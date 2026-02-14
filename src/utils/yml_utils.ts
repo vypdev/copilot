@@ -14,8 +14,14 @@ interface ActionYaml {
   inputs: Record<string, ActionInput>;
 }
 
+/**
+ * Resolves action.yml from the copilot package root, not cwd.
+ * When run as CLI from another repo, cwd is that repo; action.yml lives next to the bundle.
+ * - From source: __dirname is src/utils → ../../action.yml = repo root.
+ * - From bundle (build/cli): __dirname is bundle dir → ../../action.yml = package root.
+ */
 export function loadActionYaml(): ActionYaml {
-  const actionYamlPath = path.join(process.cwd(), 'action.yml');
+  const actionYamlPath = path.join(__dirname, '..', '..', 'action.yml');
   const yamlContent = fs.readFileSync(actionYamlPath, 'utf8');
   return yaml.load(yamlContent) as ActionYaml;
 }

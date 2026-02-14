@@ -13,9 +13,11 @@ jest.mock('../../../utils/task_emoji', () => ({
 
 const mockEnsureGitHubDirs = jest.fn();
 const mockCopySetupFiles = jest.fn();
+const mockHasValidSetupToken = jest.fn();
 jest.mock('../../../utils/setup_files', () => ({
   ensureGitHubDirs: (...args: unknown[]) => mockEnsureGitHubDirs(...args),
   copySetupFiles: (...args: unknown[]) => mockCopySetupFiles(...args),
+  hasValidSetupToken: (...args: unknown[]) => mockHasValidSetupToken(...args),
 }));
 
 const mockGetUserFromToken = jest.fn();
@@ -70,17 +72,38 @@ describe('InitialSetupUseCase', () => {
     useCase = new InitialSetupUseCase();
     mockEnsureGitHubDirs.mockClear();
     mockCopySetupFiles.mockReturnValue({ copied: 2, skipped: 0 });
+    mockHasValidSetupToken.mockReturnValue(true);
     mockGetUserFromToken.mockResolvedValue('test-user');
     mockEnsureLabels.mockResolvedValue({ success: true, created: 0, existing: 5, errors: [] });
     mockEnsureProgressLabels.mockResolvedValue({ created: 0, existing: 21, errors: [] });
     mockEnsureIssueTypes.mockResolvedValue({ success: true, created: 0, existing: 3, errors: [] });
   });
 
-  it('calls ensureGitHubDirs and copySetupFiles with process.cwd()', async () => {
+  it('calls ensureGitHubDirs, copySetupFiles and hasValidSetupToken with process.cwd()', async () => {
     const param = baseParam();
     await useCase.invoke(param);
     expect(mockEnsureGitHubDirs).toHaveBeenCalledWith(process.cwd());
     expect(mockCopySetupFiles).toHaveBeenCalledWith(process.cwd());
+    expect(mockHasValidSetupToken).toHaveBeenCalledWith(process.cwd());
+  });
+
+  it('returns failure and does not continue when hasValidSetupToken is false', async () => {
+    mockHasValidSetupToken.mockReturnValue(false);
+    try {
+      const param = baseParam();
+      const results = await useCase.invoke(param);
+      expect(results).toHaveLength(1);
+      expect(results[0].success).toBe(false);
+      expect(results[0].errors).toContain(
+        'PERSONAL_ACCESS_TOKEN must be set (environment or .env) with a valid token to run setup.'
+      );
+      expect(results[0].steps).not.toContainEqual(
+        expect.stringMatching(/GitHub access verified/)
+      );
+      expect(mockHasValidSetupToken).toHaveBeenCalledWith(process.cwd());
+    } finally {
+      mockHasValidSetupToken.mockReturnValue(true);
+    }
   });
 
   it('returns success and steps including setup files when all steps succeed', async () => {

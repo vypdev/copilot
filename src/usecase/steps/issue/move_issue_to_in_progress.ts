@@ -33,7 +33,7 @@ export class MoveIssueToInProgressUseCase implements ParamUseCase<Execution, Res
                             success: true,
                             executed: true,
                             steps: [
-                                `Moved issue to \`${columnName}\` in [${project.title}](https://github.com/${param.owner}/${param.repo}/projects/${project.id}).`,
+                                `Moved issue to \`${columnName}\` in [${project.title}](${project.publicUrl}).`,
                             ],
                         })
                     );

@@ -28,4 +28,26 @@ describe('ProjectDetail', () => {
     expect(p.url).toBe('');
     expect(p.number).toBe(-1);
   });
+
+  describe('publicUrl', () => {
+    it('returns url when set and valid (https)', () => {
+      const p = new ProjectDetail({
+        url: 'https://github.com/orgs/myorg/projects/2',
+        type: 'organization',
+        owner: 'myorg',
+        number: 2,
+      });
+      expect(p.publicUrl).toBe('https://github.com/orgs/myorg/projects/2');
+    });
+
+    it('builds URL from type, owner and number when url is empty', () => {
+      const p = new ProjectDetail({ type: 'organization', owner: 'acme', number: 1 });
+      expect(p.publicUrl).toBe('https://github.com/orgs/acme/projects/1');
+    });
+
+    it('builds users URL when type is user', () => {
+      const p = new ProjectDetail({ type: 'user', owner: 'jane', number: 3 });
+      expect(p.publicUrl).toBe('https://github.com/users/jane/projects/3');
+    });
+  });
 });

@@ -1,3 +1,4 @@
+import { ProjectDetail } from '../../../../data/model/project_detail';
 import { CheckPriorityIssueSizeUseCase } from '../check_priority_issue_size_use_case';
 
 jest.mock('../../../../utils/logger', () => ({
@@ -143,5 +144,27 @@ describe('CheckPriorityIssueSizeUseCase', () => {
     expect(results[0].success).toBe(true);
     expect(results[0].executed).toBe(true);
     expect(mockSetTaskPriority).toHaveBeenCalled();
+  });
+
+  it('step message contains built project URL when project has no url', async () => {
+    mockSetTaskPriority.mockResolvedValue(true);
+    const projectNoUrl = new ProjectDetail({
+      id: 'p1',
+      title: 'Board',
+      type: 'user',
+      owner: 'jane',
+      url: '',
+      number: 2,
+    });
+    const param = baseParam({
+      project: { getProjects: () => [projectNoUrl] },
+    });
+
+    const results = await useCase.invoke(param);
+
+    const builtUrl = 'https://github.com/users/jane/projects/2';
+    expect(results[0].success).toBe(true);
+    expect(results[0].steps?.some((s) => s.includes(builtUrl))).toBe(true);
+    expect(results[0].steps?.some((s) => s.includes('[Board]'))).toBe(true);
   });
 });

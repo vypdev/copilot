@@ -1,3 +1,4 @@
+import { ProjectDetail } from '../../../../data/model/project_detail';
 import { CheckPriorityPullRequestSizeUseCase } from '../check_priority_pull_request_size_use_case';
 
 jest.mock('../../../../utils/logger', () => ({
@@ -157,5 +158,27 @@ describe('CheckPriorityPullRequestSizeUseCase', () => {
     expect(results[0].success).toBe(false);
     expect(results[0].executed).toBe(true);
     expect(results[0].steps).toContain('Tried to check the priority of the issue, but there was a problem.');
+  });
+
+  it('step message contains built project URL when project has no url', async () => {
+    mockSetTaskPriority.mockResolvedValue(true);
+    const projectNoUrl = new ProjectDetail({
+      id: 'p1',
+      title: 'Sprint',
+      type: 'organization',
+      owner: 'acme',
+      url: '',
+      number: 5,
+    });
+    const param = baseParam({
+      project: { getProjects: () => [projectNoUrl] },
+    });
+
+    const results = await useCase.invoke(param);
+
+    const builtUrl = 'https://github.com/orgs/acme/projects/5';
+    expect(results[0].success).toBe(true);
+    expect(results[0].steps?.some((s) => s.includes(builtUrl))).toBe(true);
+    expect(results[0].steps?.some((s) => s.includes('[Sprint]'))).toBe(true);
   });
 });

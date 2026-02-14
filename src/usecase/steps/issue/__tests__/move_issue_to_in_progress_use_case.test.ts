@@ -1,3 +1,4 @@
+import { ProjectDetail } from '../../../../data/model/project_detail';
 import { MoveIssueToInProgressUseCase } from '../move_issue_to_in_progress';
 
 jest.mock('../../../../utils/logger', () => ({
@@ -71,5 +72,27 @@ describe('MoveIssueToInProgressUseCase', () => {
     const results = await useCase.invoke(param);
     expect(results[0].success).toBe(false);
     expect(results[0].steps?.some((s) => s.includes('problem'))).toBe(true);
+  });
+
+  it('step message contains built project URL when project has no url', async () => {
+    const projectNoUrl = new ProjectDetail({
+      id: 'p1',
+      title: 'Backlog',
+      type: 'organization',
+      owner: 'acme',
+      url: '',
+      number: 3,
+    });
+    const param = baseParam({
+      project: {
+        getProjects: () => [projectNoUrl],
+        getProjectColumnIssueInProgress: () => 'In Progress',
+      },
+    });
+    const results = await useCase.invoke(param);
+    const builtUrl = 'https://github.com/orgs/acme/projects/3';
+    expect(results[0].success).toBe(true);
+    expect(results[0].steps?.some((s) => s.includes(builtUrl))).toBe(true);
+    expect(results[0].steps?.some((s) => s.includes('[Backlog]'))).toBe(true);
   });
 });

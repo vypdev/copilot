@@ -67,7 +67,7 @@ export class CheckPriorityIssueSizeUseCase implements ParamUseCase<Execution, Re
                             success: true,
                             executed: true,
                             steps: [
-                                `Priority set to \`${priorityLabel}\` in [${project.title}](https://github.com/${param.owner}/${param.repo}/projects/${project.id}).`,
+                                `Priority set to \`${priorityLabel}\` in [${project.title}](${project.publicUrl}).`,
                             ],
                         })
                     );

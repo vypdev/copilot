@@ -5,7 +5,7 @@ import { Result } from "../../data/model/result";
 import { ParamUseCase } from "../base/param_usecase";
 import { logError, logInfo } from "../../utils/logger";
 import { getTaskEmoji } from "../../utils/task_emoji";
-import { copySetupFiles, ensureGitHubDirs } from "../../utils/setup_files";
+import { copySetupFiles, ensureGitHubDirs, hasValidSetupToken } from "../../utils/setup_files";
 
 export class InitialSetupUseCase implements ParamUseCase<Execution, Result[]> {
     taskId: string = 'InitialSetupUseCase';
@@ -23,6 +23,21 @@ export class InitialSetupUseCase implements ParamUseCase<Execution, Result[]> {
             ensureGitHubDirs(process.cwd());
             const filesResult = copySetupFiles(process.cwd());
             steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
+
+            if (!hasValidSetupToken(process.cwd())) {
+                logInfo('  🛑 Setup requires PERSONAL_ACCESS_TOKEN (environment or .env) with a valid token.');
+                errors.push('PERSONAL_ACCESS_TOKEN must be set (environment or .env) with a valid token to run setup.');
+                results.push(
+                    new Result({
+                        id: this.taskId,
+                        success: false,
+                        executed: true,
+                        steps: steps,
+                        errors: errors,
+                    })
+                );
+                return results;
+            }
 
             // 1. Verificar acceso a GitHub con Personal Access Token
             logInfo('🔐 Checking GitHub access...');

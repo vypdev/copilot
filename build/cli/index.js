@@ -47252,6 +47252,7 @@ const dotenv = __importStar(__nccwpck_require__(2437));
 const local_action_1 = __nccwpck_require__(7002);
 const issue_repository_1 = __nccwpck_require__(57);
 const constants_1 = __nccwpck_require__(8593);
+const setup_files_1 = __nccwpck_require__(1666);
 const logger_1 = __nccwpck_require__(8836);
 const prompts_1 = __nccwpck_require__(5554);
 const ai_1 = __nccwpck_require__(4470);
@@ -47650,12 +47651,24 @@ program
         process.exit(1);
     }
     (0, logger_1.logInfo)(`📦 Repository: ${gitInfo.owner}/${gitInfo.repo}`);
+    if (!(0, setup_files_1.hasValidSetupToken)(cwd)) {
+        (0, logger_1.logError)('🛑 Setup requires PERSONAL_ACCESS_TOKEN with a valid token.');
+        (0, logger_1.logInfo)('   You can:');
+        (0, logger_1.logInfo)('   • Add it to your environment: export PERSONAL_ACCESS_TOKEN=your_github_token');
+        if ((0, setup_files_1.setupEnvFileExists)(cwd)) {
+            (0, logger_1.logInfo)('   • Or add PERSONAL_ACCESS_TOKEN=your_github_token to your existing .env file');
+        }
+        else {
+            (0, logger_1.logInfo)('   • Or create a .env file in this repo with: PERSONAL_ACCESS_TOKEN=your_github_token');
+        }
+        process.exit(1);
+    }
     (0, logger_1.logInfo)('⚙️  Running initial setup (labels, issue types, access)...');
     const params = {
         [constants_1.INPUT_KEYS.DEBUG]: options.debug.toString(),
         [constants_1.INPUT_KEYS.SINGLE_ACTION]: constants_1.ACTIONS.INITIAL_SETUP,
         [constants_1.INPUT_KEYS.SINGLE_ACTION_ISSUE]: 1,
-        [constants_1.INPUT_KEYS.TOKEN]: options.token || process.env.PERSONAL_ACCESS_TOKEN,
+        [constants_1.INPUT_KEYS.TOKEN]: options.token || process.env.PERSONAL_ACCESS_TOKEN || (0, setup_files_1.getSetupToken)(cwd),
         repo: {
             owner: gitInfo.owner,
             repo: gitInfo.repo,
@@ -48711,6 +48724,17 @@ class ProjectDetail {
         this.owner = data[`owner`] ?? '';
         this.url = data[`url`] ?? '';
         this.number = data[`number`] ?? -1;
+    }
+    /**
+     * Returns the full public URL to the project (board).
+     * Uses the URL from the API when present and valid; otherwise builds it from owner, type and number.
+     */
+    get publicUrl() {
+        if (this.url && typeof this.url === 'string' && this.url.startsWith('https://')) {
+            return this.url;
+        }
+        const path = this.type === 'organization' ? 'orgs' : 'users';
+        return `https://github.com/${path}/${this.owner}/projects/${this.number}`;
     }
 }
 exports.ProjectDetail = ProjectDetail;
@@ -54003,6 +54027,18 @@ class InitialSetupUseCase {
             (0, setup_files_1.ensureGitHubDirs)(process.cwd());
             const filesResult = (0, setup_files_1.copySetupFiles)(process.cwd());
             steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
+            if (!(0, setup_files_1.hasValidSetupToken)(process.cwd())) {
+                (0, logger_1.logInfo)('  🛑 Setup requires PERSONAL_ACCESS_TOKEN (environment or .env) with a valid token.');
+                errors.push('PERSONAL_ACCESS_TOKEN must be set (environment or .env) with a valid token to run setup.');
+                results.push(new result_1.Result({
+                    id: this.taskId,
+                    success: false,
+                    executed: true,
+                    steps: steps,
+                    errors: errors,
+                }));
+                return results;
+            }
             // 1. Verificar acceso a GitHub con Personal Access Token
             (0, logger_1.logInfo)('🔐 Checking GitHub access...');
             const githubAccessResult = await this.verifyGitHubAccess(param);
@@ -57923,7 +57959,7 @@ class CheckPriorityIssueSizeUseCase {
                         success: true,
                         executed: true,
                         steps: [
-                            `Priority set to \`${priorityLabel}\` in [${project.title}](https://github.com/${param.owner}/${param.repo}/projects/${project.id}).`,
+                            `Priority set to \`${priorityLabel}\` in [${project.title}](${project.publicUrl}).`,
                         ],
                     }));
                 }
@@ -58364,7 +58400,7 @@ class MoveIssueToInProgressUseCase {
                         success: true,
                         executed: true,
                         steps: [
-                            `Moved issue to \`${columnName}\` in [${project.title}](https://github.com/${param.owner}/${param.repo}/projects/${project.id}).`,
+                            `Moved issue to \`${columnName}\` in [${project.title}](${project.publicUrl}).`,
                         ],
                     }));
                 }
@@ -59116,7 +59152,7 @@ class CheckPriorityPullRequestSizeUseCase {
                         success: true,
                         executed: true,
                         steps: [
-                            `Priority set to \`${priorityLabel}\` in [${project.title}](https://github.com/${param.owner}/${param.repo}/projects/${project.id}).`,
+                            `Priority set to \`${priorityLabel}\` in [${project.title}](${project.publicUrl}).`,
                         ],
                     }));
                 }
@@ -60342,6 +60378,10 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ensureGitHubDirs = ensureGitHubDirs;
 exports.copySetupFiles = copySetupFiles;
+exports.ensureEnvWithToken = ensureEnvWithToken;
+exports.getSetupToken = getSetupToken;
+exports.hasValidSetupToken = hasValidSetupToken;
+exports.setupEnvFileExists = setupEnvFileExists;
 const fs = __importStar(__nccwpck_require__(7147));
 const path = __importStar(__nccwpck_require__(1017));
 const logger_1 = __nccwpck_require__(8836);
@@ -60370,11 +60410,13 @@ function ensureGitHubDirs(cwd) {
  * Copy setup files from setup/ to repo (.github/ workflows, ISSUE_TEMPLATE, pull_request_template.md, .env at root).
  * Skips files that already exist at destination (no overwrite).
  * Logs each file copied or skipped. No-op if setup/ does not exist.
- * @param cwd - Repo root
+ * By default setup dir is the copilot package root (not cwd), so it works when running from another repo.
+ * @param cwd - Repo root (destination)
+ * @param setupDirOverride - Optional path to setup/ folder (for tests). If not set, uses package root.
  * @returns { copied, skipped }
  */
-function copySetupFiles(cwd) {
-    const setupDir = path.join(cwd, 'setup');
+function copySetupFiles(cwd, setupDirOverride) {
+    const setupDir = setupDirOverride ?? path.join(__dirname, '..', '..', 'setup');
     if (!fs.existsSync(setupDir))
         return { copied: 0, skipped: 0 };
     let copied = 0;
@@ -60430,20 +60472,76 @@ function copySetupFiles(cwd) {
             copied += 1;
         }
     }
-    const envSrc = path.join(setupDir, '.env');
-    const envDst = path.join(cwd, '.env');
-    if (fs.existsSync(envSrc) && fs.statSync(envSrc).isFile()) {
-        if (fs.existsSync(envDst)) {
-            (0, logger_1.logInfo)('  ⏭️  .env already exists; skipping.');
-            skipped += 1;
+    ensureEnvWithToken(cwd);
+    return { copied, skipped };
+}
+const ENV_TOKEN_KEY = 'PERSONAL_ACCESS_TOKEN';
+const ENV_PLACEHOLDER_VALUE = 'github_pat_11..';
+/** Minimum length for a token to be considered "defined" (not placeholder). */
+const MIN_VALID_TOKEN_LENGTH = 20;
+function getTokenFromEnvFile(envPath) {
+    if (!fs.existsSync(envPath) || !fs.statSync(envPath).isFile())
+        return null;
+    const content = fs.readFileSync(envPath, 'utf8');
+    const match = content.match(new RegExp(`^${ENV_TOKEN_KEY}=(.+)$`, 'm'));
+    if (!match)
+        return null;
+    const value = match[1].trim().replace(/^["']|["']$/g, '');
+    return value.length > 0 ? value : null;
+}
+/**
+ * Logs the current state of PERSONAL_ACCESS_TOKEN (environment or .env). Does not create .env.
+ */
+function ensureEnvWithToken(cwd) {
+    const envPath = path.join(cwd, '.env');
+    const tokenInEnv = process.env[ENV_TOKEN_KEY]?.trim();
+    if (tokenInEnv) {
+        (0, logger_1.logInfo)('  🔑 PERSONAL_ACCESS_TOKEN is set in environment; .env not needed.');
+        return;
+    }
+    if (fs.existsSync(envPath)) {
+        const tokenInFile = getTokenFromEnvFile(envPath);
+        if (tokenInFile) {
+            (0, logger_1.logInfo)('  ✅ .env exists and contains PERSONAL_ACCESS_TOKEN.');
         }
         else {
-            fs.copyFileSync(envSrc, envDst);
-            (0, logger_1.logInfo)('  ✅ Copied setup/.env → .env');
-            copied += 1;
+            (0, logger_1.logInfo)('  ⚠️  .env exists but PERSONAL_ACCESS_TOKEN is missing or empty.');
         }
+        return;
     }
-    return { copied, skipped };
+    (0, logger_1.logInfo)('  💡 You can create a .env file here with PERSONAL_ACCESS_TOKEN=your_token or set it in your environment.');
+}
+function isTokenValueValid(token) {
+    const t = token.trim();
+    return (t.length >= MIN_VALID_TOKEN_LENGTH &&
+        t !== ENV_PLACEHOLDER_VALUE &&
+        !t.startsWith('github_pat_11..'));
+}
+/**
+ * Returns the PERSONAL_ACCESS_TOKEN to use for setup (from environment or .env in cwd).
+ * Same resolution order as hasValidSetupToken; returns undefined if no valid token is found.
+ */
+function getSetupToken(cwd) {
+    const fromEnv = process.env[ENV_TOKEN_KEY]?.trim();
+    if (fromEnv && isTokenValueValid(fromEnv))
+        return fromEnv;
+    const envPath = path.join(cwd, '.env');
+    const fromFile = getTokenFromEnvFile(envPath);
+    if (fromFile !== null && isTokenValueValid(fromFile))
+        return fromFile;
+    return undefined;
+}
+/**
+ * Returns true if PERSONAL_ACCESS_TOKEN is available and looks like a real token
+ * (from environment or .env), not the placeholder. Setup should only continue when this is true.
+ */
+function hasValidSetupToken(cwd) {
+    return getSetupToken(cwd) !== undefined;
+}
+/** Returns true if a .env file exists in the given directory. */
+function setupEnvFileExists(cwd) {
+    const envPath = path.join(cwd, '.env');
+    return fs.existsSync(envPath) && fs.statSync(envPath).isFile();
 }
 
 
@@ -60650,8 +60748,14 @@ exports.getActionInputsWithDefaults = getActionInputsWithDefaults;
 const fs = __importStar(__nccwpck_require__(7147));
 const path = __importStar(__nccwpck_require__(1017));
 const yaml = __importStar(__nccwpck_require__(1917));
+/**
+ * Resolves action.yml from the copilot package root, not cwd.
+ * When run as CLI from another repo, cwd is that repo; action.yml lives next to the bundle.
+ * - From source: __dirname is src/utils → ../../action.yml = repo root.
+ * - From bundle (build/cli): __dirname is bundle dir → ../../action.yml = package root.
+ */
 function loadActionYaml() {
-    const actionYamlPath = path.join(process.cwd(), 'action.yml');
+    const actionYamlPath = path.join(__dirname, '..', '..', 'action.yml');
     const yamlContent = fs.readFileSync(actionYamlPath, 'utf8');
     return yaml.load(yamlContent);
 }

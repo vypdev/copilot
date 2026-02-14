@@ -69,4 +69,45 @@ describe('Issue', () => {
     expect(i.commentAuthor).toBe('alice');
     expect(i.commentUrl).toBe('url');
   });
+
+  it('opened is true when action is reopened', () => {
+    const inputs = { action: 'reopened', issue: issuePayload, eventName: 'issues' };
+    const i = new Issue(false, false, 1, inputs);
+    expect(i.opened).toBe(true);
+  });
+
+  it('opened is false when action is closed', () => {
+    getContext().payload = { action: 'closed', issue: issuePayload };
+    const i = new Issue(false, false, 1, undefined);
+    expect(i.opened).toBe(false);
+  });
+
+  it('falls back to context for creator when inputs.issue has no user', () => {
+    getContext().payload = { action: 'opened', issue: { ...issuePayload, user: { login: 'context-user' } } };
+    const i = new Issue(false, false, 1, { action: 'opened', issue: { title: 'x', number: 1, body: '', html_url: '' }, eventName: 'issues' });
+    expect(i.creator).toBe('context-user');
+    const i2 = new Issue(false, false, 1, undefined);
+    expect(i2.creator).toBe('context-user');
+  });
+
+  it('falls back to context for commentBody and commentAuthor when inputs has eventName but comment from context', () => {
+    getContext().payload = {
+      action: 'created',
+      issue: issuePayload,
+      comment: { id: 99, body: 'From context', user: { login: 'ctx-commenter' }, html_url: 'https://comment.url' },
+    };
+    getContext().eventName = 'issue_comment';
+    const i = new Issue(false, false, 1, { eventName: 'issue_comment', issue: issuePayload });
+    expect(i.commentBody).toBe('From context');
+    expect(i.commentAuthor).toBe('ctx-commenter');
+    expect(i.commentUrl).toBe('https://comment.url');
+    expect(i.commentId).toBe(99);
+  });
+
+  it('labelAdded falls back to context when inputs has labeled but no label', () => {
+    getContext().payload = { action: 'labeled', issue: issuePayload, label: { name: 'from-ctx' } };
+    const i = new Issue(false, false, 1, undefined);
+    expect(i.labeled).toBe(true);
+    expect(i.labelAdded).toBe('from-ctx');
+  });
 });
