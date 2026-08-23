@@ -11,7 +11,7 @@ describe('agent input builder', () => {
             [INPUT_KEYS.FINDINGS_TRANSPORT]: 'cli',
             [INPUT_KEYS.FINDINGS_MODEL]: 'codex-model',
         });
-        expect(tasks.findings).toMatchObject({ provider: 'codex', transport: 'cli', model: 'codex-model', command: 'codex' });
+        expect(tasks.findings).toMatchObject({ provider: 'codex', transport: 'cli', model: 'codex-model', command: 'codex exec --ephemeral --skip-git-repo-check -' });
         expect(tasks.fixer).toMatchObject({ provider: 'opencode', transport: 'server', model: 'base-model' });
     });
 });

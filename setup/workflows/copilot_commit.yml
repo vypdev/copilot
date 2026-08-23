@@ -20,4 +20,8 @@ jobs:
           debug: ${{ vars.DEBUG }}
           project-ids: ${{ vars.PROJECT_IDS }}
           opencode-model: ${{ vars.OPENCODE_MODEL }}
+          agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+          agent-transport: ${{ vars.AGENT_TRANSPORT || 'server' }}
+          agent-model: ${{ vars.AGENT_MODEL }}
+          agent-command: ${{ vars.AGENT_COMMAND }}
           token: ${{ secrets.PAT }}

@@ -22,7 +22,7 @@ describe('buildAgentTasks', () => {
         });
         expect(tasks.findings.provider).toBe('opencode');
         expect(tasks.fixer.provider).toBe('codex');
-        expect(tasks.fixer.command).toBe('codex');
+        expect(tasks.fixer.command).toBe('codex exec --ephemeral --skip-git-repo-check -');
     });
 
     it('rejects unknown providers and transports', () => {
@@ -35,8 +35,8 @@ describe('buildAgentTasks', () => {
     });
 
     it('uses provider executable defaults for CLI transport', () => {
-        expect(buildAgentTasks({ provider: 'codex', transport: 'cli', model: 'gpt-5-codex' }).findings.command).toBe('codex');
-        expect(buildAgentTasks({ provider: 'cursor', transport: 'cli', model: 'cursor-agent' }).findings.command).toBe('cursor-agent');
+        expect(buildAgentTasks({ provider: 'codex', transport: 'cli', model: 'gpt-5-codex' }).findings.command).toBe('codex exec --ephemeral --skip-git-repo-check -');
+        expect(buildAgentTasks({ provider: 'cursor', transport: 'cli', model: 'cursor-agent' }).findings.command).toBe('agent -p --output-format text -');
     });
 
     it('rejects server transport for providers without a server adapter', () => {

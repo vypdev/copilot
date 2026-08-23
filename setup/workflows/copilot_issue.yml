@@ -17,5 +17,8 @@ jobs:
           ai-ignore-files: build/*
           debug: ${{ vars.DEBUG }}
           opencode-model: ${{ vars.OPENCODE_MODEL }}
-          project-ids: ${{ vars.PROJECT_IDS }}
+          agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+          agent-transport: ${{ vars.AGENT_TRANSPORT || 'server' }}
+          agent-model: ${{ vars.AGENT_MODEL }}
+          agent-command: ${{ vars.AGENT_COMMAND }}
           token: ${{ secrets.PAT }}

@@ -47971,19 +47971,15 @@ function resolveActionInput(additionalParams, actionInputs, key) {
 /***/ }),
 
 /***/ 1248:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildAgentTasks = buildAgentTasks;
+const agent_cli_command_policy_1 = __nccwpck_require__(4678);
 const PROVIDERS = ['opencode', 'cursor', 'codex'];
 const TRANSPORTS = ['server', 'cli'];
-const DEFAULT_COMMANDS = {
-    opencode: 'opencode',
-    cursor: 'cursor-agent',
-    codex: 'codex',
-};
 function resolveProvider(value) {
     if (PROVIDERS.includes(value))
         return value;
@@ -48001,7 +47997,7 @@ function buildConfiguration(values) {
     if (!model)
         throw new Error('Agent model must not be empty.');
     const serverUrl = values.serverUrl?.trim();
-    const command = values.command?.trim() || DEFAULT_COMMANDS[provider];
+    const command = values.command?.trim() || (0, agent_cli_command_policy_1.defaultCliCommand)(provider);
     if (transport === 'server' && provider !== 'opencode') {
         throw new Error(`Agent server transport is only supported by opencode. Use cli for ${provider}.`);
     }
@@ -48127,77 +48123,41 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.mainRun = mainRun;
 const core = __importStar(__nccwpck_require__(1078));
-const commit_use_case_1 = __nccwpck_require__(8001);
-const notify_new_commit_on_issue_use_case_1 = __nccwpck_require__(3276);
-const check_changes_issue_size_use_case_1 = __nccwpck_require__(8356);
-const detect_potential_problems_use_case_1 = __nccwpck_require__(6287);
-const bugbot_autofix_use_case_1 = __nccwpck_require__(5446);
-const detect_bugbot_fix_intent_use_case_1 = __nccwpck_require__(6234);
-const user_request_use_case_1 = __nccwpck_require__(9004);
-const repository_factory_1 = __nccwpck_require__(3728);
-const git_commit_adapter_1 = __nccwpck_require__(8606);
-const issue_comment_use_case_1 = __nccwpck_require__(2042);
-const check_issue_comment_language_use_case_1 = __nccwpck_require__(3152);
-const pull_request_review_comment_use_case_1 = __nccwpck_require__(9415);
-const check_pull_request_comment_language_use_case_1 = __nccwpck_require__(1729);
-const single_action_use_case_1 = __nccwpck_require__(3572);
-const deployed_action_use_case_1 = __nccwpck_require__(3185);
-const publish_github_action_use_case_1 = __nccwpck_require__(8891);
-const create_release_use_case_1 = __nccwpck_require__(5258);
-const create_tag_use_case_1 = __nccwpck_require__(2120);
-const think_use_case_1 = __nccwpck_require__(9255);
-const recommend_steps_use_case_1 = __nccwpck_require__(3238);
-const agent_repository_factory_1 = __nccwpck_require__(4960);
 const logger_1 = __nccwpck_require__(1151);
 const constants_1 = __nccwpck_require__(5415);
 const chalk_1 = __importDefault(__nccwpck_require__(2082));
 const boxen_1 = __importDefault(__nccwpck_require__(1652));
-const queue_utils_1 = __nccwpck_require__(2657);
 const main_run_route_1 = __nccwpck_require__(8466);
-function createDetectPotentialProblemsUseCase(factory) {
-    const issueRepository = factory.createIssueRepository();
-    const pullRequestRepository = factory.createPullRequestRepository();
-    const contextPorts = { issue: issueRepository, pullRequest: pullRequestRepository };
-    const writePorts = { issueComments: issueRepository, pullRequestComments: pullRequestRepository };
-    return new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(new agent_repository_factory_1.DefaultAgentRepositoryFactory().createFindings(), contextPorts, writePorts);
-}
-function createBugbotContextPorts(factory) {
-    return {
-        issue: factory.createIssueRepository(),
-        pullRequest: factory.createPullRequestRepository(),
-    };
-}
-function createDetectBugbotFixIntentUseCase(factory) {
-    const contextPorts = createBugbotContextPorts(factory);
-    return new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(contextPorts.pullRequest, new agent_repository_factory_1.DefaultAgentRepositoryFactory().createFindings(), contextPorts);
-}
-function createSingleActionUseCase(factory) {
-    const repositoryReleasePort = factory.createRepositoryReleaseRepository();
-    const issueDescriptionQueryPort = factory.createIssueRepository();
-    return new single_action_use_case_1.SingleActionUseCase(new deployed_action_use_case_1.DeployedActionUseCase(factory.createIssueRepository(), factory.createIssueRepository(), factory.createBranchRepository()), new publish_github_action_use_case_1.PublishGithubActionUseCase(repositoryReleasePort), new create_release_use_case_1.CreateReleaseUseCase(repositoryReleasePort), new create_tag_use_case_1.CreateTagUseCase(repositoryReleasePort), new think_use_case_1.ThinkUseCase(issueDescriptionQueryPort, factory.createIssueRepository(), new agent_repository_factory_1.DefaultAgentRepositoryFactory().createFindings()), factory.createInitialSetupUseCase(), factory.createCheckProgressUseCase(), createDetectPotentialProblemsUseCase(factory), new recommend_steps_use_case_1.RecommendStepsUseCase(issueDescriptionQueryPort, new agent_repository_factory_1.DefaultAgentRepositoryFactory().createFindings()));
-}
-async function mainRun(execution, projectBoardCommandPort, branchRepository) {
+const main_run_dispatcher_1 = __nccwpck_require__(8586);
+const execution_setup_composition_root_1 = __nccwpck_require__(3965);
+const workflow_queue_composition_root_1 = __nccwpck_require__(1598);
+const main_run_route_composition_root_1 = __nccwpck_require__(4706);
+async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort) {
     const results = [];
     (0, logger_1.logInfo)('GitHub Action: starting main run.');
     (0, logger_1.logDebugInfo)(`Event: ${execution.eventName}, actor: ${execution.actor}, repo: ${execution.owner}/${execution.repo}, debug: ${execution.debug}`);
-    const setupFactory = new repository_factory_1.RepositoryFactory();
-    await execution.setup(branchRepository, setupFactory.createIssueRepository(), setupFactory.createOrganizationRepository());
+    await (0, execution_setup_composition_root_1.createSetupExecutionUseCase)(latestTagQueryPort).invoke(execution);
     (0, logger_1.clearAccumulatedLogs)();
     (0, logger_1.logDebugInfo)(`Setup done. Issue number: ${execution.issueNumber}, isSingleAction: ${execution.isSingleAction}, isIssue: ${execution.isIssue}, isPullRequest: ${execution.isPullRequest}, isPush: ${execution.isPush}`);
     if (!execution.welcome) {
         /**
          * Wait for previous runs to finish
          */
-        await (0, queue_utils_1.waitForPreviousRuns)(execution).catch((err) => {
+        await (0, workflow_queue_composition_root_1.createWaitForPreviousWorkflowRunsUseCase)(execution.tokens.token).invoke({
+            owner: execution.owner,
+            repository: execution.repo,
+            currentRunId: Number.parseInt(process.env.GITHUB_RUN_ID ?? '', 10),
+            workflowName: process.env.GITHUB_WORKFLOW ?? '',
+        }).catch((err) => {
             (0, logger_1.logError)(`Error waiting for previous runs: ${err}`);
             process.exit(1);
         });
     }
+    const routeHandlers = (0, main_run_route_composition_root_1.createMainRunRouteCompositionRoot)(projectBoardCommandPort);
     if (execution.runnedByToken) {
         if (execution.isSingleAction && execution.singleAction.validSingleAction) {
             (0, logger_1.logInfo)(`User from token (${execution.tokenUser}) matches actor. Executing single action: ${execution.singleAction.currentSingleAction}.`);
-            const singleActionFactory = new repository_factory_1.RepositoryFactory();
-            results.push(...await createSingleActionUseCase(singleActionFactory).invoke(execution));
+            results.push(...await (0, main_run_dispatcher_1.dispatchMainRunRoute)('single-action', execution, routeHandlers));
             (0, logger_1.logInfo)(`Single action finished. Results: ${results.length}.`);
             return results;
         }
@@ -48207,8 +48167,7 @@ async function mainRun(execution, projectBoardCommandPort, branchRepository) {
     if (execution.issueNumber === -1) {
         if (execution.isSingleAction && execution.singleAction.isSingleActionWithoutIssue) {
             (0, logger_1.logInfo)('No issue number; running single action without issue.');
-            const singleActionFactory = new repository_factory_1.RepositoryFactory();
-            results.push(...await createSingleActionUseCase(singleActionFactory).invoke(execution));
+            results.push(...await (0, main_run_dispatcher_1.dispatchMainRunRoute)('single-action', execution, routeHandlers));
         }
         else {
             (0, logger_1.logInfo)('Issue number not found. Skipping.');
@@ -48235,50 +48194,12 @@ async function mainRun(execution, projectBoardCommandPort, branchRepository) {
             isPullRequestReviewComment: execution.pullRequest.isPullRequestReviewComment,
             isPush: execution.isPush,
         });
-        switch (route) {
-            case 'single-action': {
-                (0, logger_1.logInfo)(`Running SingleActionUseCase (action: ${execution.singleAction.currentSingleAction}).`);
-                const singleActionFactory = new repository_factory_1.RepositoryFactory();
-                results.push(...await createSingleActionUseCase(singleActionFactory).invoke(execution));
-                break;
-            }
-            case 'issue-comment': {
-                (0, logger_1.logInfo)(`Running IssueCommentUseCase for issue #${execution.issue.number}.`);
-                const commentFactory = new repository_factory_1.RepositoryFactory();
-                results.push(...await new issue_comment_use_case_1.IssueCommentUseCase(new check_issue_comment_language_use_case_1.CheckIssueCommentLanguageUseCase(commentFactory.createIssueRepository(), new agent_repository_factory_1.DefaultAgentRepositoryFactory().createFindings()), createDetectBugbotFixIntentUseCase(commentFactory), new think_use_case_1.ThinkUseCase(commentFactory.createIssueRepository(), commentFactory.createIssueRepository(), new agent_repository_factory_1.DefaultAgentRepositoryFactory().createFindings()), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(new agent_repository_factory_1.DefaultAgentRepositoryFactory().createFixer(), createBugbotContextPorts(commentFactory), new git_commit_adapter_1.GitCommitAdapter()), new user_request_use_case_1.DoUserRequestUseCase(new agent_repository_factory_1.DefaultAgentRepositoryFactory().createFixer()), commentFactory.createIssueRepository(), commentFactory.createOrganizationRepository(), commentFactory.createOrganizationRepository(), {
-                    issueComments: commentFactory.createIssueRepository(),
-                    pullRequestComments: commentFactory.createPullRequestRepository(),
-                }, new git_commit_adapter_1.GitCommitAdapter()).invoke(execution));
-                break;
-            }
-            case 'issue':
-                (0, logger_1.logInfo)(`Running IssueUseCase for issue #${execution.issueNumber}.`);
-                results.push(...await new repository_factory_1.RepositoryFactory().createIssueUseCase().invoke(execution));
-                break;
-            case 'pull-request-review-comment': {
-                (0, logger_1.logInfo)(`Running PullRequestReviewCommentUseCase for PR #${execution.pullRequest.number}.`);
-                const reviewCommentFactory = new repository_factory_1.RepositoryFactory();
-                results.push(...await new pull_request_review_comment_use_case_1.PullRequestReviewCommentUseCase(new check_pull_request_comment_language_use_case_1.CheckPullRequestCommentLanguageUseCase(reviewCommentFactory.createIssueRepository(), new agent_repository_factory_1.DefaultAgentRepositoryFactory().createFindings()), createDetectBugbotFixIntentUseCase(reviewCommentFactory), new think_use_case_1.ThinkUseCase(reviewCommentFactory.createIssueRepository(), reviewCommentFactory.createIssueRepository(), new agent_repository_factory_1.DefaultAgentRepositoryFactory().createFindings()), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(new agent_repository_factory_1.DefaultAgentRepositoryFactory().createFixer(), createBugbotContextPorts(reviewCommentFactory), new git_commit_adapter_1.GitCommitAdapter()), new user_request_use_case_1.DoUserRequestUseCase(new agent_repository_factory_1.DefaultAgentRepositoryFactory().createFixer()), reviewCommentFactory.createIssueRepository(), reviewCommentFactory.createOrganizationRepository(), reviewCommentFactory.createOrganizationRepository(), {
-                    issueComments: reviewCommentFactory.createIssueRepository(),
-                    pullRequestComments: reviewCommentFactory.createPullRequestRepository(),
-                }, new git_commit_adapter_1.GitCommitAdapter()).invoke(execution));
-                break;
-            }
-            case 'pull-request':
-                (0, logger_1.logInfo)(`Running PullRequestUseCase for PR #${execution.pullRequest.number}.`);
-                results.push(...await new repository_factory_1.RepositoryFactory().createPullRequestUseCase().invoke(execution));
-                break;
-            case 'push': {
-                (0, logger_1.logDebugInfo)(`Push event. Branch: ${execution.commit?.branch ?? 'unknown'}, commits: ${execution.commit?.commits?.length ?? 0}, issue number: ${execution.issueNumber}.`);
-                (0, logger_1.logInfo)('Running CommitUseCase.');
-                const commitFactory = new repository_factory_1.RepositoryFactory();
-                results.push(...await new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase(commitFactory.createIssueRepository()), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase(projectBoardCommandPort, commitFactory.createIssueRepository(), commitFactory.createPullRequestRepository(), commitFactory.createBranchRepository()), createDetectPotentialProblemsUseCase(commitFactory), commitFactory.createCheckProgressUseCase()).invoke(execution));
-                break;
-            }
-            case 'unhandled':
-                (0, logger_1.logError)(`Action not handled. Event: ${execution.eventName}.`);
-                core.setFailed('Action not handled.');
-                break;
+        if (route === 'unhandled') {
+            (0, logger_1.logError)(`Action not handled. Event: ${execution.eventName}.`);
+            core.setFailed('Action not handled.');
+        }
+        else {
+            results.push(...await (0, main_run_dispatcher_1.dispatchMainRunRoute)(route, execution, routeHandlers));
         }
         const totalSteps = results.reduce((acc, r) => acc + (r.steps?.length ?? 0), 0);
         (0, logger_1.logInfo)(`Main run finished. Results: ${results.length}, total steps: ${totalSteps}.`);
@@ -48318,7 +48239,7 @@ const issue_types_1 = __nccwpck_require__(7357);
 const labels_1 = __nccwpck_require__(9463);
 const locale_1 = __nccwpck_require__(9832);
 const pull_request_1 = __nccwpck_require__(5713);
-const projects_1 = __nccwpck_require__(3231);
+const projects_1 = __nccwpck_require__(6562);
 const tokens_1 = __nccwpck_require__(4153);
 const workflows_1 = __nccwpck_require__(5790);
 function buildProjects(values) {
@@ -48414,62 +48335,66 @@ const core = __importStar(__nccwpck_require__(1078));
 const github = __importStar(__nccwpck_require__(9848));
 const ai_1 = __nccwpck_require__(7478);
 const hotfix_1 = __nccwpck_require__(8537);
-const locale_1 = __nccwpck_require__(9832);
 const release_1 = __nccwpck_require__(4715);
 const single_action_1 = __nccwpck_require__(5898);
-const publish_resume_use_case_1 = __nccwpck_require__(8684);
-const store_configuration_use_case_1 = __nccwpck_require__(4375);
+const github_action_completion_1 = __nccwpck_require__(4140);
+const configuration_handler_1 = __nccwpck_require__(188);
 const constants_1 = __nccwpck_require__(5415);
 const logger_1 = __nccwpck_require__(1151);
 const opencode_server_lifecycle_adapter_1 = __nccwpck_require__(2135);
-const repository_factory_1 = __nccwpck_require__(3728);
-const configuration_handler_1 = __nccwpck_require__(188);
+const git_cli_repository_1 = __nccwpck_require__(6331);
+const issue_content_composition_root_1 = __nccwpck_require__(2255);
+const issue_interaction_composition_root_1 = __nccwpck_require__(2503);
+const project_board_composition_root_1 = __nccwpck_require__(7194);
 const project_details_loader_1 = __nccwpck_require__(3448);
 const common_action_1 = __nccwpck_require__(2238);
 const input_boolean_policy_1 = __nccwpck_require__(8330);
-const action_input_source_1 = __nccwpck_require__(8143);
+const github_action_input_1 = __nccwpck_require__(8824);
 const input_number_policy_1 = __nccwpck_require__(7165);
 const input_values_policy_1 = __nccwpck_require__(8841);
-const agent_input_builder_1 = __nccwpck_require__(1404);
-const image_configuration_builder_1 = __nccwpck_require__(9246);
+const github_action_ai_inputs_1 = __nccwpck_require__(7640);
+const github_action_image_inputs_1 = __nccwpck_require__(5380);
+const github_action_locale_inputs_1 = __nccwpck_require__(8893);
 const size_threshold_builder_1 = __nccwpck_require__(9757);
+const github_action_threshold_inputs_1 = __nccwpck_require__(8578);
 const branches_builder_1 = __nccwpck_require__(85);
+const github_action_branch_inputs_1 = __nccwpck_require__(7167);
+const github_action_label_inputs_1 = __nccwpck_require__(5013);
+const github_action_workflow_inputs_1 = __nccwpck_require__(1543);
+const github_action_issue_type_inputs_1 = __nccwpck_require__(7939);
+const github_action_project_inputs_1 = __nccwpck_require__(1293);
 const execution_builder_1 = __nccwpck_require__(236);
 const configuration_builders_1 = __nccwpck_require__(9094);
 async function runGitHubAction() {
     const eventInputs = { ...github.context.payload, eventName: github.context.eventName };
-    const repositoryFactory = new repository_factory_1.RepositoryFactory();
-    const projectRepository = repositoryFactory.createProjectBoardRepository();
+    const projectBoard = (0, project_board_composition_root_1.createProjectBoardCompositionRoot)();
     (0, logger_1.logInfo)('GitHub Action: runGitHubAction started.');
     /**
      * Debug
      */
-    const debug = (0, input_boolean_policy_1.isEnabledInput)(getInput(constants_1.INPUT_KEYS.DEBUG));
+    const debug = (0, input_boolean_policy_1.isEnabledInput)((0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.DEBUG));
     if (debug) {
         (0, logger_1.logInfo)('Debug mode is enabled. Full logs will be included in the report.');
     }
     /**
      * Single action
      */
-    const singleAction = getInput(constants_1.INPUT_KEYS.SINGLE_ACTION);
-    const singleActionIssue = getInput(constants_1.INPUT_KEYS.SINGLE_ACTION_ISSUE);
-    const singleActionVersion = getInput(constants_1.INPUT_KEYS.SINGLE_ACTION_VERSION);
-    const singleActionTitle = getInput(constants_1.INPUT_KEYS.SINGLE_ACTION_TITLE);
-    const singleActionChangelog = getInput(constants_1.INPUT_KEYS.SINGLE_ACTION_CHANGELOG);
+    const singleAction = (0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.SINGLE_ACTION);
+    const singleActionIssue = (0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.SINGLE_ACTION_ISSUE);
+    const singleActionVersion = (0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.SINGLE_ACTION_VERSION);
+    const singleActionTitle = (0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.SINGLE_ACTION_TITLE);
+    const singleActionChangelog = (0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.SINGLE_ACTION_CHANGELOG);
     /**
      * Tokens
      */
-    const token = getInput(constants_1.INPUT_KEYS.TOKEN, { required: true });
+    const token = (0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.TOKEN, { required: true });
     /**
      * AI (OpenCode)
      */
-    let opencodeServerUrl = getInput(constants_1.INPUT_KEYS.OPENCODE_SERVER_URL) || 'http://127.0.0.1:4096';
-    const readAgentInput = (key) => getInput(key);
-    const requestedAgentTasks = (0, agent_input_builder_1.buildAgentTasksFromInputs)(readAgentInput);
-    const opencodeModel = requestedAgentTasks.findings.model;
-    const opencodeStartServer = (0, input_boolean_policy_1.isEnabledInput)(getInput(constants_1.INPUT_KEYS.OPENCODE_START_SERVER))
-        && requestedAgentTasks.findings.provider === 'opencode'
-        && requestedAgentTasks.findings.transport === 'server';
+    const aiInputs = (0, github_action_ai_inputs_1.readGithubActionAiInputs)(github_action_input_1.getGithubActionInput);
+    let opencodeServerUrl = aiInputs.serverUrl;
+    const opencodeModel = aiInputs.requestedAgentTasks.findings.model;
+    const opencodeStartServer = aiInputs.startServer;
     const lifecycle = new opencode_server_lifecycle_adapter_1.OpenCodeServerLifecycleAdapter();
     let managedOpencodeServer;
     if (opencodeStartServer) {
@@ -48481,158 +48406,56 @@ async function runGitHubAction() {
     else {
         (0, logger_1.logDebugInfo)(`Using OpenCode server URL: ${opencodeServerUrl}, model: ${opencodeModel}.`);
     }
-    const agentTasks = (0, agent_input_builder_1.buildAgentTasksFromInputs)((key) => key === constants_1.INPUT_KEYS.OPENCODE_SERVER_URL ? opencodeServerUrl : readAgentInput(key));
+    const agentTasks = (0, github_action_ai_inputs_1.readGithubActionAgentTasks)(github_action_input_1.getGithubActionInput, opencodeServerUrl);
     try {
-        const aiPullRequestDescription = (0, input_boolean_policy_1.isEnabledInput)(getInput(constants_1.INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION));
-        const aiMembersOnly = (0, input_boolean_policy_1.isEnabledInput)(getInput(constants_1.INPUT_KEYS.AI_MEMBERS_ONLY));
-        const aiIncludeReasoning = (0, input_boolean_policy_1.isEnabledInput)(getInput(constants_1.INPUT_KEYS.AI_INCLUDE_REASONING));
-        const aiIgnoreFilesInput = getInput(constants_1.INPUT_KEYS.AI_IGNORE_FILES);
-        const aiIgnoreFiles = (0, input_values_policy_1.parseDelimitedValues)(aiIgnoreFilesInput);
-        const bugbotSeverity = getInput(constants_1.INPUT_KEYS.BUGBOT_SEVERITY) || constants_1.BUGBOT_MIN_SEVERITY;
-        const bugbotCommentLimit = (0, input_number_policy_1.parseBoundedPositiveIntegerInput)(getInput(constants_1.INPUT_KEYS.BUGBOT_COMMENT_LIMIT), constants_1.BUGBOT_MAX_COMMENTS, 200);
-        const bugbotFixVerifyCommandsInput = getInput(constants_1.INPUT_KEYS.BUGBOT_FIX_VERIFY_COMMANDS);
-        const bugbotFixVerifyCommands = bugbotFixVerifyCommandsInput
-            .split(',')
-            .map((c) => c.trim())
-            .filter((c) => c.length > 0);
+        const aiPullRequestDescription = aiInputs.pullRequestDescription;
+        const aiMembersOnly = aiInputs.membersOnly;
+        const aiIncludeReasoning = aiInputs.includeReasoning;
+        const aiIgnoreFiles = aiInputs.ignoreFiles;
+        const bugbotSeverity = aiInputs.bugbotSeverity;
+        const bugbotCommentLimit = aiInputs.bugbotCommentLimit;
+        const bugbotFixVerifyCommands = aiInputs.bugbotFixVerifyCommands;
         /**
          * Projects Details
          */
-        const projectIdsInput = getInput(constants_1.INPUT_KEYS.PROJECT_IDS);
+        const projectIdsInput = (0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.PROJECT_IDS);
         const projectIds = (0, input_values_policy_1.parseDelimitedValues)(projectIdsInput);
-        const projects = await (0, project_details_loader_1.loadProjectDetails)(projectRepository, projectIds, token);
-        const projectColumnIssueCreated = getInput(constants_1.INPUT_KEYS.PROJECT_COLUMN_ISSUE_CREATED);
-        const projectColumnPullRequestCreated = getInput(constants_1.INPUT_KEYS.PROJECT_COLUMN_PULL_REQUEST_CREATED);
-        const projectColumnIssueInProgress = getInput(constants_1.INPUT_KEYS.PROJECT_COLUMN_ISSUE_IN_PROGRESS);
-        const projectColumnPullRequestInProgress = getInput(constants_1.INPUT_KEYS.PROJECT_COLUMN_PULL_REQUEST_IN_PROGRESS);
+        const projects = await (0, project_details_loader_1.loadProjectDetails)(projectBoard.query, projectIds, token);
+        const projectInputs = (0, github_action_project_inputs_1.readGithubActionProjectInputs)(github_action_input_1.getGithubActionInput, projects);
         /**
          * Images
          */
-        const imageConfiguration = (0, image_configuration_builder_1.buildImageConfiguration)(getInput);
-        /**
-         * Workflows
-         */
-        const releaseWorkflow = getInput(constants_1.INPUT_KEYS.RELEASE_WORKFLOW);
-        const hotfixWorkflow = getInput(constants_1.INPUT_KEYS.HOTFIX_WORKFLOW);
+        const imageConfiguration = (0, github_action_image_inputs_1.readGithubActionImageInputs)(github_action_input_1.getGithubActionInput);
+        const workflowInputs = (0, github_action_workflow_inputs_1.readGithubActionWorkflowInputs)(github_action_input_1.getGithubActionInput);
         /**
          * Emoji-title
          */
-        const titleEmoji = getInput(constants_1.INPUT_KEYS.EMOJI_LABELED_TITLE) === 'true';
-        const branchManagementEmoji = getInput(constants_1.INPUT_KEYS.BRANCH_MANAGEMENT_EMOJI);
-        /**
-         * Labels
-         */
-        const branchManagementLauncherLabel = getInput(constants_1.INPUT_KEYS.BRANCH_MANAGEMENT_LAUNCHER_LABEL);
-        const bugfixLabel = getInput(constants_1.INPUT_KEYS.BUGFIX_LABEL);
-        const bugLabel = getInput(constants_1.INPUT_KEYS.BUG_LABEL);
-        const hotfixLabel = getInput(constants_1.INPUT_KEYS.HOTFIX_LABEL);
-        const enhancementLabel = getInput(constants_1.INPUT_KEYS.ENHANCEMENT_LABEL);
-        const featureLabel = getInput(constants_1.INPUT_KEYS.FEATURE_LABEL);
-        const releaseLabel = getInput(constants_1.INPUT_KEYS.RELEASE_LABEL);
-        const questionLabel = getInput(constants_1.INPUT_KEYS.QUESTION_LABEL);
-        const helpLabel = getInput(constants_1.INPUT_KEYS.HELP_LABEL);
-        const deployLabel = getInput(constants_1.INPUT_KEYS.DEPLOY_LABEL);
-        const deployedLabel = getInput(constants_1.INPUT_KEYS.DEPLOYED_LABEL);
-        const docsLabel = getInput(constants_1.INPUT_KEYS.DOCS_LABEL);
-        const documentationLabel = getInput(constants_1.INPUT_KEYS.DOCUMENTATION_LABEL);
-        const choreLabel = getInput(constants_1.INPUT_KEYS.CHORE_LABEL);
-        const maintenanceLabel = getInput(constants_1.INPUT_KEYS.MAINTENANCE_LABEL);
-        const priorityHighLabel = getInput(constants_1.INPUT_KEYS.PRIORITY_HIGH_LABEL);
-        const priorityMediumLabel = getInput(constants_1.INPUT_KEYS.PRIORITY_MEDIUM_LABEL);
-        const priorityLowLabel = getInput(constants_1.INPUT_KEYS.PRIORITY_LOW_LABEL);
-        const priorityNoneLabel = getInput(constants_1.INPUT_KEYS.PRIORITY_NONE_LABEL);
-        const sizeXxlLabel = getInput(constants_1.INPUT_KEYS.SIZE_XXL_LABEL);
-        const sizeXlLabel = getInput(constants_1.INPUT_KEYS.SIZE_XL_LABEL);
-        const sizeLLabel = getInput(constants_1.INPUT_KEYS.SIZE_L_LABEL);
-        const sizeMLabel = getInput(constants_1.INPUT_KEYS.SIZE_M_LABEL);
-        const sizeSLabel = getInput(constants_1.INPUT_KEYS.SIZE_S_LABEL);
-        const sizeXsLabel = getInput(constants_1.INPUT_KEYS.SIZE_XS_LABEL);
-        /**
-         * Issue Types
-         */
-        const issueTypeBug = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_BUG);
-        const issueTypeBugDescription = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_BUG_DESCRIPTION);
-        const issueTypeBugColor = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_BUG_COLOR);
-        const issueTypeHotfix = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_HOTFIX);
-        const issueTypeHotfixDescription = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_HOTFIX_DESCRIPTION);
-        const issueTypeHotfixColor = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_HOTFIX_COLOR);
-        const issueTypeFeature = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_FEATURE);
-        const issueTypeFeatureDescription = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_FEATURE_DESCRIPTION);
-        const issueTypeFeatureColor = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_FEATURE_COLOR);
-        const issueTypeDocumentation = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_DOCUMENTATION);
-        const issueTypeDocumentationDescription = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_DOCUMENTATION_DESCRIPTION);
-        const issueTypeDocumentationColor = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_DOCUMENTATION_COLOR);
-        const issueTypeMaintenance = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_MAINTENANCE);
-        const issueTypeMaintenanceDescription = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_MAINTENANCE_DESCRIPTION);
-        const issueTypeMaintenanceColor = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_MAINTENANCE_COLOR);
-        const issueTypeRelease = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_RELEASE);
-        const issueTypeReleaseDescription = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_RELEASE_DESCRIPTION);
-        const issueTypeReleaseColor = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_RELEASE_COLOR);
-        const issueTypeQuestion = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_QUESTION);
-        const issueTypeQuestionDescription = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_QUESTION_DESCRIPTION);
-        const issueTypeQuestionColor = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_QUESTION_COLOR);
-        const issueTypeHelp = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_HELP);
-        const issueTypeHelpDescription = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_HELP_DESCRIPTION);
-        const issueTypeHelpColor = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_HELP_COLOR);
-        const issueTypeTask = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_TASK);
-        const issueTypeTaskDescription = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_TASK_DESCRIPTION);
-        const issueTypeTaskColor = getInput(constants_1.INPUT_KEYS.ISSUE_TYPE_TASK_COLOR);
-        /**
-         * Locale
-         */
-        const issueLocale = getInput(constants_1.INPUT_KEYS.ISSUES_LOCALE) ?? locale_1.Locale.DEFAULT;
-        const pullRequestLocale = getInput(constants_1.INPUT_KEYS.PULL_REQUESTS_LOCALE) ?? locale_1.Locale.DEFAULT;
-        /**
-         * Size Thresholds
-         */
-        const sizeXxlThresholdLines = (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XXL_THRESHOLD_LINES), 1000);
-        const sizeXxlThresholdFiles = (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XXL_THRESHOLD_FILES), 20);
-        const sizeXxlThresholdCommits = (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XXL_THRESHOLD_COMMITS), 10);
-        const sizeXlThresholdLines = (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XL_THRESHOLD_LINES), 500);
-        const sizeXlThresholdFiles = (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XL_THRESHOLD_FILES), 10);
-        const sizeXlThresholdCommits = (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XL_THRESHOLD_COMMITS), 5);
-        const sizeLThresholdLines = (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_L_THRESHOLD_LINES), 250);
-        const sizeLThresholdFiles = (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_L_THRESHOLD_FILES), 5);
-        const sizeLThresholdCommits = (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_L_THRESHOLD_COMMITS), 3);
-        const sizeMThresholdLines = (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_M_THRESHOLD_LINES), 100);
-        const sizeMThresholdFiles = (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_M_THRESHOLD_FILES), 3);
-        const sizeMThresholdCommits = (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_M_THRESHOLD_COMMITS), 2);
-        const sizeSThresholdLines = (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_S_THRESHOLD_LINES), 50);
-        const sizeSThresholdFiles = (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_S_THRESHOLD_FILES), 2);
-        const sizeSThresholdCommits = (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_S_THRESHOLD_COMMITS), 1);
-        const sizeXsThresholdLines = (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XS_THRESHOLD_LINES), 25);
-        const sizeXsThresholdFiles = (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XS_THRESHOLD_FILES), 1);
-        const sizeXsThresholdCommits = (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XS_THRESHOLD_COMMITS), 1);
-        /**
-         * Branches
-         */
-        const mainBranch = getInput(constants_1.INPUT_KEYS.MAIN_BRANCH);
-        const developmentBranch = getInput(constants_1.INPUT_KEYS.DEVELOPMENT_BRANCH);
-        const featureTree = getInput(constants_1.INPUT_KEYS.FEATURE_TREE);
-        const bugfixTree = getInput(constants_1.INPUT_KEYS.BUGFIX_TREE);
-        const hotfixTree = getInput(constants_1.INPUT_KEYS.HOTFIX_TREE);
-        const releaseTree = getInput(constants_1.INPUT_KEYS.RELEASE_TREE);
-        const docsTree = getInput(constants_1.INPUT_KEYS.DOCS_TREE);
-        const choreTree = getInput(constants_1.INPUT_KEYS.CHORE_TREE);
+        const titleEmoji = (0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.EMOJI_LABELED_TITLE) === 'true';
+        const branchManagementEmoji = (0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.BRANCH_MANAGEMENT_EMOJI);
+        const labelInputs = (0, github_action_label_inputs_1.readGithubActionLabelInputs)(github_action_input_1.getGithubActionInput);
+        const issueTypeInputs = (0, github_action_issue_type_inputs_1.readGithubActionIssueTypeInputs)(github_action_input_1.getGithubActionInput);
+        const localeInputs = (0, github_action_locale_inputs_1.readGithubActionLocaleInputs)(github_action_input_1.getGithubActionInput);
+        const sizeThresholdInputs = (0, github_action_threshold_inputs_1.readGithubActionThresholdInputs)(github_action_input_1.getGithubActionInput);
+        const branchInputs = (0, github_action_branch_inputs_1.readGithubActionBranchInputs)(github_action_input_1.getGithubActionInput);
         /**
          * Prefix builder
          */
-        let commitPrefixBuilder = getInput(constants_1.INPUT_KEYS.COMMIT_PREFIX_TRANSFORMS) ?? '';
+        let commitPrefixBuilder = (0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.COMMIT_PREFIX_TRANSFORMS) ?? '';
         if (commitPrefixBuilder.length === 0) {
             commitPrefixBuilder = 'replace-slash';
         }
         /**
          * Issue
          */
-        const branchManagementAlways = (0, input_boolean_policy_1.isEnabledInput)(getInput(constants_1.INPUT_KEYS.BRANCH_MANAGEMENT_ALWAYS));
-        const reopenIssueOnPush = (0, input_boolean_policy_1.isEnabledInput)(getInput(constants_1.INPUT_KEYS.REOPEN_ISSUE_ON_PUSH));
-        const issueDesiredAssigneesCount = (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.DESIRED_ASSIGNEES_COUNT), 0);
+        const branchManagementAlways = (0, input_boolean_policy_1.isEnabledInput)((0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.BRANCH_MANAGEMENT_ALWAYS));
+        const reopenIssueOnPush = (0, input_boolean_policy_1.isEnabledInput)((0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.REOPEN_ISSUE_ON_PUSH));
+        const issueDesiredAssigneesCount = (0, input_number_policy_1.parseIntegerInput)((0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.DESIRED_ASSIGNEES_COUNT), 0);
         /**
          * Pull Request
          */
-        const pullRequestDesiredAssigneesCount = (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.PULL_REQUEST_DESIRED_ASSIGNEES_COUNT), 0);
-        const pullRequestDesiredReviewersCount = (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.PULL_REQUEST_DESIRED_REVIEWERS_COUNT), 0);
-        const pullRequestMergeTimeout = (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.PULL_REQUEST_MERGE_TIMEOUT), 0);
+        const pullRequestDesiredAssigneesCount = (0, input_number_policy_1.parseIntegerInput)((0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.PULL_REQUEST_DESIRED_ASSIGNEES_COUNT), 0);
+        const pullRequestDesiredReviewersCount = (0, input_number_policy_1.parseIntegerInput)((0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.PULL_REQUEST_DESIRED_REVIEWERS_COUNT), 0);
+        const pullRequestMergeTimeout = (0, input_number_policy_1.parseIntegerInput)((0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.PULL_REQUEST_MERGE_TIMEOUT), 0);
         const execution = (0, execution_builder_1.buildExecution)({
             debug,
             singleAction: new single_action_1.SingleAction(singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog),
@@ -48650,101 +48473,27 @@ async function runGitHubAction() {
             }),
             tokens: (0, configuration_builders_1.buildTokens)(token),
             ai: new ai_1.Ai(opencodeServerUrl, opencodeModel, aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, agentTasks),
-            labels: (0, configuration_builders_1.buildLabels)({
-                branching: { launcher: branchManagementLauncherLabel },
-                workflow: { bug: bugLabel, bugfix: bugfixLabel, hotfix: hotfixLabel, enhancement: enhancementLabel, feature: featureLabel, release: releaseLabel, question: questionLabel, help: helpLabel, deploy: deployLabel, deployed: deployedLabel, docs: docsLabel, documentation: documentationLabel, chore: choreLabel, maintenance: maintenanceLabel },
-                priorities: { high: priorityHighLabel, medium: priorityMediumLabel, low: priorityLowLabel, none: priorityNoneLabel },
-                sizes: { xxl: sizeXxlLabel, xl: sizeXlLabel, l: sizeLLabel, m: sizeMLabel, s: sizeSLabel, xs: sizeXsLabel },
-            }),
-            issueTypes: (0, configuration_builders_1.buildIssueTypes)({
-                task: { name: issueTypeTask, description: issueTypeTaskDescription, color: issueTypeTaskColor },
-                bug: { name: issueTypeBug, description: issueTypeBugDescription, color: issueTypeBugColor },
-                feature: { name: issueTypeFeature, description: issueTypeFeatureDescription, color: issueTypeFeatureColor },
-                documentation: { name: issueTypeDocumentation, description: issueTypeDocumentationDescription, color: issueTypeDocumentationColor },
-                maintenance: { name: issueTypeMaintenance, description: issueTypeMaintenanceDescription, color: issueTypeMaintenanceColor },
-                hotfix: { name: issueTypeHotfix, description: issueTypeHotfixDescription, color: issueTypeHotfixColor },
-                release: { name: issueTypeRelease, description: issueTypeReleaseDescription, color: issueTypeReleaseColor },
-                question: { name: issueTypeQuestion, description: issueTypeQuestionDescription, color: issueTypeQuestionColor },
-                help: { name: issueTypeHelp, description: issueTypeHelpDescription, color: issueTypeHelpColor },
-            }),
-            locale: (0, configuration_builders_1.buildLocale)(issueLocale, pullRequestLocale),
-            sizeThresholds: (0, size_threshold_builder_1.buildSizeThresholds)({
-                xxl: { lines: sizeXxlThresholdLines, files: sizeXxlThresholdFiles, commits: sizeXxlThresholdCommits },
-                xl: { lines: sizeXlThresholdLines, files: sizeXlThresholdFiles, commits: sizeXlThresholdCommits },
-                l: { lines: sizeLThresholdLines, files: sizeLThresholdFiles, commits: sizeLThresholdCommits },
-                m: { lines: sizeMThresholdLines, files: sizeMThresholdFiles, commits: sizeMThresholdCommits },
-                s: { lines: sizeSThresholdLines, files: sizeSThresholdFiles, commits: sizeSThresholdCommits },
-                xs: { lines: sizeXsThresholdLines, files: sizeXsThresholdFiles, commits: sizeXsThresholdCommits },
-            }),
-            branches: (0, branches_builder_1.buildBranches)({
-                main: mainBranch,
-                defaultBranch: mainBranch,
-                development: developmentBranch,
-                featureTree,
-                bugfixTree,
-                hotfixTree,
-                releaseTree,
-                docsTree,
-                choreTree,
-            }),
+            labels: (0, configuration_builders_1.buildLabels)(labelInputs),
+            issueTypes: (0, configuration_builders_1.buildIssueTypes)(issueTypeInputs),
+            locale: (0, configuration_builders_1.buildLocale)(localeInputs.issue, localeInputs.pullRequest),
+            sizeThresholds: (0, size_threshold_builder_1.buildSizeThresholds)(sizeThresholdInputs),
+            branches: (0, branches_builder_1.buildBranches)(branchInputs),
             release: new release_1.Release(),
             hotfix: new hotfix_1.Hotfix(),
-            workflows: (0, configuration_builders_1.buildWorkflows)(releaseWorkflow, hotfixWorkflow),
-            projects: (0, configuration_builders_1.buildProjects)({
-                projects,
-                issueCreated: projectColumnIssueCreated,
-                pullRequestCreated: projectColumnPullRequestCreated,
-                issueInProgress: projectColumnIssueInProgress,
-                pullRequestInProgress: projectColumnPullRequestInProgress,
-            }),
+            workflows: (0, configuration_builders_1.buildWorkflows)(workflowInputs.release, workflowInputs.hotfix),
+            projects: (0, configuration_builders_1.buildProjects)(projectInputs),
             inputs: eventInputs,
         });
         (0, logger_1.logDebugInfo)(`Execution built. Event will be resolved in mainRun. Single action: ${execution.singleAction.currentSingleAction ?? 'none'}, AI PR description: ${execution.ai.getAiPullRequestDescription()}, bugbot min severity: ${execution.ai.getBugbotMinSeverity()}.`);
-        const results = await (0, common_action_1.mainRun)(execution, projectRepository, repositoryFactory.createBranchRepository());
-        await finishWithResults(execution, results, repositoryFactory.createIssueRepository());
+        const results = await (0, common_action_1.mainRun)(execution, projectBoard.command, new git_cli_repository_1.GitCliRepository());
+        const issueContentPort = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
+        await (0, github_action_completion_1.finishGithubAction)(execution, results, (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), new configuration_handler_1.ConfigurationHandler(issueContentPort));
     }
     finally {
         if (managedOpencodeServer) {
             (0, logger_1.logInfo)('Stopping OpenCode server...');
             await managedOpencodeServer.stop();
             (0, logger_1.logInfo)('OpenCode server stopped.');
-        }
-    }
-}
-async function finishWithResults(execution, results, issueRepository) {
-    const stepCount = results.reduce((acc, r) => acc + (r.steps?.length ?? 0), 0);
-    const errorCount = results.reduce((acc, r) => acc + (r.errors?.length ?? 0), 0);
-    (0, logger_1.logInfo)(`Publishing result: ${results.length} result(s), ${stepCount} step(s), ${errorCount} error(s).`);
-    execution.currentConfiguration.results = results;
-    await new publish_resume_use_case_1.PublishResultUseCase(issueRepository).invoke(execution);
-    await new store_configuration_use_case_1.StoreConfigurationUseCase(new configuration_handler_1.ConfigurationHandler(issueRepository)).invoke(execution);
-    (0, logger_1.logInfo)('Configuration stored. Finishing.');
-    /**
-     * If a single action is executed and the last step failed, throw an error
-     */
-    if (execution.isSingleAction && execution.singleAction.throwError) {
-        setFirstErrorIfExists(results);
-    }
-}
-function getInput(key, options) {
-    try {
-        const inputVarsJson = process.env.INPUT_VARS_JSON;
-        const value = (0, action_input_source_1.resolveJsonInput)(inputVarsJson, key);
-        if (value !== undefined) {
-            return value;
-        }
-    }
-    catch (error) {
-        (0, logger_1.logError)(`Error parsing INPUT_VARS_JSON: ${JSON.stringify(error, null, 2)}`);
-    }
-    // Fallback to core.getInput
-    return core.getInput(key, options);
-}
-function setFirstErrorIfExists(results) {
-    for (const result of results) {
-        if (result.errors && result.errors.length > 0) {
-            core.setFailed(result.errors[0]);
-            return;
         }
     }
 }
@@ -48757,6 +48506,386 @@ if (typeof process.env.JEST_WORKER_ID === 'undefined') {
         core.setFailed(err instanceof Error ? err.message : String(err));
         process.exit(1);
     });
+}
+
+
+/***/ }),
+
+/***/ 7640:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readGithubActionAgentTasks = readGithubActionAgentTasks;
+exports.readGithubActionAiInputs = readGithubActionAiInputs;
+const constants_1 = __nccwpck_require__(5415);
+const input_boolean_policy_1 = __nccwpck_require__(8330);
+const input_number_policy_1 = __nccwpck_require__(7165);
+const input_values_policy_1 = __nccwpck_require__(8841);
+const agent_input_builder_1 = __nccwpck_require__(1404);
+function readGithubActionAgentTasks(getInput, serverUrl) {
+    return (0, agent_input_builder_1.buildAgentTasksFromInputs)((key) => key === constants_1.INPUT_KEYS.OPENCODE_SERVER_URL ? serverUrl : getInput(key));
+}
+function readGithubActionAiInputs(getInput) {
+    const serverUrl = getInput(constants_1.INPUT_KEYS.OPENCODE_SERVER_URL) || 'http://127.0.0.1:4096';
+    const requestedAgentTasks = (0, agent_input_builder_1.buildAgentTasksFromInputs)(getInput);
+    const startServer = (0, input_boolean_policy_1.isEnabledInput)(getInput(constants_1.INPUT_KEYS.OPENCODE_START_SERVER))
+        && requestedAgentTasks.findings.provider === 'opencode'
+        && requestedAgentTasks.findings.transport === 'server';
+    const verifyCommands = getInput(constants_1.INPUT_KEYS.BUGBOT_FIX_VERIFY_COMMANDS)
+        .split(',')
+        .map((command) => command.trim())
+        .filter((command) => command.length > 0);
+    return {
+        serverUrl,
+        requestedAgentTasks,
+        startServer,
+        pullRequestDescription: (0, input_boolean_policy_1.isEnabledInput)(getInput(constants_1.INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION)),
+        membersOnly: (0, input_boolean_policy_1.isEnabledInput)(getInput(constants_1.INPUT_KEYS.AI_MEMBERS_ONLY)),
+        includeReasoning: (0, input_boolean_policy_1.isEnabledInput)(getInput(constants_1.INPUT_KEYS.AI_INCLUDE_REASONING)),
+        ignoreFiles: (0, input_values_policy_1.parseDelimitedValues)(getInput(constants_1.INPUT_KEYS.AI_IGNORE_FILES)),
+        bugbotSeverity: getInput(constants_1.INPUT_KEYS.BUGBOT_SEVERITY) || constants_1.BUGBOT_MIN_SEVERITY,
+        bugbotCommentLimit: (0, input_number_policy_1.parseBoundedPositiveIntegerInput)(getInput(constants_1.INPUT_KEYS.BUGBOT_COMMENT_LIMIT), constants_1.BUGBOT_MAX_COMMENTS, 200),
+        bugbotFixVerifyCommands: verifyCommands,
+    };
+}
+
+
+/***/ }),
+
+/***/ 7167:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readGithubActionBranchInputs = readGithubActionBranchInputs;
+const constants_1 = __nccwpck_require__(5415);
+function readGithubActionBranchInputs(getInput) {
+    const main = getInput(constants_1.INPUT_KEYS.MAIN_BRANCH);
+    return {
+        main,
+        defaultBranch: main,
+        development: getInput(constants_1.INPUT_KEYS.DEVELOPMENT_BRANCH),
+        featureTree: getInput(constants_1.INPUT_KEYS.FEATURE_TREE),
+        bugfixTree: getInput(constants_1.INPUT_KEYS.BUGFIX_TREE),
+        hotfixTree: getInput(constants_1.INPUT_KEYS.HOTFIX_TREE),
+        releaseTree: getInput(constants_1.INPUT_KEYS.RELEASE_TREE),
+        docsTree: getInput(constants_1.INPUT_KEYS.DOCS_TREE),
+        choreTree: getInput(constants_1.INPUT_KEYS.CHORE_TREE),
+    };
+}
+
+
+/***/ }),
+
+/***/ 4140:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.finishGithubAction = finishGithubAction;
+const core = __importStar(__nccwpck_require__(1078));
+const publish_resume_use_case_1 = __nccwpck_require__(8684);
+const store_configuration_use_case_1 = __nccwpck_require__(4375);
+const logger_1 = __nccwpck_require__(1151);
+async function finishGithubAction(execution, results, issueNotificationPort, configurationStorePort) {
+    const stepCount = results.reduce((acc, result) => acc + (result.steps?.length ?? 0), 0);
+    const errorCount = results.reduce((acc, result) => acc + (result.errors?.length ?? 0), 0);
+    (0, logger_1.logInfo)(`Publishing result: ${results.length} result(s), ${stepCount} step(s), ${errorCount} error(s).`);
+    execution.currentConfiguration.results = results;
+    await new publish_resume_use_case_1.PublishResultUseCase(issueNotificationPort).invoke(execution);
+    await new store_configuration_use_case_1.StoreConfigurationUseCase(configurationStorePort).invoke(execution);
+    (0, logger_1.logInfo)('Configuration stored. Finishing.');
+    if (execution.isSingleAction && execution.singleAction.throwError) {
+        setFirstErrorIfExists(results);
+    }
+}
+function setFirstErrorIfExists(results) {
+    for (const result of results) {
+        if (result.errors && result.errors.length > 0) {
+            core.setFailed(result.errors[0]);
+            return;
+        }
+    }
+}
+
+
+/***/ }),
+
+/***/ 5380:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readGithubActionImageInputs = readGithubActionImageInputs;
+const image_configuration_builder_1 = __nccwpck_require__(9246);
+function readGithubActionImageInputs(getInput) {
+    return (0, image_configuration_builder_1.buildImageConfiguration)(getInput);
+}
+
+
+/***/ }),
+
+/***/ 8824:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getGithubActionInput = getGithubActionInput;
+const core = __importStar(__nccwpck_require__(1078));
+const action_input_source_1 = __nccwpck_require__(8143);
+const logger_1 = __nccwpck_require__(1151);
+function getGithubActionInput(key, options) {
+    try {
+        const inputVarsJson = process.env.INPUT_VARS_JSON;
+        const value = (0, action_input_source_1.resolveJsonInput)(inputVarsJson, key);
+        if (value !== undefined) {
+            return value;
+        }
+    }
+    catch (error) {
+        (0, logger_1.logError)(`Error parsing INPUT_VARS_JSON: ${JSON.stringify(error, null, 2)}`);
+    }
+    return core.getInput(key, options);
+}
+
+
+/***/ }),
+
+/***/ 7939:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readGithubActionIssueTypeInputs = readGithubActionIssueTypeInputs;
+const constants_1 = __nccwpck_require__(5415);
+function readIssueType(getInput, name, description, color) {
+    return { name: getInput(name), description: getInput(description), color: getInput(color) };
+}
+function readGithubActionIssueTypeInputs(getInput) {
+    return {
+        task: readIssueType(getInput, constants_1.INPUT_KEYS.ISSUE_TYPE_TASK, constants_1.INPUT_KEYS.ISSUE_TYPE_TASK_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_TASK_COLOR),
+        bug: readIssueType(getInput, constants_1.INPUT_KEYS.ISSUE_TYPE_BUG, constants_1.INPUT_KEYS.ISSUE_TYPE_BUG_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_BUG_COLOR),
+        feature: readIssueType(getInput, constants_1.INPUT_KEYS.ISSUE_TYPE_FEATURE, constants_1.INPUT_KEYS.ISSUE_TYPE_FEATURE_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_FEATURE_COLOR),
+        documentation: readIssueType(getInput, constants_1.INPUT_KEYS.ISSUE_TYPE_DOCUMENTATION, constants_1.INPUT_KEYS.ISSUE_TYPE_DOCUMENTATION_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_DOCUMENTATION_COLOR),
+        maintenance: readIssueType(getInput, constants_1.INPUT_KEYS.ISSUE_TYPE_MAINTENANCE, constants_1.INPUT_KEYS.ISSUE_TYPE_MAINTENANCE_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_MAINTENANCE_COLOR),
+        hotfix: readIssueType(getInput, constants_1.INPUT_KEYS.ISSUE_TYPE_HOTFIX, constants_1.INPUT_KEYS.ISSUE_TYPE_HOTFIX_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_HOTFIX_COLOR),
+        release: readIssueType(getInput, constants_1.INPUT_KEYS.ISSUE_TYPE_RELEASE, constants_1.INPUT_KEYS.ISSUE_TYPE_RELEASE_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_RELEASE_COLOR),
+        question: readIssueType(getInput, constants_1.INPUT_KEYS.ISSUE_TYPE_QUESTION, constants_1.INPUT_KEYS.ISSUE_TYPE_QUESTION_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_QUESTION_COLOR),
+        help: readIssueType(getInput, constants_1.INPUT_KEYS.ISSUE_TYPE_HELP, constants_1.INPUT_KEYS.ISSUE_TYPE_HELP_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_HELP_COLOR),
+    };
+}
+
+
+/***/ }),
+
+/***/ 5013:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readGithubActionLabelInputs = readGithubActionLabelInputs;
+const constants_1 = __nccwpck_require__(5415);
+function readGithubActionLabelInputs(getInput) {
+    return {
+        branching: { launcher: getInput(constants_1.INPUT_KEYS.BRANCH_MANAGEMENT_LAUNCHER_LABEL) },
+        workflow: {
+            bug: getInput(constants_1.INPUT_KEYS.BUG_LABEL), bugfix: getInput(constants_1.INPUT_KEYS.BUGFIX_LABEL),
+            hotfix: getInput(constants_1.INPUT_KEYS.HOTFIX_LABEL), enhancement: getInput(constants_1.INPUT_KEYS.ENHANCEMENT_LABEL),
+            feature: getInput(constants_1.INPUT_KEYS.FEATURE_LABEL), release: getInput(constants_1.INPUT_KEYS.RELEASE_LABEL),
+            question: getInput(constants_1.INPUT_KEYS.QUESTION_LABEL), help: getInput(constants_1.INPUT_KEYS.HELP_LABEL),
+            deploy: getInput(constants_1.INPUT_KEYS.DEPLOY_LABEL), deployed: getInput(constants_1.INPUT_KEYS.DEPLOYED_LABEL),
+            docs: getInput(constants_1.INPUT_KEYS.DOCS_LABEL), documentation: getInput(constants_1.INPUT_KEYS.DOCUMENTATION_LABEL),
+            chore: getInput(constants_1.INPUT_KEYS.CHORE_LABEL), maintenance: getInput(constants_1.INPUT_KEYS.MAINTENANCE_LABEL),
+        },
+        priorities: {
+            high: getInput(constants_1.INPUT_KEYS.PRIORITY_HIGH_LABEL), medium: getInput(constants_1.INPUT_KEYS.PRIORITY_MEDIUM_LABEL),
+            low: getInput(constants_1.INPUT_KEYS.PRIORITY_LOW_LABEL), none: getInput(constants_1.INPUT_KEYS.PRIORITY_NONE_LABEL),
+        },
+        sizes: {
+            xxl: getInput(constants_1.INPUT_KEYS.SIZE_XXL_LABEL), xl: getInput(constants_1.INPUT_KEYS.SIZE_XL_LABEL),
+            l: getInput(constants_1.INPUT_KEYS.SIZE_L_LABEL), m: getInput(constants_1.INPUT_KEYS.SIZE_M_LABEL),
+            s: getInput(constants_1.INPUT_KEYS.SIZE_S_LABEL), xs: getInput(constants_1.INPUT_KEYS.SIZE_XS_LABEL),
+        },
+    };
+}
+
+
+/***/ }),
+
+/***/ 8893:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readGithubActionLocaleInputs = readGithubActionLocaleInputs;
+const locale_1 = __nccwpck_require__(9832);
+const constants_1 = __nccwpck_require__(5415);
+function readGithubActionLocaleInputs(getInput) {
+    return {
+        issue: getInput(constants_1.INPUT_KEYS.ISSUES_LOCALE) || locale_1.Locale.DEFAULT,
+        pullRequest: getInput(constants_1.INPUT_KEYS.PULL_REQUESTS_LOCALE) || locale_1.Locale.DEFAULT,
+    };
+}
+
+
+/***/ }),
+
+/***/ 1293:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readGithubActionProjectInputs = readGithubActionProjectInputs;
+const constants_1 = __nccwpck_require__(5415);
+function readGithubActionProjectInputs(getInput, projects) {
+    return {
+        projects,
+        issueCreated: getInput(constants_1.INPUT_KEYS.PROJECT_COLUMN_ISSUE_CREATED),
+        pullRequestCreated: getInput(constants_1.INPUT_KEYS.PROJECT_COLUMN_PULL_REQUEST_CREATED),
+        issueInProgress: getInput(constants_1.INPUT_KEYS.PROJECT_COLUMN_ISSUE_IN_PROGRESS),
+        pullRequestInProgress: getInput(constants_1.INPUT_KEYS.PROJECT_COLUMN_PULL_REQUEST_IN_PROGRESS),
+    };
+}
+
+
+/***/ }),
+
+/***/ 8578:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readGithubActionThresholdInputs = readGithubActionThresholdInputs;
+const constants_1 = __nccwpck_require__(5415);
+const input_number_policy_1 = __nccwpck_require__(7165);
+function readGithubActionThresholdInputs(getInput) {
+    return {
+        xxl: {
+            lines: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XXL_THRESHOLD_LINES), 1000),
+            files: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XXL_THRESHOLD_FILES), 20),
+            commits: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XXL_THRESHOLD_COMMITS), 10),
+        },
+        xl: {
+            lines: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XL_THRESHOLD_LINES), 500),
+            files: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XL_THRESHOLD_FILES), 10),
+            commits: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XL_THRESHOLD_COMMITS), 5),
+        },
+        l: {
+            lines: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_L_THRESHOLD_LINES), 250),
+            files: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_L_THRESHOLD_FILES), 5),
+            commits: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_L_THRESHOLD_COMMITS), 3),
+        },
+        m: {
+            lines: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_M_THRESHOLD_LINES), 100),
+            files: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_M_THRESHOLD_FILES), 3),
+            commits: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_M_THRESHOLD_COMMITS), 2),
+        },
+        s: {
+            lines: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_S_THRESHOLD_LINES), 50),
+            files: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_S_THRESHOLD_FILES), 2),
+            commits: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_S_THRESHOLD_COMMITS), 1),
+        },
+        xs: {
+            lines: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XS_THRESHOLD_LINES), 25),
+            files: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XS_THRESHOLD_FILES), 1),
+            commits: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XS_THRESHOLD_COMMITS), 1),
+        },
+    };
+}
+
+
+/***/ }),
+
+/***/ 1543:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readGithubActionWorkflowInputs = readGithubActionWorkflowInputs;
+const constants_1 = __nccwpck_require__(5415);
+function readGithubActionWorkflowInputs(getInput) {
+    return {
+        release: getInput(constants_1.INPUT_KEYS.RELEASE_WORKFLOW),
+        hotfix: getInput(constants_1.INPUT_KEYS.HOTFIX_WORKFLOW),
+    };
 }
 
 
@@ -48878,6 +49007,42 @@ function parseDelimitedValues(value) {
 
 /***/ }),
 
+/***/ 8586:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.dispatchMainRunRoute = dispatchMainRunRoute;
+const logger_1 = __nccwpck_require__(1151);
+async function dispatchMainRunRoute(route, execution, handlers) {
+    switch (route) {
+        case 'single-action':
+            (0, logger_1.logInfo)(`Running SingleActionUseCase (action: ${execution.singleAction.currentSingleAction}).`);
+            break;
+        case 'issue-comment':
+            (0, logger_1.logInfo)(`Running IssueCommentUseCase for issue #${execution.issue.number}.`);
+            break;
+        case 'issue':
+            (0, logger_1.logInfo)(`Running IssueUseCase for issue #${execution.issueNumber}.`);
+            break;
+        case 'pull-request-review-comment':
+            (0, logger_1.logInfo)(`Running PullRequestReviewCommentUseCase for PR #${execution.pullRequest.number}.`);
+            break;
+        case 'pull-request':
+            (0, logger_1.logInfo)(`Running PullRequestUseCase for PR #${execution.pullRequest.number}.`);
+            break;
+        case 'push':
+            (0, logger_1.logDebugInfo)(`Push event. Branch: ${execution.commit?.branch ?? 'unknown'}, commits: ${execution.commit?.commits?.length ?? 0}, issue number: ${execution.issueNumber}.`);
+            (0, logger_1.logInfo)('Running CommitUseCase.');
+            break;
+    }
+    return handlers[route](execution);
+}
+
+
+/***/ }),
+
 /***/ 8466:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -48935,6 +49100,263 @@ function buildSizeThresholds(values) {
 
 /***/ }),
 
+/***/ 5603:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+/** Shared structured-response contracts used by agent-backed application flows. */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.LANGUAGE_CHECK_RESPONSE_SCHEMA = exports.THINK_RESPONSE_SCHEMA = exports.TRANSLATION_RESPONSE_SCHEMA = void 0;
+exports.TRANSLATION_RESPONSE_SCHEMA = {
+    type: 'object',
+    properties: {
+        translatedText: {
+            type: 'string',
+            description: 'The text translated to the requested locale. Required. Must not be empty.',
+        },
+        reason: {
+            type: 'string',
+            description: 'Optional: reason why translation could not be produced or was partial (e.g. ambiguous input).',
+        },
+    },
+    required: ['translatedText'],
+    additionalProperties: false,
+};
+exports.THINK_RESPONSE_SCHEMA = {
+    type: 'object',
+    properties: {
+        answer: {
+            type: 'string',
+            description: 'The concise answer to the user question. Required.',
+        },
+    },
+    required: ['answer'],
+    additionalProperties: false,
+};
+exports.LANGUAGE_CHECK_RESPONSE_SCHEMA = {
+    type: 'object',
+    properties: {
+        status: {
+            type: 'string',
+            enum: ['done', 'must_translate'],
+            description: 'done if text is in the requested locale, must_translate otherwise.',
+        },
+    },
+    required: ['status'],
+    additionalProperties: false,
+};
+
+
+/***/ }),
+
+/***/ 5712:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.OPENCODE_AGENT_BUILD = exports.OPENCODE_AGENT_PLAN = void 0;
+exports.OPENCODE_AGENT_PLAN = 'build';
+exports.OPENCODE_AGENT_BUILD = 'build';
+
+
+/***/ }),
+
+/***/ 7307:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.decideManagedBranchPreparation = decideManagedBranchPreparation;
+function decideManagedBranchPreparation(input) {
+    const targetBranchName = `${input.targetBranchType}/${input.issueNumber}-${input.formattedIssueTitle}`;
+    if (input.availableBranches.includes(targetBranchName)) {
+        return { kind: "already-exists", targetBranchName };
+    }
+    const previousBranch = findPreviousIssueBranch(input.availableBranches, input.issueNumber, input.managedBranchTypes);
+    const isRename = previousBranch !== undefined;
+    const baseBranchName = previousBranch ?? input.developmentBranch;
+    const parentBranch = isRename && input.currentParentBranch !== undefined
+        ? input.currentParentBranch
+        : baseBranchName;
+    return {
+        kind: "create",
+        targetBranchName,
+        baseBranchName,
+        isRename,
+        parentBranch,
+    };
+}
+function findPreviousIssueBranch(branches, issueNumber, branchTypes) {
+    for (const branchType of branchTypes) {
+        const prefix = `${branchType}/${issueNumber}-`;
+        const matchingBranch = branches.find((branch) => branch.startsWith(prefix));
+        if (matchingBranch !== undefined)
+            return matchingBranch;
+    }
+    return undefined;
+}
+
+
+/***/ }),
+
+/***/ 3160:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildInitialLabelProvisioningPlan = buildInitialLabelProvisioningPlan;
+const progress_labels_1 = __nccwpck_require__(7890);
+const normalizeLabelName = (name) => name.trim().toLowerCase();
+function configuredLabelDefinitions(labels) {
+    const metadata = [
+        ['branchManagementLauncherLabel', '0E8A16', 'Label to trigger branch management actions'],
+        ['bug', 'D73A4A', 'Label to indicate a bug type'],
+        ['bugfix', 'D73A4A', 'Label to manage bugfix branches'],
+        ['hotfix', 'B60205', 'Label to manage hotfix branches'],
+        ['enhancement', 'A2EEEF', 'Label to indicate an enhancement type'],
+        ['feature', '0E8A16', 'Label to manage feature branches'],
+        ['release', '1D76DB', 'Label to manage release branches'],
+        ['question', 'CC317C', 'Label to detect issues marked as questions'],
+        ['help', 'CC317C', 'Label to detect help request issues'],
+        ['deploy', '7057FF', 'Label to detect deploy actions'],
+        ['deployed', '0E8A16', 'Label to detect the deployed status'],
+        ['docs', 'C5DEF5', 'Label to manage docs branches'],
+        ['documentation', 'C5DEF5', 'Label to manage documentation branches'],
+        ['chore', '5319E7', 'Label to manage chore branches'],
+        ['maintenance', '5319E7', 'Label to manage maintenance branches'],
+        ['priorityHigh', 'B60205', 'Label to indicate a priority high'],
+        ['priorityMedium', 'FBBD0C', 'Label to indicate a priority medium'],
+        ['priorityLow', '0E8A16', 'Label to indicate a priority low'],
+        ['priorityNone', 'B4B4B4', 'Label to indicate no priority'],
+        ['sizeXxl', '8E44AD', 'Label to indicate a task of size XXL'],
+        ['sizeXl', '9B59B6', 'Label to indicate a task of size XL'],
+        ['sizeL', '3498DB', 'Label to indicate a task of size L'],
+        ['sizeM', '1ABC9C', 'Label to indicate a task of size M'],
+        ['sizeS', 'F39C12', 'Label to indicate a task of size S'],
+        ['sizeXs', 'E67E22', 'Label to indicate a task of size XS'],
+    ];
+    return metadata
+        .map(([key, color, description]) => ({ name: labels[key], color, description }))
+        .filter(definition => typeof definition.name === 'string' && definition.name.trim().length > 0);
+}
+function progressLabelDefinitions() {
+    return progress_labels_1.PROGRESS_LABEL_PERCENTS.map(percent => ({
+        name: `${percent}%`,
+        color: (0, progress_labels_1.progressPercentToColor)(percent),
+        description: `Progress: ${percent}%`,
+    }));
+}
+function buildInitialLabelProvisioningPlan(labels, existingLabelNames) {
+    const existingNames = new Set(existingLabelNames.map(normalizeLabelName));
+    const requestedNames = new Set();
+    const planGroup = (definitions) => {
+        const plan = { existing: 0, missing: [] };
+        for (const definition of definitions) {
+            const normalizedName = normalizeLabelName(definition.name);
+            if (normalizedName.length === 0 || requestedNames.has(normalizedName))
+                continue;
+            requestedNames.add(normalizedName);
+            if (existingNames.has(normalizedName)) {
+                plan.existing++;
+            }
+            else {
+                plan.missing.push(definition);
+            }
+        }
+        return plan;
+    };
+    return {
+        configured: planGroup(configuredLabelDefinitions(labels)),
+        progress: planGroup(progressLabelDefinitions()),
+    };
+}
+
+
+/***/ }),
+
+/***/ 7890:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PROGRESS_LABEL_PERCENTS = exports.PROGRESS_LABEL_PATTERN = void 0;
+exports.progressPercentToColor = progressPercentToColor;
+exports.PROGRESS_LABEL_PATTERN = /^\d+%$/;
+exports.PROGRESS_LABEL_PERCENTS = [
+    0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50,
+    55, 60, 65, 70, 75, 80, 85, 90, 95, 100,
+];
+function progressPercentToColor(percent) {
+    const p = Math.min(100, Math.max(0, percent));
+    let r, g, b;
+    if (p <= 50) {
+        const t = p / 50;
+        r = Math.round(182 + (251 - 182) * t);
+        g = Math.round(2 + (202 - 2) * t);
+        b = Math.round(5 + (4 - 5) * t);
+    }
+    else {
+        const t = (p - 50) / 50;
+        r = Math.round(251 + (14 - 251) * t);
+        g = Math.round(202 + (138 - 202) * t);
+        b = Math.round(4 + (22 - 4) * t);
+    }
+    return [r, g, b].map(value => value.toString(16).padStart(2, '0')).join('');
+}
+
+
+/***/ }),
+
+/***/ 6445:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PullRequestReviewOperationError = void 0;
+exports.toPullRequestReviewOperationError = toPullRequestReviewOperationError;
+const ERROR_MESSAGES = {
+    "list-reviewers": "Unable to list pull request reviewers.",
+    "request-reviewers": "Unable to request pull request reviewers.",
+    "assign-reviewers": "Unable to assign pull request reviewers.",
+    "list-comments": "Unable to list pull request review comments.",
+    "get-comment": "Unable to get the pull request review comment.",
+    "publish-comments": "Failed to publish pull request review comments.",
+    "update-comment": "Unable to update the pull request review comment.",
+    "resolve-thread": "Unable to resolve the pull request review thread.",
+    "mark-resolved": "Unable to mark a pull request finding as resolved.",
+};
+function buildMessage(operation, context) {
+    const baseMessage = ERROR_MESSAGES[operation];
+    if (operation !== "publish-comments" ||
+        context?.failedCount == null ||
+        context.totalCount == null) {
+        return baseMessage;
+    }
+    return `Failed to publish ${context.failedCount} of ${context.totalCount} pull request review comments.`;
+}
+class PullRequestReviewOperationError extends Error {
+    constructor(operation, context) {
+        super(buildMessage(operation, context));
+        this.name = "PullRequestReviewOperationError";
+        this.operation = operation;
+    }
+}
+exports.PullRequestReviewOperationError = PullRequestReviewOperationError;
+function toPullRequestReviewOperationError(error, operation, context) {
+    return error instanceof PullRequestReviewOperationError
+        ? error
+        : new PullRequestReviewOperationError(operation, context);
+}
+
+
+/***/ }),
+
 /***/ 1601:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -48946,7 +49368,7 @@ const agent_1 = __nccwpck_require__(9937);
 const result_1 = __nccwpck_require__(3817);
 const logger_1 = __nccwpck_require__(1151);
 const task_emoji_1 = __nccwpck_require__(6103);
-const agent_task_policy_1 = __nccwpck_require__(4504);
+const agent_task_policy_1 = __nccwpck_require__(5712);
 const prompts_1 = __nccwpck_require__(9518);
 const opencode_project_context_instruction_1 = __nccwpck_require__(2225);
 const find_issue_branch_1 = __nccwpck_require__(8575);
@@ -49539,15 +49961,15 @@ const result_1 = __nccwpck_require__(3817);
 const version_utils_1 = __nccwpck_require__(419);
 const logger_1 = __nccwpck_require__(1151);
 const task_emoji_1 = __nccwpck_require__(6103);
-const setup_files_1 = __nccwpck_require__(9126);
 class InitialSetupUseCase {
-    constructor(authenticatedUserPort, issueLabelProvisioningPort, issueProgressLabelProvisioningPort, issueTypeProvisioningPort, latestTagQueryPort, repositoryReleasePort) {
+    constructor(authenticatedUserPort, initialLabelProvisioningPort, issueTypeProvisioningPort, latestTagQueryPort, repositoryDefaultBranchPort, repositoryTagPort, setupWorkspacePort) {
         this.authenticatedUserPort = authenticatedUserPort;
-        this.issueLabelProvisioningPort = issueLabelProvisioningPort;
-        this.issueProgressLabelProvisioningPort = issueProgressLabelProvisioningPort;
+        this.initialLabelProvisioningPort = initialLabelProvisioningPort;
         this.issueTypeProvisioningPort = issueTypeProvisioningPort;
         this.latestTagQueryPort = latestTagQueryPort;
-        this.repositoryReleasePort = repositoryReleasePort;
+        this.repositoryDefaultBranchPort = repositoryDefaultBranchPort;
+        this.repositoryTagPort = repositoryTagPort;
+        this.setupWorkspacePort = setupWorkspacePort;
         this.taskId = 'InitialSetupUseCase';
     }
     async invoke(param) {
@@ -49558,10 +49980,9 @@ class InitialSetupUseCase {
         try {
             // 0. Setup files (.github/workflows, .github/ISSUE_TEMPLATE, pull_request_template.md, .env)
             (0, logger_1.logInfo)('📋 Ensuring .github and copying setup files...');
-            (0, setup_files_1.ensureGitHubDirs)(process.cwd());
-            const filesResult = (0, setup_files_1.copySetupFiles)(process.cwd());
+            const filesResult = this.setupWorkspacePort.prepare();
             steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
-            if (!(0, setup_files_1.hasValidSetupToken)(process.cwd())) {
+            if (!this.setupWorkspacePort.hasValidToken()) {
                 (0, logger_1.logInfo)('  🛑 Setup requires PERSONAL_ACCESS_TOKEN (environment or .env) with a valid token.');
                 errors.push('PERSONAL_ACCESS_TOKEN must be set (environment or .env) with a valid token to run setup.');
                 results.push(new result_1.Result({
@@ -49588,25 +50009,30 @@ class InitialSetupUseCase {
                 return results;
             }
             steps.push(`✅ GitHub access verified: ${githubAccessResult.user}`);
-            // 2. Create all required labels
-            (0, logger_1.logInfo)('🏷️  Checking labels...');
-            const labelsResult = await this.ensureLabels(param);
-            if (!labelsResult.success) {
-                errors.push(...labelsResult.errors);
-                (0, logger_1.logError)(`Error checking labels: ${labelsResult.errors}`);
+            // 2. Provision the complete initial label catalog in one semantic execution
+            (0, logger_1.logInfo)('🏷️  Checking configured and progress labels...');
+            const initialLabelsResult = await this.ensureInitialLabels(param);
+            if (!initialLabelsResult.completed) {
+                errors.push(initialLabelsResult.error);
             }
             else {
-                steps.push(`✅ Labels checked: ${labelsResult.created} created, ${labelsResult.existing} already existed`);
-            }
-            // 2b. Create progress labels (0%, 5%, ..., 100%) with red→yellow→green colors
-            (0, logger_1.logInfo)('📊 Checking progress labels...');
-            const progressLabelsResult = await this.ensureProgressLabels(param);
-            if (progressLabelsResult.errors.length > 0) {
-                errors.push(...progressLabelsResult.errors);
-                (0, logger_1.logError)(`Error checking progress labels: ${progressLabelsResult.errors}`);
-            }
-            else {
-                steps.push(`✅ Progress labels checked: ${progressLabelsResult.created} created, ${progressLabelsResult.existing} already existed`);
+                const labelsResult = initialLabelsResult.configured;
+                if (labelsResult.errors.length > 0) {
+                    errors.push(...labelsResult.errors);
+                    (0, logger_1.logError)(`Error checking labels: ${labelsResult.errors}`);
+                }
+                else {
+                    steps.push(`✅ Labels checked: ${labelsResult.created} created, ${labelsResult.existing} already existed`);
+                }
+                // Report progress labels (0%, 5%, ..., 100%) separately in the user-facing result
+                const progressLabelsResult = initialLabelsResult.progress;
+                if (progressLabelsResult.errors.length > 0) {
+                    errors.push(...progressLabelsResult.errors);
+                    (0, logger_1.logError)(`Error checking progress labels: ${progressLabelsResult.errors}`);
+                }
+                else {
+                    steps.push(`✅ Progress labels checked: ${progressLabelsResult.created} created, ${progressLabelsResult.existing} already existed`);
+                }
             }
             // 3. Create all issue types if they do not exist
             (0, logger_1.logInfo)('📋 Checking issue types...');
@@ -49658,28 +50084,15 @@ class InitialSetupUseCase {
             return { success: false, errors };
         }
     }
-    async ensureLabels(param) {
+    async ensureInitialLabels(param) {
         try {
-            const result = await this.issueLabelProvisioningPort.ensureLabels(param.owner, param.repo, param.labels, param.tokens.token);
-            return {
-                success: result.errors.length === 0,
-                created: result.created,
-                existing: result.existing,
-                errors: result.errors,
-            };
+            const summary = await this.initialLabelProvisioningPort.ensureInitialLabels(param.owner, param.repo, param.labels, param.tokens.token);
+            return { completed: true, ...summary };
         }
         catch (error) {
-            (0, logger_1.logError)(`Error ensuring labels: ${error}`);
-            return { success: false, created: 0, existing: 0, errors: [`Error ensuring labels: ${error}`] };
-        }
-    }
-    async ensureProgressLabels(param) {
-        try {
-            return await this.issueProgressLabelProvisioningPort.ensureProgressLabels(param.owner, param.repo, param.tokens.token);
-        }
-        catch (error) {
-            (0, logger_1.logError)(`Error ensuring progress labels: ${error}`);
-            return { created: 0, existing: 0, errors: [`Error ensuring progress labels: ${error}`] };
+            const message = `Error ensuring initial labels: ${error}`;
+            (0, logger_1.logError)(message);
+            return { completed: false, error: message };
         }
     }
     async ensureIssueTypes(param) {
@@ -49709,13 +50122,13 @@ class InitialSetupUseCase {
                 return {};
             }
             (0, logger_1.logInfo)(`🏷️  No version tags found. Creating default tag ${version_utils_1.DEFAULT_INITIAL_TAG}...`);
-            const defaultBranch = await this.repositoryReleasePort.getDefaultBranch(param.owner, param.repo, param.tokens.token);
+            const defaultBranch = await this.repositoryDefaultBranchPort.getDefaultBranch(param.owner, param.repo, param.tokens.token);
             if (!defaultBranch) {
                 const msg = 'Could not get default branch to create initial version tag.';
                 (0, logger_1.logError)(msg);
                 return { error: msg };
             }
-            const sha = await this.repositoryReleasePort.createTag(param.owner, param.repo, defaultBranch, version_utils_1.DEFAULT_INITIAL_TAG, param.tokens.token);
+            const sha = await this.repositoryTagPort.createTag(param.owner, param.repo, defaultBranch, version_utils_1.DEFAULT_INITIAL_TAG, param.tokens.token);
             if (sha) {
                 const step = `✅ Default version tag ${version_utils_1.DEFAULT_INITIAL_TAG} created on branch ${defaultBranch}. Run \`git fetch --tags\` to update local refs.`;
                 return { step };
@@ -49836,7 +50249,8 @@ const constants_1 = __nccwpck_require__(5415);
 const logger_1 = __nccwpck_require__(1151);
 const task_emoji_1 = __nccwpck_require__(6103);
 class PublishGithubActionUseCase {
-    constructor(repositoryReleasePort) {
+    constructor(repositoryTagPort, repositoryReleasePort) {
+        this.repositoryTagPort = repositoryTagPort;
         this.repositoryReleasePort = repositoryReleasePort;
         this.taskId = 'PublishGithubActionUseCase';
     }
@@ -49858,7 +50272,7 @@ class PublishGithubActionUseCase {
         const sourceTag = `v${param.singleAction.version}`;
         const targetTag = sourceTag.split('.')[0];
         try {
-            await this.repositoryReleasePort.updateTag(param.owner, param.repo, sourceTag, targetTag, param.tokens.token);
+            await this.repositoryTagPort.updateTag(param.owner, param.repo, sourceTag, targetTag, param.tokens.token);
             const releaseId = await this.repositoryReleasePort.updateRelease(param.owner, param.repo, sourceTag, targetTag, param.tokens.token);
             if (releaseId) {
                 (0, logger_1.logInfo)(`Updated release \`${targetTag}\` from \`${sourceTag}\`: ${releaseId}`);
@@ -49909,7 +50323,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RecommendStepsUseCase = void 0;
 const agent_1 = __nccwpck_require__(9937);
 const result_1 = __nccwpck_require__(3817);
-const agent_task_policy_1 = __nccwpck_require__(4504);
+const agent_task_policy_1 = __nccwpck_require__(5712);
 const prompts_1 = __nccwpck_require__(9518);
 const logger_1 = __nccwpck_require__(1151);
 const opencode_project_context_instruction_1 = __nccwpck_require__(2225);
@@ -50001,7 +50415,7 @@ exports.RecommendStepsUseCase = RecommendStepsUseCase;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.syncProgressLabelsToOpenPullRequests = syncProgressLabelsToOpenPullRequests;
-const progress_labels_1 = __nccwpck_require__(7172);
+const progress_labels_1 = __nccwpck_require__(7890);
 const logger_1 = __nccwpck_require__(1151);
 async function syncProgressLabelsToOpenPullRequests(owner, repo, branch, progress, token, issueRepository, pullRequestRepository) {
     const roundedProgress = Math.min(100, Math.max(0, Math.round(progress / 5) * 5));
@@ -50021,6 +50435,27 @@ async function syncProgressLabelsToOpenPullRequests(owner, repo, branch, progres
 
 /***/ }),
 
+/***/ 7058:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.resolveCommentAutomationRoute = resolveCommentAutomationRoute;
+const bugbot_fix_intent_payload_1 = __nccwpck_require__(5734);
+function resolveCommentAutomationRoute(payload, allowedToModifyFiles) {
+    if (!allowedToModifyFiles)
+        return 'think';
+    if ((0, bugbot_fix_intent_payload_1.canRunBugbotAutofix)(payload))
+        return 'autofix';
+    if ((0, bugbot_fix_intent_payload_1.canRunDoUserRequest)(payload))
+        return 'do-user-request';
+    return 'think';
+}
+
+
+/***/ }),
+
 /***/ 9661:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -50028,101 +50463,97 @@ async function syncProgressLabelsToOpenPullRequests(owner, repo, branch, progres
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCommentAutomation = runCommentAutomation;
+const result_1 = __nccwpck_require__(3817);
 const logger_1 = __nccwpck_require__(1151);
-const bugbot_autofix_commit_1 = __nccwpck_require__(8158);
-const mark_findings_resolved_use_case_1 = __nccwpck_require__(6963);
-const marker_1 = __nccwpck_require__(2274);
 const bugbot_fix_intent_payload_1 = __nccwpck_require__(5734);
-async function runCommentAutomation(param, options, actorAuthorizationPort, authenticatedUserPort, bugbotWritePorts) {
+const comment_automation_route_policy_1 = __nccwpck_require__(7058);
+const commit_autofix_and_resolve_workflow_1 = __nccwpck_require__(3455);
+const commit_user_request_workflow_1 = __nccwpck_require__(3393);
+class CommentAutomationError extends Error {
+    constructor() {
+        super("Comment automation failed.");
+        this.name = "CommentAutomationError";
+    }
+}
+async function runCommentAutomation(param, options, actorAuthorizationPort, authenticatedUserPort, bugbotResolutionPorts) {
     (0, logger_1.logInfo)(`${options.taskId} started.`);
     const results = [];
-    results.push(...(await options.languageUseCase.invoke(param)));
-    (0, logger_1.logInfo)("Running bugbot fix intent detection (before Think).");
-    const intentResults = await options.intentUseCase.invoke(param);
-    results.push(...intentResults);
-    const intentPayload = (0, bugbot_fix_intent_payload_1.getBugbotFixIntentPayload)(intentResults);
-    const runAutofix = (0, bugbot_fix_intent_payload_1.canRunBugbotAutofix)(intentPayload);
-    if (intentPayload) {
-        (0, logger_1.logInfo)(`Bugbot fix intent: isFixRequest=${intentPayload.isFixRequest}, isDoRequest=${intentPayload.isDoRequest}, targetFindingIds=${intentPayload.targetFindingIds?.length ?? 0}.`);
+    try {
+        results.push(...(await options.languageUseCase.invoke(param)));
+        (0, logger_1.logInfo)("Running bugbot fix intent detection (before Think).");
+        const intentResults = await options.intentUseCase.invoke(param);
+        results.push(...intentResults);
+        const intentPayload = (0, bugbot_fix_intent_payload_1.getBugbotFixIntentPayload)(intentResults);
+        const runAutofix = (0, bugbot_fix_intent_payload_1.canRunBugbotAutofix)(intentPayload);
+        if (intentPayload) {
+            (0, logger_1.logInfo)(`Bugbot fix intent: isFixRequest=${intentPayload.isFixRequest}, isDoRequest=${intentPayload.isDoRequest}, targetFindingIds=${intentPayload.targetFindingIds?.length ?? 0}.`);
+        }
+        else {
+            (0, logger_1.logInfo)("Bugbot fix intent: no payload from intent detection.");
+        }
+        const allowedToModifyFiles = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.actor, param.tokens.token);
+        const canModifyFiles = runAutofix || (0, bugbot_fix_intent_payload_1.canRunDoUserRequest)(intentPayload);
+        const route = (0, comment_automation_route_policy_1.resolveCommentAutomationRoute)(intentPayload, allowedToModifyFiles);
+        if (!allowedToModifyFiles && canModifyFiles) {
+            (0, logger_1.logInfo)("Skipping file-modifying use cases: user is not an org member or repo owner.");
+        }
+        if (route === "autofix" && intentPayload) {
+            const payload = intentPayload;
+            (0, logger_1.logInfo)("Running bugbot autofix.");
+            const autofixResults = await options.autofixUseCase.invoke({
+                execution: param,
+                targetFindingIds: payload.targetFindingIds,
+                userComment: options.userComment,
+                context: payload.context,
+                branchOverride: payload.branchOverride,
+            });
+            results.push(...autofixResults);
+            const resolutionErrors = await (0, commit_autofix_and_resolve_workflow_1.commitAutofixAndResolveFindings)(param, payload, autofixResults, authenticatedUserPort, bugbotResolutionPorts, options.gitCommitPort);
+            if (resolutionErrors.length > 0) {
+                results.push(new result_1.Result({
+                    id: `${options.taskId}.ResolveFindings`,
+                    success: false,
+                    executed: true,
+                    steps: [
+                        "Autofix succeeded, but one or more findings could not be marked as resolved.",
+                    ],
+                    errors: resolutionErrors,
+                }));
+            }
+        }
+        else if (route === "do-user-request") {
+            const payload = intentPayload;
+            (0, logger_1.logInfo)("Running do user request.");
+            const doResults = await options.doUserRequestUseCase.invoke({
+                execution: param,
+                userComment: options.userComment,
+                branchOverride: payload.branchOverride,
+            });
+            results.push(...doResults);
+            await (0, commit_user_request_workflow_1.commitUserRequestIfSuccessful)(param, payload.branchOverride, doResults, authenticatedUserPort, options.gitCommitPort);
+        }
+        else if (route === "think") {
+            (0, logger_1.logInfo)("Skipping bugbot autofix (no fix request, no targets, or no context).");
+        }
+        const ranAutofix = route === "autofix";
+        const ranDoRequest = route === "do-user-request";
+        if (!ranAutofix && !ranDoRequest) {
+            (0, logger_1.logInfo)("Running ThinkUseCase (no file-modifying action ran).");
+            results.push(...(await options.thinkUseCase.invoke(param)));
+        }
     }
-    else {
-        (0, logger_1.logInfo)("Bugbot fix intent: no payload from intent detection.");
-    }
-    const allowedToModifyFiles = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.actor, param.tokens.token);
-    const canModifyFiles = runAutofix || (0, bugbot_fix_intent_payload_1.canRunDoUserRequest)(intentPayload);
-    if (!allowedToModifyFiles && canModifyFiles) {
-        (0, logger_1.logInfo)("Skipping file-modifying use cases: user is not an org member or repo owner.");
-    }
-    if (runAutofix && intentPayload && allowedToModifyFiles) {
-        const payload = intentPayload;
-        (0, logger_1.logInfo)("Running bugbot autofix.");
-        const autofixResults = await options.autofixUseCase.invoke({
-            execution: param,
-            targetFindingIds: payload.targetFindingIds,
-            userComment: options.userComment,
-            context: payload.context,
-            branchOverride: payload.branchOverride,
-        });
-        results.push(...autofixResults);
-        await commitAutofixAndResolveFindings(param, payload, autofixResults, authenticatedUserPort, bugbotWritePorts, options.gitCommitPort);
-    }
-    else if (!runAutofix && (0, bugbot_fix_intent_payload_1.canRunDoUserRequest)(intentPayload) && allowedToModifyFiles) {
-        const payload = intentPayload;
-        (0, logger_1.logInfo)("Running do user request.");
-        const doResults = await options.doUserRequestUseCase.invoke({
-            execution: param,
-            userComment: options.userComment,
-            branchOverride: payload.branchOverride,
-        });
-        results.push(...doResults);
-        await commitUserRequestIfSuccessful(param, payload.branchOverride, doResults, authenticatedUserPort, options.gitCommitPort);
-    }
-    else if (!runAutofix) {
-        (0, logger_1.logInfo)("Skipping bugbot autofix (no fix request, no targets, or no context).");
-    }
-    const ranAutofix = runAutofix && allowedToModifyFiles && intentPayload;
-    const ranDoRequest = (0, bugbot_fix_intent_payload_1.canRunDoUserRequest)(intentPayload) && allowedToModifyFiles;
-    if (!ranAutofix && !ranDoRequest) {
-        (0, logger_1.logInfo)("Running ThinkUseCase (no file-modifying action ran).");
-        results.push(...(await options.thinkUseCase.invoke(param)));
+    catch {
+        const error = new CommentAutomationError();
+        (0, logger_1.logError)(error);
+        results.push(new result_1.Result({
+            id: options.taskId,
+            success: false,
+            executed: true,
+            steps: [error.message],
+            errors: [error],
+        }));
     }
     return results;
-}
-async function commitAutofixAndResolveFindings(param, payload, autofixResults, authenticatedUserPort, bugbotWritePorts, gitCommitPort) {
-    const lastAutofix = autofixResults.at(-1);
-    if (!lastAutofix?.success) {
-        (0, logger_1.logInfo)("Bugbot autofix did not succeed; skipping commit.");
-        return;
-    }
-    (0, logger_1.logInfo)("Bugbot autofix succeeded; running commit and push.");
-    const autofixPayload = lastAutofix.payload;
-    const commitResult = await (0, bugbot_autofix_commit_1.runBugbotAutofixCommitAndPush)(param, {
-        branchOverride: payload.branchOverride,
-        targetFindingIds: payload.targetFindingIds,
-        workspacePaths: autofixPayload?.workspacePaths,
-    }, authenticatedUserPort, gitCommitPort);
-    if (commitResult.committed && payload.context) {
-        const ids = payload.targetFindingIds;
-        await (0, mark_findings_resolved_use_case_1.markFindingsResolved)({
-            execution: param,
-            context: payload.context,
-            resolvedFindingIds: new Set(ids),
-            normalizedResolvedIds: new Set(ids.map(marker_1.sanitizeFindingIdForMarker)),
-            ports: bugbotWritePorts,
-        });
-        (0, logger_1.logInfo)(`Marked ${ids.length} finding(s) as resolved.`);
-    }
-    else if (!commitResult.committed) {
-        (0, logger_1.logInfo)("No commit performed (no changes or error).");
-    }
-}
-async function commitUserRequestIfSuccessful(param, branchOverride, results, authenticatedUserPort, gitCommitPort) {
-    if (!results.at(-1)?.success) {
-        (0, logger_1.logInfo)("Do user request did not succeed; skipping commit.");
-        return;
-    }
-    (0, logger_1.logInfo)("Do user request succeeded; running commit and push.");
-    await (0, bugbot_autofix_commit_1.runUserRequestCommitAndPush)(param, { branchOverride }, authenticatedUserPort, gitCommitPort);
 }
 
 
@@ -50182,6 +50613,223 @@ exports.CommitUseCase = CommitUseCase;
 
 /***/ }),
 
+/***/ 1813:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ExecutionBranchVersionResolver = void 0;
+const version_resolution_application_policy_1 = __nccwpck_require__(231);
+const version_resolution_outcome_policy_1 = __nccwpck_require__(3496);
+const version_resolution_result_policy_1 = __nccwpck_require__(1730);
+const version_resolution_policy_1 = __nccwpck_require__(2373);
+class ExecutionBranchVersionResolver {
+    constructor(latestTagQueryPort, getReleaseVersion, getReleaseType, getHotfixVersion) {
+        this.latestTagQueryPort = latestTagQueryPort;
+        this.getReleaseVersion = getReleaseVersion;
+        this.getReleaseType = getReleaseType;
+        this.getHotfixVersion = getHotfixVersion;
+    }
+    async resolve(execution) {
+        if (execution.release.active && execution.release.version === undefined) {
+            return this.resolveRelease(execution);
+        }
+        if (execution.hotfix.active && execution.hotfix.version === undefined) {
+            return this.resolveHotfix(execution);
+        }
+        return true;
+    }
+    async resolveRelease(execution) {
+        const versionInfo = (await this.getReleaseVersion.invoke(execution)).at(-1);
+        if (versionInfo?.executed && versionInfo.success) {
+            execution.release.version = (0, version_resolution_result_policy_1.releaseResolutionFromPayload)(versionInfo.payload).version;
+        }
+        else {
+            const typeInfo = (await this.getReleaseType.invoke(execution)).at(-1);
+            if (typeInfo?.executed && typeInfo.success) {
+                execution.release.type = (0, version_resolution_result_policy_1.releaseResolutionFromPayload)(typeInfo.payload).type;
+                if ((0, version_resolution_outcome_policy_1.shouldAbortReleaseResolution)(execution.release.type))
+                    return false;
+                execution.release.version = (0, version_resolution_policy_1.nextReleaseVersion)(await this.latestTagQueryPort.getLatestTag(), execution.release.type);
+            }
+        }
+        execution.release.branch = (0, version_resolution_application_policy_1.applyReleaseResolution)(execution.branches.releaseTree, execution.release.version).branch;
+        return true;
+    }
+    async resolveHotfix(execution) {
+        const versionInfo = (await this.getHotfixVersion.invoke(execution)).at(-1);
+        if (versionInfo?.executed && versionInfo.success) {
+            const resolution = (0, version_resolution_result_policy_1.hotfixResolutionFromPayload)(versionInfo.payload);
+            execution.hotfix.baseVersion = resolution.baseVersion;
+            execution.hotfix.version = resolution.version;
+        }
+        else {
+            const nextVersion = (0, version_resolution_policy_1.nextHotfixVersion)(await this.latestTagQueryPort.getLatestTag());
+            execution.hotfix.baseVersion = nextVersion.baseVersion;
+            execution.hotfix.version = nextVersion.version;
+        }
+        const state = (0, version_resolution_application_policy_1.applyHotfixResolution)(execution.branches.hotfixTree, execution.hotfix.baseVersion, execution.hotfix.version);
+        execution.hotfix.branch = state.branch;
+        execution.currentConfiguration.hotfixBranch = state.branch;
+        execution.hotfix.baseBranch = state.baseBranch;
+        execution.currentConfiguration.hotfixOriginBranch = state.baseBranch;
+        return true;
+    }
+}
+exports.ExecutionBranchVersionResolver = ExecutionBranchVersionResolver;
+
+
+/***/ }),
+
+/***/ 972:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.resolveExecutionIssueNumber = resolveExecutionIssueNumber;
+const constants_1 = __nccwpck_require__(5415);
+const title_utils_1 = __nccwpck_require__(6267);
+async function resolveExecutionIssueNumber(execution, issueRepository) {
+    if (execution.isSingleAction) {
+        if (execution.inputs?.[constants_1.INPUT_KEYS.SINGLE_ACTION_ISSUE]) {
+            execution.issueNumber = Number(execution.inputs[constants_1.INPUT_KEYS.SINGLE_ACTION_ISSUE]);
+            execution.singleAction.issue = execution.issueNumber;
+        }
+        else if (execution.isIssue) {
+            execution.singleAction.isIssue = true;
+            execution.issueNumber = execution.issue.number;
+            execution.singleAction.issue = execution.issueNumber;
+        }
+        else if (execution.isPullRequest) {
+            execution.singleAction.isPullRequest = true;
+            execution.issueNumber = (0, title_utils_1.extractIssueNumberFromBranch)(execution.pullRequest.head);
+            execution.singleAction.issue = execution.issueNumber;
+        }
+        else if (execution.isPush) {
+            execution.singleAction.isPush = true;
+            execution.issueNumber = (0, title_utils_1.extractIssueNumberFromPush)(execution.commit.branch);
+            execution.singleAction.issue = execution.issueNumber;
+        }
+        else {
+            execution.singleAction.isPullRequest = await issueRepository.isPullRequest(execution.owner, execution.repo, execution.singleAction.issue, execution.tokens.token);
+            execution.singleAction.isIssue = await issueRepository.isIssue(execution.owner, execution.repo, execution.singleAction.issue, execution.tokens.token);
+            if (execution.singleAction.isIssue) {
+                execution.issueNumber = execution.singleAction.issue;
+            }
+            else if (execution.singleAction.isPullRequest) {
+                const head = await issueRepository.getHeadBranch(execution.owner, execution.repo, execution.singleAction.issue, execution.tokens.token);
+                if (head === undefined)
+                    return undefined;
+                execution.issueNumber = (0, title_utils_1.extractIssueNumberFromBranch)(head);
+            }
+        }
+    }
+    else if (execution.isIssue) {
+        execution.issueNumber = execution.issue.number;
+    }
+    else if (execution.isPullRequest) {
+        execution.issueNumber = (0, title_utils_1.extractIssueNumberFromBranch)(execution.pullRequest.head);
+    }
+    else if (execution.isPush) {
+        execution.issueNumber = (0, title_utils_1.extractIssueNumberFromPush)(execution.commit.branch);
+    }
+    return execution.issueNumber;
+}
+
+
+/***/ }),
+
+/***/ 8512:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupExecutionUseCase = void 0;
+const initial_labels_policy_1 = __nccwpck_require__(293);
+const previous_branch_state_policy_1 = __nccwpck_require__(3630);
+const logger_1 = __nccwpck_require__(1151);
+const resolve_execution_issue_number_1 = __nccwpck_require__(972);
+class SetupExecutionUseCase {
+    constructor(issueSetupPort, organizationSetupPort, configurationPort, branchVersionResolver) {
+        this.issueSetupPort = issueSetupPort;
+        this.organizationSetupPort = organizationSetupPort;
+        this.configurationPort = configurationPort;
+        this.branchVersionResolver = branchVersionResolver;
+        this.taskId = 'SetupExecutionUseCase';
+    }
+    async invoke(execution) {
+        var _a;
+        (0, logger_1.setGlobalLoggerDebug)(execution.debug, execution.inputs === undefined);
+        execution.tokenUser = await this.organizationSetupPort.getUserFromToken(execution.tokens.token);
+        if (!execution.tokenUser)
+            throw new Error('Failed to get user from token');
+        if (await (0, resolve_execution_issue_number_1.resolveExecutionIssueNumber)(execution, this.issueSetupPort) === undefined)
+            return;
+        const configurationIssueNumber = this.configurationIssueNumber(execution);
+        execution.previousConfiguration = configurationIssueNumber === undefined
+            ? undefined
+            : await this.configurationPort.get({
+                owner: execution.owner,
+                repository: execution.repo,
+                issueNumber: configurationIssueNumber,
+                token: execution.tokens.token,
+            });
+        try {
+            execution.labels.currentIssueLabels = await this.issueSetupPort.getLabels(execution.owner, execution.repo, execution.issueNumber, execution.tokens.token);
+        }
+        catch (error) {
+            if (!(0, initial_labels_policy_1.shouldSkipInitialLabelsFetch)(execution.isSingleAction, execution.singleAction.currentSingleAction))
+                throw error;
+            (0, logger_1.logDebugInfo)('Skipping initial labels fetch for setup action.');
+            execution.labels.currentIssueLabels = [];
+        }
+        execution.release.active = execution.labels.isRelease;
+        execution.hotfix.active = execution.labels.isHotfix;
+        this.restorePreviousState(execution);
+        if (execution.isIssue) {
+            if (!execution.isSingleAction && !await this.branchVersionResolver.resolve(execution))
+                return;
+        }
+        else if (execution.isPullRequest && !execution.isSingleAction) {
+            execution.labels.currentPullRequestLabels = await this.issueSetupPort.getLabels(execution.owner, execution.repo, execution.pullRequest.number, execution.tokens.token);
+            execution.release.active = execution.pullRequest.base.includes(`${execution.branches.releaseTree}/`);
+            execution.hotfix.active = execution.pullRequest.base.includes(`${execution.branches.hotfixTree}/`);
+            (_a = execution.currentConfiguration).parentBranch ?? (_a.parentBranch = execution.pullRequest.base);
+        }
+        execution.currentConfiguration.branchType = execution.issueType;
+    }
+    restorePreviousState(execution) {
+        const state = (0, previous_branch_state_policy_1.restorePreviousBranchState)(execution.previousConfiguration, execution.release.active ? 'release' : execution.hotfix.active ? 'hotfix' : 'default', execution.branches.releaseTree, execution.branches.hotfixTree);
+        execution.release.version = state.releaseVersion;
+        execution.release.branch = state.releaseBranch;
+        execution.hotfix.baseVersion = state.hotfixBaseVersion;
+        execution.hotfix.baseBranch = state.hotfixBaseBranch;
+        execution.hotfix.version = state.hotfixVersion;
+        execution.hotfix.branch = state.hotfixBranch;
+        execution.currentConfiguration.parentBranch = state.parentBranch;
+        execution.currentConfiguration.workingBranch = state.workingBranch;
+        execution.currentConfiguration.releaseBranch = state.releaseBranch;
+        execution.currentConfiguration.hotfixOriginBranch = state.hotfixBaseBranch;
+        execution.currentConfiguration.hotfixBranch = state.hotfixBranch;
+    }
+    configurationIssueNumber(execution) {
+        if (execution.isSingleAction || execution.isPush)
+            return execution.issueNumber;
+        if (execution.isIssue)
+            return execution.issue.number;
+        if (execution.isPullRequest)
+            return execution.pullRequest.number;
+        return undefined;
+    }
+}
+exports.SetupExecutionUseCase = SetupExecutionUseCase;
+
+
+/***/ }),
+
 /***/ 2042:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -50191,7 +50839,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueCommentUseCase = void 0;
 const comment_automation_use_case_1 = __nccwpck_require__(9661);
 class IssueCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, issueCommentUpdatePort, actorAuthorizationPort, authenticatedUserPort, bugbotWritePorts, gitCommitPort) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, issueCommentUpdatePort, actorAuthorizationPort, authenticatedUserPort, bugbotResolutionPorts, gitCommitPort) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
@@ -50200,7 +50848,7 @@ class IssueCommentUseCase {
         this.issueCommentUpdatePort = issueCommentUpdatePort;
         this.actorAuthorizationPort = actorAuthorizationPort;
         this.authenticatedUserPort = authenticatedUserPort;
-        this.bugbotWritePorts = bugbotWritePorts;
+        this.bugbotResolutionPorts = bugbotResolutionPorts;
         this.gitCommitPort = gitCommitPort;
         this.taskId = "IssueCommentUseCase";
     }
@@ -50214,7 +50862,7 @@ class IssueCommentUseCase {
             doUserRequestUseCase: this.doUserRequestUseCase,
             userComment: param.issue.commentBody ?? "",
             gitCommitPort: this.gitCommitPort,
-        }, this.actorAuthorizationPort, this.authenticatedUserPort, this.bugbotWritePorts);
+        }, this.actorAuthorizationPort, this.authenticatedUserPort, this.bugbotResolutionPorts);
     }
 }
 exports.IssueCommentUseCase = IssueCommentUseCase;
@@ -50244,11 +50892,12 @@ const remove_issue_branches_use_case_1 = __nccwpck_require__(5608);
 const remove_not_needed_branches_use_case_1 = __nccwpck_require__(7129);
 const update_issue_type_use_case_1 = __nccwpck_require__(8222);
 class IssueUseCase {
-    constructor(projectBoardPriorityPort, organizationMembersPort, issueIdentityQueryPort, projectBoardPort, issueTitlePort, issueAssigneePort, issueClosurePort, issueTypeAssignmentPort, issueDescriptionQueryPort, issueNotificationPort, branchLifecyclePort, branchNamePort, branchPreparationPort, branchWorkflowPort, recommendStepsUseCase, answerIssueHelpUseCase) {
+    constructor(projectBoardPriorityPort, organizationMembersPort, issueIdentityQueryPort, projectBoardPort, projectBoardLinkPort, issueTitlePort, issueAssigneePort, issueClosurePort, issueTypeAssignmentPort, issueDescriptionQueryPort, issueNotificationPort, branchLifecyclePort, branchNamePort, remoteBranchSyncPort, commitTagQueryPort, linkedBranchCommandPort, branchPropagationDelayPort, branchWorkflowPort, recommendStepsUseCase, answerIssueHelpUseCase) {
         this.projectBoardPriorityPort = projectBoardPriorityPort;
         this.organizationMembersPort = organizationMembersPort;
         this.issueIdentityQueryPort = issueIdentityQueryPort;
         this.projectBoardPort = projectBoardPort;
+        this.projectBoardLinkPort = projectBoardLinkPort;
         this.issueTitlePort = issueTitlePort;
         this.issueAssigneePort = issueAssigneePort;
         this.issueClosurePort = issueClosurePort;
@@ -50257,11 +50906,14 @@ class IssueUseCase {
         this.issueNotificationPort = issueNotificationPort;
         this.branchLifecyclePort = branchLifecyclePort;
         this.branchNamePort = branchNamePort;
-        this.branchPreparationPort = branchPreparationPort;
+        this.remoteBranchSyncPort = remoteBranchSyncPort;
+        this.commitTagQueryPort = commitTagQueryPort;
+        this.linkedBranchCommandPort = linkedBranchCommandPort;
+        this.branchPropagationDelayPort = branchPropagationDelayPort;
         this.branchWorkflowPort = branchWorkflowPort;
         this.recommendStepsUseCase = recommendStepsUseCase;
         this.answerIssueHelpUseCase = answerIssueHelpUseCase;
-        this.taskId = 'IssueUseCase';
+        this.taskId = "IssueUseCase";
     }
     async invoke(param) {
         (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
@@ -50270,53 +50922,53 @@ class IssueUseCase {
         const lastAction = permissionResult[permissionResult.length - 1];
         if (!lastAction.success && lastAction.executed) {
             results.push(...permissionResult);
-            results.push(...await new close_not_allowed_issue_use_case_1.CloseNotAllowedIssueUseCase(this.issueClosurePort).invoke(param));
+            results.push(...(await new close_not_allowed_issue_use_case_1.CloseNotAllowedIssueUseCase(this.issueClosurePort).invoke(param)));
             return results;
         }
         if (param.cleanIssueBranches) {
-            results.push(...await new remove_issue_branches_use_case_1.RemoveIssueBranchesUseCase(this.branchLifecyclePort).invoke(param));
+            results.push(...(await new remove_issue_branches_use_case_1.RemoveIssueBranchesUseCase(this.branchLifecyclePort).invoke(param)));
         }
         /**
          * Assignees
          */
-        results.push(...await new assign_members_to_issue_use_case_1.AssignMemberToIssueUseCase(this.issueAssigneePort, this.organizationMembersPort).invoke(param));
+        results.push(...(await new assign_members_to_issue_use_case_1.AssignMemberToIssueUseCase(this.issueAssigneePort, this.organizationMembersPort).invoke(param)));
         /**
          * Update title
          */
-        results.push(...await new update_title_use_case_1.UpdateTitleUseCase(this.issueTitlePort).invoke(param));
+        results.push(...(await new update_title_use_case_1.UpdateTitleUseCase(this.issueTitlePort).invoke(param)));
         /**
          * Update issue type
          */
-        results.push(...await new update_issue_type_use_case_1.UpdateIssueTypeUseCase(this.issueTypeAssignmentPort).invoke(param));
+        results.push(...(await new update_issue_type_use_case_1.UpdateIssueTypeUseCase(this.issueTypeAssignmentPort).invoke(param)));
         /**
          * Link issue to project
          */
-        results.push(...await new link_issue_project_use_case_1.LinkIssueProjectUseCase(this.issueIdentityQueryPort, this.projectBoardPort).invoke(param));
+        results.push(...(await new link_issue_project_use_case_1.LinkIssueProjectUseCase(this.issueIdentityQueryPort, this.projectBoardPort, this.projectBoardLinkPort).invoke(param)));
         /**
          * Check priority issue size
          */
-        results.push(...await new check_priority_issue_size_use_case_1.CheckPriorityIssueSizeUseCase(this.projectBoardPriorityPort).invoke(param));
+        results.push(...(await new check_priority_issue_size_use_case_1.CheckPriorityIssueSizeUseCase(this.projectBoardPriorityPort).invoke(param)));
         /**
          * Prepare branches
          */
         if (param.isBranched) {
-            results.push(...await new prepare_branches_use_case_1.PrepareBranchesUseCase(this.projectBoardPort, this.branchPreparationPort).invoke(param));
+            results.push(...(await new prepare_branches_use_case_1.PrepareBranchesUseCase(this.projectBoardPort, this.branchLifecyclePort, this.branchNamePort, this.remoteBranchSyncPort, this.commitTagQueryPort, this.linkedBranchCommandPort, this.branchPropagationDelayPort).invoke(param)));
         }
         else {
-            results.push(...await new remove_issue_branches_use_case_1.RemoveIssueBranchesUseCase(this.branchLifecyclePort).invoke(param));
+            results.push(...(await new remove_issue_branches_use_case_1.RemoveIssueBranchesUseCase(this.branchLifecyclePort).invoke(param)));
         }
         /**
          * Remove unnecessary branches
          */
-        results.push(...await new remove_not_needed_branches_use_case_1.RemoveNotNeededBranchesUseCase(this.branchLifecyclePort, this.branchNamePort).invoke(param));
+        results.push(...(await new remove_not_needed_branches_use_case_1.RemoveNotNeededBranchesUseCase(this.branchLifecyclePort, this.branchNamePort).invoke(param)));
         /**
          * Check if deploy label was added
          */
-        results.push(...await new label_deploy_added_use_case_1.DeployAddedUseCase(this.projectBoardPort, this.branchWorkflowPort).invoke(param));
+        results.push(...(await new label_deploy_added_use_case_1.DeployAddedUseCase(this.projectBoardPort, this.branchWorkflowPort).invoke(param)));
         /**
          * Check if deployed label was added
          */
-        results.push(...await new label_deployed_added_use_case_1.DeployedAddedUseCase().invoke(param));
+        results.push(...(await new label_deployed_added_use_case_1.DeployedAddedUseCase().invoke(param)));
         /**
          * On newly opened issues: recommend steps (non release/question/help) or post initial help (question/help).
          */
@@ -50347,7 +50999,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentUseCase = void 0;
 const comment_automation_use_case_1 = __nccwpck_require__(9661);
 class PullRequestReviewCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, issueCommentUpdatePort, actorAuthorizationPort, authenticatedUserPort, bugbotWritePorts, gitCommitPort) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, issueCommentUpdatePort, actorAuthorizationPort, authenticatedUserPort, bugbotResolutionPorts, gitCommitPort) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
@@ -50356,7 +51008,7 @@ class PullRequestReviewCommentUseCase {
         this.issueCommentUpdatePort = issueCommentUpdatePort;
         this.actorAuthorizationPort = actorAuthorizationPort;
         this.authenticatedUserPort = authenticatedUserPort;
-        this.bugbotWritePorts = bugbotWritePorts;
+        this.bugbotResolutionPorts = bugbotResolutionPorts;
         this.gitCommitPort = gitCommitPort;
         this.taskId = "PullRequestReviewCommentUseCase";
     }
@@ -50370,7 +51022,7 @@ class PullRequestReviewCommentUseCase {
             doUserRequestUseCase: this.doUserRequestUseCase,
             userComment: param.pullRequest.commentBody ?? "",
             gitCommitPort: this.gitCommitPort,
-        }, this.actorAuthorizationPort, this.authenticatedUserPort, this.bugbotWritePorts);
+        }, this.actorAuthorizationPort, this.authenticatedUserPort, this.bugbotResolutionPorts);
     }
 }
 exports.PullRequestReviewCommentUseCase = PullRequestReviewCommentUseCase;
@@ -50397,7 +51049,7 @@ const link_pull_request_issue_use_case_1 = __nccwpck_require__(8259);
 const link_pull_request_project_use_case_1 = __nccwpck_require__(7169);
 const sync_size_and_progress_labels_from_issue_to_pr_use_case_1 = __nccwpck_require__(9085);
 class PullRequestUseCase {
-    constructor(projectBoardPriorityPort, pullRequestDescriptionCommandPort, issueDescriptionQueryPort, issueTitlePort, issueClosurePort, issueAssigneePort, pullRequestReviewPort, organizationMembersPort, issueLabelsPort, pullRequestIssueLinkPort, projectBoardLinkPort, updatePullRequestDescriptionUseCase) {
+    constructor(projectBoardPriorityPort, pullRequestDescriptionCommandPort, issueDescriptionQueryPort, issueTitlePort, issueClosurePort, issueAssigneePort, pullRequestReviewPort, organizationMembersPort, issueLabelsPort, pullRequestIssueLinkPort, projectBoardLinkPort, projectBoardCommandPort, updatePullRequestDescriptionUseCase) {
         this.projectBoardPriorityPort = projectBoardPriorityPort;
         this.pullRequestDescriptionCommandPort = pullRequestDescriptionCommandPort;
         this.issueDescriptionQueryPort = issueDescriptionQueryPort;
@@ -50409,8 +51061,9 @@ class PullRequestUseCase {
         this.issueLabelsPort = issueLabelsPort;
         this.pullRequestIssueLinkPort = pullRequestIssueLinkPort;
         this.projectBoardLinkPort = projectBoardLinkPort;
+        this.projectBoardCommandPort = projectBoardCommandPort;
         this.updatePullRequestDescriptionUseCase = updatePullRequestDescriptionUseCase;
-        this.taskId = 'PullRequestUseCase';
+        this.taskId = "PullRequestUseCase";
     }
     async invoke(param) {
         (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
@@ -50424,36 +51077,36 @@ class PullRequestUseCase {
                 /**
                  * Update title
                  */
-                results.push(...await new update_title_use_case_1.UpdateTitleUseCase(this.issueTitlePort).invoke(param));
+                results.push(...(await new update_title_use_case_1.UpdateTitleUseCase(this.issueTitlePort).invoke(param)));
                 /**
                  * Assignees
                  */
-                results.push(...await new assign_members_to_issue_use_case_1.AssignMemberToIssueUseCase(this.issueAssigneePort, this.organizationMembersPort).invoke(param));
+                results.push(...(await new assign_members_to_issue_use_case_1.AssignMemberToIssueUseCase(this.issueAssigneePort, this.organizationMembersPort).invoke(param)));
                 /**
                  * Reviewers
                  */
-                results.push(...await new assign_reviewers_to_issue_use_case_1.AssignReviewersToIssueUseCase(this.issueAssigneePort, this.pullRequestReviewPort, this.organizationMembersPort).invoke(param));
+                results.push(...(await new assign_reviewers_to_issue_use_case_1.AssignReviewersToIssueUseCase(this.issueAssigneePort, this.pullRequestReviewPort, this.organizationMembersPort).invoke(param)));
                 /**
                  * Link Pull Request to projects
                  */
-                results.push(...await new link_pull_request_project_use_case_1.LinkPullRequestProjectUseCase(this.projectBoardLinkPort).invoke(param));
+                results.push(...(await new link_pull_request_project_use_case_1.LinkPullRequestProjectUseCase(this.projectBoardCommandPort, this.projectBoardLinkPort).invoke(param)));
                 /**
                  * Link Pull Request to issue
                  */
-                results.push(...await new link_pull_request_issue_use_case_1.LinkPullRequestIssueUseCase(this.pullRequestIssueLinkPort).invoke(param));
+                results.push(...(await new link_pull_request_issue_use_case_1.LinkPullRequestIssueUseCase(this.pullRequestIssueLinkPort).invoke(param)));
                 /**
                  * Copy size and progress labels from the linked issue to this PR (corner case: PR just opened).
                  */
-                results.push(...await new sync_size_and_progress_labels_from_issue_to_pr_use_case_1.SyncSizeAndProgressLabelsFromIssueToPrUseCase(this.issueLabelsPort).invoke(param));
+                results.push(...(await new sync_size_and_progress_labels_from_issue_to_pr_use_case_1.SyncSizeAndProgressLabelsFromIssueToPrUseCase(this.issueLabelsPort).invoke(param)));
                 /**
                  * Check priority pull request size
                  */
-                results.push(...await new check_priority_pull_request_size_use_case_1.CheckPriorityPullRequestSizeUseCase(this.projectBoardPriorityPort).invoke(param));
+                results.push(...(await new check_priority_pull_request_size_use_case_1.CheckPriorityPullRequestSizeUseCase(this.projectBoardPriorityPort).invoke(param)));
                 if (param.ai.getAiPullRequestDescription()) {
                     /**
                      * Update pull request description
                      */
-                    results.push(...await this.updatePullRequestDescriptionUseCase.invoke(param));
+                    results.push(...(await this.updatePullRequestDescriptionUseCase.invoke(param)));
                 }
             }
             else if (param.pullRequest.isSynchronize) {
@@ -50464,26 +51117,25 @@ class PullRequestUseCase {
                     /**
                      * Update pull request description
                      */
-                    results.push(...await this.updatePullRequestDescriptionUseCase.invoke(param));
+                    results.push(...(await this.updatePullRequestDescriptionUseCase.invoke(param)));
                 }
             }
             else if (param.pullRequest.isClosed && param.pullRequest.isMerged) {
                 /**
                  * Close issue if needed
                  */
-                results.push(...await new close_issue_after_merging_use_case_1.CloseIssueAfterMergingUseCase(this.issueClosurePort).invoke(param));
+                results.push(...(await new close_issue_after_merging_use_case_1.CloseIssueAfterMergingUseCase(this.issueClosurePort).invoke(param)));
             }
         }
-        catch (error) {
-            (0, logger_1.logError)(error);
+        catch {
+            const semanticError = new Error("Unable to process the pull request.");
+            (0, logger_1.logError)(semanticError);
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
                 executed: true,
-                steps: [
-                    `Error linking projects/issues with pull request.`,
-                ],
-                error: error,
+                steps: ["Unable to process the pull request."],
+                errors: [semanticError],
             }));
         }
         return results;
@@ -50584,28 +51236,37 @@ exports.prepareDetectedFindings = prepareDetectedFindings;
 exports.applyDetectedFindings = applyDetectedFindings;
 const prepare_bugbot_findings_1 = __nccwpck_require__(5016);
 const mark_findings_resolved_use_case_1 = __nccwpck_require__(6963);
-const publish_findings_use_case_1 = __nccwpck_require__(2639);
+const publish_findings_use_case_1 = __nccwpck_require__(8442);
 const constants_1 = __nccwpck_require__(5415);
+const pull_request_review_errors_1 = __nccwpck_require__(6445);
 function prepareDetectedFindings(execution, response) {
     return (0, prepare_bugbot_findings_1.prepareBugbotFindings)(response, execution.ai?.getAiIgnoreFiles?.() ?? [], execution.ai?.getBugbotMinSeverity?.(), execution.ai?.getBugbotCommentLimit?.() ?? constants_1.BUGBOT_MAX_COMMENTS);
 }
-async function applyDetectedFindings(execution, context, prepared, ports) {
-    await (0, mark_findings_resolved_use_case_1.markFindingsResolved)({
+async function applyDetectedFindings(execution, context, prepared, publicationPorts, resolutionPorts) {
+    try {
+        await (0, publish_findings_use_case_1.publishFindings)({
+            execution,
+            context,
+            findings: prepared.toPublish,
+            commitSha: context.prContext?.prHeadSha ?? "",
+            overflowCount: prepared.overflowCount > 0 ? prepared.overflowCount : undefined,
+            overflowTitles: prepared.overflowCount > 0 ? prepared.overflowTitles : undefined,
+            ports: publicationPorts,
+        });
+    }
+    catch (error) {
+        const publicationError = error instanceof pull_request_review_errors_1.PullRequestReviewOperationError
+            ? error
+            : new Error("Unable to publish findings.");
+        return [publicationError];
+    }
+    const resolutionErrors = await (0, mark_findings_resolved_use_case_1.markFindingsResolved)({
         execution,
         context,
         resolvedFindingIds: prepared.resolvedFindingIds,
-        normalizedResolvedIds: prepared.normalizedResolvedIds,
-        ports,
+        ports: resolutionPorts,
     });
-    await (0, publish_findings_use_case_1.publishFindings)({
-        execution,
-        context,
-        findings: prepared.toPublish,
-        commitSha: context.prContext?.prHeadSha ?? '',
-        overflowCount: prepared.overflowCount > 0 ? prepared.overflowCount : undefined,
-        overflowTitles: prepared.overflowCount > 0 ? prepared.overflowTitles : undefined,
-        ports,
-    });
+    return resolutionErrors;
 }
 
 
@@ -50655,6 +51316,7 @@ const agent_1 = __nccwpck_require__(9937);
 const logger_1 = __nccwpck_require__(1151);
 const task_emoji_1 = __nccwpck_require__(6103);
 const result_1 = __nccwpck_require__(3817);
+const types_1 = __nccwpck_require__(2632);
 const build_bugbot_fix_prompt_1 = __nccwpck_require__(9819);
 const load_bugbot_context_use_case_1 = __nccwpck_require__(4050);
 const workspace_changes_1 = __nccwpck_require__(3370);
@@ -50705,7 +51367,7 @@ class BugbotAutofixUseCase {
             return results;
         }
         const validIds = new Set(Object.entries(context.existingByFindingId)
-            .filter(([, info]) => !info.resolved)
+            .filter(([, info]) => !(0, types_1.isExistingFindingFullyResolved)(info))
             .map(([id]) => id));
         const idsToFix = targetFindingIds.filter((id) => validIds.has(id));
         if (idsToFix.length === 0) {
@@ -50798,46 +51460,60 @@ exports.collectPreviousBugbotFindings = collectPreviousBugbotFindings;
 exports.buildPreviousFindingsBlock = buildPreviousFindingsBlock;
 const build_bugbot_fix_prompt_1 = __nccwpck_require__(9819);
 const marker_1 = __nccwpck_require__(2274);
+const types_1 = __nccwpck_require__(2632);
 function parseBugbotFindingComments(issueComments, pullRequestCommentsByNumber) {
-    const boundedIssueComments = issueComments.map((comment) => ({
-        ...comment,
-        body: comment.body == null ? comment.body : (0, build_bugbot_fix_prompt_1.truncateFindingBody)(comment.body, build_bugbot_fix_prompt_1.MAX_FINDING_BODY_LENGTH),
-    }));
     const existingByFindingId = {};
     for (const comment of issueComments) {
-        for (const { findingId, resolved } of (0, marker_1.parseMarker)(comment.body)) {
+        for (const marker of (0, marker_1.parseMarker)(comment.body)) {
+            const findingId = (0, marker_1.normalizeFindingIdForMarker)(marker.findingId);
+            if (findingId == null)
+                continue;
             existingByFindingId[findingId] = {
                 ...(existingByFindingId[findingId] ?? {}),
-                issueCommentId: comment.id,
-                resolved,
+                issue: { commentId: comment.id, resolved: marker.resolved },
             };
         }
     }
     const prFindingIdToBody = {};
-    for (const [prNumber, comments] of pullRequestCommentsByNumber) {
+    for (const [pullRequestNumber, comments] of pullRequestCommentsByNumber) {
         for (const comment of comments) {
             const body = comment.body ?? "";
-            for (const { findingId, resolved } of (0, marker_1.parseMarker)(body)) {
+            for (const marker of (0, marker_1.parseMarker)(body)) {
+                const findingId = (0, marker_1.normalizeFindingIdForMarker)(marker.findingId);
+                if (findingId == null)
+                    continue;
                 existingByFindingId[findingId] = {
                     ...(existingByFindingId[findingId] ?? {}),
-                    prCommentId: comment.id,
-                    prNumber,
-                    resolved,
+                    pullRequest: {
+                        commentIdentity: comment.identity,
+                        pullRequestNumber,
+                        resolved: marker.resolved,
+                    },
                 };
                 prFindingIdToBody[findingId] = (0, build_bugbot_fix_prompt_1.truncateFindingBody)(body, build_bugbot_fix_prompt_1.MAX_FINDING_BODY_LENGTH);
             }
         }
     }
-    return { issueComments: boundedIssueComments, existingByFindingId, prFindingIdToBody };
+    return { issueComments, existingByFindingId, prFindingIdToBody };
 }
 function collectPreviousBugbotFindings(issueComments, existingByFindingId, prFindingIdToBody) {
     return Object.entries(existingByFindingId).flatMap(([findingId, data]) => {
-        if (data.resolved)
+        if ((0, types_1.isExistingFindingFullyResolved)(data))
             return [];
-        const issueBody = issueComments.find((comment) => comment.id === data.issueCommentId)?.body ?? null;
-        const rawBody = (issueBody ?? prFindingIdToBody[findingId] ?? "").trim();
+        const issueBody = data.issue != null && !data.issue.resolved
+            ? (issueComments.find((comment) => comment.id === data.issue?.commentId)?.body ?? null)
+            : null;
+        const pullRequestBody = data.pullRequest != null && !data.pullRequest.resolved
+            ? (prFindingIdToBody[findingId] ?? null)
+            : null;
+        const rawBody = (issueBody ?? pullRequestBody ?? "").trim();
         return rawBody
-            ? [{ id: findingId, fullBody: (0, build_bugbot_fix_prompt_1.truncateFindingBody)(rawBody, build_bugbot_fix_prompt_1.MAX_FINDING_BODY_LENGTH) }]
+            ? [
+                {
+                    id: findingId,
+                    fullBody: (0, build_bugbot_fix_prompt_1.truncateFindingBody)(rawBody, build_bugbot_fix_prompt_1.MAX_FINDING_BODY_LENGTH),
+                },
+            ]
             : [];
     });
 }
@@ -50989,14 +51665,11 @@ function buildBugbotFixPrompt(param, context, targetFindingIds, userComment, ver
     const safeId = (id) => id.replace(/`/g, "\\`");
     const findingsBlock = targetFindingIds
         .map((id) => {
-        const data = context.existingByFindingId[id];
-        if (!data)
-            return null;
-        const issueBody = context.issueComments.find((c) => c.id === data.issueCommentId)?.body ?? null;
-        const fullBody = truncateFindingBody((issueBody?.trim() ?? ""), exports.MAX_FINDING_BODY_LENGTH);
+        const fullBody = context.unresolvedFindingsWithBody.find((finding) => finding.id === id)?.fullBody.trim() ?? "";
         if (!fullBody)
             return null;
-        return `---\n**Finding id:** \`${safeId(id)}\`\n\n**Full comment (title, description, location, suggestion):**\n${fullBody}\n`;
+        const boundedBody = truncateFindingBody(fullBody, exports.MAX_FINDING_BODY_LENGTH);
+        return `---\n**Finding id:** \`${safeId(id)}\`\n\n**Full comment (title, description, location, suggestion):**\n${boundedBody}\n`;
     })
         .filter(Boolean)
         .join("\n");
@@ -51076,7 +51749,7 @@ exports.runCommitAndPushWorkflow = runCommitAndPushWorkflow;
 const logger_1 = __nccwpck_require__(1151);
 const git_branch_checkout_1 = __nccwpck_require__(6333);
 const verify_command_policy_1 = __nccwpck_require__(6031);
-const verify_command_runner_1 = __nccwpck_require__(7742);
+const verify_command_runner_1 = __nccwpck_require__(6689);
 const workspace_changes_1 = __nccwpck_require__(3370);
 async function runCommitAndPushWorkflow(execution, options, authenticatedUserPort, gitCommitPort) {
     if (!options.branch?.trim()) {
@@ -51137,6 +51810,51 @@ async function runCommitAndPushWorkflow(execution, options, authenticatedUserPor
 
 /***/ }),
 
+/***/ 3455:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.commitAutofixAndResolveFindings = commitAutofixAndResolveFindings;
+const logger_1 = __nccwpck_require__(1151);
+const bugbot_autofix_commit_1 = __nccwpck_require__(8158);
+const mark_findings_resolved_use_case_1 = __nccwpck_require__(6963);
+async function commitAutofixAndResolveFindings(param, payload, autofixResults, authenticatedUserPort, bugbotResolutionPorts, gitCommitPort) {
+    const lastAutofix = autofixResults.at(-1);
+    if (!lastAutofix?.success) {
+        (0, logger_1.logInfo)("Bugbot autofix did not succeed; skipping commit.");
+        return [];
+    }
+    (0, logger_1.logInfo)("Bugbot autofix succeeded; running commit and push.");
+    const autofixPayload = lastAutofix.payload;
+    const commitResult = await (0, bugbot_autofix_commit_1.runBugbotAutofixCommitAndPush)(param, {
+        branchOverride: payload.branchOverride,
+        targetFindingIds: payload.targetFindingIds,
+        workspacePaths: autofixPayload?.workspacePaths,
+    }, authenticatedUserPort, gitCommitPort);
+    if (commitResult.committed && payload.context) {
+        const ids = payload.targetFindingIds;
+        const resolutionErrors = await (0, mark_findings_resolved_use_case_1.markFindingsResolved)({
+            execution: param,
+            context: payload.context,
+            resolvedFindingIds: new Set(ids),
+            ports: bugbotResolutionPorts,
+        });
+        if (resolutionErrors.length === 0) {
+            (0, logger_1.logInfo)(`Marked ${ids.length} finding(s) as resolved.`);
+        }
+        return resolutionErrors;
+    }
+    else if (!commitResult.committed) {
+        (0, logger_1.logInfo)("No commit performed (no changes or error).");
+    }
+    return [];
+}
+
+
+/***/ }),
+
 /***/ 5518:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -51191,6 +51909,27 @@ function buildUserRequestCommitMessage(issueNumber) {
 
 /***/ }),
 
+/***/ 3393:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.commitUserRequestIfSuccessful = commitUserRequestIfSuccessful;
+const logger_1 = __nccwpck_require__(1151);
+const bugbot_autofix_commit_1 = __nccwpck_require__(8158);
+async function commitUserRequestIfSuccessful(param, branchOverride, results, authenticatedUserPort, gitCommitPort) {
+    if (!results.at(-1)?.success) {
+        (0, logger_1.logInfo)('Do user request did not succeed; skipping commit.');
+        return;
+    }
+    (0, logger_1.logInfo)('Do user request succeeded; running commit and push.');
+    await (0, bugbot_autofix_commit_1.runUserRequestCommitAndPush)(param, { branchOverride }, authenticatedUserPort, gitCommitPort);
+}
+
+
+/***/ }),
+
 /***/ 2908:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -51231,7 +51970,7 @@ function deduplicateFindings(findings) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DetectBugbotFixIntentUseCase = void 0;
 const agent_1 = __nccwpck_require__(9937);
-const agent_task_policy_1 = __nccwpck_require__(4504);
+const agent_task_policy_1 = __nccwpck_require__(5712);
 const logger_1 = __nccwpck_require__(1151);
 const task_emoji_1 = __nccwpck_require__(6103);
 const result_1 = __nccwpck_require__(3817);
@@ -51594,61 +52333,76 @@ async function loadBugbotContext(param, options, ports) {
 
 "use strict";
 
-/**
- * Marks findings reported as fixed by updating their issue comments and PR review threads.
- */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.markFindingsResolved = markFindingsResolved;
+const pull_request_review_errors_1 = __nccwpck_require__(6445);
 const logger_1 = __nccwpck_require__(1151);
-const marker_1 = __nccwpck_require__(2274);
 const resolve_issue_finding_1 = __nccwpck_require__(5300);
 const resolve_pull_request_finding_1 = __nccwpck_require__(4567);
+function resolutionError(destination) {
+    return destination === "pull request"
+        ? new pull_request_review_errors_1.PullRequestReviewOperationError("mark-resolved")
+        : new Error("Unable to mark an issue finding as resolved.");
+}
+async function tryResolvePullRequestFinding(ports, execution, findingId, destination, errors) {
+    try {
+        await (0, resolve_pull_request_finding_1.resolvePullRequestFinding)(ports.pullRequestComments, {
+            findingId,
+            commentIdentity: destination.commentIdentity,
+            pullRequestNumber: destination.pullRequestNumber,
+            owner: execution.owner,
+            repo: execution.repo,
+            token: execution.tokens.token,
+        });
+    }
+    catch {
+        const error = resolutionError("pull request");
+        (0, logger_1.logError)(error);
+        errors.push(error);
+    }
+}
 async function markFindingsResolved(param) {
-    const { execution, context, resolvedFindingIds, normalizedResolvedIds, ports } = param;
-    const { existingByFindingId, issueComments } = context;
-    const owner = execution.owner;
-    const repo = execution.repo;
-    const token = execution.tokens.token;
-    for (const [findingId, existing] of Object.entries(existingByFindingId)) {
-        if (existing.resolved ||
-            (!resolvedFindingIds.has(findingId) &&
-                !normalizedResolvedIds.has((0, marker_1.sanitizeFindingIdForMarker)(findingId)))) {
+    const { execution, context, resolvedFindingIds, ports } = param;
+    const errors = [];
+    for (const [findingId, existing] of Object.entries(context.existingByFindingId)) {
+        const pullRequestDestination = existing.pullRequest;
+        // Marker-true comments can predate thread-first ordering. Repair their thread
+        // independently of the agent response; the provider operation is idempotent.
+        if (pullRequestDestination?.resolved) {
+            await tryResolvePullRequestFinding(ports, execution, findingId, pullRequestDestination, errors);
+        }
+        if (!resolvedFindingIds.has(findingId))
+            continue;
+        if (pullRequestDestination != null && !pullRequestDestination.resolved) {
+            await tryResolvePullRequestFinding(ports, execution, findingId, pullRequestDestination, errors);
+        }
+        const issueDestination = existing.issue;
+        if (issueDestination == null || issueDestination.resolved)
+            continue;
+        const issueComment = context.issueComments.find((comment) => comment.id === issueDestination.commentId);
+        if (issueComment?.body == null) {
+            const error = resolutionError("issue");
+            (0, logger_1.logError)(error);
+            errors.push(error);
             continue;
         }
-        const marker = (0, marker_1.buildMarker)(findingId, true);
-        if (existing.issueCommentId != null) {
-            const comment = issueComments.find((candidate) => candidate.id === existing.issueCommentId);
-            if (comment == null) {
-                (0, logger_1.logError)(`[Bugbot] No se encontró el comentario de la issue para marcar como resuelto. findingId="${findingId}", issueCommentId=${existing.issueCommentId}, issueNumber=${execution.issueNumber}, owner=${owner}, repo=${repo}.`);
-            }
-            else {
-                await (0, resolve_issue_finding_1.resolveIssueFinding)(ports.issueComments, {
-                    findingId,
-                    commentId: existing.issueCommentId,
-                    owner,
-                    repo,
-                    issueNumber: execution.issueNumber,
-                    token,
-                    body: comment.body,
-                }, marker);
-            }
+        try {
+            await (0, resolve_issue_finding_1.resolveIssueFinding)(ports.issueComments, {
+                findingId,
+                comment: { id: issueComment.id, body: issueComment.body },
+                owner: execution.owner,
+                repo: execution.repo,
+                issueNumber: execution.issueNumber,
+                token: execution.tokens.token,
+            });
         }
-        if (existing.prCommentId != null && existing.prNumber != null) {
-            try {
-                await (0, resolve_pull_request_finding_1.resolvePullRequestFinding)(ports.pullRequestComments, {
-                    findingId,
-                    commentId: existing.prCommentId,
-                    prNumber: existing.prNumber,
-                    owner,
-                    repo,
-                    token,
-                });
-            }
-            catch (err) {
-                (0, logger_1.logError)(`[Bugbot] Error al cargar el comentario de revisión de la PR (marcar como resuelto). findingId="${findingId}", prCommentId=${existing.prCommentId}, prNumber=${existing.prNumber}: ${err}`);
-            }
+        catch {
+            const error = resolutionError("issue");
+            (0, logger_1.logError)(error);
+            errors.push(error);
         }
     }
+    return errors;
 }
 
 
@@ -51666,7 +52420,9 @@ async function markFindingsResolved(param) {
  * threads when the user replies "fix it" in a PR.
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MAX_FINDING_ID_LENGTH = void 0;
 exports.sanitizeFindingIdForMarker = sanitizeFindingIdForMarker;
+exports.normalizeFindingIdForMarker = normalizeFindingIdForMarker;
 exports.buildMarker = buildMarker;
 exports.parseMarker = parseMarker;
 exports.markerRegexForFinding = markerRegexForFinding;
@@ -51674,34 +52430,48 @@ exports.replaceMarkerInBody = replaceMarkerInBody;
 exports.extractTitleFromBody = extractTitleFromBody;
 exports.buildCommentBody = buildCommentBody;
 const constants_1 = __nccwpck_require__(5415);
-const logger_1 = __nccwpck_require__(1151);
-/** Max length for finding ID when used in RegExp to mitigate ReDoS from external/crafted IDs. */
-const MAX_FINDING_ID_LENGTH_FOR_REGEX = 200;
-/** Safe character set for finding IDs in regex (alphanumeric, path/segment chars). IDs with other chars are escaped but length is always limited. */
+/** Maximum lossless finding identity accepted by the marker contract. */
+exports.MAX_FINDING_ID_LENGTH = 200;
+/** Safe character set for finding IDs in regex (alphanumeric, path/segment chars). */
 const SAFE_FINDING_ID_REGEX_CHARS = /^[a-zA-Z0-9_\-.:/]+$/;
-/** Sanitize finding ID so it cannot break HTML comment syntax (e.g. -->, <!, <, >, newlines, quotes). */
+/**
+ * Canonicalize only insignificant outer whitespace. Internal characters are
+ * never removed: doing so would make distinct finding identities collide.
+ */
 function sanitizeFindingIdForMarker(findingId) {
-    return findingId
-        .replace(/-->/g, '')
-        .replace(/<!/g, '')
-        .replace(/</g, '')
-        .replace(/>/g, '')
-        .replace(/"/g, '')
-        .replace(/\r\n|\r|\n/g, '')
-        .trim();
+    return findingId.trim();
+}
+function normalizeFindingIdForMarker(findingId) {
+    const safeId = sanitizeFindingIdForMarker(findingId);
+    return safeId.length > 0 &&
+        safeId.length <= exports.MAX_FINDING_ID_LENGTH &&
+        !/[\r\n]|-->|<!|[>"]/.test(safeId)
+        ? safeId
+        : null;
+}
+function requireFindingIdForMarker(findingId) {
+    const safeId = normalizeFindingIdForMarker(findingId);
+    if (safeId == null) {
+        throw new Error(findingId.trim().length === 0
+            ? "Finding ID is empty after marker sanitization."
+            : findingId.trim().length > exports.MAX_FINDING_ID_LENGTH
+                ? "Finding ID exceeds the maximum marker length."
+                : "Finding ID contains marker-breaking characters.");
+    }
+    return safeId;
 }
 function buildMarker(findingId, resolved) {
-    const safeId = sanitizeFindingIdForMarker(findingId);
+    const safeId = requireFindingIdForMarker(findingId);
     return `<!-- ${constants_1.BUGBOT_MARKER_PREFIX} finding_id:"${safeId}" resolved:${resolved} -->`;
 }
 function parseMarker(body) {
     if (!body)
         return [];
     const results = [];
-    const regex = new RegExp(`<!--\\s*${constants_1.BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"([^"]+)"\\s+resolved:(true|false)\\s*-->`, 'g');
+    const regex = new RegExp(`<!--\\s*${constants_1.BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"([^"]+)"\\s+resolved:(true|false)\\s*-->`, "g");
     let m;
     while ((m = regex.exec(body)) !== null) {
-        results.push({ findingId: m[1], resolved: m[2] === 'true' });
+        results.push({ findingId: m[1], resolved: m[2] === "true" });
     }
     return results;
 }
@@ -51710,46 +52480,47 @@ function parseMarker(body) {
  * Finding IDs from external data (comments, API) are length-limited and validated to mitigate ReDoS.
  */
 function markerRegexForFinding(findingId) {
-    const safeId = sanitizeFindingIdForMarker(findingId);
-    const truncated = safeId.length <= MAX_FINDING_ID_LENGTH_FOR_REGEX
+    const safeId = requireFindingIdForMarker(findingId);
+    const idForRegex = SAFE_FINDING_ID_REGEX_CHARS.test(safeId)
         ? safeId
-        : safeId.slice(0, MAX_FINDING_ID_LENGTH_FOR_REGEX);
-    const idForRegex = SAFE_FINDING_ID_REGEX_CHARS.test(truncated)
-        ? truncated
-        : truncated.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return new RegExp(`<!--\\s*${constants_1.BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"${idForRegex}"\\s+resolved:(?:true|false)\\s*-->`, 'g');
+        : safeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`<!--\\s*${constants_1.BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"${idForRegex}"\\s+resolved:(?:true|false)\\s*-->`, "g");
 }
 /**
  * Find the marker for this finding in body (using same pattern as parseMarker) and replace it.
- * Returns the updated body and whether a replacement was made. Logs an error with details if no replacement occurred.
+ * Returns whether the marker exists independently from whether the body changed.
  */
 function replaceMarkerInBody(body, findingId, newResolved, replacement) {
     const regex = markerRegexForFinding(findingId);
     const newMarker = replacement ?? buildMarker(findingId, newResolved);
+    const found = regex.test(body);
+    regex.lastIndex = 0;
+    if (!found)
+        return { updated: body, found: false, changed: false };
     const updated = body.replace(regex, newMarker);
-    const replaced = updated !== body;
-    if (!replaced) {
-        (0, logger_1.logError)(`[Bugbot] No se pudo marcar como resuelto: no se encontró el marcador en el comentario. findingId="${findingId}", bodyLength=${body?.length ?? 0}, bodySnippet=${(body ?? '').slice(0, 200)}...`);
-    }
-    return { updated, replaced };
+    return { updated, found: true, changed: updated !== body };
 }
 /** Extract title from comment body (first ## line) for context when sending to OpenCode. */
 function extractTitleFromBody(body) {
     if (!body)
-        return '';
+        return "";
     const match = body.match(/^##\s+(.+)$/m);
-    return (match?.[1] ?? '').trim();
+    return (match?.[1] ?? "").trim();
 }
 /** Builds the visible comment body (title, severity, location, description, suggestion) plus the hidden marker for this finding. */
 function buildCommentBody(finding, resolved) {
-    const severity = finding.severity ? `**Severity:** ${finding.severity}\n\n` : '';
+    const severity = finding.severity
+        ? `**Severity:** ${finding.severity}\n\n`
+        : "";
     const fileLine = finding.file != null
-        ? `**Location:** \`${finding.file}${finding.line != null ? `:${finding.line}` : ''}\`\n\n`
-        : '';
+        ? `**Location:** \`${finding.file}${finding.line != null ? `:${finding.line}` : ""}\`\n\n`
+        : "";
     const suggestion = finding.suggestion
         ? `**Suggested fix:**\n${finding.suggestion}\n\n`
-        : '';
-    const resolvedNote = resolved ? '\n\n---\n**Resolved** (no longer reported in latest analysis).\n' : '';
+        : "";
+    const resolvedNote = resolved
+        ? "\n\n---\n**Resolved** (no longer reported in latest analysis).\n"
+        : "";
     const marker = buildMarker(finding.id, resolved);
     return `## ${finding.title}
 
@@ -51844,12 +52615,20 @@ function prepareBugbotFindings(response, ignorePatterns, minSeverityValue, maxCo
     if (response == null || typeof response !== 'object')
         return undefined;
     const payload = response;
-    const findings = Array.isArray(payload.findings) ? payload.findings : [];
+    const findings = (Array.isArray(payload.findings) ? payload.findings : []).flatMap((finding) => {
+        const normalizedId = typeof finding?.id === 'string' ? (0, marker_1.normalizeFindingIdForMarker)(finding.id) : null;
+        return normalizedId == null ? [] : [{ ...finding, id: normalizedId }];
+    });
     const resolvedFindingIdsRaw = Array.isArray(payload.resolved_finding_ids)
         ? payload.resolved_finding_ids
         : [];
-    const resolvedFindingIds = new Set(resolvedFindingIdsRaw);
-    const normalizedResolvedIds = new Set(resolvedFindingIdsRaw.map(marker_1.sanitizeFindingIdForMarker));
+    const normalizedResolvedIdValues = resolvedFindingIdsRaw.flatMap((findingId) => {
+        if (typeof findingId !== 'string')
+            return [];
+        const normalizedId = (0, marker_1.normalizeFindingIdForMarker)(findingId);
+        return normalizedId == null ? [] : [normalizedId];
+    });
+    const resolvedFindingIds = new Set(normalizedResolvedIdValues);
     const minSeverity = (0, severity_1.normalizeMinSeverity)(minSeverityValue);
     const filteredFindings = (0, deduplicate_findings_1.deduplicateFindings)(findings
         .filter((finding) => finding.file == null || String(finding.file).trim() === '' || (0, path_validation_1.isSafeFindingFilePath)(finding.file))
@@ -51858,14 +52637,13 @@ function prepareBugbotFindings(response, ignorePatterns, minSeverityValue, maxCo
     return {
         ...(0, limit_comments_1.applyCommentLimit)(filteredFindings, maxComments),
         resolvedFindingIds,
-        normalizedResolvedIds,
     };
 }
 
 
 /***/ }),
 
-/***/ 2639:
+/***/ 8442:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -51920,8 +52698,8 @@ const logger_1 = __nccwpck_require__(1151);
 async function publishIssueFindingComment(repository, execution, finding, existing, commitSha) {
     const body = (0, marker_1.buildCommentBody)(finding, false);
     const options = commitSha ? { commitSha } : undefined;
-    if (existing?.issueCommentId != null) {
-        await repository.updateComment(execution.owner, execution.repo, execution.issueNumber, existing.issueCommentId, body, execution.tokens.token, options);
+    if (existing?.issue != null) {
+        await repository.updateComment(execution.owner, execution.repo, execution.issueNumber, existing.issue.commentId, body, execution.tokens.token, options);
         (0, logger_1.logDebugInfo)(`Updated bugbot comment for finding ${finding.id} on issue.`);
         return;
     }
@@ -51982,8 +52760,9 @@ class PullRequestReviewCommentPublisher {
         }
         const body = `${(0, marker_1.buildCommentBody)(finding, false)}\n\n${this.options.watermark}`;
         const line = finding.line ?? prContext.pathToFirstDiffLine[path] ?? 1;
-        if (existing?.prCommentId != null && existing.prNumber === openPrNumber) {
-            await this.options.repository.updatePullRequestReviewComment(execution.owner, execution.repo, existing.prCommentId, body, execution.tokens.token);
+        if (existing?.pullRequest != null &&
+            existing.pullRequest.pullRequestNumber === openPrNumber) {
+            await this.options.repository.updatePullRequestReviewComment(execution.owner, execution.repo, existing.pullRequest.commentIdentity, body, execution.tokens.token);
             return;
         }
         this.commentsToCreate.push({ path, line, body });
@@ -52000,14 +52779,14 @@ exports.PullRequestReviewCommentPublisher = PullRequestReviewCommentPublisher;
 
 /***/ }),
 
-/***/ 9626:
+/***/ 3059:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.queryBugbotFindings = queryBugbotFindings;
-const agent_task_policy_1 = __nccwpck_require__(4504);
+const agent_task_policy_1 = __nccwpck_require__(5712);
 const schema_1 = __nccwpck_require__(6808);
 async function queryBugbotFindings(repository, execution, prompt) {
     return repository.query({
@@ -52032,21 +52811,19 @@ async function queryBugbotFindings(repository, execution, prompt) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveIssueFinding = resolveIssueFinding;
-const logger_1 = __nccwpck_require__(1151);
+const comment_watermark_1 = __nccwpck_require__(3623);
 const marker_1 = __nccwpck_require__(2274);
-const RESOLVED_NOTE = '\n\n---\n**Resolved** (OpenCode confirmed fixed in latest analysis).\n';
-async function resolveIssueFinding(repository, resolution, marker) {
-    const { findingId, commentId, owner, repo, issueNumber, token, body } = resolution;
-    const { updated, replaced } = (0, marker_1.replaceMarkerInBody)(body ?? "", findingId, true, RESOLVED_NOTE + marker);
-    if (!replaced)
+const RESOLVED_NOTE = "\n\n---\n**Resolved** (OpenCode confirmed fixed in latest analysis).\n";
+async function resolveIssueFinding(repository, resolution) {
+    const body = (0, comment_watermark_1.stripTrailingCommentWatermarks)(resolution.comment.body);
+    const marker = (0, marker_1.parseMarker)(body).find((candidate) => candidate.findingId === resolution.findingId);
+    if (marker == null || marker.resolved)
         return;
-    try {
-        await repository.updateComment(owner, repo, issueNumber, commentId, updated.trimEnd(), token);
-        (0, logger_1.logDebugInfo)(`Marked finding "${findingId}" as resolved on issue #${issueNumber} (comment ${commentId}).`);
-    }
-    catch (err) {
-        (0, logger_1.logError)(`[Bugbot] Error al actualizar comentario de la issue (marcar como resuelto). findingId="${findingId}", issueCommentId=${commentId}, issueNumber=${issueNumber}: ${err}`);
-    }
+    const replacement = `${RESOLVED_NOTE}${(0, marker_1.buildMarker)(resolution.findingId, true)}`;
+    const replaced = (0, marker_1.replaceMarkerInBody)(body, resolution.findingId, true, replacement);
+    if (!replaced.found || !replaced.changed)
+        return;
+    await repository.updateComment(resolution.owner, resolution.repo, resolution.issueNumber, resolution.comment.id, replaced.updated, resolution.token);
 }
 
 
@@ -52059,29 +52836,27 @@ async function resolveIssueFinding(repository, resolution, marker) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolvePullRequestFinding = resolvePullRequestFinding;
-const logger_1 = __nccwpck_require__(1151);
+const pull_request_review_errors_1 = __nccwpck_require__(6445);
 const marker_1 = __nccwpck_require__(2274);
+const RESOLVED_NOTE = "\n\n---\n**Resolved** (OpenCode confirmed fixed in latest analysis).\n";
 async function resolvePullRequestFinding(repository, resolution) {
-    const { findingId, commentId, prNumber, owner, repo, token } = resolution;
-    const comments = await repository.listPullRequestReviewComments(owner, repo, prNumber, token);
-    const comment = comments.find((candidate) => candidate.id === commentId);
-    if (comment == null) {
-        (0, logger_1.logError)(`[Bugbot] No se encontró el comentario de la PR para marcar como resuelto. findingId="${findingId}", prCommentId=${commentId}, prNumber=${prNumber}, owner=${owner}, repo=${repo}.`);
+    const comments = await repository.listPullRequestReviewComments(resolution.owner, resolution.repo, resolution.pullRequestNumber, resolution.token);
+    const comment = comments.find((candidate) => candidate.identity === resolution.commentIdentity);
+    if (comment?.body == null) {
+        throw new pull_request_review_errors_1.PullRequestReviewOperationError("resolve-thread");
+    }
+    const marker = (0, marker_1.parseMarker)(comment.body).find((candidate) => candidate.findingId === resolution.findingId);
+    if (marker == null) {
+        throw new pull_request_review_errors_1.PullRequestReviewOperationError("resolve-thread");
+    }
+    await repository.resolvePullRequestReviewThread(resolution.owner, resolution.repo, resolution.pullRequestNumber, resolution.commentIdentity, resolution.token);
+    if (marker.resolved)
         return;
-    }
-    const { updated, replaced } = (0, marker_1.replaceMarkerInBody)(comment.body ?? "", findingId, true);
-    if (!replaced)
+    const replacement = `${RESOLVED_NOTE}${(0, marker_1.buildMarker)(resolution.findingId, true)}`;
+    const replaced = (0, marker_1.replaceMarkerInBody)(comment.body, resolution.findingId, true, replacement);
+    if (!replaced.found || !replaced.changed)
         return;
-    try {
-        await repository.updatePullRequestReviewComment(owner, repo, commentId, updated.trimEnd(), token);
-        (0, logger_1.logDebugInfo)(`Marked finding "${findingId}" as resolved on PR #${prNumber} (review comment ${commentId}).`);
-        if (comment.node_id) {
-            await repository.resolvePullRequestReviewThread(owner, repo, prNumber, comment.node_id, token);
-        }
-    }
-    catch (err) {
-        (0, logger_1.logError)(`[Bugbot] Error al actualizar comentario de revisión de la PR (marcar como resuelto). findingId="${findingId}", prCommentId=${commentId}, prNumber=${prNumber}: ${err}`);
-    }
+    await repository.updatePullRequestReviewComment(resolution.owner, resolution.repo, resolution.commentIdentity, replaced.updated, resolution.token);
 }
 
 
@@ -52134,7 +52909,7 @@ function sanitizeUserCommentForPrompt(raw) {
 /***/ }),
 
 /***/ 6808:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
@@ -52144,6 +52919,7 @@ function sanitizeUserCommentForPrompt(raw) {
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BUGBOT_FIX_INTENT_RESPONSE_SCHEMA = exports.BUGBOT_RESPONSE_SCHEMA = void 0;
+const marker_1 = __nccwpck_require__(2274);
 /** Detection (on push): OpenCode computes diff itself and returns findings + resolved_finding_ids. */
 exports.BUGBOT_RESPONSE_SCHEMA = {
     type: 'object',
@@ -52153,7 +52929,12 @@ exports.BUGBOT_RESPONSE_SCHEMA = {
             items: {
                 type: 'object',
                 properties: {
-                    id: { type: 'string', description: 'Stable unique id for this finding (e.g. file:line:summary)' },
+                    id: {
+                        type: 'string',
+                        minLength: 1,
+                        maxLength: marker_1.MAX_FINDING_ID_LENGTH,
+                        description: 'Stable unique id for this finding (e.g. file:line:summary)',
+                    },
                     title: { type: 'string', description: 'Short title of the problem' },
                     description: { type: 'string', description: 'Clear explanation of the issue' },
                     file: { type: 'string', description: 'Repository-relative path when applicable' },
@@ -52167,7 +52948,11 @@ exports.BUGBOT_RESPONSE_SCHEMA = {
         },
         resolved_finding_ids: {
             type: 'array',
-            items: { type: 'string' },
+            items: {
+                type: 'string',
+                minLength: 1,
+                maxLength: marker_1.MAX_FINDING_ID_LENGTH,
+            },
             description: 'Ids of previously reported issues (from the list we sent) that are now fixed in the current code. Only include ids we asked you to check.',
         },
     },
@@ -52235,6 +53020,26 @@ function severityLevel(severity) {
 /** Returns true if the finding's severity is at or above the minimum threshold. */
 function meetsMinSeverity(findingSeverity, minSeverity) {
     return severityLevel(findingSeverity) >= SEVERITY_ORDER[minSeverity];
+}
+
+
+/***/ }),
+
+/***/ 2632:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+/**
+ * Bugbot types: data structures used across detection, publishing, and autofix.
+ * OpenCode computes the diff and returns findings; we never pass a pre-computed diff to OpenCode.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isExistingFindingFullyResolved = isExistingFindingFullyResolved;
+function isExistingFindingFullyResolved(finding) {
+    const destinations = [finding.issue, finding.pullRequest].filter((destination) => destination != null);
+    return (destinations.length > 0 &&
+        destinations.every((destination) => destination.resolved));
 }
 
 
@@ -52308,7 +53113,7 @@ function limitVerifyCommands(commands) {
 
 /***/ }),
 
-/***/ 7742:
+/***/ 6689:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -52526,48 +53331,55 @@ const agent_1 = __nccwpck_require__(9937);
 const result_1 = __nccwpck_require__(3817);
 const task_emoji_1 = __nccwpck_require__(6103);
 const logger_1 = __nccwpck_require__(1151);
+const pull_request_review_errors_1 = __nccwpck_require__(6445);
 const build_bugbot_prompt_1 = __nccwpck_require__(2483);
 const load_bugbot_context_use_case_1 = __nccwpck_require__(4050);
 const apply_detected_findings_1 = __nccwpck_require__(793);
-const query_bugbot_findings_1 = __nccwpck_require__(9626);
+const query_bugbot_findings_1 = __nccwpck_require__(3059);
 class DetectPotentialProblemsUseCase {
-    constructor(aiRepository, contextPorts, writePorts) {
+    constructor(aiRepository, contextPorts, publicationPorts, resolutionPorts) {
         this.aiRepository = aiRepository;
         this.contextPorts = contextPorts;
-        this.writePorts = writePorts;
-        this.taskId = 'DetectPotentialProblemsUseCase';
+        this.publicationPorts = publicationPorts;
+        this.resolutionPorts = resolutionPorts;
+        this.taskId = "DetectPotentialProblemsUseCase";
     }
     async invoke(param) {
         (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const results = [];
         try {
-            if (!(0, agent_1.isAgentConfigurationReady)(param.ai?.getAgentConfiguration('findings'))) {
-                (0, logger_1.logDebugInfo)('OpenCode not configured; skipping potential problems detection.');
+            if (!(0, agent_1.isAgentConfigurationReady)(param.ai?.getAgentConfiguration("findings"))) {
+                (0, logger_1.logDebugInfo)("OpenCode not configured; skipping potential problems detection.");
                 return results;
             }
             if (param.issueNumber === -1) {
-                (0, logger_1.logDebugInfo)('No issue number for this branch; skipping potential problems detection.');
+                (0, logger_1.logDebugInfo)("No issue number for this branch; skipping potential problems detection.");
                 return results;
             }
             const context = await (0, load_bugbot_context_use_case_1.loadBugbotContext)(param, undefined, this.contextPorts);
             const prompt = (0, build_bugbot_prompt_1.buildBugbotPrompt)(param, context);
-            (0, logger_1.logInfo)('Detecting potential problems via OpenCode (agent computes changes and checks resolved)...');
+            (0, logger_1.logInfo)("Detecting potential problems via OpenCode (agent computes changes and checks resolved)...");
             const prepared = (0, apply_detected_findings_1.prepareDetectedFindings)(param, await (0, query_bugbot_findings_1.queryBugbotFindings)(this.aiRepository, param, prompt));
             if (prepared === undefined) {
-                (0, logger_1.logDebugInfo)('DetectPotentialProblems: No response from OpenCode.');
+                (0, logger_1.logDebugInfo)("DetectPotentialProblems: No response from OpenCode.");
                 return results;
             }
-            if (prepared.toPublish.length === 0 && prepared.resolvedFindingIds.size === 0) {
+            if (prepared.toPublish.length === 0 &&
+                prepared.resolvedFindingIds.size === 0) {
                 results.push(new result_1.Result({
                     id: this.taskId,
                     success: true,
                     executed: true,
-                    steps: ['Potential problems detection completed (no new findings, no resolved).'],
+                    steps: [
+                        "Potential problems detection completed (no new findings, no resolved).",
+                    ],
                 }));
                 return results;
             }
-            await (0, apply_detected_findings_1.applyDetectedFindings)(param, context, prepared, this.writePorts);
-            const stepParts = [`${prepared.toPublish.length} new/current finding(s) from OpenCode`];
+            const resolutionErrors = await (0, apply_detected_findings_1.applyDetectedFindings)(param, context, prepared, this.publicationPorts, this.resolutionPorts);
+            const stepParts = [
+                `${prepared.toPublish.length} new/current finding(s) from OpenCode`,
+            ];
             if (prepared.overflowCount > 0) {
                 stepParts.push(`${prepared.overflowCount} more not published (see summary comment)`);
             }
@@ -52576,18 +53388,25 @@ class DetectPotentialProblemsUseCase {
             }
             results.push(new result_1.Result({
                 id: this.taskId,
-                success: true,
+                success: resolutionErrors.length === 0,
                 executed: true,
-                steps: [`Potential problems detection completed. ${stepParts.join('; ')}.`],
+                steps: [
+                    `Potential problems detection completed. ${stepParts.join("; ")}.`,
+                ],
+                errors: resolutionErrors,
             }));
         }
         catch (error) {
-            (0, logger_1.logError)(`Error in ${this.taskId}: ${error}`);
+            const normalizedError = error instanceof pull_request_review_errors_1.PullRequestReviewOperationError
+                ? error
+                : new Error("Unable to detect potential problems.");
+            const resultError = new Error(`Error in ${this.taskId}: ${normalizedError.message}`);
+            (0, logger_1.logError)(resultError.message);
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
                 executed: true,
-                errors: [`Error in ${this.taskId}: ${error}`],
+                errors: [resultError],
             }));
         }
         return results;
@@ -52918,6 +53737,78 @@ class CheckPermissionsUseCase {
     }
 }
 exports.CheckPermissionsUseCase = CheckPermissionsUseCase;
+
+
+/***/ }),
+
+/***/ 2770:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CommentLanguageTranslationWorkflow = exports.TRANSLATED_COMMENT_MARKER = void 0;
+const result_1 = __nccwpck_require__(3817);
+const agent_task_policy_1 = __nccwpck_require__(5712);
+const agent_response_schemas_1 = __nccwpck_require__(5603);
+const prompts_1 = __nccwpck_require__(9518);
+const logger_1 = __nccwpck_require__(1151);
+const task_emoji_1 = __nccwpck_require__(6103);
+exports.TRANSLATED_COMMENT_MARKER = `<!-- content_translated
+If you'd like this comment to be translated again, please delete the entire comment, including this message. It will then be processed as a new one.
+-->`;
+class CommentLanguageTranslationWorkflow {
+    constructor(commentRepository, findingsQueryPort) {
+        this.commentRepository = commentRepository;
+        this.findingsQueryPort = findingsQueryPort;
+    }
+    async invoke(context) {
+        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(context.taskId)} Executing ${context.taskId}.`);
+        if (!context.commentBody || context.commentBody.includes(exports.TRANSLATED_COMMENT_MARKER)) {
+            return [new result_1.Result({ id: context.taskId, success: true, executed: false })];
+        }
+        const configuration = context.configuration;
+        const checkResponse = await this.findingsQueryPort.query({
+            configuration,
+            agentId: agent_task_policy_1.OPENCODE_AGENT_PLAN,
+            prompt: (0, prompts_1.getCheckCommentLanguagePrompt)({ locale: context.locale, commentBody: context.commentBody }),
+            options: {
+                expectJson: true,
+                schema: agent_response_schemas_1.LANGUAGE_CHECK_RESPONSE_SCHEMA,
+                schemaName: 'language_check_response',
+            },
+        });
+        const status = this.stringProperty(checkResponse, 'status');
+        (0, logger_1.logDebugInfo)(`${context.taskId}: language check status=${status}.`);
+        if (status === 'done')
+            return [new result_1.Result({ id: context.taskId, success: true, executed: true })];
+        const translationResponse = await this.findingsQueryPort.query({
+            configuration,
+            agentId: agent_task_policy_1.OPENCODE_AGENT_PLAN,
+            prompt: (0, prompts_1.getTranslateCommentPrompt)({ locale: context.locale, commentBody: context.commentBody }),
+            options: {
+                expectJson: true,
+                schema: agent_response_schemas_1.TRANSLATION_RESPONSE_SCHEMA,
+                schemaName: 'translation_response',
+            },
+        });
+        const translatedText = this.stringProperty(translationResponse, 'translatedText').trim();
+        if (!translatedText) {
+            const reason = this.stringProperty(translationResponse, 'reason');
+            (0, logger_1.logInfo)(`Translation returned no text; skipping comment update.${reason ? ` Reason: ${reason}` : ' OpenCode may have failed or returned invalid response.'}`);
+            return [new result_1.Result({ id: context.taskId, success: true, executed: false })];
+        }
+        await this.commentRepository.updateComment(context.owner, context.repo, context.issueNumber, context.commentId, `${translatedText}\n> ${context.commentBody}\n${exports.TRANSLATED_COMMENT_MARKER}\n`, context.token);
+        return [];
+    }
+    stringProperty(value, property) {
+        if (value && typeof value === 'object' && typeof value[property] === 'string') {
+            return value[property];
+        }
+        return '';
+    }
+}
+exports.CommentLanguageTranslationWorkflow = CommentLanguageTranslationWorkflow;
 
 
 /***/ }),
@@ -53521,14 +54412,14 @@ const task_emoji_1 = __nccwpck_require__(6103);
  * Store las configuration in the description
  */
 class StoreConfigurationUseCase {
-    constructor(handler) {
-        this.handler = handler;
+    constructor(configurationStorePort) {
+        this.configurationStorePort = configurationStorePort;
         this.taskId = 'StoreConfigurationUseCase';
     }
     async invoke(param) {
         (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         try {
-            await this.handler.update(param);
+            await this.configurationStorePort.update(param);
         }
         catch (error) {
             (0, logger_1.logError)(`StoreConfiguration: failed to update configuration.`, error instanceof Error ? { stack: error.stack } : undefined);
@@ -53572,8 +54463,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ThinkUseCase = void 0;
 const agent_1 = __nccwpck_require__(9937);
 const result_1 = __nccwpck_require__(3817);
-const agent_task_policy_1 = __nccwpck_require__(4504);
-const agent_response_schemas_1 = __nccwpck_require__(9656);
+const agent_task_policy_1 = __nccwpck_require__(5712);
+const agent_response_schemas_1 = __nccwpck_require__(5603);
 const prompts_1 = __nccwpck_require__(9518);
 const logger_1 = __nccwpck_require__(1151);
 const opencode_project_context_instruction_1 = __nccwpck_require__(2225);
@@ -53849,8 +54740,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AnswerIssueHelpUseCase = void 0;
 const agent_1 = __nccwpck_require__(9937);
 const result_1 = __nccwpck_require__(3817);
-const agent_task_policy_1 = __nccwpck_require__(4504);
-const agent_response_schemas_1 = __nccwpck_require__(9656);
+const agent_task_policy_1 = __nccwpck_require__(5712);
+const agent_response_schemas_1 = __nccwpck_require__(5603);
 const prompts_1 = __nccwpck_require__(9518);
 const logger_1 = __nccwpck_require__(1151);
 const opencode_project_context_instruction_1 = __nccwpck_require__(2225);
@@ -54090,14 +54981,24 @@ exports.AssignMemberToIssueUseCase = AssignMemberToIssueUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AssignReviewersToIssueUseCase = void 0;
 const result_1 = __nccwpck_require__(3817);
+const pull_request_review_errors_1 = __nccwpck_require__(6445);
 const logger_1 = __nccwpck_require__(1151);
 const task_emoji_1 = __nccwpck_require__(6103);
+function uniqueLogins(logins) {
+    const identities = new Map();
+    for (const login of logins) {
+        const identity = login.toLowerCase();
+        if (!identities.has(identity))
+            identities.set(identity, login);
+    }
+    return [...identities.values()];
+}
 class AssignReviewersToIssueUseCase {
     constructor(issueRepository, pullRequestRepository, projectRepository) {
         this.issueRepository = issueRepository;
         this.pullRequestRepository = pullRequestRepository;
         this.projectRepository = projectRepository;
-        this.taskId = 'AssignReviewersToIssueUseCase';
+        this.taskId = "AssignReviewersToIssueUseCase";
     }
     async invoke(param) {
         (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
@@ -54106,8 +55007,15 @@ class AssignReviewersToIssueUseCase {
         const result = [];
         try {
             (0, logger_1.logDebugInfo)(`#${number} needs ${desiredReviewersCount} reviewers.`);
-            const currentReviewers = await this.pullRequestRepository.getCurrentReviewers(param.owner, param.repo, number, param.tokens.token);
-            const currentAssignees = await this.issueRepository.getCurrentAssignees(param.owner, param.repo, number, param.tokens.token);
+            if (desiredReviewersCount <= 0) {
+                result.push(new result_1.Result({
+                    id: this.taskId,
+                    success: true,
+                    executed: true,
+                }));
+                return result;
+            }
+            const currentReviewers = uniqueLogins(await this.pullRequestRepository.getCurrentReviewers(param.owner, param.repo, number, param.tokens.token));
             if (currentReviewers.length >= desiredReviewersCount) {
                 /**
                  * No more assignees needed
@@ -54119,13 +55027,17 @@ class AssignReviewersToIssueUseCase {
                 }));
                 return result;
             }
+            const currentAssignees = uniqueLogins(await this.issueRepository.getCurrentAssignees(param.owner, param.repo, number, param.tokens.token));
             const missingReviewers = desiredReviewersCount - currentReviewers.length;
             (0, logger_1.logDebugInfo)(`#${number} needs ${missingReviewers} more reviewers.`);
             const excludeForReview = [];
             excludeForReview.push(param.pullRequest.creator);
             excludeForReview.push(...currentReviewers);
             excludeForReview.push(...currentAssignees);
-            const members = await this.projectRepository.getRandomMembers(param.owner, missingReviewers, excludeForReview, param.tokens.token);
+            const excludedIdentities = new Set(excludeForReview.map((login) => login.toLowerCase()));
+            const members = uniqueLogins(await this.projectRepository.getRandomMembers(param.owner, missingReviewers, excludeForReview, param.tokens.token))
+                .filter((member) => !excludedIdentities.has(member.toLowerCase()))
+                .slice(0, missingReviewers);
             if (members.length === 0) {
                 result.push(new result_1.Result({
                     id: this.taskId,
@@ -54138,29 +55050,60 @@ class AssignReviewersToIssueUseCase {
                 return result;
             }
             const reviewersAdded = await this.pullRequestRepository.addReviewersToPullRequest(param.owner, param.repo, number, members, param.tokens.token);
-            for (const member of reviewersAdded) {
-                if (members.indexOf(member) > -1)
-                    result.push(new result_1.Result({
-                        id: this.taskId,
-                        success: true,
-                        executed: true,
-                        steps: [
-                            `@${member} was requested to review the pull request.`,
-                        ],
-                    }));
+            const requestedMemberLogins = new Set(members.map((member) => member.toLowerCase()));
+            const confirmedReviewerLogins = new Set();
+            const confirmedReviewers = reviewersAdded.filter((member) => {
+                const normalizedLogin = member.toLowerCase();
+                if (!requestedMemberLogins.has(normalizedLogin) ||
+                    confirmedReviewerLogins.has(normalizedLogin)) {
+                    return false;
+                }
+                confirmedReviewerLogins.add(normalizedLogin);
+                return true;
+            });
+            if (confirmedReviewers.length === 0) {
+                result.push(new result_1.Result({
+                    id: this.taskId,
+                    success: false,
+                    executed: true,
+                    steps: [
+                        `Tried to assign members as reviewers to pull request, but no reviewer request was confirmed.`,
+                    ],
+                }));
+                return result;
+            }
+            for (const member of confirmedReviewers) {
+                result.push(new result_1.Result({
+                    id: this.taskId,
+                    success: true,
+                    executed: true,
+                    steps: [`@${member} was requested to review the pull request.`],
+                }));
+            }
+            const reviewersStillNeeded = Math.max(desiredReviewersCount -
+                currentReviewers.length -
+                confirmedReviewers.length, 0);
+            if (reviewersStillNeeded > 0) {
+                result.push(new result_1.Result({
+                    id: this.taskId,
+                    success: false,
+                    executed: true,
+                    steps: [
+                        `Confirmed ${confirmedReviewers.length} of ${missingReviewers} required reviewer requests; pull request still needs ${reviewersStillNeeded} ${reviewersStillNeeded === 1 ? "reviewer" : "reviewers"}.`,
+                    ],
+                }));
             }
             return result;
         }
         catch (error) {
-            (0, logger_1.logError)(error);
+            const normalizedError = (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "assign-reviewers");
+            (0, logger_1.logError)(normalizedError);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
                 executed: true,
-                steps: [
-                    `Tried to assign members to issue.`,
-                ],
-                error: error,
+                steps: [`Tried to assign reviewers to pull request.`],
+                errors: [normalizedError],
             }));
         }
         return result;
@@ -54543,9 +55486,10 @@ const result_1 = __nccwpck_require__(3817);
 const logger_1 = __nccwpck_require__(1151);
 const task_emoji_1 = __nccwpck_require__(6103);
 class LinkIssueProjectUseCase {
-    constructor(issueRepository, projectRepository) {
+    constructor(issueRepository, projectCommandRepository, projectLinkRepository) {
         this.issueRepository = issueRepository;
-        this.projectRepository = projectRepository;
+        this.projectCommandRepository = projectCommandRepository;
+        this.projectLinkRepository = projectLinkRepository;
         this.taskId = 'LinkIssueProjectUseCase';
     }
     async invoke(param) {
@@ -54560,13 +55504,13 @@ class LinkIssueProjectUseCase {
         try {
             for (const project of projects) {
                 const issueId = await this.issueRepository.getId(param.owner, param.repo, param.issue.number, param.tokens.token);
-                let actionDone = await this.projectRepository.linkContentId(project, issueId, param.tokens.token);
+                let actionDone = await this.projectLinkRepository.linkContentId(project, issueId, param.tokens.token);
                 if (actionDone) {
                     /**
                      * Wait for 10 seconds to ensure the issue is linked to the project
                      */
                     await new Promise(resolve => setTimeout(resolve, 10000));
-                    actionDone = await this.projectRepository.moveIssueToColumn(project, param.owner, param.repo, param.issue.number, columnName, param.tokens.token);
+                    actionDone = await this.projectCommandRepository.moveIssueToColumn(project, param.owner, param.repo, param.issue.number, columnName, param.tokens.token);
                     if (actionDone) {
                         result.push(new result_1.Result({
                             id: this.taskId,
@@ -54670,58 +55614,30 @@ exports.MoveIssueToInProgressUseCase = MoveIssueToInProgressUseCase;
 /***/ }),
 
 /***/ 7546:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PrepareBranchesUseCase = void 0;
-const core = __importStar(__nccwpck_require__(1078));
 const result_1 = __nccwpck_require__(3817);
+const branch_preparation_policy_1 = __nccwpck_require__(7307);
 const logger_1 = __nccwpck_require__(1151);
 const task_emoji_1 = __nccwpck_require__(6103);
 const execute_script_use_case_1 = __nccwpck_require__(5440);
+const branch_preparation_strategy_1 = __nccwpck_require__(9988);
 const move_issue_to_in_progress_1 = __nccwpck_require__(2309);
 const prepare_hotfix_branch_1 = __nccwpck_require__(6318);
-const prepare_release_branch_1 = __nccwpck_require__(3059);
-const branch_preparation_strategy_1 = __nccwpck_require__(9988);
+const prepare_release_branch_1 = __nccwpck_require__(4356);
 class PrepareBranchesUseCase {
-    constructor(projectBoardPort, branchPreparationPort) {
+    constructor(projectBoardPort, branchListQueryPort, branchNamePort, remoteBranchSyncPort, commitTagQueryPort, linkedBranchCommandPort, branchPropagationDelayPort) {
         this.projectBoardPort = projectBoardPort;
-        this.branchPreparationPort = branchPreparationPort;
+        this.branchListQueryPort = branchListQueryPort;
+        this.branchNamePort = branchNamePort;
+        this.remoteBranchSyncPort = remoteBranchSyncPort;
+        this.commitTagQueryPort = commitTagQueryPort;
+        this.linkedBranchCommandPort = linkedBranchCommandPort;
+        this.branchPropagationDelayPort = branchPropagationDelayPort;
         this.taskId = "PrepareBranchesUseCase";
     }
     async invoke(param) {
@@ -54730,7 +55646,6 @@ class PrepareBranchesUseCase {
         try {
             const issueTitle = param.issue.title ?? "";
             if (!param.labels.isMandatoryBranchedLabel && issueTitle.length === 0) {
-                core.setFailed("Issue title not available.");
                 return [
                     new result_1.Result({
                         id: this.taskId,
@@ -54740,26 +55655,26 @@ class PrepareBranchesUseCase {
                     }),
                 ];
             }
-            await this.branchPreparationPort.fetchRemoteBranches();
+            await this.remoteBranchSyncPort.fetchRemoteBranches();
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: true,
                 executed: true,
                 reminders: ["Take a coffee break while you work ☕."],
             }));
-            const branches = await this.branchPreparationPort.getListOfBranches(param.owner, param.repo, param.tokens.token);
+            const branches = await this.branchListQueryPort.getListOfBranches(param.owner, param.repo, param.tokens.token);
             branches.forEach((branch) => (0, logger_1.logDebugInfo)(`- ${branch}`));
             const strategy = (0, branch_preparation_strategy_1.selectBranchPreparationStrategy)({
                 hotfixActive: param.hotfix.active,
                 releaseActive: param.release.active,
             });
             if (strategy === "hotfix") {
-                return result.concat(await (0, prepare_hotfix_branch_1.prepareHotfixBranch)(param, this.branchPreparationPort, branches, this.taskId));
+                return result.concat(await (0, prepare_hotfix_branch_1.prepareHotfixBranch)(param, this.commitTagQueryPort, this.linkedBranchCommandPort, branches, this.taskId));
             }
             if (strategy === "release") {
-                return result.concat(await (0, prepare_release_branch_1.prepareReleaseBranch)(param, this.branchPreparationPort, branches, this.taskId));
+                return result.concat(await (0, prepare_release_branch_1.prepareReleaseBranch)(param, this.linkedBranchCommandPort, branches, this.taskId));
             }
-            result.push(...(await this.prepareManagedBranch(param, issueTitle)));
+            result.push(...(await this.prepareManagedBranch(param, issueTitle, branches)));
             return result;
         }
         catch (error) {
@@ -54768,15 +55683,44 @@ class PrepareBranchesUseCase {
                 id: this.taskId,
                 success: false,
                 executed: true,
-                steps: ["Tried to prepare the hotfix branch to the issue, but there was a problem."],
-                error,
+                steps: [
+                    "Tried to prepare the branch for the issue, but there was a problem.",
+                ],
+                errors: [error instanceof Error ? error : new Error(String(error))],
             }));
             return result;
         }
     }
-    async prepareManagedBranch(param, issueTitle) {
+    async prepareManagedBranch(param, issueTitle, branches) {
         (0, logger_1.logDebugInfo)(`Branch type: ${param.managementBranch}`);
-        const branchesResult = await this.branchPreparationPort.manageBranches(param, param.owner, param.repo, param.issueNumber, issueTitle, param.managementBranch, param.branches.development, param.hotfix?.branch, param.hotfix.active, param.tokens.token);
+        const decision = (0, branch_preparation_policy_1.decideManagedBranchPreparation)({
+            availableBranches: branches,
+            issueNumber: param.issueNumber,
+            formattedIssueTitle: this.branchNamePort.formatBranchName(issueTitle, param.issueNumber),
+            targetBranchType: param.managementBranch,
+            developmentBranch: param.branches.development,
+            managedBranchTypes: [
+                param.branches.featureTree,
+                param.branches.bugfixTree,
+                param.branches.docsTree,
+                param.branches.choreTree,
+            ].filter((branchType) => typeof branchType === "string" && branchType.length > 0),
+            currentParentBranch: param.currentConfiguration.parentBranch,
+        });
+        if (decision.kind === "already-exists") {
+            return [
+                new result_1.Result({
+                    id: this.taskId,
+                    success: true,
+                    executed: false,
+                    steps: [
+                        `Branch ${decision.targetBranchName} already exists, nothing to do.`,
+                    ],
+                }),
+            ];
+        }
+        param.currentConfiguration.parentBranch = decision.parentBranch;
+        const branchesResult = await this.linkedBranchCommandPort.createLinkedBranch(param.owner, param.repo, decision.baseBranchName, decision.targetBranchName, param.issueNumber, undefined, param.tokens.token);
         const lastAction = branchesResult.at(-1);
         if (!lastAction?.success || !lastAction.executed)
             return branchesResult;
@@ -54785,38 +55729,34 @@ class PrepareBranchesUseCase {
             return branchesResult;
         param.currentConfiguration.workingBranch = branchName;
         const commitPrefix = await this.buildCommitPrefix(param, branchName);
-        const rename = lastAction.payload.baseBranchName.includes(`${param.branches.featureTree}/`) ||
-            lastAction.payload.baseBranchName.includes(`${param.branches.bugfixTree}/`);
         const developmentUrl = `https://github.com/${param.owner}/${param.repo}/tree/${param.branches.development}`;
-        const step = rename
+        const step = decision.isRename
             ? `The branch **${lastAction.payload.baseBranchName}** was renamed to [**${branchName}**](${lastAction.payload.newBranchUrl}).`
             : `The branch [**${lastAction.payload.baseBranchName}**](${lastAction.payload.baseBranchUrl}) was used to create [**${branchName}**](${lastAction.payload.newBranchUrl}).`;
         const inlineCode = "`";
         const fence = "```";
-        const reminder = rename
+        const reminder = decision.isRename
             ? `Open a Pull Request from [${inlineCode}${branchName}${inlineCode}](${lastAction.payload.newBranchUrl}) to [${inlineCode}${param.branches.development}${inlineCode}](${developmentUrl}). [New PR](https://github.com/${param.owner}/${param.repo}/compare/${param.branches.development}...${branchName}?expand=1)`
             : `Open a Pull Request from [${inlineCode}${branchName}${inlineCode}](${lastAction.payload.newBranchUrl}) to [${inlineCode}${lastAction.payload.baseBranchName}${inlineCode}](${lastAction.payload.baseBranchUrl}). [New PR](https://github.com/${param.owner}/${param.repo}/compare/${lastAction.payload.baseBranchName}...${branchName}?expand=1)`;
         const reminders = [
             `Check out the branch:\n> ${fence}bash\n> git fetch -v && git checkout ${branchName}\n> ${fence}`,
-            ...(commitPrefix ? [`Commit the needed changes with this prefix:\n> ${fence}\n>${commitPrefix}\n> ${fence}`] : []),
+            ...(commitPrefix
+                ? [
+                    `Commit the needed changes with this prefix:\n> ${fence}\n>${commitPrefix}\n> ${fence}`,
+                ]
+                : []),
             reminder,
         ];
         const result = [
-            new result_1.Result({ id: this.taskId, success: true, executed: true, steps: [step], reminders }),
-        ];
-        if (param.hotfix.active) {
-            const mainBranchUrl = `https://github.com/${param.owner}/${param.repo}/tree/${param.branches.main}`;
-            result.push(new result_1.Result({
+            new result_1.Result({
                 id: this.taskId,
                 success: true,
                 executed: true,
-                reminders: [
-                    `After merging into [${inlineCode}${lastAction.payload.baseBranchName}${inlineCode}](${lastAction.payload.baseBranchUrl}), open a Pull Request from [${inlineCode}${lastAction.payload.baseBranchName}${inlineCode}](${lastAction.payload.baseBranchUrl}) to [${inlineCode}${param.branches.main}${inlineCode}](${mainBranchUrl}). [New PR](https://github.com/${param.owner}/${param.repo}/compare/${param.branches.main}...${lastAction.payload.baseBranchName}?expand=1)`,
-                    `After merging into [${inlineCode}${param.branches.main}${inlineCode}](${mainBranchUrl}), create the tag ${inlineCode}${param.hotfix.version}${inlineCode}.`,
-                ],
-            }));
-        }
-        await new Promise((resolve) => setTimeout(resolve, 10000));
+                steps: [step],
+                reminders,
+            }),
+        ];
+        await this.branchPropagationDelayPort.waitForLinkedBranch();
         result.push(...(await new move_issue_to_in_progress_1.MoveIssueToInProgressUseCase(this.projectBoardPort).invoke(param)));
         return result;
     }
@@ -54842,7 +55782,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.prepareHotfixBranch = prepareHotfixBranch;
 const result_1 = __nccwpck_require__(3817);
 const logger_1 = __nccwpck_require__(1151);
-async function prepareHotfixBranch(param, repository, branches, taskId) {
+async function prepareHotfixBranch(param, commitTagQuery, linkedBranchCommand, branches, taskId) {
     const { hotfix } = param;
     if (hotfix.baseVersion === undefined ||
         hotfix.version === undefined ||
@@ -54858,7 +55798,7 @@ async function prepareHotfixBranch(param, repository, branches, taskId) {
             }),
         ];
     }
-    const branchOid = await repository.getCommitTag(hotfix.baseVersion);
+    const branchOid = await commitTagQuery.getCommitTag(hotfix.baseVersion);
     const tagUrl = `https://github.com/${param.owner}/${param.repo}/tree/${hotfix.baseBranch}`;
     const hotfixUrl = `https://github.com/${param.owner}/${param.repo}/tree/${hotfix.branch}`;
     param.currentConfiguration.parentBranch = hotfix.baseBranch;
@@ -54876,7 +55816,7 @@ async function prepareHotfixBranch(param, repository, branches, taskId) {
             }),
         ];
     }
-    const linkResult = await repository.createLinkedBranch(param.owner, param.repo, hotfix.baseBranch, hotfix.branch, param.issueNumber, branchOid, param.tokens.token);
+    const linkResult = await linkedBranchCommand.createLinkedBranch(param.owner, param.repo, hotfix.baseBranch, hotfix.branch, param.issueNumber, branchOid, param.tokens.token);
     const lastAction = linkResult.at(-1);
     if (!lastAction?.success)
         return linkResult;
@@ -54896,7 +55836,7 @@ async function prepareHotfixBranch(param, repository, branches, taskId) {
 
 /***/ }),
 
-/***/ 3059:
+/***/ 4356:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -54906,7 +55846,7 @@ exports.prepareReleaseBranch = prepareReleaseBranch;
 const result_1 = __nccwpck_require__(3817);
 const execute_script_use_case_1 = __nccwpck_require__(5440);
 const logger_1 = __nccwpck_require__(1151);
-async function prepareReleaseBranch(param, repository, branches, taskId) {
+async function prepareReleaseBranch(param, linkedBranchCommand, branches, taskId) {
     const { release } = param;
     if (release.version === undefined || release.branch === undefined) {
         (0, logger_1.logWarn)("PrepareBranches: release requested but no release version found.");
@@ -54931,11 +55871,13 @@ async function prepareReleaseBranch(param, repository, branches, taskId) {
                 id: taskId,
                 success: true,
                 executed: true,
-                reminders: [buildReleaseReminder(param, releaseUrl, developmentUrl, mainUrl)],
+                reminders: [
+                    buildReleaseReminder(param, releaseUrl, developmentUrl, mainUrl),
+                ],
             }),
         ];
     }
-    const linkResult = await repository.createLinkedBranch(param.owner, param.repo, param.branches.development, release.branch, param.issueNumber, undefined, param.tokens.token);
+    const linkResult = await linkedBranchCommand.createLinkedBranch(param.owner, param.repo, param.branches.development, release.branch, param.issueNumber, undefined, param.tokens.token);
     const lastAction = linkResult.at(-1);
     if (!lastAction?.success)
         return linkResult;
@@ -54967,7 +55909,9 @@ async function prepareReleaseBranch(param, repository, branches, taskId) {
             id: taskId,
             success: true,
             executed: true,
-            steps: [`The branch [**${param.branches.development}**](${developmentUrl}) was used to create the branch [**${release.branch}**](${releaseUrl})`],
+            steps: [
+                `The branch [**${param.branches.development}**](${developmentUrl}) was used to create the branch [**${release.branch}**](${releaseUrl})`,
+            ],
             reminders,
         }),
     ];
@@ -55128,46 +56072,12 @@ exports.RemoveIssueBranchesUseCase = RemoveIssueBranchesUseCase;
 /***/ }),
 
 /***/ 7129:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RemoveNotNeededBranchesUseCase = void 0;
-const core = __importStar(__nccwpck_require__(1078));
 const result_1 = __nccwpck_require__(3817);
 const logger_1 = __nccwpck_require__(1151);
 const task_emoji_1 = __nccwpck_require__(6103);
@@ -55240,7 +56150,6 @@ class RemoveNotNeededBranchesUseCase {
         ];
     }
     missingTitleResult() {
-        core.setFailed("Issue title not available.");
         return [
             new result_1.Result({
                 id: this.taskId,
@@ -55304,99 +56213,24 @@ exports.UpdateIssueTypeUseCase = UpdateIssueTypeUseCase;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CheckIssueCommentLanguageUseCase = void 0;
-const result_1 = __nccwpck_require__(3817);
-const agent_task_policy_1 = __nccwpck_require__(4504);
-const agent_response_schemas_1 = __nccwpck_require__(9656);
-const prompts_1 = __nccwpck_require__(9518);
-const logger_1 = __nccwpck_require__(1151);
-const task_emoji_1 = __nccwpck_require__(6103);
+const comment_language_translation_workflow_1 = __nccwpck_require__(2770);
 class CheckIssueCommentLanguageUseCase {
     constructor(issueRepository, aiRepository) {
-        this.issueRepository = issueRepository;
-        this.aiRepository = aiRepository;
         this.taskId = 'CheckIssueCommentLanguageUseCase';
-        this.translatedKey = `<!-- content_translated
-If you'd like this comment to be translated again, please delete the entire comment, including this message. It will then be processed as a new one.
--->`;
+        this.workflow = new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(issueRepository, aiRepository);
     }
-    async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
-        const results = [];
-        const commentBody = param.issue.commentBody;
-        if (commentBody.length === 0 || commentBody.includes(this.translatedKey)) {
-            results.push(new result_1.Result({
-                id: this.taskId,
-                success: true,
-                executed: false,
-            }));
-            return results;
-        }
-        const locale = param.locale.issue;
-        let prompt = (0, prompts_1.getCheckCommentLanguagePrompt)({ locale, commentBody });
-        (0, logger_1.logDebugInfo)(`CheckIssueCommentLanguage: locale=${locale}, comment length=${commentBody.length}. Calling OpenCode for language check.`);
-        const checkResponse = await this.aiRepository.query({
+    invoke(param) {
+        return this.workflow.invoke({
+            taskId: this.taskId,
+            commentBody: param.issue.commentBody,
+            locale: param.locale.issue,
+            issueNumber: param.issue.number,
+            commentId: param.issue.commentId,
+            owner: param.owner,
+            repo: param.repo,
+            token: param.tokens.token,
             configuration: param.ai?.getAgentConfiguration('findings'),
-            agentId: agent_task_policy_1.OPENCODE_AGENT_PLAN,
-            prompt,
-            options: {
-                expectJson: true,
-                schema: agent_response_schemas_1.LANGUAGE_CHECK_RESPONSE_SCHEMA,
-                schemaName: 'language_check_response',
-            },
         });
-        const status = checkResponse != null &&
-            typeof checkResponse === 'object' &&
-            typeof checkResponse.status === 'string'
-            ? checkResponse.status
-            : '';
-        (0, logger_1.logDebugInfo)(`CheckIssueCommentLanguage: language check status=${status}.`);
-        if (status === 'done') {
-            results.push(new result_1.Result({
-                id: this.taskId,
-                success: true,
-                executed: true,
-            }));
-            return results;
-        }
-        prompt = (0, prompts_1.getTranslateCommentPrompt)({ locale, commentBody });
-        (0, logger_1.logDebugInfo)(`CheckIssueCommentLanguage: translating comment (prompt length=${prompt.length}).`);
-        const translationResponse = await this.aiRepository.query({
-            configuration: param.ai?.getAgentConfiguration('findings'),
-            agentId: agent_task_policy_1.OPENCODE_AGENT_PLAN,
-            prompt,
-            options: {
-                expectJson: true,
-                schema: agent_response_schemas_1.TRANSLATION_RESPONSE_SCHEMA,
-                schemaName: 'translation_response',
-            },
-        });
-        const translatedText = translationResponse != null &&
-            typeof translationResponse === 'object' &&
-            typeof translationResponse.translatedText === 'string'
-            ? translationResponse.translatedText.trim()
-            : '';
-        (0, logger_1.logDebugInfo)(`CheckIssueCommentLanguage: translation received. translatedText length=${translatedText.length}. Full translated text:\n${translatedText}`);
-        if (!translatedText) {
-            const reason = translationResponse != null &&
-                typeof translationResponse === 'object' &&
-                typeof translationResponse.reason === 'string'
-                ? translationResponse.reason
-                : undefined;
-            (0, logger_1.logInfo)(`Translation returned no text; skipping comment update.${reason ? ` Reason: ${reason}` : ' OpenCode may have failed or returned invalid response.'}`);
-            results.push(new result_1.Result({
-                id: this.taskId,
-                success: true,
-                executed: false,
-            }));
-            return results;
-        }
-        const translatedCommentBody = `${translatedText}
-> ${commentBody}
-${this.translatedKey}
-`;
-        (0, logger_1.logInfo)(`🔎 Issue number: ${param.issue.number}`);
-        await this.issueRepository.updateComment(param.owner, param.repo, param.issue.number, param.issue.commentId, translatedCommentBody, param.tokens.token);
-        return results;
     }
 }
 exports.CheckIssueCommentLanguageUseCase = CheckIssueCommentLanguageUseCase;
@@ -55540,8 +56374,9 @@ const result_1 = __nccwpck_require__(3817);
 const logger_1 = __nccwpck_require__(1151);
 const task_emoji_1 = __nccwpck_require__(6103);
 class LinkPullRequestProjectUseCase {
-    constructor(projectBoardPort) {
-        this.projectBoardPort = projectBoardPort;
+    constructor(projectBoardCommandPort, projectBoardLinkPort) {
+        this.projectBoardCommandPort = projectBoardCommandPort;
+        this.projectBoardLinkPort = projectBoardLinkPort;
         this.taskId = 'LinkPullRequestProjectUseCase';
     }
     async invoke(param) {
@@ -55555,13 +56390,13 @@ class LinkPullRequestProjectUseCase {
         }
         try {
             for (const project of projects) {
-                let actionDone = await this.projectBoardPort.linkContentId(project, param.pullRequest.id, param.tokens.token);
+                let actionDone = await this.projectBoardLinkPort.linkContentId(project, param.pullRequest.id, param.tokens.token);
                 if (actionDone) {
                     /**
                      * Wait for 10 seconds to ensure the pull request is linked to the project
                      */
                     await new Promise(resolve => setTimeout(resolve, 10000));
-                    actionDone = await this.projectBoardPort.moveIssueToColumn(project, param.owner, param.repo, param.pullRequest.number, columnName, param.tokens.token);
+                    actionDone = await this.projectBoardCommandPort.moveIssueToColumn(project, param.owner, param.repo, param.pullRequest.number, columnName, param.tokens.token);
                     if (actionDone) {
                         result.push(new result_1.Result({
                             id: this.taskId,
@@ -55618,7 +56453,7 @@ exports.LinkPullRequestProjectUseCase = LinkPullRequestProjectUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SyncSizeAndProgressLabelsFromIssueToPrUseCase = void 0;
 const result_1 = __nccwpck_require__(3817);
-const progress_labels_1 = __nccwpck_require__(7172);
+const progress_labels_1 = __nccwpck_require__(7890);
 const logger_1 = __nccwpck_require__(1151);
 const task_emoji_1 = __nccwpck_require__(6103);
 /**
@@ -55701,7 +56536,7 @@ exports.SyncSizeAndProgressLabelsFromIssueToPrUseCase = SyncSizeAndProgressLabel
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdatePullRequestDescriptionUseCase = void 0;
 const result_1 = __nccwpck_require__(3817);
-const agent_task_policy_1 = __nccwpck_require__(4504);
+const agent_task_policy_1 = __nccwpck_require__(5712);
 const prompts_1 = __nccwpck_require__(9518);
 const logger_1 = __nccwpck_require__(1151);
 const opencode_project_context_instruction_1 = __nccwpck_require__(2225);
@@ -55817,101 +56652,64 @@ exports.UpdatePullRequestDescriptionUseCase = UpdatePullRequestDescriptionUseCas
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CheckPullRequestCommentLanguageUseCase = void 0;
-const result_1 = __nccwpck_require__(3817);
-const agent_task_policy_1 = __nccwpck_require__(4504);
-const agent_response_schemas_1 = __nccwpck_require__(9656);
-const prompts_1 = __nccwpck_require__(9518);
-const logger_1 = __nccwpck_require__(1151);
-const task_emoji_1 = __nccwpck_require__(6103);
+const comment_language_translation_workflow_1 = __nccwpck_require__(2770);
 class CheckPullRequestCommentLanguageUseCase {
     constructor(issueRepository, aiRepository) {
-        this.issueRepository = issueRepository;
-        this.aiRepository = aiRepository;
         this.taskId = 'CheckPullRequestCommentLanguageUseCase';
-        this.translatedKey = `<!-- content_translated
-If you'd like this comment to be translated again, please delete the entire comment, including this message. It will then be processed as a new one.
--->`;
+        this.workflow = new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(issueRepository, aiRepository);
     }
-    async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
-        const results = [];
-        const commentBody = param.pullRequest.commentBody;
-        if (commentBody.length === 0 || commentBody.includes(this.translatedKey)) {
-            results.push(new result_1.Result({
-                id: this.taskId,
-                success: true,
-                executed: false,
-            }));
-            return results;
-        }
-        const locale = param.locale.pullRequest;
-        let prompt = (0, prompts_1.getCheckCommentLanguagePrompt)({ locale, commentBody });
-        (0, logger_1.logDebugInfo)(`CheckPullRequestCommentLanguage: locale=${locale}, comment length=${commentBody.length}. Calling OpenCode for language check.`);
-        const checkResponse = await this.aiRepository.query({
+    invoke(param) {
+        return this.workflow.invoke({
+            taskId: this.taskId,
+            commentBody: param.pullRequest.commentBody,
+            locale: param.locale.pullRequest,
+            issueNumber: param.pullRequest.number,
+            commentId: param.pullRequest.commentId,
+            owner: param.owner,
+            repo: param.repo,
+            token: param.tokens.token,
             configuration: param.ai?.getAgentConfiguration('findings'),
-            agentId: agent_task_policy_1.OPENCODE_AGENT_PLAN,
-            prompt,
-            options: {
-                expectJson: true,
-                schema: agent_response_schemas_1.LANGUAGE_CHECK_RESPONSE_SCHEMA,
-                schemaName: 'language_check_response',
-            },
         });
-        const status = checkResponse != null &&
-            typeof checkResponse === 'object' &&
-            typeof checkResponse.status === 'string'
-            ? checkResponse.status
-            : '';
-        (0, logger_1.logDebugInfo)(`CheckPullRequestCommentLanguage: language check status=${status}.`);
-        if (status === 'done') {
-            results.push(new result_1.Result({
-                id: this.taskId,
-                success: true,
-                executed: true,
-            }));
-            return results;
-        }
-        prompt = (0, prompts_1.getTranslateCommentPrompt)({ locale, commentBody });
-        (0, logger_1.logDebugInfo)(`CheckPullRequestCommentLanguage: translating comment (prompt length=${prompt.length}).`);
-        const translationResponse = await this.aiRepository.query({
-            configuration: param.ai?.getAgentConfiguration('findings'),
-            agentId: agent_task_policy_1.OPENCODE_AGENT_PLAN,
-            prompt,
-            options: {
-                expectJson: true,
-                schema: agent_response_schemas_1.TRANSLATION_RESPONSE_SCHEMA,
-                schemaName: 'translation_response',
-            },
-        });
-        const translatedText = translationResponse != null &&
-            typeof translationResponse === 'object' &&
-            typeof translationResponse.translatedText === 'string'
-            ? translationResponse.translatedText.trim()
-            : '';
-        (0, logger_1.logDebugInfo)(`CheckPullRequestCommentLanguage: translation received. translatedText length=${translatedText.length}. Full translated text:\n${translatedText}`);
-        if (!translatedText) {
-            const reason = translationResponse != null &&
-                typeof translationResponse === 'object' &&
-                typeof translationResponse.reason === 'string'
-                ? translationResponse.reason
-                : undefined;
-            (0, logger_1.logInfo)(`Translation returned no text; skipping comment update.${reason ? ` Reason: ${reason}` : ' OpenCode may have failed or returned invalid response.'}`);
-            results.push(new result_1.Result({
-                id: this.taskId,
-                success: true,
-                executed: false,
-            }));
-            return results;
-        }
-        const translatedCommentBody = `${translatedText}
-> ${commentBody}
-${this.translatedKey}
-`;
-        await this.issueRepository.updateComment(param.owner, param.repo, param.pullRequest.number, param.pullRequest.commentId, translatedCommentBody, param.tokens.token);
-        return results;
     }
 }
 exports.CheckPullRequestCommentLanguageUseCase = CheckPullRequestCommentLanguageUseCase;
+
+
+/***/ }),
+
+/***/ 8301:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WaitForPreviousWorkflowRunsUseCase = void 0;
+const DEFAULT_POLICY = {
+    maximumAttempts: 2000,
+    delayMilliseconds: 2000,
+};
+class WaitForPreviousWorkflowRunsUseCase {
+    constructor(queryPort, delayPort, observerPort, policy = DEFAULT_POLICY) {
+        this.queryPort = queryPort;
+        this.delayPort = delayPort;
+        this.observerPort = observerPort;
+        this.policy = policy;
+        this.taskId = 'WaitForPreviousWorkflowRunsUseCase';
+    }
+    async invoke(query) {
+        for (let attempt = 0; attempt < this.policy.maximumAttempts; attempt++) {
+            const activeRunCount = await this.queryPort.countActivePreviousRuns(query);
+            if (activeRunCount === 0) {
+                this.observerPort.noActivePreviousRuns();
+                return;
+            }
+            this.observerPort.waitingForPreviousRuns(activeRunCount, this.policy.delayMilliseconds);
+            await this.delayPort.wait(this.policy.delayMilliseconds);
+        }
+        throw new Error('Timeout waiting for previous runs to finish.');
+    }
+}
+exports.WaitForPreviousWorkflowRunsUseCase = WaitForPreviousWorkflowRunsUseCase;
 
 
 /***/ }),
@@ -56148,15 +56946,9 @@ exports.Emoji = Emoji;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Execution = void 0;
-const configuration_handler_1 = __nccwpck_require__(188);
-const initial_labels_policy_1 = __nccwpck_require__(293);
 const label_utils_1 = __nccwpck_require__(9192);
-const logger_1 = __nccwpck_require__(1151);
 const commit_1 = __nccwpck_require__(7525);
 const config_1 = __nccwpck_require__(450);
-const resolve_execution_issue_number_1 = __nccwpck_require__(7647);
-const resolve_issue_branch_version_1 = __nccwpck_require__(1567);
-const previous_branch_state_policy_1 = __nccwpck_require__(3630);
 class Execution {
     get eventName() {
         return this.inputs?.eventName ?? '';
@@ -56231,61 +57023,6 @@ class Execution {
          */
         this.issueNumber = -1;
         this.commitPrefixBuilderParams = {};
-        this.setup = async (branchRepository, issueRepository, organizationRepository) => {
-            (0, logger_1.setGlobalLoggerDebug)(this.debug, this.inputs === undefined);
-            this.tokenUser = await organizationRepository.getUserFromToken(this.tokens.token);
-            if (!this.tokenUser) {
-                throw new Error('Failed to get user from token');
-            }
-            const resolvedIssueNumber = await (0, resolve_execution_issue_number_1.resolveExecutionIssueNumber)(this, issueRepository);
-            if (resolvedIssueNumber === undefined) {
-                return;
-            }
-            this.previousConfiguration = await new configuration_handler_1.ConfigurationHandler(issueRepository).get(this);
-            /**
-             * Get labels of issue (skip if it's the initial setup and it fails)
-             */
-            try {
-                this.labels.currentIssueLabels = await issueRepository.getLabels(this.owner, this.repo, this.issueNumber, this.tokens.token);
-            }
-            catch (error) {
-                const isInitialSetup = (0, initial_labels_policy_1.shouldSkipInitialLabelsFetch)(this.isSingleAction, this.singleAction.currentSingleAction);
-                if (isInitialSetup) {
-                    (0, logger_1.logDebugInfo)('Skipping initial labels fetch for setup action.');
-                    this.labels.currentIssueLabels = [];
-                }
-                else {
-                    throw error;
-                }
-            }
-            /**
-             * Contains release label
-             */
-            this.release.active = this.labels.isRelease;
-            this.hotfix.active = this.labels.isHotfix;
-            const previousState = (0, previous_branch_state_policy_1.restorePreviousBranchState)(this.previousConfiguration, this.release.active ? 'release' : this.hotfix.active ? 'hotfix' : 'default', this.branches.releaseTree, this.branches.hotfixTree);
-            this.restorePreviousBranchState(previousState);
-            if (this.isSingleAction) {
-                /**
-                 * Nothing to do here (for now)
-                 */
-            }
-            else if (this.isIssue) {
-                const canContinue = await (0, resolve_issue_branch_version_1.resolveIssueBranchVersion)(this, branchRepository, issueRepository);
-                if (!canContinue)
-                    return;
-            }
-            else if (this.isPullRequest) {
-                this.labels.currentPullRequestLabels = await issueRepository.getLabels(this.owner, this.repo, this.pullRequest.number, this.tokens.token);
-                this.release.active = this.pullRequest.base.indexOf(`${this.branches.releaseTree}/`) > -1;
-                this.hotfix.active = this.pullRequest.base.indexOf(`${this.branches.hotfixTree}/`) > -1;
-                if (!this.currentConfiguration.parentBranch) {
-                    this.currentConfiguration.parentBranch = this.pullRequest.base;
-                }
-            }
-            this.currentConfiguration.branchType = this.issueType;
-            // logDebugInfo(`Current configuration: ${JSON.stringify(this.currentConfiguration, null, 2)}`);
-        };
         this.debug = debug;
         this.singleAction = singleAction;
         this.commitPrefixBuilder = commitPrefixBuilder;
@@ -56307,19 +57044,6 @@ class Execution {
         this.currentConfiguration = new config_1.Config({});
         this.inputs = inputs;
         this.welcome = welcome;
-    }
-    restorePreviousBranchState(state) {
-        this.release.version = state.releaseVersion;
-        this.release.branch = state.releaseBranch;
-        this.hotfix.baseVersion = state.hotfixBaseVersion;
-        this.hotfix.baseBranch = state.hotfixBaseBranch;
-        this.hotfix.version = state.hotfixVersion;
-        this.hotfix.branch = state.hotfixBranch;
-        this.currentConfiguration.parentBranch = state.parentBranch;
-        this.currentConfiguration.workingBranch = state.workingBranch;
-        this.currentConfiguration.releaseBranch = state.releaseBranch;
-        this.currentConfiguration.hotfixOriginBranch = state.hotfixBaseBranch;
-        this.currentConfiguration.hotfixBranch = state.hotfixBranch;
     }
 }
 exports.Execution = Execution;
@@ -56814,7 +57538,7 @@ exports.ProjectDetail = ProjectDetail;
 
 /***/ }),
 
-/***/ 3231:
+/***/ 6562:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
@@ -56956,164 +57680,6 @@ class Release {
     }
 }
 exports.Release = Release;
-
-
-/***/ }),
-
-/***/ 7647:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.resolveExecutionIssueNumber = resolveExecutionIssueNumber;
-const constants_1 = __nccwpck_require__(5415);
-const title_utils_1 = __nccwpck_require__(6267);
-/**
- * Resolves the issue/PR number that drives an execution and records the
- * single-action event classification. Repository access is injected so this
- * concern does not construct repositories or configure unrelated state.
- */
-async function resolveExecutionIssueNumber(execution, issueRepository) {
-    if (execution.isSingleAction) {
-        if (execution.inputs?.[constants_1.INPUT_KEYS.SINGLE_ACTION_ISSUE]) {
-            execution.issueNumber = execution.inputs[constants_1.INPUT_KEYS.SINGLE_ACTION_ISSUE];
-            execution.singleAction.issue = execution.issueNumber;
-        }
-        else if (execution.isIssue) {
-            execution.singleAction.isIssue = true;
-            execution.issueNumber = execution.issue.number;
-            execution.singleAction.issue = execution.issueNumber;
-        }
-        else if (execution.isPullRequest) {
-            execution.singleAction.isPullRequest = true;
-            execution.issueNumber = (0, title_utils_1.extractIssueNumberFromBranch)(execution.pullRequest.head);
-            execution.singleAction.issue = execution.issueNumber;
-        }
-        else if (execution.isPush) {
-            execution.singleAction.isPush = true;
-            execution.issueNumber = (0, title_utils_1.extractIssueNumberFromPush)(execution.commit.branch);
-            execution.singleAction.issue = execution.issueNumber;
-        }
-        else {
-            execution.singleAction.isPullRequest = await issueRepository.isPullRequest(execution.owner, execution.repo, execution.singleAction.issue, execution.tokens.token);
-            execution.singleAction.isIssue = await issueRepository.isIssue(execution.owner, execution.repo, execution.singleAction.issue, execution.tokens.token);
-            if (execution.singleAction.isIssue) {
-                execution.issueNumber = execution.singleAction.issue;
-            }
-            else if (execution.singleAction.isPullRequest) {
-                const head = await issueRepository.getHeadBranch(execution.owner, execution.repo, execution.singleAction.issue, execution.tokens.token);
-                if (head === undefined) {
-                    return undefined;
-                }
-                execution.issueNumber = (0, title_utils_1.extractIssueNumberFromBranch)(head);
-            }
-        }
-    }
-    else if (execution.isIssue) {
-        execution.issueNumber = execution.issue.number;
-    }
-    else if (execution.isPullRequest) {
-        execution.issueNumber = (0, title_utils_1.extractIssueNumberFromBranch)(execution.pullRequest.head);
-    }
-    else if (execution.isPush) {
-        execution.issueNumber = (0, title_utils_1.extractIssueNumberFromPush)(execution.commit.branch);
-    }
-    return execution.issueNumber;
-}
-
-
-/***/ }),
-
-/***/ 659:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.resolveHotfixBranchVersion = resolveHotfixBranchVersion;
-const version_resolution_policy_1 = __nccwpck_require__(2373);
-const version_resolution_application_policy_1 = __nccwpck_require__(231);
-const version_resolution_result_policy_1 = __nccwpck_require__(1730);
-const get_hotfix_version_use_case_1 = __nccwpck_require__(9946);
-async function resolveHotfixBranchVersion(execution, branchRepository, issueDescriptionPort) {
-    const versionResult = await new get_hotfix_version_use_case_1.GetHotfixVersionUseCase(issueDescriptionPort).invoke(execution);
-    const versionInfo = versionResult.at(-1);
-    if (versionInfo?.executed && versionInfo.success) {
-        const resolution = (0, version_resolution_result_policy_1.hotfixResolutionFromPayload)(versionInfo.payload);
-        execution.hotfix.baseVersion = resolution.baseVersion;
-        execution.hotfix.version = resolution.version;
-    }
-    else {
-        const nextVersion = (0, version_resolution_policy_1.nextHotfixVersion)(await branchRepository.getLatestTag());
-        execution.hotfix.baseVersion = nextVersion.baseVersion;
-        execution.hotfix.version = nextVersion.version;
-    }
-    const state = (0, version_resolution_application_policy_1.applyHotfixResolution)(execution.branches.hotfixTree, execution.hotfix.baseVersion, execution.hotfix.version);
-    execution.hotfix.branch = state.branch;
-    execution.currentConfiguration.hotfixBranch = state.branch;
-    execution.hotfix.baseBranch = state.baseBranch;
-    execution.currentConfiguration.hotfixOriginBranch = state.baseBranch;
-    return true;
-}
-
-
-/***/ }),
-
-/***/ 1567:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.resolveIssueBranchVersion = resolveIssueBranchVersion;
-const resolve_hotfix_branch_version_1 = __nccwpck_require__(659);
-const resolve_release_branch_version_1 = __nccwpck_require__(2622);
-async function resolveIssueBranchVersion(execution, branchRepository, issueDescriptionPort) {
-    if (execution.release.active && execution.release.version === undefined) {
-        return (0, resolve_release_branch_version_1.resolveReleaseBranchVersion)(execution, branchRepository, issueDescriptionPort);
-    }
-    if (execution.hotfix.active && execution.hotfix.version === undefined) {
-        return (0, resolve_hotfix_branch_version_1.resolveHotfixBranchVersion)(execution, branchRepository, issueDescriptionPort);
-    }
-    return true;
-}
-
-
-/***/ }),
-
-/***/ 2622:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.resolveReleaseBranchVersion = resolveReleaseBranchVersion;
-const version_resolution_policy_1 = __nccwpck_require__(2373);
-const version_resolution_application_policy_1 = __nccwpck_require__(231);
-const version_resolution_result_policy_1 = __nccwpck_require__(1730);
-const version_resolution_outcome_policy_1 = __nccwpck_require__(3496);
-const get_release_type_use_case_1 = __nccwpck_require__(4410);
-const get_release_version_use_case_1 = __nccwpck_require__(587);
-async function resolveReleaseBranchVersion(execution, branchRepository, issueDescriptionPort) {
-    const versionResult = await new get_release_version_use_case_1.GetReleaseVersionUseCase(issueDescriptionPort).invoke(execution);
-    const versionInfo = versionResult.at(-1);
-    if (versionInfo?.executed && versionInfo.success) {
-        execution.release.version = (0, version_resolution_result_policy_1.releaseResolutionFromPayload)(versionInfo.payload).version;
-    }
-    else {
-        const typeResult = await new get_release_type_use_case_1.GetReleaseTypeUseCase(issueDescriptionPort).invoke(execution);
-        const typeInfo = typeResult.at(-1);
-        if (typeInfo?.executed && typeInfo.success) {
-            execution.release.type = (0, version_resolution_result_policy_1.releaseResolutionFromPayload)(typeInfo.payload).type;
-            if ((0, version_resolution_outcome_policy_1.shouldAbortReleaseResolution)(execution.release.type))
-                return false;
-            execution.release.version = (0, version_resolution_policy_1.nextReleaseVersion)(await branchRepository.getLatestTag(), execution.release.type);
-        }
-    }
-    execution.release.branch = (0, version_resolution_application_policy_1.applyReleaseResolution)(execution.branches.releaseTree, execution.release.version).branch;
-    return true;
-}
 
 
 /***/ }),
@@ -57400,39 +57966,6 @@ function hotfixResolutionFromPayload(payload) {
 
 /***/ }),
 
-/***/ 4521:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-// types.ts (o donde quieras definir tus modelos)
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.WorkflowRun = void 0;
-class WorkflowRun {
-    // puedes agregar más campos si los usas
-    constructor(data) {
-        this.id = data.id;
-        this.name = data.name;
-        this.head_branch = data.head_branch;
-        this.head_sha = data.head_sha;
-        this.run_number = data.run_number;
-        this.event = data.event;
-        this.status = data.status;
-        this.conclusion = data.conclusion;
-        this.created_at = data.created_at;
-        this.updated_at = data.updated_at;
-        this.url = data.url;
-        this.html_url = data.html_url;
-    }
-    isActive() {
-        return this.status === "in_progress" || this.status === "queued";
-    }
-}
-exports.WorkflowRun = WorkflowRun;
-
-
-/***/ }),
-
 /***/ 5790:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -57579,6 +58112,42 @@ exports.AgentCliClient = AgentCliClient;
 
 /***/ }),
 
+/***/ 4678:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.defaultCliCommand = defaultCliCommand;
+exports.cliInstallationHint = cliInstallationHint;
+/**
+ * Provider-specific headless commands. The prompt is supplied through stdin.
+ * Keep these as argv-safe command strings; AgentCliClient never invokes a shell.
+ */
+function defaultCliCommand(provider) {
+    switch (provider) {
+        case 'codex':
+            return 'codex exec --ephemeral --skip-git-repo-check -';
+        case 'cursor':
+            return 'agent -p --output-format text -';
+        case 'opencode':
+            return 'opencode run';
+    }
+}
+function cliInstallationHint(provider) {
+    switch (provider) {
+        case 'codex':
+            return 'Install the OpenAI Codex CLI and verify `codex exec --help` on the runner.';
+        case 'cursor':
+            return 'Install the Cursor CLI from https://cursor.com/install and verify `agent --help` on the runner.';
+        case 'opencode':
+            return 'Install OpenCode and verify `opencode run --help` on the runner.';
+    }
+}
+
+
+/***/ }),
+
 /***/ 7950:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -57662,7 +58231,7 @@ function getValidatedAgentConfiguration(configuration, task) {
 
 /***/ }),
 
-/***/ 8442:
+/***/ 8556:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -57846,37 +58415,6 @@ function buildAgentPrompt(prompt, expectJson, schema, schemaName) {
 
 /***/ }),
 
-/***/ 4960:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DefaultAgentRepositoryFactory = void 0;
-const agent_cli_client_1 = __nccwpck_require__(8570);
-const opencode_http_client_1 = __nccwpck_require__(5108);
-const constants_1 = __nccwpck_require__(5415);
-const findings_agent_adapter_1 = __nccwpck_require__(7725);
-const fixer_agent_adapter_1 = __nccwpck_require__(2259);
-class DefaultAgentRepositoryFactory {
-    constructor(infrastructure = {
-        cli: new agent_cli_client_1.AgentCliClient(),
-        openCode: new opencode_http_client_1.OpenCodeHttpClient({ requestTimeoutMs: constants_1.OPENCODE_REQUEST_TIMEOUT_MS }),
-    }) {
-        this.infrastructure = infrastructure;
-    }
-    createFindings() {
-        return new findings_agent_adapter_1.FindingsAgentAdapter(this.infrastructure);
-    }
-    createFixer() {
-        return new fixer_agent_adapter_1.FixerAgentAdapter(this.infrastructure);
-    }
-}
-exports.DefaultAgentRepositoryFactory = DefaultAgentRepositoryFactory;
-
-
-/***/ }),
-
 /***/ 4745:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -57905,69 +58443,6 @@ function extractReasoningFromParts(parts) {
 
 /***/ }),
 
-/***/ 9656:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-/** Shared structured-response contracts used by agent-backed application flows. */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.LANGUAGE_CHECK_RESPONSE_SCHEMA = exports.THINK_RESPONSE_SCHEMA = exports.TRANSLATION_RESPONSE_SCHEMA = void 0;
-exports.TRANSLATION_RESPONSE_SCHEMA = {
-    type: 'object',
-    properties: {
-        translatedText: {
-            type: 'string',
-            description: 'The text translated to the requested locale. Required. Must not be empty.',
-        },
-        reason: {
-            type: 'string',
-            description: 'Optional: reason why translation could not be produced or was partial (e.g. ambiguous input).',
-        },
-    },
-    required: ['translatedText'],
-    additionalProperties: false,
-};
-exports.THINK_RESPONSE_SCHEMA = {
-    type: 'object',
-    properties: {
-        answer: {
-            type: 'string',
-            description: 'The concise answer to the user question. Required.',
-        },
-    },
-    required: ['answer'],
-    additionalProperties: false,
-};
-exports.LANGUAGE_CHECK_RESPONSE_SCHEMA = {
-    type: 'object',
-    properties: {
-        status: {
-            type: 'string',
-            enum: ['done', 'must_translate'],
-            description: 'done if text is in the requested locale, must_translate otherwise.',
-        },
-    },
-    required: ['status'],
-    additionalProperties: false,
-};
-
-
-/***/ }),
-
-/***/ 4504:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.OPENCODE_AGENT_BUILD = exports.OPENCODE_AGENT_PLAN = void 0;
-exports.OPENCODE_AGENT_PLAN = 'build';
-exports.OPENCODE_AGENT_BUILD = 'build';
-
-
-/***/ }),
-
 /***/ 2152:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -57980,7 +58455,7 @@ const logger_1 = __nccwpck_require__(1151);
 const provider_cli_adapter_1 = __nccwpck_require__(8199);
 const opencode_agent_invoker_1 = __nccwpck_require__(3955);
 const agent_configuration_policy_1 = __nccwpck_require__(9616);
-const agent_execution_policy_1 = __nccwpck_require__(8442);
+const agent_execution_policy_1 = __nccwpck_require__(8556);
 class AgentCapabilityAdapter {
     constructor(infrastructure) {
         this.cliAdapter = new provider_cli_adapter_1.ProviderCliAdapter(infrastructure.cli);
@@ -58118,6 +58593,212 @@ exports.FixerAgentAdapter = FixerAgentAdapter;
 
 /***/ }),
 
+/***/ 8009:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.LinkedBranchRepository = void 0;
+const result_1 = __nccwpck_require__(3817);
+const logger_1 = __nccwpck_require__(1151);
+class LinkedBranchRepository {
+    constructor(graphqlClient) {
+        this.graphqlClient = graphqlClient;
+        this.createLinkedBranch = async (owner, repo, baseBranchName, newBranchName, issueNumber, oid, token) => {
+            const result = [];
+            try {
+                (0, logger_1.logDebugInfo)(`Creating linked branch ${newBranchName} from ${oid ?? baseBranchName}`);
+                const qualifiedRef = baseBranchName.startsWith("tags/")
+                    ? `refs/${baseBranchName}`
+                    : `refs/heads/${baseBranchName}`;
+                const graphql = this.graphqlClient.getClient(token).graphql;
+                const { repository } = await graphql(`
+          query (
+            $repo: String!
+            $owner: String!
+            $issueNumber: Int!
+            $ref: String!
+          ) {
+            repository(name: $repo, owner: $owner) {
+              id
+              issue(number: $issueNumber) {
+                id
+              }
+              ref(qualifiedName: $ref) {
+                target {
+                  ... on Commit {
+                    oid
+                  }
+                }
+              }
+            }
+          }
+        `, {
+                    repo: repo,
+                    owner: owner,
+                    issueNumber: issueNumber,
+                    ref: qualifiedRef,
+                });
+                (0, logger_1.logDebugInfo)(`Repository information retrieved: ${JSON.stringify(repository?.ref)}`);
+                const repositoryId = repository?.id ?? undefined;
+                const issueId = repository?.issue?.id ?? undefined;
+                const branchOid = oid ?? repository?.ref?.target?.oid ?? undefined;
+                if (repositoryId === undefined ||
+                    issueId === undefined ||
+                    branchOid === undefined) {
+                    (0, logger_1.logError)(`Error searching repository "${baseBranchName}": id: ${repositoryId}, issue: ${issueId}, oid: ${branchOid}), issue #${issueNumber}`);
+                    result.push(new result_1.Result({
+                        id: "branch_repository",
+                        success: false,
+                        executed: true,
+                        steps: [
+                            `Error linking branch ${newBranchName} to issue: Repository not found.`,
+                        ],
+                    }));
+                    return result;
+                }
+                (0, logger_1.logDebugInfo)(`Linking branch "${newBranchName}" (oid: ${branchOid}) to issue #${issueNumber}`);
+                const mutationResponse = await graphql(`
+            mutation (
+              $issueId: ID!
+              $name: String!
+              $repositoryId: ID!
+              $oid: GitObjectID!
+            ) {
+              createLinkedBranch(
+                input: {
+                  issueId: $issueId
+                  name: $name
+                  repositoryId: $repositoryId
+                  oid: $oid
+                }
+              ) {
+                linkedBranch {
+                  id
+                  ref {
+                    name
+                  }
+                }
+              }
+            }
+          `, {
+                    issueId: issueId,
+                    name: `/${newBranchName}`,
+                    repositoryId: repositoryId,
+                    oid: branchOid,
+                });
+                (0, logger_1.logDebugInfo)(`Linked branch: ${JSON.stringify(mutationResponse.createLinkedBranch?.linkedBranch)}`);
+                if (mutationResponse.createLinkedBranch?.linkedBranch == null) {
+                    result.push(new result_1.Result({
+                        id: "branch_repository",
+                        success: false,
+                        executed: true,
+                        steps: [
+                            `Linked branch creation returned no linked branch for ${newBranchName}.`,
+                        ],
+                    }));
+                    return result;
+                }
+                const createdRefName = mutationResponse.createLinkedBranch.linkedBranch.ref?.name;
+                const normalizedCreatedRefName = createdRefName
+                    ?.replace(/^refs\/heads\//, "")
+                    .replace(/^\/+/, "");
+                if (normalizedCreatedRefName !== newBranchName) {
+                    result.push(new result_1.Result({
+                        id: "branch_repository",
+                        success: false,
+                        executed: true,
+                        steps: [
+                            `Linked branch creation returned an unexpected branch ref for ${newBranchName}.`,
+                        ],
+                    }));
+                    return result;
+                }
+                const baseBranchUrl = `https://github.com/${owner}/${repo}/tree/${baseBranchName}`;
+                const newBranchUrl = `https://github.com/${owner}/${repo}/tree/${newBranchName}`;
+                result.push(new result_1.Result({
+                    id: "branch_repository",
+                    success: true,
+                    executed: true,
+                    payload: {
+                        baseBranchName: baseBranchName,
+                        baseBranchUrl: baseBranchUrl,
+                        newBranchName: newBranchName,
+                        newBranchUrl: newBranchUrl,
+                    },
+                }));
+            }
+            catch (error) {
+                (0, logger_1.logError)(`Error Linking branch "${error}"`);
+                result.push(new result_1.Result({
+                    id: "branch_repository",
+                    success: false,
+                    executed: true,
+                    steps: [
+                        `Tried to link branch to the issue, but there was a problem.`,
+                    ],
+                    errors: [error instanceof Error ? error : new Error(String(error))],
+                }));
+            }
+            return result;
+        };
+    }
+}
+exports.LinkedBranchRepository = LinkedBranchRepository;
+
+
+/***/ }),
+
+/***/ 3891:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.classifyChangeSize = classifyChangeSize;
+function classifyChangeSize(metrics, sizeThresholds, labels) {
+    const categories = [
+        { key: 'xxl', label: labels.sizeXxl, githubSize: 'XL' },
+        { key: 'xl', label: labels.sizeXl, githubSize: 'XL' },
+        { key: 'l', label: labels.sizeL, githubSize: 'L' },
+        { key: 'm', label: labels.sizeM, githubSize: 'M' },
+        { key: 's', label: labels.sizeS, githubSize: 'S' },
+    ];
+    for (const category of categories) {
+        const threshold = sizeThresholds[category.key];
+        if (metrics.totalChanges > threshold.lines) {
+            return {
+                size: category.label,
+                githubSize: category.githubSize,
+                reason: `More than ${threshold.lines} lines changed`,
+            };
+        }
+        if (metrics.totalFiles > threshold.files) {
+            return {
+                size: category.label,
+                githubSize: category.githubSize,
+                reason: `More than ${threshold.files} files modified`,
+            };
+        }
+        if (metrics.totalCommits > threshold.commits) {
+            return {
+                size: category.label,
+                githubSize: category.githubSize,
+                reason: `More than ${threshold.commits} commits`,
+            };
+        }
+    }
+    return {
+        size: labels.sizeXs,
+        githubSize: 'XS',
+        reason: `Small changes (${metrics.totalChanges} lines, ${metrics.totalFiles} files)`,
+    };
+}
+
+
+/***/ }),
+
 /***/ 5859:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -58126,6 +58807,7 @@ exports.FixerAgentAdapter = FixerAgentAdapter;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BranchCompareRepository = void 0;
 const logger_1 = __nccwpck_require__(1151);
+const branch_change_size_policy_1 = __nccwpck_require__(3891);
 /**
  * Repository for comparing branches and computing size categories.
  * Isolated to allow unit tests with mocked Octokit and pure size logic.
@@ -58189,57 +58871,11 @@ class BranchCompareRepository {
         this.getSizeCategoryAndReason = async (owner, repository, head, base, sizeThresholds, labels, token) => {
             try {
                 const headBranchChanges = await this.getChanges(owner, repository, head, base, token);
-                const totalChanges = headBranchChanges.files.reduce((sum, file) => sum + file.changes, 0);
-                const totalFiles = headBranchChanges.files.length;
-                const totalCommits = headBranchChanges.totalCommits;
-                let sizeCategory;
-                let githubSize;
-                let sizeReason;
-                if (totalChanges > sizeThresholds.xxl.lines || totalFiles > sizeThresholds.xxl.files || totalCommits > sizeThresholds.xxl.commits) {
-                    sizeCategory = labels.sizeXxl;
-                    githubSize = `XL`;
-                    sizeReason = totalChanges > sizeThresholds.xxl.lines ? `More than ${sizeThresholds.xxl.lines} lines changed` :
-                        totalFiles > sizeThresholds.xxl.files ? `More than ${sizeThresholds.xxl.files} files modified` :
-                            `More than ${sizeThresholds.xxl.commits} commits`;
-                }
-                else if (totalChanges > sizeThresholds.xl.lines || totalFiles > sizeThresholds.xl.files || totalCommits > sizeThresholds.xl.commits) {
-                    sizeCategory = labels.sizeXl;
-                    githubSize = `XL`;
-                    sizeReason = totalChanges > sizeThresholds.xl.lines ? `More than ${sizeThresholds.xl.lines} lines changed` :
-                        totalFiles > sizeThresholds.xl.files ? `More than ${sizeThresholds.xl.files} files modified` :
-                            `More than ${sizeThresholds.xl.commits} commits`;
-                }
-                else if (totalChanges > sizeThresholds.l.lines || totalFiles > sizeThresholds.l.files || totalCommits > sizeThresholds.l.commits) {
-                    sizeCategory = labels.sizeL;
-                    githubSize = `L`;
-                    sizeReason = totalChanges > sizeThresholds.l.lines ? `More than ${sizeThresholds.l.lines} lines changed` :
-                        totalFiles > sizeThresholds.l.files ? `More than ${sizeThresholds.l.files} files modified` :
-                            `More than ${sizeThresholds.l.commits} commits`;
-                }
-                else if (totalChanges > sizeThresholds.m.lines || totalFiles > sizeThresholds.m.files || totalCommits > sizeThresholds.m.commits) {
-                    sizeCategory = labels.sizeM;
-                    githubSize = `M`;
-                    sizeReason = totalChanges > sizeThresholds.m.lines ? `More than ${sizeThresholds.m.lines} lines changed` :
-                        totalFiles > sizeThresholds.m.files ? `More than ${sizeThresholds.m.files} files modified` :
-                            `More than ${sizeThresholds.m.commits} commits`;
-                }
-                else if (totalChanges > sizeThresholds.s.lines || totalFiles > sizeThresholds.s.files || totalCommits > sizeThresholds.s.commits) {
-                    sizeCategory = labels.sizeS;
-                    githubSize = `S`;
-                    sizeReason = totalChanges > sizeThresholds.s.lines ? `More than ${sizeThresholds.s.lines} lines changed` :
-                        totalFiles > sizeThresholds.s.files ? `More than ${sizeThresholds.s.files} files modified` :
-                            `More than ${sizeThresholds.s.commits} commits`;
-                }
-                else {
-                    sizeCategory = labels.sizeXs;
-                    githubSize = `XS`;
-                    sizeReason = `Small changes (${totalChanges} lines, ${totalFiles} files)`;
-                }
-                return {
-                    size: sizeCategory,
-                    githubSize: githubSize,
-                    reason: sizeReason,
-                };
+                return (0, branch_change_size_policy_1.classifyChangeSize)({
+                    totalChanges: headBranchChanges.files.reduce((sum, file) => sum + file.changes, 0),
+                    totalFiles: headBranchChanges.files.length,
+                    totalCommits: headBranchChanges.totalCommits,
+                }, sizeThresholds, labels);
             }
             catch (error) {
                 (0, logger_1.logError)(`Error comparing branches: ${error}`);
@@ -58253,262 +58889,24 @@ exports.BranchCompareRepository = BranchCompareRepository;
 
 /***/ }),
 
-/***/ 9188:
+/***/ 9504:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.BranchRepository = void 0;
+exports.BranchLifecycleRepository = void 0;
 const logger_1 = __nccwpck_require__(1151);
-const result_1 = __nccwpck_require__(3817);
-const git_cli_repository_1 = __nccwpck_require__(6331);
-const find_previous_issue_branch_1 = __nccwpck_require__(9900);
-/**
- * Facade for branch-related operations. Delegates to focused repositories
- * (GitCli, Workflow, Merge, BranchCompare) for testability.
- */
-class BranchRepository {
-    constructor(workflowRepository, branchClient, graphqlClient, branchCompareRepository, mergeRepository) {
-        this.workflowRepository = workflowRepository;
-        this.mergeRepository = mergeRepository;
-        this.gitCliRepository = new git_cli_repository_1.GitCliRepository();
-        this.fetchRemoteBranches = async () => {
-            return this.gitCliRepository.fetchRemoteBranches();
-        };
-        this.getLatestTag = async () => {
-            return this.gitCliRepository.getLatestTag();
-        };
-        this.getCommitTag = async (latestTag) => {
-            return this.gitCliRepository.getCommitTag(latestTag);
-        };
-        /**
-         * Returns replaced branch (if any).
-         *
-         * @param param
-         * @param repository
-         * @param owner
-         * @param token
-         * @param issueNumber
-         * @param issueTitle
-         * @param branchType
-         * @param developmentBranch
-         * @param hotfixBranch
-         * @param isHotfix
-         */
-        this.manageBranches = async (param, owner, repository, issueNumber, issueTitle, branchType, developmentBranch, hotfixBranch, isHotfix, token) => {
-            const result = [];
-            try {
-                (0, logger_1.logDebugInfo)(`Managing branches`);
-                const branches = await this.getListOfBranches(owner, repository, token);
-                (0, logger_1.logDebugInfo)(JSON.stringify(branches, null, 2));
-                if (hotfixBranch === undefined && isHotfix) {
-                    result.push(new result_1.Result({
-                        id: 'branch_repository',
-                        success: false,
-                        executed: true,
-                        steps: [
-                            `Tried to prepare the hotfix branch of the issue, but hotfix branch was not found.`,
-                        ],
-                    }));
-                    return result;
-                }
-                const octokit = this.branchClient.getClient(token);
-                const sanitizedTitle = this.formatBranchName(issueTitle, issueNumber);
-                const newBranchName = `${branchType}/${issueNumber}-${sanitizedTitle}`;
-                if (branches.indexOf(newBranchName) > -1) {
-                    result.push(new result_1.Result({
-                        id: 'branch_repository',
-                        success: true,
-                        executed: false,
-                    }));
-                    return result;
-                }
-                const branchTypes = [
-                    param.branches.featureTree,
-                    param.branches.bugfixTree,
-                    param.branches.docsTree,
-                    param.branches.choreTree,
-                ];
-                /**
-                 * Default base branch name. (ex. [develop])
-                 */
-                let baseBranchName = developmentBranch;
-                let isRenamingBranch = false;
-                if (!isHotfix) {
-                    /**
-                     * Check if it is a branch switch: feature/123-bla <-> bugfix/123-bla
-                     */
-                    (0, logger_1.logDebugInfo)(`Searching for branches related to issue #${issueNumber}...`);
-                    const { data } = await octokit.rest.repos.listBranches({
-                        owner: owner,
-                        repo: repository,
-                    });
-                    const previousBranch = (0, find_previous_issue_branch_1.findPreviousIssueBranch)(data.map((branch) => branch.name), issueNumber, branchTypes);
-                    if (previousBranch) {
-                        baseBranchName = previousBranch;
-                        isRenamingBranch = true;
-                        (0, logger_1.logDebugInfo)(`Found previous issue branch: ${baseBranchName}`);
-                    }
-                }
-                else {
-                    baseBranchName = hotfixBranch ?? developmentBranch;
-                }
-                if (!isRenamingBranch || param.currentConfiguration.parentBranch === undefined) {
-                    param.currentConfiguration.parentBranch = baseBranchName;
-                }
-                (0, logger_1.logDebugInfo)(`============================================================================================`);
-                (0, logger_1.logDebugInfo)(`Base branch: ${baseBranchName}`);
-                (0, logger_1.logDebugInfo)(`New branch: ${newBranchName}`);
-                result.push(...await this.createLinkedBranch(owner, repository, baseBranchName, newBranchName, issueNumber, undefined, token));
-            }
-            catch (error) {
-                (0, logger_1.logError)(error);
-                result.push(new result_1.Result({
-                    id: 'branch_repository',
-                    success: false,
-                    executed: true,
-                    steps: [
-                        `Tried to prepare the hotfix to the issue, but there was a problem.`,
-                    ],
-                    error: error,
-                }));
-            }
-            return result;
-        };
-        this.formatBranchName = (issueTitle, issueNumber) => {
-            let sanitizedTitle = issueTitle.toLowerCase()
-                .replace(/\b\d+(\.\d+){2,}\b/g, '')
-                .replace(/[^\p{L}\p{N}\p{P}\p{Z}^$\n]/gu, '')
-                .replace(/\u200D/g, '')
-                .replace(/[^\S\r\n]+/g, ' ')
-                .replace(/[^a-zA-Z0-9 .]/g, '')
-                .replace(/^-+|-+$/g, '')
-                .replace(/- -/g, '-').trim()
-                .replace(/-+/g, '-')
-                .trim();
-            sanitizedTitle = sanitizedTitle.replace(/[^a-z0-9 ]/g, '').replace(/ /g, '-');
-            const issuePrefix = `${issueNumber}-`;
-            if (sanitizedTitle.startsWith(issuePrefix)) {
-                sanitizedTitle = sanitizedTitle.substring(issuePrefix.length);
-            }
-            sanitizedTitle = sanitizedTitle.replace(/-+/g, '-');
-            sanitizedTitle = sanitizedTitle.replace(/^-|-$/g, '');
-            return sanitizedTitle;
-        };
-        this.createLinkedBranch = async (owner, repo, baseBranchName, newBranchName, issueNumber, oid, token) => {
-            const result = [];
-            try {
-                (0, logger_1.logDebugInfo)(`Creating linked branch ${newBranchName} from ${oid ?? baseBranchName}`);
-                let ref = `heads/${baseBranchName}`;
-                if (baseBranchName.indexOf('tags/') > -1) {
-                    ref = baseBranchName;
-                }
-                const refForGraphQL = ref.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-                const { repository } = await this.graphqlClient.getClient(token).graphql(`
-              query($repo: String!, $owner: String!, $issueNumber: Int!) {
-                repository(name: $repo, owner: $owner) {
-                  id
-                  issue(number: $issueNumber) {
-                    id
-                  }
-                  ref(qualifiedName: "refs/${refForGraphQL}") {
-                    target {
-                      ... on Commit {
-                        oid
-                      }
-                    }
-                  }
-                }
-              }
-            `, {
-                    repo: repo,
-                    owner: owner,
-                    issueNumber: issueNumber
-                });
-                (0, logger_1.logDebugInfo)(`Repository information retrieved: ${JSON.stringify(repository?.ref)}`);
-                const repositoryId = repository?.id ?? undefined;
-                const issueId = repository?.issue?.id ?? undefined;
-                const branchOid = oid ?? repository?.ref?.target?.oid ?? undefined;
-                if (repositoryId === undefined || issueId === undefined || branchOid === undefined) {
-                    (0, logger_1.logError)(`Error searching repository "${baseBranchName}": id: ${repositoryId}, issue: ${issueId}, oid: ${branchOid}), issue #${issueNumber}`);
-                    result.push(new result_1.Result({
-                        id: 'branch_repository',
-                        success: false,
-                        executed: true,
-                        steps: [
-                            `Error linking branch ${newBranchName} to issue: Repository not found.`,
-                        ],
-                    }));
-                    return result;
-                }
-                (0, logger_1.logDebugInfo)(`Linking branch "${newBranchName}" (oid: ${branchOid}) to issue #${issueNumber}`);
-                const mutationResponse = await this.graphqlClient.getClient(token).graphql(`
-                mutation($issueId: ID!, $name: String!, $repositoryId: ID!, $oid: GitObjectID!) {
-                  createLinkedBranch(input: {
-                    issueId: $issueId,
-                    name: $name,
-                    repositoryId: $repositoryId,
-                    oid: $oid,
-                  }) {
-                    linkedBranch {
-                      id
-                      ref {
-                        name
-                      }
-                    }
-                  }
-                }
-              `, {
-                    issueId: issueId,
-                    name: `/${newBranchName}`,
-                    repositoryId: repositoryId,
-                    oid: branchOid,
-                });
-                (0, logger_1.logDebugInfo)(`Linked branch: ${JSON.stringify(mutationResponse.createLinkedBranch?.linkedBranch)}`);
-                const baseBranchUrl = `https://github.com/${owner}/${repo}/tree/${baseBranchName}`;
-                const newBranchUrl = `https://github.com/${owner}/${repo}/tree/${newBranchName}`;
-                result.push(new result_1.Result({
-                    id: 'branch_repository',
-                    success: true,
-                    executed: true,
-                    payload: {
-                        baseBranchName: baseBranchName,
-                        baseBranchUrl: baseBranchUrl,
-                        newBranchName: newBranchName,
-                        newBranchUrl: newBranchUrl,
-                    },
-                }));
-            }
-            catch (error) {
-                (0, logger_1.logError)(`Error Linking branch "${error}"`);
-                result.push(new result_1.Result({
-                    id: 'branch_repository',
-                    success: false,
-                    executed: true,
-                    steps: [
-                        `Tried to link branch to the issue, but there was a problem.`,
-                    ],
-                    error: error,
-                }));
-            }
-            return result;
-        };
+class BranchLifecycleRepository {
+    constructor(branchClient) {
+        this.branchClient = branchClient;
         this.removeBranch = async (owner, repository, branch, token) => {
             const octokit = this.branchClient.getClient(token);
             const ref = `heads/${branch}`;
             try {
-                const { data } = await octokit.rest.git.getRef({
-                    owner: owner,
-                    repo: repository,
-                    ref,
-                });
+                const { data } = await octokit.rest.git.getRef({ owner, repo: repository, ref });
                 (0, logger_1.logDebugInfo)(`Branch found: ${data.ref}`);
-                await octokit.rest.git.deleteRef({
-                    owner: owner,
-                    repo: repository,
-                    ref,
-                });
+                await octokit.rest.git.deleteRef({ owner, repo: repository, ref });
                 (0, logger_1.logDebugInfo)(`Successfully deleted branch: ${branch}`);
                 return true;
             }
@@ -58522,58 +58920,50 @@ class BranchRepository {
             const allBranches = [];
             let page = 1;
             while (true) {
-                const { data } = await octokit.rest.repos.listBranches({
-                    owner: owner,
-                    repo: repository,
-                    per_page: 100,
-                    page: page,
-                });
-                if (data.length === 0) {
+                const { data } = await octokit.rest.repos.listBranches({ owner, repo: repository, per_page: 100, page });
+                if (data.length === 0)
                     break;
-                }
                 allBranches.push(...data.map(branch => branch.name));
                 page++;
             }
             return allBranches;
         };
-        this.executeWorkflow = async (owner, repository, branch, workflow, inputs, token) => {
-            await this.workflowRepository.executeWorkflow(owner, repository, branch, workflow, inputs, token);
-        };
-        this.mergeBranch = async (owner, repository, head, base, timeout, token) => {
-            return this.mergeRepository.mergeBranch(owner, repository, head, base, timeout, token);
-        };
-        this.getChanges = async (owner, repository, head, base, token) => {
-            return this.branchCompareRepository.getChanges(owner, repository, head, base, token);
-        };
-        this.getSizeCategoryAndReason = async (owner, repository, head, base, sizeThresholds, labels, token) => {
-            return this.branchCompareRepository.getSizeCategoryAndReason(owner, repository, head, base, sizeThresholds, labels, token);
-        };
-        this.branchClient = branchClient;
-        this.graphqlClient = graphqlClient;
-        this.branchCompareRepository = branchCompareRepository;
     }
 }
-exports.BranchRepository = BranchRepository;
+exports.BranchLifecycleRepository = BranchLifecycleRepository;
 
 
 /***/ }),
 
-/***/ 9900:
+/***/ 1887:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.findPreviousIssueBranch = findPreviousIssueBranch;
-function findPreviousIssueBranch(branchNames, issueNumber, branchTypes) {
-    for (const type of branchTypes) {
-        const prefix = `${type}/${issueNumber}-`;
-        const matchingBranch = branchNames.find((branch) => branch.includes(prefix));
-        if (matchingBranch)
-            return matchingBranch;
+exports.BranchNameRepository = void 0;
+class BranchNameRepository {
+    constructor() {
+        this.formatBranchName = (issueTitle, issueNumber) => {
+            let sanitizedTitle = issueTitle.toLowerCase()
+                .replace(/\b\d+(\.\d+){2,}\b/g, '')
+                .replace(/[^\p{L}\p{N}\p{P}\p{Z}^$\n]/gu, '')
+                .replace(/\u200D/g, '')
+                .replace(/[^\S\r\n]+/g, ' ')
+                .replace(/[^a-zA-Z0-9 .]/g, '')
+                .replace(/^-+|-+$/g, '')
+                .replace(/- -/g, '-').trim()
+                .replace(/-+/g, '-')
+                .trim();
+            sanitizedTitle = sanitizedTitle.replace(/[^a-z0-9 ]/g, '').replace(/ /g, '-');
+            const issuePrefix = `${issueNumber}-`;
+            if (sanitizedTitle.startsWith(issuePrefix))
+                sanitizedTitle = sanitizedTitle.substring(issuePrefix.length);
+            return sanitizedTitle.replace(/-+/g, '-').replace(/^-|-$/g, '');
+        };
     }
-    return undefined;
 }
+exports.BranchNameRepository = BranchNameRepository;
 
 
 /***/ }),
@@ -58712,6 +59102,46 @@ exports.GitCliRepository = GitCliRepository;
 
 /***/ }),
 
+/***/ 8791:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isGithubAlreadyExists = exports.isGithubNotFound = exports.getGithubErrorStatus = void 0;
+const getGithubErrorStatus = (error) => {
+    if (typeof error !== "object" || error === null)
+        return undefined;
+    const status = error.status;
+    return typeof status === "number" ? status : undefined;
+};
+exports.getGithubErrorStatus = getGithubErrorStatus;
+const isGithubNotFound = (error) => (0, exports.getGithubErrorStatus)(error) === 404;
+exports.isGithubNotFound = isGithubNotFound;
+const isGithubAlreadyExists = (error) => {
+    const shape = typeof error === "object" && error !== null ? error : undefined;
+    if ((0, exports.getGithubErrorStatus)(error) !== 422)
+        return false;
+    const responseData = typeof shape?.response === "object" && shape.response !== null && "data" in shape.response
+        ? shape.response.data
+        : undefined;
+    const validationErrors = typeof responseData === "object" && responseData !== null && "errors" in responseData
+        ? responseData.errors
+        : undefined;
+    const hasAlreadyExistsCode = Array.isArray(validationErrors) && validationErrors.some(validationError => (typeof validationError === "object"
+        && validationError !== null
+        && "code" in validationError
+        && validationError.code === "already_exists"));
+    const message = typeof shape?.message === "string" ? shape.message.toLowerCase() : "";
+    return hasAlreadyExistsCode
+        || message.includes("already exists")
+        || message.includes("already_exists");
+};
+exports.isGithubAlreadyExists = isGithubAlreadyExists;
+
+
+/***/ }),
+
 /***/ 5093:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -58746,6 +59176,52 @@ async function* paginateCursor(fetchPage, options = {}) {
     (0, logger_1.logError)(message);
     throw new Error(message);
 }
+
+
+/***/ }),
+
+/***/ 2726:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BugbotIssueRepository = void 0;
+class BugbotIssueRepository {
+    constructor(content) {
+        this.content = content;
+        this.listIssueComments = (...args) => this.content.listIssueComments(...args);
+        this.addComment = (...args) => this.content.addComment(...args);
+        this.updateComment = (...args) => this.content.updateComment(...args);
+    }
+}
+exports.BugbotIssueRepository = BugbotIssueRepository;
+
+
+/***/ }),
+
+/***/ 1153:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ExecutionIssueSetupRepository = void 0;
+/** Composes the issue capabilities required to initialize an Execution. */
+class ExecutionIssueSetupRepository {
+    constructor(metadataRepository, contentRepository, labelRepository) {
+        this.metadataRepository = metadataRepository;
+        this.contentRepository = contentRepository;
+        this.labelRepository = labelRepository;
+        this.isPullRequest = (...args) => this.metadataRepository.isPullRequest(...args);
+        this.isIssue = (...args) => this.metadataRepository.isIssue(...args);
+        this.getHeadBranch = (...args) => this.metadataRepository.getHeadBranch(...args);
+        this.getLabels = (...args) => this.labelRepository.getLabels(...args);
+        this.getDescription = (...args) => this.contentRepository.getDescription(...args);
+        this.updateDescription = (...args) => this.contentRepository.updateDescription(...args);
+    }
+}
+exports.ExecutionIssueSetupRepository = ExecutionIssueSetupRepository;
 
 
 /***/ }),
@@ -58792,6 +59268,26 @@ class IssueAssignmentRepository {
     }
 }
 exports.IssueAssignmentRepository = IssueAssignmentRepository;
+
+
+/***/ }),
+
+/***/ 3231:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.IssueClosureRepository = void 0;
+class IssueClosureRepository {
+    constructor(lifecycleRepository, contentRepository) {
+        this.lifecycleRepository = lifecycleRepository;
+        this.contentRepository = contentRepository;
+        this.closeIssue = (...args) => this.lifecycleRepository.closeIssue(...args);
+        this.addComment = (...args) => this.contentRepository.addComment(...args);
+    }
+}
+exports.IssueClosureRepository = IssueClosureRepository;
 
 
 /***/ }),
@@ -58905,79 +59401,74 @@ exports.IssueContentRepository = IssueContentRepository;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueLabelProvisioningRepository = void 0;
+const initial_label_provisioning_policy_1 = __nccwpck_require__(3160);
 const logger_1 = __nccwpck_require__(1151);
-const required_labels_1 = __nccwpck_require__(2461);
+const github_error_policy_1 = __nccwpck_require__(8791);
 class IssueLabelProvisioningRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
-        this.listLabelsForRepo = async (owner, repository, token) => {
-            const octokit = this.githubClient.getClient(token);
-            const { data: labels } = await octokit.rest.issues.listLabelsForRepo({
-                owner,
-                repo: repository,
-                per_page: 100,
-            });
-            return labels.map(label => ({
-                name: label.name,
-                color: label.color,
-                description: label.description ?? null,
-            }));
+        this.ensureInitialLabels = async (owner, repository, labels, token) => {
+            const client = this.githubClient.getClient(token);
+            const inventory = await this.listLabelsForRepo(client, owner, repository);
+            const plan = (0, initial_label_provisioning_policy_1.buildInitialLabelProvisioningPlan)(labels, inventory.map(label => label.name));
+            const context = { client, owner, repository };
+            return {
+                configured: await this.provisionMissingLabels(context, plan.configured),
+                progress: await this.provisionMissingLabels(context, plan.progress),
+            };
         };
-        this.createLabel = async (owner, repository, name, color, description, token) => {
-            const octokit = this.githubClient.getClient(token);
-            await octokit.rest.issues.createLabel({ owner, repo: repository, name, color, description });
+        this.listLabelsForRepo = async (client, owner, repository) => {
+            const labels = [];
+            for await (const page of client.paginate.iterator(client.rest.issues.listLabelsForRepo, { owner, repo: repository, per_page: 100 })) {
+                labels.push(...page.data.map(label => ({
+                    name: label.name,
+                    color: label.color,
+                    description: label.description ?? null,
+                })));
+            }
+            return labels;
         };
-        this.ensureLabel = async (owner, repository, name, color, description, token) => {
+        this.provisionMissingLabels = async (context, plan) => {
+            const outcomes = [];
+            for (const definition of plan.missing) {
+                outcomes.push(await this.provisionLabel(context, definition));
+            }
+            return {
+                created: outcomes.filter(outcome => outcome.kind === 'created').length,
+                existing: plan.existing + outcomes.filter(outcome => outcome.kind === 'existing').length,
+                errors: outcomes.flatMap(outcome => outcome.kind === 'failed' ? [outcome.error] : []),
+            };
+        };
+        this.provisionLabel = async (context, definition) => {
             try {
-                if (!name || name.trim().length === 0) {
-                    (0, logger_1.logDebugInfo)('Skipping label creation: name is undefined or empty');
-                    return { created: false, existed: false };
-                }
-                const existingLabels = await this.listLabelsForRepo(owner, repository, token);
-                const existingLabelNames = new Set(existingLabels.map(label => label.name.toLowerCase()));
-                if (existingLabelNames.has(name.toLowerCase())) {
-                    return { created: false, existed: true };
-                }
-                try {
-                    await this.createLabel(owner, repository, name, color, description, token);
-                    return { created: true, existed: false };
-                }
-                catch (error) {
-                    const err = error;
-                    if (err.status === 422 && err.message?.includes('already exists')) {
-                        return { created: false, existed: true };
-                    }
-                    throw error;
-                }
+                await context.client.rest.issues.createLabel({
+                    owner: context.owner,
+                    repo: context.repository,
+                    name: definition.name,
+                    color: definition.color,
+                    description: definition.description,
+                });
+                return { kind: 'created' };
             }
             catch (error) {
-                (0, logger_1.logError)(`Error ensuring label "${name}": ${error}`);
-                throw error;
+                return mapLabelMutationError(definition.name, error);
             }
-        };
-        this.ensureLabels = async (owner, repository, labels, token) => {
-            const errors = [];
-            let created = 0;
-            let existing = 0;
-            for (const label of (0, required_labels_1.getRequiredLabels)(labels)) {
-                try {
-                    const result = await this.ensureLabel(owner, repository, label.name, label.color, label.description, token);
-                    if (result.created)
-                        created++;
-                    else if (result.existed)
-                        existing++;
-                }
-                catch (error) {
-                    const err = error;
-                    (0, logger_1.logError)(`Error ensuring label "${label.name}": ${error}`);
-                    errors.push(`Error creando label "${label.name}": ${err.message || error}`);
-                }
-            }
-            return { created, existing, errors };
         };
     }
 }
 exports.IssueLabelProvisioningRepository = IssueLabelProvisioningRepository;
+function mapLabelMutationError(name, error) {
+    if ((0, github_error_policy_1.isGithubAlreadyExists)(error))
+        return { kind: 'existing' };
+    const summaryError = `Error creating label "${name}": ${providerErrorMessage(error)}`;
+    (0, logger_1.logError)(summaryError);
+    return { kind: 'failed', error: summaryError };
+}
+function providerErrorMessage(error) {
+    if (error instanceof Error)
+        return error.message;
+    return String(error);
+}
 
 
 /***/ }),
@@ -59149,6 +59640,26 @@ exports.IssueMetadataRepository = IssueMetadataRepository;
 
 /***/ }),
 
+/***/ 907:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.IssueNotificationRepository = void 0;
+class IssueNotificationRepository {
+    constructor(lifecycleRepository, contentRepository) {
+        this.lifecycleRepository = lifecycleRepository;
+        this.contentRepository = contentRepository;
+        this.openIssue = (...args) => this.lifecycleRepository.openIssue(...args);
+        this.addComment = (...args) => this.contentRepository.addComment(...args);
+    }
+}
+exports.IssueNotificationRepository = IssueNotificationRepository;
+
+
+/***/ }),
+
 /***/ 6610:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -59157,31 +59668,10 @@ exports.IssueMetadataRepository = IssueMetadataRepository;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueProgressLabelRepository = void 0;
 const logger_1 = __nccwpck_require__(1151);
-const progress_labels_1 = __nccwpck_require__(7172);
+const progress_labels_1 = __nccwpck_require__(7890);
 class IssueProgressLabelRepository {
     constructor(issueLabelRepository) {
         this.issueLabelRepository = issueLabelRepository;
-        this.ensureProgressLabels = async (owner, repository, token, ensureLabel) => {
-            const errors = [];
-            let created = 0;
-            let existing = 0;
-            for (const percent of progress_labels_1.PROGRESS_LABEL_PERCENTS) {
-                const name = `${percent}%`;
-                try {
-                    const result = await ensureLabel(owner, repository, name, (0, progress_labels_1.progressPercentToColor)(percent), `Progress: ${percent}%`, token);
-                    if (result.created)
-                        created++;
-                    else if (result.existed)
-                        existing++;
-                }
-                catch (error) {
-                    const message = error instanceof Error ? error.message : String(error);
-                    (0, logger_1.logError)(`Error ensuring progress label "${name}": ${message}`);
-                    errors.push(`Error creating label "${name}": ${message}`);
-                }
-            }
-            return { created, existing, errors };
-        };
         this.setProgressLabel = async (owner, repository, issueNumber, progress, token) => {
             const rounded = Math.min(100, Math.max(0, Math.round(progress / 5) * 5));
             const newLabel = `${rounded}%`;
@@ -59196,6 +59686,138 @@ class IssueProgressLabelRepository {
     }
 }
 exports.IssueProgressLabelRepository = IssueProgressLabelRepository;
+
+
+/***/ }),
+
+/***/ 6674:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.IssueProgressTrackingRepository = void 0;
+class IssueProgressTrackingRepository {
+    constructor(contentRepository, labelRepository, progressRepository) {
+        this.contentRepository = contentRepository;
+        this.labelRepository = labelRepository;
+        this.progressRepository = progressRepository;
+        this.getDescription = (...args) => this.contentRepository.getDescription(...args);
+        this.getLabels = (...args) => this.labelRepository.getLabels(...args);
+        this.setLabels = (...args) => this.labelRepository.setLabels(...args);
+        this.setProgressLabel = (...args) => this.progressRepository.setProgressLabel(...args);
+    }
+}
+exports.IssueProgressTrackingRepository = IssueProgressTrackingRepository;
+
+
+/***/ }),
+
+/***/ 121:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.IssueTitleRepository = void 0;
+const core = __importStar(__nccwpck_require__(1078));
+const logger_1 = __nccwpck_require__(1151);
+const issue_emoji_policy_1 = __nccwpck_require__(1201);
+const issue_title_policy_1 = __nccwpck_require__(3179);
+class IssueTitleRepository {
+    constructor(issueTitleClient, issueMetadataRepository) {
+        this.issueTitleClient = issueTitleClient;
+        this.issueMetadataRepository = issueMetadataRepository;
+        this.getTitle = (...args) => this.issueMetadataRepository.getTitle(...args);
+        this.updateTitleIssueFormat = async (owner, repository, version, issueTitle, issueNumber, branchManagementAlways, branchManagementEmoji, labels, token) => {
+            try {
+                const emoji = (0, issue_emoji_policy_1.resolveIssueTitleEmoji)(labels, branchManagementAlways, branchManagementEmoji);
+                const sanitizedTitle = (0, issue_title_policy_1.sanitizeIssueTitle)(issueTitle);
+                const formattedTitle = version.length > 0
+                    ? `${emoji} - ${version} - ${sanitizedTitle}`
+                    : `${emoji} - ${sanitizedTitle}`;
+                if (formattedTitle === issueTitle)
+                    return undefined;
+                await this.issueTitleClient.getClient(token).rest.issues.update({
+                    owner, repo: repository, issue_number: issueNumber, title: formattedTitle,
+                });
+                (0, logger_1.logDebugInfo)(`Issue title updated to: ${formattedTitle}`);
+                return formattedTitle;
+            }
+            catch (error) {
+                core.setFailed(`Failed to check or update issue title: ${error}`);
+                return undefined;
+            }
+        };
+        this.updateTitlePullRequestFormat = async (owner, repository, pullRequestTitle, issueTitle, issueNumber, pullRequestNumber, branchManagementAlways, branchManagementEmoji, labels, token) => {
+            try {
+                const emoji = (0, issue_emoji_policy_1.resolvePullRequestTitleEmoji)(labels, branchManagementAlways, branchManagementEmoji);
+                const formattedTitle = `[#${issueNumber}] ${emoji} - ${(0, issue_title_policy_1.sanitizePullRequestTitle)(issueTitle)}`;
+                if (formattedTitle === pullRequestTitle)
+                    return undefined;
+                await this.issueTitleClient.getClient(token).rest.issues.update({
+                    owner, repo: repository, issue_number: pullRequestNumber, title: formattedTitle,
+                });
+                (0, logger_1.logDebugInfo)(`Issue title updated to: ${formattedTitle}`);
+                return formattedTitle;
+            }
+            catch (error) {
+                core.setFailed(`Failed to check or update issue title: ${error}`);
+                return undefined;
+            }
+        };
+        this.cleanTitle = async (owner, repository, issueTitle, issueNumber, token) => {
+            try {
+                const sanitizedTitle = (0, issue_title_policy_1.sanitizePullRequestTitle)(issueTitle);
+                if (sanitizedTitle === issueTitle)
+                    return undefined;
+                await this.issueTitleClient.getClient(token).rest.issues.update({
+                    owner, repo: repository, issue_number: issueNumber, title: sanitizedTitle,
+                });
+                (0, logger_1.logDebugInfo)(`Issue title updated to: ${sanitizedTitle}`);
+                return sanitizedTitle;
+            }
+            catch (error) {
+                core.setFailed(`Failed to check or update issue title: ${error}`);
+                return undefined;
+            }
+        };
+    }
+}
+exports.IssueTitleRepository = IssueTitleRepository;
 
 
 /***/ }),
@@ -59460,171 +60082,6 @@ function resolvePullRequestTitleEmoji(labels, branchManagementAlways, branchMana
 
 /***/ }),
 
-/***/ 2528:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.IssueRepository = exports.PROGRESS_LABEL_PATTERN = void 0;
-const core = __importStar(__nccwpck_require__(1078));
-const logger_1 = __nccwpck_require__(1151);
-const issue_progress_label_repository_1 = __nccwpck_require__(6610);
-const issue_title_policy_1 = __nccwpck_require__(3179);
-const issue_emoji_policy_1 = __nccwpck_require__(1201);
-var progress_labels_1 = __nccwpck_require__(7172);
-Object.defineProperty(exports, "PROGRESS_LABEL_PATTERN", ({ enumerable: true, get: function () { return progress_labels_1.PROGRESS_LABEL_PATTERN; } }));
-class IssueRepository {
-    constructor(issueContentRepository, issueMetadataRepository, issueLabelRepository, issueAssignmentRepository, issueLabelProvisioningRepository, issueTypeRepository, issueTypeAssignmentRepository, issueLifecycleRepository, issueTitleClient) {
-        this.updateTitleIssueFormat = async (owner, repository, version, issueTitle, issueNumber, branchManagementAlways, branchManagementEmoji, labels, token) => {
-            try {
-                const octokit = this.issueTitleClient.getClient(token);
-                const emoji = (0, issue_emoji_policy_1.resolveIssueTitleEmoji)(labels, branchManagementAlways, branchManagementEmoji);
-                const sanitizedTitle = (0, issue_title_policy_1.sanitizeIssueTitle)(issueTitle);
-                let formattedTitle = `${emoji} - ${sanitizedTitle}`;
-                if (version.length > 0) {
-                    formattedTitle = `${emoji} - ${version} - ${sanitizedTitle}`;
-                }
-                if (formattedTitle !== issueTitle) {
-                    await octokit.rest.issues.update({
-                        owner: owner,
-                        repo: repository,
-                        issue_number: issueNumber,
-                        title: formattedTitle,
-                    });
-                    (0, logger_1.logDebugInfo)(`Issue title updated to: ${formattedTitle}`);
-                    return formattedTitle;
-                }
-                return undefined;
-            }
-            catch (error) {
-                core.setFailed(`Failed to check or update issue title: ${error}`);
-                return undefined;
-            }
-        };
-        this.updateTitlePullRequestFormat = async (owner, repository, pullRequestTitle, issueTitle, issueNumber, pullRequestNumber, branchManagementAlways, branchManagementEmoji, labels, token) => {
-            try {
-                const octokit = this.issueTitleClient.getClient(token);
-                const emoji = (0, issue_emoji_policy_1.resolvePullRequestTitleEmoji)(labels, branchManagementAlways, branchManagementEmoji);
-                const sanitizedTitle = (0, issue_title_policy_1.sanitizePullRequestTitle)(issueTitle);
-                const formattedTitle = `[#${issueNumber}] ${emoji} - ${sanitizedTitle}`;
-                if (formattedTitle !== pullRequestTitle) {
-                    await octokit.rest.issues.update({
-                        owner: owner,
-                        repo: repository,
-                        issue_number: pullRequestNumber,
-                        title: formattedTitle,
-                    });
-                    (0, logger_1.logDebugInfo)(`Issue title updated to: ${formattedTitle}`);
-                    return formattedTitle;
-                }
-                return undefined;
-            }
-            catch (error) {
-                core.setFailed(`Failed to check or update issue title: ${error}`);
-                return undefined;
-            }
-        };
-        this.cleanTitle = async (owner, repository, issueTitle, issueNumber, token) => {
-            try {
-                const octokit = this.issueTitleClient.getClient(token);
-                const sanitizedTitle = (0, issue_title_policy_1.sanitizePullRequestTitle)(issueTitle);
-                if (sanitizedTitle !== issueTitle) {
-                    await octokit.rest.issues.update({
-                        owner: owner,
-                        repo: repository,
-                        issue_number: issueNumber,
-                        title: sanitizedTitle,
-                    });
-                    (0, logger_1.logDebugInfo)(`Issue title updated to: ${sanitizedTitle}`);
-                    return sanitizedTitle;
-                }
-                return undefined;
-            }
-            catch (error) {
-                core.setFailed(`Failed to check or update issue title: ${error}`);
-                return undefined;
-            }
-        };
-        this.updateDescription = (...args) => this.issueContentRepository.updateDescription(...args);
-        this.getDescription = (...args) => this.issueContentRepository.getDescription(...args);
-        this.getId = (...args) => this.issueMetadataRepository.getId(...args);
-        this.getMilestone = (...args) => this.issueMetadataRepository.getMilestone(...args);
-        this.getTitle = (...args) => this.issueMetadataRepository.getTitle(...args);
-        this.getLabels = (...args) => this.issueLabelRepository.getLabels(...args);
-        this.setLabels = (...args) => this.issueLabelRepository.setLabels(...args);
-        this.ensureProgressLabels = (owner, repository, token) => this.issueProgressLabelRepository.ensureProgressLabels(owner, repository, token, (...args) => this.ensureLabel(...args));
-        this.setProgressLabel = (...args) => this.issueProgressLabelRepository.setProgressLabel(...args);
-        this.isIssue = (...args) => this.issueMetadataRepository.isIssue(...args);
-        this.isPullRequest = (...args) => this.issueMetadataRepository.isPullRequest(...args);
-        this.getHeadBranch = (...args) => this.issueMetadataRepository.getHeadBranch(...args);
-        this.addComment = (...args) => this.issueContentRepository.addComment(...args);
-        this.updateComment = (...args) => this.issueContentRepository.updateComment(...args);
-        this.listIssueComments = (...args) => this.issueContentRepository.listIssueComments(...args);
-        this.closeIssue = (...args) => this.issueLifecycleRepository.closeIssue(...args);
-        this.openIssue = (...args) => this.issueLifecycleRepository.openIssue(...args);
-        this.getCurrentAssignees = (...args) => this.issueAssignmentRepository.getCurrentAssignees(...args);
-        this.assignMembersToIssue = (...args) => this.issueAssignmentRepository.assignMembersToIssue(...args);
-        this.getIssueDescription = (...args) => this.issueContentRepository.getIssueDescription(...args);
-        this.setIssueType = (...args) => this.issueTypeAssignmentRepository.setIssueType(...args);
-        this.listLabelsForRepo = (...args) => this.issueLabelProvisioningRepository.listLabelsForRepo(...args);
-        this.createLabel = (...args) => this.issueLabelProvisioningRepository.createLabel(...args);
-        this.ensureLabel = (...args) => this.issueLabelProvisioningRepository.ensureLabel(...args);
-        this.ensureLabels = (...args) => this.issueLabelProvisioningRepository.ensureLabels(...args);
-        this.listIssueTypes = (...args) => this.issueTypeRepository.listIssueTypes(...args);
-        this.createIssueType = (...args) => this.issueTypeRepository.createIssueType(...args);
-        this.ensureIssueType = (...args) => this.issueTypeRepository.ensureIssueType(...args);
-        this.ensureIssueTypes = (...args) => this.issueTypeRepository.ensureIssueTypes(...args);
-        this.issueContentRepository = issueContentRepository;
-        this.issueMetadataRepository = issueMetadataRepository;
-        this.issueLabelRepository = issueLabelRepository;
-        this.issueProgressLabelRepository = new issue_progress_label_repository_1.IssueProgressLabelRepository(issueLabelRepository);
-        this.issueAssignmentRepository = issueAssignmentRepository;
-        this.issueLabelProvisioningRepository = issueLabelProvisioningRepository;
-        this.issueTypeRepository = issueTypeRepository;
-        this.issueTypeAssignmentRepository = issueTypeAssignmentRepository;
-        this.issueLifecycleRepository = issueLifecycleRepository;
-        this.issueTitleClient = issueTitleClient;
-    }
-}
-exports.IssueRepository = IssueRepository;
-
-
-/***/ }),
-
 /***/ 3179:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -59656,6 +60113,32 @@ exports.sanitizePullRequestTitle = sanitizePullRequestTitle;
 
 /***/ }),
 
+/***/ 9281:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.selectPullRequestChecks = selectPullRequestChecks;
+exports.pendingCheckRuns = pendingCheckRuns;
+exports.failedCheckRuns = failedCheckRuns;
+exports.pendingStatuses = pendingStatuses;
+function selectPullRequestChecks(checkRuns, pullRequestNumber) {
+    return checkRuns.filter((run) => run.pull_requests?.some((pullRequest) => pullRequest.number === pullRequestNumber));
+}
+function pendingCheckRuns(checkRuns) {
+    return checkRuns.filter((check) => check.status !== 'completed');
+}
+function failedCheckRuns(checkRuns) {
+    return checkRuns.filter((check) => check.conclusion === 'failure');
+}
+function pendingStatuses(statuses) {
+    return statuses.filter((status) => status.state === 'pending');
+}
+
+
+/***/ }),
+
 /***/ 1412:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -59665,6 +60148,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MergeRepository = void 0;
 const logger_1 = __nccwpck_require__(1151);
 const result_1 = __nccwpck_require__(3817);
+const merge_checks_policy_1 = __nccwpck_require__(9281);
 /**
  * Repository for merging branches: creates a PR, waits for that PR's check runs (or status checks),
  * then merges the PR; on failure, falls back to a direct Git merge.
@@ -59734,7 +60218,7 @@ This PR merges **${head}** into **${base}**.
                         // multiple PRs (e.g. release→master and release→develop), listForRef returns runs
                         // for all PRs; we must wait for runs tied to the current PR or we may see completed
                         // runs from the other PR and merge before this PR's checks have run.
-                        const runsForThisPr = checkRuns.check_runs.filter(run => run.pull_requests?.some(pr => pr.number === pullRequest.number));
+                        const runsForThisPr = (0, merge_checks_policy_1.selectPullRequestChecks)(checkRuns.check_runs, pullRequest.number);
                         // Get commit status checks for the PR head commit
                         const { data: commitStatus } = await octokit.rest.repos.getCombinedStatusForRef({
                             owner: owner,
@@ -59745,19 +60229,19 @@ This PR merges **${head}** into **${base}**.
                         (0, logger_1.logDebugInfo)(`Number of check runs for this PR: ${runsForThisPr.length} (total on ref: ${checkRuns.check_runs.length})`);
                         // If there are check runs for this PR, wait for them to complete
                         if (runsForThisPr.length > 0) {
-                            const pendingCheckRuns = runsForThisPr.filter(check => check.status !== 'completed');
-                            if (pendingCheckRuns.length === 0) {
+                            const pendingChecksForPullRequest = (0, merge_checks_policy_1.pendingCheckRuns)(runsForThisPr);
+                            if (pendingChecksForPullRequest.length === 0) {
                                 checksCompleted = true;
                                 (0, logger_1.logDebugInfo)('All check runs have completed.');
                                 // Verify if all checks passed
-                                const failedChecks = runsForThisPr.filter(check => check.conclusion === 'failure');
+                                const failedChecks = (0, merge_checks_policy_1.failedCheckRuns)(runsForThisPr);
                                 if (failedChecks.length > 0) {
                                     throw new Error(`Checks failed: ${failedChecks.map(check => check.name).join(', ')}`);
                                 }
                             }
                             else {
-                                (0, logger_1.logDebugInfo)(`Waiting for ${pendingCheckRuns.length} check runs to complete:`);
-                                pendingCheckRuns.forEach(check => {
+                                (0, logger_1.logDebugInfo)(`Waiting for ${pendingChecksForPullRequest.length} check runs to complete:`);
+                                pendingChecksForPullRequest.forEach(check => {
                                     (0, logger_1.logDebugInfo)(`  - ${check.name} (Status: ${check.status})`);
                                 });
                                 await new Promise(resolve => setTimeout(resolve, iteration * 1000));
@@ -59772,10 +60256,10 @@ This PR merges **${head}** into **${base}**.
                             if (waitForPrChecksAttempts >= maxWaitForPrChecksAttempts) {
                                 // Give up waiting for PR-specific check runs; fall back to status checks
                                 // before proceeding to merge (PR may have required status checks).
-                                const pendingChecksFallback = commitStatus.statuses.filter(status => {
+                                commitStatus.statuses.forEach(status => {
                                     (0, logger_1.logDebugInfo)(`Status check (fallback): ${status.context} (State: ${status.state})`);
-                                    return status.state === 'pending';
                                 });
+                                const pendingChecksFallback = (0, merge_checks_policy_1.pendingStatuses)(commitStatus.statuses);
                                 if (pendingChecksFallback.length === 0) {
                                     checksCompleted = true;
                                     (0, logger_1.logDebugInfo)(`No check runs for this PR after ${maxWaitForPrChecksAttempts} polls; no pending status checks; proceeding to merge.`);
@@ -59798,10 +60282,10 @@ This PR merges **${head}** into **${base}**.
                         }
                         else {
                             // Fall back to status checks if no check runs exist
-                            const pendingChecks = commitStatus.statuses.filter(status => {
+                            commitStatus.statuses.forEach(status => {
                                 (0, logger_1.logDebugInfo)(`Status check: ${status.context} (State: ${status.state})`);
-                                return status.state === 'pending';
                             });
+                            const pendingChecks = (0, merge_checks_policy_1.pendingStatuses)(commitStatus.statuses);
                             if (pendingChecks.length === 0) {
                                 checksCompleted = true;
                                 (0, logger_1.logDebugInfo)('All status checks have completed.');
@@ -60132,26 +60616,26 @@ class ActorAuthorizationRepository {
                 const authorization = (0, actor_modification_policy_1.authorizationForFileModification)(owner, actor, ownerUser.type);
                 if (authorization.kind === 'owner')
                     return authorization.allowed;
-                try {
-                    await octokit.rest.orgs.checkMembershipForUser({
-                        org: authorization.organization,
-                        username: authorization.actor,
-                    });
-                    return true;
-                }
-                catch (membershipErr) {
-                    const status = membershipErr?.status;
-                    if (status === 404)
-                        return false;
-                    (0, logger_1.logDebugInfo)(`checkMembershipForUser(${owner}, ${actor}): ${membershipErr instanceof Error ? membershipErr.message : String(membershipErr)}`);
-                    return false;
-                }
+                return this.checkOrganizationMembership(octokit, authorization.organization, authorization.actor, owner, actor);
             }
             catch (err) {
                 (0, logger_1.logDebugInfo)(`isActorAllowedToModifyFiles(${owner}, ${actor}): ${err instanceof Error ? err.message : String(err)}`);
                 return false;
             }
         };
+    }
+    async checkOrganizationMembership(octokit, organization, actor, owner, originalActor) {
+        try {
+            await octokit.rest.orgs.checkMembershipForUser({ org: organization, username: actor });
+            return true;
+        }
+        catch (membershipErr) {
+            const status = membershipErr?.status;
+            if (status === 404)
+                return false;
+            (0, logger_1.logDebugInfo)(`checkMembershipForUser(${owner}, ${originalActor}): ${membershipErr instanceof Error ? membershipErr.message : String(membershipErr)}`);
+            return false;
+        }
     }
 }
 exports.ActorAuthorizationRepository = ActorAuthorizationRepository;
@@ -60205,17 +60689,13 @@ class OrganizationMembersRepository {
         this.getRandomMembers = async (organization, membersToAdd, currentMembers, token) => {
             if (membersToAdd === 0)
                 return [];
-            const octokit = this.githubClient.getClient(token);
             try {
-                const { data: teams } = await octokit.rest.teams.list({ org: organization });
+                const teams = await this.listAllTeams(organization, token);
                 if (teams.length === 0) {
                     (0, logger_1.logDebugInfo)(`${organization} doesn't have any team.`);
                     return [];
                 }
-                const allMembers = await (0, project_members_policy_1.collectOrganizationMembers)(teams, async (teamSlug) => {
-                    const { data: members } = await octokit.rest.teams.listMembersInOrg({ org: organization, team_slug: teamSlug });
-                    return members;
-                });
+                const allMembers = await (0, project_members_policy_1.collectOrganizationMembers)(teams, (teamSlug) => this.listAllTeamMembers(organization, teamSlug, token));
                 const selectedMembers = (0, project_members_policy_1.selectAvailableMembers)(allMembers, currentMembers, membersToAdd);
                 if (selectedMembers.length === 0)
                     (0, logger_1.logDebugInfo)(`No available members to assign for organization ${organization}.`);
@@ -60227,17 +60707,13 @@ class OrganizationMembersRepository {
             }
         };
         this.getAllMembers = async (organization, token) => {
-            const octokit = this.githubClient.getClient(token);
             try {
-                const { data: teams } = await octokit.rest.teams.list({ org: organization });
+                const teams = await this.listAllTeams(organization, token);
                 if (teams.length === 0) {
                     (0, logger_1.logDebugInfo)(`${organization} doesn't have any team.`);
                     return [];
                 }
-                return await (0, project_members_policy_1.collectOrganizationMembers)(teams, async (teamSlug) => {
-                    const { data: members } = await octokit.rest.teams.listMembersInOrg({ org: organization, team_slug: teamSlug });
-                    return members;
-                });
+                return await (0, project_members_policy_1.collectOrganizationMembers)(teams, (teamSlug) => this.listAllTeamMembers(organization, teamSlug, token));
             }
             catch (error) {
                 (0, logger_1.logError)(`Error getting all members: ${error}.`);
@@ -60245,330 +60721,371 @@ class OrganizationMembersRepository {
             }
         };
     }
+    async listAllTeams(organization, token) {
+        const octokit = this.githubClient.getClient(token);
+        const teams = [];
+        for await (const response of octokit.paginate.iterator(octokit.rest.teams.list, {
+            org: organization,
+            per_page: 100,
+        })) {
+            teams.push(...response.data.filter((team) => 'slug' in team));
+        }
+        return teams;
+    }
+    async listAllTeamMembers(organization, teamSlug, token) {
+        const octokit = this.githubClient.getClient(token);
+        const members = [];
+        for await (const response of octokit.paginate.iterator(octokit.rest.teams.listMembersInOrg, {
+            org: organization,
+            team_slug: teamSlug,
+            per_page: 100,
+        })) {
+            members.push(...response.data.filter((member) => 'login' in member));
+        }
+        return members;
+    }
 }
 exports.OrganizationMembersRepository = OrganizationMembersRepository;
 
 
 /***/ }),
 
-/***/ 592:
+/***/ 8952:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.OrganizationRepository = void 0;
-const actor_authorization_repository_1 = __nccwpck_require__(6711);
-const authenticated_user_repository_1 = __nccwpck_require__(1454);
-const organization_members_repository_1 = __nccwpck_require__(845);
-/**
- * Compatibility facade for callers that still need the complete organization capability.
- * New application code should depend on the narrow ports and adapters directly.
- */
-class OrganizationRepository {
-    constructor(githubClient) {
-        this.getRandomMembers = (...args) => this.members.getRandomMembers(...args);
-        this.getAllMembers = (...args) => this.members.getAllMembers(...args);
-        this.getUserFromToken = (...args) => this.authenticatedUser.getUserFromToken(...args);
-        this.getTokenUserDetails = (...args) => this.authenticatedUser.getTokenUserDetails(...args);
-        this.isActorAllowedToModifyFiles = (...args) => this.authorization.isActorAllowedToModifyFiles(...args);
-        this.members = new organization_members_repository_1.OrganizationMembersRepository(githubClient);
-        this.authenticatedUser = new authenticated_user_repository_1.AuthenticatedUserRepository(githubClient);
-        this.authorization = new actor_authorization_repository_1.ActorAuthorizationRepository(githubClient);
-    }
-}
-exports.OrganizationRepository = OrganizationRepository;
-
-
-/***/ }),
-
-/***/ 7172:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PROGRESS_LABEL_PERCENTS = exports.PROGRESS_LABEL_PATTERN = void 0;
-exports.progressPercentToColor = progressPercentToColor;
-exports.PROGRESS_LABEL_PATTERN = /^\d+%$/;
-exports.PROGRESS_LABEL_PERCENTS = [
-    0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50,
-    55, 60, 65, 70, 75, 80, 85, 90, 95, 100,
-];
-function progressPercentToColor(percent) {
-    const p = Math.min(100, Math.max(0, percent));
-    let r, g, b;
-    if (p <= 50) {
-        const t = p / 50;
-        r = Math.round(182 + (251 - 182) * t);
-        g = Math.round(2 + (202 - 2) * t);
-        b = Math.round(5 + (4 - 5) * t);
-    }
-    else {
-        const t = (p - 50) / 50;
-        r = Math.round(251 + (14 - 251) * t);
-        g = Math.round(202 + (138 - 202) * t);
-        b = Math.round(4 + (22 - 4) * t);
-    }
-    return [r, g, b].map(value => value.toString(16).padStart(2, '0')).join('');
-}
-
-
-/***/ }),
-
-/***/ 8009:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ProjectBoardRepository = void 0;
+exports.ProjectBoardCommandRepository = void 0;
+const project_board_provider_limits_1 = __nccwpck_require__(6997);
 const logger_1 = __nccwpck_require__(1151);
 const github_pagination_adapter_1 = __nccwpck_require__(5093);
-const project_detail_1 = __nccwpck_require__(3428);
-/** GitHub Projects V2 adapter for project loading, content lookup, and linking. */
-class ProjectBoardRepository {
-    constructor(projectClient, graphqlClient) {
-        this.projectClient = projectClient;
+const FIELD_QUERY = `
+    query($projectId: ID!, $after: String) {
+      node(id: $projectId) {
+        ... on ProjectV2 {
+          fields(first: 100, after: $after) {
+            pageInfo { hasNextPage endCursor }
+            nodes {
+              ... on ProjectV2SingleSelectField {
+                id
+                name
+                options { id name }
+              }
+            }
+          }
+        }
+      }
+    }`;
+const ITEM_QUERY = `
+    query($projectId: ID!, $after: String) {
+      node(id: $projectId) {
+        ... on ProjectV2 {
+          items(first: 100, after: $after) {
+            pageInfo { hasNextPage endCursor }
+            nodes {
+              id
+              fieldValues(first: 100) {
+                nodes {
+                  ... on ProjectV2ItemFieldSingleSelectValue {
+                    field { ... on ProjectV2SingleSelectField { name } }
+                    optionId
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }`;
+const UPDATE_FIELD_MUTATION = `
+    mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+      updateProjectV2ItemFieldValue(
+        input: {
+          projectId: $projectId
+          itemId: $itemId
+          fieldId: $fieldId
+          value: { singleSelectOptionId: $optionId }
+        }
+      ) {
+        projectV2Item { id }
+      }
+    }`;
+class ProjectBoardCommandRepository {
+    constructor(projectBoardContentQueryPort, graphqlClient) {
+        this.projectBoardContentQueryPort = projectBoardContentQueryPort;
         this.graphqlClient = graphqlClient;
         this.priorityLabel = "Priority";
         this.sizeLabel = "Size";
         this.statusLabel = "Status";
-        /**
-         * Retrieves detailed information about a GitHub project
-         * @param projectId - The project number/ID
-         * @param token - GitHub authentication token
-         * @returns Promise<ProjectDetail> - The project details
-         * @throws {Error} If the project is not found or if there are authentication/network issues
-         */
-        this.getProjectDetail = async (projectId, token) => {
-            try {
-                const projectNumber = parseInt(projectId, 10);
-                if (isNaN(projectNumber)) {
-                    throw new Error(`Invalid project ID: ${projectId}. Must be a valid number.`);
-                }
-                const projectOctokit = this.projectClient.getClient(token);
-                const { data: owner } = await projectOctokit.rest.users.getByUsername({ username: this.projectClient.getClient(token).context.repo.owner }).catch((error) => {
-                    throw new Error(`Failed to get owner information: ${error instanceof Error ? error.message : String(error)}`);
+        this.findFieldOption = async (client, project, fieldName, fieldValue) => {
+            for await (const page of (0, github_pagination_adapter_1.paginateCursor)(async (after) => {
+                const result = await client.graphql(FIELD_QUERY, {
+                    projectId: project.id,
+                    after,
                 });
-                const ownerType = owner.type === 'Organization' ? 'orgs' : 'users';
-                const projectUrl = `https://github.com/${ownerType}/${this.projectClient.getClient(token).context.repo.owner}/projects/${projectId}`;
-                const ownerQueryField = ownerType === 'orgs' ? 'organization' : 'user';
-                const queryProject = `
-                query($ownerName: String!, $projectNumber: Int!) {
-                    ${ownerQueryField}(login: $ownerName) {
-                        projectV2(number: $projectNumber) { id title url }
-                    }
+                if (!result.node) {
+                    throw new Error(`Project ${project.id} was not found while reading single-select fields.`);
                 }
-            `;
-                const projectResult = await this.graphqlClient.getClient(token).graphql(queryProject, {
-                    ownerName: this.projectClient.getClient(token).context.repo.owner,
-                    projectNumber,
-                }).catch(error => {
-                    throw new Error(`Failed to fetch project data: ${error.message}`);
+                return (result.node.fields ?? {
+                    nodes: [],
+                    pageInfo: { hasNextPage: false, endCursor: null },
                 });
-                const projectData = projectResult[ownerQueryField]?.projectV2;
-                if (!projectData)
-                    throw new Error(`Project not found: ${projectUrl}`);
-                (0, logger_1.logDebugInfo)(`Project ID: ${projectData.id}`);
-                (0, logger_1.logDebugInfo)(`Project Title: ${projectData.title}`);
-                (0, logger_1.logDebugInfo)(`Project URL: ${projectData.url}`);
-                return new project_detail_1.ProjectDetail({ id: projectData.id, title: projectData.title, url: projectData.url, type: ownerQueryField, owner: this.projectClient.getClient(token).context.repo.owner, number: projectNumber });
+            }, { description: "project board fields" })) {
+                const field = page.nodes.find((candidate) => candidate.name === fieldName && Array.isArray(candidate.options));
+                if (!field)
+                    continue;
+                const option = field.options?.find((candidate) => candidate.name === fieldValue);
+                if (!option) {
+                    const message = `Option '${fieldValue}' not found for field '${fieldName}'.`;
+                    (0, logger_1.logError)(message);
+                    throw new Error(message);
+                }
+                (0, logger_1.logDebugInfo)(`Target field ID: ${field.id}`);
+                (0, logger_1.logDebugInfo)(`Target option ID: ${option.id}`);
+                return { fieldId: field.id, optionId: option.id };
             }
-            catch (error) {
-                const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-                (0, logger_1.logError)(`Error in getProjectDetail: ${errorMessage}`);
-                throw error;
-            }
+            const message = `Field '${fieldName}' not found or is not a single-select field.`;
+            (0, logger_1.logError)(message);
+            throw new Error(message);
         };
-        this.getContentId = async (project, owner, repo, issueOrPullRequestNumber, token) => {
-            const issueOrPrQuery = `query($owner: String!, $repo: String!, $number: Int!) { repository(owner: $owner, name: $repo) { issueOrPullRequest: issueOrPullRequest(number: $number) { ... on Issue { id } ... on PullRequest { id } } } }`;
-            const issueOrPrResult = await this.graphqlClient.getClient(token).graphql(issueOrPrQuery, { owner, repo, number: issueOrPullRequestNumber });
-            if (!issueOrPrResult.repository.issueOrPullRequest) {
-                (0, logger_1.logError)(`Issue or PR #${issueOrPullRequestNumber} not found in repository.`);
-                return undefined;
+        this.findProjectItem = async (client, project, itemId, fieldName) => {
+            for await (const page of (0, github_pagination_adapter_1.paginateCursor)(async (after) => {
+                const result = await client.graphql(ITEM_QUERY, {
+                    projectId: project.id,
+                    after,
+                });
+                if (!result.node) {
+                    throw new Error(`Project ${project.id} was not found while reading project items.`);
+                }
+                return (result.node.items ?? {
+                    nodes: [],
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                });
+            }, {
+                description: "project board items",
+                maxPages: project_board_provider_limits_1.PROJECT_BOARD_ITEM_PAGE_LIMIT,
+            })) {
+                const item = page.nodes.find((candidate) => candidate.id === itemId);
+                if (item)
+                    return item;
             }
-            const contentId = issueOrPrResult.repository.issueOrPullRequest.id;
-            let cursor = null;
-            let projectItemId;
-            let totalItemsChecked = 0;
-            const maxPages = 100;
-            let pageCount = 0;
-            do {
-                if (pageCount >= maxPages) {
-                    (0, logger_1.logError)(`Stopped after ${maxPages} pages (${totalItemsChecked} items). Issue or PR #${issueOrPullRequestNumber} not found in project.`);
-                    break;
-                }
-                pageCount += 1;
-                const projectQuery = `query($projectId: ID!, $cursor: String) { node(id: $projectId) { ... on ProjectV2 { items(first: 100, after: $cursor) { pageInfo { hasNextPage endCursor } nodes { id content { ... on Issue { id } ... on PullRequest { id } } } } } } }`;
-                const projectResult = await this.graphqlClient.getClient(token).graphql(projectQuery, { projectId: project.id, cursor });
-                if (projectResult.node === null) {
-                    (0, logger_1.logError)(`Project not found for ID "${project.id}". Ensure the project is loaded via getProjectDetail (GraphQL node ID), not the project number.`);
-                    throw new Error(`Project not found or invalid project ID. The project ID must be the GraphQL node ID from the API (e.g. PVT_...), not the project number.`);
-                }
-                const items = projectResult.node.items?.nodes ?? [];
-                totalItemsChecked += items.length;
-                const foundItem = items.find((item) => item.content?.id === contentId);
-                if (foundItem) {
-                    projectItemId = foundItem.id;
-                    break;
-                }
-                const hasNextPage = projectResult.node.items?.pageInfo.hasNextPage === true;
-                const endCursor = projectResult.node.items?.pageInfo.endCursor ?? null;
-                if (hasNextPage && endCursor)
-                    cursor = endCursor;
-                else {
-                    if (hasNextPage)
-                        (0, logger_1.logError)(`Project items pagination: hasNextPage is true but endCursor is null (page ${pageCount}, ${totalItemsChecked} items so far). Cannot fetch more.`);
-                    cursor = null;
-                }
-            } while (cursor);
-            if (projectItemId === undefined) {
-                (0, logger_1.logError)(`Issue or PR #${issueOrPullRequestNumber} not found in project after checking ${totalItemsChecked} items (${pageCount} page(s)). Link it to the project first, or wait for the board to sync.`);
-                throw new Error(`Issue or pull request #${issueOrPullRequestNumber} is not in the project yet (checked ${totalItemsChecked} items). Link it to the project first, or wait for the board to sync.`);
-            }
-            return projectItemId;
-        };
-        this.isContentLinked = async (project, contentId, token) => {
-            const query = `query($projectId: ID!, $after: String) { node(id: $projectId) { ... on ProjectV2 { items(first: 100, after: $after) { nodes { content { ... on PullRequest { id } ... on Issue { id } } } pageInfo { hasNextPage endCursor } } } } }`;
-            const allItems = [];
-            for await (const page of (0, github_pagination_adapter_1.paginateCursor)(async (cursor) => {
-                const result = await this.graphqlClient.getClient(token).graphql(query, { projectId: project.id, after: cursor });
-                return result.node.items;
-            }, { description: `Project ${project.id} items pagination` }))
-                allItems.push(...page.nodes);
-            return allItems.some(item => item.content?.id === contentId);
-        };
-        this.linkContentId = async (project, contentId, token) => {
-            if (await this.isContentLinked(project, contentId, token)) {
-                (0, logger_1.logDebugInfo)(`Content ${contentId} is already linked to project ${project.id}.`);
-                return false;
-            }
-            const linkMutation = `mutation($projectId: ID!, $contentId: ID!) { addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) { item { id } } }`;
-            const linkResult = await this.graphqlClient.getClient(token).graphql(linkMutation, { projectId: project.id, contentId });
-            (0, logger_1.logDebugInfo)(`Linked ${contentId} with id ${linkResult.addProjectV2ItemById?.item?.id ?? ''} to project ${project.id}`);
-            return true;
+            const message = `Project item ${itemId} was not found while updating field '${fieldName}'.`;
+            (0, logger_1.logError)(message);
+            throw new Error(message);
         };
         this.setSingleSelectFieldValue = async (project, owner, repo, issueOrPullRequestNumber, fieldName, fieldValue, token) => {
-            const contentId = await this.getContentId(project, owner, repo, issueOrPullRequestNumber, token);
+            const contentId = await this.projectBoardContentQueryPort.getProjectItemId(project, owner, repo, issueOrPullRequestNumber, token);
             if (!contentId) {
-                (0, logger_1.logError)(`Content ID not found for issue or pull request #${issueOrPullRequestNumber}.`);
-                throw new Error(`Content ID not found for issue or pull request #${issueOrPullRequestNumber}.`);
+                const message = `Content ID not found for issue or pull request #${issueOrPullRequestNumber}.`;
+                (0, logger_1.logError)(message);
+                throw new Error(message);
             }
-            (0, logger_1.logDebugInfo)(`Content ID: ${contentId}`);
-            // Get the field ID and current value
-            const fieldQuery = `
-        query($projectId: ID!, $after: String) {
-          node(id: $projectId) {
-            ... on ProjectV2 {
-              fields(first: 20) {
-                nodes {
-                  ... on ProjectV2SingleSelectField {
-                    id
-                    name
-                    options {
-                      id
-                      name
-                    }
-                  }
-                }
-              }
-              items(first: 100, after: $after) {
-                pageInfo {
-                  hasNextPage
-                  endCursor
-                }
-                nodes {
-                  id
-                  fieldValues(first: 20) {
-                    nodes {
-                      ... on ProjectV2ItemFieldSingleSelectValue {
-                        field {
-                          ... on ProjectV2SingleSelectField {
-                            name
-                          }
-                        }
-                        optionId
-                      }
-                    }
-                  }
-                }
-              }
+            const client = this.graphqlClient.getClient(token);
+            const target = await this.findFieldOption(client, project, fieldName, fieldValue);
+            const currentItem = await this.findProjectItem(client, project, contentId, fieldName);
+            const currentFieldValue = currentItem.fieldValues?.nodes.find((value) => value.field?.name === fieldName);
+            if (currentFieldValue?.optionId === target.optionId) {
+                (0, logger_1.logDebugInfo)(`Field '${fieldName}' is already set to '${fieldValue}'. No update needed.`);
+                return false;
             }
-          }
-        }`;
-            let hasNextPage = true;
-            let endCursor = null;
-            let currentItem = null;
-            // Get the field and option information from the first page
-            const initialFieldResult = await this.graphqlClient.getClient(token).graphql(fieldQuery, {
-                projectId: project.id,
-                after: null
-            });
-            const targetField = initialFieldResult.node.fields.nodes.find((f) => f.name === fieldName);
-            (0, logger_1.logDebugInfo)(`Target field: ${JSON.stringify(targetField, null, 2)}`);
-            if (!targetField) {
-                (0, logger_1.logError)(`Field '${fieldName}' not found or is not a single-select field.`);
-                throw new Error(`Field '${fieldName}' not found or is not a single-select field.`);
-            }
-            const targetOption = targetField.options?.find((opt) => opt.name === fieldValue);
-            (0, logger_1.logDebugInfo)(`Target option: ${JSON.stringify(targetOption, null, 2)}`);
-            if (!targetOption) {
-                (0, logger_1.logError)(`Option '${fieldValue}' not found for field '${fieldName}'.`);
-                throw new Error(`Option '${fieldValue}' not found for field '${fieldName}'.`);
-            }
-            // Now search for the item through all pages
-            while (hasNextPage) {
-                const fieldResult = await this.graphqlClient.getClient(token).graphql(fieldQuery, {
-                    projectId: project.id,
-                    after: endCursor
-                });
-                // logDebugInfo(`Field result: ${JSON.stringify(fieldResult, null, 2)}`);
-                // Check current value in current page
-                currentItem = fieldResult.node.items.nodes.find((item) => item.id === contentId) ?? null;
-                if (currentItem) {
-                    // logDebugInfo(`Current item: ${JSON.stringify(currentItem, null, 2)}`);
-                    const currentFieldValue = currentItem.fieldValues?.nodes.find((value) => value.field?.name === fieldName);
-                    if (currentFieldValue && currentFieldValue.optionId === targetOption.id) {
-                        (0, logger_1.logDebugInfo)(`Field '${fieldName}' is already set to '${fieldValue}'. No update needed.`);
-                        return false;
-                    }
-                    break; // Found the item, no need to continue pagination
-                }
-                hasNextPage = fieldResult.node.items.pageInfo.hasNextPage;
-                endCursor = fieldResult.node.items.pageInfo.endCursor;
-            }
-            (0, logger_1.logDebugInfo)(`Target field ID: ${targetField.id}`);
-            (0, logger_1.logDebugInfo)(`Target option ID: ${targetOption.id}`);
-            const mutation = `
-        mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
-          updateProjectV2ItemFieldValue(
-            input: {
-              projectId: $projectId,
-              itemId: $itemId,
-              fieldId: $fieldId,
-              value: { singleSelectOptionId: $optionId }
-            }
-          ) {
-            projectV2Item {
-              id
-            }
-          }
-        }`;
-            const mutationResult = await this.graphqlClient.getClient(token).graphql(mutation, {
+            const mutationResult = await client.graphql(UPDATE_FIELD_MUTATION, {
                 projectId: project.id,
                 itemId: contentId,
-                fieldId: targetField.id,
-                optionId: targetOption.id
+                fieldId: target.fieldId,
+                optionId: target.optionId,
             });
-            return !!mutationResult.updateProjectV2ItemFieldValue?.projectV2Item;
+            return Boolean(mutationResult.updateProjectV2ItemFieldValue?.projectV2Item);
         };
         this.setTaskPriority = async (project, owner, repo, issueOrPullRequestNumber, priorityLabel, token) => this.setSingleSelectFieldValue(project, owner, repo, issueOrPullRequestNumber, this.priorityLabel, priorityLabel, token);
         this.setTaskSize = async (project, owner, repo, issueOrPullRequestNumber, sizeLabel, token) => this.setSingleSelectFieldValue(project, owner, repo, issueOrPullRequestNumber, this.sizeLabel, sizeLabel, token);
         this.moveIssueToColumn = async (project, owner, repo, issueOrPullRequestNumber, columnName, token) => this.setSingleSelectFieldValue(project, owner, repo, issueOrPullRequestNumber, this.statusLabel, columnName, token);
     }
 }
-exports.ProjectBoardRepository = ProjectBoardRepository;
+exports.ProjectBoardCommandRepository = ProjectBoardCommandRepository;
+
+
+/***/ }),
+
+/***/ 9285:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ProjectBoardLinkRepository = void 0;
+const logger_1 = __nccwpck_require__(1151);
+class ProjectBoardLinkRepository {
+    constructor(projectBoardQueryPort, graphqlClient) {
+        this.projectBoardQueryPort = projectBoardQueryPort;
+        this.graphqlClient = graphqlClient;
+        this.linkContentId = async (project, contentId, token) => {
+            if (await this.projectBoardQueryPort.isContentLinked(project, contentId, token)) {
+                (0, logger_1.logDebugInfo)(`Content ${contentId} is already linked to project ${project.id}.`);
+                return false;
+            }
+            const linkMutation = `mutation($projectId: ID!, $contentId: ID!) { addProjectV2ItemById(input: {projectId: $projectId, contentId: $contentId}) { item { id } } }`;
+            const linkResult = await this.graphqlClient.getClient(token).graphql(linkMutation, { projectId: project.id, contentId });
+            const linkedItemId = linkResult.addProjectV2ItemById?.item?.id;
+            if (!linkedItemId) {
+                (0, logger_1.logDebugInfo)(`Project link mutation returned no item for content ${contentId} and project ${project.id}.`);
+                return false;
+            }
+            (0, logger_1.logDebugInfo)(`Linked ${contentId} with id ${linkedItemId} to project ${project.id}`);
+            return true;
+        };
+    }
+}
+exports.ProjectBoardLinkRepository = ProjectBoardLinkRepository;
+
+
+/***/ }),
+
+/***/ 7301:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ProjectBoardQueryRepository = void 0;
+const project_board_provider_limits_1 = __nccwpck_require__(6997);
+const logger_1 = __nccwpck_require__(1151);
+const project_detail_1 = __nccwpck_require__(3428);
+const github_pagination_adapter_1 = __nccwpck_require__(5093);
+const CONTENT_QUERY = `
+    query($owner: String!, $repo: String!, $number: Int!) {
+      repository(owner: $owner, name: $repo) {
+        issueOrPullRequest: issueOrPullRequest(number: $number) {
+          ... on Issue { id }
+          ... on PullRequest { id }
+        }
+      }
+    }`;
+const PROJECT_ITEMS_QUERY = `
+    query($projectId: ID!, $after: String) {
+      node(id: $projectId) {
+        ... on ProjectV2 {
+          items(first: 100, after: $after) {
+            pageInfo { hasNextPage endCursor }
+            nodes {
+              id
+              content {
+                ... on Issue { id }
+                ... on PullRequest { id }
+              }
+            }
+          }
+        }
+      }
+    }`;
+const errorMessage = (error) => error instanceof Error ? error.message : String(error);
+class ProjectBoardQueryRepository {
+    constructor(repositoryContextClient, ownerTypeClient, graphqlClient) {
+        this.repositoryContextClient = repositoryContextClient;
+        this.ownerTypeClient = ownerTypeClient;
+        this.graphqlClient = graphqlClient;
+        this.findProjectItemId = async (client, project, contentId) => {
+            for await (const page of (0, github_pagination_adapter_1.paginateCursor)(async (after) => {
+                const result = await client.graphql(PROJECT_ITEMS_QUERY, {
+                    projectId: project.id,
+                    after,
+                });
+                if (!result.node) {
+                    throw new Error(`Project ${project.id} was not found while reading project items.`);
+                }
+                return (result.node.items ?? {
+                    nodes: [],
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                });
+            }, {
+                description: "project board content",
+                maxPages: project_board_provider_limits_1.PROJECT_BOARD_ITEM_PAGE_LIMIT,
+            })) {
+                const item = page.nodes.find((candidate) => candidate.content?.id === contentId);
+                if (item)
+                    return item.id;
+            }
+            return undefined;
+        };
+        this.getProjectDetail = async (projectId, token) => {
+            try {
+                if (!/^[1-9]\d*$/.test(projectId)) {
+                    throw new Error(`Invalid project ID: ${projectId}. Must be a positive integer.`);
+                }
+                const projectNumber = Number(projectId);
+                const repositoryContext = this.repositoryContextClient.getClient(token);
+                const ownerTypeProvider = this.ownerTypeClient.getClient(token);
+                const graphql = this.graphqlClient.getClient(token);
+                const ownerName = repositoryContext.context.repo.owner;
+                const { data: owner } = await ownerTypeProvider.rest.users
+                    .getByUsername({ username: ownerName })
+                    .catch((error) => {
+                    throw new Error(`Failed to get owner information: ${errorMessage(error)}`);
+                });
+                if (owner.type !== "Organization" && owner.type !== "User") {
+                    throw new Error(`Unsupported GitHub owner type '${String(owner.type)}' for owner ${ownerName}.`);
+                }
+                const ownerPath = owner.type === "Organization" ? "orgs" : "users";
+                const ownerQueryField = ownerPath === "orgs" ? "organization" : "user";
+                const projectUrl = `https://github.com/${ownerPath}/${ownerName}/projects/${projectId}`;
+                const projectQuery = `
+                query($ownerName: String!, $projectNumber: Int!) {
+                    ${ownerQueryField}(login: $ownerName) {
+                        projectV2(number: $projectNumber) { id title url }
+                    }
+                }
+            `;
+                const result = await graphql
+                    .graphql(projectQuery, {
+                    ownerName,
+                    projectNumber,
+                })
+                    .catch((error) => {
+                    throw new Error(`Failed to fetch project data: ${errorMessage(error)}`);
+                });
+                const project = result[ownerQueryField]?.projectV2;
+                if (!project)
+                    throw new Error(`Project not found: ${projectUrl}`);
+                (0, logger_1.logDebugInfo)(`Project ID: ${project.id}`);
+                (0, logger_1.logDebugInfo)(`Project Title: ${project.title}`);
+                (0, logger_1.logDebugInfo)(`Project URL: ${project.url}`);
+                return new project_detail_1.ProjectDetail({
+                    id: project.id,
+                    title: project.title,
+                    url: project.url,
+                    type: ownerQueryField,
+                    owner: ownerName,
+                    number: projectNumber,
+                });
+            }
+            catch (error) {
+                (0, logger_1.logError)(`Error in getProjectDetail: ${errorMessage(error)}`);
+                throw error;
+            }
+        };
+        this.getProjectItemId = async (project, owner, repo, issueOrPullRequestNumber, token) => {
+            const client = this.graphqlClient.getClient(token);
+            const contentResult = await client.graphql(CONTENT_QUERY, { owner, repo, number: issueOrPullRequestNumber });
+            const contentId = contentResult.repository?.issueOrPullRequest?.id;
+            if (!contentId) {
+                (0, logger_1.logError)(`Issue or PR #${issueOrPullRequestNumber} not found in repository.`);
+                return undefined;
+            }
+            const projectItemId = await this.findProjectItemId(client, project, contentId);
+            if (!projectItemId) {
+                const message = `Issue or pull request #${issueOrPullRequestNumber} is not in project ${project.id}.`;
+                (0, logger_1.logError)(message);
+                throw new Error(message);
+            }
+            return projectItemId;
+        };
+        this.isContentLinked = async (project, contentId, token) => {
+            const client = this.graphqlClient.getClient(token);
+            return Boolean(await this.findProjectItemId(client, project, contentId));
+        };
+    }
+}
+exports.ProjectBoardQueryRepository = ProjectBoardQueryRepository;
 
 
 /***/ }),
@@ -60582,15 +61099,28 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.collectOrganizationMembers = collectOrganizationMembers;
 exports.selectAvailableMembers = selectAvailableMembers;
 async function collectOrganizationMembers(teams, listTeamMembers) {
-    const members = new Set();
+    const members = new Map();
     for (const team of teams) {
         const teamMembers = await listTeamMembers(team.slug);
-        teamMembers.forEach((member) => members.add(member.login));
+        teamMembers.forEach((member) => {
+            const identity = member.login.toLowerCase();
+            if (!members.has(identity))
+                members.set(identity, member.login);
+        });
     }
-    return [...members];
+    return [...members.values()];
 }
 function selectAvailableMembers(members, currentMembers, requested) {
-    const available = members.filter((member) => !currentMembers.includes(member));
+    const excludedIdentities = new Set(currentMembers.map((member) => member.toLowerCase()));
+    const availableByIdentity = new Map();
+    for (const member of members) {
+        const identity = member.toLowerCase();
+        if (!excludedIdentities.has(identity) &&
+            !availableByIdentity.has(identity)) {
+            availableByIdentity.set(identity, member);
+        }
+    }
+    const available = [...availableByIdentity.values()];
     if (requested >= available.length)
         return available;
     return available.sort(() => Math.random() - 0.5).slice(0, requested);
@@ -60633,6 +61163,37 @@ exports.ProviderCliAdapter = ProviderCliAdapter;
 
 /***/ }),
 
+/***/ 5165:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BugbotPullRequestRepository = void 0;
+class BugbotPullRequestRepository {
+    constructor(lifecycle, changes, reviewQuery, reviewCommand, threadCommand) {
+        this.lifecycle = lifecycle;
+        this.changes = changes;
+        this.reviewQuery = reviewQuery;
+        this.reviewCommand = reviewCommand;
+        this.threadCommand = threadCommand;
+        this.getHeadBranchForIssue = (...args) => this.lifecycle.getHeadBranchForIssue(...args);
+        this.getOpenPullRequestNumbersByHeadBranch = (...args) => this.lifecycle.getOpenPullRequestNumbersByHeadBranch(...args);
+        this.getPullRequestReviewCommentBody = (...args) => this.reviewQuery.getPullRequestReviewCommentBody(...args);
+        this.listPullRequestReviewComments = (...args) => this.reviewQuery.listPullRequestReviewComments(...args);
+        this.getPullRequestHeadSha = (...args) => this.changes.getPullRequestHeadSha(...args);
+        this.getChangedFiles = (...args) => this.changes.getChangedFiles(...args);
+        this.getFilesWithFirstDiffLine = (...args) => this.changes.getFilesWithFirstDiffLine(...args);
+        this.createReviewWithComments = (...args) => this.reviewCommand.createReviewWithComments(...args);
+        this.updatePullRequestReviewComment = (...args) => this.reviewCommand.updatePullRequestReviewComment(...args);
+        this.resolvePullRequestReviewThread = (...args) => this.threadCommand.resolvePullRequestReviewThread(...args);
+    }
+}
+exports.BugbotPullRequestRepository = BugbotPullRequestRepository;
+
+
+/***/ }),
+
 /***/ 1564:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -60645,22 +61206,9 @@ class PullRequestChangesRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
         this.getChangedFiles = async (owner, repository, pullNumber, token) => {
-            const octokit = this.githubClient.getClient(token);
-            const all = [];
             try {
-                for await (const response of octokit.paginate.iterator(octokit.rest.pulls.listFiles, {
-                    owner,
-                    repo: repository,
-                    pull_number: pullNumber,
-                    per_page: 100,
-                })) {
-                    const data = response.data ?? [];
-                    all.push(...data.map((file) => ({
-                        filename: file.filename,
-                        status: file.status,
-                    })));
-                }
-                return all;
+                return (await this.listAllFiles(owner, repository, pullNumber, token))
+                    .map(({ filename, status }) => ({ filename, status }));
             }
             catch (error) {
                 (0, logger_1.logError)(`Error getting changed files from pull request: ${error}.`);
@@ -60672,14 +61220,8 @@ class PullRequestChangesRepository {
          * Used so review comments use a line that GitHub can resolve (avoids "line could not be resolved").
          */
         this.getFilesWithFirstDiffLine = async (owner, repository, pullNumber, token) => {
-            const octokit = this.githubClient.getClient(token);
             try {
-                const { data } = await octokit.rest.pulls.listFiles({
-                    owner,
-                    repo: repository,
-                    pull_number: pullNumber,
-                });
-                return (data || [])
+                return (await this.listAllFiles(owner, repository, pullNumber, token))
                     .filter((f) => f.status !== 'removed' && (f.patch ?? '').length > 0)
                     .map((f) => {
                     const firstLine = PullRequestChangesRepository.firstLineFromPatch(f.patch ?? '');
@@ -60692,25 +61234,15 @@ class PullRequestChangesRepository {
             }
         };
         this.getPullRequestChanges = async (owner, repository, pullNumber, token) => {
-            const octokit = this.githubClient.getClient(token);
-            const allFiles = [];
             try {
-                for await (const response of octokit.paginate.iterator(octokit.rest.pulls.listFiles, {
-                    owner,
-                    repo: repository,
-                    pull_number: pullNumber,
-                    per_page: 100
-                })) {
-                    const filesData = response.data;
-                    allFiles.push(...filesData.map((file) => ({
-                        filename: file.filename,
-                        status: file.status,
-                        additions: file.additions,
-                        deletions: file.deletions,
-                        patch: file.patch || ''
-                    })));
-                }
-                return allFiles;
+                return (await this.listAllFiles(owner, repository, pullNumber, token))
+                    .map(({ filename, status, additions, deletions, patch }) => ({
+                    filename,
+                    status,
+                    additions,
+                    deletions,
+                    patch: patch || '',
+                }));
             }
             catch (error) {
                 (0, logger_1.logError)(`Error getting pull request changes: ${error}.`);
@@ -60733,6 +61265,19 @@ class PullRequestChangesRepository {
                 return undefined;
             }
         };
+    }
+    async listAllFiles(owner, repository, pullNumber, token) {
+        const octokit = this.githubClient.getClient(token);
+        const allFiles = [];
+        for await (const response of octokit.paginate.iterator(octokit.rest.pulls.listFiles, {
+            owner,
+            repo: repository,
+            pull_number: pullNumber,
+            per_page: 100,
+        })) {
+            allFiles.push(...(response.data ?? []));
+        }
+        return allFiles;
     }
     /** First line (right side) of the first hunk per file, for valid review comment placement. */
     static firstLineFromPatch(patch) {
@@ -60861,175 +61406,159 @@ PullRequestLifecycleRepository.IS_LINKED_FETCH_TIMEOUT_MS = 10000;
 
 /***/ }),
 
-/***/ 2023:
+/***/ 7120:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PullRequestReviewRepository = void 0;
-const pull_request_review_thread_repository_1 = __nccwpck_require__(3314);
-const logger_1 = __nccwpck_require__(1151);
-class PullRequestReviewRepository {
-    constructor(githubClient, graphqlClient) {
-        this.githubClient = githubClient;
-        /**
-         * Returns all users involved in review: requested (pending) + those who already submitted a review.
-         * Used to avoid re-requesting someone who already reviewed when ensuring desired reviewer count.
-         */
-        this.getCurrentReviewers = async (owner, repository, pullNumber, token) => {
-            const octokit = this.githubClient.getClient(token);
-            try {
-                const [requestedRes, reviewsRes] = await Promise.all([
-                    octokit.rest.pulls.listRequestedReviewers({
-                        owner,
-                        repo: repository,
-                        pull_number: pullNumber,
-                    }),
-                    octokit.rest.pulls.listReviews({
-                        owner,
-                        repo: repository,
-                        pull_number: pullNumber,
-                    }),
-                ]);
-                const logins = new Set();
-                for (const user of requestedRes.data.users) {
-                    logins.add(user.login);
-                }
-                for (const review of reviewsRes.data) {
-                    if (review.user?.login) {
-                        logins.add(review.user.login);
-                    }
-                }
-                return Array.from(logins);
+exports.PullRequestReviewCommentCommandRepository = void 0;
+const pull_request_review_errors_1 = __nccwpck_require__(6445);
+const MAX_CONCURRENT_COMMENTS = 10;
+function chunkComments(comments) {
+    const chunks = [];
+    for (let index = 0; index < comments.length; index += MAX_CONCURRENT_COMMENTS) {
+        chunks.push(comments.slice(index, index + MAX_CONCURRENT_COMMENTS));
+    }
+    return chunks;
+}
+class PullRequestReviewCommentCommandRepository {
+    constructor(createClient, graphqlClient, queryClient) {
+        this.createClient = createClient;
+        this.graphqlClient = graphqlClient;
+        this.queryClient = queryClient;
+    }
+    async listExistingBodies(owner, repository, pullRequestNumber, token) {
+        if (!this.queryClient)
+            return new Set();
+        const client = this.queryClient.getClient(token);
+        const bodies = new Set();
+        for await (const page of client.paginate.iterator(client.rest.pulls.listReviewComments, { owner, repo: repository, pull_number: pullRequestNumber })) {
+            for (const comment of page.data) {
+                if (typeof comment.body === "string")
+                    bodies.add(comment.body);
             }
-            catch (error) {
-                (0, logger_1.logError)(`Error getting reviewers of PR: ${error}.`);
-                return [];
-            }
-        };
-        this.addReviewersToPullRequest = async (owner, repository, pullNumber, reviewers, token) => {
-            const octokit = this.githubClient.getClient(token);
-            try {
-                if (reviewers.length === 0) {
-                    (0, logger_1.logDebugInfo)(`No reviewers provided for addition. Skipping operation.`);
-                    return [];
-                }
-                const { data } = await octokit.rest.pulls.requestReviewers({
-                    owner,
-                    repo: repository,
-                    pull_number: pullNumber,
-                    reviewers: reviewers,
-                });
-                const addedReviewers = data.requested_reviewers || [];
-                return addedReviewers.map((reviewer) => reviewer.login);
-            }
-            catch (error) {
-                (0, logger_1.logError)(`Error adding reviewers to pull request: ${error}.`);
-                return [];
-            }
-        };
-        /**
-         * List all review comments on a PR (for bugbot: find existing findings by marker).
-         * Uses pagination to fetch every comment (default API returns only 30 per page).
-         * Includes node_id for GraphQL (e.g. resolve review thread).
-         */
-        this.listPullRequestReviewComments = async (owner, repository, pullNumber, token) => {
-            const octokit = this.githubClient.getClient(token);
-            const all = [];
-            try {
-                for await (const response of octokit.paginate.iterator(octokit.rest.pulls.listReviewComments, {
-                    owner,
-                    repo: repository,
-                    pull_number: pullNumber,
-                    per_page: 100,
-                })) {
-                    const data = response.data || [];
-                    all.push(...data.map((c) => ({
-                        id: c.id,
-                        body: c.body ?? null,
-                        path: c.path,
-                        line: c.line ?? undefined,
-                        node_id: c.node_id ?? undefined,
-                    })));
-                }
-                return all;
-            }
-            catch (error) {
-                (0, logger_1.logError)(`Error listing PR review comments (owner=${owner}, repo=${repository}, pullNumber=${pullNumber}): ${error}.`);
-                return [];
-            }
-        };
-        /**
-         * Fetches a single PR review comment by id (e.g. parent comment when user replied in thread).
-         * Returns the comment body or null if not found.
-         */
-        this.getPullRequestReviewCommentBody = async (owner, repository, _pullNumber, commentId, token) => {
-            const octokit = this.githubClient.getClient(token);
-            try {
-                const { data } = await octokit.rest.pulls.getReviewComment({
-                    owner,
-                    repo: repository,
-                    comment_id: commentId,
-                });
-                return data.body ?? null;
-            }
-            catch (error) {
-                (0, logger_1.logError)(`Error getting PR review comment ${commentId}: ${error}`);
-                return null;
-            }
-        };
-        /** Resolve a PR review thread containing the given review comment node. */
-        this.resolvePullRequestReviewThread = async (owner, repository, pullNumber, commentNodeId, token) => {
-            await this.pullRequestReviewThreadRepository.resolve(owner, repository, pullNumber, commentNodeId, token);
-        };
-        /**
-         * Create a review on the PR with one or more inline comments (bugbot findings).
-         * Each comment requires path and line (use first file and line 1 if not specified).
-         */
-        this.createReviewWithComments = async (owner, repository, pullNumber, commitId, comments, token) => {
-            if (comments.length === 0)
+        }
+        return bodies;
+    }
+    async createReviewWithComments(owner, repository, pullRequestNumber, commitSha, comments, token) {
+        if (comments.length === 0)
+            return;
+        let failedComments = 0;
+        try {
+            const existingBodies = await this.listExistingBodies(owner, repository, pullRequestNumber, token);
+            const pendingComments = comments.filter((comment) => !existingBodies.has(comment.body));
+            if (pendingComments.length === 0)
                 return;
-            const octokit = this.githubClient.getClient(token);
-            const results = await Promise.allSettled(comments.map((c) => octokit.rest.pulls.createReviewComment({
+            const client = this.createClient.getClient(token);
+            for (const commentBatch of chunkComments(pendingComments)) {
+                const outcomes = await Promise.allSettled(commentBatch.map((comment) => Promise.resolve().then(() => client.rest.pulls.createReviewComment({
+                    owner,
+                    repo: repository,
+                    pull_number: pullRequestNumber,
+                    commit_id: commitSha,
+                    body: comment.body,
+                    path: comment.path,
+                    line: comment.line,
+                    side: "RIGHT",
+                }))));
+                failedComments += outcomes.filter((outcome) => outcome.status === "rejected").length;
+            }
+            if (failedComments > 0) {
+                throw new pull_request_review_errors_1.PullRequestReviewOperationError("publish-comments", {
+                    failedCount: failedComments,
+                    totalCount: pendingComments.length,
+                });
+            }
+        }
+        catch (error) {
+            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "publish-comments");
+        }
+    }
+    async updatePullRequestReviewComment(_owner, _repository, commentIdentity, body, token) {
+        try {
+            const client = this.graphqlClient.getClient(token);
+            const result = await client.graphql(`mutation ($commentIdentity: ID!, $body: String!) {
+          updatePullRequestReviewComment(
+            input: { pullRequestReviewCommentId: $commentIdentity, body: $body }
+          ) {
+            pullRequestReviewComment { id }
+          }
+        }`, { commentIdentity, body });
+            if (result.updatePullRequestReviewComment?.pullRequestReviewComment?.id !==
+                commentIdentity) {
+                throw new pull_request_review_errors_1.PullRequestReviewOperationError("update-comment");
+            }
+        }
+        catch (error) {
+            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "update-comment");
+        }
+    }
+}
+exports.PullRequestReviewCommentCommandRepository = PullRequestReviewCommentCommandRepository;
+
+
+/***/ }),
+
+/***/ 4085:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PullRequestReviewCommentQueryRepository = void 0;
+const pull_request_review_errors_1 = __nccwpck_require__(6445);
+function toReviewComment(comment) {
+    if (typeof comment.node_id !== "string" || comment.node_id.length === 0) {
+        throw new Error("Review comment identity is unavailable.");
+    }
+    return {
+        id: comment.id,
+        identity: comment.node_id,
+        body: comment.body ?? null,
+        path: comment.path,
+        line: comment.line ?? undefined,
+    };
+}
+class PullRequestReviewCommentQueryRepository {
+    constructor(githubClient) {
+        this.githubClient = githubClient;
+    }
+    async listPullRequestReviewComments(owner, repository, pullRequestNumber, token) {
+        try {
+            const client = this.githubClient.getClient(token);
+            const comments = [];
+            for await (const response of client.paginate.iterator(client.rest.pulls.listReviewComments, {
                 owner,
                 repo: repository,
-                pull_number: pullNumber,
-                commit_id: commitId,
-                path: c.path,
-                line: c.line,
-                side: 'RIGHT',
-                body: c.body,
-            })));
-            let created = 0;
-            results.forEach((result, i) => {
-                if (result.status === 'fulfilled') {
-                    created += 1;
-                }
-                else {
-                    const c = comments[i];
-                    (0, logger_1.logError)(`[Bugbot] Error creating PR review comment. path="${c.path}", line=${c.line}, prNumber=${pullNumber}, owner=${owner}, repo=${repository}: ${result.reason}`);
-                }
-            });
-            if (created > 0) {
-                (0, logger_1.logDebugInfo)(`Created ${created} review comment(s) on PR #${pullNumber}.`);
+                pull_number: pullRequestNumber,
+                per_page: 100,
+            })) {
+                const page = response.data;
+                comments.push(...page.map(toReviewComment));
             }
-        };
-        /** Update an existing PR review comment (e.g. to mark finding as resolved in body). */
-        this.updatePullRequestReviewComment = async (owner, repository, commentId, body, token) => {
-            const octokit = this.githubClient.getClient(token);
-            await octokit.rest.pulls.updateReviewComment({
+            return comments;
+        }
+        catch (error) {
+            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "list-comments");
+        }
+    }
+    async getPullRequestReviewCommentBody(owner, repository, _pullRequestNumber, commentId, token) {
+        try {
+            const client = this.githubClient.getClient(token);
+            const { data } = await client.rest.pulls.getReviewComment({
                 owner,
                 repo: repository,
                 comment_id: commentId,
-                body,
             });
-            (0, logger_1.logDebugInfo)(`Updated review comment ${commentId}.`);
-        };
-        this.pullRequestReviewThreadRepository = new pull_request_review_thread_repository_1.PullRequestReviewThreadRepository(graphqlClient);
+            return data.body ?? null;
+        }
+        catch (error) {
+            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "get-comment");
+        }
     }
 }
-exports.PullRequestReviewRepository = PullRequestReviewRepository;
+exports.PullRequestReviewCommentQueryRepository = PullRequestReviewCommentQueryRepository;
 
 
 /***/ }),
@@ -61042,32 +61571,42 @@ exports.PullRequestReviewRepository = PullRequestReviewRepository;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewThreadRepository = void 0;
 const logger_1 = __nccwpck_require__(1151);
+const pull_request_review_errors_1 = __nccwpck_require__(6445);
 /** GitHub GraphQL adapter for locating and resolving a pull-request review thread. */
 class PullRequestReviewThreadRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
-        this.resolve = async (owner, repository, pullNumber, commentNodeId, token) => {
-            const octokit = this.githubClient.getClient(token);
+        this.resolvePullRequestReviewThread = async (owner, repository, pullNumber, commentIdentity, token) => {
             try {
-                const threadId = await this.findThreadId(octokit, owner, repository, pullNumber, commentNodeId);
-                if (!threadId) {
-                    (0, logger_1.logError)(`[Bugbot] No review thread found for comment node_id=${commentNodeId}.`);
+                const octokit = this.githubClient.getClient(token);
+                const thread = await this.findThread(octokit, owner, repository, pullNumber, commentIdentity);
+                if (thread == null) {
+                    throw new pull_request_review_errors_1.PullRequestReviewOperationError("resolve-thread");
+                }
+                if (thread.isResolved) {
+                    (0, logger_1.logDebugInfo)("Pull request review thread is already resolved.");
                     return;
                 }
-                await octokit.graphql(`mutation ($threadId: ID!) {
+                const result = await octokit.graphql(`mutation ($threadId: ID!) {
                     resolveReviewThread(input: { threadId: $threadId }) {
                         thread { id }
                     }
-                }`, { threadId });
-                (0, logger_1.logDebugInfo)(`Resolved PR review thread ${threadId}.`);
+                }`, { threadId: thread.id });
+                if (result.resolveReviewThread?.thread?.id !== thread.id) {
+                    throw new pull_request_review_errors_1.PullRequestReviewOperationError("resolve-thread");
+                }
+                (0, logger_1.logDebugInfo)("Resolved pull request review thread.");
             }
-            catch (err) {
-                (0, logger_1.logError)(`[Bugbot] Error resolving PR review thread (commentNodeId=${commentNodeId}, owner=${owner}, repo=${repository}): ${err}`);
+            catch (error) {
+                throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "resolve-thread");
             }
         };
-        this.findThreadId = async (octokit, owner, repository, pullNumber, commentNodeId) => {
-            let threadId = null;
+        this.findThread = async (octokit, owner, repository, pullNumber, commentIdentity) => {
+            if (commentIdentity.trim().length === 0)
+                return null;
+            let locatedThread = null;
             let threadsCursor = null;
+            const seenThreadCursors = new Set();
             outer: do {
                 const threadsData = await octokit.graphql(`query ($owner: String!, $repo: String!, $prNumber: Int!, $threadsAfter: String) {
                     repository(owner: $owner, name: $repo) {
@@ -61075,6 +61614,7 @@ class PullRequestReviewThreadRepository {
                             reviewThreads(first: 100, after: $threadsAfter) {
                                 nodes {
                                     id
+                                    isResolved
                                     comments(first: 100) {
                                         nodes { id }
                                         pageInfo { hasNextPage endCursor }
@@ -61084,22 +61624,39 @@ class PullRequestReviewThreadRepository {
                             }
                         }
                     }
-                }`, { owner, repo: repository, prNumber: pullNumber, threadsAfter: threadsCursor });
+                }`, {
+                    owner,
+                    repo: repository,
+                    prNumber: pullNumber,
+                    threadsAfter: threadsCursor,
+                });
                 const threads = threadsData?.repository?.pullRequest?.reviewThreads;
-                if (!threads?.nodes?.length)
+                if (threads == null)
                     break;
-                for (const thread of threads.nodes) {
+                for (const thread of threads.nodes ?? []) {
+                    if (thread == null)
+                        continue;
                     let commentsCursor = null;
+                    const seenCommentCursors = new Set();
                     let commentNodes = thread.comments?.nodes ?? [];
                     let commentsPageInfo = thread.comments?.pageInfo;
                     do {
-                        if (commentNodes.some((comment) => comment.id === commentNodeId)) {
-                            threadId = thread.id;
+                        if (commentNodes.some((comment) => comment?.id === commentIdentity)) {
+                            locatedThread = {
+                                id: thread.id,
+                                isResolved: thread.isResolved === true,
+                            };
                             break outer;
                         }
-                        if (!commentsPageInfo?.hasNextPage || commentsPageInfo.endCursor == null)
+                        if (!commentsPageInfo?.hasNextPage ||
+                            commentsPageInfo.endCursor == null)
                             break;
-                        commentsCursor = commentsPageInfo.endCursor;
+                        const nextCommentsCursor = commentsPageInfo.endCursor;
+                        if (seenCommentCursors.has(nextCommentsCursor)) {
+                            throw new pull_request_review_errors_1.PullRequestReviewOperationError("resolve-thread");
+                        }
+                        seenCommentCursors.add(nextCommentsCursor);
+                        commentsCursor = nextCommentsCursor;
                         const nextComments = await octokit.graphql(`query ($threadId: ID!, $commentsAfter: String) {
                             node(id: $threadId) {
                                 ... on PullRequestReviewThread {
@@ -61115,18 +61672,29 @@ class PullRequestReviewThreadRepository {
                             hasNextPage: false,
                             endCursor: null,
                         };
-                        if (commentNodes.some((comment) => comment.id === commentNodeId)) {
-                            threadId = thread.id;
+                        if (commentNodes.some((comment) => comment?.id === commentIdentity)) {
+                            locatedThread = {
+                                id: thread.id,
+                                isResolved: thread.isResolved === true,
+                            };
                             break outer;
                         }
-                    } while (commentsPageInfo?.hasNextPage === true && commentsPageInfo?.endCursor != null);
+                    } while (commentsPageInfo?.hasNextPage === true &&
+                        commentsPageInfo?.endCursor != null);
                 }
                 const pageInfo = threads.pageInfo;
-                if (threadId != null || !pageInfo?.hasNextPage)
+                if (locatedThread != null || !pageInfo?.hasNextPage)
                     break;
-                threadsCursor = pageInfo.endCursor ?? null;
+                const nextThreadsCursor = pageInfo.endCursor ?? null;
+                if (nextThreadsCursor == null)
+                    break;
+                if (seenThreadCursors.has(nextThreadsCursor)) {
+                    throw new pull_request_review_errors_1.PullRequestReviewOperationError("resolve-thread");
+                }
+                seenThreadCursors.add(nextThreadsCursor);
+                threadsCursor = nextThreadsCursor;
             } while (threadsCursor != null);
-            return threadId;
+            return locatedThread;
         };
     }
 }
@@ -61135,109 +61703,142 @@ exports.PullRequestReviewThreadRepository = PullRequestReviewThreadRepository;
 
 /***/ }),
 
-/***/ 4113:
+/***/ 3779:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PullRequestRepository = void 0;
-const pull_request_lifecycle_repository_1 = __nccwpck_require__(4189);
-const pull_request_changes_repository_1 = __nccwpck_require__(1564);
-const pull_request_review_repository_1 = __nccwpck_require__(2023);
-class PullRequestRepository {
-    constructor(githubClient, graphqlClient, reviewClient, lifecycleClient) {
-        this.getOpenPullRequestNumbersByHeadBranch = (...args) => this.lifecycleRepository.getOpenPullRequestNumbersByHeadBranch(...args);
-        this.getHeadBranchForIssue = (...args) => this.lifecycleRepository.getHeadBranchForIssue(...args);
-        this.isLinked = (...args) => this.lifecycleRepository.isLinked(...args);
-        this.updateBaseBranch = (...args) => this.lifecycleRepository.updateBaseBranch(...args);
-        this.updateDescription = (...args) => this.lifecycleRepository.updateDescription(...args);
-        this.getChangedFiles = (...args) => this.changesRepository.getChangedFiles(...args);
-        this.getFilesWithFirstDiffLine = (...args) => this.changesRepository.getFilesWithFirstDiffLine(...args);
-        this.getPullRequestChanges = (...args) => this.changesRepository.getPullRequestChanges(...args);
-        this.getPullRequestHeadSha = (...args) => this.changesRepository.getPullRequestHeadSha(...args);
-        this.getCurrentReviewers = (...args) => this.reviewRepository.getCurrentReviewers(...args);
-        this.addReviewersToPullRequest = (...args) => this.reviewRepository.addReviewersToPullRequest(...args);
-        this.listPullRequestReviewComments = (...args) => this.reviewRepository.listPullRequestReviewComments(...args);
-        this.getPullRequestReviewCommentBody = (...args) => this.reviewRepository.getPullRequestReviewCommentBody(...args);
-        this.resolvePullRequestReviewThread = (...args) => this.reviewRepository.resolvePullRequestReviewThread(...args);
-        this.createReviewWithComments = (...args) => this.reviewRepository.createReviewWithComments(...args);
-        this.updatePullRequestReviewComment = (...args) => this.reviewRepository.updatePullRequestReviewComment(...args);
-        this.lifecycleRepository = new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository(lifecycleClient);
-        this.changesRepository = new pull_request_changes_repository_1.PullRequestChangesRepository(githubClient);
-        this.reviewRepository = new pull_request_review_repository_1.PullRequestReviewRepository(reviewClient, graphqlClient);
+exports.PullRequestReviewerRepository = void 0;
+const pull_request_review_errors_1 = __nccwpck_require__(6445);
+const COMPLETED_REVIEW_STATES = new Set([
+    "APPROVED",
+    "CHANGES_REQUESTED",
+    "COMMENTED",
+    "DISMISSED",
+]);
+class PullRequestReviewerRepository {
+    constructor(githubClient) {
+        this.githubClient = githubClient;
+    }
+    async getCurrentReviewers(owner, repository, pullRequestNumber, token) {
+        try {
+            const client = this.githubClient.getClient(token);
+            const parameters = {
+                owner,
+                repo: repository,
+                pull_number: pullRequestNumber,
+            };
+            const [requested, completed] = await Promise.all([
+                this.listRequestedReviewers(client, parameters),
+                this.listCompletedReviewers(client, { ...parameters, per_page: 100 }),
+            ]);
+            const reviewers = new Map();
+            for (const login of [...requested, ...completed]) {
+                const key = login.toLowerCase();
+                if (!reviewers.has(key))
+                    reviewers.set(key, login);
+            }
+            return [...reviewers.values()];
+        }
+        catch (error) {
+            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "list-reviewers");
+        }
+    }
+    async addReviewersToPullRequest(owner, repository, pullRequestNumber, reviewers, token) {
+        if (reviewers.length === 0)
+            return [];
+        try {
+            const client = this.githubClient.getClient(token);
+            const { data } = await client.rest.pulls.requestReviewers({
+                owner,
+                repo: repository,
+                pull_number: pullRequestNumber,
+                reviewers,
+            });
+            const requested = new Set(reviewers.map((reviewer) => reviewer.toLowerCase()));
+            const confirmed = new Map();
+            for (const reviewer of data.requested_reviewers ?? []) {
+                const key = reviewer.login.toLowerCase();
+                if (requested.has(key) && !confirmed.has(key)) {
+                    confirmed.set(key, reviewer.login);
+                }
+            }
+            return [...confirmed.values()];
+        }
+        catch (error) {
+            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "request-reviewers");
+        }
+    }
+    async listRequestedReviewers(client, parameters) {
+        const { data } = await client.rest.pulls.listRequestedReviewers(parameters);
+        const page = data;
+        return page.users.map(({ login }) => login);
+    }
+    async listCompletedReviewers(client, parameters) {
+        const reviewers = [];
+        for await (const response of client.paginate.iterator(client.rest.pulls.listReviews, parameters)) {
+            const page = response.data;
+            for (const review of page) {
+                if (review.user?.login &&
+                    review.state != null &&
+                    COMPLETED_REVIEW_STATES.has(review.state.toUpperCase())) {
+                    reviewers.push(review.user.login);
+                }
+            }
+        }
+        return reviewers;
     }
 }
-exports.PullRequestRepository = PullRequestRepository;
+exports.PullRequestReviewerRepository = PullRequestReviewerRepository;
 
 
 /***/ }),
 
-/***/ 3089:
+/***/ 6578:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.RepositoryReleaseRepository = void 0;
+exports.RepositoryDefaultBranchRepository = void 0;
+const logger_1 = __nccwpck_require__(1151);
+class RepositoryDefaultBranchRepository {
+    constructor(githubClient) {
+        this.githubClient = githubClient;
+        this.getDefaultBranch = async (owner, repository, token) => {
+            try {
+                const octokit = this.githubClient.getClient(token);
+                const { data } = await octokit.rest.repos.get({ owner, repo: repository });
+                (0, logger_1.logDebugInfo)(`Default branch for ${owner}/${repository}: ${data.default_branch}`);
+                return data.default_branch;
+            }
+            catch (error) {
+                (0, logger_1.logError)(`Error getting default branch for ${owner}/${repository}: ${error}`);
+                return undefined;
+            }
+        };
+    }
+}
+exports.RepositoryDefaultBranchRepository = RepositoryDefaultBranchRepository;
+
+
+/***/ }),
+
+/***/ 2075:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RepositoryReleasePublicationRepository = void 0;
 const logger_1 = __nccwpck_require__(1151);
 const release_content_policy_1 = __nccwpck_require__(6818);
 const release_transition_policy_1 = __nccwpck_require__(7673);
 const release_tag_policy_1 = __nccwpck_require__(2748);
-/** Adapter for GitHub repository tags, releases, and default-branch metadata. */
-class RepositoryReleaseRepository {
+class RepositoryReleasePublicationRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
-        this.findTag = async (owner, repository, tag, token) => {
-            const octokit = this.githubClient.getClient(token);
-            try {
-                const { data: foundTag } = await octokit.rest.git.getRef({
-                    owner,
-                    repo: repository,
-                    ref: (0, release_tag_policy_1.tagReference)(tag),
-                });
-                return foundTag;
-            }
-            catch {
-                return undefined;
-            }
-        };
-        this.getTagSha = async (owner, repository, tag, token) => {
-            const foundTag = await this.findTag(owner, repository, tag, token);
-            if (!foundTag) {
-                (0, logger_1.logError)(`The '${tag}' tag does not exist in the remote repository`);
-                return undefined;
-            }
-            return foundTag.object.sha;
-        };
-        this.updateTag = async (owner, repository, sourceTag, targetTag, token) => {
-            const sourceTagSha = await this.getTagSha(owner, repository, sourceTag, token);
-            if (!sourceTagSha) {
-                (0, logger_1.logError)(`The '${sourceTag}' tag does not exist in the remote repository`);
-                return;
-            }
-            const foundTargetTag = await this.findTag(owner, repository, targetTag, token);
-            const octokit = this.githubClient.getClient(token);
-            if (foundTargetTag) {
-                (0, logger_1.logDebugInfo)(`Updating the '${targetTag}' tag to point to the '${sourceTag}' tag`);
-                await octokit.rest.git.updateRef({
-                    owner,
-                    repo: repository,
-                    ref: (0, release_tag_policy_1.tagReference)(targetTag),
-                    sha: sourceTagSha,
-                    force: true,
-                });
-            }
-            else {
-                (0, logger_1.logDebugInfo)(`Creating the '${targetTag}' tag from the '${sourceTag}' tag`);
-                await octokit.rest.git.createRef({
-                    owner,
-                    repo: repository,
-                    ref: (0, release_tag_policy_1.tagReferencePath)(targetTag),
-                    sha: sourceTagSha,
-                });
-            }
-        };
         this.updateRelease = async (owner, repository, sourceTag, targetTag, token) => {
             const octokit = this.githubClient.getClient(token);
             const { data: sourceRelease } = await octokit.rest.repos.getReleaseByTag({
@@ -61295,16 +61896,73 @@ class RepositoryReleaseRepository {
                 return undefined;
             }
         };
-        this.getDefaultBranch = async (owner, repository, token) => {
+    }
+}
+exports.RepositoryReleasePublicationRepository = RepositoryReleasePublicationRepository;
+
+
+/***/ }),
+
+/***/ 8717:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RepositoryTagRepository = void 0;
+const logger_1 = __nccwpck_require__(1151);
+const release_tag_policy_1 = __nccwpck_require__(2748);
+class RepositoryTagRepository {
+    constructor(githubClient) {
+        this.githubClient = githubClient;
+        this.findTag = async (owner, repository, tag, token) => {
+            const octokit = this.githubClient.getClient(token);
             try {
-                const octokit = this.githubClient.getClient(token);
-                const { data } = await octokit.rest.repos.get({ owner, repo: repository });
-                (0, logger_1.logDebugInfo)(`Default branch for ${owner}/${repository}: ${data.default_branch}`);
-                return data.default_branch;
+                const { data: foundTag } = await octokit.rest.git.getRef({
+                    owner,
+                    repo: repository,
+                    ref: (0, release_tag_policy_1.tagReference)(tag),
+                });
+                return foundTag;
             }
-            catch (error) {
-                (0, logger_1.logError)(`Error getting default branch for ${owner}/${repository}: ${error}`);
+            catch {
                 return undefined;
+            }
+        };
+        this.getTagSha = async (owner, repository, tag, token) => {
+            const foundTag = await this.findTag(owner, repository, tag, token);
+            if (!foundTag) {
+                (0, logger_1.logError)(`The '${tag}' tag does not exist in the remote repository`);
+                return undefined;
+            }
+            return foundTag.object.sha;
+        };
+        this.updateTag = async (owner, repository, sourceTag, targetTag, token) => {
+            const sourceTagSha = await this.getTagSha(owner, repository, sourceTag, token);
+            if (!sourceTagSha) {
+                (0, logger_1.logError)(`The '${sourceTag}' tag does not exist in the remote repository`);
+                return;
+            }
+            const foundTargetTag = await this.findTag(owner, repository, targetTag, token);
+            const octokit = this.githubClient.getClient(token);
+            if (foundTargetTag) {
+                (0, logger_1.logDebugInfo)(`Updating the '${targetTag}' tag to point to the '${sourceTag}' tag`);
+                await octokit.rest.git.updateRef({
+                    owner,
+                    repo: repository,
+                    ref: (0, release_tag_policy_1.tagReference)(targetTag),
+                    sha: sourceTagSha,
+                    force: true,
+                });
+            }
+            else {
+                (0, logger_1.logDebugInfo)(`Creating the '${targetTag}' tag from the '${sourceTag}' tag`);
+                await octokit.rest.git.createRef({
+                    owner,
+                    repo: repository,
+                    ref: (0, release_tag_policy_1.tagReferencePath)(targetTag),
+                    sha: sourceTagSha,
+                });
             }
         };
         this.createTag = async (owner, repository, branch, tag, token) => {
@@ -61336,7 +61994,7 @@ class RepositoryReleaseRepository {
         };
     }
 }
-exports.RepositoryReleaseRepository = RepositoryReleaseRepository;
+exports.RepositoryTagRepository = RepositoryTagRepository;
 
 
 /***/ }),
@@ -61405,229 +62063,745 @@ function releaseIdAsString(id) {
 
 /***/ }),
 
-/***/ 2461:
+/***/ 941:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ActivePreviousWorkflowRunsRepository = void 0;
+const constants_1 = __nccwpck_require__(5415);
+class ActivePreviousWorkflowRunsRepository {
+    constructor(client) {
+        this.client = client;
+    }
+    async countActivePreviousRuns(query) {
+        if (!Number.isFinite(query.currentRunId) || query.workflowName.length === 0) {
+            return 0;
+        }
+        let activeRunCount = 0;
+        for await (const response of this.client.paginate.iterator(this.client.rest.actions.listWorkflowRunsForRepo, {
+            owner: query.owner,
+            repo: query.repository,
+            per_page: 100,
+        })) {
+            activeRunCount += response.data.workflow_runs.filter((run) => this.isActivePreviousRun(run, query)).length;
+        }
+        return activeRunCount;
+    }
+    isActivePreviousRun(run, query) {
+        return run.name === query.workflowName
+            && run.id < query.currentRunId
+            && constants_1.WORKFLOW_ACTIVE_STATUSES.includes(run.status ?? 'unknown');
+    }
+}
+exports.ActivePreviousWorkflowRunsRepository = ActivePreviousWorkflowRunsRepository;
+
+
+/***/ }),
+
+/***/ 9509:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getRequiredLabels = getRequiredLabels;
-function getRequiredLabels(labels) {
-    return [
-        ['branchManagementLauncherLabel', '0E8A16', 'Label to trigger branch management actions'],
-        ['bug', 'D73A4A', 'Label to indicate a bug type'],
-        ['bugfix', 'D73A4A', 'Label to manage bugfix branches'],
-        ['hotfix', 'B60205', 'Label to manage hotfix branches'],
-        ['enhancement', 'A2EEEF', 'Label to indicate an enhancement type'],
-        ['feature', '0E8A16', 'Label to manage feature branches'],
-        ['release', '1D76DB', 'Label to manage release branches'],
-        ['question', 'CC317C', 'Label to detect issues marked as questions'],
-        ['help', 'CC317C', 'Label to detect help request issues'],
-        ['deploy', '7057FF', 'Label to detect deploy actions'],
-        ['deployed', '0E8A16', 'Label to detect the deployed status'],
-        ['docs', 'C5DEF5', 'Label to manage docs branches'],
-        ['documentation', 'C5DEF5', 'Label to manage documentation branches'],
-        ['chore', '5319E7', 'Label to manage chore branches'],
-        ['maintenance', '5319E7', 'Label to manage maintenance branches'],
-        ['priorityHigh', 'B60205', 'Label to indicate a priority high'],
-        ['priorityMedium', 'FBBD0C', 'Label to indicate a priority medium'],
-        ['priorityLow', '0E8A16', 'Label to indicate a priority low'],
-        ['priorityNone', 'B4B4B4', 'Label to indicate no priority'],
-        ['sizeXxl', '8E44AD', 'Label to indicate a task of size XXL'],
-        ['sizeXl', '9B59B6', 'Label to indicate a task of size XL'],
-        ['sizeL', '3498DB', 'Label to indicate a task of size L'],
-        ['sizeM', '1ABC9C', 'Label to indicate a task of size M'],
-        ['sizeS', 'F39C12', 'Label to indicate a task of size S'],
-        ['sizeXs', 'E67E22', 'Label to indicate a task of size XS'],
-    ].map(([key, color, description]) => ({
-        name: labels[key],
-        color,
-        description,
-    })).filter(label => label.name?.trim());
-}
-
-
-/***/ }),
-
-/***/ 8059:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.WorkflowRepository = void 0;
-const workflow_run_1 = __nccwpck_require__(4521);
-const constants_1 = __nccwpck_require__(5415);
-class WorkflowRepository {
+exports.WorkflowDispatchRepository = void 0;
+class WorkflowDispatchRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
-        this.getWorkflows = async (params) => {
-            const octokit = this.githubClient.getClient(params.tokens.token);
-            const workflows = await octokit.rest.actions.listWorkflowRunsForRepo({
-                owner: params.owner,
-                repo: params.repo,
-            });
-            return workflows.data.workflow_runs.map(w => new workflow_run_1.WorkflowRun({
-                id: w.id,
-                name: w.name ?? 'unknown',
-                head_branch: w.head_branch,
-                head_sha: w.head_sha,
-                run_number: w.run_number,
-                event: w.event,
-                status: w.status ?? 'unknown',
-                conclusion: w.conclusion ?? null,
-                created_at: w.created_at,
-                updated_at: w.updated_at,
-                url: w.url,
-                html_url: w.html_url,
-            }));
-        };
-        this.getActivePreviousRuns = async (params) => {
-            const workflows = await this.getWorkflows(params);
-            const runId = parseInt(process.env.GITHUB_RUN_ID, 10);
-            const workflowName = process.env.GITHUB_WORKFLOW;
-            return workflows.filter((run) => {
-                const isSameWorkflow = run.name === workflowName;
-                const isPrevious = run.id < runId;
-                const isActive = constants_1.WORKFLOW_ACTIVE_STATUSES.includes(run.status);
-                return isSameWorkflow && isPrevious && isActive;
-            });
-        };
-        this.executeWorkflow = async (owner, repository, branch, workflow, inputs, token) => {
-            const octokit = this.githubClient.getClient(token);
-            await octokit.rest.actions.createWorkflowDispatch({
-                owner: owner,
-                repo: repository,
-                workflow_id: workflow,
-                ref: branch,
-                inputs: inputs,
-            });
-        };
+    }
+    async executeWorkflow(owner, repository, branch, workflow, inputs, token) {
+        const client = this.githubClient.getClient(token);
+        await client.rest.actions.createWorkflowDispatch({
+            owner,
+            repo: repository,
+            workflow_id: workflow,
+            ref: branch,
+            inputs,
+        });
     }
 }
-exports.WorkflowRepository = WorkflowRepository;
+exports.WorkflowDispatchRepository = WorkflowDispatchRepository;
 
 
 /***/ }),
 
-/***/ 3728:
+/***/ 233:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.RepositoryFactory = void 0;
-const organization_repository_1 = __nccwpck_require__(592);
-const issue_repository_1 = __nccwpck_require__(2528);
-const issue_assignment_repository_1 = __nccwpck_require__(5023);
+exports.createActorAuthorizationRepository = createActorAuthorizationRepository;
+const github_identity_client_factory_1 = __nccwpck_require__(3081);
+const actor_authorization_repository_1 = __nccwpck_require__(6711);
+function createActorAuthorizationRepository() {
+    return new actor_authorization_repository_1.ActorAuthorizationRepository((0, github_identity_client_factory_1.createActorAuthorizationClient)());
+}
+
+
+/***/ }),
+
+/***/ 5079:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createFindingsQueryPort = createFindingsQueryPort;
+exports.createFixerQueryPort = createFixerQueryPort;
+const agent_cli_client_1 = __nccwpck_require__(8570);
+const opencode_http_client_1 = __nccwpck_require__(5108);
+const constants_1 = __nccwpck_require__(5415);
+const findings_agent_adapter_1 = __nccwpck_require__(7725);
+const fixer_agent_adapter_1 = __nccwpck_require__(2259);
+function defaultInfrastructure() {
+    return {
+        cli: new agent_cli_client_1.AgentCliClient(),
+        openCode: new opencode_http_client_1.OpenCodeHttpClient({ requestTimeoutMs: constants_1.OPENCODE_REQUEST_TIMEOUT_MS }),
+    };
+}
+function createFindingsQueryPort(infrastructure = defaultInfrastructure()) {
+    return new findings_agent_adapter_1.FindingsAgentAdapter(infrastructure);
+}
+function createFixerQueryPort(infrastructure = defaultInfrastructure()) {
+    return new fixer_agent_adapter_1.FixerAgentAdapter(infrastructure);
+}
+
+
+/***/ }),
+
+/***/ 3885:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createAuthenticatedUserCompositionRoot = createAuthenticatedUserCompositionRoot;
+const github_identity_client_factory_1 = __nccwpck_require__(3081);
+const authenticated_user_repository_1 = __nccwpck_require__(1454);
+function createAuthenticatedUserCompositionRoot() {
+    return new authenticated_user_repository_1.AuthenticatedUserRepository((0, github_identity_client_factory_1.createAuthenticatedUserClient)());
+}
+
+
+/***/ }),
+
+/***/ 7395:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createBugbotCompositionRoot = createBugbotCompositionRoot;
+const github_issue_client_factory_1 = __nccwpck_require__(5883);
+const github_project_client_factory_1 = __nccwpck_require__(3691);
+const github_pull_request_client_factory_1 = __nccwpck_require__(9068);
+const bugbot_issue_repository_1 = __nccwpck_require__(2726);
 const issue_content_repository_1 = __nccwpck_require__(2313);
-const issue_label_repository_1 = __nccwpck_require__(5725);
-const issue_label_provisioning_repository_1 = __nccwpck_require__(9699);
-const issue_lifecycle_repository_1 = __nccwpck_require__(8346);
-const issue_metadata_repository_1 = __nccwpck_require__(1333);
-const issue_progress_label_repository_1 = __nccwpck_require__(6610);
-const issue_type_repository_1 = __nccwpck_require__(4858);
-const issue_type_assignment_repository_1 = __nccwpck_require__(9118);
-const project_board_repository_1 = __nccwpck_require__(8009);
+const bugbot_pull_request_repository_1 = __nccwpck_require__(5165);
 const pull_request_changes_repository_1 = __nccwpck_require__(1564);
 const pull_request_lifecycle_repository_1 = __nccwpck_require__(4189);
-const pull_request_review_repository_1 = __nccwpck_require__(2023);
+const pull_request_review_comment_command_repository_1 = __nccwpck_require__(7120);
+const pull_request_review_comment_query_repository_1 = __nccwpck_require__(4085);
 const pull_request_review_thread_repository_1 = __nccwpck_require__(3314);
-const pull_request_repository_1 = __nccwpck_require__(4113);
-const repository_release_repository_1 = __nccwpck_require__(3089);
-const octokit_client_1 = __nccwpck_require__(6962);
-const issue_use_case_1 = __nccwpck_require__(5281);
-const pull_request_use_case_1 = __nccwpck_require__(7259);
-const initial_setup_use_case_1 = __nccwpck_require__(4837);
-const merge_repository_1 = __nccwpck_require__(1412);
-const branch_compare_repository_1 = __nccwpck_require__(5859);
-const branch_repository_1 = __nccwpck_require__(9188);
+function createBugbotCompositionRoot() {
+    const issue = new bugbot_issue_repository_1.BugbotIssueRepository(new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)()));
+    const reviewCommentClient = (0, github_pull_request_client_factory_1.createPullRequestReviewCommentClient)();
+    const graphqlClient = (0, github_project_client_factory_1.createGraphqlTransportClient)();
+    const reviewQuery = new pull_request_review_comment_query_repository_1.PullRequestReviewCommentQueryRepository(reviewCommentClient);
+    const reviewCommand = new pull_request_review_comment_command_repository_1.PullRequestReviewCommentCommandRepository(reviewCommentClient, graphqlClient, reviewCommentClient);
+    const threadCommand = new pull_request_review_thread_repository_1.PullRequestReviewThreadRepository(graphqlClient);
+    const pullRequest = new bugbot_pull_request_repository_1.BugbotPullRequestRepository(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), new pull_request_changes_repository_1.PullRequestChangesRepository((0, github_pull_request_client_factory_1.createPullRequestChangesClient)()), reviewQuery, reviewCommand, threadCommand);
+    return {
+        issue,
+        pullRequest,
+        context: { issue, pullRequest },
+        resolution: { issueComments: issue, pullRequestComments: pullRequest },
+        publication: { issueComments: issue, pullRequestComments: pullRequest },
+    };
+}
+
+
+/***/ }),
+
+/***/ 1531:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createCheckProgressCompositionRoot = createCheckProgressCompositionRoot;
+const github_branch_client_factory_1 = __nccwpck_require__(144);
+const github_issue_client_factory_1 = __nccwpck_require__(5883);
+const github_pull_request_client_factory_1 = __nccwpck_require__(9068);
 const check_progress_use_case_1 = __nccwpck_require__(1601);
+const agent_capability_composition_root_1 = __nccwpck_require__(5079);
+const issue_content_repository_1 = __nccwpck_require__(2313);
+const issue_label_repository_1 = __nccwpck_require__(5725);
+const issue_progress_label_repository_1 = __nccwpck_require__(6610);
+const issue_progress_tracking_repository_1 = __nccwpck_require__(6674);
+const branch_lifecycle_repository_1 = __nccwpck_require__(9504);
+const pull_request_lifecycle_repository_1 = __nccwpck_require__(4189);
+function createCheckProgressCompositionRoot() {
+    const labels = new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)());
+    return new check_progress_use_case_1.CheckProgressUseCase(new issue_progress_tracking_repository_1.IssueProgressTrackingRepository(new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)()), labels, new issue_progress_label_repository_1.IssueProgressLabelRepository(new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)()))), new branch_lifecycle_repository_1.BranchLifecycleRepository((0, github_branch_client_factory_1.createBranchClient)()), new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
+}
+
+
+/***/ }),
+
+/***/ 8313:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createExecutionIssueSetupCompositionRoot = createExecutionIssueSetupCompositionRoot;
+const github_issue_client_factory_1 = __nccwpck_require__(5883);
+const github_project_client_factory_1 = __nccwpck_require__(3691);
+const execution_issue_setup_repository_1 = __nccwpck_require__(1153);
+const issue_content_repository_1 = __nccwpck_require__(2313);
+const issue_label_repository_1 = __nccwpck_require__(5725);
+const issue_metadata_repository_1 = __nccwpck_require__(1333);
+function createExecutionIssueSetupCompositionRoot() {
+    return new execution_issue_setup_repository_1.ExecutionIssueSetupRepository(new issue_metadata_repository_1.IssueMetadataRepository((0, github_issue_client_factory_1.createIssueMetadataClient)(), (0, github_project_client_factory_1.createGraphqlTransportClient)()), new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)()), new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)()));
+}
+
+
+/***/ }),
+
+/***/ 3965:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createSetupExecutionUseCase = createSetupExecutionUseCase;
+const execution_branch_version_resolver_1 = __nccwpck_require__(1813);
+const setup_execution_use_case_1 = __nccwpck_require__(8512);
+const get_hotfix_version_use_case_1 = __nccwpck_require__(9946);
+const get_release_type_use_case_1 = __nccwpck_require__(4410);
+const get_release_version_use_case_1 = __nccwpck_require__(587);
+const configuration_handler_1 = __nccwpck_require__(188);
+const authenticated_user_composition_root_1 = __nccwpck_require__(3885);
+const execution_issue_setup_composition_root_1 = __nccwpck_require__(8313);
+function createSetupExecutionUseCase(latestTagQueryPort) {
+    const issueSetupPort = (0, execution_issue_setup_composition_root_1.createExecutionIssueSetupCompositionRoot)();
+    const releaseVersion = new get_release_version_use_case_1.GetReleaseVersionUseCase(issueSetupPort);
+    const releaseType = new get_release_type_use_case_1.GetReleaseTypeUseCase(issueSetupPort);
+    const hotfixVersion = new get_hotfix_version_use_case_1.GetHotfixVersionUseCase(issueSetupPort);
+    return new setup_execution_use_case_1.SetupExecutionUseCase(issueSetupPort, (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), new configuration_handler_1.ConfigurationHandler(issueSetupPort), new execution_branch_version_resolver_1.ExecutionBranchVersionResolver(latestTagQueryPort, releaseVersion, releaseType, hotfixVersion));
+}
+
+
+/***/ }),
+
+/***/ 144:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createBranchComparisonClient = exports.createBranchMergeClient = exports.createBranchClient = void 0;
+const octokit_branch_adapters_1 = __nccwpck_require__(7889);
+const createBranchClient = () => new octokit_branch_adapters_1.OctokitBranchClientAdapter();
+exports.createBranchClient = createBranchClient;
+const createBranchMergeClient = () => new octokit_branch_adapters_1.OctokitBranchMergeClientAdapter();
+exports.createBranchMergeClient = createBranchMergeClient;
+const createBranchComparisonClient = () => new octokit_branch_adapters_1.OctokitBranchComparisonClientAdapter();
+exports.createBranchComparisonClient = createBranchComparisonClient;
+
+
+/***/ }),
+
+/***/ 3081:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createOrganizationMembersClient = exports.createActorAuthorizationClient = exports.createAuthenticatedUserClient = void 0;
+const octokit_identity_adapters_1 = __nccwpck_require__(9996);
+const createAuthenticatedUserClient = () => new octokit_identity_adapters_1.OctokitAuthenticatedUserClientAdapter();
+exports.createAuthenticatedUserClient = createAuthenticatedUserClient;
+const createActorAuthorizationClient = () => new octokit_identity_adapters_1.OctokitActorAuthorizationClientAdapter();
+exports.createActorAuthorizationClient = createActorAuthorizationClient;
+const createOrganizationMembersClient = () => new octokit_identity_adapters_1.OctokitOrganizationMembersClientAdapter();
+exports.createOrganizationMembersClient = createOrganizationMembersClient;
+
+
+/***/ }),
+
+/***/ 5883:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createIssueTitleClient = exports.createIssueMetadataClient = exports.createIssueLifecycleClient = exports.createIssueLabelsClient = exports.createIssueLabelProvisioningClient = exports.createIssueContentClient = exports.createIssueAssignmentClient = void 0;
+const octokit_issue_adapters_1 = __nccwpck_require__(7179);
+const createIssueAssignmentClient = () => new octokit_issue_adapters_1.OctokitIssueAssignmentClientAdapter();
+exports.createIssueAssignmentClient = createIssueAssignmentClient;
+const createIssueContentClient = () => new octokit_issue_adapters_1.OctokitIssueContentClientAdapter();
+exports.createIssueContentClient = createIssueContentClient;
+const createIssueLabelProvisioningClient = () => new octokit_issue_adapters_1.OctokitIssueLabelProvisioningClientAdapter();
+exports.createIssueLabelProvisioningClient = createIssueLabelProvisioningClient;
+const createIssueLabelsClient = () => new octokit_issue_adapters_1.OctokitIssueLabelsClientAdapter();
+exports.createIssueLabelsClient = createIssueLabelsClient;
+const createIssueLifecycleClient = () => new octokit_issue_adapters_1.OctokitIssueLifecycleClientAdapter();
+exports.createIssueLifecycleClient = createIssueLifecycleClient;
+const createIssueMetadataClient = () => new octokit_issue_adapters_1.OctokitIssueMetadataClientAdapter();
+exports.createIssueMetadataClient = createIssueMetadataClient;
+const createIssueTitleClient = () => new octokit_issue_adapters_1.OctokitIssueTitleClientAdapter();
+exports.createIssueTitleClient = createIssueTitleClient;
+
+
+/***/ }),
+
+/***/ 3691:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createOwnerTypeClient = exports.createRepositoryContextClient = exports.createGraphqlTransportClient = void 0;
+const octokit_project_adapters_1 = __nccwpck_require__(8505);
+const octokit_identity_adapters_1 = __nccwpck_require__(9996);
+const createGraphqlTransportClient = () => new octokit_project_adapters_1.OctokitGraphqlTransportClientAdapter();
+exports.createGraphqlTransportClient = createGraphqlTransportClient;
+const createRepositoryContextClient = () => new octokit_identity_adapters_1.OctokitRepositoryContextClientAdapter();
+exports.createRepositoryContextClient = createRepositoryContextClient;
+const createOwnerTypeClient = () => new octokit_identity_adapters_1.OctokitOwnerTypeClientAdapter();
+exports.createOwnerTypeClient = createOwnerTypeClient;
+
+
+/***/ }),
+
+/***/ 9068:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createPullRequestReviewCommentClient = exports.createPullRequestReviewerClient = exports.createPullRequestLifecycleClient = exports.createPullRequestChangesClient = void 0;
+const octokit_pull_request_adapters_1 = __nccwpck_require__(1397);
+const createPullRequestChangesClient = () => new octokit_pull_request_adapters_1.OctokitPullRequestChangesClientAdapter();
+exports.createPullRequestChangesClient = createPullRequestChangesClient;
+const createPullRequestLifecycleClient = () => new octokit_pull_request_adapters_1.OctokitPullRequestLifecycleClientAdapter();
+exports.createPullRequestLifecycleClient = createPullRequestLifecycleClient;
+const createPullRequestReviewerClient = () => new octokit_pull_request_adapters_1.OctokitPullRequestReviewerClientAdapter();
+exports.createPullRequestReviewerClient = createPullRequestReviewerClient;
+const createPullRequestReviewCommentClient = () => new octokit_pull_request_adapters_1.OctokitPullRequestReviewCommentClientAdapter();
+exports.createPullRequestReviewCommentClient = createPullRequestReviewCommentClient;
+
+
+/***/ }),
+
+/***/ 6706:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createReleaseClient = void 0;
+const octokit_release_adapters_1 = __nccwpck_require__(5334);
+const createReleaseClient = () => new octokit_release_adapters_1.OctokitReleaseClientAdapter();
+exports.createReleaseClient = createReleaseClient;
+
+
+/***/ }),
+
+/***/ 9839:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createWorkflowDispatchClient = exports.createWorkflowRunsClient = void 0;
+const octokit_workflow_adapters_1 = __nccwpck_require__(6719);
+const createWorkflowRunsClient = () => new octokit_workflow_adapters_1.OctokitWorkflowRunsClientAdapter();
+exports.createWorkflowRunsClient = createWorkflowRunsClient;
+const createWorkflowDispatchClient = () => new octokit_workflow_adapters_1.OctokitWorkflowDispatchClientAdapter();
+exports.createWorkflowDispatchClient = createWorkflowDispatchClient;
+
+
+/***/ }),
+
+/***/ 4138:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createInitialSetupCompositionRoot = createInitialSetupCompositionRoot;
+const github_identity_client_factory_1 = __nccwpck_require__(3081);
+const github_issue_client_factory_1 = __nccwpck_require__(5883);
+const github_project_client_factory_1 = __nccwpck_require__(3691);
+const github_release_client_factory_1 = __nccwpck_require__(6706);
+const issue_label_provisioning_repository_1 = __nccwpck_require__(9699);
+const issue_type_repository_1 = __nccwpck_require__(4858);
+const authenticated_user_repository_1 = __nccwpck_require__(1454);
+const repository_default_branch_repository_1 = __nccwpck_require__(6578);
+const repository_tag_repository_1 = __nccwpck_require__(8717);
+const git_cli_repository_1 = __nccwpck_require__(6331);
+const initial_setup_use_case_composition_1 = __nccwpck_require__(3141);
+const setup_workspace_adapter_1 = __nccwpck_require__(5729);
+function createInitialSetupCompositionRoot() {
+    const labelProvisioning = new issue_label_provisioning_repository_1.IssueLabelProvisioningRepository((0, github_issue_client_factory_1.createIssueLabelProvisioningClient)());
+    return (0, initial_setup_use_case_composition_1.composeInitialSetupUseCase)(new authenticated_user_repository_1.AuthenticatedUserRepository((0, github_identity_client_factory_1.createAuthenticatedUserClient)()), labelProvisioning, new issue_type_repository_1.IssueTypeRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new git_cli_repository_1.GitCliRepository(), new repository_default_branch_repository_1.RepositoryDefaultBranchRepository((0, github_release_client_factory_1.createReleaseClient)()), new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)()), new setup_workspace_adapter_1.SetupWorkspaceAdapter());
+}
+
+
+/***/ }),
+
+/***/ 3141:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.composeInitialSetupUseCase = composeInitialSetupUseCase;
+const initial_setup_use_case_1 = __nccwpck_require__(4837);
+function composeInitialSetupUseCase(...dependencies) {
+    return new initial_setup_use_case_1.InitialSetupUseCase(...dependencies);
+}
+
+
+/***/ }),
+
+/***/ 2255:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createIssueContentCompositionRoot = createIssueContentCompositionRoot;
+const github_issue_client_factory_1 = __nccwpck_require__(5883);
+const issue_content_repository_1 = __nccwpck_require__(2313);
+function createIssueContentCompositionRoot() {
+    return new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
+}
+
+
+/***/ }),
+
+/***/ 2503:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createIssueClosureRepository = createIssueClosureRepository;
+exports.createIssueNotificationRepository = createIssueNotificationRepository;
+const github_issue_client_factory_1 = __nccwpck_require__(5883);
+const issue_content_repository_1 = __nccwpck_require__(2313);
+const issue_lifecycle_repository_1 = __nccwpck_require__(8346);
+const issue_closure_repository_1 = __nccwpck_require__(3231);
+const issue_notification_repository_1 = __nccwpck_require__(907);
+function createIssueClosureRepository() {
+    return new issue_closure_repository_1.IssueClosureRepository(new issue_lifecycle_repository_1.IssueLifecycleRepository((0, github_issue_client_factory_1.createIssueLifecycleClient)()), new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)()));
+}
+function createIssueNotificationRepository() {
+    return new issue_notification_repository_1.IssueNotificationRepository(new issue_lifecycle_repository_1.IssueLifecycleRepository((0, github_issue_client_factory_1.createIssueLifecycleClient)()), new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)()));
+}
+
+
+/***/ }),
+
+/***/ 4780:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createIssueLabelRepository = createIssueLabelRepository;
+const github_issue_client_factory_1 = __nccwpck_require__(5883);
+const issue_label_repository_1 = __nccwpck_require__(5725);
+function createIssueLabelRepository() {
+    return new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)());
+}
+
+
+/***/ }),
+
+/***/ 1239:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.composeIssueUseCase = composeIssueUseCase;
+const issue_use_case_1 = __nccwpck_require__(5281);
+function composeIssueUseCase(...dependencies) {
+    return new issue_use_case_1.IssueUseCase(...dependencies);
+}
+
+
+/***/ }),
+
+/***/ 3022:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createIssueUseCaseCompositionRoot = createIssueUseCaseCompositionRoot;
+const github_branch_client_factory_1 = __nccwpck_require__(144);
+const github_issue_client_factory_1 = __nccwpck_require__(5883);
+const github_project_client_factory_1 = __nccwpck_require__(3691);
+const github_workflow_client_factory_1 = __nccwpck_require__(9839);
 const recommend_steps_use_case_1 = __nccwpck_require__(3238);
 const answer_issue_help_use_case_1 = __nccwpck_require__(706);
-const update_pull_request_description_use_case_1 = __nccwpck_require__(5089);
-const agent_repository_factory_1 = __nccwpck_require__(4960);
-const workflow_repository_1 = __nccwpck_require__(8059);
-class RepositoryFactory {
-    createOrganizationGithubClient() {
-        return new octokit_client_1.OctokitOrganizationClientAdapter();
-    }
-    createPullRequestChangesClient() {
-        return new octokit_client_1.OctokitPullRequestChangesClientAdapter();
-    }
-    createGraphqlClient() {
-        return new octokit_client_1.OctokitGraphqlClientAdapter();
-    }
-    createPullRequestReviewClient() {
-        return new octokit_client_1.OctokitPullRequestReviewClientAdapter();
-    }
-    createPullRequestLifecycleClient() {
-        return new octokit_client_1.OctokitPullRequestLifecycleClientAdapter();
-    }
-    createBranchRepository() {
-        return new branch_repository_1.BranchRepository(this.createWorkflowRepository(), new octokit_client_1.OctokitBranchClientAdapter(), new octokit_client_1.OctokitGraphqlClientAdapter(), new branch_compare_repository_1.BranchCompareRepository(new octokit_client_1.OctokitBranchComparisonClientAdapter()), new merge_repository_1.MergeRepository(new octokit_client_1.OctokitBranchMergeClientAdapter()));
-    }
-    createWorkflowRepository() {
-        return new workflow_repository_1.WorkflowRepository(new octokit_client_1.OctokitWorkflowClientAdapter());
-    }
-    createCheckProgressUseCase() {
-        const issueRepository = this.createIssueRepository();
-        return new check_progress_use_case_1.CheckProgressUseCase(issueRepository, this.createBranchRepository(), this.createPullRequestRepository(), new agent_repository_factory_1.DefaultAgentRepositoryFactory().createFindings());
-    }
-    createIssueUseCase() {
-        return new issue_use_case_1.IssueUseCase(this.createProjectBoardRepository(), this.createOrganizationRepository(), this.createIssueRepository(), this.createProjectBoardRepository(), this.createIssueRepository(), this.createIssueRepository(), this.createIssueRepository(), this.createIssueRepository(), this.createIssueRepository(), this.createIssueRepository(), this.createBranchRepository(), this.createBranchRepository(), this.createBranchRepository(), this.createBranchRepository(), new recommend_steps_use_case_1.RecommendStepsUseCase(this.createIssueRepository(), new agent_repository_factory_1.DefaultAgentRepositoryFactory().createFindings()), new answer_issue_help_use_case_1.AnswerIssueHelpUseCase(this.createIssueRepository(), new agent_repository_factory_1.DefaultAgentRepositoryFactory().createFindings()));
-    }
-    createPullRequestUseCase() {
-        return new pull_request_use_case_1.PullRequestUseCase(this.createProjectBoardRepository(), this.createPullRequestRepository(), this.createIssueRepository(), this.createIssueRepository(), this.createIssueRepository(), this.createIssueRepository(), this.createPullRequestRepository(), this.createOrganizationRepository(), this.createIssueRepository(), this.createPullRequestRepository(), this.createProjectBoardRepository(), new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase(this.createPullRequestRepository(), this.createIssueRepository(), this.createOrganizationRepository(), new agent_repository_factory_1.DefaultAgentRepositoryFactory().createFindings()));
-    }
-    createInitialSetupUseCase() {
-        const issueRepository = this.createIssueRepository();
-        return new initial_setup_use_case_1.InitialSetupUseCase(this.createOrganizationRepository(), issueRepository, issueRepository, issueRepository, this.createBranchRepository(), this.createRepositoryReleaseRepository());
-    }
-    createOrganizationRepository() {
-        return new organization_repository_1.OrganizationRepository(this.createOrganizationGithubClient());
-    }
-    createIssueRepository() {
-        const metadataRepository = this.createIssueMetadataRepository();
-        const graphqlClient = new octokit_client_1.OctokitGraphqlClientAdapter();
-        return new issue_repository_1.IssueRepository(this.createIssueContentRepository(), metadataRepository, this.createIssueLabelRepository(), this.createIssueAssignmentRepository(), this.createIssueLabelProvisioningRepository(), new issue_type_repository_1.IssueTypeRepository(graphqlClient), new issue_type_assignment_repository_1.IssueTypeAssignmentRepository((owner, repository, issueNumber, token) => metadataRepository.getId(owner, repository, issueNumber, token), graphqlClient), this.createIssueLifecycleRepository(), new octokit_client_1.OctokitIssueTitleClientAdapter());
-    }
-    createIssueAssignmentRepository() { return new issue_assignment_repository_1.IssueAssignmentRepository(new octokit_client_1.OctokitIssueAssignmentClientAdapter()); }
-    createIssueContentRepository() { return new issue_content_repository_1.IssueContentRepository(new octokit_client_1.OctokitIssueContentClientAdapter()); }
-    createIssueLabelRepository() { return new issue_label_repository_1.IssueLabelRepository(new octokit_client_1.OctokitIssueLabelsClientAdapter()); }
-    createIssueLabelProvisioningRepository() { return new issue_label_provisioning_repository_1.IssueLabelProvisioningRepository(new octokit_client_1.OctokitIssueLabelProvisioningClientAdapter()); }
-    createIssueMetadataRepository() { return new issue_metadata_repository_1.IssueMetadataRepository(new octokit_client_1.OctokitIssueMetadataClientAdapter(), new octokit_client_1.OctokitGraphqlClientAdapter()); }
-    createIssueLifecycleRepository() { return new issue_lifecycle_repository_1.IssueLifecycleRepository(new octokit_client_1.OctokitIssueLifecycleClientAdapter()); }
-    createIssueProgressLabelRepository() {
-        return new issue_progress_label_repository_1.IssueProgressLabelRepository(this.createIssueLabelRepository());
-    }
-    createIssueTypeRepository() { return new issue_type_repository_1.IssueTypeRepository(new octokit_client_1.OctokitGraphqlClientAdapter()); }
-    createIssueTypeAssignmentRepository(getIssueId) {
-        return new issue_type_assignment_repository_1.IssueTypeAssignmentRepository(getIssueId, new octokit_client_1.OctokitGraphqlClientAdapter());
-    }
-    createProjectBoardRepository() {
-        return new project_board_repository_1.ProjectBoardRepository(new octokit_client_1.OctokitProjectClientAdapter(), new octokit_client_1.OctokitGraphqlClientAdapter());
-    }
-    createPullRequestRepository() {
-        return new pull_request_repository_1.PullRequestRepository(this.createPullRequestChangesClient(), this.createGraphqlClient(), this.createPullRequestReviewClient(), this.createPullRequestLifecycleClient());
-    }
-    createPullRequestChangesRepository() {
-        return new pull_request_changes_repository_1.PullRequestChangesRepository(this.createPullRequestChangesClient());
-    }
-    createPullRequestLifecycleRepository() {
-        return new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository(this.createPullRequestLifecycleClient());
-    }
-    createPullRequestReviewRepository() {
-        return new pull_request_review_repository_1.PullRequestReviewRepository(this.createPullRequestReviewClient(), this.createGraphqlClient());
-    }
-    createPullRequestReviewThreadRepository() {
-        return new pull_request_review_thread_repository_1.PullRequestReviewThreadRepository(this.createGraphqlClient());
-    }
-    createRepositoryReleaseRepository() {
-        return new repository_release_repository_1.RepositoryReleaseRepository(new octokit_client_1.OctokitReleaseClientAdapter());
-    }
+const branch_lifecycle_repository_1 = __nccwpck_require__(9504);
+const branch_name_repository_1 = __nccwpck_require__(1887);
+const linked_branch_repository_1 = __nccwpck_require__(8009);
+const git_cli_repository_1 = __nccwpck_require__(6331);
+const issue_assignment_repository_1 = __nccwpck_require__(5023);
+const issue_closure_repository_1 = __nccwpck_require__(3231);
+const issue_content_repository_1 = __nccwpck_require__(2313);
+const issue_lifecycle_repository_1 = __nccwpck_require__(8346);
+const issue_metadata_repository_1 = __nccwpck_require__(1333);
+const issue_notification_repository_1 = __nccwpck_require__(907);
+const issue_title_repository_1 = __nccwpck_require__(121);
+const issue_type_assignment_repository_1 = __nccwpck_require__(9118);
+const workflow_dispatch_repository_1 = __nccwpck_require__(9509);
+const timer_branch_propagation_delay_adapter_1 = __nccwpck_require__(846);
+const agent_capability_composition_root_1 = __nccwpck_require__(5079);
+const issue_use_case_composition_1 = __nccwpck_require__(1239);
+const organization_members_composition_root_1 = __nccwpck_require__(603);
+const project_board_composition_root_1 = __nccwpck_require__(7194);
+function createIssueUseCaseCompositionRoot() {
+    const issueMetadata = new issue_metadata_repository_1.IssueMetadataRepository((0, github_issue_client_factory_1.createIssueMetadataClient)(), (0, github_project_client_factory_1.createGraphqlTransportClient)());
+    const issueContent = new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
+    const issueLifecycle = new issue_lifecycle_repository_1.IssueLifecycleRepository((0, github_issue_client_factory_1.createIssueLifecycleClient)());
+    const issueNotification = new issue_notification_repository_1.IssueNotificationRepository(issueLifecycle, issueContent);
+    const branchLifecycle = new branch_lifecycle_repository_1.BranchLifecycleRepository((0, github_branch_client_factory_1.createBranchClient)());
+    const branchName = new branch_name_repository_1.BranchNameRepository();
+    const gitCli = new git_cli_repository_1.GitCliRepository();
+    const linkedBranch = new linked_branch_repository_1.LinkedBranchRepository((0, github_project_client_factory_1.createGraphqlTransportClient)());
+    const branchPropagationDelay = new timer_branch_propagation_delay_adapter_1.TimerBranchPropagationDelayAdapter();
+    const projectBoard = (0, project_board_composition_root_1.createProjectBoardCompositionRoot)();
+    return (0, issue_use_case_composition_1.composeIssueUseCase)(projectBoard.command, (0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)(), issueMetadata, projectBoard.command, projectBoard.link, new issue_title_repository_1.IssueTitleRepository((0, github_issue_client_factory_1.createIssueTitleClient)(), issueMetadata), new issue_assignment_repository_1.IssueAssignmentRepository((0, github_issue_client_factory_1.createIssueAssignmentClient)()), new issue_closure_repository_1.IssueClosureRepository(issueLifecycle, issueContent), new issue_type_assignment_repository_1.IssueTypeAssignmentRepository((owner, repository, issueNumber, token) => issueMetadata.getId(owner, repository, issueNumber, token), (0, github_project_client_factory_1.createGraphqlTransportClient)()), issueContent, issueNotification, branchLifecycle, branchName, gitCli, gitCli, linkedBranch, branchPropagationDelay, new workflow_dispatch_repository_1.WorkflowDispatchRepository((0, github_workflow_client_factory_1.createWorkflowDispatchClient)()), new recommend_steps_use_case_1.RecommendStepsUseCase(issueContent, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), new answer_issue_help_use_case_1.AnswerIssueHelpUseCase(issueNotification, (0, agent_capability_composition_root_1.createFindingsQueryPort)()));
 }
-exports.RepositoryFactory = RepositoryFactory;
+
+
+/***/ }),
+
+/***/ 4706:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createSingleActionUseCaseCompositionRoot = createSingleActionUseCaseCompositionRoot;
+exports.createIssueCommentUseCaseCompositionRoot = createIssueCommentUseCaseCompositionRoot;
+exports.createPullRequestReviewCommentUseCaseCompositionRoot = createPullRequestReviewCommentUseCaseCompositionRoot;
+exports.createCommitUseCaseCompositionRoot = createCommitUseCaseCompositionRoot;
+exports.createMainRunRouteCompositionRoot = createMainRunRouteCompositionRoot;
+const commit_use_case_1 = __nccwpck_require__(8001);
+const issue_comment_use_case_1 = __nccwpck_require__(2042);
+const pull_request_review_comment_use_case_1 = __nccwpck_require__(9415);
+const single_action_use_case_1 = __nccwpck_require__(3572);
+const create_release_use_case_1 = __nccwpck_require__(5258);
+const create_tag_use_case_1 = __nccwpck_require__(2120);
+const deployed_action_use_case_1 = __nccwpck_require__(3185);
+const publish_github_action_use_case_1 = __nccwpck_require__(8891);
+const recommend_steps_use_case_1 = __nccwpck_require__(3238);
+const check_changes_issue_size_use_case_1 = __nccwpck_require__(8356);
+const bugbot_autofix_use_case_1 = __nccwpck_require__(5446);
+const detect_bugbot_fix_intent_use_case_1 = __nccwpck_require__(6234);
+const detect_potential_problems_use_case_1 = __nccwpck_require__(6287);
+const notify_new_commit_on_issue_use_case_1 = __nccwpck_require__(3276);
+const user_request_use_case_1 = __nccwpck_require__(9004);
+const think_use_case_1 = __nccwpck_require__(9255);
+const check_issue_comment_language_use_case_1 = __nccwpck_require__(3152);
+const check_pull_request_comment_language_use_case_1 = __nccwpck_require__(1729);
+const branch_compare_repository_1 = __nccwpck_require__(5859);
+const merge_repository_1 = __nccwpck_require__(1412);
+const pull_request_lifecycle_repository_1 = __nccwpck_require__(4189);
+const repository_release_publication_repository_1 = __nccwpck_require__(2075);
+const repository_tag_repository_1 = __nccwpck_require__(8717);
+const git_commit_adapter_1 = __nccwpck_require__(8606);
+const actor_authorization_composition_root_1 = __nccwpck_require__(233);
+const agent_capability_composition_root_1 = __nccwpck_require__(5079);
+const authenticated_user_composition_root_1 = __nccwpck_require__(3885);
+const bugbot_composition_root_1 = __nccwpck_require__(7395);
+const check_progress_composition_root_1 = __nccwpck_require__(1531);
+const github_branch_client_factory_1 = __nccwpck_require__(144);
+const github_pull_request_client_factory_1 = __nccwpck_require__(9068);
+const github_release_client_factory_1 = __nccwpck_require__(6706);
+const initial_setup_composition_root_1 = __nccwpck_require__(4138);
+const issue_content_composition_root_1 = __nccwpck_require__(2255);
+const issue_interaction_composition_root_1 = __nccwpck_require__(2503);
+const issue_labels_composition_root_1 = __nccwpck_require__(4780);
+const issue_use_case_composition_root_1 = __nccwpck_require__(3022);
+const pull_request_use_case_composition_root_1 = __nccwpck_require__(636);
+function createDetectPotentialProblemsUseCase() {
+    const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();
+    return new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.context, bugbot.publication, bugbot.resolution);
+}
+function createSingleActionUseCaseCompositionRoot() {
+    const repositoryTagPort = new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)());
+    const repositoryReleasePort = new repository_release_publication_repository_1.RepositoryReleasePublicationRepository((0, github_release_client_factory_1.createReleaseClient)());
+    const issueDescriptionQueryPort = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
+    return new single_action_use_case_1.SingleActionUseCase(new deployed_action_use_case_1.DeployedActionUseCase((0, issue_labels_composition_root_1.createIssueLabelRepository)(), (0, issue_interaction_composition_root_1.createIssueClosureRepository)(), new merge_repository_1.MergeRepository((0, github_branch_client_factory_1.createBranchMergeClient)())), new publish_github_action_use_case_1.PublishGithubActionUseCase(repositoryTagPort, repositoryReleasePort), new create_release_use_case_1.CreateReleaseUseCase(repositoryReleasePort), new create_tag_use_case_1.CreateTagUseCase(repositoryTagPort), new think_use_case_1.ThinkUseCase(issueDescriptionQueryPort, (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), createDetectPotentialProblemsUseCase(), new recommend_steps_use_case_1.RecommendStepsUseCase(issueDescriptionQueryPort, (0, agent_capability_composition_root_1.createFindingsQueryPort)()));
+}
+function createIssueCommentUseCaseCompositionRoot() {
+    const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();
+    const findings = (0, agent_capability_composition_root_1.createFindingsQueryPort)();
+    const fixer = (0, agent_capability_composition_root_1.createFixerQueryPort)();
+    const gitCommit = new git_commit_adapter_1.GitCommitAdapter();
+    return new issue_comment_use_case_1.IssueCommentUseCase(new check_issue_comment_language_use_case_1.CheckIssueCommentLanguageUseCase(bugbot.issue, findings), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), bugbot.resolution, gitCommit);
+}
+function createPullRequestReviewCommentUseCaseCompositionRoot() {
+    const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();
+    const findings = (0, agent_capability_composition_root_1.createFindingsQueryPort)();
+    const fixer = (0, agent_capability_composition_root_1.createFixerQueryPort)();
+    const gitCommit = new git_commit_adapter_1.GitCommitAdapter();
+    return new pull_request_review_comment_use_case_1.PullRequestReviewCommentUseCase(new check_pull_request_comment_language_use_case_1.CheckPullRequestCommentLanguageUseCase(bugbot.issue, findings), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), bugbot.resolution, gitCommit);
+}
+function createCommitUseCaseCompositionRoot(projectBoardCommandPort) {
+    return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, issue_interaction_composition_root_1.createIssueNotificationRepository)()), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase(projectBoardCommandPort, (0, issue_labels_composition_root_1.createIssueLabelRepository)(), new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)())), createDetectPotentialProblemsUseCase(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)());
+}
+function createMainRunRouteCompositionRoot(projectBoardCommandPort) {
+    return {
+        "single-action": async (execution) => createSingleActionUseCaseCompositionRoot().invoke(execution),
+        "issue-comment": async (execution) => createIssueCommentUseCaseCompositionRoot().invoke(execution),
+        issue: async (execution) => (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)().invoke(execution),
+        "pull-request-review-comment": async (execution) => createPullRequestReviewCommentUseCaseCompositionRoot().invoke(execution),
+        "pull-request": async (execution) => (0, pull_request_use_case_composition_root_1.createPullRequestUseCaseCompositionRoot)().invoke(execution),
+        push: async (execution) => createCommitUseCaseCompositionRoot(projectBoardCommandPort).invoke(execution),
+    };
+}
+
+
+/***/ }),
+
+/***/ 603:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createOrganizationMembersCompositionRoot = createOrganizationMembersCompositionRoot;
+const github_identity_client_factory_1 = __nccwpck_require__(3081);
+const organization_members_repository_1 = __nccwpck_require__(845);
+function createOrganizationMembersCompositionRoot() {
+    return new organization_members_repository_1.OrganizationMembersRepository((0, github_identity_client_factory_1.createOrganizationMembersClient)());
+}
+
+
+/***/ }),
+
+/***/ 7194:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createProjectBoardCompositionRoot = createProjectBoardCompositionRoot;
+const github_project_client_factory_1 = __nccwpck_require__(3691);
+const project_board_command_repository_1 = __nccwpck_require__(8952);
+const project_board_link_repository_1 = __nccwpck_require__(9285);
+const project_board_query_repository_1 = __nccwpck_require__(7301);
+function createProjectBoardCompositionRoot() {
+    const query = new project_board_query_repository_1.ProjectBoardQueryRepository((0, github_project_client_factory_1.createRepositoryContextClient)(), (0, github_project_client_factory_1.createOwnerTypeClient)(), (0, github_project_client_factory_1.createGraphqlTransportClient)());
+    return {
+        query,
+        link: new project_board_link_repository_1.ProjectBoardLinkRepository(query, (0, github_project_client_factory_1.createGraphqlTransportClient)()),
+        command: new project_board_command_repository_1.ProjectBoardCommandRepository(query, (0, github_project_client_factory_1.createGraphqlTransportClient)()),
+    };
+}
+
+
+/***/ }),
+
+/***/ 2651:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createPullRequestReviewerCompositionRoot = createPullRequestReviewerCompositionRoot;
+const pull_request_reviewer_repository_1 = __nccwpck_require__(3779);
+const github_pull_request_client_factory_1 = __nccwpck_require__(9068);
+function createPullRequestReviewerCompositionRoot() {
+    return new pull_request_reviewer_repository_1.PullRequestReviewerRepository((0, github_pull_request_client_factory_1.createPullRequestReviewerClient)());
+}
+
+
+/***/ }),
+
+/***/ 24:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.composePullRequestUseCase = composePullRequestUseCase;
+const pull_request_use_case_1 = __nccwpck_require__(7259);
+function composePullRequestUseCase(...dependencies) {
+    return new pull_request_use_case_1.PullRequestUseCase(...dependencies);
+}
+
+
+/***/ }),
+
+/***/ 636:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createPullRequestUseCaseCompositionRoot = createPullRequestUseCaseCompositionRoot;
+const github_issue_client_factory_1 = __nccwpck_require__(5883);
+const github_project_client_factory_1 = __nccwpck_require__(3691);
+const github_pull_request_client_factory_1 = __nccwpck_require__(9068);
+const update_pull_request_description_use_case_1 = __nccwpck_require__(5089);
+const agent_capability_composition_root_1 = __nccwpck_require__(5079);
+const issue_assignment_repository_1 = __nccwpck_require__(5023);
+const issue_closure_repository_1 = __nccwpck_require__(3231);
+const issue_content_repository_1 = __nccwpck_require__(2313);
+const issue_label_repository_1 = __nccwpck_require__(5725);
+const issue_lifecycle_repository_1 = __nccwpck_require__(8346);
+const issue_metadata_repository_1 = __nccwpck_require__(1333);
+const issue_title_repository_1 = __nccwpck_require__(121);
+const pull_request_lifecycle_repository_1 = __nccwpck_require__(4189);
+const pull_request_use_case_composition_1 = __nccwpck_require__(24);
+const pull_request_reviewer_composition_root_1 = __nccwpck_require__(2651);
+const organization_members_composition_root_1 = __nccwpck_require__(603);
+const project_board_composition_root_1 = __nccwpck_require__(7194);
+function createPullRequestUseCaseCompositionRoot() {
+    const issueLifecycle = new issue_lifecycle_repository_1.IssueLifecycleRepository((0, github_issue_client_factory_1.createIssueLifecycleClient)());
+    const issueContent = new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
+    const pullRequestLifecycle = new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)());
+    const issueMetadata = new issue_metadata_repository_1.IssueMetadataRepository((0, github_issue_client_factory_1.createIssueMetadataClient)(), (0, github_project_client_factory_1.createGraphqlTransportClient)());
+    const organizationMembers = (0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)();
+    const projectBoard = (0, project_board_composition_root_1.createProjectBoardCompositionRoot)();
+    return (0, pull_request_use_case_composition_1.composePullRequestUseCase)(projectBoard.command, pullRequestLifecycle, issueContent, new issue_title_repository_1.IssueTitleRepository((0, github_issue_client_factory_1.createIssueTitleClient)(), issueMetadata), new issue_closure_repository_1.IssueClosureRepository(issueLifecycle, issueContent), new issue_assignment_repository_1.IssueAssignmentRepository((0, github_issue_client_factory_1.createIssueAssignmentClient)()), (0, pull_request_reviewer_composition_root_1.createPullRequestReviewerCompositionRoot)(), organizationMembers, new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)()), pullRequestLifecycle, projectBoard.link, projectBoard.command, new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase(pullRequestLifecycle, issueContent, organizationMembers, (0, agent_capability_composition_root_1.createFindingsQueryPort)()));
+}
+
+
+/***/ }),
+
+/***/ 1598:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createWaitForPreviousWorkflowRunsUseCase = createWaitForPreviousWorkflowRunsUseCase;
+const wait_for_previous_workflow_runs_use_case_1 = __nccwpck_require__(8301);
+const active_previous_workflow_runs_repository_1 = __nccwpck_require__(941);
+const timer_workflow_polling_delay_adapter_1 = __nccwpck_require__(339);
+const logger_workflow_polling_observer_adapter_1 = __nccwpck_require__(2883);
+const github_workflow_client_factory_1 = __nccwpck_require__(9839);
+function createWaitForPreviousWorkflowRunsUseCase(token) {
+    const client = (0, github_workflow_client_factory_1.createWorkflowRunsClient)().getClient(token);
+    return new wait_for_previous_workflow_runs_use_case_1.WaitForPreviousWorkflowRunsUseCase(new active_previous_workflow_runs_repository_1.ActivePreviousWorkflowRunsRepository(client), new timer_workflow_polling_delay_adapter_1.TimerWorkflowPollingDelayAdapter(), new logger_workflow_polling_observer_adapter_1.LoggerWorkflowPollingObserverAdapter());
+}
 
 
 /***/ }),
@@ -61705,7 +62879,31 @@ exports.GitCommitAdapter = GitCommitAdapter;
 
 /***/ }),
 
-/***/ 6962:
+/***/ 7889:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.OctokitBranchMergeClientAdapter = exports.OctokitBranchComparisonClientAdapter = exports.OctokitBranchClientAdapter = void 0;
+const octokit_client_resolver_1 = __nccwpck_require__(4047);
+class OctokitBranchClientAdapter {
+    getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
+}
+exports.OctokitBranchClientAdapter = OctokitBranchClientAdapter;
+class OctokitBranchComparisonClientAdapter {
+    getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
+}
+exports.OctokitBranchComparisonClientAdapter = OctokitBranchComparisonClientAdapter;
+class OctokitBranchMergeClientAdapter {
+    getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
+}
+exports.OctokitBranchMergeClientAdapter = OctokitBranchMergeClientAdapter;
+
+
+/***/ }),
+
+/***/ 4047:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -61744,80 +62942,269 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.OctokitIssueAssignmentClientAdapter = exports.OctokitIssueLabelProvisioningClientAdapter = exports.OctokitIssueLabelsClientAdapter = exports.OctokitIssueMetadataClientAdapter = exports.OctokitIssueTitleClientAdapter = exports.OctokitBranchComparisonClientAdapter = exports.OctokitBranchClientAdapter = exports.OctokitBranchMergeClientAdapter = exports.OctokitIssueContentClientAdapter = exports.OctokitProjectClientAdapter = exports.OctokitReleaseClientAdapter = exports.OctokitIssueLifecycleClientAdapter = exports.OctokitPullRequestLifecycleClientAdapter = exports.OctokitPullRequestReviewClientAdapter = exports.OctokitGraphqlClientAdapter = exports.OctokitPullRequestChangesClientAdapter = exports.OctokitOrganizationClientAdapter = exports.OctokitWorkflowClientAdapter = void 0;
+exports.getOctokitClient = getOctokitClient;
 const github = __importStar(__nccwpck_require__(9848));
-class OctokitWorkflowClientAdapter {
-    getClient(token) { return github.getOctokit(token); }
+function getOctokitClient(token) {
+    return github.getOctokit(token);
 }
-exports.OctokitWorkflowClientAdapter = OctokitWorkflowClientAdapter;
-class OctokitOrganizationClientAdapter {
-    getClient(token) { return github.getOctokit(token); }
+
+
+/***/ }),
+
+/***/ 9996:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.OctokitOwnerTypeClientAdapter = exports.OctokitRepositoryContextClientAdapter = exports.OctokitOrganizationMembersClientAdapter = exports.OctokitActorAuthorizationClientAdapter = exports.OctokitAuthenticatedUserClientAdapter = void 0;
+const octokit_client_resolver_1 = __nccwpck_require__(4047);
+class OctokitAuthenticatedUserClientAdapter {
+    getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
 }
-exports.OctokitOrganizationClientAdapter = OctokitOrganizationClientAdapter;
-class OctokitPullRequestChangesClientAdapter {
-    getClient(token) { return github.getOctokit(token); }
+exports.OctokitAuthenticatedUserClientAdapter = OctokitAuthenticatedUserClientAdapter;
+class OctokitActorAuthorizationClientAdapter {
+    getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
 }
-exports.OctokitPullRequestChangesClientAdapter = OctokitPullRequestChangesClientAdapter;
-class OctokitGraphqlClientAdapter {
-    getClient(token) { return github.getOctokit(token); }
+exports.OctokitActorAuthorizationClientAdapter = OctokitActorAuthorizationClientAdapter;
+class OctokitOrganizationMembersClientAdapter {
+    getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
 }
-exports.OctokitGraphqlClientAdapter = OctokitGraphqlClientAdapter;
-class OctokitPullRequestReviewClientAdapter {
-    getClient(token) { return github.getOctokit(token); }
+exports.OctokitOrganizationMembersClientAdapter = OctokitOrganizationMembersClientAdapter;
+class OctokitRepositoryContextClientAdapter {
+    getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
 }
-exports.OctokitPullRequestReviewClientAdapter = OctokitPullRequestReviewClientAdapter;
-class OctokitPullRequestLifecycleClientAdapter {
-    getClient(token) { return github.getOctokit(token); }
+exports.OctokitRepositoryContextClientAdapter = OctokitRepositoryContextClientAdapter;
+class OctokitOwnerTypeClientAdapter {
+    getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
 }
-exports.OctokitPullRequestLifecycleClientAdapter = OctokitPullRequestLifecycleClientAdapter;
-class OctokitIssueLifecycleClientAdapter {
-    getClient(token) { return github.getOctokit(token); }
-}
-exports.OctokitIssueLifecycleClientAdapter = OctokitIssueLifecycleClientAdapter;
-class OctokitReleaseClientAdapter {
-    getClient(token) { return github.getOctokit(token); }
-}
-exports.OctokitReleaseClientAdapter = OctokitReleaseClientAdapter;
-class OctokitProjectClientAdapter {
-    getClient(token) { return github.getOctokit(token); }
-}
-exports.OctokitProjectClientAdapter = OctokitProjectClientAdapter;
-class OctokitIssueContentClientAdapter {
-    getClient(token) { return github.getOctokit(token); }
-}
-exports.OctokitIssueContentClientAdapter = OctokitIssueContentClientAdapter;
-class OctokitBranchMergeClientAdapter {
-    getClient(token) { return github.getOctokit(token); }
-}
-exports.OctokitBranchMergeClientAdapter = OctokitBranchMergeClientAdapter;
-class OctokitBranchClientAdapter {
-    getClient(token) { return github.getOctokit(token); }
-}
-exports.OctokitBranchClientAdapter = OctokitBranchClientAdapter;
-class OctokitBranchComparisonClientAdapter {
-    getClient(token) { return github.getOctokit(token); }
-}
-exports.OctokitBranchComparisonClientAdapter = OctokitBranchComparisonClientAdapter;
-class OctokitIssueTitleClientAdapter {
-    getClient(token) { return github.getOctokit(token); }
-}
-exports.OctokitIssueTitleClientAdapter = OctokitIssueTitleClientAdapter;
-class OctokitIssueMetadataClientAdapter {
-    getClient(token) { return github.getOctokit(token); }
-}
-exports.OctokitIssueMetadataClientAdapter = OctokitIssueMetadataClientAdapter;
-class OctokitIssueLabelsClientAdapter {
-    getClient(token) { return github.getOctokit(token); }
-}
-exports.OctokitIssueLabelsClientAdapter = OctokitIssueLabelsClientAdapter;
-class OctokitIssueLabelProvisioningClientAdapter {
-    getClient(token) { return github.getOctokit(token); }
-}
-exports.OctokitIssueLabelProvisioningClientAdapter = OctokitIssueLabelProvisioningClientAdapter;
+exports.OctokitOwnerTypeClientAdapter = OctokitOwnerTypeClientAdapter;
+
+
+/***/ }),
+
+/***/ 7179:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.OctokitIssueTitleClientAdapter = exports.OctokitIssueMetadataClientAdapter = exports.OctokitIssueLifecycleClientAdapter = exports.OctokitIssueLabelsClientAdapter = exports.OctokitIssueLabelProvisioningClientAdapter = exports.OctokitIssueContentClientAdapter = exports.OctokitIssueAssignmentClientAdapter = void 0;
+const octokit_client_resolver_1 = __nccwpck_require__(4047);
 class OctokitIssueAssignmentClientAdapter {
-    getClient(token) { return github.getOctokit(token); }
+    getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
 }
 exports.OctokitIssueAssignmentClientAdapter = OctokitIssueAssignmentClientAdapter;
+class OctokitIssueContentClientAdapter {
+    getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
+}
+exports.OctokitIssueContentClientAdapter = OctokitIssueContentClientAdapter;
+class OctokitIssueLabelProvisioningClientAdapter {
+    getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
+}
+exports.OctokitIssueLabelProvisioningClientAdapter = OctokitIssueLabelProvisioningClientAdapter;
+class OctokitIssueLabelsClientAdapter {
+    getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
+}
+exports.OctokitIssueLabelsClientAdapter = OctokitIssueLabelsClientAdapter;
+class OctokitIssueLifecycleClientAdapter {
+    getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
+}
+exports.OctokitIssueLifecycleClientAdapter = OctokitIssueLifecycleClientAdapter;
+class OctokitIssueMetadataClientAdapter {
+    getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
+}
+exports.OctokitIssueMetadataClientAdapter = OctokitIssueMetadataClientAdapter;
+class OctokitIssueTitleClientAdapter {
+    getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
+}
+exports.OctokitIssueTitleClientAdapter = OctokitIssueTitleClientAdapter;
+
+
+/***/ }),
+
+/***/ 8505:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.OctokitGraphqlTransportClientAdapter = void 0;
+const octokit_client_resolver_1 = __nccwpck_require__(4047);
+class OctokitGraphqlTransportClientAdapter {
+    getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
+}
+exports.OctokitGraphqlTransportClientAdapter = OctokitGraphqlTransportClientAdapter;
+
+
+/***/ }),
+
+/***/ 1397:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.OctokitPullRequestReviewCommentClientAdapter = exports.OctokitPullRequestReviewerClientAdapter = exports.OctokitPullRequestLifecycleClientAdapter = exports.OctokitPullRequestChangesClientAdapter = void 0;
+const octokit_client_resolver_1 = __nccwpck_require__(4047);
+class OctokitPullRequestChangesClientAdapter {
+    getClient(token) {
+        return (0, octokit_client_resolver_1.getOctokitClient)(token);
+    }
+}
+exports.OctokitPullRequestChangesClientAdapter = OctokitPullRequestChangesClientAdapter;
+class OctokitPullRequestLifecycleClientAdapter {
+    getClient(token) {
+        return (0, octokit_client_resolver_1.getOctokitClient)(token);
+    }
+}
+exports.OctokitPullRequestLifecycleClientAdapter = OctokitPullRequestLifecycleClientAdapter;
+class OctokitPullRequestReviewerClientAdapter {
+    getClient(token) {
+        return (0, octokit_client_resolver_1.getOctokitClient)(token);
+    }
+}
+exports.OctokitPullRequestReviewerClientAdapter = OctokitPullRequestReviewerClientAdapter;
+class OctokitPullRequestReviewCommentClientAdapter {
+    getClient(token) {
+        return (0, octokit_client_resolver_1.getOctokitClient)(token);
+    }
+}
+exports.OctokitPullRequestReviewCommentClientAdapter = OctokitPullRequestReviewCommentClientAdapter;
+
+
+/***/ }),
+
+/***/ 5334:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.OctokitReleaseClientAdapter = void 0;
+const octokit_client_resolver_1 = __nccwpck_require__(4047);
+class OctokitReleaseClientAdapter {
+    getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
+}
+exports.OctokitReleaseClientAdapter = OctokitReleaseClientAdapter;
+
+
+/***/ }),
+
+/***/ 6719:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.OctokitWorkflowDispatchClientAdapter = exports.OctokitWorkflowRunsClientAdapter = void 0;
+const octokit_client_resolver_1 = __nccwpck_require__(4047);
+class OctokitWorkflowRunsClientAdapter {
+    getClient(token) {
+        return (0, octokit_client_resolver_1.getOctokitClient)(token);
+    }
+}
+exports.OctokitWorkflowRunsClientAdapter = OctokitWorkflowRunsClientAdapter;
+class OctokitWorkflowDispatchClientAdapter {
+    getClient(token) {
+        return (0, octokit_client_resolver_1.getOctokitClient)(token);
+    }
+}
+exports.OctokitWorkflowDispatchClientAdapter = OctokitWorkflowDispatchClientAdapter;
+
+
+/***/ }),
+
+/***/ 6997:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PROJECT_BOARD_ITEM_PAGE_LIMIT = void 0;
+// GitHub Projects currently permits up to 50,000 items per project.
+exports.PROJECT_BOARD_ITEM_PAGE_LIMIT = 500;
+
+
+/***/ }),
+
+/***/ 2883:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.LoggerWorkflowPollingObserverAdapter = void 0;
+const logger_1 = __nccwpck_require__(1151);
+class LoggerWorkflowPollingObserverAdapter {
+    noActivePreviousRuns() {
+        (0, logger_1.logDebugInfo)('✅ No previous runs active. Continuing...');
+    }
+    waitingForPreviousRuns(activeRunCount, delayMilliseconds) {
+        (0, logger_1.logDebugInfo)(`⏳ Found ${activeRunCount} previous run(s) still active. Waiting ${delayMilliseconds / 1000}s...`);
+    }
+}
+exports.LoggerWorkflowPollingObserverAdapter = LoggerWorkflowPollingObserverAdapter;
+
+
+/***/ }),
+
+/***/ 5729:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupWorkspaceAdapter = void 0;
+const setup_files_1 = __nccwpck_require__(9126);
+class SetupWorkspaceAdapter {
+    prepare() {
+        const workspace = process.cwd();
+        (0, setup_files_1.ensureGitHubDirs)(workspace);
+        return (0, setup_files_1.copySetupFiles)(workspace);
+    }
+    hasValidToken() {
+        return (0, setup_files_1.hasValidSetupToken)(process.cwd());
+    }
+}
+exports.SetupWorkspaceAdapter = SetupWorkspaceAdapter;
+
+
+/***/ }),
+
+/***/ 846:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TimerBranchPropagationDelayAdapter = void 0;
+class TimerBranchPropagationDelayAdapter {
+    constructor(delayMilliseconds = 10000) {
+        this.delayMilliseconds = delayMilliseconds;
+        this.waitForLinkedBranch = async () => {
+            await new Promise((resolve) => setTimeout(resolve, this.delayMilliseconds));
+        };
+    }
+}
+exports.TimerBranchPropagationDelayAdapter = TimerBranchPropagationDelayAdapter;
+
+
+/***/ }),
+
+/***/ 339:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TimerWorkflowPollingDelayAdapter = void 0;
+class TimerWorkflowPollingDelayAdapter {
+    async wait(milliseconds) {
+        await new Promise((resolve) => setTimeout(resolve, milliseconds));
+    }
+}
+exports.TimerWorkflowPollingDelayAdapter = TimerWorkflowPollingDelayAdapter;
 
 
 /***/ }),
@@ -62055,9 +63442,10 @@ class ConfigurationHandler extends issue_content_interface_1.IssueContentInterfa
                 return undefined;
             }
         };
-        this.get = async (execution) => {
+        this.get = async (query) => {
             try {
-                const config = await this.internalGetter(execution);
+                const description = await this.issueDescriptionPort.getDescription(query.owner, query.repository, query.issueNumber, query.token);
+                const config = this.getContent(description);
                 if (config === undefined) {
                     return undefined;
                 }
@@ -62618,6 +64006,7 @@ function getUserRequestPrompt(params) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.COPILOT_MARKETPLACE_URL = void 0;
 exports.getCommentWatermark = getCommentWatermark;
+exports.stripTrailingCommentWatermarks = stripTrailingCommentWatermarks;
 exports.COPILOT_MARKETPLACE_URL = 'https://github.com/marketplace/actions/copilot-github-with-super-powers';
 const DEFAULT_WATERMARK = `<sup>Made with ❤️ by [vypdev/copilot](${exports.COPILOT_MARKETPLACE_URL})</sup>`;
 function commitUrl(owner, repo, sha) {
@@ -62629,6 +64018,15 @@ function getCommentWatermark(options) {
         return `<sup>Written by [vypdev/copilot](${exports.COPILOT_MARKETPLACE_URL}) for commit [${options.commitSha}](${url}). This will update automatically on new commits.</sup>`;
     }
     return DEFAULT_WATERMARK;
+}
+const TRAILING_COMMENT_WATERMARK = /\s*<sup>(?:Made with ❤️ by|Written by) \[vypdev\/copilot\]\(https:\/\/github\.com\/marketplace\/actions\/copilot-github-with-super-powers\)[^<]*<\/sup>\s*$/u;
+/** Removes all trailing Copilot watermarks before a read-modify-write update. */
+function stripTrailingCommentWatermarks(comment) {
+    let stripped = comment;
+    while (TRAILING_COMMENT_WATERMARK.test(stripped)) {
+        stripped = stripped.replace(TRAILING_COMMENT_WATERMARK, '');
+    }
+    return stripped.trimEnd();
 }
 
 
@@ -63502,36 +64900,6 @@ async function stopOpencodeServer(child) {
 
 /***/ }),
 
-/***/ 2657:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.waitForPreviousRuns = void 0;
-const workflow_repository_1 = __nccwpck_require__(8059);
-const octokit_client_1 = __nccwpck_require__(6962);
-const logger_1 = __nccwpck_require__(1151);
-const waitForPreviousRuns = async (params) => {
-    let attempts = 0;
-    while (attempts < 2000) {
-        const workflowRepository = new workflow_repository_1.WorkflowRepository(new octokit_client_1.OctokitWorkflowClientAdapter());
-        const activeRuns = await workflowRepository.getActivePreviousRuns(params);
-        if (activeRuns.length === 0) {
-            (0, logger_1.logDebugInfo)("✅ No previous runs active. Continuing...");
-            return;
-        }
-        (0, logger_1.logDebugInfo)(`⏳ Found ${activeRuns.length} previous run(s) still active. Waiting 2s...`);
-        await new Promise((res) => setTimeout(res, 2000));
-        attempts++;
-    }
-    throw new Error("Timeout waiting for previous runs to finish.");
-};
-exports.waitForPreviousRuns = waitForPreviousRuns;
-
-
-/***/ }),
-
 /***/ 102:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -64107,7 +65475,7 @@ module.exports = require("node:perf_hooks");
 
 /***/ }),
 
-/***/ 2571:
+/***/ 7742:
 /***/ ((module) => {
 
 "use strict";
@@ -64241,7 +65609,7 @@ __nccwpck_require__.d(__webpack_exports__, {
 });
 
 // EXTERNAL MODULE: external "node:process"
-var external_node_process_ = __nccwpck_require__(2571);
+var external_node_process_ = __nccwpck_require__(7742);
 ;// CONCATENATED MODULE: ./node_modules/.pnpm/ansi-regex@6.3.0/node_modules/ansi-regex/index.js
 function ansiRegex({onlyFirst = false} = {}) {
 	// Valid string terminator sequences are BEL, ESC\, and 0x9c
@@ -65778,7 +67146,7 @@ const ansiStyles = assembleStyles();
 /* harmony default export */ const ansi_styles = (ansiStyles);
 
 // EXTERNAL MODULE: external "node:process"
-var external_node_process_ = __nccwpck_require__(2571);
+var external_node_process_ = __nccwpck_require__(7742);
 ;// CONCATENATED MODULE: external "node:os"
 const external_node_os_namespaceObject = require("node:os");
 ;// CONCATENATED MODULE: external "node:tty"
