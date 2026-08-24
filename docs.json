@@ -66,12 +66,12 @@
         {
           "title": "First workflow",
           "href": "/first-workflow",
-          "icon": "check-square"
+          "icon": "square-check"
         },
         {
           "title": "Configuration checklist",
           "href": "/configuration-checklist",
-          "icon": "check-square"
+          "icon": "square-check"
         },
         {
           "title": "How To Use",
@@ -90,7 +90,7 @@
       "tab": "agents",
       "pages": [
         { "title": "Overview", "href": "/agents", "icon": "terminal" },
-        { "title": "Execution contract", "href": "/agent-execution-contract", "icon": "file-text" },
+        { "title": "Execution contract", "href": "/agent-execution-contract", "icon": "file-lines" },
         { "title": "Runtime selection", "href": "/runtime-selection", "icon": "terminal" },
         { "title": "Model selection", "href": "/model-selection", "icon": "list" },
         { "title": "Model allowlists", "href": "/model-allowlists", "icon": "shield" },
@@ -111,7 +111,7 @@
         { "title": "Forks and pull_request_target", "href": "/security/forks-and-pull-request-target", "icon": "code-pull-request" },
         { "title": "Self-hosted runners", "href": "/security/self-hosted-runners", "icon": "terminal" },
         { "title": "Secret exposure rules", "href": "/security/secret-exposure", "icon": "lock" },
-        { "title": "Authentication compliance", "href": "/codex-authentication-and-compliance", "icon": "file-text" }
+        { "title": "Authentication compliance", "href": "/codex-authentication-and-compliance", "icon": "file-lines" }
       ]
     },
     {
@@ -134,9 +134,9 @@
       "pages": [
         { "title": "Architecture", "href": "/development/architecture", "icon": "list" },
         { "title": "Local development", "href": "/development/local-development", "icon": "code" },
-        { "title": "Testing", "href": "/development/testing", "icon": "check-square" },
+        { "title": "Testing", "href": "/development/testing", "icon": "square-check" },
         { "title": "Build artifacts", "href": "/development/build-artifacts", "icon": "box" },
-        { "title": "Documentation", "href": "/development/documentation", "icon": "file-text" },
+        { "title": "Documentation", "href": "/development/documentation", "icon": "file-lines" },
         { "title": "Documentation completeness plan", "href": "/documentation-completeness-plan", "icon": "clipboard" },
         { "title": "Release process", "href": "/development/release-process", "icon": "upload" }
       ]
@@ -153,7 +153,7 @@
         {
           "title": "First workflow",
           "href": "/issues/first-workflow",
-          "icon": "check-square"
+          "icon": "square-check"
         },
         {
           "title": "Labels and branch types",
@@ -199,7 +199,7 @@
         {
           "title": "Documentation",
           "href": "/issues/type/docs",
-          "icon": "file-text"
+          "icon": "file-lines"
         },
         {
           "title": "Chore",
@@ -240,7 +240,7 @@
         {
           "title": "First workflow",
           "href": "/pull-requests/first-workflow",
-          "icon": "check-square"
+          "icon": "square-check"
         },
         {
           "title": "Workflow setup",
@@ -255,7 +255,7 @@
         {
           "title": "AI PR description",
           "href": "/pull-requests/ai-description",
-          "icon": "file-text"
+          "icon": "file-lines"
         },
         {
           "title": "Configuration",
@@ -342,7 +342,7 @@
         {
           "title": "Do user request",
           "href": "/bugbot/do-user-request",
-          "icon": "edit"
+          "icon": "pen-to-square"
         },
         {
           "title": "Configuration",
