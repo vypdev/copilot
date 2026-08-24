@@ -60,7 +60,7 @@ Add other inputs as needed: `branch-management-launcher-label`, `desired-assigne
 
 ## What runs when
 
-1. **On every trigger** (with valid `token`): The action loads the issue and repository context. If the **event actor** is the same as the **token owner**, the action may skip the normal pipeline (see [Troubleshooting → Action skips issue/PR/push pipelines](/troubleshooting#action-skips-issueprpush-pipelines)); use a **bot account** for the PAT if you want full behavior when you act as a user.
+1. **On every trigger** (with valid `token`): The action loads the issue and repository context. If the **event actor** is the same as the **token owner**, the action may skip the normal pipeline (see [Troubleshooting → Action skips issue/PR/push pipelines](/security-operations/operations/troubleshooting#action-skips-issueprpush-pipelines)); use a **bot account** for the PAT if you want full behavior when you act as a user.
 
 2. **Project linking:** If `project-ids` is set and the token has access, the issue is linked to those projects and moved to the configured column (e.g. "Todo" or "In Progress").
 

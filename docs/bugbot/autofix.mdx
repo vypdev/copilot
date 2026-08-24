@@ -35,7 +35,7 @@ Add a **comment** on the issue that references the findings you want fixed. Open
 
 You don’t have to use exact wording; the Plan agent interprets intent. Be clear when you want only **some** findings (e.g. “fix the first two” or “fix the one about the login handler”).
 
-**Important:** On **issue comments**, the action needs an **open pull request** that references the issue so it can determine which **branch** to checkout and push to. If there is no such PR, autofix is skipped (the action cannot push without a branch). See [Troubleshooting → Bugbot autofix](/troubleshooting#bugbot-autofix).
+**Important:** On **issue comments**, the action needs an **open pull request** that references the issue so it can determine which **branch** to checkout and push to. If there is no such PR, autofix is skipped (the action cannot push without a branch). See [Troubleshooting → Bugbot autofix](/security-operations/operations/troubleshooting#bugbot-autofix).
 
 ### From the pull request
 
@@ -102,7 +102,7 @@ So the next time detection runs (e.g. on the next push), OpenCode will see those
 
 ## Troubleshooting
 
-- **Bot didn’t run autofix:** Check that the selected agent CLI is configured, the comment is interpreted as a fix request (e.g. “fix it”, “fix all”), and there is at least one **unresolved** finding. On **issue comments**, ensure there is an **open PR** that references the issue so the action can resolve the branch. See [Troubleshooting → Bugbot autofix](/troubleshooting#bugbot-autofix).
+- **Bot didn’t run autofix:** Check that the selected agent CLI is configured, the comment is interpreted as a fix request (e.g. “fix it”, “fix all”), and there is at least one **unresolved** finding. On **issue comments**, ensure there is an **open PR** that references the issue so the action can resolve the branch. See [Troubleshooting → Bugbot autofix](/security-operations/operations/troubleshooting#bugbot-autofix).
 - **Commit not made:** Verify commands run after the fix; if any fails, no commit is made. If OpenCode didn’t change any files, there’s nothing to commit. If push failed (e.g. conflict or missing `contents: write`), check workflow permissions and token scope.
 
 ---

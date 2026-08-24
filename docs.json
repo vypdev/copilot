@@ -96,47 +96,47 @@
         },
         {
           "title": "Execution contract",
-          "href": "/agent-execution-contract",
+          "href": "/agents/execution-contract",
           "icon": "file-lines"
         },
         {
           "title": "Runtime selection",
-          "href": "/runtime-selection",
+          "href": "/agents/runtime-selection",
           "icon": "laptop-code"
         },
         {
           "title": "Model selection",
-          "href": "/model-selection",
+          "href": "/agents/model-selection",
           "icon": "brain"
         },
         {
           "title": "Model allowlists",
-          "href": "/model-allowlists",
+          "href": "/agents/model-allowlists",
           "icon": "list-check"
         },
         {
           "title": "CLI commands",
-          "href": "/cli-commands",
+          "href": "/agents/cli-commands",
           "icon": "terminal"
         },
         {
           "title": "CLI configuration",
-          "href": "/agent-cli-configuration",
+          "href": "/agents/cli-configuration",
           "icon": "gear"
         },
         {
           "title": "OpenCode",
-          "href": "/opencode-integration",
+          "href": "/agents/opencode",
           "icon": "code"
         },
         {
           "title": "Input reference",
-          "href": "/agent-input-reference",
+          "href": "/agents/input-reference",
           "icon": "clipboard-list"
         },
         {
           "title": "Failure behavior",
-          "href": "/agent-failure-policy",
+          "href": "/agents/failure-policy",
           "icon": "triangle-exclamation"
         }
       ]
@@ -147,37 +147,37 @@
       "pages": [
         {
           "title": "Overview",
-          "href": "/security/overview",
+          "href": "/security-operations/security/overview",
           "icon": "shield"
         },
         {
           "title": "Credentials",
-          "href": "/security/credentials",
+          "href": "/security-operations/security/credentials",
           "icon": "key"
         },
         {
           "title": "Trust boundaries",
-          "href": "/security/trust-boundaries",
+          "href": "/security-operations/security/trust-boundaries",
           "icon": "shield-halved"
         },
         {
           "title": "Forks and pull_request_target",
-          "href": "/security/forks-and-pull-request-target",
+          "href": "/security-operations/security/forks-and-pull-request-target",
           "icon": "code-pull-request"
         },
         {
           "title": "Self-hosted runners",
-          "href": "/security/self-hosted-runners",
+          "href": "/security-operations/security/self-hosted-runners",
           "icon": "server"
         },
         {
           "title": "Secret exposure rules",
-          "href": "/security/secret-exposure",
+          "href": "/security-operations/security/secret-exposure",
           "icon": "lock"
         },
         {
           "title": "Authentication compliance",
-          "href": "/codex-authentication-and-compliance",
+          "href": "/security-operations/security/authentication-compliance",
           "icon": "file-lines"
         }
       ]
@@ -188,42 +188,42 @@
       "pages": [
         {
           "title": "Provisioning",
-          "href": "/operations/provisioning",
+          "href": "/security-operations/operations/provisioning",
           "icon": "download"
         },
         {
           "title": "CLI provisioning details",
-          "href": "/agent-cli-provisioning",
+          "href": "/security-operations/operations/cli-provisioning",
           "icon": "box-open"
         },
         {
           "title": "Version pinning",
-          "href": "/operations/version-pinning",
+          "href": "/security-operations/operations/version-pinning",
           "icon": "tag"
         },
         {
           "title": "Verification",
-          "href": "/operations/verification",
+          "href": "/security-operations/operations/verification",
           "icon": "circle-check"
         },
         {
           "title": "Smoke tests",
-          "href": "/operations/smoke-tests",
+          "href": "/security-operations/operations/smoke-tests",
           "icon": "vial"
         },
         {
           "title": "CLI runners",
-          "href": "/agent-cli-runners",
+          "href": "/security-operations/operations/cli-runners",
           "icon": "server"
         },
         {
           "title": "Troubleshooting",
-          "href": "/troubleshooting",
+          "href": "/security-operations/operations/troubleshooting",
           "icon": "wrench"
         },
         {
           "title": "Upgrade and rollback",
-          "href": "/operations/upgrade-rollback",
+          "href": "/security-operations/operations/upgrade-rollback",
           "icon": "rotate"
         }
       ]
@@ -259,7 +259,7 @@
         },
         {
           "title": "Documentation completeness plan",
-          "href": "/documentation-completeness-plan",
+          "href": "/development/documentation-completeness-plan",
           "icon": "clipboard"
         },
         {

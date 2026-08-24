@@ -105,7 +105,7 @@ Credentials are independent from allowlists:
 | Codex | `CODEX_ACCESS_TOKEN`, `OPENAI_API_KEY`, or a local ChatGPT Codex session on a controlled self-hosted runner |
 | Cursor | `CURSOR_API_KEY` |
 
-Never place tokens in `with`, command arguments, prompts, repository files, or logs. See [Agent CLI runners](/agent-cli-runners), [Agent CLI provisioning](/agent-cli-provisioning), and [Codex authentication and compliance](/codex-authentication-and-compliance) for operational details.
+Never place tokens in `with`, command arguments, prompts, repository files, or logs. See [Agent CLI runners](/security-operations/operations/cli-runners), [Agent CLI provisioning](/security-operations/operations/cli-provisioning), and [Codex authentication and compliance](/security-operations/security/authentication-compliance) for operational details.
 
 ## Provisioning
 
@@ -117,7 +117,7 @@ OPENCODE_VERSION
 CURSOR_INSTALLER_SHA256
 ```
 
-The Action does not copy local OAuth files into CI and does not install an unselected provider. See [Agent CLI provisioning](/agent-cli-provisioning).
+The Action does not copy local OAuth files into CI and does not install an unselected provider. See [Agent CLI provisioning](/security-operations/operations/cli-provisioning).
 
 ## Failure policy
 

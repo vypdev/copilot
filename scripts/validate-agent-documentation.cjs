@@ -50,17 +50,17 @@ for (const value of ['AGENT_ALLOWED_MODEL_PROVIDERS', 'AGENT_ALLOWED_MODELS', 'o
 
 const requiredPages = [
   'overview.mdx', 'quick-start.mdx', 'configuration-checklist.mdx',
-  'agent-execution-contract.mdx', 'runtime-selection.mdx', 'model-selection.mdx',
-  'model-allowlists.mdx', 'cli-commands.mdx', 'agent-failure-policy.mdx',
-  'security/credentials.mdx', 'security/trust-boundaries.mdx',
-  'security/forks-and-pull-request-target.mdx', 'security/self-hosted-runners.mdx',
-  'security/secret-exposure.mdx', 'operations/provisioning.mdx',
-  'operations/verification.mdx', 'operations/smoke-tests.mdx',
-  'operations/upgrade-rollback.mdx', 'bugbot/finding-publication.mdx',
+  'agents/execution-contract.mdx', 'agents/runtime-selection.mdx', 'agents/model-selection.mdx',
+  'agents/model-allowlists.mdx', 'agents/cli-commands.mdx', 'agents/failure-policy.mdx',
+  'security-operations/security/credentials.mdx', 'security-operations/security/trust-boundaries.mdx',
+  'security-operations/security/forks-and-pull-request-target.mdx', 'security-operations/security/self-hosted-runners.mdx',
+  'security-operations/security/secret-exposure.mdx', 'security-operations/operations/provisioning.mdx',
+  'security-operations/operations/verification.mdx', 'security-operations/operations/smoke-tests.mdx',
+  'security-operations/operations/upgrade-rollback.mdx', 'bugbot/finding-publication.mdx',
   'bugbot/permissions.mdx', 'bugbot/verification-commands.mdx',
   'development/architecture.mdx', 'development/local-development.mdx',
   'development/testing.mdx', 'development/build-artifacts.mdx',
-  'development/release-process.mdx', 'documentation-completeness-plan.mdx',
+  'development/release-process.mdx', 'development/documentation-completeness-plan.mdx',
 ];
 for (const file of requiredPages) {
   const absolute = path.join(docsRoot, file);
@@ -82,7 +82,13 @@ function collect(value) {
 collect(docsConfig);
 const categoryRoutes = new Set(['/', '/issues', '/pull-requests', '/single-actions', '/bugbot']);
 const missingRoutes = [...new Set(routes)].filter(route => !categoryRoutes.has(route))
-  .filter(route => !fs.existsSync(path.join(docsRoot, `${route.slice(1)}.mdx`)) && !fs.existsSync(path.join(docsRoot, `${route.slice(1)}.md`)));
+  .filter(route => {
+    const relative = route.slice(1);
+    return !fs.existsSync(path.join(docsRoot, `${relative}.mdx`))
+      && !fs.existsSync(path.join(docsRoot, `${relative}.md`))
+      && !fs.existsSync(path.join(docsRoot, relative, 'index.mdx'))
+      && !fs.existsSync(path.join(docsRoot, relative, 'index.md'));
+  });
 if (missingRoutes.length) throw new Error(`Missing docs.json routes: ${missingRoutes.join(', ')}`);
 
 const workflowFiles = fs.readdirSync(path.join(root, 'setup', 'workflows')).filter(file => file.endsWith('.yml'));
