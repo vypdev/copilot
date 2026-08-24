@@ -1,0 +1,9 @@
+---
+title: Finding publication
+description: How Bugbot validates, deduplicates, limits, and publishes findings.
+---
+# Finding publication
+
+Bugbot accepts only structured findings that pass schema, path, severity, duplicate, and comment-limit policies. Findings are published to the linked issue and, when applicable, to pull-request review comments.
+
+Publication MUST complete before a finding is marked resolved. Invalid responses, unsafe paths, malformed identifiers, or publication failures are terminal for that finding and MUST NOT produce a false resolved state.

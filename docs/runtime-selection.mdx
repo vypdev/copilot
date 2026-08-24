@@ -1,0 +1,15 @@
+---
+title: Runtime selection
+description: Select exactly one external CLI runtime for a run.
+---
+# Runtime selection
+
+`agent-provider` selects the executable runtime:
+
+| Value | Executable | Input mode |
+| --- | --- | --- |
+| `opencode` | `opencode` | Prompt through stdin, explicit `--model` |
+| `codex` | `codex` | Ephemeral stdin execution |
+| `cursor` | `agent` | Non-interactive prompt mode |
+
+Only the selected runtime is provisioned and executed. The runtime is not the model provider. For example, `opencode` can execute an `openai/...` model.

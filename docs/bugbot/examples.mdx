@@ -11,7 +11,7 @@ This page provides **concrete examples**: workflows that enable Bugbot detection
 
 ## Push workflow (with Bugbot)
 
-The **Commit** workflow runs on **push** to branches (typically excluding `main` and `develop`). If OpenCode is configured, Bugbot detection runs automatically for branches linked to an issue.
+The **Commit** workflow runs on **push** to branches (typically excluding `main` and `develop`). If an agent CLI is configured, Bugbot detection runs automatically for branches linked to an issue.
 
 ```yaml
 name: Copilot - Commit
@@ -161,7 +161,7 @@ After the run, findings appear on the issue and on any open PR for that branch.
 
 ## CLI: detect potential problems
 
-From the **repository root** (with a `.env` that has `PERSONAL_ACCESS_TOKEN` and, if needed, OpenCode env vars), you can run Bugbot detection locally:
+From the **repository root** (with a `.env` that has `PERSONAL_ACCESS_TOKEN` and, if needed, agent CLI environment variables), you can run Bugbot detection locally:
 
 ```bash
 # Require issue number; optional branch (default: current branch)

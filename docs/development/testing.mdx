@@ -1,0 +1,17 @@
+---
+title: Testing
+description: Reproducible quality gates for contributors.
+---
+# Testing
+
+Use Corepack and the pinned pnpm toolchain:
+
+```bash
+corepack pnpm@10.12.4 exec tsc --noEmit
+corepack pnpm@10.12.4 run lint
+corepack pnpm@10.12.4 exec jest --runInBand
+corepack pnpm@10.12.4 run build
+corepack pnpm@10.12.4 run validate:agent-docs
+```
+
+Tests MUST isolate environment variables such as `AGENT_PROVIDER`, `AGENT_MODEL_PROVIDER`, `AGENT_MODEL`, and `AGENT_COMMAND`. Real provider smoke tests are separate from deterministic unit tests and MUST NOT run without authorization and cost controls.

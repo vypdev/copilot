@@ -1,0 +1,15 @@
+---
+title: Verification
+description: Read-only checks that prove the selected CLI is available and controlled.
+---
+# Verification
+
+Run the verifier from the repository root:
+
+```bash
+node scripts/verify-agent-clis.cjs
+```
+
+The verifier MUST report the selected binary, version/help result, credential-reference status, and failures without secret values. A successful binary check does not prove a successful model request.
+
+For a provider smoke test, use a bounded prompt that requests exactly `READY`, read-only workspace permissions, and the explicit qualified model. Record exit status and sanitized diagnostics only.

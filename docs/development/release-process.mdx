@@ -1,0 +1,15 @@
+---
+title: Release process
+description: Evidence required before publishing a Copilot release.
+---
+# Release process
+
+1. Confirm the candidate branch and working tree.
+2. Review source, generated bundles, workflows, `action.yml`, and MDX navigation.
+3. Run all quality and documentation gates.
+4. Review the diff for credentials, legacy inputs, implicit defaults, and unauthorized fallback.
+5. Commit with a specific message.
+6. Push explicitly to the intended branch.
+7. Verify local and remote SHAs match and the working tree is clean.
+
+A release MUST NOT be described as complete without current command output proving these steps.

@@ -1,0 +1,17 @@
+---
+title: Agent execution contract
+description: Normative contract for runtime, model, command, authorization, and failure behavior.
+---
+# Agent execution contract
+
+A run MUST resolve one complete tuple before invoking a CLI:
+
+```text
+runtime = agent-provider
+model = agent-model-provider/agent-model
+command = agent-command or the selected provider default
+```
+
+The tuple is invalid if any field is empty, malformed, outside policy, or inconsistent with the selected provider. Validation is terminal. The implementation MUST NOT infer a missing model from a provider default.
+
+The contract is defined by `action.yml`, resolved by the input builder, authorized by the configuration policy, and executed by provider-specific adapters. See [Agent input reference](/agent-input-reference).

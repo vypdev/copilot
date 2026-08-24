@@ -1,0 +1,44 @@
+---
+title: Quick start
+description: Minimal verified setup for the Copilot Action.
+---
+# Quick start
+
+## Prerequisites
+
+You MUST have a GitHub repository, a fine-grained token stored as a repository secret, and a workflow that checks out the repository before invoking Copilot. Agent features additionally require a pinned CLI version and an approved credential reference.
+
+## Minimal workflow
+
+```yaml
+name: Copilot
+on: push
+jobs:
+  copilot:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: vypdev/copilot@master
+        with:
+          token: ${{ secrets.COPILOT_TOKEN }}
+          agent-provider: opencode
+          agent-model-provider: openai
+          agent-model: gpt-5.6-luna
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+```
+
+Pin a released Action ref in production. The example uses `master` only to show the current contract.
+
+## Verify before enabling writes
+
+1. Run the workflow with read-only permissions.
+2. Confirm the CLI version and model allowlists.
+3. Run the provider smoke procedure.
+4. Grant write permissions only to the workflows that need commits or comments.
+
+See [Configuration checklist](/configuration-checklist) and [Security](/security/credentials).

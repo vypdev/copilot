@@ -1,0 +1,13 @@
+---
+title: Build artifacts
+description: Generation and verification of the ncc bundles consumed by the Action and CLI.
+---
+# Build artifacts
+
+The source of truth is `src/`. Build artifacts are generated with:
+
+```bash
+corepack pnpm@10.12.4 run build
+```
+
+The build produces the Action and CLI bundles under `build/`. A successful build MUST be followed by `git diff --check`, the full test suite, and a review that no secret or prohibited transport was embedded.

@@ -61185,10 +61185,10 @@ function registerDoCommand(program) {
                 return;
             }
             console.log('\n' + '='.repeat(80));
-            console.log('🤖 RESPONSE (OpenCode build agent)');
+            console.log('🤖 RESPONSE (selected agent build execution)');
             console.log('='.repeat(80));
             console.log(`\n${text || '(No text response)'}\n`);
-            console.log('Changes are applied directly in the workspace when OpenCode runs from the repo (e.g. opencode serve).');
+            console.log('Changes are applied directly in the workspace by the selected agent CLI.');
         }
         catch (error) {
             const err = error instanceof Error ? error : new Error(String(error));

@@ -1,0 +1,16 @@
+---
+title: Model selection
+description: Select a qualified model without implicit provider or model fallback.
+---
+# Model selection
+
+Set the provider and model independently:
+
+```yaml
+agent-model-provider: openai
+agent-model: gpt-5.6-luna
+```
+
+The effective qualified model is `openai/gpt-5.6-luna`. The provider prefix MUST NOT be duplicated in `agent-model`. A blank or malformed value fails before the CLI starts.
+
+Changing the model MAY change cost, quota, latency, and data-processing behavior. Treat a model change as an operational change requiring verification.

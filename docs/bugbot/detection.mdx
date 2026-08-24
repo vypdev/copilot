@@ -13,7 +13,7 @@ Bugbot detection runs in two ways:
 
 ### 1. On every push (commit workflow)
 
-When you push to a branch that is **linked to an issue** (e.g. a feature or bugfix branch created by Copilot), the **Commit** workflow runs. If OpenCode is configured, the action runs **DetectPotentialProblemsUseCase**: it loads existing finding context, asks OpenCode to analyze the branch vs the base, and then publishes new findings and updates or marks as resolved any previous findings that no longer apply.
+When you push to a branch that is **linked to an issue** (e.g. a feature or bugfix branch created by Copilot), the **Commit** workflow runs. If an agent CLI is configured, the action runs **DetectPotentialProblemsUseCase**: it loads existing finding context, asks OpenCode to analyze the branch vs the base, and then publishes new findings and updates or marks as resolved any previous findings that no longer apply.
 
 **Requirements:**
 

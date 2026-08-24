@@ -39,6 +39,21 @@
           "icon": "rocket"
         },
         {
+          "title": "Overview",
+          "href": "/overview",
+          "icon": "book"
+        },
+        {
+          "title": "Quick start",
+          "href": "/quick-start",
+          "icon": "play"
+        },
+        {
+          "title": "Configuration checklist",
+          "href": "/configuration-checklist",
+          "icon": "check-square"
+        },
+        {
           "title": "How To Use",
           "href": "/how-to-use",
           "icon": "list-check"
@@ -107,7 +122,57 @@
           "title": "Troubleshooting",
           "href": "/troubleshooting",
           "icon": "wrench"
+        },
+        {
+          "title": "Documentation completeness plan",
+          "href": "/documentation-completeness-plan",
+          "icon": "clipboard"
         }
+      ]
+    },
+    {
+      "group": "Agent Execution",
+      "tab": "root",
+      "pages": [
+        { "title": "Execution contract", "href": "/agent-execution-contract", "icon": "file-text" },
+        { "title": "Runtime selection", "href": "/runtime-selection", "icon": "cpu" },
+        { "title": "Model selection", "href": "/model-selection", "icon": "sliders" },
+        { "title": "Model allowlists", "href": "/model-allowlists", "icon": "shield" },
+        { "title": "CLI commands", "href": "/cli-commands", "icon": "terminal" },
+        { "title": "Failure behavior", "href": "/agent-failure-policy", "icon": "alert-triangle" }
+      ]
+    },
+    {
+      "group": "Security",
+      "tab": "root",
+      "pages": [
+        { "title": "Credentials", "href": "/security/credentials", "icon": "key" },
+        { "title": "Trust boundaries", "href": "/security/trust-boundaries", "icon": "shield" },
+        { "title": "Forks and pull_request_target", "href": "/security/forks-and-pull-request-target", "icon": "git-pull-request" },
+        { "title": "Self-hosted runners", "href": "/security/self-hosted-runners", "icon": "server" },
+        { "title": "Secret exposure rules", "href": "/security/secret-exposure", "icon": "lock" },
+        { "title": "Authentication compliance", "href": "/codex-authentication-and-compliance", "icon": "file-text" }
+      ]
+    },
+    {
+      "group": "Operations",
+      "tab": "root",
+      "pages": [
+        { "title": "Provisioning", "href": "/operations/provisioning", "icon": "download" },
+        { "title": "Verification", "href": "/operations/verification", "icon": "check-circle" },
+        { "title": "Smoke tests", "href": "/operations/smoke-tests", "icon": "activity" },
+        { "title": "Upgrade and rollback", "href": "/operations/upgrade-rollback", "icon": "rotate-ccw" }
+      ]
+    },
+    {
+      "group": "Development",
+      "tab": "root",
+      "pages": [
+        { "title": "Architecture", "href": "/development/architecture", "icon": "layers" },
+        { "title": "Local development", "href": "/development/local-development", "icon": "code" },
+        { "title": "Testing", "href": "/development/testing", "icon": "check-square" },
+        { "title": "Build artifacts", "href": "/development/build-artifacts", "icon": "package" },
+        { "title": "Release process", "href": "/development/release-process", "icon": "upload" }
       ]
     },
     {
@@ -274,6 +339,16 @@
           "icon": "search"
         },
         {
+          "title": "Finding publication",
+          "href": "/bugbot/finding-publication",
+          "icon": "message-square"
+        },
+        {
+          "title": "Permissions",
+          "href": "/bugbot/permissions",
+          "icon": "shield"
+        },
+        {
           "title": "Autofix",
           "href": "/bugbot/autofix",
           "icon": "wrench"
@@ -287,6 +362,11 @@
           "title": "Configuration",
           "href": "/bugbot/configuration",
           "icon": "gear"
+        },
+        {
+          "title": "Verification commands",
+          "href": "/bugbot/verification-commands",
+          "icon": "check-circle"
         },
         {
           "title": "How it works",

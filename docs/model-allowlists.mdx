@@ -1,0 +1,14 @@
+---
+title: Model allowlists
+description: Authorize exact model providers and qualified models before execution.
+---
+# Model allowlists
+
+Allowlists are authorization policy, not defaults:
+
+```text
+AGENT_ALLOWED_MODEL_PROVIDERS=openai
+AGENT_ALLOWED_MODELS=openai/gpt-5.6-luna
+```
+
+The selected model provider MUST appear in the first list. The exact qualified model MUST appear in the second list. A provider may be allowed while a particular model remains forbidden. The action fails closed when either check fails.

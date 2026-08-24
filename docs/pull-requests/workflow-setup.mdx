@@ -68,9 +68,9 @@ jobs:
 
 4. **Reviewers:** If `desired-reviewers-count` is set, the action assigns up to that many reviewers. See [Configuration](/pull-requests/configuration).
 
-5. **Size and priority:** The action computes **size** (XS–XXL) and **progress** (if OpenCode is configured) from the branch diff and applies the corresponding labels to the **issue** and to the **PR**. Same thresholds as in [Configuration](/configuration).
+5. **Size and priority:** The action computes **size** (XS–XXL) and **progress** (if the selected agent CLI is configured) from the branch diff and applies the corresponding labels to the **issue** and to the **PR**. Same thresholds as in [Configuration](/configuration).
 
-6. **AI PR description:** If `ai-pull-request-description` is true and OpenCode is configured, the action can generate or update the PR description from the issue and the branch diff. See [AI PR description](/pull-requests/ai-description).
+6. **AI PR description:** If `ai-pull-request-description` is true and the selected agent CLI is configured, the action can generate or update the PR description from the issue and the branch diff. See [AI PR description](/pull-requests/ai-description).
 
 7. **Comments and images:** The action can post a comment on the PR with optional images per branch type (feature, bugfix, etc.). See [Capabilities](/pull-requests/capabilities).
 

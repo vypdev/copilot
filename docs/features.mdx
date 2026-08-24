@@ -51,7 +51,7 @@ When the workflow runs on `pull_request` (opened, edited, etc.):
 | **Project linking** | Adds the PR to the configured GitHub Projects and moves it to the configured column. |
 | **Reviewers** | Assigns up to `desired-reviewers-count` reviewers. |
 | **Priority & size** | Applies priority and size checks (labels and thresholds). |
-| **AI PR description** | If `ai-pull-request-description` is true and OpenCode is configured, generates or updates the PR description by filling the repo's `.github/pull_request_template.md` from the issue and the branch diff (configured agent CLI). See [Pull Requests → AI-generated PR description](/pull-requests/ai-description). |
+| **AI PR description** | If `ai-pull-request-description` is true and the selected agent CLI is configured, generates or updates the PR description by filling the repo's `.github/pull_request_template.md` from the issue and the branch diff (configured agent CLI). See [Pull Requests → AI-generated PR description](/pull-requests/ai-description). |
 | **Comments & images** | Posts comments with optional images per branch type. |
 
 ### 3. Push events (`on: push`)
@@ -64,7 +64,7 @@ When the workflow runs on `push` (e.g. to any branch):
 | **Commit prefix check** | Warns if commit messages do not follow the prefix derived from the branch name (using `commit-prefix-transforms`). |
 | **Reopen issue** | If `reopen-issue-on-push` is true, reopens the issue when new commits are pushed to its branch. |
 | **Size & progress** | Computes size (XS–XXL) and progress (0–100%) from the branch diff; updates the **issue** and any **open PRs** for that branch with the same labels. Requires OpenCode for progress. No separate workflow is needed. |
-| **Bugbot (potential problems)** | OpenCode analyzes the branch vs base and reports findings as **comments on the issue** and **review comments on open PRs**; updates issue comments when findings are resolved and **marks PR review threads as resolved** when applicable. Configurable via `bugbot-severity` and `ai-ignore-files`. See [Bugbot](/bugbot), [Issues](/issues#bugbot-potential-problems), and [Pull Requests](/pull-requests#bugbot-potential-problems). |
+| **Bugbot (potential problems)** | the configured agent analyzes the branch vs base and reports findings as **comments on the issue** and **review comments on open PRs**; updates issue comments when findings are resolved and **marks PR review threads as resolved** when applicable. Configurable via `bugbot-severity` and `ai-ignore-files`. See [Bugbot](/bugbot), [Issues](/issues#bugbot-potential-problems), and [Pull Requests](/pull-requests#bugbot-potential-problems). |
 | **Comments & images** | Posts commit summary comments with optional images. |
 
 ---
@@ -76,7 +76,7 @@ When you set `single-action` (and, when required, `single-action-issue`, `single
 | Single action value | Inputs required | Description |
 |--------------------|----------------|-------------|
 | **`check_progress_action`** | `single-action-issue` | Runs progress check on demand (e.g. without pushing). Progress is normally updated automatically on every push; use this to re-run the check or when no push workflow is configured. |
-| **`detect_potential_problems_action`** | `single-action-issue` | Bugbot: OpenCode analyzes the branch vs base; reports findings as comments on the issue and as PR review comments; updates issue comments and marks PR review threads as resolved when findings are fixed. |
+| **`detect_potential_problems_action`** | `single-action-issue` | Bugbot: the configured agent analyzes the branch vs base; reports findings as comments on the issue and as PR review comments; updates issue comments and marks PR review threads as resolved when findings are fixed. |
 | **`recommend_steps_action`** | `single-action-issue` | Uses OpenCode Plan to recommend implementation steps from the issue description; posts a comment on the issue. |
 | **`think_action`** | — | Uses OpenCode Plan for deep code analysis and change proposals (reasoning over the codebase). No issue required. |
 | **`initial_setup`** | — | Performs initial setup: creates labels, issue types, verifies access. If the repo has no version tags, creates default tag `v1.0.0` so release/hotfix issues get a base version. No issue required. |
@@ -97,7 +97,7 @@ All AI features use the configured agent CLI and explicit model contract. The ru
 |--------|----------------|-------------|
 | **Check progress** | Push (commit) pipeline; optional single action `check_progress_action` / CLI `check-progress` | On every push, OpenCode Plan compares issue vs branch diff and updates the progress label on the issue and on any open PRs for that branch. You can also run it on demand via single action or CLI. |
 | **Bugbot (potential problems)** | Push (commit) pipeline; optional single action `detect_potential_problems_action` / CLI `detect-potential-problems` | Analyzes branch vs base and posts findings as **comments on the issue** and **review comments on open PRs**; updates issue comments and marks PR review threads as resolved when findings are fixed. Configurable: `bugbot-severity`, `ai-ignore-files`. |
-| **Do user request** | Issue comment; PR review comment | When you comment asking to perform a change in the repo (e.g. "add a test for X", "refactor this", "implement feature Y"), OpenCode applies the changes in the workspace, runs verify commands, and the action commits and pushes with a generic message. Same permission as Bugbot autofix: **only org members or the repo owner**. Uses the same `bugbot-fix-verify-commands` and OpenCode setup. |
+| **Do user request** | Issue comment; PR review comment | When you comment asking to perform a change in the repo (e.g. "add a test for X", "refactor this", "implement feature Y"), the configured agent applies the changes in the workspace, runs verify commands, and the action commits and pushes with a generic message. Same permission as Bugbot autofix: **only org members or the repo owner**. Uses the same `bugbot-fix-verify-commands` and agent CLI setup. |
 | **Think / reasoning** | Issue/PR comment pipeline; single action `think_action` | Deep code analysis and change proposals (configured agent CLI). On comments: answers when mentioned (or on any comment for question/help issues). Runs when the comment was not a fix/do request or when the user is not allowed to trigger file-modifying actions. |
 | **Comment translation** | Issue comment; PR review comment | Translates comments to the configured locale (`issues-locale`, `pull-requests-locale`) when they are written in another language. |
 | **AI PR description** | Pull request pipeline | Fills the repo's `.github/pull_request_template.md` from issue and branch diff (configured agent CLI). |

@@ -1,0 +1,17 @@
+---
+title: Self-hosted runners
+description: Isolation and cleanup requirements for self-hosted agent execution.
+---
+# Self-hosted runners
+
+A self-hosted runner that can access agent credentials MUST be dedicated or isolated from unrelated workloads. Operators MUST:
+
+- restrict repository and organization access;
+- prevent untrusted fork jobs from selecting the runner;
+- patch the operating system and CLIs;
+- remove workspaces and transient logs after runs;
+- restrict outbound network access where feasible;
+- audit runner labels and permissions;
+- keep local session files outside repository workspaces.
+
+A shared persistent runner is not equivalent to an ephemeral trusted runner.

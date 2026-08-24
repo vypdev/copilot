@@ -1,0 +1,30 @@
+---
+title: Documentation completeness plan
+description: Public plan and acceptance criteria for the complete, fragmented Copilot documentation.
+---
+
+# Documentation completeness plan
+
+This plan defines the public documentation structure and the evidence required to keep it aligned with the implementation.
+
+## Information architecture
+
+- Getting Started: overview, quick start, first workflow, checklist.
+- Agent Execution: contract, runtime, model, allowlists, commands, failures.
+- Security: credentials, trust boundaries, forks, self-hosted runners, exposure, compliance.
+- Operations: provisioning, versions, verification, smoke tests, upgrades, rollback.
+- Bugbot: detection, publication, autofix, user requests, verification, permissions.
+- Development: architecture, local workflow, testing, artifacts, release.
+
+## Acceptance criteria
+
+Every public page MUST:
+
+- describe the current CLI-only contract;
+- identify required, optional, forbidden, and terminal behavior;
+- avoid undocumented defaults and implicit fallbacks;
+- link to the applicable source of truth;
+- use MDX and appear in `docs.json` when it is a user-facing reference;
+- avoid secrets, authentication values, and unverifiable success claims.
+
+The repository validator checks action inputs, defaults, allowlists, workflow references, navigation routes, and forbidden legacy identifiers. A documentation change is incomplete until the validator, tests, lint, build, and diff checks pass.
