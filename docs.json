@@ -8,6 +8,21 @@
       "href": "/"
     },
     {
+      "id": "agents",
+      "title": "Agents",
+      "href": "/agents"
+    },
+    {
+      "id": "security-operations",
+      "title": "Security & Operations",
+      "href": "/security-operations"
+    },
+    {
+      "id": "development",
+      "title": "Development",
+      "href": "/development"
+    },
+    {
       "id": "issues",
       "title": "Issues",
       "href": "/issues"
@@ -49,6 +64,11 @@
           "icon": "play"
         },
         {
+          "title": "First workflow",
+          "href": "/first-workflow",
+          "icon": "check-square"
+        },
+        {
           "title": "Configuration checklist",
           "href": "/configuration-checklist",
           "icon": "check-square"
@@ -62,90 +82,30 @@
           "title": "Features & Capabilities",
           "href": "/features",
           "icon": "list"
-        },
-        {
-          "title": "Authentication",
-          "href": "/authentication",
-          "icon": "key"
-        },
-        {
-          "title": "Agent CLI configuration",
-          "href": "/agent-cli-configuration",
-          "icon": "settings"
-        },
-        {
-          "title": "Agent input reference",
-          "href": "/agent-input-reference",
-          "icon": "list"
-        },
-        {
-          "title": "Agent failure policy",
-          "href": "/agent-failure-policy",
-          "icon": "alert-triangle"
-        },
-        {
-          "title": "Hardening plan",
-          "href": "/agent-contract-hardening-plan",
-          "icon": "clipboard"
-        },
-        {
-          "title": "Agent CLI runners",
-          "href": "/agent-cli-runners",
-          "icon": "terminal"
-        },
-        {
-          "title": "Agent CLI provisioning",
-          "href": "/agent-cli-provisioning",
-          "icon": "download"
-        },
-        {
-          "title": "Codex authentication",
-          "href": "/codex-authentication-and-compliance",
-          "icon": "key"
-        },
-        {
-          "title": "OpenCode (AI)",
-          "href": "/opencode-integration",
-          "icon": "cpu"
-        },
-        {
-          "title": "Testing OpenCode Plan Locally",
-          "href": "/testing-opencode-plan-locally",
-          "icon": "terminal"
-        },
-        {
-          "title": "Configuration",
-          "href": "/configuration",
-          "icon": "gear"
-        },
-        {
-          "title": "Troubleshooting",
-          "href": "/troubleshooting",
-          "icon": "wrench"
-        },
-        {
-          "title": "Documentation completeness plan",
-          "href": "/documentation-completeness-plan",
-          "icon": "clipboard"
         }
       ]
     },
     {
-      "group": "Agent Execution",
-      "tab": "root",
+      "group": "Agents",
+      "tab": "agents",
       "pages": [
+        { "title": "Overview", "href": "/agents", "icon": "cpu" },
         { "title": "Execution contract", "href": "/agent-execution-contract", "icon": "file-text" },
         { "title": "Runtime selection", "href": "/runtime-selection", "icon": "cpu" },
-        { "title": "Model selection", "href": "/model-selection", "icon": "sliders" },
+        { "title": "Model selection", "href": "/model-selection", "icon": "settings" },
         { "title": "Model allowlists", "href": "/model-allowlists", "icon": "shield" },
         { "title": "CLI commands", "href": "/cli-commands", "icon": "terminal" },
+        { "title": "CLI configuration", "href": "/agent-cli-configuration", "icon": "settings" },
+        { "title": "OpenCode", "href": "/opencode-integration", "icon": "cpu" },
+        { "title": "Input reference", "href": "/agent-input-reference", "icon": "list" },
         { "title": "Failure behavior", "href": "/agent-failure-policy", "icon": "alert-triangle" }
       ]
     },
     {
       "group": "Security",
-      "tab": "root",
+      "tab": "security-operations",
       "pages": [
+        { "title": "Overview", "href": "/security/overview", "icon": "shield" },
         { "title": "Credentials", "href": "/security/credentials", "icon": "key" },
         { "title": "Trust boundaries", "href": "/security/trust-boundaries", "icon": "shield" },
         { "title": "Forks and pull_request_target", "href": "/security/forks-and-pull-request-target", "icon": "git-pull-request" },
@@ -156,22 +116,28 @@
     },
     {
       "group": "Operations",
-      "tab": "root",
+      "tab": "security-operations",
       "pages": [
         { "title": "Provisioning", "href": "/operations/provisioning", "icon": "download" },
+        { "title": "CLI provisioning details", "href": "/agent-cli-provisioning", "icon": "download" },
+        { "title": "Version pinning", "href": "/operations/version-pinning", "icon": "tag" },
         { "title": "Verification", "href": "/operations/verification", "icon": "check-circle" },
         { "title": "Smoke tests", "href": "/operations/smoke-tests", "icon": "activity" },
+        { "title": "CLI runners", "href": "/agent-cli-runners", "icon": "server" },
+        { "title": "Troubleshooting", "href": "/troubleshooting", "icon": "wrench" },
         { "title": "Upgrade and rollback", "href": "/operations/upgrade-rollback", "icon": "rotate-ccw" }
       ]
     },
     {
       "group": "Development",
-      "tab": "root",
+      "tab": "development",
       "pages": [
         { "title": "Architecture", "href": "/development/architecture", "icon": "layers" },
         { "title": "Local development", "href": "/development/local-development", "icon": "code" },
         { "title": "Testing", "href": "/development/testing", "icon": "check-square" },
         { "title": "Build artifacts", "href": "/development/build-artifacts", "icon": "package" },
+        { "title": "Documentation", "href": "/development/documentation", "icon": "file-text" },
+        { "title": "Documentation completeness plan", "href": "/documentation-completeness-plan", "icon": "clipboard" },
         { "title": "Release process", "href": "/development/release-process", "icon": "upload" }
       ]
     },
@@ -183,6 +149,11 @@
           "title": "Overview",
           "href": "/issues",
           "icon": "book"
+        },
+        {
+          "title": "First workflow",
+          "href": "/issues/first-workflow",
+          "icon": "check-square"
         },
         {
           "title": "Labels and branch types",
@@ -267,6 +238,11 @@
           "icon": "book"
         },
         {
+          "title": "First workflow",
+          "href": "/pull-requests/first-workflow",
+          "icon": "check-square"
+        },
+        {
           "title": "Workflow setup",
           "href": "/pull-requests/workflow-setup",
           "icon": "play"
@@ -318,6 +294,11 @@
           "icon": "terminal"
         },
         {
+          "title": "Permissions and safety",
+          "href": "/single-actions/permissions",
+          "icon": "shield"
+        },
+        {
           "title": "Examples",
           "href": "/single-actions/examples",
           "icon": "file-code"
@@ -332,6 +313,11 @@
           "title": "Overview",
           "href": "/bugbot",
           "icon": "bug"
+        },
+        {
+          "title": "Concepts",
+          "href": "/bugbot/concepts",
+          "icon": "list"
         },
         {
           "title": "Detection",
@@ -372,6 +358,11 @@
           "title": "How it works",
           "href": "/bugbot/how-it-works",
           "icon": "cpu"
+        },
+        {
+          "title": "Failure scenarios",
+          "href": "/bugbot/failure-scenarios",
+          "icon": "alert-triangle"
         },
         {
           "title": "Examples",

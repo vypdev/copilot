@@ -1,0 +1,7 @@
+{
+  "source": "docs-page Font Awesome icon names plus names already used by validated repository pages",
+  "verifiedAt": "2026-08-24",
+  "icons": [
+    "activity", "alert-circle", "alert-triangle", "bell", "book", "bug", "check-circle", "check-square", "circle-dot", "clipboard", "clock", "code", "code-branch", "cpu", "download", "edit", "file-code", "file-text", "fire", "gear", "git-branch", "git-commit", "git-merge", "git-pull-request", "help-circle", "image", "key", "layers", "layout-grid", "lightbulb", "list", "list-check", "lock", "message-square", "package", "people", "play", "rocket", "rotate-ccw", "search", "server", "settings", "shield", "tag", "terminal", "upload", "user-x", "wrench"
+  ]
+}

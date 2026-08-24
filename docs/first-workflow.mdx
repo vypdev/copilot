@@ -1,0 +1,40 @@
+---
+title: First workflow
+description: Create and verify a complete Copilot workflow before enabling broader automation.
+---
+
+# First workflow
+
+Use this page after [Quick start](/quick-start). It creates one controlled workflow, verifies the result, and only then expands the configuration.
+
+<Warning>
+Start with the minimum permissions and a trusted branch. Do not expose write credentials to forked pull requests.
+</Warning>
+
+<Steps>
+  <Step title="Create the workflow">
+    Add a workflow under `.github/workflows/` that checks out the repository and invokes the Copilot Action. Use an explicit Action ref for production.
+  </Step>
+  <Step title="Set permissions">
+    Grant only the permissions required by the selected capability. Detection can start with read-oriented permissions; comments and commits require explicit write permissions.
+  </Step>
+  <Step title="Configure the agent tuple">
+    Set `agent-provider`, `agent-model-provider`, and `agent-model` explicitly. Configure the matching credential reference and model allowlists.
+  </Step>
+  <Step title="Run on a trusted branch">
+    Trigger the workflow on a branch controlled by the repository. Confirm the workflow starts, the selected CLI is provisioned, and the model policy passes.
+  </Step>
+  <Step title="Verify the result">
+    Check the expected comment, label, branch, or output. Review sanitized logs and confirm that no credential or sensitive workspace content was exposed.
+  </Step>
+</Steps>
+
+## Minimal verification checklist
+
+- [ ] The workflow used the intended event.
+- [ ] The selected runtime and qualified model were explicit.
+- [ ] Provisioning and authentication preflight passed.
+- [ ] The expected GitHub side effect occurred once.
+- [ ] No fork or untrusted checkout received write credentials.
+
+For agent details, see [Agents](/agents). For operational controls, see [Security & Operations](/security-operations).

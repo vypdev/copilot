@@ -1,0 +1,29 @@
+---
+title: Security overview
+description: Identify the trust boundary, credential boundary, and write boundary before enabling Copilot.
+---
+
+# Security overview
+
+Copilot can read repository data, invoke an external agent CLI, publish GitHub results, and optionally mutate a workspace. These are separate boundaries and must be authorized separately.
+
+| Boundary | Question | Required control |
+| --- | --- | --- |
+| Event | Who can trigger the workflow? | Trusted event and actor policy |
+| Workspace | Which checkout can the agent inspect or modify? | Explicit ref and checkout policy |
+| Credential | Which credential is available? | Environment reference, never command arguments |
+| Model | Which provider/model may run? | Qualified model and allowlists |
+| Write | Which GitHub or workspace side effects are allowed? | Minimal permissions and verification |
+
+<Warning>
+Do not use a personal interactive session credential as a general GitHub-hosted CI credential. Use an approved API or enterprise automation credential for CI, or keep local session authentication on a controlled self-hosted runner.
+</Warning>
+
+## Related controls
+
+- [Credentials](/security/credentials)
+- [Trust boundaries](/security/trust-boundaries)
+- [Forks and pull_request_target](/security/forks-and-pull-request-target)
+- [Self-hosted runners](/security/self-hosted-runners)
+- [Secret exposure rules](/security/secret-exposure)
+- [Permissions](/bugbot/permissions)

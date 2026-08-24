@@ -1,0 +1,39 @@
+---
+title: Agents
+description: Configure, authorize, provision, and execute Copilot agent runtimes.
+---
+
+# Agents
+
+Agents are external headless CLIs. Copilot keeps the runtime, model provider, model, credentials, and authorization policy explicit.
+
+<CardGroup cols={2}>
+  <Card title="Agent contract" icon="file-text" href="/agent-execution-contract">
+    Understand the runtime/model tuple and effective configuration.
+  </Card>
+  <Card title="Runtime selection" icon="cpu" href="/runtime-selection">
+    Compare OpenCode, Codex, and Cursor execution modes.
+  </Card>
+  <Card title="Model selection" icon="settings" href="/model-selection">
+    Select and authorize the qualified model.
+  </Card>
+  <Card title="CLI commands" icon="terminal" href="/cli-commands">
+    Review the exact provider-specific command shapes.
+  </Card>
+</CardGroup>
+
+## Recommended path
+
+<Steps>
+  <Step title="Define the tuple">Set the runtime, model provider, and model explicitly.</Step>
+  <Step title="Authorize the model">Configure exact provider and model allowlists.</Step>
+  <Step title="Provision and authenticate">Follow [Security & Operations](/security-operations).</Step>
+  <Step title="Verify before writes">Run a bounded, read-only verification or smoke test.</Step>
+</Steps>
+
+## Related documentation
+
+- [Agent input reference](/agent-input-reference)
+- [Failure behavior](/agent-failure-policy)
+- [Bugbot](/bugbot)
+- [Development](/development)

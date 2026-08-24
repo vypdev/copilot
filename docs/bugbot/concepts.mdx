@@ -1,0 +1,20 @@
+---
+title: Bugbot concepts
+description: Understand findings, severity, resolution, and the Bugbot lifecycle.
+---
+
+# Bugbot concepts
+
+A finding is a structured report produced by the configured agent after inspecting the allowed workspace. Detection, publication, autofix, and resolution are separate stages.
+
+| Stage | Meaning | Side effect |
+| --- | --- | --- |
+| Detection | Analyze the selected diff or request | None by default |
+| Publication | Publish a bounded finding | Comment or review output |
+| Autofix | Apply an explicitly requested change | Workspace mutation |
+| Verification | Run configured checks | May block publication or commit |
+| Resolution | Mark a finding addressed | Comment/update marker |
+
+Severity and publication policy must be explicit. A missing credential, invalid model policy, malformed response, timeout, or failed verification is terminal.
+
+See [Detection](/bugbot/detection), [Finding publication](/bugbot/finding-publication), and [Autofix](/bugbot/autofix).

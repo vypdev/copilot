@@ -1,0 +1,27 @@
+---
+title: Documentation maintenance
+description: Maintain the information architecture, MDX components, routes, and documentation validation gates.
+---
+
+# Documentation maintenance
+
+Documentation is part of the product contract. A page is complete only when its content, route, component usage, icon, source of truth, and links are all verified.
+
+## Source of truth
+
+- `action.yml`: public inputs and defaults.
+- `src/`: runtime behavior, validation, adapters, and policies.
+- `.github/workflows/`: event, permissions, and variable propagation.
+- `docs.json`: tabs, groups, titles, icons, and routes.
+- `docs-page` catalog: supported MDX components and icon vocabulary.
+
+## Change procedure
+
+<Steps>
+  <Step title="Inspect the contract">Read the implementation and workflow before changing prose.</Step>
+  <Step title="Update the smallest page">Keep one user task or concept per page.</Step>
+  <Step title="Validate components and routes">Use only supported MDX components and icons.</Step>
+  <Step title="Run the documentation gates">Check links, frontmatter, defaults, terms, and generated artifacts.</Step>
+</Steps>
+
+See the [documentation completeness plan](/documentation-completeness-plan) for the complete information architecture.

@@ -123,7 +123,7 @@ source paths must always be verified before acting.
 The original reconstruction spike contained 2327 nodes and 6764 edges and
 highlighted `Execution`, `GithubClientPort`, `IssueRepository`,
 `RepositoryFactory`, and the former AI facade. Those metrics remain useful only
-as historical comparison in `migration-baseline.md`; several named facades no
+as a historical comparison; several named facades no
 longer exist in production and must not be treated as current hotspots.
 
 ## Privacy and generated artifacts
