@@ -89,19 +89,29 @@ Single actions that **throw an error** if the last step fails: `publish_github_a
 
 ---
 
-## AI features (OpenCode)
+## AI features and runtime coverage
 
 All AI features use the configured agent CLI and explicit model contract. The runtime is selected with `agent-provider`; the model provider and model are selected with `agent-model-provider` and `agent-model`. See [Agent CLI configuration](/agents/cli-configuration).
 
+<Warning>
+OpenCode is the currently validated runtime for the repository's AI feature paths. Codex is supported as a CLI runtime but has a narrower validation boundary. Cursor is WIP and must not be described as production-validated; see [Cursor runtime (WIP)](/agents/cursor-wip).
+</Warning>
+
+| Runtime | Status | Documentation |
+| --- | --- | --- |
+| OpenCode | Validated path | [OpenCode runtime](/agents/opencode) |
+| Codex with OpenAI | Implemented CLI path; verify authentication and model behavior before production use | [Codex and OpenAI](/agents/codex-openai) |
+| Cursor | WIP; authenticated smoke test pending | [Cursor runtime (WIP)](/agents/cursor-wip) |
+
 | Feature | Where it runs | Description |
 |--------|----------------|-------------|
-| **Check progress** | Push (commit) pipeline; optional single action `check_progress_action` / CLI `check-progress` | On every push, OpenCode Plan compares issue vs branch diff and updates the progress label on the issue and on any open PRs for that branch. You can also run it on demand via single action or CLI. |
+| **Check progress** | Push (commit) pipeline; optional single action `check_progress_action` / CLI `check-progress` | On every push, the configured agent compares issue vs branch diff and updates the progress label on the issue and on any open PRs for that branch. The currently validated implementation path uses OpenCode Plan. |
 | **Bugbot (potential problems)** | Push (commit) pipeline; optional single action `detect_potential_problems_action` / CLI `detect-potential-problems` | Analyzes branch vs base and posts findings as **comments on the issue** and **review comments on open PRs**; updates issue comments and marks PR review threads as resolved when findings are fixed. Configurable: `bugbot-severity`, `ai-ignore-files`. |
 | **Do user request** | Issue comment; PR review comment | When you comment asking to perform a change in the repo (e.g. "add a test for X", "refactor this", "implement feature Y"), the configured agent applies the changes in the workspace, runs verify commands, and the action commits and pushes with a generic message. Same permission as Bugbot autofix: **only org members or the repo owner**. Uses the same `bugbot-fix-verify-commands` and agent CLI setup. |
 | **Think / reasoning** | Issue/PR comment pipeline; single action `think_action` | Deep code analysis and change proposals (configured agent CLI). On comments: answers when mentioned (or on any comment for question/help issues). Runs when the comment was not a fix/do request or when the user is not allowed to trigger file-modifying actions. |
 | **Comment translation** | Issue comment; PR review comment | Translates comments to the configured locale (`issues-locale`, `pull-requests-locale`) when they are written in another language. |
 | **AI PR description** | Pull request pipeline | Fills the repo's `.github/pull_request_template.md` from issue and branch diff (configured agent CLI). |
-| **Copilot** | CLI `giik copilot` | Code analysis and file edits via OpenCode Build agent. |
+| **Copilot** | CLI `giik copilot` | Code analysis and file edits via the configured agent runtime; the currently validated path uses OpenCode Build. |
 | **Recommend steps** | Single action / CLI | Suggests implementation steps from the issue description (configured agent CLI). |
 
 

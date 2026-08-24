@@ -111,5 +111,7 @@ jobs:
           debug: ${{ vars.DEBUG }}
           single-action: 'deployed_action'
           single-action-issue: '${{ github.event.inputs.issue }}'
-          opencode-model: ${{ vars.OPENCODE_MODEL }}
+          agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+          agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
           token: ${{ secrets.PAT }}

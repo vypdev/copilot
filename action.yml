@@ -443,7 +443,7 @@ inputs:
     description: "Maximum number of potential-problem findings to publish as individual comments on the issue and PR. Extra findings are summarized in a single overflow comment."
     default: "20"
   bugbot-fix-verify-commands:
-    description: "Comma-separated commands to run after bugbot autofix (e.g. pnpm run build, pnpm test, pnpm run lint). OpenCode runs these in its workspace; the runner can re-run them before commit. If empty, only OpenCode's run is used."
+    description: "Comma-separated commands to run after bugbot autofix (e.g. pnpm run build, pnpm test, pnpm run lint). The selected agent runtime runs these in its workspace; the runner can re-run them before commit. If empty, no additional verification commands are requested."
     default: ""
 runs:
   using: "node20"

@@ -52,6 +52,7 @@ const requiredPages = [
   'overview.mdx', 'quick-start.mdx', 'configuration-checklist.mdx',
   'agents/execution-contract.mdx', 'agents/runtime-selection.mdx', 'agents/model-selection.mdx',
   'agents/model-allowlists.mdx', 'agents/cli-commands.mdx', 'agents/failure-policy.mdx',
+  'agents/codex-openai.mdx', 'agents/cursor-wip.mdx',
   'security-operations/security/credentials.mdx', 'security-operations/security/trust-boundaries.mdx',
   'security-operations/security/forks-and-pull-request-target.mdx', 'security-operations/security/self-hosted-runners.mdx',
   'security-operations/security/secret-exposure.mdx', 'security-operations/operations/provisioning.mdx',

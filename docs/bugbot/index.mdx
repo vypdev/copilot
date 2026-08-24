@@ -7,6 +7,10 @@ description: Detect potential problems, publish findings, and optionally apply t
 
 Bugbot analyzes changes with the configured agent CLI and publishes structured findings to issues and pull requests. It can optionally apply fixes or user-requested changes when the workflow is restricted to trusted actors and the verification commands pass.
 
+<Warning>
+The repository's currently validated Bugbot path uses OpenCode. Codex is an implemented CLI runtime with a narrower validation boundary, and Cursor remains WIP. See [runtime coverage](/features#ai-features-and-runtime-coverage) before selecting a non-OpenCode runtime.
+</Warning>
+
 ## Requirements
 
 - a configured `agent-provider`, `agent-model-provider`, and `agent-model`;

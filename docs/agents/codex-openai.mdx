@@ -1,0 +1,91 @@
+---
+title: Codex and OpenAI runtime
+description: Use the OpenAI Codex CLI and understand the separate OpenAI model-provider contract.
+---
+
+# Codex and OpenAI
+
+## Status
+
+<Warning>
+Codex execution is implemented as a CLI runtime. OpenAI model-provider support is documented and validated for the OpenCode path. The Codex runtime path is available, but its provider-specific model-selection and authenticated CI coverage remain narrower than OpenCode and must be verified before production use.
+</Warning>
+
+Copilot separates two concepts:
+
+| Concept | Configuration | Meaning |
+| --- | --- | --- |
+| Runtime | `agent-provider: codex` | Executes the external `codex` CLI. |
+| Model provider | `agent-model-provider: openai` | Identifies the provider serving the selected model. |
+| Model | `agent-model` | Names the model without the provider prefix. |
+
+Do not describe `codex` and `openai` as interchangeable values. `codex` is a runtime; `openai` is a model/authentication provider.
+
+## CLI runtime
+
+The built-in Codex command is:
+
+```text
+codex exec --ephemeral --skip-git-repo-check -
+```
+
+The command reads the prompt from standard input, runs ephemerally, and does not use a shell. A provider failure is terminal; Copilot does not silently fall back to OpenCode or Cursor.
+
+## Authentication modes
+
+Codex can use one of the following credential references:
+
+| Mode | Reference | Scope |
+| --- | --- | --- |
+| API key | `OPENAI_API_KEY` | Programmatic/API billing; suitable for explicitly controlled CI. |
+| Access token | `CODEX_ACCESS_TOKEN` | Explicit Codex credential supplied by the runner. |
+| Local ChatGPT session | Local Codex authentication state | Controlled self-hosted runner only; never export it to hosted CI. |
+
+Copilot never prints, copies, or serializes token values. See [Codex authentication and compliance](/security-operations/security/authentication-compliance) for the account, billing, and terms boundaries.
+
+## Provisioning
+
+GitHub Actions provisioning uses the pinned version variable:
+
+```text
+CODEX_VERSION
+```
+
+The approved package installation shape is:
+
+```bash
+corepack pnpm add --global "@openai/codex@${CODEX_VERSION}"
+```
+
+Verify the executable before a real request:
+
+```bash
+codex --version
+codex exec --help
+```
+
+## Configuration example
+
+```yaml
+with:
+  agent-provider: codex
+  agent-model-provider: openai
+  agent-model: gpt-5.6-luna
+env:
+  AGENT_ALLOWED_MODEL_PROVIDERS: openai
+  AGENT_ALLOWED_MODELS: openai/gpt-5.6-luna
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+```
+
+The allowlists are policy controls. They do not create credentials, and they do not make a ChatGPT session suitable for hosted CI.
+
+## Verification boundary
+
+A help command proves only that the binary is available. It does not prove authentication, model entitlement, quota, billing, or permission to use a personal ChatGPT session in CI. Run a real smoke test only with explicit authorization, a bounded cost, and read-only instructions.
+
+## Related pages
+
+- [Agent CLI configuration](/agents/cli-configuration)
+- [Runtime selection](/agents/runtime-selection)
+- [Agent CLI provisioning](/security-operations/operations/cli-provisioning)
+- [Codex authentication and compliance](/security-operations/security/authentication-compliance)

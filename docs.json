@@ -130,6 +130,16 @@
           "icon": "code"
         },
         {
+          "title": "Codex and OpenAI",
+          "href": "/agents/codex-openai",
+          "icon": "robot"
+        },
+        {
+          "title": "Cursor (WIP)",
+          "href": "/agents/cursor-wip",
+          "icon": "wand-magic-sparkles"
+        },
+        {
           "title": "Input reference",
           "href": "/agents/input-reference",
           "icon": "clipboard-list"

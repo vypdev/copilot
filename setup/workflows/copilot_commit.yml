@@ -19,10 +19,9 @@ jobs:
         with:
           debug: ${{ vars.DEBUG }}
           project-ids: ${{ vars.PROJECT_IDS }}
-          opencode-model: ${{ vars.OPENCODE_MODEL }}
           agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
           agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
-          agent-model: ${{ vars.AGENT_MODEL }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
           agent-command: ${{ vars.AGENT_COMMAND }}
           token: ${{ secrets.PAT }}
         env:

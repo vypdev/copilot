@@ -1,0 +1,76 @@
+---
+title: Cursor runtime (WIP)
+description: Cursor CLI integration status, intended contract, and validation boundary.
+---
+
+# Cursor runtime (WIP)
+
+<Warning>
+Cursor support is **Work in Progress**. The CLI adapter, provisioning path, installer checksum gate, and credential preflight exist, but a real authenticated Cursor smoke test has not been completed. Do not describe Cursor as production-validated.
+</Warning>
+
+## What is implemented
+
+Copilot has the provider-specific CLI shape:
+
+```text
+agent -p --output-format text -
+```
+
+The Action can provision the official Cursor installer when all required inputs are present:
+
+```text
+CURSOR_INSTALLER_SHA256
+CURSOR_API_KEY
+```
+
+The installer checksum is verified before execution. Unofficial npm packages, shell fallbacks, and unverified downloads are not supported.
+
+## What remains WIP
+
+The following items must be completed before Cursor can be documented as production-ready:
+
+- authenticated end-to-end smoke test with an authorized `CURSOR_API_KEY`;
+- verification of the exact Cursor CLI version and output contract in GitHub Actions;
+- validation of model/provider selection behavior for the configured Cursor CLI;
+- verification of timeout, cancellation, output limits, and terminal failures with real Cursor responses;
+- confirmation that the installer remains compatible with every supported runner image;
+- documentation of Cursor-specific billing, workspace, and account restrictions from current official sources.
+
+Until those gates pass, the absence of a Cursor credential or smoke-test evidence is an expected WIP condition, not a successful provider check.
+
+## Configuration shape
+
+```yaml
+with:
+  agent-provider: cursor
+  agent-model-provider: <approved-provider>
+  agent-model: <approved-model>
+env:
+  CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+```
+
+The runtime provider (`cursor`) is separate from the model provider and model. Do not assume that a Cursor CLI installation proves that a selected model is available or authorized.
+
+## Security boundary
+
+Never put `CURSOR_API_KEY` in action inputs, command arguments, prompts, repository files, or logs. Use a protected runner environment and do not expose the credential to fork-controlled code.
+
+## Current verification commands
+
+These checks are safe binary checks only:
+
+```bash
+agent --version
+agent --help
+node scripts/verify-agent-clis.cjs
+```
+
+They do not replace the pending authenticated smoke test. Do not run that test without explicit authorization, a bounded cost, and a read-only prompt.
+
+## Related pages
+
+- [Runtime selection](/agents/runtime-selection)
+- [Agent CLI configuration](/agents/cli-configuration)
+- [Agent CLI provisioning](/security-operations/operations/cli-provisioning)
+- [Agent CLI runners](/security-operations/operations/cli-runners)
