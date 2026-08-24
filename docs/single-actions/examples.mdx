@@ -24,7 +24,9 @@ jobs:
           token: ${{ secrets.PAT }}
           single-action: check_progress_action
           single-action-issue: "123"
-          opencode-model: ${{ vars.OPENCODE_MODEL }}
+          agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+          agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
 ```
 
 ## Workflow: Bugbot (detect potential problems)
@@ -42,7 +44,9 @@ jobs:
           token: ${{ secrets.PAT }}
           single-action: detect_potential_problems_action
           single-action-issue: "456"
-          opencode-model: ${{ vars.OPENCODE_MODEL }}
+          agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+          agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
 ```
 
 See [Bugbot](/bugbot) for full documentation.
@@ -57,7 +61,9 @@ Get implementation steps for issue `789` and post them as a comment:
     token: ${{ secrets.PAT }}
     single-action: recommend_steps_action
     single-action-issue: "789"
-    opencode-model: ${{ vars.OPENCODE_MODEL }}
+    agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+    agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
+    agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
 ```
 
 ## Workflow: think (no issue)

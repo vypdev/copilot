@@ -1,4 +1,4 @@
-import { ACTIONS, INPUT_KEYS, OPENCODE_DEFAULT_MODEL } from '../../utils/constants';
+import { ACTIONS, INPUT_KEYS } from '../../utils/constants';
 import type { GitInfo } from '../../cli_context';
 import { cleanCliArgument, parsePositiveCliInteger } from '../command_input_policy';
 
@@ -7,16 +7,12 @@ export interface IssueCommandOptions {
   branch?: string;
   debug?: boolean;
   token?: string;
-
-  opencodeModel?: string;
 }
 
 function sharedOptions(options: IssueCommandOptions): Record<string, unknown> {
   return {
     [INPUT_KEYS.DEBUG]: options.debug?.toString() ?? 'false',
     [INPUT_KEYS.TOKEN]: options.token || process.env.PERSONAL_ACCESS_TOKEN,
-
-    [INPUT_KEYS.OPENCODE_MODEL]: options.opencodeModel || process.env.OPENCODE_MODEL || OPENCODE_DEFAULT_MODEL,
   };
 }
 

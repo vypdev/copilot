@@ -1,4 +1,4 @@
-import { ACTIONS, INPUT_KEYS, OPENCODE_DEFAULT_MODEL } from '../../utils/constants';
+import { ACTIONS, INPUT_KEYS } from '../../utils/constants';
 import type { GitInfo } from '../../cli_context';
 import { cleanCliArgument, parsePositiveCliInteger } from '../command_input_policy';
 
@@ -7,8 +7,6 @@ export interface DetectProblemsOptions {
   branch?: string;
   debug?: boolean;
   token?: string;
-
-  opencodeModel?: string;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- CLI action params are dynamically shaped
@@ -22,8 +20,6 @@ export function buildDetectPotentialProblemsParams(options: DetectProblemsOption
     [INPUT_KEYS.SINGLE_ACTION]: ACTIONS.DETECT_POTENTIAL_PROBLEMS,
     [INPUT_KEYS.SINGLE_ACTION_ISSUE]: issueNumber,
     [INPUT_KEYS.TOKEN]: options.token || process.env.PERSONAL_ACCESS_TOKEN,
-
-    [INPUT_KEYS.OPENCODE_MODEL]: options.opencodeModel || process.env.OPENCODE_MODEL || OPENCODE_DEFAULT_MODEL,
     repo: { owner: gitInfo.owner, repo: gitInfo.repo },
     issue: { number: issueNumber },
     commits: { ref: `refs/heads/${branch}` },

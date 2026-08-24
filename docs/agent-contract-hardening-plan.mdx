@@ -1,0 +1,60 @@
+---
+title: Agent contract and documentation hardening plan
+description: Plan for making agent defaults, policy, security documentation, and validation strict and source-aligned.
+---
+
+# Agent contract and documentation hardening plan
+
+## Objective
+
+Make the public documentation and runtime behavior agree exactly. A reader must be able to determine the selected runtime, model provider, model, authorization policy, credential source, provisioning requirements, failure behavior, and security boundary without inferring hidden defaults.
+
+## Non-negotiable rules
+
+- The Action MUST use one explicit runtime and one explicit model contract per execution.
+- The selected model provider and model MUST be validated before the CLI starts.
+- Allowlists MUST authorize; they MUST NOT select a provider, model, or credential.
+- The Action MUST NOT silently fall back between runtimes, providers, models, credentials, or transport modes.
+- Credentials MUST NOT appear in inputs, arguments, prompts, repository files, logs, or documentation examples.
+- Public documentation MUST describe effective defaults, not merely recommended values.
+- Cursor remains documented as a supported runtime, but its real smoke test remains blocked until an authorized credential is available.
+
+## Phases
+
+### Phase 1 — Contract hardening
+
+Align `action.yml`, the input builder, policy builder, workflows, tests, and documentation. The `agent-*` contract becomes authoritative for agent execution. Legacy general-AI model compatibility MUST NOT silently configure Bugbot.
+
+### Phase 2 — Normative reference
+
+Split the public documentation into focused pages for:
+
+- contract and value semantics;
+- complete Action input reference;
+- allowlists and failure behavior;
+- CLI provisioning and upgrades;
+- credentials and trust boundaries;
+- operational verification and smoke tests;
+- Bugbot configuration and permissions.
+
+### Phase 3 — Security and operations
+
+Add explicit MUST/MUST NOT language, trust-boundary matrices, credential-mode matrices, error/action tables, version-upgrade procedures, rollback guidance, and cost authorization requirements.
+
+### Phase 4 — Drift prevention
+
+Add a repository validator that checks documented agent inputs, defaults, workflow policy values, CLI commands, and forbidden legacy server/SDK references against the implementation.
+
+### Phase 5 — Verification and publication
+
+Run the validator, YAML/JSON checks, TypeScript, focused tests, full Jest, build, lint, diff checks, pre-commit, and final remote SHA verification. Publish only with a clean tree.
+
+## Acceptance criteria
+
+- No undocumented or falsely documented effective agent default.
+- No Bugbot documentation instructs users to configure an HTTP OpenCode server.
+- No public page presents a credential as a model policy value.
+- Every documented agent input exists in `action.yml`.
+- Every workflow default is represented in the normative documentation.
+- Failure behavior is explicit and testable.
+- Validation fails when source and documentation drift.

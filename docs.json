@@ -59,6 +59,21 @@
           "icon": "settings"
         },
         {
+          "title": "Agent input reference",
+          "href": "/agent-input-reference",
+          "icon": "list"
+        },
+        {
+          "title": "Agent failure policy",
+          "href": "/agent-failure-policy",
+          "icon": "alert-triangle"
+        },
+        {
+          "title": "Hardening plan",
+          "href": "/agent-contract-hardening-plan",
+          "icon": "clipboard"
+        },
+        {
           "title": "Agent CLI runners",
           "href": "/agent-cli-runners",
           "icon": "terminal"

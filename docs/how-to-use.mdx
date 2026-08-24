@@ -191,7 +191,7 @@ All `.yml` / `.yaml` files here are copied to `.github/workflows/`. Default file
 | `release_workflow.yml` | **Manual** (`workflow_dispatch`): release flow (version, changelog, tag, release, deployed). Filename must match the action input `release-workflow` (default: `release_workflow.yml`) so the Issue workflow can dispatch it when the **deploy** label is added. |
 | `hotfix_workflow.yml` | **Manual** (`workflow_dispatch`): hotfix flow. Filename must match the action input `hotfix-workflow` (default: `hotfix_workflow.yml`). |
 
-Each Copilot workflow step passes at least `token` (and often `project-ids`, `opencode-model`, `debug` via vars). The **release** and **hotfix** workflows are **dispatched by the action** when an issue has the deploy label and the corresponding release/hotfix context (branch, version, etc.); they are not triggered by issue events directly.
+Each Copilot workflow step passes at least `token` and the configured agent CLI inputs via `vars.*`. The **release** and **hotfix** workflows are **dispatched by the action** when an issue has the deploy label and the corresponding release/hotfix context (branch, version, etc.); they are not triggered by issue events directly.
 
 ### `setup/ISSUE_TEMPLATE/`
 
@@ -224,7 +224,7 @@ If present, copied to the repository root as `.env`. Useful for local CLI (e.g. 
 
 After the tutorial and file adaption, you can:
 
-- Set **repository or organization variables** (e.g. `PROJECT_IDS`, `OPENCODE_MODEL`, `DEBUG`) and reference them in the Copilot workflow steps (`project-ids: ${{ vars.PROJECT_IDS }}`, etc.).
+- Set **repository or organization variables** for the agent CLI contract (`AGENT_PROVIDER`, `AGENT_MODEL_PROVIDER`, `AGENT_MODEL`, `AGENT_ALLOWED_MODEL_PROVIDERS`, and `AGENT_ALLOWED_MODELS`) and reference them in the Copilot workflow steps.
 - Adjust **project column names** and **branch names** via action inputs so the action moves issues/PRs to the right columns and uses your branch naming.
 - Customize **issue templates** (copy, add fields, change labels) while keeping label and workflow names consistent as above.
 - Add or modify **release/hotfix** workflow steps (e.g. build, deploy) while keeping the workflow **filenames** and the action inputs `release-workflow` and `hotfix-workflow` in sync.

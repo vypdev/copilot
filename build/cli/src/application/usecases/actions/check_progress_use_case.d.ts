@@ -15,8 +15,8 @@ export declare class CheckProgressUseCase implements ParamUseCase<Execution, Res
     constructor(issueRepository: IssueDescriptionQueryPort & IssueLabelsPort & IssueProgressPort, branchRepository: BranchListQueryPort, pullRequestRepository: PullRequestBranchQueryPort, aiRepository: FindingsQueryPort);
     invoke(param: Execution): Promise<Result[]>;
     /**
-     * Calls the OpenCode agent once and returns parsed progress, summary, and reasoning.
-     * HTTP-level retries are handled by the findings capability transport (OPENCODE_MAX_RETRIES).
+     * Calls the configured agent once and returns parsed progress, summary, and reasoning.
+     * Provider-specific CLI failures are terminal and are surfaced as sanitized action errors.
      */
     private fetchProgressAttempt;
 }

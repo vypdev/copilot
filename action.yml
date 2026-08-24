@@ -398,8 +398,8 @@ inputs:
     default: "openai"
 
   agent-model:
-    description: "Selected model name without the provider prefix, for example gpt-5.6-luna. The provider is configured separately with agent-model-provider."
-    default: ""
+    description: "Selected model name without the provider prefix. The provider is configured separately with agent-model-provider."
+    default: "gpt-5.6-luna"
   agent-command:
     description: "Optional executable command for the selected CLI agent. Defaults: opencode run, agent -p --output-format text -, or codex exec --ephemeral --skip-git-repo-check -. No fallback command is attempted."
     default: ""
@@ -423,10 +423,6 @@ inputs:
   fixer-command:
     description: "Optional CLI command override for fixer."
     default: ""
-
-  opencode-model:
-    description: "OpenCode model in provider/model format (default opencode/kimi-k2.5-free; e.g. openai/gpt-4o-mini)."
-    default: "opencode/kimi-k2.5-free"
 
   ai-pull-request-description:
     description: "Enable AI-powered automatic updates for pull request descriptions."

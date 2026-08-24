@@ -15,10 +15,9 @@ program
   .description(`${TITLE} - AI development assistant (OpenCode build agent; can edit files when run locally)`)
   .option('-p, --prompt <prompt...>', 'Prompt or question (required)', '')
   .option('-d, --debug', 'Debug mode', false)
-  .option('--opencode-model <model>', 'OpenCode model', process.env.OPENCODE_MODEL)
   .option('--agent-provider <provider>', 'Agent provider (opencode|cursor|codex)', process.env.AGENT_PROVIDER || 'opencode')
-  .option('--agent-model-provider <provider>', 'Provider of the selected model', process.env.AGENT_MODEL_PROVIDER || 'opencode')
-  .option('--agent-model <model>', 'Selected agent model', process.env.AGENT_MODEL)
+  .option('--agent-model-provider <provider>', 'Provider of the selected model', process.env.AGENT_MODEL_PROVIDER || 'openai')
+  .option('--agent-model <model>', 'Selected agent model', process.env.AGENT_MODEL || 'gpt-5.6-luna')
   .option('--agent-command <command>', 'CLI executable for the selected agent', process.env.AGENT_COMMAND)
   .option('--findings-provider <provider>', 'Findings agent provider', process.env.FINDINGS_PROVIDER)
 
@@ -67,7 +66,7 @@ program
       });
 
       if (!result) {
-        console.error('❌ Request failed (check OpenCode server and model).');
+        console.error('❌ Request failed while executing the configured agent CLI.');
         process.exit(1);
       }
 

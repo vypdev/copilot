@@ -35,7 +35,9 @@ jobs:
           desired-reviewers-count: 1
           commit-prefix-transforms: replace-slash
           ai-pull-request-description: true
-          opencode-model: ${{ vars.OPENCODE_MODEL }}
+          agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+          agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
           ai-ignore-files: build/*
           debug: ${{ vars.DEBUG }}
 ```
@@ -66,7 +68,9 @@ jobs:
         with:
           token: ${{ secrets.PAT }}
           ai-pull-request-description: true
-          opencode-model: "anthropic/claude-3-5-sonnet"
+          agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+          agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
 ```
 
 The PR must have an **issue linked** (via branch name) and the issue must have a **non-empty description**. See [AI PR description](/pull-requests/ai-description).

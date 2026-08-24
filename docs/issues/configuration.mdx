@@ -141,7 +141,6 @@ All three providers use the CLI contract:
 
 SDK and HTTP server transports are not part of the current public contract. CLI commands are executed without a shell and credentials are supplied through the runner environment or an explicitly controlled local credential store. Tokens must never be included in `agent-command`.
 #### AI model compatibility input
-- `opencode-model`: Legacy/general AI model reference in `provider/model` format. Bugbot agent execution uses the explicit `agent-model-provider` plus `agent-model` contract instead.
 - `ai-pull-request-description`: Enable AI-powered PR descriptions (default: `false`)
 - `ai-ignore-files`: Comma-separated list of files to ignore for AI operations
 - `ai-members-only`: Restrict AI features to organization/project members (default: `false`)

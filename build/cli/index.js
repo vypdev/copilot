@@ -52474,7 +52474,7 @@ function resolveProvider(value) {
 }
 function buildConfiguration(values) {
     const provider = resolveProvider(values.provider.trim().toLowerCase());
-    const modelProvider = values.modelProvider?.trim().toLowerCase() || 'opencode';
+    const modelProvider = values.modelProvider?.trim().toLowerCase() || 'openai';
     if (!/^[a-z0-9][a-z0-9_-]*$/.test(modelProvider))
         throw new Error('Agent model provider must be a valid provider identifier.');
     const allowedProviders = configuredAllowlist('AGENT_ALLOWED_MODEL_PROVIDERS', DEFAULT_MODEL_PROVIDERS);
@@ -52516,11 +52516,13 @@ exports.buildAgentTasksFromInputs = buildAgentTasksFromInputs;
 exports.buildAgentTasksFromValues = buildAgentTasksFromValues;
 const constants_1 = __nccwpck_require__(15415);
 const agent_configuration_builder_1 = __nccwpck_require__(81248);
+const DEFAULT_AGENT_PROVIDER = 'opencode';
+const DEFAULT_MODEL_PROVIDER = 'openai';
+const DEFAULT_AGENT_MODEL = 'gpt-5.6-luna';
 function buildAgentTasksFromInputs(read) {
-    const opencodeModel = read(constants_1.INPUT_KEYS.OPENCODE_MODEL)?.trim() || constants_1.OPENCODE_DEFAULT_MODEL;
-    const provider = read(constants_1.INPUT_KEYS.AGENT_PROVIDER)?.trim() || 'opencode';
-    const modelProvider = read(constants_1.INPUT_KEYS.AGENT_MODEL_PROVIDER)?.trim() || 'opencode';
-    const model = read(constants_1.INPUT_KEYS.AGENT_MODEL)?.trim() || opencodeModel;
+    const provider = read(constants_1.INPUT_KEYS.AGENT_PROVIDER)?.trim() || DEFAULT_AGENT_PROVIDER;
+    const modelProvider = read(constants_1.INPUT_KEYS.AGENT_MODEL_PROVIDER)?.trim() || DEFAULT_MODEL_PROVIDER;
+    const model = read(constants_1.INPUT_KEYS.AGENT_MODEL)?.trim() || DEFAULT_AGENT_MODEL;
     const command = read(constants_1.INPUT_KEYS.AGENT_COMMAND) ?? '';
     return (0, agent_configuration_builder_1.buildAgentTasks)({
         provider,
@@ -53912,8 +53914,8 @@ class CheckProgressUseCase {
         return results;
     }
     /**
-     * Calls the OpenCode agent once and returns parsed progress, summary, and reasoning.
-     * HTTP-level retries are handled by the findings capability transport (OPENCODE_MAX_RETRIES).
+     * Calls the configured agent once and returns parsed progress, summary, and reasoning.
+     * Provider-specific CLI failures are terminal and are surfaced as sanitized action errors.
      */
     async fetchProgressAttempt(ai, prompt) {
         return (0, progress_response_1.parseProgressResponse)(await this.aiRepository.query({
@@ -60983,7 +60985,6 @@ function registerCheckProgressCommand(program) {
         .option('-b, --branch <name>', 'Branch name (optional, will try to determine from issue)')
         .option('-d, --debug', 'Debug mode', false)
         .option('-t, --token <token>', 'Personal access token', process.env.PERSONAL_ACCESS_TOKEN)
-        .option('--opencode-model <model>', 'OpenCode model', process.env.OPENCODE_MODEL)
         .action(async (options) => {
         const gitInfo = (0, cli_context_1.getGitInfo)();
         if ('error' in gitInfo) {
@@ -61040,7 +61041,6 @@ function registerDetectPotentialProblemsCommand(program) {
         .option('-b, --branch <name>', 'Branch name (optional, defaults to current git branch)', '')
         .option('-d, --debug', 'Debug mode', false)
         .option('-t, --token <token>', 'Personal access token', process.env.PERSONAL_ACCESS_TOKEN)
-        .option('--opencode-model <model>', 'OpenCode model', process.env.OPENCODE_MODEL)
         .action(async (options) => {
         const gitInfo = (0, cli_context_1.getGitInfo)();
         if ('error' in gitInfo) {
@@ -61095,7 +61095,6 @@ function buildDetectPotentialProblemsParams(options, gitInfo, currentBranch) {
         [constants_1.INPUT_KEYS.SINGLE_ACTION]: constants_1.ACTIONS.DETECT_POTENTIAL_PROBLEMS,
         [constants_1.INPUT_KEYS.SINGLE_ACTION_ISSUE]: issueNumber,
         [constants_1.INPUT_KEYS.TOKEN]: options.token || process.env.PERSONAL_ACCESS_TOKEN,
-        [constants_1.INPUT_KEYS.OPENCODE_MODEL]: options.opencodeModel || process.env.OPENCODE_MODEL || constants_1.OPENCODE_DEFAULT_MODEL,
         repo: { owner: gitInfo.owner, repo: gitInfo.repo },
         issue: { number: issueNumber },
         commits: { ref: `refs/heads/${branch}` },
@@ -61132,10 +61131,9 @@ function registerDoCommand(program) {
         .description(`${constants_1.TITLE} - AI development assistant (OpenCode build agent; can edit files when run locally)`)
         .option('-p, --prompt <prompt...>', 'Prompt or question (required)', '')
         .option('-d, --debug', 'Debug mode', false)
-        .option('--opencode-model <model>', 'OpenCode model', process.env.OPENCODE_MODEL)
         .option('--agent-provider <provider>', 'Agent provider (opencode|cursor|codex)', process.env.AGENT_PROVIDER || 'opencode')
-        .option('--agent-model-provider <provider>', 'Provider of the selected model', process.env.AGENT_MODEL_PROVIDER || 'opencode')
-        .option('--agent-model <model>', 'Selected agent model', process.env.AGENT_MODEL)
+        .option('--agent-model-provider <provider>', 'Provider of the selected model', process.env.AGENT_MODEL_PROVIDER || 'openai')
+        .option('--agent-model <model>', 'Selected agent model', process.env.AGENT_MODEL || 'gpt-5.6-luna')
         .option('--agent-command <command>', 'CLI executable for the selected agent', process.env.AGENT_COMMAND)
         .option('--findings-provider <provider>', 'Findings agent provider', process.env.FINDINGS_PROVIDER)
         .option('--findings-model <model>', 'Findings agent model', process.env.FINDINGS_MODEL)
@@ -61178,7 +61176,7 @@ function registerDoCommand(program) {
                 prompt: fullPrompt,
             });
             if (!result) {
-                console.error('❌ Request failed (check OpenCode server and model).');
+                console.error('❌ Request failed while executing the configured agent CLI.');
                 process.exit(1);
             }
             const { text, sessionId } = result;
@@ -61215,16 +61213,17 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildDoAgentTasks = buildDoAgentTasks;
 exports.formatDoJsonResponse = formatDoJsonResponse;
 const agent_configuration_builder_1 = __nccwpck_require__(81248);
-const constants_1 = __nccwpck_require__(15415);
 const command_input_policy_1 = __nccwpck_require__(95212);
+const DEFAULT_AGENT_PROVIDER = 'opencode';
+const DEFAULT_MODEL_PROVIDER = 'openai';
+const DEFAULT_AGENT_MODEL = 'gpt-5.6-luna';
 function buildDoAgentTasks(options) {
-    const model = (0, command_input_policy_1.cleanCliArgument)(options.opencodeModel) || process.env.OPENCODE_MODEL || constants_1.OPENCODE_DEFAULT_MODEL;
-    const provider = (0, command_input_policy_1.cleanCliArgument)(options.agentProvider) || process.env.AGENT_PROVIDER || 'opencode';
-    const modelProvider = (0, command_input_policy_1.cleanCliArgument)(options.agentModelProvider) || process.env.AGENT_MODEL_PROVIDER || 'opencode';
+    const provider = (0, command_input_policy_1.cleanCliArgument)(options.agentProvider) || process.env.AGENT_PROVIDER || DEFAULT_AGENT_PROVIDER;
+    const modelProvider = (0, command_input_policy_1.cleanCliArgument)(options.agentModelProvider) || process.env.AGENT_MODEL_PROVIDER || DEFAULT_MODEL_PROVIDER;
     return (0, agent_configuration_builder_1.buildAgentTasks)({
         provider,
         modelProvider,
-        model: (0, command_input_policy_1.cleanCliArgument)(options.agentModel) || process.env.AGENT_MODEL || model,
+        model: (0, command_input_policy_1.cleanCliArgument)(options.agentModel) || process.env.AGENT_MODEL || DEFAULT_AGENT_MODEL,
         command: (0, command_input_policy_1.cleanCliArgument)(options.agentCommand) || process.env.AGENT_COMMAND,
         findings: {
             provider: (0, command_input_policy_1.cleanCliArgument)(options.findingsProvider),
@@ -61260,7 +61259,6 @@ function sharedOptions(options) {
     return {
         [constants_1.INPUT_KEYS.DEBUG]: options.debug?.toString() ?? 'false',
         [constants_1.INPUT_KEYS.TOKEN]: options.token || process.env.PERSONAL_ACCESS_TOKEN,
-        [constants_1.INPUT_KEYS.OPENCODE_MODEL]: options.opencodeModel || process.env.OPENCODE_MODEL || constants_1.OPENCODE_DEFAULT_MODEL,
     };
 }
 function parseIssueNumber(value) {
@@ -61327,7 +61325,6 @@ function registerRecommendStepsCommand(program) {
         .option('-i, --issue <number>', 'Issue number (required)', '')
         .option('-d, --debug', 'Debug mode', false)
         .option('-t, --token <token>', 'Personal access token', process.env.PERSONAL_ACCESS_TOKEN)
-        .option('--opencode-model <model>', 'OpenCode model', process.env.OPENCODE_MODEL)
         .action(async (options) => {
         const gitInfo = (0, cli_context_1.getGitInfo)();
         if ('error' in gitInfo) {
@@ -61459,8 +61456,6 @@ function registerThinkCommand(program) {
         .option('-d, --debug', 'Debug mode', false)
         .option('-t, --token <token>', 'Personal access token', process.env.PERSONAL_ACCESS_TOKEN)
         .option('-q, --question <question...>', 'Question or prompt for analysis', '')
-        .option('--opencode-server-url <url>', 'OpenCode server URL (e.g. http://127.0.0.1:4096)', '')
-        .option('--opencode-model <model>', `OpenCode model (e.g. ${constants_1.OPENCODE_DEFAULT_MODEL}, openai/gpt-4o-mini)`, '')
         .option('--ai-ignore-files <ai-ignore-files>', 'AI ignore files', 'node_modules/*,build/*')
         .option('--include-reasoning <include-reasoning>', 'Include reasoning', 'false')
         .action(async (options) => {
@@ -61482,7 +61477,6 @@ function registerThinkCommand(program) {
             [constants_1.INPUT_KEYS.SINGLE_ACTION]: constants_1.ACTIONS.THINK,
             [constants_1.INPUT_KEYS.SINGLE_ACTION_ISSUE]: parseInt(issueNumber) || 1,
             [constants_1.INPUT_KEYS.TOKEN]: options?.token?.length > 0 ? options.token : process.env.PERSONAL_ACCESS_TOKEN,
-            [constants_1.INPUT_KEYS.OPENCODE_MODEL]: options?.opencodeModel?.length > 0 ? options.opencodeModel : process.env.OPENCODE_MODEL || constants_1.OPENCODE_DEFAULT_MODEL,
             [constants_1.INPUT_KEYS.AI_IGNORE_FILES]: options?.aiIgnoreFiles?.length > 0 ? options.aiIgnoreFiles : process.env.AI_IGNORE_FILES,
             [constants_1.INPUT_KEYS.AI_INCLUDE_REASONING]: options?.includeReasoning?.length > 0 ? options.includeReasoning : process.env.AI_INCLUDE_REASONING,
             repo: {
@@ -63385,7 +63379,7 @@ class AgentCapabilityAdapter {
             const output = await this.cliAdapter.execute({
                 configuration: taskConfiguration,
                 prompt: request.prompt,
-                timeoutMs: constants_1.OPENCODE_REQUEST_TIMEOUT_MS,
+                timeoutMs: constants_1.AGENT_REQUEST_TIMEOUT_MS,
             });
             return request.mapCliOutput(output);
         }
@@ -68758,16 +68752,10 @@ function stripTrailingCommentWatermarks(comment) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PROMPTS = exports.BUGBOT_MIN_SEVERITY = exports.BUGBOT_MAX_COMMENTS = exports.BUGBOT_MARKER_PREFIX = exports.ACTIONS = exports.ERRORS = exports.INPUT_KEYS = exports.WORKFLOW_ACTIVE_STATUSES = exports.WORKFLOW_STATUS = exports.DEFAULT_IMAGE_CONFIG = exports.OPENCODE_RETRY_DELAY_MS = exports.OPENCODE_MAX_RETRIES = exports.OPENCODE_REQUEST_TIMEOUT_MS = exports.OPENCODE_DEFAULT_MODEL = exports.TITLE = void 0;
+exports.PROMPTS = exports.BUGBOT_MIN_SEVERITY = exports.BUGBOT_MAX_COMMENTS = exports.BUGBOT_MARKER_PREFIX = exports.ACTIONS = exports.ERRORS = exports.INPUT_KEYS = exports.WORKFLOW_ACTIVE_STATUSES = exports.WORKFLOW_STATUS = exports.DEFAULT_IMAGE_CONFIG = exports.AGENT_REQUEST_TIMEOUT_MS = exports.TITLE = void 0;
 exports.TITLE = 'Copilot';
-/** Default OpenCode model: provider/modelID (e.g. opencode/kimi-k2.5-free). Reuse for CLI, action and Ai fallbacks. */
-exports.OPENCODE_DEFAULT_MODEL = 'opencode/kimi-k2.5-free';
-/** Timeout in ms for OpenCode HTTP requests (session create, message, diff). Agent calls can be slow (e.g. plan analyzing repo). */
-exports.OPENCODE_REQUEST_TIMEOUT_MS = 900000;
-/** Max attempts for OpenCode requests (retries on failure). Applied by the capability transport policy. */
-exports.OPENCODE_MAX_RETRIES = 5;
-/** Delay in ms between OpenCode retry attempts. */
-exports.OPENCODE_RETRY_DELAY_MS = 2000;
+/** Maximum time allowed for one external agent CLI request. */
+exports.AGENT_REQUEST_TIMEOUT_MS = 900000;
 exports.DEFAULT_IMAGE_CONFIG = {
     issue: {
         automatic: [
@@ -68977,8 +68965,7 @@ exports.INPUT_KEYS = {
     FIXER_PROVIDER: 'fixer-provider',
     FIXER_MODEL: 'fixer-model',
     FIXER_COMMAND: 'fixer-command',
-    // AI provider configuration
-    OPENCODE_MODEL: 'opencode-model',
+    // AI configuration
     AI_PULL_REQUEST_DESCRIPTION: 'ai-pull-request-description',
     AI_MEMBERS_ONLY: 'ai-members-only',
     AI_IGNORE_FILES: 'ai-ignore-files',

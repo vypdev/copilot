@@ -1,4 +1,4 @@
-import { OPENCODE_REQUEST_TIMEOUT_MS } from '../../../utils/constants';
+import { AGENT_REQUEST_TIMEOUT_MS } from '../../../utils/constants';
 import { logError } from '../../../utils/logger';
 import { ProviderCliAdapter } from '../provider_cli_adapter';
 
@@ -35,7 +35,7 @@ export abstract class AgentCapabilityAdapter {
             const output = await this.cliAdapter.execute({
                 configuration: taskConfiguration,
                 prompt: request.prompt,
-                timeoutMs: OPENCODE_REQUEST_TIMEOUT_MS,
+                timeoutMs: AGENT_REQUEST_TIMEOUT_MS,
             });
             return request.mapCliOutput(output);
         } catch (error: unknown) {

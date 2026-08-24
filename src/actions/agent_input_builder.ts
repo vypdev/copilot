@@ -1,13 +1,16 @@
-import { INPUT_KEYS, OPENCODE_DEFAULT_MODEL } from '../utils/constants';
+import { INPUT_KEYS } from '../utils/constants';
 import { buildAgentTasks } from './agent_configuration_builder';
+
+const DEFAULT_AGENT_PROVIDER = 'opencode';
+const DEFAULT_MODEL_PROVIDER = 'openai';
+const DEFAULT_AGENT_MODEL = 'gpt-5.6-luna';
 
 export type AgentInputReader = (key: string) => string | undefined;
 
 export function buildAgentTasksFromInputs(read: AgentInputReader) {
-    const opencodeModel = read(INPUT_KEYS.OPENCODE_MODEL)?.trim() || OPENCODE_DEFAULT_MODEL;
-    const provider = read(INPUT_KEYS.AGENT_PROVIDER)?.trim() || 'opencode';
-    const modelProvider = read(INPUT_KEYS.AGENT_MODEL_PROVIDER)?.trim() || 'opencode';
-    const model = read(INPUT_KEYS.AGENT_MODEL)?.trim() || opencodeModel;
+    const provider = read(INPUT_KEYS.AGENT_PROVIDER)?.trim() || DEFAULT_AGENT_PROVIDER;
+    const modelProvider = read(INPUT_KEYS.AGENT_MODEL_PROVIDER)?.trim() || DEFAULT_MODEL_PROVIDER;
+    const model = read(INPUT_KEYS.AGENT_MODEL)?.trim() || DEFAULT_AGENT_MODEL;
     const command = read(INPUT_KEYS.AGENT_COMMAND) ?? '';
     return buildAgentTasks({
         provider,

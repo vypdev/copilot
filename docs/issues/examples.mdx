@@ -38,7 +38,9 @@ jobs:
           bugfix-tree: bugfix
           hotfix-tree: hotfix
           release-tree: release
-          opencode-model: ${{ vars.OPENCODE_MODEL }}
+          agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+          agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
           ai-ignore-files: build/*
           debug: ${{ vars.DEBUG }}
 ```

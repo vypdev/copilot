@@ -47996,7 +47996,7 @@ function resolveProvider(value) {
 }
 function buildConfiguration(values) {
     const provider = resolveProvider(values.provider.trim().toLowerCase());
-    const modelProvider = values.modelProvider?.trim().toLowerCase() || 'opencode';
+    const modelProvider = values.modelProvider?.trim().toLowerCase() || 'openai';
     if (!/^[a-z0-9][a-z0-9_-]*$/.test(modelProvider))
         throw new Error('Agent model provider must be a valid provider identifier.');
     const allowedProviders = configuredAllowlist('AGENT_ALLOWED_MODEL_PROVIDERS', DEFAULT_MODEL_PROVIDERS);
@@ -48038,11 +48038,13 @@ exports.buildAgentTasksFromInputs = buildAgentTasksFromInputs;
 exports.buildAgentTasksFromValues = buildAgentTasksFromValues;
 const constants_1 = __nccwpck_require__(5415);
 const agent_configuration_builder_1 = __nccwpck_require__(1248);
+const DEFAULT_AGENT_PROVIDER = 'opencode';
+const DEFAULT_MODEL_PROVIDER = 'openai';
+const DEFAULT_AGENT_MODEL = 'gpt-5.6-luna';
 function buildAgentTasksFromInputs(read) {
-    const opencodeModel = read(constants_1.INPUT_KEYS.OPENCODE_MODEL)?.trim() || constants_1.OPENCODE_DEFAULT_MODEL;
-    const provider = read(constants_1.INPUT_KEYS.AGENT_PROVIDER)?.trim() || 'opencode';
-    const modelProvider = read(constants_1.INPUT_KEYS.AGENT_MODEL_PROVIDER)?.trim() || 'opencode';
-    const model = read(constants_1.INPUT_KEYS.AGENT_MODEL)?.trim() || opencodeModel;
+    const provider = read(constants_1.INPUT_KEYS.AGENT_PROVIDER)?.trim() || DEFAULT_AGENT_PROVIDER;
+    const modelProvider = read(constants_1.INPUT_KEYS.AGENT_MODEL_PROVIDER)?.trim() || DEFAULT_MODEL_PROVIDER;
+    const model = read(constants_1.INPUT_KEYS.AGENT_MODEL)?.trim() || DEFAULT_AGENT_MODEL;
     const command = read(constants_1.INPUT_KEYS.AGENT_COMMAND) ?? '';
     return (0, agent_configuration_builder_1.buildAgentTasks)({
         provider,
@@ -49520,8 +49522,8 @@ class CheckProgressUseCase {
         return results;
     }
     /**
-     * Calls the OpenCode agent once and returns parsed progress, summary, and reasoning.
-     * HTTP-level retries are handled by the findings capability transport (OPENCODE_MAX_RETRIES).
+     * Calls the configured agent once and returns parsed progress, summary, and reasoning.
+     * Provider-specific CLI failures are terminal and are surfaced as sanitized action errors.
      */
     async fetchProgressAttempt(ai, prompt) {
         return (0, progress_response_1.parseProgressResponse)(await this.aiRepository.query({
@@ -58458,7 +58460,7 @@ class AgentCapabilityAdapter {
             const output = await this.cliAdapter.execute({
                 configuration: taskConfiguration,
                 prompt: request.prompt,
-                timeoutMs: constants_1.OPENCODE_REQUEST_TIMEOUT_MS,
+                timeoutMs: constants_1.AGENT_REQUEST_TIMEOUT_MS,
             });
             return request.mapCliOutput(output);
         }
@@ -63814,16 +63816,10 @@ function stripTrailingCommentWatermarks(comment) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PROMPTS = exports.BUGBOT_MIN_SEVERITY = exports.BUGBOT_MAX_COMMENTS = exports.BUGBOT_MARKER_PREFIX = exports.ACTIONS = exports.ERRORS = exports.INPUT_KEYS = exports.WORKFLOW_ACTIVE_STATUSES = exports.WORKFLOW_STATUS = exports.DEFAULT_IMAGE_CONFIG = exports.OPENCODE_RETRY_DELAY_MS = exports.OPENCODE_MAX_RETRIES = exports.OPENCODE_REQUEST_TIMEOUT_MS = exports.OPENCODE_DEFAULT_MODEL = exports.TITLE = void 0;
+exports.PROMPTS = exports.BUGBOT_MIN_SEVERITY = exports.BUGBOT_MAX_COMMENTS = exports.BUGBOT_MARKER_PREFIX = exports.ACTIONS = exports.ERRORS = exports.INPUT_KEYS = exports.WORKFLOW_ACTIVE_STATUSES = exports.WORKFLOW_STATUS = exports.DEFAULT_IMAGE_CONFIG = exports.AGENT_REQUEST_TIMEOUT_MS = exports.TITLE = void 0;
 exports.TITLE = 'Copilot';
-/** Default OpenCode model: provider/modelID (e.g. opencode/kimi-k2.5-free). Reuse for CLI, action and Ai fallbacks. */
-exports.OPENCODE_DEFAULT_MODEL = 'opencode/kimi-k2.5-free';
-/** Timeout in ms for OpenCode HTTP requests (session create, message, diff). Agent calls can be slow (e.g. plan analyzing repo). */
-exports.OPENCODE_REQUEST_TIMEOUT_MS = 900000;
-/** Max attempts for OpenCode requests (retries on failure). Applied by the capability transport policy. */
-exports.OPENCODE_MAX_RETRIES = 5;
-/** Delay in ms between OpenCode retry attempts. */
-exports.OPENCODE_RETRY_DELAY_MS = 2000;
+/** Maximum time allowed for one external agent CLI request. */
+exports.AGENT_REQUEST_TIMEOUT_MS = 900000;
 exports.DEFAULT_IMAGE_CONFIG = {
     issue: {
         automatic: [
@@ -64033,8 +64029,7 @@ exports.INPUT_KEYS = {
     FIXER_PROVIDER: 'fixer-provider',
     FIXER_MODEL: 'fixer-model',
     FIXER_COMMAND: 'fixer-command',
-    // AI provider configuration
-    OPENCODE_MODEL: 'opencode-model',
+    // AI configuration
     AI_PULL_REQUEST_DESCRIPTION: 'ai-pull-request-description',
     AI_MEMBERS_ONLY: 'ai-members-only',
     AI_IGNORE_FILES: 'ai-ignore-files',

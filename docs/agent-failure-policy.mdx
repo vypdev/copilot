@@ -1,0 +1,41 @@
+---
+title: Agent failure policy
+description: Deterministic failure behavior for provisioning, policy, authentication, execution, and verification.
+---
+
+# Agent failure policy
+
+The Action fails closed. It MUST stop rather than silently selecting another runtime, provider, model, credential, or transport.
+
+| Failure | Phase | Required behavior |
+| --- | --- | --- |
+| Unsupported runtime | Configuration | Stop before CLI execution |
+| Empty model | Configuration | Stop before CLI execution |
+| Invalid model provider | Configuration | Stop before CLI execution |
+| Provider not allowlisted | Authorization | Stop before CLI execution |
+| Qualified model not allowlisted | Authorization | Stop before CLI execution |
+| Missing pinned version | Provisioning | Stop before installation/use |
+| Missing executable | Provisioning | Stop before agent request |
+| Missing credential reference | Authentication preflight | Stop before agent request |
+| Headless help check fails | Provisioning | Stop before agent request |
+| CLI timeout | Execution | Stop; do not switch provider |
+| Non-zero CLI exit | Execution | Stop; preserve sanitized diagnostics only |
+| Invalid agent response | Parsing | Stop; do not publish unsafe findings |
+| Verification command fails | Autofix | Do not commit or push |
+| Sensitive workspace change | Commit policy | Reject automated commit |
+
+## Retry rule
+
+Retries, when implemented by a provider-specific policy, MUST retry only the same selected operation. A retry MUST NOT change the runtime, provider, model, credential, or command.
+
+## Logging rule
+
+Diagnostics MAY include provider-independent error categories, exit status, and bounded sanitized stderr. Diagnostics MUST NOT include API keys, OAuth tokens, authentication files, cookies, prompts containing secrets, or unbounded provider output.
+
+## Cost rule
+
+A real provider request MUST be authorized before execution when it can incur usage charges or consume plan quotas. Binary/version/help checks are not evidence of successful model authentication.
+
+## Security rule
+
+Credentials MUST NOT be available to untrusted forks or attacker-controlled code. `pull_request_target` MUST NOT check out and execute untrusted code in a credentialed job.

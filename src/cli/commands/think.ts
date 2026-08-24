@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { runLocalAction } from '../../actions/local_action';
 import { createIssueMetadataCompositionRoot } from '../../infrastructure/composition/issue_metadata_composition_root';
-import { ACTIONS, INPUT_KEYS, OPENCODE_DEFAULT_MODEL, TITLE } from '../../utils/constants';
+import { ACTIONS, INPUT_KEYS, TITLE } from '../../utils/constants';
 import { logError } from '../../utils/logger';
 import { getGitInfo } from '../../cli_context';
 import { cleanCliArgument, joinCliArguments } from '../command_input_policy';
@@ -15,8 +15,6 @@ program
   .option('-d, --debug', 'Debug mode', false)
   .option('-t, --token <token>', 'Personal access token', process.env.PERSONAL_ACCESS_TOKEN)
   .option('-q, --question <question...>', 'Question or prompt for analysis', '')
-  .option('--opencode-server-url <url>', 'OpenCode server URL (e.g. http://127.0.0.1:4096)', '')
-  .option('--opencode-model <model>', `OpenCode model (e.g. ${OPENCODE_DEFAULT_MODEL}, openai/gpt-4o-mini)`, '')
   .option('--ai-ignore-files <ai-ignore-files>', 'AI ignore files', 'node_modules/*,build/*')
   .option('--include-reasoning <include-reasoning>', 'Include reasoning', 'false')
   .action(async (options) => {    
@@ -44,7 +42,6 @@ program
       [INPUT_KEYS.SINGLE_ACTION_ISSUE]: parseInt(issueNumber) || 1,
       [INPUT_KEYS.TOKEN]: options?.token?.length > 0 ? options.token : process.env.PERSONAL_ACCESS_TOKEN,
 
-      [INPUT_KEYS.OPENCODE_MODEL]: options?.opencodeModel?.length > 0 ? options.opencodeModel : process.env.OPENCODE_MODEL || OPENCODE_DEFAULT_MODEL,
       [INPUT_KEYS.AI_IGNORE_FILES]: options?.aiIgnoreFiles?.length > 0 ? options.aiIgnoreFiles : process.env.AI_IGNORE_FILES,
       [INPUT_KEYS.AI_INCLUDE_REASONING]: options?.includeReasoning?.length > 0 ? options.includeReasoning : process.env.AI_INCLUDE_REASONING,
       repo: {

@@ -1,6 +1,5 @@
 import type { AgentTaskConfiguration } from '../../data/model/agent';
 export interface DoAgentOptions {
-    opencodeModel?: string;
     agentProvider?: string;
     agentModelProvider?: string;
     agentModel?: string;

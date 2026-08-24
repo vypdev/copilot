@@ -5,9 +5,8 @@
 This document describes the architecture of the current `master` checkout. It
 is an implementation map and migration contract, not a request to create files
 mechanically. Historical baselines and completed migrations live in
-[`migration-baseline.md`](./migration-baseline.md) and
-[`hotspot-refactoring-plan.md`](./hotspot-refactoring-plan.md). The remaining
-quality and coverage work is governed by
+[`migration-baseline.md`](./migration-baseline.md). The remaining quality and
+coverage work is governed by
 [`repowise-perfect-metrics-plan.md`](./repowise-perfect-metrics-plan.md); current
 coverage inventory lives in
 [`COVERAGE_ACTION_PLAN.md`](./COVERAGE_ACTION_PLAN.md).

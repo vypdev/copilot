@@ -13,8 +13,6 @@ export function registerRecommendStepsCommand(program: Command): void {
     .option('-i, --issue <number>', 'Issue number (required)', '')
     .option('-d, --debug', 'Debug mode', false)
     .option('-t, --token <token>', 'Personal access token', process.env.PERSONAL_ACCESS_TOKEN)
-
-    .option('--opencode-model <model>', 'OpenCode model', process.env.OPENCODE_MODEL)
     .action(async (options) => {
       const gitInfo = getGitInfo();
       if ('error' in gitInfo) {

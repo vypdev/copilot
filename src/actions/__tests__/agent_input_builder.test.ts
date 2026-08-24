@@ -11,7 +11,7 @@ describe('agent input builder', () => {
 
             [INPUT_KEYS.FINDINGS_MODEL]: 'codex-model',
         });
-        expect(tasks.findings).toMatchObject({ provider: 'codex', modelProvider: 'opencode', model: 'codex-model', command: 'codex exec --ephemeral --skip-git-repo-check -' });
-        expect(tasks.fixer).toMatchObject({ provider: 'opencode', modelProvider: 'opencode', model: 'base-model', command: 'opencode run --model opencode/base-model' });
+        expect(tasks.findings).toMatchObject({ provider: 'codex', modelProvider: 'openai', model: 'codex-model', command: 'codex exec --ephemeral --skip-git-repo-check -' });
+        expect(tasks.fixer).toMatchObject({ provider: 'opencode', modelProvider: 'openai', model: 'base-model', command: 'opencode run --model openai/base-model' });
     });
 });

@@ -14,8 +14,6 @@ export function registerCheckProgressCommand(program: Command): void {
     .option('-b, --branch <name>', 'Branch name (optional, will try to determine from issue)')
     .option('-d, --debug', 'Debug mode', false)
     .option('-t, --token <token>', 'Personal access token', process.env.PERSONAL_ACCESS_TOKEN)
-
-    .option('--opencode-model <model>', 'OpenCode model', process.env.OPENCODE_MODEL)
     .action(async (options) => {
       const gitInfo = getGitInfo();
       if ('error' in gitInfo) {

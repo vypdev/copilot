@@ -32,7 +32,7 @@ function resolveProvider(value: string): AgentProvider {
 
 function buildConfiguration(values: AgentTaskConfigurationValues): AgentConfiguration {
     const provider = resolveProvider(values.provider.trim().toLowerCase());
-    const modelProvider = values.modelProvider?.trim().toLowerCase() || 'opencode';
+    const modelProvider = values.modelProvider?.trim().toLowerCase() || 'openai';
     if (!/^[a-z0-9][a-z0-9_-]*$/.test(modelProvider)) throw new Error('Agent model provider must be a valid provider identifier.');
     const allowedProviders = configuredAllowlist('AGENT_ALLOWED_MODEL_PROVIDERS', DEFAULT_MODEL_PROVIDERS);
     if (!allowedProviders.includes(modelProvider)) throw new Error(`Agent model provider "${modelProvider}" is not allowlisted.`);

@@ -4,7 +4,6 @@ export interface IssueCommandOptions {
     branch?: string;
     debug?: boolean;
     token?: string;
-    opencodeModel?: string;
 }
 export declare function parseIssueNumber(value: unknown): number | undefined;
 export declare function buildCheckProgressParams(options: IssueCommandOptions, gitInfo: GitInfo): any | undefined;

@@ -1,10 +1,12 @@
 import { buildAgentTasks } from '../../actions/agent_configuration_builder';
 import type { AgentTaskConfiguration } from '../../data/model/agent';
-import { OPENCODE_DEFAULT_MODEL } from '../../utils/constants';
 import { cleanCliArgument } from '../command_input_policy';
 
+const DEFAULT_AGENT_PROVIDER = 'opencode';
+const DEFAULT_MODEL_PROVIDER = 'openai';
+const DEFAULT_AGENT_MODEL = 'gpt-5.6-luna';
+
 export interface DoAgentOptions {
-  opencodeModel?: string;
   agentProvider?: string;
   agentModelProvider?: string;
   agentModel?: string;
@@ -23,15 +25,14 @@ export interface DoAgentOptions {
 
 export function buildDoAgentTasks(options: DoAgentOptions): AgentTaskConfiguration {
 
-  const model = cleanCliArgument(options.opencodeModel) || process.env.OPENCODE_MODEL || OPENCODE_DEFAULT_MODEL;
-  const provider = cleanCliArgument(options.agentProvider) || process.env.AGENT_PROVIDER || 'opencode';
-  const modelProvider = cleanCliArgument(options.agentModelProvider) || process.env.AGENT_MODEL_PROVIDER || 'opencode';
+  const provider = cleanCliArgument(options.agentProvider) || process.env.AGENT_PROVIDER || DEFAULT_AGENT_PROVIDER;
+  const modelProvider = cleanCliArgument(options.agentModelProvider) || process.env.AGENT_MODEL_PROVIDER || DEFAULT_MODEL_PROVIDER;
 
   return buildAgentTasks({
     provider,
     modelProvider,
 
-    model: cleanCliArgument(options.agentModel) || process.env.AGENT_MODEL || model,
+    model: cleanCliArgument(options.agentModel) || process.env.AGENT_MODEL || DEFAULT_AGENT_MODEL,
 
     command: cleanCliArgument(options.agentCommand) || process.env.AGENT_COMMAND,
     findings: {
