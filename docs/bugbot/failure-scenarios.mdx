@@ -6,13 +6,13 @@ description: Diagnose terminal failures across detection, publication, autofix, 
 # Bugbot failure scenarios
 
 <AccordionGroup>
-  <Accordion title="Agent or model policy fails" icon="cpu">
+  <Accordion title="Agent or model policy fails" icon="microchip">
     Stop before workspace mutation. Verify the selected runtime, qualified model, and allowlists.
   </Accordion>
   <Accordion title="Credential or permission is missing" icon="shield">
     Stop and correct the workflow secret reference or GitHub permission. Never print or copy the secret into arguments.
   </Accordion>
-  <Accordion title="The agent response is invalid" icon="alert-circle">
+  <Accordion title="The agent response is invalid" icon="circle-exclamation">
     Treat malformed JSON or unparseable output as terminal. Do not publish an inferred finding.
   </Accordion>
   <Accordion title="Verification fails" icon="check-circle">

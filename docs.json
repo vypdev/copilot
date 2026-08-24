@@ -98,7 +98,7 @@
         { "title": "CLI configuration", "href": "/agent-cli-configuration", "icon": "list" },
         { "title": "OpenCode", "href": "/opencode-integration", "icon": "terminal" },
         { "title": "Input reference", "href": "/agent-input-reference", "icon": "list" },
-        { "title": "Failure behavior", "href": "/agent-failure-policy", "icon": "alert-triangle" }
+        { "title": "Failure behavior", "href": "/agent-failure-policy", "icon": "triangle-exclamation" }
       ]
     },
     {
@@ -108,7 +108,7 @@
         { "title": "Overview", "href": "/security/overview", "icon": "shield" },
         { "title": "Credentials", "href": "/security/credentials", "icon": "key" },
         { "title": "Trust boundaries", "href": "/security/trust-boundaries", "icon": "shield" },
-        { "title": "Forks and pull_request_target", "href": "/security/forks-and-pull-request-target", "icon": "git-pull-request" },
+        { "title": "Forks and pull_request_target", "href": "/security/forks-and-pull-request-target", "icon": "code-pull-request" },
         { "title": "Self-hosted runners", "href": "/security/self-hosted-runners", "icon": "terminal" },
         { "title": "Secret exposure rules", "href": "/security/secret-exposure", "icon": "lock" },
         { "title": "Authentication compliance", "href": "/codex-authentication-and-compliance", "icon": "file-text" }
@@ -135,7 +135,7 @@
         { "title": "Architecture", "href": "/development/architecture", "icon": "list" },
         { "title": "Local development", "href": "/development/local-development", "icon": "code" },
         { "title": "Testing", "href": "/development/testing", "icon": "check-square" },
-        { "title": "Build artifacts", "href": "/development/build-artifacts", "icon": "package" },
+        { "title": "Build artifacts", "href": "/development/build-artifacts", "icon": "box" },
         { "title": "Documentation", "href": "/development/documentation", "icon": "file-text" },
         { "title": "Documentation completeness plan", "href": "/documentation-completeness-plan", "icon": "clipboard" },
         { "title": "Release process", "href": "/development/release-process", "icon": "upload" }
@@ -168,12 +168,12 @@
         {
           "title": "Assignees and projects",
           "href": "/issues/assignees-and-projects",
-          "icon": "people"
+          "icon": "users"
         },
         {
           "title": "Branch management",
           "href": "/issues/branch-management",
-          "icon": "git-branch"
+          "icon": "code-branch"
         },
         {
           "title": "Notifications and auto-close",
@@ -327,7 +327,7 @@
         {
           "title": "Finding publication",
           "href": "/bugbot/finding-publication",
-          "icon": "message-square"
+          "icon": "comment"
         },
         {
           "title": "Permissions",
@@ -362,7 +362,7 @@
         {
           "title": "Failure scenarios",
           "href": "/bugbot/failure-scenarios",
-          "icon": "alert-triangle"
+          "icon": "triangle-exclamation"
         },
         {
           "title": "Examples",
@@ -377,7 +377,7 @@
         {
           "title": "Support",
           "href": "/support",
-          "icon": "help-circle"
+          "icon": "circle-question"
         }
       ]
     }

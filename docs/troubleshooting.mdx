@@ -8,7 +8,7 @@ description: Common issues and solutions when using Copilot
 This guide helps you resolve common issues you might encounter while using Copilot. Expand the section that matches your problem.
 
 <AccordionGroup>
-  <Accordion title="Branch creation fails" icon="git-branch">
+  <Accordion title="Branch creation fails" icon="code-branch">
     **Symptoms:**
     - Error messages during branch creation
     - Branches not being created automatically
@@ -20,7 +20,7 @@ This guide helps you resolve common issues you might encounter while using Copil
     3. **Branch names:** Ensure branch names are valid, check for naming conflicts, and verify branch prefix configuration (e.g. `feature-tree`, `bugfix-tree`).
   </Accordion>
 
-  <Accordion title="Project linking problems" icon="layout-grid">
+  <Accordion title="Project linking problems" icon="table-cells-large">
     **Symptoms:**
     - Issues not appearing in projects
     - PRs not being linked automatically
@@ -44,7 +44,7 @@ This guide helps you resolve common issues you might encounter while using Copil
     3. **Triggers:** Verify event triggers, workflow conditions, and concurrent executions.
   </Accordion>
 
-  <Accordion title="Action skips issue/PR/push pipelines" icon="user-x" defaultOpen={true}>
+  <Accordion title="Action skips issue/PR/push pipelines" icon="user-slash" defaultOpen={true}>
     **Symptoms:**
     - The workflow runs but nothing happens (no branches created, no project linking, no comments).
     - Logs say something like "User from token (...) matches actor. Ignoring."
@@ -58,7 +58,7 @@ This guide helps you resolve common issues you might encounter while using Copil
     See [Authentication](/authentication) for token setup and the note on token user vs. actor.
   </Accordion>
 
-  <Accordion title="Common error messages" icon="alert-circle">
+  <Accordion title="Common error messages" icon="circle-exclamation">
     **"Permission Denied"** — Check token permissions, verify repository access, and review security settings.
 
     **"Resource Not Found"** — Verify the resource exists, check access permissions, and validate URLs and paths.
@@ -66,7 +66,7 @@ This guide helps you resolve common issues you might encounter while using Copil
     **"Invalid Configuration"** — Review workflow syntax, check configuration values, and validate input parameters.
   </Accordion>
 
-  <Accordion title="Agent runtime issues" icon="cpu">
+  <Accordion title="Agent runtime issues" icon="microchip">
     - **Invalid JSON response**: If the AI returns malformed JSON (e.g. for progress/error detection), the model may not follow the schema. Try a different model or check the OpenCode logs.
   </Accordion>
 
@@ -81,7 +81,7 @@ This guide helps you resolve common issues you might encounter while using Copil
     - **"Please provide an issue number using -i or --issue"**: Commands like `check-progress`, `detect-potential-problems`, and `recommend-steps` require an issue number with `-i <number>`.
   </Accordion>
 
-  <Accordion title="Getting help" icon="help-circle">
+  <Accordion title="Getting help" icon="circle-question">
     If you're still experiencing issues:
 
     1. Check the [GitHub repository](https://github.com/vypdev/copilot) for known issues.
