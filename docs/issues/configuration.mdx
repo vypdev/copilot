@@ -140,15 +140,11 @@ All three providers use the CLI contract:
 | Codex | `codex exec --ephemeral --skip-git-repo-check -` |
 
 SDK and HTTP server transports are not part of the current public contract. CLI commands are executed without a shell and credentials are supplied through the runner environment or an explicitly controlled local credential store. Tokens must never be included in `agent-command`.
-Legacy OpenCode inputs remain supported:
-
-#### AI (OpenCode)
-- `opencode-server-url`: OpenCode server URL (default: "http://localhost:4096"). See [OpenCode (AI)](/opencode-integration).
-- `opencode-model`: Model in provider/model format (default: "opencode/kimi-k2.5-free")
-- `opencode-start-server`: If true, the action starts and stops OpenCode in the job (default: "false")
-- `ai-pull-request-description`: Enable AI-powered PR descriptions (default: "false")
+#### AI model compatibility input
+- `opencode-model`: Legacy/general AI model reference in `provider/model` format. Bugbot agent execution uses the explicit `agent-model-provider` plus `agent-model` contract instead.
+- `ai-pull-request-description`: Enable AI-powered PR descriptions (default: `false`)
 - `ai-ignore-files`: Comma-separated list of files to ignore for AI operations
-- `ai-members-only`: Restrict AI features to organization/project members (default: "false")
+- `ai-members-only`: Restrict AI features to organization/project members (default: `false`)
 
 #### Workflow Configuration
 - `release-workflow`: Release workflow for running release deploys (default: "release_workflow.yml")

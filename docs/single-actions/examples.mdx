@@ -43,7 +43,6 @@ jobs:
           single-action: detect_potential_problems_action
           single-action-issue: "456"
           opencode-model: ${{ vars.OPENCODE_MODEL }}
-          opencode-server-url: ${{ vars.OPENCODE_SERVER_URL }}
 ```
 
 See [Bugbot](/bugbot) for full documentation.
@@ -188,7 +187,6 @@ copilot think -q "Where is authentication validated?" -t $PAT
 copilot copilot -p "Explain the main function" -t $PAT
 ```
 
-Common options: **`-t`** / **`--token`** (PAT), **`-d`** / **`--debug`**, **`--opencode-server-url`**, **`--opencode-model`**. See [Workflow & CLI](/single-actions/workflow-and-cli) and [Testing OpenCode Plan Locally](/testing-opencode-plan-locally).
 
 ## Next steps
 

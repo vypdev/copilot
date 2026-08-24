@@ -1,0 +1,134 @@
+---
+title: Agent CLI configuration
+description: Configure the Bugbot runtime CLI, model provider, model, credentials, and fail-closed policy.
+---
+
+# Agent CLI configuration
+
+Bugbot executes one external, headless CLI per run. The selected runtime, the provider that serves the model, and the model name are separate values.
+
+## The three-value contract
+
+```yaml
+with:
+  agent-provider: opencode
+  agent-model-provider: openai
+  agent-model: gpt-5.6-luna
+```
+
+| Input | Meaning | Example |
+| --- | --- | --- |
+| `agent-provider` | CLI runtime that is executed | `opencode`, `codex`, `cursor` |
+| `agent-model-provider` | Provider that serves the selected model | `openai` |
+| `agent-model` | Model name without the provider prefix | `gpt-5.6-luna` |
+
+For OpenCode, these values produce the qualified model reference:
+
+```text
+openai/gpt-5.6-luna
+```
+
+and the runtime command is equivalent to:
+
+```bash
+opencode run --model openai/gpt-5.6-luna
+```
+
+The runtime provider and model provider do not have to be the same. OpenCode can be the runtime while OpenAI is the model provider.
+
+## Recommended GitHub Actions configuration
+
+The following example uses GitHub Variables for non-sensitive policy and a GitHub Secret for the credential:
+
+```yaml
+jobs:
+  bugbot:
+    runs-on: ubuntu-latest
+    env:
+      AGENT_PROVIDER: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+      AGENT_MODEL_PROVIDER: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
+      AGENT_MODEL: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
+      AGENT_ALLOWED_MODEL_PROVIDERS: ${{ vars.AGENT_ALLOWED_MODEL_PROVIDERS || 'openai' }}
+      AGENT_ALLOWED_MODELS: ${{ vars.AGENT_ALLOWED_MODELS || 'openai/gpt-5.6-luna' }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: vypdev/copilot@master
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          agent-provider: ${{ env.AGENT_PROVIDER }}
+          agent-model-provider: ${{ env.AGENT_MODEL_PROVIDER }}
+          agent-model: ${{ env.AGENT_MODEL }}
+```
+
+`AGENT_ALLOWED_MODEL_PROVIDERS` and `AGENT_ALLOWED_MODELS` are policy controls. They do not select a model and they never contain credentials.
+
+## Allowlists
+
+For an OpenAI-only policy:
+
+```text
+AGENT_ALLOWED_MODEL_PROVIDERS=openai
+AGENT_ALLOWED_MODELS=openai/gpt-5.6-luna
+```
+
+The first variable allows model providers. The second allows exact qualified model references. Both are checked before the CLI starts. A provider or model outside the policy is a terminal failure; there is no fallback.
+
+A broader policy is possible, but it must be explicit:
+
+```text
+AGENT_ALLOWED_MODEL_PROVIDERS=openai,opencode
+AGENT_ALLOWED_MODELS=openai/gpt-5.6-luna,opencode/kimi-k2.5-free
+```
+
+Use GitHub Variables, workflow `env`, or a controlled self-hosted runner environment. Do not store these values as Secrets unless your organization has a specific reason to hide policy values.
+
+## Runtime commands
+
+The built-in commands are provider-specific:
+
+| Runtime | Command |
+| --- | --- |
+| OpenCode | `opencode run --model provider/model` |
+| Codex | `codex exec --ephemeral --skip-git-repo-check -` |
+| Cursor | `agent -p --output-format text -` |
+
+Custom commands are optional. They must remain compatible with the selected runtime, and OpenCode commands must include an explicit `--model` argument. Shell execution and automatic provider fallback are not used.
+
+## Credentials
+
+Credentials are independent from allowlists:
+
+| Runtime/provider | Supported reference |
+| --- | --- |
+| OpenCode with OpenAI | `OPENAI_API_KEY` or a controlled local OpenCode login |
+| Codex | `CODEX_ACCESS_TOKEN`, `OPENAI_API_KEY`, or a local ChatGPT Codex session on a controlled self-hosted runner |
+| Cursor | `CURSOR_API_KEY` |
+
+Never place tokens in `with`, command arguments, prompts, repository files, or logs. See [Agent CLI runners](/agent-cli-runners), [Agent CLI provisioning](/agent-cli-provisioning), and [Codex authentication and compliance](/codex-authentication-and-compliance) for operational details.
+
+## Provisioning
+
+The Action provisions only the selected CLI in GitHub Actions when the required version variables are present. Versions and the Cursor installer checksum are non-sensitive GitHub Variables:
+
+```text
+CODEX_VERSION
+OPENCODE_VERSION
+CURSOR_INSTALLER_SHA256
+```
+
+The Action does not copy local OAuth files into CI and does not install an unselected provider. See [Agent CLI provisioning](/agent-cli-provisioning).
+
+## Failure policy
+
+The run fails before the agent starts when any of the following is invalid:
+
+- runtime provider;
+- model provider or model allowlist;
+- qualified model reference;
+- provider-specific command;
+- required CLI executable;
+- required credential reference;
+- pinned CLI provisioning input.
+
+This behavior is intentional: a run must never silently use another provider, another model, a repository-local default, or an unverified credential.

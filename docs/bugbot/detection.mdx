@@ -18,7 +18,6 @@ When you push to a branch that is **linked to an issue** (e.g. a feature or bugf
 **Requirements:**
 
 - The push must be to a branch that has an associated issue (the action resolves the issue number from the branch name or from project/linking).
-- OpenCode must be configured (`opencode-server-url`, `opencode-model`).
 - The Commit workflow must include the Copilot step (see [Examples → Push workflow](/bugbot/examples#push-workflow-with-bugbot)).
 
 If the branch is not linked to an issue (e.g. `issueNumber === -1`), detection is skipped.
@@ -28,7 +27,7 @@ If the branch is not linked to an issue (e.g. `issueNumber === -1`), detection i
 You can run Bugbot detection **without pushing**:
 
 - **Single action:** In a workflow, set `single-action: detect_potential_problems_action` and `single-action-issue: <issue number>`. The workflow must run in a context where the **branch** to analyze is the current checkout (e.g. trigger on `workflow_dispatch` after checking out the branch you want to analyze).
-- **CLI:** From the repository root, run `copilot detect-potential-problems -i <issue>` (optionally `-b <branch>`). Requires a `.env` with `PERSONAL_ACCESS_TOKEN` and, for OpenCode, the appropriate server URL and model. See [Examples → CLI](/bugbot/examples#cli) and [Testing OpenCode Plan Locally](/testing-opencode-plan-locally).
+- **CLI:** From the repository root, run `copilot detect-potential-problems -i <issue>` (optionally `-b <branch>`). Requires a `.env` with `PERSONAL_ACCESS_TOKEN` and the configured agent CLI credentials/model. See [Examples → CLI](/bugbot/examples#cli) and [Testing OpenCode locally](/testing-opencode-plan-locally).
 
 In both cases, the action uses the same detection flow: load context for that issue/branch, call OpenCode Plan, filter and apply comment limit, then publish to the issue and to any open PR for that branch.
 

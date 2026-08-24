@@ -36,7 +36,6 @@ jobs:
           commit-prefix-transforms: replace-slash
           ai-pull-request-description: true
           opencode-model: ${{ vars.OPENCODE_MODEL }}
-          opencode-server-url: ${{ vars.OPENCODE_SERVER_URL }}
           ai-ignore-files: build/*
           debug: ${{ vars.DEBUG }}
 ```
@@ -46,7 +45,6 @@ jobs:
 - **`project-column-*`**: Column names in your GitHub Project (must match exactly).
 - **`desired-reviewers-count`**: Number of reviewers to assign (e.g. 1).
 - **`commit-prefix-transforms`**: Transforms for commit prefix derived from branch name (e.g. `replace-slash` for `feature/123` → `feature-123`).
-- **`ai-pull-request-description`**: Set to `true` to generate/update the PR description with OpenCode (requires `opencode-model` and `opencode-server-url`).
 
 ## Example: AI PR description only
 
@@ -68,7 +66,6 @@ jobs:
         with:
           token: ${{ secrets.PAT }}
           ai-pull-request-description: true
-          opencode-server-url: ${{ secrets.OPENCODE_SERVER_URL }}
           opencode-model: "anthropic/claude-3-5-sonnet"
 ```
 

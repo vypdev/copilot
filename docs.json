@@ -54,6 +54,26 @@
           "icon": "key"
         },
         {
+          "title": "Agent CLI configuration",
+          "href": "/agent-cli-configuration",
+          "icon": "settings"
+        },
+        {
+          "title": "Agent CLI runners",
+          "href": "/agent-cli-runners",
+          "icon": "terminal"
+        },
+        {
+          "title": "Agent CLI provisioning",
+          "href": "/agent-cli-provisioning",
+          "icon": "download"
+        },
+        {
+          "title": "Codex authentication",
+          "href": "/codex-authentication-and-compliance",
+          "icon": "key"
+        },
+        {
           "title": "OpenCode (AI)",
           "href": "/opencode-integration",
           "icon": "cpu"

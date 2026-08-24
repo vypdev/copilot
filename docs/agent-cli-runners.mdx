@@ -1,60 +1,47 @@
 ---
 title: Agent CLI runners
-description: Provision and verify OpenCode, Codex CLI, and Cursor CLI for Bugbot.
+description: Run and verify the provider-specific headless CLIs used by Bugbot.
 ---
 
 # Agent CLI runners
 
-Copilot uses one execution contract for all supported agents: a provider-specific headless CLI receives the prompt on standard input and returns its response on standard output.
+Copilot uses one provider-specific, headless CLI per run. The prompt is sent through standard input and the response is read from standard output.
 
-| Provider | Headless command | Credential reference |
+| Runtime | Headless command | Credential reference |
 | --- | --- | --- |
-| OpenCode | `opencode run` | Provider-specific API key in the workflow environment |
-| Codex | `codex exec --ephemeral --skip-git-repo-check -` | `CODEX_ACCESS_TOKEN`, `OPENAI_API_KEY`, or a local ChatGPT session in `CODEX_HOME/auth.json` |
+| OpenCode | `opencode run --model provider/model` | Provider credential, for example `OPENAI_API_KEY` |
+| Codex | `codex exec --ephemeral --skip-git-repo-check -` | `CODEX_ACCESS_TOKEN`, `OPENAI_API_KEY`, or a controlled local ChatGPT session |
 | Cursor | `agent -p --output-format text -` | `CURSOR_API_KEY` |
 
-There is deliberately no transport setting, server URL, managed server lifecycle, or provider fallback. If the selected provider is unavailable or fails, the run fails closed and no other agent is attempted.
+There is no transport setting, server URL, managed server lifecycle, SDK, or provider fallback in the current architecture. If the selected runtime is unavailable or fails, the run fails closed.
 
-## Runner provisioning
-
-Provision the CLIs on the runner before enabling the workflow. Installation is intentionally outside the action bundle so the action remains a small application adapter and does not download executables during a run.
-
-The provisioning job or image must:
-
-1. install the exact versions selected by the organization;
-2. expose the binaries as `opencode`, `codex`, and `agent`;
-3. authenticate through environment-backed secrets or the provider's non-interactive login mechanism;
-4. run `node scripts/verify-agent-clis.cjs`;
-5. fail before invoking Copilot when the selected provider is unavailable.
-
-Do not put API keys in repository files, action inputs, workflow YAML, or command strings. The checker reports only executable and credential-reference state and never prints secret values.
-
-## Configuration
-
-The only agent selection inputs are:
-
-```yaml
-agent-provider: ${{ vars.AGENT_PROVIDER }}
-agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER }}
-agent-model: ${{ vars.AGENT_MODEL }}
-agent-command: ${{ vars.AGENT_COMMAND }}
-```
-
-`agent-command` is optional. When omitted, Copilot derives the safe provider default shown in the table above. The provider and command are validated together; a command for another provider is rejected.
-
-Example provider selection:
+## Configure the runtime and model separately
 
 ```yaml
 with:
-  agent-provider: codex
+  agent-provider: opencode
   agent-model-provider: openai
-  agent-model: gpt-5-codex
-  agent-command: codex exec --ephemeral --skip-git-repo-check -
-env:
-  CODEX_ACCESS_TOKEN: ${{ secrets.CODEX_ACCESS_TOKEN }}
+  agent-model: gpt-5.6-luna
 ```
 
-## Verification
+For OpenCode, Copilot validates and passes `openai/gpt-5.6-luna` explicitly. Repository-local OpenCode configuration and implicit defaults cannot replace that selection.
+
+## Provisioning contract
+
+The runner must provide the selected executable and its credential reference before the Action invokes it. In GitHub Actions, the Action can provision the selected CLI using pinned version variables. In a prebuilt self-hosted image, install and verify the same pinned versions before accepting jobs.
+
+Required checks:
+
+1. install only the selected runtime;
+2. verify the exact binary version;
+3. verify the headless help command;
+4. verify the credential reference without printing its value;
+5. run a harmless, non-production smoke test when authorized;
+6. fail before Copilot starts when a prerequisite is missing.
+
+Do not put secrets in action inputs, YAML literals, command arguments, prompts, or logs. Do not copy local OAuth files into GitHub-hosted CI.
+
+## Verification command
 
 From the repository root:
 
@@ -62,4 +49,22 @@ From the repository root:
 node scripts/verify-agent-clis.cjs
 ```
 
-A provider is operational only when its executable, headless help invocation, credential reference, and non-production smoke execution succeed. Verification must be performed on the exact runner image used by the workflow.
+The verifier reports executable availability, headless help status, and sanitized credential state. A successful help check is not proof that a provider/model request is authenticated; use an authorized smoke test for that.
+
+## Provider notes
+
+### OpenCode
+
+Use an explicit qualified model. For the recommended policy:
+
+```bash
+opencode run --model openai/gpt-5.6-luna 'Reply with exactly READY.'
+```
+
+### Codex
+
+Codex can use an API credential or a local ChatGPT session. A local session is appropriate only on a self-hosted machine controlled by the account owner; do not export its `auth.json` to GitHub-hosted runners.
+
+### Cursor
+
+The CLI and headless invocation are supported, but a real smoke test requires an authorized `CURSOR_API_KEY`. Cursor validation is intentionally separate from the OpenCode and Codex validation path.
