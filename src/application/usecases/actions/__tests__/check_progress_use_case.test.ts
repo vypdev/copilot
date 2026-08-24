@@ -77,7 +77,7 @@ describe('CheckProgressUseCase', () => {
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
     expect(results[0].errors).toContain(
-      'Missing required agent configuration. Provide a model and a valid server URL or CLI command.'
+      'Could not retrieve issue description for issue #123'
     );
     expect(mockAskAgent).not.toHaveBeenCalled();
   });
@@ -90,7 +90,7 @@ describe('CheckProgressUseCase', () => {
 
     expect(results[0].success).toBe(false);
     expect(results[0].errors).toContain(
-      'Missing required agent configuration. Provide a model and a valid server URL or CLI command.'
+      'Missing required agent configuration. Provide a model and a valid CLI command.'
     );
     expect(mockAskAgent).not.toHaveBeenCalled();
   });

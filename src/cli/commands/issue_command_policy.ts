@@ -7,7 +7,7 @@ export interface IssueCommandOptions {
   branch?: string;
   debug?: boolean;
   token?: string;
-  opencodeServerUrl?: string;
+
   opencodeModel?: string;
 }
 
@@ -15,7 +15,7 @@ function sharedOptions(options: IssueCommandOptions): Record<string, unknown> {
   return {
     [INPUT_KEYS.DEBUG]: options.debug?.toString() ?? 'false',
     [INPUT_KEYS.TOKEN]: options.token || process.env.PERSONAL_ACCESS_TOKEN,
-    [INPUT_KEYS.OPENCODE_SERVER_URL]: options.opencodeServerUrl || process.env.OPENCODE_SERVER_URL || 'http://127.0.0.1:4096',
+
     [INPUT_KEYS.OPENCODE_MODEL]: options.opencodeModel || process.env.OPENCODE_MODEL || OPENCODE_DEFAULT_MODEL,
   };
 }

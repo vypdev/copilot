@@ -127,32 +127,19 @@ The following parameters can be configured in the workflow:
 #### AI agent selection
 The workflow can select one provider for both findings and fixer operations. The selected transport is resolved before execution; unsupported combinations fail instead of silently falling back to OpenCode.
 
-- `agent-provider`: `opencode`, `cursor`, or `codex` (default: `opencode`)
-- `agent-transport`: `server` or `cli` (default: `server`)
-- `agent-model`: provider-specific model or executable identifier (defaults to `opencode-model`)
-- `agent-command`: optional literal executable plus arguments for CLI transport;
-  defaults are `opencode`, `cursor-agent`, or `codex` according to the provider
+- `agent-provider`: CLI runtime used by the findings and fixer tasks (`opencode`, `codex`, or `cursor`)
+- `agent-model-provider`: upstream provider for the selected model (for example `openai` or `opencode`)
+- `agent-model`: model name without the provider prefix (for example `gpt-5.6-luna`)
+- `agent-command`: optional literal executable plus arguments for the selected CLI. OpenCode commands must include an explicit `--model provider/model` selection.
+All three providers use the CLI contract:
 
-Current execution matrix:
+| Provider | CLI command |
+| --- | --- |
+| OpenCode | `opencode run --model provider/model` |
+| Cursor | `agent -p --output-format text -` |
+| Codex | `codex exec --ephemeral --skip-git-repo-check -` |
 
-| Provider | `server` | `cli` |
-| --- | --- | --- |
-| OpenCode | supported; managed startup preserves the legacy lifecycle | experimental generic command transport; no provider-specific flags are added |
-| Cursor | rejected | experimental generic command transport; provider-specific integration is not wired or end-to-end verified |
-| Codex | rejected | experimental generic command transport; provider-specific integration is not wired or end-to-end verified |
-
-SDK transport is not part of the current public contract. It remains a future
-design option in the explicitly non-active multi-agent proposal.
-
-CLI commands are executed without a shell. Shell operators, substitutions,
-pipes, redirects, and non-literal command tokens are rejected. The generic
-transport sends the prompt through standard input and treats stdout as the agent
-response. A default executable name does not prove that a provider's current
-CLI accepts this protocol. Use CLI transport only after verifying the selected
-non-interactive command in the runner environment, preferably by setting
-`agent-command` explicitly. Configure credentials through the runner/provider
-environment; never include tokens in `agent-command`.
-
+SDK and HTTP server transports are not part of the current public contract. CLI commands are executed without a shell and credentials are supplied through the runner environment or an explicitly controlled local credential store. Tokens must never be included in `agent-command`.
 Legacy OpenCode inputs remain supported:
 
 #### AI (OpenCode)

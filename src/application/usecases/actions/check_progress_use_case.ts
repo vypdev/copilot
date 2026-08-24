@@ -41,14 +41,14 @@ export class CheckProgressUseCase implements ParamUseCase<Execution, Result[]> {
         try {
             // Check if AI configuration is available
             if (!isAgentConfigurationReady(param.ai?.getAgentConfiguration('findings'))) {
-                logError(`Missing required agent configuration. Provide a model and a valid server URL or CLI command.`);
+                logError(`Missing required agent configuration. Provide a model and a valid CLI command.`);
                 results.push(
                     new Result({
                         id: this.taskId,
                         success: false,
                         executed: true,
                         errors: [
-                            `Missing required agent configuration. Provide a model and a valid server URL or CLI command.`,
+                            `Missing required agent configuration. Provide a model and a valid CLI command.`,
                         ],
                     })
                 );

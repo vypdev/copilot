@@ -9,3 +9,5 @@ export interface BugbotWatermarkOptions {
     repo: string;
 }
 export declare function getCommentWatermark(options?: BugbotWatermarkOptions): string;
+/** Removes all trailing Copilot watermarks before a read-modify-write update. */
+export declare function stripTrailingCommentWatermarks(comment: string): string;

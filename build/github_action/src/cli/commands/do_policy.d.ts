@@ -1,0 +1,18 @@
+import type { AgentTaskConfiguration } from '../../data/model/agent';
+export interface DoAgentOptions {
+    opencodeModel?: string;
+    agentProvider?: string;
+    agentModelProvider?: string;
+    agentModel?: string;
+    agentCommand?: string;
+    findingsProvider?: string;
+    findingsModelProvider?: string;
+    findingsModel?: string;
+    findingsCommand?: string;
+    fixerProvider?: string;
+    fixerModelProvider?: string;
+    fixerModel?: string;
+    fixerCommand?: string;
+}
+export declare function buildDoAgentTasks(options: DoAgentOptions): AgentTaskConfiguration;
+export declare function formatDoJsonResponse(text: string | undefined, sessionId?: string): string;

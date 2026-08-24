@@ -11,7 +11,7 @@ export class Ai {
     private agentTasks: AgentTaskConfiguration;
 
     constructor(
-        serverUrl: string,
+        _configurationSource: string,
         model: string,
         aiPullRequestDescription: boolean,
         aiMembersOnly: boolean,
@@ -21,8 +21,8 @@ export class Ai {
         bugbotCommentLimit: number,
         bugbotFixVerifyCommands: string[] = [],
         agentTasks: AgentTaskConfiguration = {
-            findings: { provider: 'opencode', transport: 'server', model, serverUrl },
-            fixer: { provider: 'opencode', transport: 'server', model, serverUrl },
+            findings: { provider: 'opencode', modelProvider: 'opencode', model, command: `opencode run --model opencode/${model}` },
+            fixer: { provider: 'opencode', modelProvider: 'opencode', model, command: `opencode run --model opencode/${model}` },
         }
     ) {
         this.aiPullRequestDescription = aiPullRequestDescription;

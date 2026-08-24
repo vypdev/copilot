@@ -46,7 +46,6 @@ export async function buildLocalActionConfiguration(
          * AI (OpenCode)
          */
         const agentTasks = buildAgentTasksFromValues({ ...actionInputs, ...additionalParams });
-        const opencodeServerUrl = agentTasks.findings.serverUrl ?? 'http://127.0.0.1:4096';
         const opencodeModel = agentTasks.findings.model ?? '';
         const aiPullRequestDescription = isEnabledInput(resolveActionInput(additionalParams, actionInputs, INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION));
         const aiMembersOnly = isEnabledInput(resolveActionInput(additionalParams, actionInputs, INPUT_KEYS.AI_MEMBERS_ONLY));
@@ -235,7 +234,6 @@ export async function buildLocalActionConfiguration(
         singleActionChangelog,
         token,
         agentTasks,
-        opencodeServerUrl,
         opencodeModel,
         aiPullRequestDescription,
         aiMembersOnly,

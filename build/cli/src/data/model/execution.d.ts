@@ -69,5 +69,4 @@ export declare class Execution {
     get commit(): Commit;
     get runnedByToken(): boolean;
     constructor(debug: boolean, singleAction: SingleAction, commitPrefixBuilder: string, issue: Issue, pullRequest: PullRequest, emoji: Emoji, giphy: Images, tokens: Tokens, ai: Ai, labels: Labels, issueTypes: IssueTypes, locale: Locale, sizeThresholds: SizeThresholds, branches: Branches, release: Release, hotfix: Hotfix, workflows: Workflows, project: Projects, welcome: Welcome | undefined, inputs: any | undefined);
-    setup: () => Promise<void>;
 }

@@ -13,7 +13,6 @@ describe('agent port boundaries', () => {
             'agent_configuration_ports.ts',
             'agent_findings_ports.ts',
             'agent_fixer_ports.ts',
-            'agent_server_ports.ts',
         ]) {
             expect(existsSync(join(portsDirectory, file))).toBe(true);
         }

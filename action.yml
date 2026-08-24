@@ -393,11 +393,12 @@ inputs:
   agent-provider:
     description: "Single agent provider used by findings and fixer tasks: opencode, cursor, or codex. A provider failure is terminal; no fallback provider is attempted."
     default: "opencode"
-  agent-transport:
-    description: "Agent transport: server or cli. Server is OpenCode-only; CLI uses the selected provider command and fails closed."
-    default: "server"
+  agent-model-provider:
+    description: "Provider that supplies the selected model, for example openai, opencode, openrouter, anthropic, or a local provider."
+    default: "openai"
+
   agent-model:
-    description: "Selected agent model or model identifier. Defaults to opencode-model."
+    description: "Selected model name without the provider prefix, for example gpt-5.6-luna. The provider is configured separately with agent-model-provider."
     default: ""
   agent-command:
     description: "Optional executable command for the selected CLI agent. Defaults: opencode run, agent -p --output-format text -, or codex exec --ephemeral --skip-git-repo-check -. No fallback command is attempted."
@@ -405,9 +406,7 @@ inputs:
   findings-provider:
     description: "Optional provider override for findings."
     default: ""
-  findings-transport:
-    description: "Optional transport override for findings."
-    default: ""
+
   findings-model:
     description: "Optional model override for findings."
     default: ""
@@ -417,24 +416,18 @@ inputs:
   fixer-provider:
     description: "Optional provider override for fixer."
     default: ""
-  fixer-transport:
-    description: "Optional transport override for fixer."
-    default: ""
+
   fixer-model:
     description: "Optional model override for fixer."
     default: ""
   fixer-command:
     description: "Optional CLI command override for fixer."
     default: ""
-  opencode-server-url:
-    description: "OpenCode server URL for AI operations (e.g. http://localhost:4096). OpenCode supports 75+ LLM providers."
-    default: "http://localhost:4096"
+
   opencode-model:
     description: "OpenCode model in provider/model format (default opencode/kimi-k2.5-free; e.g. openai/gpt-4o-mini)."
     default: "opencode/kimi-k2.5-free"
-  opencode-start-server:
-    description: "If true, the action starts an OpenCode server at the beginning and stops it when the job ends. No need to install or run OpenCode yourself. Requires provider API keys as secrets (e.g. OPENAI_API_KEY, ANTHROPIC_API_KEY, OPENROUTER_API_KEY) passed via env."
-    default: "true"
+
   ai-pull-request-description:
     description: "Enable AI-powered automatic updates for pull request descriptions."
     default: "true"

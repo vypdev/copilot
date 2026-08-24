@@ -1,25 +1,25 @@
 import { OPENCODE_REQUEST_TIMEOUT_MS } from '../../../utils/constants';
 import { logError } from '../../../utils/logger';
 import { ProviderCliAdapter } from '../provider_cli_adapter';
-import { OpenCodeAgentInvoker } from '../opencode_agent_invoker';
-import { getValidatedAgentConfiguration, isValidServerAgentConfiguration } from '../agent_configuration_policy';
-import { executeAgentRequest } from '../agent_execution_policy';
+
+import { getValidatedAgentConfiguration } from '../agent_configuration_policy';
+
 import type { AgentConfiguration } from '../../../application/ports/agent_configuration_ports';
 import type { AgentTask } from '../../model/agent';
-import type { AgentCliPort, OpenCodeClientPort } from '../../../infrastructure/agents/ports/agent_provider_ports';
+import type { AgentCliPort } from '../../../infrastructure/agents/ports/agent_provider_ports';
 
 export interface AgentCapabilityInfrastructure {
     readonly cli: AgentCliPort;
-    readonly openCode: OpenCodeClientPort;
+
 }
 
 export abstract class AgentCapabilityAdapter {
     protected readonly cliAdapter: ProviderCliAdapter;
-    protected readonly openCodeInvoker: OpenCodeAgentInvoker;
+
 
     protected constructor(infrastructure: AgentCapabilityInfrastructure) {
         this.cliAdapter = new ProviderCliAdapter(infrastructure.cli);
-        this.openCodeInvoker = new OpenCodeAgentInvoker(infrastructure.openCode);
+
     }
 
     protected async execute<T>(request: {
@@ -31,39 +31,15 @@ export abstract class AgentCapabilityAdapter {
         mapServerResponse: (response: { parts: unknown; sessionId: string }) => T;
     }): Promise<T | undefined> {
         const taskConfiguration = getValidatedAgentConfiguration(request.configuration, request.capability);
-        if (taskConfiguration.transport === 'cli') {
-            try {
-                const output = await this.cliAdapter.execute({
-                    configuration: taskConfiguration,
-                    prompt: request.prompt,
-                    timeoutMs: OPENCODE_REQUEST_TIMEOUT_MS,
-                });
-                return request.mapCliOutput(output);
-            } catch (error: unknown) {
-                logError(`Error querying ${taskConfiguration.provider} CLI ${request.capability}: ${error instanceof Error ? error.message : String(error)}`);
-                return undefined;
-            }
-        }
-        if (!isValidServerAgentConfiguration(taskConfiguration)) {
-            logError(`Missing required AI configuration for ${request.capability} server transport.`);
-            return undefined;
-        }
         try {
-            return await executeAgentRequest({
+            const output = await this.cliAdapter.execute({
                 configuration: taskConfiguration,
                 prompt: request.prompt,
-                agent: request.agent,
                 timeoutMs: OPENCODE_REQUEST_TIMEOUT_MS,
-                cliAdapter: this.cliAdapter,
-                openCodeInvoker: this.openCodeInvoker,
-                mapCliOutput: request.mapCliOutput,
-                mapServerResponse: request.mapServerResponse,
             });
+            return request.mapCliOutput(output);
         } catch (error: unknown) {
-            const err = error instanceof Error ? error : new Error(String(error));
-            const cause = (err as Error & { cause?: unknown }).cause;
-            const detail = cause != null ? ` (${cause instanceof Error ? cause.message : String(cause)})` : '';
-            logError(`Error querying ${request.capability} agent ${request.agent}: ${err.message}${detail}`);
+            logError(`Error querying ${taskConfiguration.provider} CLI ${request.capability}: ${error instanceof Error ? error.message : String(error)}`);
             return undefined;
         }
     }

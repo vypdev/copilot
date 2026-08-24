@@ -1,0 +1,16 @@
+export interface AgentCliRequest {
+    command: string;
+    prompt: string;
+    timeoutMs: number;
+    signal?: AbortSignal;
+    cwd?: string;
+    maxOutputBytes?: number;
+}
+export declare class AgentCliError extends Error {
+    readonly category: 'configuration' | 'timeout' | 'cancelled' | 'process' | 'output';
+    readonly retryable: boolean;
+    constructor(message: string, category: 'configuration' | 'timeout' | 'cancelled' | 'process' | 'output', retryable?: boolean);
+}
+export declare class AgentCliClient {
+    execute(request: AgentCliRequest): Promise<string>;
+}

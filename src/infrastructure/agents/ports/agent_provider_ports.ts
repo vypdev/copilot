@@ -8,14 +8,3 @@ export interface AgentCliPort {
         maxOutputBytes?: number;
     }): Promise<string>;
 }
-
-export interface OpenCodeClientPort {
-    sendMessage(request: {
-        serverUrl: string;
-        providerID: string;
-        modelID: string;
-        agent: string;
-        prompt: string;
-        signal?: AbortSignal;
-    }): Promise<{ parts: unknown; sessionId: string }>;
-}

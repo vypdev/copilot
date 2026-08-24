@@ -34,7 +34,7 @@ export class RecommendStepsUseCase implements ParamUseCase<Execution, Result[]> 
                         id: this.taskId,
                         success: false,
                         executed: true,
-                        errors: ['Missing OPENCODE_SERVER_URL and OPENCODE_MODEL.'],
+                        errors: ['Missing agent CLI command and model.'],
                     })
                 );
                 return results;

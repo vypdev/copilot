@@ -1,0 +1,11 @@
+import { CommitUseCase } from "../../application/usecases/commit_use_case";
+import { IssueCommentUseCase } from "../../application/usecases/issue_comment_use_case";
+import type { ProjectBoardCommandPort } from "../../application/ports/project_board_command_ports";
+import { PullRequestReviewCommentUseCase } from "../../application/usecases/pull_request_review_comment_use_case";
+import { SingleActionUseCase } from "../../application/usecases/single_action_use_case";
+import type { MainRunRouteHandlers } from "../../actions/main_run_route_handlers";
+export declare function createSingleActionUseCaseCompositionRoot(): SingleActionUseCase;
+export declare function createIssueCommentUseCaseCompositionRoot(): IssueCommentUseCase;
+export declare function createPullRequestReviewCommentUseCaseCompositionRoot(): PullRequestReviewCommentUseCase;
+export declare function createCommitUseCaseCompositionRoot(projectBoardCommandPort: ProjectBoardCommandPort): CommitUseCase;
+export declare function createMainRunRouteCompositionRoot(projectBoardCommandPort: ProjectBoardCommandPort): MainRunRouteHandlers;

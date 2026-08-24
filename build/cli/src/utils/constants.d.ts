@@ -3,7 +3,7 @@ export declare const TITLE = "Copilot";
 export declare const OPENCODE_DEFAULT_MODEL = "opencode/kimi-k2.5-free";
 /** Timeout in ms for OpenCode HTTP requests (session create, message, diff). Agent calls can be slow (e.g. plan analyzing repo). */
 export declare const OPENCODE_REQUEST_TIMEOUT_MS = 900000;
-/** Max attempts for OpenCode requests (retries on failure). Applied transparently in AiRepository. */
+/** Max attempts for OpenCode requests (retries on failure). Applied by the capability transport policy. */
 export declare const OPENCODE_MAX_RETRIES = 5;
 /** Delay in ms between OpenCode retry attempts. */
 export declare const OPENCODE_RETRY_DELAY_MS = 2000;
@@ -56,9 +56,17 @@ export declare const INPUT_KEYS: {
     readonly SINGLE_ACTION_TITLE: "single-action-title";
     readonly SINGLE_ACTION_CHANGELOG: "single-action-changelog";
     readonly TOKEN: "token";
-    readonly OPENCODE_SERVER_URL: "opencode-server-url";
+    readonly AGENT_PROVIDER: "agent-provider";
+    readonly AGENT_MODEL_PROVIDER: "agent-model-provider";
+    readonly AGENT_MODEL: "agent-model";
+    readonly AGENT_COMMAND: "agent-command";
+    readonly FINDINGS_PROVIDER: "findings-provider";
+    readonly FINDINGS_MODEL: "findings-model";
+    readonly FINDINGS_COMMAND: "findings-command";
+    readonly FIXER_PROVIDER: "fixer-provider";
+    readonly FIXER_MODEL: "fixer-model";
+    readonly FIXER_COMMAND: "fixer-command";
     readonly OPENCODE_MODEL: "opencode-model";
-    readonly OPENCODE_START_SERVER: "opencode-start-server";
     readonly AI_PULL_REQUEST_DESCRIPTION: "ai-pull-request-description";
     readonly AI_MEMBERS_ONLY: "ai-members-only";
     readonly AI_IGNORE_FILES: "ai-ignore-files";

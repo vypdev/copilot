@@ -1,0 +1,33 @@
+import { Execution } from "../../data/model/execution";
+import { Result } from "../../data/model/result";
+import type { ParamUseCase } from "./base/param_usecase";
+import type { ProjectBoardPriorityPort } from "./steps/issue/priority_size_check_use_case";
+import type { IssueAssigneePort } from "../ports/issue_management_ports";
+import type { IssueClosurePort } from "../ports/issue_lifecycle_ports";
+import type { IssueDescriptionQueryPort } from "../ports/issue_description_ports";
+import type { OrganizationMembersPort } from "../ports/organization_members_ports";
+import type { PullRequestDescriptionCommandPort } from "../ports/pull_request_description_ports";
+import type { PullRequestReviewerPort } from "../ports/pull_request_reviewer_ports";
+import type { PullRequestIssueLinkPort } from "../ports/pull_request_issue_link_ports";
+import type { IssueLabelsPort } from "../ports/issue_management_ports";
+import type { IssueTitlePort } from "../ports/issue_title_ports";
+import type { ProjectBoardCommandPort } from "../ports/project_board_command_ports";
+import type { ProjectBoardLinkPort } from "../ports/project_board_link_ports";
+export declare class PullRequestUseCase implements ParamUseCase<Execution, Result[]> {
+    private readonly projectBoardPriorityPort;
+    private readonly pullRequestDescriptionCommandPort;
+    private readonly issueDescriptionQueryPort;
+    private readonly issueTitlePort;
+    private readonly issueClosurePort;
+    private readonly issueAssigneePort;
+    private readonly pullRequestReviewPort;
+    private readonly organizationMembersPort;
+    private readonly issueLabelsPort;
+    private readonly pullRequestIssueLinkPort;
+    private readonly projectBoardLinkPort;
+    private readonly projectBoardCommandPort;
+    private readonly updatePullRequestDescriptionUseCase;
+    taskId: string;
+    constructor(projectBoardPriorityPort: ProjectBoardPriorityPort, pullRequestDescriptionCommandPort: PullRequestDescriptionCommandPort, issueDescriptionQueryPort: IssueDescriptionQueryPort, issueTitlePort: IssueTitlePort, issueClosurePort: IssueClosurePort, issueAssigneePort: IssueAssigneePort, pullRequestReviewPort: PullRequestReviewerPort, organizationMembersPort: OrganizationMembersPort, issueLabelsPort: IssueLabelsPort, pullRequestIssueLinkPort: PullRequestIssueLinkPort, projectBoardLinkPort: ProjectBoardLinkPort, projectBoardCommandPort: ProjectBoardCommandPort, updatePullRequestDescriptionUseCase: ParamUseCase<Execution, Result[]>);
+    invoke(param: Execution): Promise<Result[]>;
+}

@@ -43,7 +43,7 @@ program
       [INPUT_KEYS.SINGLE_ACTION]: ACTIONS.THINK,
       [INPUT_KEYS.SINGLE_ACTION_ISSUE]: parseInt(issueNumber) || 1,
       [INPUT_KEYS.TOKEN]: options?.token?.length > 0 ? options.token : process.env.PERSONAL_ACCESS_TOKEN,
-      [INPUT_KEYS.OPENCODE_SERVER_URL]: options?.opencodeServerUrl?.length > 0 ? options.opencodeServerUrl : process.env.OPENCODE_SERVER_URL,
+
       [INPUT_KEYS.OPENCODE_MODEL]: options?.opencodeModel?.length > 0 ? options.opencodeModel : process.env.OPENCODE_MODEL || OPENCODE_DEFAULT_MODEL,
       [INPUT_KEYS.AI_IGNORE_FILES]: options?.aiIgnoreFiles?.length > 0 ? options.aiIgnoreFiles : process.env.AI_IGNORE_FILES,
       [INPUT_KEYS.AI_INCLUDE_REASONING]: options?.includeReasoning?.length > 0 ? options.includeReasoning : process.env.AI_INCLUDE_REASONING,

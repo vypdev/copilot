@@ -6,7 +6,7 @@ describe('ProviderCliAdapter', () => {
         const execute = jest.fn().mockResolvedValue('result');
         const adapter = new ProviderCliAdapter({ execute } as unknown as AgentCliPort);
         const result = await adapter.execute({
-            configuration: { provider: 'cursor', transport: 'cli', model: 'cursor', command: 'cursor-agent' },
+            configuration: { provider: 'cursor', model: 'cursor', command: 'cursor-agent' },
             prompt: 'inspect changes',
             timeoutMs: 1000,
         });
@@ -14,14 +14,14 @@ describe('ProviderCliAdapter', () => {
         expect(execute).toHaveBeenCalledWith({ command: 'cursor-agent', prompt: 'inspect changes', timeoutMs: 1000, cwd: undefined, signal: undefined });
     });
 
-    it('rejects a server configuration before invoking the process port', async () => {
+    it('rejects an incomplete CLI configuration before invoking the process port', () => {
         const execute = jest.fn();
         const adapter = new ProviderCliAdapter({ execute } as unknown as AgentCliPort);
         expect(() => adapter.execute({
-            configuration: { provider: 'opencode', transport: 'server', model: 'model', serverUrl: 'http://localhost' },
+            configuration: { provider: 'opencode', model: 'model', command: '' },
             prompt: 'inspect',
             timeoutMs: 1000,
-        })).toThrow('CLI adapter cannot execute server transport');
+        })).toThrow('CLI command is required');
         expect(execute).not.toHaveBeenCalled();
     });
 });

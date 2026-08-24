@@ -4,39 +4,44 @@ import { OPENCODE_DEFAULT_MODEL } from '../../utils/constants';
 import { cleanCliArgument } from '../command_input_policy';
 
 export interface DoAgentOptions {
-  opencodeServerUrl?: string;
   opencodeModel?: string;
   agentProvider?: string;
-  agentTransport?: string;
+  agentModelProvider?: string;
   agentModel?: string;
   agentCommand?: string;
   findingsProvider?: string;
-  findingsTransport?: string;
+  findingsModelProvider?: string;
+
   findingsModel?: string;
   findingsCommand?: string;
   fixerProvider?: string;
-  fixerTransport?: string;
+  fixerModelProvider?: string;
+
   fixerModel?: string;
   fixerCommand?: string;
 }
 
 export function buildDoAgentTasks(options: DoAgentOptions): AgentTaskConfiguration {
-  const serverUrl = cleanCliArgument(options.opencodeServerUrl) || process.env.OPENCODE_SERVER_URL || 'http://127.0.0.1:4096';
+
   const model = cleanCliArgument(options.opencodeModel) || process.env.OPENCODE_MODEL || OPENCODE_DEFAULT_MODEL;
   const provider = cleanCliArgument(options.agentProvider) || process.env.AGENT_PROVIDER || 'opencode';
-  const transport = cleanCliArgument(options.agentTransport) || process.env.AGENT_TRANSPORT || 'server';
+  const modelProvider = cleanCliArgument(options.agentModelProvider) || process.env.AGENT_MODEL_PROVIDER || 'opencode';
+
   return buildAgentTasks({
     provider,
-    transport,
+    modelProvider,
+
     model: cleanCliArgument(options.agentModel) || process.env.AGENT_MODEL || model,
-    serverUrl,
+
     command: cleanCliArgument(options.agentCommand) || process.env.AGENT_COMMAND,
     findings: {
-      provider: cleanCliArgument(options.findingsProvider), transport: cleanCliArgument(options.findingsTransport),
+      provider: cleanCliArgument(options.findingsProvider),
+      modelProvider: cleanCliArgument(options.findingsModelProvider),
       model: cleanCliArgument(options.findingsModel), command: cleanCliArgument(options.findingsCommand),
     },
     fixer: {
-      provider: cleanCliArgument(options.fixerProvider), transport: cleanCliArgument(options.fixerTransport),
+      provider: cleanCliArgument(options.fixerProvider),
+      modelProvider: cleanCliArgument(options.fixerModelProvider),
       model: cleanCliArgument(options.fixerModel), command: cleanCliArgument(options.fixerCommand),
     },
   });

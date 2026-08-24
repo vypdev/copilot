@@ -20,8 +20,6 @@ import { finishGithubAction } from './github_action_completion';
 import { ConfigurationHandler } from '../manager/description/configuration_handler';
 import { INPUT_KEYS } from '../utils/constants';
 import { logDebugInfo, logError, logInfo } from '../utils/logger';
-import type { ManagedAgentServer } from '../application/ports/agent_server_ports';
-import { OpenCodeServerLifecycleAdapter } from '../data/repository/opencode_server_lifecycle_adapter';
 import { GitCliRepository } from '../data/repository/git_cli_repository';
 import { createIssueContentCompositionRoot } from '../infrastructure/composition/issue_content_composition_root';
 
@@ -34,7 +32,8 @@ import { isEnabledInput } from './input_boolean_policy';
 import { getGithubActionInput } from './github_action_input';
 import { parseIntegerInput } from './input_number_policy';
 import { parseDelimitedValues } from './input_values_policy';
-import { readGithubActionAgentTasks, readGithubActionAiInputs } from './github_action_ai_inputs';
+import { readGithubActionAiInputs } from './github_action_ai_inputs';
+import { AgentCliProvisioner } from '../data/repository/agent_cli_provisioner';
 import { readGithubActionImageInputs } from './github_action_image_inputs';
 import { readGithubActionLocaleInputs } from './github_action_locale_inputs';
 import { buildSizeThresholds } from './size_threshold_builder';
@@ -80,24 +79,14 @@ export async function runGitHubAction(): Promise<void> {
      * AI (OpenCode)
      */
     const aiInputs = readGithubActionAiInputs(getGithubActionInput);
-    let opencodeServerUrl = aiInputs.serverUrl;
-    const opencodeModel = aiInputs.requestedAgentTasks.findings.model;
-    const opencodeStartServer = aiInputs.startServer;
-
-    const lifecycle: OpenCodeServerLifecycleAdapter = new OpenCodeServerLifecycleAdapter();
-    let managedOpencodeServer: ManagedAgentServer | undefined;
-    if (opencodeStartServer) {
-        logInfo('Starting managed OpenCode server...');
-        managedOpencodeServer = await lifecycle.start({ cwd: process.cwd() });
-        opencodeServerUrl = managedOpencodeServer.url;
-        logInfo(`OpenCode server started at ${opencodeServerUrl}.`);
-    } else {
-        logDebugInfo(`Using OpenCode server URL: ${opencodeServerUrl}, model: ${opencodeModel}.`);
+    if (process.env.GITHUB_ACTIONS === 'true') {
+        new AgentCliProvisioner().provision(aiInputs.requestedAgentTasks.findings.provider);
     }
-    const agentTasks = readGithubActionAgentTasks(getGithubActionInput, opencodeServerUrl);
+    const opencodeModel = aiInputs.requestedAgentTasks.findings.model;
+    logDebugInfo(`Using ${aiInputs.requestedAgentTasks.findings.provider} CLI, model: ${opencodeModel}.`);
+    const agentTasks = aiInputs.requestedAgentTasks;
 
 
-    try {
     const aiPullRequestDescription = aiInputs.pullRequestDescription;
     const aiMembersOnly = aiInputs.membersOnly;
     const aiIncludeReasoning = aiInputs.includeReasoning;
@@ -182,7 +171,7 @@ export async function runGitHubAction(): Promise<void> {
         }),
         tokens: buildTokens(token),
         ai: new Ai(
-            opencodeServerUrl,
+            '',
             opencodeModel,
             aiPullRequestDescription,
             aiMembersOnly,
@@ -216,13 +205,6 @@ export async function runGitHubAction(): Promise<void> {
         createIssueNotificationRepository(),
         new ConfigurationHandler(issueContentPort),
     );
-    } finally {
-        if (managedOpencodeServer) {
-            logInfo('Stopping OpenCode server...');
-            await managedOpencodeServer.stop();
-            logInfo('OpenCode server stopped.');
-        }
-    }
 }
 
 // Only auto-run when executed as the action entry (not when imported by tests)

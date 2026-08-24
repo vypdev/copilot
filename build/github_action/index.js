@@ -47979,31 +47979,42 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildAgentTasks = buildAgentTasks;
 const agent_cli_command_policy_1 = __nccwpck_require__(4678);
 const PROVIDERS = ['opencode', 'cursor', 'codex'];
-const TRANSPORTS = ['server', 'cli'];
+const DEFAULT_MODEL_PROVIDERS = ['openai', 'opencode', 'openrouter', 'anthropic', 'cursor', 'local'];
+function configuredAllowlist(name, fallback) {
+    const raw = process.env[name]?.trim();
+    if (!raw)
+        return fallback;
+    const values = raw.split(',').map(value => value.trim().toLowerCase()).filter(Boolean);
+    if (!values.length)
+        throw new Error(`${name} must contain at least one value.`);
+    return values;
+}
 function resolveProvider(value) {
     if (PROVIDERS.includes(value))
         return value;
     throw new Error(`Unsupported agent provider "${value}". Supported providers: ${PROVIDERS.join(', ')}.`);
 }
-function resolveTransport(value) {
-    if (TRANSPORTS.includes(value))
-        return value;
-    throw new Error(`Unsupported agent transport "${value}". Supported transports: ${TRANSPORTS.join(', ')}.`);
-}
 function buildConfiguration(values) {
     const provider = resolveProvider(values.provider.trim().toLowerCase());
-    const transport = resolveTransport(values.transport.trim().toLowerCase());
+    const modelProvider = values.modelProvider?.trim().toLowerCase() || 'opencode';
+    if (!/^[a-z0-9][a-z0-9_-]*$/.test(modelProvider))
+        throw new Error('Agent model provider must be a valid provider identifier.');
+    const allowedProviders = configuredAllowlist('AGENT_ALLOWED_MODEL_PROVIDERS', DEFAULT_MODEL_PROVIDERS);
+    if (!allowedProviders.includes(modelProvider))
+        throw new Error(`Agent model provider "${modelProvider}" is not allowlisted.`);
     const model = values.model.trim();
     if (!model)
         throw new Error('Agent model must not be empty.');
-    const serverUrl = values.serverUrl?.trim();
-    const command = values.command?.trim() || (0, agent_cli_command_policy_1.defaultCliCommand)(provider);
-    if (transport === 'server' && provider !== 'opencode') {
-        throw new Error(`Agent server transport is only supported by opencode. Use cli for ${provider}.`);
+    const allowedModels = process.env.AGENT_ALLOWED_MODELS?.split(',').map(value => value.trim()).filter(Boolean);
+    if (allowedModels?.length && !allowedModels.includes(`${modelProvider}/${model}`) && !allowedModels.includes(model)) {
+        throw new Error(`Agent model "${modelProvider}/${model}" is not allowlisted.`);
     }
-    if (transport === 'server' && !serverUrl)
-        throw new Error('Agent server transport requires a server URL.');
-    return { provider, transport, model, ...(serverUrl ? { serverUrl } : {}), ...(transport === 'cli' ? { command } : {}) };
+    const command = values.command?.trim() || (provider === 'opencode'
+        ? `${(0, agent_cli_command_policy_1.defaultCliCommand)(provider)} --model ${modelProvider}/${model}`
+        : (0, agent_cli_command_policy_1.defaultCliCommand)(provider));
+    if (provider === 'opencode' && !command.includes('--model'))
+        throw new Error('OpenCode command must select the model explicitly with --model.');
+    return { provider, modelProvider, model, command };
 }
 function mergeTaskValues(values, overrides) {
     return { ...values, ...Object.fromEntries(Object.entries(overrides ?? {}).filter(([, value]) => typeof value === 'string' && value.trim().length > 0)) };
@@ -48028,27 +48039,23 @@ exports.buildAgentTasksFromValues = buildAgentTasksFromValues;
 const constants_1 = __nccwpck_require__(5415);
 const agent_configuration_builder_1 = __nccwpck_require__(1248);
 function buildAgentTasksFromInputs(read) {
-    const opencodeServerUrl = read(constants_1.INPUT_KEYS.OPENCODE_SERVER_URL)?.trim() || 'http://127.0.0.1:4096';
     const opencodeModel = read(constants_1.INPUT_KEYS.OPENCODE_MODEL)?.trim() || constants_1.OPENCODE_DEFAULT_MODEL;
     const provider = read(constants_1.INPUT_KEYS.AGENT_PROVIDER)?.trim() || 'opencode';
-    const transport = read(constants_1.INPUT_KEYS.AGENT_TRANSPORT)?.trim() || 'server';
+    const modelProvider = read(constants_1.INPUT_KEYS.AGENT_MODEL_PROVIDER)?.trim() || 'opencode';
     const model = read(constants_1.INPUT_KEYS.AGENT_MODEL)?.trim() || opencodeModel;
     const command = read(constants_1.INPUT_KEYS.AGENT_COMMAND) ?? '';
     return (0, agent_configuration_builder_1.buildAgentTasks)({
         provider,
-        transport,
+        modelProvider,
         model,
-        serverUrl: opencodeServerUrl,
         command,
         findings: {
             provider: read(constants_1.INPUT_KEYS.FINDINGS_PROVIDER),
-            transport: read(constants_1.INPUT_KEYS.FINDINGS_TRANSPORT),
             model: read(constants_1.INPUT_KEYS.FINDINGS_MODEL),
             command: read(constants_1.INPUT_KEYS.FINDINGS_COMMAND),
         },
         fixer: {
             provider: read(constants_1.INPUT_KEYS.FIXER_PROVIDER),
-            transport: read(constants_1.INPUT_KEYS.FIXER_TRANSPORT),
             model: read(constants_1.INPUT_KEYS.FIXER_MODEL),
             command: read(constants_1.INPUT_KEYS.FIXER_COMMAND),
         },
@@ -48125,7 +48132,7 @@ exports.mainRun = mainRun;
 const core = __importStar(__nccwpck_require__(1078));
 const logger_1 = __nccwpck_require__(1151);
 const constants_1 = __nccwpck_require__(5415);
-const chalk_1 = __importDefault(__nccwpck_require__(2082));
+const chalk_1 = __importDefault(__nccwpck_require__(8578));
 const boxen_1 = __importDefault(__nccwpck_require__(1652));
 const main_run_route_1 = __nccwpck_require__(8466);
 const main_run_dispatcher_1 = __nccwpck_require__(8586);
@@ -48341,7 +48348,6 @@ const github_action_completion_1 = __nccwpck_require__(4140);
 const configuration_handler_1 = __nccwpck_require__(188);
 const constants_1 = __nccwpck_require__(5415);
 const logger_1 = __nccwpck_require__(1151);
-const opencode_server_lifecycle_adapter_1 = __nccwpck_require__(2135);
 const git_cli_repository_1 = __nccwpck_require__(6331);
 const issue_content_composition_root_1 = __nccwpck_require__(2255);
 const issue_interaction_composition_root_1 = __nccwpck_require__(2503);
@@ -48353,10 +48359,11 @@ const github_action_input_1 = __nccwpck_require__(8824);
 const input_number_policy_1 = __nccwpck_require__(7165);
 const input_values_policy_1 = __nccwpck_require__(8841);
 const github_action_ai_inputs_1 = __nccwpck_require__(7640);
+const agent_cli_provisioner_1 = __nccwpck_require__(3115);
 const github_action_image_inputs_1 = __nccwpck_require__(5380);
 const github_action_locale_inputs_1 = __nccwpck_require__(8893);
 const size_threshold_builder_1 = __nccwpck_require__(9757);
-const github_action_threshold_inputs_1 = __nccwpck_require__(8578);
+const github_action_threshold_inputs_1 = __nccwpck_require__(9308);
 const branches_builder_1 = __nccwpck_require__(85);
 const github_action_branch_inputs_1 = __nccwpck_require__(7167);
 const github_action_label_inputs_1 = __nccwpck_require__(5013);
@@ -48392,110 +48399,92 @@ async function runGitHubAction() {
      * AI (OpenCode)
      */
     const aiInputs = (0, github_action_ai_inputs_1.readGithubActionAiInputs)(github_action_input_1.getGithubActionInput);
-    let opencodeServerUrl = aiInputs.serverUrl;
+    if (process.env.GITHUB_ACTIONS === 'true') {
+        new agent_cli_provisioner_1.AgentCliProvisioner().provision(aiInputs.requestedAgentTasks.findings.provider);
+    }
     const opencodeModel = aiInputs.requestedAgentTasks.findings.model;
-    const opencodeStartServer = aiInputs.startServer;
-    const lifecycle = new opencode_server_lifecycle_adapter_1.OpenCodeServerLifecycleAdapter();
-    let managedOpencodeServer;
-    if (opencodeStartServer) {
-        (0, logger_1.logInfo)('Starting managed OpenCode server...');
-        managedOpencodeServer = await lifecycle.start({ cwd: process.cwd() });
-        opencodeServerUrl = managedOpencodeServer.url;
-        (0, logger_1.logInfo)(`OpenCode server started at ${opencodeServerUrl}.`);
+    (0, logger_1.logDebugInfo)(`Using ${aiInputs.requestedAgentTasks.findings.provider} CLI, model: ${opencodeModel}.`);
+    const agentTasks = aiInputs.requestedAgentTasks;
+    const aiPullRequestDescription = aiInputs.pullRequestDescription;
+    const aiMembersOnly = aiInputs.membersOnly;
+    const aiIncludeReasoning = aiInputs.includeReasoning;
+    const aiIgnoreFiles = aiInputs.ignoreFiles;
+    const bugbotSeverity = aiInputs.bugbotSeverity;
+    const bugbotCommentLimit = aiInputs.bugbotCommentLimit;
+    const bugbotFixVerifyCommands = aiInputs.bugbotFixVerifyCommands;
+    /**
+     * Projects Details
+     */
+    const projectIdsInput = (0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.PROJECT_IDS);
+    const projectIds = (0, input_values_policy_1.parseDelimitedValues)(projectIdsInput);
+    const projects = await (0, project_details_loader_1.loadProjectDetails)(projectBoard.query, projectIds, token);
+    const projectInputs = (0, github_action_project_inputs_1.readGithubActionProjectInputs)(github_action_input_1.getGithubActionInput, projects);
+    /**
+     * Images
+     */
+    const imageConfiguration = (0, github_action_image_inputs_1.readGithubActionImageInputs)(github_action_input_1.getGithubActionInput);
+    const workflowInputs = (0, github_action_workflow_inputs_1.readGithubActionWorkflowInputs)(github_action_input_1.getGithubActionInput);
+    /**
+     * Emoji-title
+     */
+    const titleEmoji = (0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.EMOJI_LABELED_TITLE) === 'true';
+    const branchManagementEmoji = (0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.BRANCH_MANAGEMENT_EMOJI);
+    const labelInputs = (0, github_action_label_inputs_1.readGithubActionLabelInputs)(github_action_input_1.getGithubActionInput);
+    const issueTypeInputs = (0, github_action_issue_type_inputs_1.readGithubActionIssueTypeInputs)(github_action_input_1.getGithubActionInput);
+    const localeInputs = (0, github_action_locale_inputs_1.readGithubActionLocaleInputs)(github_action_input_1.getGithubActionInput);
+    const sizeThresholdInputs = (0, github_action_threshold_inputs_1.readGithubActionThresholdInputs)(github_action_input_1.getGithubActionInput);
+    const branchInputs = (0, github_action_branch_inputs_1.readGithubActionBranchInputs)(github_action_input_1.getGithubActionInput);
+    /**
+     * Prefix builder
+     */
+    let commitPrefixBuilder = (0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.COMMIT_PREFIX_TRANSFORMS) ?? '';
+    if (commitPrefixBuilder.length === 0) {
+        commitPrefixBuilder = 'replace-slash';
     }
-    else {
-        (0, logger_1.logDebugInfo)(`Using OpenCode server URL: ${opencodeServerUrl}, model: ${opencodeModel}.`);
-    }
-    const agentTasks = (0, github_action_ai_inputs_1.readGithubActionAgentTasks)(github_action_input_1.getGithubActionInput, opencodeServerUrl);
-    try {
-        const aiPullRequestDescription = aiInputs.pullRequestDescription;
-        const aiMembersOnly = aiInputs.membersOnly;
-        const aiIncludeReasoning = aiInputs.includeReasoning;
-        const aiIgnoreFiles = aiInputs.ignoreFiles;
-        const bugbotSeverity = aiInputs.bugbotSeverity;
-        const bugbotCommentLimit = aiInputs.bugbotCommentLimit;
-        const bugbotFixVerifyCommands = aiInputs.bugbotFixVerifyCommands;
-        /**
-         * Projects Details
-         */
-        const projectIdsInput = (0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.PROJECT_IDS);
-        const projectIds = (0, input_values_policy_1.parseDelimitedValues)(projectIdsInput);
-        const projects = await (0, project_details_loader_1.loadProjectDetails)(projectBoard.query, projectIds, token);
-        const projectInputs = (0, github_action_project_inputs_1.readGithubActionProjectInputs)(github_action_input_1.getGithubActionInput, projects);
-        /**
-         * Images
-         */
-        const imageConfiguration = (0, github_action_image_inputs_1.readGithubActionImageInputs)(github_action_input_1.getGithubActionInput);
-        const workflowInputs = (0, github_action_workflow_inputs_1.readGithubActionWorkflowInputs)(github_action_input_1.getGithubActionInput);
-        /**
-         * Emoji-title
-         */
-        const titleEmoji = (0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.EMOJI_LABELED_TITLE) === 'true';
-        const branchManagementEmoji = (0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.BRANCH_MANAGEMENT_EMOJI);
-        const labelInputs = (0, github_action_label_inputs_1.readGithubActionLabelInputs)(github_action_input_1.getGithubActionInput);
-        const issueTypeInputs = (0, github_action_issue_type_inputs_1.readGithubActionIssueTypeInputs)(github_action_input_1.getGithubActionInput);
-        const localeInputs = (0, github_action_locale_inputs_1.readGithubActionLocaleInputs)(github_action_input_1.getGithubActionInput);
-        const sizeThresholdInputs = (0, github_action_threshold_inputs_1.readGithubActionThresholdInputs)(github_action_input_1.getGithubActionInput);
-        const branchInputs = (0, github_action_branch_inputs_1.readGithubActionBranchInputs)(github_action_input_1.getGithubActionInput);
-        /**
-         * Prefix builder
-         */
-        let commitPrefixBuilder = (0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.COMMIT_PREFIX_TRANSFORMS) ?? '';
-        if (commitPrefixBuilder.length === 0) {
-            commitPrefixBuilder = 'replace-slash';
-        }
-        /**
-         * Issue
-         */
-        const branchManagementAlways = (0, input_boolean_policy_1.isEnabledInput)((0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.BRANCH_MANAGEMENT_ALWAYS));
-        const reopenIssueOnPush = (0, input_boolean_policy_1.isEnabledInput)((0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.REOPEN_ISSUE_ON_PUSH));
-        const issueDesiredAssigneesCount = (0, input_number_policy_1.parseIntegerInput)((0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.DESIRED_ASSIGNEES_COUNT), 0);
-        /**
-         * Pull Request
-         */
-        const pullRequestDesiredAssigneesCount = (0, input_number_policy_1.parseIntegerInput)((0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.PULL_REQUEST_DESIRED_ASSIGNEES_COUNT), 0);
-        const pullRequestDesiredReviewersCount = (0, input_number_policy_1.parseIntegerInput)((0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.PULL_REQUEST_DESIRED_REVIEWERS_COUNT), 0);
-        const pullRequestMergeTimeout = (0, input_number_policy_1.parseIntegerInput)((0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.PULL_REQUEST_MERGE_TIMEOUT), 0);
-        const execution = (0, execution_builder_1.buildExecution)({
-            debug,
-            singleAction: new single_action_1.SingleAction(singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog),
-            commitPrefixBuilder,
-            issue: (0, configuration_builders_1.buildIssue)(branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount, eventInputs),
-            pullRequest: (0, configuration_builders_1.buildPullRequest)(pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, pullRequestMergeTimeout, eventInputs),
-            emoji: (0, configuration_builders_1.buildEmoji)(titleEmoji, branchManagementEmoji),
-            images: (0, configuration_builders_1.buildImages)({
-                onIssue: imageConfiguration.onIssue,
-                onPullRequest: imageConfiguration.onPullRequest,
-                onCommit: imageConfiguration.onCommit,
-                issue: imageConfiguration.issue,
-                pullRequest: imageConfiguration.pullRequest,
-                commit: imageConfiguration.commit,
-            }),
-            tokens: (0, configuration_builders_1.buildTokens)(token),
-            ai: new ai_1.Ai(opencodeServerUrl, opencodeModel, aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, agentTasks),
-            labels: (0, configuration_builders_1.buildLabels)(labelInputs),
-            issueTypes: (0, configuration_builders_1.buildIssueTypes)(issueTypeInputs),
-            locale: (0, configuration_builders_1.buildLocale)(localeInputs.issue, localeInputs.pullRequest),
-            sizeThresholds: (0, size_threshold_builder_1.buildSizeThresholds)(sizeThresholdInputs),
-            branches: (0, branches_builder_1.buildBranches)(branchInputs),
-            release: new release_1.Release(),
-            hotfix: new hotfix_1.Hotfix(),
-            workflows: (0, configuration_builders_1.buildWorkflows)(workflowInputs.release, workflowInputs.hotfix),
-            projects: (0, configuration_builders_1.buildProjects)(projectInputs),
-            inputs: eventInputs,
-        });
-        (0, logger_1.logDebugInfo)(`Execution built. Event will be resolved in mainRun. Single action: ${execution.singleAction.currentSingleAction ?? 'none'}, AI PR description: ${execution.ai.getAiPullRequestDescription()}, bugbot min severity: ${execution.ai.getBugbotMinSeverity()}.`);
-        const results = await (0, common_action_1.mainRun)(execution, projectBoard.command, new git_cli_repository_1.GitCliRepository());
-        const issueContentPort = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
-        await (0, github_action_completion_1.finishGithubAction)(execution, results, (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), new configuration_handler_1.ConfigurationHandler(issueContentPort));
-    }
-    finally {
-        if (managedOpencodeServer) {
-            (0, logger_1.logInfo)('Stopping OpenCode server...');
-            await managedOpencodeServer.stop();
-            (0, logger_1.logInfo)('OpenCode server stopped.');
-        }
-    }
+    /**
+     * Issue
+     */
+    const branchManagementAlways = (0, input_boolean_policy_1.isEnabledInput)((0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.BRANCH_MANAGEMENT_ALWAYS));
+    const reopenIssueOnPush = (0, input_boolean_policy_1.isEnabledInput)((0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.REOPEN_ISSUE_ON_PUSH));
+    const issueDesiredAssigneesCount = (0, input_number_policy_1.parseIntegerInput)((0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.DESIRED_ASSIGNEES_COUNT), 0);
+    /**
+     * Pull Request
+     */
+    const pullRequestDesiredAssigneesCount = (0, input_number_policy_1.parseIntegerInput)((0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.PULL_REQUEST_DESIRED_ASSIGNEES_COUNT), 0);
+    const pullRequestDesiredReviewersCount = (0, input_number_policy_1.parseIntegerInput)((0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.PULL_REQUEST_DESIRED_REVIEWERS_COUNT), 0);
+    const pullRequestMergeTimeout = (0, input_number_policy_1.parseIntegerInput)((0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.PULL_REQUEST_MERGE_TIMEOUT), 0);
+    const execution = (0, execution_builder_1.buildExecution)({
+        debug,
+        singleAction: new single_action_1.SingleAction(singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog),
+        commitPrefixBuilder,
+        issue: (0, configuration_builders_1.buildIssue)(branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount, eventInputs),
+        pullRequest: (0, configuration_builders_1.buildPullRequest)(pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, pullRequestMergeTimeout, eventInputs),
+        emoji: (0, configuration_builders_1.buildEmoji)(titleEmoji, branchManagementEmoji),
+        images: (0, configuration_builders_1.buildImages)({
+            onIssue: imageConfiguration.onIssue,
+            onPullRequest: imageConfiguration.onPullRequest,
+            onCommit: imageConfiguration.onCommit,
+            issue: imageConfiguration.issue,
+            pullRequest: imageConfiguration.pullRequest,
+            commit: imageConfiguration.commit,
+        }),
+        tokens: (0, configuration_builders_1.buildTokens)(token),
+        ai: new ai_1.Ai('', opencodeModel, aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, agentTasks),
+        labels: (0, configuration_builders_1.buildLabels)(labelInputs),
+        issueTypes: (0, configuration_builders_1.buildIssueTypes)(issueTypeInputs),
+        locale: (0, configuration_builders_1.buildLocale)(localeInputs.issue, localeInputs.pullRequest),
+        sizeThresholds: (0, size_threshold_builder_1.buildSizeThresholds)(sizeThresholdInputs),
+        branches: (0, branches_builder_1.buildBranches)(branchInputs),
+        release: new release_1.Release(),
+        hotfix: new hotfix_1.Hotfix(),
+        workflows: (0, configuration_builders_1.buildWorkflows)(workflowInputs.release, workflowInputs.hotfix),
+        projects: (0, configuration_builders_1.buildProjects)(projectInputs),
+        inputs: eventInputs,
+    });
+    (0, logger_1.logDebugInfo)(`Execution built. Event will be resolved in mainRun. Single action: ${execution.singleAction.currentSingleAction ?? 'none'}, AI PR description: ${execution.ai.getAiPullRequestDescription()}, bugbot min severity: ${execution.ai.getBugbotMinSeverity()}.`);
+    const results = await (0, common_action_1.mainRun)(execution, projectBoard.command, new git_cli_repository_1.GitCliRepository());
+    const issueContentPort = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
+    await (0, github_action_completion_1.finishGithubAction)(execution, results, (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), new configuration_handler_1.ConfigurationHandler(issueContentPort));
 }
 // Only auto-run when executed as the action entry (not when imported by tests)
 if (typeof process.env.JEST_WORKER_ID === 'undefined') {
@@ -48524,23 +48513,17 @@ const input_boolean_policy_1 = __nccwpck_require__(8330);
 const input_number_policy_1 = __nccwpck_require__(7165);
 const input_values_policy_1 = __nccwpck_require__(8841);
 const agent_input_builder_1 = __nccwpck_require__(1404);
-function readGithubActionAgentTasks(getInput, serverUrl) {
-    return (0, agent_input_builder_1.buildAgentTasksFromInputs)((key) => key === constants_1.INPUT_KEYS.OPENCODE_SERVER_URL ? serverUrl : getInput(key));
+function readGithubActionAgentTasks(getInput, _configurationSource) {
+    return (0, agent_input_builder_1.buildAgentTasksFromInputs)(getInput);
 }
 function readGithubActionAiInputs(getInput) {
-    const serverUrl = getInput(constants_1.INPUT_KEYS.OPENCODE_SERVER_URL) || 'http://127.0.0.1:4096';
     const requestedAgentTasks = (0, agent_input_builder_1.buildAgentTasksFromInputs)(getInput);
-    const startServer = (0, input_boolean_policy_1.isEnabledInput)(getInput(constants_1.INPUT_KEYS.OPENCODE_START_SERVER))
-        && requestedAgentTasks.findings.provider === 'opencode'
-        && requestedAgentTasks.findings.transport === 'server';
     const verifyCommands = getInput(constants_1.INPUT_KEYS.BUGBOT_FIX_VERIFY_COMMANDS)
         .split(',')
         .map((command) => command.trim())
         .filter((command) => command.length > 0);
     return {
-        serverUrl,
         requestedAgentTasks,
-        startServer,
         pullRequestDescription: (0, input_boolean_policy_1.isEnabledInput)(getInput(constants_1.INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION)),
         membersOnly: (0, input_boolean_policy_1.isEnabledInput)(getInput(constants_1.INPUT_KEYS.AI_MEMBERS_ONLY)),
         includeReasoning: (0, input_boolean_policy_1.isEnabledInput)(getInput(constants_1.INPUT_KEYS.AI_INCLUDE_REASONING)),
@@ -48826,7 +48809,7 @@ function readGithubActionProjectInputs(getInput, projects) {
 
 /***/ }),
 
-/***/ 8578:
+/***/ 9308:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -49390,13 +49373,13 @@ class CheckProgressUseCase {
         try {
             // Check if AI configuration is available
             if (!(0, agent_1.isAgentConfigurationReady)(param.ai?.getAgentConfiguration('findings'))) {
-                (0, logger_1.logError)(`Missing required agent configuration. Provide a model and a valid server URL or CLI command.`);
+                (0, logger_1.logError)(`Missing required agent configuration. Provide a model and a valid CLI command.`);
                 results.push(new result_1.Result({
                     id: this.taskId,
                     success: false,
                     executed: true,
                     errors: [
-                        `Missing required agent configuration. Provide a model and a valid server URL or CLI command.`,
+                        `Missing required agent configuration. Provide a model and a valid CLI command.`,
                     ],
                 }));
                 return results;
@@ -50156,7 +50139,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.validateProgressPrerequisites = validateProgressPrerequisites;
 function validateProgressPrerequisites(input) {
     if (!input.agentReady) {
-        return 'Missing required agent configuration. Provide a model and a valid server URL or CLI command.';
+        return 'Missing required agent configuration. Provide a model and a valid CLI command.';
     }
     if (input.issueNumber === -1) {
         return 'Issue number not found. Cannot check progress without an issue number.';
@@ -50343,7 +50326,7 @@ class RecommendStepsUseCase {
                     id: this.taskId,
                     success: false,
                     executed: true,
-                    errors: ['Missing OPENCODE_SERVER_URL and OPENCODE_MODEL.'],
+                    errors: ['Missing agent CLI command and model.'],
                 }));
                 return results;
             }
@@ -54518,7 +54501,7 @@ class ThinkUseCase {
                     id: this.taskId,
                     success: false,
                     executed: false,
-                    errors: ['OpenCode server URL or model not found.'],
+                    errors: ['OpenCode model or CLI command not found.'],
                 }));
                 return results;
             }
@@ -56724,8 +56707,6 @@ exports.isAgentConfigurationReady = isAgentConfigurationReady;
 function isAgentConfigurationReady(configuration) {
     if (!configuration?.model.trim())
         return false;
-    if (configuration.transport === 'server')
-        return Boolean(configuration.serverUrl?.trim());
     return Boolean(configuration.command?.trim());
 }
 
@@ -56740,9 +56721,9 @@ function isAgentConfigurationReady(configuration) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Ai = void 0;
 class Ai {
-    constructor(serverUrl, model, aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotMinSeverity, bugbotCommentLimit, bugbotFixVerifyCommands = [], agentTasks = {
-        findings: { provider: 'opencode', transport: 'server', model, serverUrl },
-        fixer: { provider: 'opencode', transport: 'server', model, serverUrl },
+    constructor(_configurationSource, model, aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotMinSeverity, bugbotCommentLimit, bugbotFixVerifyCommands = [], agentTasks = {
+        findings: { provider: 'opencode', modelProvider: 'opencode', model, command: `opencode run --model opencode/${model}` },
+        fixer: { provider: 'opencode', modelProvider: 'opencode', model, command: `opencode run --model opencode/${model}` },
     }) {
         this.aiPullRequestDescription = aiPullRequestDescription;
         this.aiMembersOnly = aiMembersOnly;
@@ -58148,6 +58129,61 @@ function cliInstallationHint(provider) {
 
 /***/ }),
 
+/***/ 3115:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AgentCliProvisioner = void 0;
+const node_crypto_1 = __nccwpck_require__(6005);
+const node_child_process_1 = __nccwpck_require__(7718);
+const node_fs_1 = __nccwpck_require__(7561);
+const node_os_1 = __nccwpck_require__(612);
+const node_path_1 = __nccwpck_require__(9411);
+class AgentCliProvisioner {
+    provision(provider, environment = process.env) {
+        switch (provider) {
+            case 'codex':
+                this.installPnpmPackage('@openai/codex', environment.codexVersion);
+                return;
+            case 'opencode':
+                this.installPnpmPackage('opencode-ai', environment.opencodeVersion);
+                return;
+            case 'cursor':
+                this.installCursor(environment.cursorInstallerSha256);
+                return;
+        }
+    }
+    installPnpmPackage(packageName, version) {
+        if (!version?.trim())
+            throw new Error(`${packageName} version is required for reproducible provisioning.`);
+        (0, node_child_process_1.execFileSync)('corepack', ['pnpm', 'add', '--global', `${packageName}@${version}`], { stdio: 'inherit' });
+    }
+    installCursor(expectedSha256) {
+        if (!expectedSha256?.match(/^[a-f0-9]{64}$/i)) {
+            throw new Error('CURSOR_INSTALLER_SHA256 must be provided for verified Cursor provisioning.');
+        }
+        const directory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-cursor-installer-'));
+        const installer = (0, node_path_1.join)(directory, 'install.sh');
+        try {
+            (0, node_child_process_1.execFileSync)('curl', ['--fail', '--silent', '--show-error', '--location', 'https://cursor.com/install', '--output', installer], { stdio: 'inherit' });
+            const actualSha256 = (0, node_crypto_1.createHash)('sha256').update((0, node_fs_1.readFileSync)(installer)).digest('hex');
+            if (actualSha256.toLowerCase() !== expectedSha256.toLowerCase()) {
+                throw new Error('Cursor installer checksum mismatch.');
+            }
+            (0, node_child_process_1.execFileSync)('bash', [installer], { stdio: 'inherit' });
+        }
+        finally {
+            (0, node_fs_1.rmSync)(directory, { recursive: true, force: true });
+        }
+    }
+}
+exports.AgentCliProvisioner = AgentCliProvisioner;
+
+
+/***/ }),
+
 /***/ 7950:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -58210,58 +58246,16 @@ function parseAgentCommand(command) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isValidServerAgentConfiguration = isValidServerAgentConfiguration;
+exports.isValidAgentConfiguration = isValidAgentConfiguration;
 exports.getValidatedAgentConfiguration = getValidatedAgentConfiguration;
-function isValidServerAgentConfiguration(configuration) {
-    return configuration.transport === 'server'
-        && configuration.provider === 'opencode'
-        && Boolean(configuration.serverUrl?.trim())
-        && Boolean(configuration.model.trim());
+function isValidAgentConfiguration(configuration) {
+    return Boolean(configuration.command?.trim()) && Boolean(configuration.model.trim());
 }
 function getValidatedAgentConfiguration(configuration, task) {
-    if (configuration.transport === 'server' && configuration.provider !== 'opencode') {
-        throw new Error(`Agent server transport is not implemented for ${configuration.provider}. Use cli.`);
-    }
-    if (configuration.transport === 'cli' && !configuration.command?.trim()) {
-        throw new Error(`Agent CLI command is required for ${configuration.provider} ${task}.`);
+    if (!configuration.command?.trim()) {
+        throw new Error(`Missing command for ${task} agent.`);
     }
     return configuration;
-}
-
-
-/***/ }),
-
-/***/ 8556:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.executeAgentRequest = executeAgentRequest;
-const opencode_model_reference_policy_1 = __nccwpck_require__(5911);
-async function executeAgentRequest(request) {
-    if (request.configuration.transport === 'cli') {
-        const cliRequest = {
-            configuration: request.configuration,
-            prompt: request.prompt,
-            timeoutMs: request.timeoutMs,
-        };
-        return request.cliAdapter.execute(cliRequest).then(request.mapCliOutput);
-    }
-    if (request.configuration.provider !== 'opencode') {
-        throw new Error(`Agent server transport is not implemented for ${request.configuration.provider}. Use cli.`);
-    }
-    if (!request.configuration.serverUrl || !request.configuration.model.trim()) {
-        throw new Error('Missing required AI configuration for server transport.');
-    }
-    const { providerId, modelId } = (0, opencode_model_reference_policy_1.resolveOpenCodeModelReference)(request.configuration.model);
-    return request.openCodeInvoker.invoke({
-        serverUrl: request.configuration.serverUrl,
-        providerID: providerId,
-        modelID: modelId,
-        agent: request.agent,
-        prompt: request.prompt,
-    }, `agent ${request.agent}`, request.mapServerResponse);
 }
 
 
@@ -58453,51 +58447,23 @@ exports.AgentCapabilityAdapter = void 0;
 const constants_1 = __nccwpck_require__(5415);
 const logger_1 = __nccwpck_require__(1151);
 const provider_cli_adapter_1 = __nccwpck_require__(8199);
-const opencode_agent_invoker_1 = __nccwpck_require__(3955);
 const agent_configuration_policy_1 = __nccwpck_require__(9616);
-const agent_execution_policy_1 = __nccwpck_require__(8556);
 class AgentCapabilityAdapter {
     constructor(infrastructure) {
         this.cliAdapter = new provider_cli_adapter_1.ProviderCliAdapter(infrastructure.cli);
-        this.openCodeInvoker = new opencode_agent_invoker_1.OpenCodeAgentInvoker(infrastructure.openCode);
     }
     async execute(request) {
         const taskConfiguration = (0, agent_configuration_policy_1.getValidatedAgentConfiguration)(request.configuration, request.capability);
-        if (taskConfiguration.transport === 'cli') {
-            try {
-                const output = await this.cliAdapter.execute({
-                    configuration: taskConfiguration,
-                    prompt: request.prompt,
-                    timeoutMs: constants_1.OPENCODE_REQUEST_TIMEOUT_MS,
-                });
-                return request.mapCliOutput(output);
-            }
-            catch (error) {
-                (0, logger_1.logError)(`Error querying ${taskConfiguration.provider} CLI ${request.capability}: ${error instanceof Error ? error.message : String(error)}`);
-                return undefined;
-            }
-        }
-        if (!(0, agent_configuration_policy_1.isValidServerAgentConfiguration)(taskConfiguration)) {
-            (0, logger_1.logError)(`Missing required AI configuration for ${request.capability} server transport.`);
-            return undefined;
-        }
         try {
-            return await (0, agent_execution_policy_1.executeAgentRequest)({
+            const output = await this.cliAdapter.execute({
                 configuration: taskConfiguration,
                 prompt: request.prompt,
-                agent: request.agent,
                 timeoutMs: constants_1.OPENCODE_REQUEST_TIMEOUT_MS,
-                cliAdapter: this.cliAdapter,
-                openCodeInvoker: this.openCodeInvoker,
-                mapCliOutput: request.mapCliOutput,
-                mapServerResponse: request.mapServerResponse,
             });
+            return request.mapCliOutput(output);
         }
         catch (error) {
-            const err = error instanceof Error ? error : new Error(String(error));
-            const cause = err.cause;
-            const detail = cause != null ? ` (${cause instanceof Error ? cause.message : String(cause)})` : '';
-            (0, logger_1.logError)(`Error querying ${request.capability} agent ${request.agent}: ${err.message}${detail}`);
+            (0, logger_1.logError)(`Error querying ${taskConfiguration.provider} CLI ${request.capability}: ${error instanceof Error ? error.message : String(error)}`);
             return undefined;
         }
     }
@@ -60376,227 +60342,6 @@ exports.MergeRepository = MergeRepository;
 
 /***/ }),
 
-/***/ 3955:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.OpenCodeAgentInvoker = void 0;
-const opencode_retry_1 = __nccwpck_require__(9193);
-class OpenCodeAgentInvoker {
-    constructor(client, retry = opencode_retry_1.withOpenCodeRetry) {
-        this.client = client;
-        this.retry = retry;
-    }
-    invoke(request, context, interpret) {
-        return this.retry(async () => interpret(await this.client.sendMessage(request)), context);
-    }
-}
-exports.OpenCodeAgentInvoker = OpenCodeAgentInvoker;
-
-
-/***/ }),
-
-/***/ 5108:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.OpenCodeHttpClient = exports.OpenCodeClientError = void 0;
-class OpenCodeClientError extends Error {
-    constructor(message, phase, category, retryable, httpStatus) {
-        super(message);
-        this.phase = phase;
-        this.category = category;
-        this.retryable = retryable;
-        this.httpStatus = httpStatus;
-        this.name = 'OpenCodeClientError';
-    }
-}
-exports.OpenCodeClientError = OpenCodeClientError;
-class OpenCodeHttpClient {
-    constructor(options) {
-        this.options = options;
-        this.fetchFn = options.fetchFn ?? fetch;
-    }
-    async checkHealth(serverUrl, signal) {
-        const response = await this.request(serverUrl, '/global/health', {
-            method: 'GET',
-            signal,
-        }, 'readiness');
-        if (!response.ok)
-            return false;
-        const payload = await this.readJson(response, 'OpenCode health');
-        return payload.healthy === true;
-    }
-    async sendMessage(request) {
-        const baseUrl = request.serverUrl.replace(/\/+$/, '');
-        const sessionResponse = await this.request(baseUrl, '/session', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: 'copilot' }),
-            signal: request.signal,
-        }, 'invocation');
-        const session = await this.readJson(sessionResponse, 'OpenCode session');
-        const sessionId = session.id ?? session.data?.id;
-        if (!sessionId) {
-            throw new OpenCodeClientError('OpenCode session response did not include an id', 'parse', 'malformed_response', false);
-        }
-        const messageResponse = await this.request(baseUrl, `/session/${encodeURIComponent(sessionId)}/message`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                agent: request.agent,
-                model: { providerID: request.providerID, modelID: request.modelID },
-                parts: [{ type: 'text', text: request.prompt }],
-            }),
-            signal: request.signal,
-        }, 'invocation');
-        const payload = await this.readJson(messageResponse, 'OpenCode message');
-        const parts = payload.parts ?? payload.data?.parts;
-        if (!Array.isArray(parts)) {
-            throw new OpenCodeClientError('OpenCode message response did not include parts', 'parse', 'malformed_response', false);
-        }
-        return { sessionId, parts };
-    }
-    async request(baseUrl, path, init, phase) {
-        let response;
-        const timeoutSignal = AbortSignal.timeout(this.options.requestTimeoutMs);
-        const signal = init.signal ? AbortSignal.any([init.signal, timeoutSignal]) : timeoutSignal;
-        try {
-            response = await this.fetchFn(`${baseUrl}${path}`, {
-                ...init,
-                signal,
-            });
-        }
-        catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            if (init.signal?.aborted) {
-                throw new OpenCodeClientError(`OpenCode request cancelled: ${message}`, phase, 'cancelled', false);
-            }
-            if (signal.aborted) {
-                throw new OpenCodeClientError(`OpenCode request timed out after ${this.options.requestTimeoutMs}ms`, phase, 'timeout', false);
-            }
-            throw new OpenCodeClientError(`OpenCode request failed: ${message}`, phase, 'network', true);
-        }
-        if (!response.ok) {
-            const retryable = response.status === 408 || response.status === 429 || response.status >= 500;
-            const category = response.status === 401 || response.status === 403
-                ? 'authentication'
-                : response.status === 429 ? 'rate_limit' : 'network';
-            throw new OpenCodeClientError(`OpenCode request failed with HTTP ${response.status}`, phase, category, retryable, response.status);
-        }
-        return response;
-    }
-    async readJson(response, context) {
-        let raw;
-        try {
-            raw = await response.text();
-        }
-        catch {
-            throw new OpenCodeClientError(`${context} returned an unreadable body`, 'parse', 'malformed_response', false, response.status);
-        }
-        if (!raw.trim()) {
-            throw new OpenCodeClientError(`${context} returned an empty body`, 'parse', 'malformed_response', false, response.status);
-        }
-        try {
-            return JSON.parse(raw);
-        }
-        catch {
-            throw new OpenCodeClientError(`${context} returned invalid JSON`, 'parse', 'malformed_response', false, response.status);
-        }
-    }
-}
-exports.OpenCodeHttpClient = OpenCodeHttpClient;
-
-
-/***/ }),
-
-/***/ 5911:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.resolveOpenCodeModelReference = resolveOpenCodeModelReference;
-function resolveOpenCodeModelReference(modelReference) {
-    const normalized = modelReference.trim();
-    const separator = normalized.indexOf('/');
-    const providerId = separator > 0 ? normalized.slice(0, separator) : 'opencode';
-    const modelId = separator > 0 ? normalized.slice(separator + 1).trim() : normalized;
-    if (!modelId) {
-        throw new Error('OpenCode model must use provider/model format.');
-    }
-    return { providerId, modelId };
-}
-
-
-/***/ }),
-
-/***/ 9193:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.withOpenCodeRetry = withOpenCodeRetry;
-const constants_1 = __nccwpck_require__(5415);
-const logger_1 = __nccwpck_require__(1151);
-async function withOpenCodeRetry(fn, context) {
-    let lastError;
-    for (let attempt = 1; attempt <= constants_1.OPENCODE_MAX_RETRIES; attempt++) {
-        try {
-            return await fn();
-        }
-        catch (error) {
-            lastError = error;
-            const message = error instanceof Error ? error.message : String(error);
-            const cause = error instanceof Error && error.cause instanceof Error
-                ? error.cause.message
-                : '';
-            const detail = cause ? ` (cause: ${cause})` : '';
-            const noResponseHint = message === 'fetch failed'
-                ? ' No HTTP response; connection lost or timeout. If this was before the client timeout (see log above), the OpenCode server or a proxy may have a shorter timeout.'
-                : '';
-            if (attempt < constants_1.OPENCODE_MAX_RETRIES) {
-                (0, logger_1.logInfo)(`OpenCode [${context}] attempt ${attempt}/${constants_1.OPENCODE_MAX_RETRIES} failed: ${message}${detail}.${noResponseHint} Retrying in ${constants_1.OPENCODE_RETRY_DELAY_MS}ms...`);
-                await delay(constants_1.OPENCODE_RETRY_DELAY_MS);
-            }
-            else {
-                (0, logger_1.logError)(`OpenCode [${context}] failed after ${constants_1.OPENCODE_MAX_RETRIES} attempts: ${message}${detail}`);
-            }
-        }
-    }
-    throw lastError;
-}
-function delay(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-
-/***/ }),
-
-/***/ 2135:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.OpenCodeServerLifecycleAdapter = void 0;
-const opencode_server_1 = __nccwpck_require__(1603);
-/** Infrastructure adapter for the managed OpenCode server lifecycle. */
-class OpenCodeServerLifecycleAdapter {
-    start(options) {
-        return (0, opencode_server_1.startOpencodeServer)(options);
-    }
-}
-exports.OpenCodeServerLifecycleAdapter = OpenCodeServerLifecycleAdapter;
-
-
-/***/ }),
-
 /***/ 6711:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -61136,29 +60881,63 @@ function selectAvailableMembers(members, currentMembers, requested) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ProviderCliAdapter = void 0;
-const agent_cli_client_1 = __nccwpck_require__(8570);
+const provider_specific_cli_adapters_1 = __nccwpck_require__(5508);
 /** Provider-neutral CLI adapter. Provider-specific flags belong in future adapters. */
 class ProviderCliAdapter {
-    constructor(client = new agent_cli_client_1.AgentCliClient()) {
-        this.client = client;
+    constructor(client) {
+        this.adapters = {
+            opencode: new provider_specific_cli_adapters_1.OpenCodeCliAdapter(client),
+            codex: new provider_specific_cli_adapters_1.CodexCliAdapter(client),
+            cursor: new provider_specific_cli_adapters_1.CursorCliAdapter(client),
+        };
     }
     execute(request) {
-        if (request.configuration.transport !== 'cli') {
-            throw new Error(`CLI adapter cannot execute ${request.configuration.transport} transport.`);
-        }
-        if (!request.configuration.command?.trim()) {
-            throw new Error(`CLI command is required for ${request.configuration.provider}.`);
-        }
-        return this.client.execute({
-            command: request.configuration.command,
-            prompt: request.prompt,
-            timeoutMs: request.timeoutMs,
-            cwd: request.cwd,
-            signal: request.signal,
-        });
+        const providerRequest = request;
+        return this.adapters[request.configuration.provider].execute(providerRequest);
     }
 }
 exports.ProviderCliAdapter = ProviderCliAdapter;
+
+
+/***/ }),
+
+/***/ 5508:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CursorCliAdapter = exports.CodexCliAdapter = exports.OpenCodeCliAdapter = void 0;
+class SpecificCliAdapter {
+    constructor(expectedProvider, client) {
+        this.expectedProvider = expectedProvider;
+        this.client = client;
+    }
+    execute(request) {
+        if (request.configuration.provider !== this.expectedProvider) {
+            throw new Error(`${this.expectedProvider} CLI adapter received ${request.configuration.provider} configuration.`);
+        }
+        const command = request.configuration.command?.trim();
+        if (!command)
+            throw new Error(`CLI command is required for ${this.expectedProvider}.`);
+        return this.client.execute({ command, prompt: request.prompt, timeoutMs: request.timeoutMs, cwd: request.cwd, signal: request.signal });
+    }
+}
+class OpenCodeCliAdapter extends SpecificCliAdapter {
+    constructor(client) { super('opencode', client); }
+    execute(request) { return super.execute(request); }
+}
+exports.OpenCodeCliAdapter = OpenCodeCliAdapter;
+class CodexCliAdapter extends SpecificCliAdapter {
+    constructor(client) { super('codex', client); }
+    execute(request) { return super.execute(request); }
+}
+exports.CodexCliAdapter = CodexCliAdapter;
+class CursorCliAdapter extends SpecificCliAdapter {
+    constructor(client) { super('cursor', client); }
+    execute(request) { return super.execute(request); }
+}
+exports.CursorCliAdapter = CursorCliAdapter;
 
 
 /***/ }),
@@ -62152,14 +61931,11 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createFindingsQueryPort = createFindingsQueryPort;
 exports.createFixerQueryPort = createFixerQueryPort;
 const agent_cli_client_1 = __nccwpck_require__(8570);
-const opencode_http_client_1 = __nccwpck_require__(5108);
-const constants_1 = __nccwpck_require__(5415);
 const findings_agent_adapter_1 = __nccwpck_require__(7725);
 const fixer_agent_adapter_1 = __nccwpck_require__(2259);
 function defaultInfrastructure() {
     return {
         cli: new agent_cli_client_1.AgentCliClient(),
-        openCode: new opencode_http_client_1.OpenCodeHttpClient({ requestTimeoutMs: constants_1.OPENCODE_REQUEST_TIMEOUT_MS }),
     };
 }
 function createFindingsQueryPort(infrastructure = defaultInfrastructure()) {
@@ -64248,21 +64024,17 @@ exports.INPUT_KEYS = {
     TOKEN: 'token',
     // Agent selection
     AGENT_PROVIDER: 'agent-provider',
-    AGENT_TRANSPORT: 'agent-transport',
+    AGENT_MODEL_PROVIDER: 'agent-model-provider',
     AGENT_MODEL: 'agent-model',
     AGENT_COMMAND: 'agent-command',
     FINDINGS_PROVIDER: 'findings-provider',
-    FINDINGS_TRANSPORT: 'findings-transport',
     FINDINGS_MODEL: 'findings-model',
     FINDINGS_COMMAND: 'findings-command',
     FIXER_PROVIDER: 'fixer-provider',
-    FIXER_TRANSPORT: 'fixer-transport',
     FIXER_MODEL: 'fixer-model',
     FIXER_COMMAND: 'fixer-command',
-    // AI (OpenCode compatibility)
-    OPENCODE_SERVER_URL: 'opencode-server-url',
+    // AI provider configuration
     OPENCODE_MODEL: 'opencode-model',
-    OPENCODE_START_SERVER: 'opencode-start-server',
     AI_PULL_REQUEST_DESCRIPTION: 'ai-pull-request-description',
     AI_MEMBERS_ONLY: 'ai-members-only',
     AI_IGNORE_FILES: 'ai-ignore-files',
@@ -64713,193 +64485,6 @@ exports.OPENCODE_PROJECT_CONTEXT_INSTRUCTION = `**Important – use full project
 
 /***/ }),
 
-/***/ 1603:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-/**
- * Managed OpenCode server lifecycle for GitHub Actions.
- * Starts "pnpm dlx --yes opencode-ai serve" and stops it when the action finishes.
- * If no opencode.json exists in cwd, creates one with provider timeout 10 min and removes it on stop.
- */
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.startOpencodeServer = startOpencodeServer;
-exports.stopOpencodeServer = stopOpencodeServer;
-const child_process_1 = __nccwpck_require__(2081);
-const promises_1 = __nccwpck_require__(3292);
-const path_1 = __importDefault(__nccwpck_require__(1017));
-const logger_1 = __nccwpck_require__(1151);
-const DEFAULT_PORT = 4096;
-const HEALTH_PATH = '/global/health';
-const POLL_INTERVAL_MS = 500;
-const STARTUP_TIMEOUT_MS = 120000; // 2 min (first pnpm dlx download can be slow)
-const OPENCODE_CONFIG_FILENAME = 'opencode.json';
-const OPENCODE_PACKAGE_VERSION = '1.18.18';
-/** Provider request timeout in ms (10 min). OpenCode default is 5 min; we need longer for plan agent. */
-const OPENCODE_PROVIDER_TIMEOUT_MS = 600000;
-/**
- * If opencode.json does not exist in cwd, create it with provider timeout (10 min).
- * OpenCode merges configs; this file will set provider.opencode.options.timeout so long requests don't get cut at 5 min.
- */
-async function ensureOpencodeConfig(cwd) {
-    const configPath = path_1.default.join(cwd, OPENCODE_CONFIG_FILENAME);
-    try {
-        await (0, promises_1.access)(configPath);
-        return { created: false, configPath };
-    }
-    catch {
-        // File does not exist; create minimal config for provider timeout
-    }
-    const config = {
-        $schema: 'https://opencode.ai/config.json',
-        provider: {
-            opencode: {
-                options: {
-                    timeout: OPENCODE_PROVIDER_TIMEOUT_MS,
-                },
-            },
-        },
-    };
-    await (0, promises_1.writeFile)(configPath, JSON.stringify(config, null, 2), 'utf8');
-    (0, logger_1.logInfo)(`Created ${OPENCODE_CONFIG_FILENAME} with provider timeout ${OPENCODE_PROVIDER_TIMEOUT_MS / 60000} min (will remove on server stop).`);
-    return { created: true, configPath };
-}
-/**
- * Remove opencode.json if we created it (so we don't leave a temporary file in the repo).
- */
-async function removeOpencodeConfigIfCreated(result) {
-    if (!result.created)
-        return;
-    try {
-        await (0, promises_1.unlink)(result.configPath);
-        (0, logger_1.logInfo)(`Removed temporary ${OPENCODE_CONFIG_FILENAME}.`);
-    }
-    catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
-        (0, logger_1.logError)(`Failed to remove temporary ${OPENCODE_CONFIG_FILENAME}: ${msg}`);
-    }
-}
-/**
- * Wait until OpenCode server responds to /global/health or timeout.
- */
-async function waitForHealthy(baseUrl) {
-    const start = Date.now();
-    while (Date.now() - start < STARTUP_TIMEOUT_MS) {
-        try {
-            const res = await fetch(`${baseUrl}${HEALTH_PATH}`, {
-                method: 'GET',
-                signal: AbortSignal.timeout(5000),
-            });
-            if (res.ok) {
-                const data = (await res.json());
-                if (data?.healthy === true) {
-                    return true;
-                }
-            }
-        }
-        catch {
-            // ignore and retry
-        }
-        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-    }
-    return false;
-}
-/**
- * Start OpenCode server in the background and wait until it is healthy.
- * Uses pnpm dlx so the binary is fetched on first use (no pre-install needed).
- * Call the returned stop() when the action finishes (e.g. in finally).
- */
-async function startOpencodeServer(options) {
-    const port = options?.port ?? DEFAULT_PORT;
-    const hostname = options?.hostname ?? '127.0.0.1';
-    const cwd = options?.cwd ?? process.cwd();
-    const baseUrl = `http://${hostname}:${port}`;
-    const configResult = await ensureOpencodeConfig(cwd);
-    (0, logger_1.logInfo)(`Starting OpenCode server at ${baseUrl} (this may take a moment on first run)...`);
-    const child = (0, child_process_1.spawn)('pnpm', ['dlx', '--yes', `opencode-ai@${OPENCODE_PACKAGE_VERSION}`, 'serve', '--port', String(port), '--hostname', hostname], {
-        cwd,
-        env: { ...process.env, OPENCODE_CLIENT: 'copilot' },
-        stdio: ['ignore', 'pipe', 'pipe'],
-        shell: false,
-    });
-    const stop = async () => {
-        try {
-            await stopOpencodeServer(child);
-        }
-        finally {
-            process.removeListener('exit', onExit);
-            process.removeListener('SIGINT', onExit);
-            process.removeListener('SIGTERM', onExit);
-            await removeOpencodeConfigIfCreated(configResult);
-        }
-    };
-    // Ensure we don't leave the process running if our process exits
-    const onExit = () => {
-        child.kill('SIGTERM');
-    };
-    process.once('exit', onExit);
-    process.once('SIGINT', onExit);
-    process.once('SIGTERM', onExit);
-    // Log stderr so user sees OpenCode output if something goes wrong
-    child.stderr?.on('data', (chunk) => (0, logger_1.logDebugInfo)(`[opencode] ${chunk.toString().trim()}`));
-    child.on('error', (err) => {
-        (0, logger_1.logError)(`OpenCode server process error: ${err.message}`);
-    });
-    child.on('exit', (code, signal) => {
-        if (code != null && code !== 0 && code !== 143) {
-            (0, logger_1.logError)(`OpenCode server exited with code ${code} signal ${signal}`);
-        }
-    });
-    const healthy = await waitForHealthy(baseUrl);
-    if (!healthy) {
-        await stop();
-        throw new Error(`OpenCode server did not become healthy within ${STARTUP_TIMEOUT_MS / 1000}s. Check that pnpm dlx can run and that opencode-ai can be installed.`);
-    }
-    (0, logger_1.logInfo)(`OpenCode server is ready at ${baseUrl}`);
-    return { url: baseUrl, stop };
-}
-/**
- * Stop the OpenCode server process cleanly.
- * Destroys stdio pipes first so the child can exit without blocking on write.
- */
-async function stopOpencodeServer(child) {
-    if (!child.pid)
-        return;
-    (0, logger_1.logInfo)('Stopping OpenCode server process...');
-    const destroyIfPossible = (s) => {
-        if (s && typeof s.destroy === 'function')
-            s.destroy();
-    };
-    destroyIfPossible(child.stdout);
-    destroyIfPossible(child.stderr);
-    return new Promise((resolve) => {
-        const onExit = () => {
-            clearTimeout(t);
-            (0, logger_1.logInfo)('OpenCode server process exited.');
-            resolve();
-        };
-        child.once('exit', onExit);
-        child.kill('SIGTERM');
-        const t = setTimeout(() => {
-            try {
-                child.kill('SIGKILL');
-            }
-            catch {
-                // ignore
-            }
-            (0, logger_1.logInfo)('OpenCode server stop timeout reached (SIGKILL sent).');
-            resolve();
-        }, 5000);
-    });
-}
-
-
-/***/ }),
-
 /***/ 102:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -65339,14 +64924,6 @@ module.exports = require("fs");
 
 /***/ }),
 
-/***/ 3292:
-/***/ ((module) => {
-
-"use strict";
-module.exports = require("fs/promises");
-
-/***/ }),
-
 /***/ 3685:
 /***/ ((module) => {
 
@@ -65443,6 +65020,14 @@ module.exports = require("node:events");
 
 /***/ }),
 
+/***/ 7561:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("node:fs");
+
+/***/ }),
+
 /***/ 8849:
 /***/ ((module) => {
 
@@ -65464,6 +65049,22 @@ module.exports = require("node:http2");
 
 "use strict";
 module.exports = require("node:net");
+
+/***/ }),
+
+/***/ 612:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("node:os");
+
+/***/ }),
+
+/***/ 9411:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("node:path");
 
 /***/ }),
 
@@ -65935,8 +65536,8 @@ function stringWidth(string, options = {}) {
 	return width;
 }
 
-// EXTERNAL MODULE: ./node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/source/index.js + 5 modules
-var source = __nccwpck_require__(2082);
+// EXTERNAL MODULE: ./node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/source/index.js + 4 modules
+var source = __nccwpck_require__(8578);
 ;// CONCATENATED MODULE: ./node_modules/.pnpm/widest-line@5.0.0/node_modules/widest-line/index.js
 
 
@@ -66896,7 +66497,7 @@ function boxen(text, options) {
 
 /***/ }),
 
-/***/ 2082:
+/***/ 8578:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 "use strict";
@@ -67147,8 +66748,8 @@ const ansiStyles = assembleStyles();
 
 // EXTERNAL MODULE: external "node:process"
 var external_node_process_ = __nccwpck_require__(7742);
-;// CONCATENATED MODULE: external "node:os"
-const external_node_os_namespaceObject = require("node:os");
+// EXTERNAL MODULE: external "node:os"
+var external_node_os_ = __nccwpck_require__(612);
 ;// CONCATENATED MODULE: external "node:tty"
 const external_node_tty_namespaceObject = require("node:tty");
 ;// CONCATENATED MODULE: ./node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/source/vendor/supports-color/index.js
@@ -67254,7 +66855,7 @@ function _supportsColor(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
 	if (external_node_process_.platform === 'win32') {
 		// Windows 10 build 10586 is the first Windows release that supports 256 colors.
 		// Windows 10 build 14931 is the first release that supports 16m/TrueColor.
-		const osRelease = external_node_os_namespaceObject.release().split('.');
+		const osRelease = external_node_os_.release().split('.');
 		if (
 			Number(osRelease[0]) >= 10
 			&& Number(osRelease[2]) >= 10_586

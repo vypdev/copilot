@@ -173,8 +173,7 @@ describe('runLocalAction', () => {
     mockGetActionInputsWithDefaults.mockReturnValue({
       ...minimalActionInputs(),
       [INPUT_KEYS.TOKEN]: 'from-action-inputs',
-      [INPUT_KEYS.OPENCODE_SERVER_URL]: 'http://custom-opencode:4096',
-    });
+          });
     const params: Record<string, unknown> = {
       repo: { owner: 'o', repo: 'r' },
       eventName: 'push',
@@ -185,6 +184,5 @@ describe('runLocalAction', () => {
 
     const execution = mockMainRun.mock.calls[0][0];
     expect(execution.tokens.token).toBe('from-action-inputs');
-    expect(execution.ai.getAgentConfiguration('findings').serverUrl).toBe('http://custom-opencode:4096');
   });
 });

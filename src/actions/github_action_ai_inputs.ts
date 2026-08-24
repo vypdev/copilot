@@ -6,9 +6,7 @@ import { buildAgentTasksFromInputs } from './agent_input_builder';
 import type { AgentTaskConfiguration } from '../data/model/agent';
 
 export interface GithubActionAiInputs {
-    readonly serverUrl: string;
     readonly requestedAgentTasks: AgentTaskConfiguration;
-    readonly startServer: boolean;
     readonly pullRequestDescription: boolean;
     readonly membersOnly: boolean;
     readonly includeReasoning: boolean;
@@ -20,28 +18,20 @@ export interface GithubActionAiInputs {
 
 export function readGithubActionAgentTasks(
     getInput: (key: string) => string,
-    serverUrl: string,
+    _configurationSource?: string,
 ): AgentTaskConfiguration {
-    return buildAgentTasksFromInputs((key) =>
-        key === INPUT_KEYS.OPENCODE_SERVER_URL ? serverUrl : getInput(key),
-    );
+    return buildAgentTasksFromInputs(getInput);
 }
 
 export function readGithubActionAiInputs(getInput: (key: string) => string): GithubActionAiInputs {
-    const serverUrl = getInput(INPUT_KEYS.OPENCODE_SERVER_URL) || 'http://127.0.0.1:4096';
     const requestedAgentTasks = buildAgentTasksFromInputs(getInput);
-    const startServer = isEnabledInput(getInput(INPUT_KEYS.OPENCODE_START_SERVER))
-        && requestedAgentTasks.findings.provider === 'opencode'
-        && requestedAgentTasks.findings.transport === 'server';
     const verifyCommands = getInput(INPUT_KEYS.BUGBOT_FIX_VERIFY_COMMANDS)
         .split(',')
         .map((command) => command.trim())
         .filter((command) => command.length > 0);
 
     return {
-        serverUrl,
         requestedAgentTasks,
-        startServer,
         pullRequestDescription: isEnabledInput(getInput(INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION)),
         membersOnly: isEnabledInput(getInput(INPUT_KEYS.AI_MEMBERS_ONLY)),
         includeReasoning: isEnabledInput(getInput(INPUT_KEYS.AI_INCLUDE_REASONING)),

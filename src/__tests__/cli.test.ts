@@ -51,6 +51,11 @@ describe('CLI', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env.AGENT_PROVIDER = 'opencode';
+    process.env.AGENT_MODEL = 'test-model';
+    process.env.AGENT_COMMAND = 'opencode run --model opencode/test-model';
+    process.env.AGENT_MODEL_PROVIDER = 'opencode';
+    process.env.OPENAI_API_KEY = 'test-key';
     exitSpy = jest.spyOn(process, 'exit').mockImplementation((() => {}) as () => never);
     (execSync as jest.Mock).mockReturnValue(Buffer.from('https://github.com/test-owner/test-repo.git'));
     (runLocalAction as jest.Mock).mockResolvedValue(undefined);

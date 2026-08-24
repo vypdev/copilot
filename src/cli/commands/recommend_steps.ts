@@ -13,7 +13,7 @@ export function registerRecommendStepsCommand(program: Command): void {
     .option('-i, --issue <number>', 'Issue number (required)', '')
     .option('-d, --debug', 'Debug mode', false)
     .option('-t, --token <token>', 'Personal access token', process.env.PERSONAL_ACCESS_TOKEN)
-    .option('--opencode-server-url <url>', 'OpenCode server URL', process.env.OPENCODE_SERVER_URL || 'http://127.0.0.1:4096')
+
     .option('--opencode-model <model>', 'OpenCode model', process.env.OPENCODE_MODEL)
     .action(async (options) => {
       const gitInfo = getGitInfo();

@@ -144,11 +144,11 @@ describe('ThinkUseCase', () => {
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
-    expect(results[0].errors).toContain('OpenCode server URL or model not found.');
+    expect(results[0].errors).toContain('OpenCode model or CLI command not found.');
     expect(mockAskAgent).not.toHaveBeenCalled();
   });
 
-  it('returns error when OpenCode server URL is empty', async () => {
+  it('returns error when OpenCode CLI returns no answer', async () => {
     const param = baseParam({
       ai: new Ai('', 'model', false, false, [], false, 'low', 20),
       issue: { ...baseParam().issue, commentBody: '@bot hi' },
@@ -157,7 +157,7 @@ describe('ThinkUseCase', () => {
     const results = await useCase.invoke(param);
 
     expect(results[0].success).toBe(false);
-    expect(results[0].errors).toContain('OpenCode server URL or model not found.');
+    expect(results[0].errors).toContain('OpenCode returned no answer.');
   });
 
   it('returns success executed false when comment is only the mention', async () => {

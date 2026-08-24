@@ -1,15 +1,18 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { checkAgentAuthentication } from '../agent_authentication';
 
 describe('checkAgentAuthentication', () => {
-    it('does not require local credentials for server transport', () => {
+    it('requires provider credentials for CLI execution', () => {
         expect(
-            checkAgentAuthentication({ provider: 'opencode', transport: 'server', model: 'model', serverUrl: 'http://localhost' }, {})
-        ).toMatchObject({ status: 'not_required', variables: [] });
+            checkAgentAuthentication({ provider: 'opencode', model: 'model', command: 'opencode run' }, {})
+        ).toMatchObject({ status: 'missing' });
     });
 
     it('recognizes Cursor API credentials without exposing their value', () => {
         const result = checkAgentAuthentication(
-            { provider: 'cursor', transport: 'cli', model: 'cursor-agent', command: 'cursor-agent' },
+            { provider: 'cursor', model: 'cursor-agent', command: 'cursor-agent' },
             { CURSOR_API_KEY: 'secret-value' }
         );
         expect(result.status).toBe('available');
@@ -20,21 +23,59 @@ describe('checkAgentAuthentication', () => {
     it('supports Codex access token or OpenAI API key', () => {
         expect(
             checkAgentAuthentication(
-                { provider: 'codex', transport: 'cli', model: 'gpt-5-codex', command: 'codex' },
+                { provider: 'codex', model: 'gpt-5-codex', command: 'codex' },
                 { CODEX_ACCESS_TOKEN: 'token' }
             ).status
         ).toBe('available');
         expect(
             checkAgentAuthentication(
-                { provider: 'codex', transport: 'cli', model: 'gpt-5-codex', command: 'codex' },
+                { provider: 'codex', model: 'gpt-5-codex', command: 'codex' },
                 { OPENAI_API_KEY: 'key' }
             ).status
         ).toBe('available');
     });
 
+    it('recognizes a local ChatGPT Codex session without exposing token values', () => {
+        const directory = mkdtempSync(join(tmpdir(), 'copilot-codex-auth-test-'));
+        try {
+            writeFileSync(join(directory, 'auth.json'), JSON.stringify({
+                auth_mode: 'chatgpt',
+                OPENAI_API_KEY: null,
+                tokens: { access_token: 'access', refresh_token: 'refresh' },
+            }));
+            const result = checkAgentAuthentication(
+                { provider: 'codex', model: 'gpt-5.6-luna', command: 'codex exec' },
+                { CODEX_HOME: directory }
+            );
+            expect(result.status).toBe('available');
+            expect(result.message).toContain('CODEX_HOME/auth.json');
+            expect(result.message).not.toContain('access');
+            expect(result.message).not.toContain('refresh');
+        } finally {
+            rmSync(directory, { recursive: true, force: true });
+        }
+    });
+
+    it('does not treat an API-key auth file as a ChatGPT session', () => {
+        const directory = mkdtempSync(join(tmpdir(), 'copilot-codex-auth-test-'));
+        try {
+            writeFileSync(join(directory, 'auth.json'), JSON.stringify({
+                auth_mode: 'apikey',
+                OPENAI_API_KEY: 'key',
+                tokens: { access_token: 'access', refresh_token: 'refresh' },
+            }));
+            expect(checkAgentAuthentication(
+                { provider: 'codex', model: 'model', command: 'codex exec' },
+                { CODEX_HOME: directory }
+            ).status).toBe('missing');
+        } finally {
+            rmSync(directory, { recursive: true, force: true });
+        }
+    });
+
     it('reports the accepted variables when credentials are missing', () => {
         const result = checkAgentAuthentication(
-            { provider: 'cursor', transport: 'cli', model: 'cursor-agent', command: 'cursor-agent' },
+            { provider: 'cursor', model: 'cursor-agent', command: 'cursor-agent' },
             {}
         );
         expect(result).toEqual({

@@ -39,7 +39,7 @@ describe('RecommendStepsUseCase', () => {
     const results = await useCase.invoke(param);
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
-    expect(results[0].errors).toContain('Missing OPENCODE_SERVER_URL and OPENCODE_MODEL.');
+    expect(results[0].errors).toContain('Missing agent CLI command and model.');
   });
 
   it('returns failure when issueNumber is -1', async () => {

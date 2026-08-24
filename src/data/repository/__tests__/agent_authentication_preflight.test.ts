@@ -16,9 +16,9 @@ describe('agent authentication preflight', () => {
         expect(runAgentAuthenticationPreflight(cursor, { AGENT_AUTH_PREFLIGHT: 'disabled' }).shouldFail).toBe(false);
     });
 
-    it('does not require local credentials for server transport', () => {
-        const result = runAgentAuthenticationPreflight({ provider: 'opencode', transport: 'server', model: 'model', serverUrl: 'http://localhost' }, {});
-        expect(result.check.status).toBe('not_required');
-        expect(result.shouldFail).toBe(false);
+    it('requires credentials for OpenCode CLI execution', () => {
+        const result = runAgentAuthenticationPreflight({ provider: 'opencode', model: 'model', command: 'opencode run' }, {});
+        expect(result.check.status).toBe('missing');
+        expect(result.shouldFail).toBe(true);
     });
 });

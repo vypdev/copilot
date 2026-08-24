@@ -1,3 +1,6 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import type { AgentConfiguration } from '../model/agent';
 
 export type AgentCredentialStatus = 'available' | 'missing' | 'not_required';
@@ -18,24 +21,39 @@ function hasValue(environment: NodeJS.ProcessEnv, variable: string): boolean {
     return Boolean(environment[variable]?.trim());
 }
 
+function hasCodexChatGptSession(environment: NodeJS.ProcessEnv): boolean {
+    const codexHome = environment.CODEX_HOME?.trim() || join(homedir(), '.codex');
+    const authPath = join(codexHome, 'auth.json');
+    if (!existsSync(authPath)) return false;
+    try {
+        const auth = JSON.parse(readFileSync(authPath, 'utf8')) as {
+            auth_mode?: unknown;
+            OPENAI_API_KEY?: unknown;
+            tokens?: { access_token?: unknown; refresh_token?: unknown };
+        };
+        return auth.auth_mode === 'chatgpt'
+            && auth.OPENAI_API_KEY == null
+            && typeof auth.tokens?.access_token === 'string'
+            && typeof auth.tokens?.refresh_token === 'string';
+    } catch {
+        return false;
+    }
+}
+
 export function checkAgentAuthentication(
     configuration: AgentConfiguration,
     environment: NodeJS.ProcessEnv = process.env
 ): AgentAuthenticationCheck {
-    if (configuration.transport === 'server') {
-        return {
-            status: 'not_required',
-            variables: [],
-            message: 'Server transport delegates authentication to the configured agent server.',
-        };
-    }
 
     const variables = CLI_CREDENTIALS[configuration.provider];
-    if (variables.some((variable) => hasValue(environment, variable))) {
+    const hasCodexSession = configuration.provider === 'codex' && hasCodexChatGptSession(environment);
+    if (hasCodexSession || variables.some((variable) => hasValue(environment, variable))) {
         return {
             status: 'available',
             variables,
-            message: `Local credentials available for ${configuration.provider}.`,
+            message: hasCodexSession
+                ? 'Local ChatGPT Codex session available from CODEX_HOME/auth.json.'
+                : `Local credentials available for ${configuration.provider}.`,
         };
     }
 

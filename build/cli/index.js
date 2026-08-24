@@ -52457,31 +52457,42 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildAgentTasks = buildAgentTasks;
 const agent_cli_command_policy_1 = __nccwpck_require__(64678);
 const PROVIDERS = ['opencode', 'cursor', 'codex'];
-const TRANSPORTS = ['server', 'cli'];
+const DEFAULT_MODEL_PROVIDERS = ['openai', 'opencode', 'openrouter', 'anthropic', 'cursor', 'local'];
+function configuredAllowlist(name, fallback) {
+    const raw = process.env[name]?.trim();
+    if (!raw)
+        return fallback;
+    const values = raw.split(',').map(value => value.trim().toLowerCase()).filter(Boolean);
+    if (!values.length)
+        throw new Error(`${name} must contain at least one value.`);
+    return values;
+}
 function resolveProvider(value) {
     if (PROVIDERS.includes(value))
         return value;
     throw new Error(`Unsupported agent provider "${value}". Supported providers: ${PROVIDERS.join(', ')}.`);
 }
-function resolveTransport(value) {
-    if (TRANSPORTS.includes(value))
-        return value;
-    throw new Error(`Unsupported agent transport "${value}". Supported transports: ${TRANSPORTS.join(', ')}.`);
-}
 function buildConfiguration(values) {
     const provider = resolveProvider(values.provider.trim().toLowerCase());
-    const transport = resolveTransport(values.transport.trim().toLowerCase());
+    const modelProvider = values.modelProvider?.trim().toLowerCase() || 'opencode';
+    if (!/^[a-z0-9][a-z0-9_-]*$/.test(modelProvider))
+        throw new Error('Agent model provider must be a valid provider identifier.');
+    const allowedProviders = configuredAllowlist('AGENT_ALLOWED_MODEL_PROVIDERS', DEFAULT_MODEL_PROVIDERS);
+    if (!allowedProviders.includes(modelProvider))
+        throw new Error(`Agent model provider "${modelProvider}" is not allowlisted.`);
     const model = values.model.trim();
     if (!model)
         throw new Error('Agent model must not be empty.');
-    const serverUrl = values.serverUrl?.trim();
-    const command = values.command?.trim() || (0, agent_cli_command_policy_1.defaultCliCommand)(provider);
-    if (transport === 'server' && provider !== 'opencode') {
-        throw new Error(`Agent server transport is only supported by opencode. Use cli for ${provider}.`);
+    const allowedModels = process.env.AGENT_ALLOWED_MODELS?.split(',').map(value => value.trim()).filter(Boolean);
+    if (allowedModels?.length && !allowedModels.includes(`${modelProvider}/${model}`) && !allowedModels.includes(model)) {
+        throw new Error(`Agent model "${modelProvider}/${model}" is not allowlisted.`);
     }
-    if (transport === 'server' && !serverUrl)
-        throw new Error('Agent server transport requires a server URL.');
-    return { provider, transport, model, ...(serverUrl ? { serverUrl } : {}), ...(transport === 'cli' ? { command } : {}) };
+    const command = values.command?.trim() || (provider === 'opencode'
+        ? `${(0, agent_cli_command_policy_1.defaultCliCommand)(provider)} --model ${modelProvider}/${model}`
+        : (0, agent_cli_command_policy_1.defaultCliCommand)(provider));
+    if (provider === 'opencode' && !command.includes('--model'))
+        throw new Error('OpenCode command must select the model explicitly with --model.');
+    return { provider, modelProvider, model, command };
 }
 function mergeTaskValues(values, overrides) {
     return { ...values, ...Object.fromEntries(Object.entries(overrides ?? {}).filter(([, value]) => typeof value === 'string' && value.trim().length > 0)) };
@@ -52506,27 +52517,23 @@ exports.buildAgentTasksFromValues = buildAgentTasksFromValues;
 const constants_1 = __nccwpck_require__(15415);
 const agent_configuration_builder_1 = __nccwpck_require__(81248);
 function buildAgentTasksFromInputs(read) {
-    const opencodeServerUrl = read(constants_1.INPUT_KEYS.OPENCODE_SERVER_URL)?.trim() || 'http://127.0.0.1:4096';
     const opencodeModel = read(constants_1.INPUT_KEYS.OPENCODE_MODEL)?.trim() || constants_1.OPENCODE_DEFAULT_MODEL;
     const provider = read(constants_1.INPUT_KEYS.AGENT_PROVIDER)?.trim() || 'opencode';
-    const transport = read(constants_1.INPUT_KEYS.AGENT_TRANSPORT)?.trim() || 'server';
+    const modelProvider = read(constants_1.INPUT_KEYS.AGENT_MODEL_PROVIDER)?.trim() || 'opencode';
     const model = read(constants_1.INPUT_KEYS.AGENT_MODEL)?.trim() || opencodeModel;
     const command = read(constants_1.INPUT_KEYS.AGENT_COMMAND) ?? '';
     return (0, agent_configuration_builder_1.buildAgentTasks)({
         provider,
-        transport,
+        modelProvider,
         model,
-        serverUrl: opencodeServerUrl,
         command,
         findings: {
             provider: read(constants_1.INPUT_KEYS.FINDINGS_PROVIDER),
-            transport: read(constants_1.INPUT_KEYS.FINDINGS_TRANSPORT),
             model: read(constants_1.INPUT_KEYS.FINDINGS_MODEL),
             command: read(constants_1.INPUT_KEYS.FINDINGS_COMMAND),
         },
         fixer: {
             provider: read(constants_1.INPUT_KEYS.FIXER_PROVIDER),
-            transport: read(constants_1.INPUT_KEYS.FIXER_TRANSPORT),
             model: read(constants_1.INPUT_KEYS.FIXER_MODEL),
             command: read(constants_1.INPUT_KEYS.FIXER_COMMAND),
         },
@@ -52603,7 +52610,7 @@ exports.mainRun = mainRun;
 const core = __importStar(__nccwpck_require__(81078));
 const logger_1 = __nccwpck_require__(91151);
 const constants_1 = __nccwpck_require__(15415);
-const chalk_1 = __importDefault(__nccwpck_require__(32082));
+const chalk_1 = __importDefault(__nccwpck_require__(8578));
 const boxen_1 = __importDefault(__nccwpck_require__(11652));
 const main_run_route_1 = __nccwpck_require__(8466);
 const main_run_dispatcher_1 = __nccwpck_require__(28586);
@@ -52957,7 +52964,6 @@ additionalParams, projectRepository) {
      * AI (OpenCode)
      */
     const agentTasks = (0, agent_input_builder_1.buildAgentTasksFromValues)({ ...actionInputs, ...additionalParams });
-    const opencodeServerUrl = agentTasks.findings.serverUrl ?? 'http://127.0.0.1:4096';
     const opencodeModel = agentTasks.findings.model ?? '';
     const aiPullRequestDescription = (0, input_boolean_policy_1.isEnabledInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION));
     const aiMembersOnly = (0, input_boolean_policy_1.isEnabledInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.AI_MEMBERS_ONLY));
@@ -53122,7 +53128,6 @@ additionalParams, projectRepository) {
         singleActionChangelog,
         token,
         agentTasks,
-        opencodeServerUrl,
         opencodeModel,
         aiPullRequestDescription,
         aiMembersOnly,
@@ -53256,7 +53261,7 @@ const configuration_builders_1 = __nccwpck_require__(19094);
 const branches_builder_1 = __nccwpck_require__(30085);
 const size_threshold_builder_1 = __nccwpck_require__(39757);
 function buildLocalActionExecution(configuration, additionalParams) {
-    const { debug, singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog, commitPrefixBuilder, branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount, pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, pullRequestMergeTimeout, titleEmoji, branchManagementEmoji, imageConfiguration, token, opencodeServerUrl, opencodeModel, aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, agentTasks, branchManagementLauncherLabel, bugLabel, bugfixLabel, hotfixLabel, enhancementLabel, featureLabel, releaseLabel, questionLabel, helpLabel, deployLabel, deployedLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel, priorityHighLabel, priorityMediumLabel, priorityLowLabel, priorityNoneLabel, sizeXxlLabel, sizeXlLabel, sizeLLabel, sizeMLabel, sizeSLabel, sizeXsLabel, issueTypeTask, issueTypeTaskDescription, issueTypeTaskColor, issueTypeBug, issueTypeBugDescription, issueTypeBugColor, issueTypeFeature, issueTypeFeatureDescription, issueTypeFeatureColor, issueTypeDocumentation, issueTypeDocumentationDescription, issueTypeDocumentationColor, issueTypeMaintenance, issueTypeMaintenanceDescription, issueTypeMaintenanceColor, issueTypeHotfix, issueTypeHotfixDescription, issueTypeHotfixColor, issueTypeRelease, issueTypeReleaseDescription, issueTypeReleaseColor, issueTypeQuestion, issueTypeQuestionDescription, issueTypeQuestionColor, issueTypeHelp, issueTypeHelpDescription, issueTypeHelpColor, issueLocale, pullRequestLocale, sizeXxlThresholdLines, sizeXxlThresholdFiles, sizeXxlThresholdCommits, sizeXlThresholdLines, sizeXlThresholdFiles, sizeXlThresholdCommits, sizeLThresholdLines, sizeLThresholdFiles, sizeLThresholdCommits, sizeMThresholdLines, sizeMThresholdFiles, sizeMThresholdCommits, sizeSThresholdLines, sizeSThresholdFiles, sizeSThresholdCommits, sizeXsThresholdLines, sizeXsThresholdFiles, sizeXsThresholdCommits, mainBranch, developmentBranch, featureTree, bugfixTree, hotfixTree, releaseTree, docsTree, choreTree, releaseWorkflow, hotfixWorkflow, projects, projectColumnIssueCreated, projectColumnPullRequestCreated, projectColumnIssueInProgress, projectColumnPullRequestInProgress, welcomeTitle, welcomeMessages, } = configuration;
+    const { debug, singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog, commitPrefixBuilder, branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount, pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, pullRequestMergeTimeout, titleEmoji, branchManagementEmoji, imageConfiguration, token, opencodeModel, aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, agentTasks, branchManagementLauncherLabel, bugLabel, bugfixLabel, hotfixLabel, enhancementLabel, featureLabel, releaseLabel, questionLabel, helpLabel, deployLabel, deployedLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel, priorityHighLabel, priorityMediumLabel, priorityLowLabel, priorityNoneLabel, sizeXxlLabel, sizeXlLabel, sizeLLabel, sizeMLabel, sizeSLabel, sizeXsLabel, issueTypeTask, issueTypeTaskDescription, issueTypeTaskColor, issueTypeBug, issueTypeBugDescription, issueTypeBugColor, issueTypeFeature, issueTypeFeatureDescription, issueTypeFeatureColor, issueTypeDocumentation, issueTypeDocumentationDescription, issueTypeDocumentationColor, issueTypeMaintenance, issueTypeMaintenanceDescription, issueTypeMaintenanceColor, issueTypeHotfix, issueTypeHotfixDescription, issueTypeHotfixColor, issueTypeRelease, issueTypeReleaseDescription, issueTypeReleaseColor, issueTypeQuestion, issueTypeQuestionDescription, issueTypeQuestionColor, issueTypeHelp, issueTypeHelpDescription, issueTypeHelpColor, issueLocale, pullRequestLocale, sizeXxlThresholdLines, sizeXxlThresholdFiles, sizeXxlThresholdCommits, sizeXlThresholdLines, sizeXlThresholdFiles, sizeXlThresholdCommits, sizeLThresholdLines, sizeLThresholdFiles, sizeLThresholdCommits, sizeMThresholdLines, sizeMThresholdFiles, sizeMThresholdCommits, sizeSThresholdLines, sizeSThresholdFiles, sizeSThresholdCommits, sizeXsThresholdLines, sizeXsThresholdFiles, sizeXsThresholdCommits, mainBranch, developmentBranch, featureTree, bugfixTree, hotfixTree, releaseTree, docsTree, choreTree, releaseWorkflow, hotfixWorkflow, projects, projectColumnIssueCreated, projectColumnPullRequestCreated, projectColumnIssueInProgress, projectColumnPullRequestInProgress, welcomeTitle, welcomeMessages, } = configuration;
     return (0, execution_builder_1.buildExecution)({
         debug,
         singleAction: new single_action_1.SingleAction(singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog),
@@ -53273,7 +53278,7 @@ function buildLocalActionExecution(configuration, additionalParams) {
             commit: imageConfiguration.commit,
         }),
         tokens: (0, configuration_builders_1.buildTokens)(token),
-        ai: new ai_1.Ai(opencodeServerUrl, opencodeModel, aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, agentTasks),
+        ai: new ai_1.Ai('', opencodeModel, aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, agentTasks),
         labels: (0, configuration_builders_1.buildLabels)({
             branching: { launcher: branchManagementLauncherLabel },
             workflow: { bug: bugLabel, bugfix: bugfixLabel, hotfix: hotfixLabel, enhancement: enhancementLabel, feature: featureLabel, release: releaseLabel, question: questionLabel, help: helpLabel, deploy: deployLabel, deployed: deployedLabel, docs: docsLabel, documentation: documentationLabel, chore: choreLabel, maintenance: maintenanceLabel },
@@ -53339,7 +53344,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.renderLocalActionResults = renderLocalActionResults;
-const chalk_1 = __importDefault(__nccwpck_require__(32082));
+const chalk_1 = __importDefault(__nccwpck_require__(8578));
 const boxen_1 = __importDefault(__nccwpck_require__(11652));
 const constants_1 = __nccwpck_require__(15415);
 const logger_1 = __nccwpck_require__(91151);
@@ -53760,13 +53765,13 @@ class CheckProgressUseCase {
         try {
             // Check if AI configuration is available
             if (!(0, agent_1.isAgentConfigurationReady)(param.ai?.getAgentConfiguration('findings'))) {
-                (0, logger_1.logError)(`Missing required agent configuration. Provide a model and a valid server URL or CLI command.`);
+                (0, logger_1.logError)(`Missing required agent configuration. Provide a model and a valid CLI command.`);
                 results.push(new result_1.Result({
                     id: this.taskId,
                     success: false,
                     executed: true,
                     errors: [
-                        `Missing required agent configuration. Provide a model and a valid server URL or CLI command.`,
+                        `Missing required agent configuration. Provide a model and a valid CLI command.`,
                     ],
                 }));
                 return results;
@@ -54526,7 +54531,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.validateProgressPrerequisites = validateProgressPrerequisites;
 function validateProgressPrerequisites(input) {
     if (!input.agentReady) {
-        return 'Missing required agent configuration. Provide a model and a valid server URL or CLI command.';
+        return 'Missing required agent configuration. Provide a model and a valid CLI command.';
     }
     if (input.issueNumber === -1) {
         return 'Issue number not found. Cannot check progress without an issue number.';
@@ -54713,7 +54718,7 @@ class RecommendStepsUseCase {
                     id: this.taskId,
                     success: false,
                     executed: true,
-                    errors: ['Missing OPENCODE_SERVER_URL and OPENCODE_MODEL.'],
+                    errors: ['Missing agent CLI command and model.'],
                 }));
                 return results;
             }
@@ -58655,7 +58660,7 @@ class ThinkUseCase {
                     id: this.taskId,
                     success: false,
                     executed: false,
-                    errors: ['OpenCode server URL or model not found.'],
+                    errors: ['OpenCode model or CLI command not found.'],
                 }));
                 return results;
             }
@@ -60978,7 +60983,6 @@ function registerCheckProgressCommand(program) {
         .option('-b, --branch <name>', 'Branch name (optional, will try to determine from issue)')
         .option('-d, --debug', 'Debug mode', false)
         .option('-t, --token <token>', 'Personal access token', process.env.PERSONAL_ACCESS_TOKEN)
-        .option('--opencode-server-url <url>', 'OpenCode server URL', process.env.OPENCODE_SERVER_URL || 'http://127.0.0.1:4096')
         .option('--opencode-model <model>', 'OpenCode model', process.env.OPENCODE_MODEL)
         .action(async (options) => {
         const gitInfo = (0, cli_context_1.getGitInfo)();
@@ -61036,7 +61040,6 @@ function registerDetectPotentialProblemsCommand(program) {
         .option('-b, --branch <name>', 'Branch name (optional, defaults to current git branch)', '')
         .option('-d, --debug', 'Debug mode', false)
         .option('-t, --token <token>', 'Personal access token', process.env.PERSONAL_ACCESS_TOKEN)
-        .option('--opencode-server-url <url>', 'OpenCode server URL', process.env.OPENCODE_SERVER_URL || 'http://127.0.0.1:4096')
         .option('--opencode-model <model>', 'OpenCode model', process.env.OPENCODE_MODEL)
         .action(async (options) => {
         const gitInfo = (0, cli_context_1.getGitInfo)();
@@ -61092,7 +61095,6 @@ function buildDetectPotentialProblemsParams(options, gitInfo, currentBranch) {
         [constants_1.INPUT_KEYS.SINGLE_ACTION]: constants_1.ACTIONS.DETECT_POTENTIAL_PROBLEMS,
         [constants_1.INPUT_KEYS.SINGLE_ACTION_ISSUE]: issueNumber,
         [constants_1.INPUT_KEYS.TOKEN]: options.token || process.env.PERSONAL_ACCESS_TOKEN,
-        [constants_1.INPUT_KEYS.OPENCODE_SERVER_URL]: options.opencodeServerUrl || process.env.OPENCODE_SERVER_URL || 'http://127.0.0.1:4096',
         [constants_1.INPUT_KEYS.OPENCODE_MODEL]: options.opencodeModel || process.env.OPENCODE_MODEL || constants_1.OPENCODE_DEFAULT_MODEL,
         repo: { owner: gitInfo.owner, repo: gitInfo.repo },
         issue: { number: issueNumber },
@@ -61130,18 +61132,15 @@ function registerDoCommand(program) {
         .description(`${constants_1.TITLE} - AI development assistant (OpenCode build agent; can edit files when run locally)`)
         .option('-p, --prompt <prompt...>', 'Prompt or question (required)', '')
         .option('-d, --debug', 'Debug mode', false)
-        .option('--opencode-server-url <url>', 'OpenCode server URL', process.env.OPENCODE_SERVER_URL || 'http://127.0.0.1:4096')
         .option('--opencode-model <model>', 'OpenCode model', process.env.OPENCODE_MODEL)
         .option('--agent-provider <provider>', 'Agent provider (opencode|cursor|codex)', process.env.AGENT_PROVIDER || 'opencode')
-        .option('--agent-transport <transport>', 'Agent transport (server|cli)', process.env.AGENT_TRANSPORT || 'server')
+        .option('--agent-model-provider <provider>', 'Provider of the selected model', process.env.AGENT_MODEL_PROVIDER || 'opencode')
         .option('--agent-model <model>', 'Selected agent model', process.env.AGENT_MODEL)
         .option('--agent-command <command>', 'CLI executable for the selected agent', process.env.AGENT_COMMAND)
         .option('--findings-provider <provider>', 'Findings agent provider', process.env.FINDINGS_PROVIDER)
-        .option('--findings-transport <transport>', 'Findings agent transport', process.env.FINDINGS_TRANSPORT)
         .option('--findings-model <model>', 'Findings agent model', process.env.FINDINGS_MODEL)
         .option('--findings-command <command>', 'Findings CLI executable', process.env.FINDINGS_COMMAND)
         .option('--fixer-provider <provider>', 'Fixer agent provider', process.env.FIXER_PROVIDER)
-        .option('--fixer-transport <transport>', 'Fixer agent transport', process.env.FIXER_TRANSPORT)
         .option('--fixer-model <model>', 'Fixer agent model', process.env.FIXER_MODEL)
         .option('--fixer-command <command>', 'Fixer CLI executable', process.env.FIXER_COMMAND)
         .option('--output <format>', 'Output format (text|json)', 'text')
@@ -61219,22 +61218,22 @@ const agent_configuration_builder_1 = __nccwpck_require__(81248);
 const constants_1 = __nccwpck_require__(15415);
 const command_input_policy_1 = __nccwpck_require__(95212);
 function buildDoAgentTasks(options) {
-    const serverUrl = (0, command_input_policy_1.cleanCliArgument)(options.opencodeServerUrl) || process.env.OPENCODE_SERVER_URL || 'http://127.0.0.1:4096';
     const model = (0, command_input_policy_1.cleanCliArgument)(options.opencodeModel) || process.env.OPENCODE_MODEL || constants_1.OPENCODE_DEFAULT_MODEL;
     const provider = (0, command_input_policy_1.cleanCliArgument)(options.agentProvider) || process.env.AGENT_PROVIDER || 'opencode';
-    const transport = (0, command_input_policy_1.cleanCliArgument)(options.agentTransport) || process.env.AGENT_TRANSPORT || 'server';
+    const modelProvider = (0, command_input_policy_1.cleanCliArgument)(options.agentModelProvider) || process.env.AGENT_MODEL_PROVIDER || 'opencode';
     return (0, agent_configuration_builder_1.buildAgentTasks)({
         provider,
-        transport,
+        modelProvider,
         model: (0, command_input_policy_1.cleanCliArgument)(options.agentModel) || process.env.AGENT_MODEL || model,
-        serverUrl,
         command: (0, command_input_policy_1.cleanCliArgument)(options.agentCommand) || process.env.AGENT_COMMAND,
         findings: {
-            provider: (0, command_input_policy_1.cleanCliArgument)(options.findingsProvider), transport: (0, command_input_policy_1.cleanCliArgument)(options.findingsTransport),
+            provider: (0, command_input_policy_1.cleanCliArgument)(options.findingsProvider),
+            modelProvider: (0, command_input_policy_1.cleanCliArgument)(options.findingsModelProvider),
             model: (0, command_input_policy_1.cleanCliArgument)(options.findingsModel), command: (0, command_input_policy_1.cleanCliArgument)(options.findingsCommand),
         },
         fixer: {
-            provider: (0, command_input_policy_1.cleanCliArgument)(options.fixerProvider), transport: (0, command_input_policy_1.cleanCliArgument)(options.fixerTransport),
+            provider: (0, command_input_policy_1.cleanCliArgument)(options.fixerProvider),
+            modelProvider: (0, command_input_policy_1.cleanCliArgument)(options.fixerModelProvider),
             model: (0, command_input_policy_1.cleanCliArgument)(options.fixerModel), command: (0, command_input_policy_1.cleanCliArgument)(options.fixerCommand),
         },
     });
@@ -61261,7 +61260,6 @@ function sharedOptions(options) {
     return {
         [constants_1.INPUT_KEYS.DEBUG]: options.debug?.toString() ?? 'false',
         [constants_1.INPUT_KEYS.TOKEN]: options.token || process.env.PERSONAL_ACCESS_TOKEN,
-        [constants_1.INPUT_KEYS.OPENCODE_SERVER_URL]: options.opencodeServerUrl || process.env.OPENCODE_SERVER_URL || 'http://127.0.0.1:4096',
         [constants_1.INPUT_KEYS.OPENCODE_MODEL]: options.opencodeModel || process.env.OPENCODE_MODEL || constants_1.OPENCODE_DEFAULT_MODEL,
     };
 }
@@ -61329,7 +61327,6 @@ function registerRecommendStepsCommand(program) {
         .option('-i, --issue <number>', 'Issue number (required)', '')
         .option('-d, --debug', 'Debug mode', false)
         .option('-t, --token <token>', 'Personal access token', process.env.PERSONAL_ACCESS_TOKEN)
-        .option('--opencode-server-url <url>', 'OpenCode server URL', process.env.OPENCODE_SERVER_URL || 'http://127.0.0.1:4096')
         .option('--opencode-model <model>', 'OpenCode model', process.env.OPENCODE_MODEL)
         .action(async (options) => {
         const gitInfo = (0, cli_context_1.getGitInfo)();
@@ -61485,7 +61482,6 @@ function registerThinkCommand(program) {
             [constants_1.INPUT_KEYS.SINGLE_ACTION]: constants_1.ACTIONS.THINK,
             [constants_1.INPUT_KEYS.SINGLE_ACTION_ISSUE]: parseInt(issueNumber) || 1,
             [constants_1.INPUT_KEYS.TOKEN]: options?.token?.length > 0 ? options.token : process.env.PERSONAL_ACCESS_TOKEN,
-            [constants_1.INPUT_KEYS.OPENCODE_SERVER_URL]: options?.opencodeServerUrl?.length > 0 ? options.opencodeServerUrl : process.env.OPENCODE_SERVER_URL,
             [constants_1.INPUT_KEYS.OPENCODE_MODEL]: options?.opencodeModel?.length > 0 ? options.opencodeModel : process.env.OPENCODE_MODEL || constants_1.OPENCODE_DEFAULT_MODEL,
             [constants_1.INPUT_KEYS.AI_IGNORE_FILES]: options?.aiIgnoreFiles?.length > 0 ? options.aiIgnoreFiles : process.env.AI_IGNORE_FILES,
             [constants_1.INPUT_KEYS.AI_INCLUDE_REASONING]: options?.includeReasoning?.length > 0 ? options.includeReasoning : process.env.AI_INCLUDE_REASONING,
@@ -61595,8 +61591,6 @@ exports.isAgentConfigurationReady = isAgentConfigurationReady;
 function isAgentConfigurationReady(configuration) {
     if (!configuration?.model.trim())
         return false;
-    if (configuration.transport === 'server')
-        return Boolean(configuration.serverUrl?.trim());
     return Boolean(configuration.command?.trim());
 }
 
@@ -61611,9 +61605,9 @@ function isAgentConfigurationReady(configuration) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Ai = void 0;
 class Ai {
-    constructor(serverUrl, model, aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotMinSeverity, bugbotCommentLimit, bugbotFixVerifyCommands = [], agentTasks = {
-        findings: { provider: 'opencode', transport: 'server', model, serverUrl },
-        fixer: { provider: 'opencode', transport: 'server', model, serverUrl },
+    constructor(_configurationSource, model, aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotMinSeverity, bugbotCommentLimit, bugbotFixVerifyCommands = [], agentTasks = {
+        findings: { provider: 'opencode', modelProvider: 'opencode', model, command: `opencode run --model opencode/${model}` },
+        fixer: { provider: 'opencode', modelProvider: 'opencode', model, command: `opencode run --model opencode/${model}` },
     }) {
         this.aiPullRequestDescription = aiPullRequestDescription;
         this.aiMembersOnly = aiMembersOnly;
@@ -62891,12 +62885,15 @@ function authorizationForFileModification(owner, actor, ownerType) {
 /***/ }),
 
 /***/ 51371:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.checkAgentAuthentication = checkAgentAuthentication;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_os_1 = __nccwpck_require__(70612);
+const node_path_1 = __nccwpck_require__(49411);
 const CLI_CREDENTIALS = {
     opencode: ['OPENCODE_API_KEY', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'GOOGLE_API_KEY'],
     cursor: ['CURSOR_API_KEY'],
@@ -62905,20 +62902,32 @@ const CLI_CREDENTIALS = {
 function hasValue(environment, variable) {
     return Boolean(environment[variable]?.trim());
 }
-function checkAgentAuthentication(configuration, environment = process.env) {
-    if (configuration.transport === 'server') {
-        return {
-            status: 'not_required',
-            variables: [],
-            message: 'Server transport delegates authentication to the configured agent server.',
-        };
+function hasCodexChatGptSession(environment) {
+    const codexHome = environment.CODEX_HOME?.trim() || (0, node_path_1.join)((0, node_os_1.homedir)(), '.codex');
+    const authPath = (0, node_path_1.join)(codexHome, 'auth.json');
+    if (!(0, node_fs_1.existsSync)(authPath))
+        return false;
+    try {
+        const auth = JSON.parse((0, node_fs_1.readFileSync)(authPath, 'utf8'));
+        return auth.auth_mode === 'chatgpt'
+            && auth.OPENAI_API_KEY == null
+            && typeof auth.tokens?.access_token === 'string'
+            && typeof auth.tokens?.refresh_token === 'string';
     }
+    catch {
+        return false;
+    }
+}
+function checkAgentAuthentication(configuration, environment = process.env) {
     const variables = CLI_CREDENTIALS[configuration.provider];
-    if (variables.some((variable) => hasValue(environment, variable))) {
+    const hasCodexSession = configuration.provider === 'codex' && hasCodexChatGptSession(environment);
+    if (hasCodexSession || variables.some((variable) => hasValue(environment, variable))) {
         return {
             status: 'available',
             variables,
-            message: `Local credentials available for ${configuration.provider}.`,
+            message: hasCodexSession
+                ? 'Local ChatGPT Codex session available from CODEX_HOME/auth.json.'
+                : `Local credentials available for ${configuration.provider}.`,
         };
     }
     return {
@@ -63164,58 +63173,16 @@ function parseAgentCommand(command) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isValidServerAgentConfiguration = isValidServerAgentConfiguration;
+exports.isValidAgentConfiguration = isValidAgentConfiguration;
 exports.getValidatedAgentConfiguration = getValidatedAgentConfiguration;
-function isValidServerAgentConfiguration(configuration) {
-    return configuration.transport === 'server'
-        && configuration.provider === 'opencode'
-        && Boolean(configuration.serverUrl?.trim())
-        && Boolean(configuration.model.trim());
+function isValidAgentConfiguration(configuration) {
+    return Boolean(configuration.command?.trim()) && Boolean(configuration.model.trim());
 }
 function getValidatedAgentConfiguration(configuration, task) {
-    if (configuration.transport === 'server' && configuration.provider !== 'opencode') {
-        throw new Error(`Agent server transport is not implemented for ${configuration.provider}. Use cli.`);
-    }
-    if (configuration.transport === 'cli' && !configuration.command?.trim()) {
-        throw new Error(`Agent CLI command is required for ${configuration.provider} ${task}.`);
+    if (!configuration.command?.trim()) {
+        throw new Error(`Missing command for ${task} agent.`);
     }
     return configuration;
-}
-
-
-/***/ }),
-
-/***/ 28442:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.executeAgentRequest = executeAgentRequest;
-const opencode_model_reference_policy_1 = __nccwpck_require__(95911);
-async function executeAgentRequest(request) {
-    if (request.configuration.transport === 'cli') {
-        const cliRequest = {
-            configuration: request.configuration,
-            prompt: request.prompt,
-            timeoutMs: request.timeoutMs,
-        };
-        return request.cliAdapter.execute(cliRequest).then(request.mapCliOutput);
-    }
-    if (request.configuration.provider !== 'opencode') {
-        throw new Error(`Agent server transport is not implemented for ${request.configuration.provider}. Use cli.`);
-    }
-    if (!request.configuration.serverUrl || !request.configuration.model.trim()) {
-        throw new Error('Missing required AI configuration for server transport.');
-    }
-    const { providerId, modelId } = (0, opencode_model_reference_policy_1.resolveOpenCodeModelReference)(request.configuration.model);
-    return request.openCodeInvoker.invoke({
-        serverUrl: request.configuration.serverUrl,
-        providerID: providerId,
-        modelID: modelId,
-        agent: request.agent,
-        prompt: request.prompt,
-    }, `agent ${request.agent}`, request.mapServerResponse);
 }
 
 
@@ -63407,51 +63374,23 @@ exports.AgentCapabilityAdapter = void 0;
 const constants_1 = __nccwpck_require__(15415);
 const logger_1 = __nccwpck_require__(91151);
 const provider_cli_adapter_1 = __nccwpck_require__(18199);
-const opencode_agent_invoker_1 = __nccwpck_require__(53955);
 const agent_configuration_policy_1 = __nccwpck_require__(49616);
-const agent_execution_policy_1 = __nccwpck_require__(28442);
 class AgentCapabilityAdapter {
     constructor(infrastructure) {
         this.cliAdapter = new provider_cli_adapter_1.ProviderCliAdapter(infrastructure.cli);
-        this.openCodeInvoker = new opencode_agent_invoker_1.OpenCodeAgentInvoker(infrastructure.openCode);
     }
     async execute(request) {
         const taskConfiguration = (0, agent_configuration_policy_1.getValidatedAgentConfiguration)(request.configuration, request.capability);
-        if (taskConfiguration.transport === 'cli') {
-            try {
-                const output = await this.cliAdapter.execute({
-                    configuration: taskConfiguration,
-                    prompt: request.prompt,
-                    timeoutMs: constants_1.OPENCODE_REQUEST_TIMEOUT_MS,
-                });
-                return request.mapCliOutput(output);
-            }
-            catch (error) {
-                (0, logger_1.logError)(`Error querying ${taskConfiguration.provider} CLI ${request.capability}: ${error instanceof Error ? error.message : String(error)}`);
-                return undefined;
-            }
-        }
-        if (!(0, agent_configuration_policy_1.isValidServerAgentConfiguration)(taskConfiguration)) {
-            (0, logger_1.logError)(`Missing required AI configuration for ${request.capability} server transport.`);
-            return undefined;
-        }
         try {
-            return await (0, agent_execution_policy_1.executeAgentRequest)({
+            const output = await this.cliAdapter.execute({
                 configuration: taskConfiguration,
                 prompt: request.prompt,
-                agent: request.agent,
                 timeoutMs: constants_1.OPENCODE_REQUEST_TIMEOUT_MS,
-                cliAdapter: this.cliAdapter,
-                openCodeInvoker: this.openCodeInvoker,
-                mapCliOutput: request.mapCliOutput,
-                mapServerResponse: request.mapServerResponse,
             });
+            return request.mapCliOutput(output);
         }
         catch (error) {
-            const err = error instanceof Error ? error : new Error(String(error));
-            const cause = err.cause;
-            const detail = cause != null ? ` (${cause instanceof Error ? cause.message : String(cause)})` : '';
-            (0, logger_1.logError)(`Error querying ${request.capability} agent ${request.agent}: ${err.message}${detail}`);
+            (0, logger_1.logError)(`Error querying ${taskConfiguration.provider} CLI ${request.capability}: ${error instanceof Error ? error.message : String(error)}`);
             return undefined;
         }
     }
@@ -65330,208 +65269,6 @@ exports.MergeRepository = MergeRepository;
 
 /***/ }),
 
-/***/ 53955:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.OpenCodeAgentInvoker = void 0;
-const opencode_retry_1 = __nccwpck_require__(29193);
-class OpenCodeAgentInvoker {
-    constructor(client, retry = opencode_retry_1.withOpenCodeRetry) {
-        this.client = client;
-        this.retry = retry;
-    }
-    invoke(request, context, interpret) {
-        return this.retry(async () => interpret(await this.client.sendMessage(request)), context);
-    }
-}
-exports.OpenCodeAgentInvoker = OpenCodeAgentInvoker;
-
-
-/***/ }),
-
-/***/ 5108:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.OpenCodeHttpClient = exports.OpenCodeClientError = void 0;
-class OpenCodeClientError extends Error {
-    constructor(message, phase, category, retryable, httpStatus) {
-        super(message);
-        this.phase = phase;
-        this.category = category;
-        this.retryable = retryable;
-        this.httpStatus = httpStatus;
-        this.name = 'OpenCodeClientError';
-    }
-}
-exports.OpenCodeClientError = OpenCodeClientError;
-class OpenCodeHttpClient {
-    constructor(options) {
-        this.options = options;
-        this.fetchFn = options.fetchFn ?? fetch;
-    }
-    async checkHealth(serverUrl, signal) {
-        const response = await this.request(serverUrl, '/global/health', {
-            method: 'GET',
-            signal,
-        }, 'readiness');
-        if (!response.ok)
-            return false;
-        const payload = await this.readJson(response, 'OpenCode health');
-        return payload.healthy === true;
-    }
-    async sendMessage(request) {
-        const baseUrl = request.serverUrl.replace(/\/+$/, '');
-        const sessionResponse = await this.request(baseUrl, '/session', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: 'copilot' }),
-            signal: request.signal,
-        }, 'invocation');
-        const session = await this.readJson(sessionResponse, 'OpenCode session');
-        const sessionId = session.id ?? session.data?.id;
-        if (!sessionId) {
-            throw new OpenCodeClientError('OpenCode session response did not include an id', 'parse', 'malformed_response', false);
-        }
-        const messageResponse = await this.request(baseUrl, `/session/${encodeURIComponent(sessionId)}/message`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                agent: request.agent,
-                model: { providerID: request.providerID, modelID: request.modelID },
-                parts: [{ type: 'text', text: request.prompt }],
-            }),
-            signal: request.signal,
-        }, 'invocation');
-        const payload = await this.readJson(messageResponse, 'OpenCode message');
-        const parts = payload.parts ?? payload.data?.parts;
-        if (!Array.isArray(parts)) {
-            throw new OpenCodeClientError('OpenCode message response did not include parts', 'parse', 'malformed_response', false);
-        }
-        return { sessionId, parts };
-    }
-    async request(baseUrl, path, init, phase) {
-        let response;
-        const timeoutSignal = AbortSignal.timeout(this.options.requestTimeoutMs);
-        const signal = init.signal ? AbortSignal.any([init.signal, timeoutSignal]) : timeoutSignal;
-        try {
-            response = await this.fetchFn(`${baseUrl}${path}`, {
-                ...init,
-                signal,
-            });
-        }
-        catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            if (init.signal?.aborted) {
-                throw new OpenCodeClientError(`OpenCode request cancelled: ${message}`, phase, 'cancelled', false);
-            }
-            if (signal.aborted) {
-                throw new OpenCodeClientError(`OpenCode request timed out after ${this.options.requestTimeoutMs}ms`, phase, 'timeout', false);
-            }
-            throw new OpenCodeClientError(`OpenCode request failed: ${message}`, phase, 'network', true);
-        }
-        if (!response.ok) {
-            const retryable = response.status === 408 || response.status === 429 || response.status >= 500;
-            const category = response.status === 401 || response.status === 403
-                ? 'authentication'
-                : response.status === 429 ? 'rate_limit' : 'network';
-            throw new OpenCodeClientError(`OpenCode request failed with HTTP ${response.status}`, phase, category, retryable, response.status);
-        }
-        return response;
-    }
-    async readJson(response, context) {
-        let raw;
-        try {
-            raw = await response.text();
-        }
-        catch {
-            throw new OpenCodeClientError(`${context} returned an unreadable body`, 'parse', 'malformed_response', false, response.status);
-        }
-        if (!raw.trim()) {
-            throw new OpenCodeClientError(`${context} returned an empty body`, 'parse', 'malformed_response', false, response.status);
-        }
-        try {
-            return JSON.parse(raw);
-        }
-        catch {
-            throw new OpenCodeClientError(`${context} returned invalid JSON`, 'parse', 'malformed_response', false, response.status);
-        }
-    }
-}
-exports.OpenCodeHttpClient = OpenCodeHttpClient;
-
-
-/***/ }),
-
-/***/ 95911:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.resolveOpenCodeModelReference = resolveOpenCodeModelReference;
-function resolveOpenCodeModelReference(modelReference) {
-    const normalized = modelReference.trim();
-    const separator = normalized.indexOf('/');
-    const providerId = separator > 0 ? normalized.slice(0, separator) : 'opencode';
-    const modelId = separator > 0 ? normalized.slice(separator + 1).trim() : normalized;
-    if (!modelId) {
-        throw new Error('OpenCode model must use provider/model format.');
-    }
-    return { providerId, modelId };
-}
-
-
-/***/ }),
-
-/***/ 29193:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.withOpenCodeRetry = withOpenCodeRetry;
-const constants_1 = __nccwpck_require__(15415);
-const logger_1 = __nccwpck_require__(91151);
-async function withOpenCodeRetry(fn, context) {
-    let lastError;
-    for (let attempt = 1; attempt <= constants_1.OPENCODE_MAX_RETRIES; attempt++) {
-        try {
-            return await fn();
-        }
-        catch (error) {
-            lastError = error;
-            const message = error instanceof Error ? error.message : String(error);
-            const cause = error instanceof Error && error.cause instanceof Error
-                ? error.cause.message
-                : '';
-            const detail = cause ? ` (cause: ${cause})` : '';
-            const noResponseHint = message === 'fetch failed'
-                ? ' No HTTP response; connection lost or timeout. If this was before the client timeout (see log above), the OpenCode server or a proxy may have a shorter timeout.'
-                : '';
-            if (attempt < constants_1.OPENCODE_MAX_RETRIES) {
-                (0, logger_1.logInfo)(`OpenCode [${context}] attempt ${attempt}/${constants_1.OPENCODE_MAX_RETRIES} failed: ${message}${detail}.${noResponseHint} Retrying in ${constants_1.OPENCODE_RETRY_DELAY_MS}ms...`);
-                await delay(constants_1.OPENCODE_RETRY_DELAY_MS);
-            }
-            else {
-                (0, logger_1.logError)(`OpenCode [${context}] failed after ${constants_1.OPENCODE_MAX_RETRIES} attempts: ${message}${detail}`);
-            }
-        }
-    }
-    throw lastError;
-}
-function delay(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-
-/***/ }),
-
 /***/ 96711:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -66071,29 +65808,63 @@ function selectAvailableMembers(members, currentMembers, requested) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ProviderCliAdapter = void 0;
-const agent_cli_client_1 = __nccwpck_require__(68570);
+const provider_specific_cli_adapters_1 = __nccwpck_require__(65508);
 /** Provider-neutral CLI adapter. Provider-specific flags belong in future adapters. */
 class ProviderCliAdapter {
-    constructor(client = new agent_cli_client_1.AgentCliClient()) {
-        this.client = client;
+    constructor(client) {
+        this.adapters = {
+            opencode: new provider_specific_cli_adapters_1.OpenCodeCliAdapter(client),
+            codex: new provider_specific_cli_adapters_1.CodexCliAdapter(client),
+            cursor: new provider_specific_cli_adapters_1.CursorCliAdapter(client),
+        };
     }
     execute(request) {
-        if (request.configuration.transport !== 'cli') {
-            throw new Error(`CLI adapter cannot execute ${request.configuration.transport} transport.`);
-        }
-        if (!request.configuration.command?.trim()) {
-            throw new Error(`CLI command is required for ${request.configuration.provider}.`);
-        }
-        return this.client.execute({
-            command: request.configuration.command,
-            prompt: request.prompt,
-            timeoutMs: request.timeoutMs,
-            cwd: request.cwd,
-            signal: request.signal,
-        });
+        const providerRequest = request;
+        return this.adapters[request.configuration.provider].execute(providerRequest);
     }
 }
 exports.ProviderCliAdapter = ProviderCliAdapter;
+
+
+/***/ }),
+
+/***/ 65508:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CursorCliAdapter = exports.CodexCliAdapter = exports.OpenCodeCliAdapter = void 0;
+class SpecificCliAdapter {
+    constructor(expectedProvider, client) {
+        this.expectedProvider = expectedProvider;
+        this.client = client;
+    }
+    execute(request) {
+        if (request.configuration.provider !== this.expectedProvider) {
+            throw new Error(`${this.expectedProvider} CLI adapter received ${request.configuration.provider} configuration.`);
+        }
+        const command = request.configuration.command?.trim();
+        if (!command)
+            throw new Error(`CLI command is required for ${this.expectedProvider}.`);
+        return this.client.execute({ command, prompt: request.prompt, timeoutMs: request.timeoutMs, cwd: request.cwd, signal: request.signal });
+    }
+}
+class OpenCodeCliAdapter extends SpecificCliAdapter {
+    constructor(client) { super('opencode', client); }
+    execute(request) { return super.execute(request); }
+}
+exports.OpenCodeCliAdapter = OpenCodeCliAdapter;
+class CodexCliAdapter extends SpecificCliAdapter {
+    constructor(client) { super('codex', client); }
+    execute(request) { return super.execute(request); }
+}
+exports.CodexCliAdapter = CodexCliAdapter;
+class CursorCliAdapter extends SpecificCliAdapter {
+    constructor(client) { super('cursor', client); }
+    execute(request) { return super.execute(request); }
+}
+exports.CursorCliAdapter = CursorCliAdapter;
 
 
 /***/ }),
@@ -67087,14 +66858,11 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createFindingsQueryPort = createFindingsQueryPort;
 exports.createFixerQueryPort = createFixerQueryPort;
 const agent_cli_client_1 = __nccwpck_require__(68570);
-const opencode_http_client_1 = __nccwpck_require__(5108);
-const constants_1 = __nccwpck_require__(15415);
 const findings_agent_adapter_1 = __nccwpck_require__(27725);
 const fixer_agent_adapter_1 = __nccwpck_require__(62259);
 function defaultInfrastructure() {
     return {
         cli: new agent_cli_client_1.AgentCliClient(),
-        openCode: new opencode_http_client_1.OpenCodeHttpClient({ requestTimeoutMs: constants_1.OPENCODE_REQUEST_TIMEOUT_MS }),
     };
 }
 function createFindingsQueryPort(infrastructure = defaultInfrastructure()) {
@@ -69200,21 +68968,17 @@ exports.INPUT_KEYS = {
     TOKEN: 'token',
     // Agent selection
     AGENT_PROVIDER: 'agent-provider',
-    AGENT_TRANSPORT: 'agent-transport',
+    AGENT_MODEL_PROVIDER: 'agent-model-provider',
     AGENT_MODEL: 'agent-model',
     AGENT_COMMAND: 'agent-command',
     FINDINGS_PROVIDER: 'findings-provider',
-    FINDINGS_TRANSPORT: 'findings-transport',
     FINDINGS_MODEL: 'findings-model',
     FINDINGS_COMMAND: 'findings-command',
     FIXER_PROVIDER: 'fixer-provider',
-    FIXER_TRANSPORT: 'fixer-transport',
     FIXER_MODEL: 'fixer-model',
     FIXER_COMMAND: 'fixer-command',
-    // AI (OpenCode compatibility)
-    OPENCODE_SERVER_URL: 'opencode-server-url',
+    // AI provider configuration
     OPENCODE_MODEL: 'opencode-model',
-    OPENCODE_START_SERVER: 'opencode-start-server',
     AI_PULL_REQUEST_DESCRIPTION: 'ai-pull-request-description',
     AI_MEMBERS_ONLY: 'ai-members-only',
     AI_IGNORE_FILES: 'ai-ignore-files',
@@ -70301,6 +70065,14 @@ module.exports = require("node:http2");
 
 "use strict";
 module.exports = require("node:net");
+
+/***/ }),
+
+/***/ 70612:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("node:os");
 
 /***/ }),
 
@@ -74501,8 +74273,8 @@ function stringWidth(string, options = {}) {
 	return width;
 }
 
-// EXTERNAL MODULE: ./node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/source/index.js + 5 modules
-var source = __nccwpck_require__(32082);
+// EXTERNAL MODULE: ./node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/source/index.js + 4 modules
+var source = __nccwpck_require__(8578);
 ;// CONCATENATED MODULE: ./node_modules/.pnpm/widest-line@5.0.0/node_modules/widest-line/index.js
 
 
@@ -75462,7 +75234,7 @@ function boxen(text, options) {
 
 /***/ }),
 
-/***/ 32082:
+/***/ 8578:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
 
 "use strict";
@@ -75713,8 +75485,8 @@ const ansiStyles = assembleStyles();
 
 // EXTERNAL MODULE: external "node:process"
 var external_node_process_ = __nccwpck_require__(97742);
-;// CONCATENATED MODULE: external "node:os"
-const external_node_os_namespaceObject = require("node:os");
+// EXTERNAL MODULE: external "node:os"
+var external_node_os_ = __nccwpck_require__(70612);
 ;// CONCATENATED MODULE: external "node:tty"
 const external_node_tty_namespaceObject = require("node:tty");
 ;// CONCATENATED MODULE: ./node_modules/.pnpm/chalk@5.6.2/node_modules/chalk/source/vendor/supports-color/index.js
@@ -75820,7 +75592,7 @@ function _supportsColor(haveStream, {streamIsTTY, sniffFlags = true} = {}) {
 	if (external_node_process_.platform === 'win32') {
 		// Windows 10 build 10586 is the first Windows release that supports 256 colors.
 		// Windows 10 build 14931 is the first release that supports 16m/TrueColor.
-		const osRelease = external_node_os_namespaceObject.release().split('.');
+		const osRelease = external_node_os_.release().split('.');
 		if (
 			Number(osRelease[0]) >= 10
 			&& Number(osRelease[2]) >= 10_586

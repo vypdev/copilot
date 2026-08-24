@@ -1,11 +1,10 @@
-import type { AgentConfiguration, AgentProvider, AgentTaskConfiguration, AgentTransport } from '../data/model/agent';
+import type { AgentConfiguration, AgentProvider, AgentTaskConfiguration } from '../data/model/agent';
 import { defaultCliCommand } from '../data/repository/agent_cli_command_policy';
 
 export interface AgentTaskConfigurationValues {
     provider: string;
-    transport: string;
+    modelProvider?: string;
     model: string;
-    serverUrl?: string;
     command?: string;
 }
 
@@ -15,30 +14,39 @@ export interface AgentTasksConfigurationValues extends AgentTaskConfigurationVal
 }
 
 const PROVIDERS: readonly AgentProvider[] = ['opencode', 'cursor', 'codex'];
-const TRANSPORTS: readonly AgentTransport[] = ['server', 'cli'];
+const DEFAULT_MODEL_PROVIDERS = ['openai', 'opencode', 'openrouter', 'anthropic', 'cursor', 'local'] as const;
+
+function configuredAllowlist(name: string, fallback: readonly string[]): readonly string[] {
+    const raw = process.env[name]?.trim();
+    if (!raw) return fallback;
+    const values = raw.split(',').map(value => value.trim().toLowerCase()).filter(Boolean);
+    if (!values.length) throw new Error(`${name} must contain at least one value.`);
+    return values;
+}
+
 
 function resolveProvider(value: string): AgentProvider {
     if (PROVIDERS.includes(value as AgentProvider)) return value as AgentProvider;
     throw new Error(`Unsupported agent provider "${value}". Supported providers: ${PROVIDERS.join(', ')}.`);
 }
 
-function resolveTransport(value: string): AgentTransport {
-    if (TRANSPORTS.includes(value as AgentTransport)) return value as AgentTransport;
-    throw new Error(`Unsupported agent transport "${value}". Supported transports: ${TRANSPORTS.join(', ')}.`);
-}
-
 function buildConfiguration(values: AgentTaskConfigurationValues): AgentConfiguration {
     const provider = resolveProvider(values.provider.trim().toLowerCase());
-    const transport = resolveTransport(values.transport.trim().toLowerCase());
+    const modelProvider = values.modelProvider?.trim().toLowerCase() || 'opencode';
+    if (!/^[a-z0-9][a-z0-9_-]*$/.test(modelProvider)) throw new Error('Agent model provider must be a valid provider identifier.');
+    const allowedProviders = configuredAllowlist('AGENT_ALLOWED_MODEL_PROVIDERS', DEFAULT_MODEL_PROVIDERS);
+    if (!allowedProviders.includes(modelProvider)) throw new Error(`Agent model provider "${modelProvider}" is not allowlisted.`);
     const model = values.model.trim();
     if (!model) throw new Error('Agent model must not be empty.');
-    const serverUrl = values.serverUrl?.trim();
-    const command = values.command?.trim() || defaultCliCommand(provider);
-    if (transport === 'server' && provider !== 'opencode') {
-        throw new Error(`Agent server transport is only supported by opencode. Use cli for ${provider}.`);
+    const allowedModels = process.env.AGENT_ALLOWED_MODELS?.split(',').map(value => value.trim()).filter(Boolean);
+    if (allowedModels?.length && !allowedModels.includes(`${modelProvider}/${model}`) && !allowedModels.includes(model)) {
+        throw new Error(`Agent model "${modelProvider}/${model}" is not allowlisted.`);
     }
-    if (transport === 'server' && !serverUrl) throw new Error('Agent server transport requires a server URL.');
-    return { provider, transport, model, ...(serverUrl ? { serverUrl } : {}), ...(transport === 'cli' ? { command } : {}) };
+    const command = values.command?.trim() || (provider === 'opencode'
+        ? `${defaultCliCommand(provider)} --model ${modelProvider}/${model}`
+        : defaultCliCommand(provider));
+    if (provider === 'opencode' && !command.includes('--model')) throw new Error('OpenCode command must select the model explicitly with --model.');
+    return { provider, modelProvider, model, command };
 }
 
 function mergeTaskValues(values: AgentTaskConfigurationValues, overrides?: Partial<AgentTaskConfigurationValues>): AgentTaskConfigurationValues {

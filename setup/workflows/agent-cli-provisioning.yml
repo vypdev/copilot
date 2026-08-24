@@ -1,0 +1,23 @@
+name: Agent CLI Provisioning Check
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  verify-agent-clis:
+    name: Verify provisioned agent CLIs
+    runs-on: [self-hosted, X64, Linux, coolify]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify CLI binaries and headless contracts
+        run: node scripts/verify-agent-clis.cjs
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          CODEX_ACCESS_TOKEN: ${{ secrets.CODEX_ACCESS_TOKEN }}

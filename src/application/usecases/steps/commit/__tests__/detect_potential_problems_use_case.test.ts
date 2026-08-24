@@ -121,9 +121,12 @@ describe("DetectPotentialProblemsUseCase", () => {
     mockGetFilesWithFirstDiffLine.mockResolvedValue([]);
   });
 
-  it("returns empty results when OpenCode is not configured (no server URL)", async () => {
+  it("returns empty results when the findings CLI is not configured", async () => {
     const param = baseParam({
-      ai: new Ai("", "opencode/model", false, false, [], false, "low", 20),
+      ai: new Ai("", "opencode/model", false, false, [], false, "low", 20, [], {
+        findings: { provider: "opencode", model: "opencode/model", command: "" },
+        fixer: { provider: "opencode", model: "opencode/model", command: "" },
+      }),
     });
 
     const results = await useCase.invoke(param);
@@ -166,9 +169,8 @@ describe("DetectPotentialProblemsUseCase", () => {
     const minimalAi = {
       getAgentConfiguration: () => ({
         provider: "opencode",
-        transport: "server",
         model: "opencode/model",
-        serverUrl: "http://localhost:4096",
+        command: "opencode run",
       }),
       getBugbotMinSeverity: () => "low",
     } as unknown as Execution["ai"];

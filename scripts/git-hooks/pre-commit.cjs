@@ -8,7 +8,22 @@ const { spawnSync } = require('child_process');
 const path = require('path');
 
 const root = path.resolve(__dirname, '..', '..');
-const opts = { cwd: root, stdio: 'inherit', shell: true }; // shell: true keeps pnpm available on Windows too
+const opts = {
+  cwd: root,
+  stdio: 'inherit',
+  shell: true,
+  env: Object.fromEntries(
+    Object.entries(process.env).filter(([key]) => ![
+      'AGENT_PROVIDER',
+      'AGENT_MODEL',
+      'AGENT_COMMAND',
+      'AGENT_MODEL_PROVIDER',
+      'AGENT_ALLOWED_MODEL_PROVIDERS',
+      'AGENT_ALLOWED_MODELS',
+    ].includes(key)),
+  ),
+}; // Keep hooks deterministic and independent from local agent configuration
+const packageManager = process.env.COPILOT_PACKAGE_MANAGER || 'corepack pnpm@10.12.4';
 
 function run(name, args) {
   const r = spawnSync(name, args, opts);
@@ -17,6 +32,6 @@ function run(name, args) {
   }
 }
 
-run('pnpm', ['run', 'build']);
-run('pnpm', ['test']);
-run('pnpm', ['run', 'lint']);
+run(packageManager, ['run', 'build']);
+run(packageManager, ['test']);
+run(packageManager, ['run', 'lint']);

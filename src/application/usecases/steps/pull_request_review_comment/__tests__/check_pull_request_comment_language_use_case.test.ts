@@ -19,7 +19,7 @@ function baseParam(overrides: Record<string, unknown> = {}) {
     pullRequest: { number: 5, commentId: 10, commentBody: 'Hello' },
     tokens: { token: 't' },
     locale: { pullRequest: 'Spanish' },
-    ai: { getAgentConfiguration: () => ({ provider: 'opencode', transport: 'server', model: 'model', serverUrl: 'http://localhost' }) },
+    ai: { getAgentConfiguration: () => ({ provider: 'opencode', model: 'model', command: 'opencode run' }) },
     ...overrides,
   } as unknown as Parameters<CheckPullRequestCommentLanguageUseCase['invoke']>[0];
 }

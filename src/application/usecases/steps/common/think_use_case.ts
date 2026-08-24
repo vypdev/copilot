@@ -78,7 +78,7 @@ export class ThinkUseCase implements ParamUseCase<Execution, Result[]> {
                         id: this.taskId,
                         success: false,
                         executed: false,
-                        errors: ['OpenCode server URL or model not found.'],
+                        errors: ['OpenCode model or CLI command not found.'],
                     })
                 );
                 return results;

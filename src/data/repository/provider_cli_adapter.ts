@@ -1,6 +1,6 @@
 import type { AgentConfiguration } from '../model/agent';
 import type { AgentCliPort } from '../../infrastructure/agents/ports/agent_provider_ports';
-import { AgentCliClient } from './agent_cli_client';
+import { CodexCliAdapter, CursorCliAdapter, OpenCodeCliAdapter, type ProviderCliRequest } from './provider_specific_cli_adapters';
 
 export interface ProviderCliExecution {
     configuration: AgentConfiguration;
@@ -12,21 +12,18 @@ export interface ProviderCliExecution {
 
 /** Provider-neutral CLI adapter. Provider-specific flags belong in future adapters. */
 export class ProviderCliAdapter {
-    constructor(private readonly client: AgentCliPort = new AgentCliClient()) {}
+    private readonly adapters;
+
+    constructor(client: AgentCliPort) {
+        this.adapters = {
+            opencode: new OpenCodeCliAdapter(client),
+            codex: new CodexCliAdapter(client),
+            cursor: new CursorCliAdapter(client),
+        };
+    }
 
     execute(request: ProviderCliExecution): Promise<string> {
-        if (request.configuration.transport !== 'cli') {
-            throw new Error(`CLI adapter cannot execute ${request.configuration.transport} transport.`);
-        }
-        if (!request.configuration.command?.trim()) {
-            throw new Error(`CLI command is required for ${request.configuration.provider}.`);
-        }
-        return this.client.execute({
-            command: request.configuration.command,
-            prompt: request.prompt,
-            timeoutMs: request.timeoutMs,
-            cwd: request.cwd,
-            signal: request.signal,
-        });
+        const providerRequest: ProviderCliRequest = request;
+        return this.adapters[request.configuration.provider].execute(providerRequest);
     }
 }

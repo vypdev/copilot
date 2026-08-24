@@ -1,11 +1,5 @@
-/**
- * AI configuration for OpenCode-backed analysis.
- * OpenCode supports 75+ LLM providers (Anthropic, OpenAI, Gemini, local models, etc.).
- * API keys are configured on the OpenCode server, not here.
- */
+import { AgentTask, AgentTaskConfiguration } from './agent';
 export declare class Ai {
-    private opencodeServerUrl;
-    private opencodeModel;
     private aiPullRequestDescription;
     private aiMembersOnly;
     private aiIgnoreFiles;
@@ -13,9 +7,8 @@ export declare class Ai {
     private bugbotMinSeverity;
     private bugbotCommentLimit;
     private bugbotFixVerifyCommands;
-    constructor(opencodeServerUrl: string, opencodeModel: string, aiPullRequestDescription: boolean, aiMembersOnly: boolean, aiIgnoreFiles: string[], aiIncludeReasoning: boolean, bugbotMinSeverity: string, bugbotCommentLimit: number, bugbotFixVerifyCommands?: string[]);
-    getOpencodeServerUrl(): string;
-    getOpencodeModel(): string;
+    private agentTasks;
+    constructor(_configurationSource: string, model: string, aiPullRequestDescription: boolean, aiMembersOnly: boolean, aiIgnoreFiles: string[], aiIncludeReasoning: boolean, bugbotMinSeverity: string, bugbotCommentLimit: number, bugbotFixVerifyCommands?: string[], agentTasks?: AgentTaskConfiguration);
     getAiPullRequestDescription(): boolean;
     getAiMembersOnly(): boolean;
     getAiIgnoreFiles(): string[];
@@ -23,12 +16,5 @@ export declare class Ai {
     getBugbotMinSeverity(): string;
     getBugbotCommentLimit(): number;
     getBugbotFixVerifyCommands(): string[];
-    /**
-     * Parse "provider/model-id" into { providerID, modelID } for OpenCode session.prompt.
-     * Uses OPENCODE_DEFAULT_MODEL when no model is set (e.g. opencode/kimi-k2.5-free).
-     */
-    getOpencodeModelParts(): {
-        providerID: string;
-        modelID: string;
-    };
+    getAgentConfiguration(task: AgentTask): AgentTaskConfiguration[AgentTask];
 }
