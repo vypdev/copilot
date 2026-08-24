@@ -89,14 +89,14 @@
       "group": "Agents",
       "tab": "agents",
       "pages": [
-        { "title": "Overview", "href": "/agents", "icon": "cpu" },
+        { "title": "Overview", "href": "/agents", "icon": "terminal" },
         { "title": "Execution contract", "href": "/agent-execution-contract", "icon": "file-text" },
-        { "title": "Runtime selection", "href": "/runtime-selection", "icon": "cpu" },
-        { "title": "Model selection", "href": "/model-selection", "icon": "settings" },
+        { "title": "Runtime selection", "href": "/runtime-selection", "icon": "terminal" },
+        { "title": "Model selection", "href": "/model-selection", "icon": "list" },
         { "title": "Model allowlists", "href": "/model-allowlists", "icon": "shield" },
         { "title": "CLI commands", "href": "/cli-commands", "icon": "terminal" },
-        { "title": "CLI configuration", "href": "/agent-cli-configuration", "icon": "settings" },
-        { "title": "OpenCode", "href": "/opencode-integration", "icon": "cpu" },
+        { "title": "CLI configuration", "href": "/agent-cli-configuration", "icon": "list" },
+        { "title": "OpenCode", "href": "/opencode-integration", "icon": "terminal" },
         { "title": "Input reference", "href": "/agent-input-reference", "icon": "list" },
         { "title": "Failure behavior", "href": "/agent-failure-policy", "icon": "alert-triangle" }
       ]
@@ -109,7 +109,7 @@
         { "title": "Credentials", "href": "/security/credentials", "icon": "key" },
         { "title": "Trust boundaries", "href": "/security/trust-boundaries", "icon": "shield" },
         { "title": "Forks and pull_request_target", "href": "/security/forks-and-pull-request-target", "icon": "git-pull-request" },
-        { "title": "Self-hosted runners", "href": "/security/self-hosted-runners", "icon": "server" },
+        { "title": "Self-hosted runners", "href": "/security/self-hosted-runners", "icon": "terminal" },
         { "title": "Secret exposure rules", "href": "/security/secret-exposure", "icon": "lock" },
         { "title": "Authentication compliance", "href": "/codex-authentication-and-compliance", "icon": "file-text" }
       ]
@@ -122,17 +122,17 @@
         { "title": "CLI provisioning details", "href": "/agent-cli-provisioning", "icon": "download" },
         { "title": "Version pinning", "href": "/operations/version-pinning", "icon": "tag" },
         { "title": "Verification", "href": "/operations/verification", "icon": "check-circle" },
-        { "title": "Smoke tests", "href": "/operations/smoke-tests", "icon": "activity" },
-        { "title": "CLI runners", "href": "/agent-cli-runners", "icon": "server" },
+        { "title": "Smoke tests", "href": "/operations/smoke-tests", "icon": "check-circle" },
+        { "title": "CLI runners", "href": "/agent-cli-runners", "icon": "terminal" },
         { "title": "Troubleshooting", "href": "/troubleshooting", "icon": "wrench" },
-        { "title": "Upgrade and rollback", "href": "/operations/upgrade-rollback", "icon": "rotate-ccw" }
+        { "title": "Upgrade and rollback", "href": "/operations/upgrade-rollback", "icon": "wrench" }
       ]
     },
     {
       "group": "Development",
       "tab": "development",
       "pages": [
-        { "title": "Architecture", "href": "/development/architecture", "icon": "layers" },
+        { "title": "Architecture", "href": "/development/architecture", "icon": "list" },
         { "title": "Local development", "href": "/development/local-development", "icon": "code" },
         { "title": "Testing", "href": "/development/testing", "icon": "check-square" },
         { "title": "Build artifacts", "href": "/development/build-artifacts", "icon": "package" },
@@ -357,7 +357,7 @@
         {
           "title": "How it works",
           "href": "/bugbot/how-it-works",
-          "icon": "cpu"
+          "icon": "terminal"
         },
         {
           "title": "Failure scenarios",
