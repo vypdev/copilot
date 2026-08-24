@@ -56,7 +56,7 @@
         {
           "title": "Overview",
           "href": "/overview",
-          "icon": "book"
+          "icon": "house"
         },
         {
           "title": "Quick start",
@@ -89,56 +89,184 @@
       "group": "Agents",
       "tab": "agents",
       "pages": [
-        { "title": "Overview", "href": "/agents", "icon": "terminal" },
-        { "title": "Execution contract", "href": "/agent-execution-contract", "icon": "file-lines" },
-        { "title": "Runtime selection", "href": "/runtime-selection", "icon": "terminal" },
-        { "title": "Model selection", "href": "/model-selection", "icon": "list" },
-        { "title": "Model allowlists", "href": "/model-allowlists", "icon": "shield" },
-        { "title": "CLI commands", "href": "/cli-commands", "icon": "terminal" },
-        { "title": "CLI configuration", "href": "/agent-cli-configuration", "icon": "list" },
-        { "title": "OpenCode", "href": "/opencode-integration", "icon": "terminal" },
-        { "title": "Input reference", "href": "/agent-input-reference", "icon": "list" },
-        { "title": "Failure behavior", "href": "/agent-failure-policy", "icon": "triangle-exclamation" }
+        {
+          "title": "Overview",
+          "href": "/agents",
+          "icon": "microchip"
+        },
+        {
+          "title": "Execution contract",
+          "href": "/agent-execution-contract",
+          "icon": "file-lines"
+        },
+        {
+          "title": "Runtime selection",
+          "href": "/runtime-selection",
+          "icon": "laptop-code"
+        },
+        {
+          "title": "Model selection",
+          "href": "/model-selection",
+          "icon": "brain"
+        },
+        {
+          "title": "Model allowlists",
+          "href": "/model-allowlists",
+          "icon": "list-check"
+        },
+        {
+          "title": "CLI commands",
+          "href": "/cli-commands",
+          "icon": "terminal"
+        },
+        {
+          "title": "CLI configuration",
+          "href": "/agent-cli-configuration",
+          "icon": "gear"
+        },
+        {
+          "title": "OpenCode",
+          "href": "/opencode-integration",
+          "icon": "code"
+        },
+        {
+          "title": "Input reference",
+          "href": "/agent-input-reference",
+          "icon": "clipboard-list"
+        },
+        {
+          "title": "Failure behavior",
+          "href": "/agent-failure-policy",
+          "icon": "triangle-exclamation"
+        }
       ]
     },
     {
       "group": "Security",
       "tab": "security-operations",
       "pages": [
-        { "title": "Overview", "href": "/security/overview", "icon": "shield" },
-        { "title": "Credentials", "href": "/security/credentials", "icon": "key" },
-        { "title": "Trust boundaries", "href": "/security/trust-boundaries", "icon": "shield" },
-        { "title": "Forks and pull_request_target", "href": "/security/forks-and-pull-request-target", "icon": "code-pull-request" },
-        { "title": "Self-hosted runners", "href": "/security/self-hosted-runners", "icon": "terminal" },
-        { "title": "Secret exposure rules", "href": "/security/secret-exposure", "icon": "lock" },
-        { "title": "Authentication compliance", "href": "/codex-authentication-and-compliance", "icon": "file-lines" }
+        {
+          "title": "Overview",
+          "href": "/security/overview",
+          "icon": "shield"
+        },
+        {
+          "title": "Credentials",
+          "href": "/security/credentials",
+          "icon": "key"
+        },
+        {
+          "title": "Trust boundaries",
+          "href": "/security/trust-boundaries",
+          "icon": "shield-halved"
+        },
+        {
+          "title": "Forks and pull_request_target",
+          "href": "/security/forks-and-pull-request-target",
+          "icon": "code-pull-request"
+        },
+        {
+          "title": "Self-hosted runners",
+          "href": "/security/self-hosted-runners",
+          "icon": "server"
+        },
+        {
+          "title": "Secret exposure rules",
+          "href": "/security/secret-exposure",
+          "icon": "lock"
+        },
+        {
+          "title": "Authentication compliance",
+          "href": "/codex-authentication-and-compliance",
+          "icon": "file-lines"
+        }
       ]
     },
     {
       "group": "Operations",
       "tab": "security-operations",
       "pages": [
-        { "title": "Provisioning", "href": "/operations/provisioning", "icon": "download" },
-        { "title": "CLI provisioning details", "href": "/agent-cli-provisioning", "icon": "download" },
-        { "title": "Version pinning", "href": "/operations/version-pinning", "icon": "tag" },
-        { "title": "Verification", "href": "/operations/verification", "icon": "check-circle" },
-        { "title": "Smoke tests", "href": "/operations/smoke-tests", "icon": "check-circle" },
-        { "title": "CLI runners", "href": "/agent-cli-runners", "icon": "terminal" },
-        { "title": "Troubleshooting", "href": "/troubleshooting", "icon": "wrench" },
-        { "title": "Upgrade and rollback", "href": "/operations/upgrade-rollback", "icon": "wrench" }
+        {
+          "title": "Provisioning",
+          "href": "/operations/provisioning",
+          "icon": "download"
+        },
+        {
+          "title": "CLI provisioning details",
+          "href": "/agent-cli-provisioning",
+          "icon": "box-open"
+        },
+        {
+          "title": "Version pinning",
+          "href": "/operations/version-pinning",
+          "icon": "tag"
+        },
+        {
+          "title": "Verification",
+          "href": "/operations/verification",
+          "icon": "circle-check"
+        },
+        {
+          "title": "Smoke tests",
+          "href": "/operations/smoke-tests",
+          "icon": "vial"
+        },
+        {
+          "title": "CLI runners",
+          "href": "/agent-cli-runners",
+          "icon": "server"
+        },
+        {
+          "title": "Troubleshooting",
+          "href": "/troubleshooting",
+          "icon": "wrench"
+        },
+        {
+          "title": "Upgrade and rollback",
+          "href": "/operations/upgrade-rollback",
+          "icon": "rotate"
+        }
       ]
     },
     {
       "group": "Development",
       "tab": "development",
       "pages": [
-        { "title": "Architecture", "href": "/development/architecture", "icon": "list" },
-        { "title": "Local development", "href": "/development/local-development", "icon": "code" },
-        { "title": "Testing", "href": "/development/testing", "icon": "square-check" },
-        { "title": "Build artifacts", "href": "/development/build-artifacts", "icon": "box" },
-        { "title": "Documentation", "href": "/development/documentation", "icon": "file-lines" },
-        { "title": "Documentation completeness plan", "href": "/documentation-completeness-plan", "icon": "clipboard" },
-        { "title": "Release process", "href": "/development/release-process", "icon": "upload" }
+        {
+          "title": "Architecture",
+          "href": "/development/architecture",
+          "icon": "layer-group"
+        },
+        {
+          "title": "Local development",
+          "href": "/development/local-development",
+          "icon": "code"
+        },
+        {
+          "title": "Testing",
+          "href": "/development/testing",
+          "icon": "vial"
+        },
+        {
+          "title": "Build artifacts",
+          "href": "/development/build-artifacts",
+          "icon": "box"
+        },
+        {
+          "title": "Documentation",
+          "href": "/development/documentation",
+          "icon": "file-lines"
+        },
+        {
+          "title": "Documentation completeness plan",
+          "href": "/documentation-completeness-plan",
+          "icon": "clipboard"
+        },
+        {
+          "title": "Release process",
+          "href": "/development/release-process",
+          "icon": "upload"
+        }
       ]
     },
     {
@@ -235,7 +363,7 @@
         {
           "title": "Overview",
           "href": "/pull-requests",
-          "icon": "book"
+          "icon": "file-lines"
         },
         {
           "title": "First workflow",
@@ -317,7 +445,7 @@
         {
           "title": "Concepts",
           "href": "/bugbot/concepts",
-          "icon": "list"
+          "icon": "brain"
         },
         {
           "title": "Detection",
@@ -337,7 +465,7 @@
         {
           "title": "Autofix",
           "href": "/bugbot/autofix",
-          "icon": "wrench"
+          "icon": "wand-magic-sparkles"
         },
         {
           "title": "Do user request",
@@ -352,12 +480,12 @@
         {
           "title": "Verification commands",
           "href": "/bugbot/verification-commands",
-          "icon": "check-circle"
+          "icon": "circle-check"
         },
         {
           "title": "How it works",
           "href": "/bugbot/how-it-works",
-          "icon": "terminal"
+          "icon": "diagram-project"
         },
         {
           "title": "Failure scenarios",
