@@ -48038,7 +48038,7 @@ exports.buildAgentTasksFromInputs = buildAgentTasksFromInputs;
 exports.buildAgentTasksFromValues = buildAgentTasksFromValues;
 const constants_1 = __nccwpck_require__(5415);
 const agent_configuration_builder_1 = __nccwpck_require__(1248);
-const DEFAULT_AGENT_PROVIDER = 'opencode';
+const DEFAULT_AGENT_PROVIDER = 'codex';
 const DEFAULT_MODEL_PROVIDER = 'openai';
 const DEFAULT_AGENT_MODEL = 'gpt-5.6-luna';
 function buildAgentTasksFromInputs(read) {
@@ -48159,7 +48159,7 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort) {
             workflowName: process.env.GITHUB_WORKFLOW ?? '',
         }).catch((err) => {
             (0, logger_1.logError)(`Error waiting for previous runs: ${err}`);
-            process.exit(1);
+            throw err;
         });
     }
     const routeHandlers = (0, main_run_route_composition_root_1.createMainRunRouteCompositionRoot)(projectBoardCommandPort);
@@ -49963,7 +49963,7 @@ class InitialSetupUseCase {
         const steps = [];
         const errors = [];
         try {
-            // 0. Setup files (.github/workflows, .github/ISSUE_TEMPLATE, pull_request_template.md, .env)
+            // 0. Setup files (.github/workflows, .github/ISSUE_TEMPLATE, and pull_request_template.md)
             (0, logger_1.logInfo)('📋 Ensuring .github and copying setup files...');
             const filesResult = this.setupWorkspacePort.prepare();
             steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
@@ -56724,8 +56724,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Ai = void 0;
 class Ai {
     constructor(_configurationSource, model, aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotMinSeverity, bugbotCommentLimit, bugbotFixVerifyCommands = [], agentTasks = {
-        findings: { provider: 'opencode', modelProvider: 'opencode', model, command: `opencode run --model opencode/${model}` },
-        fixer: { provider: 'opencode', modelProvider: 'opencode', model, command: `opencode run --model opencode/${model}` },
+        findings: { provider: 'codex', modelProvider: 'openai', model, command: 'codex exec --ephemeral --skip-git-repo-check -' },
+        fixer: { provider: 'codex', modelProvider: 'openai', model, command: 'codex exec --ephemeral --skip-git-repo-check -' },
     }) {
         this.aiPullRequestDescription = aiPullRequestDescription;
         this.aiMembersOnly = aiMembersOnly;
@@ -64622,7 +64622,7 @@ function ensureGitHubDirs(cwd) {
     }
 }
 /**
- * Copy setup files from setup/ to repo (.github/ workflows, ISSUE_TEMPLATE, pull_request_template.md, .env at root).
+ * Copy setup files from setup/ to repo (.github/ workflows, ISSUE_TEMPLATE, and pull_request_template.md).
  * Skips files that already exist at destination (no overwrite).
  * Logs each file copied or skipped. No-op if setup/ does not exist.
  * By default setup dir is the copilot package root (not cwd), so it works when running from another repo.
@@ -64637,6 +64637,8 @@ function copySetupFiles(cwd, setupDirOverride) {
     const workflows = (0, setup_file_copy_1.copySetupDirectory)(path.join(setupDir, 'workflows'), path.join(cwd, '.github', 'workflows'), (fileName) => fileName.endsWith('.yml') || fileName.endsWith('.yaml'), 'setup/workflows');
     const issueTemplates = (0, setup_file_copy_1.copySetupDirectory)(path.join(setupDir, 'ISSUE_TEMPLATE'), path.join(cwd, '.github', 'ISSUE_TEMPLATE'), () => true, 'setup/ISSUE_TEMPLATE');
     const pullRequestTemplate = (0, setup_file_copy_1.copySetupFile)(path.join(setupDir, 'pull_request_template.md'), path.join(cwd, '.github', 'pull_request_template.md'), 'setup/pull_request_template.md', '.github/pull_request_template.md');
+    // Credentials are deliberately never copied from the package. Keep the
+    // destination check here so setup can guide users to their local .env.
     ensureEnvWithToken(cwd);
     return [workflows, issueTemplates, pullRequestTemplate].reduce((total, current) => ({
         copied: total.copied + current.copied,

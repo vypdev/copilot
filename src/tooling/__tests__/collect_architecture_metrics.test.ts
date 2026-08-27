@@ -3,6 +3,7 @@ const {
   mkdtempSync,
   mkdirSync,
   readFileSync,
+  realpathSync,
   symlinkSync,
   writeFileSync,
 } = require("node:fs");
@@ -473,7 +474,7 @@ describe("collect architecture metrics", () => {
         sha: "abc123",
         timestamp: "2026-08-20T09:30:00.000Z",
         scope: "single-repository",
-        outputDirectory,
+        outputDirectory: realpathSync(outputDirectory),
         executablePaths: {
           node: expect.any(String),
           pnpm: expect.any(String),

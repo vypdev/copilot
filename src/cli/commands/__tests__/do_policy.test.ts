@@ -22,7 +22,7 @@ describe('do command policy', () => {
     delete process.env.AGENT_COMMAND;
     try {
       const tasks = buildDoAgentTasks({});
-      expect(tasks.findings.provider).toBe('opencode');
+      expect(tasks.findings.provider).toBe('codex');
       expect(tasks.findings.modelProvider).toBe('openai');
       expect(tasks.findings.model).toBe('gpt-5.6-luna');
     } finally {

@@ -45,7 +45,7 @@ jobs:
   bugbot:
     runs-on: ubuntu-latest
     env:
-      AGENT_PROVIDER: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+      AGENT_PROVIDER: ${{ vars.AGENT_PROVIDER || 'codex' }}
       AGENT_MODEL_PROVIDER: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
       AGENT_MODEL: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
       AGENT_ALLOWED_MODEL_PROVIDERS: ${{ vars.AGENT_ALLOWED_MODEL_PROVIDERS || 'openai' }}

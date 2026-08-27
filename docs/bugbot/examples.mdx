@@ -26,7 +26,7 @@ on:
 jobs:
   copilot-commits:
     name: Copilot - Commit
-    runs-on: [self-hosted, X64, Linux, coolify]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -35,7 +35,7 @@ jobs:
         with:
           token: ${{ secrets.PAT }}
           project-ids: ${{ vars.PROJECT_IDS }}
-          agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+          agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
           agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
           agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
           # Optional: Bugbot-specific
@@ -62,7 +62,7 @@ on:
 jobs:
   copilot-issues:
     name: Copilot - Issue Comment
-    runs-on: [self-hosted, X64, Linux, coolify]
+    runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
@@ -72,7 +72,7 @@ jobs:
       - uses: vypdev/copilot@v2
         with:
           token: ${{ secrets.PAT }}
-          agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+          agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
           agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
           agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
           ai-ignore-files: build/*
@@ -97,7 +97,7 @@ on:
 jobs:
   copilot-pull-requests:
     name: Copilot - Pull Request Comment
-    runs-on: [self-hosted, X64, Linux, coolify]
+    runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
@@ -107,7 +107,7 @@ jobs:
       - uses: vypdev/copilot@v2
         with:
           token: ${{ secrets.PAT }}
-          agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+    agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
           agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
           agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
           ai-ignore-files: build/*
@@ -139,7 +139,7 @@ on:
 
 jobs:
   detect:
-    runs-on: [self-hosted, X64, Linux, coolify]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -150,7 +150,7 @@ jobs:
           token: ${{ secrets.PAT }}
           single-action: detect_potential_problems_action
           single-action-issue: ${{ github.event.inputs.issue_number }}
-          agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+          agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
           agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
           agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
 ```

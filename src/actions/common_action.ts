@@ -39,7 +39,7 @@ export async function mainRun(
             workflowName: process.env.GITHUB_WORKFLOW ?? '',
         }).catch((err) => {
             logError(`Error waiting for previous runs: ${err}`);
-            process.exit(1);
+            throw err;
         });
     }
 
@@ -109,4 +109,3 @@ export async function mainRun(
         return [];
     }
 }
-

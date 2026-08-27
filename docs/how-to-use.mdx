@@ -65,6 +65,8 @@ Once installed, the `copilot` command is available globally. **All Copilot CLI c
     - **Deploy label**: The label that triggers the deploy flow is configured by the `deploy-label` input (default: `deploy`). The issue templates and your usage must use this same label when you want to run the release or hotfix workflow.
     - **Branch names in workflows**: The Commit workflow (push) often excludes the main and development branches from running (e.g. `!master`, `!develop`). If you change the default branch names (e.g. `main-branch: 'main'`, `development-branch: 'develop'`), update the `push.branches` filter in `.github/workflows/copilot_commit.yml` so it excludes those same names; otherwise the action may run on every push to main/develop or never run on feature branches.
 
+    **Runner selection:** The setup templates and documentation use `runs-on: ubuntu-latest` as the neutral default. You can change it to any runner labels that fit your infrastructure. This repository's active dogfooding workflows use `runs-on: [self-hosted, codex]` because its Codex runner is pre-initialized; that is an internal optimization, not a requirement for consumers.
+
     **Optional but keep coherence:**
     - **Labels**: If you change any label input (e.g. `feature-label`, `bugfix-label`, `deploy-label`), use the **same** label names in your issue templates (`labels:` in each `.yml`) and when labeling issues manually. Otherwise the action will not recognize the type or flow.
     - **Branch name prefixes**: The action uses inputs like `feature-tree`, `bugfix-tree`, `release-tree`, `hotfix-tree` (defaults: `feature`, `bugfix`, `release`, `hotfix`) to create branch names. If you change them, branch names will follow the new prefixes; keep templates and docs in sync.
@@ -78,7 +80,7 @@ Once installed, the `copilot` command is available globally. **All Copilot CLI c
 
 ## What lives in `setup/` (and what gets created)
 
-Everything under the `setup/` directory is copied into your repo by `copySetupFiles` (run during `copilot setup`). Below is a desglose of labels (with defaults), issue types, and the contents of `setup/` so you know what you can customize and what must stay consistent.
+The workflow and template files under `setup/` are copied into your repo by `copySetupFiles` (run during `copilot setup`). The `setup/.env` file is a local, developer-friendly credential-key template and is intentionally not copied. Below is a desglose of labels (with defaults), issue types, and the contents of `setup/` so you know what you can customize and what must stay consistent.
 
 ### Coherence when customizing
 
@@ -216,7 +218,7 @@ Copied to `.github/pull_request_template.md`. Used as the default body for new P
 
 ### `setup/.env`
 
-If present, copied to the repository root as `.env`. Useful for local CLI (e.g. `PAT=...`). Not used by the GitHub Action (secrets come from the workflow).
+The setup package keeps a developer-friendly `setup/.env` template containing only `PERSONAL_ACCESS_TOKEN=` and no value. For local CLI usage, create an ignored `.env` file in the root of the target repository and set the token there. This file is not used by the GitHub Action; workflow credentials come from GitHub Secrets.
 
 ---
 

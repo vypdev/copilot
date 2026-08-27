@@ -14,7 +14,7 @@ Add a job that sets `single-action` and any required inputs (`single-action-issu
 ```yaml
 jobs:
   run-check-progress:
-    runs-on: [self-hosted, X64, Linux, coolify]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: vypdev/copilot@master
