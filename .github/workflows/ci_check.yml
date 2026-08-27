@@ -50,6 +50,9 @@ jobs:
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v6
+        # Coverage reporting is advisory; Codecov v6 requires gpg even when
+        # fail_ci_if_error is false, and the internal macOS runner may not have it.
+        continue-on-error: true
         with:
           files: ./coverage/lcov.info
           disable_search: true
