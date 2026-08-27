@@ -13,7 +13,7 @@ All bugfix issues are created with the `bugfix-label`. The default label for cre
 jobs:
   git-board-issues:
     name: Git Board - Issue
-    runs-on: [self-hosted, X64, Linux, coolify]
+    runs-on: ubuntu-latest
     steps:
       - uses: vypdev/copilot@v2
         with:
@@ -28,7 +28,7 @@ The default tree for creating bugfix branches is `bugfix`. You can configure thi
 jobs:
   git-board-issues:
     name: Git Board - Issue
-    runs-on: [self-hosted, X64, Linux, coolify]
+    runs-on: ubuntu-latest
     steps:
       - uses: vypdev/copilot@v2
         with:
@@ -54,7 +54,7 @@ Bugfix branches are created from the development branch. By default, bugfix bran
 jobs:
   git-board-issues:
     name: Git Board - Issue
-    runs-on: [self-hosted, X64, Linux, coolify]
+    runs-on: ubuntu-latest
     steps:
       - uses: vypdev/copilot@v2
         with:
@@ -71,7 +71,7 @@ To configure the images, provide a comma-separated list of image URLs in the `im
 jobs:
   git-board-issues:
     name: Git Board - Issue
-    runs-on: [self-hosted, X64, Linux, coolify]
+    runs-on: ubuntu-latest
     steps:
       - uses: vypdev/copilot@v2
         with:

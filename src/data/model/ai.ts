@@ -21,8 +21,8 @@ export class Ai {
         bugbotCommentLimit: number,
         bugbotFixVerifyCommands: string[] = [],
         agentTasks: AgentTaskConfiguration = {
-            findings: { provider: 'opencode', modelProvider: 'opencode', model, command: `opencode run --model opencode/${model}` },
-            fixer: { provider: 'opencode', modelProvider: 'opencode', model, command: `opencode run --model opencode/${model}` },
+            findings: { provider: 'codex', modelProvider: 'openai', model, command: 'codex exec --ephemeral --skip-git-repo-check -' },
+            fixer: { provider: 'codex', modelProvider: 'openai', model, command: 'codex exec --ephemeral --skip-git-repo-check -' },
         }
     ) {
         this.aiPullRequestDescription = aiPullRequestDescription;

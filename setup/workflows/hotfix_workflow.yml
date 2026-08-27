@@ -27,9 +27,12 @@ concurrency:
 jobs:
   prepare-version-files:
     name: Prepare files for hotfix
-    runs-on: [self-hosted, X64, Linux, coolify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Validate inputs
         env:
@@ -72,11 +75,31 @@ jobs:
 
   tag:
     name: Publish version
-    runs-on: [self-hosted, X64, Linux, coolify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     needs: [ prepare-version-files ]
+    permissions:
+      contents: read
+    env:
+      AGENT_PROVIDER: ${{ vars.AGENT_PROVIDER || 'codex' }}
+      AGENT_MODEL_PROVIDER: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
+      AGENT_MODEL: ${{ vars.AGENT_MODEL }}
+      AGENT_ALLOWED_MODEL_PROVIDERS: ${{ vars.AGENT_ALLOWED_MODEL_PROVIDERS || 'openai' }}
+      AGENT_ALLOWED_MODELS: ${{ vars.AGENT_ALLOWED_MODELS || 'openai/gpt-5.6-luna' }}
+      AGENT_COMMAND: ${{ vars.AGENT_COMMAND }}
+      CODEX_VERSION: ${{ vars.CODEX_VERSION }}
+      OPENCODE_VERSION: ${{ vars.OPENCODE_VERSION }}
+      CURSOR_INSTALLER_SHA256: ${{ vars.CURSOR_INSTALLER_SHA256 }}
+      OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+      CODEX_ACCESS_TOKEN: ${{ secrets.CODEX_ACCESS_TOKEN }}
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         
       - name: Copilot - Create Tag
         uses: vypdev/copilot@v2
@@ -86,6 +109,10 @@ jobs:
           single-action: 'create_tag'
           single-action-issue: '${{ github.event.inputs.issue }}'
           single-action-version: '${{ github.event.inputs.version }}'
+          agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
+          agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
+          agent-command: ${{ vars.AGENT_COMMAND }}
           token: ${{ secrets.PAT }}
   
       - name: Copilot - Create Release
@@ -98,6 +125,10 @@ jobs:
           single-action-version: '${{ github.event.inputs.version }}'
           single-action-title: '${{ github.event.inputs.title }}'
           single-action-changelog: '${{ github.event.inputs.changelog }}'
+          agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
+          agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
+          agent-command: ${{ vars.AGENT_COMMAND }}
           token: ${{ secrets.PAT }}
 
       # Example: generic step to perform the deployment (uncomment and adjust as needed)
@@ -111,7 +142,7 @@ jobs:
           debug: ${{ vars.DEBUG }}
           single-action: 'deployed_action'
           single-action-issue: '${{ github.event.inputs.issue }}'
-          agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+          agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
           agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
           agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
           token: ${{ secrets.PAT }}

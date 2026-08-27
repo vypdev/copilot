@@ -4,7 +4,7 @@
  */
 export declare function ensureGitHubDirs(cwd: string): void;
 /**
- * Copy setup files from setup/ to repo (.github/ workflows, ISSUE_TEMPLATE, pull_request_template.md, .env at root).
+ * Copy setup files from setup/ to repo (.github/ workflows, ISSUE_TEMPLATE, and pull_request_template.md).
  * Skips files that already exist at destination (no overwrite).
  * Logs each file copied or skipped. No-op if setup/ does not exist.
  * By default setup dir is the copilot package root (not cwd), so it works when running from another repo.

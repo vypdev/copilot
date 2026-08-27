@@ -12,10 +12,10 @@ import { cleanCliArgument, joinCliArguments } from '../command_input_policy';
 export function registerDoCommand(program: Command): void {
 program
   .command('do')
-  .description(`${TITLE} - AI development assistant (OpenCode build agent; can edit files when run locally)`)
+  .description(`${TITLE} - AI development assistant (selected build agent; can edit files when run locally)`)
   .option('-p, --prompt <prompt...>', 'Prompt or question (required)', '')
   .option('-d, --debug', 'Debug mode', false)
-  .option('--agent-provider <provider>', 'Agent provider (opencode|cursor|codex)', process.env.AGENT_PROVIDER || 'opencode')
+  .option('--agent-provider <provider>', 'Agent provider (codex|opencode|cursor)', process.env.AGENT_PROVIDER || 'codex')
   .option('--agent-model-provider <provider>', 'Provider of the selected model', process.env.AGENT_MODEL_PROVIDER || 'openai')
   .option('--agent-model <model>', 'Selected agent model', process.env.AGENT_MODEL || 'gpt-5.6-luna')
   .option('--agent-command <command>', 'CLI executable for the selected agent', process.env.AGENT_COMMAND)

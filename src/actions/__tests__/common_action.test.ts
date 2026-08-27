@@ -375,14 +375,12 @@ describe('mainRun', () => {
     expect(results).toEqual([]);
   });
 
-  it('exits process when workflow queue polling rejects and welcome is false', async () => {
-    const exitSpy = jest.spyOn(process, 'exit').mockImplementation((() => {}) as () => never);
+  it('propagates workflow queue errors when polling rejects and welcome is false', async () => {
     mockWaitForPreviousWorkflowRunsInvoke.mockRejectedValue(new Error('Queue error'));
     const execution = mockExecution({ welcome: undefined });
 
-    await runMain(execution);
+    await expect(runMain(execution)).rejects.toThrow('Queue error');
 
-    expect(exitSpy).toHaveBeenCalledWith(1);
-    exitSpy.mockRestore();
+    expect(logger.logError).toHaveBeenCalledWith('Error waiting for previous runs: Error: Queue error');
   });
 });

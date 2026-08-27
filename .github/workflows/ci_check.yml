@@ -14,16 +14,17 @@ concurrency:
 jobs:
   ci-check:
     name: CI Check
-    runs-on: [self-hosted, X64, Linux, coolify]
+    runs-on: [self-hosted, codex]
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v5
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
-          version: 10
+          version: 10.12.4
 
       - name: Set up Node.js 24
         uses: actions/setup-node@v7
@@ -47,8 +48,9 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v6
         with:
-          directory: ./coverage
-          fail_ci_if_error: true
+          files: ./coverage/lcov.info
+          disable_search: true
+          fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
           verbose: true
 

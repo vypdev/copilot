@@ -22,7 +22,7 @@ const missingInputs = requiredInputs.filter(input => !action.inputs?.[input]);
 if (missingInputs.length) throw new Error(`Missing agent inputs in action.yml: ${missingInputs.join(', ')}`);
 
 const expectedDefaults = {
-  'agent-provider': 'opencode',
+  'agent-provider': 'codex',
   'agent-model-provider': 'openai',
   'agent-model': 'gpt-5.6-luna',
 };

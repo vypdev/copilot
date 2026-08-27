@@ -43,7 +43,7 @@ on:
 jobs:
   copilot-pull-requests:
     name: Copilot - Pull Request
-    runs-on: [self-hosted, X64, Linux, coolify]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4

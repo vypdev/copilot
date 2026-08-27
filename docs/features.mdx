@@ -15,7 +15,7 @@ This page describes **every function** the Copilot GitHub Action provides: workf
     When PRs are opened or updated: link to issue, project column, reviewers, AI description, size/progress sync.
   </Card>
   <Card title="Push events" icon="git-commit">
-    On every push: commit notifications on the issue, prefix check, reopen option, size & progress labels (with OpenCode). Details below.
+    On every push: commit notifications on the issue, prefix check, reopen option, size & progress labels (with the configured agent runtime). Details below.
   </Card>
 </CardGroup>
 
@@ -63,7 +63,7 @@ When the workflow runs on `push` (e.g. to any branch):
 | **Commit notifications** | For branches linked to an issue, posts a comment on the issue with commit messages and links. |
 | **Commit prefix check** | Warns if commit messages do not follow the prefix derived from the branch name (using `commit-prefix-transforms`). |
 | **Reopen issue** | If `reopen-issue-on-push` is true, reopens the issue when new commits are pushed to its branch. |
-| **Size & progress** | Computes size (XS–XXL) and progress (0–100%) from the branch diff; updates the **issue** and any **open PRs** for that branch with the same labels. Requires OpenCode for progress. No separate workflow is needed. |
+| **Size & progress** | Computes size (XS–XXL) and progress (0–100%) from the branch diff; updates the **issue** and any **open PRs** for that branch with the same labels. Uses the configured agent runtime. No separate workflow is needed. |
 | **Bugbot (potential problems)** | the configured agent analyzes the branch vs base and reports findings as **comments on the issue** and **review comments on open PRs**; updates issue comments when findings are resolved and **marks PR review threads as resolved** when applicable. Configurable via `bugbot-severity` and `ai-ignore-files`. See [Bugbot](/bugbot), [Issues](/issues#bugbot-potential-problems), and [Pull Requests](/pull-requests#bugbot-potential-problems). |
 | **Comments & images** | Posts commit summary comments with optional images. |
 
@@ -94,13 +94,13 @@ Single actions that **throw an error** if the last step fails: `publish_github_a
 All AI features use the configured agent CLI and explicit model contract. The runtime is selected with `agent-provider`; the model provider and model are selected with `agent-model-provider` and `agent-model`. See [Agent CLI configuration](/agents/cli-configuration).
 
 <Warning>
-OpenCode is the currently validated runtime for the repository's AI feature paths. Codex is supported as a CLI runtime but has a narrower validation boundary. Cursor is WIP and must not be described as production-validated; see [Cursor runtime (WIP)](/agents/cursor-wip).
+Codex is the default runtime for the repository's AI feature paths. OpenCode remains a supported and validated alternative. Cursor is WIP and must not be described as production-validated; see [Cursor runtime (WIP)](/agents/cursor-wip).
 </Warning>
 
 | Runtime | Status | Documentation |
 | --- | --- | --- |
-| OpenCode | Validated path | [OpenCode runtime](/agents/opencode) |
-| Codex with OpenAI | Implemented CLI path; verify authentication and model behavior before production use | [Codex and OpenAI](/agents/codex-openai) |
+| Codex with OpenAI | Default CLI path; verify authentication and model entitlement before production use | [Codex and OpenAI](/agents/codex-openai) |
+| OpenCode | Supported validated alternative | [OpenCode runtime](/agents/opencode) |
 | Cursor | WIP; authenticated smoke test pending | [Cursor runtime (WIP)](/agents/cursor-wip) |
 
 | Feature | Where it runs | Description |
@@ -145,7 +145,7 @@ on:
 
 jobs:
   copilot-issues:
-    runs-on: [self-hosted, X64, Linux, coolify]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: vypdev/copilot@master

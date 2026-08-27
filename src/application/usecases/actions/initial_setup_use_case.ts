@@ -42,7 +42,7 @@ export class InitialSetupUseCase implements ParamUseCase<Execution, Result[]> {
         const errors: string[] = [];
 
         try {
-            // 0. Setup files (.github/workflows, .github/ISSUE_TEMPLATE, pull_request_template.md, .env)
+            // 0. Setup files (.github/workflows, .github/ISSUE_TEMPLATE, and pull_request_template.md)
             logInfo('📋 Ensuring .github and copying setup files...');
             const filesResult = this.setupWorkspacePort.prepare();
             steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
@@ -235,4 +235,3 @@ export class InitialSetupUseCase implements ParamUseCase<Execution, Result[]> {
     }
 
 }
-

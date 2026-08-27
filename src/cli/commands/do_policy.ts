@@ -2,7 +2,7 @@ import { buildAgentTasks } from '../../actions/agent_configuration_builder';
 import type { AgentTaskConfiguration } from '../../data/model/agent';
 import { cleanCliArgument } from '../command_input_policy';
 
-const DEFAULT_AGENT_PROVIDER = 'opencode';
+const DEFAULT_AGENT_PROVIDER = 'codex';
 const DEFAULT_MODEL_PROVIDER = 'openai';
 const DEFAULT_AGENT_MODEL = 'gpt-5.6-luna';
 

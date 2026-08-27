@@ -1,7 +1,7 @@
 import { INPUT_KEYS } from '../utils/constants';
 import { buildAgentTasks } from './agent_configuration_builder';
 
-const DEFAULT_AGENT_PROVIDER = 'opencode';
+const DEFAULT_AGENT_PROVIDER = 'codex';
 const DEFAULT_MODEL_PROVIDER = 'openai';
 const DEFAULT_AGENT_MODEL = 'gpt-5.6-luna';
 

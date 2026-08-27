@@ -391,8 +391,8 @@ inputs:
     description: "Fine-grained personal access token for branch and project operations"
     required: true
   agent-provider:
-    description: "Single agent provider used by findings and fixer tasks: opencode, cursor, or codex. A provider failure is terminal; no fallback provider is attempted."
-    default: "opencode"
+    description: "Single agent provider used by findings and fixer tasks: codex, opencode, or cursor. A provider failure is terminal; no fallback provider is attempted."
+    default: "codex"
   agent-model-provider:
     description: "Provider that supplies the selected model, for example openai, opencode, openrouter, anthropic, or a local provider."
     default: "openai"
@@ -401,7 +401,7 @@ inputs:
     description: "Selected model name without the provider prefix. The provider is configured separately with agent-model-provider."
     default: "gpt-5.6-luna"
   agent-command:
-    description: "Optional executable command for the selected CLI agent. Defaults: opencode run, agent -p --output-format text -, or codex exec --ephemeral --skip-git-repo-check -. No fallback command is attempted."
+    description: "Optional executable command for the selected CLI agent. Defaults: codex exec --ephemeral --skip-git-repo-check -, opencode run, or agent -p --output-format text -. No fallback command is attempted."
     default: ""
   findings-provider:
     description: "Optional provider override for findings."
@@ -446,7 +446,7 @@ inputs:
     description: "Comma-separated commands to run after bugbot autofix (e.g. pnpm run build, pnpm test, pnpm run lint). The selected agent runtime runs these in its workspace; the runner can re-run them before commit. If empty, no additional verification commands are requested."
     default: ""
 runs:
-  using: "node20"
+  using: "node24"
   main: "build/github_action/index.js"
 branding:
   icon: "cpu"

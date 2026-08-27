@@ -59,7 +59,7 @@ The Action does not require every secret. Only the credential for the selected r
 
 ```yaml
 with:
-  agent-provider: opencode
+  agent-provider: codex
   agent-model-provider: openai
   agent-model: gpt-5.6-luna
 env:
@@ -67,10 +67,10 @@ env:
   AGENT_ALLOWED_MODELS: openai/gpt-5.6-luna
 ```
 
-The effective OpenCode command is:
+The effective Codex command is:
 
 ```text
-opencode run --model openai/gpt-5.6-luna
+codex exec --ephemeral --skip-git-repo-check -
 ```
 
 The allowlists are authorization policy, not credentials and not model selectors. A rejected provider/model is a terminal failure.

@@ -26,7 +26,7 @@ export function ensureGitHubDirs(cwd: string): void {
 }
 
 /**
- * Copy setup files from setup/ to repo (.github/ workflows, ISSUE_TEMPLATE, pull_request_template.md, .env at root).
+ * Copy setup files from setup/ to repo (.github/ workflows, ISSUE_TEMPLATE, and pull_request_template.md).
  * Skips files that already exist at destination (no overwrite).
  * Logs each file copied or skipped. No-op if setup/ does not exist.
  * By default setup dir is the copilot package root (not cwd), so it works when running from another repo.
@@ -56,6 +56,8 @@ export function copySetupFiles(cwd: string, setupDirOverride?: string): { copied
     'setup/pull_request_template.md',
     '.github/pull_request_template.md',
   );
+  // Credentials are deliberately never copied from the package. Keep the
+  // destination check here so setup can guide users to their local .env.
   ensureEnvWithToken(cwd);
   return [workflows, issueTemplates, pullRequestTemplate].reduce((total, current) => ({
     copied: total.copied + current.copied,

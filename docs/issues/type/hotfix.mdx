@@ -48,7 +48,7 @@ This workflow ensures that critical fixes reach production quickly while maintai
   jobs:
     git-board-issues:
       name: Git Board - Issue
-      runs-on: [self-hosted, X64, Linux, coolify]
+      runs-on: ubuntu-latest
       steps:
         - uses: vypdev/copilot@v2
           with:
@@ -94,7 +94,7 @@ This workflow ensures that critical fixes reach production quickly while maintai
   jobs:
     deploy:
       name: Git Board - Issue
-      runs-on: [self-hosted, X64, Linux, coolify]
+      runs-on: ubuntu-latest
       steps:
         - name: Checkout Repository
           uses: actions/checkout@v4
@@ -132,7 +132,7 @@ All hotfix issues are created with the `hotfix-label`. The default label for cre
 jobs:
   git-board-issues:
     name: Git Board - Issue
-    runs-on: [self-hosted, X64, Linux, coolify]
+    runs-on: ubuntu-latest
     steps:
       - uses: vypdev/copilot@v2
         with:
@@ -147,7 +147,7 @@ The default tree for creating hotfix branches is `hotfix`. You can configure thi
 jobs:
   git-board-issues:
     name: Git Board - Issue
-    runs-on: [self-hosted, X64, Linux, coolify]
+    runs-on: ubuntu-latest
     steps:
       - uses: vypdev/copilot@v2
         with:
@@ -173,7 +173,7 @@ Hotfix branches are created from the master branch, specifically from the latest
 jobs:
   git-board-issues:
     name: Git Board - Issue
-    runs-on: [self-hosted, X64, Linux, coolify]
+    runs-on: ubuntu-latest
     steps:
       - uses: vypdev/copilot@v2
         with:
@@ -190,7 +190,7 @@ To configure the images, provide a comma-separated list of image URLs in the `im
 jobs:
   git-board-issues:
     name: Git Board - Issue
-    runs-on: [self-hosted, X64, Linux, coolify]
+    runs-on: ubuntu-latest
     steps:
       - uses: vypdev/copilot@v2
         with:

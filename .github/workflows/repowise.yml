@@ -17,7 +17,8 @@ permissions:
 jobs:
   code-health:
     name: RepoWise code health
-    runs-on: [self-hosted, X64, Linux, coolify]
+    runs-on: [self-hosted, codex]
+    timeout-minutes: 30
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -34,7 +35,7 @@ jobs:
           "$RUNNER_TEMP/repowise-venv/bin/python" -m pip install \
             --disable-pip-version-check \
             --no-cache-dir \
-            'repowise==0.42.0'
+            'repowise==0.45.0'
       - name: Generate RepoWise reports
         env:
           REPOWISE_SKIP_EDITOR_SETUP: '1'
@@ -55,7 +56,7 @@ jobs:
           "$repowise_bin" health --no-workspace --refactoring-targets --format md . | tee "$report_dir/health.md"
           "$repowise_bin" health --no-workspace --refactoring-targets --format json . > "$report_dir/health.json"
           "$repowise_bin" dead-code --safe-only --no-workspace --format json . > "$report_dir/dead-code.json" || true
-          "$repowise_bin" security scan --path . --format json > "$report_dir/security.json" || true
+          "$repowise_bin" security scan --history --path . --format json > "$report_dir/security.json" || true
           {
             echo '## RepoWise code health'
             echo
