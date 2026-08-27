@@ -24,6 +24,11 @@ jest.mock('../common_action', () => ({
   mainRun: (...args: unknown[]) => mockMainRun(...args),
 }));
 
+const mockProvision = jest.fn();
+jest.mock('../../data/repository/agent_cli_provisioner', () => ({
+  AgentCliProvisioner: jest.fn().mockImplementation(() => ({ provision: mockProvision })),
+}));
+
 const mockPublishInvoke = jest.fn();
 const mockStoreInvoke = jest.fn();
 jest.mock('../../application/usecases/steps/common/publish_resume_use_case', () => ({
