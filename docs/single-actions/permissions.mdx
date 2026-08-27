@@ -1,0 +1,19 @@
+---
+title: Permissions and safety
+description: Choose the minimum permissions for a single action and verify before mutation.
+---
+
+# Permissions and safety
+
+Single actions may read a repository, invoke an agent, publish a comment, or mutate a workspace. Configure only the permissions required by the chosen action.
+
+| Capability | Default posture | Additional control |
+| --- | --- | --- |
+| Detection | Read-only | Trusted event and bounded checkout |
+| Publication | Explicit write | Comment target and actor policy |
+| Autofix | Explicit write | Verification commands and clean diff policy |
+| Commit/push | Explicit write | Protected branch and final review |
+
+<Warning>
+A successful agent response is not authorization to commit or push. Authorization, verification, and side-effect policy remain separate gates.
+</Warning>

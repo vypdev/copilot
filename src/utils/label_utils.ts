@@ -1,7 +1,16 @@
-import { Execution } from "../data/model/execution";
+interface LabelBranchContext {
+    branches: {
+        bugfixTree: string;
+        releaseTree: string;
+        docsTree: string;
+        choreTree: string;
+        featureTree: string;
+        hotfixTree: string;
+    };
+}
 
 export const branchesForManagement = (
-    params: Execution,
+    params: LabelBranchContext,
     labels: string[],
     featureLabel: string,
     enhancementLabel: string,
@@ -24,7 +33,7 @@ export const branchesForManagement = (
 }
 
 export const typesForIssue = (
-    params: Execution,
+    params: LabelBranchContext,
     labels: string[],
     featureLabel: string,
     enhancementLabel: string,

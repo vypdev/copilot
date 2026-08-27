@@ -1,6 +1,6 @@
 /**
  * Unit tests for CLI commands.
- * Mocks execSync (getGitInfo), runLocalAction, IssueRepository, AiRepository.
+ * Mocks execSync (getGitInfo), runLocalAction, IssueMetadataRepository, and the fixer port.
  */
 
 import { execSync } from 'child_process';
@@ -22,16 +22,15 @@ jest.mock('../utils/logger', () => ({
 }));
 
 const mockIsIssue = jest.fn();
-jest.mock('../data/repository/issue_repository', () => ({
-  IssueRepository: jest.fn().mockImplementation(() => ({
+jest.mock('../data/repository/issue/issue_metadata_repository', () => ({
+  IssueMetadataRepository: jest.fn().mockImplementation(() => ({
     isIssue: mockIsIssue,
   })),
 }));
 
-jest.mock('../data/repository/ai_repository', () => ({
-  AiRepository: jest.fn().mockImplementation(() => ({
-    copilotMessage: jest.fn().mockResolvedValue({ text: 'OK', sessionId: 's1' }),
-  })),
+const mockFix = jest.fn();
+jest.mock('../infrastructure/composition/agent_capability_composition_root', () => ({
+  createFixerQueryPort: () => ({ fix: mockFix }),
 }));
 
 const mockGetSetupToken = jest.fn();
@@ -52,6 +51,11 @@ describe('CLI', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env.AGENT_PROVIDER = 'opencode';
+    process.env.AGENT_MODEL = 'test-model';
+    process.env.AGENT_COMMAND = 'opencode run --model opencode/test-model';
+    process.env.AGENT_MODEL_PROVIDER = 'opencode';
+    process.env.OPENAI_API_KEY = 'test-key';
     exitSpy = jest.spyOn(process, 'exit').mockImplementation((() => {}) as () => never);
     (execSync as jest.Mock).mockReturnValue(Buffer.from('https://github.com/test-owner/test-repo.git'));
     (runLocalAction as jest.Mock).mockResolvedValue(undefined);
@@ -107,24 +111,29 @@ describe('CLI', () => {
   });
 
   describe('do', () => {
-    it('calls AiRepository and logs response', async () => {
-      const { AiRepository } = require('../data/repository/ai_repository');
+    it('calls the fixer port and logs response', async () => {
       const logSpy = jest.spyOn(console, 'log').mockImplementation();
 
+      mockFix.mockResolvedValue({ text: 'OK', sessionId: 's1' });
       await program.parseAsync(['node', 'cli', 'do', '-p', 'refactor this']);
 
-      expect(AiRepository).toHaveBeenCalled();
-      const instance = AiRepository.mock.results[AiRepository.mock.results.length - 1].value;
-      expect(instance.copilotMessage).toHaveBeenCalled();
+      expect(mockFix).toHaveBeenCalled();
       expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('RESPONSE'));
       logSpy.mockRestore();
     });
 
+    it('includes repository identity and current branch in the OpenCode prompt', async () => {
+      mockFix.mockResolvedValue({ text: 'OK', sessionId: 's1' });
+
+      await program.parseAsync(['node', 'cli', 'do', '-p', 'refactor this']);
+
+      const prompt = mockFix.mock.calls[0][0].prompt as string;
+      expect(prompt).toContain('Repository identity: test-owner/test-repo');
+      expect(prompt).toContain('Current branch:');
+    });
+
     it('calls process.exit(1) when do fails', async () => {
-      const { AiRepository } = require('../data/repository/ai_repository');
-      AiRepository.mockImplementation(() => ({
-        copilotMessage: jest.fn().mockRejectedValue(new Error('OpenCode down')),
-      }));
+      mockFix.mockRejectedValue(new Error('OpenCode down'));
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
       await program.parseAsync(['node', 'cli', 'do', '-p', 'hello']);
@@ -151,10 +160,7 @@ describe('CLI', () => {
     });
 
     it('exits when copilotMessage returns null', async () => {
-      const { AiRepository } = require('../data/repository/ai_repository');
-      AiRepository.mockImplementation(() => ({
-        copilotMessage: jest.fn().mockResolvedValue(null),
-      }));
+      mockFix.mockResolvedValue(null);
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
       await program.parseAsync(['node', 'cli', 'do', '-p', 'hello']);
@@ -166,10 +172,7 @@ describe('CLI', () => {
 
     it('logs error and exits with debug when do throws and --debug', async () => {
       const err = new Error('OpenCode down');
-      const { AiRepository } = require('../data/repository/ai_repository');
-      AiRepository.mockImplementation(() => ({
-        copilotMessage: jest.fn().mockRejectedValue(err),
-      }));
+      mockFix.mockRejectedValue(err);
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
 
       await program.parseAsync(['node', 'cli', 'do', '-p', 'hello', '--debug']);
@@ -441,10 +444,7 @@ describe('CLI', () => {
 
   describe('do --output json', () => {
     it('prints JSON when --output json', async () => {
-      const { AiRepository } = require('../data/repository/ai_repository');
-      AiRepository.mockImplementation(() => ({
-        copilotMessage: jest.fn().mockResolvedValue({ text: 'Hi', sessionId: 'sid-1' }),
-      }));
+      mockFix.mockResolvedValue({ text: 'Hi', sessionId: 'sid-1' });
       const logSpy = jest.spyOn(console, 'log').mockImplementation();
 
       await program.parseAsync(['node', 'cli', 'do', '-p', 'hello', '--output', 'json']);

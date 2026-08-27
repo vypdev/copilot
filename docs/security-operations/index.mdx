@@ -1,0 +1,41 @@
+---
+title: Security & Operations
+description: Operate Copilot agents safely, reproducibly, and with controlled lifecycle procedures.
+---
+
+# Security & Operations
+
+This area covers the controls around credentials, trust boundaries, CLI provisioning, verification, smoke tests, upgrades, rollback, and troubleshooting.
+
+<CardGroup cols={2}>
+  <Card title="Security" icon="shield" href="/security-operations/security/credentials">
+    Protect credentials, runners, forks, and write permissions.
+  </Card>
+  <Card title="Provisioning" icon="download" href="/security-operations/operations/provisioning">
+    Install only the selected pinned CLI runtime.
+  </Card>
+  <Card title="Verification" icon="check-circle" href="/security-operations/operations/verification">
+    Prove binary, configuration, and credential readiness.
+  </Card>
+  <Card title="Lifecycle" icon="rotate" href="/security-operations/operations/upgrade-rollback">
+    Upgrade and roll back complete known-good tuples.
+  </Card>
+</CardGroup>
+
+<Warning>
+Provisioning, authentication, policy, parsing, timeout, and verification failures are terminal. Copilot must not silently select another runtime, model, credential, or transport.
+</Warning>
+
+## Recommended path
+
+<Steps>
+  <Step title="Secure the trust boundary">Review event type, checkout source, runner, and permissions.</Step>
+  <Step title="Provision one pinned runtime">Install only the selected provider and verify its version.</Step>
+  <Step title="Run read-only verification">Confirm command, credential reference, model policy, and bounded output.</Step>
+  <Step title="Enable writes deliberately">Grant write permissions only after the controlled path passes.</Step>
+</Steps>
+
+- [Credentials](/security-operations/security/credentials)
+- [Trust boundaries](/security-operations/security/trust-boundaries)
+- [Smoke tests](/security-operations/operations/smoke-tests)
+- [Troubleshooting](/security-operations/operations/troubleshooting)

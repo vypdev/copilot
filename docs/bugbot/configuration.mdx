@@ -1,149 +1,107 @@
 ---
 title: Configuration
-description: All Bugbot-related action inputs: severity, comment limit, verify commands, and ignore files.
+description: Configure Bugbot detection, autofix, verification, ignore rules, and the agent CLI policy.
 ---
 
-# Configuration
+# Bugbot configuration
 
-This page lists every **Bugbot-related** input: what it does, default value, and example usage. For the full list of Copilot inputs (branches, labels, projects, etc.), see [Configuration](/configuration).
+Bugbot uses the same explicit agent CLI contract as the other AI features. Configure the runtime, model provider, model, credentials, and policy separately.
 
----
+## Agent runtime
 
-## OpenCode (required for Bugbot)
+```yaml
+with:
+  agent-provider: opencode
+  agent-model-provider: openai
+  agent-model: gpt-5.6-luna
+env:
+  AGENT_ALLOWED_MODEL_PROVIDERS: openai
+  AGENT_ALLOWED_MODELS: openai/gpt-5.6-luna
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+```
 
-Bugbot depends on OpenCode for both **detection** (Plan agent) and **autofix / do-user-request** (Build agent). These inputs are shared with other AI features (progress, Think, AI PR description).
+For this configuration, Bugbot executes:
 
-| Input | Default | Description |
-|-------|---------|-------------|
-| **`opencode-server-url`** | `http://localhost:4096` | URL of the OpenCode server. The runner must be able to reach it (e.g. same job if you use `opencode-start-server: true`). |
-| **`opencode-model`** | `opencode/kimi-k2.5-free` | Model in `provider/model` format (e.g. `anthropic/claude-3-5-sonnet`, `openai/gpt-4o-mini`). |
-| **`opencode-start-server`** | `true` | If `true`, the action starts an OpenCode server at job start and stops it at job end. Requires provider API keys (e.g. `OPENAI_API_KEY`) passed as env. If you run OpenCode yourself, set to `false` and pass `opencode-server-url`. |
+```text
+opencode run --model openai/gpt-5.6-luna
+```
 
-Without a valid `opencode-server-url` and `opencode-model`, Bugbot **detection** is skipped (no findings posted). **Autofix** and **do-user-request** also require OpenCode and a running server (or `opencode-start-server: true`) so the Build agent can apply changes in the workspace.
-
----
+`agent-provider` selects the CLI runtime. `agent-model-provider` and `agent-model` select the qualified model. Allowlists are checked before execution and failures are terminal. See [Agent CLI configuration](/agents/cli-configuration).
 
 ## bugbot-severity
 
 **Default:** `low`
 
-**Description:** Minimum severity for findings to be **published** as comments on the issue and PR. Findings with severity **below** this threshold are filtered out before publishing.
+Minimum severity published as a finding comment.
 
 | Value | Findings published |
-|-------|---------------------|
+| --- | --- |
 | `info` | info, low, medium, high |
 | `low` | low, medium, high |
 | `medium` | medium, high |
 | `high` | high only |
 
-**Example:**
-
 ```yaml
-# Only report medium and high (skip low and info)
-bugbot-severity: "medium"
+bugbot-severity: medium
 ```
-
-```yaml
-# Report everything including info
-bugbot-severity: "info"
-```
-
----
 
 ## bugbot-comment-limit
 
 **Default:** `20`
 
-**Description:** Maximum number of findings to publish as **individual** comments on the issue and PR. If OpenCode returns more findings (after severity and ignore filters), only the first N are posted one per comment; the rest are summarized in a **single overflow comment** on the issue (e.g. “X additional findings were not posted; consider reviewing the branch locally”).
-
-The value is clamped between **1** and **200** (or your docs’ stated range). Use a higher limit if you want more findings visible at the cost of more comments.
-
-**Example:**
+Maximum number of individual finding comments published per target. Additional findings are summarized in an overflow comment. The implementation bounds this value; use a modest limit to avoid noisy issue or review threads.
 
 ```yaml
-# Default: up to 20 individual comments + 1 overflow if needed
-bugbot-comment-limit: "20"
-
-# Stricter: only 10 individual comments
-bugbot-comment-limit: "10"
-
-# Allow up to 50 individual comments
-bugbot-comment-limit: "50"
+bugbot-comment-limit: 20
 ```
-
----
 
 ## bugbot-fix-verify-commands
 
-**Default:** `""` (empty)
+**Default:** empty
 
-**Description:** Comma-separated list of **commands** to run **after** OpenCode applies changes (autofix or do-user-request) and **before** the action commits and pushes. Typically: build, test, lint. If **any** command fails, the action **does not commit**; no push happens and findings are not marked as resolved.
-
-- Commands are parsed (e.g. with shell-quote) and run in the runner; there is a **maximum of 20** commands.
-- If left **empty**, only OpenCode’s own execution is used; the action may still commit if there are file changes.
-
-**Example:**
+Comma-separated commands run after an autofix or user-request change and before the Action commits and pushes. If any command fails, no commit or push occurs.
 
 ```yaml
-# Run build, test, and lint before committing
-bugbot-fix-verify-commands: "npm run build, npm test, npm run lint"
+bugbot-fix-verify-commands: "pnpm run build, pnpm test, pnpm run lint"
 ```
 
-```yaml
-# Single command
-bugbot-fix-verify-commands: "npm test"
-```
-
-```yaml
-# From a repo/organization variable (recommended for secrets or env-specific commands)
-bugbot-fix-verify-commands: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS }}
-```
-
-Use this in workflows that run on **`issue_comment`** or **`pull_request_review_comment`** so autofix and do-user-request only commit when your checks pass.
-
----
+Commands are parsed without invoking a shell and unsafe shell operators are rejected. Keep commands deterministic and use `pnpm` for JavaScript/TypeScript projects.
 
 ## ai-ignore-files
 
-**Default:** `""` (empty)
+**Default:** empty
 
-**Description:** Comma-separated list of **paths or patterns** to **exclude** from AI operations that analyze file content or paths. For Bugbot:
-
-- **Detection:** These paths are passed to OpenCode in the prompt (“do not report findings in files matching …”) and findings in matching files are **filtered out** before publishing.
-- **Autofix / do-user-request:** The ignore list is not used to restrict which files the Build agent can edit; it mainly affects **detection** and reporting.
-
-Common use: exclude generated code, vendored deps, or noisy directories.
-
-**Example:**
+Comma-separated paths or patterns excluded from Bugbot analysis and finding publication. This is an analysis/reporting filter; it is not a general write-protection mechanism for autofix or user-request workflows.
 
 ```yaml
-# Ignore build output and lockfiles
-ai-ignore-files: "build/*, dist/*, package-lock.json"
+ai-ignore-files: "build/*, dist/*, **/node_modules/**"
 ```
 
-```yaml
-# Ignore specific dirs and patterns
-ai-ignore-files: "**/node_modules/**, **/vendor/**, *.min.js"
-```
+Use repository-specific review and protected-branch controls in addition to ignore patterns when limiting automated writes.
 
----
+## Permissions and triggers
 
-## Summary table
+Detection is read-oriented, but publication requires the GitHub permissions needed to create issue comments or pull-request review comments. Autofix and user-request workflows additionally require write permission and must be restricted to trusted actors and trusted code.
 
-| Input | Default | Used by |
-|-------|---------|---------|
-| `opencode-server-url` | `http://localhost:4096` | Detection, autofix, do-user-request |
-| `opencode-model` | `opencode/kimi-k2.5-free` | Detection, autofix, do-user-request |
-| `opencode-start-server` | `true` | All AI features |
-| `bugbot-severity` | `low` | Detection (filter before publish) |
-| `bugbot-comment-limit` | `20` | Detection (max individual comments) |
-| `bugbot-fix-verify-commands` | `""` | Autofix, do-user-request (before commit) |
-| `ai-ignore-files` | `""` | Detection (exclude paths from findings) |
+Do not expose provider credentials to fork code, untrusted pull requests, or `pull_request_target` workflows that execute attacker-controlled code. Prefer private repositories, protected branches, reviewed workflows, approved environments, and controlled runners.
 
----
+## Summary
 
-## Next steps
+| Input or variable | Default/recommended value | Purpose |
+| --- | --- | --- |
+| `agent-provider` | `opencode` | Selects the CLI runtime |
+| `agent-model-provider` | `openai` | Selects the model provider |
+| `agent-model` | `gpt-5.6-luna` | Selects the model name |
+| `AGENT_ALLOWED_MODEL_PROVIDERS` | `openai` | Provider allowlist |
+| `AGENT_ALLOWED_MODELS` | `openai/gpt-5.6-luna` | Exact qualified-model allowlist |
+| `bugbot-severity` | `low` | Minimum published severity |
+| `bugbot-comment-limit` | `20` | Individual comment limit |
+| `bugbot-fix-verify-commands` | empty | Pre-commit verification |
+| `ai-ignore-files` | empty | Analysis/reporting exclusions |
 
-- **[Detection](/bugbot/detection)** — How severity and comment limit affect published findings.
-- **[Autofix](/bugbot/autofix)** — How verify commands gate commits.
-- **[Configuration](/configuration)** — Full Copilot configuration reference.
+## Related pages
+
+- [Detection](/bugbot/detection)
+- [Autofix](/bugbot/autofix)
+- [Do user request](/bugbot/do-user-request)
+- [Agent CLI configuration](/agents/cli-configuration)

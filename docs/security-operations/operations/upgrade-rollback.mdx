@@ -1,0 +1,23 @@
+---
+title: Upgrade and rollback procedure
+description: Controlled procedure for changing CLI versions and reverting safely.
+---
+# Upgrade and rollback procedure
+
+## Upgrade
+
+1. Select one provider and one version.
+2. Verify its release and checksum when applicable.
+3. Update the repository or organization variable.
+4. Run provisioning, help, focused tests, and a read-only smoke test.
+5. Run the complete gates before enabling the version for write workflows.
+
+## Rollback
+
+1. Restore the last known-good version variable.
+2. Re-run provisioning and verification.
+3. Confirm the qualified model and allowlists did not change.
+4. Run a read-only smoke test.
+5. Re-enable write permissions only after the rollback passes.
+
+Rollback MUST restore a complete known-good tuple; changing only the binary while keeping incompatible command or model settings is not a valid rollback.

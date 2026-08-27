@@ -1,0 +1,28 @@
+---
+title: Configuration checklist
+description: Required checks before enabling Copilot automation.
+---
+# Configuration checklist
+
+## Action contract
+
+- [ ] `token` is supplied as a repository or organization secret.
+- [ ] `agent-provider`, `agent-model-provider`, and `agent-model` are explicit.
+- [ ] `AGENT_ALLOWED_MODEL_PROVIDERS` contains the selected model provider.
+- [ ] `AGENT_ALLOWED_MODELS` contains the exact qualified model.
+- [ ] `agent-command` is empty unless an audited command override is required.
+
+## Credentials
+
+- [ ] Credentials are configured as secrets or as a local self-hosted credential store.
+- [ ] No session file or token is copied into GitHub Secrets.
+- [ ] Fork workflows cannot access write credentials.
+- [ ] `pull_request_target` does not execute attacker-controlled checkout content.
+
+## Operations
+
+- [ ] CLI versions are pinned.
+- [ ] Cursor installer checksum is configured when Cursor is selected.
+- [ ] Provisioning and help checks pass.
+- [ ] Smoke tests are recorded without printing credentials.
+- [ ] Rollback refs and previous CLI versions are known.

@@ -1,16 +1,7 @@
 export const TITLE = 'Copilot'
 
-/** Default OpenCode model: provider/modelID (e.g. opencode/kimi-k2.5-free). Reuse for CLI, action and Ai fallbacks. */
-export const OPENCODE_DEFAULT_MODEL = 'opencode/kimi-k2.5-free'
-
-/** Timeout in ms for OpenCode HTTP requests (session create, message, diff). Agent calls can be slow (e.g. plan analyzing repo). */
-export const OPENCODE_REQUEST_TIMEOUT_MS = 900_000
-
-/** Max attempts for OpenCode requests (retries on failure). Applied transparently in AiRepository. */
-export const OPENCODE_MAX_RETRIES = 5
-
-/** Delay in ms between OpenCode retry attempts. */
-export const OPENCODE_RETRY_DELAY_MS = 2000
+/** Maximum time allowed for one external agent CLI request. */
+export const AGENT_REQUEST_TIMEOUT_MS = 900_000
 
 export const DEFAULT_IMAGE_CONFIG = {
     issue: {
@@ -217,10 +208,22 @@ export const INPUT_KEYS = {
     // Tokens
     TOKEN: 'token',
 
-    // AI (OpenCode)
-    OPENCODE_SERVER_URL: 'opencode-server-url',
-    OPENCODE_MODEL: 'opencode-model',
-    OPENCODE_START_SERVER: 'opencode-start-server',
+    // Agent selection
+    AGENT_PROVIDER: 'agent-provider',
+    AGENT_MODEL_PROVIDER: 'agent-model-provider',
+
+    AGENT_MODEL: 'agent-model',
+    AGENT_COMMAND: 'agent-command',
+    FINDINGS_PROVIDER: 'findings-provider',
+
+    FINDINGS_MODEL: 'findings-model',
+    FINDINGS_COMMAND: 'findings-command',
+    FIXER_PROVIDER: 'fixer-provider',
+
+    FIXER_MODEL: 'fixer-model',
+    FIXER_COMMAND: 'fixer-command',
+
+    // AI configuration
     AI_PULL_REQUEST_DESCRIPTION: 'ai-pull-request-description',
     AI_MEMBERS_ONLY: 'ai-members-only',
     AI_IGNORE_FILES: 'ai-ignore-files',

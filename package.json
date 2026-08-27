@@ -11,7 +11,10 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "metrics:architecture": "node scripts/collect-architecture-metrics.cjs",
     "lint": "eslint src",
+    "validate:agent-docs": "node scripts/validate-agent-documentation.cjs",
+    "validate:docs-page": "node scripts/validate-docs-page-assets.cjs",
     "lint:fix": "eslint src --fix",
     "postinstall": "node scripts/install-git-hooks.cjs"
   },
@@ -19,10 +22,10 @@
   "author": "Efra Espada",
   "license": "ISC",
   "dependencies": {
-    "@actions/cache": "^4.0.3",
-    "@actions/core": "^1.10.0",
+    "@actions/cache": "^4.1.0",
+    "@actions/core": "^1.11.1",
     "@actions/exec": "^1.1.1",
-    "@actions/github": "^6.0.0",
+    "@actions/github": "^6.0.1",
     "@types/axios": "^0.14.4",
     "@types/chance": "^1.1.6",
     "@types/dotenv": "^8.2.3",
@@ -48,5 +51,11 @@
     "ts-jest": "^29.4.5",
     "typescript": "^5.2.2",
     "typescript-eslint": "^8.15.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "undici": "6.28.0",
+      "uuid": "11.1.1"
+    }
   }
 }

@@ -1,0 +1,94 @@
+---
+title: Troubleshooting
+description: Common issues and solutions when using Copilot
+---
+
+# Troubleshooting
+
+This guide helps you resolve common issues you might encounter while using Copilot. Expand the section that matches your problem.
+
+<AccordionGroup>
+  <Accordion title="Branch creation fails" icon="code-branch">
+    **Symptoms:**
+    - Error messages during branch creation
+    - Branches not being created automatically
+    - Permission denied errors
+
+    **Solutions:**
+    1. **Token permissions:** Ensure the `token` (PAT) has repo and project access; check token scope and validity.
+    2. **Label configuration:** Confirm labels exist in the repository, verify label names match your config, and check that label triggers are firing.
+    3. **Branch names:** Ensure branch names are valid, check for naming conflicts, and verify branch prefix configuration (e.g. `feature-tree`, `bugfix-tree`).
+  </Accordion>
+
+  <Accordion title="Project linking problems" icon="table-cells-large">
+    **Symptoms:**
+    - Issues not appearing in projects
+    - PRs not being linked automatically
+    - Project automation not working
+
+    **Solutions:**
+    1. **Project configuration:** Use `project-ids` (comma-separated project IDs), not URLs. Ensure projects exist and the token has access. For org projects, verify organization project permissions.
+    2. **Token scope:** Confirm project access permissions, verify organization access if needed, and check token expiration.
+    3. **Visibility:** Check project visibility settings and ensure the bot has access.
+  </Accordion>
+
+  <Accordion title="Workflow timeouts or execution issues" icon="clock">
+    **Symptoms:**
+    - Workflows timing out
+    - Long execution times
+    - Failed workflow runs
+
+    **Solutions:**
+    1. **Timeouts:** Increase `merge-timeout` if needed; check workflow step timeouts and monitor execution times.
+    2. **Network:** Check GitHub API status, verify network access, and monitor rate limits.
+    3. **Triggers:** Verify event triggers, workflow conditions, and concurrent executions.
+  </Accordion>
+
+  <Accordion title="Action skips issue/PR/push pipelines" icon="user-slash" defaultOpen={true}>
+    **Symptoms:**
+    - The workflow runs but nothing happens (no branches created, no project linking, no comments).
+    - Logs say something like "User from token (...) matches actor. Ignoring."
+
+    **Cause:** When the **event actor** (the user who triggered the event: e.g. who opened the issue, who pushed, who opened the PR) is the **same** as the user who owns the PAT (`token`), the action intentionally skips the normal issue, PR, and push pipelines. It will only run a **single action** if you passed `single-action`; otherwise it exits without doing anything.
+
+    **Solutions:**
+    1. Use a **dedicated bot account** for the PAT (e.g. `giik-bot`) so that the actor (developer) is different from the token user. Then the full pipelines run as expected.
+    2. If you want to run only specific actions when you are the actor, use `single-action` (e.g. `check_progress_action`, `deployed_action`) so the action runs that single action and exits.
+
+    See [Authentication](/authentication) for token setup and the note on token user vs. actor.
+  </Accordion>
+
+  <Accordion title="Common error messages" icon="circle-exclamation">
+    **"Permission Denied"** — Check token permissions, verify repository access, and review security settings.
+
+    **"Resource Not Found"** — Verify the resource exists, check access permissions, and validate URLs and paths.
+
+    **"Invalid Configuration"** — Review workflow syntax, check configuration values, and validate input parameters.
+  </Accordion>
+
+  <Accordion title="Agent runtime issues" icon="microchip">
+    - **Invalid JSON response**: If the AI returns malformed JSON (e.g. for progress/error detection), the model may not follow the schema. Try a different model or check the OpenCode logs.
+  </Accordion>
+
+  <Accordion title="Bugbot autofix" icon="wrench">
+    - **Bot didn't run autofix**: OpenCode must be configured and the comment must be interpreted as a fix request (e.g. "fix it", "arregla", "fix all"). There must be at least one unresolved finding. On issue comments, the action needs an open PR that references the issue so it can resolve the branch to checkout and push; otherwise autofix is skipped.
+    - **Commit not made**: Verify commands (`bugbot-fix-verify-commands`) run after the configured agent applies changes; if any command fails, the action does not commit. If there are no file changes after the fix, nothing is committed. If push fails (e.g. conflict or permissions), check workflow `contents: write` and that the token can push to the branch.
+  </Accordion>
+
+  <Accordion title="CLI issues" icon="terminal">
+    - **"Git repository not found"**: Ensure you're in a directory with `git` initialized and `remote.origin.url` pointing to a GitHub repository (e.g. `github.com/owner/repo`).
+    - **"Please provide a prompt using -p or --prompt"**: The `copilot` command requires a prompt. Use `-p "your prompt"` or `--prompt "your prompt"`.
+    - **"Please provide an issue number using -i or --issue"**: Commands like `check-progress`, `detect-potential-problems`, and `recommend-steps` require an issue number with `-i <number>`.
+  </Accordion>
+
+  <Accordion title="Getting help" icon="circle-question">
+    If you're still experiencing issues:
+
+    1. Check the [GitHub repository](https://github.com/vypdev/copilot) for known issues.
+    2. Review the latest documentation.
+    3. Open a new issue with:
+       - Detailed description
+       - Steps to reproduce
+       - Relevant logs and configurations
+  </Accordion>
+</AccordionGroup>

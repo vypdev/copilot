@@ -1,10 +1,12 @@
 import { Execution } from "../../../data/model/execution";
-import { IssueRepository } from "../../../data/repository/issue_repository";
+import type { IssueDescriptionCommandPort, IssueDescriptionQueryPort } from "../../../application/ports/issue_description_ports";
 import { logError } from "../../../utils/logger";
 import { ContentInterface } from "./content_interface";
 
 export abstract class IssueContentInterface extends ContentInterface {
-    private issueRepository = new IssueRepository();
+    constructor(protected readonly issueDescriptionPort: IssueDescriptionQueryPort & IssueDescriptionCommandPort) {
+        super();
+    }
 
     internalGetter = async (execution: Execution): Promise<string | undefined> => {
         try {
@@ -21,7 +23,7 @@ export abstract class IssueContentInterface extends ContentInterface {
                 return undefined;
             }
 
-            const description = await this.issueRepository.getDescription(
+            const description = await this.issueDescriptionPort.getDescription(
                 execution.owner,
                 execution.repo,
                 number,
@@ -58,7 +60,7 @@ export abstract class IssueContentInterface extends ContentInterface {
                 return undefined;
             }
 
-            const description = await this.issueRepository.getDescription(
+            const description = await this.issueDescriptionPort.getDescription(
                 execution.owner,
                 execution.repo,
                 number,
@@ -70,7 +72,7 @@ export abstract class IssueContentInterface extends ContentInterface {
                 return undefined
             }
 
-            await this.issueRepository.updateDescription(
+            await this.issueDescriptionPort.updateDescription(
                 execution.owner,
                 execution.repo,
                 number,

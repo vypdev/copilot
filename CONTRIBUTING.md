@@ -6,38 +6,41 @@ Thank you for your interest in contributing to Copilot. This document provides g
 
 ### Prerequisites
 
-- **Node.js 20** – Use `nvm use 20` if you have nvm.
+- **Node.js 24** – Use `nvm use 24` if you have nvm.
 - **Git** – A GitHub repository with `origin` pointing to a valid GitHub URL.
 
 ### Initial Setup
 
 ```bash
-nvm use 20
-npm install
-npm run build
+nvm use 24
+pnpm install
+pnpm run build
 ```
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `npm run build` | Compiles `src/actions/github_action.ts` → `build/github_action/`, `src/cli.ts` → `build/cli/`, and sets the CLI as executable. |
-| `npm test` | Runs Jest tests (exclude e2e when relevant). |
-| `npm run test:watch` | Runs tests in watch mode. |
-| `npm run test:coverage` | Runs tests with coverage report. |
-| `npm run lint` | Runs ESLint on `src/` (recommended rules + unused-vars, no-explicit-any). |
-| `npm run lint:fix` | Auto-fixes fixable lint issues. |
+| `pnpm run build` | Compiles `src/actions/github_action.ts` → `build/github_action/`, `src/cli.ts` → `build/cli/`, and sets the CLI as executable. |
+| `pnpm test` | Runs Jest tests (exclude e2e when relevant). |
+| `pnpm run test:watch` | Runs tests in watch mode. |
+| `pnpm run test:coverage` | Runs tests with coverage report. |
+| `pnpm run lint` | Runs ESLint on `src/` (recommended rules + unused-vars, no-explicit-any). |
+| `pnpm run lint:fix` | Auto-fixes fixable lint issues. |
 
 ## Project Structure
 
-- **`src/actions/`** – GitHub Action and CLI entry points.
+- **`src/actions/`** – GitHub Action/local lifecycles and route-specific runtime composition.
   - `github_action.ts` – GitHub Action entry; reads inputs and runs the main flow.
   - `local_action.ts` – CLI entry; same logic with local/config inputs.
   - `common_action.ts` – Shared flow: single actions vs issue/PR/push pipelines.
-- **`src/usecase/`** – Use cases (issue, pull request, commit, single actions).
+- **`src/application/usecases/`** – Application use cases and workflows.
+- **`src/application/ports/`** – Semantic capability contracts.
+- **`src/infrastructure/composition/`** – Capability and use-case composition roots.
+- **`src/infrastructure/github/`** – GitHub provider clients and transport adapters.
 - **`src/manager/`** – Content handlers for PR descriptions, hotfix changelog, and markdown (e.g. `configuration_handler`, `markdown_content_hotfix_handler`).
-- **`src/data/model/`** – Domain models (Execution, Ai, Issue, etc.).
-- **`src/data/repository/`** – Repositories (GitHub API, OpenCode API).
+- **`src/data/model/`** – Models and model policies; the directory still contains some transitional orchestration and is not uniformly pure domain.
+- **`src/data/repository/`** – Specialized capability adapters and repository policies.
 - **`src/utils/`** – Constants, logger, content utils, etc.
 - **`action.yml`** – Action metadata and input definitions.
 - **`build/`** – Compiled output (bundled JS); do not edit directly.
@@ -54,9 +57,9 @@ npm run build
 
 ## Code Quality
 
-- Run `npm run lint` before submitting; fix issues with `npm run lint:fix`.
+- Run `pnpm run lint` before submitting; fix issues with `pnpm run lint:fix`.
 - Add or update tests for new functionality.
-- Run `npm test` to ensure all tests pass.
+- Run `pnpm test` to ensure all tests pass.
 
 ## Documentation
 
@@ -67,10 +70,10 @@ npm run build
 
 ## Git hooks
 
-Hooks are **installed when you run `npm install`** (postinstall). To reinstall: `node scripts/install-git-hooks.cjs`. Works on Windows, macOS, and Linux. On **Windows**, use [Git for Windows](https://git-scm.com/download/win) so hooks run with Bash (the pre-commit launcher is a shell script).
+Hooks are **installed when you run `pnpm install`** (postinstall). To reinstall: `node scripts/install-git-hooks.cjs`. Works on Windows, macOS, and Linux. On **Windows**, use [Git for Windows](https://git-scm.com/download/win) so hooks run with Bash (the pre-commit launcher is a shell script).
 
 - **prepare-commit-msg** — Adds the current branch name as prefix to the commit message (with `/` replaced by `-`), e.g. `feature-292-github-action-rename: add concurrency to CI`.
-- **pre-commit** — Before each commit, runs `npm run build`, `npm test`, and `npm run lint`. The commit is aborted if any of these fail.
+- **pre-commit** — Before each commit, runs `pnpm run build`, `pnpm test`, and `pnpm run lint`. The commit is aborted if any of these fail.
 
 ## Submitting Changes
 

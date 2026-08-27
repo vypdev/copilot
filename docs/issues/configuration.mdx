@@ -124,13 +124,26 @@ The following parameters can be configured in the workflow:
 - `images-commit-hotfix`: Image URLs to display in hotfix action commit comments
 - `images-commit-release`: Image URLs to display in release action commit comments
 
-#### AI (OpenCode)
-- `opencode-server-url`: OpenCode server URL (default: "http://localhost:4096"). See [OpenCode (AI)](/opencode-integration).
-- `opencode-model`: Model in provider/model format (default: "opencode/kimi-k2.5-free")
-- `opencode-start-server`: If true, the action starts and stops OpenCode in the job (default: "false")
-- `ai-pull-request-description`: Enable AI-powered PR descriptions (default: "false")
+#### AI agent selection
+The workflow can select one provider for both findings and fixer operations. The selected transport is resolved before execution; unsupported combinations fail instead of silently falling back to OpenCode.
+
+- `agent-provider`: CLI runtime used by the findings and fixer tasks (`opencode`, `codex`, or `cursor`)
+- `agent-model-provider`: upstream provider for the selected model (for example `openai` or `opencode`)
+- `agent-model`: model name without the provider prefix (for example `gpt-5.6-luna`)
+- `agent-command`: optional literal executable plus arguments for the selected CLI. OpenCode commands must include an explicit `--model provider/model` selection.
+All three providers use the CLI contract:
+
+| Provider | CLI command |
+| --- | --- |
+| OpenCode | `opencode run --model provider/model` |
+| Cursor | `agent -p --output-format text -` |
+| Codex | `codex exec --ephemeral --skip-git-repo-check -` |
+
+SDK and HTTP server transports are not part of the current public contract. CLI commands are executed without a shell and credentials are supplied through the runner environment or an explicitly controlled local credential store. Tokens must never be included in `agent-command`.
+#### AI model compatibility input
+- `ai-pull-request-description`: Enable AI-powered PR descriptions (default: `false`)
 - `ai-ignore-files`: Comma-separated list of files to ignore for AI operations
-- `ai-members-only`: Restrict AI features to organization/project members (default: "false")
+- `ai-members-only`: Restrict AI features to organization/project members (default: `false`)
 
 #### Workflow Configuration
 - `release-workflow`: Release workflow for running release deploys (default: "release_workflow.yml")

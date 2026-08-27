@@ -1,7 +1,6 @@
-import * as github from "@actions/github";
-
 export class Branches {
     main: string;
+    defaultBranch: string;
     development: string;
     featureTree: string;
     bugfixTree: string;
@@ -10,12 +9,9 @@ export class Branches {
     docsTree: string;
     choreTree: string;
 
-    get defaultBranch(): string {
-        return github.context.payload.repository?.default_branch ?? '';
-    }
-
     constructor(
         main: string,
+        defaultBranch: string,
         development: string,
         featureTree: string,
         bugfixTree: string,
@@ -25,6 +21,7 @@ export class Branches {
         choreTree: string,
     ) {
         this.main = main;
+        this.defaultBranch = defaultBranch;
         this.development = development;
         this.featureTree = featureTree;
         this.bugfixTree = bugfixTree;

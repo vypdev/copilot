@@ -127,9 +127,16 @@ web_modules/
 .yarn/unplugged
 .yarn/build-state.yml
 .yarn/install-state.gz
-# Keep package-lock.json in git for reproducible installs and npm ci
+# Dependency lockfiles are managed by pnpm; do not use npm, npx, Yarn, or Bun.
 
 *.lock
+
+# RepoWise repository-local index (managed by the global RepoWise installation)
+.repowise/
+
+# Graphify development knowledge graph (generated, never shipped)
+graphify-out/
+.graphify/
 
 # OpenCode runtime (created/removed by action or CLI)
 opencode.json

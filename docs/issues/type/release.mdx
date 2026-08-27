@@ -48,7 +48,7 @@ This workflow ensures that releases are properly planned, tested, and deployed w
   jobs:
     git-board-issues:
       name: Git Board - Issue
-      runs-on: ubuntu-latest
+      runs-on: [self-hosted, X64, Linux, coolify]
       steps:
         - uses: vypdev/copilot@v2
           with:
@@ -94,7 +94,7 @@ This workflow ensures that releases are properly planned, tested, and deployed w
   jobs:
     deploy:
       name: Git Board - Issue
-      runs-on: ubuntu-latest
+      runs-on: [self-hosted, X64, Linux, coolify]
       steps:
         - name: Checkout Repository
           uses: actions/checkout@v4
@@ -132,7 +132,7 @@ All release issues are created with the `release-label`. The default label for c
 jobs:
   git-board-issues:
     name: Git Board - Issue
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, X64, Linux, coolify]
     steps:
       - uses: vypdev/copilot@v2
         with:
@@ -147,7 +147,7 @@ The default tree for creating release branches is `release`. You can configure t
 jobs:
   git-board-issues:
     name: Git Board - Issue
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, X64, Linux, coolify]
     steps:
       - uses: vypdev/copilot@v2
         with:
@@ -173,7 +173,7 @@ Release branches are created from the development branch, ensuring that all plan
 jobs:
   git-board-issues:
     name: Git Board - Issue
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, X64, Linux, coolify]
     steps:
       - uses: vypdev/copilot@v2
         with:
@@ -190,7 +190,7 @@ To configure the images, provide a comma-separated list of image URLs in the `im
 jobs:
   git-board-issues:
     name: Git Board - Issue
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, X64, Linux, coolify]
     steps:
       - uses: vypdev/copilot@v2
         with:

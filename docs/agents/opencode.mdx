@@ -1,0 +1,105 @@
+---
+title: OpenCode runtime
+description: Configure OpenCode as the headless CLI runtime for Copilot AI features.
+---
+
+# OpenCode integration
+
+Copilot invokes OpenCode as an external, headless CLI. The Action does not start an OpenCode HTTP server, manage a server URL, embed the OpenCode SDK, or choose an implicit model.
+
+## Recommended configuration
+
+```yaml
+with:
+  agent-provider: opencode
+  agent-model-provider: openai
+  agent-model: gpt-5.6-luna
+env:
+  AGENT_ALLOWED_MODEL_PROVIDERS: openai
+  AGENT_ALLOWED_MODELS: openai/gpt-5.6-luna
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+```
+
+Copilot constructs the qualified model reference `openai/gpt-5.6-luna` and invokes:
+
+```bash
+opencode run --model openai/gpt-5.6-luna
+```
+
+The runtime (`opencode`), model provider (`openai`), model (`gpt-5.6-luna`), credential, and allowlist are separate concerns. See [Agent CLI configuration](/agents/cli-configuration) for the complete contract.
+
+## Credentials
+
+For CI, provide the selected model provider's credential through a GitHub Secret mapped into the job environment. For OpenAI, use `OPENAI_API_KEY`.
+
+Do not put API keys in action inputs, command arguments, prompts, repository files, or logs. A local OAuth login may work on a controlled self-hosted runner, but local authentication files must not be copied into GitHub-hosted CI.
+
+OpenCode supports many providers and local models. That flexibility does not change the Bugbot contract: the effective provider/model must be explicitly selected and, when configured, must pass the allowlists before the CLI starts.
+
+## Runtime and provisioning
+
+The Action can provision only the selected runtime in GitHub Actions using pinned version variables. OpenCode is installed as:
+
+```bash
+corepack pnpm add --global "opencode-ai@${OPENCODE_VERSION}"
+```
+
+The binary must pass version and headless-help checks before use:
+
+```bash
+opencode --version
+opencode run --help
+```
+
+See [Agent CLI provisioning](/security-operations/operations/cli-provisioning) and [Agent CLI runners](/security-operations/operations/cli-runners).
+
+## OpenCode behavior controlled by Copilot
+
+- The model is passed explicitly with `--model provider/model`.
+- Custom OpenCode commands without an explicit `--model` are rejected.
+- No interactive TUI login is available during a headless run.
+- No background HTTP daemon, endpoint URL, or server lifecycle is required.
+- A provider failure is terminal; Copilot does not fall back to another provider or model.
+- Repository-local OpenCode defaults cannot silently replace the selected qualified model.
+
+## Local smoke test
+
+Only run a real provider request when the user has authorized the provider, credential, and cost. A harmless test for the recommended configuration is:
+
+```bash
+printf '%s\n' 'Reply with exactly READY. Do not inspect or modify files.' \
+  | timeout 120s opencode run --model openai/gpt-5.6-luna -
+```
+
+The expected evidence is `READY` and exit code `0`. A successful binary/help check alone is not evidence that the selected provider is authenticated.
+
+## Troubleshooting
+
+### Missing executable
+
+Install the pinned OpenCode version with Corepack and pnpm, then rerun:
+
+```bash
+command -v opencode
+opencode --version
+node scripts/verify-agent-clis.cjs
+```
+
+### Missing credential
+
+Check that the required GitHub Secret is mapped to the runner environment. Never print the value while diagnosing it.
+
+### Provider or model rejected
+
+Check the three `agent-*` values and the two allowlists. The qualified model must match an exact allowed value, for example `openai/gpt-5.6-luna`.
+
+### Configuration appears to be ignored
+
+Check for a custom `agent-command`. OpenCode commands must contain an explicit `--model`. Do not rely on a repository or global default to select the model.
+
+## Related pages
+
+- [Agent CLI configuration](/agents/cli-configuration)
+- [Agent CLI provisioning](/security-operations/operations/cli-provisioning)
+- [Bugbot configuration](/bugbot/configuration)
+- [Authentication](/authentication)

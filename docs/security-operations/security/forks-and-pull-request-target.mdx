@@ -1,0 +1,9 @@
+---
+title: Forks and pull_request_target
+description: Safe handling of forked pull requests and privileged workflow events.
+---
+# Forks and `pull_request_target`
+
+Fork code and comments are untrusted. A workflow handling `pull_request` from a fork MUST NOT receive write credentials. A `pull_request_target` workflow MUST NOT check out the pull request head and execute it in the same job that has secrets or write permissions.
+
+If an agent analyzes fork content, use a read-only job, bounded prompts, no credentialed CLI, and no workspace mutation. Authorization is required again before any write-capable follow-up.

@@ -11,7 +11,7 @@ This page describes **every function** the Copilot GitHub Action provides: workf
   <Card title="Issue events" icon="circle-dot" href="/issues">
     When you open, edit, or label issues: branch creation, project linking, assignees, issue type, size labels, and comments.
   </Card>
-  <Card title="Pull request events" icon="git-pull-request" href="/pull-requests">
+  <Card title="Pull request events" icon="code-pull-request" href="/pull-requests">
     When PRs are opened or updated: link to issue, project column, reviewers, AI description, size/progress sync.
   </Card>
   <Card title="Push events" icon="git-commit">
@@ -51,7 +51,7 @@ When the workflow runs on `pull_request` (opened, edited, etc.):
 | **Project linking** | Adds the PR to the configured GitHub Projects and moves it to the configured column. |
 | **Reviewers** | Assigns up to `desired-reviewers-count` reviewers. |
 | **Priority & size** | Applies priority and size checks (labels and thresholds). |
-| **AI PR description** | If `ai-pull-request-description` is true and OpenCode is configured, generates or updates the PR description by filling the repo's `.github/pull_request_template.md` from the issue and the branch diff (OpenCode Plan agent). See [Pull Requests → AI-generated PR description](/pull-requests/ai-description). |
+| **AI PR description** | If `ai-pull-request-description` is true and the selected agent CLI is configured, generates or updates the PR description by filling the repo's `.github/pull_request_template.md` from the issue and the branch diff (configured agent CLI). See [Pull Requests → AI-generated PR description](/pull-requests/ai-description). |
 | **Comments & images** | Posts comments with optional images per branch type. |
 
 ### 3. Push events (`on: push`)
@@ -64,7 +64,7 @@ When the workflow runs on `push` (e.g. to any branch):
 | **Commit prefix check** | Warns if commit messages do not follow the prefix derived from the branch name (using `commit-prefix-transforms`). |
 | **Reopen issue** | If `reopen-issue-on-push` is true, reopens the issue when new commits are pushed to its branch. |
 | **Size & progress** | Computes size (XS–XXL) and progress (0–100%) from the branch diff; updates the **issue** and any **open PRs** for that branch with the same labels. Requires OpenCode for progress. No separate workflow is needed. |
-| **Bugbot (potential problems)** | OpenCode analyzes the branch vs base and reports findings as **comments on the issue** and **review comments on open PRs**; updates issue comments when findings are resolved and **marks PR review threads as resolved** when applicable. Configurable via `bugbot-severity` and `ai-ignore-files`. See [Bugbot](/bugbot), [Issues](/issues#bugbot-potential-problems), and [Pull Requests](/pull-requests#bugbot-potential-problems). |
+| **Bugbot (potential problems)** | the configured agent analyzes the branch vs base and reports findings as **comments on the issue** and **review comments on open PRs**; updates issue comments when findings are resolved and **marks PR review threads as resolved** when applicable. Configurable via `bugbot-severity` and `ai-ignore-files`. See [Bugbot](/bugbot), [Issues](/issues#bugbot-potential-problems), and [Pull Requests](/pull-requests#bugbot-potential-problems). |
 | **Comments & images** | Posts commit summary comments with optional images. |
 
 ---
@@ -76,7 +76,7 @@ When you set `single-action` (and, when required, `single-action-issue`, `single
 | Single action value | Inputs required | Description |
 |--------------------|----------------|-------------|
 | **`check_progress_action`** | `single-action-issue` | Runs progress check on demand (e.g. without pushing). Progress is normally updated automatically on every push; use this to re-run the check or when no push workflow is configured. |
-| **`detect_potential_problems_action`** | `single-action-issue` | Bugbot: OpenCode analyzes the branch vs base; reports findings as comments on the issue and as PR review comments; updates issue comments and marks PR review threads as resolved when findings are fixed. |
+| **`detect_potential_problems_action`** | `single-action-issue` | Bugbot: the configured agent analyzes the branch vs base; reports findings as comments on the issue and as PR review comments; updates issue comments and marks PR review threads as resolved when findings are fixed. |
 | **`recommend_steps_action`** | `single-action-issue` | Uses OpenCode Plan to recommend implementation steps from the issue description; posts a comment on the issue. |
 | **`think_action`** | — | Uses OpenCode Plan for deep code analysis and change proposals (reasoning over the codebase). No issue required. |
 | **`initial_setup`** | — | Performs initial setup: creates labels, issue types, verifies access. If the repo has no version tags, creates default tag `v1.0.0` so release/hotfix issues get a base version. No issue required. |
@@ -89,23 +89,31 @@ Single actions that **throw an error** if the last step fails: `publish_github_a
 
 ---
 
-## AI features (OpenCode)
+## AI features and runtime coverage
 
-All AI features go through **OpenCode** (one server URL + model). You can use 75+ providers (OpenAI, Anthropic, Gemini, Ollama, etc.) by configuring OpenCode.
+All AI features use the configured agent CLI and explicit model contract. The runtime is selected with `agent-provider`; the model provider and model are selected with `agent-model-provider` and `agent-model`. See [Agent CLI configuration](/agents/cli-configuration).
+
+<Warning>
+OpenCode is the currently validated runtime for the repository's AI feature paths. Codex is supported as a CLI runtime but has a narrower validation boundary. Cursor is WIP and must not be described as production-validated; see [Cursor runtime (WIP)](/agents/cursor-wip).
+</Warning>
+
+| Runtime | Status | Documentation |
+| --- | --- | --- |
+| OpenCode | Validated path | [OpenCode runtime](/agents/opencode) |
+| Codex with OpenAI | Implemented CLI path; verify authentication and model behavior before production use | [Codex and OpenAI](/agents/codex-openai) |
+| Cursor | WIP; authenticated smoke test pending | [Cursor runtime (WIP)](/agents/cursor-wip) |
 
 | Feature | Where it runs | Description |
 |--------|----------------|-------------|
-| **Check progress** | Push (commit) pipeline; optional single action `check_progress_action` / CLI `check-progress` | On every push, OpenCode Plan compares issue vs branch diff and updates the progress label on the issue and on any open PRs for that branch. You can also run it on demand via single action or CLI. |
+| **Check progress** | Push (commit) pipeline; optional single action `check_progress_action` / CLI `check-progress` | On every push, the configured agent compares issue vs branch diff and updates the progress label on the issue and on any open PRs for that branch. The currently validated implementation path uses OpenCode Plan. |
 | **Bugbot (potential problems)** | Push (commit) pipeline; optional single action `detect_potential_problems_action` / CLI `detect-potential-problems` | Analyzes branch vs base and posts findings as **comments on the issue** and **review comments on open PRs**; updates issue comments and marks PR review threads as resolved when findings are fixed. Configurable: `bugbot-severity`, `ai-ignore-files`. |
-| **Bugbot autofix** | Issue comment; PR review comment | When you comment on an issue or PR asking to fix one or more reported findings (e.g. "fix it", "arregla", "fix all"), OpenCode decides which findings you mean, applies fixes in the workspace, runs verify commands (build/test/lint), and the action commits and pushes. **Only org members or the repo owner** can trigger this (and the do-user-request action). Configure `bugbot-fix-verify-commands` (e.g. `npm run build, npm test, npm run lint`). Requires OpenCode and `opencode-start-server: true` (or server running from repo) so changes are applied in the same workspace. |
-| **Do user request** | Issue comment; PR review comment | When you comment asking to perform a change in the repo (e.g. "add a test for X", "refactor this", "implement feature Y"), OpenCode applies the changes in the workspace, runs verify commands, and the action commits and pushes with a generic message. Same permission as Bugbot autofix: **only org members or the repo owner**. Uses the same `bugbot-fix-verify-commands` and OpenCode setup. |
-| **Think / reasoning** | Issue/PR comment pipeline; single action `think_action` | Deep code analysis and change proposals (OpenCode Plan agent). On comments: answers when mentioned (or on any comment for question/help issues). Runs when the comment was not a fix/do request or when the user is not allowed to trigger file-modifying actions. |
+| **Do user request** | Issue comment; PR review comment | When you comment asking to perform a change in the repo (e.g. "add a test for X", "refactor this", "implement feature Y"), the configured agent applies the changes in the workspace, runs verify commands, and the action commits and pushes with a generic message. Same permission as Bugbot autofix: **only org members or the repo owner**. Uses the same `bugbot-fix-verify-commands` and agent CLI setup. |
+| **Think / reasoning** | Issue/PR comment pipeline; single action `think_action` | Deep code analysis and change proposals (configured agent CLI). On comments: answers when mentioned (or on any comment for question/help issues). Runs when the comment was not a fix/do request or when the user is not allowed to trigger file-modifying actions. |
 | **Comment translation** | Issue comment; PR review comment | Translates comments to the configured locale (`issues-locale`, `pull-requests-locale`) when they are written in another language. |
-| **AI PR description** | Pull request pipeline | Fills the repo's `.github/pull_request_template.md` from issue and branch diff (OpenCode Plan agent). |
-| **Copilot** | CLI `giik copilot` | Code analysis and file edits via OpenCode Build agent. |
-| **Recommend steps** | Single action / CLI | Suggests implementation steps from the issue description (OpenCode Plan agent). |
+| **AI PR description** | Pull request pipeline | Fills the repo's `.github/pull_request_template.md` from issue and branch diff (configured agent CLI). |
+| **Copilot** | CLI `giik copilot` | Code analysis and file edits via the configured agent runtime; the currently validated path uses OpenCode Build. |
+| **Recommend steps** | Single action / CLI | Suggests implementation steps from the issue description (configured agent CLI). |
 
-Configuration: `opencode-server-url`, `opencode-model`, and optionally `opencode-start-server` (action starts and stops OpenCode in the job). For bugbot autofix, use `bugbot-fix-verify-commands` to list commands to run after fixes (e.g. `npm run build, npm test, npm run lint`). See [Bugbot](/bugbot) and [OpenCode (AI)](/opencode-integration).
 
 ---
 
@@ -137,7 +145,7 @@ on:
 
 jobs:
   copilot-issues:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, X64, Linux, coolify]
     steps:
       - uses: actions/checkout@v4
       - uses: vypdev/copilot@master

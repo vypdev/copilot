@@ -14,7 +14,7 @@ Add a job that sets `single-action` and any required inputs (`single-action-issu
 ```yaml
 jobs:
   run-check-progress:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, X64, Linux, coolify]
     steps:
       - uses: actions/checkout@v4
       - uses: vypdev/copilot@master
@@ -31,9 +31,9 @@ Use `workflow_dispatch` to run on demand, or trigger from another event. See [Co
 Build the CLI from the copilot repo, then run it from **any repo** that has `origin` pointing to GitHub (or from the same repo):
 
 ```bash
-nvm use 20
-npm install
-npm run build
+nvm use 24
+pnpm install
+pnpm run build
 # From the repo you want to analyze:
 node build/cli/index.js <command> [options]
 # Or if giik is on PATH:
@@ -51,7 +51,6 @@ giik <command> [options]
 | `think` | `think_action` | `-q "<question>"` | Deep code analysis (OpenCode) |
 | `copilot` | (CLI only) | `-p "<prompt>"` | AI assistant: analyze/modify code (OpenCode Build) |
 
-Common options: `-t` / `--token` (PAT), `-d` / `--debug`, `--opencode-server-url`, `--opencode-model`. You can also set `PERSONAL_ACCESS_TOKEN` and OpenCode vars in a `.env` file (do not commit it).
 
 ### Examples
 
@@ -69,4 +68,4 @@ node build/cli/index.js think -q "Where is authentication validated?" -t $PAT
 node build/cli/index.js copilot -p "Explain the main function" -t $PAT
 ```
 
-For a step-by-step guide to testing the OpenCode Plan flows locally, see [Testing OpenCode Plan Locally](/testing-opencode-plan-locally).
+For a step-by-step guide to testing the OpenCode Plan flows locally, see [Smoke tests](/security-operations/operations/smoke-tests).

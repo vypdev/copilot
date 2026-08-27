@@ -12,14 +12,14 @@ describe('getBugbotFixPrompt', () => {
             prNumberLine: '- Pull request number: 5',
             findingsBlock: '---\n**Finding id:** `f1`\n\n**Full comment:**\nBug here.\n',
             userComment: 'fix it',
-            verifyBlock: '\n**Verify commands:**\n- `npm test`\n',
+            verifyBlock: '\n**Verify commands:**\n- `pnpm test`\n',
         });
         expect(prompt).toContain('**Context.**');
         expect(prompt).toContain('Pull request number: 5');
         expect(prompt).toContain('Finding id');
         expect(prompt).toContain('fix it');
         expect(prompt).toContain('Verify commands');
-        expect(prompt).toContain('npm test');
+        expect(prompt).toContain('pnpm test');
         expect(prompt).not.toContain('{{');
     });
 

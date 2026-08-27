@@ -1,0 +1,74 @@
+---
+title: Codex authentication and compliance
+description: Authentication modes, data handling, and compliance considerations for Codex CLI.
+---
+
+# Codex authentication and compliance
+
+This is technical and compliance guidance, not legal advice. Review the current OpenAI, ChatGPT, GitHub, and organizational terms before enabling Codex in CI.
+
+## Supported authentication modes
+
+### API key authentication
+
+Set `OPENAI_API_KEY` as a GitHub Actions Secret. The Action provisions the pinned Codex CLI, runs authentication preflight, and invokes Codex without printing the secret.
+
+This is the documented automation-oriented option. API-key usage is separate from ChatGPT Plus/Pro plan usage and is billed through the OpenAI API account. Configure billing limits and monitoring before enabling it.
+
+### Local ChatGPT session on a self-hosted runner
+
+If `OPENAI_API_KEY` is absent, Copilot can recognize an already authenticated Codex CLI session on the runner. Preflight recognizes only the local ChatGPT session shape (`auth_mode=chatgpt`, no API key, and access/refresh token fields). It never copies, exports, or transmits the file.
+
+The file normally exists at `~/.codex/auth.json` or under `CODEX_HOME`. This mode is technically possible, but it must not be described as an OpenAI-approved personal-account CI integration. Technical portability is not evidence of contractual permission.
+
+Use this only on a self-hosted machine controlled by the account holder or organization. Do not export `auth.json` to GitHub-hosted runners or turn it into a repository Secret.
+
+## Legal and contractual warnings
+
+The current [OpenAI Terms of Use](https://openai.com/policies/row-terms-of-use/) state that users may not share account credentials or make an account available to others and remain responsible for activity under the account. The [Europe Terms of Use](https://openai.com/policies/eu-terms-of-use/) contain corresponding restrictions for covered users.
+
+The [Account Sharing Policy](https://help.openai.com/en/articles/10471989-openai-account-sharing-policy) explains the risks of exposing credentials, personal data, and payment information.
+
+Copilot therefore makes these distinctions explicit:
+
+- Plus or Pro users may technically run Codex CLI locally with a ChatGPT session.
+- A controlled self-hosted runner may technically invoke that local session.
+- Public documentation does not establish that exporting a personal ChatGPT session as remote CI credentials is an approved automation method.
+- API keys are the documented programmatic CI/CD option; Enterprise automation has separate workspace controls.
+- The user remains responsible for applicable terms, organization policy, account security, and usage costs.
+
+## Mandatory controls for local-session mode
+
+Use this mode only when all of the following are true:
+
+- the runner is self-hosted and controlled by the account holder or organization;
+- the repository is private;
+- fork and untrusted-contributor workflows cannot access the session;
+- workflow files and executed code are protected by review and branch rules;
+- no `pull_request_target` workflow executes attacker-controlled code with session access;
+- third-party Actions are pinned and reviewed;
+- the runner is isolated from unrelated tenants;
+- `auth.json` remains outside the repository and is readable only by the runner user;
+- revocation, rotation, compromise, and unexpected quota use have been considered.
+
+GitHub documents that secrets are not passed to fork workflows by default, but maintainers must still prevent untrusted code from running on a trusted self-hosted runner. See [GitHub secrets](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets) and [security hardening](https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions).
+
+## Data handling
+
+Never commit, print, prompt, ticket, implicitly copy, or expose a Codex session file to forks or untrusted builds. Copilot reports only credential mode and presence/absence. It does not report token values, identity claims, account identifiers, or raw file contents.
+
+## Decision matrix
+
+| Mode | Plan | Programmatic CI posture | Billing | Copilot behavior |
+| --- | --- | --- | --- | --- |
+| `OPENAI_API_KEY` | API Platform | Documented for CI/CD | API pay-as-you-go | Supported and explicit |
+| Enterprise access token | ChatGPT Enterprise | Intended for trusted automation | Workspace/plan terms | Supported when configured |
+| Local ChatGPT `auth.json` | Plus/Pro/personal | Local CLI documented; personal CI export not established | Uses session entitlements | Controlled self-hosted option; contractual status unconfirmed |
+
+## Sources
+
+- [Codex authentication](https://developers.openai.com/codex/auth)
+- [Using Codex with your ChatGPT plan](https://help.openai.com/en/articles/11369540-using-codex-with-your-chatgpt-plan)
+- [OpenAI Terms of Use](https://openai.com/policies/row-terms-of-use/)
+- [Europe Terms of Use](https://openai.com/policies/eu-terms-of-use/)
+- [OpenAI Account Sharing Policy](https://help.openai.com/en/articles/10471989-openai-account-sharing-policy)

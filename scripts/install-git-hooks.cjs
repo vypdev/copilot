@@ -1,7 +1,7 @@
 /**
  * Installs git hooks from scripts/git-hooks/ into .git/hooks/.
  * Cross-platform: Windows, macOS, Linux.
- * Run automatically on npm install, or: node scripts/install-git-hooks.cjs
+ * Run automatically on pnpm install, or: node scripts/install-git-hooks.cjs
  */
 
 const fs = require('fs');

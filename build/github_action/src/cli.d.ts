@@ -1,4 +1,3 @@
 #!/usr/bin/env node
-import { Command } from 'commander';
-declare const program: Command;
+declare const program: import("commander").Command;
 export { program };

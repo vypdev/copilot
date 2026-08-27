@@ -9,6 +9,7 @@ function minimalExecution(branches: Branches): Pick<Execution, 'branches'> {
 describe('label_utils', () => {
   const branches = new Branches(
     'main',
+    'main',
     'develop',
     'feature',
     'bugfix',

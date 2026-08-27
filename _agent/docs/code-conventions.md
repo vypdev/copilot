@@ -30,4 +30,4 @@ description: Copilot – coding conventions and where to change things
 ## Style and lint
 
 - Prefer TypeScript; avoid `any` (lint rule: no-explicit-any).
-- Run `npm run lint` before committing; use `npm run lint:fix` when possible.
+- Run `pnpm run lint` before committing; use `pnpm run lint:fix` when possible.

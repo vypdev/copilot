@@ -1,0 +1,49 @@
+import type { GitCommitPort } from '../../../../ports/git_ports';
+import { logDebugInfo, logError, logInfo } from "../../../../../utils/logger";
+
+const STASH_MESSAGE = "bugbot-autofix-before-checkout";
+
+async function hasUncommittedChanges(gitCommitPort: GitCommitPort): Promise<boolean> {
+    let output = "";
+    await gitCommitPort.execute("git", ["status", "--porcelain"], {
+        stdout: (data: Buffer) => {
+            output += data.toString();
+        },
+    });
+    return output.trim().length > 0;
+}
+
+/** Infrastructure boundary for checking out a branch without losing workspace changes. */
+export async function checkoutBranch(branch: string, gitCommitPort: GitCommitPort): Promise<boolean> {
+    let didStash = false;
+    try {
+        if (await hasUncommittedChanges(gitCommitPort)) {
+            logDebugInfo("Uncommitted changes present; stashing before checkout.");
+            await gitCommitPort.execute("git", ["stash", "push", "-u", "-m", STASH_MESSAGE]);
+            didStash = true;
+        }
+
+        await gitCommitPort.execute("git", ["fetch", "origin", branch]);
+        await gitCommitPort.execute("git", ["checkout", branch]);
+        logInfo(`Checked out branch ${branch}.`);
+
+        if (!didStash) return true;
+        try {
+            await gitCommitPort.execute("git", ["stash", "pop"]);
+            logDebugInfo("Restored stashed changes after checkout.");
+            return true;
+        } catch (popErr) {
+            const popMsg = popErr instanceof Error ? popErr.message : String(popErr);
+            logError(`Failed to restore stashed changes after checkout: ${popMsg}`);
+            logError("Changes remain stashed; run 'git stash pop' manually to restore them.");
+            return false;
+        }
+    } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        logError(`Failed to checkout branch ${branch}: ${msg}`);
+        if (didStash) {
+            logError("Changes were stashed; run 'git stash pop' manually to restore them.");
+        }
+        return false;
+    }
+}

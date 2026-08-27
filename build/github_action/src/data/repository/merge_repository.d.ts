@@ -1,3 +1,5 @@
+import type { GithubBranchMergeClient } from '../../application/ports/github_branch_ports';
+import type { GithubClientPort } from '../../infrastructure/github/ports/github_client_provider_port';
 import { Result } from '../model/result';
 /**
  * Repository for merging branches: creates a PR, waits for that PR's check runs (or status checks),
@@ -10,5 +12,7 @@ import { Result } from '../model/result';
  * @see docs/single-actions/deploy-label-and-merge.mdx for the deploy flow and check-wait behaviour.
  */
 export declare class MergeRepository {
+    private readonly githubClient;
+    constructor(githubClient: GithubClientPort<GithubBranchMergeClient>);
     mergeBranch: (owner: string, repository: string, head: string, base: string, timeout: number, token: string) => Promise<Result[]>;
 }

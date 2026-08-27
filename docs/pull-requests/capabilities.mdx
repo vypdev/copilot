@@ -44,13 +44,12 @@ The action computes **size** (XS, S, M, L, XL, XXL) and **priority** from the br
 
 - **Size labels:** `size: XS`, `size: S`, … `size: XXL` (configurable via `size-xs-label`, etc.).
 - **Priority labels:** e.g. `priority: high`, `priority: medium`, `priority: low` (configurable).
-- **Progress:** If OpenCode is configured, the action can also compute **progress** (0–100%) from the issue vs branch diff and update the **progress** label on the issue and PR. This often runs in the **push (commit)** workflow as well.
+- **Progress:** If an agent CLI is configured, the action can also compute **progress** (0–100%) from the issue vs branch diff and update the **progress** label on the issue and PR. This often runs in the **push (commit)** workflow as well.
 
 Thresholds are defined in [Configuration](/configuration) (e.g. `size-m-threshold-lines`, `size-m-threshold-files`, `size-m-threshold-commits`). No separate PR workflow is required for size/progress; the same logic can run on push and when the PR is opened/updated.
 
 ## AI-generated PR description
 
-When **`ai-pull-request-description`** is `true` and **OpenCode** is configured (`opencode-server-url`, `opencode-model`), the action can **generate or update the PR description** using the OpenCode Plan agent. The agent:
 
 - Reads your repo’s **pull request template** (`.github/pull_request_template.md`).
 - Uses the **issue description** and the **branch diff** (base..head) as context.

@@ -390,15 +390,40 @@ inputs:
   token:
     description: "Fine-grained personal access token for branch and project operations"
     required: true
-  opencode-server-url:
-    description: "OpenCode server URL for AI operations (e.g. http://localhost:4096). OpenCode supports 75+ LLM providers."
-    default: "http://localhost:4096"
-  opencode-model:
-    description: "OpenCode model in provider/model format (default opencode/kimi-k2.5-free; e.g. openai/gpt-4o-mini)."
-    default: "opencode/kimi-k2.5-free"
-  opencode-start-server:
-    description: "If true, the action starts an OpenCode server at the beginning and stops it when the job ends. No need to install or run OpenCode yourself. Requires provider API keys as secrets (e.g. OPENAI_API_KEY, ANTHROPIC_API_KEY, OPENROUTER_API_KEY) passed via env."
-    default: "true"
+  agent-provider:
+    description: "Single agent provider used by findings and fixer tasks: opencode, cursor, or codex. A provider failure is terminal; no fallback provider is attempted."
+    default: "opencode"
+  agent-model-provider:
+    description: "Provider that supplies the selected model, for example openai, opencode, openrouter, anthropic, or a local provider."
+    default: "openai"
+
+  agent-model:
+    description: "Selected model name without the provider prefix. The provider is configured separately with agent-model-provider."
+    default: "gpt-5.6-luna"
+  agent-command:
+    description: "Optional executable command for the selected CLI agent. Defaults: opencode run, agent -p --output-format text -, or codex exec --ephemeral --skip-git-repo-check -. No fallback command is attempted."
+    default: ""
+  findings-provider:
+    description: "Optional provider override for findings."
+    default: ""
+
+  findings-model:
+    description: "Optional model override for findings."
+    default: ""
+  findings-command:
+    description: "Optional CLI command override for findings."
+    default: ""
+  fixer-provider:
+    description: "Optional provider override for fixer."
+    default: ""
+
+  fixer-model:
+    description: "Optional model override for fixer."
+    default: ""
+  fixer-command:
+    description: "Optional CLI command override for fixer."
+    default: ""
+
   ai-pull-request-description:
     description: "Enable AI-powered automatic updates for pull request descriptions."
     default: "true"
@@ -418,7 +443,7 @@ inputs:
     description: "Maximum number of potential-problem findings to publish as individual comments on the issue and PR. Extra findings are summarized in a single overflow comment."
     default: "20"
   bugbot-fix-verify-commands:
-    description: "Comma-separated commands to run after bugbot autofix (e.g. npm run build, npm test, npm run lint). OpenCode runs these in its workspace; the runner can re-run them before commit. If empty, only OpenCode's run is used."
+    description: "Comma-separated commands to run after bugbot autofix (e.g. pnpm run build, pnpm test, pnpm run lint). The selected agent runtime runs these in its workspace; the runner can re-run them before commit. If empty, no additional verification commands are requested."
     default: ""
 runs:
   using: "node20"

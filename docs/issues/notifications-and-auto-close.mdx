@@ -14,7 +14,7 @@ When the **push (commit)** workflow runs (on push to a branch linked to an issue
 - **What is posted:** Commit summary (messages, authors, links to commits). Optionally **images** per branch type (feature, bugfix, etc.) if **`images-on-commit`** and the corresponding `images-commit-*` inputs are set. See [Configuration](/issues/configuration).
 - **Where:** The comment is posted on the **issue** associated with the branch (the issue number is derived from the branch name, e.g. `feature/123-title` → issue `123`).
 
-Commit notifications are part of the **Commit** workflow, not the Issue workflow. Ensure you have a workflow that runs on **push** (e.g. `copilot_commit.yml`) and that the Copilot step has `token` and any optional inputs (e.g. `project-ids`, `opencode-model` for progress/Bugbot). See [How to use](/how-to-use) and [Bugbot](/bugbot) for push-related features.
+Commit notifications are part of the **Commit** workflow, not the Issue workflow. Ensure you have a workflow that runs on **push** (e.g. `copilot_commit.yml`) and that the Copilot step has `token` and any configured agent CLI inputs. See [How to use](/how-to-use) and [Bugbot](/bugbot) for push-related features.
 
 ## Reopen issue on push
 

@@ -1,0 +1,100 @@
+---
+title: Agent CLI provisioning
+description: Provision pinned OpenCode, Codex, and Cursor CLI runtimes for Bugbot.
+---
+
+# Agent CLI provisioning
+
+The Action executes external provider-specific CLIs. It does not embed agent SDKs, start an HTTP server, copy authentication files, or fall back to another provider.
+
+## Supported runtimes
+
+| Runtime | Binary | Invocation | Credential reference |
+| --- | --- | --- | --- |
+| OpenCode | `opencode` | `opencode run --model provider/model` | Provider credential, for example `OPENAI_API_KEY` |
+| Codex | `codex` | `codex exec --ephemeral --skip-git-repo-check -` | `CODEX_ACCESS_TOKEN`, `OPENAI_API_KEY`, or controlled local session |
+| Cursor | `agent` | `agent -p --output-format text -` | `CURSOR_API_KEY` |
+
+## Version variables
+
+Use GitHub repository or environment Variables for non-sensitive provisioning inputs:
+
+```text
+CODEX_VERSION=<approved-version>
+OPENCODE_VERSION=<approved-version>
+CURSOR_INSTALLER_SHA256=<approved-installer-sha256>
+```
+
+The GitHub workflows pass these values to the Action. The selected provider is provisioned only when the Action runs in GitHub Actions. Local development can use already-installed binaries.
+
+## Approved installation methods
+
+Codex and OpenCode are installed with the pinned package versions using Corepack and pnpm:
+
+```bash
+corepack pnpm add --global "@openai/codex@${CODEX_VERSION}"
+corepack pnpm add --global "opencode-ai@${OPENCODE_VERSION}"
+```
+
+Cursor uses the official installer and verifies its SHA-256 against `CURSOR_INSTALLER_SHA256` before execution. Do not substitute an unofficial npm package.
+
+Do not use `npm`, `npx`, Yarn, Bun, floating `@latest`, unverified shell downloads, or secrets in command-line arguments.
+
+## Workflow environment
+
+```yaml
+env:
+  CODEX_VERSION: ${{ vars.CODEX_VERSION }}
+  OPENCODE_VERSION: ${{ vars.OPENCODE_VERSION }}
+  CURSOR_INSTALLER_SHA256: ${{ vars.CURSOR_INSTALLER_SHA256 }}
+  OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  CODEX_ACCESS_TOKEN: ${{ secrets.CODEX_ACCESS_TOKEN }}
+  CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+```
+
+The Action does not require every secret. Only the credential for the selected runtime/model provider should be supplied. Never expose a local OpenCode or Codex OAuth file to a GitHub-hosted runner.
+
+## Recommended model policy
+
+```yaml
+with:
+  agent-provider: opencode
+  agent-model-provider: openai
+  agent-model: gpt-5.6-luna
+env:
+  AGENT_ALLOWED_MODEL_PROVIDERS: openai
+  AGENT_ALLOWED_MODELS: openai/gpt-5.6-luna
+```
+
+The effective OpenCode command is:
+
+```text
+opencode run --model openai/gpt-5.6-luna
+```
+
+The allowlists are authorization policy, not credentials and not model selectors. A rejected provider/model is a terminal failure.
+
+## Verification
+
+From the repository root:
+
+```bash
+node scripts/verify-agent-clis.cjs
+```
+
+The verifier never prints secret values. It checks executable availability, headless help, and sanitized credential state. A real smoke test may incur provider usage and must be explicitly authorized with an appropriate cost limit.
+
+For Codex authentication modes and account restrictions, see [Codex authentication and compliance](/security-operations/security/authentication-compliance). For the configuration contract, see [Agent CLI configuration](/agents/cli-configuration).
+
+## Verified development manifest
+
+The following versions were verified during development on a Linux x64 machine:
+
+```text
+Codex CLI: 0.149.0
+OpenCode: 1.18.21
+Cursor Agent: 2026.08.11-e8db854
+```
+
+These are development evidence, not permanent defaults. Update the corresponding GitHub Variables deliberately and repeat version, headless, authentication, and smoke validation before upgrading.

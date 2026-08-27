@@ -1,16 +1,4 @@
-import * as github from '@actions/github';
 import { Issue } from '../issue';
-
-jest.mock('@actions/github', () => ({
-  context: {
-    payload: {} as Record<string, unknown>,
-    eventName: '',
-  },
-}));
-
-function getContext(): { payload: Record<string, unknown>; eventName: string } {
-  return github.context as unknown as { payload: Record<string, unknown>; eventName: string };
-}
 
 describe('Issue', () => {
   const issuePayload = {
@@ -20,11 +8,6 @@ describe('Issue', () => {
     body: 'Body text',
     user: { login: 'bob' },
   };
-
-  beforeEach(() => {
-    getContext().payload = {};
-    getContext().eventName = 'issues';
-  });
 
   it('uses inputs when provided', () => {
     const inputs = { action: 'opened', issue: issuePayload, eventName: 'issues' };
@@ -40,16 +23,11 @@ describe('Issue', () => {
     expect(i.isIssueComment).toBe(false);
   });
 
-  it('falls back to context.payload when inputs missing', () => {
-    getContext().payload = {
-      action: 'opened',
-      issue: issuePayload,
-    };
-    getContext().eventName = 'issues';
+  it('returns empty values when inputs are missing', () => {
     const i = new Issue(false, false, 1, undefined);
-    expect(i.title).toBe('Add feature');
-    expect(i.number).toBe(10);
-    expect(i.isIssue).toBe(true);
+    expect(i.title).toBe('');
+    expect(i.number).toBe(-1);
+    expect(i.isIssue).toBe(false);
   });
 
   it('labeled and labelAdded when action is labeled', () => {
@@ -77,37 +55,27 @@ describe('Issue', () => {
   });
 
   it('opened is false when action is closed', () => {
-    getContext().payload = { action: 'closed', issue: issuePayload };
-    const i = new Issue(false, false, 1, undefined);
+    const i = new Issue(false, false, 1, { action: 'closed', issue: issuePayload, eventName: 'issues' });
     expect(i.opened).toBe(false);
   });
 
-  it('falls back to context for creator when inputs.issue has no user', () => {
-    getContext().payload = { action: 'opened', issue: { ...issuePayload, user: { login: 'context-user' } } };
-    const i = new Issue(false, false, 1, { action: 'opened', issue: { title: 'x', number: 1, body: '', html_url: '' }, eventName: 'issues' });
-    expect(i.creator).toBe('context-user');
-    const i2 = new Issue(false, false, 1, undefined);
-    expect(i2.creator).toBe('context-user');
-  });
-
-  it('falls back to context for commentBody and commentAuthor when inputs has eventName but comment from context', () => {
-    getContext().payload = {
+  it('uses the user and comment data provided in inputs', () => {
+    const i = new Issue(false, false, 1, {
       action: 'created',
-      issue: issuePayload,
+      eventName: 'issue_comment',
+      issue: { ...issuePayload, user: { login: 'context-user' } },
       comment: { id: 99, body: 'From context', user: { login: 'ctx-commenter' }, html_url: 'https://comment.url' },
-    };
-    getContext().eventName = 'issue_comment';
-    const i = new Issue(false, false, 1, { eventName: 'issue_comment', issue: issuePayload });
+    });
+    expect(i.creator).toBe('context-user');
     expect(i.commentBody).toBe('From context');
     expect(i.commentAuthor).toBe('ctx-commenter');
     expect(i.commentUrl).toBe('https://comment.url');
     expect(i.commentId).toBe(99);
   });
 
-  it('labelAdded falls back to context when inputs has labeled but no label', () => {
-    getContext().payload = { action: 'labeled', issue: issuePayload, label: { name: 'from-ctx' } };
-    const i = new Issue(false, false, 1, undefined);
+  it('uses the label data provided in inputs', () => {
+    const i = new Issue(false, false, 1, { action: 'labeled', issue: issuePayload, eventName: 'issues', label: { name: 'from-inputs' } });
     expect(i.labeled).toBe(true);
-    expect(i.labelAdded).toBe('from-ctx');
+    expect(i.labelAdded).toBe('from-inputs');
   });
 });

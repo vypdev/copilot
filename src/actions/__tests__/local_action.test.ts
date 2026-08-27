@@ -1,6 +1,6 @@
 /**
  * Unit tests for runLocalAction.
- * Mocks getActionInputsWithDefaults, ProjectRepository, mainRun, chalk, boxen.
+ * Mocks getActionInputsWithDefaults, the project-board adapter, mainRun, chalk, boxen.
  */
 
 jest.mock('chalk', () => ({
@@ -26,8 +26,8 @@ jest.mock('../common_action', () => ({
 }));
 
 const mockGetProjectDetail = jest.fn();
-jest.mock('../../data/repository/project_repository', () => ({
-  ProjectRepository: jest.fn().mockImplementation(() => ({
+jest.mock('../../data/repository/project/project_board_query_repository', () => ({
+  ProjectBoardQueryRepository: jest.fn().mockImplementation(() => ({
     getProjectDetail: mockGetProjectDetail,
   })),
 }));
@@ -173,8 +173,7 @@ describe('runLocalAction', () => {
     mockGetActionInputsWithDefaults.mockReturnValue({
       ...minimalActionInputs(),
       [INPUT_KEYS.TOKEN]: 'from-action-inputs',
-      [INPUT_KEYS.OPENCODE_SERVER_URL]: 'http://custom-opencode:4096',
-    });
+          });
     const params: Record<string, unknown> = {
       repo: { owner: 'o', repo: 'r' },
       eventName: 'push',
@@ -185,6 +184,5 @@ describe('runLocalAction', () => {
 
     const execution = mockMainRun.mock.calls[0][0];
     expect(execution.tokens.token).toBe('from-action-inputs');
-    expect(execution.ai.getOpencodeServerUrl()).toBe('http://custom-opencode:4096');
   });
 });

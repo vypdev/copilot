@@ -8,6 +8,21 @@
       "href": "/"
     },
     {
+      "id": "agents",
+      "title": "Agents",
+      "href": "/agents"
+    },
+    {
+      "id": "security-operations",
+      "title": "Security & Operations",
+      "href": "/security-operations"
+    },
+    {
+      "id": "development",
+      "title": "Development",
+      "href": "/development"
+    },
+    {
       "id": "issues",
       "title": "Issues",
       "href": "/issues"
@@ -39,6 +54,26 @@
           "icon": "rocket"
         },
         {
+          "title": "Overview",
+          "href": "/overview",
+          "icon": "house"
+        },
+        {
+          "title": "Quick start",
+          "href": "/quick-start",
+          "icon": "play"
+        },
+        {
+          "title": "First workflow",
+          "href": "/first-workflow",
+          "icon": "square-check"
+        },
+        {
+          "title": "Configuration checklist",
+          "href": "/configuration-checklist",
+          "icon": "square-check"
+        },
+        {
           "title": "How To Use",
           "href": "/how-to-use",
           "icon": "list-check"
@@ -47,31 +82,200 @@
           "title": "Features & Capabilities",
           "href": "/features",
           "icon": "list"
+        }
+      ]
+    },
+    {
+      "group": "Agents",
+      "tab": "agents",
+      "pages": [
+        {
+          "title": "Overview",
+          "href": "/agents",
+          "icon": "microchip"
         },
         {
-          "title": "Authentication",
-          "href": "/authentication",
-          "icon": "key"
+          "title": "Execution contract",
+          "href": "/agents/execution-contract",
+          "icon": "file-lines"
         },
         {
-          "title": "OpenCode (AI)",
-          "href": "/opencode-integration",
-          "icon": "cpu"
+          "title": "Runtime selection",
+          "href": "/agents/runtime-selection",
+          "icon": "laptop-code"
         },
         {
-          "title": "Testing OpenCode Plan Locally",
-          "href": "/testing-opencode-plan-locally",
+          "title": "Model selection",
+          "href": "/agents/model-selection",
+          "icon": "brain"
+        },
+        {
+          "title": "Model allowlists",
+          "href": "/agents/model-allowlists",
+          "icon": "list-check"
+        },
+        {
+          "title": "CLI commands",
+          "href": "/agents/cli-commands",
           "icon": "terminal"
         },
         {
-          "title": "Configuration",
-          "href": "/configuration",
+          "title": "CLI configuration",
+          "href": "/agents/cli-configuration",
           "icon": "gear"
         },
         {
+          "title": "OpenCode",
+          "href": "/agents/opencode",
+          "icon": "code"
+        },
+        {
+          "title": "Codex and OpenAI",
+          "href": "/agents/codex-openai",
+          "icon": "robot"
+        },
+        {
+          "title": "Cursor (WIP)",
+          "href": "/agents/cursor-wip",
+          "icon": "wand-magic-sparkles"
+        },
+        {
+          "title": "Input reference",
+          "href": "/agents/input-reference",
+          "icon": "clipboard-list"
+        },
+        {
+          "title": "Failure behavior",
+          "href": "/agents/failure-policy",
+          "icon": "triangle-exclamation"
+        }
+      ]
+    },
+    {
+      "group": "Security",
+      "tab": "security-operations",
+      "pages": [
+        {
+          "title": "Overview",
+          "href": "/security-operations/security/overview",
+          "icon": "shield"
+        },
+        {
+          "title": "Credentials",
+          "href": "/security-operations/security/credentials",
+          "icon": "key"
+        },
+        {
+          "title": "Trust boundaries",
+          "href": "/security-operations/security/trust-boundaries",
+          "icon": "shield-halved"
+        },
+        {
+          "title": "Forks and pull_request_target",
+          "href": "/security-operations/security/forks-and-pull-request-target",
+          "icon": "code-pull-request"
+        },
+        {
+          "title": "Self-hosted runners",
+          "href": "/security-operations/security/self-hosted-runners",
+          "icon": "server"
+        },
+        {
+          "title": "Secret exposure rules",
+          "href": "/security-operations/security/secret-exposure",
+          "icon": "lock"
+        },
+        {
+          "title": "Authentication compliance",
+          "href": "/security-operations/security/authentication-compliance",
+          "icon": "file-lines"
+        }
+      ]
+    },
+    {
+      "group": "Operations",
+      "tab": "security-operations",
+      "pages": [
+        {
+          "title": "Provisioning",
+          "href": "/security-operations/operations/provisioning",
+          "icon": "download"
+        },
+        {
+          "title": "CLI provisioning details",
+          "href": "/security-operations/operations/cli-provisioning",
+          "icon": "box-open"
+        },
+        {
+          "title": "Version pinning",
+          "href": "/security-operations/operations/version-pinning",
+          "icon": "tag"
+        },
+        {
+          "title": "Verification",
+          "href": "/security-operations/operations/verification",
+          "icon": "circle-check"
+        },
+        {
+          "title": "Smoke tests",
+          "href": "/security-operations/operations/smoke-tests",
+          "icon": "vial"
+        },
+        {
+          "title": "CLI runners",
+          "href": "/security-operations/operations/cli-runners",
+          "icon": "server"
+        },
+        {
           "title": "Troubleshooting",
-          "href": "/troubleshooting",
+          "href": "/security-operations/operations/troubleshooting",
           "icon": "wrench"
+        },
+        {
+          "title": "Upgrade and rollback",
+          "href": "/security-operations/operations/upgrade-rollback",
+          "icon": "rotate"
+        }
+      ]
+    },
+    {
+      "group": "Development",
+      "tab": "development",
+      "pages": [
+        {
+          "title": "Architecture",
+          "href": "/development/architecture",
+          "icon": "layer-group"
+        },
+        {
+          "title": "Local development",
+          "href": "/development/local-development",
+          "icon": "code"
+        },
+        {
+          "title": "Testing",
+          "href": "/development/testing",
+          "icon": "vial"
+        },
+        {
+          "title": "Build artifacts",
+          "href": "/development/build-artifacts",
+          "icon": "box"
+        },
+        {
+          "title": "Documentation",
+          "href": "/development/documentation",
+          "icon": "file-lines"
+        },
+        {
+          "title": "Documentation completeness plan",
+          "href": "/development/documentation-completeness-plan",
+          "icon": "clipboard"
+        },
+        {
+          "title": "Release process",
+          "href": "/development/release-process",
+          "icon": "upload"
         }
       ]
     },
@@ -83,6 +287,11 @@
           "title": "Overview",
           "href": "/issues",
           "icon": "book"
+        },
+        {
+          "title": "First workflow",
+          "href": "/issues/first-workflow",
+          "icon": "square-check"
         },
         {
           "title": "Labels and branch types",
@@ -97,12 +306,12 @@
         {
           "title": "Assignees and projects",
           "href": "/issues/assignees-and-projects",
-          "icon": "people"
+          "icon": "users"
         },
         {
           "title": "Branch management",
           "href": "/issues/branch-management",
-          "icon": "git-branch"
+          "icon": "code-branch"
         },
         {
           "title": "Notifications and auto-close",
@@ -128,7 +337,7 @@
         {
           "title": "Documentation",
           "href": "/issues/type/docs",
-          "icon": "file-text"
+          "icon": "file-lines"
         },
         {
           "title": "Chore",
@@ -164,7 +373,12 @@
         {
           "title": "Overview",
           "href": "/pull-requests",
-          "icon": "book"
+          "icon": "file-lines"
+        },
+        {
+          "title": "First workflow",
+          "href": "/pull-requests/first-workflow",
+          "icon": "square-check"
         },
         {
           "title": "Workflow setup",
@@ -179,7 +393,7 @@
         {
           "title": "AI PR description",
           "href": "/pull-requests/ai-description",
-          "icon": "file-text"
+          "icon": "file-lines"
         },
         {
           "title": "Configuration",
@@ -218,6 +432,11 @@
           "icon": "terminal"
         },
         {
+          "title": "Permissions and safety",
+          "href": "/single-actions/permissions",
+          "icon": "shield"
+        },
+        {
           "title": "Examples",
           "href": "/single-actions/examples",
           "icon": "file-code"
@@ -234,19 +453,34 @@
           "icon": "bug"
         },
         {
+          "title": "Concepts",
+          "href": "/bugbot/concepts",
+          "icon": "brain"
+        },
+        {
           "title": "Detection",
           "href": "/bugbot/detection",
           "icon": "search"
         },
         {
+          "title": "Finding publication",
+          "href": "/bugbot/finding-publication",
+          "icon": "comment"
+        },
+        {
+          "title": "Permissions",
+          "href": "/bugbot/permissions",
+          "icon": "shield"
+        },
+        {
           "title": "Autofix",
           "href": "/bugbot/autofix",
-          "icon": "wrench"
+          "icon": "wand-magic-sparkles"
         },
         {
           "title": "Do user request",
           "href": "/bugbot/do-user-request",
-          "icon": "edit"
+          "icon": "pen-to-square"
         },
         {
           "title": "Configuration",
@@ -254,9 +488,19 @@
           "icon": "gear"
         },
         {
+          "title": "Verification commands",
+          "href": "/bugbot/verification-commands",
+          "icon": "circle-check"
+        },
+        {
           "title": "How it works",
           "href": "/bugbot/how-it-works",
-          "icon": "cpu"
+          "icon": "diagram-project"
+        },
+        {
+          "title": "Failure scenarios",
+          "href": "/bugbot/failure-scenarios",
+          "icon": "triangle-exclamation"
         },
         {
           "title": "Examples",
@@ -271,7 +515,7 @@
         {
           "title": "Support",
           "href": "/support",
-          "icon": "help-circle"
+          "icon": "circle-question"
         }
       ]
     }

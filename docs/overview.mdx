@@ -1,0 +1,27 @@
+---
+title: Overview
+description: What Copilot does, who should use it, and the current execution contract.
+---
+# Overview
+
+Copilot is a GitHub Action and local CLI for repository workflow automation. It manages issues, branches, pull requests, projects, releases, and optional agent-assisted analysis.
+
+## Current contract
+
+Agent execution is CLI-only. The Action selects exactly one runtime CLI and exactly one qualified model per run:
+
+```text
+agent-provider        = runtime CLI
+agent-model-provider  = model provider
+agent-model           = model name
+qualified model       = agent-model-provider/agent-model
+```
+
+The default is `opencode` with `openai/gpt-5.6-luna`. The selected configuration is validated before execution. No implicit runtime, model, credential, or transport is selected.
+
+## Who should read what?
+
+- Users: [Quick start](/quick-start), [Configuration checklist](/configuration-checklist).
+- Operators: [Provisioning](/security-operations/operations/provisioning), [Verification](/security-operations/operations/verification), [Security](/security-operations/security/credentials).
+- Bugbot users: [Bugbot overview](/bugbot), [Detection](/bugbot/detection), [Autofix](/bugbot/autofix).
+- Contributors: [Architecture](/development/architecture), [Testing](/development/testing), [Release process](/development/release-process).

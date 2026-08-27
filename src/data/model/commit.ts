@@ -1,5 +1,3 @@
-import * as github from "@actions/github";
-
 export class Commit {
     /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- GitHub context payload shape */
     private inputs: any | undefined = undefined;
@@ -10,7 +8,7 @@ export class Commit {
     }
     
     get branchReference(): string {
-        return this.inputs?.commits?.ref ?? github.context.payload.ref ?? '';
+        return this.inputs?.commits?.ref ?? this.inputs?.ref ?? '';
     }
 
     get branch(): string {
@@ -19,6 +17,6 @@ export class Commit {
 
     /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- GitHub payload.commits shape */
     get commits(): any[] {
-        return github.context.payload.commits || [];
+        return this.inputs?.commits ?? [];
     }
 }

@@ -1,0 +1,25 @@
+import { Execution } from "../../data/model/execution";
+import { Result } from "../../data/model/result";
+import { ParamUseCase } from "./base/param_usecase";
+import type { BugbotAutofixParam } from "./steps/commit/bugbot/bugbot_autofix_use_case";
+import type { DoUserRequestParam } from "./steps/commit/user_request_use_case";
+import type { IssueCommentUpdatePort } from "../ports/issue_lifecycle_ports";
+import type { AuthenticatedUserPort } from "../ports/authenticated_user_ports";
+import type { ActorAuthorizationPort } from "../ports/actor_authorization_ports";
+import type { BugbotFindingResolutionPorts } from "../ports/bugbot_finding_resolution_ports";
+import type { GitCommitPort } from "../ports/git_ports";
+export declare class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
+    private readonly languageUseCase;
+    private readonly intentUseCase;
+    private readonly thinkUseCase;
+    private readonly autofixUseCase;
+    private readonly doUserRequestUseCase;
+    private readonly issueCommentUpdatePort;
+    private readonly actorAuthorizationPort;
+    private readonly authenticatedUserPort;
+    private readonly bugbotResolutionPorts;
+    private readonly gitCommitPort;
+    taskId: string;
+    constructor(languageUseCase: ParamUseCase<Execution, Result[]>, intentUseCase: ParamUseCase<Execution, Result[]>, thinkUseCase: ParamUseCase<Execution, Result[]>, autofixUseCase: ParamUseCase<BugbotAutofixParam, Result[]>, doUserRequestUseCase: ParamUseCase<DoUserRequestParam, Result[]>, issueCommentUpdatePort: IssueCommentUpdatePort, actorAuthorizationPort: ActorAuthorizationPort, authenticatedUserPort: AuthenticatedUserPort, bugbotResolutionPorts: BugbotFindingResolutionPorts, gitCommitPort: GitCommitPort);
+    invoke(param: Execution): Promise<Result[]>;
+}

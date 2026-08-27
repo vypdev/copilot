@@ -1,0 +1,72 @@
+/**
+ * Bugbot types: data structures used across detection, publishing, and autofix.
+ * OpenCode computes the diff and returns findings; we never pass a pre-computed diff to OpenCode.
+ */
+
+/** Single finding from OpenCode (plan agent). */
+export interface BugbotFinding {
+  id: string;
+  title: string;
+  description: string;
+  file?: string;
+  line?: number;
+  severity?: string;
+  suggestion?: string;
+}
+
+export interface ExistingIssueFindingInfo {
+  commentId: number;
+  resolved: boolean;
+}
+
+export interface ExistingPullRequestFindingInfo {
+  commentIdentity: string;
+  pullRequestNumber: number;
+  resolved: boolean;
+}
+
+/** Tracks each published destination independently so partial failures remain retryable. */
+export interface ExistingFindingInfo {
+  issue?: ExistingIssueFindingInfo;
+  pullRequest?: ExistingPullRequestFindingInfo;
+}
+
+export type ExistingByFindingId = Record<string, ExistingFindingInfo>;
+
+export function isExistingFindingFullyResolved(
+  finding: ExistingFindingInfo,
+): boolean {
+  const destinations = [finding.issue, finding.pullRequest].filter(
+    (destination) => destination != null,
+  );
+  return (
+    destinations.length > 0 &&
+    destinations.every((destination) => destination.resolved)
+  );
+}
+
+/** PR metadata used only when publishing findings to GitHub. */
+export interface BugbotPrContext {
+  prHeadSha: string;
+  prFiles: Array<{ filename: string; status: string }>;
+  pathToFirstDiffLine: Record<string, number>;
+}
+
+/** Unresolved finding with a prompt-bounded comment body. */
+export interface UnresolvedFindingWithBody {
+  id: string;
+  fullBody: string;
+}
+
+/** Full context for detection, mutation, publishing, and autofix intent. */
+export interface BugbotContext {
+  existingByFindingId: ExistingByFindingId;
+  /** Full issue-comment bodies reserved for read-modify-write operations. */
+  issueComments: Array<{ id: number; body: string | null }>;
+  openPrNumbers: number[];
+  /** Bounded text sent to OpenCode. */
+  previousFindingsBlock: string;
+  prContext: BugbotPrContext | null;
+  /** Bounded bodies used by intent prompts and autofix. */
+  unresolvedFindingsWithBody: UnresolvedFindingWithBody[];
+}

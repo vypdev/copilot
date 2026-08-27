@@ -1,0 +1,73 @@
+name: RepoWise Code Health
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+concurrency:
+  group: repowise-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  code-health:
+    name: RepoWise code health
+    runs-on: [self-hosted, X64, Linux, coolify]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Create isolated RepoWise environment
+        run: python -m venv "$RUNNER_TEMP/repowise-venv"
+      - name: Install RepoWise
+        run: |
+          "$RUNNER_TEMP/repowise-venv/bin/python" -m pip install \
+            --disable-pip-version-check \
+            --no-cache-dir \
+            'repowise==0.42.0'
+      - name: Generate RepoWise reports
+        env:
+          REPOWISE_SKIP_EDITOR_SETUP: '1'
+        run: |
+          set -euo pipefail
+          report_dir="$RUNNER_TEMP/repowise-report"
+          repowise_bin="$RUNNER_TEMP/repowise-venv/bin/repowise"
+          mkdir -p "$report_dir"
+          cleanup() {
+            rm -rf .repowise .mcp.json
+            rm -f .vscode/mcp.json .vscode/extensions.json
+            rmdir .vscode 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          "$repowise_bin" init \
+            --no-prose --no-claude-md --no-codex --no-editor-setup \
+            --no-onboarding --no-distill-hook --no-workspace . > "$report_dir/index.log"
+          "$repowise_bin" health --no-workspace --refactoring-targets --format md . | tee "$report_dir/health.md"
+          "$repowise_bin" health --no-workspace --refactoring-targets --format json . > "$report_dir/health.json"
+          "$repowise_bin" dead-code --safe-only --no-workspace --format json . > "$report_dir/dead-code.json" || true
+          "$repowise_bin" security scan --path . --format json > "$report_dir/security.json" || true
+          {
+            echo '## RepoWise code health'
+            echo
+            echo 'Advisory reports are retained as workflow artifacts for this commit.'
+            echo
+            sed -n '1,100p' "$report_dir/health.md"
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload RepoWise reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: repowise-code-health
+          path: ${{ runner.temp }}/repowise-report/
+          if-no-files-found: warn
+          retention-days: 14

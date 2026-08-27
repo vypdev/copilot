@@ -1,16 +1,4 @@
-import * as github from '@actions/github';
 import { PullRequest } from '../pull_request';
-
-jest.mock('@actions/github', () => ({
-  context: {
-    payload: {} as Record<string, unknown>,
-    eventName: '',
-  },
-}));
-
-function getContext(): { payload: Record<string, unknown>; eventName: string } {
-  return github.context as unknown as { payload: Record<string, unknown>; eventName: string };
-}
 
 describe('PullRequest', () => {
   const pr = {
@@ -25,11 +13,6 @@ describe('PullRequest', () => {
     merged: false,
     user: { login: 'alice' },
   };
-
-  beforeEach(() => {
-    getContext().payload = {};
-    getContext().eventName = 'pull_request';
-  });
 
   it('uses inputs when provided', () => {
     const inputs = {
@@ -56,10 +39,12 @@ describe('PullRequest', () => {
     expect(p.isPullRequestReviewComment).toBe(false);
   });
 
-  it('falls back to context.payload when inputs missing', () => {
-    getContext().payload = { action: 'closed', pull_request: { ...pr, state: 'closed', merged: true } };
-    getContext().eventName = 'pull_request';
-    const p = new PullRequest(1, 2, 30, undefined);
+  it('uses closed and merged data provided in inputs', () => {
+    const p = new PullRequest(1, 2, 30, {
+      action: 'closed',
+      pull_request: { ...pr, state: 'closed', merged: true },
+      eventName: 'pull_request',
+    });
     expect(p.action).toBe('closed');
     expect(p.isMerged).toBe(true);
     expect(p.isClosed).toBe(true);

@@ -96,6 +96,16 @@ describe('SingleAction', () => {
       expect(s.issue).toBe(0);
     });
 
+    it('ignores a non-numeric issue for THINK', () => {
+      const s = new SingleAction(ACTIONS.THINK, 'not-a-number', '', '', '');
+      expect(s.issue).toBe(0);
+    });
+
+    it('ignores the provided issue for INITIAL_SETUP', () => {
+      const s = new SingleAction(ACTIONS.INITIAL_SETUP, '999', '', '', '');
+      expect(s.issue).toBe(0);
+    });
+
     it('sets issue from numeric string for actions that require issue', () => {
       const s = new SingleAction(ACTIONS.CHECK_PROGRESS, '42', '', '', '');
       expect(s.issue).toBe(42);

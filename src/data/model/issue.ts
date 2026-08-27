@@ -1,5 +1,3 @@
-import * as github from "@actions/github";
-
 export class Issue {
     reopenOnPush: boolean;
     branchManagementAlways: boolean;
@@ -8,59 +6,59 @@ export class Issue {
     inputs: any | undefined = undefined;
 
     get title(): string {
-        return this.inputs?.issue?.title ?? github.context.payload.issue?.title ?? '';
+        return this.inputs?.issue?.title ?? '';
     }
 
     get number(): number {
-        return this.inputs?.issue?.number ?? github.context.payload.issue?.number ?? -1;
+        return this.inputs?.issue?.number ?? -1;
     }
 
     get creator(): string {
-        return this.inputs?.issue?.user?.login ?? github.context.payload.issue?.user.login ?? '';
+        return this.inputs?.issue?.user?.login ?? '';
     }
 
     get url(): string {
-        return this.inputs?.issue?.html_url ?? github.context.payload.issue?.html_url ?? '';
+        return this.inputs?.issue?.html_url ?? '';
     }
 
     get body(): string {
-        return this.inputs?.issue?.body ?? github.context.payload.issue?.body ?? '';
+        return this.inputs?.issue?.body ?? '';
     }
 
     get opened(): boolean {
-        return ['opened', 'reopened'].includes(this.inputs?.action ?? github.context.payload.action ?? '');
+        return ['opened', 'reopened'].includes(this.inputs?.action ?? '');
     }
 
     get labeled(): boolean {
-        return (this.inputs?.action ?? github.context.payload.action) === 'labeled';
+        return this.inputs?.action === 'labeled';
     }
 
     get labelAdded(): string {
-        return this.inputs?.label?.name ?? github.context.payload.label?.name ?? '';
+        return this.inputs?.label?.name ?? '';
     }
 
     get isIssue(): boolean {
-        return (this.inputs?.eventName ?? github.context.eventName) === 'issues';
+        return this.inputs?.eventName === 'issues';
     }
 
     get isIssueComment(): boolean {
-        return (this.inputs?.eventName ?? github.context.eventName) === 'issue_comment';
+        return this.inputs?.eventName === 'issue_comment';
     }
 
     get commentId(): number {
-        return this.inputs?.comment?.id ?? github.context.payload.comment?.id ?? -1;
+        return this.inputs?.comment?.id ?? -1;
     }
 
     get commentBody(): string {
-        return this.inputs?.comment?.body ?? github.context.payload.comment?.body ?? '';
+        return this.inputs?.comment?.body ?? '';
     }
 
     get commentAuthor(): string {
-        return this.inputs?.comment?.user?.login ?? github.context.payload.comment?.user.login ?? '';
+        return this.inputs?.comment?.user?.login ?? '';
     }
 
     get commentUrl(): string {
-        return this.inputs?.comment?.html_url ?? github.context.payload.comment?.html_url ?? '';
+        return this.inputs?.comment?.html_url ?? '';
     }
 
     constructor(

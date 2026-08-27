@@ -1,0 +1,25 @@
+---
+title: Version pinning
+description: Pin agent CLI versions and installer integrity inputs for reproducible execution.
+---
+
+# Version pinning
+
+Every runtime must have a deliberate version policy. A missing version is not an invitation to install the latest package implicitly.
+
+| Runtime | Version input | Installation boundary | Verification |
+| --- | --- | --- | --- |
+| Codex | `CODEX_VERSION` | Corepack pnpm global install | CLI version output |
+| OpenCode | `OPENCODE_VERSION` | Corepack pnpm global install | CLI version output |
+| Cursor | installer and `CURSOR_INSTALLER_SHA256` | Official installer download | SHA-256 comparison |
+
+## Rules
+
+1. Pin the version in repository or organization variables.
+2. Provision only the selected runtime.
+3. Verify the installed version before invoking the agent.
+4. For Cursor, require the expected SHA-256 before running the installer.
+5. Treat missing, malformed, or mismatched values as terminal failures.
+6. Record the effective version in sanitized logs without credentials.
+
+See [Provisioning](/security-operations/operations/provisioning) and [Upgrade and rollback](/security-operations/operations/upgrade-rollback) for the lifecycle procedure.

@@ -1,5 +1,6 @@
 import { Config } from "../../data/model/config";
-import { Execution } from "../../data/model/execution";
+import type { Execution } from "../../data/model/execution";
+import type { ExecutionConfigurationQuery } from "../../application/ports/execution_configuration_ports";
 import { logError } from "../../utils/logger";
 import { IssueContentInterface } from "./base/issue_content_interface";
 
@@ -51,9 +52,15 @@ export class ConfigurationHandler extends IssueContentInterface {
         }
     }
 
-    get = async (execution: Execution): Promise<Config | undefined> => {
+    get = async (query: ExecutionConfigurationQuery): Promise<Config | undefined> => {
         try {
-            const config = await this.internalGetter(execution)
+            const description = await this.issueDescriptionPort.getDescription(
+                query.owner,
+                query.repository,
+                query.issueNumber,
+                query.token,
+            );
+            const config = this.getContent(description);
             if (config === undefined) {
                 return undefined;
             }

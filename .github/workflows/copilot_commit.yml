@@ -10,10 +10,10 @@ on:
 jobs:
   copilot-commits:
     name: Copilot - Commit
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, X64, Linux, coolify]
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - uses: ./
         with:

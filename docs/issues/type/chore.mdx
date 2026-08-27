@@ -13,7 +13,7 @@ All chore issues are created with the `chore-label`. The default label for creat
 jobs:
   git-board-issues:
     name: Git Board - Issue
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, X64, Linux, coolify]
     steps:
       - uses: vypdev/copilot@v2
         with:
@@ -28,7 +28,7 @@ The default tree for creating chore branches is `chore`. You can configure this 
 jobs:
   git-board-issues:
     name: Git Board - Issue
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, X64, Linux, coolify]
     steps:
       - uses: vypdev/copilot@v2
         with:
@@ -54,7 +54,7 @@ Chore branches are created from the development branch. By default, chore branch
 jobs:
   git-board-issues:
     name: Git Board - Issue
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, X64, Linux, coolify]
     steps:
       - uses: vypdev/copilot@v2
         with:
@@ -71,7 +71,7 @@ To configure the images, provide a comma-separated list of image URLs in the `im
 jobs:
   git-board-issues:
     name: Git Board - Issue
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, X64, Linux, coolify]
     steps:
       - uses: vypdev/copilot@v2
         with:

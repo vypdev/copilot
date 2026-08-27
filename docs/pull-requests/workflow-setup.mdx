@@ -43,7 +43,7 @@ on:
 jobs:
   copilot-pull-requests:
     name: Copilot - Pull Request
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, X64, Linux, coolify]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -57,11 +57,10 @@ jobs:
 - **`token`** is required (use a fine-grained PAT with repo and project permissions; see [Authentication](/authentication)).
 - **`project-ids`** is optional but needed if you want PRs linked to GitHub Project boards and moved to columns (e.g. "In Progress").
 
-Add other inputs as needed: `desired-reviewers-count`, `commit-prefix-transforms`, `ai-pull-request-description`, `opencode-server-url`, `opencode-model`, etc. See [Configuration](/pull-requests/configuration) and [Examples](/pull-requests/examples).
 
 ## What runs when
 
-1. **On every trigger** (with valid `token`): The action loads the PR and repository context. If the **event actor** is the same as the **token owner**, the action may skip the normal pipeline (see [Troubleshooting](/troubleshooting)); use a **bot account** for the PAT if you want full behavior when you open your own PRs.
+1. **On every trigger** (with valid `token`): The action loads the PR and repository context. If the **event actor** is the same as the **token owner**, the action may skip the normal pipeline (see [Troubleshooting](/security-operations/operations/troubleshooting)); use a **bot account** for the PAT if you want full behavior when you open your own PRs.
 
 2. **PR–issue linking:** The action infers the **issue number** from the PR branch name (e.g. `feature/123-add-login` → issue `123`) and **links the PR to that issue** (and posts a comment on the PR when configured).
 
@@ -69,9 +68,9 @@ Add other inputs as needed: `desired-reviewers-count`, `commit-prefix-transforms
 
 4. **Reviewers:** If `desired-reviewers-count` is set, the action assigns up to that many reviewers. See [Configuration](/pull-requests/configuration).
 
-5. **Size and priority:** The action computes **size** (XS–XXL) and **progress** (if OpenCode is configured) from the branch diff and applies the corresponding labels to the **issue** and to the **PR**. Same thresholds as in [Configuration](/configuration).
+5. **Size and priority:** The action computes **size** (XS–XXL) and **progress** (if the selected agent CLI is configured) from the branch diff and applies the corresponding labels to the **issue** and to the **PR**. Same thresholds as in [Configuration](/configuration).
 
-6. **AI PR description:** If `ai-pull-request-description` is true and OpenCode is configured, the action can generate or update the PR description from the issue and the branch diff. See [AI PR description](/pull-requests/ai-description).
+6. **AI PR description:** If `ai-pull-request-description` is true and the selected agent CLI is configured, the action can generate or update the PR description from the issue and the branch diff. See [AI PR description](/pull-requests/ai-description).
 
 7. **Comments and images:** The action can post a comment on the PR with optional images per branch type (feature, bugfix, etc.). See [Capabilities](/pull-requests/capabilities).
 

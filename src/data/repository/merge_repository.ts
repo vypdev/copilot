@@ -1,6 +1,8 @@
-import * as github from '@actions/github';
 import { logDebugInfo, logError } from '../../utils/logger';
+import type { GithubBranchMergeClient } from '../../application/ports/github_branch_ports';
+import type { GithubClientPort } from '../../infrastructure/github/ports/github_client_provider_port';
 import { Result } from '../model/result';
+import { failedCheckRuns, pendingCheckRuns, pendingStatuses, selectPullRequestChecks } from './merge_checks_policy';
 
 /**
  * Repository for merging branches: creates a PR, waits for that PR's check runs (or status checks),
@@ -13,6 +15,7 @@ import { Result } from '../model/result';
  * @see docs/single-actions/deploy-label-and-merge.mdx for the deploy flow and check-wait behaviour.
  */
 export class MergeRepository {
+    constructor(private readonly githubClient: GithubClientPort<GithubBranchMergeClient>) {}
 
     mergeBranch = async (
         owner: string,
@@ -24,7 +27,7 @@ export class MergeRepository {
     ): Promise<Result[]> => {
         const result: Result[] = [];
         try {
-            const octokit = github.getOctokit(token);
+            const octokit = this.githubClient.getClient(token);
             logDebugInfo(`Creating merge from ${head} into ${base}`);
 
             // Build PR body with commit list
@@ -87,9 +90,7 @@ This PR merges **${head}** into **${base}**.
                     // multiple PRs (e.g. release→master and release→develop), listForRef returns runs
                     // for all PRs; we must wait for runs tied to the current PR or we may see completed
                     // runs from the other PR and merge before this PR's checks have run.
-                    const runsForThisPr = (checkRuns.check_runs as Array<{ status: string; conclusion: string | null; name: string; pull_requests?: Array<{ number: number }> }>).filter(
-                        run => run.pull_requests?.some(pr => pr.number === pullRequest.number),
-                    );
+                    const runsForThisPr = selectPullRequestChecks(checkRuns.check_runs, pullRequest.number);
 
                     // Get commit status checks for the PR head commit
                     const { data: commitStatus } = await octokit.rest.repos.getCombinedStatusForRef({
@@ -103,25 +104,21 @@ This PR merges **${head}** into **${base}**.
 
                     // If there are check runs for this PR, wait for them to complete
                     if (runsForThisPr.length > 0) {
-                        const pendingCheckRuns = runsForThisPr.filter(
-                            check => check.status !== 'completed',
-                        );
+                        const pendingChecksForPullRequest = pendingCheckRuns(runsForThisPr);
 
-                        if (pendingCheckRuns.length === 0) {
+                        if (pendingChecksForPullRequest.length === 0) {
                             checksCompleted = true;
                             logDebugInfo('All check runs have completed.');
 
                             // Verify if all checks passed
-                            const failedChecks = runsForThisPr.filter(
-                                check => check.conclusion === 'failure',
-                            );
+                            const failedChecks = failedCheckRuns(runsForThisPr);
 
                             if (failedChecks.length > 0) {
                                 throw new Error(`Checks failed: ${failedChecks.map(check => check.name).join(', ')}`);
                             }
                         } else {
-                            logDebugInfo(`Waiting for ${pendingCheckRuns.length} check runs to complete:`);
-                            pendingCheckRuns.forEach(check => {
+                            logDebugInfo(`Waiting for ${pendingChecksForPullRequest.length} check runs to complete:`);
+                            pendingChecksForPullRequest.forEach(check => {
                                 logDebugInfo(`  - ${check.name} (Status: ${check.status})`);
                             });
                             await new Promise(resolve => setTimeout(resolve, iteration * 1000));
@@ -135,10 +132,10 @@ This PR merges **${head}** into **${base}**.
                         if (waitForPrChecksAttempts >= maxWaitForPrChecksAttempts) {
                             // Give up waiting for PR-specific check runs; fall back to status checks
                             // before proceeding to merge (PR may have required status checks).
-                            const pendingChecksFallback = commitStatus.statuses.filter(status => {
+                            commitStatus.statuses.forEach(status => {
                                 logDebugInfo(`Status check (fallback): ${status.context} (State: ${status.state})`);
-                                return status.state === 'pending';
                             });
+                            const pendingChecksFallback = pendingStatuses(commitStatus.statuses);
 
                             if (pendingChecksFallback.length === 0) {
                                 checksCompleted = true;
@@ -163,10 +160,10 @@ This PR merges **${head}** into **${base}**.
                         continue;
                     } else {
                         // Fall back to status checks if no check runs exist
-                        const pendingChecks = commitStatus.statuses.filter(status => {
+                        commitStatus.statuses.forEach(status => {
                             logDebugInfo(`Status check: ${status.context} (State: ${status.state})`);
-                            return status.state === 'pending';
                         });
+                        const pendingChecks = pendingStatuses(commitStatus.statuses);
 
                         if (pendingChecks.length === 0) {
                             checksCompleted = true;
@@ -211,7 +208,7 @@ This PR merges **${head}** into **${base}**.
 
             // If the PR workflow fails, we try to merge directly - need PAT for direct merge to ensure it can trigger workflows
             try {
-                const octokit = github.getOctokit(token);
+                const octokit = this.githubClient.getClient(token);
                 await octokit.rest.repos.merge({
                     owner: owner,
                     repo: repository,

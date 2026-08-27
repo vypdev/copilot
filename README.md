@@ -19,17 +19,12 @@ Full documentation: **[docs.page/vypdev/copilot](https://docs.page/vypdev/copilo
 | Section | Description |
 |--------|-------------|
 | [How to use](https://docs.page/vypdev/copilot/how-to-use) | Step-by-step setup: PAT, `copilot setup`, workflows |
-| [Features & capabilities](https://docs.page/vypdev/copilot/features) | Workflow triggers, single actions, AI (OpenCode), concurrency |
+| [Features & capabilities](https://docs.page/vypdev/copilot/features) | Workflow triggers, single actions, agent execution, and concurrency |
 | [Authentication](https://docs.page/vypdev/copilot/authentication) | PAT setup, permissions, token best practices |
 | [Configuration](https://docs.page/vypdev/copilot/configuration) | All inputs: branches, labels, projects, images, etc. |
-| [OpenCode (AI)](https://docs.page/vypdev/copilot/opencode-integration) | Progress, Bugbot, think, AI PR description |
-| [Testing OpenCode locally](https://docs.page/vypdev/copilot/testing-opencode-plan-locally) | Run check-progress, detect-potential-problems, recommend-steps via CLI |
-| [Single actions](https://docs.page/vypdev/copilot/single-actions) | On-demand: check progress, think, create release/tag, deployed |
-| [Deploy label and merge flow](docs/single-actions/deploy-label-and-merge.mdx) | Deploy/deployed labels, post-deploy merges, waiting for checks per PR |
-| [Issues](https://docs.page/vypdev/copilot/issues) | Issue configuration and types (feature, bugfix, hotfix, release, docs, chore) |
-| [Pull requests](https://docs.page/vypdev/copilot/pull-requests) | PR configuration and AI description |
-| [Troubleshooting](https://docs.page/vypdev/copilot/troubleshooting) | Common issues and solutions |
-| [Support](https://docs.page/vypdev/copilot/support) | How to get help |
+| [Agents](https://docs.page/vypdev/copilot/agents) | Runtime, model, CLI, policy, and failure behavior |
+| [Security & Operations](https://docs.page/vypdev/copilot/security-operations) | Credentials, trust boundaries, provisioning, verification, upgrades, and rollback |
+| [Development](https://docs.page/vypdev/copilot/development) | Architecture, testing, documentation, artifacts, and release process |
 
 ---
 
@@ -53,7 +48,7 @@ Full documentation: **[docs.page/vypdev/copilot](https://docs.page/vypdev/copilo
 - **Single actions** — On-demand: check progress, think, create release/tag, mark deployed, etc.
 - **Concurrency** — Waits for previous runs of the same workflow so runs can be sequential. See [Features → Workflow concurrency](https://docs.page/vypdev/copilot/features#workflow-concurrency-and-sequential-execution).
 
-AI features (progress, Bugbot, think, AI PR description) use **OpenCode**; see [OpenCode (AI)](https://docs.page/vypdev/copilot/opencode-integration). You can also run progress and Bugbot locally via the **CLI** — [Testing OpenCode locally](https://docs.page/vypdev/copilot/testing-opencode-plan-locally) and [Single actions → Workflow & CLI](https://docs.page/vypdev/copilot/single-actions/workflow-and-cli).
+AI features use the configured agent runtime and qualified model; see the [Agents](https://docs.page/vypdev/copilot/agents) and [Security & Operations](https://docs.page/vypdev/copilot/security-operations) documentation. You can run progress and Bugbot locally through the [Single actions → Workflow & CLI](https://docs.page/vypdev/copilot/single-actions/workflow-and-cli) path.
 
 ---
 

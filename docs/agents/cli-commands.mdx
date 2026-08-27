@@ -1,0 +1,13 @@
+---
+title: CLI commands
+description: Provider-specific commands and process safety rules.
+---
+# CLI commands
+
+| Runtime | Command shape |
+| --- | --- |
+| OpenCode | `opencode run --model <provider>/<model>` |
+| Codex | `codex exec --ephemeral --skip-git-repo-check -` |
+| Cursor | `agent -p --output-format text -` |
+
+Commands are parsed as argv and executed with `shell: false`. Shell operators, empty commands, embedded credentials, and OpenCode commands without `--model` are rejected. A custom `agent-command` MUST be reviewed as executable code.

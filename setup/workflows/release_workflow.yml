@@ -27,7 +27,7 @@ concurrency:
 jobs:
   prepare-version-files:
     name: Prepare files for release
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, X64, Linux, coolify]
     steps:
       - uses: actions/checkout@v4
 
@@ -72,7 +72,7 @@ jobs:
 
   tag:
     name: Publish version
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, X64, Linux, coolify]
     needs: [ prepare-version-files ]
     steps:
       - name: Checkout Repository
@@ -111,5 +111,7 @@ jobs:
           debug: ${{ vars.DEBUG }}
           single-action: 'deployed_action'
           single-action-issue: '${{ github.event.inputs.issue }}'
-          opencode-model: ${{ vars.OPENCODE_MODEL }}
+          agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+          agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
           token: ${{ secrets.PAT }}

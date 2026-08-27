@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { copySetupDirectory, copySetupFile } from './setup_file_copy';
 import { logInfo } from './logger';
 
 /**
@@ -37,58 +38,29 @@ export function copySetupFiles(cwd: string, setupDirOverride?: string): { copied
   const setupDir = setupDirOverride ?? path.join(__dirname, '..', '..', 'setup');
   if (!fs.existsSync(setupDir)) return { copied: 0, skipped: 0 };
 
-  let copied = 0;
-  let skipped = 0;
-  const workflowsSrc = path.join(setupDir, 'workflows');
-  const workflowsDst = path.join(cwd, '.github', 'workflows');
-  if (fs.existsSync(workflowsSrc)) {
-    const files = fs.readdirSync(workflowsSrc).filter((f) => f.endsWith('.yml') || f.endsWith('.yaml'));
-    for (const f of files) {
-      const src = path.join(workflowsSrc, f);
-      const dst = path.join(workflowsDst, f);
-      if (fs.statSync(src).isFile()) {
-        if (fs.existsSync(dst)) {
-          logInfo(`  ⏭️  .github/workflows/${f} already exists; skipping.`);
-          skipped += 1;
-        } else {
-          fs.copyFileSync(src, dst);
-          logInfo(`  ✅ Copied setup/workflows/${f} → .github/workflows/${f}`);
-          copied += 1;
-        }
-      }
-    }
-  }
-  const issueTemplateSrc = path.join(setupDir, 'ISSUE_TEMPLATE');
-  const issueTemplateDst = path.join(cwd, '.github', 'ISSUE_TEMPLATE');
-  if (fs.existsSync(issueTemplateSrc)) {
-    const files = fs.readdirSync(issueTemplateSrc).filter((f) => fs.statSync(path.join(issueTemplateSrc, f)).isFile());
-    for (const f of files) {
-      const src = path.join(issueTemplateSrc, f);
-      const dst = path.join(issueTemplateDst, f);
-      if (fs.existsSync(dst)) {
-        logInfo(`  ⏭️  .github/ISSUE_TEMPLATE/${f} already exists; skipping.`);
-        skipped += 1;
-      } else {
-        fs.copyFileSync(src, dst);
-        logInfo(`  ✅ Copied setup/ISSUE_TEMPLATE/${f} → .github/ISSUE_TEMPLATE/${f}`);
-        copied += 1;
-      }
-    }
-  }
-  const prTemplateSrc = path.join(setupDir, 'pull_request_template.md');
-  const prTemplateDst = path.join(cwd, '.github', 'pull_request_template.md');
-  if (fs.existsSync(prTemplateSrc)) {
-    if (fs.existsSync(prTemplateDst)) {
-      logInfo('  ⏭️  .github/pull_request_template.md already exists; skipping.');
-      skipped += 1;
-    } else {
-      fs.copyFileSync(prTemplateSrc, prTemplateDst);
-      logInfo('  ✅ Copied setup/pull_request_template.md → .github/pull_request_template.md');
-      copied += 1;
-    }
-  }
+  const workflows = copySetupDirectory(
+    path.join(setupDir, 'workflows'),
+    path.join(cwd, '.github', 'workflows'),
+    (fileName) => fileName.endsWith('.yml') || fileName.endsWith('.yaml'),
+    'setup/workflows',
+  );
+  const issueTemplates = copySetupDirectory(
+    path.join(setupDir, 'ISSUE_TEMPLATE'),
+    path.join(cwd, '.github', 'ISSUE_TEMPLATE'),
+    () => true,
+    'setup/ISSUE_TEMPLATE',
+  );
+  const pullRequestTemplate = copySetupFile(
+    path.join(setupDir, 'pull_request_template.md'),
+    path.join(cwd, '.github', 'pull_request_template.md'),
+    'setup/pull_request_template.md',
+    '.github/pull_request_template.md',
+  );
   ensureEnvWithToken(cwd);
-  return { copied, skipped };
+  return [workflows, issueTemplates, pullRequestTemplate].reduce((total, current) => ({
+    copied: total.copied + current.copied,
+    skipped: total.skipped + current.skipped,
+  }), { copied: 0, skipped: 0 });
 }
 
 const ENV_TOKEN_KEY = 'PERSONAL_ACCESS_TOKEN';

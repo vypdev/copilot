@@ -11,7 +11,7 @@ This page provides **concrete examples**: workflows that enable Bugbot detection
 
 ## Push workflow (with Bugbot)
 
-The **Commit** workflow runs on **push** to branches (typically excluding `main` and `develop`). If OpenCode is configured, Bugbot detection runs automatically for branches linked to an issue.
+The **Commit** workflow runs on **push** to branches (typically excluding `main` and `develop`). If an agent CLI is configured, Bugbot detection runs automatically for branches linked to an issue.
 
 ```yaml
 name: Copilot - Commit
@@ -26,7 +26,7 @@ on:
 jobs:
   copilot-commits:
     name: Copilot - Commit
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, X64, Linux, coolify]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -35,8 +35,9 @@ jobs:
         with:
           token: ${{ secrets.PAT }}
           project-ids: ${{ vars.PROJECT_IDS }}
-          opencode-model: ${{ vars.OPENCODE_MODEL }}
-          opencode-server-url: ${{ vars.OPENCODE_SERVER_URL }}
+          agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+          agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
           # Optional: Bugbot-specific
           bugbot-severity: "low"
           bugbot-comment-limit: "20"
@@ -61,7 +62,7 @@ on:
 jobs:
   copilot-issues:
     name: Copilot - Issue Comment
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, X64, Linux, coolify]
     permissions:
       contents: write
     steps:
@@ -71,7 +72,9 @@ jobs:
       - uses: vypdev/copilot@v2
         with:
           token: ${{ secrets.PAT }}
-          opencode-model: ${{ vars.OPENCODE_MODEL }}
+          agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+          agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
           ai-ignore-files: build/*
           bugbot-fix-verify-commands: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS }}
 ```
@@ -94,7 +97,7 @@ on:
 jobs:
   copilot-pull-requests:
     name: Copilot - Pull Request Comment
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, X64, Linux, coolify]
     permissions:
       contents: write
     steps:
@@ -104,7 +107,9 @@ jobs:
       - uses: vypdev/copilot@v2
         with:
           token: ${{ secrets.PAT }}
-          opencode-model: ${{ vars.OPENCODE_MODEL }}
+          agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+          agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
           ai-ignore-files: build/*
           bugbot-fix-verify-commands: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS }}
 ```
@@ -134,7 +139,7 @@ on:
 
 jobs:
   detect:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, X64, Linux, coolify]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -145,8 +150,9 @@ jobs:
           token: ${{ secrets.PAT }}
           single-action: detect_potential_problems_action
           single-action-issue: ${{ github.event.inputs.issue_number }}
-          opencode-model: ${{ vars.OPENCODE_MODEL }}
-          opencode-server-url: ${{ vars.OPENCODE_SERVER_URL }}
+          agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+          agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
 ```
 
 After the run, findings appear on the issue and on any open PR for that branch.
@@ -155,7 +161,7 @@ After the run, findings appear on the issue and on any open PR for that branch.
 
 ## CLI: detect potential problems
 
-From the **repository root** (with a `.env` that has `PERSONAL_ACCESS_TOKEN` and, if needed, OpenCode env vars), you can run Bugbot detection locally:
+From the **repository root** (with a `.env` that has `PERSONAL_ACCESS_TOKEN` and, if needed, agent CLI environment variables), you can run Bugbot detection locally:
 
 ```bash
 # Require issue number; optional branch (default: current branch)
@@ -168,7 +174,7 @@ copilot detect-potential-problems -i 123 -b feature/issue-123
 copilot detect-potential-problems -i 123 -t $PAT -d
 ```
 
-See [Testing OpenCode Plan Locally](/testing-opencode-plan-locally) for full setup (OpenCode server, API keys, etc.).
+See [Smoke tests](/security-operations/operations/smoke-tests) for full setup (OpenCode CLI, API keys, etc.).
 
 ---
 
@@ -223,7 +229,7 @@ Each **finding** is posted as a comment with a **title**, **severity**, optional
 
 **Title:** Possible null reference in login handler  
 **Severity:** medium  
-**File:** `src/auth/login.ts` (line 42)  
+**Example target file (from the analyzed repository):** `src/auth/login.ts` (line 42)
 **Description:** The variable `user` may be null when passed to `validateSession`. Consider adding a null check before use.
 
 The action uses the marker to later mark this finding as resolved when OpenCode reports it fixed (e.g. after you or the bot change the code).

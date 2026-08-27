@@ -2,6 +2,7 @@
  * Unit tests for BranchCompareRepository: getChanges, getSizeCategoryAndReason.
  */
 
+import { OctokitBranchComparisonClientAdapter } from '../../../infrastructure/github/octokit_branch_adapters';
 import { BranchCompareRepository } from '../branch_compare_repository';
 import { Labels } from '../../model/labels';
 import { SizeThresholds } from '../../model/size_thresholds';
@@ -44,7 +45,7 @@ function makeLabels(): Labels {
 }
 
 describe('BranchCompareRepository', () => {
-    const repo = new BranchCompareRepository();
+    const repo = new BranchCompareRepository(new OctokitBranchComparisonClientAdapter());
 
     beforeEach(() => {
         mockCompareCommits.mockReset();

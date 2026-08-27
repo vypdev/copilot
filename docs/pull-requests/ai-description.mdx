@@ -5,12 +5,11 @@ description: How OpenCode fills your pull request template from the issue and br
 
 # AI-Generated PR Description
 
-When `ai-pull-request-description` is `true` and [OpenCode](/opencode-integration) is configured (`opencode-server-url`, `opencode-model`), the action can **generate or update the pull request description** automatically using the OpenCode Plan agent.
 
 ## How it works
 
 1. The action determines the PR's **base** and **head** branch (target and source branch).
-2. The OpenCode Plan agent runs in the repository workspace. It:
+2. The configured agent CLI runs in the repository workspace. It:
    - Reads the repository's **pull request template** (see below).
    - Computes the **diff** between base and head (e.g. `git diff base..head`) to understand what changed.
    - Uses the **issue description** (from the issue linked to the PR branch) as context.
@@ -50,8 +49,9 @@ Set `ai-pull-request-description: true` and configure OpenCode in your workflow:
     token: ${{ secrets.PAT }}
     project-ids: '2,3'
     ai-pull-request-description: true
-    opencode-server-url: ${{ secrets.OPENCODE_SERVER_URL }}
-    opencode-model: 'anthropic/claude-3-5-sonnet'
+    agent-provider: opencode
+    agent-model-provider: openai
+    agent-model: gpt-5.6-luna
 ```
 
-See [OpenCode (AI)](/opencode-integration) for provider setup and [Configuration](/configuration) for all AI-related inputs.
+See [Agents](/agents) for runtime and model setup and [Configuration](/configuration) for all AI-related inputs.

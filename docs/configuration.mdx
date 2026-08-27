@@ -13,26 +13,31 @@ Copilot provides extensive configuration options to customize your workflow. Use
 
     - `token`: GitHub token for repository operations (required)
 
-    ## AI (OpenCode)
+    ## Agent CLI selection
 
-    - `opencode-server-url`: OpenCode server URL for AI operations (default: "http://localhost:4096"). See [OpenCode (AI)](/opencode-integration).
-    - `opencode-model`: Model in provider/model format, e.g. `opencode/kimi-k2.5-free` or `anthropic/claude-3-5-sonnet` (default: "opencode/kimi-k2.5-free")
-    - `opencode-start-server`: If true, the action starts an OpenCode server at job start and stops it at job end; no separate install needed (default: "true")
+    - `agent-provider`: CLI runtime (`opencode`, `codex`, or `cursor`; default: `opencode`)
+    - `agent-model-provider`: provider serving the selected model (default: `openai`)
+    - `agent-model`: model name without the provider prefix (for example `gpt-5.6-luna`)
+    - `agent-command`: optional provider-specific CLI command; OpenCode commands must include `--model provider/model`
+    - `AGENT_ALLOWED_MODEL_PROVIDERS`: optional comma-separated model-provider allowlist
+    - `AGENT_ALLOWED_MODELS`: optional exact qualified-model allowlist
+
+    See [Agent CLI configuration](/agents/cli-configuration) and [Agent CLI provisioning](/security-operations/operations/cli-provisioning).
 
     ## AI Features
 
-    - `ai-pull-request-description`: Enable AI-powered automatic updates for pull request descriptions (default: "true"). When enabled, the OpenCode Plan agent fills your repository's pull request template (`.github/pull_request_template.md`) using the issue description and the branch diff. See [Pull Requests → AI-generated PR description](/pull-requests/ai-description).
-    - `issues-locale`: Target locale for issue comments (default: "en-US"). When comments are in another language, OpenCode translates them to this locale. See [OpenCode → Comment translation](/opencode-integration#how-comment-translation-works).
+    - `ai-pull-request-description`: Enable AI-powered automatic updates for pull request descriptions (default: "true"). When enabled, the configured agent CLI fills your repository's pull request template (`.github/pull_request_template.md`) using the issue description and the branch diff. See [Pull Requests → AI-generated PR description](/pull-requests/ai-description).
+    - `issues-locale`: Target locale for issue comments (default: "en-US"). When comments are in another language, OpenCode translates them to this locale. See [OpenCode → Comment translation](/agents/opencode#how-comment-translation-works).
     - `pull-requests-locale`: Target locale for PR review comments (default: "en-US"). Same translation behavior as `issues-locale` but for PR comments.
     - `ai-ignore-files`: Comma-separated list of paths to ignore for AI operations (e.g. progress detection, Bugbot; not used for PR description, where the agent computes the diff in the workspace).
     - `bugbot-severity`: Minimum severity for Bugbot findings to report: `info`, `low`, `medium`, or `high` (default: `low`). Findings below this threshold are not posted on the issue or PR.
     - `bugbot-comment-limit`: Maximum number of findings to publish as individual comments on the issue and PR (default: `20`). Extra findings are summarized in a single overflow comment. Clamped between 1 and 200.
-    - `bugbot-fix-verify-commands`: Comma-separated commands to run after Bugbot autofix (e.g. `npm run build, npm test, npm run lint`). When a user asks to fix findings from an issue or PR comment, OpenCode applies fixes and these commands run before the action commits and pushes; if any fails, no commit is made. Default: empty (only OpenCode's run is used). See [Features → Bugbot autofix](/features#ai-features-opencode).
+    - `bugbot-fix-verify-commands`: Comma-separated commands to run after Bugbot autofix (e.g. `pnpm run build, pnpm test, pnpm run lint`). When a user asks to fix findings from an issue or PR comment, the configured agent applies fixes and these commands run before the action commits and pushes; if any fails, no commit is made. Default: empty (only OpenCode's run is used). See [Features → Bugbot autofix](/features#ai-features-opencode).
     - `ai-members-only`: Restrict AI features to only organization/project members (default: "false"); when true, AI PR description is skipped if the PR author is not a member.
     - `ai-include-reasoning`: Include reasoning or chain-of-thought in AI responses when supported by the model (default: "true").
   </Tab>
 
-  <Tab title="Branches & Labels" icon="git-branch">
+  <Tab title="Branches & Labels" icon="code-branch">
     ## Branch Management
 
     - `branch-management-launcher-label`: Label to trigger branch management (default: "branched")
@@ -77,7 +82,7 @@ Copilot provides extensive configuration options to customize your workflow. Use
     Default thresholds: XXL 1000/20/10, XL 500/10/5, L 250/5/3, M 100/3/2, S 50/2/1, XS 25/1/1 (lines/files/commits).
   </Tab>
 
-  <Tab title="Project & Behavior" icon="layout-grid">
+  <Tab title="Project & Behavior" icon="table-cells-large">
     ## Project Integration
 
     - `project-ids`: Comma-separated list of GitHub Project IDs to link issues and PRs

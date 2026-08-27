@@ -108,6 +108,7 @@ export class SingleAction {
         this.version = version;
         this.title = title;
         this.changelog = changelog;
+        this.currentSingleAction = currentSingleAction;
         if (!this.isSingleActionWithoutIssue) {
             try {
                 this.issue = parseInt(issue)
@@ -118,6 +119,5 @@ export class SingleAction {
         } else {
             this.issue = 0;
         }
-        this.currentSingleAction = currentSingleAction;
     }
 }

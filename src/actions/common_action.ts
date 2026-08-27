@@ -1,25 +1,29 @@
 import * as core from '@actions/core';
 import { Execution } from '../data/model/execution';
 import { Result } from '../data/model/result';
-import { CommitUseCase } from '../usecase/commit_use_case';
-import { IssueCommentUseCase } from '../usecase/issue_comment_use_case';
-import { IssueUseCase } from '../usecase/issue_use_case';
-import { PullRequestReviewCommentUseCase } from '../usecase/pull_request_review_comment_use_case';
-import { PullRequestUseCase } from '../usecase/pull_request_use_case';
-import { SingleActionUseCase } from '../usecase/single_action_use_case';
+import { ProjectBoardCommandPort } from '../application/ports/project_board_command_ports';
+import type { LatestTagQueryPort } from '../application/ports/branch_tag_ports';
 import { clearAccumulatedLogs, logDebugInfo, logError, logInfo } from '../utils/logger';
 import { TITLE } from '../utils/constants';
 import chalk from 'chalk';
 import boxen from 'boxen';
-import { waitForPreviousRuns } from '../utils/queue_utils';
+import { resolveMainRunRoute } from './main_run_route';
+import { dispatchMainRunRoute } from './main_run_dispatcher';
+import { createSetupExecutionUseCase } from '../infrastructure/composition/execution_setup_composition_root';
+import { createWaitForPreviousWorkflowRunsUseCase } from '../infrastructure/composition/workflow_queue_composition_root';
+import { createMainRunRouteCompositionRoot } from '../infrastructure/composition/main_run_route_composition_root';
 
-export async function mainRun(execution: Execution): Promise<Result[]> {
+export async function mainRun(
+    execution: Execution,
+    projectBoardCommandPort: ProjectBoardCommandPort,
+    latestTagQueryPort: LatestTagQueryPort,
+): Promise<Result[]> {
     const results: Result[] = [];
 
     logInfo('GitHub Action: starting main run.');
     logDebugInfo(`Event: ${execution.eventName}, actor: ${execution.actor}, repo: ${execution.owner}/${execution.repo}, debug: ${execution.debug}`);
 
-    await execution.setup();
+    await createSetupExecutionUseCase(latestTagQueryPort).invoke(execution);
     clearAccumulatedLogs();
 
     logDebugInfo(`Setup done. Issue number: ${execution.issueNumber}, isSingleAction: ${execution.isSingleAction}, isIssue: ${execution.isIssue}, isPullRequest: ${execution.isPullRequest}, isPush: ${execution.isPush}`);
@@ -28,16 +32,23 @@ export async function mainRun(execution: Execution): Promise<Result[]> {
         /**
          * Wait for previous runs to finish
          */
-        await waitForPreviousRuns(execution).catch((err) => {
+        await createWaitForPreviousWorkflowRunsUseCase(execution.tokens.token).invoke({
+            owner: execution.owner,
+            repository: execution.repo,
+            currentRunId: Number.parseInt(process.env.GITHUB_RUN_ID ?? '', 10),
+            workflowName: process.env.GITHUB_WORKFLOW ?? '',
+        }).catch((err) => {
             logError(`Error waiting for previous runs: ${err}`);
             process.exit(1);
         });
     }
+
+    const routeHandlers = createMainRunRouteCompositionRoot(projectBoardCommandPort);
     
     if (execution.runnedByToken) {
         if (execution.isSingleAction && execution.singleAction.validSingleAction) {
             logInfo(`User from token (${execution.tokenUser}) matches actor. Executing single action: ${execution.singleAction.currentSingleAction}.`);
-            results.push(...await new SingleActionUseCase().invoke(execution));
+            results.push(...await dispatchMainRunRoute('single-action', execution, routeHandlers));
             logInfo(`Single action finished. Results: ${results.length}.`);
             return results;
         }
@@ -48,7 +59,7 @@ export async function mainRun(execution: Execution): Promise<Result[]> {
     if (execution.issueNumber === -1) {
         if (execution.isSingleAction && execution.singleAction.isSingleActionWithoutIssue) {
             logInfo('No issue number; running single action without issue.');
-            results.push(...await new SingleActionUseCase().invoke(execution));
+            results.push(...await dispatchMainRunRoute('single-action', execution, routeHandlers));
         } else {
             logInfo('Issue number not found. Skipping.');
         }
@@ -73,32 +84,19 @@ export async function mainRun(execution: Execution): Promise<Result[]> {
     }
 
     try {
-        if (execution.isSingleAction) {
-            logInfo(`Running SingleActionUseCase (action: ${execution.singleAction.currentSingleAction}).`);
-            results.push(...await new SingleActionUseCase().invoke(execution));
-        } else if (execution.isIssue) {
-            if (execution.issue.isIssueComment) {
-                logInfo(`Running IssueCommentUseCase for issue #${execution.issue.number}.`);
-                results.push(...await new IssueCommentUseCase().invoke(execution));
-            } else {
-                logInfo(`Running IssueUseCase for issue #${execution.issueNumber}.`);
-                results.push(...await new IssueUseCase().invoke(execution));
-            }
-        } else if (execution.isPullRequest) {
-            if (execution.pullRequest.isPullRequestReviewComment) {
-                logInfo(`Running PullRequestReviewCommentUseCase for PR #${execution.pullRequest.number}.`);
-                results.push(...await new PullRequestReviewCommentUseCase().invoke(execution));
-            } else {
-                logInfo(`Running PullRequestUseCase for PR #${execution.pullRequest.number}.`);
-                results.push(...await new PullRequestUseCase().invoke(execution));
-            }
-        } else if (execution.isPush) {
-            logDebugInfo(`Push event. Branch: ${execution.commit?.branch ?? 'unknown'}, commits: ${execution.commit?.commits?.length ?? 0}, issue number: ${execution.issueNumber}.`);
-            logInfo('Running CommitUseCase.');
-            results.push(...await new CommitUseCase().invoke(execution));
-        } else {
+        const route = resolveMainRunRoute({
+            isSingleAction: execution.isSingleAction,
+            isIssue: execution.isIssue,
+            isIssueComment: execution.issue.isIssueComment,
+            isPullRequest: execution.isPullRequest,
+            isPullRequestReviewComment: execution.pullRequest.isPullRequestReviewComment,
+            isPush: execution.isPush,
+        });
+        if (route === 'unhandled') {
             logError(`Action not handled. Event: ${execution.eventName}.`);
-            core.setFailed(`Action not handled.`);
+            core.setFailed('Action not handled.');
+        } else {
+            results.push(...await dispatchMainRunRoute(route, execution, routeHandlers));
         }
 
         const totalSteps = results.reduce((acc, r) => acc + (r.steps?.length ?? 0), 0);

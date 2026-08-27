@@ -1,0 +1,68 @@
+---
+title: Agent input reference
+description: Strict reference for the public agent inputs and their effective defaults.
+---
+
+# Agent input reference
+
+The `agent-*` inputs are the only public configuration contract for agent execution. The removed OpenCode model and server inputs are not supported.
+
+## Selection inputs
+
+| Input | Required | Effective default | Meaning | Secret |
+| --- | --- | --- | --- | --- |
+| `agent-provider` | No | `opencode` | CLI runtime: `opencode`, `codex`, or `cursor` | No |
+| `agent-model-provider` | No | `openai` | Provider serving the selected model | No |
+| `agent-model` | No | `gpt-5.6-luna` | Model name without the provider prefix | No |
+| `agent-command` | No | Provider-specific command | Optional literal CLI override | No |
+
+The qualified model is always constructed as:
+
+```text
+<agent-model-provider>/<agent-model>
+```
+
+For the effective defaults:
+
+```text
+openai/gpt-5.6-luna
+```
+
+## Authorization variables
+
+| Variable | Example | Meaning |
+| --- | --- | --- |
+| `AGENT_ALLOWED_MODEL_PROVIDERS` | `openai` | Comma-separated provider allowlist |
+| `AGENT_ALLOWED_MODELS` | `openai/gpt-5.6-luna` | Exact qualified-model allowlist |
+
+Allowlists authorize a selection. They do not select the runtime, model, or credential.
+
+## Authentication variables
+
+| Runtime/provider | Credential reference |
+| --- | --- |
+| OpenCode using OpenAI | `OPENAI_API_KEY` or a controlled local provider login |
+| Codex | `CODEX_ACCESS_TOKEN`, `OPENAI_API_KEY`, or a controlled local Codex session |
+| Cursor | `CURSOR_API_KEY` |
+
+Values MUST be supplied through the runner's secret/environment mechanism. They MUST NOT be placed in `with`, command arguments, prompts, repository files, or logs.
+
+## Provider commands
+
+| Runtime | Default command |
+| --- | --- |
+| OpenCode | `opencode run --model <provider>/<model>` |
+| Codex | `codex exec --ephemeral --skip-git-repo-check -` |
+| Cursor | `agent -p --output-format text -` |
+
+Commands are executed without a shell. An OpenCode command MUST contain an explicit `--model` value. No runtime, provider, model, credential, or command fallback is attempted.
+
+## Configuration ownership
+
+- Action inputs are declared in `action.yml`.
+- Workflow defaults are declared in `setup/workflows/*.yml`.
+- Runtime input resolution is implemented in `src/actions/agent_input_builder.ts`.
+- Model authorization is implemented in `src/actions/agent_configuration_builder.ts`.
+- Provider commands are implemented in provider-specific CLI adapters.
+
+A change to one source MUST be reflected in the others and covered by validation.

@@ -1,0 +1,9 @@
+---
+title: Local development
+description: Reproducible local workflow for changing Copilot.
+---
+# Local development
+
+Use Node and Corepack with the repository's pnpm version. Install dependencies with pnpm only. Keep provider credentials outside the repository and never commit local `.env` files.
+
+Before editing, inspect `git status`. After editing, run focused tests, the full gates, the documentation validator, and `git diff --check`. Real provider calls require separate authorization and MUST use read-only prompts unless the task explicitly authorizes mutation.

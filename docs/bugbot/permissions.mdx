@@ -1,0 +1,14 @@
+---
+title: Bugbot permissions
+description: Minimum permissions and authorization rules for detection, autofix, and user requests.
+---
+# Bugbot permissions
+
+| Capability | Minimum permission | Trusted actor requirement |
+| --- | --- | --- |
+| Detection and issue comments | `issues: write` | Workflow policy |
+| PR review comments | `pull-requests: write` | Workflow policy |
+| Autofix commit/push | `contents: write` | Organization member or repository owner |
+| User-request changes | `contents: write` | Organization member or repository owner |
+
+Detection SHOULD run read-only where possible. Write permissions MUST be granted only to the event-specific job that needs them. See [Trust boundaries](/security-operations/security/trust-boundaries).

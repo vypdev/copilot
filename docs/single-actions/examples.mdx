@@ -14,7 +14,7 @@ Run progress check for issue `123` (checkout the branch first if you need a spec
 ```yaml
 jobs:
   run-check-progress:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, X64, Linux, coolify]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -24,7 +24,9 @@ jobs:
           token: ${{ secrets.PAT }}
           single-action: check_progress_action
           single-action-issue: "123"
-          opencode-model: ${{ vars.OPENCODE_MODEL }}
+          agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+          agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
 ```
 
 ## Workflow: Bugbot (detect potential problems)
@@ -34,7 +36,7 @@ Run Bugbot detection for issue `456` on the current checkout:
 ```yaml
 jobs:
   run-bugbot:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, X64, Linux, coolify]
     steps:
       - uses: actions/checkout@v4
       - uses: vypdev/copilot@v2
@@ -42,8 +44,9 @@ jobs:
           token: ${{ secrets.PAT }}
           single-action: detect_potential_problems_action
           single-action-issue: "456"
-          opencode-model: ${{ vars.OPENCODE_MODEL }}
-          opencode-server-url: ${{ vars.OPENCODE_SERVER_URL }}
+          agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+          agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
 ```
 
 See [Bugbot](/bugbot) for full documentation.
@@ -58,7 +61,9 @@ Get implementation steps for issue `789` and post them as a comment:
     token: ${{ secrets.PAT }}
     single-action: recommend_steps_action
     single-action-issue: "789"
-    opencode-model: ${{ vars.OPENCODE_MODEL }}
+    agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+    agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
+    agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
 ```
 
 ## Workflow: think (no issue)
@@ -76,7 +81,7 @@ on:
 
 jobs:
   think:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, X64, Linux, coolify]
     steps:
       - uses: actions/checkout@v4
       - uses: vypdev/copilot@v2
@@ -188,7 +193,6 @@ copilot think -q "Where is authentication validated?" -t $PAT
 copilot copilot -p "Explain the main function" -t $PAT
 ```
 
-Common options: **`-t`** / **`--token`** (PAT), **`-d`** / **`--debug`**, **`--opencode-server-url`**, **`--opencode-model`**. See [Workflow & CLI](/single-actions/workflow-and-cli) and [Testing OpenCode Plan Locally](/testing-opencode-plan-locally).
 
 ## Next steps
 

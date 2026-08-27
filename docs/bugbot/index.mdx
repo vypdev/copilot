@@ -1,39 +1,38 @@
 ---
 title: Bugbot
-description: AI-powered detection of potential problems and autofix from comments. Learn how to use and configure Bugbot.
+description: Detect potential problems, publish findings, and optionally apply trusted fixes.
 ---
 
 # Bugbot
 
-**Bugbot** uses OpenCode to analyze your branch against the base and report **potential problems** (bugs, risks, code quality issues) as comments on the **issue** and as **review comments** on open **pull requests**. You can then ask the bot to **fix** specific findings or to apply **general code changes**; it will apply edits, run your verify commands, and commit and push for you.
+Bugbot analyzes changes with the configured agent CLI and publishes structured findings to issues and pull requests. It can optionally apply fixes or user-requested changes when the workflow is restricted to trusted actors and the verification commands pass.
 
-<CardGroup cols={2}>
-  <Card title="Detection" icon="search" href="/bugbot/detection">
-    When and how Bugbot runs, where findings appear, severity, and overflow.
-  </Card>
-  <Card title="Autofix" icon="wrench" href="/bugbot/autofix">
-    Ask the bot to fix one or more findings from an issue or PR comment.
-  </Card>
-  <Card title="Do user request" icon="edit" href="/bugbot/do-user-request">
-    Ask for general code changes (tests, refactors, features) from a comment.
-  </Card>
-  <Card title="Configuration" icon="gear" href="/bugbot/configuration">
-    All Bugbot-related inputs: severity, comment limit, verify commands, ignore files.
-  </Card>
-  <Card title="How it works" icon="cpu" href="/bugbot/how-it-works">
-    Internal flow: detection, intent, Plan vs Build agents, commit and push.
-  </Card>
-  <Card title="Examples" icon="file-code" href="/bugbot/examples">
-    Workflow snippets, comment examples, and CLI usage.
-  </Card>
-</CardGroup>
+<Warning>
+The repository's currently validated Bugbot path uses OpenCode. Codex is an implemented CLI runtime with a narrower validation boundary, and Cursor remains WIP. See [runtime coverage](/features#ai-features-and-runtime-coverage) before selecting a non-OpenCode runtime.
+</Warning>
+
+## Requirements
+
+- a configured `agent-provider`, `agent-model-provider`, and `agent-model`;
+- the corresponding CLI and credential reference;
+- GitHub permissions for the requested comment or write operation;
+- protected workflows that do not expose credentials to untrusted code.
+
+See [Agent CLI configuration](/agents/cli-configuration) and [Configuration](/bugbot/configuration).
 
 ## Quick summary
 
 | What you do | What happens |
-|-------------|--------------|
-| **Push** to a branch linked to an issue | Bugbot analyzes the diff and posts findings on the issue and on any open PR; updates or marks findings as resolved when the code changes. |
-| **Comment** “fix it” / “fix all” (with permission) | OpenCode fixes the chosen findings; the action runs verify commands and commits and pushes. |
-| **Comment** “add a test for X” (with permission) | OpenCode applies the change; the action runs verify commands and commits and pushes. |
+| --- | --- |
+| **Push** to a branch linked to an issue | Bugbot analyzes the diff and posts findings on the issue and any open PR. |
+| **Comment** “fix it” / “fix all” (with permission) | The selected agent applies the requested fixes; verification commands run before any commit or push. |
+| **Comment** “add a test for X” (with permission) | The selected agent applies the request; verification commands run before any commit or push. |
 
-**Requirements:** OpenCode must be configured (`opencode-server-url`, `opencode-model`). For autofix and do-user-request, the workflow must grant **`contents: write`** and only **organization members** or the **repository owner** can trigger file-modifying actions. See [Autofix](/bugbot/autofix#permissions) and [Configuration](/bugbot/configuration).
+## Pages
+
+- [Detection](/bugbot/detection)
+- [Autofix](/bugbot/autofix)
+- [Do user request](/bugbot/do-user-request)
+- [Configuration](/bugbot/configuration)
+- [How it works](/bugbot/how-it-works)
+- [Examples](/bugbot/examples)

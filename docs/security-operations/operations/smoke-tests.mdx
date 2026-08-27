@@ -1,0 +1,15 @@
+---
+title: Smoke tests
+description: Bounded read-only checks for a selected agent runtime.
+---
+# Smoke tests
+
+Smoke tests are real provider calls and MAY incur cost or consume plan quota. Run them only with explicit authorization and a defined budget.
+
+Use a fixed prompt such as:
+
+```text
+Reply with exactly READY. Do not inspect or modify files.
+```
+
+Run with read-only workspace controls, the explicit qualified model, bounded output, and no write permissions. Record only provider, CLI version, exit code, and sanitized output. Cursor MUST remain untested until `CURSOR_API_KEY` is supplied through a secure mechanism and the test is authorized.

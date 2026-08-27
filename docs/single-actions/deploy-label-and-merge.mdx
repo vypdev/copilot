@@ -62,8 +62,8 @@ For each PR we create (e.g. release→main, release→develop), we wait until th
 
 ## Related code and tests
 
-- **Use case:** `src/usecase/actions/deployed_action_use_case.ts` — deploy label handling, merge order, issue close.
+- **Use case:** `src/application/usecases/actions/deployed_action_use_case.ts` — deploy label handling, merge order, issue close.
 - **Merge and checks:** `src/data/repository/merge_repository.ts` — PR creation, per-PR check filtering, status checks fallback, direct merge fallback.
 - **Tests:**
-  - `src/usecase/actions/__tests__/deployed_action_use_case.test.ts` — deploy label validation, release/hotfix merge order, close on success, no close on merge failure.
+  - `src/application/usecases/actions/__tests__/deployed_action_use_case.test.ts` — deploy label validation, release/hotfix merge order, close on success, no close on merge failure.
   - `src/data/repository/__tests__/merge_repository.test.ts` — check runs per PR, no check runs, timeout, direct merge fallback.

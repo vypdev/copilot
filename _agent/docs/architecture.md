@@ -1,37 +1,78 @@
 ---
 name: Architecture
-description: Project architecture, entry points, and use case flows.
+description: Current architecture, runtime boundaries, and key source paths.
 ---
 
-# Architecture & Key Paths
+# Architecture and key paths
 
-## Entry and main flow
+This is a compact contributor guide for the current checkout. The authoritative
+architecture contract is [`../../docs/repository-architecture.md`](../../docs/repository-architecture.md),
+with the capability inventory in
+[`../../docs/capability-map.md`](../../docs/capability-map.md).
 
-1. **GitHub Action**: `src/actions/github_action.ts` reads inputs, builds `Execution`, calls `mainRun(execution)` from `common_action.ts`.
-2. **CLI**: `src/actions/local_action.ts` same flow with CLI/config inputs.
-3. **common_action.ts**: Sets up; calls `waitForPreviousRuns(execution)` (sequential workflow); then:
-   - **Single action** → `SingleActionUseCase`
-   - **Issue** → `IssueCommentUseCase` or `IssueUseCase`
-   - **Pull request** → `PullRequestReviewCommentUseCase` or `PullRequestUseCase`
-   - **Push** → `CommitUseCase`
+## Dependency direction
+
+```text
+entrypoint
+  -> lifecycle/capability composition
+    -> application use case/workflow
+      -> semantic port
+        -> specialized adapter
+          -> provider client/detail
+```
+
+Application code must not import concrete repositories, manager adapters,
+infrastructure, entrypoints, Octokit, or provider DTOs.
+
+## Runtime entrypoints
+
+1. **GitHub Action:** `src/actions/github_action.ts` maps GitHub inputs/events,
+   builds `Execution`, and enters the shared action lifecycle.
+2. **Local action:** `src/actions/local_action.ts` builds local configuration and
+   execution, invokes `mainRun`, and renders local results.
+3. **CLI:** `src/cli.ts` is a small bootstrap for `src/cli/cli_program.ts` and
+   command modules under `src/cli/commands/`.
+4. **Main routing:** `src/actions/common_action.ts` and
+   `src/actions/main_run_dispatcher.ts` select issue, pull-request, comment,
+   push, and single-action workflows.
+
+These lifecycles are intentionally independent.
 
 ## Key paths
 
 | Area | Path | Purpose |
-|------|------|--------|
-| Action entry | `src/actions/github_action.ts` | Reads inputs, builds Execution |
-| CLI entry | `src/cli.ts` → `local_action.ts` | Same flow, local inputs |
-| Shared flow | `src/actions/common_action.ts` | mainRun, waitForPreviousRuns, dispatch to use cases |
-| Use cases | `src/usecase/` | issue_use_case, pull_request_use_case, commit_use_case, single_action_use_case |
-| Single actions | `src/usecase/actions/` | check_progress, detect_errors, recommend_steps, think, initial_setup, create_release, create_tag, publish_github_action, deployed_action |
-| Steps (issue) | `src/usecase/steps/issue/` | check_permissions, close_not_allowed_issue, assign_members, update_title, update_issue_type, link_issue_project, check_priority_issue_size, prepare_branches, remove_issue_branches, remove_not_needed_branches, label_deploy_added, label_deployed_added, move_issue_to_in_progress, answer_issue_help_use_case (question/help on open). On issue opened: RecommendStepsUseCase (non release/question/help) or AnswerIssueHelpUseCase (question/help). |
-| Steps (PR) | `src/usecase/steps/pull_request/` | update_title, assign_members (issue), assign_reviewers_to_issue, link_pr_project, link_pr_issue, sync_size_and_progress_from_issue, check_priority_pull_request_size, update_description (AI), close_issue_after_merging |
-| Steps (commit) | `src/usecase/steps/commit/` | notify commit, check size |
-| Steps (issue comment) | `src/usecase/steps/issue_comment/` | check_issue_comment_language (translation) |
-| Steps (PR review comment) | `src/usecase/steps/pull_request_review_comment/` | check_pull_request_comment_language (translation) |
-| Bugbot autofix & user request | `src/usecase/steps/commit/bugbot/` + `user_request_use_case.ts` | detect_bugbot_fix_intent_use_case (plan agent: is_fix_request, is_do_request, target_finding_ids), BugbotAutofixUseCase + runBugbotAutofixCommitAndPush (fix findings), DoUserRequestUseCase + runUserRequestCommitAndPush (generic “do this”). Permission: ProjectRepository.isActorAllowedToModifyFiles (org member or repo owner). |
-| Manager (content) | `src/manager/` | description handlers, configuration_handler, markdown_content_hotfix_handler (PR description, hotfix changelog content) |
-| Models | `src/data/model/` | Execution, Issue, PullRequest, SingleAction, etc. |
-| Repos | `src/data/repository/` | branch_repository, issue_repository, workflow_repository, ai_repository (OpenCode), file_repository, project_repository |
-| Config | `src/utils/constants.ts` | INPUT_KEYS, ACTIONS, defaults |
-| Metadata | `action.yml` | Action inputs and defaults |
+|---|---|---|
+| Application use cases | `src/application/usecases/` | workflows and orchestration |
+| Semantic ports | `src/application/ports/` | capability contracts |
+| Domain/model policies | `src/data/model/` | models and pure policies |
+| Specialized adapters | `src/data/repository/` | provider-facing capability implementations |
+| GitHub transports | `src/infrastructure/github/` | Octokit/GraphQL adapters and client ports |
+| Composition roots | `src/infrastructure/composition/` | capability/use-case graph assembly |
+| Runtime composition | `src/actions/` | GitHub/local lifecycle and route-specific wiring |
+| Description/configuration adapter | `src/manager/description/` | issue-description persistence details |
+| CLI commands | `src/cli/commands/` | parsing and command-specific entry behavior |
+| Architecture tests | `src/application/__tests__/`, `src/actions/__tests__/`, `src/infrastructure/**/__tests__/` | executable dependency rules |
+
+## Current architecture notes
+
+- There is no current universal `RepositoryFactory`, `AiRepository`,
+  `IssueRepository`, `PullRequestRepository`, `ProjectBoardRepository`, or
+  `OrganizationRepository` production facade.
+- Project board query, link, and command capabilities share only the query
+  contract required by composition.
+- Organization membership, authenticated identity, and actor authorization are
+  separate ports/adapters.
+- Pull-request changes, review, threads, and lifecycle remain separate.
+- `ConfigurationHandler` is an outer adapter behind application configuration
+  ports.
+- Concrete route wiring still exists in `main_run_dispatcher.ts`; Phase D audits
+  whether that is the correct lifecycle boundary before moving any code.
+- A verified import SCC is the next production priority: `Execution` initiates
+  release/hotfix resolution through model helpers, those helpers construct
+  application use cases, and those use cases import `Execution`;
+  `ExecutionConfigurationPort` and `Execution` also import each other. Remove
+  this through application-owned orchestration and an executable boundary guard
+  before continuing release/tag adapter hardening.
+
+Never infer current architecture from historical plans without checking the
+source and the authoritative documents.

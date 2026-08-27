@@ -21,7 +21,7 @@ on:
 jobs:
   copilot-pull-requests:
     name: Copilot - Pull Request
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, X64, Linux, coolify]
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -35,8 +35,9 @@ jobs:
           desired-reviewers-count: 1
           commit-prefix-transforms: replace-slash
           ai-pull-request-description: true
-          opencode-model: ${{ vars.OPENCODE_MODEL }}
-          opencode-server-url: ${{ vars.OPENCODE_SERVER_URL }}
+          agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+          agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
           ai-ignore-files: build/*
           debug: ${{ vars.DEBUG }}
 ```
@@ -46,7 +47,6 @@ jobs:
 - **`project-column-*`**: Column names in your GitHub Project (must match exactly).
 - **`desired-reviewers-count`**: Number of reviewers to assign (e.g. 1).
 - **`commit-prefix-transforms`**: Transforms for commit prefix derived from branch name (e.g. `replace-slash` for `feature/123` → `feature-123`).
-- **`ai-pull-request-description`**: Set to `true` to generate/update the PR description with OpenCode (requires `opencode-model` and `opencode-server-url`).
 
 ## Example: AI PR description only
 
@@ -61,15 +61,16 @@ on:
 
 jobs:
   copilot-pull-requests:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, X64, Linux, coolify]
     steps:
       - uses: actions/checkout@v4
       - uses: vypdev/copilot@v2
         with:
           token: ${{ secrets.PAT }}
           ai-pull-request-description: true
-          opencode-server-url: ${{ secrets.OPENCODE_SERVER_URL }}
-          opencode-model: "anthropic/claude-3-5-sonnet"
+          agent-provider: ${{ vars.AGENT_PROVIDER || 'opencode' }}
+          agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
+          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
 ```
 
 The PR must have an **issue linked** (via branch name) and the issue must have a **non-empty description**. See [AI PR description](/pull-requests/ai-description).

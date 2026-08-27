@@ -8,12 +8,6 @@ jest.mock('../../../../utils/logger', () => ({
 const mockGetDescription = jest.fn();
 const mockUpdateDescription = jest.fn();
 
-jest.mock('../../../../data/repository/issue_repository', () => ({
-  IssueRepository: jest.fn().mockImplementation(() => ({
-    getDescription: mockGetDescription,
-    updateDescription: mockUpdateDescription,
-  })),
-}));
 
 /** Concrete implementation for testing IssueContentInterface. */
 class TestIssueContent extends IssueContentInterface {
@@ -54,7 +48,7 @@ describe('IssueContentInterface', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    handler = new TestIssueContent();
+    handler = new TestIssueContent({ getDescription: mockGetDescription, updateDescription: mockUpdateDescription });
   });
 
   describe('internalGetter', () => {

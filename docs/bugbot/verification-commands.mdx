@@ -1,0 +1,13 @@
+---
+title: Verification commands
+description: Safe commands run after Bugbot changes and before a commit.
+---
+# Verification commands
+
+`bugbot-fix-verify-commands` contains comma-separated commands such as:
+
+```text
+pnpm run build, pnpm test, pnpm run lint
+```
+
+Commands are parsed without a shell. Shell operators and empty commands are rejected. Commands run after the agent changes and before staging. If any command fails, the action MUST NOT commit, push, or mark findings resolved.
