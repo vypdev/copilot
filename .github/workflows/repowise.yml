@@ -24,12 +24,23 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.11'
+      - name: Select system Python
+        id: python
+        shell: bash
+        run: |
+          set -euo pipefail
+          python_bin="$(command -v python3 || command -v python || true)"
+          if [[ -z "$python_bin" ]]; then
+            echo "::error::RepoWise requires Python 3.11 or newer on the self-hosted runner."
+            exit 1
+          fi
+          "$python_bin" -c 'import sys; print(f"Using Python {sys.version.split()[0]}"); sys.exit("Python 3.11 or newer is required") if sys.version_info < (3, 11) else None'
+          echo "path=$python_bin" >> "$GITHUB_OUTPUT"
       - name: Create isolated RepoWise environment
-        run: python -m venv "$RUNNER_TEMP/repowise-venv"
+        env:
+          PYTHON_BIN: "${{ steps.python.outputs.path }}"
+        run: |
+          "$PYTHON_BIN" -m venv "$RUNNER_TEMP/repowise-venv"
       - name: Install RepoWise
         run: |
           "$RUNNER_TEMP/repowise-venv/bin/python" -m pip install \
