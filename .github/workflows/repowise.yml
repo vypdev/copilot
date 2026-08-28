@@ -17,7 +17,7 @@ permissions:
 jobs:
   code-health:
     name: RepoWise code health
-    runs-on: [self-hosted, codex]
+    runs-on: [self-hosted, coolify]
     timeout-minutes: 30
     steps:
       - name: Checkout repository
@@ -29,12 +29,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python_bin="$(command -v python3 || command -v python || true)"
+          python_bin=""
+          for candidate in python3.11 python3 python; do
+            if command -v "$candidate" >/dev/null 2>&1 && \
+              "$candidate" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' 2>/dev/null; then
+              python_bin="$(command -v "$candidate")"
+              break
+            fi
+          done
           if [[ -z "$python_bin" ]]; then
             echo "::error::RepoWise requires Python 3.11 or newer on the self-hosted runner."
             exit 1
           fi
-          "$python_bin" -c 'import sys; print(f"Using Python {sys.version.split()[0]}"); sys.exit("Python 3.11 or newer is required") if sys.version_info < (3, 11) else None'
+          "$python_bin" -c 'import sys; print(f"Using Python {sys.version.split()[0]}")'
           echo "path=$python_bin" >> "$GITHUB_OUTPUT"
       - name: Create isolated RepoWise environment
         env:
