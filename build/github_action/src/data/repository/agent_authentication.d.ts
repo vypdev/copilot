@@ -13,5 +13,5 @@ export interface AgentAuthenticationCheck {
  * change the authentication mode selected by the local CLI. If the session is
  * absent, the existing API-key/access-token fallback remains available.
  */
-export declare function buildAgentCliEnvironment(provider: AgentProvider | undefined, environment?: NodeJS.ProcessEnv): NodeJS.ProcessEnv;
+export declare function buildAgentCliEnvironment(provider: AgentProvider | undefined, environment?: NodeJS.ProcessEnv, modelProvider?: string): NodeJS.ProcessEnv;
 export declare function checkAgentAuthentication(configuration: AgentConfiguration, environment?: NodeJS.ProcessEnv): AgentAuthenticationCheck;

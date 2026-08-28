@@ -7,6 +7,7 @@ export interface AgentCliRequest {
     command: string;
     prompt: string;
     provider?: AgentProvider;
+    modelProvider?: string;
     environment?: NodeJS.ProcessEnv;
     promptMode?: 'stdin' | 'argv';
     timeoutMs: number;
@@ -59,7 +60,7 @@ export class AgentCliClient {
                 promptMode === 'argv' ? [...args, request.prompt] : args,
                 {
                     cwd: request.cwd,
-                    env: buildAgentCliEnvironment(request.provider, request.environment),
+                    env: buildAgentCliEnvironment(request.provider, request.environment, request.modelProvider),
                     stdio: ['pipe', 'pipe', 'pipe'],
                     shell: false,
                 },

@@ -15,6 +15,8 @@ Copilot uses one provider-specific, headless CLI per run. The provider adapter s
 
 There is no user-configurable transport setting, managed server lifecycle, SDK, or provider fallback in the current architecture. Additional provider-specific flags can be supplied through the audited command override. If the selected runtime is unavailable or fails, the run fails closed.
 
+At the process boundary, Copilot removes known credentials that do not belong to the selected runtime. Cursor receives `CURSOR_API_KEY` only when Cursor is the selected runtime; the enterprise credential is not used by the default Codex/OpenCode path. A local ChatGPT Codex session also takes precedence over exported Codex credentials.
+
 ## Configure the runtime and model separately
 
 ```yaml

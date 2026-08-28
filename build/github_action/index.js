@@ -58062,6 +58062,11 @@ const CLI_CREDENTIALS = {
     cursor: ['CURSOR_API_KEY'],
     codex: ['CODEX_ACCESS_TOKEN', 'OPENAI_API_KEY'],
 };
+const KNOWN_AGENT_CREDENTIALS = [...new Set([
+        ...COMMON_OPENCODE_CREDENTIALS,
+        ...Object.values(MODEL_PROVIDER_CREDENTIALS).flat(),
+        ...CLI_CREDENTIALS.codex,
+    ])];
 function hasValue(environment, variable) {
     return Boolean(environment[variable]?.trim());
 }
@@ -58092,12 +58097,32 @@ function hasCodexChatGptSession(environment) {
  * change the authentication mode selected by the local CLI. If the session is
  * absent, the existing API-key/access-token fallback remains available.
  */
-function buildAgentCliEnvironment(provider, environment = process.env) {
-    if (provider !== 'codex' || !hasCodexChatGptSession(environment))
+function buildAgentCliEnvironment(provider, environment = process.env, modelProvider) {
+    if (!provider)
         return environment;
+    const normalizedModelProvider = modelProvider?.trim().toLowerCase();
+    const selectedModelProviderCredential = normalizedModelProvider
+        && !['local', 'ollama', 'lmstudio'].includes(normalizedModelProvider)
+        ? MODEL_PROVIDER_CREDENTIALS[normalizedModelProvider]?.[0]
+            ?? `${normalizedModelProvider.replace(/-/g, '_').toUpperCase()}_API_KEY`
+        : undefined;
+    const allowedCredentials = provider === 'cursor'
+        ? CLI_CREDENTIALS.cursor
+        : provider === 'codex'
+            ? [...new Set([...CLI_CREDENTIALS.codex, ...(selectedModelProviderCredential ? [selectedModelProviderCredential] : [])])]
+            : normalizedModelProvider
+                ? [...new Set([...CLI_CREDENTIALS.opencode, ...(selectedModelProviderCredential ? [selectedModelProviderCredential] : [])])]
+                : [...new Set([...CLI_CREDENTIALS.opencode, ...COMMON_OPENCODE_CREDENTIALS])];
+    const hasLocalCodexSession = provider === 'codex' && hasCodexChatGptSession(environment);
     const isolatedEnvironment = { ...environment };
-    delete isolatedEnvironment.OPENAI_API_KEY;
-    delete isolatedEnvironment.CODEX_ACCESS_TOKEN;
+    for (const variable of KNOWN_AGENT_CREDENTIALS)
+        delete isolatedEnvironment[variable];
+    if (!hasLocalCodexSession) {
+        for (const variable of allowedCredentials) {
+            if (environment[variable] !== undefined)
+                isolatedEnvironment[variable] = environment[variable];
+        }
+    }
     return isolatedEnvironment;
 }
 function hasOpenCodeLocalSession(environment) {
@@ -58266,7 +58291,7 @@ class AgentCliClient {
             }
             const child = (0, node_child_process_1.spawn)(executable, promptMode === 'argv' ? [...args, request.prompt] : args, {
                 cwd: request.cwd,
-                env: (0, agent_authentication_1.buildAgentCliEnvironment)(request.provider, request.environment),
+                env: (0, agent_authentication_1.buildAgentCliEnvironment)(request.provider, request.environment, request.modelProvider),
                 stdio: ['pipe', 'pipe', 'pipe'],
                 shell: false,
             });
@@ -61282,6 +61307,7 @@ class SpecificCliAdapter {
             command,
             prompt: request.prompt,
             provider: this.expectedProvider,
+            ...(request.configuration.modelProvider ? { modelProvider: request.configuration.modelProvider } : {}),
             promptMode: this.expectedProvider === 'codex' ? 'stdin' : 'argv',
             timeoutMs: request.timeoutMs,
             cwd: request.cwd,

@@ -98,8 +98,36 @@ describe('checkAgentAuthentication', () => {
     });
 
     it('keeps the Codex API fallback when no local session is available', () => {
-        const environment = { OPENAI_API_KEY: 'api-key', CODEX_ACCESS_TOKEN: 'access-token' };
-        expect(buildAgentCliEnvironment('codex', environment)).toBe(environment);
+        const environment = {
+            OPENAI_API_KEY: 'api-key',
+            CODEX_ACCESS_TOKEN: 'access-token',
+            OPENCODE_API_KEY: 'opencode-key',
+            CURSOR_API_KEY: 'cursor-key',
+        };
+        const isolated = buildAgentCliEnvironment('codex', environment);
+        expect(isolated).toMatchObject({ OPENAI_API_KEY: 'api-key', CODEX_ACCESS_TOKEN: 'access-token' });
+        expect(isolated).not.toHaveProperty('OPENCODE_API_KEY');
+        expect(isolated).not.toHaveProperty('CURSOR_API_KEY');
+    });
+
+    it('passes only the selected runtime credentials to each CLI', () => {
+        const environment = {
+            OPENAI_API_KEY: 'openai-key',
+            OPENCODE_API_KEY: 'opencode-key',
+            CURSOR_API_KEY: 'cursor-key',
+            CODEX_ACCESS_TOKEN: 'codex-token',
+        };
+
+        const openCodeEnvironment = buildAgentCliEnvironment('opencode', environment, 'openai');
+        expect(openCodeEnvironment).toMatchObject({ OPENAI_API_KEY: 'openai-key', OPENCODE_API_KEY: 'opencode-key' });
+        expect(openCodeEnvironment).not.toHaveProperty('CURSOR_API_KEY');
+        expect(openCodeEnvironment).not.toHaveProperty('CODEX_ACCESS_TOKEN');
+
+        const cursorEnvironment = buildAgentCliEnvironment('cursor', environment);
+        expect(cursorEnvironment).toMatchObject({ CURSOR_API_KEY: 'cursor-key' });
+        expect(cursorEnvironment).not.toHaveProperty('OPENAI_API_KEY');
+        expect(cursorEnvironment).not.toHaveProperty('OPENCODE_API_KEY');
+        expect(cursorEnvironment).not.toHaveProperty('CODEX_ACCESS_TOKEN');
     });
 
     it('recognizes a local OpenCode auth store without exposing its contents', () => {

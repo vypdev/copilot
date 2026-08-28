@@ -54,6 +54,23 @@ describe('AgentCliClient', () => {
         }
     });
 
+    it('passes Cursor credentials only to the Cursor CLI', async () => {
+        const script = "process.stdout.write(JSON.stringify({ cursor: process.env.CURSOR_API_KEY ?? null, openai: process.env.OPENAI_API_KEY ?? null, opencode: process.env.OPENCODE_API_KEY ?? null }))";
+        const output = await new AgentCliClient().execute({
+            command: `${process.execPath} -e ${JSON.stringify(script)}`,
+            prompt: 'ignored',
+            provider: 'cursor',
+            environment: {
+                CURSOR_API_KEY: 'enterprise-key',
+                OPENAI_API_KEY: 'api-key-that-must-not-be-used',
+                OPENCODE_API_KEY: 'opencode-key-that-must-not-be-used',
+            },
+            timeoutMs: 2000,
+        });
+
+        expect(JSON.parse(output)).toEqual({ cursor: 'enterprise-key', openai: null, opencode: null });
+    });
+
     it('classifies a missing executable as a process error', async () => {
         await expect(new AgentCliClient().execute({ command: 'missing-agent-binary', prompt: 'prompt', timeoutMs: 2000 })).rejects.toMatchObject({ category: 'process' });
     });

@@ -56,6 +56,12 @@ const CLI_CREDENTIALS: Readonly<Record<AgentConfiguration['provider'], readonly 
     codex: ['CODEX_ACCESS_TOKEN', 'OPENAI_API_KEY'],
 };
 
+const KNOWN_AGENT_CREDENTIALS = [...new Set([
+    ...COMMON_OPENCODE_CREDENTIALS,
+    ...Object.values(MODEL_PROVIDER_CREDENTIALS).flat(),
+    ...CLI_CREDENTIALS.codex,
+])];
+
 function hasValue(environment: NodeJS.ProcessEnv, variable: string): boolean {
     return Boolean(environment[variable]?.trim());
 }
@@ -92,12 +98,32 @@ function hasCodexChatGptSession(environment: NodeJS.ProcessEnv): boolean {
 export function buildAgentCliEnvironment(
     provider: AgentProvider | undefined,
     environment: NodeJS.ProcessEnv = process.env,
+    modelProvider?: string,
 ): NodeJS.ProcessEnv {
-    if (provider !== 'codex' || !hasCodexChatGptSession(environment)) return environment;
+    if (!provider) return environment;
+
+    const normalizedModelProvider = modelProvider?.trim().toLowerCase();
+    const selectedModelProviderCredential = normalizedModelProvider
+        && !['local', 'ollama', 'lmstudio'].includes(normalizedModelProvider)
+        ? MODEL_PROVIDER_CREDENTIALS[normalizedModelProvider]?.[0]
+            ?? `${normalizedModelProvider.replace(/-/g, '_').toUpperCase()}_API_KEY`
+        : undefined;
+    const allowedCredentials = provider === 'cursor'
+        ? CLI_CREDENTIALS.cursor
+        : provider === 'codex'
+            ? [...new Set([...CLI_CREDENTIALS.codex, ...(selectedModelProviderCredential ? [selectedModelProviderCredential] : [])])]
+            : normalizedModelProvider
+                ? [...new Set([...CLI_CREDENTIALS.opencode, ...(selectedModelProviderCredential ? [selectedModelProviderCredential] : [])])]
+                : [...new Set([...CLI_CREDENTIALS.opencode, ...COMMON_OPENCODE_CREDENTIALS])];
+    const hasLocalCodexSession = provider === 'codex' && hasCodexChatGptSession(environment);
 
     const isolatedEnvironment = { ...environment };
-    delete isolatedEnvironment.OPENAI_API_KEY;
-    delete isolatedEnvironment.CODEX_ACCESS_TOKEN;
+    for (const variable of KNOWN_AGENT_CREDENTIALS) delete isolatedEnvironment[variable];
+    if (!hasLocalCodexSession) {
+        for (const variable of allowedCredentials) {
+            if (environment[variable] !== undefined) isolatedEnvironment[variable] = environment[variable];
+        }
+    }
     return isolatedEnvironment;
 }
 

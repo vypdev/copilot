@@ -5,6 +5,7 @@ export interface AgentCliPort {
         command: string;
         prompt: string;
         provider?: AgentProvider;
+        modelProvider?: string;
         environment?: NodeJS.ProcessEnv;
         promptMode?: 'stdin' | 'argv';
         timeoutMs: number;
