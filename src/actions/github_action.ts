@@ -34,6 +34,7 @@ import { parseIntegerInput } from './input_number_policy';
 import { parseDelimitedValues } from './input_values_policy';
 import { readGithubActionAiInputs } from './github_action_ai_inputs';
 import { AgentCliProvisioner } from '../data/repository/agent_cli_provisioner';
+import { runAgentAuthenticationPreflight } from '../data/repository/agent_authentication_preflight';
 import { readGithubActionImageInputs } from './github_action_image_inputs';
 import { readGithubActionLocaleInputs } from './github_action_locale_inputs';
 import { buildSizeThresholds } from './size_threshold_builder';
@@ -76,15 +77,26 @@ export async function runGitHubAction(): Promise<void> {
     const token = getGithubActionInput(INPUT_KEYS.TOKEN, {required: true});
 
     /**
-     * AI (OpenCode)
+     * Agent runtime
      */
     const aiInputs = readGithubActionAiInputs(getGithubActionInput);
-    if (process.env.GITHUB_ACTIONS === 'true') {
-        new AgentCliProvisioner().provision(aiInputs.requestedAgentTasks.findings.provider);
-    }
-    const opencodeModel = aiInputs.requestedAgentTasks.findings.model;
-    logDebugInfo(`Using ${aiInputs.requestedAgentTasks.findings.provider} CLI, model: ${opencodeModel}.`);
     const agentTasks = aiInputs.requestedAgentTasks;
+    for (const [task, configuration] of [['findings', agentTasks.findings], ['fixer', agentTasks.fixer]] as const) {
+        const preflight = runAgentAuthenticationPreflight(configuration);
+        if (preflight.check.status === 'missing' && preflight.shouldFail) {
+            throw new Error(`${task} agent authentication failed: ${preflight.check.message}`);
+        }
+        if (preflight.check.status === 'missing' && preflight.mode === 'warn') {
+            logInfo(`Warning: ${task} agent authentication could not be preflighted: ${preflight.check.message}`);
+        }
+    }
+    if (process.env.GITHUB_ACTIONS === 'true') {
+        const provisioner = new AgentCliProvisioner();
+        for (const configuration of [agentTasks.findings, agentTasks.fixer]) {
+            provisioner.provision(configuration);
+        }
+    }
+    logDebugInfo(`Using ${agentTasks.findings.provider} CLI for findings (${agentTasks.findings.modelProvider ?? 'default'}/${agentTasks.findings.model}) and ${agentTasks.fixer.provider} CLI for fixer (${agentTasks.fixer.modelProvider ?? 'default'}/${agentTasks.fixer.model}).`);
 
 
     const aiPullRequestDescription = aiInputs.pullRequestDescription;
@@ -172,7 +184,7 @@ export async function runGitHubAction(): Promise<void> {
         tokens: buildTokens(token),
         ai: new Ai(
             '',
-            opencodeModel,
+            agentTasks.findings.model,
             aiPullRequestDescription,
             aiMembersOnly,
             aiIgnoreFiles,

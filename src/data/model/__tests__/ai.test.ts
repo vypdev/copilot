@@ -18,7 +18,7 @@ describe('Ai', () => {
 
     it('defaults both tasks to the configured Codex runtime', () => {
         const ai = new Ai('http://opencode:4096', 'opencode/model', true, false, [], false, 'low', 10);
-        const expected = { provider: 'codex', modelProvider: 'openai', model: 'opencode/model', command: 'codex exec --ephemeral --skip-git-repo-check -' };
+        const expected = { provider: 'codex', modelProvider: 'openai', model: 'opencode/model', command: "codex exec --ephemeral --skip-git-repo-check --model opencode/model --config 'model_provider=\"openai\"' -" };
 
         expect(ai.getAgentConfiguration('findings')).toEqual(expected);
         expect(ai.getAgentConfiguration('fixer')).toEqual(expected);

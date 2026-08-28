@@ -17,7 +17,11 @@ const auditableFiles = [
 ];
 const auditableContent = auditableFiles.map(file => fs.readFileSync(file, 'utf8')).join('\\n');
 
-const requiredInputs = ['agent-provider', 'agent-model-provider', 'agent-model', 'agent-command'];
+const requiredInputs = [
+  'agent-provider', 'agent-model-provider', 'agent-model', 'agent-effort', 'agent-command',
+  'findings-provider', 'findings-model-provider', 'findings-model', 'findings-effort', 'findings-command',
+  'fixer-provider', 'fixer-model-provider', 'fixer-model', 'fixer-effort', 'fixer-command',
+];
 const missingInputs = requiredInputs.filter(input => !action.inputs?.[input]);
 if (missingInputs.length) throw new Error(`Missing agent inputs in action.yml: ${missingInputs.join(', ')}`);
 
@@ -45,6 +49,9 @@ for (const value of forbidden) {
   }
 }
 for (const value of ['AGENT_ALLOWED_MODEL_PROVIDERS', 'AGENT_ALLOWED_MODELS', 'opencode run --model']) {
+  if (!docs.includes(value)) throw new Error(`Missing normative documentation reference: ${value}`);
+}
+for (const value of ['model_reasoning_effort', '--variant', 'AGENT_PROVISIONING']) {
   if (!docs.includes(value)) throw new Error(`Missing normative documentation reference: ${value}`);
 }
 

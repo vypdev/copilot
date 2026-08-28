@@ -5,7 +5,7 @@ import { getCliDoPrompt } from '../../prompts';
 import { buildDoAgentTasks, formatDoJsonResponse } from './do_policy';
 import { TITLE } from '../../utils/constants';
 import { logError } from '../../utils/logger';
-import { OPENCODE_PROJECT_CONTEXT_INSTRUCTION } from '../../utils/opencode_project_context_instruction';
+import { PROJECT_CONTEXT_INSTRUCTION } from '../../utils/project_context_instruction';
 import { getGitInfo, getCurrentBranch } from '../../cli_context';
 import { cleanCliArgument, joinCliArguments } from '../command_input_policy';
 
@@ -15,18 +15,23 @@ program
   .description(`${TITLE} - AI development assistant (selected build agent; can edit files when run locally)`)
   .option('-p, --prompt <prompt...>', 'Prompt or question (required)', '')
   .option('-d, --debug', 'Debug mode', false)
-  .option('--agent-provider <provider>', 'Agent provider (codex|opencode|cursor)', process.env.AGENT_PROVIDER || 'codex')
-  .option('--agent-model-provider <provider>', 'Provider of the selected model', process.env.AGENT_MODEL_PROVIDER || 'openai')
-  .option('--agent-model <model>', 'Selected agent model', process.env.AGENT_MODEL || 'gpt-5.6-luna')
-  .option('--agent-command <command>', 'CLI executable for the selected agent', process.env.AGENT_COMMAND)
-  .option('--findings-provider <provider>', 'Findings agent provider', process.env.FINDINGS_PROVIDER)
+  .option('--agent-provider <provider>', 'Agent provider (codex|opencode|cursor)')
+  .option('--agent-model-provider <provider>', 'Provider of the selected model')
+  .option('--agent-model <model>', 'Selected agent model')
+  .option('--agent-effort <effort>', 'Reasoning effort or provider-specific model variant')
+  .option('--agent-command <command>', 'CLI executable for the selected agent')
+  .option('--findings-provider <provider>', 'Findings agent provider')
+  .option('--findings-model-provider <provider>', 'Findings model provider')
+  .option('--findings-effort <effort>', 'Findings reasoning effort or model variant')
 
-  .option('--findings-model <model>', 'Findings agent model', process.env.FINDINGS_MODEL)
-  .option('--findings-command <command>', 'Findings CLI executable', process.env.FINDINGS_COMMAND)
-  .option('--fixer-provider <provider>', 'Fixer agent provider', process.env.FIXER_PROVIDER)
+  .option('--findings-model <model>', 'Findings agent model')
+  .option('--findings-command <command>', 'Findings CLI executable')
+  .option('--fixer-provider <provider>', 'Fixer agent provider')
+  .option('--fixer-model-provider <provider>', 'Fixer model provider')
+  .option('--fixer-effort <effort>', 'Fixer reasoning effort or model variant')
 
-  .option('--fixer-model <model>', 'Fixer agent model', process.env.FIXER_MODEL)
-  .option('--fixer-command <command>', 'Fixer CLI executable', process.env.FIXER_COMMAND)
+  .option('--fixer-model <model>', 'Fixer agent model')
+  .option('--fixer-command <command>', 'Fixer CLI executable')
   .option('--output <format>', 'Output format (text|json)', 'text')
   .action(async (options) => {
     const gitInfo = getGitInfo();
@@ -39,25 +44,36 @@ program
 
     if (!prompt || prompt.length === 0) {
       console.log('❌ Please provide a prompt using -p or --prompt');
+      process.exitCode = 1;
       return;
     }
 
     const agentTasks = buildDoAgentTasks(options);
-    const authPreflight = runAgentAuthenticationPreflight(agentTasks.findings);
-    if (authPreflight.check.status === 'missing') {
-      const message = `❌ ${authPreflight.check.message}`;
+    const authPreflights = [
+      ['findings', agentTasks.findings],
+      ['fixer', agentTasks.fixer],
+    ] as const;
+    for (const [task, configuration] of authPreflights) {
+      const authPreflight = runAgentAuthenticationPreflight(configuration);
+      if (authPreflight.check.status !== 'missing') continue;
       if (authPreflight.shouldFail) {
-        console.error(message);
+        console.error(`❌ ${task} agent: ${authPreflight.check.message}`);
+        process.exitCode = 1;
         return;
       }
-      if (authPreflight.mode === 'warn') console.warn(`⚠️ ${authPreflight.check.message}`);
+      if (authPreflight.mode === 'warn') console.warn(`⚠️ ${task} agent: ${authPreflight.check.message}`);
     }
     const outputFormat = cleanCliArgument(options.output) || 'text';
+    if (outputFormat !== 'text' && outputFormat !== 'json') {
+      console.error('❌ Output format must be text or json.');
+      process.exitCode = 1;
+      return;
+    }
 
     try {
       const aiRepository = createFixerQueryPort();
       const fullPrompt = getCliDoPrompt({
-        projectContextInstruction: `${OPENCODE_PROJECT_CONTEXT_INSTRUCTION}\n\nRepository identity: ${gitInfo.owner}/${gitInfo.repo}\nCurrent branch: ${getCurrentBranch()}\nTreat this repository identity as authoritative context for the request.`,
+        projectContextInstruction: `${PROJECT_CONTEXT_INSTRUCTION}\n\nRepository identity: ${gitInfo.owner}/${gitInfo.repo}\nCurrent branch: ${getCurrentBranch()}\nTreat this repository identity as authoritative context for the request.`,
         userPrompt: prompt,
       });
       const result = await aiRepository.fix({

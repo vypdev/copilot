@@ -6,8 +6,8 @@ description: Provider-specific commands and process safety rules.
 
 | Runtime | Command shape |
 | --- | --- |
-| OpenCode | `opencode run --model <provider>/<model>` |
-| Codex | `codex exec --ephemeral --skip-git-repo-check -` |
-| Cursor | `agent -p --output-format text -` |
+| OpenCode | `opencode run --model <provider>/<model> [--variant <effort>]` |
+| Codex | `codex exec --ephemeral --skip-git-repo-check --model <model> --config 'model_provider="<provider>"' [--config 'model_reasoning_effort="<effort>"'] -` |
+| Cursor | `agent -p --output-format text --model <model> <prompt>` |
 
-Commands are parsed as argv and executed with `shell: false`. Shell operators, empty commands, embedded credentials, and OpenCode commands without `--model` are rejected. A custom `agent-command` MUST be reviewed as executable code.
+Commands are parsed as argv and executed with `shell: false`. The prompt is sent through `stdin` for Codex and as one positional argument for OpenCode and Cursor. Shell operators, empty commands, embedded credentials, and commands without explicit model selection are rejected. Codex custom commands must also declare `model_provider`; Codex and OpenCode custom commands must declare the configured effort when one is set. Cursor has no documented native effort flag, so its effort value is carried as execution context. A custom `agent-command` MUST be reviewed as executable code.

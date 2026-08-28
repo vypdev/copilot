@@ -1,0 +1,2 @@
+/** Shared repository-context instruction for every supported agent runtime. */
+export declare const PROJECT_CONTEXT_INSTRUCTION = "**Important \u2013 use full project context:** In addition to reading the relevant code (respecting any file ignore patterns specified), read the repository documentation (e.g. README, docs/) and any defined rules or conventions (e.g. .cursor/rules, CONTRIBUTING, project guidelines). This gives you a complete picture of the project and leads to better decisions in both quality of reasoning and efficiency.";

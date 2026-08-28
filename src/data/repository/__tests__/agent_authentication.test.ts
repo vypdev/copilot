@@ -1,13 +1,29 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { checkAgentAuthentication } from '../agent_authentication';
 
 describe('checkAgentAuthentication', () => {
-    it('requires provider credentials for CLI execution', () => {
+    it('requires provider credentials for OpenCode CLI execution', () => {
         expect(
             checkAgentAuthentication({ provider: 'opencode', model: 'model', command: 'opencode run' }, {})
         ).toMatchObject({ status: 'missing' });
+    });
+
+    it('requires the selected OpenCode model-provider credential', () => {
+        expect(checkAgentAuthentication({ provider: 'opencode', modelProvider: 'anthropic', model: 'claude', command: 'opencode run --model anthropic/claude' }, { OPENAI_API_KEY: 'wrong-provider' }).status).toBe('missing');
+        expect(checkAgentAuthentication({ provider: 'opencode', modelProvider: 'anthropic', model: 'claude', command: 'opencode run --model anthropic/claude' }, { ANTHROPIC_API_KEY: 'key' }).status).toBe('available');
+    });
+
+    it('does not require credentials for local OpenCode providers', () => {
+        expect(checkAgentAuthentication({ provider: 'opencode', modelProvider: 'ollama', model: 'llama3', command: 'opencode run --model ollama/llama3' }, {}).status).toBe('not_required');
+    });
+
+    it('delegates unknown OpenCode provider credentials to OpenCode configuration', () => {
+        expect(checkAgentAuthentication({ provider: 'opencode', modelProvider: 'custom-cloud', model: 'model', command: 'opencode run --model custom-cloud/model' }, {})).toMatchObject({
+            status: 'not_required',
+            variables: [],
+        });
     });
 
     it('recognizes Cursor API credentials without exposing their value', () => {
@@ -56,7 +72,24 @@ describe('checkAgentAuthentication', () => {
         }
     });
 
-    it('does not treat an API-key auth file as a ChatGPT session', () => {
+    it('recognizes a local OpenCode auth store without exposing its contents', () => {
+        const directory = mkdtempSync(join(tmpdir(), 'copilot-opencode-auth-test-'));
+        try {
+            const authDirectory = join(directory, 'opencode');
+            mkdirSync(authDirectory);
+            writeFileSync(join(authDirectory, 'auth.json'), JSON.stringify({ anthropic: { type: 'oauth', refresh: 'refresh-token' } }));
+            const result = checkAgentAuthentication(
+                { provider: 'opencode', modelProvider: 'anthropic', model: 'claude', command: 'opencode run --model anthropic/claude' },
+                { XDG_DATA_HOME: directory }
+            );
+            expect(result.status).toBe('available');
+            expect(result.message).not.toContain('refresh-token');
+        } finally {
+            rmSync(directory, { recursive: true, force: true });
+        }
+    });
+
+    it('allows Codex to defer authentication to a preinitialized runner CLI', () => {
         const directory = mkdtempSync(join(tmpdir(), 'copilot-codex-auth-test-'));
         try {
             writeFileSync(join(directory, 'auth.json'), JSON.stringify({
@@ -67,7 +100,7 @@ describe('checkAgentAuthentication', () => {
             expect(checkAgentAuthentication(
                 { provider: 'codex', model: 'model', command: 'codex exec' },
                 { CODEX_HOME: directory }
-            ).status).toBe('missing');
+            ).status).toBe('not_required');
         } finally {
             rmSync(directory, { recursive: true, force: true });
         }

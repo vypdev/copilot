@@ -1,12 +1,12 @@
 /**
- * Builds the prompt for OpenCode (plan agent) when detecting potential problems on push.
- * We pass: repo context, head/base branch names (OpenCode computes the diff itself), issue number,
+ * Builds the prompt for the configured findings agent when detecting potential problems on push.
+ * We pass: repo context, head/base branch names (the agent computes the diff itself), issue number,
  * optional ignore patterns, and the block of previously reported findings (task 2).
  * We do not pass a pre-computed diff or file list.
  */
 
 import { getBugbotPrompt } from "../../../../../prompts";
-import { OPENCODE_PROJECT_CONTEXT_INSTRUCTION } from "../../../../../utils/opencode_project_context_instruction";
+import { PROJECT_CONTEXT_INSTRUCTION } from "../../../../../utils/project_context_instruction";
 import type { Execution } from "../../../../../data/model/execution";
 import type { BugbotContext } from "./types";
 
@@ -30,7 +30,7 @@ export function buildBugbotPrompt(param: Execution, context: BugbotContext): str
             : "";
 
     return getBugbotPrompt({
-        projectContextInstruction: OPENCODE_PROJECT_CONTEXT_INSTRUCTION,
+        projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
         owner: param.owner,
         repo: param.repo,
         headBranch,

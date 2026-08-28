@@ -31,14 +31,17 @@ jobs:
             case "$AGENT_PROVIDER" in
               opencode)
                 command -v opencode
+                opencode --version >/dev/null
                 opencode run --help >/dev/null
                 ;;
               codex)
                 command -v codex
+                codex --version >/dev/null
                 codex exec --help >/dev/null
                 ;;
               cursor)
                 command -v agent
+                agent --version >/dev/null
                 agent --help >/dev/null
                 ;;
               *)

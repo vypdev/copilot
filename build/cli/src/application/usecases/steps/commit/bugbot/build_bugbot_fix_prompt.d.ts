@@ -8,7 +8,7 @@ export declare const MAX_FINDING_BODY_LENGTH = 12000;
  */
 export declare function truncateFindingBody(body: string, maxLength: number): string;
 /**
- * Builds the prompt for the OpenCode build agent to fix the selected bugbot findings.
+ * Builds the prompt for the configured build agent to fix the selected bugbot findings.
  * Includes repo context, the findings to fix (with full detail), the user's comment,
  * strict scope rules, and the verify commands to run.
  */

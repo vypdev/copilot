@@ -40,7 +40,7 @@ export class DetectPotentialProblemsUseCase implements ParamUseCase<
         !isAgentConfigurationReady(param.ai?.getAgentConfiguration("findings"))
       ) {
         logDebugInfo(
-          "OpenCode not configured; skipping potential problems detection.",
+          "Agent not configured; skipping potential problems detection.",
         );
         return results;
       }
@@ -58,14 +58,14 @@ export class DetectPotentialProblemsUseCase implements ParamUseCase<
       );
       const prompt = buildBugbotPrompt(param, context);
       logInfo(
-        "Detecting potential problems via OpenCode (agent computes changes and checks resolved)...",
+        "Detecting potential problems via configured agent (agent computes changes and checks resolved)...",
       );
       const prepared = prepareDetectedFindings(
         param,
         await queryBugbotFindings(this.aiRepository, param, prompt),
       );
       if (prepared === undefined) {
-        logDebugInfo("DetectPotentialProblems: No response from OpenCode.");
+        logDebugInfo("DetectPotentialProblems: No response from configured agent.");
         return results;
       }
 
@@ -94,7 +94,7 @@ export class DetectPotentialProblemsUseCase implements ParamUseCase<
         this.resolutionPorts,
       );
       const stepParts = [
-        `${prepared.toPublish.length} new/current finding(s) from OpenCode`,
+        `${prepared.toPublish.length} new/current finding(s) from configured agent`,
       ];
       if (prepared.overflowCount > 0) {
         stepParts.push(
@@ -103,7 +103,7 @@ export class DetectPotentialProblemsUseCase implements ParamUseCase<
       }
       if (prepared.resolvedFindingIds.size > 0) {
         stepParts.push(
-          `${prepared.resolvedFindingIds.size} marked as resolved by OpenCode`,
+          `${prepared.resolvedFindingIds.size} marked as resolved by configured agent`,
         );
       }
       results.push(

@@ -156,7 +156,7 @@ describe('AnswerIssueHelpUseCase', () => {
     expect(mockAddComment).not.toHaveBeenCalled();
     expect(results[0].success).toBe(false);
     expect(results[0].executed).toBe(true);
-    expect(results[0].errors).toContain('OpenCode returned no answer for initial help.');
+    expect(results[0].errors).toContain('Configured agent returned no answer for initial help.');
   });
 
   it('returns failure when OpenCode returns empty answer', async () => {
@@ -167,7 +167,7 @@ describe('AnswerIssueHelpUseCase', () => {
 
     expect(mockAddComment).not.toHaveBeenCalled();
     expect(results[0].success).toBe(false);
-    expect(results[0].errors).toContain('OpenCode returned no answer for initial help.');
+    expect(results[0].errors).toContain('Configured agent returned no answer for initial help.');
   });
 
   it('returns failure when addComment throws', async () => {

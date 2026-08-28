@@ -1,12 +1,12 @@
 import { isAgentConfigurationReady } from '../../../data/model/agent';
 import { Execution } from '../../../data/model/execution';
 import { Result } from '../../../data/model/result';
-import { OPENCODE_AGENT_PLAN } from '../../../application/policies/agent_task_policy';
+import { AGENT_PLAN } from '../../../application/policies/agent_task_policy';
 import type { FindingsQueryPort } from '../../ports/agent_findings_ports';
 import type { IssueDescriptionQueryPort } from '../../ports/issue_description_ports';
 import { getRecommendStepsPrompt } from '../../../prompts';
 import { logDebugInfo, logError, logInfo } from '../../../utils/logger';
-import { OPENCODE_PROJECT_CONTEXT_INSTRUCTION } from '../../../utils/opencode_project_context_instruction';
+import { PROJECT_CONTEXT_INSTRUCTION } from '../../../utils/project_context_instruction';
 import { getTaskEmoji } from '../../../utils/task_emoji';
 import { ParamUseCase } from '../base/param_usecase';
 
@@ -73,16 +73,16 @@ export class RecommendStepsUseCase implements ParamUseCase<Execution, Result[]> 
             }
 
             const prompt = getRecommendStepsPrompt({
-                projectContextInstruction: OPENCODE_PROJECT_CONTEXT_INSTRUCTION,
+                projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
                 issueNumber: String(issueNumber),
                 issueDescription,
             });
 
             logDebugInfo(`RecommendSteps: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`);
-            logInfo(`🤖 Recommending steps using OpenCode Plan agent...`);
+            logInfo(`🤖 Recommending steps using the configured agent...`);
             const response = await this.aiRepository.query({
                 configuration: param.ai?.getAgentConfiguration('findings'),
-                agentId: OPENCODE_AGENT_PLAN,
+                agentId: AGENT_PLAN,
                 prompt,
             });
 
@@ -91,14 +91,14 @@ export class RecommendStepsUseCase implements ParamUseCase<Execution, Result[]> 
                     ? response
                     : (response && String((response as Record<string, unknown>).steps)) || 'No response.';
 
-            logDebugInfo(`RecommendSteps: OpenCode response received. Steps length=${steps.length}. Full steps:\n${steps}`);
+            logDebugInfo(`RecommendSteps: agent response received. Steps length=${steps.length}. Full steps:\n${steps}`);
 
             results.push(
                 new Result({
                     id: this.taskId,
                     success: true,
                     executed: true,
-                    steps: ['Recommended steps (OpenCode Plan agent):', steps],
+                    steps: ['Recommended steps (configured agent):', steps],
                     payload: { issueNumber, recommendedSteps: steps },
                 })
             );

@@ -13,7 +13,7 @@ This page explains how to use it and how it differs from autofix.
 
 ## How it works
 
-When you comment on an **issue** or **pull request**, the action first runs **intent detection** (OpenCode Plan): it decides whether your comment is:
+When you comment on an **issue** or **pull request**, the action first runs **intent detection** with the configured agent: it decides whether your comment is:
 
 - A **fix request** — “fix it”, “fix all”, etc. → [Autofix](/bugbot/autofix) runs (fix specific findings).
 - A **do request** — “add a test for X”, “refactor this”, “implement feature Y”, etc. → **Do user request** runs (general code change).

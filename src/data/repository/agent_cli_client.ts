@@ -4,6 +4,7 @@ import { parseAgentCommand } from './agent_command_parser';
 export interface AgentCliRequest {
     command: string;
     prompt: string;
+    promptMode?: 'stdin' | 'argv';
     timeoutMs: number;
     signal?: AbortSignal;
     cwd?: string;
@@ -31,6 +32,12 @@ function splitCommand(command: string): string[] {
 
 export class AgentCliClient {
     async execute(request: AgentCliRequest): Promise<string> {
+        if (!Number.isFinite(request.timeoutMs) || request.timeoutMs <= 0) {
+            throw new AgentCliError('Agent CLI timeout must be a finite positive number.', 'configuration');
+        }
+        if (request.maxOutputBytes !== undefined && (!Number.isFinite(request.maxOutputBytes) || request.maxOutputBytes <= 0)) {
+            throw new AgentCliError('Agent CLI maxOutputBytes must be a finite positive number.', 'configuration');
+        }
         let executable: string;
         let args: string[];
         try {
@@ -39,7 +46,15 @@ export class AgentCliClient {
             throw new AgentCliError(error instanceof Error ? error.message : String(error), 'configuration');
         }
         return new Promise((resolve, reject) => {
-            const child = spawn(executable, args, { cwd: request.cwd, stdio: ['pipe', 'pipe', 'pipe'], shell: false });
+            const promptMode = request.promptMode ?? 'stdin';
+            if (promptMode !== 'stdin' && promptMode !== 'argv') {
+                throw new AgentCliError('Agent CLI promptMode must be stdin or argv.', 'configuration');
+            }
+            const child = spawn(
+                executable,
+                promptMode === 'argv' ? [...args, request.prompt] : args,
+                { cwd: request.cwd, stdio: ['pipe', 'pipe', 'pipe'], shell: false },
+            );
             let stdout = '';
             let stderr = '';
             let outputBytes = 0;
@@ -99,7 +114,7 @@ export class AgentCliClient {
                 if (!output) return finishReject(new AgentCliError('Agent CLI returned empty output.', 'output'));
                 finishResolve(output);
             });
-            child.stdin.end(request.prompt);
+            child.stdin.end(promptMode === 'stdin' ? request.prompt : undefined);
         });
     }
 }

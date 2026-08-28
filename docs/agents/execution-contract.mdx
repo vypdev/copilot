@@ -9,9 +9,12 @@ A run MUST resolve one complete tuple before invoking a CLI:
 ```text
 runtime = agent-provider
 model = agent-model-provider/agent-model
+effort = agent-effort
 command = agent-command or the selected provider default
 ```
 
-The tuple is invalid if any field is empty, malformed, outside policy, or inconsistent with the selected provider. Validation is terminal. The implementation MUST NOT infer a missing model from a provider default.
+The tuple is invalid if any required field is empty, malformed, outside policy, or inconsistent with the selected provider. `effort` is optional; when present it is mapped to the provider's native reasoning/variant option, and is also included as a provider-neutral execution preference where the CLI has no native flag. Validation is terminal. The implementation MUST NOT infer a missing model from a provider default.
+
+Findings and fixer may override the complete tuple independently with `findings-*` and `fixer-*` inputs. The selected runtime and model are resolved before either task starts.
 
 The contract is defined by `action.yml`, resolved by the input builder, authorized by the configuration policy, and executed by provider-specific adapters. See [Agent input reference](/agents/input-reference).

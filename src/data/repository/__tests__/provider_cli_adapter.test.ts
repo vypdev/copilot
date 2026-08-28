@@ -11,7 +11,7 @@ describe('ProviderCliAdapter', () => {
             timeoutMs: 1000,
         });
         expect(result).toBe('result');
-        expect(execute).toHaveBeenCalledWith({ command: 'cursor-agent', prompt: 'inspect changes', timeoutMs: 1000, cwd: undefined, signal: undefined });
+        expect(execute).toHaveBeenCalledWith({ command: 'cursor-agent', prompt: 'inspect changes', promptMode: 'argv', timeoutMs: 1000, cwd: undefined, signal: undefined });
     });
 
     it('rejects an incomplete CLI configuration before invoking the process port', () => {

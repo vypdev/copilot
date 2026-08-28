@@ -18,7 +18,7 @@ import { listWorkspacePaths, isSensitiveWorkspacePath, selectWorkspacePathsToCom
 const TASK_ID = "BugbotAutofixUseCase";
 
 /**
- * Runs the OpenCode build agent to fix the selected bugbot findings. OpenCode edits files
+ * Runs the configured build agent to fix the selected bugbot findings. The agent edits files
  * directly in the workspace (we do not pass or apply diffs). Caller must run verify commands
  * and commit/push after success (see runBugbotAutofixCommitAndPush).
  */
@@ -53,7 +53,7 @@ export class BugbotAutofixUseCase implements ParamUseCase<BugbotAutofixParam, Re
         }
 
         if (!isAgentConfigurationReady(execution.ai?.getAgentConfiguration('fixer'))) {
-            logDebugInfo("OpenCode not configured; skipping autofix.");
+            logDebugInfo("Agent not configured; skipping autofix.");
             return results;
         }
 
@@ -68,7 +68,7 @@ export class BugbotAutofixUseCase implements ParamUseCase<BugbotAutofixParam, Re
             workspacePathsBefore = await listWorkspacePaths(this.gitCommitPort);
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            logError(`Bugbot autofix: unable to inspect workspace before OpenCode: ${message}`);
+            logError(`Bugbot autofix: unable to inspect workspace before agent execution: ${message}`);
             results.push(
                 new Result({
                     id: this.taskId,
@@ -86,7 +86,7 @@ export class BugbotAutofixUseCase implements ParamUseCase<BugbotAutofixParam, Re
                     id: this.taskId,
                     success: false,
                     executed: true,
-                    errors: ["Bugbot autofix refused: workspace is not clean before OpenCode."],
+                    errors: ["Bugbot autofix refused: workspace is not clean before agent execution."],
                 })
             );
             return results;
@@ -107,22 +107,22 @@ export class BugbotAutofixUseCase implements ParamUseCase<BugbotAutofixParam, Re
         const prompt = buildBugbotFixPrompt(execution, context, idsToFix, userComment, verifyCommands);
 
         logDebugInfo(`BugbotAutofix: prompt length=${prompt.length}, target finding ids=${idsToFix.length}, verifyCommands=${verifyCommands.length}.`);
-        logInfo("Running OpenCode build agent to fix selected findings (changes applied in workspace).");
+        logInfo("Running configured build agent to fix selected findings (changes applied in workspace).");
         const response = await this.aiRepository.fix({
             configuration: execution.ai?.getAgentConfiguration('fixer'),
             prompt,
         });
 
-        logDebugInfo(`BugbotAutofix: OpenCode build agent response length=${response?.text?.length ?? 0}. Full response:\n${response?.text ?? '(none)'}`);
+        logDebugInfo(`BugbotAutofix: build agent response length=${response?.text?.length ?? 0}. Full response:\n${response?.text ?? '(none)'}`);
 
         if (!response?.text) {
-            logError("Bugbot autofix: no response from OpenCode build agent.");
+            logError("Bugbot autofix: no response from configured build agent.");
             results.push(
                 new Result({
                     id: this.taskId,
                     success: false,
                     executed: true,
-                    errors: ["OpenCode build agent returned no response."],
+                    errors: ["Configured build agent returned no response."],
                 })
             );
             return results;
@@ -133,7 +133,7 @@ export class BugbotAutofixUseCase implements ParamUseCase<BugbotAutofixParam, Re
             workspacePathsAfter = await listWorkspacePaths(this.gitCommitPort);
         } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            logError(`Bugbot autofix: unable to inspect workspace after OpenCode: ${message}`);
+            logError(`Bugbot autofix: unable to inspect workspace after agent execution: ${message}`);
             results.push(
                 new Result({
                     id: this.taskId,
@@ -179,7 +179,7 @@ export class BugbotAutofixUseCase implements ParamUseCase<BugbotAutofixParam, Re
                 success: true,
                 executed: true,
                 steps: [
-                    // `Bugbot autofix completed. OpenCode applied changes for findings: ${idsToFix.join(", ")}. Run verify commands and commit/push.`,
+                    // `Bugbot autofix completed. The configured agent applied changes for findings: ${idsToFix.join(", ")}. Run verify commands and commit/push.`,
                 ],
                 payload: { targetFindingIds: idsToFix, context, workspacePaths },
             })

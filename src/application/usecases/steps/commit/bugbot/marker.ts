@@ -1,7 +1,7 @@
 /**
  * Bugbot marker: we embed a hidden HTML comment in each finding comment (issue and PR)
  * with finding_id and resolved flag. This lets us (1) find existing findings when loading
- * context, (2) update the same comment when OpenCode re-reports or marks resolved, (3) match
+ * context, (2) update the same comment when the agent re-reports or marks resolved, (3) match
  * threads when the user replies "fix it" in a PR.
  */
 
@@ -102,7 +102,7 @@ export function replaceMarkerInBody(
   return { updated, found: true, changed: updated !== body };
 }
 
-/** Extract title from comment body (first ## line) for context when sending to OpenCode. */
+/** Extract title from comment body (first ## line) for context when sending to the agent. */
 export function extractTitleFromBody(body: string | null): string {
   if (!body) return "";
   const match = body.match(/^##\s+(.+)$/m);

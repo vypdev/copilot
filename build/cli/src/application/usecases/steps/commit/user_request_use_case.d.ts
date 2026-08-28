@@ -1,6 +1,6 @@
 /**
  * Use case that performs whatever changes the user asked for (generic request).
- * Uses the OpenCode build agent to edit files and run commands in the workspace.
+ * Uses the configured build agent to edit files and run commands in the workspace.
  * Caller is responsible for permission check and for running commit/push after success.
  */
 import type { Execution } from "../../../../data/model/execution";

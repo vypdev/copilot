@@ -1,7 +1,8 @@
-import type { AgentProvider } from '../model/agent';
+import type { AgentConfiguration, AgentProvider } from '../model/agent';
+export { defaultAgentCommand } from '../../domain/agent_command';
 /**
- * Provider-specific headless commands. The prompt is supplied through stdin.
- * Keep these as argv-safe command strings; AgentCliClient never invokes a shell.
+ * Custom commands are full overrides, so validate that they cannot silently
+ * discard the selected model or supported effort setting.
  */
-export declare function defaultCliCommand(provider: AgentProvider): string;
+export declare function validateAgentCommand(configuration: AgentConfiguration): void;
 export declare function cliInstallationHint(provider: AgentProvider): string;

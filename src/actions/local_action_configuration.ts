@@ -43,10 +43,10 @@ export async function buildLocalActionConfiguration(
         const token = resolveActionInput<string>(additionalParams, actionInputs, INPUT_KEYS.TOKEN);
 
         /**
-         * AI (OpenCode)
+         * AI agent configuration
          */
         const agentTasks = buildAgentTasksFromValues({ ...actionInputs, ...additionalParams });
-        const opencodeModel = agentTasks.findings.model ?? '';
+        const agentModel = agentTasks.findings.model;
         const aiPullRequestDescription = isEnabledInput(resolveActionInput(additionalParams, actionInputs, INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION));
         const aiMembersOnly = isEnabledInput(resolveActionInput(additionalParams, actionInputs, INPUT_KEYS.AI_MEMBERS_ONLY));
         const aiIncludeReasoning = isEnabledInput(resolveActionInput(additionalParams, actionInputs, INPUT_KEYS.AI_INCLUDE_REASONING));
@@ -234,7 +234,7 @@ export async function buildLocalActionConfiguration(
         singleActionChangelog,
         token,
         agentTasks,
-        opencodeModel,
+        agentModel,
         aiPullRequestDescription,
         aiMembersOnly,
         aiIncludeReasoning,

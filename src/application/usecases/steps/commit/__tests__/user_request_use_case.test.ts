@@ -77,7 +77,7 @@ describe("DoUserRequestUseCase", () => {
         expect(results).toHaveLength(1);
         expect(results[0].success).toBe(false);
         expect(results[0].executed).toBe(true);
-        expect(results[0].errors).toContain("OpenCode build agent returned no response.");
+        expect(results[0].errors).toContain("Configured build agent returned no response.");
         expect(mockCopilotMessage).toHaveBeenCalledTimes(1);
     });
 

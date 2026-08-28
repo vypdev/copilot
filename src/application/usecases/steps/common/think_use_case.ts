@@ -1,14 +1,14 @@
 import { isAgentConfigurationReady } from '../../../../data/model/agent';
 import { Execution } from '../../../../data/model/execution';
 import { Result } from '../../../../data/model/result';
-import { OPENCODE_AGENT_PLAN } from '../../../../application/policies/agent_task_policy';
+import { AGENT_PLAN } from '../../../../application/policies/agent_task_policy';
 import type { FindingsQueryPort } from '../../../ports/agent_findings_ports';
 import { THINK_RESPONSE_SCHEMA } from '../../../../application/policies/agent_response_schemas';
 import type { IssueDescriptionQueryPort } from '../../../ports/issue_description_ports';
 import type { IssueNotificationPort } from '../../../ports/issue_lifecycle_ports';
 import { getThinkPrompt } from '../../../../prompts';
 import { logDebugInfo, logError, logInfo } from '../../../../utils/logger';
-import { OPENCODE_PROJECT_CONTEXT_INSTRUCTION } from '../../../../utils/opencode_project_context_instruction';
+import { PROJECT_CONTEXT_INSTRUCTION } from '../../../../utils/project_context_instruction';
 import { ParamUseCase } from '../../base/param_usecase';
 import { extractStructuredAnswer } from './agent_answer_policy';
 import { extractMentionQuestion, getThinkCommentBody } from './think_input_policy';
@@ -78,7 +78,7 @@ export class ThinkUseCase implements ParamUseCase<Execution, Result[]> {
                         id: this.taskId,
                         success: false,
                         executed: false,
-                        errors: ['OpenCode model or CLI command not found.'],
+                        errors: ['Configured agent model or CLI command not found.'],
                     })
                 );
                 return results;
@@ -116,14 +116,14 @@ export class ThinkUseCase implements ParamUseCase<Execution, Result[]> {
                 : '\n\n';
             logDebugInfo(`Think: question length=${question.length}, issue context length=${issueDescription.length}. Full question:\n${question}`);
             const prompt = getThinkPrompt({
-                projectContextInstruction: OPENCODE_PROJECT_CONTEXT_INSTRUCTION,
+                projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
                 contextBlock,
                 question,
             });
-            logDebugInfo(`Think: calling OpenCode Plan agent (prompt length=${prompt.length}).`);
+            logDebugInfo(`Think: calling configured agent (prompt length=${prompt.length}).`);
             const response = await this.aiRepository.query({
                 configuration: param.ai?.getAgentConfiguration('findings'),
-                agentId: OPENCODE_AGENT_PLAN,
+                agentId: AGENT_PLAN,
                 prompt,
                 options: {
                     expectJson: true,
@@ -133,16 +133,16 @@ export class ThinkUseCase implements ParamUseCase<Execution, Result[]> {
             });
             const answer = extractStructuredAnswer(response);
 
-            logDebugInfo(`Think: OpenCode response received. Answer length=${answer.length}. Full answer:\n${answer}`);
+            logDebugInfo(`Think: agent response received. Answer length=${answer.length}. Full answer:\n${answer}`);
 
             if (!answer) {
-                logError('OpenCode returned no answer for Think.');
+                logError('Configured agent returned no answer for Think.');
                 results.push(
                     new Result({
                         id: this.taskId,
                         success: false,
                         executed: true,
-                        errors: ['OpenCode returned no answer.'],
+                        errors: ['Configured agent returned no answer.'],
                     })
                 );
                 return results;

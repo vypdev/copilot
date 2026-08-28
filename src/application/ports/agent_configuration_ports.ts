@@ -1,6 +1,1 @@
-export interface AgentConfiguration {
-    provider: 'opencode' | 'codex' | 'cursor';
-    modelProvider?: string;
-    model: string;
-    command?: string;
-}
+export type { AgentConfiguration } from '../../domain/agent';

@@ -1,5 +1,5 @@
 import { Result } from '../../../../data/model/result';
-import { OPENCODE_AGENT_PLAN } from '../../../policies/agent_task_policy';
+import { AGENT_PLAN } from '../../../policies/agent_task_policy';
 import type { AgentConfiguration } from '../../../ports/agent_configuration_ports';
 import type { FindingsQueryPort } from '../../../ports/agent_findings_ports';
 import { LANGUAGE_CHECK_RESPONSE_SCHEMA, TRANSLATION_RESPONSE_SCHEMA } from '../../../policies/agent_response_schemas';
@@ -39,7 +39,7 @@ export class CommentLanguageTranslationWorkflow {
         const configuration = context.configuration;
         const checkResponse = await this.findingsQueryPort.query({
             configuration,
-            agentId: OPENCODE_AGENT_PLAN,
+            agentId: AGENT_PLAN,
             prompt: getCheckCommentLanguagePrompt({ locale: context.locale, commentBody: context.commentBody }),
             options: {
                 expectJson: true,
@@ -53,7 +53,7 @@ export class CommentLanguageTranslationWorkflow {
 
         const translationResponse = await this.findingsQueryPort.query({
             configuration,
-            agentId: OPENCODE_AGENT_PLAN,
+            agentId: AGENT_PLAN,
             prompt: getTranslateCommentPrompt({ locale: context.locale, commentBody: context.commentBody }),
             options: {
                 expectJson: true,
@@ -64,7 +64,7 @@ export class CommentLanguageTranslationWorkflow {
         const translatedText = this.stringProperty(translationResponse, 'translatedText').trim();
         if (!translatedText) {
             const reason = this.stringProperty(translationResponse, 'reason');
-            logInfo(`Translation returned no text; skipping comment update.${reason ? ` Reason: ${reason}` : ' OpenCode may have failed or returned invalid response.'}`);
+            logInfo(`Translation returned no text; skipping comment update.${reason ? ` Reason: ${reason}` : ' The configured agent may have failed or returned an invalid response.'}`);
             return [new Result({ id: context.taskId, success: true, executed: false })];
         }
 

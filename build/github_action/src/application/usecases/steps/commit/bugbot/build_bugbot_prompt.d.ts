@@ -1,6 +1,6 @@
 /**
- * Builds the prompt for OpenCode (plan agent) when detecting potential problems on push.
- * We pass: repo context, head/base branch names (OpenCode computes the diff itself), issue number,
+ * Builds the prompt for the configured findings agent when detecting potential problems on push.
+ * We pass: repo context, head/base branch names (the agent computes the diff itself), issue number,
  * optional ignore patterns, and the block of previously reported findings (task 2).
  * We do not pass a pre-computed diff or file list.
  */

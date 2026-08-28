@@ -12,7 +12,7 @@ export interface PullRequestFindingResolution {
 }
 
 const RESOLVED_NOTE =
-  "\n\n---\n**Resolved** (OpenCode confirmed fixed in latest analysis).\n";
+  "\n\n---\n**Resolved** (configured agent confirmed fixed in latest analysis).\n";
 
 export async function resolvePullRequestFinding(
   repository: BugbotPullRequestResolutionPort,

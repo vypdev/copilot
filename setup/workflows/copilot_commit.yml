@@ -22,12 +22,15 @@ jobs:
           agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
           agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
           agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
+          agent-effort: ${{ vars.AGENT_EFFORT }}
           agent-command: ${{ vars.AGENT_COMMAND }}
           token: ${{ secrets.PAT }}
         env:
           AGENT_PROVIDER: ${{ vars.AGENT_PROVIDER || 'codex' }}
           AGENT_MODEL_PROVIDER: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
           AGENT_MODEL: ${{ vars.AGENT_MODEL }}
+          AGENT_EFFORT: ${{ vars.AGENT_EFFORT }}
+          AGENT_PROVISIONING: ${{ vars.AGENT_PROVISIONING || 'auto' }}
           AGENT_ALLOWED_MODEL_PROVIDERS: ${{ vars.AGENT_ALLOWED_MODEL_PROVIDERS || 'openai' }}
           AGENT_ALLOWED_MODELS: ${{ vars.AGENT_ALLOWED_MODELS || 'openai/gpt-5.6-luna' }}
           AGENT_COMMAND: ${{ vars.AGENT_COMMAND }}

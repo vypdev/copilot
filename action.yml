@@ -396,15 +396,24 @@ inputs:
   agent-model-provider:
     description: "Provider that supplies the selected model, for example openai, opencode, openrouter, anthropic, or a local provider."
     default: "openai"
+  agent-effort:
+    description: "Optional reasoning effort or provider-specific model variant. Codex and OpenCode map this to their native CLI options."
+    default: ""
 
   agent-model:
     description: "Selected model name without the provider prefix. The provider is configured separately with agent-model-provider."
     default: "gpt-5.6-luna"
   agent-command:
-    description: "Optional executable command for the selected CLI agent. Defaults: codex exec --ephemeral --skip-git-repo-check -, opencode run, or agent -p --output-format text -. No fallback command is attempted."
+    description: "Optional executable command for the selected CLI agent. Defaults are model-aware: codex exec with --model and model_provider, opencode run --model provider/model, or agent -p --model. No fallback command is attempted."
     default: ""
   findings-provider:
     description: "Optional provider override for findings."
+    default: ""
+  findings-model-provider:
+    description: "Optional model-provider override for findings."
+    default: ""
+  findings-effort:
+    description: "Optional reasoning effort or model variant override for findings."
     default: ""
 
   findings-model:
@@ -415,6 +424,12 @@ inputs:
     default: ""
   fixer-provider:
     description: "Optional provider override for fixer."
+    default: ""
+  fixer-model-provider:
+    description: "Optional model-provider override for fixer."
+    default: ""
+  fixer-effort:
+    description: "Optional reasoning effort or model variant override for fixer."
     default: ""
 
   fixer-model:

@@ -1,6 +1,6 @@
 import { isAgentConfigurationReady } from "../../../../../data/model/agent";
 import type { Execution } from "../../../../../data/model/execution";
-import { OPENCODE_AGENT_PLAN } from "../../../../../application/policies/agent_task_policy";
+import { AGENT_PLAN } from "../../../../../application/policies/agent_task_policy";
 import type { FindingsQueryPort } from "../../../../ports/agent_findings_ports";
 import type { BugbotContextPorts } from "../../../../../application/ports/bugbot_context_ports";
 import type { BugbotPullRequestQueryPort } from "../../../../../application/ports/bugbot_pull_request_read_ports";
@@ -23,7 +23,7 @@ export interface BugbotFixIntent {
 const TASK_ID = "DetectBugbotFixIntentUseCase";
 
 /**
- * Asks OpenCode (plan agent) whether the user comment is a request to fix one or more
+ * Asks the configured findings agent whether the user comment is a request to fix one or more
  * bugbot findings, and which finding ids to target. Used from issue comments and PR
  * review comments. When isFixRequest is true and targetFindingIds is non-empty, the
  * caller (IssueCommentUseCase / PullRequestReviewCommentUseCase) runs the autofix flow.
@@ -44,7 +44,7 @@ export class DetectBugbotFixIntentUseCase implements ParamUseCase<Execution, Res
         const results: Result[] = [];
 
         if (!isAgentConfigurationReady(param.ai?.getAgentConfiguration('findings'))) {
-            logInfo("OpenCode not configured; skipping bugbot fix intent detection.");
+            logInfo("Agent not configured; skipping bugbot fix intent detection.");
             return results;
         }
 
@@ -99,7 +99,7 @@ export class DetectBugbotFixIntentUseCase implements ParamUseCase<Execution, Res
             description: p.fullBody?.slice(0, 4000) ?? "",
         }));
 
-        // When user replied in a PR thread, include parent comment so OpenCode knows which finding they mean.
+        // When user replied in a PR thread, include parent comment so the agent knows which finding they mean.
         let parentCommentBody: string | undefined;
         if (param.pullRequest.isPullRequestReviewComment && param.pullRequest.commentInReplyToId) {
             const prNumber = param.pullRequest.number;
@@ -115,10 +115,10 @@ export class DetectBugbotFixIntentUseCase implements ParamUseCase<Execution, Res
 
         const prompt = buildBugbotFixIntentPrompt(commentBody, unresolvedFindings, parentCommentBody);
 
-        logDebugInfo(`DetectBugbotFixIntent: prompt length=${prompt.length}, unresolved findings=${unresolvedFindings.length}. Calling OpenCode Plan agent.`);
+        logDebugInfo(`DetectBugbotFixIntent: prompt length=${prompt.length}, unresolved findings=${unresolvedFindings.length}. Calling configured findings agent.`);
         const response = await this.aiRepository.query({
             configuration: param.ai?.getAgentConfiguration('findings'),
-            agentId: OPENCODE_AGENT_PLAN,
+            agentId: AGENT_PLAN,
             prompt,
             options: {
                 expectJson: true,
@@ -128,7 +128,7 @@ export class DetectBugbotFixIntentUseCase implements ParamUseCase<Execution, Res
         });
 
         if (response == null || typeof response !== "object") {
-            logInfo("No response from OpenCode for fix intent.");
+            logInfo("No response from configured agent for fix intent.");
             results.push(
                 new Result({
                     id: this.taskId,
@@ -155,7 +155,7 @@ export class DetectBugbotFixIntentUseCase implements ParamUseCase<Execution, Res
         const validIds = new Set(unresolvedIds);
         const filteredIds = targetFindingIds.filter((id) => validIds.has(id));
 
-        logDebugInfo(`DetectBugbotFixIntent: OpenCode payload is_fix_request=${isFixRequest}, is_do_request=${isDoRequest}, target_finding_ids=${JSON.stringify(targetFindingIds)}, filteredIds=${JSON.stringify(filteredIds)}.`);
+        logDebugInfo(`DetectBugbotFixIntent: agent payload is_fix_request=${isFixRequest}, is_do_request=${isDoRequest}, target_finding_ids=${JSON.stringify(targetFindingIds)}, filteredIds=${JSON.stringify(filteredIds)}.`);
 
         results.push(
             new Result({

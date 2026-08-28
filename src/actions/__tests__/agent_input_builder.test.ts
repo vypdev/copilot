@@ -5,13 +5,15 @@ describe('agent input builder', () => {
     it('applies defaults and task-specific overrides consistently', () => {
         const tasks = buildAgentTasksFromValues({
             [INPUT_KEYS.AGENT_PROVIDER]: 'opencode',
-
+            [INPUT_KEYS.AGENT_EFFORT]: 'medium',
             [INPUT_KEYS.AGENT_MODEL]: 'base-model',
             [INPUT_KEYS.FINDINGS_PROVIDER]: 'codex',
-
+            [INPUT_KEYS.FINDINGS_MODEL_PROVIDER]: 'openai',
             [INPUT_KEYS.FINDINGS_MODEL]: 'codex-model',
+            [INPUT_KEYS.FINDINGS_EFFORT]: 'high',
+            [INPUT_KEYS.FIXER_EFFORT]: 'low',
         });
-        expect(tasks.findings).toMatchObject({ provider: 'codex', modelProvider: 'openai', model: 'codex-model', command: 'codex exec --ephemeral --skip-git-repo-check -' });
-        expect(tasks.fixer).toMatchObject({ provider: 'opencode', modelProvider: 'openai', model: 'base-model', command: 'opencode run --model openai/base-model' });
+        expect(tasks.findings).toMatchObject({ provider: 'codex', modelProvider: 'openai', model: 'codex-model', effort: 'high', command: "codex exec --ephemeral --skip-git-repo-check --model codex-model --config 'model_provider=\"openai\"' --config 'model_reasoning_effort=\"high\"' -" });
+        expect(tasks.fixer).toMatchObject({ provider: 'opencode', modelProvider: 'openai', model: 'base-model', effort: 'low', command: 'opencode run --model openai/base-model --variant low' });
     });
 });

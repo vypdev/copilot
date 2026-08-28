@@ -1,10 +1,10 @@
 /**
- * Builds the prompt for OpenCode (plan agent) to decide if the user is requesting
+ * Builds the prompt for the configured findings agent to decide if the user is requesting
  * to fix one or more bugbot findings and which finding ids to target.
  */
 
 import { getBugbotFixIntentPrompt } from "../../../../../prompts";
-import { OPENCODE_PROJECT_CONTEXT_INSTRUCTION } from "../../../../../utils/opencode_project_context_instruction";
+import { PROJECT_CONTEXT_INSTRUCTION } from "../../../../../utils/project_context_instruction";
 import { sanitizeUserCommentForPrompt } from "./sanitize_user_comment_for_prompt";
 
 export interface UnresolvedFindingSummary {
@@ -52,7 +52,7 @@ export function buildBugbotFixIntentPrompt(
             : '';
 
     return getBugbotFixIntentPrompt({
-        projectContextInstruction: OPENCODE_PROJECT_CONTEXT_INSTRUCTION,
+        projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
         findingsBlock,
         parentBlock,
         userComment: sanitizeUserCommentForPrompt(userComment),

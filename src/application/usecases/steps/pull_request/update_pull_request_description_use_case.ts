@@ -1,13 +1,13 @@
 import { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
-import { OPENCODE_AGENT_PLAN } from "../../../../application/policies/agent_task_policy";
+import { AGENT_PLAN } from "../../../../application/policies/agent_task_policy";
 import type { FindingsQueryPort } from "../../../ports/agent_findings_ports";
 import type { IssueDescriptionQueryPort } from "../../../ports/issue_description_ports";
 import type { OrganizationMembersPort } from "../../../ports/organization_members_ports";
 import type { PullRequestDescriptionCommandPort } from "../../../ports/pull_request_description_ports";
 import { getUpdatePullRequestDescriptionPrompt } from "../../../../prompts";
 import { logDebugInfo, logError, logInfo } from "../../../../utils/logger";
-import { OPENCODE_PROJECT_CONTEXT_INSTRUCTION } from "../../../../utils/opencode_project_context_instruction";
+import { PROJECT_CONTEXT_INSTRUCTION } from "../../../../utils/project_context_instruction";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
 
@@ -49,7 +49,7 @@ export class UpdatePullRequestDescriptionUseCase implements ParamUseCase<Executi
             }
 
             logDebugInfo(
-                `PR description will be generated from workspace diff: base "${baseBranch}", head "${headBranch}" (OpenCode agent will run git diff).`
+                `PR description will be generated from workspace diff: base "${baseBranch}", head "${headBranch}" (configured agent will run git diff).`
             );
 
             const issueDescription = (await this.issueDescriptionQueryPort.getDescription(
@@ -96,17 +96,17 @@ export class UpdatePullRequestDescriptionUseCase implements ParamUseCase<Executi
             }
 
             const prompt = getUpdatePullRequestDescriptionPrompt({
-                projectContextInstruction: OPENCODE_PROJECT_CONTEXT_INSTRUCTION,
+                projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
                 baseBranch,
                 headBranch,
                 issueNumber: String(param.issueNumber),
                 issueDescription,
             });
 
-            logDebugInfo(`UpdatePullRequestDescription: prompt length=${prompt.length}, issue description length=${issueDescription.length}. Calling OpenCode Plan agent.`);
+            logDebugInfo(`UpdatePullRequestDescription: prompt length=${prompt.length}, issue description length=${issueDescription.length}. Calling configured agent.`);
             const agentResponse = await this.aiRepository.query({
                 configuration: param.ai?.getAgentConfiguration('findings'),
-                agentId: OPENCODE_AGENT_PLAN,
+                agentId: AGENT_PLAN,
                 prompt,
             });
 
@@ -115,7 +115,7 @@ export class UpdatePullRequestDescriptionUseCase implements ParamUseCase<Executi
                     ? agentResponse
                     : (agentResponse && String((agentResponse as Record<string, unknown>).description)) || '';
 
-            logDebugInfo(`UpdatePullRequestDescription: OpenCode response received. Description length=${prBody.length}. Full description:\n${prBody}`);
+            logDebugInfo(`UpdatePullRequestDescription: agent response received. Description length=${prBody.length}. Full description:\n${prBody}`);
 
             if (!prBody.trim()) {
                 result.push(
@@ -123,7 +123,7 @@ export class UpdatePullRequestDescriptionUseCase implements ParamUseCase<Executi
                         id: this.taskId,
                         success: false,
                         executed: true,
-                        steps: [`OpenCode Plan agent did not return a PR description.`],
+                        steps: [`Configured agent did not return a PR description.`],
                     })
                 );
                 return result;

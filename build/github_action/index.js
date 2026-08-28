@@ -47977,13 +47977,13 @@ function resolveActionInput(additionalParams, actionInputs, key) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildAgentTasks = buildAgentTasks;
+const agent_command_1 = __nccwpck_require__(7700);
 const agent_cli_command_policy_1 = __nccwpck_require__(4678);
 const PROVIDERS = ['opencode', 'cursor', 'codex'];
-const DEFAULT_MODEL_PROVIDERS = ['openai', 'opencode', 'openrouter', 'anthropic', 'cursor', 'local'];
-function configuredAllowlist(name, fallback) {
+function configuredAllowlist(name) {
     const raw = process.env[name]?.trim();
     if (!raw)
-        return fallback;
+        return undefined;
     const values = raw.split(',').map(value => value.trim().toLowerCase()).filter(Boolean);
     if (!values.length)
         throw new Error(`${name} must contain at least one value.`);
@@ -47999,22 +47999,34 @@ function buildConfiguration(values) {
     const modelProvider = values.modelProvider?.trim().toLowerCase() || 'openai';
     if (!/^[a-z0-9][a-z0-9_-]*$/.test(modelProvider))
         throw new Error('Agent model provider must be a valid provider identifier.');
-    const allowedProviders = configuredAllowlist('AGENT_ALLOWED_MODEL_PROVIDERS', DEFAULT_MODEL_PROVIDERS);
-    if (!allowedProviders.includes(modelProvider))
+    const allowedProviders = configuredAllowlist('AGENT_ALLOWED_MODEL_PROVIDERS');
+    if (allowedProviders && !allowedProviders.includes(modelProvider))
         throw new Error(`Agent model provider "${modelProvider}" is not allowlisted.`);
     const model = values.model.trim();
     if (!model)
         throw new Error('Agent model must not be empty.');
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/.test(model)) {
+        throw new Error('Agent model must be a simple model identifier without whitespace or shell syntax.');
+    }
     const allowedModels = process.env.AGENT_ALLOWED_MODELS?.split(',').map(value => value.trim()).filter(Boolean);
     if (allowedModels?.length && !allowedModels.includes(`${modelProvider}/${model}`) && !allowedModels.includes(model)) {
         throw new Error(`Agent model "${modelProvider}/${model}" is not allowlisted.`);
     }
-    const command = values.command?.trim() || (provider === 'opencode'
-        ? `${(0, agent_cli_command_policy_1.defaultCliCommand)(provider)} --model ${modelProvider}/${model}`
-        : (0, agent_cli_command_policy_1.defaultCliCommand)(provider));
-    if (provider === 'opencode' && !command.includes('--model'))
-        throw new Error('OpenCode command must select the model explicitly with --model.');
-    return { provider, modelProvider, model, command };
+    const effort = values.effort?.trim() || undefined;
+    if (effort && !/^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/.test(effort)) {
+        throw new Error('Agent effort must be a simple identifier without whitespace or shell syntax.');
+    }
+    const customCommand = values.command?.trim();
+    const configuration = {
+        provider,
+        modelProvider,
+        model,
+        ...(effort ? { effort } : {}),
+        command: customCommand || (0, agent_command_1.defaultAgentCommand)({ provider, modelProvider, model, effort }),
+    };
+    if (customCommand)
+        (0, agent_cli_command_policy_1.validateAgentCommand)(configuration);
+    return configuration;
 }
 function mergeTaskValues(values, overrides) {
     return { ...values, ...Object.fromEntries(Object.entries(overrides ?? {}).filter(([, value]) => typeof value === 'string' && value.trim().length > 0)) };
@@ -48038,27 +48050,31 @@ exports.buildAgentTasksFromInputs = buildAgentTasksFromInputs;
 exports.buildAgentTasksFromValues = buildAgentTasksFromValues;
 const constants_1 = __nccwpck_require__(5415);
 const agent_configuration_builder_1 = __nccwpck_require__(1248);
-const DEFAULT_AGENT_PROVIDER = 'codex';
-const DEFAULT_MODEL_PROVIDER = 'openai';
-const DEFAULT_AGENT_MODEL = 'gpt-5.6-luna';
+const agent_1 = __nccwpck_require__(9040);
 function buildAgentTasksFromInputs(read) {
-    const provider = read(constants_1.INPUT_KEYS.AGENT_PROVIDER)?.trim() || DEFAULT_AGENT_PROVIDER;
-    const modelProvider = read(constants_1.INPUT_KEYS.AGENT_MODEL_PROVIDER)?.trim() || DEFAULT_MODEL_PROVIDER;
-    const model = read(constants_1.INPUT_KEYS.AGENT_MODEL)?.trim() || DEFAULT_AGENT_MODEL;
+    const provider = read(constants_1.INPUT_KEYS.AGENT_PROVIDER)?.trim() || agent_1.DEFAULT_AGENT_PROVIDER;
+    const modelProvider = read(constants_1.INPUT_KEYS.AGENT_MODEL_PROVIDER)?.trim() || agent_1.DEFAULT_MODEL_PROVIDER;
+    const model = read(constants_1.INPUT_KEYS.AGENT_MODEL)?.trim() || agent_1.DEFAULT_AGENT_MODEL;
+    const effort = read(constants_1.INPUT_KEYS.AGENT_EFFORT) ?? '';
     const command = read(constants_1.INPUT_KEYS.AGENT_COMMAND) ?? '';
     return (0, agent_configuration_builder_1.buildAgentTasks)({
         provider,
         modelProvider,
         model,
+        effort,
         command,
         findings: {
             provider: read(constants_1.INPUT_KEYS.FINDINGS_PROVIDER),
+            modelProvider: read(constants_1.INPUT_KEYS.FINDINGS_MODEL_PROVIDER),
             model: read(constants_1.INPUT_KEYS.FINDINGS_MODEL),
+            effort: read(constants_1.INPUT_KEYS.FINDINGS_EFFORT),
             command: read(constants_1.INPUT_KEYS.FINDINGS_COMMAND),
         },
         fixer: {
             provider: read(constants_1.INPUT_KEYS.FIXER_PROVIDER),
+            modelProvider: read(constants_1.INPUT_KEYS.FIXER_MODEL_PROVIDER),
             model: read(constants_1.INPUT_KEYS.FIXER_MODEL),
+            effort: read(constants_1.INPUT_KEYS.FIXER_EFFORT),
             command: read(constants_1.INPUT_KEYS.FIXER_COMMAND),
         },
     });
@@ -48362,6 +48378,7 @@ const input_number_policy_1 = __nccwpck_require__(7165);
 const input_values_policy_1 = __nccwpck_require__(8841);
 const github_action_ai_inputs_1 = __nccwpck_require__(7640);
 const agent_cli_provisioner_1 = __nccwpck_require__(3115);
+const agent_authentication_preflight_1 = __nccwpck_require__(7766);
 const github_action_image_inputs_1 = __nccwpck_require__(5380);
 const github_action_locale_inputs_1 = __nccwpck_require__(8893);
 const size_threshold_builder_1 = __nccwpck_require__(9757);
@@ -48398,15 +48415,26 @@ async function runGitHubAction() {
      */
     const token = (0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.TOKEN, { required: true });
     /**
-     * AI (OpenCode)
+     * Agent runtime
      */
     const aiInputs = (0, github_action_ai_inputs_1.readGithubActionAiInputs)(github_action_input_1.getGithubActionInput);
-    if (process.env.GITHUB_ACTIONS === 'true') {
-        new agent_cli_provisioner_1.AgentCliProvisioner().provision(aiInputs.requestedAgentTasks.findings.provider);
-    }
-    const opencodeModel = aiInputs.requestedAgentTasks.findings.model;
-    (0, logger_1.logDebugInfo)(`Using ${aiInputs.requestedAgentTasks.findings.provider} CLI, model: ${opencodeModel}.`);
     const agentTasks = aiInputs.requestedAgentTasks;
+    for (const [task, configuration] of [['findings', agentTasks.findings], ['fixer', agentTasks.fixer]]) {
+        const preflight = (0, agent_authentication_preflight_1.runAgentAuthenticationPreflight)(configuration);
+        if (preflight.check.status === 'missing' && preflight.shouldFail) {
+            throw new Error(`${task} agent authentication failed: ${preflight.check.message}`);
+        }
+        if (preflight.check.status === 'missing' && preflight.mode === 'warn') {
+            (0, logger_1.logInfo)(`Warning: ${task} agent authentication could not be preflighted: ${preflight.check.message}`);
+        }
+    }
+    if (process.env.GITHUB_ACTIONS === 'true') {
+        const provisioner = new agent_cli_provisioner_1.AgentCliProvisioner();
+        for (const configuration of [agentTasks.findings, agentTasks.fixer]) {
+            provisioner.provision(configuration);
+        }
+    }
+    (0, logger_1.logDebugInfo)(`Using ${agentTasks.findings.provider} CLI for findings (${agentTasks.findings.modelProvider ?? 'default'}/${agentTasks.findings.model}) and ${agentTasks.fixer.provider} CLI for fixer (${agentTasks.fixer.modelProvider ?? 'default'}/${agentTasks.fixer.model}).`);
     const aiPullRequestDescription = aiInputs.pullRequestDescription;
     const aiMembersOnly = aiInputs.membersOnly;
     const aiIncludeReasoning = aiInputs.includeReasoning;
@@ -48471,7 +48499,7 @@ async function runGitHubAction() {
             commit: imageConfiguration.commit,
         }),
         tokens: (0, configuration_builders_1.buildTokens)(token),
-        ai: new ai_1.Ai('', opencodeModel, aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, agentTasks),
+        ai: new ai_1.Ai('', agentTasks.findings.model, aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, agentTasks),
         labels: (0, configuration_builders_1.buildLabels)(labelInputs),
         issueTypes: (0, configuration_builders_1.buildIssueTypes)(issueTypeInputs),
         locale: (0, configuration_builders_1.buildLocale)(localeInputs.issue, localeInputs.pullRequest),
@@ -49141,9 +49169,8 @@ exports.LANGUAGE_CHECK_RESPONSE_SCHEMA = {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.OPENCODE_AGENT_BUILD = exports.OPENCODE_AGENT_PLAN = void 0;
-exports.OPENCODE_AGENT_PLAN = 'build';
-exports.OPENCODE_AGENT_BUILD = 'build';
+exports.AGENT_PLAN = void 0;
+exports.AGENT_PLAN = 'build';
 
 
 /***/ }),
@@ -49355,7 +49382,7 @@ const logger_1 = __nccwpck_require__(1151);
 const task_emoji_1 = __nccwpck_require__(6103);
 const agent_task_policy_1 = __nccwpck_require__(5712);
 const prompts_1 = __nccwpck_require__(9518);
-const opencode_project_context_instruction_1 = __nccwpck_require__(2225);
+const project_context_instruction_1 = __nccwpck_require__(3907);
 const find_issue_branch_1 = __nccwpck_require__(8575);
 const sync_progress_labels_to_open_pull_requests_1 = __nccwpck_require__(8277);
 const progress_summary_builder_1 = __nccwpck_require__(2721);
@@ -49430,18 +49457,18 @@ class CheckProgressUseCase {
                 return results;
             }
             const resolvedBranch = branch;
-            // Get development (parent) branch – we pass this so the OpenCode agent can compute the diff
+            // Get development (parent) branch – the configured agent computes the diff
             const developmentBranch = param.branches.development || 'develop';
-            (0, logger_1.logInfo)(`📦 Progress will be assessed from workspace diff: base branch "${developmentBranch}", current branch "${resolvedBranch}" (OpenCode agent will run git diff).`);
+            (0, logger_1.logInfo)(`📦 Progress will be assessed from workspace diff: base branch "${developmentBranch}", current branch "${resolvedBranch}" (configured agent will run git diff).`);
             const prompt = (0, prompts_1.getCheckProgressPrompt)({
-                projectContextInstruction: opencode_project_context_instruction_1.OPENCODE_PROJECT_CONTEXT_INSTRUCTION,
+                projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
                 issueNumber: String(issueNumber),
                 issueDescription,
                 baseBranch: developmentBranch,
                 currentBranch: resolvedBranch,
             });
             (0, logger_1.logDebugInfo)(`CheckProgress: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`);
-            (0, logger_1.logInfo)('🤖 Analyzing progress using OpenCode Plan agent...');
+            (0, logger_1.logInfo)('🤖 Analyzing progress using the configured agent...');
             const attemptResult = await this.fetchProgressAttempt(param.ai, prompt);
             const progress = attemptResult.progress;
             const summary = attemptResult.summary;
@@ -49528,7 +49555,7 @@ class CheckProgressUseCase {
     async fetchProgressAttempt(ai, prompt) {
         return (0, progress_response_1.parseProgressResponse)(await this.aiRepository.query({
             configuration: ai.getAgentConfiguration('findings'),
-            agentId: agent_task_policy_1.OPENCODE_AGENT_PLAN,
+            agentId: agent_task_policy_1.AGENT_PLAN,
             prompt,
             options: {
                 expectJson: true,
@@ -50311,7 +50338,7 @@ const result_1 = __nccwpck_require__(3817);
 const agent_task_policy_1 = __nccwpck_require__(5712);
 const prompts_1 = __nccwpck_require__(9518);
 const logger_1 = __nccwpck_require__(1151);
-const opencode_project_context_instruction_1 = __nccwpck_require__(2225);
+const project_context_instruction_1 = __nccwpck_require__(3907);
 const task_emoji_1 = __nccwpck_require__(6103);
 class RecommendStepsUseCase {
     constructor(issueDescriptionQueryPort, aiRepository) {
@@ -50353,26 +50380,26 @@ class RecommendStepsUseCase {
                 return results;
             }
             const prompt = (0, prompts_1.getRecommendStepsPrompt)({
-                projectContextInstruction: opencode_project_context_instruction_1.OPENCODE_PROJECT_CONTEXT_INSTRUCTION,
+                projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
                 issueNumber: String(issueNumber),
                 issueDescription,
             });
             (0, logger_1.logDebugInfo)(`RecommendSteps: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`);
-            (0, logger_1.logInfo)(`🤖 Recommending steps using OpenCode Plan agent...`);
+            (0, logger_1.logInfo)(`🤖 Recommending steps using the configured agent...`);
             const response = await this.aiRepository.query({
                 configuration: param.ai?.getAgentConfiguration('findings'),
-                agentId: agent_task_policy_1.OPENCODE_AGENT_PLAN,
+                agentId: agent_task_policy_1.AGENT_PLAN,
                 prompt,
             });
             const steps = typeof response === 'string'
                 ? response
                 : (response && String(response.steps)) || 'No response.';
-            (0, logger_1.logDebugInfo)(`RecommendSteps: OpenCode response received. Steps length=${steps.length}. Full steps:\n${steps}`);
+            (0, logger_1.logDebugInfo)(`RecommendSteps: agent response received. Steps length=${steps.length}. Full steps:\n${steps}`);
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: true,
                 executed: true,
-                steps: ['Recommended steps (OpenCode Plan agent):', steps],
+                steps: ['Recommended steps (configured agent):', steps],
                 payload: { issueNumber, recommendedSteps: steps },
             }));
         }
@@ -51322,7 +51349,7 @@ class BugbotAutofixUseCase {
             return results;
         }
         if (!(0, agent_1.isAgentConfigurationReady)(execution.ai?.getAgentConfiguration('fixer'))) {
-            (0, logger_1.logDebugInfo)("OpenCode not configured; skipping autofix.");
+            (0, logger_1.logDebugInfo)("Agent not configured; skipping autofix.");
             return results;
         }
         const context = providedContext ?? (await (0, load_bugbot_context_use_case_1.loadBugbotContext)(execution, branchOverride ? { branchOverride } : undefined, this.contextPorts));
@@ -51332,7 +51359,7 @@ class BugbotAutofixUseCase {
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            (0, logger_1.logError)(`Bugbot autofix: unable to inspect workspace before OpenCode: ${message}`);
+            (0, logger_1.logError)(`Bugbot autofix: unable to inspect workspace before agent execution: ${message}`);
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -51347,7 +51374,7 @@ class BugbotAutofixUseCase {
                 id: this.taskId,
                 success: false,
                 executed: true,
-                errors: ["Bugbot autofix refused: workspace is not clean before OpenCode."],
+                errors: ["Bugbot autofix refused: workspace is not clean before agent execution."],
             }));
             return results;
         }
@@ -51362,19 +51389,19 @@ class BugbotAutofixUseCase {
         const verifyCommands = execution.ai.getBugbotFixVerifyCommands?.() ?? [];
         const prompt = (0, build_bugbot_fix_prompt_1.buildBugbotFixPrompt)(execution, context, idsToFix, userComment, verifyCommands);
         (0, logger_1.logDebugInfo)(`BugbotAutofix: prompt length=${prompt.length}, target finding ids=${idsToFix.length}, verifyCommands=${verifyCommands.length}.`);
-        (0, logger_1.logInfo)("Running OpenCode build agent to fix selected findings (changes applied in workspace).");
+        (0, logger_1.logInfo)("Running configured build agent to fix selected findings (changes applied in workspace).");
         const response = await this.aiRepository.fix({
             configuration: execution.ai?.getAgentConfiguration('fixer'),
             prompt,
         });
-        (0, logger_1.logDebugInfo)(`BugbotAutofix: OpenCode build agent response length=${response?.text?.length ?? 0}. Full response:\n${response?.text ?? '(none)'}`);
+        (0, logger_1.logDebugInfo)(`BugbotAutofix: build agent response length=${response?.text?.length ?? 0}. Full response:\n${response?.text ?? '(none)'}`);
         if (!response?.text) {
-            (0, logger_1.logError)("Bugbot autofix: no response from OpenCode build agent.");
+            (0, logger_1.logError)("Bugbot autofix: no response from configured build agent.");
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
                 executed: true,
-                errors: ["OpenCode build agent returned no response."],
+                errors: ["Configured build agent returned no response."],
             }));
             return results;
         }
@@ -51384,7 +51411,7 @@ class BugbotAutofixUseCase {
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            (0, logger_1.logError)(`Bugbot autofix: unable to inspect workspace after OpenCode: ${message}`);
+            (0, logger_1.logError)(`Bugbot autofix: unable to inspect workspace after agent execution: ${message}`);
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -51422,7 +51449,7 @@ class BugbotAutofixUseCase {
             success: true,
             executed: true,
             steps: [
-            // `Bugbot autofix completed. OpenCode applied changes for findings: ${idsToFix.join(", ")}. Run verify commands and commit/push.`,
+            // `Bugbot autofix completed. The configured agent applied changes for findings: ${idsToFix.join(", ")}. Run verify commands and commit/push.`,
             ],
             payload: { targetFindingIds: idsToFix, context, workspacePaths },
         }));
@@ -51568,13 +51595,13 @@ function canRunDoUserRequest(payload) {
 "use strict";
 
 /**
- * Builds the prompt for OpenCode (plan agent) to decide if the user is requesting
+ * Builds the prompt for the configured findings agent to decide if the user is requesting
  * to fix one or more bugbot findings and which finding ids to target.
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildBugbotFixIntentPrompt = buildBugbotFixIntentPrompt;
 const prompts_1 = __nccwpck_require__(9518);
-const opencode_project_context_instruction_1 = __nccwpck_require__(2225);
+const project_context_instruction_1 = __nccwpck_require__(3907);
 const sanitize_user_comment_for_prompt_1 = __nccwpck_require__(9828);
 const MAX_TITLE_LENGTH = 200;
 const MAX_FILE_LENGTH = 256;
@@ -51600,7 +51627,7 @@ function buildBugbotFixIntentPrompt(userComment, unresolvedFindings, parentComme
         })()
         : '';
     return (0, prompts_1.getBugbotFixIntentPrompt)({
-        projectContextInstruction: opencode_project_context_instruction_1.OPENCODE_PROJECT_CONTEXT_INSTRUCTION,
+        projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
         findingsBlock,
         parentBlock,
         userComment: (0, sanitize_user_comment_for_prompt_1.sanitizeUserCommentForPrompt)(userComment),
@@ -51620,7 +51647,7 @@ exports.MAX_FINDING_BODY_LENGTH = void 0;
 exports.truncateFindingBody = truncateFindingBody;
 exports.buildBugbotFixPrompt = buildBugbotFixPrompt;
 const prompts_1 = __nccwpck_require__(9518);
-const opencode_project_context_instruction_1 = __nccwpck_require__(2225);
+const project_context_instruction_1 = __nccwpck_require__(3907);
 const sanitize_user_comment_for_prompt_1 = __nccwpck_require__(9828);
 /** Maximum characters for a single finding's full comment body to avoid prompt bloat and token limits. */
 exports.MAX_FINDING_BODY_LENGTH = 12000;
@@ -51635,7 +51662,7 @@ function truncateFindingBody(body, maxLength) {
     return body.slice(0, maxLength - TRUNCATION_SUFFIX.length) + TRUNCATION_SUFFIX;
 }
 /**
- * Builds the prompt for the OpenCode build agent to fix the selected bugbot findings.
+ * Builds the prompt for the configured build agent to fix the selected bugbot findings.
  * Includes repo context, the findings to fix (with full detail), the user's comment,
  * strict scope rules, and the verify commands to run.
  */
@@ -51663,7 +51690,7 @@ function buildBugbotFixPrompt(param, context, targetFindingIds, userComment, ver
         : "\n**Verify:** Run any standard project checks (e.g. build, test, lint) that exist in this repo and confirm they pass.\n";
     const prNumberLine = prNumber != null ? `- Pull request number: ${prNumber}` : "";
     return (0, prompts_1.getBugbotFixPrompt)({
-        projectContextInstruction: opencode_project_context_instruction_1.OPENCODE_PROJECT_CONTEXT_INSTRUCTION,
+        projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
         owner,
         repo,
         headBranch,
@@ -51685,15 +51712,15 @@ function buildBugbotFixPrompt(param, context, targetFindingIds, userComment, ver
 "use strict";
 
 /**
- * Builds the prompt for OpenCode (plan agent) when detecting potential problems on push.
- * We pass: repo context, head/base branch names (OpenCode computes the diff itself), issue number,
+ * Builds the prompt for the configured findings agent when detecting potential problems on push.
+ * We pass: repo context, head/base branch names (the agent computes the diff itself), issue number,
  * optional ignore patterns, and the block of previously reported findings (task 2).
  * We do not pass a pre-computed diff or file list.
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildBugbotPrompt = buildBugbotPrompt;
 const prompts_1 = __nccwpck_require__(9518);
-const opencode_project_context_instruction_1 = __nccwpck_require__(2225);
+const project_context_instruction_1 = __nccwpck_require__(3907);
 const MAX_IGNORE_BLOCK_LENGTH = 2000;
 function buildBugbotPrompt(param, context) {
     const headBranch = param.commit.branch;
@@ -51710,7 +51737,7 @@ function buildBugbotPrompt(param, context) {
         })()
         : "";
     return (0, prompts_1.getBugbotPrompt)({
-        projectContextInstruction: opencode_project_context_instruction_1.OPENCODE_PROJECT_CONTEXT_INSTRUCTION,
+        projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
         owner: param.owner,
         repo: param.repo,
         headBranch,
@@ -51965,7 +51992,7 @@ const load_bugbot_context_use_case_1 = __nccwpck_require__(4050);
 const schema_1 = __nccwpck_require__(6808);
 const TASK_ID = "DetectBugbotFixIntentUseCase";
 /**
- * Asks OpenCode (plan agent) whether the user comment is a request to fix one or more
+ * Asks the configured findings agent whether the user comment is a request to fix one or more
  * bugbot findings, and which finding ids to target. Used from issue comments and PR
  * review comments. When isFixRequest is true and targetFindingIds is non-empty, the
  * caller (IssueCommentUseCase / PullRequestReviewCommentUseCase) runs the autofix flow.
@@ -51982,7 +52009,7 @@ class DetectBugbotFixIntentUseCase {
         (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const results = [];
         if (!(0, agent_1.isAgentConfigurationReady)(param.ai?.getAgentConfiguration('findings'))) {
-            (0, logger_1.logInfo)("OpenCode not configured; skipping bugbot fix intent detection.");
+            (0, logger_1.logInfo)("Agent not configured; skipping bugbot fix intent detection.");
             return results;
         }
         if (param.issueNumber === -1) {
@@ -52022,7 +52049,7 @@ class DetectBugbotFixIntentUseCase {
             title: (0, marker_1.extractTitleFromBody)(p.fullBody) || p.id,
             description: p.fullBody?.slice(0, 4000) ?? "",
         }));
-        // When user replied in a PR thread, include parent comment so OpenCode knows which finding they mean.
+        // When user replied in a PR thread, include parent comment so the agent knows which finding they mean.
         let parentCommentBody;
         if (param.pullRequest.isPullRequestReviewComment && param.pullRequest.commentInReplyToId) {
             const prNumber = param.pullRequest.number;
@@ -52030,10 +52057,10 @@ class DetectBugbotFixIntentUseCase {
             parentCommentBody = parentBody ?? undefined;
         }
         const prompt = (0, build_bugbot_fix_intent_prompt_1.buildBugbotFixIntentPrompt)(commentBody, unresolvedFindings, parentCommentBody);
-        (0, logger_1.logDebugInfo)(`DetectBugbotFixIntent: prompt length=${prompt.length}, unresolved findings=${unresolvedFindings.length}. Calling OpenCode Plan agent.`);
+        (0, logger_1.logDebugInfo)(`DetectBugbotFixIntent: prompt length=${prompt.length}, unresolved findings=${unresolvedFindings.length}. Calling configured findings agent.`);
         const response = await this.aiRepository.query({
             configuration: param.ai?.getAgentConfiguration('findings'),
-            agentId: agent_task_policy_1.OPENCODE_AGENT_PLAN,
+            agentId: agent_task_policy_1.AGENT_PLAN,
             prompt,
             options: {
                 expectJson: true,
@@ -52042,7 +52069,7 @@ class DetectBugbotFixIntentUseCase {
             },
         });
         if (response == null || typeof response !== "object") {
-            (0, logger_1.logInfo)("No response from OpenCode for fix intent.");
+            (0, logger_1.logInfo)("No response from configured agent for fix intent.");
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: true,
@@ -52060,7 +52087,7 @@ class DetectBugbotFixIntentUseCase {
             : [];
         const validIds = new Set(unresolvedIds);
         const filteredIds = targetFindingIds.filter((id) => validIds.has(id));
-        (0, logger_1.logDebugInfo)(`DetectBugbotFixIntent: OpenCode payload is_fix_request=${isFixRequest}, is_do_request=${isDoRequest}, target_finding_ids=${JSON.stringify(targetFindingIds)}, filteredIds=${JSON.stringify(filteredIds)}.`);
+        (0, logger_1.logDebugInfo)(`DetectBugbotFixIntent: agent payload is_fix_request=${isFixRequest}, is_do_request=${isDoRequest}, target_finding_ids=${JSON.stringify(targetFindingIds)}, filteredIds=${JSON.stringify(filteredIds)}.`);
         results.push(new result_1.Result({
             id: this.taskId,
             success: true,
@@ -52401,7 +52428,7 @@ async function markFindingsResolved(param) {
 /**
  * Bugbot marker: we embed a hidden HTML comment in each finding comment (issue and PR)
  * with finding_id and resolved flag. This lets us (1) find existing findings when loading
- * context, (2) update the same comment when OpenCode re-reports or marks resolved, (3) match
+ * context, (2) update the same comment when the agent re-reports or marks resolved, (3) match
  * threads when the user replies "fix it" in a PR.
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
@@ -52485,7 +52512,7 @@ function replaceMarkerInBody(body, findingId, newResolved, replacement) {
     const updated = body.replace(regex, newMarker);
     return { updated, found: true, changed: updated !== body };
 }
-/** Extract title from comment body (first ## line) for context when sending to OpenCode. */
+/** Extract title from comment body (first ## line) for context when sending to the agent. */
 function extractTitleFromBody(body) {
     if (!body)
         return "";
@@ -52776,7 +52803,7 @@ const schema_1 = __nccwpck_require__(6808);
 async function queryBugbotFindings(repository, execution, prompt) {
     return repository.query({
         configuration: execution.ai?.getAgentConfiguration('findings'),
-        agentId: agent_task_policy_1.OPENCODE_AGENT_PLAN,
+        agentId: agent_task_policy_1.AGENT_PLAN,
         prompt,
         options: {
             expectJson: true,
@@ -52798,7 +52825,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveIssueFinding = resolveIssueFinding;
 const comment_watermark_1 = __nccwpck_require__(3623);
 const marker_1 = __nccwpck_require__(2274);
-const RESOLVED_NOTE = "\n\n---\n**Resolved** (OpenCode confirmed fixed in latest analysis).\n";
+const RESOLVED_NOTE = "\n\n---\n**Resolved** (configured agent confirmed fixed in latest analysis).\n";
 async function resolveIssueFinding(repository, resolution) {
     const body = (0, comment_watermark_1.stripTrailingCommentWatermarks)(resolution.comment.body);
     const marker = (0, marker_1.parseMarker)(body).find((candidate) => candidate.findingId === resolution.findingId);
@@ -52823,7 +52850,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolvePullRequestFinding = resolvePullRequestFinding;
 const pull_request_review_errors_1 = __nccwpck_require__(6445);
 const marker_1 = __nccwpck_require__(2274);
-const RESOLVED_NOTE = "\n\n---\n**Resolved** (OpenCode confirmed fixed in latest analysis).\n";
+const RESOLVED_NOTE = "\n\n---\n**Resolved** (configured agent confirmed fixed in latest analysis).\n";
 async function resolvePullRequestFinding(repository, resolution) {
     const comments = await repository.listPullRequestReviewComments(resolution.owner, resolution.repo, resolution.pullRequestNumber, resolution.token);
     const comment = comments.find((candidate) => candidate.identity === resolution.commentIdentity);
@@ -52899,13 +52926,13 @@ function sanitizeUserCommentForPrompt(raw) {
 "use strict";
 
 /**
- * JSON schemas for OpenCode responses. Used with askAgent(plan) so the agent returns
+ * JSON schemas for findings-agent responses. Used with the findings query so the agent returns
  * structured JSON we can parse.
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BUGBOT_FIX_INTENT_RESPONSE_SCHEMA = exports.BUGBOT_RESPONSE_SCHEMA = void 0;
 const marker_1 = __nccwpck_require__(2274);
-/** Detection (on push): OpenCode computes diff itself and returns findings + resolved_finding_ids. */
+/** Detection (on push): the configured agent computes the diff and returns findings + resolved_finding_ids. */
 exports.BUGBOT_RESPONSE_SCHEMA = {
     type: 'object',
     properties: {
@@ -52945,7 +52972,7 @@ exports.BUGBOT_RESPONSE_SCHEMA = {
     additionalProperties: false,
 };
 /**
- * OpenCode (plan agent) response schema for bugbot fix intent.
+ * Findings-agent response schema for bugbot fix intent.
  * Given the user comment and the list of unresolved findings, the agent decides whether
  * the user is asking to fix one or more of them and which finding ids to target.
  */
@@ -53017,7 +53044,7 @@ function meetsMinSeverity(findingSeverity, minSeverity) {
 
 /**
  * Bugbot types: data structures used across detection, publishing, and autofix.
- * OpenCode computes the diff and returns findings; we never pass a pre-computed diff to OpenCode.
+ * The configured agent computes the diff and returns findings; we never pass a pre-computed diff to it.
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.isExistingFindingFullyResolved = isExistingFindingFullyResolved;
@@ -53334,7 +53361,7 @@ class DetectPotentialProblemsUseCase {
         const results = [];
         try {
             if (!(0, agent_1.isAgentConfigurationReady)(param.ai?.getAgentConfiguration("findings"))) {
-                (0, logger_1.logDebugInfo)("OpenCode not configured; skipping potential problems detection.");
+                (0, logger_1.logDebugInfo)("Agent not configured; skipping potential problems detection.");
                 return results;
             }
             if (param.issueNumber === -1) {
@@ -53343,10 +53370,10 @@ class DetectPotentialProblemsUseCase {
             }
             const context = await (0, load_bugbot_context_use_case_1.loadBugbotContext)(param, undefined, this.contextPorts);
             const prompt = (0, build_bugbot_prompt_1.buildBugbotPrompt)(param, context);
-            (0, logger_1.logInfo)("Detecting potential problems via OpenCode (agent computes changes and checks resolved)...");
+            (0, logger_1.logInfo)("Detecting potential problems via configured agent (agent computes changes and checks resolved)...");
             const prepared = (0, apply_detected_findings_1.prepareDetectedFindings)(param, await (0, query_bugbot_findings_1.queryBugbotFindings)(this.aiRepository, param, prompt));
             if (prepared === undefined) {
-                (0, logger_1.logDebugInfo)("DetectPotentialProblems: No response from OpenCode.");
+                (0, logger_1.logDebugInfo)("DetectPotentialProblems: No response from configured agent.");
                 return results;
             }
             if (prepared.toPublish.length === 0 &&
@@ -53363,13 +53390,13 @@ class DetectPotentialProblemsUseCase {
             }
             const resolutionErrors = await (0, apply_detected_findings_1.applyDetectedFindings)(param, context, prepared, this.publicationPorts, this.resolutionPorts);
             const stepParts = [
-                `${prepared.toPublish.length} new/current finding(s) from OpenCode`,
+                `${prepared.toPublish.length} new/current finding(s) from configured agent`,
             ];
             if (prepared.overflowCount > 0) {
                 stepParts.push(`${prepared.overflowCount} more not published (see summary comment)`);
             }
             if (prepared.resolvedFindingIds.size > 0) {
-                stepParts.push(`${prepared.resolvedFindingIds.size} marked as resolved by OpenCode`);
+                stepParts.push(`${prepared.resolvedFindingIds.size} marked as resolved by configured agent`);
             }
             results.push(new result_1.Result({
                 id: this.taskId,
@@ -53546,7 +53573,7 @@ exports.NotifyNewCommitOnIssueUseCase = NotifyNewCommitOnIssueUseCase;
 
 /**
  * Use case that performs whatever changes the user asked for (generic request).
- * Uses the OpenCode build agent to edit files and run commands in the workspace.
+ * Uses the configured build agent to edit files and run commands in the workspace.
  * Caller is responsible for permission check and for running commit/push after success.
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
@@ -53556,7 +53583,7 @@ const prompts_1 = __nccwpck_require__(9518);
 const logger_1 = __nccwpck_require__(1151);
 const task_emoji_1 = __nccwpck_require__(6103);
 const result_1 = __nccwpck_require__(3817);
-const opencode_project_context_instruction_1 = __nccwpck_require__(2225);
+const project_context_instruction_1 = __nccwpck_require__(3907);
 const sanitize_user_comment_for_prompt_1 = __nccwpck_require__(9828);
 const TASK_ID = "DoUserRequestUseCase";
 class DoUserRequestUseCase {
@@ -53569,7 +53596,7 @@ class DoUserRequestUseCase {
         const results = [];
         const { execution, userComment } = param;
         if (!(0, agent_1.isAgentConfigurationReady)(execution.ai?.getAgentConfiguration('fixer'))) {
-            (0, logger_1.logInfo)("OpenCode not configured; skipping user request.");
+            (0, logger_1.logInfo)("Agent not configured; skipping user request.");
             return results;
         }
         const commentTrimmed = userComment?.trim() ?? "";
@@ -53579,7 +53606,7 @@ class DoUserRequestUseCase {
         }
         const baseBranch = execution.currentConfiguration.parentBranch ?? execution.branches.development ?? "develop";
         const prompt = (0, prompts_1.getUserRequestPrompt)({
-            projectContextInstruction: opencode_project_context_instruction_1.OPENCODE_PROJECT_CONTEXT_INSTRUCTION,
+            projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
             owner: execution.owner,
             repo: execution.repo,
             headBranch: execution.commit.branch,
@@ -53588,19 +53615,19 @@ class DoUserRequestUseCase {
             userComment: (0, sanitize_user_comment_for_prompt_1.sanitizeUserCommentForPrompt)(userComment),
         });
         (0, logger_1.logDebugInfo)(`DoUserRequest: prompt length=${prompt.length}, user comment length=${commentTrimmed.length}.`);
-        (0, logger_1.logInfo)("Running OpenCode build agent to perform user request (changes applied in workspace).");
+        (0, logger_1.logInfo)("Running configured build agent to perform user request (changes applied in workspace).");
         const response = await this.aiRepository.fix({
             configuration: execution.ai?.getAgentConfiguration('fixer'),
             prompt,
         });
-        (0, logger_1.logDebugInfo)(`DoUserRequest: OpenCode build agent response length=${response?.text?.length ?? 0}. Full response:\n${response?.text ?? '(none)'}`);
+        (0, logger_1.logDebugInfo)(`DoUserRequest: build agent response length=${response?.text?.length ?? 0}. Full response:\n${response?.text ?? '(none)'}`);
         if (!response?.text) {
-            (0, logger_1.logError)("DoUserRequest: no response from OpenCode build agent.");
+            (0, logger_1.logError)("DoUserRequest: no response from configured build agent.");
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
                 executed: true,
-                errors: ["OpenCode build agent returned no response."],
+                errors: ["Configured build agent returned no response."],
             }));
             return results;
         }
@@ -53755,7 +53782,7 @@ class CommentLanguageTranslationWorkflow {
         const configuration = context.configuration;
         const checkResponse = await this.findingsQueryPort.query({
             configuration,
-            agentId: agent_task_policy_1.OPENCODE_AGENT_PLAN,
+            agentId: agent_task_policy_1.AGENT_PLAN,
             prompt: (0, prompts_1.getCheckCommentLanguagePrompt)({ locale: context.locale, commentBody: context.commentBody }),
             options: {
                 expectJson: true,
@@ -53769,7 +53796,7 @@ class CommentLanguageTranslationWorkflow {
             return [new result_1.Result({ id: context.taskId, success: true, executed: true })];
         const translationResponse = await this.findingsQueryPort.query({
             configuration,
-            agentId: agent_task_policy_1.OPENCODE_AGENT_PLAN,
+            agentId: agent_task_policy_1.AGENT_PLAN,
             prompt: (0, prompts_1.getTranslateCommentPrompt)({ locale: context.locale, commentBody: context.commentBody }),
             options: {
                 expectJson: true,
@@ -53780,7 +53807,7 @@ class CommentLanguageTranslationWorkflow {
         const translatedText = this.stringProperty(translationResponse, 'translatedText').trim();
         if (!translatedText) {
             const reason = this.stringProperty(translationResponse, 'reason');
-            (0, logger_1.logInfo)(`Translation returned no text; skipping comment update.${reason ? ` Reason: ${reason}` : ' OpenCode may have failed or returned invalid response.'}`);
+            (0, logger_1.logInfo)(`Translation returned no text; skipping comment update.${reason ? ` Reason: ${reason}` : ' The configured agent may have failed or returned an invalid response.'}`);
             return [new result_1.Result({ id: context.taskId, success: true, executed: false })];
         }
         await this.commentRepository.updateComment(context.owner, context.repo, context.issueNumber, context.commentId, `${translatedText}\n> ${context.commentBody}\n${exports.TRANSLATED_COMMENT_MARKER}\n`, context.token);
@@ -54452,7 +54479,7 @@ const agent_task_policy_1 = __nccwpck_require__(5712);
 const agent_response_schemas_1 = __nccwpck_require__(5603);
 const prompts_1 = __nccwpck_require__(9518);
 const logger_1 = __nccwpck_require__(1151);
-const opencode_project_context_instruction_1 = __nccwpck_require__(2225);
+const project_context_instruction_1 = __nccwpck_require__(3907);
 const agent_answer_policy_1 = __nccwpck_require__(2063);
 const think_input_policy_1 = __nccwpck_require__(9687);
 class ThinkUseCase {
@@ -54503,7 +54530,7 @@ class ThinkUseCase {
                     id: this.taskId,
                     success: false,
                     executed: false,
-                    errors: ['OpenCode model or CLI command not found.'],
+                    errors: ['Configured agent model or CLI command not found.'],
                 }));
                 return results;
             }
@@ -54529,14 +54556,14 @@ class ThinkUseCase {
                 : '\n\n';
             (0, logger_1.logDebugInfo)(`Think: question length=${question.length}, issue context length=${issueDescription.length}. Full question:\n${question}`);
             const prompt = (0, prompts_1.getThinkPrompt)({
-                projectContextInstruction: opencode_project_context_instruction_1.OPENCODE_PROJECT_CONTEXT_INSTRUCTION,
+                projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
                 contextBlock,
                 question,
             });
-            (0, logger_1.logDebugInfo)(`Think: calling OpenCode Plan agent (prompt length=${prompt.length}).`);
+            (0, logger_1.logDebugInfo)(`Think: calling configured agent (prompt length=${prompt.length}).`);
             const response = await this.aiRepository.query({
                 configuration: param.ai?.getAgentConfiguration('findings'),
-                agentId: agent_task_policy_1.OPENCODE_AGENT_PLAN,
+                agentId: agent_task_policy_1.AGENT_PLAN,
                 prompt,
                 options: {
                     expectJson: true,
@@ -54545,14 +54572,14 @@ class ThinkUseCase {
                 },
             });
             const answer = (0, agent_answer_policy_1.extractStructuredAnswer)(response);
-            (0, logger_1.logDebugInfo)(`Think: OpenCode response received. Answer length=${answer.length}. Full answer:\n${answer}`);
+            (0, logger_1.logDebugInfo)(`Think: agent response received. Answer length=${answer.length}. Full answer:\n${answer}`);
             if (!answer) {
-                (0, logger_1.logError)('OpenCode returned no answer for Think.');
+                (0, logger_1.logError)('Configured agent returned no answer for Think.');
                 results.push(new result_1.Result({
                     id: this.taskId,
                     success: false,
                     executed: true,
-                    errors: ['OpenCode returned no answer.'],
+                    errors: ['Configured agent returned no answer.'],
                 }));
                 return results;
             }
@@ -54718,7 +54745,7 @@ exports.UpdateTitleUseCase = UpdateTitleUseCase;
 
 /**
  * When a question or help issue is newly opened, posts an initial helpful reply
- * based on the issue description (OpenCode Plan agent). The user can still
+ * based on the issue description (configured agent). The user can still
  * @mention the bot later for follow-up answers (ThinkUseCase).
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
@@ -54729,7 +54756,7 @@ const agent_task_policy_1 = __nccwpck_require__(5712);
 const agent_response_schemas_1 = __nccwpck_require__(5603);
 const prompts_1 = __nccwpck_require__(9518);
 const logger_1 = __nccwpck_require__(1151);
-const opencode_project_context_instruction_1 = __nccwpck_require__(2225);
+const project_context_instruction_1 = __nccwpck_require__(3907);
 const task_emoji_1 = __nccwpck_require__(6103);
 const agent_answer_policy_1 = __nccwpck_require__(2063);
 class AnswerIssueHelpUseCase {
@@ -54759,7 +54786,7 @@ class AnswerIssueHelpUseCase {
                 return results;
             }
             if (!(0, agent_1.isAgentConfigurationReady)(param.ai?.getAgentConfiguration('findings'))) {
-                (0, logger_1.logInfo)('OpenCode not configured; skipping initial help reply.');
+                (0, logger_1.logInfo)('Agent not configured; skipping initial help reply.');
                 results.push(new result_1.Result({
                     id: this.taskId,
                     success: true,
@@ -54789,12 +54816,12 @@ class AnswerIssueHelpUseCase {
             (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Posting initial help reply for question/help issue #${issueNumber}.`);
             const prompt = (0, prompts_1.getAnswerIssueHelpPrompt)({
                 description,
-                projectContextInstruction: opencode_project_context_instruction_1.OPENCODE_PROJECT_CONTEXT_INSTRUCTION,
+                projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
             });
-            (0, logger_1.logDebugInfo)(`AnswerIssueHelp: prompt length=${prompt.length}, issue description length=${description.length}. Calling OpenCode Plan agent.`);
+            (0, logger_1.logDebugInfo)(`AnswerIssueHelp: prompt length=${prompt.length}, issue description length=${description.length}. Calling configured agent.`);
             const response = await this.aiRepository.query({
                 configuration: param.ai?.getAgentConfiguration('findings'),
-                agentId: agent_task_policy_1.OPENCODE_AGENT_PLAN,
+                agentId: agent_task_policy_1.AGENT_PLAN,
                 prompt,
                 options: {
                     expectJson: true,
@@ -54803,14 +54830,14 @@ class AnswerIssueHelpUseCase {
                 },
             });
             const answer = (0, agent_answer_policy_1.extractStructuredAnswer)(response);
-            (0, logger_1.logDebugInfo)(`AnswerIssueHelp: OpenCode response. Answer length=${answer.length}. Full answer:\n${answer}`);
+            (0, logger_1.logDebugInfo)(`AnswerIssueHelp: agent response. Answer length=${answer.length}. Full answer:\n${answer}`);
             if (!answer) {
-                (0, logger_1.logError)('OpenCode returned no answer for initial help.');
+                (0, logger_1.logError)('Configured agent returned no answer for initial help.');
                 results.push(new result_1.Result({
                     id: this.taskId,
                     success: false,
                     executed: true,
-                    errors: ['OpenCode returned no answer for initial help.'],
+                    errors: ['Configured agent returned no answer for initial help.'],
                 }));
                 return results;
             }
@@ -56524,7 +56551,7 @@ const result_1 = __nccwpck_require__(3817);
 const agent_task_policy_1 = __nccwpck_require__(5712);
 const prompts_1 = __nccwpck_require__(9518);
 const logger_1 = __nccwpck_require__(1151);
-const opencode_project_context_instruction_1 = __nccwpck_require__(2225);
+const project_context_instruction_1 = __nccwpck_require__(3907);
 const task_emoji_1 = __nccwpck_require__(6103);
 class UpdatePullRequestDescriptionUseCase {
     constructor(pullRequestDescriptionCommandPort, issueDescriptionQueryPort, organizationMembersPort, aiRepository) {
@@ -56552,7 +56579,7 @@ class UpdatePullRequestDescriptionUseCase {
                 }));
                 return result;
             }
-            (0, logger_1.logDebugInfo)(`PR description will be generated from workspace diff: base "${baseBranch}", head "${headBranch}" (OpenCode agent will run git diff).`);
+            (0, logger_1.logDebugInfo)(`PR description will be generated from workspace diff: base "${baseBranch}", head "${headBranch}" (configured agent will run git diff).`);
             const issueDescription = (await this.issueDescriptionQueryPort.getDescription(param.owner, param.repo, param.issueNumber, param.tokens.token)) ?? '';
             if (issueDescription.length === 0) {
                 result.push(new result_1.Result({
@@ -56580,28 +56607,28 @@ class UpdatePullRequestDescriptionUseCase {
                 return result;
             }
             const prompt = (0, prompts_1.getUpdatePullRequestDescriptionPrompt)({
-                projectContextInstruction: opencode_project_context_instruction_1.OPENCODE_PROJECT_CONTEXT_INSTRUCTION,
+                projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
                 baseBranch,
                 headBranch,
                 issueNumber: String(param.issueNumber),
                 issueDescription,
             });
-            (0, logger_1.logDebugInfo)(`UpdatePullRequestDescription: prompt length=${prompt.length}, issue description length=${issueDescription.length}. Calling OpenCode Plan agent.`);
+            (0, logger_1.logDebugInfo)(`UpdatePullRequestDescription: prompt length=${prompt.length}, issue description length=${issueDescription.length}. Calling configured agent.`);
             const agentResponse = await this.aiRepository.query({
                 configuration: param.ai?.getAgentConfiguration('findings'),
-                agentId: agent_task_policy_1.OPENCODE_AGENT_PLAN,
+                agentId: agent_task_policy_1.AGENT_PLAN,
                 prompt,
             });
             const prBody = typeof agentResponse === 'string'
                 ? agentResponse
                 : (agentResponse && String(agentResponse.description)) || '';
-            (0, logger_1.logDebugInfo)(`UpdatePullRequestDescription: OpenCode response received. Description length=${prBody.length}. Full description:\n${prBody}`);
+            (0, logger_1.logDebugInfo)(`UpdatePullRequestDescription: agent response received. Description length=${prBody.length}. Full description:\n${prBody}`);
             if (!prBody.trim()) {
                 result.push(new result_1.Result({
                     id: this.taskId,
                     success: false,
                     executed: true,
-                    steps: [`OpenCode Plan agent did not return a PR description.`],
+                    steps: [`Configured agent did not return a PR description.`],
                 }));
                 return result;
             }
@@ -56700,32 +56727,30 @@ exports.WaitForPreviousWorkflowRunsUseCase = WaitForPreviousWorkflowRunsUseCase;
 /***/ }),
 
 /***/ 9937:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isAgentConfigurationReady = isAgentConfigurationReady;
-function isAgentConfigurationReady(configuration) {
-    if (!configuration?.model.trim())
-        return false;
-    return Boolean(configuration.command?.trim());
-}
+exports.isAgentConfigurationReady = void 0;
+var agent_1 = __nccwpck_require__(9040);
+Object.defineProperty(exports, "isAgentConfigurationReady", ({ enumerable: true, get: function () { return agent_1.isAgentConfigurationReady; } }));
 
 
 /***/ }),
 
 /***/ 7478:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Ai = void 0;
+const agent_command_1 = __nccwpck_require__(7700);
 class Ai {
     constructor(_configurationSource, model, aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotMinSeverity, bugbotCommentLimit, bugbotFixVerifyCommands = [], agentTasks = {
-        findings: { provider: 'codex', modelProvider: 'openai', model, command: 'codex exec --ephemeral --skip-git-repo-check -' },
-        fixer: { provider: 'codex', modelProvider: 'openai', model, command: 'codex exec --ephemeral --skip-git-repo-check -' },
+        findings: { provider: 'codex', modelProvider: 'openai', model, command: (0, agent_command_1.defaultAgentCommand)({ provider: 'codex', modelProvider: 'openai', model }) },
+        fixer: { provider: 'codex', modelProvider: 'openai', model, command: (0, agent_command_1.defaultAgentCommand)({ provider: 'codex', modelProvider: 'openai', model }) },
     }) {
         this.aiPullRequestDescription = aiPullRequestDescription;
         this.aiMembersOnly = aiMembersOnly;
@@ -57984,6 +58009,198 @@ function authorizationForFileModification(owner, actor, ownerType) {
 
 /***/ }),
 
+/***/ 1371:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.checkAgentAuthentication = checkAgentAuthentication;
+const node_fs_1 = __nccwpck_require__(7561);
+const node_os_1 = __nccwpck_require__(612);
+const node_path_1 = __nccwpck_require__(9411);
+const COMMON_OPENCODE_CREDENTIALS = [
+    'OPENCODE_API_KEY',
+    'OPENAI_API_KEY',
+    'ANTHROPIC_API_KEY',
+    'GOOGLE_API_KEY',
+    'OPENROUTER_API_KEY',
+    'MISTRAL_API_KEY',
+    'GROQ_API_KEY',
+    'DEEPSEEK_API_KEY',
+    'XAI_API_KEY',
+    'TOGETHERAI_API_KEY',
+    'FIREWORKS_API_KEY',
+    'PERPLEXITY_API_KEY',
+    'CEREBRAS_API_KEY',
+    'COHERE_API_KEY',
+    'AZURE_OPENAI_API_KEY',
+];
+const MODEL_PROVIDER_CREDENTIALS = {
+    opencode: ['OPENCODE_API_KEY'],
+    openai: ['OPENAI_API_KEY'],
+    anthropic: ['ANTHROPIC_API_KEY'],
+    google: ['GOOGLE_API_KEY'],
+    openrouter: ['OPENROUTER_API_KEY'],
+    mistral: ['MISTRAL_API_KEY'],
+    groq: ['GROQ_API_KEY'],
+    deepseek: ['DEEPSEEK_API_KEY'],
+    xai: ['XAI_API_KEY'],
+    togetherai: ['TOGETHERAI_API_KEY'],
+    fireworks: ['FIREWORKS_API_KEY'],
+    perplexity: ['PERPLEXITY_API_KEY'],
+    cerebras: ['CEREBRAS_API_KEY'],
+    cohere: ['COHERE_API_KEY'],
+    zai: ['ZAI_API_KEY'],
+    moonshot: ['MOONSHOT_API_KEY'],
+    minimax: ['MINIMAX_API_KEY'],
+    cursor: ['CURSOR_API_KEY'],
+};
+const CLI_CREDENTIALS = {
+    opencode: ['OPENCODE_API_KEY'],
+    cursor: ['CURSOR_API_KEY'],
+    codex: ['CODEX_ACCESS_TOKEN', 'OPENAI_API_KEY'],
+};
+function hasValue(environment, variable) {
+    return Boolean(environment[variable]?.trim());
+}
+function hasCodexChatGptSession(environment) {
+    const codexHome = environment.CODEX_HOME?.trim()
+        || (environment === process.env || environment.HOME ? (0, node_path_1.join)(environment.HOME || (0, node_os_1.homedir)(), '.codex') : undefined);
+    if (!codexHome)
+        return false;
+    const authPath = (0, node_path_1.join)(codexHome, 'auth.json');
+    if (!(0, node_fs_1.existsSync)(authPath))
+        return false;
+    try {
+        const auth = JSON.parse((0, node_fs_1.readFileSync)(authPath, 'utf8'));
+        return auth.auth_mode === 'chatgpt'
+            && auth.OPENAI_API_KEY == null
+            && typeof auth.tokens?.access_token === 'string'
+            && typeof auth.tokens?.refresh_token === 'string';
+    }
+    catch {
+        return false;
+    }
+}
+function hasOpenCodeLocalSession(environment) {
+    const dataDirectory = environment.OPENCODE_DATA_DIR?.trim()
+        || environment.XDG_DATA_HOME?.trim()
+        || (environment === process.env || environment.HOME ? (0, node_path_1.join)(environment.HOME || (0, node_os_1.homedir)(), '.local', 'share') : undefined);
+    if (!dataDirectory)
+        return false;
+    const authPath = environment.OPENCODE_AUTH_FILE?.trim() || (0, node_path_1.join)(dataDirectory, 'opencode', 'auth.json');
+    if (!(0, node_fs_1.existsSync)(authPath))
+        return false;
+    try {
+        const auth = JSON.parse((0, node_fs_1.readFileSync)(authPath, 'utf8'));
+        return containsCredentialMaterial(auth);
+    }
+    catch {
+        return false;
+    }
+}
+function containsCredentialMaterial(value, propertyName = '') {
+    if (typeof value === 'string') {
+        return Boolean(propertyName.match(/(?:api[_-]?key|access|refresh|token|secret)/i) && value.trim());
+    }
+    if (!value || typeof value !== 'object')
+        return false;
+    return Object.entries(value).some(([key, nested]) => containsCredentialMaterial(nested, key));
+}
+function credentialVariables(configuration) {
+    if (configuration.provider === 'cursor')
+        return CLI_CREDENTIALS.cursor;
+    if (configuration.provider === 'codex') {
+        const modelProvider = configuration.modelProvider?.trim().toLowerCase();
+        return [...new Set([
+                ...CLI_CREDENTIALS.codex,
+                ...(modelProvider ? MODEL_PROVIDER_CREDENTIALS[modelProvider] ?? [`${modelProvider.replace(/-/g, '_').toUpperCase()}_API_KEY`] : []),
+            ])];
+    }
+    const modelProvider = configuration.modelProvider?.trim().toLowerCase();
+    if (modelProvider === 'local' || modelProvider === 'ollama' || modelProvider === 'lmstudio') {
+        return [];
+    }
+    const selectedProviderCredentials = modelProvider
+        ? MODEL_PROVIDER_CREDENTIALS[modelProvider] ?? [`${modelProvider.replace(/-/g, '_').toUpperCase()}_API_KEY`]
+        : COMMON_OPENCODE_CREDENTIALS;
+    return [...new Set([...selectedProviderCredentials, ...CLI_CREDENTIALS.opencode])];
+}
+function checkAgentAuthentication(configuration, environment = process.env) {
+    const variables = credentialVariables(configuration);
+    const hasCodexSession = configuration.provider === 'codex' && hasCodexChatGptSession(environment);
+    const hasOpenCodeSession = configuration.provider === 'opencode' && hasOpenCodeLocalSession(environment);
+    const modelProvider = configuration.modelProvider?.trim().toLowerCase();
+    const hasInspectableOpenCodeProvider = !modelProvider
+        || ['local', 'ollama', 'lmstudio'].includes(modelProvider)
+        || Object.prototype.hasOwnProperty.call(MODEL_PROVIDER_CREDENTIALS, modelProvider);
+    if (hasCodexSession || hasOpenCodeSession || variables.some((variable) => hasValue(environment, variable))) {
+        return {
+            status: 'available',
+            variables,
+            message: hasCodexSession
+                ? 'Local ChatGPT Codex session available from CODEX_HOME/auth.json.'
+                : hasOpenCodeSession
+                    ? 'Local OpenCode authentication available from its controlled auth store.'
+                    : `Local credentials available for ${configuration.provider}.`,
+        };
+    }
+    if (configuration.provider === 'codex') {
+        return {
+            status: 'not_required',
+            variables,
+            message: 'No exported Codex credential found; authentication will be resolved by the preinitialized Codex CLI on the runner.',
+        };
+    }
+    if (configuration.provider === 'opencode' && modelProvider && !hasInspectableOpenCodeProvider) {
+        return {
+            status: 'not_required',
+            variables: [],
+            message: `Credential resolution for the custom OpenCode provider "${modelProvider}" is delegated to OpenCode configuration or its controlled auth store.`,
+        };
+    }
+    if (configuration.provider === 'opencode' && ['local', 'ollama', 'lmstudio'].includes(configuration.modelProvider?.trim().toLowerCase() || '')) {
+        return {
+            status: 'not_required',
+            variables,
+            message: `No external credential is required for the local ${configuration.modelProvider} model provider.`,
+        };
+    }
+    return {
+        status: 'missing',
+        variables,
+        message: `No local credentials found for ${configuration.provider}. Set one of: ${variables.join(', ')}.`,
+    };
+}
+
+
+/***/ }),
+
+/***/ 7766:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.resolveAgentAuthenticationPreflightMode = resolveAgentAuthenticationPreflightMode;
+exports.runAgentAuthenticationPreflight = runAgentAuthenticationPreflight;
+const agent_authentication_1 = __nccwpck_require__(1371);
+function resolveAgentAuthenticationPreflightMode(environment = process.env, defaultMode = 'required') {
+    const configured = environment.AGENT_AUTH_PREFLIGHT?.trim().toLowerCase();
+    if (configured === 'required' || configured === 'warn' || configured === 'disabled')
+        return configured;
+    return defaultMode;
+}
+function runAgentAuthenticationPreflight(configuration, environment = process.env, defaultMode = 'required') {
+    const mode = resolveAgentAuthenticationPreflightMode(environment, defaultMode);
+    const check = (0, agent_authentication_1.checkAgentAuthentication)(configuration, environment);
+    return { check, mode, shouldFail: mode === 'required' && check.status === 'missing' };
+}
+
+
+/***/ }),
+
 /***/ 8570:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -58010,6 +58227,12 @@ function splitCommand(command) {
 }
 class AgentCliClient {
     async execute(request) {
+        if (!Number.isFinite(request.timeoutMs) || request.timeoutMs <= 0) {
+            throw new AgentCliError('Agent CLI timeout must be a finite positive number.', 'configuration');
+        }
+        if (request.maxOutputBytes !== undefined && (!Number.isFinite(request.maxOutputBytes) || request.maxOutputBytes <= 0)) {
+            throw new AgentCliError('Agent CLI maxOutputBytes must be a finite positive number.', 'configuration');
+        }
         let executable;
         let args;
         try {
@@ -58019,7 +58242,11 @@ class AgentCliClient {
             throw new AgentCliError(error instanceof Error ? error.message : String(error), 'configuration');
         }
         return new Promise((resolve, reject) => {
-            const child = (0, node_child_process_1.spawn)(executable, args, { cwd: request.cwd, stdio: ['pipe', 'pipe', 'pipe'], shell: false });
+            const promptMode = request.promptMode ?? 'stdin';
+            if (promptMode !== 'stdin' && promptMode !== 'argv') {
+                throw new AgentCliError('Agent CLI promptMode must be stdin or argv.', 'configuration');
+            }
+            const child = (0, node_child_process_1.spawn)(executable, promptMode === 'argv' ? [...args, request.prompt] : args, { cwd: request.cwd, stdio: ['pipe', 'pipe', 'pipe'], shell: false });
             let stdout = '';
             let stderr = '';
             let outputBytes = 0;
@@ -58086,7 +58313,7 @@ class AgentCliClient {
                     return finishReject(new AgentCliError('Agent CLI returned empty output.', 'output'));
                 finishResolve(output);
             });
-            child.stdin.end(request.prompt);
+            child.stdin.end(promptMode === 'stdin' ? request.prompt : undefined);
         });
     }
 }
@@ -58096,25 +58323,91 @@ exports.AgentCliClient = AgentCliClient;
 /***/ }),
 
 /***/ 4678:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.defaultCliCommand = defaultCliCommand;
+exports.defaultAgentCommand = void 0;
+exports.validateAgentCommand = validateAgentCommand;
 exports.cliInstallationHint = cliInstallationHint;
+const agent_command_parser_1 = __nccwpck_require__(7950);
+var agent_command_1 = __nccwpck_require__(7700);
+Object.defineProperty(exports, "defaultAgentCommand", ({ enumerable: true, get: function () { return agent_command_1.defaultAgentCommand; } }));
+function hasFlag(args, flag) {
+    return args.some((argument, index) => (argument === flag && index < args.length - 1) || argument.startsWith(`${flag}=`));
+}
+function flagValue(args, flags) {
+    for (const [index, argument] of args.entries()) {
+        const inlineFlag = flags.find((flag) => argument.startsWith(`${flag}=`));
+        if (inlineFlag)
+            return argument.slice(inlineFlag.length + 1);
+        if (flags.includes(argument))
+            return args[index + 1];
+    }
+    return undefined;
+}
+function configValue(args, key) {
+    for (const [index, argument] of args.entries()) {
+        const value = argument === '--config' || argument === '-c'
+            ? args[index + 1]
+            : argument;
+        if (!value?.startsWith(`${key}=`))
+            continue;
+        return value.slice(key.length + 1).replace(/^['"]/, '').replace(/['"]$/, '');
+    }
+    return undefined;
+}
+function hasCodexConfig(args, key) {
+    return args.some((argument, index) => ((argument === '--config' || argument === '-c')
+        && typeof args[index + 1] === 'string'
+        && args[index + 1].startsWith(`${key}=`)) || argument.startsWith(`${key}=`));
+}
 /**
- * Provider-specific headless commands. The prompt is supplied through stdin.
- * Keep these as argv-safe command strings; AgentCliClient never invokes a shell.
+ * Custom commands are full overrides, so validate that they cannot silently
+ * discard the selected model or supported effort setting.
  */
-function defaultCliCommand(provider) {
-    switch (provider) {
-        case 'codex':
-            return 'codex exec --ephemeral --skip-git-repo-check -';
-        case 'cursor':
-            return 'agent -p --output-format text -';
-        case 'opencode':
-            return 'opencode run';
+function validateAgentCommand(configuration) {
+    const command = configuration.command?.trim();
+    if (!command)
+        throw new Error(`CLI command is required for ${configuration.provider}.`);
+    const { args } = (0, agent_command_parser_1.parseAgentCommand)(command);
+    if (configuration.provider !== 'codex' && args.includes('-')) {
+        throw new Error(`${configuration.provider} command must not include the Codex stdin placeholder "-"; its prompt is passed as an argument.`);
+    }
+    if (!hasFlag(args, '--model') && !hasFlag(args, '-m')) {
+        throw new Error(`${configuration.provider} command must select the model explicitly with --model.`);
+    }
+    const expectedModel = configuration.provider === 'opencode'
+        ? `${configuration.modelProvider?.trim() || 'openai'}/${configuration.model.trim()}`
+        : configuration.model.trim();
+    const configuredModel = flagValue(args, ['--model', '-m']);
+    if (configuredModel !== expectedModel) {
+        throw new Error(`${configuration.provider} command must select configured model "${expectedModel}".`);
+    }
+    if (configuration.provider === 'codex' && !hasCodexConfig(args, 'model_provider')) {
+        throw new Error('Codex command must select the model provider explicitly with --config model_provider=... .');
+    }
+    if (configuration.provider === 'codex') {
+        const configuredModelProvider = configValue(args, 'model_provider');
+        const expectedModelProvider = configuration.modelProvider?.trim() || 'openai';
+        if (configuredModelProvider !== expectedModelProvider) {
+            throw new Error(`Codex command must select configured model provider "${expectedModelProvider}".`);
+        }
+    }
+    if (configuration.effort?.trim()) {
+        if (configuration.provider === 'codex' && !hasCodexConfig(args, 'model_reasoning_effort')) {
+            throw new Error('Codex command must select effort explicitly with --config model_reasoning_effort=... .');
+        }
+        if (configuration.provider === 'codex' && configValue(args, 'model_reasoning_effort') !== configuration.effort.trim()) {
+            throw new Error(`Codex command must select configured effort "${configuration.effort.trim()}".`);
+        }
+        if (configuration.provider === 'opencode' && !hasFlag(args, '--variant')) {
+            throw new Error('OpenCode command must select effort explicitly with --variant ... .');
+        }
+        if (configuration.provider === 'opencode' && flagValue(args, ['--variant']) !== configuration.effort.trim()) {
+            throw new Error(`OpenCode command must select configured effort "${configuration.effort.trim()}".`);
+        }
     }
 }
 function cliInstallationHint(provider) {
@@ -58143,23 +58436,76 @@ const node_child_process_1 = __nccwpck_require__(7718);
 const node_fs_1 = __nccwpck_require__(7561);
 const node_os_1 = __nccwpck_require__(612);
 const node_path_1 = __nccwpck_require__(9411);
+const agent_command_parser_1 = __nccwpck_require__(7950);
+const DEFAULT_EXECUTABLES = {
+    codex: 'codex',
+    opencode: 'opencode',
+    cursor: 'agent',
+};
+function executableExists(executable, environment) {
+    if ((0, node_path_1.isAbsolute)(executable) || executable.includes('/')) {
+        try {
+            (0, node_fs_1.accessSync)(executable, node_fs_1.constants.X_OK);
+            return true;
+        }
+        catch {
+            return false;
+        }
+    }
+    const pathEntries = (environment.PATH || '').split(node_path_1.delimiter).filter(Boolean);
+    const extensions = process.platform === 'win32'
+        ? (environment.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';')
+        : [''];
+    return pathEntries.some((directory) => extensions.some((extension) => {
+        try {
+            (0, node_fs_1.accessSync)((0, node_path_1.join)(directory, `${executable}${extension}`), node_fs_1.constants.X_OK);
+            return true;
+        }
+        catch {
+            return false;
+        }
+    }));
+}
 class AgentCliProvisioner {
-    provision(provider, environment = process.env) {
+    provision(target, environment = process.env) {
+        const provider = typeof target === 'string' ? target : target.provider;
+        const configuredCommand = typeof target === 'string' ? undefined : target.command;
+        const executable = configuredCommand ? (0, agent_command_parser_1.parseAgentCommand)(configuredCommand).executable : DEFAULT_EXECUTABLES[provider];
+        const mode = this.resolveMode(environment.AGENT_PROVISIONING);
+        if (mode !== 'always' && executableExists(executable, environment))
+            return;
+        if (mode === 'disabled') {
+            throw new Error(`Agent provisioning is disabled and the ${provider} CLI executable "${executable}" is not available.`);
+        }
         switch (provider) {
             case 'codex':
-                this.installPnpmPackage('@openai/codex', environment.codexVersion);
+                this.installPnpmPackage('@openai/codex', environment.codexVersion || environment.CODEX_VERSION, 'CODEX_VERSION');
+                this.assertInstalled(executable, provider, environment);
                 return;
             case 'opencode':
-                this.installPnpmPackage('opencode-ai', environment.opencodeVersion);
+                this.installPnpmPackage('opencode-ai', environment.opencodeVersion || environment.OPENCODE_VERSION, 'OPENCODE_VERSION');
+                this.assertInstalled(executable, provider, environment);
                 return;
             case 'cursor':
-                this.installCursor(environment.cursorInstallerSha256);
+                this.installCursor(environment.cursorInstallerSha256 || environment.CURSOR_INSTALLER_SHA256);
+                this.assertInstalled(executable, provider, environment);
                 return;
         }
     }
-    installPnpmPackage(packageName, version) {
+    resolveMode(value) {
+        const mode = value?.trim().toLowerCase() || 'auto';
+        if (mode === 'auto' || mode === 'always' || mode === 'disabled')
+            return mode;
+        throw new Error('AGENT_PROVISIONING must be one of: auto, always, disabled.');
+    }
+    assertInstalled(executable, provider, environment) {
+        if (!executableExists(executable, environment)) {
+            throw new Error(`The ${provider} CLI was provisioned but executable "${executable}" is not available on PATH.`);
+        }
+    }
+    installPnpmPackage(packageName, version, versionVariable) {
         if (!version?.trim())
-            throw new Error(`${packageName} version is required for reproducible provisioning.`);
+            throw new Error(`${packageName} CLI is not installed and ${versionVariable} is not configured. Preinstall the CLI or set ${versionVariable} to a pinned version.`);
         (0, node_child_process_1.execFileSync)('corepack', ['pnpm', 'add', '--global', `${packageName}@${version}`], { stdio: 'inherit' });
     }
     installCursor(expectedSha256) {
@@ -58243,20 +58589,34 @@ function parseAgentCommand(command) {
 /***/ }),
 
 /***/ 9616:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.isValidAgentConfiguration = isValidAgentConfiguration;
 exports.getValidatedAgentConfiguration = getValidatedAgentConfiguration;
+const agent_cli_command_policy_1 = __nccwpck_require__(4678);
 function isValidAgentConfiguration(configuration) {
-    return Boolean(configuration.command?.trim()) && Boolean(configuration.model.trim());
+    if (!['opencode', 'codex', 'cursor'].includes(configuration.provider))
+        return false;
+    if (!configuration.model.trim() || !/^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/.test(configuration.model.trim()))
+        return false;
+    if (configuration.modelProvider && !/^[a-z0-9][a-z0-9_-]*$/.test(configuration.modelProvider.trim().toLowerCase()))
+        return false;
+    if (configuration.effort && !/^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/.test(configuration.effort.trim()))
+        return false;
+    try {
+        (0, agent_cli_command_policy_1.validateAgentCommand)(configuration);
+        return true;
+    }
+    catch {
+        return false;
+    }
 }
 function getValidatedAgentConfiguration(configuration, task) {
-    if (!configuration.command?.trim()) {
-        throw new Error(`Missing command for ${task} agent.`);
-    }
+    if (!isValidAgentConfiguration(configuration))
+        throw new Error(`Invalid configuration for ${task} agent.`);
     return configuration;
 }
 
@@ -58285,24 +58645,6 @@ function interpretFindingsResponse(parts, options) {
             return { ...parsed, reasoning };
     }
     return parsed;
-}
-
-
-/***/ }),
-
-/***/ 2579:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.interpretFixerResponse = interpretFixerResponse;
-const agent_response_parser_1 = __nccwpck_require__(4745);
-function interpretFixerResponse(parts, sessionId) {
-    const text = (0, agent_response_parser_1.extractTextFromParts)(parts);
-    if (!text)
-        throw new Error('Empty response text');
-    return { text, sessionId };
 }
 
 
@@ -58385,10 +58727,10 @@ function parseJsonFromAgentText(text) {
         const object = parseObject(extracted);
         if (object)
             return object;
-        (0, logger_1.logDebugInfo)(`OpenCode agent response (expectJson): failed to parse extracted JSON. Full text length=${trimmed.length}. Full text:\n${trimmed}`);
+        (0, logger_1.logDebugInfo)(`Agent response (expectJson): failed to parse extracted JSON. Full text length=${trimmed.length}. Full text:\n${trimmed}`);
         throw new Error('Agent response is not valid JSON: extracted object is invalid');
     }
-    (0, logger_1.logDebugInfo)(`OpenCode agent response (expectJson): no JSON object found. length=${trimmed.length}. Full text:\n${trimmed}`);
+    (0, logger_1.logDebugInfo)(`Agent response (expectJson): no JSON object found. length=${trimmed.length}. Full text:\n${trimmed}`);
     throw new Error(`Agent response is not valid JSON: no JSON object found. Response length: ${trimmed.length} chars.`);
 }
 
@@ -58459,7 +58801,7 @@ class AgentCapabilityAdapter {
         try {
             const output = await this.cliAdapter.execute({
                 configuration: taskConfiguration,
-                prompt: request.prompt,
+                prompt: this.addEffortInstruction(request.prompt, taskConfiguration.effort),
                 timeoutMs: constants_1.AGENT_REQUEST_TIMEOUT_MS,
             });
             return request.mapCliOutput(output);
@@ -58468,6 +58810,12 @@ class AgentCapabilityAdapter {
             (0, logger_1.logError)(`Error querying ${taskConfiguration.provider} CLI ${request.capability}: ${error instanceof Error ? error.message : String(error)}`);
             return undefined;
         }
+    }
+    addEffortInstruction(prompt, effort) {
+        const normalizedEffort = effort?.trim();
+        if (!normalizedEffort)
+            return prompt;
+        return `${prompt}\n\nExecution preference: use the configured reasoning effort or model variant "${normalizedEffort}" when supported by the selected agent.`;
     }
 }
 exports.AgentCapabilityAdapter = AgentCapabilityAdapter;
@@ -58485,7 +58833,6 @@ exports.FindingsAgentAdapter = void 0;
 const logger_1 = __nccwpck_require__(1151);
 const agent_prompt_policy_1 = __nccwpck_require__(8804);
 const agent_findings_response_policy_1 = __nccwpck_require__(4908);
-const agent_response_parser_1 = __nccwpck_require__(4745);
 const agent_capability_adapter_1 = __nccwpck_require__(2152);
 class FindingsAgentAdapter extends agent_capability_adapter_1.AgentCapabilityAdapter {
     constructor(infrastructure) {
@@ -58502,21 +58849,11 @@ class FindingsAgentAdapter extends agent_capability_adapter_1.AgentCapabilityAda
         return this.execute({
             configuration: request.configuration,
             prompt: promptText,
-            agent: request.agentId,
             capability: 'findings',
             mapCliOutput: (output) => {
                 if (options.expectJson && options.schema)
                     return (0, agent_findings_response_policy_1.interpretFindingsResponse)(output, options);
                 return output;
-            },
-            mapServerResponse: ({ parts }) => {
-                const result = (0, agent_findings_response_policy_1.interpretFindingsResponse)(parts, options);
-                if (options.expectJson && options.schema) {
-                    const text = (0, agent_response_parser_1.extractTextFromParts)(parts);
-                    (0, logger_1.logInfo)(`OpenCode agent response (expectJson=true) length=${text.length}`);
-                    (0, logger_1.logDebugInfo)(`OpenCode agent response (full text, no truncation) length=${text.length}:\\n${text}`);
-                }
-                return result;
             },
         });
     }
@@ -58534,9 +58871,7 @@ exports.FindingsAgentAdapter = FindingsAgentAdapter;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.FixerAgentAdapter = void 0;
 const logger_1 = __nccwpck_require__(1151);
-const agent_fixer_response_policy_1 = __nccwpck_require__(2579);
 const agent_capability_adapter_1 = __nccwpck_require__(2152);
-const OPENCODE_AGENT_BUILD = 'build';
 class FixerAgentAdapter extends agent_capability_adapter_1.AgentCapabilityAdapter {
     constructor(infrastructure) {
         super(infrastructure);
@@ -58549,10 +58884,8 @@ class FixerAgentAdapter extends agent_capability_adapter_1.AgentCapabilityAdapte
         return this.execute({
             configuration: request.configuration,
             prompt: request.prompt,
-            agent: OPENCODE_AGENT_BUILD,
             capability: 'fixer',
             mapCliOutput: (text) => ({ text, sessionId: 'cli' }),
-            mapServerResponse: (result) => (0, agent_fixer_response_policy_1.interpretFixerResponse)(result.parts, result.sessionId),
         });
     }
 }
@@ -60922,7 +61255,14 @@ class SpecificCliAdapter {
         const command = request.configuration.command?.trim();
         if (!command)
             throw new Error(`CLI command is required for ${this.expectedProvider}.`);
-        return this.client.execute({ command, prompt: request.prompt, timeoutMs: request.timeoutMs, cwd: request.cwd, signal: request.signal });
+        return this.client.execute({
+            command,
+            prompt: request.prompt,
+            promptMode: this.expectedProvider === 'codex' ? 'stdin' : 'argv',
+            timeoutMs: request.timeoutMs,
+            cwd: request.cwd,
+            signal: request.signal,
+        });
     }
 }
 class OpenCodeCliAdapter extends SpecificCliAdapter {
@@ -61904,6 +62244,73 @@ class WorkflowDispatchRepository {
     }
 }
 exports.WorkflowDispatchRepository = WorkflowDispatchRepository;
+
+
+/***/ }),
+
+/***/ 9040:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DEFAULT_AGENT_MODEL = exports.DEFAULT_MODEL_PROVIDER = exports.DEFAULT_AGENT_PROVIDER = void 0;
+exports.isAgentConfigurationReady = isAgentConfigurationReady;
+exports.DEFAULT_AGENT_PROVIDER = 'codex';
+exports.DEFAULT_MODEL_PROVIDER = 'openai';
+exports.DEFAULT_AGENT_MODEL = 'gpt-5.6-luna';
+function isAgentConfigurationReady(configuration) {
+    if (!configuration?.model.trim())
+        return false;
+    return Boolean(configuration.command?.trim());
+}
+
+
+/***/ }),
+
+/***/ 7700:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.defaultAgentCommand = defaultAgentCommand;
+function quote(value) {
+    if (/^[a-zA-Z0-9._:/-]+$/.test(value))
+        return value;
+    return `'${value.replace(/'/g, "'\\''")}'`;
+}
+/** Build the provider-specific, non-interactive command for an agent task. */
+function defaultAgentCommand(configuration) {
+    const model = configuration.model.trim();
+    const modelProvider = configuration.modelProvider?.trim() || 'openai';
+    const effort = configuration.effort?.trim();
+    switch (configuration.provider) {
+        case 'codex': {
+            const parts = [
+                'codex exec',
+                '--ephemeral',
+                '--skip-git-repo-check',
+                '--model',
+                quote(model),
+                '--config',
+                quote(`model_provider="${modelProvider}"`),
+            ];
+            if (effort)
+                parts.push('--config', quote(`model_reasoning_effort="${effort}"`));
+            parts.push('-');
+            return parts.join(' ');
+        }
+        case 'cursor':
+            return ['agent', '-p', '--output-format', 'text', '--model', quote(model)].join(' ');
+        case 'opencode': {
+            const parts = ['opencode', 'run', '--model', quote(`${modelProvider}/${model}`)];
+            if (effort)
+                parts.push('--variant', quote(effort));
+            return parts.join(' ');
+        }
+    }
+}
 
 
 /***/ }),
@@ -64021,12 +64428,17 @@ exports.INPUT_KEYS = {
     // Agent selection
     AGENT_PROVIDER: 'agent-provider',
     AGENT_MODEL_PROVIDER: 'agent-model-provider',
+    AGENT_EFFORT: 'agent-effort',
     AGENT_MODEL: 'agent-model',
     AGENT_COMMAND: 'agent-command',
     FINDINGS_PROVIDER: 'findings-provider',
+    FINDINGS_MODEL_PROVIDER: 'findings-model-provider',
+    FINDINGS_EFFORT: 'findings-effort',
     FINDINGS_MODEL: 'findings-model',
     FINDINGS_COMMAND: 'findings-command',
     FIXER_PROVIDER: 'fixer-provider',
+    FIXER_MODEL_PROVIDER: 'fixer-model-provider',
+    FIXER_EFFORT: 'fixer-effort',
     FIXER_MODEL: 'fixer-model',
     FIXER_COMMAND: 'fixer-command',
     // AI configuration
@@ -64463,19 +64875,15 @@ function logDebugError(message) {
 
 /***/ }),
 
-/***/ 2225:
+/***/ 3907:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
-/**
- * Shared instruction for every prompt we send to OpenCode about the project.
- * Tells the agent to read not only the code (respecting ignore patterns) but also
- * the repository documentation and defined rules, for a full picture and better decisions.
- */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.OPENCODE_PROJECT_CONTEXT_INSTRUCTION = void 0;
-exports.OPENCODE_PROJECT_CONTEXT_INSTRUCTION = `**Important – use full project context:** In addition to reading the relevant code (respecting any file ignore patterns specified), read the repository documentation (e.g. README, docs/) and any defined rules or conventions (e.g. .cursor/rules, CONTRIBUTING, project guidelines). This gives you a complete picture of the project and leads to better decisions in both quality of reasoning and efficiency.`;
+exports.PROJECT_CONTEXT_INSTRUCTION = void 0;
+/** Shared repository-context instruction for every supported agent runtime. */
+exports.PROJECT_CONTEXT_INSTRUCTION = `**Important – use full project context:** In addition to reading the relevant code (respecting any file ignore patterns specified), read the repository documentation (e.g. README, docs/) and any defined rules or conventions (e.g. .cursor/rules, CONTRIBUTING, project guidelines). This gives you a complete picture of the project and leads to better decisions in both quality of reasoning and efficiency.`;
 
 
 /***/ }),

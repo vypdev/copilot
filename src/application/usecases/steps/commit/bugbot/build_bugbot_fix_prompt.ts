@@ -1,7 +1,7 @@
 import type { Execution } from "../../../../../data/model/execution";
 import type { BugbotContext } from "./types";
 import { getBugbotFixPrompt } from "../../../../../prompts";
-import { OPENCODE_PROJECT_CONTEXT_INSTRUCTION } from "../../../../../utils/opencode_project_context_instruction";
+import { PROJECT_CONTEXT_INSTRUCTION } from "../../../../../utils/project_context_instruction";
 import { sanitizeUserCommentForPrompt } from "./sanitize_user_comment_for_prompt";
 
 /** Maximum characters for a single finding's full comment body to avoid prompt bloat and token limits. */
@@ -19,7 +19,7 @@ export function truncateFindingBody(body: string, maxLength: number): string {
 }
 
 /**
- * Builds the prompt for the OpenCode build agent to fix the selected bugbot findings.
+ * Builds the prompt for the configured build agent to fix the selected bugbot findings.
  * Includes repo context, the findings to fix (with full detail), the user's comment,
  * strict scope rules, and the verify commands to run.
  */
@@ -62,7 +62,7 @@ export function buildBugbotFixPrompt(
     const prNumberLine = prNumber != null ? `- Pull request number: ${prNumber}` : "";
 
     return getBugbotFixPrompt({
-        projectContextInstruction: OPENCODE_PROJECT_CONTEXT_INSTRUCTION,
+        projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
         owner,
         repo,
         headBranch,

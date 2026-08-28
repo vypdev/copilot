@@ -8,7 +8,7 @@ description: Use the OpenAI Codex CLI and understand the separate OpenAI model-p
 ## Status
 
 <Warning>
-Codex execution is implemented as a CLI runtime. OpenAI model-provider support is documented and validated for the OpenCode path. The Codex runtime path is available, but its provider-specific model-selection and authenticated CI coverage remain narrower than OpenCode and must be verified before production use.
+The repository does not include a Codex credential. A controlled self-hosted runner may provide a preinitialized Codex session; otherwise map `OPENAI_API_KEY` or `CODEX_ACCESS_TOKEN` as a secret. Authenticated provider smoke tests must be run by the operator with an authorized account.
 </Warning>
 
 Copilot separates two concepts:
@@ -26,7 +26,7 @@ Do not describe `codex` and `openai` as interchangeable values. `codex` is a run
 The built-in Codex command is:
 
 ```text
-codex exec --ephemeral --skip-git-repo-check -
+codex exec --ephemeral --skip-git-repo-check --model <model> --config 'model_provider="<provider>"' [--config 'model_reasoning_effort="<effort>"'] -
 ```
 
 The command reads the prompt from standard input, runs ephemerally, and does not use a shell. A provider failure is terminal; Copilot does not silently fall back to OpenCode or Cursor.
@@ -41,14 +41,14 @@ Codex can use one of the following credential references:
 | Access token | `CODEX_ACCESS_TOKEN` | Explicit Codex credential supplied by the runner. |
 | Local ChatGPT session | Local Codex authentication state | Controlled self-hosted runner only; never export it to hosted CI. |
 
-Copilot never prints, copies, or serializes token values. See [Codex authentication and compliance](/security-operations/security/authentication-compliance) for the account, billing, and terms boundaries.
+Copilot never prints, copies, or serializes token values. With no exported credential, the preflight intentionally defers to the runner-local Codex CLI, which is valid for a preinitialized self-hosted runner. See [Codex authentication and compliance](/security-operations/security/authentication-compliance) for the account, billing, and terms boundaries.
 
 ## Provisioning
 
-GitHub Actions provisioning uses the pinned version variable:
+GitHub Actions provisioning uses an installed-first policy. A preinitialized `codex` executable is accepted without `CODEX_VERSION`. If it is missing, provisioning requires the pinned version variable:
 
 ```text
-CODEX_VERSION
+CODEX_VERSION=<approved-version>
 ```
 
 The approved package installation shape is:

@@ -5,7 +5,7 @@ description: Strict reference for the public agent inputs and their effective de
 
 # Agent input reference
 
-The `agent-*` inputs are the only public configuration contract for agent execution. The removed OpenCode model and server inputs are not supported.
+The agent inputs are the public configuration contract for agent execution. Provider-specific capabilities not represented by the common contract can be supplied through an audited `agent-command` override.
 
 ## Selection inputs
 
@@ -14,7 +14,10 @@ The `agent-*` inputs are the only public configuration contract for agent execut
 | `agent-provider` | No | `codex` | CLI runtime: `codex`, `opencode`, or `cursor` | No |
 | `agent-model-provider` | No | `openai` | Provider serving the selected model | No |
 | `agent-model` | No | `gpt-5.6-luna` | Model name without the provider prefix | No |
+| `agent-effort` | No | empty | Reasoning effort or provider-specific model variant | No |
 | `agent-command` | No | Provider-specific command | Optional literal CLI override | No |
+
+Each task also supports independent overrides: `findings-provider`, `findings-model-provider`, `findings-model`, `findings-effort`, `findings-command` and the corresponding `fixer-*` inputs. Empty task overrides inherit the common selection.
 
 The qualified model is always constructed as:
 
@@ -51,11 +54,11 @@ Values MUST be supplied through the runner's secret/environment mechanism. They 
 
 | Runtime | Default command |
 | --- | --- |
-| OpenCode | `opencode run --model <provider>/<model>` |
-| Codex | `codex exec --ephemeral --skip-git-repo-check -` |
-| Cursor | `agent -p --output-format text -` |
+| OpenCode | `opencode run --model <provider>/<model> [--variant <effort>]` |
+| Codex | `codex exec --ephemeral --skip-git-repo-check --model <model> --config 'model_provider="<provider>"' [--config 'model_reasoning_effort="<effort>"'] -` |
+| Cursor | `agent -p --output-format text --model <model> <prompt>` |
 
-Commands are executed without a shell. An OpenCode command MUST contain an explicit `--model` value. No runtime, provider, model, credential, or command fallback is attempted.
+Commands are executed without a shell. Codex receives the prompt over `stdin`; OpenCode and Cursor receive it as a single positional argument. A custom command MUST contain explicit model selection; Codex must also contain `model_provider`, and Codex/OpenCode must contain effort when configured. No runtime, provider, model, credential, or command fallback is attempted.
 
 ## Configuration ownership
 

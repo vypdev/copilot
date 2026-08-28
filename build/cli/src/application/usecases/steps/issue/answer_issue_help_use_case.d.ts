@@ -1,6 +1,6 @@
 /**
  * When a question or help issue is newly opened, posts an initial helpful reply
- * based on the issue description (OpenCode Plan agent). The user can still
+ * based on the issue description (configured agent). The user can still
  * @mention the bot later for follow-up answers (ThinkUseCase).
  */
 import { Execution } from '../../../../data/model/execution';

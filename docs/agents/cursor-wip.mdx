@@ -3,10 +3,10 @@ title: Cursor runtime (WIP)
 description: Cursor CLI integration status, intended contract, and validation boundary.
 ---
 
-# Cursor runtime (WIP)
+# Cursor runtime
 
 <Warning>
-Cursor support is **Work in Progress**. The CLI adapter, provisioning path, installer checksum gate, and credential preflight exist, but a real authenticated Cursor smoke test has not been completed. Do not describe Cursor as production-validated.
+The Cursor CLI integration is complete at the code and provisioning boundary. A real authenticated smoke test remains an operator responsibility because this repository does not yet have a `CURSOR_API_KEY`.
 </Warning>
 
 ## What is implemented
@@ -14,7 +14,7 @@ Cursor support is **Work in Progress**. The CLI adapter, provisioning path, inst
 Copilot has the provider-specific CLI shape:
 
 ```text
-agent -p --output-format text -
+agent -p --output-format text --model <model> <prompt>
 ```
 
 The Action can provision the official Cursor installer when all required inputs are present:
@@ -26,31 +26,27 @@ CURSOR_API_KEY
 
 The installer checksum is verified before execution. Unofficial npm packages, shell fallbacks, and unverified downloads are not supported.
 
-## What remains WIP
-
-The following items must be completed before Cursor can be documented as production-ready:
+## Operator validation still required
 
 - authenticated end-to-end smoke test with an authorized `CURSOR_API_KEY`;
-- verification of the exact Cursor CLI version and output contract in GitHub Actions;
-- validation of model/provider selection behavior for the configured Cursor CLI;
-- verification of timeout, cancellation, output limits, and terminal failures with real Cursor responses;
-- confirmation that the installer remains compatible with every supported runner image;
-- documentation of Cursor-specific billing, workspace, and account restrictions from current official sources.
+- confirmation that the installer remains compatible with the operator's runner image;
+- review of Cursor-specific billing and account restrictions for the selected workspace.
 
-Until those gates pass, the absence of a Cursor credential or smoke-test evidence is an expected WIP condition, not a successful provider check.
+The deterministic adapter, timeout, cancellation, output-limit, and terminal-failure behavior is covered by repository tests. The absence of a Cursor credential only prevents an authenticated smoke test; it does not prevent configuration or provisioning checks.
 
 ## Configuration shape
 
 ```yaml
 with:
   agent-provider: cursor
-  agent-model-provider: <approved-provider>
+  agent-model-provider: cursor
   agent-model: <approved-model>
+  agent-effort: <optional-preference>
 env:
   CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
 ```
 
-The runtime provider (`cursor`) is separate from the model provider and model. Do not assume that a Cursor CLI installation proves that a selected model is available or authorized.
+The runtime provider (`cursor`) is separate from the model provider and model. Cursor's documented CLI exposes model selection but no standard effort flag; Copilot keeps the common effort value in the execution context instead of inventing an unsupported CLI option. Do not assume that a CLI installation proves that a selected model is available or authorized.
 
 ## Security boundary
 

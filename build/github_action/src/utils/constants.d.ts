@@ -52,12 +52,17 @@ export declare const INPUT_KEYS: {
     readonly TOKEN: "token";
     readonly AGENT_PROVIDER: "agent-provider";
     readonly AGENT_MODEL_PROVIDER: "agent-model-provider";
+    readonly AGENT_EFFORT: "agent-effort";
     readonly AGENT_MODEL: "agent-model";
     readonly AGENT_COMMAND: "agent-command";
     readonly FINDINGS_PROVIDER: "findings-provider";
+    readonly FINDINGS_MODEL_PROVIDER: "findings-model-provider";
+    readonly FINDINGS_EFFORT: "findings-effort";
     readonly FINDINGS_MODEL: "findings-model";
     readonly FINDINGS_COMMAND: "findings-command";
     readonly FIXER_PROVIDER: "fixer-provider";
+    readonly FIXER_MODEL_PROVIDER: "fixer-model-provider";
+    readonly FIXER_EFFORT: "fixer-effort";
     readonly FIXER_MODEL: "fixer-model";
     readonly FIXER_COMMAND: "fixer-command";
     readonly AI_PULL_REQUEST_DESCRIPTION: "ai-pull-request-description";

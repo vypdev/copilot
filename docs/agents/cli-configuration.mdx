@@ -7,13 +7,14 @@ description: Configure the Bugbot runtime CLI, model provider, model, credential
 
 Bugbot executes one external, headless CLI per run. The selected runtime, the provider that serves the model, and the model name are separate values.
 
-## The three-value contract
+## The common agent contract
 
 ```yaml
 with:
   agent-provider: opencode
   agent-model-provider: openai
   agent-model: gpt-5.6-luna
+  agent-effort: high
 ```
 
 | Input | Meaning | Example |
@@ -21,6 +22,7 @@ with:
 | `agent-provider` | CLI runtime that is executed | `opencode`, `codex`, `cursor` |
 | `agent-model-provider` | Provider that serves the selected model | `openai` |
 | `agent-model` | Model name without the provider prefix | `gpt-5.6-luna` |
+| `agent-effort` | Optional reasoning effort or provider-specific model variant | `high` |
 
 For OpenCode, these values produce the qualified model reference:
 
@@ -89,11 +91,11 @@ The built-in commands are provider-specific:
 
 | Runtime | Command |
 | --- | --- |
-| OpenCode | `opencode run --model provider/model` |
-| Codex | `codex exec --ephemeral --skip-git-repo-check -` |
-| Cursor | `agent -p --output-format text -` |
+| OpenCode | `opencode run --model provider/model [--variant effort]` |
+| Codex | `codex exec --ephemeral --skip-git-repo-check --model model --config 'model_provider="provider"' [--config 'model_reasoning_effort="effort"'] -` |
+| Cursor | `agent -p --output-format text --model model <prompt>` |
 
-Custom commands are optional. They must remain compatible with the selected runtime, and OpenCode commands must include an explicit `--model` argument. Shell execution and automatic provider fallback are not used.
+Custom commands are optional. They must remain compatible with the selected runtime and explicitly carry the selected model; Codex must carry `model_provider`, and Codex/OpenCode must carry configured effort. Shell execution and automatic provider fallback are not used.
 
 ## Credentials
 
@@ -109,12 +111,13 @@ Never place tokens in `with`, command arguments, prompts, repository files, or l
 
 ## Provisioning
 
-The Action provisions only the selected CLI in GitHub Actions when the required version variables are present. Versions and the Cursor installer checksum are non-sensitive GitHub Variables:
+The Action verifies the selected CLI in GitHub Actions and, by default, reuses a preinstalled executable. If it is absent, it provisions it only when the corresponding version/checksum variable is present. Versions and the Cursor installer checksum are non-sensitive GitHub Variables:
 
 ```text
 CODEX_VERSION
 OPENCODE_VERSION
 CURSOR_INSTALLER_SHA256
+AGENT_PROVISIONING=auto|always|disabled
 ```
 
 The Action does not copy local OAuth files into CI and does not install an unselected provider. See [Agent CLI provisioning](/security-operations/operations/cli-provisioning).

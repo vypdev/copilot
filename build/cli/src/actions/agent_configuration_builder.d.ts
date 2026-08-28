@@ -3,6 +3,7 @@ export interface AgentTaskConfigurationValues {
     provider: string;
     modelProvider?: string;
     model: string;
+    effort?: string;
     command?: string;
 }
 export interface AgentTasksConfigurationValues extends AgentTaskConfigurationValues {

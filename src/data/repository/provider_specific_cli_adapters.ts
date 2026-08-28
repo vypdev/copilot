@@ -21,7 +21,14 @@ abstract class SpecificCliAdapter {
         }
         const command = request.configuration.command?.trim();
         if (!command) throw new Error(`CLI command is required for ${this.expectedProvider}.`);
-        return this.client.execute({ command, prompt: request.prompt, timeoutMs: request.timeoutMs, cwd: request.cwd, signal: request.signal });
+        return this.client.execute({
+            command,
+            prompt: request.prompt,
+            promptMode: this.expectedProvider === 'codex' ? 'stdin' : 'argv',
+            timeoutMs: request.timeoutMs,
+            cwd: request.cwd,
+            signal: request.signal,
+        });
     }
 }
 

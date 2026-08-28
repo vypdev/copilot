@@ -11,21 +11,22 @@ The Action executes external provider-specific CLIs. It does not embed agent SDK
 
 | Runtime | Binary | Invocation | Credential reference |
 | --- | --- | --- | --- |
-| OpenCode | `opencode` | `opencode run --model provider/model` | Provider credential, for example `OPENAI_API_KEY` |
-| Codex | `codex` | `codex exec --ephemeral --skip-git-repo-check -` | `CODEX_ACCESS_TOKEN`, `OPENAI_API_KEY`, or controlled local session |
-| Cursor | `agent` | `agent -p --output-format text -` | `CURSOR_API_KEY` |
+| OpenCode | `opencode` | `opencode run --model provider/model [--variant effort]` | Provider credential, for example `OPENAI_API_KEY` |
+| Codex | `codex` | `codex exec --ephemeral --skip-git-repo-check --model model --config 'model_provider="provider"' -` | `CODEX_ACCESS_TOKEN`, `OPENAI_API_KEY`, or controlled local session |
+| Cursor | `agent` | `agent -p --output-format text --model model <prompt>` | `CURSOR_API_KEY` |
 
 ## Version variables
 
-Use GitHub repository or environment Variables for non-sensitive provisioning inputs:
+Use GitHub repository or environment Variables for non-sensitive provisioning inputs. The default `auto` mode accepts a preinstalled executable, which is useful for controlled self-hosted runners:
 
 ```text
 CODEX_VERSION=<approved-version>
 OPENCODE_VERSION=<approved-version>
 CURSOR_INSTALLER_SHA256=<approved-installer-sha256>
+AGENT_PROVISIONING=auto
 ```
 
-The GitHub workflows pass these values to the Action. The selected provider is provisioned only when the Action runs in GitHub Actions. Local development can use already-installed binaries.
+The GitHub workflows pass these values to the Action. The selected provider is provisioned only when the Action runs in GitHub Actions and its executable is absent. Set `always` to force a pinned installation or `disabled` to require the runner image to provide the executable. Local development can use already-installed binaries.
 
 ## Approved installation methods
 
@@ -70,7 +71,7 @@ env:
 The effective Codex command is:
 
 ```text
-codex exec --ephemeral --skip-git-repo-check -
+codex exec --ephemeral --skip-git-repo-check --model gpt-5.6-luna --config 'model_provider="openai"' -
 ```
 
 The allowlists are authorization policy, not credentials and not model selectors. A rejected provider/model is a terminal failure.

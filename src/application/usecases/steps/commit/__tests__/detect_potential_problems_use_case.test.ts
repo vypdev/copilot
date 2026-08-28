@@ -776,7 +776,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       const updatedBody = mockUpdateComment.mock.calls[0][4];
       expect(updatedBody).toContain("resolved:true");
       expect(updatedBody).toContain(
-        "**Resolved** (OpenCode confirmed fixed in latest analysis)",
+          "**Resolved** (configured agent confirmed fixed in latest analysis)",
       );
       expect(updatedBody).toContain("copilot-bugbot");
     });

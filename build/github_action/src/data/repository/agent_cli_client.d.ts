@@ -1,6 +1,7 @@
 export interface AgentCliRequest {
     command: string;
     prompt: string;
+    promptMode?: 'stdin' | 'argv';
     timeoutMs: number;
     signal?: AbortSignal;
     cwd?: string;

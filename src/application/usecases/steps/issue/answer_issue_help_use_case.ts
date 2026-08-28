@@ -1,19 +1,19 @@
 /**
  * When a question or help issue is newly opened, posts an initial helpful reply
- * based on the issue description (OpenCode Plan agent). The user can still
+ * based on the issue description (configured agent). The user can still
  * @mention the bot later for follow-up answers (ThinkUseCase).
  */
 
 import { isAgentConfigurationReady } from '../../../../data/model/agent';
 import { Execution } from '../../../../data/model/execution';
 import { Result } from '../../../../data/model/result';
-import { OPENCODE_AGENT_PLAN } from '../../../../application/policies/agent_task_policy';
+import { AGENT_PLAN } from '../../../../application/policies/agent_task_policy';
 import type { FindingsQueryPort } from '../../../ports/agent_findings_ports';
 import { THINK_RESPONSE_SCHEMA } from '../../../../application/policies/agent_response_schemas';
 import type { IssueNotificationPort } from '../../../ports/issue_lifecycle_ports';
 import { getAnswerIssueHelpPrompt } from '../../../../prompts';
 import { logDebugInfo, logError, logInfo } from '../../../../utils/logger';
-import { OPENCODE_PROJECT_CONTEXT_INSTRUCTION } from '../../../../utils/opencode_project_context_instruction';
+import { PROJECT_CONTEXT_INSTRUCTION } from '../../../../utils/project_context_instruction';
 import { getTaskEmoji } from '../../../../utils/task_emoji';
 import { ParamUseCase } from '../../base/param_usecase';
 import { extractStructuredAnswer } from '../common/agent_answer_policy';
@@ -57,7 +57,7 @@ export class AnswerIssueHelpUseCase implements ParamUseCase<Execution, Result[]>
             }
 
             if (!isAgentConfigurationReady(param.ai?.getAgentConfiguration('findings'))) {
-                logInfo('OpenCode not configured; skipping initial help reply.');
+                logInfo('Agent not configured; skipping initial help reply.');
                 results.push(
                     new Result({
                         id: this.taskId,
@@ -97,13 +97,13 @@ export class AnswerIssueHelpUseCase implements ParamUseCase<Execution, Result[]>
 
             const prompt = getAnswerIssueHelpPrompt({
                 description,
-                projectContextInstruction: OPENCODE_PROJECT_CONTEXT_INSTRUCTION,
+                projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
             });
 
-            logDebugInfo(`AnswerIssueHelp: prompt length=${prompt.length}, issue description length=${description.length}. Calling OpenCode Plan agent.`);
+            logDebugInfo(`AnswerIssueHelp: prompt length=${prompt.length}, issue description length=${description.length}. Calling configured agent.`);
             const response = await this.aiRepository.query({
                 configuration: param.ai?.getAgentConfiguration('findings'),
-                agentId: OPENCODE_AGENT_PLAN,
+                agentId: AGENT_PLAN,
                 prompt,
                 options: {
                     expectJson: true,
@@ -114,16 +114,16 @@ export class AnswerIssueHelpUseCase implements ParamUseCase<Execution, Result[]>
 
             const answer = extractStructuredAnswer(response);
 
-            logDebugInfo(`AnswerIssueHelp: OpenCode response. Answer length=${answer.length}. Full answer:\n${answer}`);
+            logDebugInfo(`AnswerIssueHelp: agent response. Answer length=${answer.length}. Full answer:\n${answer}`);
 
             if (!answer) {
-                logError('OpenCode returned no answer for initial help.');
+                logError('Configured agent returned no answer for initial help.');
                 results.push(
                     new Result({
                         id: this.taskId,
                         success: false,
                         executed: true,
-                        errors: ['OpenCode returned no answer for initial help.'],
+                        errors: ['Configured agent returned no answer for initial help.'],
                     })
                 );
                 return results;

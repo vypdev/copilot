@@ -10,8 +10,8 @@ export declare function buildLocalActionConfiguration(additionalParams: any, pro
     singleActionTitle: string;
     singleActionChangelog: string;
     token: string;
-    agentTasks: import("../data/model/agent").AgentTaskConfiguration;
-    opencodeModel: string;
+    agentTasks: import("../domain/agent").AgentTaskConfiguration;
+    agentModel: string;
     aiPullRequestDescription: boolean;
     aiMembersOnly: boolean;
     aiIncludeReasoning: boolean;

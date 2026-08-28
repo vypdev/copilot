@@ -6,7 +6,7 @@ import { ParamUseCase } from "../../../base/param_usecase";
 import { Result } from "../../../../../data/model/result";
 import { type BugbotContext } from "./types";
 /**
- * Runs the OpenCode build agent to fix the selected bugbot findings. OpenCode edits files
+ * Runs the configured build agent to fix the selected bugbot findings. The agent edits files
  * directly in the workspace (we do not pass or apply diffs). Caller must run verify commands
  * and commit/push after success (see runBugbotAutofixCommitAndPush).
  */

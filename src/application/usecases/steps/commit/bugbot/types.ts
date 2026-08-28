@@ -1,9 +1,9 @@
 /**
  * Bugbot types: data structures used across detection, publishing, and autofix.
- * OpenCode computes the diff and returns findings; we never pass a pre-computed diff to OpenCode.
+ * The configured agent computes the diff and returns findings; we never pass a pre-computed diff to it.
  */
 
-/** Single finding from OpenCode (plan agent). */
+/** Single finding from the configured findings agent. */
 export interface BugbotFinding {
   id: string;
   title: string;
@@ -64,7 +64,7 @@ export interface BugbotContext {
   /** Full issue-comment bodies reserved for read-modify-write operations. */
   issueComments: Array<{ id: number; body: string | null }>;
   openPrNumbers: number[];
-  /** Bounded text sent to OpenCode. */
+  /** Bounded text sent to the configured findings agent. */
   previousFindingsBlock: string;
   prContext: BugbotPrContext | null;
   /** Bounded bodies used by intent prompts and autofix. */

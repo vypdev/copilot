@@ -1,4 +1,5 @@
 import { AgentTask, AgentTaskConfiguration } from './agent';
+import { defaultAgentCommand } from '../../domain/agent_command';
 
 export class Ai {
     private aiPullRequestDescription: boolean;
@@ -21,8 +22,8 @@ export class Ai {
         bugbotCommentLimit: number,
         bugbotFixVerifyCommands: string[] = [],
         agentTasks: AgentTaskConfiguration = {
-            findings: { provider: 'codex', modelProvider: 'openai', model, command: 'codex exec --ephemeral --skip-git-repo-check -' },
-            fixer: { provider: 'codex', modelProvider: 'openai', model, command: 'codex exec --ephemeral --skip-git-repo-check -' },
+            findings: { provider: 'codex', modelProvider: 'openai', model, command: defaultAgentCommand({ provider: 'codex', modelProvider: 'openai', model }) },
+            fixer: { provider: 'codex', modelProvider: 'openai', model, command: defaultAgentCommand({ provider: 'codex', modelProvider: 'openai', model }) },
         }
     ) {
         this.aiPullRequestDescription = aiPullRequestDescription;

@@ -23,7 +23,7 @@ env:
 For this configuration, Bugbot executes:
 
 ```text
-codex exec --ephemeral --skip-git-repo-check -
+codex exec --ephemeral --skip-git-repo-check --model gpt-5.6-luna --config 'model_provider="openai"' -
 ```
 
 `agent-provider` selects the CLI runtime. `agent-model-provider` and `agent-model` select the qualified model. Allowlists are checked before execution and failures are terminal. See [Agent CLI configuration](/agents/cli-configuration).

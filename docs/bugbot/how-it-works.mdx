@@ -13,7 +13,7 @@ This page describes the **internal flow** of Bugbot: how detection runs, how the
 
 | What you do | What runs inside the action | Result |
 |-------------|-----------------------------|--------|
-| **Push** to branch (or run `detect_potential_problems_action`) | Detection: load context → OpenCode Plan (findings + resolved ids) → filter → mark resolved → publish | New/updated comments on issue and PR; resolved threads on PR. |
+| **Push** to branch (or run `detect_potential_problems_action`) | Detection: load context → configured agent (findings + resolved ids) → filter → mark resolved → publish | New/updated comments on issue and PR; resolved threads on PR. |
 | **Comment** “fix it” / “fix all” (with permission) | Intent (Plan) → Autofix (Build) → verify commands → commit & push → mark findings resolved | Code change on branch; those findings marked resolved. |
 | **Comment** “add a test for X” (with permission) | Intent (Plan) → Do user request (Build) → verify commands → commit & push | Code change on branch. |
 | **Comment** without permission or not a fix/do request | Think (Plan) | Answer in comment; no file changes. |
@@ -45,7 +45,7 @@ This page describes the **internal flow** of Bugbot: how detection runs, how the
 
 When you post a comment on an **issue** or **pull request** (or reply in a PR review thread), the action runs **intent detection** before doing anything that modifies files.
 
-1. **Intent (OpenCode Plan):** The action sends:
+1. **Intent (configured agent):** The action sends:
    - Your **comment body** (and, for PR review replies, the **parent comment** body, truncated).
    - The list of **unresolved findings** (id, title, short description).
    The Plan agent returns:

@@ -4,10 +4,10 @@ describe('do command policy', () => {
   it('builds independent findings and fixer configurations', () => {
     const tasks = buildDoAgentTasks({
       agentProvider: 'opencode', agentModelProvider: 'opencode', agentModel: 'main',
-      findingsProvider: 'codex', findingsModelProvider: 'openai', findingsModel: 'findings', findingsCommand: 'codex',
+      findingsProvider: 'codex', findingsModelProvider: 'openai', findingsModel: 'findings', findingsCommand: 'codex exec --model findings --config model_provider=openai -',
       fixerProvider: 'opencode', fixerModelProvider: 'opencode', fixerModel: 'fixer', fixerCommand: 'opencode run --model opencode/fixer',
     });
-    expect(tasks.findings).toMatchObject({ provider: 'codex', model: 'findings', command: 'codex' });
+    expect(tasks.findings).toMatchObject({ provider: 'codex', model: 'findings', command: 'codex exec --model findings --config model_provider=openai -' });
     expect(tasks.fixer).toMatchObject({ provider: 'opencode', modelProvider: 'opencode', model: 'fixer', command: 'opencode run --model opencode/fixer' });
   });
 

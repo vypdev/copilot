@@ -11,12 +11,8 @@ export declare abstract class AgentCapabilityAdapter {
     protected execute<T>(request: {
         configuration: AgentConfiguration;
         prompt: string;
-        agent: string;
         capability: AgentTask;
         mapCliOutput: (output: string) => T;
-        mapServerResponse: (response: {
-            parts: unknown;
-            sessionId: string;
-        }) => T;
     }): Promise<T | undefined>;
+    private addEffortInstruction;
 }

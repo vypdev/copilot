@@ -5,15 +5,15 @@ description: Run and verify the provider-specific headless CLIs used by Bugbot.
 
 # Agent CLI runners
 
-Copilot uses one provider-specific, headless CLI per run. The prompt is sent through standard input and the response is read from standard output.
+Copilot uses one provider-specific, headless CLI per run. The provider adapter selects the documented prompt transport: Codex receives the prompt through standard input, while OpenCode and Cursor receive it as one positional argument. The response is read from standard output.
 
 | Runtime | Headless command | Credential reference |
 | --- | --- | --- |
-| OpenCode | `opencode run --model provider/model` | Provider credential, for example `OPENAI_API_KEY` |
-| Codex | `codex exec --ephemeral --skip-git-repo-check -` | `CODEX_ACCESS_TOKEN`, `OPENAI_API_KEY`, or a controlled local ChatGPT session |
-| Cursor | `agent -p --output-format text -` | `CURSOR_API_KEY` |
+| OpenCode | `opencode run --model provider/model [--variant effort]` | Provider credential, for example `OPENAI_API_KEY` |
+| Codex | `codex exec --ephemeral --skip-git-repo-check --model model --config 'model_provider="provider"' -` | `CODEX_ACCESS_TOKEN`, `OPENAI_API_KEY`, or a controlled local ChatGPT session |
+| Cursor | `agent -p --output-format text --model model <prompt>` | `CURSOR_API_KEY` |
 
-There is no transport setting, server URL, managed server lifecycle, SDK, or provider fallback in the current architecture. If the selected runtime is unavailable or fails, the run fails closed.
+There is no user-configurable transport setting, managed server lifecycle, SDK, or provider fallback in the current architecture. Additional provider-specific flags can be supplied through the audited command override. If the selected runtime is unavailable or fails, the run fails closed.
 
 ## Configure the runtime and model separately
 
@@ -22,6 +22,7 @@ with:
   agent-provider: opencode
   agent-model-provider: openai
   agent-model: gpt-5.6-luna
+  agent-effort: high
 ```
 
 For OpenCode, Copilot validates and passes `openai/gpt-5.6-luna` explicitly. Repository-local OpenCode configuration and implicit defaults cannot replace that selection.
@@ -32,12 +33,12 @@ The runner must provide the selected executable and its credential reference bef
 
 Required checks:
 
-1. install only the selected runtime;
+1. install or reuse only the selected runtime;
 2. verify the exact binary version;
 3. verify the headless help command;
 4. verify the credential reference without printing its value;
 5. run a harmless, non-production smoke test when authorized;
-6. fail before Copilot starts when a prerequisite is missing.
+6. fail before Copilot starts when a prerequisite is missing (except Codex authentication, which may be resolved by a preinitialized local CLI session).
 
 Do not put secrets in action inputs, YAML literals, command arguments, prompts, or logs. Do not copy local OAuth files into GitHub-hosted CI.
 

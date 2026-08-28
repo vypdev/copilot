@@ -6,7 +6,7 @@ description: Minimal verified setup for the Copilot Action.
 
 ## Prerequisites
 
-You MUST have a GitHub repository, a fine-grained token stored as a repository secret, and a workflow that checks out the repository before invoking Copilot. Agent features additionally require a pinned CLI version and an approved credential reference.
+You MUST have a GitHub repository, a fine-grained token stored as a repository secret, and a workflow that checks out the repository before invoking Copilot. Agent features additionally require either a verified CLI already installed on the runner or a pinned provisioning input. Codex may use the runner's preinitialized session instead of an exported credential.
 
 ## Minimal workflow
 
@@ -28,6 +28,7 @@ jobs:
           agent-provider: codex
           agent-model-provider: openai
           agent-model: gpt-5.6-luna
+          agent-effort: medium
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```

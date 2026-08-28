@@ -17,7 +17,7 @@ export function buildLocalActionExecution(
         debug, singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog,
         commitPrefixBuilder, branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount,
         pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, pullRequestMergeTimeout,
-        titleEmoji, branchManagementEmoji, imageConfiguration, token, opencodeModel,
+        titleEmoji, branchManagementEmoji, imageConfiguration, token, agentModel,
         aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity,
         bugbotCommentLimit, bugbotFixVerifyCommands, agentTasks, branchManagementLauncherLabel, bugLabel,
         bugfixLabel, hotfixLabel, enhancementLabel, featureLabel, releaseLabel, questionLabel, helpLabel,
@@ -62,7 +62,7 @@ export function buildLocalActionExecution(
         tokens: buildTokens(token),
         ai: new Ai(
             '',
-            opencodeModel,
+            agentModel,
             aiPullRequestDescription,
             aiMembersOnly,
             aiIgnoreFiles,

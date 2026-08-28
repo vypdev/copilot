@@ -12,6 +12,18 @@ describe('AgentCliClient', () => {
         expect(output).toBe('agent:find issues');
     });
 
+    it('passes the prompt as one argument when the runtime requires argv transport', async () => {
+        const script = "process.stdout.write(process.argv[1])";
+        const output = await new AgentCliClient().execute({
+            command: `${process.execPath} -e ${JSON.stringify(script)}`,
+            prompt: 'find issues with spaces',
+            promptMode: 'argv',
+            timeoutMs: 2000,
+        });
+
+        expect(output).toBe('find issues with spaces');
+    });
+
     it('classifies a missing executable as a process error', async () => {
         await expect(new AgentCliClient().execute({ command: 'missing-agent-binary', prompt: 'prompt', timeoutMs: 2000 })).rejects.toMatchObject({ category: 'process' });
     });
@@ -25,5 +37,10 @@ describe('AgentCliClient', () => {
         const pending = new AgentCliClient().execute({ command: `${process.execPath} -e ${JSON.stringify('setTimeout(() => {}, 5000)')}`, prompt: 'prompt', timeoutMs: 5000, signal: controller.signal });
         controller.abort();
         await expect(pending).rejects.toMatchObject({ category: 'cancelled' });
+    });
+
+    it('rejects invalid resource limits before spawning a process', async () => {
+        await expect(new AgentCliClient().execute({ command: 'agent', prompt: 'prompt', timeoutMs: 0 })).rejects.toMatchObject({ category: 'configuration' });
+        await expect(new AgentCliClient().execute({ command: 'agent', prompt: 'prompt', timeoutMs: 1000, maxOutputBytes: 0 })).rejects.toMatchObject({ category: 'configuration' });
     });
 });

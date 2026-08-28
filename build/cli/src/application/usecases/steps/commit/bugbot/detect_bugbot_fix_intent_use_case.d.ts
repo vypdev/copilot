@@ -10,7 +10,7 @@ export interface BugbotFixIntent {
     targetFindingIds: string[];
 }
 /**
- * Asks OpenCode (plan agent) whether the user comment is a request to fix one or more
+ * Asks the configured findings agent whether the user comment is a request to fix one or more
  * bugbot findings, and which finding ids to target. Used from issue comments and PR
  * review comments. When isFixRequest is true and targetFindingIds is non-empty, the
  * caller (IssueCommentUseCase / PullRequestReviewCommentUseCase) runs the autofix flow.

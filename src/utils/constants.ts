@@ -211,14 +211,19 @@ export const INPUT_KEYS = {
     // Agent selection
     AGENT_PROVIDER: 'agent-provider',
     AGENT_MODEL_PROVIDER: 'agent-model-provider',
+    AGENT_EFFORT: 'agent-effort',
 
     AGENT_MODEL: 'agent-model',
     AGENT_COMMAND: 'agent-command',
     FINDINGS_PROVIDER: 'findings-provider',
+    FINDINGS_MODEL_PROVIDER: 'findings-model-provider',
+    FINDINGS_EFFORT: 'findings-effort',
 
     FINDINGS_MODEL: 'findings-model',
     FINDINGS_COMMAND: 'findings-command',
     FIXER_PROVIDER: 'fixer-provider',
+    FIXER_MODEL_PROVIDER: 'fixer-model-provider',
+    FIXER_EFFORT: 'fixer-effort',
 
     FIXER_MODEL: 'fixer-model',
     FIXER_COMMAND: 'fixer-command',

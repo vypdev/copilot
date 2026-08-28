@@ -6,14 +6,14 @@ import { logDebugInfo, logError, logInfo, logWarn } from '../../../utils/logger'
 import { getTaskEmoji } from '../../../utils/task_emoji';
 import { ParamUseCase } from '../base/param_usecase';
 
-import { OPENCODE_AGENT_PLAN } from '../../../application/policies/agent_task_policy';
+import { AGENT_PLAN } from '../../../application/policies/agent_task_policy';
 import type { FindingsQueryPort } from '../../ports/agent_findings_ports';
 import type { IssueDescriptionQueryPort } from '../../../application/ports/issue_description_ports';
 import type { IssueLabelsPort, IssueProgressPort } from '../../../application/ports/issue_management_ports';
 import type { PullRequestBranchQueryPort } from '../../../application/ports/pull_request_branch_ports';
 import type { BranchListQueryPort } from '../../../application/ports/branch_lifecycle_ports';
 import { getCheckProgressPrompt } from '../../../prompts';
-import { OPENCODE_PROJECT_CONTEXT_INSTRUCTION } from '../../../utils/opencode_project_context_instruction';
+import { PROJECT_CONTEXT_INSTRUCTION } from '../../../utils/project_context_instruction';
 import { findIssueBranch } from './find_issue_branch';
 import { syncProgressLabelsToOpenPullRequests } from './sync_progress_labels_to_open_pull_requests';
 import { buildProgressSummaryMessage } from './progress_summary_builder';
@@ -116,13 +116,13 @@ export class CheckProgressUseCase implements ParamUseCase<Execution, Result[]> {
             }
 
             const resolvedBranch = branch as string;
-            // Get development (parent) branch – we pass this so the OpenCode agent can compute the diff
+            // Get development (parent) branch – the configured agent computes the diff
             const developmentBranch = param.branches.development || 'develop';
 
-            logInfo(`📦 Progress will be assessed from workspace diff: base branch "${developmentBranch}", current branch "${resolvedBranch}" (OpenCode agent will run git diff).`);
+            logInfo(`📦 Progress will be assessed from workspace diff: base branch "${developmentBranch}", current branch "${resolvedBranch}" (configured agent will run git diff).`);
 
             const prompt = getCheckProgressPrompt({
-                projectContextInstruction: OPENCODE_PROJECT_CONTEXT_INSTRUCTION,
+                projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
                 issueNumber: String(issueNumber),
                 issueDescription,
                 baseBranch: developmentBranch,
@@ -130,7 +130,7 @@ export class CheckProgressUseCase implements ParamUseCase<Execution, Result[]> {
             });
 
             logDebugInfo(`CheckProgress: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`);
-            logInfo('🤖 Analyzing progress using OpenCode Plan agent...');
+            logInfo('🤖 Analyzing progress using the configured agent...');
             const attemptResult = await this.fetchProgressAttempt(param.ai, prompt);
             const progress = attemptResult.progress;
             const summary = attemptResult.summary;
@@ -247,7 +247,7 @@ export class CheckProgressUseCase implements ParamUseCase<Execution, Result[]> {
     private async fetchProgressAttempt(ai: Ai, prompt: string): Promise<ProgressAttemptResult> {
         return parseProgressResponse(await this.aiRepository.query({
             configuration: ai.getAgentConfiguration('findings'),
-            agentId: OPENCODE_AGENT_PLAN,
+                agentId: AGENT_PLAN,
             prompt,
             options: {
                 expectJson: true,
@@ -258,4 +258,3 @@ export class CheckProgressUseCase implements ParamUseCase<Execution, Result[]> {
         }));
     }
 }
-

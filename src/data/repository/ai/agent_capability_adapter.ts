@@ -10,31 +10,26 @@ import type { AgentCliPort } from '../../../infrastructure/agents/ports/agent_pr
 
 export interface AgentCapabilityInfrastructure {
     readonly cli: AgentCliPort;
-
 }
 
 export abstract class AgentCapabilityAdapter {
     protected readonly cliAdapter: ProviderCliAdapter;
 
-
     protected constructor(infrastructure: AgentCapabilityInfrastructure) {
         this.cliAdapter = new ProviderCliAdapter(infrastructure.cli);
-
     }
 
     protected async execute<T>(request: {
         configuration: AgentConfiguration;
         prompt: string;
-        agent: string;
         capability: AgentTask;
         mapCliOutput: (output: string) => T;
-        mapServerResponse: (response: { parts: unknown; sessionId: string }) => T;
     }): Promise<T | undefined> {
         const taskConfiguration = getValidatedAgentConfiguration(request.configuration, request.capability);
         try {
             const output = await this.cliAdapter.execute({
                 configuration: taskConfiguration,
-                prompt: request.prompt,
+                prompt: this.addEffortInstruction(request.prompt, taskConfiguration.effort),
                 timeoutMs: AGENT_REQUEST_TIMEOUT_MS,
             });
             return request.mapCliOutput(output);
@@ -42,5 +37,11 @@ export abstract class AgentCapabilityAdapter {
             logError(`Error querying ${taskConfiguration.provider} CLI ${request.capability}: ${error instanceof Error ? error.message : String(error)}`);
             return undefined;
         }
+    }
+
+    private addEffortInstruction(prompt: string, effort: string | undefined): string {
+        const normalizedEffort = effort?.trim();
+        if (!normalizedEffort) return prompt;
+        return `${prompt}\n\nExecution preference: use the configured reasoning effort or model variant "${normalizedEffort}" when supported by the selected agent.`;
     }
 }

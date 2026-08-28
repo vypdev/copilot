@@ -19,7 +19,7 @@ Start with the minimum permissions and a trusted branch. Do not expose write cre
     Grant only the permissions required by the selected capability. Detection can start with read-oriented permissions; comments and commits require explicit write permissions.
   </Step>
   <Step title="Configure the agent tuple">
-    Set `agent-provider`, `agent-model-provider`, and `agent-model` explicitly. Configure the matching credential reference and model allowlists.
+    Set `agent-provider`, `agent-model-provider`, and `agent-model` explicitly; set `agent-effort` when the selected model supports it. Configure the matching credential reference and model allowlists.
   </Step>
   <Step title="Run on a trusted branch">
     Trigger the workflow on a branch controlled by the repository. Confirm the workflow starts, the selected CLI is provisioned, and the model policy passes.

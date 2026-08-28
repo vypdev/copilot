@@ -144,7 +144,7 @@ describe('ThinkUseCase', () => {
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
-    expect(results[0].errors).toContain('OpenCode model or CLI command not found.');
+    expect(results[0].errors).toContain('Configured agent model or CLI command not found.');
     expect(mockAskAgent).not.toHaveBeenCalled();
   });
 
@@ -157,7 +157,7 @@ describe('ThinkUseCase', () => {
     const results = await useCase.invoke(param);
 
     expect(results[0].success).toBe(false);
-    expect(results[0].errors).toContain('OpenCode returned no answer.');
+    expect(results[0].errors).toContain('Configured agent returned no answer.');
   });
 
   it('returns success executed false when comment is only the mention', async () => {
@@ -259,7 +259,7 @@ describe('ThinkUseCase', () => {
     expect(mockAddComment).not.toHaveBeenCalled();
     expect(results[0].success).toBe(false);
     expect(results[0].executed).toBe(true);
-    expect(results[0].errors).toContain('OpenCode returned no answer.');
+    expect(results[0].errors).toContain('Configured agent returned no answer.');
   });
 
   it('returns error when OpenCode returns empty answer', async () => {
@@ -273,7 +273,7 @@ describe('ThinkUseCase', () => {
     expect(mockAskAgent).toHaveBeenCalledTimes(1);
     expect(mockAddComment).not.toHaveBeenCalled();
     expect(results[0].success).toBe(false);
-    expect(results[0].errors).toContain('OpenCode returned no answer.');
+    expect(results[0].errors).toContain('Configured agent returned no answer.');
   });
 
   it('posts comment to PR number when pull_request_review_comment', async () => {

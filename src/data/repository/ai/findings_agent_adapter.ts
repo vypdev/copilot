@@ -1,7 +1,6 @@
-import { logDebugInfo, logInfo, logError } from '../../../utils/logger';
+import { logError } from '../../../utils/logger';
 import { buildAgentPrompt } from '../agent_prompt_policy';
 import { interpretFindingsResponse } from '../agent_findings_response_policy';
-import { extractTextFromParts } from '../agent_response_parser';
 import type { FindingsQueryPort, FindingsQueryRequest } from '../../../application/ports/agent_findings_ports';
 import { AgentCapabilityAdapter, type AgentCapabilityInfrastructure } from './agent_capability_adapter';
 
@@ -26,20 +25,10 @@ export class FindingsAgentAdapter extends AgentCapabilityAdapter implements Find
         return this.execute({
             configuration: request.configuration,
             prompt: promptText,
-            agent: request.agentId,
             capability: 'findings',
             mapCliOutput: (output) => {
                 if (options.expectJson && options.schema) return interpretFindingsResponse(output, options);
                 return output;
-            },
-            mapServerResponse: ({ parts }) => {
-                const result = interpretFindingsResponse(parts, options);
-                if (options.expectJson && options.schema) {
-                    const text = extractTextFromParts(parts);
-                    logInfo(`OpenCode agent response (expectJson=true) length=${text.length}`);
-                    logDebugInfo(`OpenCode agent response (full text, no truncation) length=${text.length}:\\n${text}`);
-                }
-                return result;
             },
         });
     }

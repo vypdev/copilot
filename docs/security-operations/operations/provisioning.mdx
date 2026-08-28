@@ -4,12 +4,12 @@ description: Pinned installation and verification of the selected agent CLI.
 ---
 # CLI provisioning
 
-The Action provisions only the selected runtime when running in GitHub Actions. Versions MUST be explicit. It MUST use `pnpm`, never `npm`, `npx`, Yarn, Bun, or an unpinned installer.
+The Action verifies only the selected runtime when running in GitHub Actions. It first reuses an executable already present on the runner (`AGENT_PROVISIONING=auto`, the default), which allows a preinitialized Codex CLI to run without a credential or package version in the repository. If the executable is absent, versions MUST be explicit. It MUST use `pnpm`, never `npm`, `npx`, Yarn, Bun, or an unpinned installer.
 
 | Runtime | Provisioning source | Required pin |
 | --- | --- | --- |
-| OpenCode | `opencode-ai@<version>` through Corepack pnpm | `OPENCODE_VERSION` |
-| Codex | `@openai/codex@<version>` through Corepack pnpm | `CODEX_VERSION` |
-| Cursor | Official installer with SHA-256 verification | `CURSOR_INSTALLER_SHA256` |
+| OpenCode | `opencode-ai@<version>` through Corepack pnpm | `OPENCODE_VERSION` only when absent |
+| Codex | `@openai/codex@<version>` through Corepack pnpm | `CODEX_VERSION` only when absent |
+| Cursor | Official installer with SHA-256 verification | `CURSOR_INSTALLER_SHA256` only when absent |
 
 Provisioning failure is terminal. The Action MUST NOT install another runtime as a fallback.

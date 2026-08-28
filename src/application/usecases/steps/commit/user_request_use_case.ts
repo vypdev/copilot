@@ -1,6 +1,6 @@
 /**
  * Use case that performs whatever changes the user asked for (generic request).
- * Uses the OpenCode build agent to edit files and run commands in the workspace.
+ * Uses the configured build agent to edit files and run commands in the workspace.
  * Caller is responsible for permission check and for running commit/push after success.
  */
 
@@ -12,7 +12,7 @@ import { logDebugInfo, logError, logInfo } from "../../../../utils/logger";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
 import { Result } from "../../../../data/model/result";
-import { OPENCODE_PROJECT_CONTEXT_INSTRUCTION } from "../../../../utils/opencode_project_context_instruction";
+import { PROJECT_CONTEXT_INSTRUCTION } from "../../../../utils/project_context_instruction";
 import { sanitizeUserCommentForPrompt } from "./bugbot/sanitize_user_comment_for_prompt";
 
 const TASK_ID = "DoUserRequestUseCase";
@@ -35,7 +35,7 @@ export class DoUserRequestUseCase implements ParamUseCase<DoUserRequestParam, Re
         const { execution, userComment } = param;
 
         if (!isAgentConfigurationReady(execution.ai?.getAgentConfiguration('fixer'))) {
-            logInfo("OpenCode not configured; skipping user request.");
+            logInfo("Agent not configured; skipping user request.");
             return results;
         }
 
@@ -48,7 +48,7 @@ export class DoUserRequestUseCase implements ParamUseCase<DoUserRequestParam, Re
         const baseBranch =
             execution.currentConfiguration.parentBranch ?? execution.branches.development ?? "develop";
         const prompt = getUserRequestPrompt({
-            projectContextInstruction: OPENCODE_PROJECT_CONTEXT_INSTRUCTION,
+            projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
             owner: execution.owner,
             repo: execution.repo,
             headBranch: execution.commit.branch,
@@ -58,22 +58,22 @@ export class DoUserRequestUseCase implements ParamUseCase<DoUserRequestParam, Re
         });
 
         logDebugInfo(`DoUserRequest: prompt length=${prompt.length}, user comment length=${commentTrimmed.length}.`);
-        logInfo("Running OpenCode build agent to perform user request (changes applied in workspace).");
+        logInfo("Running configured build agent to perform user request (changes applied in workspace).");
         const response = await this.aiRepository.fix({
             configuration: execution.ai?.getAgentConfiguration('fixer'),
             prompt,
         });
 
-        logDebugInfo(`DoUserRequest: OpenCode build agent response length=${response?.text?.length ?? 0}. Full response:\n${response?.text ?? '(none)'}`);
+        logDebugInfo(`DoUserRequest: build agent response length=${response?.text?.length ?? 0}. Full response:\n${response?.text ?? '(none)'}`);
 
         if (!response?.text) {
-            logError("DoUserRequest: no response from OpenCode build agent.");
+            logError("DoUserRequest: no response from configured build agent.");
             results.push(
                 new Result({
                     id: this.taskId,
                     success: false,
                     executed: true,
-                    errors: ["OpenCode build agent returned no response."],
+                    errors: ["Configured build agent returned no response."],
                 })
             );
             return results;

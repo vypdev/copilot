@@ -1,11 +1,11 @@
 /**
- * JSON schemas for OpenCode responses. Used with askAgent(plan) so the agent returns
+ * JSON schemas for findings-agent responses. Used with the findings query so the agent returns
  * structured JSON we can parse.
  */
 
 import { MAX_FINDING_ID_LENGTH } from './marker';
 
-/** Detection (on push): OpenCode computes diff itself and returns findings + resolved_finding_ids. */
+/** Detection (on push): the configured agent computes the diff and returns findings + resolved_finding_ids. */
 export const BUGBOT_RESPONSE_SCHEMA = {
     type: 'object',
     properties: {
@@ -47,7 +47,7 @@ export const BUGBOT_RESPONSE_SCHEMA = {
 } as const;
 
 /**
- * OpenCode (plan agent) response schema for bugbot fix intent.
+ * Findings-agent response schema for bugbot fix intent.
  * Given the user comment and the list of unresolved findings, the agent decides whether
  * the user is asking to fix one or more of them and which finding ids to target.
  */
