@@ -58015,6 +58015,7 @@ function authorizationForFileModification(owner, actor, ownerType) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildAgentCliEnvironment = buildAgentCliEnvironment;
 exports.checkAgentAuthentication = checkAgentAuthentication;
 const node_fs_1 = __nccwpck_require__(7561);
 const node_os_1 = __nccwpck_require__(612);
@@ -58082,6 +58083,22 @@ function hasCodexChatGptSession(environment) {
     catch {
         return false;
     }
+}
+/**
+ * Keeps provider credentials inside the process boundary that needs them.
+ *
+ * A controlled Codex runner authenticates through CODEX_HOME/auth.json. When
+ * that session is available, exported API credentials must not be allowed to
+ * change the authentication mode selected by the local CLI. If the session is
+ * absent, the existing API-key/access-token fallback remains available.
+ */
+function buildAgentCliEnvironment(provider, environment = process.env) {
+    if (provider !== 'codex' || !hasCodexChatGptSession(environment))
+        return environment;
+    const isolatedEnvironment = { ...environment };
+    delete isolatedEnvironment.OPENAI_API_KEY;
+    delete isolatedEnvironment.CODEX_ACCESS_TOKEN;
+    return isolatedEnvironment;
 }
 function hasOpenCodeLocalSession(environment) {
     const dataDirectory = environment.OPENCODE_DATA_DIR?.trim()
@@ -58210,6 +58227,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AgentCliClient = exports.AgentCliError = void 0;
 const node_child_process_1 = __nccwpck_require__(7718);
 const agent_command_parser_1 = __nccwpck_require__(7950);
+const agent_authentication_1 = __nccwpck_require__(1371);
 const DEFAULT_MAX_OUTPUT_BYTES = 4 * 1024 * 1024;
 const MAX_STDERR_BYTES = 8 * 1024;
 class AgentCliError extends Error {
@@ -58246,7 +58264,12 @@ class AgentCliClient {
             if (promptMode !== 'stdin' && promptMode !== 'argv') {
                 throw new AgentCliError('Agent CLI promptMode must be stdin or argv.', 'configuration');
             }
-            const child = (0, node_child_process_1.spawn)(executable, promptMode === 'argv' ? [...args, request.prompt] : args, { cwd: request.cwd, stdio: ['pipe', 'pipe', 'pipe'], shell: false });
+            const child = (0, node_child_process_1.spawn)(executable, promptMode === 'argv' ? [...args, request.prompt] : args, {
+                cwd: request.cwd,
+                env: (0, agent_authentication_1.buildAgentCliEnvironment)(request.provider, request.environment),
+                stdio: ['pipe', 'pipe', 'pipe'],
+                shell: false,
+            });
             let stdout = '';
             let stderr = '';
             let outputBytes = 0;
@@ -61258,6 +61281,7 @@ class SpecificCliAdapter {
         return this.client.execute({
             command,
             prompt: request.prompt,
+            provider: this.expectedProvider,
             promptMode: this.expectedProvider === 'codex' ? 'stdin' : 'argv',
             timeoutMs: request.timeoutMs,
             cwd: request.cwd,

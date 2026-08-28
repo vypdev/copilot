@@ -17,7 +17,7 @@ This is the documented automation-oriented option. API-key usage is separate fro
 
 ### Local ChatGPT session on a self-hosted runner
 
-If `OPENAI_API_KEY` is absent, Copilot can recognize an already authenticated Codex CLI session on the runner. Preflight recognizes only the local ChatGPT session shape (`auth_mode=chatgpt`, no API key, and access/refresh token fields). It never copies, exports, or transmits the file.
+If `OPENAI_API_KEY` is absent, Copilot can recognize an already authenticated Codex CLI session on the runner. Preflight recognizes only the local ChatGPT session shape (`auth_mode=chatgpt`, no API key, and access/refresh token fields). It never copies, exports, or transmits the file. When this session is detected, the Codex child process is isolated from `OPENAI_API_KEY` and `CODEX_ACCESS_TOKEN` so the local session remains the authentication source; the API-key fallback remains available when no local session is present.
 
 The file normally exists at `~/.codex/auth.json` or under `CODEX_HOME`. This mode is technically possible, but it must not be described as an OpenAI-approved personal-account CI integration. Technical portability is not evidence of contractual permission.
 

@@ -1,7 +1,7 @@
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { checkAgentAuthentication } from '../agent_authentication';
+import { buildAgentCliEnvironment, checkAgentAuthentication } from '../agent_authentication';
 
 describe('checkAgentAuthentication', () => {
     it('requires provider credentials for OpenCode CLI execution', () => {
@@ -70,6 +70,36 @@ describe('checkAgentAuthentication', () => {
         } finally {
             rmSync(directory, { recursive: true, force: true });
         }
+    });
+
+    it('isolates exported Codex credentials when a local ChatGPT session is available', () => {
+        const directory = mkdtempSync(join(tmpdir(), 'copilot-codex-env-test-'));
+        try {
+            writeFileSync(join(directory, 'auth.json'), JSON.stringify({
+                auth_mode: 'chatgpt',
+                OPENAI_API_KEY: null,
+                tokens: { access_token: 'access', refresh_token: 'refresh' },
+            }));
+            const environment = {
+                CODEX_HOME: directory,
+                OPENAI_API_KEY: 'api-key-that-must-not-be-used',
+                CODEX_ACCESS_TOKEN: 'token-that-must-not-be-used',
+                PATH: '/usr/bin',
+            };
+
+            const isolated = buildAgentCliEnvironment('codex', environment);
+
+            expect(isolated).not.toHaveProperty('OPENAI_API_KEY');
+            expect(isolated).not.toHaveProperty('CODEX_ACCESS_TOKEN');
+            expect(isolated.PATH).toBe('/usr/bin');
+        } finally {
+            rmSync(directory, { recursive: true, force: true });
+        }
+    });
+
+    it('keeps the Codex API fallback when no local session is available', () => {
+        const environment = { OPENAI_API_KEY: 'api-key', CODEX_ACCESS_TOKEN: 'access-token' };
+        expect(buildAgentCliEnvironment('codex', environment)).toBe(environment);
     });
 
     it('recognizes a local OpenCode auth store without exposing its contents', () => {

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import type { AgentConfiguration } from '../model/agent';
+import type { AgentConfiguration, AgentProvider } from '../model/agent';
 
 export type AgentCredentialStatus = 'available' | 'missing' | 'not_required';
 
@@ -79,6 +79,26 @@ function hasCodexChatGptSession(environment: NodeJS.ProcessEnv): boolean {
     } catch {
         return false;
     }
+}
+
+/**
+ * Keeps provider credentials inside the process boundary that needs them.
+ *
+ * A controlled Codex runner authenticates through CODEX_HOME/auth.json. When
+ * that session is available, exported API credentials must not be allowed to
+ * change the authentication mode selected by the local CLI. If the session is
+ * absent, the existing API-key/access-token fallback remains available.
+ */
+export function buildAgentCliEnvironment(
+    provider: AgentProvider | undefined,
+    environment: NodeJS.ProcessEnv = process.env,
+): NodeJS.ProcessEnv {
+    if (provider !== 'codex' || !hasCodexChatGptSession(environment)) return environment;
+
+    const isolatedEnvironment = { ...environment };
+    delete isolatedEnvironment.OPENAI_API_KEY;
+    delete isolatedEnvironment.CODEX_ACCESS_TOKEN;
+    return isolatedEnvironment;
 }
 
 function hasOpenCodeLocalSession(environment: NodeJS.ProcessEnv): boolean {

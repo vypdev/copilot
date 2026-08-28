@@ -1,7 +1,10 @@
+import type { AgentProvider } from '../../../domain/agent';
 export interface AgentCliPort {
     execute(request: {
         command: string;
         prompt: string;
+        provider?: AgentProvider;
+        environment?: NodeJS.ProcessEnv;
         promptMode?: 'stdin' | 'argv';
         timeoutMs: number;
         signal?: AbortSignal;

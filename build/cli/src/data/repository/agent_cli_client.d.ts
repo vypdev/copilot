@@ -1,6 +1,9 @@
+import type { AgentProvider } from '../model/agent';
 export interface AgentCliRequest {
     command: string;
     prompt: string;
+    provider?: AgentProvider;
+    environment?: NodeJS.ProcessEnv;
     promptMode?: 'stdin' | 'argv';
     timeoutMs: number;
     signal?: AbortSignal;

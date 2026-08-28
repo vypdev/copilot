@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { AgentCliClient } from '../agent_cli_client';
 
 describe('AgentCliClient', () => {
@@ -22,6 +25,33 @@ describe('AgentCliClient', () => {
         });
 
         expect(output).toBe('find issues with spaces');
+    });
+
+    it('does not pass exported Codex credentials to a locally authenticated CLI', async () => {
+        const directory = mkdtempSync(join(tmpdir(), 'copilot-codex-cli-env-test-'));
+        try {
+            writeFileSync(join(directory, 'auth.json'), JSON.stringify({
+                auth_mode: 'chatgpt',
+                OPENAI_API_KEY: null,
+                tokens: { access_token: 'access', refresh_token: 'refresh' },
+            }));
+            const script = "process.stdout.write(JSON.stringify({ openai: process.env.OPENAI_API_KEY ?? null, codex: process.env.CODEX_ACCESS_TOKEN ?? null }))";
+            const output = await new AgentCliClient().execute({
+                command: `${process.execPath} -e ${JSON.stringify(script)}`,
+                prompt: 'ignored',
+                provider: 'codex',
+                environment: {
+                    CODEX_HOME: directory,
+                    OPENAI_API_KEY: 'api-key-that-must-not-be-used',
+                    CODEX_ACCESS_TOKEN: 'token-that-must-not-be-used',
+                },
+                timeoutMs: 2000,
+            });
+
+            expect(JSON.parse(output)).toEqual({ openai: null, codex: null });
+        } finally {
+            rmSync(directory, { recursive: true, force: true });
+        }
     });
 
     it('classifies a missing executable as a process error', async () => {
