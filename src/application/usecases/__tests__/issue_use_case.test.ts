@@ -215,6 +215,31 @@ describe("IssueUseCase", () => {
     expect(results.some((result) => result.id === "rec")).toBe(true);
   });
 
+  it("recommends steps when the issue description is edited", async () => {
+    mockRecommendStepsInvoke.mockResolvedValue([
+      new Result({ id: "rec", success: true, executed: true, steps: [] }),
+    ]);
+    const param = minimalExecution({
+      issue: { opened: false, descriptionEdited: true },
+      labels: { isRelease: false, isQuestion: false, isHelp: false },
+    });
+
+    const results = await createUseCase().invoke(param);
+
+    expect(mockRecommendStepsInvoke).toHaveBeenCalledWith(param);
+    expect(results.some((result) => result.id === "rec")).toBe(true);
+  });
+
+  it("does not recommend steps for an unrelated issue edit", async () => {
+    const param = minimalExecution({
+      issue: { opened: false, descriptionEdited: false },
+    });
+
+    await createUseCase().invoke(param);
+
+    expect(mockRecommendStepsInvoke).not.toHaveBeenCalled();
+  });
+
   it("answers help for a newly opened question or help issue", async () => {
     mockAnswerIssueHelpInvoke.mockResolvedValue([
       new Result({ id: "help", success: true, executed: true, steps: [] }),

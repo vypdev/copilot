@@ -51087,9 +51087,10 @@ class IssueUseCase {
          */
         results.push(...(await new label_deployed_added_use_case_1.DeployedAddedUseCase().invoke(param)));
         /**
-         * On newly opened issues: recommend steps (non release/question/help) or post initial help (question/help).
+         * Analyze new issues and issue-description changes. Other edits (title,
+         * project, assignment, labels) must not invoke the agent again.
          */
-        if (param.issue.opened) {
+        if (param.issue.opened || param.issue.descriptionEdited) {
             const isRelease = param.labels.isRelease;
             const isQuestionOrHelp = param.labels.isQuestion || param.labels.isHelp;
             if (!isRelease && !isQuestionOrHelp) {
@@ -55830,9 +55831,6 @@ class PrepareBranchesUseCase {
                     id: this.taskId,
                     success: true,
                     executed: false,
-                    steps: [
-                        `Branch ${decision.targetBranchName} already exists, nothing to do.`,
-                    ],
                 }),
             ];
         }
@@ -57261,6 +57259,17 @@ class Issue {
     }
     get opened() {
         return ['opened', 'reopened'].includes(this.inputs?.action ?? '');
+    }
+    /**
+     * GitHub only includes `changes.body` when an issue description changed.
+     * Title, label, assignment and project updates must not re-run the agent.
+     */
+    get descriptionEdited() {
+        const changes = this.inputs?.changes;
+        return this.inputs?.action === 'edited'
+            && changes !== null
+            && typeof changes === 'object'
+            && Object.prototype.hasOwnProperty.call(changes, 'body');
     }
     get labeled() {
         return this.inputs?.action === 'labeled';

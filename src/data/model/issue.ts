@@ -29,6 +29,18 @@ export class Issue {
         return ['opened', 'reopened'].includes(this.inputs?.action ?? '');
     }
 
+    /**
+     * GitHub only includes `changes.body` when an issue description changed.
+     * Title, label, assignment and project updates must not re-run the agent.
+     */
+    get descriptionEdited(): boolean {
+        const changes = this.inputs?.changes;
+        return this.inputs?.action === 'edited'
+            && changes !== null
+            && typeof changes === 'object'
+            && Object.prototype.hasOwnProperty.call(changes, 'body');
+    }
+
     get labeled(): boolean {
         return this.inputs?.action === 'labeled';
     }

@@ -189,9 +189,10 @@ export class IssueUseCase implements ParamUseCase<Execution, Result[]> {
     results.push(...(await new DeployedAddedUseCase().invoke(param)));
 
     /**
-     * On newly opened issues: recommend steps (non release/question/help) or post initial help (question/help).
+     * Analyze new issues and issue-description changes. Other edits (title,
+     * project, assignment, labels) must not invoke the agent again.
      */
-    if (param.issue.opened) {
+    if (param.issue.opened || param.issue.descriptionEdited) {
       const isRelease = param.labels.isRelease;
       const isQuestionOrHelp = param.labels.isQuestion || param.labels.isHelp;
       if (!isRelease && !isQuestionOrHelp) {

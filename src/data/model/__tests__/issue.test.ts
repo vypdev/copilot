@@ -59,6 +59,28 @@ describe('Issue', () => {
     expect(i.opened).toBe(false);
   });
 
+  it('detects an issue description edit from the GitHub changes payload', () => {
+    const i = new Issue(false, false, 1, {
+      action: 'edited',
+      issue: issuePayload,
+      changes: { body: { from: 'Previous description' } },
+      eventName: 'issues',
+    });
+
+    expect(i.descriptionEdited).toBe(true);
+  });
+
+  it('does not treat title-only edits as description edits', () => {
+    const i = new Issue(false, false, 1, {
+      action: 'edited',
+      issue: issuePayload,
+      changes: { title: { from: 'Previous title' } },
+      eventName: 'issues',
+    });
+
+    expect(i.descriptionEdited).toBe(false);
+  });
+
   it('uses the user and comment data provided in inputs', () => {
     const i = new Issue(false, false, 1, {
       action: 'created',

@@ -9,6 +9,11 @@ export declare class Issue {
     get url(): string;
     get body(): string;
     get opened(): boolean;
+    /**
+     * GitHub only includes `changes.body` when an issue description changed.
+     * Title, label, assignment and project updates must not re-run the agent.
+     */
+    get descriptionEdited(): boolean;
     get labeled(): boolean;
     get labelAdded(): string;
     get isIssue(): boolean;

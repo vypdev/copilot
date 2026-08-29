@@ -196,11 +196,13 @@ describe("PrepareBranchesUseCase", () => {
 
     expect(mockCreateLinkedBranch).not.toHaveBeenCalled();
     expect(mockWaitForLinkedBranch).not.toHaveBeenCalled();
-    expect(
-      results.some((result) =>
-        result.steps.some((step) => step.includes("already exists")),
-      ),
-    ).toBe(true);
+    expect(results.at(-1)).toEqual(
+      expect.objectContaining({
+        success: true,
+        executed: false,
+        steps: [],
+      }),
+    );
   });
 
   it("returns the managed command failure without waiting or moving the issue", async () => {

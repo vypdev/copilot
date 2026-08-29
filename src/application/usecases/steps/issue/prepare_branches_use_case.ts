@@ -153,9 +153,6 @@ export class PrepareBranchesUseCase implements ParamUseCase<
           id: this.taskId,
           success: true,
           executed: false,
-          steps: [
-            `Branch ${decision.targetBranchName} already exists, nothing to do.`,
-          ],
         }),
       ];
     }
