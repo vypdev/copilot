@@ -1,6 +1,6 @@
-import { IssueLabelRepository } from './issue_label_repository';
+import type { IssueLabelsPort } from '../../../application/ports/issue_management_ports';
 export declare class IssueProgressLabelRepository {
     private readonly issueLabelRepository;
-    constructor(issueLabelRepository: IssueLabelRepository);
+    constructor(issueLabelRepository: Pick<IssueLabelsPort, 'getLabels' | 'setLabels'>);
     setProgressLabel: (owner: string, repository: string, issueNumber: number, progress: number, token: string) => Promise<void>;
 }

@@ -1,67 +1,8 @@
-import { Ai } from '../data/model/ai';
-import { Branches } from '../data/model/branches';
-import { Emoji } from '../data/model/emoji';
 import { Execution } from '../data/model/execution';
-import { Hotfix } from '../data/model/hotfix';
-import { Images } from '../data/model/images';
-import { Issue } from '../data/model/issue';
-import { IssueTypes } from '../data/model/issue_types';
-import { Labels } from '../data/model/labels';
-import { Locale } from '../data/model/locale';
-import { Projects } from '../data/model/projects';
-import { PullRequest } from '../data/model/pull_request';
-import { Release } from '../data/model/release';
-import { SingleAction } from '../data/model/single_action';
-import { SizeThresholds } from '../data/model/size_thresholds';
-import { Tokens } from '../data/model/tokens';
-import { Welcome } from '../data/model/welcome';
-import { Workflows } from '../data/model/workflows';
-import type { ExecutionInputs } from '../data/model/execution_inputs';
+import type { ExecutionComponents } from '../data/model/execution_components';
 
-export interface ExecutionComponents {
-    debug: boolean;
-    singleAction: SingleAction;
-    commitPrefixBuilder: string;
-    issue: Issue;
-    pullRequest: PullRequest;
-    emoji: Emoji;
-    images: Images;
-    tokens: Tokens;
-    ai: Ai;
-    labels: Labels;
-    issueTypes: IssueTypes;
-    locale: Locale;
-    sizeThresholds: SizeThresholds;
-    branches: Branches;
-    release: Release;
-    hotfix: Hotfix;
-    workflows: Workflows;
-    projects: Projects;
-    welcome?: Welcome;
-    inputs?: ExecutionInputs;
-}
+export type { ExecutionComponents } from '../data/model/execution_components';
 
 export function buildExecution(components: ExecutionComponents): Execution {
-    return new Execution(
-        components.debug,
-        components.singleAction,
-        components.commitPrefixBuilder,
-        components.issue,
-        components.pullRequest,
-        components.emoji,
-        components.images,
-        components.tokens,
-        components.ai,
-        components.labels,
-        components.issueTypes,
-        components.locale,
-        components.sizeThresholds,
-        components.branches,
-        components.release,
-        components.hotfix,
-        components.workflows,
-        components.projects,
-        components.welcome,
-        components.inputs,
-    );
+    return new Execution(components);
 }

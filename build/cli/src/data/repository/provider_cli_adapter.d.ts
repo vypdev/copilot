@@ -7,7 +7,7 @@ export interface ProviderCliExecution {
     cwd?: string;
     signal?: AbortSignal;
 }
-/** Provider-neutral CLI adapter. Provider-specific flags belong in future adapters. */
+/** Provider-neutral CLI adapter that delegates provider-specific execution to focused adapters. */
 export declare class ProviderCliAdapter {
     private readonly adapters;
     constructor(client: AgentCliPort);

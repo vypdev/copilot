@@ -1,17 +1,14 @@
 import type { ExecutionIssueSetupPort } from '../../../application/ports/execution_setup_ports';
-import type { IssueContentRepository } from './issue_content_repository';
-import type { IssueLabelRepository } from './issue_label_repository';
-import type { IssueMetadataRepository } from './issue_metadata_repository';
 /** Composes the issue capabilities required to initialize an Execution. */
 export declare class ExecutionIssueSetupRepository implements ExecutionIssueSetupPort {
     private readonly metadataRepository;
     private readonly contentRepository;
     private readonly labelRepository;
-    constructor(metadataRepository: IssueMetadataRepository, contentRepository: IssueContentRepository, labelRepository: IssueLabelRepository);
-    isPullRequest: (...args: Parameters<IssueMetadataRepository["isPullRequest"]>) => Promise<boolean>;
-    isIssue: (...args: Parameters<IssueMetadataRepository["isIssue"]>) => Promise<boolean>;
-    getHeadBranch: (...args: Parameters<IssueMetadataRepository["getHeadBranch"]>) => Promise<string | undefined>;
-    getLabels: (...args: Parameters<IssueLabelRepository["getLabels"]>) => Promise<string[]>;
-    getDescription: (...args: Parameters<IssueContentRepository["getDescription"]>) => Promise<string | undefined>;
-    updateDescription: (...args: Parameters<IssueContentRepository["updateDescription"]>) => Promise<void>;
+    constructor(metadataRepository: Pick<ExecutionIssueSetupPort, 'isPullRequest' | 'isIssue' | 'getHeadBranch'>, contentRepository: Pick<ExecutionIssueSetupPort, 'getDescription' | 'updateDescription'>, labelRepository: Pick<ExecutionIssueSetupPort, 'getLabels'>);
+    isPullRequest: (...args: Parameters<ExecutionIssueSetupPort["isPullRequest"]>) => Promise<boolean>;
+    isIssue: (...args: Parameters<ExecutionIssueSetupPort["isIssue"]>) => Promise<boolean>;
+    getHeadBranch: (...args: Parameters<ExecutionIssueSetupPort["getHeadBranch"]>) => Promise<string | undefined>;
+    getLabels: (...args: Parameters<ExecutionIssueSetupPort["getLabels"]>) => Promise<string[]>;
+    getDescription: (...args: Parameters<ExecutionIssueSetupPort["getDescription"]>) => Promise<string | undefined>;
+    updateDescription: (...args: Parameters<ExecutionIssueSetupPort["updateDescription"]>) => Promise<void>;
 }

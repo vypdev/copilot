@@ -52649,7 +52649,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildExecution = buildExecution;
 const execution_1 = __nccwpck_require__(31546);
 function buildExecution(components) {
-    return new execution_1.Execution(components.debug, components.singleAction, components.commitPrefixBuilder, components.issue, components.pullRequest, components.emoji, components.images, components.tokens, components.ai, components.labels, components.issueTypes, components.locale, components.sizeThresholds, components.branches, components.release, components.hotfix, components.workflows, components.projects, components.welcome, components.inputs);
+    return new execution_1.Execution(components);
 }
 
 
@@ -62389,7 +62389,7 @@ class Execution {
     get runnedByToken() {
         return this.tokenUser === this.actor;
     }
-    constructor(debug, singleAction, commitPrefixBuilder, issue, pullRequest, emoji, giphy, tokens, ai, labels, issueTypes, locale, sizeThresholds, branches, release, hotfix, workflows, project, welcome, inputs) {
+    constructor(components) {
         this.debug = false;
         /**
          * Every usage of this field should be checked.
@@ -62399,27 +62399,27 @@ class Execution {
          */
         this.issueNumber = -1;
         this.commitPrefixBuilderParams = {};
-        this.debug = debug;
-        this.singleAction = singleAction;
-        this.commitPrefixBuilder = commitPrefixBuilder;
-        this.issue = issue;
-        this.pullRequest = pullRequest;
-        this.images = giphy;
-        this.tokens = tokens;
-        this.ai = ai;
-        this.emoji = emoji;
-        this.labels = labels;
-        this.issueTypes = issueTypes;
-        this.locale = locale;
-        this.sizeThresholds = sizeThresholds;
-        this.branches = branches;
-        this.release = release;
-        this.hotfix = hotfix;
-        this.project = project;
-        this.workflows = workflows;
+        this.debug = components.debug;
+        this.singleAction = components.singleAction;
+        this.commitPrefixBuilder = components.commitPrefixBuilder;
+        this.issue = components.issue;
+        this.pullRequest = components.pullRequest;
+        this.images = components.images;
+        this.tokens = components.tokens;
+        this.ai = components.ai;
+        this.emoji = components.emoji;
+        this.labels = components.labels;
+        this.issueTypes = components.issueTypes;
+        this.locale = components.locale;
+        this.sizeThresholds = components.sizeThresholds;
+        this.branches = components.branches;
+        this.release = components.release;
+        this.hotfix = components.hotfix;
+        this.project = components.projects;
+        this.workflows = components.workflows;
         this.currentConfiguration = new config_1.Config({});
-        this.inputs = inputs;
-        this.welcome = welcome;
+        this.inputs = components.inputs;
+        this.welcome = components.welcome;
     }
 }
 exports.Execution = Execution;
@@ -66608,7 +66608,7 @@ function selectAvailableMembers(members, currentMembers, requested) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ProviderCliAdapter = void 0;
 const provider_specific_cli_adapters_1 = __nccwpck_require__(65508);
-/** Provider-neutral CLI adapter. Provider-specific flags belong in future adapters. */
+/** Provider-neutral CLI adapter that delegates provider-specific execution to focused adapters. */
 class ProviderCliAdapter {
     constructor(client) {
         this.adapters = {
