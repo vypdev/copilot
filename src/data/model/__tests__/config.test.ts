@@ -40,4 +40,26 @@ describe('Config', () => {
     expect(c.branchConfiguration!.children).toHaveLength(1);
     expect(c.branchConfiguration!.children[0].name).toBe('develop');
   });
+
+  it('restores a valid recommendation state', () => {
+    const c = new Config({
+      recommendationState: {
+        issueDescriptionFingerprint: 'description-hash',
+        recommendationFingerprint: 'recommendation-hash',
+        recommendation: '1. Add tests',
+      },
+    });
+
+    expect(c.recommendationState).toEqual({
+      issueDescriptionFingerprint: 'description-hash',
+      recommendationFingerprint: 'recommendation-hash',
+      recommendation: '1. Add tests',
+    });
+  });
+
+  it('ignores malformed recommendation state', () => {
+    const c = new Config({ recommendationState: { recommendation: 'incomplete' } });
+
+    expect(c.recommendationState).toBeUndefined();
+  });
 });

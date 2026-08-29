@@ -48651,6 +48651,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.finishGithubAction = finishGithubAction;
 const core = __importStar(__nccwpck_require__(1078));
+const recommendation_state_1 = __nccwpck_require__(8514);
 const publish_resume_use_case_1 = __nccwpck_require__(8684);
 const store_configuration_use_case_1 = __nccwpck_require__(4375);
 const logger_1 = __nccwpck_require__(1151);
@@ -48660,10 +48661,22 @@ async function finishGithubAction(execution, results, issueNotificationPort, con
     (0, logger_1.logInfo)(`Publishing result: ${results.length} result(s), ${stepCount} step(s), ${errorCount} error(s).`);
     execution.currentConfiguration.results = results;
     await new publish_resume_use_case_1.PublishResultUseCase(issueNotificationPort).invoke(execution);
+    commitPublishedRecommendationState(execution, results);
     await new store_configuration_use_case_1.StoreConfigurationUseCase(configurationStorePort).invoke(execution);
     (0, logger_1.logInfo)('Configuration stored. Finishing.');
     if (execution.isSingleAction && execution.singleAction.throwError) {
         setFirstErrorIfExists(results);
+    }
+}
+function commitPublishedRecommendationState(execution, results) {
+    const pendingState = results
+        .map((result) => result.payload?.recommendationState)
+        .find(recommendation_state_1.isRecommendationState);
+    if (!pendingState)
+        return;
+    const publicationFailed = execution.currentConfiguration.results.some((result) => result.id === 'PublishResultUseCase' && !result.success);
+    if (!publicationFailed) {
+        execution.currentConfiguration.recommendationState = pendingState;
     }
 }
 function setFirstErrorIfExists(results) {
@@ -49424,6 +49437,64 @@ function progressPercentToColor(percent) {
         b = Math.round(4 + (22 - 4) * t);
     }
     return [r, g, b].map(value => value.toString(16).padStart(2, '0')).join('');
+}
+
+
+/***/ }),
+
+/***/ 9410:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MAX_STORED_RECOMMENDATION_LENGTH = exports.NO_NEW_RECOMMENDATIONS = void 0;
+exports.getVisibleIssueDescription = getVisibleIssueDescription;
+exports.createIssueDescriptionFingerprint = createIssueDescriptionFingerprint;
+exports.createRecommendationFingerprint = createRecommendationFingerprint;
+exports.isNoNewRecommendation = isNoNewRecommendation;
+exports.limitStoredRecommendation = limitStoredRecommendation;
+const node_crypto_1 = __nccwpck_require__(6005);
+exports.NO_NEW_RECOMMENDATIONS = 'NO_NEW_RECOMMENDATIONS';
+exports.MAX_STORED_RECOMMENDATION_LENGTH = 12000;
+/**
+ * Copilot keeps internal state in hidden HTML blocks in the issue body. That
+ * state is operational metadata, not part of the issue to be analysed.
+ */
+const MANAGED_CONTENT_BLOCK_PATTERN = /<!--\s*copilot-[\w-]+-start(?:\s*-->)?[\s\S]*?copilot-[\w-]+-end\s*-->/gi;
+function getVisibleIssueDescription(description) {
+    return description.replace(MANAGED_CONTENT_BLOCK_PATTERN, '').trim();
+}
+function createIssueDescriptionFingerprint(description) {
+    return createSha256(normalizeForFingerprint(description));
+}
+function createRecommendationFingerprint(recommendation) {
+    return createSha256(normalizeForFingerprint(recommendation));
+}
+function isNoNewRecommendation(response) {
+    const withoutCodeFence = response
+        .trim()
+        .replace(/^```(?:markdown|text)?\s*/i, '')
+        .replace(/\s*```$/i, '')
+        .trim();
+    return withoutCodeFence.toUpperCase() === exports.NO_NEW_RECOMMENDATIONS;
+}
+function limitStoredRecommendation(recommendation) {
+    if (recommendation.length <= exports.MAX_STORED_RECOMMENDATION_LENGTH)
+        return recommendation;
+    return `${recommendation.slice(0, exports.MAX_STORED_RECOMMENDATION_LENGTH)}\n\n[Recommendation truncated for issue metadata storage.]`;
+}
+function normalizeForFingerprint(value) {
+    return value
+        .replace(/\r\n?/g, '\n')
+        .split('\n')
+        .map((line) => line.replace(/[ \t]+$/g, ''))
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
+function createSha256(value) {
+    return (0, node_crypto_1.createHash)('sha256').update(value, 'utf8').digest('hex');
 }
 
 
@@ -50441,6 +50512,7 @@ exports.RecommendStepsUseCase = void 0;
 const agent_1 = __nccwpck_require__(9937);
 const result_1 = __nccwpck_require__(3817);
 const agent_task_policy_1 = __nccwpck_require__(5712);
+const recommendation_policy_1 = __nccwpck_require__(9410);
 const prompts_1 = __nccwpck_require__(9518);
 const logger_1 = __nccwpck_require__(1151);
 const project_context_instruction_1 = __nccwpck_require__(3907);
@@ -50474,7 +50546,10 @@ class RecommendStepsUseCase {
                 }));
                 return results;
             }
-            const issueDescription = await this.issueDescriptionQueryPort.getDescription(param.owner, param.repo, issueNumber, param.tokens.token);
+            const rawIssueDescription = await this.issueDescriptionQueryPort.getDescription(param.owner, param.repo, issueNumber, param.tokens.token);
+            const issueDescription = rawIssueDescription === undefined
+                ? undefined
+                : (0, recommendation_policy_1.getVisibleIssueDescription)(rawIssueDescription);
             if (!issueDescription?.trim()) {
                 results.push(new result_1.Result({
                     id: this.taskId,
@@ -50484,10 +50559,17 @@ class RecommendStepsUseCase {
                 }));
                 return results;
             }
+            const previousRecommendation = param.previousConfiguration?.recommendationState;
+            const issueDescriptionFingerprint = (0, recommendation_policy_1.createIssueDescriptionFingerprint)(issueDescription);
+            if (previousRecommendation?.issueDescriptionFingerprint === issueDescriptionFingerprint) {
+                (0, logger_1.logInfo)('RecommendSteps: issue description is unchanged; skipping recommendation.');
+                return results;
+            }
             const prompt = (0, prompts_1.getRecommendStepsPrompt)({
                 projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
                 issueNumber: String(issueNumber),
                 issueDescription,
+                previousRecommendation: previousRecommendation?.recommendation,
             });
             (0, logger_1.logDebugInfo)(`RecommendSteps: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`);
             (0, logger_1.logInfo)(`🤖 Recommending steps using the configured agent...`);
@@ -50500,12 +50582,29 @@ class RecommendStepsUseCase {
                 ? response
                 : (response && String(response.steps)) || 'No response.';
             (0, logger_1.logDebugInfo)(`RecommendSteps: agent response received. Steps length=${steps.length}. Full steps:\n${steps}`);
+            if (previousRecommendation && (0, recommendation_policy_1.isNoNewRecommendation)(steps)) {
+                this.updateDescriptionFingerprint(param, previousRecommendation, issueDescriptionFingerprint);
+                (0, logger_1.logInfo)('RecommendSteps: agent found no material change; skipping recommendation comment.');
+                return results;
+            }
+            const recommendationFingerprint = (0, recommendation_policy_1.createRecommendationFingerprint)(steps);
+            if (previousRecommendation?.recommendationFingerprint === recommendationFingerprint) {
+                this.updateDescriptionFingerprint(param, previousRecommendation, issueDescriptionFingerprint);
+                (0, logger_1.logInfo)('RecommendSteps: recommendation is unchanged; skipping recommendation comment.');
+                return results;
+            }
+            const recommendationState = {
+                issueDescriptionFingerprint,
+                recommendationFingerprint,
+                recommendation: (0, recommendation_policy_1.limitStoredRecommendation)(steps),
+            };
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: true,
                 executed: true,
-                steps: ['Recommended steps (configured agent):', steps],
-                payload: { issueNumber, recommendedSteps: steps },
+                stepFormat: 'markdown',
+                steps: ['## Recommended implementation steps', steps],
+                payload: { issueNumber, recommendedSteps: steps, recommendationState },
             }));
         }
         catch (error) {
@@ -50518,6 +50617,12 @@ class RecommendStepsUseCase {
             }));
         }
         return results;
+    }
+    updateDescriptionFingerprint(param, previousRecommendation, issueDescriptionFingerprint) {
+        param.currentConfiguration.recommendationState = {
+            ...previousRecommendation,
+            issueDescriptionFingerprint,
+        };
     }
 }
 exports.RecommendStepsUseCase = RecommendStepsUseCase;
@@ -54416,12 +54521,21 @@ class PublishResultUseCase {
                 }
             }
             let indexStep = 0;
+            const renderedSteps = [];
             param.currentConfiguration.results.forEach(r => {
                 for (const step of r.steps) {
-                    content += `${indexStep + 1}. ${step}\n`;
-                    indexStep++;
+                    if (!step.trim())
+                        continue;
+                    if (r.stepFormat === 'markdown') {
+                        renderedSteps.push(step);
+                    }
+                    else {
+                        renderedSteps.push(`${indexStep + 1}. ${step}`);
+                        indexStep++;
+                    }
                 }
             });
+            content = renderedSteps.length > 0 ? `${renderedSteps.join('\n\n')}\n` : '';
             let indexReminder = 0;
             param.currentConfiguration.results.forEach(r => {
                 for (const reminder of r.reminders) {
@@ -57012,6 +57126,7 @@ exports.Commit = Commit;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Config = void 0;
 const branch_configuration_1 = __nccwpck_require__(1934);
+const recommendation_state_1 = __nccwpck_require__(8514);
 class Config {
     /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- config from API */
     constructor(data) {
@@ -57024,6 +57139,9 @@ class Config {
         this.workingBranch = data['workingBranch'];
         if (data['branchConfiguration'] !== undefined) {
             this.branchConfiguration = new branch_configuration_1.BranchConfiguration(data['branchConfiguration']);
+        }
+        if ((0, recommendation_state_1.isRecommendationState)(data['recommendationState'])) {
+            this.recommendationState = data['recommendationState'];
         }
     }
 }
@@ -57789,6 +57907,28 @@ exports.PullRequest = PullRequest;
 
 /***/ }),
 
+/***/ 8514:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isRecommendationState = isRecommendationState;
+function isRecommendationState(value) {
+    if (typeof value !== 'object' || value === null)
+        return false;
+    const candidate = value;
+    return typeof candidate.issueDescriptionFingerprint === 'string'
+        && candidate.issueDescriptionFingerprint.length > 0
+        && typeof candidate.recommendationFingerprint === 'string'
+        && candidate.recommendationFingerprint.length > 0
+        && typeof candidate.recommendation === 'string'
+        && candidate.recommendation.length > 0;
+}
+
+
+/***/ }),
+
 /***/ 4715:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -57823,6 +57963,7 @@ class Result {
         this.errors = data['errors'] ?? [];
         this.payload = data['payload'];
         this.reminders = data['reminders'] ?? [];
+        this.stepFormat = data['stepFormat'] === 'markdown' ? 'markdown' : 'plain';
     }
 }
 exports.Result = Result;
@@ -63827,6 +63968,7 @@ class ConfigurationHandler extends issue_content_interface_1.IssueContentInterfa
                     hotfixOriginBranch: current.hotfixOriginBranch,
                     hotfixBranch: current.hotfixBranch,
                     branchConfiguration: current.branchConfiguration,
+                    recommendationState: current.recommendationState,
                 };
                 const storedRaw = await this.internalGetter(execution);
                 if (storedRaw != null && storedRaw.trim().length > 0) {
@@ -64276,12 +64418,19 @@ const TEMPLATE = `Based on the following issue description, recommend concrete s
 **Issue #{{issueNumber}} description:**
 {{issueDescription}}
 
-Provide a numbered list of recommended steps in **markdown** (use headings, lists, code blocks for commands or snippets) so it is easy to read. You can add brief sub-bullets per step if needed.`;
+{{previousRecommendation}}
+
+Provide a complete numbered list of recommended steps in **markdown** (use headings, lists, code blocks for commands or snippets) so it is easy to read. You can add brief sub-bullets per step if needed.
+
+If the current description does not require any material change to the previous recommendation, output exactly \`NO_NEW_RECOMMENDATIONS\` and nothing else. Do not use that sentinel when there is no previous recommendation.`;
 function getRecommendStepsPrompt(params) {
     return (0, fill_1.fillTemplate)(TEMPLATE, {
         projectContextInstruction: params.projectContextInstruction,
         issueNumber: String(params.issueNumber),
         issueDescription: params.issueDescription,
+        previousRecommendation: params.previousRecommendation
+            ? `Previous recommendation (use only to detect whether the current plan is still valid):\n<previous-recommendation>\n${params.previousRecommendation}\n</previous-recommendation>`
+            : 'There is no previous recommendation for this issue.',
     });
 }
 

@@ -83,12 +83,19 @@ export class PublishResultUseCase implements ParamUseCase<Execution, void> {
             }
 
             let indexStep = 0
+            const renderedSteps: string[] = [];
             param.currentConfiguration.results.forEach(r => {
                 for (const step of r.steps) {
-                    content += `${indexStep + 1}. ${step}\n`
-                    indexStep++
+                    if (!step.trim()) continue;
+                    if (r.stepFormat === 'markdown') {
+                        renderedSteps.push(step);
+                    } else {
+                        renderedSteps.push(`${indexStep + 1}. ${step}`);
+                        indexStep++
+                    }
                 }
             });
+            content = renderedSteps.length > 0 ? `${renderedSteps.join('\n\n')}\n` : '';
 
             let indexReminder = 0
             param.currentConfiguration.results.forEach(r => {

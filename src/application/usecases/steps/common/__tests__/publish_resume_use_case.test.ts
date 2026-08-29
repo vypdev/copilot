@@ -87,6 +87,31 @@ describe('PublishResultUseCase', () => {
     expect(mockAddComment).toHaveBeenCalledWith('o', 'r', 42, expect.stringContaining('1. Step 1'), 't');
   });
 
+  it('preserves markdown result structure instead of numbering every line', async () => {
+    mockAddComment.mockResolvedValue(undefined);
+    const param = baseParam({
+      isIssue: true,
+      currentConfiguration: {
+        results: [new Result({
+          id: 'recommendation',
+          success: true,
+          executed: true,
+          stepFormat: 'markdown',
+          steps: ['## Recommended implementation steps', '1. Add the module\n2. Add tests\n\n```sh\npnpm test\n```'],
+        })],
+      },
+    });
+
+    await useCase.invoke(param);
+
+    const commentBody = mockAddComment.mock.calls[0][3] as string;
+    expect(commentBody).toContain('# 🪄 Automatic Actions\n## Recommended implementation steps');
+    expect(commentBody).toContain('\n1. Add the module\n2. Add tests');
+    expect(commentBody).toContain('```sh\npnpm test\n```');
+    expect(commentBody).not.toContain('1. ## Recommended implementation steps');
+    expect(commentBody).not.toContain('2. 1. Add the module');
+  });
+
   it('calls addComment on pull request when isPullRequest and results have steps', async () => {
     mockAddComment.mockResolvedValue(undefined);
     const param = baseParam({ isPullRequest: true });

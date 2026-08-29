@@ -1,4 +1,5 @@
 import {BranchConfiguration} from "./branch_configuration";
+import {isRecommendationState, RecommendationState} from "./recommendation_state";
 import {Result} from "./result";
 
 export class Config {
@@ -10,6 +11,7 @@ export class Config {
     hotfixBranch: string | undefined;
     results: Result[] = [];
     branchConfiguration: BranchConfiguration | undefined;
+    recommendationState: RecommendationState | undefined;
 
     /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- config from API */
     constructor(data: any) {
@@ -21,6 +23,9 @@ export class Config {
         this.workingBranch = data['workingBranch'];
         if (data['branchConfiguration'] !== undefined) {
             this.branchConfiguration = new BranchConfiguration(data['branchConfiguration']);
+        }
+        if (isRecommendationState(data['recommendationState'])) {
+            this.recommendationState = data['recommendationState'];
         }
     }
 }

@@ -25,6 +25,7 @@ export class ConfigurationHandler extends IssueContentInterface {
                 hotfixOriginBranch: current.hotfixOriginBranch,
                 hotfixBranch: current.hotfixBranch,
                 branchConfiguration: current.branchConfiguration,
+                recommendationState: current.recommendationState,
             };
 
             const storedRaw = await this.internalGetter(execution);

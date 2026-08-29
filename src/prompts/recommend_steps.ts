@@ -10,12 +10,17 @@ const TEMPLATE = `Based on the following issue description, recommend concrete s
 **Issue #{{issueNumber}} description:**
 {{issueDescription}}
 
-Provide a numbered list of recommended steps in **markdown** (use headings, lists, code blocks for commands or snippets) so it is easy to read. You can add brief sub-bullets per step if needed.`;
+{{previousRecommendation}}
+
+Provide a complete numbered list of recommended steps in **markdown** (use headings, lists, code blocks for commands or snippets) so it is easy to read. You can add brief sub-bullets per step if needed.
+
+If the current description does not require any material change to the previous recommendation, output exactly \`NO_NEW_RECOMMENDATIONS\` and nothing else. Do not use that sentinel when there is no previous recommendation.`;
 
 export type RecommendStepsParams = {
     projectContextInstruction: string;
     issueNumber: string;
     issueDescription: string;
+    previousRecommendation?: string;
 };
 
 export function getRecommendStepsPrompt(params: RecommendStepsParams): string {
@@ -23,5 +28,8 @@ export function getRecommendStepsPrompt(params: RecommendStepsParams): string {
         projectContextInstruction: params.projectContextInstruction,
         issueNumber: String(params.issueNumber),
         issueDescription: params.issueDescription,
+        previousRecommendation: params.previousRecommendation
+            ? `Previous recommendation (use only to detect whether the current plan is still valid):\n<previous-recommendation>\n${params.previousRecommendation}\n</previous-recommendation>`
+            : 'There is no previous recommendation for this issue.',
     });
 }

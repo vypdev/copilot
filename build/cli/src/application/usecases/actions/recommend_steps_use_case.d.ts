@@ -9,4 +9,5 @@ export declare class RecommendStepsUseCase implements ParamUseCase<Execution, Re
     private aiRepository;
     constructor(issueDescriptionQueryPort: IssueDescriptionQueryPort, aiRepository: FindingsQueryPort);
     invoke(param: Execution): Promise<Result[]>;
+    private updateDescriptionFingerprint;
 }

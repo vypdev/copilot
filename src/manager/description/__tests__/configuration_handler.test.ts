@@ -182,6 +182,29 @@ describe('ConfigurationHandler', () => {
       expect(parsed.parentBranch).toBe('develop');
     });
 
+    it('persists recommendation state while continuing to exclude results', async () => {
+      mockGetDescription.mockResolvedValue('no block');
+      mockUpdateDescription.mockResolvedValue(undefined);
+      const recommendationState = {
+        issueDescriptionFingerprint: 'description-hash',
+        recommendationFingerprint: 'recommendation-hash',
+        recommendation: '1. Add tests',
+      };
+
+      await handler.update(minimalExecution({
+        currentConfiguration: {
+          branchType: 'feature',
+          recommendationState,
+          results: [{ some: 'large result' }],
+        },
+      }));
+
+      const fullDesc = mockUpdateDescription.mock.calls[0][3];
+      const parsed = JSON.parse(handler.getContent(fullDesc)!.trim());
+      expect(parsed.recommendationState).toEqual(recommendationState);
+      expect(parsed.results).toBeUndefined();
+    });
+
     it('fails safely when block is mangled (missing end tag)', async () => {
       const mangledDesc = `body\n${CONFIG_START}\n{"x":1}\nno end tag here`;
       mockGetDescription.mockResolvedValue(mangledDesc);

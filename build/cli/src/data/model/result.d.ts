@@ -1,3 +1,4 @@
+export type ResultStepFormat = 'plain' | 'markdown';
 export declare class Result {
     id: string;
     success: boolean;
@@ -6,5 +7,6 @@ export declare class Result {
     payload: any;
     reminders: string[];
     errors: Error[];
+    stepFormat: ResultStepFormat;
     constructor(data: any);
 }
