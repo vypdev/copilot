@@ -49757,10 +49757,23 @@ function createSha256(value) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.resolveResultPublicationIssueNumber = resolveResultPublicationIssueNumber;
 exports.resolveResultPublicationPresentation = resolveResultPublicationPresentation;
 exports.renderResultSections = renderResultSections;
 exports.buildDebugLogSection = buildDebugLogSection;
 exports.hasPublishableContent = hasPublishableContent;
+/** Resolves the GitHub discussion that receives a result comment. */
+function resolveResultPublicationIssueNumber(input) {
+    if (input.isSingleAction)
+        return input.singleActionIssue;
+    if (input.isIssue)
+        return input.issueNumber;
+    if (input.isPullRequest)
+        return input.pullRequestNumber;
+    if (input.isPush && input.pushIssueNumber > 0)
+        return input.pushIssueNumber;
+    return undefined;
+}
 function resolveResultPublicationPresentation(context, selectImage) {
     if (context.isIssue) {
         if (context.issueNotBranched)
@@ -54943,11 +54956,7 @@ const result_publication_policy_1 = __nccwpck_require__(71512);
  * Publish the resume of actions
  */
 class PublishResultUseCase {
-    constructor(issueNotificationPort, logReport = {
-        getAccumulatedLogEntries: () => [],
-        getAccumulatedLogsAsText: () => '',
-        clearAccumulatedLogs: () => undefined,
-    }) {
+    constructor(issueNotificationPort, logReport) {
         this.issueNotificationPort = issueNotificationPort;
         this.logReport = logReport;
         this.taskId = 'PublishResultUseCase';
@@ -54984,17 +54993,18 @@ ${debugLogSection}
             if (!(0, result_publication_policy_1.hasPublishableContent)(sections, debugLogSection)) {
                 return;
             }
-            if (param.isSingleAction) {
-                await this.issueNotificationPort.addComment(param.owner, param.repo, param.singleAction.issue, commentBody, param.tokens.token);
-            }
-            else if (param.isIssue) {
-                await this.issueNotificationPort.addComment(param.owner, param.repo, param.issue.number, commentBody, param.tokens.token);
-            }
-            else if (param.isPullRequest) {
-                await this.issueNotificationPort.addComment(param.owner, param.repo, param.pullRequest.number, commentBody, param.tokens.token);
-            }
-            else if (param.isPush && param.issueNumber > 0) {
-                await this.issueNotificationPort.addComment(param.owner, param.repo, param.issueNumber, commentBody, param.tokens.token);
+            const issueNumber = (0, result_publication_policy_1.resolveResultPublicationIssueNumber)({
+                isSingleAction: param.isSingleAction,
+                singleActionIssue: param.singleAction.issue,
+                isIssue: param.isIssue,
+                issueNumber: param.issue.number,
+                isPullRequest: param.isPullRequest,
+                pullRequestNumber: param.pullRequest.number,
+                isPush: param.isPush,
+                pushIssueNumber: param.issueNumber,
+            });
+            if (issueNumber !== undefined) {
+                await this.issueNotificationPort.addComment(param.owner, param.repo, issueNumber, commentBody, param.tokens.token);
             }
         }
         catch (error) {

@@ -26,9 +26,11 @@ export interface ApplicationLoggingPort {
  * needs to publish accumulated diagnostics. Application use cases should
  * not depend on report storage just to log a message.
  */
-export interface ApplicationLogReportPort {
-    getAccumulatedLogEntries(): ApplicationLogEntry[];
+export interface ApplicationLogReportReaderPort {
     getAccumulatedLogsAsText(): string;
+}
+export interface ApplicationLogReportPort extends ApplicationLogReportReaderPort {
+    getAccumulatedLogEntries(): ApplicationLogEntry[];
     clearAccumulatedLogs(): void;
 }
 /** Installs the runtime logger for one application lifecycle. */
