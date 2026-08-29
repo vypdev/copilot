@@ -8,8 +8,8 @@ export interface ApplicationLogEntry {
  * Semantic logging capability required by application workflows.
  *
  * The application knows how to report progress and failures, but not how
- * those records are rendered or accumulated by a runtime. Infrastructure
- * installs the concrete implementation at the lifecycle boundary.
+ * those records are rendered by a runtime. Infrastructure installs the
+ * concrete implementation at the lifecycle boundary.
  */
 export interface ApplicationLoggingPort {
     logInfo(message: string, previousWasSingleLine?: boolean, metadata?: Record<string, unknown>, skipAccumulation?: boolean): void;
@@ -20,6 +20,13 @@ export interface ApplicationLoggingPort {
     logDebugWarning(message: string): void;
     logDebugError(message: unknown): void;
     setGlobalLoggerDebug(debug: boolean, isRemote?: boolean): void;
+}
+/**
+ * Separate output/report capability used by the outer lifecycle when it
+ * needs to publish accumulated diagnostics. Application use cases should
+ * not depend on report storage just to log a message.
+ */
+export interface ApplicationLogReportPort {
     getAccumulatedLogEntries(): ApplicationLogEntry[];
     getAccumulatedLogsAsText(): string;
     clearAccumulatedLogs(): void;
@@ -36,6 +43,3 @@ export declare function logDebugInfo(message: string, previousWasSingleLine?: bo
 export declare function logDebugWarning(message: string): void;
 export declare function logDebugError(message: unknown): void;
 export declare function setGlobalLoggerDebug(debug: boolean, isRemote?: boolean): void;
-export declare function getAccumulatedLogEntries(): ApplicationLogEntry[];
-export declare function getAccumulatedLogsAsText(): string;
-export declare function clearAccumulatedLogs(): void;

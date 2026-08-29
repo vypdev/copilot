@@ -1,7 +1,6 @@
 import type { GithubClientPort } from '../../../../infrastructure/github/ports/github_client_provider_port';
 import type { GithubIssueTitleClient } from '../../../../infrastructure/github/ports/github_issue_provider_ports';
 import { Labels } from '../../../model/labels';
-import type { IssueMetadataRepository } from '../issue_metadata_repository';
 import { IssueTitleRepository } from '../issue_title_repository';
 
 jest.mock('../../../../utils/logger', () => ({
@@ -24,10 +23,7 @@ describe('IssueTitleRepository', () => {
         getClient: jest.fn(() => ({ rest: { issues: { update } } })),
     };
     const metadataRepository = { getTitle: jest.fn() };
-    const repository = new IssueTitleRepository(
-        client,
-        metadataRepository as unknown as IssueMetadataRepository,
-    );
+    const repository = new IssueTitleRepository(client, metadataRepository);
 
     beforeEach(() => {
         update.mockReset();

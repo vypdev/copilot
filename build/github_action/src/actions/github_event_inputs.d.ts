@@ -1,4 +1,4 @@
-import type { RepositoryCoordinates } from './repository_context';
+import type { ExecutionInputs } from '../data/model/execution_inputs';
 export interface GithubRepositoryCoordinates {
     owner: string;
     repo: string;
@@ -9,9 +9,10 @@ export interface GithubActionEventContext {
     actor: string;
     repo: GithubRepositoryCoordinates;
 }
-/** Maps the GitHub Actions runtime context to the shape consumed by Execution. */
-export declare function buildGithubActionEventInputs(context: GithubActionEventContext): Record<string, unknown> & {
+export type GithubActionEventInputs = ExecutionInputs & {
     eventName: string;
     actor: string;
-    repo: RepositoryCoordinates;
+    repo: GithubRepositoryCoordinates;
 };
+/** Maps the GitHub Actions runtime context to the shape consumed by Execution. */
+export declare function buildGithubActionEventInputs(context: GithubActionEventContext): GithubActionEventInputs;

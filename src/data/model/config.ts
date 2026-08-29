@@ -1,6 +1,7 @@
 import {BranchConfiguration} from "./branch_configuration";
 import {isRecommendationState, RecommendationState} from "./recommendation_state";
 import {Result} from "./result";
+import { asModelInput, readOptionalString, readString } from './model_input';
 
 export class Config {
     branchType: string;
@@ -13,19 +14,19 @@ export class Config {
     branchConfiguration: BranchConfiguration | undefined;
     recommendationState: RecommendationState | undefined;
 
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- config from API */
-    constructor(data: any) {
-        this.branchType = data['branchType'] ?? '';
-        this.hotfixOriginBranch = data['hotfixOriginBranch'];
-        this.hotfixBranch = data['hotfixBranch'];
-        this.releaseBranch = data['releaseBranch'];
-        this.parentBranch = data['parentBranch'];
-        this.workingBranch = data['workingBranch'];
-        if (data['branchConfiguration'] !== undefined) {
-            this.branchConfiguration = new BranchConfiguration(data['branchConfiguration']);
+    constructor(data: unknown) {
+        const input = asModelInput(data);
+        this.branchType = readString(input, 'branchType');
+        this.hotfixOriginBranch = readOptionalString(input, 'hotfixOriginBranch');
+        this.hotfixBranch = readOptionalString(input, 'hotfixBranch');
+        this.releaseBranch = readOptionalString(input, 'releaseBranch');
+        this.parentBranch = readOptionalString(input, 'parentBranch');
+        this.workingBranch = readOptionalString(input, 'workingBranch');
+        if (input['branchConfiguration'] !== undefined && input['branchConfiguration'] !== null) {
+            this.branchConfiguration = new BranchConfiguration(input['branchConfiguration']);
         }
-        if (isRecommendationState(data['recommendationState'])) {
-            this.recommendationState = data['recommendationState'];
+        if (isRecommendationState(input['recommendationState'])) {
+            this.recommendationState = input['recommendationState'];
         }
     }
 }

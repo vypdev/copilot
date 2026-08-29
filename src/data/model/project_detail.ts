@@ -1,3 +1,5 @@
+import { asModelInput, readString } from './model_input';
+
 export class ProjectDetail {
     id: string;
     title: string;
@@ -6,14 +8,16 @@ export class ProjectDetail {
     url: string;
     number: number;
 
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- project detail from API */
-    constructor(data: any) {
-        this.id = data[`id`] ?? '';
-        this.title = data[`title`] ?? '';
-        this.type = data[`type`] ?? '';
-        this.owner = data[`owner`] ?? '';
-        this.url = data[`url`] ?? '';
-        this.number = data[`number`] ?? -1;
+    constructor(data: unknown) {
+        const input = asModelInput(data);
+        this.id = readString(input, 'id');
+        this.title = readString(input, 'title');
+        this.type = readString(input, 'type');
+        this.owner = readString(input, 'owner');
+        this.url = readString(input, 'url');
+        this.number = typeof input['number'] === 'number' && Number.isFinite(input['number'])
+            ? input['number']
+            : -1;
     }
 
     /**

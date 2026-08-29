@@ -1,15 +1,17 @@
+import { asModelInput, readString } from './model_input';
+
 export class BranchConfiguration {
     name: string;
     oid: string;
     children: BranchConfiguration[];
 
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- branch config from API */
-    constructor(data: any) {
-        this.name = data['name'] ?? '';
-        this.oid = data['oid'] ?? '';
+    constructor(data: unknown) {
+        const input = asModelInput(data);
+        this.name = readString(input, 'name');
+        this.oid = readString(input, 'oid');
         this.children = [];
-        if (data['children'] !== undefined && data['children'].length > 0) {
-            for (const child of data['children']) {
+        if (Array.isArray(input['children'])) {
+            for (const child of input['children']) {
                 this.children.push(new BranchConfiguration(child));
             }
         }

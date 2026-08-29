@@ -1,6 +1,11 @@
 import { Config } from '../config';
 
 describe('Config', () => {
+  it('ignores malformed external data without throwing', () => {
+    expect(() => new Config(null)).not.toThrow();
+    expect(new Config(null).branchType).toBe('');
+    expect(new Config({ branchConfiguration: null }).branchConfiguration).toBeUndefined();
+  });
   it('uses empty string for missing branchType', () => {
     const c = new Config({});
     expect(c.branchType).toBe('');

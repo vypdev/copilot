@@ -9,6 +9,7 @@ import { Projects } from '../data/model/projects';
 import { ProjectDetail } from '../data/model/project_detail';
 import { Tokens } from '../data/model/tokens';
 import { Workflows } from '../data/model/workflows';
+import type { ExecutionInputs } from '../data/model/execution_inputs';
 export interface ImageScopeValues {
     automatic: string[];
     feature: string[];
@@ -77,8 +78,8 @@ export interface ProjectConfigurationValues {
 export declare function buildProjects(values: ProjectConfigurationValues): Projects;
 export declare function buildWorkflows(release: string, hotfix: string): Workflows;
 export declare function buildLocale(issue: string, pullRequest: string): Locale;
-export declare function buildIssue(branchManagementAlways: boolean, reopenOnPush: boolean, desiredAssigneesCount: number, inputs?: unknown): Issue;
-export declare function buildPullRequest(desiredAssigneesCount: number, desiredReviewersCount: number, mergeTimeout: number, inputs?: unknown): PullRequest;
+export declare function buildIssue(branchManagementAlways: boolean, reopenOnPush: boolean, desiredAssigneesCount: number, inputs?: ExecutionInputs): Issue;
+export declare function buildPullRequest(desiredAssigneesCount: number, desiredReviewersCount: number, mergeTimeout: number, inputs?: ExecutionInputs): PullRequest;
 export declare function buildEmoji(emojiLabeledTitle: boolean, branchManagementEmoji: string): Emoji;
 export declare function buildTokens(token: string): Tokens;
 export declare function buildLabels(values: LabelValues): Labels;

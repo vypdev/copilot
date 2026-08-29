@@ -1,6 +1,13 @@
 import { ProjectDetail } from '../project_detail';
 
 describe('ProjectDetail', () => {
+  it('uses safe defaults for malformed external data', () => {
+    const p = new ProjectDetail(null);
+
+    expect(p.id).toBe('');
+    expect(p.number).toBe(-1);
+    expect(p.publicUrl).toBe('');
+  });
   it('assigns fields from data object', () => {
     const data = {
       id: 'PVT_1',

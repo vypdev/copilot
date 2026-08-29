@@ -1,8 +1,9 @@
+import type { ExecutionInputs } from './execution_inputs';
 export declare class Issue {
     reopenOnPush: boolean;
     branchManagementAlways: boolean;
     desiredAssigneesCount: number;
-    inputs: any | undefined;
+    inputs: ExecutionInputs | undefined;
     get title(): string;
     get number(): number;
     get creator(): string;
@@ -22,5 +23,5 @@ export declare class Issue {
     get commentBody(): string;
     get commentAuthor(): string;
     get commentUrl(): string;
-    constructor(branchManagementAlways: boolean, reopenOnPush: boolean, desiredAssigneesCount: number, inputs?: any | undefined);
+    constructor(branchManagementAlways: boolean, reopenOnPush: boolean, desiredAssigneesCount: number, inputs?: ExecutionInputs | undefined);
 }

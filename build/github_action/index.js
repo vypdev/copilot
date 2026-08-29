@@ -48380,12 +48380,13 @@ const recommendation_state_1 = __nccwpck_require__(68514);
 const publish_resume_use_case_1 = __nccwpck_require__(58684);
 const store_configuration_use_case_1 = __nccwpck_require__(84375);
 const logger_1 = __nccwpck_require__(91151);
+const logger_adapter_1 = __nccwpck_require__(72762);
 async function finishGithubAction(execution, results, issueNotificationPort, configurationStorePort) {
     const stepCount = results.reduce((acc, result) => acc + (result.steps?.length ?? 0), 0);
     const errorCount = results.reduce((acc, result) => acc + (result.errors?.length ?? 0), 0);
     (0, logger_1.logInfo)(`Publishing result: ${results.length} result(s), ${stepCount} step(s), ${errorCount} error(s).`);
     execution.currentConfiguration.results = results;
-    await new publish_resume_use_case_1.PublishResultUseCase(issueNotificationPort).invoke(execution);
+    await new publish_resume_use_case_1.PublishResultUseCase(issueNotificationPort, (0, logger_adapter_1.createLogReportAdapter)()).invoke(execution);
     commitPublishedRecommendationState(execution, results);
     await new store_configuration_use_case_1.StoreConfigurationUseCase(configurationStorePort).invoke(execution);
     (0, logger_1.logInfo)('Configuration stored. Finishing.');
@@ -49938,9 +49939,6 @@ exports.logDebugInfo = logDebugInfo;
 exports.logDebugWarning = logDebugWarning;
 exports.logDebugError = logDebugError;
 exports.setGlobalLoggerDebug = setGlobalLoggerDebug;
-exports.getAccumulatedLogEntries = getAccumulatedLogEntries;
-exports.getAccumulatedLogsAsText = getAccumulatedLogsAsText;
-exports.clearAccumulatedLogs = clearAccumulatedLogs;
 const noopLogger = {
     logInfo: () => undefined,
     logWarn: () => undefined,
@@ -49950,9 +49948,6 @@ const noopLogger = {
     logDebugWarning: () => undefined,
     logDebugError: () => undefined,
     setGlobalLoggerDebug: () => undefined,
-    getAccumulatedLogEntries: () => [],
-    getAccumulatedLogsAsText: () => '',
-    clearAccumulatedLogs: () => undefined,
 };
 let activeLogger = noopLogger;
 /** Installs the runtime logger for one application lifecycle. */
@@ -49986,15 +49981,6 @@ function logDebugError(message) {
 }
 function setGlobalLoggerDebug(debug, isRemote = false) {
     activeLogger.setGlobalLoggerDebug(debug, isRemote);
-}
-function getAccumulatedLogEntries() {
-    return activeLogger.getAccumulatedLogEntries();
-}
-function getAccumulatedLogsAsText() {
-    return activeLogger.getAccumulatedLogsAsText();
-}
-function clearAccumulatedLogs() {
-    activeLogger.clearAccumulatedLogs();
 }
 
 
@@ -54194,18 +54180,22 @@ class NotifyNewCommitOnIssueUseCase {
 `;
             let shouldWarn = false;
             for (const commit of param.commit.commits) {
+                const commitId = commit.id ?? 'unknown';
+                const commitAuthorName = commit.author?.name ?? 'unknown';
+                const commitAuthorUsername = commit.author?.username ?? 'unknown';
+                const commitMessage = commit.message ?? '';
                 commentBody += `
 ${this.separator}
 
-- ${commit.id} by **${commit.author.name}** (@${commit.author.username})
+- ${commitId} by **${commitAuthorName}** (@${commitAuthorUsername})
 \`\`\`
-${commit.message.replaceAll(`${commitPrefix}: `, '')}
+${commitMessage.split(`${commitPrefix}: `).join('')}
 \`\`\`
 
 `;
-                if ((commit.message.indexOf(commitPrefix) !== 0 && commitPrefix.length > 0)
-                    && commit.message.indexOf(this.mergeBranchPattern) !== 0
-                    && commit.message.indexOf(this.ghAction) !== 0) {
+                if ((commitMessage.indexOf(commitPrefix) !== 0 && commitPrefix.length > 0)
+                    && commitMessage.indexOf(this.mergeBranchPattern) !== 0
+                    && commitMessage.indexOf(this.ghAction) !== 0) {
                     shouldWarn = true;
                 }
             }
@@ -54953,8 +54943,13 @@ const result_publication_policy_1 = __nccwpck_require__(71512);
  * Publish the resume of actions
  */
 class PublishResultUseCase {
-    constructor(issueNotificationPort) {
+    constructor(issueNotificationPort, logReport = {
+        getAccumulatedLogEntries: () => [],
+        getAccumulatedLogsAsText: () => '',
+        clearAccumulatedLogs: () => undefined,
+    }) {
         this.issueNotificationPort = issueNotificationPort;
+        this.logReport = logReport;
         this.taskId = 'PublishResultUseCase';
     }
     async invoke(param) {
@@ -54973,7 +54968,7 @@ class PublishResultUseCase {
                 images: param.images,
             }, list_utils_1.getRandomElement);
             const sections = (0, result_publication_policy_1.renderResultSections)(param.currentConfiguration.results);
-            const debugLogSection = (0, result_publication_policy_1.buildDebugLogSection)(param.debug, (0, logging_ports_1.getAccumulatedLogsAsText)());
+            const debugLogSection = (0, result_publication_policy_1.buildDebugLogSection)(param.debug, this.logReport.getAccumulatedLogsAsText());
             const imageMarkdown = presentation.image && ((param.isIssue && param.images.imagesOnIssue)
                 || (param.isPullRequest && param.images.imagesOnPullRequest)) ? `![image](${presentation.image})` : '';
             const commentBody = `# ${presentation.title}
@@ -57455,21 +57450,19 @@ exports.Branches = Branches;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Commit = void 0;
 class Commit {
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- GitHub context payload shape */
     constructor(inputs = undefined) {
-        /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- GitHub context payload shape */
         this.inputs = undefined;
         this.inputs = inputs;
     }
     get branchReference() {
-        return this.inputs?.commits?.ref ?? this.inputs?.ref ?? '';
+        const commits = this.inputs?.commits;
+        return (!Array.isArray(commits) ? commits?.ref : undefined) ?? this.inputs?.ref ?? '';
     }
     get branch() {
         return this.branchReference.replace('refs/heads/', '');
     }
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- GitHub payload.commits shape */
     get commits() {
-        return this.inputs?.commits ?? [];
+        return Array.isArray(this.inputs?.commits) ? this.inputs.commits : [];
     }
 }
 exports.Commit = Commit;
@@ -57599,9 +57592,7 @@ class Execution {
     get runnedByToken() {
         return this.tokenUser === this.actor;
     }
-    constructor(debug, singleAction, commitPrefixBuilder, issue, pullRequest, emoji, giphy, tokens, ai, labels, issueTypes, locale, sizeThresholds, branches, release, hotfix, workflows, project, welcome, 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- GitHub context payload
-    inputs) {
+    constructor(debug, singleAction, commitPrefixBuilder, issue, pullRequest, emoji, giphy, tokens, ai, labels, issueTypes, locale, sizeThresholds, branches, release, hotfix, workflows, project, welcome, inputs) {
         this.debug = false;
         /**
          * Every usage of this field should be checked.
@@ -57773,7 +57764,6 @@ class Issue {
         return this.inputs?.comment?.html_url ?? '';
     }
     constructor(branchManagementAlways, reopenOnPush, desiredAssigneesCount, inputs = undefined) {
-        /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- GitHub payload shape */
         this.inputs = undefined;
         this.branchManagementAlways = branchManagementAlways;
         this.reopenOnPush = reopenOnPush;
@@ -58296,7 +58286,6 @@ class PullRequest {
         return raw != null ? Number(raw) : undefined;
     }
     constructor(desiredAssigneesCount, desiredReviewersCount, mergeTimeout, inputs = undefined) {
-        /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- GitHub payload shape */
         this.inputs = undefined;
         this.desiredAssigneesCount = desiredAssigneesCount;
         this.desiredReviewersCount = desiredReviewersCount;
@@ -64157,6 +64146,7 @@ exports.PROJECT_BOARD_ITEM_PAGE_LIMIT = 500;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createLoggerAdapter = createLoggerAdapter;
+exports.createLogReportAdapter = createLogReportAdapter;
 const logger_1 = __nccwpck_require__(91151);
 /** Adapts the process/GitHub logger to the semantic application port. */
 function createLoggerAdapter() {
@@ -64169,6 +64159,10 @@ function createLoggerAdapter() {
         logDebugWarning: logger_1.logDebugWarning,
         logDebugError: logger_1.logDebugError,
         setGlobalLoggerDebug: logger_1.setGlobalLoggerDebug,
+    };
+}
+function createLogReportAdapter() {
+    return {
         getAccumulatedLogEntries: logger_1.getAccumulatedLogEntries,
         getAccumulatedLogsAsText: logger_1.getAccumulatedLogsAsText,
         clearAccumulatedLogs: logger_1.clearAccumulatedLogs,

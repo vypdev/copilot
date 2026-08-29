@@ -17,6 +17,7 @@ import { SizeThresholds } from "./size_thresholds";
 import { Tokens } from "./tokens";
 import { Welcome } from "./welcome";
 import { Workflows } from "./workflows";
+import type { ExecutionInputs } from './execution_inputs';
 export declare class Execution {
     debug: boolean;
     welcome: Welcome | undefined;
@@ -48,7 +49,7 @@ export declare class Execution {
     previousConfiguration: Config | undefined;
     currentConfiguration: Config;
     tokenUser: string | undefined;
-    inputs: any | undefined;
+    inputs: ExecutionInputs | undefined;
     get eventName(): string;
     get actor(): string;
     get isSingleAction(): boolean;
@@ -68,5 +69,5 @@ export declare class Execution {
     get cleanIssueBranches(): boolean;
     get commit(): Commit;
     get runnedByToken(): boolean;
-    constructor(debug: boolean, singleAction: SingleAction, commitPrefixBuilder: string, issue: Issue, pullRequest: PullRequest, emoji: Emoji, giphy: Images, tokens: Tokens, ai: Ai, labels: Labels, issueTypes: IssueTypes, locale: Locale, sizeThresholds: SizeThresholds, branches: Branches, release: Release, hotfix: Hotfix, workflows: Workflows, project: Projects, welcome: Welcome | undefined, inputs: any | undefined);
+    constructor(debug: boolean, singleAction: SingleAction, commitPrefixBuilder: string, issue: Issue, pullRequest: PullRequest, emoji: Emoji, giphy: Images, tokens: Tokens, ai: Ai, labels: Labels, issueTypes: IssueTypes, locale: Locale, sizeThresholds: SizeThresholds, branches: Branches, release: Release, hotfix: Hotfix, workflows: Workflows, project: Projects, welcome: Welcome | undefined, inputs: ExecutionInputs | undefined);
 }

@@ -5,15 +5,14 @@ import { Labels } from '../../model/labels';
 import { logDebugInfo, logError } from '../../../utils/logger';
 import { resolveIssueTitleEmoji, resolvePullRequestTitleEmoji } from '../issue_emoji_policy';
 import { sanitizeIssueTitle, sanitizePullRequestTitle } from '../issue_title_policy';
-import type { IssueMetadataRepository } from './issue_metadata_repository';
 
 export class IssueTitleRepository implements IssueTitlePort {
     constructor(
         private readonly issueTitleClient: GithubClientPort<GithubIssueTitleClient>,
-        private readonly issueMetadataRepository: IssueMetadataRepository,
+        private readonly issueMetadataRepository: Pick<IssueTitlePort, 'getTitle'>,
     ) {}
 
-    getTitle = (...args: Parameters<IssueMetadataRepository['getTitle']>) => this.issueMetadataRepository.getTitle(...args);
+    getTitle = (...args: Parameters<IssueTitlePort['getTitle']>) => this.issueMetadataRepository.getTitle(...args);
 
     updateTitleIssueFormat = async (
         owner: string, repository: string, version: string, issueTitle: string, issueNumber: number,

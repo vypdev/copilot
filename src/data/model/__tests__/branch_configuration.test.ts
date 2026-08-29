@@ -1,6 +1,13 @@
 import { BranchConfiguration } from '../branch_configuration';
 
 describe('BranchConfiguration', () => {
+  it('ignores malformed external data and malformed children', () => {
+    const configuration = new BranchConfiguration({ children: [null, 'invalid', 42] });
+
+    expect(configuration.name).toBe('');
+    expect(configuration.children).toHaveLength(3);
+    expect(configuration.children.every((child) => child.name === '')).toBe(true);
+  });
   it('uses defaults for missing fields', () => {
     const b = new BranchConfiguration({});
     expect(b.name).toBe('');
