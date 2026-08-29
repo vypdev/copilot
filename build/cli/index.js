@@ -52457,8 +52457,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildAgentTasks = buildAgentTasks;
 const agent_configuration_input_policy_1 = __nccwpck_require__(7699);
 /** Builds the validated findings/fixer pair used by both action lifecycles. */
-function buildAgentTasks(values) {
-    return (0, agent_configuration_input_policy_1.buildAgentTaskConfiguration)(values);
+function buildAgentTasks(values, environment = process.env) {
+    return (0, agent_configuration_input_policy_1.buildAgentTaskConfiguration)(values, environment);
 }
 
 
@@ -53668,7 +53668,7 @@ function resolveProvider(value) {
         return value;
     throw new Error(`Unsupported agent provider "${value}". Supported providers: ${SUPPORTED_PROVIDERS.join(', ')}.`);
 }
-function buildAgentConfiguration(values, environment = process.env) {
+function buildAgentConfiguration(values, environment) {
     const provider = resolveProvider(values.provider.trim().toLowerCase());
     const modelProvider = values.modelProvider?.trim().toLowerCase() || 'openai';
     if (!/^[a-z0-9][a-z0-9_-]*$/.test(modelProvider))
@@ -53708,7 +53708,7 @@ function mergeAgentTaskValues(values, overrides) {
         ...Object.fromEntries(Object.entries(overrides ?? {}).filter(([, value]) => typeof value === 'string' && value.trim().length > 0)),
     };
 }
-function buildAgentTaskConfiguration(values, environment = process.env) {
+function buildAgentTaskConfiguration(values, environment) {
     return {
         findings: buildAgentConfiguration(mergeAgentTaskValues(values, values.findings), environment),
         fixer: buildAgentConfiguration(mergeAgentTaskValues(values, values.fixer), environment),
