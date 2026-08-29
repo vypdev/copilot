@@ -1,6 +1,5 @@
 import { Execution } from "../../../../data/model/execution";
-import { getResultPayload, Result } from "../../../../data/model/result";
-import { decideManagedBranchPreparation } from "../../../policies/branch_preparation_policy";
+import { Result } from "../../../../data/model/result";
 import type {
   BranchListQueryPort,
   BranchNamePort,
@@ -14,8 +13,8 @@ import type {
 import { logDebugInfo, logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
-import { buildCommitPrefix } from "../common/execute_script_use_case";
 import { selectBranchPreparationStrategy } from "./branch_preparation_strategy";
+import { prepareManagedBranch } from "./prepare_managed_branch";
 import { prepareHotfixBranch } from "./prepare_hotfix_branch";
 import { prepareReleaseBranch } from "./prepare_release_branch";
 
@@ -94,7 +93,12 @@ export class PrepareBranchesUseCase implements ParamUseCase<
       }
 
       result.push(
-        ...(await this.prepareManagedBranch(param, issueTitle, branches)),
+        ...(await prepareManagedBranch(param, issueTitle, branches, this.taskId, {
+          branchNamePort: this.branchNamePort,
+          linkedBranchCommandPort: this.linkedBranchCommandPort,
+          branchPropagationDelayPort: this.branchPropagationDelayPort,
+          moveIssueToInProgressUseCase: this.moveIssueToInProgressUseCase,
+        })),
       );
       return result;
     } catch (error) {
@@ -117,111 +121,4 @@ export class PrepareBranchesUseCase implements ParamUseCase<
     }
   }
 
-  private async prepareManagedBranch(
-    param: Execution,
-    issueTitle: string,
-    branches: readonly string[],
-  ): Promise<Result[]> {
-    logDebugInfo(`Branch type: ${param.managementBranch}`);
-    const decision = decideManagedBranchPreparation({
-      availableBranches: branches,
-      issueNumber: param.issueNumber,
-      formattedIssueTitle: this.branchNamePort.formatBranchName(
-        issueTitle,
-        param.issueNumber,
-      ),
-      targetBranchType: param.managementBranch,
-      developmentBranch: param.branches.development,
-
-      managedBranchTypes: [
-        param.branches.featureTree,
-        param.branches.bugfixTree,
-        param.branches.docsTree,
-        param.branches.choreTree,
-      ].filter(
-        (branchType): branchType is string =>
-          typeof branchType === "string" && branchType.length > 0,
-      ),
-      currentParentBranch: param.currentConfiguration.parentBranch,
-    });
-
-    if (decision.kind === "already-exists") {
-      return [
-        new Result({
-          id: this.taskId,
-          success: true,
-          executed: false,
-        }),
-      ];
-    }
-
-    param.currentConfiguration.parentBranch = decision.parentBranch;
-    const branchesResult =
-      await this.linkedBranchCommandPort.createLinkedBranch(
-        param.owner,
-        param.repo,
-        decision.baseBranchName,
-        decision.targetBranchName,
-        param.issueNumber,
-        undefined,
-        param.tokens.token,
-      );
-    const lastAction = branchesResult.at(-1);
-    if (!lastAction?.success || !lastAction.executed) return branchesResult;
-
-    const branchPayload = getResultPayload(lastAction.payload);
-    const branchName = branchPayload?.newBranchName;
-    if (
-      typeof branchName !== "string" ||
-      branchName.length === 0 ||
-      typeof branchPayload?.baseBranchName !== "string" ||
-      typeof branchPayload.baseBranchUrl !== "string" ||
-      typeof branchPayload.newBranchUrl !== "string"
-    )
-      return branchesResult;
-    param.currentConfiguration.workingBranch = branchName;
-
-    const commitPrefix = await this.buildCommitPrefix(param, branchName);
-    const developmentUrl = `https://github.com/${param.owner}/${param.repo}/tree/${param.branches.development}`;
-    const step = decision.isRename
-      ? `The branch **${branchPayload.baseBranchName}** was renamed to [**${branchName}**](${branchPayload.newBranchUrl}).`
-      : `The branch [**${branchPayload.baseBranchName}**](${branchPayload.baseBranchUrl}) was used to create [**${branchName}**](${branchPayload.newBranchUrl}).`;
-    const inlineCode = "`";
-    const fence = "```";
-    const reminder = decision.isRename
-      ? `Open a Pull Request from [${inlineCode}${branchName}${inlineCode}](${branchPayload.newBranchUrl}) to [${inlineCode}${param.branches.development}${inlineCode}](${developmentUrl}). [New PR](https://github.com/${param.owner}/${param.repo}/compare/${param.branches.development}...${branchName}?expand=1)`
-      : `Open a Pull Request from [${inlineCode}${branchName}${inlineCode}](${branchPayload.newBranchUrl}) to [${inlineCode}${branchPayload.baseBranchName}${inlineCode}](${branchPayload.baseBranchUrl}). [New PR](https://github.com/${param.owner}/${param.repo}/compare/${branchPayload.baseBranchName}...${branchName}?expand=1)`;
-    const reminders = [
-      `Check out the branch:\n> ${fence}bash\n> git fetch -v && git checkout ${branchName}\n> ${fence}`,
-      ...(commitPrefix
-        ? [
-            `Commit the needed changes with this prefix:\n> ${fence}\n>${commitPrefix}\n> ${fence}`,
-          ]
-        : []),
-      reminder,
-    ];
-    const result: Result[] = [
-      new Result({
-        id: this.taskId,
-        success: true,
-        executed: true,
-        steps: [step],
-        reminders,
-      }),
-    ];
-    await this.branchPropagationDelayPort.waitForLinkedBranch();
-    result.push(
-      ...(await this.moveIssueToInProgressUseCase.invoke(param)),
-    );
-    return result;
-  }
-
-  private async buildCommitPrefix(
-    param: Execution,
-    branchName: string,
-  ): Promise<string> {
-    if (!param.commitPrefixBuilder) return "";
-    param.commitPrefixBuilderParams = { branchName };
-    return buildCommitPrefix(branchName, param.commitPrefixBuilder);
-  }
 }
