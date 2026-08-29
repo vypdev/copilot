@@ -6,11 +6,9 @@
 
 import type { Result } from "../../../../../data/model/result";
 import type { MarkFindingsResolvedParam } from "./mark_findings_resolved_use_case";
+import type { BugbotFixIntent } from "./detect_bugbot_fix_intent_policy";
 
-export type BugbotFixIntentPayload = {
-    isFixRequest: boolean;
-    isDoRequest: boolean;
-    targetFindingIds: string[];
+export type BugbotFixIntentPayload = BugbotFixIntent & {
     context?: MarkFindingsResolvedParam["context"];
     branchOverride?: string;
 };

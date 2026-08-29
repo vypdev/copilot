@@ -6,14 +6,9 @@
 import { getBugbotFixIntentPrompt } from "../../../../../prompts";
 import { PROJECT_CONTEXT_INSTRUCTION } from "../../../../../utils/project_context_instruction";
 import { sanitizeUserCommentForPrompt } from "./sanitize_user_comment_for_prompt";
+import type { UnresolvedFindingSummary } from "./types";
 
-export interface UnresolvedFindingSummary {
-    id: string;
-    title: string;
-    description?: string;
-    file?: string;
-    line?: number;
-}
+export type { UnresolvedFindingSummary } from "./types";
 
 const MAX_TITLE_LENGTH = 200;
 const MAX_FILE_LENGTH = 256;

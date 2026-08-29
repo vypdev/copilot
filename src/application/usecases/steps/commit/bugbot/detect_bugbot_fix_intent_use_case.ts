@@ -8,17 +8,15 @@ import { logDebugInfo, logInfo } from "../../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../../utils/task_emoji";
 import { ParamUseCase } from "../../../base/param_usecase";
 import { Result } from "../../../../../data/model/result";
-import type { UnresolvedFindingSummary } from "./build_bugbot_fix_intent_prompt";
 import { buildBugbotFixIntentPrompt } from "./build_bugbot_fix_intent_prompt";
-import { extractTitleFromBody } from "./marker";
 import { loadBugbotContext, type LoadBugbotContextOptions } from "./load_bugbot_context_use_case";
 import { BUGBOT_FIX_INTENT_RESPONSE_SCHEMA } from "./schema";
-
-export interface BugbotFixIntent {
-    isFixRequest: boolean;
-    isDoRequest: boolean;
-    targetFindingIds: string[];
-}
+import {
+    buildUnresolvedFindingSummaries,
+    parseBugbotFixIntentResponse,
+    selectBugbotCommentBody,
+} from "./detect_bugbot_fix_intent_policy";
+import type { BugbotFixIntent } from "./detect_bugbot_fix_intent_policy";
 
 const TASK_ID = "DetectBugbotFixIntentUseCase";
 
@@ -53,12 +51,7 @@ export class DetectBugbotFixIntentUseCase implements ParamUseCase<Execution, Res
             return results;
         }
 
-        const commentBody =
-            param.issue.isIssueComment
-                ? param.issue.commentBody
-                : param.pullRequest.isPullRequestReviewComment
-                  ? param.pullRequest.commentBody
-                  : "";
+        const commentBody = selectBugbotCommentBody(param);
         if (!commentBody?.trim()) {
             logInfo("No comment body; skipping bugbot fix intent detection.");
             return results;
@@ -92,12 +85,8 @@ export class DetectBugbotFixIntentUseCase implements ParamUseCase<Execution, Res
             return results;
         }
 
-        const unresolvedIds = unresolvedWithBody.map((p) => p.id);
-        const unresolvedFindings: UnresolvedFindingSummary[] = unresolvedWithBody.map((p) => ({
-            id: p.id,
-            title: extractTitleFromBody(p.fullBody) || p.id,
-            description: p.fullBody?.slice(0, 4000) ?? "",
-        }));
+        const unresolvedIds = new Set(unresolvedWithBody.map((finding) => finding.id));
+        const unresolvedFindings = buildUnresolvedFindingSummaries(unresolvedWithBody);
 
         // When user replied in a PR thread, include parent comment so the agent knows which finding they mean.
         let parentCommentBody: string | undefined;
@@ -127,7 +116,8 @@ export class DetectBugbotFixIntentUseCase implements ParamUseCase<Execution, Res
             },
         });
 
-        if (response == null || typeof response !== "object") {
+        const intent = parseBugbotFixIntentResponse(response, unresolvedIds);
+        if (!intent) {
             logInfo("No response from configured agent for fix intent.");
             results.push(
                 new Result({
@@ -141,21 +131,7 @@ export class DetectBugbotFixIntentUseCase implements ParamUseCase<Execution, Res
             return results;
         }
 
-        const payload = response as {
-            is_fix_request?: boolean;
-            target_finding_ids?: string[];
-            is_do_request?: boolean;
-        };
-        const isFixRequest = payload.is_fix_request === true;
-        const isDoRequest = payload.is_do_request === true;
-        const targetFindingIds = Array.isArray(payload.target_finding_ids)
-            ? payload.target_finding_ids.filter((id): id is string => typeof id === "string")
-            : [];
-
-        const validIds = new Set(unresolvedIds);
-        const filteredIds = targetFindingIds.filter((id) => validIds.has(id));
-
-        logDebugInfo(`DetectBugbotFixIntent: agent payload is_fix_request=${isFixRequest}, is_do_request=${isDoRequest}, target_finding_ids=${JSON.stringify(targetFindingIds)}, filteredIds=${JSON.stringify(filteredIds)}.`);
+        logDebugInfo(`DetectBugbotFixIntent: agent payload is_fix_request=${intent.isFixRequest}, is_do_request=${intent.isDoRequest}, target_finding_ids=${JSON.stringify(intent.targetFindingIds)}.`);
 
         results.push(
             new Result({
@@ -164,9 +140,7 @@ export class DetectBugbotFixIntentUseCase implements ParamUseCase<Execution, Res
                 executed: true,
                 steps: [],
                 payload: {
-                    isFixRequest,
-                    isDoRequest,
-                    targetFindingIds: filteredIds,
+                    ...intent,
                     context,
                     branchOverride,
                 } as BugbotFixIntent & { context?: typeof context; branchOverride?: string },
