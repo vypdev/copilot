@@ -1,3 +1,4 @@
+import * as github from "@actions/github";
 import { getOctokitClient } from "./octokit_client_resolver";
 import type { GithubClientPort } from "./ports/github_client_provider_port";
 import type { GithubActorAuthorizationClient, GithubAuthenticatedUserClient, GithubOrganizationMembersClient } from "../../application/ports/github_identity_ports";
@@ -13,7 +14,9 @@ export class OctokitOrganizationMembersClientAdapter implements GithubClientPort
     getClient(token: string): GithubOrganizationMembersClient { return getOctokitClient<GithubOrganizationMembersClient>(token); }
 }
 export class OctokitRepositoryContextClientAdapter implements GithubClientPort<GithubRepositoryContextClient> {
-    getClient(token: string): GithubRepositoryContextClient { return getOctokitClient<GithubRepositoryContextClient>(token); }
+    getClient(_token: string): GithubRepositoryContextClient {
+        return { context: github.context };
+    }
 }
 export class OctokitOwnerTypeClientAdapter implements GithubClientPort<GithubOwnerTypeClient> {
     getClient(token: string): GithubOwnerTypeClient { return getOctokitClient<GithubOwnerTypeClient>(token); }

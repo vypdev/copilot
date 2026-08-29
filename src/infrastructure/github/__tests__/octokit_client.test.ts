@@ -35,6 +35,7 @@ import {
 
 jest.mock("@actions/github", () => ({
   getOctokit: jest.fn(),
+  context: { repo: { owner: "test-owner", repo: "test-repo" } },
 }));
 
 type Adapter = { getClient(token: string): unknown };
@@ -55,7 +56,6 @@ describe("Octokit client adapters contract", () => {
     ["authenticated user", OctokitAuthenticatedUserClientAdapter],
     ["actor authorization", OctokitActorAuthorizationClientAdapter],
     ["organization members", OctokitOrganizationMembersClientAdapter],
-    ["repository context", OctokitRepositoryContextClientAdapter],
     ["owner type", OctokitOwnerTypeClientAdapter],
     ["pull request changes", OctokitPullRequestChangesClientAdapter],
     ["pull request lifecycle", OctokitPullRequestLifecycleClientAdapter],
@@ -87,4 +87,13 @@ describe("Octokit client adapters contract", () => {
       expect(result).toBe(providerClient);
     },
   );
+
+  it("exposes the GitHub Actions repository context independently of the Octokit client", () => {
+    const result = new OctokitRepositoryContextClientAdapter().getClient(
+      "token-under-test",
+    );
+
+    expect(result).toEqual({ context: github.context });
+    expect(github.getOctokit).not.toHaveBeenCalled();
+  });
 });
