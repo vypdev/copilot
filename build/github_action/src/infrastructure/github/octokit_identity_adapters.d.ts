@@ -11,7 +11,7 @@ export declare class OctokitOrganizationMembersClientAdapter implements GithubCl
     getClient(token: string): GithubOrganizationMembersClient;
 }
 export declare class OctokitRepositoryContextClientAdapter implements GithubClientPort<GithubRepositoryContextClient> {
-    getClient(token: string): GithubRepositoryContextClient;
+    getClient(_token: string): GithubRepositoryContextClient;
 }
 export declare class OctokitOwnerTypeClientAdapter implements GithubClientPort<GithubOwnerTypeClient> {
     getClient(token: string): GithubOwnerTypeClient;
