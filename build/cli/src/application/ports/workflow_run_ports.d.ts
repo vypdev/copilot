@@ -3,7 +3,7 @@ export interface PreviousWorkflowRunsQuery {
     repository: string;
     currentRunId: number;
     workflowName: string;
-    /** Workflow file name or numeric id used to scope the queue query. */
+    /** Workflow file name accepted by GitHub to scope the queue query. */
     workflowIdentifier?: string;
 }
 export interface PreviousWorkflowRunsQueryPort {
