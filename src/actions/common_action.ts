@@ -13,6 +13,8 @@ import { createSetupExecutionUseCase } from '../infrastructure/composition/execu
 import { createWaitForPreviousWorkflowRunsUseCase } from '../infrastructure/composition/workflow_queue_composition_root';
 import { createMainRunRouteCompositionRoot } from '../infrastructure/composition/main_run_route_composition_root';
 import { requireRepositoryCoordinates } from './repository_context';
+import { resolveWorkflowIdentifier } from './workflow_context';
+import type { PreviousWorkflowRunsQuery } from '../application/ports/workflow_run_ports';
 
 export async function mainRun(
     execution: Execution,
@@ -37,12 +39,18 @@ export async function mainRun(
         /**
          * Wait for previous runs to finish
          */
-        await createWaitForPreviousWorkflowRunsUseCase(execution.tokens.token).invoke({
+        const previousRunsQuery: PreviousWorkflowRunsQuery = {
             owner: repository.owner,
             repository: repository.repo,
             currentRunId: Number.parseInt(process.env.GITHUB_RUN_ID ?? '', 10),
             workflowName: process.env.GITHUB_WORKFLOW ?? '',
-        }).catch((err) => {
+        };
+        const workflowIdentifier = resolveWorkflowIdentifier(process.env.GITHUB_WORKFLOW_REF);
+        if (workflowIdentifier) {
+            previousRunsQuery.workflowIdentifier = workflowIdentifier;
+        }
+
+        await createWaitForPreviousWorkflowRunsUseCase(execution.tokens.token).invoke(previousRunsQuery).catch((err) => {
             logError(`Error waiting for previous runs: ${err}`);
             throw err;
         });

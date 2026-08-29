@@ -181,6 +181,9 @@ export const DEFAULT_IMAGE_CONFIG = {
 export const WORKFLOW_STATUS = {
     IN_PROGRESS: 'in_progress',
     QUEUED: 'queued',
+    REQUESTED: 'requested',
+    WAITING: 'waiting',
+    PENDING: 'pending',
     COMPLETED: 'completed',
     FAILED: 'failed',
     CANCELLED: 'cancelled',
@@ -188,7 +191,13 @@ export const WORKFLOW_STATUS = {
     TIMED_OUT: 'timed_out',
 };
 
-export const WORKFLOW_ACTIVE_STATUSES = [WORKFLOW_STATUS.IN_PROGRESS, WORKFLOW_STATUS.QUEUED];
+export const WORKFLOW_ACTIVE_STATUSES = [
+    WORKFLOW_STATUS.IN_PROGRESS,
+    WORKFLOW_STATUS.QUEUED,
+    WORKFLOW_STATUS.REQUESTED,
+    WORKFLOW_STATUS.WAITING,
+    WORKFLOW_STATUS.PENDING,
+];
 
 export const INPUT_KEYS = {
     // Debug

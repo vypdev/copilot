@@ -134,6 +134,7 @@ const runMain = (execution: Execution) => productionMainRun(
 
 const originalRunId = process.env.GITHUB_RUN_ID;
 const originalWorkflow = process.env.GITHUB_WORKFLOW;
+const originalWorkflowRef = process.env.GITHUB_WORKFLOW_REF;
 
 function restoreEnvironmentVariable(name: string, value: string | undefined): void {
   if (value === undefined) {
@@ -159,6 +160,7 @@ describe('mainRun', () => {
   afterEach(() => {
     restoreEnvironmentVariable('GITHUB_RUN_ID', originalRunId);
     restoreEnvironmentVariable('GITHUB_WORKFLOW', originalWorkflow);
+    restoreEnvironmentVariable('GITHUB_WORKFLOW_REF', originalWorkflowRef);
   });
 
   it('delegates setup to the composed use case and clears accumulated logs', async () => {
@@ -183,6 +185,7 @@ describe('mainRun', () => {
   it('waits for previous runs when welcome is false', async () => {
     process.env.GITHUB_RUN_ID = '200';
     process.env.GITHUB_WORKFLOW = 'CI';
+    process.env.GITHUB_WORKFLOW_REF = 'org/repo/.github/workflows/copilot_issue.yml@refs/heads/master';
     const execution = mockExecution({ welcome: undefined });
     await runMain(execution);
     expect(createWaitForPreviousWorkflowRunsUseCase).toHaveBeenCalledWith('token');
@@ -191,6 +194,7 @@ describe('mainRun', () => {
       repository: 'repo',
       currentRunId: 200,
       workflowName: 'CI',
+      workflowIdentifier: 'copilot_issue.yml',
     });
   });
 

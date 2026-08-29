@@ -1,4 +1,4 @@
-import { WORKFLOW_STATUS } from '../../../../utils/constants';
+import { WORKFLOW_ACTIVE_STATUSES, WORKFLOW_STATUS } from '../../../../utils/constants';
 import type {
   GithubWorkflowRunsClient,
   GithubWorkflowRun,
@@ -7,9 +7,10 @@ import type {
 import { ActivePreviousWorkflowRunsRepository } from '../active_previous_workflow_runs_repository';
 
 const listWorkflowRunsForRepo = jest.fn();
+const listWorkflowRuns = jest.fn();
 const iterator = jest.fn();
 const client = {
-  rest: { actions: { listWorkflowRunsForRepo } },
+  rest: { actions: { listWorkflowRunsForRepo, listWorkflowRuns } },
   paginate: { iterator },
 } as unknown as GithubWorkflowRunsClient;
 
@@ -56,8 +57,13 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
         },
       },
     ];
-    iterator.mockImplementation(async function* () {
-      yield* pages;
+    iterator.mockImplementation(async function* (_method: unknown, parameters: { status?: string }) {
+      if (parameters.status === WORKFLOW_STATUS.IN_PROGRESS) {
+        yield pages[0];
+      }
+      if (parameters.status === WORKFLOW_STATUS.QUEUED) {
+        yield pages[1];
+      }
     });
     const repository = new ActivePreviousWorkflowRunsRepository(client);
 
@@ -72,7 +78,9 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
       owner: 'org',
       repo: 'repo',
       per_page: 100,
+      status: WORKFLOW_STATUS.IN_PROGRESS,
     });
+    expect(iterator).toHaveBeenCalledTimes(WORKFLOW_ACTIVE_STATUSES.length);
     expect(count).toBe(2);
   });
 
@@ -85,8 +93,10 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
         ],
       },
     ];
-    iterator.mockImplementation(async function* () {
-      yield* pages;
+    iterator.mockImplementation(async function* (_method: unknown, parameters: { status?: string }) {
+      if (parameters.status === WORKFLOW_STATUS.IN_PROGRESS) {
+        yield* pages;
+      }
     });
     const repository = new ActivePreviousWorkflowRunsRepository(client);
 
@@ -95,9 +105,17 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
       repository: 'repo',
       currentRunId: 200,
       workflowName: 'CI',
+      workflowIdentifier: 'copilot_issue.yml',
     });
 
     expect(count).toBe(2);
+    expect(iterator).toHaveBeenCalledWith(listWorkflowRuns, {
+      owner: 'org',
+      repo: 'repo',
+      per_page: 100,
+      status: WORKFLOW_STATUS.IN_PROGRESS,
+      workflow_id: 'copilot_issue.yml',
+    });
   });
 
   it('reports malformed workflow run pages clearly', async () => {
@@ -112,5 +130,38 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
       currentRunId: 200,
       workflowName: 'CI',
     })).rejects.toThrow('GitHub workflow runs response did not contain a workflow_runs array.');
+  });
+
+  it('retries transient provider failures before returning active runs', async () => {
+    const retryDelayPort = { wait: jest.fn().mockResolvedValue(undefined) };
+    let attempts = 0;
+    iterator.mockImplementation(async function* (_method: unknown, parameters: { status?: string }) {
+      if (parameters.status !== WORKFLOW_STATUS.IN_PROGRESS) {
+        return;
+      }
+
+      attempts += 1;
+      if (attempts === 1) {
+        throw { status: 500 };
+      }
+
+      yield { data: [] } as GithubWorkflowRunsResponse;
+    });
+    const repository = new ActivePreviousWorkflowRunsRepository(client, retryDelayPort, {
+      maximumAttempts: 3,
+      initialDelayMilliseconds: 10,
+      backoffMultiplier: 2,
+      maximumDelayMilliseconds: 100,
+    });
+
+    await expect(repository.countActivePreviousRuns({
+      owner: 'org',
+      repository: 'repo',
+      currentRunId: 200,
+      workflowName: 'CI',
+    })).resolves.toBe(0);
+
+    expect(attempts).toBe(2);
+    expect(retryDelayPort.wait).toHaveBeenCalledWith(10);
   });
 });

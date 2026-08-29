@@ -33,6 +33,9 @@ export declare const DEFAULT_IMAGE_CONFIG: {
 export declare const WORKFLOW_STATUS: {
     IN_PROGRESS: string;
     QUEUED: string;
+    REQUESTED: string;
+    WAITING: string;
+    PENDING: string;
     COMPLETED: string;
     FAILED: string;
     CANCELLED: string;

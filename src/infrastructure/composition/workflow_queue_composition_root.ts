@@ -6,10 +6,11 @@ import { createWorkflowRunsClient } from './github_workflow_client_factory';
 
 export function createWaitForPreviousWorkflowRunsUseCase(token: string): WaitForPreviousWorkflowRunsUseCase {
     const client = createWorkflowRunsClient().getClient(token);
+    const delayPort = new TimerWorkflowPollingDelayAdapter();
 
     return new WaitForPreviousWorkflowRunsUseCase(
-        new ActivePreviousWorkflowRunsRepository(client),
-        new TimerWorkflowPollingDelayAdapter(),
+        new ActivePreviousWorkflowRunsRepository(client, delayPort),
+        delayPort,
         new LoggerWorkflowPollingObserverAdapter(),
     );
 }

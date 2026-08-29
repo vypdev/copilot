@@ -52636,6 +52636,7 @@ const execution_setup_composition_root_1 = __nccwpck_require__(83965);
 const workflow_queue_composition_root_1 = __nccwpck_require__(21598);
 const main_run_route_composition_root_1 = __nccwpck_require__(4706);
 const repository_context_1 = __nccwpck_require__(78958);
+const workflow_context_1 = __nccwpck_require__(55224);
 async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort) {
     const results = [];
     const repository = (0, repository_context_1.requireRepositoryCoordinates)({
@@ -52651,12 +52652,17 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort) {
         /**
          * Wait for previous runs to finish
          */
-        await (0, workflow_queue_composition_root_1.createWaitForPreviousWorkflowRunsUseCase)(execution.tokens.token).invoke({
+        const previousRunsQuery = {
             owner: repository.owner,
             repository: repository.repo,
             currentRunId: Number.parseInt(process.env.GITHUB_RUN_ID ?? '', 10),
             workflowName: process.env.GITHUB_WORKFLOW ?? '',
-        }).catch((err) => {
+        };
+        const workflowIdentifier = (0, workflow_context_1.resolveWorkflowIdentifier)(process.env.GITHUB_WORKFLOW_REF);
+        if (workflowIdentifier) {
+            previousRunsQuery.workflowIdentifier = workflowIdentifier;
+        }
+        await (0, workflow_queue_composition_root_1.createWaitForPreviousWorkflowRunsUseCase)(execution.tokens.token).invoke(previousRunsQuery).catch((err) => {
             (0, logger_1.logError)(`Error waiting for previous runs: ${err}`);
             throw err;
         });
@@ -53533,6 +53539,35 @@ const size_threshold_1 = __nccwpck_require__(6362);
 const size_thresholds_1 = __nccwpck_require__(54820);
 function buildSizeThresholds(values) {
     return new size_thresholds_1.SizeThresholds(new size_threshold_1.SizeThreshold(values.xxl.lines, values.xxl.files, values.xxl.commits), new size_threshold_1.SizeThreshold(values.xl.lines, values.xl.files, values.xl.commits), new size_threshold_1.SizeThreshold(values.l.lines, values.l.files, values.l.commits), new size_threshold_1.SizeThreshold(values.m.lines, values.m.files, values.m.commits), new size_threshold_1.SizeThreshold(values.s.lines, values.s.files, values.s.commits), new size_threshold_1.SizeThreshold(values.xs.lines, values.xs.files, values.xs.commits));
+}
+
+
+/***/ }),
+
+/***/ 55224:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.resolveWorkflowIdentifier = resolveWorkflowIdentifier;
+/**
+ * Resolves the workflow file accepted by GitHub's workflow-runs endpoint from
+ * the default GITHUB_WORKFLOW_REF value.
+ */
+function resolveWorkflowIdentifier(workflowRef) {
+    const reference = workflowRef?.trim();
+    if (!reference) {
+        return undefined;
+    }
+    const workflowPath = reference.split('@', 1)[0] ?? '';
+    const workflowMarker = '/.github/workflows/';
+    const markerIndex = workflowPath.indexOf(workflowMarker);
+    if (markerIndex < 0) {
+        return undefined;
+    }
+    const workflowIdentifier = workflowPath.slice(markerIndex + workflowMarker.length).trim();
+    return workflowIdentifier || undefined;
 }
 
 
@@ -67083,23 +67118,79 @@ function releaseIdAsString(id) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ActivePreviousWorkflowRunsRepository = void 0;
 const constants_1 = __nccwpck_require__(15415);
+const DEFAULT_RETRY_POLICY = {
+    maximumAttempts: 5,
+    initialDelayMilliseconds: 1000,
+    backoffMultiplier: 2,
+    maximumDelayMilliseconds: 8000,
+};
+const NO_OP_DELAY_PORT = {
+    async wait() {
+        return Promise.resolve();
+    },
+};
 class ActivePreviousWorkflowRunsRepository {
-    constructor(client) {
+    constructor(client, retryDelayPort = NO_OP_DELAY_PORT, retryPolicy = DEFAULT_RETRY_POLICY) {
         this.client = client;
+        this.retryDelayPort = retryDelayPort;
+        this.retryPolicy = retryPolicy;
     }
     async countActivePreviousRuns(query) {
         if (!Number.isFinite(query.currentRunId) || query.workflowName.length === 0) {
             return 0;
         }
         let activeRunCount = 0;
-        for await (const response of this.client.paginate.iterator(this.client.rest.actions.listWorkflowRunsForRepo, {
+        for (const status of constants_1.WORKFLOW_ACTIVE_STATUSES) {
+            activeRunCount += await this.countActiveRunsForStatus(query, status);
+        }
+        return activeRunCount;
+    }
+    async countActiveRunsForStatus(query, status) {
+        const useWorkflowEndpoint = Boolean(query.workflowIdentifier && this.client.rest.actions.listWorkflowRuns);
+        const method = useWorkflowEndpoint
+            ? this.client.rest.actions.listWorkflowRuns
+            : this.client.rest.actions.listWorkflowRunsForRepo;
+        const parameters = {
             owner: query.owner,
             repo: query.repository,
             per_page: 100,
-        })) {
-            activeRunCount += this.extractWorkflowRuns(response).filter((run) => this.isActivePreviousRun(run, query)).length;
+            status,
+            ...(useWorkflowEndpoint ? { workflow_id: query.workflowIdentifier } : {}),
+        };
+        return this.withTransientErrorRetry(async () => {
+            let activeRunCount = 0;
+            for await (const response of this.client.paginate.iterator(method, parameters)) {
+                activeRunCount += this.extractWorkflowRuns(response).filter((run) => this.isActivePreviousRun(run, query)).length;
+            }
+            return activeRunCount;
+        });
+    }
+    async withTransientErrorRetry(operation) {
+        let delayMilliseconds = this.retryPolicy.initialDelayMilliseconds;
+        for (let attempt = 1; attempt <= this.retryPolicy.maximumAttempts; attempt++) {
+            try {
+                return await operation();
+            }
+            catch (error) {
+                if (attempt === this.retryPolicy.maximumAttempts || !this.isTransientError(error)) {
+                    throw error;
+                }
+                await this.retryDelayPort.wait(delayMilliseconds);
+                delayMilliseconds = Math.min(delayMilliseconds * this.retryPolicy.backoffMultiplier, this.retryPolicy.maximumDelayMilliseconds);
+            }
         }
-        return activeRunCount;
+        throw new Error('Workflow runs request retry policy was exhausted.');
+    }
+    isTransientError(error) {
+        if (!error || typeof error !== 'object') {
+            return false;
+        }
+        const candidate = error;
+        if (typeof candidate.status === 'number') {
+            return candidate.status === 408 || candidate.status === 429 || candidate.status >= 500;
+        }
+        return typeof candidate.code === 'string'
+            && ['ECONNRESET', 'ETIMEDOUT', 'EAI_AGAIN', 'ENETUNREACH'].includes(candidate.code);
     }
     extractWorkflowRuns(response) {
         if (Array.isArray(response.data)) {
@@ -67900,7 +67991,8 @@ const logger_workflow_polling_observer_adapter_1 = __nccwpck_require__(52883);
 const github_workflow_client_factory_1 = __nccwpck_require__(29839);
 function createWaitForPreviousWorkflowRunsUseCase(token) {
     const client = (0, github_workflow_client_factory_1.createWorkflowRunsClient)().getClient(token);
-    return new wait_for_previous_workflow_runs_use_case_1.WaitForPreviousWorkflowRunsUseCase(new active_previous_workflow_runs_repository_1.ActivePreviousWorkflowRunsRepository(client), new timer_workflow_polling_delay_adapter_1.TimerWorkflowPollingDelayAdapter(), new logger_workflow_polling_observer_adapter_1.LoggerWorkflowPollingObserverAdapter());
+    const delayPort = new timer_workflow_polling_delay_adapter_1.TimerWorkflowPollingDelayAdapter();
+    return new wait_for_previous_workflow_runs_use_case_1.WaitForPreviousWorkflowRunsUseCase(new active_previous_workflow_runs_repository_1.ActivePreviousWorkflowRunsRepository(client, delayPort), delayPort, new logger_workflow_polling_observer_adapter_1.LoggerWorkflowPollingObserverAdapter());
 }
 
 
@@ -69315,13 +69407,22 @@ exports.DEFAULT_IMAGE_CONFIG = {
 exports.WORKFLOW_STATUS = {
     IN_PROGRESS: 'in_progress',
     QUEUED: 'queued',
+    REQUESTED: 'requested',
+    WAITING: 'waiting',
+    PENDING: 'pending',
     COMPLETED: 'completed',
     FAILED: 'failed',
     CANCELLED: 'cancelled',
     SKIPPED: 'skipped',
     TIMED_OUT: 'timed_out',
 };
-exports.WORKFLOW_ACTIVE_STATUSES = [exports.WORKFLOW_STATUS.IN_PROGRESS, exports.WORKFLOW_STATUS.QUEUED];
+exports.WORKFLOW_ACTIVE_STATUSES = [
+    exports.WORKFLOW_STATUS.IN_PROGRESS,
+    exports.WORKFLOW_STATUS.QUEUED,
+    exports.WORKFLOW_STATUS.REQUESTED,
+    exports.WORKFLOW_STATUS.WAITING,
+    exports.WORKFLOW_STATUS.PENDING,
+];
 exports.INPUT_KEYS = {
     // Debug
     DEBUG: 'debug',
