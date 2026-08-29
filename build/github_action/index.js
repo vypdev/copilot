@@ -52137,7 +52137,7 @@ class BugbotAutofixUseCase {
             success: true,
             executed: true,
             steps: [
-            // `Bugbot autofix completed. The configured agent applied changes for findings: ${idsToFix.join(", ")}. Run verify commands and commit/push.`,
+                `Bugbot autofix completed. The configured agent applied changes for findings: ${idsToFix.join(", ")}. Run verify commands and commit/push.`,
             ],
             payload: { targetFindingIds: idsToFix, context, workspacePaths },
         }));
@@ -59907,21 +59907,15 @@ exports.BranchNameRepository = void 0;
 class BranchNameRepository {
     constructor() {
         this.formatBranchName = (issueTitle, issueNumber) => {
-            let sanitizedTitle = issueTitle.toLowerCase()
-                .replace(/\b\d+(\.\d+){2,}\b/g, '')
-                .replace(/[^\p{L}\p{N}\p{P}\p{Z}^$\n]/gu, '')
-                .replace(/\u200D/g, '')
-                .replace(/[^\S\r\n]+/g, ' ')
-                .replace(/[^a-zA-Z0-9 .]/g, '')
-                .replace(/^-+|-+$/g, '')
-                .replace(/- -/g, '-').trim()
-                .replace(/-+/g, '-')
-                .trim();
-            sanitizedTitle = sanitizedTitle.replace(/[^a-z0-9 ]/g, '').replace(/ /g, '-');
+            const sanitizedTitle = issueTitle.toLowerCase()
+                .replace(/\b\d+(\.\d+){2,}\b/g, ' ')
+                .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
+                .replace(/[\s-]+/g, '-')
+                .replace(/^-+|-+$/g, '');
             const issuePrefix = `${issueNumber}-`;
-            if (sanitizedTitle.startsWith(issuePrefix))
-                sanitizedTitle = sanitizedTitle.substring(issuePrefix.length);
-            return sanitizedTitle.replace(/-+/g, '-').replace(/^-|-$/g, '');
+            return sanitizedTitle.startsWith(issuePrefix)
+                ? sanitizedTitle.substring(issuePrefix.length)
+                : sanitizedTitle;
         };
     }
 }

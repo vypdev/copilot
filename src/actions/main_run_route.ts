@@ -1,20 +1,10 @@
-export type MainRunRoute =
-    | 'single-action'
-    | 'issue-comment'
-    | 'issue'
-    | 'pull-request-review-comment'
-    | 'pull-request'
-    | 'push'
-    | 'unhandled';
+import type {
+    MainRunRoute as ApplicationMainRunRoute,
+    MainRunRouteInput as ApplicationMainRunRouteInput,
+} from '../application/ports/main_run_route_ports';
 
-export interface MainRunRouteInput {
-    isSingleAction: boolean;
-    isIssue: boolean;
-    isIssueComment: boolean;
-    isPullRequest: boolean;
-    isPullRequestReviewComment: boolean;
-    isPush: boolean;
-}
+export type MainRunRoute = ApplicationMainRunRoute;
+export type MainRunRouteInput = ApplicationMainRunRouteInput;
 
 export function resolveMainRunRoute(input: MainRunRouteInput): MainRunRoute {
     if (input.isSingleAction) return 'single-action';

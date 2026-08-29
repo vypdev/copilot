@@ -40,6 +40,14 @@ describe('application architecture boundaries', () => {
             .join('\n');
         expect(applicationSources).not.toContain('GithubGraphqlTransportClient');
     });
+
+    it('keeps composition roots independent from entrypoint-owned contracts', () => {
+        const infrastructureRoot = join(__dirname, '../../infrastructure');
+        const infrastructureSources = productionTypeScriptFiles(infrastructureRoot)
+            .map((file) => readFileSync(file, 'utf8'))
+            .join('\n');
+        expect(infrastructureSources).not.toMatch(/from ['"][^'"]*(?:\.\.\/)+actions\//);
+    });
     it('keeps Execution independent from repository composition', () => {
         const executionSource = readFileSync(join(__dirname, '../../data/model/execution.ts'), 'utf8');
         expect(executionSource).not.toMatch(/RepositoryFactory|OrganizationRepository|Octokit(?:AuthenticatedUser|ActorAuthorization|OrganizationMembers)ClientAdapter/);
