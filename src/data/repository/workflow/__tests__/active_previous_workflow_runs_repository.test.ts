@@ -75,4 +75,42 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
     });
     expect(count).toBe(2);
   });
+
+  it('counts runs when Octokit pagination yields array pages', async () => {
+    const pages: GithubWorkflowRunsResponse[] = [
+      {
+        data: [
+          workflowRun({ id: 199, name: 'CI', status: WORKFLOW_STATUS.IN_PROGRESS }),
+          workflowRun({ id: 198, name: 'CI', status: WORKFLOW_STATUS.QUEUED }),
+        ],
+      },
+    ];
+    iterator.mockImplementation(async function* () {
+      yield* pages;
+    });
+    const repository = new ActivePreviousWorkflowRunsRepository(client);
+
+    const count = await repository.countActivePreviousRuns({
+      owner: 'org',
+      repository: 'repo',
+      currentRunId: 200,
+      workflowName: 'CI',
+    });
+
+    expect(count).toBe(2);
+  });
+
+  it('reports malformed workflow run pages clearly', async () => {
+    iterator.mockImplementation(async function* () {
+      yield { data: {} } as GithubWorkflowRunsResponse;
+    });
+    const repository = new ActivePreviousWorkflowRunsRepository(client);
+
+    await expect(repository.countActivePreviousRuns({
+      owner: 'org',
+      repository: 'repo',
+      currentRunId: 200,
+      workflowName: 'CI',
+    })).rejects.toThrow('GitHub workflow runs response did not contain a workflow_runs array.');
+  });
 });

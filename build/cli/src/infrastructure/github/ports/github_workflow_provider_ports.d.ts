@@ -6,7 +6,7 @@ export interface GithubWorkflowRunsParameters {
 export interface GithubWorkflowRunsResponse {
     data: {
         workflow_runs: GithubWorkflowRun[];
-    };
+    } | GithubWorkflowRun[];
 }
 export interface GithubWorkflowRunsClient {
     rest: {

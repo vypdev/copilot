@@ -4,5 +4,6 @@ export declare class ActivePreviousWorkflowRunsRepository implements PreviousWor
     private readonly client;
     constructor(client: GithubWorkflowRunsClient);
     countActivePreviousRuns(query: PreviousWorkflowRunsQuery): Promise<number>;
+    private extractWorkflowRuns;
     private isActivePreviousRun;
 }

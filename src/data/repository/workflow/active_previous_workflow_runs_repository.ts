@@ -1,5 +1,9 @@
 import type { PreviousWorkflowRunsQuery, PreviousWorkflowRunsQueryPort } from '../../../application/ports/workflow_run_ports';
-import type { GithubWorkflowRunsClient, GithubWorkflowRun } from '../../../infrastructure/github/ports/github_workflow_provider_ports';
+import type {
+    GithubWorkflowRunsClient,
+    GithubWorkflowRun,
+    GithubWorkflowRunsResponse,
+} from '../../../infrastructure/github/ports/github_workflow_provider_ports';
 import { WORKFLOW_ACTIVE_STATUSES } from '../../../utils/constants';
 
 export class ActivePreviousWorkflowRunsRepository implements PreviousWorkflowRunsQueryPort {
@@ -20,12 +24,24 @@ export class ActivePreviousWorkflowRunsRepository implements PreviousWorkflowRun
                 per_page: 100,
             },
         )) {
-            activeRunCount += response.data.workflow_runs.filter(
+            activeRunCount += this.extractWorkflowRuns(response).filter(
                 (run) => this.isActivePreviousRun(run, query),
             ).length;
         }
 
         return activeRunCount;
+    }
+
+    private extractWorkflowRuns(response: GithubWorkflowRunsResponse): GithubWorkflowRun[] {
+        if (Array.isArray(response.data)) {
+            return response.data;
+        }
+
+        if (Array.isArray(response.data.workflow_runs)) {
+            return response.data.workflow_runs;
+        }
+
+        throw new Error('GitHub workflow runs response did not contain a workflow_runs array.');
     }
 
     private isActivePreviousRun(run: GithubWorkflowRun, query: PreviousWorkflowRunsQuery): boolean {

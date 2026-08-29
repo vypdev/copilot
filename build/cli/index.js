@@ -67097,9 +67097,18 @@ class ActivePreviousWorkflowRunsRepository {
             repo: query.repository,
             per_page: 100,
         })) {
-            activeRunCount += response.data.workflow_runs.filter((run) => this.isActivePreviousRun(run, query)).length;
+            activeRunCount += this.extractWorkflowRuns(response).filter((run) => this.isActivePreviousRun(run, query)).length;
         }
         return activeRunCount;
+    }
+    extractWorkflowRuns(response) {
+        if (Array.isArray(response.data)) {
+            return response.data;
+        }
+        if (Array.isArray(response.data.workflow_runs)) {
+            return response.data.workflow_runs;
+        }
+        throw new Error('GitHub workflow runs response did not contain a workflow_runs array.');
     }
     isActivePreviousRun(run, query) {
         return run.name === query.workflowName
