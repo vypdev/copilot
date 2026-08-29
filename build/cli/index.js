@@ -61597,7 +61597,6 @@ const constants_1 = __nccwpck_require__(15415);
 const logger_1 = __nccwpck_require__(91151);
 const project_context_instruction_1 = __nccwpck_require__(63907);
 const cli_context_1 = __nccwpck_require__(21307);
-const command_input_policy_1 = __nccwpck_require__(95212);
 function registerDoCommand(program) {
     program
         .command('do')
@@ -61626,31 +61625,25 @@ function registerDoCommand(program) {
             (0, logger_1.logError)(gitInfo.error);
             process.exit(1);
         }
-        const prompt = (0, command_input_policy_1.joinCliArguments)(options.prompt);
-        if (!prompt || prompt.length === 0) {
+        const prompt = (0, do_policy_1.resolveDoPrompt)(options.prompt);
+        if (!prompt) {
             console.log('❌ Please provide a prompt using -p or --prompt');
             process.exitCode = 1;
             return;
         }
         const agentTasks = (0, do_policy_1.buildDoAgentTasks)(options);
-        const authPreflights = [
-            ['findings', agentTasks.findings],
-            ['fixer', agentTasks.fixer],
-        ];
-        for (const [task, configuration] of authPreflights) {
-            const authPreflight = (0, agent_authentication_preflight_1.runAgentAuthenticationPreflight)(configuration);
-            if (authPreflight.check.status !== 'missing')
-                continue;
-            if (authPreflight.shouldFail) {
-                console.error(`❌ ${task} agent: ${authPreflight.check.message}`);
-                process.exitCode = 1;
-                return;
-            }
-            if (authPreflight.mode === 'warn')
-                console.warn(`⚠️ ${task} agent: ${authPreflight.check.message}`);
+        const authenticationNotices = (0, do_policy_1.collectDoAuthenticationNotices)(agentTasks, agent_authentication_preflight_1.runAgentAuthenticationPreflight);
+        const authenticationError = authenticationNotices.find(({ severity }) => severity === 'error');
+        if (authenticationError) {
+            console.error(`❌ ${authenticationError.task} agent: ${authenticationError.message}`);
+            process.exitCode = 1;
+            return;
         }
-        const outputFormat = (0, command_input_policy_1.cleanCliArgument)(options.output) || 'text';
-        if (outputFormat !== 'text' && outputFormat !== 'json') {
+        authenticationNotices
+            .filter(({ severity }) => severity === 'warning')
+            .forEach(({ task, message }) => console.warn(`⚠️ ${task} agent: ${message}`));
+        const outputFormat = (0, do_policy_1.resolveDoOutputFormat)(options.output);
+        if (!outputFormat) {
             console.error('❌ Output format must be text or json.');
             process.exitCode = 1;
             return;
@@ -61668,17 +61661,10 @@ function registerDoCommand(program) {
             if (!result) {
                 console.error('❌ Request failed while executing the configured agent CLI.');
                 process.exit(1);
-            }
-            const { text, sessionId } = result;
-            if (outputFormat === 'json') {
-                console.log((0, do_policy_1.formatDoJsonResponse)(text, sessionId));
                 return;
             }
-            console.log('\n' + '='.repeat(80));
-            console.log('🤖 RESPONSE (selected agent build execution)');
-            console.log('='.repeat(80));
-            console.log(`\n${text || '(No text response)'}\n`);
-            console.log('Changes are applied directly in the workspace by the selected agent CLI.');
+            const { text, sessionId } = result;
+            console.log((0, do_policy_1.formatDoResponse)(text, sessionId, outputFormat));
         }
         catch (error) {
             const err = error instanceof Error ? error : new Error(String(error));
@@ -61701,7 +61687,12 @@ function registerDoCommand(program) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildDoAgentTasks = buildDoAgentTasks;
+exports.resolveDoPrompt = resolveDoPrompt;
+exports.resolveDoOutputFormat = resolveDoOutputFormat;
+exports.collectDoAuthenticationNotices = collectDoAuthenticationNotices;
 exports.formatDoJsonResponse = formatDoJsonResponse;
+exports.formatDoTextResponse = formatDoTextResponse;
+exports.formatDoResponse = formatDoResponse;
 const agent_configuration_builder_1 = __nccwpck_require__(81248);
 const agent_1 = __nccwpck_require__(89040);
 const command_input_policy_1 = __nccwpck_require__(95212);
@@ -61731,8 +61722,47 @@ function buildDoAgentTasks(options) {
         },
     });
 }
+function resolveDoPrompt(value) {
+    const prompt = (0, command_input_policy_1.joinCliArguments)(value);
+    return prompt.length > 0 ? prompt : undefined;
+}
+function resolveDoOutputFormat(value) {
+    const outputFormat = (0, command_input_policy_1.cleanCliArgument)(value) || 'text';
+    return outputFormat === 'text' || outputFormat === 'json' ? outputFormat : undefined;
+}
+/** Converts authentication preflight outcomes into CLI-neutral notices. */
+function collectDoAuthenticationNotices(agentTasks, runPreflight) {
+    const notices = [];
+    for (const [task, configuration] of [['findings', agentTasks.findings], ['fixer', agentTasks.fixer]]) {
+        const preflight = runPreflight(configuration);
+        if (preflight.check.status !== 'missing')
+            continue;
+        if (preflight.shouldFail) {
+            notices.push({ task, severity: 'error', message: preflight.check.message });
+        }
+        else if (preflight.mode === 'warn') {
+            notices.push({ task, severity: 'warning', message: preflight.check.message });
+        }
+    }
+    return notices;
+}
 function formatDoJsonResponse(text, sessionId) {
     return JSON.stringify({ response: text, sessionId }, null, 2);
+}
+function formatDoTextResponse(text) {
+    return `
+${'='.repeat(80)}
+🤖 RESPONSE (selected agent build execution)
+${'='.repeat(80)}
+
+${text || '(No text response)'}
+
+Changes are applied directly in the workspace by the selected agent CLI.`;
+}
+function formatDoResponse(text, sessionId, outputFormat) {
+    return outputFormat === 'json'
+        ? formatDoJsonResponse(text, sessionId)
+        : formatDoTextResponse(text);
 }
 
 
