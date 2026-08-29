@@ -61,6 +61,26 @@ describe('application architecture boundaries', () => {
         expect(modelSources).not.toMatch(/from ['"][^'"]*\/utils\//);
     });
 
+    it('keeps pure models free from application, adapter, and runtime dependencies', () => {
+        const pureSources = productionTypeScriptFiles(join(__dirname, '../../data/model'))
+            .concat(productionTypeScriptFiles(join(__dirname, '../../domain')))
+            .map((file) => ({ file, source: readFileSync(file, 'utf8') }));
+        const forbiddenPatterns = [
+            /from ['"][^'"]*\/application\//,
+            /from ['"][^'"]*\/infrastructure\//,
+            /from ['"][^'"]*\/actions\//,
+            /from ['"][^'"]*\/repository\//,
+            /from ['"]@actions\//,
+            /from ['"]@octokit\//,
+            /from ['"](?:node:)?(?:child_process|fs|os|path|http|https|net|tls|url)['"]/
+        ];
+        const violations = pureSources.flatMap(({ file, source }) => forbiddenPatterns
+            .filter((pattern) => pattern.test(source))
+            .map((pattern) => `${file}: ${pattern}`));
+
+        expect(violations).toEqual([]);
+    });
+
     it('keeps concrete logging out of application production code', () => {
         const applicationSources = productionTypeScriptFiles(applicationRoot)
             .map((file) => readFileSync(file, 'utf8'))
@@ -68,6 +88,7 @@ describe('application architecture boundaries', () => {
         expect(applicationSources).not.toMatch(/utils\/logger/);
         expect(applicationSources).not.toMatch(/console\.(log|warn|error)\s*\(/);
         expect(applicationSources).not.toMatch(/from ['"][^'"]*\/data\/repository\//);
+        expect(applicationSources).not.toMatch(/from ['"](?:node:)?(?:child_process|fs|os|path|http|https|net|tls)['"];/);
     });
 
     it('allows only side-effect-free shared utilities in application production code', () => {
