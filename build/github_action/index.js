@@ -57363,20 +57363,21 @@ exports.Ai = Ai;
 /***/ }),
 
 /***/ 71934:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BranchConfiguration = void 0;
+const model_input_1 = __nccwpck_require__(14637);
 class BranchConfiguration {
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- branch config from API */
     constructor(data) {
-        this.name = data['name'] ?? '';
-        this.oid = data['oid'] ?? '';
+        const input = (0, model_input_1.asModelInput)(data);
+        this.name = (0, model_input_1.readString)(input, 'name');
+        this.oid = (0, model_input_1.readString)(input, 'oid');
         this.children = [];
-        if (data['children'] !== undefined && data['children'].length > 0) {
-            for (const child of data['children']) {
+        if (Array.isArray(input['children'])) {
+            for (const child of input['children']) {
                 this.children.push(new BranchConfiguration(child));
             }
         }
@@ -57479,21 +57480,22 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Config = void 0;
 const branch_configuration_1 = __nccwpck_require__(71934);
 const recommendation_state_1 = __nccwpck_require__(68514);
+const model_input_1 = __nccwpck_require__(14637);
 class Config {
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- config from API */
     constructor(data) {
         this.results = [];
-        this.branchType = data['branchType'] ?? '';
-        this.hotfixOriginBranch = data['hotfixOriginBranch'];
-        this.hotfixBranch = data['hotfixBranch'];
-        this.releaseBranch = data['releaseBranch'];
-        this.parentBranch = data['parentBranch'];
-        this.workingBranch = data['workingBranch'];
-        if (data['branchConfiguration'] !== undefined) {
-            this.branchConfiguration = new branch_configuration_1.BranchConfiguration(data['branchConfiguration']);
+        const input = (0, model_input_1.asModelInput)(data);
+        this.branchType = (0, model_input_1.readString)(input, 'branchType');
+        this.hotfixOriginBranch = (0, model_input_1.readOptionalString)(input, 'hotfixOriginBranch');
+        this.hotfixBranch = (0, model_input_1.readOptionalString)(input, 'hotfixBranch');
+        this.releaseBranch = (0, model_input_1.readOptionalString)(input, 'releaseBranch');
+        this.parentBranch = (0, model_input_1.readOptionalString)(input, 'parentBranch');
+        this.workingBranch = (0, model_input_1.readOptionalString)(input, 'workingBranch');
+        if (input['branchConfiguration'] !== undefined && input['branchConfiguration'] !== null) {
+            this.branchConfiguration = new branch_configuration_1.BranchConfiguration(input['branchConfiguration']);
         }
-        if ((0, recommendation_state_1.isRecommendationState)(data['recommendationState'])) {
-            this.recommendationState = data['recommendationState'];
+        if ((0, recommendation_state_1.isRecommendationState)(input['recommendationState'])) {
+            this.recommendationState = input['recommendationState'];
         }
     }
 }
@@ -58091,6 +58093,30 @@ exports.Milestone = Milestone;
 
 /***/ }),
 
+/***/ 14637:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.asModelInput = asModelInput;
+exports.readString = readString;
+exports.readOptionalString = readOptionalString;
+function asModelInput(value) {
+    return value !== null && typeof value === 'object' && !Array.isArray(value)
+        ? value
+        : {};
+}
+function readString(input, key, fallback = '') {
+    return typeof input[key] === 'string' ? input[key] : fallback;
+}
+function readOptionalString(input, key) {
+    return typeof input[key] === 'string' ? input[key] : undefined;
+}
+
+
+/***/ }),
+
 /***/ 43630:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -58133,21 +58159,24 @@ function restorePreviousBranchState(previous, mode, releaseTree, hotfixTree) {
 /***/ }),
 
 /***/ 33428:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ProjectDetail = void 0;
+const model_input_1 = __nccwpck_require__(14637);
 class ProjectDetail {
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- project detail from API */
     constructor(data) {
-        this.id = data[`id`] ?? '';
-        this.title = data[`title`] ?? '';
-        this.type = data[`type`] ?? '';
-        this.owner = data[`owner`] ?? '';
-        this.url = data[`url`] ?? '';
-        this.number = data[`number`] ?? -1;
+        const input = (0, model_input_1.asModelInput)(data);
+        this.id = (0, model_input_1.readString)(input, 'id');
+        this.title = (0, model_input_1.readString)(input, 'title');
+        this.type = (0, model_input_1.readString)(input, 'type');
+        this.owner = (0, model_input_1.readString)(input, 'owner');
+        this.url = (0, model_input_1.readString)(input, 'url');
+        this.number = typeof input['number'] === 'number' && Number.isFinite(input['number'])
+            ? input['number']
+            : -1;
     }
     /**
      * Returns the full public URL to the project (board).

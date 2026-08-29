@@ -11,5 +11,5 @@ export declare class Config {
     results: Result[];
     branchConfiguration: BranchConfiguration | undefined;
     recommendationState: RecommendationState | undefined;
-    constructor(data: any);
+    constructor(data: unknown);
 }

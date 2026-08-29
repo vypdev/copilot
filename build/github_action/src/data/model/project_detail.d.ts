@@ -5,7 +5,7 @@ export declare class ProjectDetail {
     owner: string;
     url: string;
     number: number;
-    constructor(data: any);
+    constructor(data: unknown);
     /**
      * Returns the full public URL to the project (board).
      * Uses the URL from the API when present and valid; otherwise builds it from owner, type and number.
