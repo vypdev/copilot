@@ -1,9 +1,9 @@
 import { logDebugInfo } from '../../../utils/logger';
-import { IssueLabelRepository } from './issue_label_repository';
+import type { IssueLabelsPort } from '../../../application/ports/issue_management_ports';
 import { PROGRESS_LABEL_PATTERN } from '../../../application/policies/progress_labels';
 
 export class IssueProgressLabelRepository {
-    constructor(private readonly issueLabelRepository: IssueLabelRepository) {}
+    constructor(private readonly issueLabelRepository: Pick<IssueLabelsPort, 'getLabels' | 'setLabels'>) {}
 
     setProgressLabel = async (
         owner: string,

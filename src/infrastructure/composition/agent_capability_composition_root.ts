@@ -8,13 +8,11 @@ import { FixerAgentAdapter } from '../../data/repository/ai/fixer_agent_adapter'
 
 export interface AgentCapabilityCompositionInfrastructure {
     readonly cli: AgentCliPort;
-
 }
 
 function defaultInfrastructure(): AgentCapabilityCompositionInfrastructure {
     return {
         cli: new AgentCliClient(),
-
     };
 }
 

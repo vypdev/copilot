@@ -20,6 +20,7 @@ import { Tokens } from "./tokens";
 import { Welcome } from "./welcome";
 import { Workflows } from "./workflows";
 import type { ExecutionInputs } from './execution_inputs';
+import type { ExecutionComponents } from './execution_components';
 
 
 export class Execution {
@@ -161,49 +162,28 @@ export class Execution {
         return this.tokenUser === this.actor;
     }
 
-    constructor(
-        debug: boolean,
-        singleAction: SingleAction,
-        commitPrefixBuilder: string,
-        issue: Issue,
-        pullRequest: PullRequest,
-        emoji: Emoji,
-        giphy: Images,
-        tokens: Tokens,
-        ai: Ai,
-        labels: Labels,
-        issueTypes: IssueTypes,
-        locale: Locale,
-        sizeThresholds: SizeThresholds,
-        branches: Branches,
-        release: Release,
-        hotfix: Hotfix,
-        workflows: Workflows,
-        project: Projects,
-        welcome: Welcome | undefined,
-        inputs: ExecutionInputs | undefined
-    ) {
-        this.debug = debug;
-        this.singleAction = singleAction;
-        this.commitPrefixBuilder = commitPrefixBuilder;
-        this.issue = issue;
-        this.pullRequest = pullRequest;
-        this.images = giphy;
-        this.tokens = tokens;
-        this.ai = ai;
-        this.emoji = emoji;
-        this.labels = labels;
-        this.issueTypes = issueTypes;
-        this.locale = locale;
-        this.sizeThresholds = sizeThresholds;
-        this.branches = branches;
-        this.release = release;
-        this.hotfix = hotfix;
-        this.project = project;
-        this.workflows = workflows;
+    constructor(components: ExecutionComponents) {
+        this.debug = components.debug;
+        this.singleAction = components.singleAction;
+        this.commitPrefixBuilder = components.commitPrefixBuilder;
+        this.issue = components.issue;
+        this.pullRequest = components.pullRequest;
+        this.images = components.images;
+        this.tokens = components.tokens;
+        this.ai = components.ai;
+        this.emoji = components.emoji;
+        this.labels = components.labels;
+        this.issueTypes = components.issueTypes;
+        this.locale = components.locale;
+        this.sizeThresholds = components.sizeThresholds;
+        this.branches = components.branches;
+        this.release = components.release;
+        this.hotfix = components.hotfix;
+        this.project = components.projects;
+        this.workflows = components.workflows;
         this.currentConfiguration = new Config({});
-        this.inputs = inputs;
-        this.welcome = welcome;
+        this.inputs = components.inputs;
+        this.welcome = components.welcome;
     }
 
 }

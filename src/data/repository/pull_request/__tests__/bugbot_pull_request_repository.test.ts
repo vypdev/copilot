@@ -1,12 +1,18 @@
 import { BugbotPullRequestRepository } from "../bugbot_pull_request_repository";
+import type { BugbotPullRequestReadPort } from "../../../../application/ports/bugbot_pull_request_read_ports";
+import type {
+  PullRequestReviewCommentCommandPort,
+  PullRequestReviewCommentQueryPort,
+  PullRequestReviewThreadCommandPort,
+} from "../../../../application/ports/pull_request_review_comment_ports";
 
 describe("BugbotPullRequestRepository capabilities", () => {
   it("delegates every operation to its independently injected capability", async () => {
-    const lifecycle = {
+    const lifecycle: Pick<BugbotPullRequestReadPort, "getHeadBranchForIssue" | "getOpenPullRequestNumbersByHeadBranch"> = {
       getHeadBranchForIssue: jest.fn().mockResolvedValue("feature/9"),
       getOpenPullRequestNumbersByHeadBranch: jest.fn().mockResolvedValue([9]),
     };
-    const changes = {
+    const changes: Pick<BugbotPullRequestReadPort, "getPullRequestHeadSha" | "getChangedFiles" | "getFilesWithFirstDiffLine"> = {
       getPullRequestHeadSha: jest.fn().mockResolvedValue("sha"),
       getChangedFiles: jest
         .fn()
@@ -15,22 +21,22 @@ describe("BugbotPullRequestRepository capabilities", () => {
         .fn()
         .mockResolvedValue([{ path: "src/file.ts", firstLine: 1 }]),
     };
-    const reviewQuery = {
+    const reviewQuery: PullRequestReviewCommentQueryPort = {
       getPullRequestReviewCommentBody: jest.fn().mockResolvedValue("body"),
       listPullRequestReviewComments: jest
         .fn()
         .mockResolvedValue([{ id: 7, identity: "PRRC_7", body: "body" }]),
     };
-    const reviewCommand = {
+    const reviewCommand: PullRequestReviewCommentCommandPort = {
       createReviewWithComments: jest.fn().mockResolvedValue(undefined),
       updatePullRequestReviewComment: jest.fn().mockResolvedValue(undefined),
     };
-    const threadCommand = {
+    const threadCommand: PullRequestReviewThreadCommandPort = {
       resolvePullRequestReviewThread: jest.fn().mockResolvedValue(undefined),
     };
     const repository = new BugbotPullRequestRepository(
-      lifecycle as never,
-      changes as never,
+      lifecycle,
+      changes,
       reviewQuery,
       reviewCommand,
       threadCommand,

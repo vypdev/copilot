@@ -34,4 +34,24 @@ describe('repository facade composition boundaries', () => {
 
         expect(violations).toEqual([]);
     });
+
+    it('keeps capability facades dependent on semantic ports instead of sibling adapters', () => {
+        const sourceRoot = join(__dirname, '../../..');
+        const facadeFiles = [
+            'data/repository/issue/bugbot_issue_repository.ts',
+            'data/repository/issue/execution_issue_setup_repository.ts',
+            'data/repository/issue/issue_closure_repository.ts',
+            'data/repository/issue/issue_notification_repository.ts',
+            'data/repository/issue/issue_progress_label_repository.ts',
+            'data/repository/issue/issue_progress_tracking_repository.ts',
+            'data/repository/pull_request/bugbot_pull_request_repository.ts',
+        ];
+        const forbiddenSiblingImports = /from ['"][^'"]*\/(?:issue_content_repository|issue_label_repository|issue_lifecycle_repository|issue_metadata_repository|issue_progress_label_repository|pull_request_changes_repository|pull_request_lifecycle_repository)['"];/;
+        const violations = facadeFiles
+            .map((relativePath) => ({ relativePath, source: readFileSync(join(sourceRoot, relativePath), 'utf8') }))
+            .filter(({ source }) => forbiddenSiblingImports.test(source))
+            .map(({ relativePath }) => relativePath);
+
+        expect(violations).toEqual([]);
+    });
 });

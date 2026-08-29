@@ -186,28 +186,27 @@ function buildExecution(inputs?: Record<string, unknown>, overrides?: Partial<{
 }>): Execution {
   const labels = overrides?.labels ?? makeLabels();
   const branches = overrides?.branches ?? makeBranches();
-  return new Execution(
-    false,
-    overrides?.singleAction ?? new SingleAction('', '', '', '', ''),
-    'prefix',
-    overrides?.issue ?? makeIssue(inputs),
-    overrides?.pullRequest ?? makePullRequest(inputs),
-    new Emoji(false, ''),
-    makeImages(),
-    new Tokens('token'),
-    new Ai('http://localhost', 'model', false, false, [], false, 'High', 10, []),
+  return new Execution({
+    debug: false,
+    singleAction: overrides?.singleAction ?? new SingleAction('', '', '', '', ''),
+    commitPrefixBuilder: 'prefix',
+    issue: overrides?.issue ?? makeIssue(inputs),
+    pullRequest: overrides?.pullRequest ?? makePullRequest(inputs),
+    emoji: new Emoji(false, ''),
+    images: makeImages(),
+    tokens: new Tokens('token'),
+    ai: new Ai('http://localhost', 'model', false, false, [], false, 'High', 10, []),
     labels,
-    makeIssueTypes(),
-    new Locale('en', 'en'),
-    makeSizeThresholds(),
+    issueTypes: makeIssueTypes(),
+    locale: new Locale('en', 'en'),
+    sizeThresholds: makeSizeThresholds(),
     branches,
-    new Release(),
-    new Hotfix(),
-    new Workflows('release-wf', 'hotfix-wf'),
-    new Projects([new ProjectDetail({})], '', '', '', ''),
-    undefined,
-    inputs as never,
-  );
+    release: new Release(),
+    hotfix: new Hotfix(),
+    workflows: new Workflows('release-wf', 'hotfix-wf'),
+    projects: new Projects([new ProjectDetail({})], '', '', '', ''),
+    inputs: inputs as never,
+  });
 }
 
 const branchRepository = { getLatestTag: mockGetLatestTag } as unknown as LatestTagQueryPort;
@@ -414,14 +413,14 @@ describe('Execution', () => {
       const workflows = new Workflows('r', 'h');
       const project = new Projects([], 'a', 'b', 'c', 'd');
 
-      const e = new Execution(
-        true,
+      const e = new Execution({
+        debug: true,
         singleAction,
-        'pre',
+        commitPrefixBuilder: 'pre',
         issue,
         pullRequest,
         emoji,
-        makeImages(),
+        images: makeImages(),
         tokens,
         ai,
         labels,
@@ -432,10 +431,9 @@ describe('Execution', () => {
         release,
         hotfix,
         workflows,
-        project,
-        undefined,
-        { eventName: 'push' } as never,
-      );
+        projects: project,
+        inputs: { eventName: 'push' },
+      });
 
       expect(e.debug).toBe(true);
       expect(e.singleAction).toBe(singleAction);

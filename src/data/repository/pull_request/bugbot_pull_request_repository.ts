@@ -7,9 +7,6 @@ import type {
   PullRequestReviewCommentQueryPort,
   PullRequestReviewThreadCommandPort,
 } from "../../../application/ports/pull_request_review_comment_ports";
-import type { PullRequestChangesRepository } from "./pull_request_changes_repository";
-import type { PullRequestLifecycleRepository } from "./pull_request_lifecycle_repository";
-
 export class BugbotPullRequestRepository
   implements
     BugbotPullRequestReadPort,
@@ -17,8 +14,8 @@ export class BugbotPullRequestRepository
     BugbotPullRequestResolutionPort
 {
   constructor(
-    private readonly lifecycle: PullRequestLifecycleRepository,
-    private readonly changes: PullRequestChangesRepository,
+    private readonly lifecycle: Pick<BugbotPullRequestReadPort, "getHeadBranchForIssue" | "getOpenPullRequestNumbersByHeadBranch">,
+    private readonly changes: Pick<BugbotPullRequestReadPort, "getPullRequestHeadSha" | "getChangedFiles" | "getFilesWithFirstDiffLine">,
     private readonly reviewQuery: PullRequestReviewCommentQueryPort,
     private readonly reviewCommand: PullRequestReviewCommentCommandPort,
     private readonly threadCommand: PullRequestReviewThreadCommandPort,
