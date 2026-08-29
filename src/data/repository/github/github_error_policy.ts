@@ -13,23 +13,26 @@ export const getGithubErrorStatus = (error: unknown): number | undefined => {
 export const isGithubNotFound = (error: unknown): boolean => getGithubErrorStatus(error) === 404;
 
 export const isGithubAlreadyExists = (error: unknown): boolean => {
-    const shape = typeof error === "object" && error !== null ? (error as GithubErrorShape) : undefined;
     if (getGithubErrorStatus(error) !== 422) return false;
-
-    const responseData = typeof shape?.response === "object" && shape.response !== null && "data" in shape.response
-        ? shape.response.data
-        : undefined;
-    const validationErrors = typeof responseData === "object" && responseData !== null && "errors" in responseData
-        ? responseData.errors
-        : undefined;
-    const hasAlreadyExistsCode = Array.isArray(validationErrors) && validationErrors.some(validationError => (
-        typeof validationError === "object"
-        && validationError !== null
-        && "code" in validationError
-        && validationError.code === "already_exists"
-    ));
-    const message = typeof shape?.message === "string" ? shape.message.toLowerCase() : "";
-    return hasAlreadyExistsCode
-        || message.includes("already exists")
-        || message.includes("already_exists");
+    return hasAlreadyExistsValidationCode(error) || hasAlreadyExistsMessage(error);
 };
+
+function hasAlreadyExistsValidationCode(error: unknown): boolean {
+    const responseData = readRecord(readRecord(error)?.response)?.data;
+    const validationErrors = readRecord(responseData)?.errors;
+    return Array.isArray(validationErrors)
+        && validationErrors.some((validationError) => readRecord(validationError)?.code === "already_exists");
+}
+
+function hasAlreadyExistsMessage(error: unknown): boolean {
+    const message = readRecord(error)?.message;
+    if (typeof message !== "string") return false;
+    const normalized = message.toLowerCase();
+    return normalized.includes("already exists") || normalized.includes("already_exists");
+}
+
+function readRecord(value: unknown): Record<string, unknown> | undefined {
+    return typeof value === "object" && value !== null && !Array.isArray(value)
+        ? value as Record<string, unknown>
+        : undefined;
+}

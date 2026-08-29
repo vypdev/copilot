@@ -18,17 +18,14 @@ export class IssueTitleRepository implements IssueTitlePort {
         owner: string, repository: string, version: string, issueTitle: string, issueNumber: number,
         branchManagementAlways: boolean, branchManagementEmoji: string, labels: Labels, token: string,
     ): Promise<string | undefined> => {
-        try {
+        return this.updateTitleWithLogging(() => {
             const emoji = resolveIssueTitleEmoji(labels, branchManagementAlways, branchManagementEmoji);
             const sanitizedTitle = sanitizeIssueTitle(issueTitle);
             const formattedTitle = version.length > 0
                 ? `${emoji} - ${version} - ${sanitizedTitle}`
                 : `${emoji} - ${sanitizedTitle}`;
             return this.updateTitle(owner, repository, issueTitle, formattedTitle, issueNumber, token);
-        } catch (error) {
-            logError(`Failed to check or update issue title: ${error}`);
-            throw error;
-        }
+        });
     };
 
     updateTitlePullRequestFormat = async (
@@ -36,27 +33,32 @@ export class IssueTitleRepository implements IssueTitlePort {
         pullRequestNumber: number, branchManagementAlways: boolean, branchManagementEmoji: string,
         labels: Labels, token: string,
     ): Promise<string | undefined> => {
-        try {
+        return this.updateTitleWithLogging(() => {
             const emoji = resolvePullRequestTitleEmoji(labels, branchManagementAlways, branchManagementEmoji);
             const formattedTitle = `[#${issueNumber}] ${emoji} - ${sanitizePullRequestTitle(issueTitle)}`;
             return this.updateTitle(owner, repository, pullRequestTitle, formattedTitle, pullRequestNumber, token);
-        } catch (error) {
-            logError(`Failed to check or update issue title: ${error}`);
-            throw error;
-        }
+        });
     };
 
     cleanTitle = async (
         owner: string, repository: string, issueTitle: string, issueNumber: number, token: string,
     ): Promise<string | undefined> => {
-        try {
+        return this.updateTitleWithLogging(() => {
             const sanitizedTitle = sanitizePullRequestTitle(issueTitle);
             return this.updateTitle(owner, repository, issueTitle, sanitizedTitle, issueNumber, token);
+        });
+    };
+
+    private async updateTitleWithLogging(
+        update: () => Promise<string | undefined>,
+    ): Promise<string | undefined> {
+        try {
+            return await update();
         } catch (error) {
             logError(`Failed to check or update issue title: ${error}`);
             throw error;
         }
-    };
+    }
 
     private async updateTitle(
         owner: string,

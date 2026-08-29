@@ -1,10 +1,10 @@
 import { logDebugInfo, logError } from "../../../utils/logger";
 import { Labels } from "../../model/labels";
 import { IssueTypes } from "../../model/issue_types";
+import { selectIssueType } from './issue_type_assignment_policy';
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type { GithubGraphqlTransportClient } from "../../../infrastructure/github/ports/github_graphql_transport_port";
 
-type SelectedIssueType = { name: string; description: string; color: string };
 type GetIssueId = (owner: string, repository: string, issueNumber: number, token: string) => Promise<string>;
 
 export class IssueTypeAssignmentRepository {
@@ -22,7 +22,7 @@ export class IssueTypeAssignmentRepository {
         token: string,
     ): Promise<void> => {
         try {
-            const selected = this.selectIssueType(labels, issueTypes);
+            const selected = selectIssueType(labels, issueTypes);
             const octokit = this.graphqlClient.getClient(token);
             logDebugInfo(`Setting issue type for issue ${issueNumber} to ${selected.name}`);
 
@@ -73,20 +73,4 @@ export class IssueTypeAssignmentRepository {
             throw error;
         }
     };
-
-    private selectIssueType(labels: Labels, issueTypes: IssueTypes): SelectedIssueType {
-        if (labels.isHotfix) return this.selected(issueTypes.hotfix, issueTypes.hotfixDescription, issueTypes.hotfixColor);
-        if (labels.isRelease) return this.selected(issueTypes.release, issueTypes.releaseDescription, issueTypes.releaseColor);
-        if (labels.isDocs || labels.isDocumentation) return this.selected(issueTypes.documentation, issueTypes.documentationDescription, issueTypes.documentationColor);
-        if (labels.isChore || labels.isMaintenance) return this.selected(issueTypes.maintenance, issueTypes.maintenanceDescription, issueTypes.maintenanceColor);
-        if (labels.isBugfix || labels.isBug) return this.selected(issueTypes.bug, issueTypes.bugDescription, issueTypes.bugColor);
-        if (labels.isFeature || labels.isEnhancement) return this.selected(issueTypes.feature, issueTypes.featureDescription, issueTypes.featureColor);
-        if (labels.isHelp) return this.selected(issueTypes.help, issueTypes.helpDescription, issueTypes.helpColor);
-        if (labels.isQuestion) return this.selected(issueTypes.question, issueTypes.questionDescription, issueTypes.questionColor);
-        return this.selected(issueTypes.task, issueTypes.taskDescription, issueTypes.taskColor);
-    }
-
-    private selected(name: string, description: string, color: string): SelectedIssueType {
-        return { name, description, color };
-    }
 }

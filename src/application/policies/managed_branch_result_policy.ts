@@ -25,25 +25,27 @@ export interface ManagedBranchPresentation {
 export function readManagedBranchCreationPayload(
   payload: unknown,
 ): ManagedBranchCreationPayload | undefined {
-  if (typeof payload !== "object" || payload === null || Array.isArray(payload)) return undefined;
-  const value = payload as Record<string, unknown>;
-  if (
-    typeof value.baseBranchName !== "string" ||
-    typeof value.baseBranchUrl !== "string" ||
-    typeof value.newBranchName !== "string" ||
-    typeof value.newBranchUrl !== "string" ||
-    value.baseBranchName.length === 0 ||
-    value.baseBranchUrl.length === 0 ||
-    value.newBranchName.length === 0 ||
-    value.newBranchUrl.length === 0
-  ) return undefined;
+  if (!isRecord(payload)) return undefined;
+  const baseBranchName = readRequiredText(payload.baseBranchName);
+  const baseBranchUrl = readRequiredText(payload.baseBranchUrl);
+  const newBranchName = readRequiredText(payload.newBranchName);
+  const newBranchUrl = readRequiredText(payload.newBranchUrl);
+  if (!baseBranchName || !baseBranchUrl || !newBranchName || !newBranchUrl) return undefined;
 
   return {
-    baseBranchName: value.baseBranchName,
-    baseBranchUrl: value.baseBranchUrl,
-    newBranchName: value.newBranchName,
-    newBranchUrl: value.newBranchUrl,
+    baseBranchName,
+    baseBranchUrl,
+    newBranchName,
+    newBranchUrl,
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readRequiredText(value: unknown): string | undefined {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
 export function buildManagedBranchPresentation(
