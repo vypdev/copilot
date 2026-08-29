@@ -1,4 +1,4 @@
-import { createLoggerAdapter } from '../logger_adapter';
+import { createLogReportAdapter, createLoggerAdapter } from '../logger_adapter';
 
 jest.mock('../../../utils/logger', () => ({
     clearAccumulatedLogs: jest.fn(),
@@ -21,7 +21,13 @@ describe('logger adapter', () => {
 
         expect(adapter.logInfo).toBe(runtimeLogger.logInfo);
         expect(adapter.logError).toBe(runtimeLogger.logError);
-        expect(adapter.clearAccumulatedLogs).toBe(runtimeLogger.clearAccumulatedLogs);
-        expect(adapter.getAccumulatedLogsAsText).toBe(runtimeLogger.getAccumulatedLogsAsText);
+    });
+
+    it('exposes accumulated diagnostics through a separate report port', () => {
+        const runtimeLogger = require('../../../utils/logger') as Record<string, jest.Mock>;
+        const report = createLogReportAdapter();
+
+        expect(report.clearAccumulatedLogs).toBe(runtimeLogger.clearAccumulatedLogs);
+        expect(report.getAccumulatedLogsAsText).toBe(runtimeLogger.getAccumulatedLogsAsText);
     });
 });

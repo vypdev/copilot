@@ -13,6 +13,11 @@ jest.mock('../../../../../utils/list_utils', () => ({
 }));
 
 const mockAddComment = jest.fn();
+const logReport = {
+  getAccumulatedLogEntries: jest.fn(() => []),
+  getAccumulatedLogsAsText: () => mockGetAccumulatedLogsAsText(),
+  clearAccumulatedLogs: jest.fn(),
+};
 
 function baseParam(overrides: Record<string, unknown> = {}) {
   const defaultConfig = { results: [new Result({ id: 'x', success: true, executed: true, steps: ['Step 1'] })] };
@@ -59,7 +64,10 @@ describe('PublishResultUseCase', () => {
   let useCase: PublishResultUseCase;
 
   beforeEach(() => {
-    useCase = new PublishResultUseCase({ addComment: mockAddComment, openIssue: jest.fn() });
+    useCase = new PublishResultUseCase(
+      { addComment: mockAddComment, openIssue: jest.fn() },
+      logReport,
+    );
     mockAddComment.mockReset();
     mockGetAccumulatedLogsAsText.mockReturnValue('');
   });

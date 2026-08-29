@@ -1,7 +1,5 @@
 import {
-    clearAccumulatedLogs,
     configureApplicationLogger,
-    getAccumulatedLogsAsText,
     logError,
     logInfo,
     resetApplicationLogger,
@@ -20,19 +18,13 @@ describe('application logging port', () => {
             logDebugWarning: jest.fn(),
             logDebugError: jest.fn(),
             setGlobalLoggerDebug: jest.fn(),
-            getAccumulatedLogEntries: jest.fn().mockReturnValue([]),
-            getAccumulatedLogsAsText: jest.fn().mockReturnValue('logs'),
-            clearAccumulatedLogs: jest.fn(),
         };
 
         configureApplicationLogger(logger);
         logInfo('message');
         logError('failure');
-        clearAccumulatedLogs();
 
         expect(logger.logInfo).toHaveBeenCalledWith('message', false, undefined, undefined);
         expect(logger.logError).toHaveBeenCalledWith('failure', undefined);
-        expect(logger.clearAccumulatedLogs).toHaveBeenCalledTimes(1);
-        expect(getAccumulatedLogsAsText()).toBe('logs');
     });
 });

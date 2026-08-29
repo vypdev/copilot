@@ -1,4 +1,7 @@
-import type { ApplicationLoggingPort } from '../../application/ports/logging_ports';
+import type {
+    ApplicationLogReportPort,
+    ApplicationLoggingPort,
+} from '../../application/ports/logging_ports';
 import {
     clearAccumulatedLogs,
     getAccumulatedLogEntries,
@@ -24,6 +27,11 @@ export function createLoggerAdapter(): ApplicationLoggingPort {
         logDebugWarning,
         logDebugError,
         setGlobalLoggerDebug,
+    };
+}
+
+export function createLogReportAdapter(): ApplicationLogReportPort {
+    return {
         getAccumulatedLogEntries,
         getAccumulatedLogsAsText,
         clearAccumulatedLogs,

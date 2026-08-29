@@ -9,8 +9,8 @@ export interface ApplicationLogEntry {
  * Semantic logging capability required by application workflows.
  *
  * The application knows how to report progress and failures, but not how
- * those records are rendered or accumulated by a runtime. Infrastructure
- * installs the concrete implementation at the lifecycle boundary.
+ * those records are rendered by a runtime. Infrastructure installs the
+ * concrete implementation at the lifecycle boundary.
  */
 export interface ApplicationLoggingPort {
     logInfo(
@@ -26,6 +26,14 @@ export interface ApplicationLoggingPort {
     logDebugWarning(message: string): void;
     logDebugError(message: unknown): void;
     setGlobalLoggerDebug(debug: boolean, isRemote?: boolean): void;
+}
+
+/**
+ * Separate output/report capability used by the outer lifecycle when it
+ * needs to publish accumulated diagnostics. Application use cases should
+ * not depend on report storage just to log a message.
+ */
+export interface ApplicationLogReportPort {
     getAccumulatedLogEntries(): ApplicationLogEntry[];
     getAccumulatedLogsAsText(): string;
     clearAccumulatedLogs(): void;
@@ -40,9 +48,6 @@ const noopLogger: ApplicationLoggingPort = {
     logDebugWarning: () => undefined,
     logDebugError: () => undefined,
     setGlobalLoggerDebug: () => undefined,
-    getAccumulatedLogEntries: () => [],
-    getAccumulatedLogsAsText: () => '',
-    clearAccumulatedLogs: () => undefined,
 };
 
 let activeLogger: ApplicationLoggingPort = noopLogger;
@@ -92,16 +97,4 @@ export function logDebugError(message: unknown): void {
 
 export function setGlobalLoggerDebug(debug: boolean, isRemote = false): void {
     activeLogger.setGlobalLoggerDebug(debug, isRemote);
-}
-
-export function getAccumulatedLogEntries(): ApplicationLogEntry[] {
-    return activeLogger.getAccumulatedLogEntries();
-}
-
-export function getAccumulatedLogsAsText(): string {
-    return activeLogger.getAccumulatedLogsAsText();
-}
-
-export function clearAccumulatedLogs(): void {
-    activeLogger.clearAccumulatedLogs();
 }

@@ -7,6 +7,7 @@ import { PublishResultUseCase } from '../application/usecases/steps/common/publi
 import { StoreConfigurationUseCase } from '../application/usecases/steps/common/store_configuration_use_case';
 
 import { logInfo } from '../utils/logger';
+import { createLogReportAdapter } from '../infrastructure/logging/logger_adapter';
 
 export async function finishGithubAction(
     execution: Execution,
@@ -19,7 +20,7 @@ export async function finishGithubAction(
     logInfo(`Publishing result: ${results.length} result(s), ${stepCount} step(s), ${errorCount} error(s).`);
 
     execution.currentConfiguration.results = results;
-    await new PublishResultUseCase(issueNotificationPort).invoke(execution);
+    await new PublishResultUseCase(issueNotificationPort, createLogReportAdapter()).invoke(execution);
     commitPublishedRecommendationState(execution, results);
     await new StoreConfigurationUseCase(configurationStorePort).invoke(execution);
     logInfo('Configuration stored. Finishing.');

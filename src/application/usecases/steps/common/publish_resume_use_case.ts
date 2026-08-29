@@ -1,8 +1,9 @@
 import { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
 import type { IssueNotificationPort } from "../../../ports/issue_lifecycle_ports";
+import type { ApplicationLogReportPort } from "../../../ports/logging_ports";
 import { getRandomElement } from "../../../../utils/list_utils";
-import { getAccumulatedLogsAsText, logError, logInfo } from "../../../ports/logging_ports";
+import { logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import {
     buildDebugLogSection,
@@ -17,7 +18,14 @@ import { ParamUseCase } from "../../base/param_usecase";
  */
 export class PublishResultUseCase implements ParamUseCase<Execution, void> {
     taskId: string = 'PublishResultUseCase';
-    constructor(private readonly issueNotificationPort: IssueNotificationPort) {}
+    constructor(
+        private readonly issueNotificationPort: IssueNotificationPort,
+        private readonly logReport: ApplicationLogReportPort = {
+            getAccumulatedLogEntries: () => [],
+            getAccumulatedLogsAsText: () => '',
+            clearAccumulatedLogs: () => undefined,
+        },
+    ) {}
 
     async invoke(param: Execution): Promise<void> {
         logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`)
@@ -36,7 +44,7 @@ export class PublishResultUseCase implements ParamUseCase<Execution, void> {
                 images: param.images,
             }, getRandomElement);
             const sections = renderResultSections(param.currentConfiguration.results);
-            const debugLogSection = buildDebugLogSection(param.debug, getAccumulatedLogsAsText());
+            const debugLogSection = buildDebugLogSection(param.debug, this.logReport.getAccumulatedLogsAsText());
             const imageMarkdown = presentation.image && (
                 (param.isIssue && param.images.imagesOnIssue)
                 || (param.isPullRequest && param.images.imagesOnPullRequest)
