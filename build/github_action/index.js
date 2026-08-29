@@ -52714,6 +52714,59 @@ function deduplicateFindings(findings) {
 
 /***/ }),
 
+/***/ 14796:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.selectBugbotCommentBody = selectBugbotCommentBody;
+exports.buildUnresolvedFindingSummaries = buildUnresolvedFindingSummaries;
+exports.parseBugbotFixIntentResponse = parseBugbotFixIntentResponse;
+const marker_1 = __nccwpck_require__(62274);
+/** Selects the user-authored comment that can trigger intent detection. */
+function selectBugbotCommentBody(sources) {
+    if (sources.issue.isIssueComment)
+        return sources.issue.commentBody ?? "";
+    if (sources.pullRequest.isPullRequestReviewComment) {
+        return sources.pullRequest.commentBody ?? "";
+    }
+    return "";
+}
+/** Converts bounded finding context into the stable shape consumed by the intent prompt. */
+function buildUnresolvedFindingSummaries(findings) {
+    return findings.map((finding) => ({
+        id: finding.id,
+        title: (0, marker_1.extractTitleFromBody)(finding.fullBody ?? null) || finding.id,
+        description: finding.fullBody?.slice(0, 4000) ?? "",
+    }));
+}
+/**
+ * Validates the agent's structured response and enforces the application invariants:
+ * only unresolved, explicitly requested findings can reach the autofix flow.
+ */
+function parseBugbotFixIntentResponse(response, unresolvedFindingIds) {
+    if (typeof response !== "object" || response === null || Array.isArray(response)) {
+        return undefined;
+    }
+    const payload = response;
+    const isFixRequest = payload.is_fix_request === true;
+    const isDoRequest = payload.is_do_request === true;
+    const requestedIds = Array.isArray(payload.target_finding_ids)
+        ? payload.target_finding_ids.filter((id) => typeof id === "string")
+        : [];
+    const targetFindingIds = isFixRequest
+        ? unique(requestedIds.filter((id) => unresolvedFindingIds.has(id)))
+        : [];
+    return { isFixRequest, isDoRequest, targetFindingIds };
+}
+function unique(values) {
+    return [...new Set(values)];
+}
+
+
+/***/ }),
+
 /***/ 76234:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -52727,9 +52780,9 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const result_1 = __nccwpck_require__(73817);
 const build_bugbot_fix_intent_prompt_1 = __nccwpck_require__(18799);
-const marker_1 = __nccwpck_require__(62274);
 const load_bugbot_context_use_case_1 = __nccwpck_require__(4050);
 const schema_1 = __nccwpck_require__(16808);
+const detect_bugbot_fix_intent_policy_1 = __nccwpck_require__(14796);
 const TASK_ID = "DetectBugbotFixIntentUseCase";
 /**
  * Asks the configured findings agent whether the user comment is a request to fix one or more
@@ -52756,11 +52809,7 @@ class DetectBugbotFixIntentUseCase {
             (0, logging_ports_1.logInfo)("No issue number; skipping bugbot fix intent detection.");
             return results;
         }
-        const commentBody = param.issue.isIssueComment
-            ? param.issue.commentBody
-            : param.pullRequest.isPullRequestReviewComment
-                ? param.pullRequest.commentBody
-                : "";
+        const commentBody = (0, detect_bugbot_fix_intent_policy_1.selectBugbotCommentBody)(param);
         if (!commentBody?.trim()) {
             (0, logging_ports_1.logInfo)("No comment body; skipping bugbot fix intent detection.");
             return results;
@@ -52783,12 +52832,8 @@ class DetectBugbotFixIntentUseCase {
             (0, logging_ports_1.logInfo)("No unresolved bugbot findings for this issue/PR; skipping bugbot fix intent detection.");
             return results;
         }
-        const unresolvedIds = unresolvedWithBody.map((p) => p.id);
-        const unresolvedFindings = unresolvedWithBody.map((p) => ({
-            id: p.id,
-            title: (0, marker_1.extractTitleFromBody)(p.fullBody) || p.id,
-            description: p.fullBody?.slice(0, 4000) ?? "",
-        }));
+        const unresolvedIds = new Set(unresolvedWithBody.map((finding) => finding.id));
+        const unresolvedFindings = (0, detect_bugbot_fix_intent_policy_1.buildUnresolvedFindingSummaries)(unresolvedWithBody);
         // When user replied in a PR thread, include parent comment so the agent knows which finding they mean.
         let parentCommentBody;
         if (param.pullRequest.isPullRequestReviewComment && param.pullRequest.commentInReplyToId) {
@@ -52808,7 +52853,8 @@ class DetectBugbotFixIntentUseCase {
                 schemaName: 'bugbot_fix_intent',
             },
         });
-        if (response == null || typeof response !== "object") {
+        const intent = (0, detect_bugbot_fix_intent_policy_1.parseBugbotFixIntentResponse)(response, unresolvedIds);
+        if (!intent) {
             (0, logging_ports_1.logInfo)("No response from configured agent for fix intent.");
             results.push(new result_1.Result({
                 id: this.taskId,
@@ -52819,24 +52865,14 @@ class DetectBugbotFixIntentUseCase {
             }));
             return results;
         }
-        const payload = response;
-        const isFixRequest = payload.is_fix_request === true;
-        const isDoRequest = payload.is_do_request === true;
-        const targetFindingIds = Array.isArray(payload.target_finding_ids)
-            ? payload.target_finding_ids.filter((id) => typeof id === "string")
-            : [];
-        const validIds = new Set(unresolvedIds);
-        const filteredIds = targetFindingIds.filter((id) => validIds.has(id));
-        (0, logging_ports_1.logDebugInfo)(`DetectBugbotFixIntent: agent payload is_fix_request=${isFixRequest}, is_do_request=${isDoRequest}, target_finding_ids=${JSON.stringify(targetFindingIds)}, filteredIds=${JSON.stringify(filteredIds)}.`);
+        (0, logging_ports_1.logDebugInfo)(`DetectBugbotFixIntent: agent payload is_fix_request=${intent.isFixRequest}, is_do_request=${intent.isDoRequest}, target_finding_ids=${JSON.stringify(intent.targetFindingIds)}.`);
         results.push(new result_1.Result({
             id: this.taskId,
             success: true,
             executed: true,
             steps: [],
             payload: {
-                isFixRequest,
-                isDoRequest,
-                targetFindingIds: filteredIds,
+                ...intent,
                 context,
                 branchOverride,
             },

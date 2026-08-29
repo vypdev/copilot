@@ -4,11 +4,6 @@ import type { BugbotContextPorts } from "../../../../../application/ports/bugbot
 import type { BugbotPullRequestQueryPort } from "../../../../../application/ports/bugbot_pull_request_read_ports";
 import { ParamUseCase } from "../../../base/param_usecase";
 import { Result } from "../../../../../data/model/result";
-export interface BugbotFixIntent {
-    isFixRequest: boolean;
-    isDoRequest: boolean;
-    targetFindingIds: string[];
-}
 /**
  * Asks the configured findings agent whether the user comment is a request to fix one or more
  * bugbot findings, and which finding ids to target. Used from issue comments and PR

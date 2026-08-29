@@ -42,6 +42,14 @@ export interface UnresolvedFindingWithBody {
     id: string;
     fullBody: string;
 }
+/** Finding projection used by prompts that ask the agent to select findings. */
+export interface UnresolvedFindingSummary {
+    id: string;
+    title: string;
+    description?: string;
+    file?: string;
+    line?: number;
+}
 /** Full context for detection, mutation, publishing, and autofix intent. */
 export interface BugbotContext {
     existingByFindingId: ExistingByFindingId;
