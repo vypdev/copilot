@@ -1,4 +1,4 @@
-import type { GithubBranchComparisonClient } from '../../application/ports/github_branch_ports';
+import type { GithubBranchComparisonClient } from '../../infrastructure/github/ports/github_branch_provider_ports';
 import type { GithubClientPort } from '../../infrastructure/github/ports/github_client_provider_port';
 import { logDebugInfo, logError } from '../../utils/logger';
 import { Labels } from '../model/labels';

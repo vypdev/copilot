@@ -2,13 +2,9 @@ import { logError } from '../../../utils/logger';
 import { buildAgentPrompt } from '../agent_prompt_policy';
 import { interpretFindingsResponse } from '../agent_findings_response_policy';
 import type { FindingsQueryPort, FindingsQueryRequest } from '../../../application/ports/agent_findings_ports';
-import { AgentCapabilityAdapter, type AgentCapabilityInfrastructure } from './agent_capability_adapter';
+import { AgentCapabilityAdapter } from './agent_capability_adapter';
 
 export class FindingsAgentAdapter extends AgentCapabilityAdapter implements FindingsQueryPort {
-    constructor(infrastructure: AgentCapabilityInfrastructure) {
-        super(infrastructure);
-    }
-
     async query(request: FindingsQueryRequest): Promise<string | Record<string, unknown> | undefined> {
         const options = request.options ?? {};
         const schemaName = options.schemaName ?? 'response';

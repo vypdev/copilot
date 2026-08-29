@@ -4,18 +4,16 @@ import type { IssueAssigneePort } from "../../../../application/ports/issue_mana
 import type { OrganizationMembersPort } from "../../../../application/ports/organization_members_ports";
 import type { PullRequestReviewerPort } from "../../../../application/ports/pull_request_reviewer_ports";
 import { toPullRequestReviewOperationError } from "../../../../application/ports/pull_request_review_errors";
-import { logDebugInfo, logError, logInfo } from "../../../../utils/logger";
+import { logDebugInfo, logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
+import {
+  buildReviewerExclusions,
+  calculateReviewersStillNeeded,
+  selectConfirmedReviewers,
+  selectEligibleReviewers,
+  uniqueLogins,
+} from "../../../policies/reviewer_assignment_policy";
 import { ParamUseCase } from "../../base/param_usecase";
-
-function uniqueLogins(logins: string[]): string[] {
-  const identities = new Map<string, string>();
-  for (const login of logins) {
-    const identity = login.toLowerCase();
-    if (!identities.has(identity)) identities.set(identity, login);
-  }
-  return [...identities.values()];
-}
 
 export class AssignReviewersToIssueUseCase implements ParamUseCase<
   Execution,
@@ -86,24 +84,21 @@ export class AssignReviewersToIssueUseCase implements ParamUseCase<
       const missingReviewers = desiredReviewersCount - currentReviewers.length;
       logDebugInfo(`#${number} needs ${missingReviewers} more reviewers.`);
 
-      const excludeForReview: string[] = [];
-      excludeForReview.push(param.pullRequest.creator);
-      excludeForReview.push(...currentReviewers);
-      excludeForReview.push(...currentAssignees);
-
-      const excludedIdentities = new Set(
-        excludeForReview.map((login) => login.toLowerCase()),
+      const excludeForReview = buildReviewerExclusions(
+        param.pullRequest.creator,
+        currentReviewers,
+        currentAssignees,
       );
-      const members = uniqueLogins(
+      const members = selectEligibleReviewers(
         await this.projectRepository.getRandomMembers(
           param.owner,
           missingReviewers,
           excludeForReview,
           param.tokens.token,
         ),
-      )
-        .filter((member) => !excludedIdentities.has(member.toLowerCase()))
-        .slice(0, missingReviewers);
+        excludeForReview,
+        missingReviewers,
+      );
 
       if (members.length === 0) {
         result.push(
@@ -128,21 +123,7 @@ export class AssignReviewersToIssueUseCase implements ParamUseCase<
           param.tokens.token,
         );
 
-      const requestedMemberLogins = new Set(
-        members.map((member) => member.toLowerCase()),
-      );
-      const confirmedReviewerLogins = new Set<string>();
-      const confirmedReviewers = reviewersAdded.filter((member) => {
-        const normalizedLogin = member.toLowerCase();
-        if (
-          !requestedMemberLogins.has(normalizedLogin) ||
-          confirmedReviewerLogins.has(normalizedLogin)
-        ) {
-          return false;
-        }
-        confirmedReviewerLogins.add(normalizedLogin);
-        return true;
-      });
+      const confirmedReviewers = selectConfirmedReviewers(members, reviewersAdded);
       if (confirmedReviewers.length === 0) {
         result.push(
           new Result({
@@ -167,11 +148,10 @@ export class AssignReviewersToIssueUseCase implements ParamUseCase<
         );
       }
 
-      const reviewersStillNeeded = Math.max(
-        desiredReviewersCount -
-          currentReviewers.length -
-          confirmedReviewers.length,
-        0,
+      const reviewersStillNeeded = calculateReviewersStillNeeded(
+        desiredReviewersCount,
+        currentReviewers.length,
+        confirmedReviewers.length,
       );
       if (reviewersStillNeeded > 0) {
         result.push(

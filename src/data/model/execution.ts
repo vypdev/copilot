@@ -1,5 +1,5 @@
 
-import { branchesForManagement, typesForIssue } from "../../utils/label_utils";
+import { branchesForManagement, typesForIssue } from './label_branch_policy';
 import { Ai } from "./ai";
 import { Branches } from "./branches";
 import { Commit } from "./commit";

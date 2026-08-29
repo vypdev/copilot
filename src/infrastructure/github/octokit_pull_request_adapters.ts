@@ -1,7 +1,7 @@
 import type {
   GithubPullRequestChangesClient,
   GithubPullRequestLifecycleClient,
-} from "../../application/ports/github_pull_request_ports";
+} from "./ports/github_pull_request_provider_ports";
 import { getOctokitClient } from "./octokit_client_resolver";
 import type { GithubClientPort } from "./ports/github_client_provider_port";
 import type {

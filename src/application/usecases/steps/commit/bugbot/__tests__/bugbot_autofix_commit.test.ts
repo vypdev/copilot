@@ -8,7 +8,7 @@ import {
     runUserRequestCommitAndPush as runUserRequestCommitAndPushImpl,
 } from "../bugbot_autofix_commit";
 import type { Execution } from "../../../../../../data/model/execution";
-import { logInfo } from "../../../../../../utils/logger";
+import { logInfo } from "../../../../../ports/logging_ports";
 import { GitCommitAdapter } from "../../../../../../infrastructure/git_commit_adapter";
 
 const shellQuoteParse = jest.fn();
@@ -16,7 +16,7 @@ jest.mock("shell-quote", () => ({
     parse: (s: string, opts?: unknown) => shellQuoteParse(s, opts),
 }));
 
-jest.mock("../../../../../../utils/logger", () => ({
+jest.mock("../../../../../ports/logging_ports", () => ({
     logInfo: jest.fn(),
     logDebugInfo: jest.fn(),
     logError: jest.fn(),
@@ -158,7 +158,7 @@ describe("runBugbotAutofixCommitAndPush", () => {
             committed: false,
             error: "Failed to checkout branch feature/42-pr.",
         });
-        const { logError } = require("../../../../../../utils/logger");
+        const { logError } = require("../../../../../ports/logging_ports");
         expect(logError).toHaveBeenCalledWith(
             expect.stringContaining("Failed to restore stashed changes")
         );
@@ -186,7 +186,7 @@ describe("runBugbotAutofixCommitAndPush", () => {
         });
 
         expect(result.success).toBe(false);
-        const { logError } = require("../../../../../../utils/logger");
+        const { logError } = require("../../../../../ports/logging_ports");
         expect(logError).toHaveBeenCalledWith(
             expect.stringContaining("Failed to checkout branch")
         );
@@ -280,7 +280,7 @@ describe("runBugbotAutofixCommitAndPush", () => {
 
         expect(result.success).toBe(false);
         expect(result.error).toContain("Verify command failed");
-        const { logError } = require("../../../../../../utils/logger");
+        const { logError } = require("../../../../../ports/logging_ports");
         expect(logError).toHaveBeenCalledWith(
             expect.stringContaining("Verify command failed")
         );

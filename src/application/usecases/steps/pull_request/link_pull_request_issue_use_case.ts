@@ -1,14 +1,18 @@
 import { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
 import type { PullRequestIssueLinkPort } from "../../../ports/pull_request_issue_link_ports";
-import { logError, logInfo } from "../../../../utils/logger";
+import type { EventualConsistencyDelayPort } from "../../../ports/eventual_consistency_ports";
+import { logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
 
 export class LinkPullRequestIssueUseCase implements ParamUseCase<Execution, Result[]> {
     taskId: string = 'LinkPullRequestIssueUseCase';
     
-    constructor(private readonly pullRequestIssueLinkPort: PullRequestIssueLinkPort) {}
+    constructor(
+        private readonly pullRequestIssueLinkPort: PullRequestIssueLinkPort,
+        private readonly eventualConsistencyDelayPort: EventualConsistencyDelayPort,
+    ) {}
 
     async invoke(param: Execution): Promise<Result[]> {
         logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`)
@@ -69,7 +73,7 @@ export class LinkPullRequestIssueUseCase implements ParamUseCase<Execution, Resu
                 /**
                  *  Await 20 seconds
                  */
-                await new Promise(resolve => setTimeout(resolve, 20 * 1000));
+                await this.eventualConsistencyDelayPort.wait(20_000);
 
                 /**
                  *  Restore the original branch
@@ -129,7 +133,7 @@ export class LinkPullRequestIssueUseCase implements ParamUseCase<Execution, Resu
                     steps: [
                         `Tried to link pull request to project, but there was a problem.`,
                     ],
-                    error: error,
+                    errors: [error],
                 })
             )
         }

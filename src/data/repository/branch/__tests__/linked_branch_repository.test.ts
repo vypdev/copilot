@@ -5,6 +5,7 @@ import { LinkedBranchRepository } from "../linked_branch_repository";
 jest.mock("../../../../utils/logger", () => ({
   logDebugInfo: jest.fn(),
   logError: jest.fn(),
+  logInfo: jest.fn(),
 }));
 
 interface HarnessOptions {
@@ -237,6 +238,22 @@ describe("LinkedBranchRepository", () => {
         executed: true,
         errors: [expect.any(Error)],
       }),
+    ]);
+  });
+
+  it("treats GitHub's already-exists mutation response as an idempotent success", async () => {
+    const harness = createHarness({
+      mutationError: {
+        status: 422,
+        message: "Validation Failed",
+        response: { data: { errors: [{ code: "already_exists" }] } },
+      },
+    });
+
+    const results = await createLinkedBranch(harness);
+
+    expect(results).toEqual([
+      expect.objectContaining({ success: true, executed: false }),
     ]);
   });
 });

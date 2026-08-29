@@ -1,4 +1,5 @@
 import { GetHotfixVersionUseCase } from '../get_hotfix_version_use_case';
+import { getResultPayload } from '../../../../../data/model/result';
 
 jest.mock('../../../../../utils/logger', () => ({
   logInfo: jest.fn(),
@@ -36,8 +37,8 @@ describe('GetHotfixVersionUseCase', () => {
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(true);
-    expect(results[0].payload?.baseVersion).toBe('1.2.0');
-    expect(results[0].payload?.hotfixVersion).toBe('1.2.1');
+    expect(getResultPayload(results[0].payload)?.baseVersion).toBe('1.2.0');
+    expect(getResultPayload(results[0].payload)?.hotfixVersion).toBe('1.2.1');
     expect(mockGetDescription).toHaveBeenCalledWith('owner', 'repo', 42, 'token');
   });
 

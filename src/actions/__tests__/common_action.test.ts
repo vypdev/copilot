@@ -195,7 +195,30 @@ describe('mainRun', () => {
       currentRunId: 200,
       workflowName: 'CI',
       workflowIdentifier: 'copilot_issue.yml',
+      workflowNames: [
+        'Copilot - Issue',
+        'Copilot - Issue Comment',
+        'Copilot - Commit',
+        'Copilot - Pull Request',
+        'Copilot - Pull Request Comment',
+        'Task - Hotfix',
+        'Task - Release',
+      ],
     });
+  });
+
+  it('waits before setup so setup cannot overlap a previous mutation run', async () => {
+    const order: string[] = [];
+    mockWaitForPreviousWorkflowRunsInvoke.mockImplementation(async () => {
+      order.push('wait');
+    });
+    mockSetupExecutionInvoke.mockImplementation(async () => {
+      order.push('setup');
+    });
+
+    await runMain(mockExecution({ welcome: undefined }));
+
+    expect(order).toEqual(['wait', 'setup']);
   });
 
   it('skips wait when welcome is set', async () => {

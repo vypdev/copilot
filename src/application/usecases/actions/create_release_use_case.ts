@@ -2,7 +2,7 @@ import { Execution } from "../../../data/model/execution";
 import { Result } from "../../../data/model/result";
 import type { RepositoryReleasePublicationPort } from "../../ports/repository_release_ports";
 import { INPUT_KEYS } from "../../../utils/constants";
-import { logError, logInfo, logWarn } from "../../../utils/logger";
+import { logError, logInfo, logWarn } from "../../ports/logging_ports";
 import { getTaskEmoji } from "../../../utils/task_emoji";
 import { ParamUseCase } from "../base/param_usecase";
 
@@ -134,9 +134,7 @@ export class CreateReleaseUseCase  implements ParamUseCase<Execution, Result[]> 
                     success: false,
                     executed: true,
                     steps: [`Failed to create release.`],
-                    errors: [
-                        JSON.stringify(error)
-                    ],
+                    errors: [error],
                 })
             );
         }

@@ -1,6 +1,6 @@
 import { Execution } from "../../data/model/execution";
 import { Result } from "../../data/model/result";
-import { logDebugInfo, logError, logInfo } from "../../utils/logger";
+import { logDebugInfo, logError, logInfo } from "../ports/logging_ports";
 import { getTaskEmoji } from "../../utils/task_emoji";
 import { ParamUseCase } from "./base/param_usecase";
 import { CheckProgressUseCase } from "./actions/check_progress_use_case";
@@ -43,7 +43,7 @@ export class CommitUseCase implements ParamUseCase<Execution, Result[]> {
                     steps: [
                         `Error processing the commits.`,
                     ],
-                    error: error,
+                    errors: [error],
                 })
             )
         }

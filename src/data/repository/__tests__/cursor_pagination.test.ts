@@ -1,5 +1,9 @@
 import { CursorPage, paginateCursor } from "../github/github_pagination_adapter";
 
+jest.mock('../../../utils/logger', () => ({
+    logError: jest.fn(),
+}));
+
 describe("paginateCursor", () => {
     it("fetches pages until hasNextPage is false", async () => {
         const fetchPage = jest.fn<Promise<CursorPage<number>>, [string | null]>()

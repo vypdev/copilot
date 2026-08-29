@@ -4,7 +4,7 @@ description: Pinned installation and verification of the selected agent CLI.
 ---
 # CLI provisioning
 
-The Action verifies only the selected runtime when running in GitHub Actions. It first reuses an executable already present on the runner (`AGENT_PROVISIONING=auto`, the default), which allows a preinitialized Codex CLI to run without a credential or package version in the repository. If the executable is absent, versions MUST be explicit. It MUST use `pnpm`, never `npm`, `npx`, Yarn, Bun, or an unpinned installer.
+When running in GitHub Actions, the Action provisions and verifies the selected runtime. It first reuses an executable already present on the runner (`AGENT_PROVISIONING=auto`, the default), which allows a preinitialized Codex CLI to run without a credential or package version in the repository. If the executable is absent, versions MUST be explicit. It MUST use `pnpm`, never `npm`, `npx`, Yarn, Bun, or an unpinned installer. A setup workflow using `ubuntu-latest` therefore needs an approved version variable when the selected CLI is not already installed on the runner.
 
 | Runtime | Provisioning source | Required pin |
 | --- | --- | --- |

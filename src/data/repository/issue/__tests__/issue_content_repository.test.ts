@@ -1,6 +1,11 @@
 import { IssueContentRepository } from "../issue_content_repository";
 import { OctokitIssueContentClientAdapter } from "../../../../infrastructure/github/octokit_issue_adapters";
 
+jest.mock('../../../../utils/logger', () => ({
+    logError: jest.fn(),
+    logDebugInfo: jest.fn(),
+}));
+
 const mockUpdate = jest.fn();
 const mockGet = jest.fn();
 const mockCreateComment = jest.fn();
@@ -41,6 +46,12 @@ describe('IssueContentRepository', () => {
     it('reads the strict issue description contract', async () => {
         mockGet.mockResolvedValue({ data: { body: null } });
         await expect(repository.getIssueDescription('owner', 'repo', 7, 'token')).resolves.toBe('');
+    });
+
+    it('preserves issue access failures instead of presenting them as an empty description', async () => {
+        mockGet.mockRejectedValue(new Error('Not Found'));
+
+        await expect(repository.getDescription('owner', 'repo', 7, 'token')).rejects.toThrow('Not Found');
     });
 
     it('preserves the comment watermark contract', async () => {

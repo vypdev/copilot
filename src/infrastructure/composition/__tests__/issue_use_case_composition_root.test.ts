@@ -93,14 +93,15 @@ describe("issue use case composition root", () => {
   it("binds branch capabilities independently without a preparation aggregate", () => {
     const result = createIssueUseCaseCompositionRoot();
     const dependencies = composeIssueUseCase.mock.calls[0];
+    const workflowSteps = dependencies[2];
 
     expect(result).toBe(composedIssueUseCase);
-    expect(dependencies[11]).toBe(branchLifecycle);
-    expect(dependencies[12]).toBe(branchName);
-    expect(dependencies[13]).toBe(gitCli);
-    expect(dependencies[14]).toBe(gitCli);
-    expect(dependencies[15]).toBe(linkedBranch);
-    expect(dependencies[16]).toBe(branchDelay);
+    expect(dependencies).toHaveLength(3);
+    expect(workflowSteps).toEqual(expect.objectContaining({
+      checkPermissions: expect.objectContaining({ invoke: expect.any(Function) }),
+      prepareBranches: expect.objectContaining({ invoke: expect.any(Function) }),
+      removeNotNeededBranches: expect.objectContaining({ invoke: expect.any(Function) }),
+    }));
     expect(createBranchClient).toHaveBeenCalledTimes(1);
   });
 });

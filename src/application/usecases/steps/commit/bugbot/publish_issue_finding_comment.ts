@@ -2,7 +2,7 @@ import type { BugbotIssueCommentWritePort } from "../../../../../application/por
 import type { Execution } from "../../../../../data/model/execution";
 import type { BugbotFinding, ExistingFindingInfo } from "./types";
 import { buildCommentBody } from "./marker";
-import { logDebugInfo } from "../../../../../utils/logger";
+import { logDebugInfo } from "../../../../ports/logging_ports";
 
 export async function publishIssueFindingComment(
     repository: BugbotIssueCommentWritePort,

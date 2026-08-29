@@ -2,7 +2,8 @@ import { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
 import type { ProjectBoardCommandPort } from "../../../ports/project_board_command_ports";
 import type { ProjectBoardLinkPort } from "../../../ports/project_board_link_ports";
-import { logDebugInfo, logError, logInfo, logWarn } from "../../../../utils/logger";
+import type { EventualConsistencyDelayPort } from "../../../ports/eventual_consistency_ports";
+import { logDebugInfo, logError, logInfo, logWarn } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
 
@@ -12,6 +13,7 @@ export class LinkPullRequestProjectUseCase implements ParamUseCase<Execution, Re
     constructor(
         private readonly projectBoardCommandPort: ProjectBoardCommandPort,
         private readonly projectBoardLinkPort: ProjectBoardLinkPort,
+        private readonly eventualConsistencyDelayPort: EventualConsistencyDelayPort,
     ) {}
 
     async invoke(param: Execution): Promise<Result[]> {
@@ -37,7 +39,7 @@ export class LinkPullRequestProjectUseCase implements ParamUseCase<Execution, Re
                     /**
                      * Wait for 10 seconds to ensure the pull request is linked to the project
                      */
-                    await new Promise(resolve => setTimeout(resolve, 10000));
+                    await this.eventualConsistencyDelayPort.wait(10_000);
                     actionDone = await this.projectBoardCommandPort.moveIssueToColumn(
                         project,
                         param.owner,
@@ -86,7 +88,7 @@ export class LinkPullRequestProjectUseCase implements ParamUseCase<Execution, Re
                     steps: [
                         `Tried to link pull request to project, but there was a problem.`,
                     ],
-                    error: error,
+                    errors: [error],
                 })
             )
         }

@@ -433,7 +433,15 @@ function collectArchitectureMetrics({
   mkdirSync(resolvedOutputDirectory, { recursive: true });
 
   const repowiseCommands = buildRepoWiseCommands(repowiseBin);
-  const coverageCommand = ["pnpm", "exec", "jest", "--coverage", "--runInBand"];
+  const localJest = path.join(
+    repositoryRoot,
+    "node_modules",
+    ".bin",
+    process.platform === "win32" ? "jest.cmd" : "jest",
+  );
+  const coverageCommand = existsSync(localJest)
+    ? [localJest, "--coverage", "--runInBand"]
+    : ["pnpm", "exec", "jest", "--coverage", "--runInBand"];
   const graphifyCommand = [graphifyBin, "update", "."];
   const metadata = {
     sha,
@@ -568,8 +576,7 @@ if (require.main === module) {
   const repowiseBin =
     process.env.REPOWISE_BIN ||
     path.join(process.env.HOME, ".local", "bin", "repowise");
-  const graphifyBin =
-    process.env.GRAPHIFY_BIN || "/tmp/copilot-graphify-venv/bin/graphify";
+  const graphifyBin = process.env.GRAPHIFY_BIN || "graphify";
   const sha = runProcess(["git", "rev-parse", "HEAD"], repositoryRoot).trim();
   const outputDirectory =
     process.env.METRICS_OUTPUT_DIR ||

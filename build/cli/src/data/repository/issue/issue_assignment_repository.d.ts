@@ -1,5 +1,5 @@
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
-import type { GithubIssueAssignmentClient } from "../../../application/ports/github_issue_ports";
+import type { GithubIssueAssignmentClient } from "../../../infrastructure/github/ports/github_issue_provider_ports";
 export declare class IssueAssignmentRepository {
     private readonly githubClient;
     constructor(githubClient: GithubClientPort<GithubIssueAssignmentClient>);

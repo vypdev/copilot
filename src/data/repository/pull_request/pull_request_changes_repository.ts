@@ -1,6 +1,7 @@
 import { logError } from "../../../utils/logger";
+import { toPullRequestReviewOperationError } from "../../../application/ports/pull_request_review_errors";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
-import type { GithubPullRequestChangesClient, GithubPullRequestFile } from "../../../application/ports/github_pull_request_ports";
+import type { GithubPullRequestChangesClient, GithubPullRequestFile } from "../../../infrastructure/github/ports/github_pull_request_provider_ports";
 
 export class PullRequestChangesRepository {
     constructor(private readonly githubClient: GithubClientPort<GithubPullRequestChangesClient>) {}
@@ -35,7 +36,7 @@ export class PullRequestChangesRepository {
                 .map(({ filename, status }) => ({ filename, status }));
         } catch (error) {
             logError(`Error getting changed files from pull request: ${error}.`);
-            return [];
+            throw toPullRequestReviewOperationError(error, "list-files");
         }
     };
 
@@ -64,7 +65,7 @@ export class PullRequestChangesRepository {
                 });
         } catch (error) {
             logError(`Error getting files with diff lines (owner=${owner}, repo=${repository}, pullNumber=${pullNumber}): ${error}.`);
-            return [];
+            throw toPullRequestReviewOperationError(error, "list-files");
         }
     };
 
@@ -91,7 +92,7 @@ export class PullRequestChangesRepository {
                 }));
         } catch (error) {
             logError(`Error getting pull request changes: ${error}.`);
-            return [];
+            throw toPullRequestReviewOperationError(error, "list-files");
         }
     };
 
@@ -109,10 +110,13 @@ export class PullRequestChangesRepository {
                 repo: repository,
                 pull_number: pullNumber,
             });
-            return data.head?.sha;
+            if (!data.head?.sha) {
+                throw new Error(`Pull request #${pullNumber} did not return a head commit SHA.`);
+            }
+            return data.head.sha;
         } catch (error) {
             logError(`Error getting PR head SHA: ${error}.`);
-            return undefined;
+            throw toPullRequestReviewOperationError(error, "get-head-sha");
         }
     };
 

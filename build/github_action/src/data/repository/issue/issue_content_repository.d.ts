@@ -1,5 +1,5 @@
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
-import type { GithubIssueContentClient } from "../../../application/ports/github_issue_ports";
+import type { GithubIssueContentClient } from "../../../infrastructure/github/ports/github_issue_provider_ports";
 export interface IssueComment {
     id: number;
     body: string | null;

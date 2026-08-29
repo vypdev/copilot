@@ -9,7 +9,7 @@ import type {
 import type { Execution } from "../../../../../../data/model/execution";
 import { getCommentWatermark } from "../../../../../../utils/comment_watermark";
 
-jest.mock("../../../../../../utils/logger", () => ({
+jest.mock("../../../../../ports/logging_ports", () => ({
   logInfo: jest.fn(),
   logDebugInfo: jest.fn(),
   logError: jest.fn(),
@@ -82,7 +82,7 @@ function prComment(identity: string, body = unresolvedBody) {
 
 describe("markFindingsResolved", () => {
   beforeEach(() => {
-    const { logError } = require("../../../../../../utils/logger");
+    const { logError } = require("../../../../../ports/logging_ports");
     logError.mockReset();
     mockUpdateComment.mockReset().mockResolvedValue(undefined);
     mockListPrReviewComments.mockReset().mockResolvedValue([]);
@@ -291,7 +291,7 @@ describe("markFindingsResolved", () => {
   });
 
   it("accumulates independent sanitized PR and issue provider errors", async () => {
-    const { logError } = require("../../../../../../utils/logger");
+    const { logError } = require("../../../../../ports/logging_ports");
     const identity = "PRRC_failure";
     mockListPrReviewComments.mockResolvedValue([prComment(identity)]);
     mockUpdatePrReviewComment.mockRejectedValue(

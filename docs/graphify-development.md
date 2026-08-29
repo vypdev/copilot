@@ -17,7 +17,9 @@ Use it to investigate:
 ## Installation
 
 Install `graphifyy` in an isolated Python environment. Do not add it to
-`package.json`, the pnpm lockfile, or production dependencies.
+`package.json`, the pnpm lockfile, or production dependencies. The executable
+may live anywhere on the developer machine; set `GRAPHIFY_BIN` when it is not
+on `PATH`.
 
 ```bash
 python3 -m venv /tmp/copilot-graphify-venv
@@ -25,10 +27,10 @@ python3 -m venv /tmp/copilot-graphify-venv
 /tmp/copilot-graphify-venv/bin/graphify hermes install
 ```
 
-The executable is not assumed to be on `PATH`. Commands in this repository use:
+The executable is not required to be on `PATH`. Commands in this repository use:
 
 ```bash
-GRAPHIFY=/tmp/copilot-graphify-venv/bin/graphify
+GRAPHIFY_BIN=/tmp/copilot-graphify-venv/bin/graphify
 ```
 
 ## Current workflow
@@ -49,7 +51,7 @@ an explicitly destructive, isolated Graphify investigation, use:
 
 ```bash
 rm -rf graphify-out
-$GRAPHIFY update .
+$GRAPHIFY_BIN update .
 ```
 
 This builds the local AST graph in `graphify-out/`. The directory is generated
@@ -58,9 +60,9 @@ and ignored by Git.
 Query before reading generated JSON manually:
 
 ```bash
-$GRAPHIFY query "application boundaries and composition roots" --budget 5000
-$GRAPHIFY query "release tag adapters callers and provider clients" --budget 5000
-$GRAPHIFY query "GitHub Action local action CLI runtime composition" --budget 5000
+$GRAPHIFY_BIN query "application boundaries and composition roots" --budget 5000
+$GRAPHIFY_BIN query "release tag adapters callers and provider clients" --budget 5000
+$GRAPHIFY_BIN query "GitHub Action local action CLI runtime composition" --budget 5000
 ```
 
 Narrow broad results by naming the concrete symbol or path. Graphify semantic
@@ -81,9 +83,9 @@ A RepoWise hotspot is not a refactoring instruction. Use Graphify and source
 search to identify the real callers and ownership first, define a semantic
 boundary only when one exists, and add contract tests for intentional changes.
 
-## Current checkpoint
+## Last recorded checkpoint
 
-At published Phase D checkpoint
+At the last published Phase D checkpoint
 `af32863317977e42ec59b712fc1f371b5f231cad`, refreshed with the command above:
 
 ```text
@@ -92,8 +94,9 @@ At published Phase D checkpoint
 217 communities
 ```
 
-The resulting implementation and documentation are published together; use
-`git rev-parse HEAD` for the current revision.
+These numbers are historical navigation evidence, not a live quality score.
+Regenerate the reports locally and use `git rev-parse HEAD` for the current
+revision before making architecture decisions.
 
 The generated graph is currently marked `directed: false`. It cannot prove the
 absence of directed dependency cycles. Use source imports and executable

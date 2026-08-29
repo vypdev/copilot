@@ -110,6 +110,16 @@ describe('checkAgentAuthentication', () => {
         expect(isolated).not.toHaveProperty('CURSOR_API_KEY');
     });
 
+    it('sanitizes credential-shaped variables even when a custom CLI has no provider', () => {
+        const isolated = buildAgentCliEnvironment(undefined, {
+            CUSTOM_PROVIDER_API_KEY: 'must-not-leak',
+            CUSTOM_PROVIDER_ACCESS_TOKEN: 'must-not-leak',
+            PATH: '/usr/bin',
+        });
+
+        expect(isolated).toEqual({ PATH: '/usr/bin' });
+    });
+
     it('passes only the selected runtime credentials to each CLI', () => {
         const environment = {
             OPENAI_API_KEY: 'openai-key',
@@ -128,6 +138,19 @@ describe('checkAgentAuthentication', () => {
         expect(cursorEnvironment).not.toHaveProperty('OPENAI_API_KEY');
         expect(cursorEnvironment).not.toHaveProperty('OPENCODE_API_KEY');
         expect(cursorEnvironment).not.toHaveProperty('CODEX_ACCESS_TOKEN');
+    });
+
+    it('isolates credentials for custom OpenCode model providers', () => {
+        const environment = {
+            CUSTOM_CLOUD_API_KEY: 'custom-key',
+            OTHER_PROVIDER_API_KEY: 'other-key',
+            PATH: '/usr/bin',
+        };
+
+        const isolated = buildAgentCliEnvironment('opencode', environment, 'custom-cloud');
+
+        expect(isolated).toMatchObject({ CUSTOM_CLOUD_API_KEY: 'custom-key', PATH: '/usr/bin' });
+        expect(isolated).not.toHaveProperty('OTHER_PROVIDER_API_KEY');
     });
 
     it('recognizes a local OpenCode auth store without exposing its contents', () => {

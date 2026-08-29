@@ -1,7 +1,7 @@
 import { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
 import type { IssueTitlePort } from "../../../../application/ports/issue_title_ports";
-import { logInfo } from "../../../../utils/logger";
+import { logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
 
@@ -142,7 +142,7 @@ export class UpdateTitleUseCase implements ParamUseCase<Execution, Result[]> {
                     steps: [
                         `Tried to update title, but there was a problem.`,
                     ],
-                    error: error,
+                    errors: [error],
                 })
             )
         }

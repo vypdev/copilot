@@ -10,13 +10,13 @@ jest.mock("../mark_findings_resolved_use_case", () => ({
   markFindingsResolved: jest.fn(),
 }));
 
-jest.mock("../../../../../../utils/logger", () => ({
+jest.mock("../../../../../ports/logging_ports", () => ({
   logInfo: jest.fn(),
 }));
 
 const { runBugbotAutofixCommitAndPush } = require("../bugbot_autofix_commit");
 const { markFindingsResolved } = require("../mark_findings_resolved_use_case");
-const { logInfo } = require("../../../../../../utils/logger");
+const { logInfo } = require("../../../../../ports/logging_ports");
 
 describe("commitAutofixAndResolveFindings", () => {
   beforeEach(() => {

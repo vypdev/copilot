@@ -12,7 +12,7 @@ import type { FindingsQueryPort } from '../../../ports/agent_findings_ports';
 import { THINK_RESPONSE_SCHEMA } from '../../../../application/policies/agent_response_schemas';
 import type { IssueNotificationPort } from '../../../ports/issue_lifecycle_ports';
 import { getAnswerIssueHelpPrompt } from '../../../../prompts';
-import { logDebugInfo, logError, logInfo } from '../../../../utils/logger';
+import { logDebugInfo, logError, logInfo } from '../../../ports/logging_ports';
 import { PROJECT_CONTEXT_INSTRUCTION } from '../../../../utils/project_context_instruction';
 import { getTaskEmoji } from '../../../../utils/task_emoji';
 import { ParamUseCase } from '../../base/param_usecase';

@@ -1,4 +1,4 @@
-import { logInfo } from '../../../../../utils/logger';
+import { logInfo } from '../../../../ports/logging_ports';
 import { runUserRequestCommitAndPush } from './bugbot_autofix_commit';
 import type { Result } from '../../../../../data/model/result';
 import type { Execution } from '../../../../../data/model/execution';

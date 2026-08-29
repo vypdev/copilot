@@ -76,7 +76,7 @@ describe('CheckProgressUseCase', () => {
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
-    expect(results[0].errors).toContain(
+    expect(results[0].errors.map((error) => error.message)).toContain(
       'Could not retrieve issue description for issue #123'
     );
     expect(mockAskAgent).not.toHaveBeenCalled();
@@ -89,7 +89,7 @@ describe('CheckProgressUseCase', () => {
     const results = await useCase.invoke(param);
 
     expect(results[0].success).toBe(false);
-    expect(results[0].errors).toContain(
+    expect(results[0].errors.map((error) => error.message)).toContain(
       'Missing required agent configuration. Provide a model and a valid CLI command.'
     );
     expect(mockAskAgent).not.toHaveBeenCalled();
@@ -101,7 +101,7 @@ describe('CheckProgressUseCase', () => {
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
-    expect(results[0].errors).toContain(
+    expect(results[0].errors.map((error) => error.message)).toContain(
       'Issue number not found. Cannot check progress without an issue number.'
     );
     expect(mockGetDescription).not.toHaveBeenCalled();
@@ -115,7 +115,7 @@ describe('CheckProgressUseCase', () => {
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
-    expect(results[0].errors).toContain(
+    expect(results[0].errors.map((error) => error.message)).toContain(
       'Could not retrieve issue description for issue #123'
     );
     expect(mockAskAgent).not.toHaveBeenCalled();

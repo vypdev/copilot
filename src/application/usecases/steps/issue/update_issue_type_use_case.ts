@@ -1,7 +1,7 @@
 import { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
 import type { IssueTypeAssignmentPort } from "../../../../application/ports/issue_management_ports";
-import { logError, logInfo } from "../../../../utils/logger";
+import { logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
 
@@ -34,7 +34,7 @@ export class UpdateIssueTypeUseCase implements ParamUseCase<Execution, Result[]>
                     steps: [
                         `Tried to update issue type, but there was a problem.`,
                     ],
-                    error: error,
+                    errors: [error],
                 })
             )
         }

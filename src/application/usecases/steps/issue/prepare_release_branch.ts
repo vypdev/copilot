@@ -1,8 +1,8 @@
 import type { LinkedBranchCommandPort } from "../../../ports/branch_preparation_ports";
 import { Execution } from "../../../../data/model/execution";
-import { Result } from "../../../../data/model/result";
-import { CommitPrefixBuilderUseCase } from "../common/execute_script_use_case";
-import { logDebugInfo, logWarn } from "../../../../utils/logger";
+import { getResultPayload, Result } from "../../../../data/model/result";
+import { buildCommitPrefix as buildCommitPrefixValue } from "../common/execute_script_use_case";
+import { logDebugInfo, logWarn } from "../../../ports/logging_ports";
 
 export async function prepareReleaseBranch(
   param: Execution,
@@ -56,7 +56,7 @@ export async function prepareReleaseBranch(
   const lastAction = linkResult.at(-1);
   if (!lastAction?.success) return linkResult;
 
-  const branchName = lastAction.payload?.newBranchName;
+  const branchName = getResultPayload(lastAction.payload)?.newBranchName;
   if (typeof branchName !== "string" || branchName.length === 0) {
     return [
       new Result({
@@ -73,7 +73,7 @@ export async function prepareReleaseBranch(
   const reminders = [
     `Before deploying, apply any change needed in [**${release.branch}**](${releaseUrl}):\n> ${fence}bash\n> git fetch -v && git checkout ${release.branch}\n> ${fence}\n>\n> Version files, changelogs..`,
   ];
-  const commitPrefix = await buildCommitPrefix(param, branchName);
+  const commitPrefix = await buildConfiguredCommitPrefix(param, branchName);
   if (commitPrefix)
     reminders.push(
       `Commit the needed changes with this prefix:\n> ${fence}\n>${commitPrefix}\n> ${fence}`,
@@ -104,14 +104,13 @@ export async function prepareReleaseBranch(
   ];
 }
 
-async function buildCommitPrefix(
+async function buildConfiguredCommitPrefix(
   param: Execution,
   branchName: string,
 ): Promise<string> {
   if (!param.commitPrefixBuilder) return "";
   param.commitPrefixBuilderParams = { branchName };
-  const results = await new CommitPrefixBuilderUseCase().invoke(param);
-  return results.at(-1)?.payload?.scriptResult?.toString() ?? "";
+  return buildCommitPrefixValue(branchName, param.commitPrefixBuilder);
 }
 
 function buildReleaseReminder(

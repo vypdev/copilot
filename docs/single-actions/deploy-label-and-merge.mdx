@@ -29,7 +29,7 @@ The **deployed** single action is intended to be run **after a successful deploy
 3. **Issue closure**  
    If **all** merge operations succeed, the issue is closed. If any merge fails, the issue is left open and the action reports that one or more merge operations failed.
 
-Each merge is done via a **pull request**: create PR, wait for checks (see below), then merge the PR. If the PR workflow fails (e.g. checks fail or timeout), the code falls back to a **direct** Git merge when possible.
+Each merge is done via a **pull request**: create PR, wait for checks (see below), then merge the PR. A **direct** Git merge is used only when GitHub cannot create the pull request, preserving branch protection after a PR has been created.
 
 ## Waiting for checks before merging
 
@@ -44,11 +44,11 @@ For each PR we create (e.g. release→main, release→develop), we wait until th
 ### When the PR has no check runs
 
 - If there are **no** check runs on the ref, we use **commit status checks** (legacy) and merge when none are pending.
-- If there **are** check runs on the ref but **none** for this PR (e.g. they are from another PR with the same head, or this base branch has no required checks), we wait a short number of polls (~30 seconds). If no check runs appear for this PR in that window, we assume this PR does not require check runs and **proceed to merge**. If the branch actually requires checks, GitHub will reject the merge and we fall back to the direct merge path (which may also fail under branch protection).
+- If there **are** check runs on the ref but **none** for this PR (e.g. they are from another PR with the same head), we wait a short number of polls (~30 seconds). If no check runs appear for this PR in that window, we evaluate the combined commit status and proceed only when it is complete and successful. We never bypass branch protection after a PR has been created.
 
 ### Timeout
 
-- A configurable **merge timeout** (input `merge-timeout`, default 600 seconds) limits how long we wait for checks **per merge**. If we hit the timeout, we throw and the code attempts a direct merge as fallback.
+- A configurable **merge timeout** (input `merge-timeout`, default 600 seconds) limits how long we wait for checks **per merge**. A value of `0` means there is no artificial timeout. If a positive timeout is reached, the merge fails and no direct-merge bypass is attempted.
 
 ## Summary table
 
@@ -56,14 +56,15 @@ For each PR we create (e.g. release→main, release→develop), we wait until th
 |----------|-----------|
 | PR has check runs for this PR | Wait until all are completed and none failed, then merge. |
 | PR has no check runs on ref | Use status checks; if none pending, merge. |
-| Check runs on ref but none for this PR | Wait a few polls (~30 s); if still none, proceed to merge (branch may have no required checks). |
-| Timeout waiting for checks | Attempt direct merge. |
-| PR merge fails, direct merge fails | Return failure; issue is not closed. |
+| Check runs on ref but none for this PR | Wait a few polls (~30 s); then require successful combined status before merging. |
+| Timeout waiting for checks | Return failure; do not bypass branch protection. |
+| PR creation fails | Use the direct merge compatibility fallback and validate GitHub's response. |
+| PR merge fails | Return failure; issue is not closed. |
 
 ## Related code and tests
 
 - **Use case:** `src/application/usecases/actions/deployed_action_use_case.ts` — deploy label handling, merge order, issue close.
-- **Merge and checks:** `src/data/repository/merge_repository.ts` — PR creation, per-PR check filtering, status checks fallback, direct merge fallback.
+- **Merge and checks:** `src/data/repository/merge_repository.ts` — PR creation, per-PR check filtering, status checks fallback, and the limited direct-merge compatibility fallback.
 - **Tests:**
   - `src/application/usecases/actions/__tests__/deployed_action_use_case.test.ts` — deploy label validation, release/hotfix merge order, close on success, no close on merge failure.
   - `src/data/repository/__tests__/merge_repository.test.ts` — check runs per PR, no check runs, timeout, direct merge fallback.

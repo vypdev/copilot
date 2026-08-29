@@ -1,6 +1,6 @@
 import { Execution } from "../../../../data/model/execution";
 import type { ConfigurationStorePort } from "../../../ports/configuration_store_ports";
-import { logError, logInfo } from "../../../../utils/logger";
+import { logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
 

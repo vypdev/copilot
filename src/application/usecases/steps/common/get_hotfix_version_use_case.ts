@@ -2,7 +2,7 @@ import { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
 import type { IssueDescriptionQueryPort } from "../../../../application/ports/issue_description_ports";
 import { extractVersion } from "../../../../utils/content_utils";
-import { logError, logInfo } from "../../../../utils/logger";
+import { logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
 
@@ -99,7 +99,7 @@ export class GetHotfixVersionUseCase implements ParamUseCase<Execution, Result[]
                     success: false,
                     executed: true,
                     steps: [`Tried to check action permissions.`],
-                    error: error,
+                    errors: [error],
                 })
             );
         }

@@ -1,6 +1,6 @@
 /**
  * Repository for Git operations executed via CLI (exec).
- * Isolated to allow unit tests with mocked @actions/exec and @actions/core.
+ * Isolated to allow unit tests with mocked @actions/exec.
  */
 export declare class GitCliRepository {
     fetchRemoteBranches: () => Promise<void>;

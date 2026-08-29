@@ -45,7 +45,7 @@ describe('PublishGithubActionUseCase', () => {
     const results = await useCase.invoke(param);
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
-    expect(results[0].errors).toContain(`${INPUT_KEYS.SINGLE_ACTION_VERSION} is not set.`);
+    expect(results[0].errors.map((error) => error.message)).toContain(`${INPUT_KEYS.SINGLE_ACTION_VERSION} is not set.`);
   });
 
   it('calls updateTag with v{version} and major segment, then updateRelease', async () => {

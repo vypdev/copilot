@@ -19,11 +19,11 @@ describe('IssueAssignmentRepository', () => {
         await expect(new IssueAssignmentRepository(new OctokitIssueAssignmentClientAdapter()).getCurrentAssignees('o', 'r', 1, 't')).resolves.toEqual(['alice', 'bob']);
     });
 
-    it('returns an empty list for missing assignees or API errors', async () => {
+    it('returns an empty list for missing assignees and propagates API errors', async () => {
         mockGet.mockResolvedValueOnce({ data: { assignees: null } }).mockRejectedValueOnce(new Error('API error'));
         const repository = new IssueAssignmentRepository(new OctokitIssueAssignmentClientAdapter());
         await expect(repository.getCurrentAssignees('o', 'r', 1, 't')).resolves.toEqual([]);
-        await expect(repository.getCurrentAssignees('o', 'r', 1, 't')).resolves.toEqual([]);
+        await expect(repository.getCurrentAssignees('o', 'r', 1, 't')).rejects.toThrow('API error');
     });
 
     it('skips empty assignments and maps updated assignees', async () => {

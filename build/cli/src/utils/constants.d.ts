@@ -199,17 +199,7 @@ export declare const INPUT_KEYS: {
 export declare const ERRORS: {
     readonly GIT_REPOSITORY_NOT_FOUND: "❌ Git repository not found";
 };
-export declare const ACTIONS: {
-    readonly DEPLOYED: "deployed_action";
-    readonly PUBLISH_GITHUB_ACTION: "publish_github_action";
-    readonly CREATE_RELEASE: "create_release";
-    readonly CREATE_TAG: "create_tag";
-    readonly THINK: "think_action";
-    readonly INITIAL_SETUP: "initial_setup";
-    readonly CHECK_PROGRESS: "check_progress_action";
-    readonly DETECT_POTENTIAL_PROBLEMS: "detect_potential_problems_action";
-    readonly RECOMMEND_STEPS: "recommend_steps_action";
-};
+export { ACTIONS } from '../data/model/action_types';
 /** Hidden HTML comment prefix for bugbot findings (issue/PR comments). Format: <!-- copilot-bugbot finding_id:"id" resolved:true|false --> */
 export declare const BUGBOT_MARKER_PREFIX = "copilot-bugbot";
 /** Max number of individual bugbot comments to create per issue/PR. Excess findings get one summary comment suggesting to review locally. */

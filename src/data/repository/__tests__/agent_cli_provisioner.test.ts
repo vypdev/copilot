@@ -32,4 +32,20 @@ describe('AgentCliProvisioner', () => {
             AGENT_PROVISIONING: 'sometimes',
         })).toThrow('AGENT_PROVISIONING must be one of');
     });
+
+    it('does not install the same executable twice for findings and fixer', () => {
+        const provisioner = new AgentCliProvisioner();
+        const internals = provisioner as unknown as {
+            installPnpmPackage: () => void;
+            assertInstalled: () => void;
+        };
+        const install = jest.spyOn(internals, 'installPnpmPackage').mockImplementation(() => undefined);
+        jest.spyOn(internals, 'assertInstalled').mockImplementation(() => undefined);
+        const environment = { PATH: '', AGENT_PROVISIONING: 'auto', CODEX_VERSION: '1.0.0' };
+
+        provisioner.provision({ provider: 'codex', command: 'codex exec --model one --config model_provider=openai -' }, environment);
+        provisioner.provision({ provider: 'codex', command: 'codex exec --model two --config model_provider=openai -' }, environment);
+
+        expect(install).toHaveBeenCalledTimes(1);
+    });
 });

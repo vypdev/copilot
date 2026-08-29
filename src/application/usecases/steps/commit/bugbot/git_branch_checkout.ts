@@ -1,5 +1,5 @@
 import type { GitCommitPort } from '../../../../ports/git_ports';
-import { logDebugInfo, logError, logInfo } from "../../../../../utils/logger";
+import { logDebugInfo, logError, logInfo } from "../../../../ports/logging_ports";
 
 const STASH_MESSAGE = "bugbot-autofix-before-checkout";
 

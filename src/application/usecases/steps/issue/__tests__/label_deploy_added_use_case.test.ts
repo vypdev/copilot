@@ -7,6 +7,7 @@ jest.mock('../../../../../utils/logger', () => ({
 }));
 
 const mockMoveIssueToColumn = jest.fn();
+const mockMoveIssueInvoke = jest.fn();
 const mockExecuteWorkflow = jest.fn();
 
 function baseParam(overrides: Record<string, unknown> = {}) {
@@ -37,7 +38,11 @@ describe('DeployAddedUseCase (label_deploy_added)', () => {
   let useCase: DeployAddedUseCase;
 
   beforeEach(() => {
-    useCase = new DeployAddedUseCase({ moveIssueToColumn: jest.fn(), setTaskPriority: jest.fn(), setTaskSize: jest.fn() }, { executeWorkflow: mockExecuteWorkflow });
+    useCase = new DeployAddedUseCase(
+      { executeWorkflow: mockExecuteWorkflow },
+      { taskId: 'MoveIssueToInProgressUseCase', invoke: mockMoveIssueInvoke },
+    );
+    mockMoveIssueInvoke.mockResolvedValue([]);
     mockMoveIssueToColumn.mockResolvedValue(true);
     mockExecuteWorkflow.mockResolvedValue(undefined);
   });

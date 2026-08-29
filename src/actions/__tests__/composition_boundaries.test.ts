@@ -34,6 +34,8 @@ describe('action composition boundaries', () => {
         expect(githubAction).not.toMatch(/runLocalAction\(/);
 
         expect(localAction).toMatch(/from ['"]\.\/common_action['"]/);
+        expect(localAction).toMatch(/from ['"]\.\.\/infrastructure\/composition\/local_action_composition_root['"]/);
+        expect(localAction).not.toMatch(/GitCliRepository|createProjectBoardCompositionRoot|new\s+/);
         expect(localAction).not.toMatch(/from ['"]@actions\/github['"]/);
         expect(localAction).not.toMatch(/runGitHubAction\(/);
 
@@ -41,7 +43,7 @@ describe('action composition boundaries', () => {
         expect(commonAction).not.toMatch(/data\/repository\/branch_repository/);
         expect(commonAction).toMatch(/LatestTagQueryPort/);
 
-        expect(githubAction).toMatch(/execution_builder/);
+        expect(githubAction).toMatch(/github_action_execution/);
         expect(localAction).toMatch(/local_action_execution/);
     });
 

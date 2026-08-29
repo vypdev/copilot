@@ -1,4 +1,4 @@
-import type { GithubPullRequestChangesClient, GithubPullRequestLifecycleClient } from "../../application/ports/github_pull_request_ports";
+import type { GithubPullRequestChangesClient, GithubPullRequestLifecycleClient } from "./ports/github_pull_request_provider_ports";
 import type { GithubClientPort } from "./ports/github_client_provider_port";
 import type { GithubPullRequestReviewCommentClient, GithubPullRequestReviewerClient } from "./ports/github_pull_request_review_protocol";
 export declare class OctokitPullRequestChangesClientAdapter implements GithubClientPort<GithubPullRequestChangesClient> {

@@ -11,7 +11,7 @@ export function registerSetupCommand(program: Command): void {
     .command('setup')
     .description(`${TITLE} - Initial setup: create labels, issue types, and verify access`)
     .option('-d, --debug', 'Debug mode', false)
-    .option('-t, --token <token>', 'Personal access token', process.env.PERSONAL_ACCESS_TOKEN)
+    .option('-t, --token <token>', 'Personal access token (or PERSONAL_ACCESS_TOKEN from the environment)')
     .action(async (options) => {
       const cwd = process.cwd();
       logInfo('🔍 Checking we are inside a git repository...');

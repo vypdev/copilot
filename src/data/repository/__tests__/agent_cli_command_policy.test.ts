@@ -1,4 +1,4 @@
-import { cliInstallationHint, defaultAgentCommand, validateAgentCommand } from '../agent_cli_command_policy';
+import { cliInstallationHint, defaultAgentCommand, validateAgentCommand } from '../../../application/policies/agent_command_policy';
 
 describe('agent CLI command policy', () => {
     it('builds complete model-aware defaults for every provider', () => {

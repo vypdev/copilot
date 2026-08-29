@@ -1,10 +1,6 @@
 import { ACTIONS } from '../../../utils/constants';
 import { SingleAction } from '../single_action';
 
-jest.mock('../../../utils/logger', () => ({
-  logError: jest.fn(),
-}));
-
 describe('SingleAction', () => {
   describe('action type getters', () => {
     it('isDeployedAction', () => {
@@ -109,6 +105,12 @@ describe('SingleAction', () => {
     it('sets issue from numeric string for actions that require issue', () => {
       const s = new SingleAction(ACTIONS.CHECK_PROGRESS, '42', '', '', '');
       expect(s.issue).toBe(42);
+    });
+
+    it('normalizes an invalid issue to the domain sentinel', () => {
+      const s = new SingleAction(ACTIONS.CHECK_PROGRESS, 'not-a-number', '', '', '');
+      expect(s.issue).toBe(-1);
+      expect(s.validSingleAction).toBe(false);
     });
   });
 });

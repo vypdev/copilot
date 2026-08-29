@@ -10,6 +10,7 @@ jest.useFakeTimers();
 const mockIsLinked = jest.fn();
 const mockUpdateBaseBranch = jest.fn();
 const mockUpdateDescription = jest.fn();
+const mockWait = jest.fn((milliseconds: number) => new Promise<void>((resolve) => setTimeout(resolve, milliseconds)));
 
 function baseParam() {
   return {
@@ -26,11 +27,15 @@ describe('LinkPullRequestIssueUseCase', () => {
   let useCase: LinkPullRequestIssueUseCase;
 
   beforeEach(() => {
-    useCase = new LinkPullRequestIssueUseCase({ isLinked: mockIsLinked, updateBaseBranch: mockUpdateBaseBranch, updateDescription: mockUpdateDescription });
+    useCase = new LinkPullRequestIssueUseCase(
+      { isLinked: mockIsLinked, updateBaseBranch: mockUpdateBaseBranch, updateDescription: mockUpdateDescription },
+      { wait: mockWait },
+    );
     mockIsLinked.mockResolvedValue(false);
     mockUpdateBaseBranch.mockResolvedValue(undefined);
     mockUpdateDescription.mockResolvedValue(undefined);
     mockUpdateBaseBranch.mockClear();
+    mockWait.mockClear();
   });
 
   afterEach(() => {

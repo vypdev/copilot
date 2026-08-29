@@ -4,7 +4,7 @@ import { AGENT_PLAN } from "../../../../../application/policies/agent_task_polic
 import type { FindingsQueryPort } from "../../../../ports/agent_findings_ports";
 import type { BugbotContextPorts } from "../../../../../application/ports/bugbot_context_ports";
 import type { BugbotPullRequestQueryPort } from "../../../../../application/ports/bugbot_pull_request_read_ports";
-import { logDebugInfo, logInfo } from "../../../../../utils/logger";
+import { logDebugInfo, logInfo } from "../../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../../utils/task_emoji";
 import { ParamUseCase } from "../../../base/param_usecase";
 import { Result } from "../../../../../data/model/result";

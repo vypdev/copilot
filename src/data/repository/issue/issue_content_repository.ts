@@ -1,7 +1,7 @@
 import { getCommentWatermark } from "../../../utils/comment_watermark";
 import { logDebugInfo, logError } from "../../../utils/logger";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
-import type { GithubIssueContentClient } from "../../../application/ports/github_issue_ports";
+import type { GithubIssueContentClient } from "../../../infrastructure/github/ports/github_issue_provider_ports";
 
 export interface IssueComment {
     id: number;
@@ -51,7 +51,7 @@ export class IssueContentRepository {
             return issue.body ?? '';
         } catch (error) {
             logError(`Error reading issue #${issueNumber} description: ${error}`);
-            return undefined;
+            throw error;
         }
     };
 

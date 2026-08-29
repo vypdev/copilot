@@ -6,7 +6,8 @@ import type {
 } from "../../../infrastructure/github/ports/github_linked_branch_protocol";
 import type { LinkedBranchCommandPort } from "../../../application/ports/branch_preparation_ports";
 import { Result } from "../../model/result";
-import { logDebugInfo, logError } from "../../../utils/logger";
+import { isGithubAlreadyExists } from "../github/github_error_policy";
+import { logDebugInfo, logError, logInfo } from "../../../utils/logger";
 
 export class LinkedBranchRepository implements LinkedBranchCommandPort {
   constructor(
@@ -185,6 +186,16 @@ export class LinkedBranchRepository implements LinkedBranchCommandPort {
         }),
       );
     } catch (error) {
+      if (isGithubAlreadyExists(error)) {
+        logInfo(`Linked branch ${newBranchName} already exists; treating the operation as idempotently complete.`);
+        return [
+          new Result({
+            id: "branch_repository",
+            success: true,
+            executed: false,
+          }),
+        ];
+      }
       logError(`Error Linking branch "${error}"`);
       result.push(
         new Result({

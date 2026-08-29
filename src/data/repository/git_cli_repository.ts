@@ -1,11 +1,10 @@
-import * as core from '@actions/core';
 import * as exec from '@actions/exec';
-import { logDebugInfo } from '../../utils/logger';
-import { getLatestVersion } from '../../utils/version_utils';
+import { logDebugInfo, logError } from '../../utils/logger';
+import { getLatestVersion } from '../model/version_policy';
 
 /**
  * Repository for Git operations executed via CLI (exec).
- * Isolated to allow unit tests with mocked @actions/exec and @actions/core.
+ * Isolated to allow unit tests with mocked @actions/exec.
  */
 export class GitCliRepository {
 
@@ -19,7 +18,8 @@ export class GitCliRepository {
 
             logDebugInfo('Successfully fetched all remote branches.');
         } catch (error) {
-            core.setFailed(`Error fetching remote branches: ${error}`);
+            logError(`Error fetching remote branches: ${error}`);
+            throw error;
         }
     };
 
@@ -50,16 +50,15 @@ export class GitCliRepository {
                 return undefined;
             }
         } catch (error) {
-            core.setFailed(`Error fetching the latest tag: ${error}`);
-            return undefined;
+            logError(`Error fetching the latest tag: ${error}`);
+            throw error;
         }
     };
 
     getCommitTag = async (latestTag: string | undefined): Promise<string | undefined> => {
         try {
             if (!latestTag) {
-                core.setFailed('No LATEST_TAG found in the environment');
-                return undefined;
+                throw new Error('No LATEST_TAG found in the environment');
             }
 
             let tagVersion: string;
@@ -83,10 +82,11 @@ export class GitCliRepository {
                 logDebugInfo(`Commit tag: ${commitOid}`);
                 return commitOid;
             } else {
-                core.setFailed('No commit found for the tag');
+                throw new Error('No commit found for the tag');
             }
         } catch (error) {
-            core.setFailed(`Error fetching the commit hash: ${error}`);
+            logError(`Error fetching the commit hash: ${error}`);
+            throw error;
         }
         return undefined;
     };

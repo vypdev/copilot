@@ -1,5 +1,4 @@
-import { ACTIONS } from "../../utils/constants";
-import { logError } from "../../utils/logger";
+import { ACTIONS } from './action_types';
 
 export class SingleAction {
     currentSingleAction: string;
@@ -110,12 +109,8 @@ export class SingleAction {
         this.changelog = changelog;
         this.currentSingleAction = currentSingleAction;
         if (!this.isSingleActionWithoutIssue) {
-            try {
-                this.issue = parseInt(issue)
-            } catch (error) {
-                logError(`Issue ${issue} is not a number.`)
-                logError(error)
-            }
+            const parsedIssue = Number.parseInt(issue, 10);
+            this.issue = Number.isNaN(parsedIssue) ? -1 : parsedIssue;
         } else {
             this.issue = 0;
         }

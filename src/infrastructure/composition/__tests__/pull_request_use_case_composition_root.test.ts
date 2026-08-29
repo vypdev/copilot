@@ -163,14 +163,15 @@ describe("createPullRequestUseCaseCompositionRoot", () => {
     );
     expect(mockComposePullRequestUseCase).toHaveBeenCalledTimes(1);
     const argumentsPassed = mockComposePullRequestUseCase.mock.calls[0];
-    expect(argumentsPassed[0]).toBe(mockProjectBoard.command);
-    expect(argumentsPassed[1]).toBe(mockPullRequestLifecycle);
-    expect(argumentsPassed[6]).toBe(mockReviewer);
-    expect(argumentsPassed[7]).toBe(mockOrganizationMembers);
-    expect(argumentsPassed[9]).toBe(mockPullRequestLifecycle);
-    expect(argumentsPassed[10]).toBe(mockProjectBoard.link);
-    expect(argumentsPassed[11]).toBe(mockProjectBoard.command);
-    expect(argumentsPassed[12]).toBe(mockDescriptionUseCase);
+    expect(argumentsPassed[0]).toBe(mockDescriptionUseCase);
+    expect(argumentsPassed).toHaveLength(2);
+    expect(argumentsPassed[1]).toEqual(expect.objectContaining({
+      updateTitle: expect.objectContaining({ invoke: expect.any(Function) }),
+      assignReviewersToIssue: expect.objectContaining({ invoke: expect.any(Function) }),
+      linkPullRequestProject: expect.objectContaining({ invoke: expect.any(Function) }),
+      linkPullRequestIssue: expect.objectContaining({ invoke: expect.any(Function) }),
+      closeIssueAfterMerging: expect.objectContaining({ invoke: expect.any(Function) }),
+    }));
     expect(root).toBe(mockComposedUseCase);
   });
 });

@@ -404,17 +404,7 @@ export const ERRORS = {
     GIT_REPOSITORY_NOT_FOUND: '❌ Git repository not found'
 } as const;
 
-export const ACTIONS = {
-    DEPLOYED: 'deployed_action',
-    PUBLISH_GITHUB_ACTION: 'publish_github_action',
-    CREATE_RELEASE: 'create_release',
-    CREATE_TAG: 'create_tag',
-    THINK: 'think_action',
-    INITIAL_SETUP: 'initial_setup',
-    CHECK_PROGRESS: 'check_progress_action',
-    DETECT_POTENTIAL_PROBLEMS: 'detect_potential_problems_action',
-    RECOMMEND_STEPS: 'recommend_steps_action',
-} as const;
+export { ACTIONS } from '../data/model/action_types';
 
 /** Hidden HTML comment prefix for bugbot findings (issue/PR comments). Format: <!-- copilot-bugbot finding_id:"id" resolved:true|false --> */
 export const BUGBOT_MARKER_PREFIX = 'copilot-bugbot';

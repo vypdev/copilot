@@ -4,8 +4,9 @@ import type { BranchChangeSizePort } from "../../../ports/branch_change_ports";
 import { ProjectBoardCommandPort } from "../../../ports/project_board_command_ports";
 import type { IssueLabelsPort } from "../../../ports/issue_management_ports";
 import type { PullRequestBranchQueryPort } from "../../../ports/pull_request_branch_ports";
-import { logDebugInfo, logError, logInfo } from "../../../../utils/logger";
+import { logDebugInfo, logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
+import { updateIssueAndRelatedPullRequests } from "./update_change_size_labels";
 import { ParamUseCase } from "../../base/param_usecase";
 
 export class CheckChangesIssueSizeUseCase implements ParamUseCase<Execution, Result[]> {
@@ -50,67 +51,25 @@ export class CheckChangesIssueSizeUseCase implements ParamUseCase<Execution, Res
             logDebugInfo(`Labels: ${param.labels.sizedLabelOnIssue}`);
 
             if (param.labels.sizedLabelOnIssue !== size) {
-                const labelNames = param.labels.currentIssueLabels.filter(
-                    (name) => param.labels.sizeLabels.indexOf(name) === -1
-                );
-                labelNames.push(size);
-
-                await this.issueRepository.setLabels(
-                    param.owner,
-                    param.repo,
-                    param.issueNumber,
-                    labelNames,
-                    param.tokens.token,
-                );
-
-                for (const project of param.project.getProjects()) {
-                    await this.projectBoardCommandPort.setTaskSize(
-                        project,
-                        param.owner,
-                        param.repo,
-                        param.issueNumber,
-                        githubSize,
-                        param.tokens.token,
-                    );
-                }
-
-                const openPrNumbers = await this.pullRequestRepository.getOpenPullRequestNumbersByHeadBranch(
-                    param.owner,
-                    param.repo,
+                const update = await updateIssueAndRelatedPullRequests({
+                    owner: param.owner,
+                    repository: param.repo,
+                    issueNumber: param.issueNumber,
                     headBranch,
-                    param.tokens.token,
-                );
-                for (const prNumber of openPrNumbers) {
-                    const prLabels = await this.issueRepository.getLabels(
-                        param.owner,
-                        param.repo,
-                        prNumber,
-                        param.tokens.token,
-                    );
-                    const prLabelNames = prLabels.filter((name) => param.labels.sizeLabels.indexOf(name) === -1);
-                    prLabelNames.push(size);
-                    await this.issueRepository.setLabels(
-                        param.owner,
-                        param.repo,
-                        prNumber,
-                        prLabelNames,
-                        param.tokens.token,
-                    );
-                    for (const project of param.project.getProjects()) {
-                        await this.projectBoardCommandPort.setTaskSize(
-                            project,
-                            param.owner,
-                            param.repo,
-                            prNumber,
-                            githubSize,
-                            param.tokens.token,
-                        );
-                    }
-                    logDebugInfo(`Updated size label on PR #${prNumber} to ${size}.`);
-                }
+                    size,
+                    githubSize,
+                    currentIssueLabels: param.labels.currentIssueLabels,
+                    sizeLabels: param.labels.sizeLabels,
+                    projects: param.project.getProjects(),
+                    token: param.tokens.token,
+                }, {
+                    issueLabelsPort: this.issueRepository,
+                    projectBoardCommandPort: this.projectBoardCommandPort,
+                    pullRequestBranchQueryPort: this.pullRequestRepository,
+                });
 
                 logDebugInfo(`Updated labels on issue #${param.issueNumber}:`);
-                logDebugInfo(`Labels: ${labelNames}`);
+                logDebugInfo(`Labels: ${update.issueLabelNames}`);
 
                 result.push(
                     new Result({
@@ -119,7 +78,7 @@ export class CheckChangesIssueSizeUseCase implements ParamUseCase<Execution, Res
                         executed: true,
                         steps: [
                             `${reason}, so the issue was resized to ${size}.` +
-                                (openPrNumbers.length > 0 ? ` Same label applied to ${openPrNumbers.length} open PR(s).` : ''),
+                                (update.openPullRequestNumbers.length > 0 ? ` Same label applied to ${update.openPullRequestNumbers.length} open PR(s).` : ''),
                         ],
                     }),
                 );

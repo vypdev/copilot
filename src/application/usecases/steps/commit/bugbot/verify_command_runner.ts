@@ -1,4 +1,4 @@
-import { logError } from '../../../../../utils/logger';
+import { logError } from '../../../../ports/logging_ports';
 import { parseVerifyCommand } from './verify_command_policy';
 
 export interface VerifyCommandResult {

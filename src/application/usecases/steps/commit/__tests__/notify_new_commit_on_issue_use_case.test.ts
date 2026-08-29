@@ -13,11 +13,9 @@ jest.mock('../../../../../utils/list_utils', () => ({
 const mockAddComment = jest.fn();
 const mockOpenIssue = jest.fn();
 
-const mockInvoke = jest.fn();
+const mockBuildCommitPrefix = jest.fn();
 jest.mock('../../common/execute_script_use_case', () => ({
-  CommitPrefixBuilderUseCase: jest.fn().mockImplementation(() => ({
-    invoke: mockInvoke,
-  })),
+  buildCommitPrefix: (...args: unknown[]) => mockBuildCommitPrefix(...args),
 }));
 
 function baseParam(overrides: Record<string, unknown> = {}) {
@@ -65,9 +63,7 @@ describe('NotifyNewCommitOnIssueUseCase', () => {
     useCase = new NotifyNewCommitOnIssueUseCase({ openIssue: mockOpenIssue, addComment: mockAddComment });
     mockAddComment.mockResolvedValue(undefined);
     mockOpenIssue.mockResolvedValue(true);
-    mockInvoke.mockResolvedValue([
-      { payload: { scriptResult: '' } },
-    ]);
+    mockBuildCommitPrefix.mockReturnValue('');
   });
 
   it('adds comment with commit info and returns', async () => {
@@ -118,10 +114,8 @@ describe('NotifyNewCommitOnIssueUseCase', () => {
     expect(results[0].errors?.length).toBeGreaterThan(0);
   });
 
-  it('calls CommitPrefixBuilderUseCase and uses prefix in message when commitPrefixBuilder is set', async () => {
-    mockInvoke.mockResolvedValue([
-      { payload: { scriptResult: 'feature-42-add-login' } },
-    ]);
+  it('builds and uses the commit prefix when commitPrefixBuilder is set', async () => {
+    mockBuildCommitPrefix.mockReturnValue('feature-42-add-login');
     const param = baseParam({
       commitPrefixBuilder: 'replace-slash',
       commitPrefixBuilderParams: undefined,
@@ -137,7 +131,10 @@ describe('NotifyNewCommitOnIssueUseCase', () => {
       },
     });
     await useCase.invoke(param);
-    expect(mockInvoke).toHaveBeenCalled();
+    expect(mockBuildCommitPrefix).toHaveBeenCalledWith(
+      'feature/42-add-login',
+      'replace-slash',
+    );
     expect(mockAddComment).toHaveBeenCalledWith(
       'o',
       'r',
@@ -221,9 +218,7 @@ describe('NotifyNewCommitOnIssueUseCase', () => {
   });
 
   it('adds Attention section when commit does not start with prefix and commitPrefix is set', async () => {
-    mockInvoke.mockResolvedValue([
-      { payload: { scriptResult: 'feature-42' } },
-    ]);
+    mockBuildCommitPrefix.mockReturnValue('feature-42');
     const param = baseParam({
       commitPrefixBuilder: 'replace-slash',
       commit: {

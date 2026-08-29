@@ -10,6 +10,7 @@ jest.mock('../../../../../utils/logger', () => ({
 jest.useFakeTimers();
 
 const mockGetId = jest.fn();
+const mockWait = jest.fn((milliseconds: number) => new Promise<void>((resolve) => setTimeout(resolve, milliseconds)));
 
 const mockLinkContentId = jest.fn();
 const mockMoveIssueToColumn = jest.fn();
@@ -42,11 +43,13 @@ describe('LinkIssueProjectUseCase', () => {
       { getId: mockGetId },
       { moveIssueToColumn: mockMoveIssueToColumn, setTaskPriority: jest.fn(), setTaskSize: jest.fn() },
       { linkContentId: mockLinkContentId },
+      { wait: mockWait },
     );
     mockGetId.mockResolvedValue('issue-node-1');
     mockLinkContentId.mockResolvedValue(true);
     mockMoveIssueToColumn.mockResolvedValue(true);
     mockMoveIssueToColumn.mockClear();
+    mockWait.mockClear();
   });
 
   afterEach(() => {

@@ -1,7 +1,7 @@
 import { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
 import type { BranchLifecyclePort, BranchNamePort } from "../../../ports/branch_lifecycle_ports";
-import { logError, logInfo } from "../../../../utils/logger";
+import { logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
 
@@ -39,7 +39,7 @@ export class RemoveNotNeededBranchesUseCase implements ParamUseCase<Execution, R
                     success: false,
                     executed: true,
                     steps: ["Tried to remove not needed branches related to the issue, but there was a problem."],
-                    error,
+                    errors: [error],
                 }),
             ];
         }

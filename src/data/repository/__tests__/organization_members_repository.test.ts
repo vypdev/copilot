@@ -1,6 +1,10 @@
 import { OrganizationMembersRepository } from '../organization/organization_members_repository';
 import type { GithubClientPort } from '../../../infrastructure/github/ports/github_client_provider_port';
-import type { GithubOrganizationMembersClient } from '../../../application/ports/github_identity_ports';
+import type { GithubOrganizationMembersClient } from '../../../infrastructure/github/ports/github_identity_provider_ports';
+
+jest.mock('../../../utils/logger', () => ({
+  logError: jest.fn(),
+}));
 
 describe('OrganizationMembersRepository', () => {
   function createRepository() {
@@ -36,5 +40,19 @@ describe('OrganizationMembersRepository', () => {
     const { repository } = createRepository();
 
     await expect(repository.getRandomMembers('acme', 2, ['alice'], 'token')).resolves.toEqual(['bob', 'carol']);
+  });
+
+  it('propagates provider errors instead of treating access failures as no members', async () => {
+    const iterator = jest.fn(() => {
+      throw new Error('organization access denied');
+    });
+    const client = {
+      paginate: { iterator },
+      rest: { teams: { list: jest.fn(), listMembersInOrg: jest.fn() } },
+    } as unknown as GithubOrganizationMembersClient;
+    const provider = { getClient: jest.fn(() => client) } as unknown as GithubClientPort<GithubOrganizationMembersClient>;
+    const repository = new OrganizationMembersRepository(provider);
+
+    await expect(repository.getAllMembers('acme', 'token')).rejects.toThrow('organization access denied');
   });
 });

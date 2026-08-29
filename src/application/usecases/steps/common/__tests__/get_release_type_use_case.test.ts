@@ -1,4 +1,5 @@
 import { GetReleaseTypeUseCase } from '../get_release_type_use_case';
+import { getResultPayload } from '../../../../../data/model/result';
 
 jest.mock('../../../../../utils/logger', () => ({
   logInfo: jest.fn(),
@@ -31,7 +32,7 @@ describe('GetReleaseTypeUseCase', () => {
     const results = await useCase.invoke(param);
 
     expect(results[0].success).toBe(true);
-    expect(results[0].payload?.releaseType).toBe('Minor');
+    expect(getResultPayload(results[0].payload)?.releaseType).toBe('Minor');
   });
 
   it('returns failure when release type not found in description', async () => {

@@ -1,4 +1,4 @@
-import { incrementVersion, DEFAULT_BASE_VERSION } from '../../utils/version_utils';
+import { incrementVersion, DEFAULT_BASE_VERSION } from './version_policy';
 
 export function nextReleaseVersion(
     latestTag: string | undefined,

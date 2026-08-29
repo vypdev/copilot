@@ -7,7 +7,7 @@ import { THINK_RESPONSE_SCHEMA } from '../../../../application/policies/agent_re
 import type { IssueDescriptionQueryPort } from '../../../ports/issue_description_ports';
 import type { IssueNotificationPort } from '../../../ports/issue_lifecycle_ports';
 import { getThinkPrompt } from '../../../../prompts';
-import { logDebugInfo, logError, logInfo } from '../../../../utils/logger';
+import { logDebugInfo, logError, logInfo } from '../../../ports/logging_ports';
 import { PROJECT_CONTEXT_INSTRUCTION } from '../../../../utils/project_context_instruction';
 import { ParamUseCase } from '../../base/param_usecase';
 import { extractStructuredAnswer } from './agent_answer_policy';

@@ -1,5 +1,5 @@
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
-import type { GithubReleaseClient } from "../../../application/ports/github_release_ports";
+import type { GithubReleaseClient } from "../../../infrastructure/github/ports/github_release_provider_ports";
 import type { RepositoryTagPort } from "../../../application/ports/repository_release_ports";
 export declare class RepositoryTagRepository implements RepositoryTagPort {
     private readonly githubClient;

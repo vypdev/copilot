@@ -3,7 +3,8 @@ import { Result } from "../../../../data/model/result";
 import type { IssueIdentityQueryPort } from "../../../../application/ports/issue_identity_ports";
 import type { ProjectBoardCommandPort } from "../../../../application/ports/project_board_command_ports";
 import type { ProjectBoardLinkPort } from "../../../../application/ports/project_board_link_ports";
-import { logDebugInfo, logError, logInfo, logWarn } from "../../../../utils/logger";
+import type { EventualConsistencyDelayPort } from "../../../../application/ports/eventual_consistency_ports";
+import { logDebugInfo, logError, logInfo, logWarn } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
 
@@ -14,6 +15,7 @@ export class LinkIssueProjectUseCase implements ParamUseCase<Execution, Result[]
         private readonly issueRepository: IssueIdentityQueryPort,
         private readonly projectCommandRepository: ProjectBoardCommandPort,
         private readonly projectLinkRepository: ProjectBoardLinkPort,
+        private readonly eventualConsistencyDelayPort: EventualConsistencyDelayPort,
     ) {}
 
     async invoke(param: Execution): Promise<Result[]> {
@@ -41,7 +43,7 @@ export class LinkIssueProjectUseCase implements ParamUseCase<Execution, Result[]
                     /**
                      * Wait for 10 seconds to ensure the issue is linked to the project
                      */
-                    await new Promise(resolve => setTimeout(resolve, 10000));
+                    await this.eventualConsistencyDelayPort.wait(10_000);
                     actionDone = await this.projectCommandRepository.moveIssueToColumn(
                         project,
                         param.owner,
@@ -89,7 +91,7 @@ export class LinkIssueProjectUseCase implements ParamUseCase<Execution, Result[]
                     steps: [
                         `Tried to link issue to project, but there was a problem.`,
                     ],
-                    error: error,
+                    errors: [error],
                 })
             )
         }

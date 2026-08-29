@@ -1,6 +1,6 @@
 import type { BugbotIssueCommentWritePort } from "../../../../../application/ports/bugbot_issue_write_ports";
 import type { Execution } from "../../../../../data/model/execution";
-import { logDebugInfo } from "../../../../../utils/logger";
+import { logDebugInfo } from "../../../../ports/logging_ports";
 
 export async function publishOverflowComment(
     repository: BugbotIssueCommentWritePort,

@@ -226,7 +226,7 @@ The setup package keeps a developer-friendly `setup/.env` template containing on
 
 After the tutorial and file adaption, you can:
 
-- Set **repository or organization variables** for the agent CLI contract (`AGENT_PROVIDER`, `AGENT_MODEL_PROVIDER`, `AGENT_MODEL`, `AGENT_ALLOWED_MODEL_PROVIDERS`, and `AGENT_ALLOWED_MODELS`) and reference them in the Copilot workflow steps.
+- Set **repository or organization variables** for the agent CLI contract (`AGENT_PROVIDER`, `AGENT_MODEL_PROVIDER`, `AGENT_MODEL`, `AGENT_EFFORT`, `AGENT_ALLOWED_MODEL_PROVIDERS`, and `AGENT_ALLOWED_MODELS`) and, when needed, independent `FINDINGS_*` and `FIXER_*` overrides. The supplied Copilot workflow templates forward these values to the action. Keep `CURSOR_API_KEY` available only when the common, findings, or fixer provider is Cursor.
 - Adjust **project column names** and **branch names** via action inputs so the action moves issues/PRs to the right columns and uses your branch naming.
 - Customize **issue templates** (copy, add fields, change labels) while keeping label and workflow names consistent as above.
 - Add or modify **release/hotfix** workflow steps (e.g. build, deploy) while keeping the workflow **filenames** and the action inputs `release-workflow` and `hotfix-workflow` in sync.

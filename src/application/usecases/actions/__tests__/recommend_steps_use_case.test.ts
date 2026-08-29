@@ -1,6 +1,7 @@
 import { RecommendStepsUseCase } from '../recommend_steps_use_case';
 import { Ai } from '../../../../data/model/ai';
 import { Config } from '../../../../data/model/config';
+import { getResultPayload } from '../../../../data/model/result';
 import type { Execution } from '../../../../data/model/execution';
 
 jest.mock('../../../../utils/logger', () => ({
@@ -41,7 +42,7 @@ describe('RecommendStepsUseCase', () => {
     const results = await useCase.invoke(param);
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
-    expect(results[0].errors).toContain('Missing agent CLI command and model.');
+    expect(results[0].errors.map((error) => error.message)).toContain('Missing agent CLI command and model.');
   });
 
   it('returns failure when issueNumber is -1', async () => {
@@ -49,7 +50,7 @@ describe('RecommendStepsUseCase', () => {
     const results = await useCase.invoke(param);
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
-    expect(results[0].errors).toContain('Issue number not found.');
+    expect(results[0].errors.map((error) => error.message)).toContain('Issue number not found.');
   });
 
   it('returns failure when issue description is empty or missing', async () => {
@@ -71,7 +72,7 @@ describe('RecommendStepsUseCase', () => {
     expect(results[0].steps).toBeDefined();
     expect(results[0].stepFormat).toBe('markdown');
     expect(results[0].steps[0]).toBe('## Recommended implementation steps');
-    expect(results[0].payload?.recommendedSteps).toContain('1. Add auth module');
+    expect(getResultPayload(results[0].payload)?.recommendedSteps).toContain('1. Add auth module');
     const prompt = mockAskAgent.mock.calls[0][2];
     expect(prompt).toContain('42');
     expect(prompt).toContain('Implement login feature.');
@@ -83,7 +84,7 @@ describe('RecommendStepsUseCase', () => {
     const param = baseParam();
     const results = await useCase.invoke(param);
     expect(results[0].success).toBe(true);
-    expect(results[0].payload?.recommendedSteps).toContain('1. Reproduce');
+    expect(getResultPayload(results[0].payload)?.recommendedSteps).toContain('1. Reproduce');
   });
 
   it('removes Copilot metadata from the prompt and fingerprint input', async () => {
@@ -98,8 +99,20 @@ describe('RecommendStepsUseCase', () => {
     expect(prompt).not.toContain('recommendationState');
   });
 
+  it('does not remove a block when its managed start and end identifiers differ', async () => {
+    mockGetDescription.mockResolvedValue('Visible request.\n\n<!-- copilot-configuration-start\nleak\ncopilot-recommendation-end -->');
+    mockAskAgent.mockResolvedValue('1. Keep the visible request unchanged');
+
+    const results = await useCase.invoke(baseParam());
+
+    expect(results[0].success).toBe(true);
+    const prompt = mockAskAgent.mock.calls[0][2];
+    expect(prompt).toContain('leak');
+  });
+
   it('skips the agent when the visible issue description is unchanged', async () => {
     mockGetDescription.mockResolvedValue('Implement login feature.');
+    mockAskAgent.mockResolvedValue('1. Add auth module');
     const previousConfiguration = new Config({
       recommendationState: {
         issueDescriptionFingerprint: 'unused',
@@ -111,7 +124,7 @@ describe('RecommendStepsUseCase', () => {
     const firstResult = await useCase.invoke(firstParam);
     const fingerprint = firstResult.length === 0
       ? undefined
-      : firstResult[0].payload?.recommendationState?.issueDescriptionFingerprint;
+      : (getResultPayload(firstResult[0].payload)?.recommendationState as { issueDescriptionFingerprint?: string } | undefined)?.issueDescriptionFingerprint;
 
     mockAskAgent.mockReset();
     const matchingParam = baseParam({
@@ -162,7 +175,7 @@ describe('RecommendStepsUseCase', () => {
     });
     const param = baseParam({ previousConfiguration: previous });
     const first = await useCase.invoke(param);
-    const recommendationState = first[0].payload.recommendationState;
+    const recommendationState = getResultPayload(first[0].payload)?.recommendationState;
 
     mockAskAgent.mockClear();
     const secondParam = baseParam({
@@ -181,5 +194,27 @@ describe('RecommendStepsUseCase', () => {
     const results = await useCase.invoke(param);
     expect(results[0].success).toBe(false);
     expect(results[0].errors?.length).toBeGreaterThan(0);
+  });
+
+  it('returns failure instead of publishing a placeholder when the agent has no recommendation', async () => {
+    mockGetDescription.mockResolvedValue('Do something');
+    mockAskAgent.mockResolvedValue(undefined);
+
+    const results = await useCase.invoke(baseParam());
+
+    expect(results).toHaveLength(1);
+    expect(results[0].success).toBe(false);
+    expect(results[0].errors[0].message).toBe('The configured agent returned no recommendation.');
+    expect(results[0].steps).toEqual([]);
+  });
+
+  it('rejects an agent object without a string steps field', async () => {
+    mockGetDescription.mockResolvedValue('Do something');
+    mockAskAgent.mockResolvedValue({ answer: 'not the recommendation contract' });
+
+    const results = await useCase.invoke(baseParam());
+
+    expect(results[0].success).toBe(false);
+    expect(results[0].errors[0].message).toBe('The configured agent returned no recommendation.');
   });
 });

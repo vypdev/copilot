@@ -2,7 +2,7 @@ import { Ai } from '../../../data/model/ai';
 import { isAgentConfigurationReady } from '../../../data/model/agent';
 import { Execution } from '../../../data/model/execution';
 import { Result } from '../../../data/model/result';
-import { logDebugInfo, logError, logInfo, logWarn } from '../../../utils/logger';
+import { logDebugInfo, logError, logInfo, logWarn } from '../../ports/logging_ports';
 import { getTaskEmoji } from '../../../utils/task_emoji';
 import { ParamUseCase } from '../base/param_usecase';
 
@@ -230,9 +230,7 @@ export class CheckProgressUseCase implements ParamUseCase<Execution, Result[]> {
                     id: this.taskId,
                     success: false,
                     executed: true,
-                    errors: [
-                        `Error in ${this.taskId}: ${JSON.stringify(error, null, 2)}`,
-                    ],
+                    errors: [new Error(`Error in ${this.taskId}: ${error instanceof Error ? error.message : String(error)}`)],
                 })
             );
         }

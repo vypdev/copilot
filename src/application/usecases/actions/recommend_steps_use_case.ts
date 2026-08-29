@@ -13,7 +13,7 @@ import {
 import type { FindingsQueryPort } from '../../ports/agent_findings_ports';
 import type { IssueDescriptionQueryPort } from '../../ports/issue_description_ports';
 import { getRecommendStepsPrompt } from '../../../prompts';
-import { logDebugInfo, logError, logInfo } from '../../../utils/logger';
+import { logDebugInfo, logError, logInfo } from '../../ports/logging_ports';
 import { PROJECT_CONTEXT_INSTRUCTION } from '../../../utils/project_context_instruction';
 import { getTaskEmoji } from '../../../utils/task_emoji';
 import { ParamUseCase } from '../base/param_usecase';
@@ -105,10 +105,20 @@ export class RecommendStepsUseCase implements ParamUseCase<Execution, Result[]> 
                 prompt,
             });
 
-            const steps =
-                typeof response === 'string'
-                    ? response
-                    : (response && String((response as Record<string, unknown>).steps)) || 'No response.';
+            const steps = extractRecommendationText(response);
+            if (!steps) {
+                const error = new Error('The configured agent returned no recommendation.');
+                logError(error);
+                results.push(
+                    new Result({
+                        id: this.taskId,
+                        success: false,
+                        executed: true,
+                        errors: [error],
+                    }),
+                );
+                return results;
+            }
 
             logDebugInfo(`RecommendSteps: agent response received. Steps length=${steps.length}. Full steps:\n${steps}`);
 
@@ -166,4 +176,10 @@ export class RecommendStepsUseCase implements ParamUseCase<Execution, Result[]> 
             issueDescriptionFingerprint,
         };
     }
+}
+
+function extractRecommendationText(response: string | Record<string, unknown> | undefined): string {
+    if (typeof response === 'string') return response.trim();
+    if (!response || typeof response.steps !== 'string') return '';
+    return response.steps.trim();
 }

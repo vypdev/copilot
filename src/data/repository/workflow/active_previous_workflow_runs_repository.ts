@@ -39,7 +39,8 @@ export class ActivePreviousWorkflowRunsRepository implements PreviousWorkflowRun
     ) {}
 
     async countActivePreviousRuns(query: PreviousWorkflowRunsQuery): Promise<number> {
-        if (!Number.isFinite(query.currentRunId) || query.workflowName.length === 0) {
+        const hasWorkflowScope = query.workflowNames?.some((name) => name.trim().length > 0) || query.workflowName.trim().length > 0;
+        if (!Number.isFinite(query.currentRunId) || !hasWorkflowScope) {
             return 0;
         }
 
@@ -55,7 +56,11 @@ export class ActivePreviousWorkflowRunsRepository implements PreviousWorkflowRun
         query: PreviousWorkflowRunsQuery,
         status: string,
     ): Promise<number> {
-        const useWorkflowEndpoint = Boolean(query.workflowIdentifier && this.client.rest.actions.listWorkflowRuns);
+        const useWorkflowEndpoint = Boolean(
+            query.workflowIdentifier
+            && (!query.workflowNames || query.workflowNames.length === 0)
+            && this.client.rest.actions.listWorkflowRuns,
+        );
         const method: GithubWorkflowRunsMethod = useWorkflowEndpoint
             ? this.client.rest.actions.listWorkflowRuns!
             : this.client.rest.actions.listWorkflowRunsForRepo;
@@ -127,7 +132,10 @@ export class ActivePreviousWorkflowRunsRepository implements PreviousWorkflowRun
     }
 
     private isActivePreviousRun(run: GithubWorkflowRun, query: PreviousWorkflowRunsQuery): boolean {
-        return run.name === query.workflowName
+        const workflowMatches = query.workflowNames && query.workflowNames.length > 0
+            ? query.workflowNames.includes(run.name ?? '')
+            : run.name === query.workflowName;
+        return workflowMatches
             && run.id < query.currentRunId
             && WORKFLOW_ACTIVE_STATUSES.includes(run.status ?? 'unknown');
     }

@@ -2,6 +2,11 @@ import { IssueMetadataRepository } from '../issue_metadata_repository';
 import { OctokitGraphqlTransportClientAdapter } from '../../../../infrastructure/github/octokit_project_adapters';
 import { OctokitIssueMetadataClientAdapter } from '../../../../infrastructure/github/octokit_issue_adapters';
 
+jest.mock('../../../../utils/logger', () => ({
+    logError: jest.fn(),
+    logDebugInfo: jest.fn(),
+}));
+
 const mockGet = jest.fn();
 const mockPullGet = jest.fn();
 const mockGraphql = jest.fn();
@@ -41,5 +46,11 @@ describe('IssueMetadataRepository', () => {
 
         await expect(repository.getHeadBranch('owner', 'repo', 7, 'token')).resolves.toBeUndefined();
         expect(mockPullGet).not.toHaveBeenCalled();
+    });
+
+    it('propagates title lookup failures', async () => {
+        mockGet.mockRejectedValueOnce(new Error('issue access denied'));
+
+        await expect(repository.getTitle('owner', 'repo', 7, 'token')).rejects.toThrow('issue access denied');
     });
 });

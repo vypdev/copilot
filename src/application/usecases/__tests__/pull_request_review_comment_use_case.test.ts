@@ -4,7 +4,7 @@ import { Result } from "../../../data/model/result";
 import type { BugbotContext } from "../steps/commit/bugbot/types";
 
 const mockLogInfo = jest.fn();
-jest.mock("../../../utils/logger", () => ({
+jest.mock("../../ports/logging_ports", () => ({
   logInfo: (...args: unknown[]) => mockLogInfo(...args),
 }));
 

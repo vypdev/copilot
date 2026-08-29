@@ -21,8 +21,8 @@ export function renderLocalActionResults(results: LocalActionResult[]): void {
         }
 
         const errorsContent = results
-            .filter(result => !result.executed && result.errors.length > 0)
-            .map(result => chalk.gray(result.errors.join('\n'))).join('\n')
+            .filter(result => result.errors.length > 0)
+            .map(result => chalk.gray(result.errors.map(error => error.message).join('\n'))).join('\n')
 
         if (errorsContent.length > 0) {
             content +=  '\n' + chalk.red('Errors:') + '\n' + errorsContent

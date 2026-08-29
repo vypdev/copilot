@@ -1,5 +1,5 @@
 import type { AgentConfiguration, AgentTask, AgentTaskConfiguration } from '../model/agent';
-import { validateAgentCommand } from './agent_cli_command_policy';
+import { validateAgentCommand } from '../../application/policies/agent_command_policy';
 
 export function isValidAgentConfiguration(configuration: AgentConfiguration): boolean {
     if (!['opencode', 'codex', 'cursor'].includes(configuration.provider)) return false;

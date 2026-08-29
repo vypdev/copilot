@@ -1,4 +1,4 @@
-export type PullRequestReviewOperation = "list-reviewers" | "request-reviewers" | "assign-reviewers" | "list-comments" | "get-comment" | "publish-comments" | "update-comment" | "resolve-thread" | "mark-resolved";
+export type PullRequestReviewOperation = "list-reviewers" | "request-reviewers" | "assign-reviewers" | "list-comments" | "get-comment" | "list-files" | "get-head-sha" | "publish-comments" | "update-comment" | "resolve-thread" | "mark-resolved";
 interface PullRequestReviewErrorContext {
     failedCount?: number;
     totalCount?: number;

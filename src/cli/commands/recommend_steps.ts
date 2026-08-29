@@ -12,7 +12,7 @@ export function registerRecommendStepsCommand(program: Command): void {
     .description(`${TITLE} - Recommend steps to implement an issue (configured agent)`)
     .option('-i, --issue <number>', 'Issue number (required)', '')
     .option('-d, --debug', 'Debug mode', false)
-    .option('-t, --token <token>', 'Personal access token', process.env.PERSONAL_ACCESS_TOKEN)
+    .option('-t, --token <token>', 'Personal access token (or PERSONAL_ACCESS_TOKEN from the environment)')
     .action(async (options) => {
       const gitInfo = getGitInfo();
       if ('error' in gitInfo) {

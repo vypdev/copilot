@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { parseAgentCommand } from './agent_command_parser';
+import { parseAgentCommand } from '../../application/policies/agent_command_parser';
 import { buildAgentCliEnvironment } from './agent_authentication';
 import type { AgentProvider } from '../model/agent';
 

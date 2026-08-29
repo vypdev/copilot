@@ -1,5 +1,5 @@
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
-import type { GithubReleaseClient } from "../../../application/ports/github_release_ports";
+import type { GithubReleaseClient } from "../../../infrastructure/github/ports/github_release_provider_ports";
 import { logDebugInfo, logError } from "../../../utils/logger";
 import type { RepositoryDefaultBranchPort } from "../../../application/ports/repository_release_ports";
 
@@ -18,7 +18,7 @@ export class RepositoryDefaultBranchRepository implements RepositoryDefaultBranc
             return data.default_branch;
         } catch (error) {
             logError(`Error getting default branch for ${owner}/${repository}: ${error}`);
-            return undefined;
+            throw error;
         }
     };
 }

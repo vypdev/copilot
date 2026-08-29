@@ -1,5 +1,5 @@
 import type { BranchLifecyclePort } from '../../application/ports/branch_lifecycle_ports';
-import type { GithubBranchClient } from '../../application/ports/github_branch_ports';
+import type { GithubBranchClient } from '../../infrastructure/github/ports/github_branch_provider_ports';
 import type { GithubClientPort } from '../../infrastructure/github/ports/github_client_provider_port';
 export declare class BranchLifecycleRepository implements BranchLifecyclePort {
     private readonly branchClient;

@@ -6,6 +6,7 @@ import { GitCliRepository } from '../git_cli_repository';
 
 jest.mock('../../../utils/logger', () => ({
     logDebugInfo: jest.fn(),
+    logError: jest.fn(),
 }));
 
 const mockExec = jest.fn();
@@ -13,12 +14,7 @@ jest.mock('@actions/exec', () => ({
     exec: (...args: unknown[]) => mockExec(...args),
 }));
 
-const mockSetFailed = jest.fn();
-jest.mock('@actions/core', () => ({
-    setFailed: (...args: unknown[]) => mockSetFailed(...args),
-}));
-
-jest.mock('../../../utils/version_utils', () => ({
+jest.mock('../../model/version_policy', () => ({
     getLatestVersion: (tags: string[]) => (tags.length > 0 ? tags[0] : undefined),
 }));
 
@@ -27,7 +23,6 @@ describe('GitCliRepository', () => {
 
     beforeEach(() => {
         mockExec.mockReset();
-        mockSetFailed.mockReset();
     });
 
     describe('fetchRemoteBranches', () => {
@@ -41,12 +36,10 @@ describe('GitCliRepository', () => {
             expect(mockExec).toHaveBeenNthCalledWith(2, 'git', ['fetch', '--all', '-v']);
         });
 
-        it('calls core.setFailed on error', async () => {
+        it('rejects on error so the application layer can decide the failure policy', async () => {
             mockExec.mockRejectedValue(new Error('git failed'));
 
-            await repo.fetchRemoteBranches();
-
-            expect(mockSetFailed).toHaveBeenCalledWith(expect.stringContaining('Error fetching remote branches'));
+            await expect(repo.fetchRemoteBranches()).rejects.toThrow('git failed');
         });
     });
 
@@ -97,22 +90,18 @@ describe('GitCliRepository', () => {
             expect(result).toBeUndefined();
         });
 
-        it('returns undefined and calls setFailed on error', async () => {
+        it('rejects on error so callers can preserve the failure', async () => {
             mockExec.mockRejectedValue(new Error('fetch failed'));
 
-            const result = await repo.getLatestTag();
-
-            expect(result).toBeUndefined();
-            expect(mockSetFailed).toHaveBeenCalledWith(expect.stringContaining('Error fetching the latest tag'));
+            await expect(repo.getLatestTag()).rejects.toThrow('fetch failed');
         });
     });
 
     describe('getCommitTag', () => {
-        it('calls setFailed and returns undefined when latestTag is undefined', async () => {
-            const result = await repo.getCommitTag(undefined);
+        it('rejects when latestTag is undefined', async () => {
+            const result = repo.getCommitTag(undefined);
 
-            expect(result).toBeUndefined();
-            expect(mockSetFailed).toHaveBeenCalledWith('No LATEST_TAG found in the environment');
+            await expect(result).rejects.toThrow('No LATEST_TAG found in the environment');
             expect(mockExec).not.toHaveBeenCalled();
         });
 
@@ -142,25 +131,21 @@ describe('GitCliRepository', () => {
             expect(result).toBe('oid456');
         });
 
-        it('calls setFailed when rev-list returns empty oid', async () => {
+        it('rejects when rev-list returns empty oid', async () => {
             mockExec.mockImplementation((_cmd: string, _args: string[], opts: { listeners?: { stdout: (d: Buffer) => void } }) => {
                 if (opts?.listeners?.stdout) opts.listeners.stdout(Buffer.from(''));
                 return Promise.resolve(0);
             });
 
-            const result = await repo.getCommitTag('v1.0.0');
+            const result = repo.getCommitTag('v1.0.0');
 
-            expect(mockSetFailed).toHaveBeenCalledWith('No commit found for the tag');
-            expect(result).toBeUndefined();
+            await expect(result).rejects.toThrow('No commit found for the tag');
         });
 
-        it('returns undefined and calls setFailed on exec error', async () => {
+        it('rejects on exec error', async () => {
             mockExec.mockRejectedValue(new Error('rev-list failed'));
 
-            const result = await repo.getCommitTag('v1.0.0');
-
-            expect(result).toBeUndefined();
-            expect(mockSetFailed).toHaveBeenCalledWith(expect.stringContaining('Error fetching the commit hash'));
+            await expect(repo.getCommitTag('v1.0.0')).rejects.toThrow('rev-list failed');
         });
     });
 });

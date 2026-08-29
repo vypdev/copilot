@@ -1,6 +1,6 @@
 import * as core from '@actions/core';
 import type { Execution } from '../data/model/execution';
-import type { Result } from '../data/model/result';
+import { getResultPayload, type Result } from '../data/model/result';
 import { isRecommendationState } from '../data/model/recommendation_state';
 import type { ConfigurationStorePort } from '../application/ports/configuration_store_ports';
 import { PublishResultUseCase } from '../application/usecases/steps/common/publish_resume_use_case';
@@ -31,7 +31,7 @@ export async function finishGithubAction(
 
 function commitPublishedRecommendationState(execution: Execution, results: Result[]): void {
     const pendingState = results
-        .map((result) => result.payload?.recommendationState)
+        .map((result) => getResultPayload(result.payload)?.recommendationState)
         .find(isRecommendationState);
     if (!pendingState) return;
 
@@ -46,7 +46,7 @@ function commitPublishedRecommendationState(execution: Execution, results: Resul
 function setFirstErrorIfExists(results: Result[]): void {
     for (const result of results) {
         if (result.errors && result.errors.length > 0) {
-            core.setFailed(result.errors[0]);
+            core.setFailed(result.errors[0].message);
             return;
         }
     }

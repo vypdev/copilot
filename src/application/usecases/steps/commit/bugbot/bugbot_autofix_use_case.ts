@@ -3,7 +3,7 @@ import type { Execution } from "../../../../../data/model/execution";
 import type { FixerQueryPort } from "../../../../ports/agent_fixer_ports";
 import type { BugbotContextPorts } from "../../../../../application/ports/bugbot_context_ports";
 import type { GitCommitPort } from "../../../../../application/ports/git_ports";
-import { logDebugInfo, logError, logInfo } from "../../../../../utils/logger";
+import { logDebugInfo, logError, logInfo } from "../../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../../utils/task_emoji";
 import { ParamUseCase } from "../../../base/param_usecase";
 import { Result } from "../../../../../data/model/result";

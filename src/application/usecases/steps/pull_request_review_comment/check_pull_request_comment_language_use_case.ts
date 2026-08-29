@@ -1,7 +1,5 @@
 import { Execution } from '../../../../data/model/execution';
 import { Result } from '../../../../data/model/result';
-import type { FindingsQueryPort } from '../../../ports/agent_findings_ports';
-import type { IssueCommentUpdatePort } from '../../../../application/ports/issue_lifecycle_ports';
 import { ParamUseCase } from '../../base/param_usecase';
 import { CommentLanguageTranslationWorkflow } from '../common/comment_language_translation_workflow';
 
@@ -9,11 +7,8 @@ export class CheckPullRequestCommentLanguageUseCase implements ParamUseCase<Exec
     taskId = 'CheckPullRequestCommentLanguageUseCase';
     private readonly workflow: CommentLanguageTranslationWorkflow;
 
-    constructor(
-        issueRepository: IssueCommentUpdatePort,
-        aiRepository: FindingsQueryPort,
-    ) {
-        this.workflow = new CommentLanguageTranslationWorkflow(issueRepository, aiRepository);
+    constructor(workflow: CommentLanguageTranslationWorkflow) {
+        this.workflow = workflow;
     }
 
     invoke(param: Execution): Promise<Result[]> {

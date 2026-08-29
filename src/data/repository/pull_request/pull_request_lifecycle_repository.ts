@@ -1,6 +1,9 @@
 import { logDebugInfo, logError } from "../../../utils/logger";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
-import type { GithubPullRequestLifecycleClient } from "../../../application/ports/github_pull_request_ports";
+import type {
+    GithubPullRequestLifecycleClient,
+    GithubPullRequestSummary,
+} from "../../../infrastructure/github/ports/github_pull_request_provider_ports";
 
 export class PullRequestLifecycleRepository {
     constructor(private readonly githubClient: GithubClientPort<GithubPullRequestLifecycleClient>) {}
@@ -16,18 +19,15 @@ export class PullRequestLifecycleRepository {
     ): Promise<number[]> => {
         const octokit = this.githubClient.getClient(token);
         try {
-            const { data } = await octokit.rest.pulls.list({
-                owner,
-                repo: repository,
-                state: 'open',
+            const pullRequests = await this.listOpenPullRequests(octokit, owner, repository, {
                 head: `${owner}:${headBranch}`,
             });
-            const numbers = (data || []).map((pr) => pr.number);
+            const numbers = pullRequests.map((pr) => pr.number);
             logDebugInfo(`Found ${numbers.length} open PR(s) for head branch "${headBranch}": ${numbers.join(', ') || 'none'}`);
             return numbers;
         } catch (error) {
             logError(`Error listing PRs for branch ${headBranch}: ${error}`);
-            return [];
+            throw error;
         }
     };
 
@@ -48,13 +48,8 @@ export class PullRequestLifecycleRepository {
         const bodyRefRegex = new RegExp(`(?:^|[^\\d])#${escaped}(?:$|[^\\d])`);
         const headRefRegex = new RegExp(`\\b${escaped}\\b`);
         try {
-            const { data } = await octokit.rest.pulls.list({
-                owner,
-                repo: repository,
-                state: 'open',
-                per_page: 100,
-            });
-            for (const pr of data || []) {
+            const pullRequests = await this.listOpenPullRequests(octokit, owner, repository);
+            for (const pr of pullRequests) {
                 const body = pr.body ?? '';
                 const headRef = pr.head?.ref ?? '';
                 if (bodyRefRegex.test(body) || headRefRegex.test(headRef)) {
@@ -66,9 +61,32 @@ export class PullRequestLifecycleRepository {
             return undefined;
         } catch (error) {
             logError(`Error getting head branch for issue #${issueNumber}: ${error}`);
-            return undefined;
+            throw error;
         }
     };
+
+    private async listOpenPullRequests(
+        octokit: GithubPullRequestLifecycleClient,
+        owner: string,
+        repository: string,
+        filters: Record<string, unknown> = {},
+    ): Promise<GithubPullRequestSummary[]> {
+        const allPullRequests: GithubPullRequestSummary[] = [];
+        const maximumPages = 100;
+        for (let page = 1; page <= maximumPages; page += 1) {
+            const { data } = await octokit.rest.pulls.list({
+                owner,
+                repo: repository,
+                state: 'open',
+                per_page: 100,
+                page,
+                ...filters,
+            });
+            allPullRequests.push(...(data ?? []));
+            if ((data ?? []).length < 100) return allPullRequests;
+        }
+        throw new Error(`Open pull request pagination exceeded ${maximumPages} pages.`);
+    }
 
     /** Default timeout (ms) for isLinked fetch. */
     private static readonly IS_LINKED_FETCH_TIMEOUT_MS = 10000;

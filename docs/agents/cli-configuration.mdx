@@ -11,7 +11,7 @@ Bugbot executes one external, headless CLI per run. The selected runtime, the pr
 
 ```yaml
 with:
-  agent-provider: opencode
+  agent-provider: codex
   agent-model-provider: openai
   agent-model: gpt-5.6-luna
   agent-effort: high
@@ -36,7 +36,7 @@ and the runtime command is equivalent to:
 opencode run --model openai/gpt-5.6-luna
 ```
 
-The runtime provider and model provider do not have to be the same. OpenCode can be the runtime while OpenAI is the model provider.
+The default runtime is Codex. It can use a preinitialized local ChatGPT session on a controlled runner; `OPENAI_API_KEY` is only an optional API-mode fallback. The runtime provider and model provider do not have to be the same. OpenCode can be the runtime while OpenAI is the model provider.
 
 ## Recommended GitHub Actions configuration
 
@@ -52,6 +52,7 @@ jobs:
       AGENT_MODEL: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
       AGENT_ALLOWED_MODEL_PROVIDERS: ${{ vars.AGENT_ALLOWED_MODEL_PROVIDERS || 'openai' }}
       AGENT_ALLOWED_MODELS: ${{ vars.AGENT_ALLOWED_MODELS || 'openai/gpt-5.6-luna' }}
+      # Required only when Codex is not preauthenticated on the runner.
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     steps:
       - uses: actions/checkout@v4
@@ -111,7 +112,7 @@ Never place tokens in `with`, command arguments, prompts, repository files, or l
 
 ## Provisioning
 
-The Action verifies the selected CLI in GitHub Actions and, by default, reuses a preinstalled executable. If it is absent, it provisions it only when the corresponding version/checksum variable is present. Versions and the Cursor installer checksum are non-sensitive GitHub Variables:
+The Action provisions and verifies the selected CLI in GitHub Actions and, by default, reuses a preinstalled executable. If it is absent, it provisions it only when the corresponding version/checksum variable is present. Versions and the Cursor installer checksum are non-sensitive GitHub Variables:
 
 ```text
 CODEX_VERSION

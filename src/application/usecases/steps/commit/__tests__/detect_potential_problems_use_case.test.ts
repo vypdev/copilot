@@ -198,22 +198,26 @@ describe("DetectPotentialProblemsUseCase", () => {
     expect(mockAskAgent).not.toHaveBeenCalled();
   });
 
-  it("returns empty results when askAgent returns null", async () => {
+  it("returns a failure when askAgent returns null", async () => {
     mockAskAgent.mockResolvedValue(null);
 
     const results = await useCase.invoke(baseParam());
 
-    expect(results).toHaveLength(0);
+    expect(results).toHaveLength(1);
+    expect(results[0].success).toBe(false);
+    expect(results[0].errors[0].message).toContain("no potential-problem analysis");
     expect(mockAskAgent).toHaveBeenCalledTimes(1);
     expect(mockAddComment).not.toHaveBeenCalled();
   });
 
-  it("returns empty results when askAgent returns a string (non-object)", async () => {
+  it("returns a failure when askAgent returns a string (non-object)", async () => {
     mockAskAgent.mockResolvedValue("plain text");
 
     const results = await useCase.invoke(baseParam());
 
-    expect(results).toHaveLength(0);
+    expect(results).toHaveLength(1);
+    expect(results[0].success).toBe(false);
+    expect(results[0].errors[0].message).toContain("no potential-problem analysis");
     expect(mockAddComment).not.toHaveBeenCalled();
   });
 

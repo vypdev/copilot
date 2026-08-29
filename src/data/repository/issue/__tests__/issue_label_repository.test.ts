@@ -1,6 +1,11 @@
 import { IssueLabelRepository } from '../issue_label_repository';
 import { OctokitIssueLabelsClientAdapter } from '../../../../infrastructure/github/octokit_issue_adapters';
 
+jest.mock('../../../../utils/logger', () => ({
+    logError: jest.fn(),
+    logDebugInfo: jest.fn(),
+}));
+
 const mockList = jest.fn();
 const mockSet = jest.fn();
 jest.mock('@actions/github', () => ({
@@ -16,6 +21,12 @@ describe('IssueLabelRepository', () => {
         await expect(repository.getLabels('owner', 'repo', 7, 'token')).resolves.toEqual(['bug', 'priority:high']);
         mockList.mockRejectedValueOnce({ status: 404 });
         await expect(repository.getLabels('owner', 'repo', 7, 'token')).resolves.toEqual([]);
+    });
+
+    it('propagates non-not-found provider errors', async () => {
+        mockList.mockRejectedValueOnce({ status: 403, message: 'forbidden' });
+
+        await expect(repository.getLabels('owner', 'repo', 7, 'token')).rejects.toMatchObject({ status: 403 });
     });
 
     it('replaces issue labels', async () => {

@@ -1,7 +1,7 @@
 import { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
 import type { OrganizationMembersPort } from "../../../ports/organization_members_ports";
-import { logDebugInfo, logError, logInfo, logWarn } from "../../../../utils/logger";
+import { logDebugInfo, logError, logInfo, logWarn } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
 
@@ -90,7 +90,7 @@ export class CheckPermissionsUseCase implements ParamUseCase<Execution, Result[]
                     success: false,
                     executed: true,
                     steps: [`Tried to check action permissions.`],
-                    error: error,
+                    errors: [error],
                 })
             );
         }

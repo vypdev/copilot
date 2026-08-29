@@ -1,6 +1,6 @@
 import { logDebugInfo, logError } from "../../../utils/logger";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
-import type { GithubIssueLabelsClient } from "../../../application/ports/github_issue_ports";
+import type { GithubIssueLabelsClient } from "../../../infrastructure/github/ports/github_issue_provider_ports";
 
 export class IssueLabelRepository {
     constructor(private readonly githubClient: GithubClientPort<GithubIssueLabelsClient>) {}
@@ -21,7 +21,7 @@ export class IssueLabelRepository {
                 return [];
             }
             logError(`Error fetching labels for issue #${issueNumber}: ${error}`);
-            return [];
+            throw error;
         }
     };
 

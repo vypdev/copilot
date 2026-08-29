@@ -1,6 +1,6 @@
 import type { LatestTagQueryPort } from '../../ports/branch_tag_ports';
 import type { Execution } from '../../../data/model/execution';
-import type { Result } from '../../../data/model/result';
+import { getResultPayload, type Result } from '../../../data/model/result';
 import type { ParamUseCase } from '../base/param_usecase';
 import { applyHotfixResolution, applyReleaseResolution } from '../../../data/model/version_resolution_application_policy';
 import { shouldAbortReleaseResolution } from '../../../data/model/version_resolution_outcome_policy';
@@ -32,11 +32,11 @@ export class ExecutionBranchVersionResolver implements ExecutionBranchVersionRes
     private async resolveRelease(execution: Execution): Promise<boolean> {
         const versionInfo = (await this.getReleaseVersion.invoke(execution)).at(-1);
         if (versionInfo?.executed && versionInfo.success) {
-            execution.release.version = releaseResolutionFromPayload(versionInfo.payload).version;
+            execution.release.version = releaseResolutionFromPayload(getResultPayload(versionInfo.payload) ?? {}).version;
         } else {
             const typeInfo = (await this.getReleaseType.invoke(execution)).at(-1);
             if (typeInfo?.executed && typeInfo.success) {
-                execution.release.type = releaseResolutionFromPayload(typeInfo.payload).type;
+                execution.release.type = releaseResolutionFromPayload(getResultPayload(typeInfo.payload) ?? {}).type;
                 if (shouldAbortReleaseResolution(execution.release.type)) return false;
                 execution.release.version = nextReleaseVersion(
                     await this.latestTagQueryPort.getLatestTag(),
@@ -54,7 +54,7 @@ export class ExecutionBranchVersionResolver implements ExecutionBranchVersionRes
     private async resolveHotfix(execution: Execution): Promise<boolean> {
         const versionInfo = (await this.getHotfixVersion.invoke(execution)).at(-1);
         if (versionInfo?.executed && versionInfo.success) {
-            const resolution = hotfixResolutionFromPayload(versionInfo.payload);
+            const resolution = hotfixResolutionFromPayload(getResultPayload(versionInfo.payload) ?? {});
             execution.hotfix.baseVersion = resolution.baseVersion;
             execution.hotfix.version = resolution.version;
         } else {

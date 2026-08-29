@@ -1,6 +1,6 @@
 import { getOctokitClient } from "./octokit_client_resolver";
 import type { GithubClientPort } from "./ports/github_client_provider_port";
-import type { GithubActorAuthorizationClient, GithubAuthenticatedUserClient, GithubOrganizationMembersClient } from "../../application/ports/github_identity_ports";
+import type { GithubActorAuthorizationClient, GithubAuthenticatedUserClient, GithubOrganizationMembersClient } from "./ports/github_identity_provider_ports";
 import type { GithubOwnerTypeClient } from "./ports/github_identity_provider_ports";
 
 export class OctokitAuthenticatedUserClientAdapter implements GithubClientPort<GithubAuthenticatedUserClient> {

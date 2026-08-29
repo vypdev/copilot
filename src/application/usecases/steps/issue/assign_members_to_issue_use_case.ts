@@ -2,9 +2,24 @@ import { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
 import type { IssueAssigneePort } from "../../../../application/ports/issue_management_ports";
 import type { OrganizationMembersPort } from "../../../../application/ports/organization_members_ports";
-import { logDebugInfo, logError, logInfo } from "../../../../utils/logger";
+import { logDebugInfo, logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
+import {
+  calculateRemainingAssignees,
+  resolveAssigneeTarget,
+  resolveCreatorAssignment,
+  selectConfirmedAssignees,
+} from "../../../policies/assignee_assignment_policy";
 import { ParamUseCase } from "../../base/param_usecase";
+
+function assignmentResult(taskId: string, success: boolean, step?: string): Result {
+  return new Result({
+    id: taskId,
+    success,
+    executed: true,
+    steps: step ? [step] : [],
+  });
+}
 
 export class AssignMemberToIssueUseCase implements ParamUseCase<Execution, Result[]> {
     taskId: string = 'AssignMemberToIssueUseCase';
@@ -14,14 +29,11 @@ export class AssignMemberToIssueUseCase implements ParamUseCase<Execution, Resul
     async invoke(param: Execution): Promise<Result[]> {
         logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`);
 
-        const desiredAssigneesCount = param.isIssue ?
-            param.issue.desiredAssigneesCount : param.pullRequest.desiredAssigneesCount;
-
-        const number = param.isIssue ? param.issue.number : param.pullRequest.number;
+        const target = resolveAssigneeTarget(param);
         const result: Result[] = [];
 
         try {
-            logDebugInfo(`#${number} needs ${desiredAssigneesCount} assignees.`);
+            logDebugInfo(`#${target.number} needs ${target.desiredCount} assignees.`);
 
             const currentProjectMembers = await this.projectRepository.getAllMembers(
                 param.owner,
@@ -31,64 +43,33 @@ export class AssignMemberToIssueUseCase implements ParamUseCase<Execution, Resul
             const currentMembers = await this.issueRepository.getCurrentAssignees(
                 param.owner,
                 param.repo,
-                number,
+                target.number,
                 param.tokens.token,
             );
 
-            let remainingAssignees = desiredAssigneesCount - currentMembers.length;
-
-            const pullRequestCreatorIsTeamMember = param.isPullRequest
-                && param.pullRequest.creator.length > 0
-                && currentProjectMembers.indexOf(param.pullRequest.creator) > -1
-                && !currentMembers.includes(param.pullRequest.creator);
-
-            const issueCreatorIsTeamMember = param.isIssue
-                && param.issue.creator.length > 0
-                && currentProjectMembers.indexOf(param.issue.creator) > -1
-                && !currentMembers.includes(param.issue.creator);
-
-            /**
-             * Assign PR creator if applicable
-             */
-            if (pullRequestCreatorIsTeamMember) {
-                const creator = param.pullRequest.creator;
+            const creatorAssignment = resolveCreatorAssignment(param, currentProjectMembers, currentMembers);
+            if (creatorAssignment) {
+                const { login: creator, source } = creatorAssignment;
                 await this.issueRepository.assignMembersToIssue(
                     param.owner,
                     param.repo,
-                    number,
+                    target.number,
                     [creator],
                     param.tokens.token,
                 );
-                logDebugInfo(`Assigned PR creator @${creator} to #${number}.`);
-                result.push(
-                    new Result({
-                        id: this.taskId,
-                        success: true,
-                        executed: true,
-                        steps: [`The pull request was assigned to @${creator} (creator).`],
-                    })
-                );
-                remainingAssignees--; // Reduce the count of required assignees
-            } else if (issueCreatorIsTeamMember) {
-                const creator = param.issue.creator;
-                await this.issueRepository.assignMembersToIssue(
-                    param.owner,
-                    param.repo,
-                    number,
-                    [creator],
-                    param.tokens.token,
-                );
-                logDebugInfo(`Assigned Issue creator @${creator} to #${number}.`);
-                result.push(
-                    new Result({
-                        id: this.taskId,
-                        success: true,
-                        executed: true,
-                        steps: [`The issue was assigned to @${creator} (creator).`],
-                    })
-                );
-                remainingAssignees--; // Reduce the count of required assignees
+                logDebugInfo(`Assigned ${source} creator @${creator} to #${target.number}.`);
+                result.push(assignmentResult(
+                    this.taskId,
+                    true,
+                    `The ${source} was assigned to @${creator} (creator).`,
+                ));
             }
+
+            const remainingAssignees = calculateRemainingAssignees(
+                target.desiredCount,
+                currentMembers.length,
+                creatorAssignment !== undefined,
+            );
 
             /**
              * Exit if no more assignees are needed
@@ -129,24 +110,17 @@ export class AssignMemberToIssueUseCase implements ParamUseCase<Execution, Resul
             const membersAdded = await this.issueRepository.assignMembersToIssue(
                 param.owner,
                 param.repo,
-                number,
+                target.number,
                 members,
                 param.tokens.token,
             );
 
-            for (const member of membersAdded) {
-                if (members.includes(member)) {
-                    result.push(
-                        new Result({
-                            id: this.taskId,
-                            success: true,
-                            executed: true,
-                            steps: [
-                                param.isIssue ? `The issue was assigned to @${member}.` : `The pull request was assigned to @${member}.`,
-                            ],
-                        })
-                    );
-                }
+            for (const member of selectConfirmedAssignees(members, membersAdded)) {
+                result.push(assignmentResult(
+                    this.taskId,
+                    true,
+                    `${param.isIssue ? 'The issue' : 'The pull request'} was assigned to @${member}.`,
+                ));
             }
 
             return result;
@@ -158,7 +132,7 @@ export class AssignMemberToIssueUseCase implements ParamUseCase<Execution, Resul
                     success: false,
                     executed: true,
                     steps: [`Tried to assign members to issue.`],
-                    error: error,
+                    errors: [error],
                 })
             );
         }

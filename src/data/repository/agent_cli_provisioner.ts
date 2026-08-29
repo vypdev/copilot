@@ -4,7 +4,7 @@ import { accessSync, constants, mkdtempSync, readFileSync, rmSync } from 'node:f
 import { tmpdir } from 'node:os';
 import { delimiter, isAbsolute, join } from 'node:path';
 import type { AgentConfiguration, AgentProvider } from '../model/agent';
-import { parseAgentCommand } from './agent_command_parser';
+import { parseAgentCommand } from '../../application/policies/agent_command_parser';
 
 export interface AgentCliProvisioningEnvironment extends NodeJS.ProcessEnv {
     codexVersion?: string;
@@ -45,12 +45,15 @@ function executableExists(executable: string, environment: NodeJS.ProcessEnv): b
 }
 
 export class AgentCliProvisioner {
+    private readonly provisionedExecutables = new Set<string>();
+
     provision(target: AgentCliProvisioningTarget, environment: AgentCliProvisioningEnvironment = process.env): void {
         const provider = typeof target === 'string' ? target : target.provider;
         const configuredCommand = typeof target === 'string' ? undefined : target.command;
         const executable = configuredCommand ? parseAgentCommand(configuredCommand).executable : DEFAULT_EXECUTABLES[provider];
         const mode = this.resolveMode(environment.AGENT_PROVISIONING);
 
+        if (this.provisionedExecutables.has(executable)) return;
         if (mode !== 'always' && executableExists(executable, environment)) return;
         if (mode === 'disabled') {
             throw new Error(`Agent provisioning is disabled and the ${provider} CLI executable "${executable}" is not available.`);
@@ -60,14 +63,17 @@ export class AgentCliProvisioner {
             case 'codex':
                 this.installPnpmPackage('@openai/codex', environment.codexVersion || environment.CODEX_VERSION, 'CODEX_VERSION');
                 this.assertInstalled(executable, provider, environment);
+                this.provisionedExecutables.add(executable);
                 return;
             case 'opencode':
                 this.installPnpmPackage('opencode-ai', environment.opencodeVersion || environment.OPENCODE_VERSION, 'OPENCODE_VERSION');
                 this.assertInstalled(executable, provider, environment);
+                this.provisionedExecutables.add(executable);
                 return;
             case 'cursor':
                 this.installCursor(environment.cursorInstallerSha256 || environment.CURSOR_INSTALLER_SHA256);
                 this.assertInstalled(executable, provider, environment);
+                this.provisionedExecutables.add(executable);
                 return;
         }
     }

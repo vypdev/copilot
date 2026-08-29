@@ -7,11 +7,32 @@ description: Reproducible quality gates for contributors.
 Use Corepack and the pinned pnpm toolchain:
 
 ```bash
-corepack pnpm@10.12.4 exec tsc --noEmit
+corepack pnpm@10.12.4 run typecheck
 corepack pnpm@10.12.4 run lint
-corepack pnpm@10.12.4 exec jest --runInBand
+corepack pnpm@10.12.4 run test:coverage
 corepack pnpm@10.12.4 run build
 corepack pnpm@10.12.4 run validate:agent-docs
+corepack pnpm@10.12.4 run validate:docs-page
+corepack pnpm@10.12.4 run validate:workflows
+git diff --check
 ```
 
-Tests MUST isolate environment variables such as `AGENT_PROVIDER`, `AGENT_MODEL_PROVIDER`, `AGENT_MODEL`, and `AGENT_COMMAND`. Real provider smoke tests are separate from deterministic unit tests and MUST NOT run without authorization and cost controls.
+Tests MUST isolate environment variables such as `AGENT_PROVIDER`, `AGENT_MODEL_PROVIDER`, `AGENT_MODEL`, and `AGENT_COMMAND`. Real provider smoke tests are separate from deterministic unit tests and MUST NOT run without authorization and cost controls. Coverage thresholds are enforced by Jest and must not be reduced to accommodate a new code path; add focused tests instead.
+
+Architecture tests additionally verify that production imports remain acyclic,
+application code does not depend on concrete adapters, and pure model/policy
+code remains free of runtime, provider, and logging dependencies. Refresh the
+local topology before an architecture review with Graphify, and use the
+RepoWise index-only health/dead-code reports to distinguish current complexity
+from history-based churn signals:
+
+```bash
+graphify update .
+repowise init . --no-workspace --no-prose --no-agents --no-editor-setup \
+  --coverage-report coverage/lcov.info
+repowise dead-code --safe-only --format json --no-workspace
+```
+
+The reproducible `metrics:architecture` collector is the full evidence
+workflow; it requires a clean working tree and writes reports outside the
+repository.

@@ -1,0 +1,11 @@
+import type { Execution } from '../data/model/execution';
+import type { Result } from '../data/model/result';
+import type { ExecutableMainRunRoute, MainRunRouteHandlers } from './main_run_route_handlers';
+import type { RepositoryCoordinates } from './repository_context';
+import type { PreviousWorkflowRunsQuery } from '../application/ports/workflow_run_ports';
+export declare function buildPreviousWorkflowRunsQuery(repository: RepositoryCoordinates): PreviousWorkflowRunsQuery;
+export declare function waitForPreviousWorkflowRuns(execution: Execution, repository: RepositoryCoordinates): Promise<void>;
+export declare function logWelcomeMessage(execution: Execution): void;
+export declare function runTokenExecution(execution: Execution, routeHandlers: MainRunRouteHandlers): Promise<Result[]>;
+export declare function runNoIssueExecution(execution: Execution, routeHandlers: MainRunRouteHandlers): Promise<Result[]>;
+export declare function runMainRoute(execution: Execution, route: ExecutableMainRunRoute | 'unhandled', routeHandlers: MainRunRouteHandlers): Promise<Result[]>;

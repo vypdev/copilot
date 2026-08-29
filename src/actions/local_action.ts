@@ -7,8 +7,7 @@
 
 
 
-import { GitCliRepository } from '../data/repository/git_cli_repository';
-import { createProjectBoardCompositionRoot } from '../infrastructure/composition/project_board_composition_root';
+import { createLocalActionCompositionRoot } from '../infrastructure/composition/local_action_composition_root';
 
 import { mainRun } from './common_action';
 import { renderLocalActionResults } from './local_action_output';
@@ -22,12 +21,12 @@ export async function runLocalAction(
 ): Promise<void> {
     const repository = requireRepositoryCoordinates(additionalParams?.repo);
     const normalizedParams = { ...(additionalParams ?? {}), repo: repository };
-    const projectBoard = createProjectBoardCompositionRoot();
+    const composition = createLocalActionCompositionRoot();
 
-    const configuration = await buildLocalActionConfiguration(normalizedParams, projectBoard.query);
+    const configuration = await buildLocalActionConfiguration(normalizedParams, composition.projectBoard.query);
     const execution = buildLocalActionExecution(configuration, normalizedParams);
 
-    const results = await mainRun(execution, projectBoard.command, new GitCliRepository());
+    const results = await mainRun(execution, composition.projectBoard.command, composition.latestTagQuery);
 
     renderLocalActionResults(results);
 }

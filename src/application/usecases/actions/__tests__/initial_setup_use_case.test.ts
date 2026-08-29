@@ -118,7 +118,7 @@ describe('InitialSetupUseCase', () => {
       const results = await useCase.invoke(param);
       expect(results).toHaveLength(1);
       expect(results[0].success).toBe(false);
-      expect(results[0].errors).toContain(
+      expect(results[0].errors.map((error) => error.message)).toContain(
         'PERSONAL_ACCESS_TOKEN must be set (environment or .env) with a valid token to run setup.'
       );
       expect(results[0].steps).not.toContainEqual(
@@ -217,7 +217,7 @@ describe('InitialSetupUseCase', () => {
     const results = await useCase.invoke(param);
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
-    expect(results[0].errors).toContain('Label error');
+    expect(results[0].errors.map((error) => error.message)).toContain('Label error');
   });
 
   it('continues and reports progress-label provisioning errors', async () => {
@@ -229,7 +229,7 @@ describe('InitialSetupUseCase', () => {
     const results = await useCase.invoke(param);
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
-    expect(results[0].errors).toContain('Progress error');
+    expect(results[0].errors.map((error) => error.message)).toContain('Progress error');
   });
 
   it('continues and reports errors when ensureIssueTypes returns success false', async () => {
@@ -238,7 +238,7 @@ describe('InitialSetupUseCase', () => {
     const results = await useCase.invoke(param);
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
-    expect(results[0].errors).toContain('Issue type error');
+    expect(results[0].errors.map((error) => error.message)).toContain('Issue type error');
   });
 
   it('returns failure when initial label provisioning throws', async () => {

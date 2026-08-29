@@ -2,8 +2,14 @@ import { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
 import type { IssueNotificationPort } from "../../../ports/issue_lifecycle_ports";
 import { getRandomElement } from "../../../../utils/list_utils";
-import { getAccumulatedLogsAsText, logError, logInfo } from "../../../../utils/logger";
+import { getAccumulatedLogsAsText, logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
+import {
+    buildDebugLogSection,
+    hasPublishableContent,
+    renderResultSections,
+    resolveResultPublicationPresentation,
+} from "../../../policies/result_publication_policy";
 import { ParamUseCase } from "../../base/param_usecase";
 
 /**
@@ -17,153 +23,37 @@ export class PublishResultUseCase implements ParamUseCase<Execution, void> {
         logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`)
 
         try {
-            /**
-             * Comment resume of actions
-             */
-            let title = '🪄 Automatic Actions'
-            let content = ''
-            let stupidGif = ''
-            let image: string | undefined
-            let errors = ''
-            let footer = ''
-            if (param.isIssue) {
-                if (param.issueNotBranched) {
-                    title = '🪄 Automatic Actions'
-                    image = getRandomElement(param.images.issueAutomaticActions)
-                } else if (param.release.active) {
-                    title = '🚀 Release Actions'
-                    image = getRandomElement(param.images.issueReleaseGifs)
-                } else if (param.hotfix.active) {
-                    title = '🔥🐛 Hotfix Actions'
-                    image = getRandomElement(param.images.issueHotfixGifs)
-                } else if (param.isBugfix) {
-                    title = '🐛 Bugfix Actions'
-                    image = getRandomElement(param.images.issueBugfixGifs)
-                } else if (param.isFeature) {
-                    title = '✨ Feature Actions'
-                    image = getRandomElement(param.images.issueFeatureGifs)
-                } else if (param.isDocs) {
-                    title = '📝 Documentation Actions'
-                    image = getRandomElement(param.images.issueDocsGifs)
-                } else if (param.isChore) {
-                    title = '🔧 Chore Actions'
-                    image = getRandomElement(param.images.issueChoreGifs)
-                }
-            } else if (param.isPullRequest) {
-                if (param.release.active) {
-                    title = '🚀 Release Actions'
-                    image = getRandomElement(param.images.pullRequestReleaseGifs)
-                } else if (param.hotfix.active) {
-                    title = '🔥🐛 Hotfix Actions'
-                    image = getRandomElement(param.images.pullRequestHotfixGifs)
-                } else if (param.isBugfix) {
-                    title = '🐛 Bugfix Actions'
-                    image = getRandomElement(param.images.pullRequestBugfixGifs)
-                } else if (param.isFeature) {
-                    title = '✨ Feature Actions'
-                    image = getRandomElement(param.images.pullRequestFeatureGifs)
-                } else if (param.isDocs) {
-                    title = '📝 Documentation Actions'
-                    image = getRandomElement(param.images.pullRequestDocsGifs)
-                } else if (param.isChore) {
-                    title = '🔧 Chore Actions'
-                    image = getRandomElement(param.images.pullRequestChoreGifs)
-                } else {
-                    title = '🪄 Automatic Actions'
-                    image = getRandomElement(param.images.pullRequestAutomaticActions)
-                }
-            }
+            const presentation = resolveResultPublicationPresentation({
+                isIssue: param.isIssue,
+                isPullRequest: param.isPullRequest,
+                issueNotBranched: param.issueNotBranched,
+                releaseActive: param.release.active,
+                hotfixActive: param.hotfix.active,
+                isBugfix: param.isBugfix,
+                isFeature: param.isFeature,
+                isDocs: param.isDocs,
+                isChore: param.isChore,
+                images: param.images,
+            }, getRandomElement);
+            const sections = renderResultSections(param.currentConfiguration.results);
+            const debugLogSection = buildDebugLogSection(param.debug, getAccumulatedLogsAsText());
+            const imageMarkdown = presentation.image && (
+                (param.isIssue && param.images.imagesOnIssue)
+                || (param.isPullRequest && param.images.imagesOnPullRequest)
+            ) ? `![image](${presentation.image})` : '';
 
-            if (image) {
-                if (param.isIssue && param.images.imagesOnIssue) {
-                    stupidGif = `![image](${image})`
-                } else if (param.isPullRequest && param.images.imagesOnPullRequest) {
-                    stupidGif = `![image](${image})`
-                }
-            }
+            const commentBody = `# ${presentation.title}
+${sections.content}
+${sections.errors}
 
-            let indexStep = 0
-            const renderedSteps: string[] = [];
-            param.currentConfiguration.results.forEach(r => {
-                for (const step of r.steps) {
-                    if (!step.trim()) continue;
-                    if (r.stepFormat === 'markdown') {
-                        renderedSteps.push(step);
-                    } else {
-                        renderedSteps.push(`${indexStep + 1}. ${step}`);
-                        indexStep++
-                    }
-                }
-            });
-            content = renderedSteps.length > 0 ? `${renderedSteps.join('\n\n')}\n` : '';
+${imageMarkdown}
 
-            let indexReminder = 0
-            param.currentConfiguration.results.forEach(r => {
-                for (const reminder of r.reminders) {
-                    footer += `${indexReminder + 1}. ${reminder}\n`
-                    indexReminder++
-                }
-            });
-
-            let indexError = 0
-            param.currentConfiguration.results.forEach(r => {
-                for (const error of r.errors) {
-                    errors += `${indexError + 1}.
-\`\`\`
-${error}
-\`\`\`
-`
-                    indexError++
-                }
-            });
-
-            if (footer.length > 0) {
-                footer = `
-## Reminder
-
-${footer}
-`
-            }
-
-            if (errors.length > 0) {
-                errors = `
-## Errors Found
-
-${errors}
-
-Check your project configuration, if everything is okay consider [opening an issue](https://github.com/vypdev/copilot/issues/new/choose).
-`
-            }
-
-            let debugLogSection = '';
-            if (param.debug) {
-                const logsText = getAccumulatedLogsAsText();
-                if (logsText.length > 0) {
-                    debugLogSection = `
-
-<details>
-<summary>Debug log</summary>
-
-\`\`\`
-${logsText}
-\`\`\`
-</details>
-`;
-                }
-            }
-
-            const commentBody = `# ${title}
-${content}
-${errors.length > 0 ? errors : ''}
-
-${stupidGif}
-
-${footer}
+${sections.footer}
 ${debugLogSection}
 🚀 Happy coding!
             `;
 
-            if (content.length === 0) {
+            if (!hasPublishableContent(sections, debugLogSection)) {
                 return;
             }
 
@@ -210,7 +100,7 @@ ${debugLogSection}
                     steps: [
                         `Tried to publish the resume, but there was a problem.`,
                     ],
-                    error: error,
+                    errors: [error],
                 })
             )
         }

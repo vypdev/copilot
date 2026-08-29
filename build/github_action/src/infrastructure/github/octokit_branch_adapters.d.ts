@@ -1,5 +1,5 @@
 import type { GithubClientPort } from "./ports/github_client_provider_port";
-import type { GithubBranchClient, GithubBranchComparisonClient, GithubBranchMergeClient } from "../../application/ports/github_branch_ports";
+import type { GithubBranchClient, GithubBranchComparisonClient, GithubBranchMergeClient } from "./ports/github_branch_provider_ports";
 export declare class OctokitBranchClientAdapter implements GithubClientPort<GithubBranchClient> {
     getClient(token: string): GithubBranchClient;
 }

@@ -1,4 +1,5 @@
 import { CheckPullRequestCommentLanguageUseCase } from '../check_pull_request_comment_language_use_case';
+import { CommentLanguageTranslationWorkflow } from '../../common/comment_language_translation_workflow';
 
 jest.mock('../../../../../utils/logger', () => ({
   logInfo: jest.fn(),
@@ -28,7 +29,12 @@ describe('CheckPullRequestCommentLanguageUseCase', () => {
   let useCase: CheckPullRequestCommentLanguageUseCase;
 
   beforeEach(() => {
-    useCase = new CheckPullRequestCommentLanguageUseCase({ updateComment: mockUpdateComment }, { query: (request: { configuration: unknown; agentId: string; prompt: string; options?: unknown }) => mockAskAgent(request.configuration, request.agentId, request.prompt, request.options) });
+    useCase = new CheckPullRequestCommentLanguageUseCase(
+      new CommentLanguageTranslationWorkflow(
+        { updateComment: mockUpdateComment },
+        { query: (request: { configuration: unknown; agentId: string; prompt: string; options?: unknown }) => mockAskAgent(request.configuration, request.agentId, request.prompt, request.options) },
+      ),
+    );
     mockAskAgent.mockReset();
     mockUpdateComment.mockReset();
   });

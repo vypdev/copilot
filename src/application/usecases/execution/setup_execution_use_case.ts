@@ -3,7 +3,7 @@ import type { ExecutionIssueSetupPort, ExecutionOrganizationSetupPort } from '..
 import type { Execution } from '../../../data/model/execution';
 import { shouldSkipInitialLabelsFetch } from '../../../data/model/initial_labels_policy';
 import { restorePreviousBranchState } from '../../../data/model/previous_branch_state_policy';
-import { logDebugInfo, setGlobalLoggerDebug } from '../../../utils/logger';
+import { logDebugInfo, setGlobalLoggerDebug } from '../../ports/logging_ports';
 import type { ParamUseCase } from '../base/param_usecase';
 import type { ExecutionBranchVersionResolution } from './execution_branch_version_resolver';
 import { resolveExecutionIssueNumber } from './resolve_execution_issue_number';

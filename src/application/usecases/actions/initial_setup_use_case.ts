@@ -6,8 +6,8 @@ import type { InitialLabelProvisioningPort, IssueTypeProvisioningPort, LabelProv
 import type { SetupWorkspacePort } from "../../ports/setup_workspace_ports";
 import { Result } from "../../../data/model/result";
 import { ParamUseCase } from "../base/param_usecase";
-import { DEFAULT_INITIAL_TAG } from "../../../utils/version_utils";
-import { logDebugInfo, logError, logInfo } from "../../../utils/logger";
+import { DEFAULT_INITIAL_TAG } from '../../../data/model/version_policy';
+import { logDebugInfo, logError, logInfo } from "../../ports/logging_ports";
 import { getTaskEmoji } from "../../../utils/task_emoji";
 
 type InitialLabelProvisioningOutcome =

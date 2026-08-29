@@ -77,8 +77,10 @@ describe("main run route composition root", () => {
 
     expect(useCase).toBeInstanceOf(IssueCommentUseCase);
     expect(CheckIssueCommentLanguageUseCase).toHaveBeenCalledWith(
-      mockIssue,
-      mockFindings,
+      expect.objectContaining({
+        commentRepository: mockIssue,
+        findingsQueryPort: mockFindings,
+      }),
     );
     expect(DetectBugbotFixIntentUseCase).toHaveBeenCalledWith(
       mockPullRequest,

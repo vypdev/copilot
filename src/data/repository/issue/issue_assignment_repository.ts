@@ -1,6 +1,6 @@
 import { logDebugInfo, logError } from "../../../utils/logger";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
-import type { GithubIssueAssignmentClient } from "../../../application/ports/github_issue_ports";
+import type { GithubIssueAssignmentClient } from "../../../infrastructure/github/ports/github_issue_provider_ports";
 
 export class IssueAssignmentRepository {
     constructor(private readonly githubClient: GithubClientPort<GithubIssueAssignmentClient>) {}
@@ -11,7 +11,7 @@ export class IssueAssignmentRepository {
             return (issue.assignees ?? []).map(assignee => assignee.login);
         } catch (error) {
             logError(`Error getting members of issue: ${error}.`);
-            return [];
+            throw error;
         }
     };
 
@@ -34,7 +34,7 @@ export class IssueAssignmentRepository {
             return (updatedIssue.assignees ?? []).map(assignee => assignee.login);
         } catch (error) {
             logError(`Error assigning members to issue: ${error}.`);
-            return [];
+            throw error;
         }
     };
 }

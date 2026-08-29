@@ -1,7 +1,7 @@
 import type { BugbotFindingResolutionPorts } from "../../../../../application/ports/bugbot_finding_resolution_ports";
 import { PullRequestReviewOperationError } from "../../../../../application/ports/pull_request_review_errors";
 import type { Execution } from "../../../../../data/model/execution";
-import { logError } from "../../../../../utils/logger";
+import { logError } from "../../../../ports/logging_ports";
 import type {
   BugbotContext,
   ExistingPullRequestFindingInfo,

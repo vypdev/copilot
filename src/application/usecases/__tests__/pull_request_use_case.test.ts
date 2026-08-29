@@ -3,7 +3,7 @@ import type { Execution } from "../../../data/model/execution";
 import { Result } from "../../../data/model/result";
 
 const mockLogError = jest.fn();
-jest.mock("../../../utils/logger", () => ({
+jest.mock("../../ports/logging_ports", () => ({
   logInfo: jest.fn(),
   logDebugInfo: jest.fn(),
   logError: (...args: unknown[]) => mockLogError(...args),
@@ -19,61 +19,6 @@ const mockCheckPriorityInvoke = jest.fn();
 const mockUpdateDescriptionInvoke = jest.fn();
 const mockCloseIssueInvoke = jest.fn();
 
-jest.mock("../steps/common/update_title_use_case", () => ({
-  UpdateTitleUseCase: jest
-    .fn()
-    .mockImplementation(() => ({ invoke: mockUpdateTitleInvoke })),
-}));
-jest.mock("../steps/issue/assign_members_to_issue_use_case", () => ({
-  AssignMemberToIssueUseCase: jest
-    .fn()
-    .mockImplementation(() => ({ invoke: mockAssignMemberInvoke })),
-}));
-jest.mock("../steps/issue/assign_reviewers_to_issue_use_case", () => ({
-  AssignReviewersToIssueUseCase: jest
-    .fn()
-    .mockImplementation(() => ({ invoke: mockAssignReviewersInvoke })),
-}));
-jest.mock("../steps/pull_request/link_pull_request_project_use_case", () => ({
-  LinkPullRequestProjectUseCase: jest
-    .fn()
-    .mockImplementation(() => ({ invoke: mockLinkProjectInvoke })),
-}));
-jest.mock("../steps/pull_request/link_pull_request_issue_use_case", () => ({
-  LinkPullRequestIssueUseCase: jest
-    .fn()
-    .mockImplementation(() => ({ invoke: mockLinkIssueInvoke })),
-}));
-jest.mock(
-  "../steps/pull_request/sync_size_and_progress_labels_from_issue_to_pr_use_case",
-  () => ({
-    SyncSizeAndProgressLabelsFromIssueToPrUseCase: jest
-      .fn()
-      .mockImplementation(() => ({ invoke: mockSyncLabelsInvoke })),
-  }),
-);
-jest.mock(
-  "../steps/pull_request/check_priority_pull_request_size_use_case",
-  () => ({
-    CheckPriorityPullRequestSizeUseCase: jest
-      .fn()
-      .mockImplementation(() => ({ invoke: mockCheckPriorityInvoke })),
-  }),
-);
-jest.mock(
-  "../steps/pull_request/update_pull_request_description_use_case",
-  () => ({
-    UpdatePullRequestDescriptionUseCase: jest
-      .fn()
-      .mockImplementation(() => ({ invoke: mockUpdateDescriptionInvoke })),
-  }),
-);
-jest.mock("../steps/issue/close_issue_after_merging_use_case", () => ({
-  CloseIssueAfterMergingUseCase: jest
-    .fn()
-    .mockImplementation(() => ({ invoke: mockCloseIssueInvoke })),
-}));
-
 function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
   return {
     pullRequest: {
@@ -87,6 +32,17 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
     ...overrides,
   } as unknown as Execution;
 }
+
+const workflowSteps = {
+  updateTitle: { taskId: 'update-title', invoke: mockUpdateTitleInvoke },
+  assignMemberToIssue: { taskId: 'assign-member', invoke: mockAssignMemberInvoke },
+  assignReviewersToIssue: { taskId: 'assign-reviewers', invoke: mockAssignReviewersInvoke },
+  linkPullRequestProject: { taskId: 'link-project', invoke: mockLinkProjectInvoke },
+  linkPullRequestIssue: { taskId: 'link-issue', invoke: mockLinkIssueInvoke },
+  syncSizeAndProgressLabels: { taskId: 'sync-labels', invoke: mockSyncLabelsInvoke },
+  checkPriorityPullRequestSize: { taskId: 'check-priority', invoke: mockCheckPriorityInvoke },
+  closeIssueAfterMerging: { taskId: 'close-issue', invoke: mockCloseIssueInvoke },
+};
 
 describe("PullRequestUseCase", () => {
   beforeEach(() => {
@@ -104,37 +60,8 @@ describe("PullRequestUseCase", () => {
 
   it("when PR is opened, runs update title, assign, link, sync, check priority", async () => {
     const useCase = new PullRequestUseCase(
-      { setTaskPriority: jest.fn().mockResolvedValue(true) },
-      { updateDescription: jest.fn() },
-      { getDescription: jest.fn().mockResolvedValue("") },
-      {
-        getTitle: jest.fn(),
-        updateTitleIssueFormat: jest.fn(),
-        updateTitlePullRequestFormat: jest.fn(),
-      },
-      { closeIssue: jest.fn(), addComment: jest.fn() },
-      { getCurrentAssignees: jest.fn(), assignMembersToIssue: jest.fn() },
-      { getCurrentReviewers: jest.fn(), addReviewersToPullRequest: jest.fn() },
-      {
-        getAllMembers: jest.fn().mockResolvedValue([]),
-        getRandomMembers: jest.fn(),
-      },
-      { getLabels: jest.fn(), setLabels: jest.fn() },
-      {
-        isLinked: jest.fn().mockResolvedValue(true),
-        updateBaseBranch: jest.fn(),
-        updateDescription: jest.fn(),
-      },
-      { linkContentId: jest.fn() },
-      {
-        moveIssueToColumn: jest.fn(),
-        setTaskPriority: jest.fn(),
-        setTaskSize: jest.fn(),
-      },
-      {
-        taskId: "UpdatePullRequestDescriptionUseCase",
-        invoke: mockUpdateDescriptionInvoke,
-      },
+      { taskId: "UpdatePullRequestDescriptionUseCase", invoke: mockUpdateDescriptionInvoke },
+      workflowSteps,
     );
     const param = minimalExecution({
       pullRequest: {
@@ -162,37 +89,8 @@ describe("PullRequestUseCase", () => {
     ]);
 
     const useCase = new PullRequestUseCase(
-      { setTaskPriority: jest.fn().mockResolvedValue(true) },
-      { updateDescription: jest.fn() },
-      { getDescription: jest.fn().mockResolvedValue("") },
-      {
-        getTitle: jest.fn(),
-        updateTitleIssueFormat: jest.fn(),
-        updateTitlePullRequestFormat: jest.fn(),
-      },
-      { closeIssue: jest.fn(), addComment: jest.fn() },
-      { getCurrentAssignees: jest.fn(), assignMembersToIssue: jest.fn() },
-      { getCurrentReviewers: jest.fn(), addReviewersToPullRequest: jest.fn() },
-      {
-        getAllMembers: jest.fn().mockResolvedValue([]),
-        getRandomMembers: jest.fn(),
-      },
-      { getLabels: jest.fn(), setLabels: jest.fn() },
-      {
-        isLinked: jest.fn().mockResolvedValue(true),
-        updateBaseBranch: jest.fn(),
-        updateDescription: jest.fn(),
-      },
-      { linkContentId: jest.fn() },
-      {
-        moveIssueToColumn: jest.fn(),
-        setTaskPriority: jest.fn(),
-        setTaskSize: jest.fn(),
-      },
-      {
-        taskId: "UpdatePullRequestDescriptionUseCase",
-        invoke: mockUpdateDescriptionInvoke,
-      },
+      { taskId: "UpdatePullRequestDescriptionUseCase", invoke: mockUpdateDescriptionInvoke },
+      workflowSteps,
     );
     const param = minimalExecution({
       pullRequest: {
@@ -212,37 +110,8 @@ describe("PullRequestUseCase", () => {
 
   it("when PR is synchronize and ai description enabled, updates description", async () => {
     const useCase = new PullRequestUseCase(
-      { setTaskPriority: jest.fn().mockResolvedValue(true) },
-      { updateDescription: jest.fn() },
-      { getDescription: jest.fn().mockResolvedValue("") },
-      {
-        getTitle: jest.fn(),
-        updateTitleIssueFormat: jest.fn(),
-        updateTitlePullRequestFormat: jest.fn(),
-      },
-      { closeIssue: jest.fn(), addComment: jest.fn() },
-      { getCurrentAssignees: jest.fn(), assignMembersToIssue: jest.fn() },
-      { getCurrentReviewers: jest.fn(), addReviewersToPullRequest: jest.fn() },
-      {
-        getAllMembers: jest.fn().mockResolvedValue([]),
-        getRandomMembers: jest.fn(),
-      },
-      { getLabels: jest.fn(), setLabels: jest.fn() },
-      {
-        isLinked: jest.fn().mockResolvedValue(true),
-        updateBaseBranch: jest.fn(),
-        updateDescription: jest.fn(),
-      },
-      { linkContentId: jest.fn() },
-      {
-        moveIssueToColumn: jest.fn(),
-        setTaskPriority: jest.fn(),
-        setTaskSize: jest.fn(),
-      },
-      {
-        taskId: "UpdatePullRequestDescriptionUseCase",
-        invoke: mockUpdateDescriptionInvoke,
-      },
+      { taskId: "UpdatePullRequestDescriptionUseCase", invoke: mockUpdateDescriptionInvoke },
+      workflowSteps,
     );
     const param = minimalExecution({
       pullRequest: {
@@ -265,37 +134,8 @@ describe("PullRequestUseCase", () => {
     ]);
 
     const useCase = new PullRequestUseCase(
-      { setTaskPriority: jest.fn().mockResolvedValue(true) },
-      { updateDescription: jest.fn() },
-      { getDescription: jest.fn().mockResolvedValue("") },
-      {
-        getTitle: jest.fn(),
-        updateTitleIssueFormat: jest.fn(),
-        updateTitlePullRequestFormat: jest.fn(),
-      },
-      { closeIssue: jest.fn(), addComment: jest.fn() },
-      { getCurrentAssignees: jest.fn(), assignMembersToIssue: jest.fn() },
-      { getCurrentReviewers: jest.fn(), addReviewersToPullRequest: jest.fn() },
-      {
-        getAllMembers: jest.fn().mockResolvedValue([]),
-        getRandomMembers: jest.fn(),
-      },
-      { getLabels: jest.fn(), setLabels: jest.fn() },
-      {
-        isLinked: jest.fn().mockResolvedValue(true),
-        updateBaseBranch: jest.fn(),
-        updateDescription: jest.fn(),
-      },
-      { linkContentId: jest.fn() },
-      {
-        moveIssueToColumn: jest.fn(),
-        setTaskPriority: jest.fn(),
-        setTaskSize: jest.fn(),
-      },
-      {
-        taskId: "UpdatePullRequestDescriptionUseCase",
-        invoke: mockUpdateDescriptionInvoke,
-      },
+      { taskId: "UpdatePullRequestDescriptionUseCase", invoke: mockUpdateDescriptionInvoke },
+      workflowSteps,
     );
     const param = minimalExecution({
       pullRequest: {
@@ -317,37 +157,8 @@ describe("PullRequestUseCase", () => {
     mockUpdateTitleInvoke.mockRejectedValue(new Error("secret-token"));
 
     const useCase = new PullRequestUseCase(
-      { setTaskPriority: jest.fn().mockResolvedValue(true) },
-      { updateDescription: jest.fn() },
-      { getDescription: jest.fn().mockResolvedValue("") },
-      {
-        getTitle: jest.fn(),
-        updateTitleIssueFormat: jest.fn(),
-        updateTitlePullRequestFormat: jest.fn(),
-      },
-      { closeIssue: jest.fn(), addComment: jest.fn() },
-      { getCurrentAssignees: jest.fn(), assignMembersToIssue: jest.fn() },
-      { getCurrentReviewers: jest.fn(), addReviewersToPullRequest: jest.fn() },
-      {
-        getAllMembers: jest.fn().mockResolvedValue([]),
-        getRandomMembers: jest.fn(),
-      },
-      { getLabels: jest.fn(), setLabels: jest.fn() },
-      {
-        isLinked: jest.fn().mockResolvedValue(true),
-        updateBaseBranch: jest.fn(),
-        updateDescription: jest.fn(),
-      },
-      { linkContentId: jest.fn() },
-      {
-        moveIssueToColumn: jest.fn(),
-        setTaskPriority: jest.fn(),
-        setTaskSize: jest.fn(),
-      },
-      {
-        taskId: "UpdatePullRequestDescriptionUseCase",
-        invoke: mockUpdateDescriptionInvoke,
-      },
+      { taskId: "UpdatePullRequestDescriptionUseCase", invoke: mockUpdateDescriptionInvoke },
+      workflowSteps,
     );
     const param = minimalExecution();
     const results = await useCase.invoke(param);

@@ -114,7 +114,7 @@ describe('CreateReleaseUseCase', () => {
     const param = baseParam();
     const results = await useCase.invoke(param);
     expect(results[0].success).toBe(false);
-    expect(results[0].errors).toContain('Failed to create release.');
+    expect(results[0].errors.map((error) => error.message)).toContain('Failed to create release.');
   });
 
   it('returns failure and catches error when createRelease throws', async () => {

@@ -1,9 +1,8 @@
-import * as core from '@actions/core';
 import type { IssueTitlePort } from '../../../application/ports/issue_title_ports';
 import type { GithubClientPort } from '../../../infrastructure/github/ports/github_client_provider_port';
-import type { GithubIssueTitleClient } from '../../../application/ports/github_issue_ports';
+import type { GithubIssueTitleClient } from '../../../infrastructure/github/ports/github_issue_provider_ports';
 import { Labels } from '../../model/labels';
-import { logDebugInfo } from '../../../utils/logger';
+import { logDebugInfo, logError } from '../../../utils/logger';
 import { resolveIssueTitleEmoji, resolvePullRequestTitleEmoji } from '../issue_emoji_policy';
 import { sanitizeIssueTitle, sanitizePullRequestTitle } from '../issue_title_policy';
 import type { IssueMetadataRepository } from './issue_metadata_repository';
@@ -26,15 +25,10 @@ export class IssueTitleRepository implements IssueTitlePort {
             const formattedTitle = version.length > 0
                 ? `${emoji} - ${version} - ${sanitizedTitle}`
                 : `${emoji} - ${sanitizedTitle}`;
-            if (formattedTitle === issueTitle) return undefined;
-            await this.issueTitleClient.getClient(token).rest.issues.update({
-                owner, repo: repository, issue_number: issueNumber, title: formattedTitle,
-            });
-            logDebugInfo(`Issue title updated to: ${formattedTitle}`);
-            return formattedTitle;
+            return this.updateTitle(owner, repository, issueTitle, formattedTitle, issueNumber, token);
         } catch (error) {
-            core.setFailed(`Failed to check or update issue title: ${error}`);
-            return undefined;
+            logError(`Failed to check or update issue title: ${error}`);
+            throw error;
         }
     };
 
@@ -46,15 +40,10 @@ export class IssueTitleRepository implements IssueTitlePort {
         try {
             const emoji = resolvePullRequestTitleEmoji(labels, branchManagementAlways, branchManagementEmoji);
             const formattedTitle = `[#${issueNumber}] ${emoji} - ${sanitizePullRequestTitle(issueTitle)}`;
-            if (formattedTitle === pullRequestTitle) return undefined;
-            await this.issueTitleClient.getClient(token).rest.issues.update({
-                owner, repo: repository, issue_number: pullRequestNumber, title: formattedTitle,
-            });
-            logDebugInfo(`Issue title updated to: ${formattedTitle}`);
-            return formattedTitle;
+            return this.updateTitle(owner, repository, pullRequestTitle, formattedTitle, pullRequestNumber, token);
         } catch (error) {
-            core.setFailed(`Failed to check or update issue title: ${error}`);
-            return undefined;
+            logError(`Failed to check or update issue title: ${error}`);
+            throw error;
         }
     };
 
@@ -63,15 +52,26 @@ export class IssueTitleRepository implements IssueTitlePort {
     ): Promise<string | undefined> => {
         try {
             const sanitizedTitle = sanitizePullRequestTitle(issueTitle);
-            if (sanitizedTitle === issueTitle) return undefined;
-            await this.issueTitleClient.getClient(token).rest.issues.update({
-                owner, repo: repository, issue_number: issueNumber, title: sanitizedTitle,
-            });
-            logDebugInfo(`Issue title updated to: ${sanitizedTitle}`);
-            return sanitizedTitle;
+            return this.updateTitle(owner, repository, issueTitle, sanitizedTitle, issueNumber, token);
         } catch (error) {
-            core.setFailed(`Failed to check or update issue title: ${error}`);
-            return undefined;
+            logError(`Failed to check or update issue title: ${error}`);
+            throw error;
         }
     };
+
+    private async updateTitle(
+        owner: string,
+        repository: string,
+        currentTitle: string,
+        nextTitle: string,
+        issueNumber: number,
+        token: string,
+    ): Promise<string | undefined> {
+        if (nextTitle === currentTitle) return undefined;
+        await this.issueTitleClient.getClient(token).rest.issues.update({
+            owner, repo: repository, issue_number: issueNumber, title: nextTitle,
+        });
+        logDebugInfo(`Issue title updated to: ${nextTitle}`);
+        return nextTitle;
+    }
 }

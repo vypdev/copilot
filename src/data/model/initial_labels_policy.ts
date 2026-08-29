@@ -1,4 +1,4 @@
-import { ACTIONS } from '../../utils/constants';
+import { ACTIONS } from './action_types';
 
 export function shouldSkipInitialLabelsFetch(
     isSingleAction: boolean,

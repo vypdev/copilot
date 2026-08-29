@@ -13,7 +13,7 @@ export function registerCheckProgressCommand(program: Command): void {
     .option('-i, --issue <number>', 'Issue number to check progress for (required)', '')
     .option('-b, --branch <name>', 'Branch name (optional, will try to determine from issue)')
     .option('-d, --debug', 'Debug mode', false)
-    .option('-t, --token <token>', 'Personal access token', process.env.PERSONAL_ACCESS_TOKEN)
+    .option('-t, --token <token>', 'Personal access token (or PERSONAL_ACCESS_TOKEN from the environment)')
     .action(async (options) => {
       const gitInfo = getGitInfo();
       if ('error' in gitInfo) {

@@ -1,7 +1,7 @@
 import type { GitCommitPort } from '../../../../../application/ports/git_ports';
 import type { AuthenticatedUserPort } from '../../../../../application/ports/authenticated_user_ports';
 import type { Execution } from '../../../../../data/model/execution';
-import { logDebugInfo, logError, logInfo } from '../../../../../utils/logger';
+import { logDebugInfo, logError, logInfo } from '../../../../ports/logging_ports';
 import { checkoutBranch } from './git_branch_checkout';
 import { MAX_VERIFY_COMMANDS, limitVerifyCommands } from './verify_command_policy';
 import { runVerifyCommands } from './verify_command_runner';

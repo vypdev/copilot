@@ -9,6 +9,7 @@ jest.mock('../../../../../utils/logger', () => ({
 
 const mockLinkContentId = jest.fn();
 const mockMoveIssueToColumn = jest.fn();
+const mockWait = jest.fn((milliseconds: number) => new Promise<void>((resolve) => setTimeout(resolve, milliseconds)));
 jest.mock('../../../../../data/repository/project/project_board_query_repository', () => ({
   ProjectBoardQueryRepository: jest.fn().mockImplementation(() => ({
     linkContentId: mockLinkContentId,
@@ -38,9 +39,11 @@ describe('LinkPullRequestProjectUseCase', () => {
     useCase = new LinkPullRequestProjectUseCase(
       { moveIssueToColumn: mockMoveIssueToColumn, setTaskPriority: jest.fn(), setTaskSize: jest.fn() },
       { linkContentId: mockLinkContentId },
+      { wait: mockWait },
     );
     mockLinkContentId.mockResolvedValue(true);
     mockMoveIssueToColumn.mockResolvedValue(true);
+    mockWait.mockClear();
   });
 
   afterEach(() => {

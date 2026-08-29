@@ -1,5 +1,5 @@
 import { GetReleaseVersionUseCase } from '../get_release_version_use_case';
-import { Result } from '../../../../../data/model/result';
+import { getResultPayload, Result } from '../../../../../data/model/result';
 
 jest.mock('../../../../../utils/logger', () => ({
   logInfo: jest.fn(),
@@ -36,7 +36,7 @@ describe('GetReleaseVersionUseCase', () => {
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(true);
-    expect(results[0].payload?.releaseVersion).toBe('2.0.0');
+    expect(getResultPayload(results[0].payload)?.releaseVersion).toBe('2.0.0');
     expect(mockGetDescription).toHaveBeenCalledWith('owner', 'repo', 42, 'token');
   });
 

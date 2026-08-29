@@ -75,6 +75,20 @@ describe('CLI', () => {
     consoleLogSpy?.mockRestore();
   });
 
+  it('never exposes an environment token in command help', () => {
+    const sentinel = 'github_pat_help_output_must_not_contain_this_value';
+    const previousToken = process.env.PERSONAL_ACCESS_TOKEN;
+    process.env.PERSONAL_ACCESS_TOKEN = sentinel;
+
+    try {
+      const help = [program.helpInformation(), ...program.commands.map((command) => command.helpInformation())].join('\n');
+      expect(help).not.toContain(sentinel);
+    } finally {
+      if (previousToken === undefined) delete process.env.PERSONAL_ACCESS_TOKEN;
+      else process.env.PERSONAL_ACCESS_TOKEN = previousToken;
+    }
+  });
+
   describe('think', () => {
     it('calls runLocalAction with think action and question from -q', async () => {
       await program.parseAsync(['node', 'cli', 'think', '-q', 'how does X work?']);

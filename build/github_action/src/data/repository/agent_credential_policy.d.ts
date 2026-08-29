@@ -1,0 +1,10 @@
+import type { AgentConfiguration, AgentProvider } from '../model/agent';
+export declare const COMMON_OPENCODE_CREDENTIALS: readonly ["OPENCODE_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GOOGLE_API_KEY", "OPENROUTER_API_KEY", "MISTRAL_API_KEY", "GROQ_API_KEY", "DEEPSEEK_API_KEY", "XAI_API_KEY", "TOGETHERAI_API_KEY", "FIREWORKS_API_KEY", "PERPLEXITY_API_KEY", "CEREBRAS_API_KEY", "COHERE_API_KEY", "AZURE_OPENAI_API_KEY"];
+export declare function isAgentCredentialVariable(variable: string): boolean;
+export declare function hasValue(environment: NodeJS.ProcessEnv, variable: string): boolean;
+export declare function isLocalModelProvider(modelProvider: string | undefined): boolean;
+export declare function hasKnownModelProvider(modelProvider: string | undefined): boolean;
+export declare function allowedCredentialVariables(provider: AgentProvider | undefined, modelProvider?: string): readonly string[];
+export declare function credentialVariables(configuration: AgentConfiguration): readonly string[];
+export declare function removeAgentCredentials(environment: NodeJS.ProcessEnv): NodeJS.ProcessEnv;
+export declare function containsCredentialMaterial(value: unknown, propertyName?: string): boolean;

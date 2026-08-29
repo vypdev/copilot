@@ -7,7 +7,7 @@ export const MAX_STORED_RECOMMENDATION_LENGTH = 12000;
  * Copilot keeps internal state in hidden HTML blocks in the issue body. That
  * state is operational metadata, not part of the issue to be analysed.
  */
-const MANAGED_CONTENT_BLOCK_PATTERN = /<!--\s*copilot-[\w-]+-start(?:\s*-->)?[\s\S]*?copilot-[\w-]+-end\s*-->/gi;
+const MANAGED_CONTENT_BLOCK_PATTERN = /<!--\s*copilot-([\w-]+)-start(?:\s*-->)?[\s\S]*?copilot-\1-end\s*-->/gi;
 
 export function getVisibleIssueDescription(description: string): string {
     return description.replace(MANAGED_CONTENT_BLOCK_PATTERN, '').trim();

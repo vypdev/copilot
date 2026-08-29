@@ -1,6 +1,6 @@
 import type { LatestTagQueryPort } from '../../ports/branch_tag_ports';
 import type { Execution } from '../../../data/model/execution';
-import type { Result } from '../../../data/model/result';
+import { type Result } from '../../../data/model/result';
 import type { ParamUseCase } from '../base/param_usecase';
 export interface ExecutionBranchVersionResolution {
     resolve(execution: Execution): Promise<boolean>;

@@ -1,4 +1,4 @@
-import { logInfo } from "../../../../../utils/logger";
+import { logInfo } from "../../../../ports/logging_ports";
 import { runBugbotAutofixCommitAndPush } from "./bugbot_autofix_commit";
 import { markFindingsResolved } from "./mark_findings_resolved_use_case";
 

@@ -2,7 +2,7 @@ import type { Execution } from "../../../data/model/execution";
 import { Result } from "../../../data/model/result";
 import { IssueUseCase } from "../issue_use_case";
 
-jest.mock("../../../utils/logger", () => ({ logInfo: jest.fn() }));
+jest.mock("../../../utils/logger", () => ({ logInfo: jest.fn(), logError: jest.fn() }));
 
 const mockCheckPermissionsInvoke = jest.fn();
 const mockCloseNotAllowedInvoke = jest.fn();
@@ -19,76 +19,20 @@ const mockDeployedAddedInvoke = jest.fn();
 const mockRecommendStepsInvoke = jest.fn();
 const mockAnswerIssueHelpInvoke = jest.fn();
 
-jest.mock("../steps/common/check_permissions_use_case", () => ({
-  CheckPermissionsUseCase: jest
-    .fn()
-    .mockImplementation(() => ({ invoke: mockCheckPermissionsInvoke })),
-}));
-jest.mock("../steps/issue/close_not_allowed_issue_use_case", () => ({
-  CloseNotAllowedIssueUseCase: jest
-    .fn()
-    .mockImplementation(() => ({ invoke: mockCloseNotAllowedInvoke })),
-}));
-jest.mock("../steps/issue/remove_issue_branches_use_case", () => ({
-  RemoveIssueBranchesUseCase: jest
-    .fn()
-    .mockImplementation(() => ({ invoke: mockRemoveIssueBranchesInvoke })),
-}));
-jest.mock("../steps/issue/assign_members_to_issue_use_case", () => ({
-  AssignMemberToIssueUseCase: jest
-    .fn()
-    .mockImplementation(() => ({ invoke: mockAssignMemberInvoke })),
-}));
-jest.mock("../steps/common/update_title_use_case", () => ({
-  UpdateTitleUseCase: jest
-    .fn()
-    .mockImplementation(() => ({ invoke: mockUpdateTitleInvoke })),
-}));
-jest.mock("../steps/issue/update_issue_type_use_case", () => ({
-  UpdateIssueTypeUseCase: jest
-    .fn()
-    .mockImplementation(() => ({ invoke: mockUpdateIssueTypeInvoke })),
-}));
-jest.mock("../steps/issue/link_issue_project_use_case", () => ({
-  LinkIssueProjectUseCase: jest
-    .fn()
-    .mockImplementation(() => ({ invoke: mockLinkIssueProjectInvoke })),
-}));
-jest.mock("../steps/issue/check_priority_issue_size_use_case", () => ({
-  CheckPriorityIssueSizeUseCase: jest
-    .fn()
-    .mockImplementation(() => ({ invoke: mockCheckPriorityInvoke })),
-}));
-jest.mock("../steps/issue/prepare_branches_use_case", () => ({
-  PrepareBranchesUseCase: jest
-    .fn()
-    .mockImplementation(() => ({ invoke: mockPrepareBranchesInvoke })),
-}));
-jest.mock("../steps/issue/remove_not_needed_branches_use_case", () => ({
-  RemoveNotNeededBranchesUseCase: jest
-    .fn()
-    .mockImplementation(() => ({ invoke: mockRemoveNotNeededInvoke })),
-}));
-jest.mock("../steps/issue/label_deploy_added_use_case", () => ({
-  DeployAddedUseCase: jest
-    .fn()
-    .mockImplementation(() => ({ invoke: mockDeployAddedInvoke })),
-}));
-jest.mock("../steps/issue/label_deployed_added_use_case", () => ({
-  DeployedAddedUseCase: jest
-    .fn()
-    .mockImplementation(() => ({ invoke: mockDeployedAddedInvoke })),
-}));
-jest.mock("../actions/recommend_steps_use_case", () => ({
-  RecommendStepsUseCase: jest
-    .fn()
-    .mockImplementation(() => ({ invoke: mockRecommendStepsInvoke })),
-}));
-jest.mock("../steps/issue/answer_issue_help_use_case", () => ({
-  AnswerIssueHelpUseCase: jest
-    .fn()
-    .mockImplementation(() => ({ invoke: mockAnswerIssueHelpInvoke })),
-}));
+const workflowSteps = {
+  checkPermissions: { taskId: 'check-permissions', invoke: mockCheckPermissionsInvoke },
+  closeNotAllowedIssue: { taskId: 'close-not-allowed', invoke: mockCloseNotAllowedInvoke },
+  removeIssueBranches: { taskId: 'remove-branches', invoke: mockRemoveIssueBranchesInvoke },
+  assignMemberToIssue: { taskId: 'assign-member', invoke: mockAssignMemberInvoke },
+  updateTitle: { taskId: 'update-title', invoke: mockUpdateTitleInvoke },
+  updateIssueType: { taskId: 'update-type', invoke: mockUpdateIssueTypeInvoke },
+  linkIssueProject: { taskId: 'link-project', invoke: mockLinkIssueProjectInvoke },
+  checkPriorityIssueSize: { taskId: 'check-priority', invoke: mockCheckPriorityInvoke },
+  prepareBranches: { taskId: 'prepare-branches', invoke: mockPrepareBranchesInvoke },
+  removeNotNeededBranches: { taskId: 'remove-not-needed', invoke: mockRemoveNotNeededInvoke },
+  deployAdded: { taskId: 'deploy-added', invoke: mockDeployAddedInvoke },
+  deployedAdded: { taskId: 'deployed-added', invoke: mockDeployedAddedInvoke },
+};
 
 function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
   return {
@@ -102,37 +46,9 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
 
 function createUseCase(): IssueUseCase {
   return new IssueUseCase(
-    { setTaskPriority: jest.fn().mockResolvedValue(true) },
-    {
-      getAllMembers: jest.fn().mockResolvedValue([]),
-      getRandomMembers: jest.fn(),
-    },
-    { getId: jest.fn().mockResolvedValue("id") },
-    {
-      moveIssueToColumn: jest.fn(),
-      setTaskPriority: jest.fn(),
-      setTaskSize: jest.fn(),
-    },
-    { linkContentId: jest.fn() },
-    {
-      getTitle: jest.fn(),
-      updateTitleIssueFormat: jest.fn(),
-      updateTitlePullRequestFormat: jest.fn(),
-    },
-    { getCurrentAssignees: jest.fn(), assignMembersToIssue: jest.fn() },
-    { closeIssue: jest.fn(), addComment: jest.fn() },
-    { setIssueType: jest.fn() },
-    { getDescription: jest.fn() },
-    { addComment: jest.fn(), openIssue: jest.fn() },
-    { getListOfBranches: jest.fn(), removeBranch: jest.fn() },
-    { formatBranchName: jest.fn() },
-    { fetchRemoteBranches: jest.fn() },
-    { getCommitTag: jest.fn() },
-    { createLinkedBranch: jest.fn() },
-    { waitForLinkedBranch: jest.fn() },
-    { executeWorkflow: jest.fn() },
     { taskId: "RecommendStepsUseCase", invoke: mockRecommendStepsInvoke },
     { taskId: "AnswerIssueHelpUseCase", invoke: mockAnswerIssueHelpInvoke },
+    workflowSteps,
   );
 }
 
@@ -171,6 +87,20 @@ describe("IssueUseCase", () => {
     expect(mockCloseNotAllowedInvoke).toHaveBeenCalledWith(param);
     expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();
     expect(results).toHaveLength(2);
+  });
+
+  it("fails closed when the permission step returns no result", async () => {
+    mockCheckPermissionsInvoke.mockResolvedValue([]);
+    const param = minimalExecution();
+
+    const results = await createUseCase().invoke(param);
+
+    expect(results[0].success).toBe(false);
+    expect(results[0].errors[0]).toEqual(
+      new Error("Permission check returned no result."),
+    );
+    expect(mockUpdateTitleInvoke).not.toHaveBeenCalled();
+    expect(mockPrepareBranchesInvoke).not.toHaveBeenCalled();
   });
 
   it("removes issue branches when cleanup is requested", async () => {

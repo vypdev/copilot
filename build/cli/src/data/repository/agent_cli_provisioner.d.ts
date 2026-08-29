@@ -6,6 +6,7 @@ export interface AgentCliProvisioningEnvironment extends NodeJS.ProcessEnv {
 }
 export type AgentCliProvisioningTarget = AgentProvider | Pick<AgentConfiguration, 'provider' | 'command'>;
 export declare class AgentCliProvisioner {
+    private readonly provisionedExecutables;
     provision(target: AgentCliProvisioningTarget, environment?: AgentCliProvisioningEnvironment): void;
     private resolveMode;
     private assertInstalled;

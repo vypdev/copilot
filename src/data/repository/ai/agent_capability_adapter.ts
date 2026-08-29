@@ -15,7 +15,7 @@ export interface AgentCapabilityInfrastructure {
 export abstract class AgentCapabilityAdapter {
     protected readonly cliAdapter: ProviderCliAdapter;
 
-    protected constructor(infrastructure: AgentCapabilityInfrastructure) {
+    constructor(infrastructure: AgentCapabilityInfrastructure) {
         this.cliAdapter = new ProviderCliAdapter(infrastructure.cli);
     }
 

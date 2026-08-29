@@ -5,7 +5,7 @@ import type { FindingsQueryPort } from '../../../ports/agent_findings_ports';
 import { LANGUAGE_CHECK_RESPONSE_SCHEMA, TRANSLATION_RESPONSE_SCHEMA } from '../../../policies/agent_response_schemas';
 import type { IssueCommentUpdatePort } from '../../../ports/issue_lifecycle_ports';
 import { getCheckCommentLanguagePrompt, getTranslateCommentPrompt } from '../../../../prompts';
-import { logDebugInfo, logInfo } from '../../../../utils/logger';
+import { logDebugInfo, logInfo } from '../../../ports/logging_ports';
 import { getTaskEmoji } from '../../../../utils/task_emoji';
 
 export const TRANSLATED_COMMENT_MARKER = `<!-- content_translated

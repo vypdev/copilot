@@ -4,6 +4,8 @@ export type PullRequestReviewOperation =
   | "assign-reviewers"
   | "list-comments"
   | "get-comment"
+  | "list-files"
+  | "get-head-sha"
   | "publish-comments"
   | "update-comment"
   | "resolve-thread"
@@ -20,6 +22,8 @@ const ERROR_MESSAGES: Record<PullRequestReviewOperation, string> = {
   "assign-reviewers": "Unable to assign pull request reviewers.",
   "list-comments": "Unable to list pull request review comments.",
   "get-comment": "Unable to get the pull request review comment.",
+  "list-files": "Unable to list pull request changed files.",
+  "get-head-sha": "Unable to get the pull request head commit.",
   "publish-comments": "Failed to publish pull request review comments.",
   "update-comment": "Unable to update the pull request review comment.",
   "resolve-thread": "Unable to resolve the pull request review thread.",

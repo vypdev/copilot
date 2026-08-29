@@ -24,16 +24,12 @@ appropriate inner boundary.
 
 ### Pure model and policy subset
 
-Pure models and deterministic policies currently live mainly under
-`src/data/model/` and policy files under `src/data/repository/`. A file belongs
-to this conceptual domain subset only when it imports no application use case,
-provider adapter, entrypoint, SDK, process/filesystem API, or concrete logger.
-
-Not every file under `src/data/model/` is currently pure domain. `Execution`,
-`SingleAction`, and version/issue-resolution coordinators still use application
-ports, use cases, constants, or logging. This is a documented transitional
-model boundary, not evidence that the complete directory satisfies domain
-purity.
+Pure models and deterministic policies currently live under
+`src/data/model/` and `src/domain/`. Every production file in those directories
+is dependency-pure: it imports only other model/policy code or standard
+TypeScript types, and therefore does not know about application use cases,
+provider adapters, entrypoints, SDKs, process/filesystem APIs, or concrete
+logging.
 
 Direct import analysis previously found an unjustified SCC around `Execution`,
 release/hotfix resolution helpers, application use cases, and
@@ -63,8 +59,9 @@ filesystem/process APIs
 concrete logging
 ```
 
-A future physical `domain/` move is justified only after the pure subset is
-proved and callers can move without aliases or compatibility shims.
+A future physical `domain/` move is optional organization work, not a condition
+for architectural correctness: the enforced rule is dependency purity rather
+than a directory name.
 
 ### Application
 
@@ -75,15 +72,25 @@ Application owns:
 - application request/response contracts;
 - orchestration and application policies.
 
-Application production code may import application modules and approved
-model/policy types. Several legacy `Github*Client` SDK-shaped contracts still
-live in `src/application/ports/github_*_ports.ts`; they are explicit transitional
-exceptions used by specialized adapters, not semantic application ports. They
-must migrate capability by capability to infrastructure-owned provider protocol
-modules, with callers and focused contracts verified and no universal provider
-facade introduced.
+Application workflows report through the semantic
+`src/application/ports/logging_ports.ts` contract. The concrete logger,
+console formatting, and accumulated-report implementation are installed by
+`src/infrastructure/logging/logger_adapter.ts` at the runtime boundary. This
+keeps logging behavior replaceable and prevents application code from knowing
+about the process/GitHub logger.
 
-Except for that documented, shrinking allowlist, application must not import:
+Application may use only the following side-effect-free shared utilities:
+`comment_watermark`, `constants`, `content_utils`, `list_utils`,
+`project_context_instruction`, `task_emoji`, and `title_utils`. New reusable
+application behavior belongs in an application policy or port rather than in
+the generic utility directory.
+
+Application production code may import application modules and approved
+model/policy types. Provider-specific client contracts live under
+`src/infrastructure/github/ports/`; they are never application ports and must
+not be imported by application behavior.
+
+Application must not import:
 
 ```text
 data/repository concrete adapters
@@ -114,6 +121,13 @@ These layers own:
 - concrete logging integration;
 - implementation of application ports.
 
+Agent command parsing, validation, and configuration merging are application
+policies under `src/application/policies/`. Agent CLI and provisioning
+adapters only translate and execute those decisions. Local-action input
+assembly is split into focused readers under
+`src/actions/local_action_configuration_sections.ts`, while the entrypoint
+only coordinates their results.
+
 They must not absorb application decisions merely to share HTTP or SDK syntax.
 GraphQL transport contracts remain under `src/infrastructure/github/ports/` and
 must not leak into application.
@@ -130,10 +144,14 @@ runtime entrypoints for lifecycle-local dependencies
 
 The required direction is a named root for every runtime capability or use-case
 graph. Phase D moved route-specific assembly and workflow-queue wiring to named
-roots. One-time runtime-local construction is not an exception: the remaining
-inline Project Board and `GitCliRepository` assembly in `local_action.ts` is
-tracked debt and must move behind a named local lifecycle composition root after
-the higher-priority P0 contract blocks.
+roots. The local action lifecycle now uses
+`local_action_composition_root.ts`, which owns the shared Project Board scope and
+the Git tag-query adapter.
+
+Issue and pull-request orchestration use cases receive their executable steps as
+explicit application contracts. Their concrete step instances are assembled in
+the corresponding infrastructure composition roots; application orchestration
+does not instantiate sibling use cases or adapters.
 
 Composition roots may depend on outer details and application contracts, but
 must not become universal registries or service locators.
@@ -207,7 +225,8 @@ transport semantics and lifecycle are genuinely shared.
 
 ## Construction rules
 
-Application and pure model/policy code must never construct concrete adapters.
+Application and pure model/policy code must never construct concrete adapters or
+concrete use cases.
 Constructor dependencies are explicit; application constructors must not have
 default concrete implementations.
 

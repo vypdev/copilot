@@ -18,6 +18,7 @@ import { DoUserRequestUseCase } from "../../application/usecases/steps/commit/us
 import { ThinkUseCase } from "../../application/usecases/steps/common/think_use_case";
 import { CheckIssueCommentLanguageUseCase } from "../../application/usecases/steps/issue_comment/check_issue_comment_language_use_case";
 import { CheckPullRequestCommentLanguageUseCase } from "../../application/usecases/steps/pull_request_review_comment/check_pull_request_comment_language_use_case";
+import { CommentLanguageTranslationWorkflow } from "../../application/usecases/steps/common/comment_language_translation_workflow";
 import { BranchCompareRepository } from "../../data/repository/branch_compare_repository";
 import { MergeRepository } from "../../data/repository/merge_repository";
 import { PullRequestLifecycleRepository } from "../../data/repository/pull_request/pull_request_lifecycle_repository";
@@ -95,7 +96,9 @@ export function createIssueCommentUseCaseCompositionRoot(): IssueCommentUseCase 
   const gitCommit = new GitCommitAdapter();
 
   return new IssueCommentUseCase(
-    new CheckIssueCommentLanguageUseCase(bugbot.issue, findings),
+    new CheckIssueCommentLanguageUseCase(
+      new CommentLanguageTranslationWorkflow(bugbot.issue, findings),
+    ),
     new DetectBugbotFixIntentUseCase(
       bugbot.context.pullRequest,
       findings,
@@ -123,7 +126,9 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(): PullRequ
   const gitCommit = new GitCommitAdapter();
 
   return new PullRequestReviewCommentUseCase(
-    new CheckPullRequestCommentLanguageUseCase(bugbot.issue, findings),
+    new CheckPullRequestCommentLanguageUseCase(
+      new CommentLanguageTranslationWorkflow(bugbot.issue, findings),
+    ),
     new DetectBugbotFixIntentUseCase(
       bugbot.context.pullRequest,
       findings,

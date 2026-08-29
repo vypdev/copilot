@@ -2,7 +2,7 @@ import { Execution } from "../../../data/model/execution";
 import { Result } from "../../../data/model/result";
 import type { RepositoryTagPort, RepositoryReleasePublicationPort } from "../../ports/repository_release_ports";
 import { INPUT_KEYS } from "../../../utils/constants";
-import { logError, logInfo } from "../../../utils/logger";
+import { logError, logInfo } from "../../ports/logging_ports";
 import { getTaskEmoji } from "../../../utils/task_emoji";
 import { ParamUseCase } from "../base/param_usecase";
 
@@ -83,9 +83,7 @@ export class PublishGithubActionUseCase  implements ParamUseCase<Execution, Resu
                     success: false,
                     executed: true,
                     steps: [`Failed to update release \`${targetTag}\` from \`${sourceTag}\`.`],
-                    errors: [
-                        JSON.stringify(error)
-                    ],
+                    errors: [error],
                 })
             );
         }

@@ -6,7 +6,7 @@ import type { IssueDescriptionQueryPort } from "../../../ports/issue_description
 import type { OrganizationMembersPort } from "../../../ports/organization_members_ports";
 import type { PullRequestDescriptionCommandPort } from "../../../ports/pull_request_description_ports";
 import { getUpdatePullRequestDescriptionPrompt } from "../../../../prompts";
-import { logDebugInfo, logError, logInfo } from "../../../../utils/logger";
+import { logDebugInfo, logError, logInfo } from "../../../ports/logging_ports";
 import { PROJECT_CONTEXT_INSTRUCTION } from "../../../../utils/project_context_instruction";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";

@@ -2,7 +2,7 @@ import { Execution } from '../../../../data/model/execution';
 import { Result } from '../../../../data/model/result';
 import type { ProjectDetail } from '../../../../data/model/project_detail';
 import type { ProjectBoardCommandPort } from '../../../../application/ports/project_board_command_ports';
-import { logDebugInfo, logError } from '../../../../utils/logger';
+import { logDebugInfo, logError } from '../../../ports/logging_ports';
 
 interface PrioritySizeParam {
     labels: {

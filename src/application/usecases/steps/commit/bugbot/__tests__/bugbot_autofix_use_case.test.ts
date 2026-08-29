@@ -242,7 +242,23 @@ describe("BugbotAutofixUseCase", () => {
 
         expect(results).toHaveLength(1);
         expect(results[0].success).toBe(false);
-        expect(results[0].errors?.[0]).toContain("workspace is not clean");
+        expect(results[0].errors?.[0].message).toContain("workspace is not clean");
+        expect(mockCopilotMessage).not.toHaveBeenCalled();
+    });
+
+    it("returns a controlled failure when the workspace cannot be inspected before the agent", async () => {
+        mockExec.mockRejectedValueOnce("status unavailable");
+
+        const results = await useCase.invoke({
+            execution: baseExecution(),
+            targetFindingIds: ["f1"],
+            userComment: "fix it",
+            context: contextWithFindings(["f1"]),
+        });
+
+        expect(results).toHaveLength(1);
+        expect(results[0].success).toBe(false);
+        expect(results[0].errors?.[0].message).toContain("Unable to inspect workspace before autofix: status unavailable");
         expect(mockCopilotMessage).not.toHaveBeenCalled();
     });
 
@@ -271,6 +287,50 @@ describe("BugbotAutofixUseCase", () => {
 
         expect(results).toHaveLength(1);
         expect(results[0].success).toBe(false);
-        expect(results[0].errors?.[0]).toContain("sensitive files were modified");
+        expect(results[0].errors?.[0].message).toContain("sensitive files were modified");
+    });
+
+    it("returns a controlled failure when the workspace cannot be inspected after the agent", async () => {
+        mockExec
+            .mockImplementationOnce(
+                async (_command: string, _args: string[], options?: { listeners?: { stdout?: (data: Buffer) => void } }) => {
+                    options?.listeners?.stdout?.(Buffer.from(""));
+                    return 0;
+                },
+            )
+            .mockRejectedValueOnce(new Error("status unavailable"));
+        mockCopilotMessage.mockResolvedValue({ text: "Fixed.", sessionId: "s1" });
+
+        const results = await useCase.invoke({
+            execution: baseExecution(),
+            targetFindingIds: ["f1"],
+            userComment: "fix it",
+            context: contextWithFindings(["f1"]),
+        });
+
+        expect(results).toHaveLength(1);
+        expect(results[0].success).toBe(false);
+        expect(results[0].errors?.[0].message).toContain("Unable to inspect workspace after autofix: status unavailable");
+    });
+
+    it("refuses to report success when the agent changes no workspace paths", async () => {
+        mockExec.mockImplementation(
+            async (_command: string, _args: string[], options?: { listeners?: { stdout?: (data: Buffer) => void } }) => {
+                options?.listeners?.stdout?.(Buffer.from(""));
+                return 0;
+            },
+        );
+        mockCopilotMessage.mockResolvedValue({ text: "No changes needed.", sessionId: "s1" });
+
+        const results = await useCase.invoke({
+            execution: baseExecution(),
+            targetFindingIds: ["f1"],
+            userComment: "fix it",
+            context: contextWithFindings(["f1"]),
+        });
+
+        expect(results).toHaveLength(1);
+        expect(results[0].success).toBe(false);
+        expect(results[0].errors?.[0].message).toContain("no safe workspace paths");
     });
 });

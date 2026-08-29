@@ -14,17 +14,9 @@ const mockGetCommitTag = jest.fn();
 const mockCreateLinkedBranch = jest.fn();
 const mockWaitForLinkedBranch = jest.fn();
 const mockMoveIssueInvoke = jest.fn();
-const mockCommitPrefixInvoke = jest.fn();
-
-jest.mock("../move_issue_to_in_progress", () => ({
-  MoveIssueToInProgressUseCase: jest.fn().mockImplementation(() => ({
-    invoke: mockMoveIssueInvoke,
-  })),
-}));
+const mockBuildCommitPrefix = jest.fn();
 jest.mock("../../common/execute_script_use_case", () => ({
-  CommitPrefixBuilderUseCase: jest.fn().mockImplementation(() => ({
-    invoke: mockCommitPrefixInvoke,
-  })),
+  buildCommitPrefix: (...args: unknown[]) => mockBuildCommitPrefix(...args),
 }));
 
 function baseParam(overrides: Record<string, unknown> = {}) {
@@ -60,17 +52,13 @@ function baseParam(overrides: Record<string, unknown> = {}) {
 
 function createUseCase(): PrepareBranchesUseCase {
   return new PrepareBranchesUseCase(
-    {
-      moveIssueToColumn: jest.fn(),
-      setTaskPriority: jest.fn(),
-      setTaskSize: jest.fn(),
-    },
     { getListOfBranches: mockGetListOfBranches },
     { formatBranchName: mockFormatBranchName },
     { fetchRemoteBranches: mockFetchRemoteBranches },
     { getCommitTag: mockGetCommitTag },
     { createLinkedBranch: mockCreateLinkedBranch },
     { waitForLinkedBranch: mockWaitForLinkedBranch },
+    { taskId: "MoveIssueToInProgressUseCase", invoke: mockMoveIssueInvoke },
   );
 }
 
@@ -100,7 +88,7 @@ describe("PrepareBranchesUseCase", () => {
     ]);
     mockWaitForLinkedBranch.mockResolvedValue(undefined);
     mockMoveIssueInvoke.mockResolvedValue([]);
-    mockCommitPrefixInvoke.mockResolvedValue([]);
+    mockBuildCommitPrefix.mockReturnValue('');
   });
 
   it("returns failure before touching collaborators when issue title is empty and branching is optional", async () => {
@@ -229,9 +217,7 @@ describe("PrepareBranchesUseCase", () => {
   });
 
   it("includes a generated commit prefix for a managed branch", async () => {
-    mockCommitPrefixInvoke.mockResolvedValue([
-      { payload: { scriptResult: "feat(scope):" } },
-    ]);
+    mockBuildCommitPrefix.mockReturnValue("feat(scope):");
 
     const results = await useCase.invoke(
       baseParam({ commitPrefixBuilder: "prefix-script" }),
@@ -443,9 +429,7 @@ describe("PrepareBranchesUseCase", () => {
         payload: { newBranchName: "release/2.0.0" },
       },
     ]);
-    mockCommitPrefixInvoke.mockResolvedValue([
-      { payload: { scriptResult: "chore(release):" } },
-    ]);
+    mockBuildCommitPrefix.mockReturnValue("chore(release):");
     const param = baseParam({
       release: { active: true, version: "2.0.0", branch: "release/2.0.0" },
       labels: { deploy: "deploy" },

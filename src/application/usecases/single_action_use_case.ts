@@ -1,6 +1,6 @@
 import { Execution } from "../../data/model/execution";
 import { Result } from "../../data/model/result";
-import { logDebugInfo, logError, logInfo, logWarn } from "../../utils/logger";
+import { logDebugInfo, logError, logInfo, logWarn } from "../ports/logging_ports";
 import { getTaskEmoji } from "../../utils/task_emoji";
 import { ParamUseCase } from "./base/param_usecase";
 
@@ -60,7 +60,7 @@ export class SingleActionUseCase implements ParamUseCase<Execution, Result[]> {
                     steps: [
                         `Error executing single action: ${param.singleAction.currentSingleAction}.`,
                     ],
-                    error: error,
+                    errors: [error],
                 })
             )
         }

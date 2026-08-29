@@ -110,6 +110,48 @@ describe('logger', () => {
       expect(call).toMatch(/"message":"e"/);
       expect(call).toMatch(/stack/);
     });
+
+    it('redacts configured credentials from messages and metadata', () => {
+      const previous = process.env.OPENAI_API_KEY;
+      process.env.OPENAI_API_KEY = 'secret-openai-key';
+
+      logError('Authorization: Bearer secret-openai-key', {
+        apiKey: 'secret-openai-key',
+        nested: { token: 'secret-openai-key' },
+      });
+
+      const entry = getAccumulatedLogEntries()[0];
+      expect(entry.message).not.toContain('secret-openai-key');
+      expect(entry.metadata).toEqual({
+        apiKey: '[REDACTED]',
+        nested: { token: '[REDACTED]' },
+        stack: undefined,
+      });
+
+      if (previous === undefined) delete process.env.OPENAI_API_KEY;
+      else process.env.OPENAI_API_KEY = previous;
+    });
+
+    it('redacts credentials for custom providers without a fixed environment name', () => {
+      const previous = process.env.CUSTOM_PROVIDER_API_KEY;
+      process.env.CUSTOM_PROVIDER_API_KEY = 'custom-provider-secret';
+
+      logError('custom-provider-secret', { token: 'custom-provider-secret' });
+
+      const entry = getAccumulatedLogEntries()[0];
+      expect(entry.message).toBe('[REDACTED]');
+      expect(entry.metadata).toEqual({ token: '[REDACTED]', stack: undefined });
+
+      if (previous === undefined) delete process.env.CUSTOM_PROVIDER_API_KEY;
+      else process.env.CUSTOM_PROVIDER_API_KEY = previous;
+    });
+
+    it('bounds very large log messages', () => {
+      logInfo('x'.repeat(9000));
+
+      expect(getAccumulatedLogEntries()[0].message).toHaveLength(8013);
+      expect(getAccumulatedLogEntries()[0].message).toContain('[truncated]');
+    });
   });
 
   describe('logDebugInfo', () => {

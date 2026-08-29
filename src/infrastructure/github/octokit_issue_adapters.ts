@@ -1,6 +1,6 @@
 import { getOctokitClient } from "./octokit_client_resolver";
 import type { GithubClientPort } from "./ports/github_client_provider_port";
-import type { GithubIssueAssignmentClient, GithubIssueContentClient, GithubIssueLabelsClient, GithubIssueLifecycleClient, GithubIssueMetadataClient, GithubIssueTitleClient } from "../../application/ports/github_issue_ports";
+import type { GithubIssueAssignmentClient, GithubIssueContentClient, GithubIssueLabelsClient, GithubIssueLifecycleClient, GithubIssueMetadataClient, GithubIssueTitleClient } from "./ports/github_issue_provider_ports";
 import type { GithubIssueLabelProvisioningClient } from "./ports/github_issue_label_provisioning_protocol";
 
 export class OctokitIssueAssignmentClientAdapter implements GithubClientPort<GithubIssueAssignmentClient> {

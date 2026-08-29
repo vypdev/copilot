@@ -4,7 +4,7 @@ import type {
 } from "../../../ports/branch_preparation_ports";
 import { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
-import { logDebugInfo, logWarn } from "../../../../utils/logger";
+import { logDebugInfo, logWarn } from "../../../ports/logging_ports";
 
 export async function prepareHotfixBranch(
   param: Execution,

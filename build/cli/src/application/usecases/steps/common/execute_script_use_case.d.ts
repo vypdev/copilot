@@ -4,6 +4,5 @@ import { ParamUseCase } from "../../base/param_usecase";
 export declare class CommitPrefixBuilderUseCase implements ParamUseCase<Execution, Result[]> {
     taskId: string;
     invoke(param: Execution): Promise<Result[]>;
-    private applyTransforms;
-    private applyTransform;
 }
+export declare function buildCommitPrefix(branchName: string, transforms: string, onUnknownTransform?: (transform: string) => void): string;

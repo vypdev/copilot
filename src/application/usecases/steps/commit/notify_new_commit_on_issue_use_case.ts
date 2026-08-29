@@ -2,10 +2,10 @@ import { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
 import type { IssueNotificationPort } from "../../../../application/ports/issue_lifecycle_ports";
 import { getRandomElement } from "../../../../utils/list_utils";
-import { logDebugInfo, logError, logInfo } from "../../../../utils/logger";
+import { logDebugInfo, logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
-import { CommitPrefixBuilderUseCase } from "../common/execute_script_use_case";
+import { buildCommitPrefix } from "../common/execute_script_use_case";
 
 export class NotifyNewCommitOnIssueUseCase implements ParamUseCase<Execution, Result[]> {
     taskId: string = 'NotifyNewCommitOnIssueUseCase';
@@ -27,9 +27,7 @@ export class NotifyNewCommitOnIssueUseCase implements ParamUseCase<Execution, Re
                 param.commitPrefixBuilderParams = {
                     branchName: branchName,
                 }
-                const executor = new CommitPrefixBuilderUseCase();
-                const prefixResult = await executor.invoke(param);
-                commitPrefix = prefixResult[prefixResult.length - 1].payload['scriptResult'].toString() ?? ''
+                commitPrefix = buildCommitPrefix(branchName, param.commitPrefixBuilder);
                 logDebugInfo(`Commit prefix: ${commitPrefix}`);
             }
 

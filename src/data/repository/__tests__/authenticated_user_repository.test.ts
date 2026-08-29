@@ -1,5 +1,5 @@
 import { AuthenticatedUserRepository } from '../organization/authenticated_user_repository';
-import type { GithubAuthenticatedUserClient } from '../../../application/ports/github_identity_ports';
+import type { GithubAuthenticatedUserClient } from '../../../infrastructure/github/ports/github_identity_provider_ports';
 import type { GithubClientPort } from '../../../infrastructure/github/ports/github_client_provider_port';
 
 describe('AuthenticatedUserRepository', () => {

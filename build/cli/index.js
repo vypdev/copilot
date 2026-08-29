@@ -52455,64 +52455,10 @@ function resolveActionInput(additionalParams, actionInputs, key) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildAgentTasks = buildAgentTasks;
-const agent_command_1 = __nccwpck_require__(77923);
-const agent_cli_command_policy_1 = __nccwpck_require__(64678);
-const PROVIDERS = ['opencode', 'cursor', 'codex'];
-function configuredAllowlist(name) {
-    const raw = process.env[name]?.trim();
-    if (!raw)
-        return undefined;
-    const values = raw.split(',').map(value => value.trim().toLowerCase()).filter(Boolean);
-    if (!values.length)
-        throw new Error(`${name} must contain at least one value.`);
-    return values;
-}
-function resolveProvider(value) {
-    if (PROVIDERS.includes(value))
-        return value;
-    throw new Error(`Unsupported agent provider "${value}". Supported providers: ${PROVIDERS.join(', ')}.`);
-}
-function buildConfiguration(values) {
-    const provider = resolveProvider(values.provider.trim().toLowerCase());
-    const modelProvider = values.modelProvider?.trim().toLowerCase() || 'openai';
-    if (!/^[a-z0-9][a-z0-9_-]*$/.test(modelProvider))
-        throw new Error('Agent model provider must be a valid provider identifier.');
-    const allowedProviders = configuredAllowlist('AGENT_ALLOWED_MODEL_PROVIDERS');
-    if (allowedProviders && !allowedProviders.includes(modelProvider))
-        throw new Error(`Agent model provider "${modelProvider}" is not allowlisted.`);
-    const model = values.model.trim();
-    if (!model)
-        throw new Error('Agent model must not be empty.');
-    if (!/^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/.test(model)) {
-        throw new Error('Agent model must be a simple model identifier without whitespace or shell syntax.');
-    }
-    const allowedModels = process.env.AGENT_ALLOWED_MODELS?.split(',').map(value => value.trim()).filter(Boolean);
-    if (allowedModels?.length && !allowedModels.includes(`${modelProvider}/${model}`) && !allowedModels.includes(model)) {
-        throw new Error(`Agent model "${modelProvider}/${model}" is not allowlisted.`);
-    }
-    const effort = values.effort?.trim() || undefined;
-    if (effort && !/^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/.test(effort)) {
-        throw new Error('Agent effort must be a simple identifier without whitespace or shell syntax.');
-    }
-    const customCommand = values.command?.trim();
-    const configuration = {
-        provider,
-        modelProvider,
-        model,
-        ...(effort ? { effort } : {}),
-        command: customCommand || (0, agent_command_1.defaultAgentCommand)({ provider, modelProvider, model, effort }),
-    };
-    if (customCommand)
-        (0, agent_cli_command_policy_1.validateAgentCommand)(configuration);
-    return configuration;
-}
-function mergeTaskValues(values, overrides) {
-    return { ...values, ...Object.fromEntries(Object.entries(overrides ?? {}).filter(([, value]) => typeof value === 'string' && value.trim().length > 0)) };
-}
+const agent_configuration_input_policy_1 = __nccwpck_require__(7699);
+/** Builds the validated findings/fixer pair used by both action lifecycles. */
 function buildAgentTasks(values) {
-    const findings = buildConfiguration(mergeTaskValues(values, values.findings));
-    const fixer = buildConfiguration(mergeTaskValues(values, values.fixer));
-    return { findings, fixer };
+    return (0, agent_configuration_input_policy_1.buildAgentTaskConfiguration)(values);
 }
 
 
@@ -52583,148 +52529,52 @@ function buildBranches(values) {
 /***/ }),
 
 /***/ 42238:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.mainRun = mainRun;
-const core = __importStar(__nccwpck_require__(81078));
 const logger_1 = __nccwpck_require__(91151);
-const constants_1 = __nccwpck_require__(15415);
-const chalk_1 = __importDefault(__nccwpck_require__(8578));
-const boxen_1 = __importDefault(__nccwpck_require__(11652));
 const main_run_route_1 = __nccwpck_require__(8466);
-const main_run_dispatcher_1 = __nccwpck_require__(28586);
 const execution_setup_composition_root_1 = __nccwpck_require__(83965);
-const workflow_queue_composition_root_1 = __nccwpck_require__(21598);
 const main_run_route_composition_root_1 = __nccwpck_require__(4706);
 const repository_context_1 = __nccwpck_require__(78958);
-const workflow_context_1 = __nccwpck_require__(55224);
+const logging_ports_1 = __nccwpck_require__(6152);
+const logger_adapter_1 = __nccwpck_require__(72762);
+const main_run_lifecycle_1 = __nccwpck_require__(916);
 async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort) {
-    const results = [];
+    (0, logging_ports_1.configureApplicationLogger)((0, logger_adapter_1.createLoggerAdapter)());
     const repository = (0, repository_context_1.requireRepositoryCoordinates)({
         owner: execution.owner,
         repo: execution.repo,
     });
     (0, logger_1.logInfo)('GitHub Action: starting main run.');
     (0, logger_1.logDebugInfo)(`Event: ${execution.eventName}, actor: ${execution.actor}, repo: ${repository.owner}/${repository.repo}, debug: ${execution.debug}`);
+    if (!execution.welcome) {
+        // Queue before setup or route work so executions cannot overlap mutations.
+        await (0, main_run_lifecycle_1.waitForPreviousWorkflowRuns)(execution, repository);
+    }
     await (0, execution_setup_composition_root_1.createSetupExecutionUseCase)(latestTagQueryPort).invoke(execution);
     (0, logger_1.clearAccumulatedLogs)();
     (0, logger_1.logDebugInfo)(`Setup done. Issue number: ${execution.issueNumber}, isSingleAction: ${execution.isSingleAction}, isIssue: ${execution.isIssue}, isPullRequest: ${execution.isPullRequest}, isPush: ${execution.isPush}`);
-    if (!execution.welcome) {
-        /**
-         * Wait for previous runs to finish
-         */
-        const previousRunsQuery = {
-            owner: repository.owner,
-            repository: repository.repo,
-            currentRunId: Number.parseInt(process.env.GITHUB_RUN_ID ?? '', 10),
-            workflowName: process.env.GITHUB_WORKFLOW ?? '',
-        };
-        const workflowIdentifier = (0, workflow_context_1.resolveWorkflowIdentifier)(process.env.GITHUB_WORKFLOW_REF);
-        if (workflowIdentifier) {
-            previousRunsQuery.workflowIdentifier = workflowIdentifier;
-        }
-        await (0, workflow_queue_composition_root_1.createWaitForPreviousWorkflowRunsUseCase)(execution.tokens.token).invoke(previousRunsQuery).catch((err) => {
-            (0, logger_1.logError)(`Error waiting for previous runs: ${err}`);
-            throw err;
-        });
-    }
     const routeHandlers = (0, main_run_route_composition_root_1.createMainRunRouteCompositionRoot)(projectBoardCommandPort);
     if (execution.runnedByToken) {
-        if (execution.isSingleAction && execution.singleAction.validSingleAction) {
-            (0, logger_1.logInfo)(`User from token (${execution.tokenUser}) matches actor. Executing single action: ${execution.singleAction.currentSingleAction}.`);
-            results.push(...await (0, main_run_dispatcher_1.dispatchMainRunRoute)('single-action', execution, routeHandlers));
-            (0, logger_1.logInfo)(`Single action finished. Results: ${results.length}.`);
-            return results;
-        }
-        (0, logger_1.logInfo)(`User from token (${execution.tokenUser}) matches actor. Ignoring (not a valid single action).`);
-        return results;
+        return (0, main_run_lifecycle_1.runTokenExecution)(execution, routeHandlers);
     }
     if (execution.issueNumber === -1) {
-        if (execution.isSingleAction && execution.singleAction.isSingleActionWithoutIssue) {
-            (0, logger_1.logInfo)('No issue number; running single action without issue.');
-            results.push(...await (0, main_run_dispatcher_1.dispatchMainRunRoute)('single-action', execution, routeHandlers));
-        }
-        else {
-            (0, logger_1.logInfo)('Issue number not found. Skipping.');
-        }
-        return results;
+        return (0, main_run_lifecycle_1.runNoIssueExecution)(execution, routeHandlers);
     }
-    if (execution.welcome) {
-        (0, logger_1.logInfo)((0, boxen_1.default)(chalk_1.default.cyan(execution.welcome.title) + '\n' +
-            execution.welcome.messages.map(message => chalk_1.default.gray(message)).join('\n'), {
-            padding: 1,
-            margin: 1,
-            borderStyle: 'round',
-            borderColor: 'cyan',
-            title: constants_1.TITLE,
-            titleAlignment: 'center'
-        }));
-    }
-    try {
-        const route = (0, main_run_route_1.resolveMainRunRoute)({
-            isSingleAction: execution.isSingleAction,
-            isIssue: execution.isIssue,
-            isIssueComment: execution.issue.isIssueComment,
-            isPullRequest: execution.isPullRequest,
-            isPullRequestReviewComment: execution.pullRequest.isPullRequestReviewComment,
-            isPush: execution.isPush,
-        });
-        if (route === 'unhandled') {
-            (0, logger_1.logError)(`Action not handled. Event: ${execution.eventName}.`);
-            core.setFailed('Action not handled.');
-        }
-        else {
-            results.push(...await (0, main_run_dispatcher_1.dispatchMainRunRoute)(route, execution, routeHandlers));
-        }
-        const totalSteps = results.reduce((acc, r) => acc + (r.steps?.length ?? 0), 0);
-        (0, logger_1.logInfo)(`Main run finished. Results: ${results.length}, total steps: ${totalSteps}.`);
-        return results;
-    }
-    catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        (0, logger_1.logError)(`Main run failed: ${msg}`, error instanceof Error ? { stack: error.stack } : undefined);
-        core.setFailed(msg);
-        return [];
-    }
+    (0, main_run_lifecycle_1.logWelcomeMessage)(execution);
+    const route = (0, main_run_route_1.resolveMainRunRoute)({
+        isSingleAction: execution.isSingleAction,
+        isIssue: execution.isIssue,
+        isIssueComment: execution.issue.isIssueComment,
+        isPullRequest: execution.isPullRequest,
+        isPullRequestReviewComment: execution.pullRequest.isPullRequestReviewComment,
+        isPush: execution.isPush,
+    });
+    return (0, main_run_lifecycle_1.runMainRoute)(execution, route, routeHandlers);
 }
 
 
@@ -52888,10 +52738,15 @@ function isEnabledInput(value) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.parseIntegerInput = parseIntegerInput;
+exports.parseNonNegativeIntegerInput = parseNonNegativeIntegerInput;
 exports.parseBoundedPositiveIntegerInput = parseBoundedPositiveIntegerInput;
 function parseIntegerInput(value, fallback) {
     const parsed = typeof value === 'number' ? value : Number.parseInt(String(value ?? ''), 10);
     return Number.isFinite(parsed) ? parsed : fallback;
+}
+function parseNonNegativeIntegerInput(value, fallback) {
+    const parsed = typeof value === 'number' ? value : Number.parseInt(String(value ?? ''), 10);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
 }
 function parseBoundedPositiveIntegerInput(value, fallback, maximum) {
     const parsed = typeof value === 'number' ? value : Number.parseInt(String(value ?? ''), 10);
@@ -52928,8 +52783,7 @@ function parseDelimitedValues(value) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runLocalAction = runLocalAction;
-const git_cli_repository_1 = __nccwpck_require__(26331);
-const project_board_composition_root_1 = __nccwpck_require__(37194);
+const local_action_composition_root_1 = __nccwpck_require__(34760);
 const common_action_1 = __nccwpck_require__(42238);
 const local_action_output_1 = __nccwpck_require__(94290);
 const local_action_configuration_1 = __nccwpck_require__(66645);
@@ -52940,10 +52794,10 @@ async function runLocalAction(
 additionalParams) {
     const repository = (0, repository_context_1.requireRepositoryCoordinates)(additionalParams?.repo);
     const normalizedParams = { ...(additionalParams ?? {}), repo: repository };
-    const projectBoard = (0, project_board_composition_root_1.createProjectBoardCompositionRoot)();
-    const configuration = await (0, local_action_configuration_1.buildLocalActionConfiguration)(normalizedParams, projectBoard.query);
+    const composition = (0, local_action_composition_root_1.createLocalActionCompositionRoot)();
+    const configuration = await (0, local_action_configuration_1.buildLocalActionConfiguration)(normalizedParams, composition.projectBoard.query);
     const execution = (0, local_action_execution_1.buildLocalActionExecution)(configuration, normalizedParams);
-    const results = await (0, common_action_1.mainRun)(execution, projectBoard.command, new git_cli_repository_1.GitCliRepository());
+    const results = await (0, common_action_1.mainRun)(execution, composition.projectBoard.command, composition.latestTagQuery);
     (0, local_action_output_1.renderLocalActionResults)(results);
 }
 
@@ -52957,9 +52811,41 @@ additionalParams) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildLocalActionConfiguration = buildLocalActionConfiguration;
+const yml_utils_1 = __nccwpck_require__(61788);
+const local_action_configuration_sections_1 = __nccwpck_require__(27946);
+async function buildLocalActionConfiguration(additionalParams, projectRepository) {
+    const actionInputs = (0, yml_utils_1.getActionInputsWithDefaults)();
+    const core = (0, local_action_configuration_sections_1.readLocalCoreConfiguration)(additionalParams, actionInputs);
+    const agent = (0, local_action_configuration_sections_1.readLocalAgentConfiguration)(additionalParams, actionInputs);
+    const projects = await (0, local_action_configuration_sections_1.readLocalProjectConfiguration)(additionalParams, actionInputs, projectRepository, core.token);
+    const labelsAndIssueTypes = (0, local_action_configuration_sections_1.readLocalLabelsAndIssueTypes)(additionalParams, actionInputs);
+    const workflow = (0, local_action_configuration_sections_1.readLocalWorkflowConfiguration)(additionalParams, actionInputs);
+    return {
+        ...core,
+        ...agent,
+        ...projects,
+        ...labelsAndIssueTypes.labels,
+        ...labelsAndIssueTypes.issueTypes,
+        ...workflow,
+    };
+}
+
+
+/***/ }),
+
+/***/ 27946:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readLocalCoreConfiguration = readLocalCoreConfiguration;
+exports.readLocalAgentConfiguration = readLocalAgentConfiguration;
+exports.readLocalProjectConfiguration = readLocalProjectConfiguration;
+exports.readLocalLabelsAndIssueTypes = readLocalLabelsAndIssueTypes;
+exports.readLocalWorkflowConfiguration = readLocalWorkflowConfiguration;
 const locale_1 = __nccwpck_require__(9832);
 const constants_1 = __nccwpck_require__(15415);
-const yml_utils_1 = __nccwpck_require__(61788);
 const input_boolean_policy_1 = __nccwpck_require__(18330);
 const action_input_source_1 = __nccwpck_require__(98143);
 const project_details_loader_1 = __nccwpck_require__(73448);
@@ -52967,309 +52853,201 @@ const input_number_policy_1 = __nccwpck_require__(47165);
 const input_values_policy_1 = __nccwpck_require__(68841);
 const agent_input_builder_1 = __nccwpck_require__(71404);
 const image_configuration_builder_1 = __nccwpck_require__(9246);
-async function buildLocalActionConfiguration(
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Params shape is dynamic (CLI/action inputs)
-additionalParams, projectRepository) {
-    const actionInputs = (0, yml_utils_1.getActionInputsWithDefaults)();
-    /**
-     * Debug
-     */
-    const debug = (0, input_boolean_policy_1.isEnabledInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.DEBUG));
-    /**
-     * Welcome
-     */
-    const welcomeTitle = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.WELCOME_TITLE);
-    const welcomeMessages = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.WELCOME_MESSAGES);
-    /**
-     * Single action
-     */
-    const singleAction = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SINGLE_ACTION);
-    const singleActionIssue = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SINGLE_ACTION_ISSUE);
-    const singleActionVersion = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SINGLE_ACTION_VERSION);
-    const singleActionTitle = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SINGLE_ACTION_TITLE);
-    const singleActionChangelog = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SINGLE_ACTION_CHANGELOG);
-    /**
-     * Tokens
-     */
-    const token = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.TOKEN);
-    /**
-     * AI agent configuration
-     */
-    const agentTasks = (0, agent_input_builder_1.buildAgentTasksFromValues)({ ...actionInputs, ...additionalParams });
-    const agentModel = agentTasks.findings.model;
-    const aiPullRequestDescription = (0, input_boolean_policy_1.isEnabledInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION));
-    const aiMembersOnly = (0, input_boolean_policy_1.isEnabledInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.AI_MEMBERS_ONLY));
-    const aiIncludeReasoning = (0, input_boolean_policy_1.isEnabledInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.AI_INCLUDE_REASONING));
-    const aiIgnoreFilesInput = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.AI_IGNORE_FILES);
-    const aiIgnoreFiles = (0, input_values_policy_1.parseDelimitedValues)(aiIgnoreFilesInput);
-    const bugbotSeverity = ((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.BUGBOT_SEVERITY)) || constants_1.BUGBOT_MIN_SEVERITY;
-    const bugbotCommentLimitRaw = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.BUGBOT_COMMENT_LIMIT);
-    const bugbotCommentLimit = (0, input_number_policy_1.parseBoundedPositiveIntegerInput)(bugbotCommentLimitRaw, constants_1.BUGBOT_MAX_COMMENTS, 200);
-    const bugbotFixVerifyCommandsInput = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.BUGBOT_FIX_VERIFY_COMMANDS) ?? '';
-    const bugbotFixVerifyCommands = String(bugbotFixVerifyCommandsInput)
-        .split(',')
-        .map((c) => c.trim())
-        .filter((c) => c.length > 0);
-    /**
-     * Projects Details
-     */
-    const projectIdsInput = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.PROJECT_IDS);
-    const projectIds = (0, input_values_policy_1.parseDelimitedValues)(projectIdsInput);
-    const projects = await (0, project_details_loader_1.loadProjectDetails)(projectRepository, projectIds, additionalParams?.repo?.owner, token ?? '');
-    const projectColumnIssueCreated = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.PROJECT_COLUMN_ISSUE_CREATED);
-    const projectColumnPullRequestCreated = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.PROJECT_COLUMN_PULL_REQUEST_CREATED);
-    const projectColumnIssueInProgress = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.PROJECT_COLUMN_ISSUE_IN_PROGRESS);
-    const projectColumnPullRequestInProgress = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.PROJECT_COLUMN_PULL_REQUEST_IN_PROGRESS);
-    /**
-     * Images
-     */
-    const imageConfiguration = (0, image_configuration_builder_1.buildImageConfiguration)(key => additionalParams[key] ?? actionInputs[key]);
-    /**
-     * Workflows
-     */
-    const releaseWorkflow = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.RELEASE_WORKFLOW);
-    const hotfixWorkflow = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.HOTFIX_WORKFLOW);
-    /**
-     * Emoji-title
-     */
-    const titleEmoji = ((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.EMOJI_LABELED_TITLE)) === 'true';
-    const branchManagementEmoji = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.BRANCH_MANAGEMENT_EMOJI);
-    /**
-     * Labels
-     */
-    const branchManagementLauncherLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.BRANCH_MANAGEMENT_LAUNCHER_LABEL);
-    const bugfixLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.BUGFIX_LABEL);
-    const bugLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.BUG_LABEL);
-    const hotfixLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.HOTFIX_LABEL);
-    const enhancementLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ENHANCEMENT_LABEL);
-    const featureLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.FEATURE_LABEL);
-    const releaseLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.RELEASE_LABEL);
-    const questionLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.QUESTION_LABEL);
-    const helpLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.HELP_LABEL);
-    const deployLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.DEPLOY_LABEL);
-    const deployedLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.DEPLOYED_LABEL);
-    const docsLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.DOCS_LABEL);
-    const documentationLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.DOCUMENTATION_LABEL);
-    const choreLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.CHORE_LABEL);
-    const maintenanceLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.MAINTENANCE_LABEL);
-    const priorityHighLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.PRIORITY_HIGH_LABEL);
-    const priorityMediumLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.PRIORITY_MEDIUM_LABEL);
-    const priorityLowLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.PRIORITY_LOW_LABEL);
-    const priorityNoneLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.PRIORITY_NONE_LABEL);
-    const sizeXxlLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SIZE_XXL_LABEL);
-    const sizeXlLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SIZE_XL_LABEL);
-    const sizeLLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SIZE_L_LABEL);
-    const sizeMLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SIZE_M_LABEL);
-    const sizeSLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SIZE_S_LABEL);
-    const sizeXsLabel = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SIZE_XS_LABEL);
-    /**
-     * Issue Types
-     */
-    const issueTypeBug = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_BUG);
-    const issueTypeBugDescription = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_BUG_DESCRIPTION);
-    const issueTypeBugColor = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_BUG_COLOR);
-    const issueTypeHotfix = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_HOTFIX);
-    const issueTypeHotfixDescription = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_HOTFIX_DESCRIPTION);
-    const issueTypeHotfixColor = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_HOTFIX_COLOR);
-    const issueTypeFeature = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_FEATURE);
-    const issueTypeFeatureDescription = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_FEATURE_DESCRIPTION);
-    const issueTypeFeatureColor = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_FEATURE_COLOR);
-    const issueTypeDocumentation = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_DOCUMENTATION);
-    const issueTypeDocumentationDescription = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_DOCUMENTATION_DESCRIPTION);
-    const issueTypeDocumentationColor = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_DOCUMENTATION_COLOR);
-    const issueTypeMaintenance = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_MAINTENANCE);
-    const issueTypeMaintenanceDescription = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_MAINTENANCE_DESCRIPTION);
-    const issueTypeMaintenanceColor = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_MAINTENANCE_COLOR);
-    const issueTypeRelease = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_RELEASE);
-    const issueTypeReleaseDescription = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_RELEASE_DESCRIPTION);
-    const issueTypeReleaseColor = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_RELEASE_COLOR);
-    const issueTypeQuestion = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_QUESTION);
-    const issueTypeQuestionDescription = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_QUESTION_DESCRIPTION);
-    const issueTypeQuestionColor = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_QUESTION_COLOR);
-    const issueTypeHelp = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_HELP);
-    const issueTypeHelpDescription = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_HELP_DESCRIPTION);
-    const issueTypeHelpColor = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_HELP_COLOR);
-    const issueTypeTask = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_TASK);
-    const issueTypeTaskDescription = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_TASK_DESCRIPTION);
-    const issueTypeTaskColor = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_TASK_COLOR);
-    /**
-     * Locale
-     */
-    const issueLocale = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUES_LOCALE) ?? locale_1.Locale.DEFAULT;
-    const pullRequestLocale = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.PULL_REQUESTS_LOCALE) ?? locale_1.Locale.DEFAULT;
-    /**
-     * Size Thresholds
-     */
-    const sizeXxlThresholdLines = (0, input_number_policy_1.parseIntegerInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SIZE_XXL_THRESHOLD_LINES), 1000);
-    const sizeXxlThresholdFiles = (0, input_number_policy_1.parseIntegerInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SIZE_XXL_THRESHOLD_FILES), 20);
-    const sizeXxlThresholdCommits = (0, input_number_policy_1.parseIntegerInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SIZE_XXL_THRESHOLD_COMMITS), 10);
-    const sizeXlThresholdLines = (0, input_number_policy_1.parseIntegerInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SIZE_XL_THRESHOLD_LINES), 500);
-    const sizeXlThresholdFiles = (0, input_number_policy_1.parseIntegerInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SIZE_XL_THRESHOLD_FILES), 10);
-    const sizeXlThresholdCommits = (0, input_number_policy_1.parseIntegerInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SIZE_XL_THRESHOLD_COMMITS), 5);
-    const sizeLThresholdLines = (0, input_number_policy_1.parseIntegerInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SIZE_L_THRESHOLD_LINES), 250);
-    const sizeLThresholdFiles = (0, input_number_policy_1.parseIntegerInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SIZE_L_THRESHOLD_FILES), 5);
-    const sizeLThresholdCommits = (0, input_number_policy_1.parseIntegerInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SIZE_L_THRESHOLD_COMMITS), 3);
-    const sizeMThresholdLines = (0, input_number_policy_1.parseIntegerInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SIZE_M_THRESHOLD_LINES), 100);
-    const sizeMThresholdFiles = (0, input_number_policy_1.parseIntegerInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SIZE_M_THRESHOLD_FILES), 3);
-    const sizeMThresholdCommits = (0, input_number_policy_1.parseIntegerInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SIZE_M_THRESHOLD_COMMITS), 2);
-    const sizeSThresholdLines = (0, input_number_policy_1.parseIntegerInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SIZE_S_THRESHOLD_LINES), 50);
-    const sizeSThresholdFiles = (0, input_number_policy_1.parseIntegerInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SIZE_S_THRESHOLD_FILES), 2);
-    const sizeSThresholdCommits = (0, input_number_policy_1.parseIntegerInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SIZE_S_THRESHOLD_COMMITS), 1);
-    const sizeXsThresholdLines = (0, input_number_policy_1.parseIntegerInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SIZE_XS_THRESHOLD_LINES), 25);
-    const sizeXsThresholdFiles = (0, input_number_policy_1.parseIntegerInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SIZE_XS_THRESHOLD_FILES), 1);
-    const sizeXsThresholdCommits = (0, input_number_policy_1.parseIntegerInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.SIZE_XS_THRESHOLD_COMMITS), 1);
-    /**
-     * Branches
-     */
-    const mainBranch = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.MAIN_BRANCH);
-    const developmentBranch = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.DEVELOPMENT_BRANCH);
-    const featureTree = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.FEATURE_TREE);
-    const bugfixTree = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.BUGFIX_TREE);
-    const hotfixTree = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.HOTFIX_TREE);
-    const releaseTree = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.RELEASE_TREE);
-    const docsTree = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.DOCS_TREE);
-    const choreTree = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.CHORE_TREE);
-    /**
-     * Prefix builder
-     */
-    let commitPrefixBuilder = (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.COMMIT_PREFIX_TRANSFORMS) ?? '';
-    if (commitPrefixBuilder.length === 0) {
-        commitPrefixBuilder = 'replace-slash';
-    }
-    /**
-     * Issue
-     */
-    const branchManagementAlways = (0, input_boolean_policy_1.isEnabledInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.BRANCH_MANAGEMENT_ALWAYS));
-    const reopenIssueOnPush = (0, input_boolean_policy_1.isEnabledInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.REOPEN_ISSUE_ON_PUSH));
-    const issueDesiredAssigneesCount = (0, input_number_policy_1.parseIntegerInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.DESIRED_ASSIGNEES_COUNT), 0);
-    /**
-     * Pull Request
-     */
-    const pullRequestDesiredAssigneesCount = (0, input_number_policy_1.parseIntegerInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.PULL_REQUEST_DESIRED_ASSIGNEES_COUNT), 0);
-    const pullRequestDesiredReviewersCount = (0, input_number_policy_1.parseIntegerInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.PULL_REQUEST_DESIRED_REVIEWERS_COUNT), 0);
-    const pullRequestMergeTimeout = (0, input_number_policy_1.parseIntegerInput)((0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, constants_1.INPUT_KEYS.PULL_REQUEST_MERGE_TIMEOUT), 0);
+function input(additionalParams, actionInputs, key) {
+    return (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, key);
+}
+function readLocalCoreConfiguration(additionalParams, actionInputs) {
     return {
         actionInputs,
-        debug,
-        welcomeTitle,
-        welcomeMessages,
-        singleAction,
-        singleActionIssue,
-        singleActionVersion,
-        singleActionTitle,
-        singleActionChangelog,
-        token,
+        debug: (0, input_boolean_policy_1.isEnabledInput)(input(additionalParams, actionInputs, constants_1.INPUT_KEYS.DEBUG)),
+        welcomeTitle: input(additionalParams, actionInputs, constants_1.INPUT_KEYS.WELCOME_TITLE),
+        welcomeMessages: input(additionalParams, actionInputs, constants_1.INPUT_KEYS.WELCOME_MESSAGES),
+        singleAction: input(additionalParams, actionInputs, constants_1.INPUT_KEYS.SINGLE_ACTION),
+        singleActionIssue: input(additionalParams, actionInputs, constants_1.INPUT_KEYS.SINGLE_ACTION_ISSUE),
+        singleActionVersion: input(additionalParams, actionInputs, constants_1.INPUT_KEYS.SINGLE_ACTION_VERSION),
+        singleActionTitle: input(additionalParams, actionInputs, constants_1.INPUT_KEYS.SINGLE_ACTION_TITLE),
+        singleActionChangelog: input(additionalParams, actionInputs, constants_1.INPUT_KEYS.SINGLE_ACTION_CHANGELOG),
+        token: input(additionalParams, actionInputs, constants_1.INPUT_KEYS.TOKEN),
+    };
+}
+function readLocalAgentConfiguration(additionalParams, actionInputs) {
+    const agentTasks = (0, agent_input_builder_1.buildAgentTasksFromValues)({ ...actionInputs, ...additionalParams });
+    const bugbotFixVerifyCommandsInput = input(additionalParams, actionInputs, constants_1.INPUT_KEYS.BUGBOT_FIX_VERIFY_COMMANDS) ?? '';
+    return {
         agentTasks,
-        agentModel,
-        aiPullRequestDescription,
-        aiMembersOnly,
-        aiIncludeReasoning,
-        aiIgnoreFilesInput,
-        aiIgnoreFiles,
-        bugbotSeverity,
-        bugbotCommentLimitRaw,
-        bugbotCommentLimit,
+        agentModel: agentTasks.findings.model,
+        aiPullRequestDescription: (0, input_boolean_policy_1.isEnabledInput)(input(additionalParams, actionInputs, constants_1.INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION)),
+        aiMembersOnly: (0, input_boolean_policy_1.isEnabledInput)(input(additionalParams, actionInputs, constants_1.INPUT_KEYS.AI_MEMBERS_ONLY)),
+        aiIncludeReasoning: (0, input_boolean_policy_1.isEnabledInput)(input(additionalParams, actionInputs, constants_1.INPUT_KEYS.AI_INCLUDE_REASONING)),
+        aiIgnoreFilesInput: input(additionalParams, actionInputs, constants_1.INPUT_KEYS.AI_IGNORE_FILES),
+        aiIgnoreFiles: (0, input_values_policy_1.parseDelimitedValues)(input(additionalParams, actionInputs, constants_1.INPUT_KEYS.AI_IGNORE_FILES)),
+        bugbotSeverity: input(additionalParams, actionInputs, constants_1.INPUT_KEYS.BUGBOT_SEVERITY) || constants_1.BUGBOT_MIN_SEVERITY,
+        bugbotCommentLimitRaw: input(additionalParams, actionInputs, constants_1.INPUT_KEYS.BUGBOT_COMMENT_LIMIT),
+        bugbotCommentLimit: (0, input_number_policy_1.parseBoundedPositiveIntegerInput)(input(additionalParams, actionInputs, constants_1.INPUT_KEYS.BUGBOT_COMMENT_LIMIT), constants_1.BUGBOT_MAX_COMMENTS, 200),
         bugbotFixVerifyCommandsInput,
-        bugbotFixVerifyCommands,
+        bugbotFixVerifyCommands: String(bugbotFixVerifyCommandsInput)
+            .split(',')
+            .map((command) => command.trim())
+            .filter(Boolean),
+    };
+}
+async function readLocalProjectConfiguration(additionalParams, actionInputs, projectRepository, token) {
+    const projectIdsInput = input(additionalParams, actionInputs, constants_1.INPUT_KEYS.PROJECT_IDS);
+    const projectIds = (0, input_values_policy_1.parseDelimitedValues)(projectIdsInput);
+    const repository = additionalParams.repo;
+    const owner = repository && typeof repository === 'object'
+        ? String(repository.owner ?? '')
+        : '';
+    const projects = await (0, project_details_loader_1.loadProjectDetails)(projectRepository, projectIds, owner, token ?? '');
+    return {
         projectIdsInput,
         projectIds,
         projects,
-        projectColumnIssueCreated,
-        projectColumnPullRequestCreated,
-        projectColumnIssueInProgress,
-        projectColumnPullRequestInProgress,
-        imageConfiguration,
-        releaseWorkflow,
-        hotfixWorkflow,
-        titleEmoji,
-        branchManagementEmoji,
-        branchManagementLauncherLabel,
-        bugfixLabel,
-        bugLabel,
-        hotfixLabel,
-        enhancementLabel,
-        featureLabel,
-        releaseLabel,
-        questionLabel,
-        helpLabel,
-        deployLabel,
-        deployedLabel,
-        docsLabel,
-        documentationLabel,
-        choreLabel,
-        maintenanceLabel,
-        priorityHighLabel,
-        priorityMediumLabel,
-        priorityLowLabel,
-        priorityNoneLabel,
-        sizeXxlLabel,
-        sizeXlLabel,
-        sizeLLabel,
-        sizeMLabel,
-        sizeSLabel,
-        sizeXsLabel,
-        issueTypeBug,
-        issueTypeBugDescription,
-        issueTypeBugColor,
-        issueTypeHotfix,
-        issueTypeHotfixDescription,
-        issueTypeHotfixColor,
-        issueTypeFeature,
-        issueTypeFeatureDescription,
-        issueTypeFeatureColor,
-        issueTypeDocumentation,
-        issueTypeDocumentationDescription,
-        issueTypeDocumentationColor,
-        issueTypeMaintenance,
-        issueTypeMaintenanceDescription,
-        issueTypeMaintenanceColor,
-        issueTypeRelease,
-        issueTypeReleaseDescription,
-        issueTypeReleaseColor,
-        issueTypeQuestion,
-        issueTypeQuestionDescription,
-        issueTypeQuestionColor,
-        issueTypeHelp,
-        issueTypeHelpDescription,
-        issueTypeHelpColor,
-        issueTypeTask,
-        issueTypeTaskDescription,
-        issueTypeTaskColor,
-        issueLocale,
-        pullRequestLocale,
-        sizeXxlThresholdLines,
-        sizeXxlThresholdFiles,
-        sizeXxlThresholdCommits,
-        sizeXlThresholdLines,
-        sizeXlThresholdFiles,
-        sizeXlThresholdCommits,
-        sizeLThresholdLines,
-        sizeLThresholdFiles,
-        sizeLThresholdCommits,
-        sizeMThresholdLines,
-        sizeMThresholdFiles,
-        sizeMThresholdCommits,
-        sizeSThresholdLines,
-        sizeSThresholdFiles,
-        sizeSThresholdCommits,
-        sizeXsThresholdLines,
-        sizeXsThresholdFiles,
-        sizeXsThresholdCommits,
-        mainBranch,
-        developmentBranch,
-        featureTree,
-        bugfixTree,
-        hotfixTree,
-        releaseTree,
-        docsTree,
-        choreTree,
-        commitPrefixBuilder,
-        branchManagementAlways,
-        reopenIssueOnPush,
-        issueDesiredAssigneesCount,
-        pullRequestDesiredAssigneesCount,
-        pullRequestDesiredReviewersCount,
-        pullRequestMergeTimeout,
+        projectColumnIssueCreated: input(additionalParams, actionInputs, constants_1.INPUT_KEYS.PROJECT_COLUMN_ISSUE_CREATED),
+        projectColumnPullRequestCreated: input(additionalParams, actionInputs, constants_1.INPUT_KEYS.PROJECT_COLUMN_PULL_REQUEST_CREATED),
+        projectColumnIssueInProgress: input(additionalParams, actionInputs, constants_1.INPUT_KEYS.PROJECT_COLUMN_ISSUE_IN_PROGRESS),
+        projectColumnPullRequestInProgress: input(additionalParams, actionInputs, constants_1.INPUT_KEYS.PROJECT_COLUMN_PULL_REQUEST_IN_PROGRESS),
+    };
+}
+function readIssueType(additionalParams, actionInputs, name, description, color) {
+    return {
+        name: input(additionalParams, actionInputs, name),
+        description: input(additionalParams, actionInputs, description),
+        color: input(additionalParams, actionInputs, color),
+    };
+}
+function readLocalLabelsAndIssueTypes(additionalParams, actionInputs) {
+    const label = (key) => input(additionalParams, actionInputs, key);
+    const issueTypeBug = readIssueType(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_BUG, constants_1.INPUT_KEYS.ISSUE_TYPE_BUG_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_BUG_COLOR);
+    const issueTypeHotfix = readIssueType(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_HOTFIX, constants_1.INPUT_KEYS.ISSUE_TYPE_HOTFIX_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_HOTFIX_COLOR);
+    const issueTypeFeature = readIssueType(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_FEATURE, constants_1.INPUT_KEYS.ISSUE_TYPE_FEATURE_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_FEATURE_COLOR);
+    const issueTypeDocumentation = readIssueType(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_DOCUMENTATION, constants_1.INPUT_KEYS.ISSUE_TYPE_DOCUMENTATION_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_DOCUMENTATION_COLOR);
+    const issueTypeMaintenance = readIssueType(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_MAINTENANCE, constants_1.INPUT_KEYS.ISSUE_TYPE_MAINTENANCE_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_MAINTENANCE_COLOR);
+    const issueTypeRelease = readIssueType(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_RELEASE, constants_1.INPUT_KEYS.ISSUE_TYPE_RELEASE_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_RELEASE_COLOR);
+    const issueTypeQuestion = readIssueType(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_QUESTION, constants_1.INPUT_KEYS.ISSUE_TYPE_QUESTION_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_QUESTION_COLOR);
+    const issueTypeHelp = readIssueType(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_HELP, constants_1.INPUT_KEYS.ISSUE_TYPE_HELP_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_HELP_COLOR);
+    const issueTypeTask = readIssueType(additionalParams, actionInputs, constants_1.INPUT_KEYS.ISSUE_TYPE_TASK, constants_1.INPUT_KEYS.ISSUE_TYPE_TASK_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_TASK_COLOR);
+    return {
+        labels: {
+            branchManagementLauncherLabel: label(constants_1.INPUT_KEYS.BRANCH_MANAGEMENT_LAUNCHER_LABEL),
+            bugfixLabel: label(constants_1.INPUT_KEYS.BUGFIX_LABEL),
+            bugLabel: label(constants_1.INPUT_KEYS.BUG_LABEL),
+            hotfixLabel: label(constants_1.INPUT_KEYS.HOTFIX_LABEL),
+            enhancementLabel: label(constants_1.INPUT_KEYS.ENHANCEMENT_LABEL),
+            featureLabel: label(constants_1.INPUT_KEYS.FEATURE_LABEL),
+            releaseLabel: label(constants_1.INPUT_KEYS.RELEASE_LABEL),
+            questionLabel: label(constants_1.INPUT_KEYS.QUESTION_LABEL),
+            helpLabel: label(constants_1.INPUT_KEYS.HELP_LABEL),
+            deployLabel: label(constants_1.INPUT_KEYS.DEPLOY_LABEL),
+            deployedLabel: label(constants_1.INPUT_KEYS.DEPLOYED_LABEL),
+            docsLabel: label(constants_1.INPUT_KEYS.DOCS_LABEL),
+            documentationLabel: label(constants_1.INPUT_KEYS.DOCUMENTATION_LABEL),
+            choreLabel: label(constants_1.INPUT_KEYS.CHORE_LABEL),
+            maintenanceLabel: label(constants_1.INPUT_KEYS.MAINTENANCE_LABEL),
+            priorityHighLabel: label(constants_1.INPUT_KEYS.PRIORITY_HIGH_LABEL),
+            priorityMediumLabel: label(constants_1.INPUT_KEYS.PRIORITY_MEDIUM_LABEL),
+            priorityLowLabel: label(constants_1.INPUT_KEYS.PRIORITY_LOW_LABEL),
+            priorityNoneLabel: label(constants_1.INPUT_KEYS.PRIORITY_NONE_LABEL),
+            sizeXxlLabel: label(constants_1.INPUT_KEYS.SIZE_XXL_LABEL),
+            sizeXlLabel: label(constants_1.INPUT_KEYS.SIZE_XL_LABEL),
+            sizeLLabel: label(constants_1.INPUT_KEYS.SIZE_L_LABEL),
+            sizeMLabel: label(constants_1.INPUT_KEYS.SIZE_M_LABEL),
+            sizeSLabel: label(constants_1.INPUT_KEYS.SIZE_S_LABEL),
+            sizeXsLabel: label(constants_1.INPUT_KEYS.SIZE_XS_LABEL),
+        },
+        issueTypes: {
+            issueTypeBug: issueTypeBug.name,
+            issueTypeBugDescription: issueTypeBug.description,
+            issueTypeBugColor: issueTypeBug.color,
+            issueTypeHotfix: issueTypeHotfix.name,
+            issueTypeHotfixDescription: issueTypeHotfix.description,
+            issueTypeHotfixColor: issueTypeHotfix.color,
+            issueTypeFeature: issueTypeFeature.name,
+            issueTypeFeatureDescription: issueTypeFeature.description,
+            issueTypeFeatureColor: issueTypeFeature.color,
+            issueTypeDocumentation: issueTypeDocumentation.name,
+            issueTypeDocumentationDescription: issueTypeDocumentation.description,
+            issueTypeDocumentationColor: issueTypeDocumentation.color,
+            issueTypeMaintenance: issueTypeMaintenance.name,
+            issueTypeMaintenanceDescription: issueTypeMaintenance.description,
+            issueTypeMaintenanceColor: issueTypeMaintenance.color,
+            issueTypeRelease: issueTypeRelease.name,
+            issueTypeReleaseDescription: issueTypeRelease.description,
+            issueTypeReleaseColor: issueTypeRelease.color,
+            issueTypeQuestion: issueTypeQuestion.name,
+            issueTypeQuestionDescription: issueTypeQuestion.description,
+            issueTypeQuestionColor: issueTypeQuestion.color,
+            issueTypeHelp: issueTypeHelp.name,
+            issueTypeHelpDescription: issueTypeHelp.description,
+            issueTypeHelpColor: issueTypeHelp.color,
+            issueTypeTask: issueTypeTask.name,
+            issueTypeTaskDescription: issueTypeTask.description,
+            issueTypeTaskColor: issueTypeTask.color,
+        },
+    };
+}
+function readThresholds(additionalParams, actionInputs) {
+    const read = (key, fallback) => (0, input_number_policy_1.parseIntegerInput)(input(additionalParams, actionInputs, key), fallback);
+    const groups = {
+        Xxl: [constants_1.INPUT_KEYS.SIZE_XXL_THRESHOLD_LINES, constants_1.INPUT_KEYS.SIZE_XXL_THRESHOLD_FILES, constants_1.INPUT_KEYS.SIZE_XXL_THRESHOLD_COMMITS, 1000, 20, 10],
+        Xl: [constants_1.INPUT_KEYS.SIZE_XL_THRESHOLD_LINES, constants_1.INPUT_KEYS.SIZE_XL_THRESHOLD_FILES, constants_1.INPUT_KEYS.SIZE_XL_THRESHOLD_COMMITS, 500, 10, 5],
+        L: [constants_1.INPUT_KEYS.SIZE_L_THRESHOLD_LINES, constants_1.INPUT_KEYS.SIZE_L_THRESHOLD_FILES, constants_1.INPUT_KEYS.SIZE_L_THRESHOLD_COMMITS, 250, 5, 3],
+        M: [constants_1.INPUT_KEYS.SIZE_M_THRESHOLD_LINES, constants_1.INPUT_KEYS.SIZE_M_THRESHOLD_FILES, constants_1.INPUT_KEYS.SIZE_M_THRESHOLD_COMMITS, 100, 3, 2],
+        S: [constants_1.INPUT_KEYS.SIZE_S_THRESHOLD_LINES, constants_1.INPUT_KEYS.SIZE_S_THRESHOLD_FILES, constants_1.INPUT_KEYS.SIZE_S_THRESHOLD_COMMITS, 50, 2, 1],
+        Xs: [constants_1.INPUT_KEYS.SIZE_XS_THRESHOLD_LINES, constants_1.INPUT_KEYS.SIZE_XS_THRESHOLD_FILES, constants_1.INPUT_KEYS.SIZE_XS_THRESHOLD_COMMITS, 25, 1, 1],
+    };
+    const values = Object.fromEntries(Object.entries(groups).flatMap(([name, [linesKey, filesKey, commitsKey, linesFallback, filesFallback, commitsFallback]]) => [
+        [`size${name}ThresholdLines`, read(linesKey, linesFallback)],
+        [`size${name}ThresholdFiles`, read(filesKey, filesFallback)],
+        [`size${name}ThresholdCommits`, read(commitsKey, commitsFallback)],
+    ]));
+    return {
+        sizeXxlThresholdLines: values.sizeXxlThresholdLines,
+        sizeXxlThresholdFiles: values.sizeXxlThresholdFiles,
+        sizeXxlThresholdCommits: values.sizeXxlThresholdCommits,
+        sizeXlThresholdLines: values.sizeXlThresholdLines,
+        sizeXlThresholdFiles: values.sizeXlThresholdFiles,
+        sizeXlThresholdCommits: values.sizeXlThresholdCommits,
+        sizeLThresholdLines: values.sizeLThresholdLines,
+        sizeLThresholdFiles: values.sizeLThresholdFiles,
+        sizeLThresholdCommits: values.sizeLThresholdCommits,
+        sizeMThresholdLines: values.sizeMThresholdLines,
+        sizeMThresholdFiles: values.sizeMThresholdFiles,
+        sizeMThresholdCommits: values.sizeMThresholdCommits,
+        sizeSThresholdLines: values.sizeSThresholdLines,
+        sizeSThresholdFiles: values.sizeSThresholdFiles,
+        sizeSThresholdCommits: values.sizeSThresholdCommits,
+        sizeXsThresholdLines: values.sizeXsThresholdLines,
+        sizeXsThresholdFiles: values.sizeXsThresholdFiles,
+        sizeXsThresholdCommits: values.sizeXsThresholdCommits,
+    };
+}
+function readLocalWorkflowConfiguration(additionalParams, actionInputs) {
+    const read = (key) => input(additionalParams, actionInputs, key);
+    return {
+        imageConfiguration: (0, image_configuration_builder_1.buildImageConfiguration)((key) => additionalParams[key] ?? actionInputs[key]),
+        releaseWorkflow: read(constants_1.INPUT_KEYS.RELEASE_WORKFLOW),
+        hotfixWorkflow: read(constants_1.INPUT_KEYS.HOTFIX_WORKFLOW),
+        titleEmoji: read(constants_1.INPUT_KEYS.EMOJI_LABELED_TITLE) === 'true',
+        branchManagementEmoji: read(constants_1.INPUT_KEYS.BRANCH_MANAGEMENT_EMOJI),
+        issueLocale: read(constants_1.INPUT_KEYS.ISSUES_LOCALE) ?? locale_1.Locale.DEFAULT,
+        pullRequestLocale: read(constants_1.INPUT_KEYS.PULL_REQUESTS_LOCALE) ?? locale_1.Locale.DEFAULT,
+        ...readThresholds(additionalParams, actionInputs),
+        mainBranch: read(constants_1.INPUT_KEYS.MAIN_BRANCH),
+        developmentBranch: read(constants_1.INPUT_KEYS.DEVELOPMENT_BRANCH),
+        featureTree: read(constants_1.INPUT_KEYS.FEATURE_TREE),
+        bugfixTree: read(constants_1.INPUT_KEYS.BUGFIX_TREE),
+        hotfixTree: read(constants_1.INPUT_KEYS.HOTFIX_TREE),
+        releaseTree: read(constants_1.INPUT_KEYS.RELEASE_TREE),
+        docsTree: read(constants_1.INPUT_KEYS.DOCS_TREE),
+        choreTree: read(constants_1.INPUT_KEYS.CHORE_TREE),
+        commitPrefixBuilder: read(constants_1.INPUT_KEYS.COMMIT_PREFIX_TRANSFORMS) || 'replace-slash',
+        branchManagementAlways: (0, input_boolean_policy_1.isEnabledInput)(read(constants_1.INPUT_KEYS.BRANCH_MANAGEMENT_ALWAYS)),
+        reopenIssueOnPush: (0, input_boolean_policy_1.isEnabledInput)(read(constants_1.INPUT_KEYS.REOPEN_ISSUE_ON_PUSH)),
+        issueDesiredAssigneesCount: (0, input_number_policy_1.parseIntegerInput)(read(constants_1.INPUT_KEYS.DESIRED_ASSIGNEES_COUNT), 0),
+        pullRequestDesiredAssigneesCount: (0, input_number_policy_1.parseIntegerInput)(read(constants_1.INPUT_KEYS.PULL_REQUEST_DESIRED_ASSIGNEES_COUNT), 0),
+        pullRequestDesiredReviewersCount: (0, input_number_policy_1.parseIntegerInput)(read(constants_1.INPUT_KEYS.PULL_REQUEST_DESIRED_REVIEWERS_COUNT), 0),
+        pullRequestMergeTimeout: (0, input_number_policy_1.parseNonNegativeIntegerInput)(read(constants_1.INPUT_KEYS.PULL_REQUEST_MERGE_TIMEOUT), 0),
     };
 }
 
@@ -53389,8 +53167,8 @@ function renderLocalActionResults(results) {
         content += '\n' + chalk_1.default.cyan('Steps:') + '\n' + stepsContent;
     }
     const errorsContent = results
-        .filter(result => !result.executed && result.errors.length > 0)
-        .map(result => chalk_1.default.gray(result.errors.join('\n'))).join('\n');
+        .filter(result => result.errors.length > 0)
+        .map(result => chalk_1.default.gray(result.errors.map(error => error.message).join('\n'))).join('\n');
     if (errorsContent.length > 0) {
         content += '\n' + chalk_1.default.red('Errors:') + '\n' + errorsContent;
     }
@@ -53445,6 +53223,143 @@ async function dispatchMainRunRoute(route, execution, handlers) {
             break;
     }
     return handlers[route](execution);
+}
+
+
+/***/ }),
+
+/***/ 916:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildPreviousWorkflowRunsQuery = buildPreviousWorkflowRunsQuery;
+exports.waitForPreviousWorkflowRuns = waitForPreviousWorkflowRuns;
+exports.logWelcomeMessage = logWelcomeMessage;
+exports.runTokenExecution = runTokenExecution;
+exports.runNoIssueExecution = runNoIssueExecution;
+exports.runMainRoute = runMainRoute;
+const core = __importStar(__nccwpck_require__(81078));
+const chalk_1 = __importDefault(__nccwpck_require__(8578));
+const boxen_1 = __importDefault(__nccwpck_require__(11652));
+const constants_1 = __nccwpck_require__(15415);
+const logger_1 = __nccwpck_require__(91151);
+const main_run_dispatcher_1 = __nccwpck_require__(28586);
+const workflow_context_1 = __nccwpck_require__(55224);
+const workflow_queue_composition_root_1 = __nccwpck_require__(21598);
+const workflow_queue_policy_1 = __nccwpck_require__(43193);
+function buildPreviousWorkflowRunsQuery(repository) {
+    const query = {
+        owner: repository.owner,
+        repository: repository.repo,
+        currentRunId: Number.parseInt(process.env.GITHUB_RUN_ID ?? '', 10),
+        workflowName: process.env.GITHUB_WORKFLOW ?? '',
+        workflowNames: workflow_queue_policy_1.COPILOT_WORKFLOW_NAMES,
+    };
+    const workflowIdentifier = (0, workflow_context_1.resolveWorkflowIdentifier)(process.env.GITHUB_WORKFLOW_REF);
+    if (workflowIdentifier) {
+        query.workflowIdentifier = workflowIdentifier;
+    }
+    return query;
+}
+async function waitForPreviousWorkflowRuns(execution, repository) {
+    const query = buildPreviousWorkflowRunsQuery(repository);
+    await (0, workflow_queue_composition_root_1.createWaitForPreviousWorkflowRunsUseCase)(execution.tokens.token)
+        .invoke(query)
+        .catch((error) => {
+        (0, logger_1.logError)(`Error waiting for previous runs: ${error}`);
+        throw error;
+    });
+}
+function logWelcomeMessage(execution) {
+    if (!execution.welcome)
+        return;
+    (0, logger_1.logInfo)((0, boxen_1.default)(chalk_1.default.cyan(execution.welcome.title) + '\n' +
+        execution.welcome.messages.map(message => chalk_1.default.gray(message)).join('\n'), {
+        padding: 1,
+        margin: 1,
+        borderStyle: 'round',
+        borderColor: 'cyan',
+        title: constants_1.TITLE,
+        titleAlignment: 'center',
+    }));
+}
+async function runTokenExecution(execution, routeHandlers) {
+    if (execution.isSingleAction && execution.singleAction.validSingleAction) {
+        (0, logger_1.logInfo)(`User from token (${execution.tokenUser}) matches actor. Executing single action: ${execution.singleAction.currentSingleAction}.`);
+        const results = await (0, main_run_dispatcher_1.dispatchMainRunRoute)('single-action', execution, routeHandlers);
+        (0, logger_1.logInfo)(`Single action finished. Results: ${results.length}.`);
+        return results;
+    }
+    (0, logger_1.logInfo)(`User from token (${execution.tokenUser}) matches actor. Ignoring (not a valid single action).`);
+    return [];
+}
+async function runNoIssueExecution(execution, routeHandlers) {
+    if (execution.isSingleAction && execution.singleAction.isSingleActionWithoutIssue) {
+        (0, logger_1.logInfo)('No issue number; running single action without issue.');
+        return (0, main_run_dispatcher_1.dispatchMainRunRoute)('single-action', execution, routeHandlers);
+    }
+    (0, logger_1.logInfo)('Issue number not found. Skipping.');
+    return [];
+}
+async function runMainRoute(execution, route, routeHandlers) {
+    try {
+        let results;
+        if (route === 'unhandled') {
+            (0, logger_1.logError)(`Action not handled. Event: ${execution.eventName}.`);
+            core.setFailed('Action not handled.');
+            results = [];
+        }
+        else {
+            results = await (0, main_run_dispatcher_1.dispatchMainRunRoute)(route, execution, routeHandlers);
+        }
+        const totalSteps = results.reduce((acc, result) => acc + (result.steps?.length ?? 0), 0);
+        (0, logger_1.logInfo)(`Main run finished. Results: ${results.length}, total steps: ${totalSteps}.`);
+        return results;
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        (0, logger_1.logError)(`Main run failed: ${message}`, error instanceof Error ? { stack: error.stack } : undefined);
+        core.setFailed(message);
+        return [];
+    }
 }
 
 
@@ -53573,6 +53488,236 @@ function resolveWorkflowIdentifier(workflowRef) {
 
 /***/ }),
 
+/***/ 15044:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.parseAgentCommand = parseAgentCommand;
+const shellQuote = __importStar(__nccwpck_require__(75430));
+/** Parses a literal agent command without allowing shell operators or substitutions. */
+function parseAgentCommand(command) {
+    const trimmed = command.trim();
+    if (!trimmed)
+        throw new Error('Agent CLI command must not be empty.');
+    const parsed = shellQuote.parse(trimmed, {});
+    const argv = parsed.filter((entry) => typeof entry === 'string');
+    if (argv.length !== parsed.length || argv.length === 0) {
+        throw new Error('Agent CLI command contains unsupported shell syntax. Use an executable and literal arguments only.');
+    }
+    return { executable: argv[0], args: argv.slice(1) };
+}
+
+
+/***/ }),
+
+/***/ 37011:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.defaultAgentCommand = void 0;
+exports.validateAgentCommand = validateAgentCommand;
+exports.cliInstallationHint = cliInstallationHint;
+const agent_command_1 = __nccwpck_require__(77923);
+Object.defineProperty(exports, "defaultAgentCommand", ({ enumerable: true, get: function () { return agent_command_1.defaultAgentCommand; } }));
+const agent_command_parser_1 = __nccwpck_require__(15044);
+function hasFlag(args, flag) {
+    return args.some((argument, index) => (argument === flag && index < args.length - 1) || argument.startsWith(`${flag}=`));
+}
+function flagValue(args, flags) {
+    for (const [index, argument] of args.entries()) {
+        const inlineFlag = flags.find((flag) => argument.startsWith(`${flag}=`));
+        if (inlineFlag)
+            return argument.slice(inlineFlag.length + 1);
+        if (flags.includes(argument))
+            return args[index + 1];
+    }
+    return undefined;
+}
+function configValue(args, key) {
+    for (const [index, argument] of args.entries()) {
+        const value = argument === '--config' || argument === '-c' ? args[index + 1] : argument;
+        if (!value?.startsWith(`${key}=`))
+            continue;
+        return value.slice(key.length + 1).replace(/^['"]/, '').replace(/['"]$/, '');
+    }
+    return undefined;
+}
+function hasCodexConfig(args, key) {
+    return args.some((argument, index) => ((argument === '--config' || argument === '-c')
+        && typeof args[index + 1] === 'string'
+        && args[index + 1].startsWith(`${key}=`)) || argument.startsWith(`${key}=`));
+}
+/** Validates a complete custom command against the selected provider configuration. */
+function validateAgentCommand(configuration) {
+    const command = configuration.command?.trim();
+    if (!command)
+        throw new Error(`CLI command is required for ${configuration.provider}.`);
+    const { args } = (0, agent_command_parser_1.parseAgentCommand)(command);
+    if (configuration.provider !== 'codex' && args.includes('-')) {
+        throw new Error(`${configuration.provider} command must not include the Codex stdin placeholder "-"; its prompt is passed as an argument.`);
+    }
+    if (!hasFlag(args, '--model') && !hasFlag(args, '-m')) {
+        throw new Error(`${configuration.provider} command must select the model explicitly with --model.`);
+    }
+    const expectedModel = configuration.provider === 'opencode'
+        ? `${configuration.modelProvider?.trim() || 'openai'}/${configuration.model.trim()}`
+        : configuration.model.trim();
+    const configuredModel = flagValue(args, ['--model', '-m']);
+    if (configuredModel !== expectedModel) {
+        throw new Error(`${configuration.provider} command must select configured model "${expectedModel}".`);
+    }
+    if (configuration.provider === 'codex' && !hasCodexConfig(args, 'model_provider')) {
+        throw new Error('Codex command must select the model provider explicitly with --config model_provider=... .');
+    }
+    if (configuration.provider === 'codex') {
+        const configuredModelProvider = configValue(args, 'model_provider');
+        const expectedModelProvider = configuration.modelProvider?.trim() || 'openai';
+        if (configuredModelProvider !== expectedModelProvider) {
+            throw new Error(`Codex command must select configured model provider "${expectedModelProvider}".`);
+        }
+    }
+    if (configuration.effort?.trim()) {
+        if (configuration.provider === 'codex' && !hasCodexConfig(args, 'model_reasoning_effort')) {
+            throw new Error('Codex command must select effort explicitly with --config model_reasoning_effort=... .');
+        }
+        if (configuration.provider === 'codex' && configValue(args, 'model_reasoning_effort') !== configuration.effort.trim()) {
+            throw new Error(`Codex command must select configured effort "${configuration.effort.trim()}".`);
+        }
+        if (configuration.provider === 'opencode' && !hasFlag(args, '--variant')) {
+            throw new Error('OpenCode command must select effort explicitly with --variant ... .');
+        }
+        if (configuration.provider === 'opencode' && flagValue(args, ['--variant']) !== configuration.effort.trim()) {
+            throw new Error(`OpenCode command must select configured effort "${configuration.effort.trim()}".`);
+        }
+    }
+}
+function cliInstallationHint(provider) {
+    switch (provider) {
+        case 'codex':
+            return 'Install the OpenAI Codex CLI and verify `codex exec --help` on the runner.';
+        case 'cursor':
+            return 'Install the Cursor CLI from https://cursor.com/install and verify `agent --help` on the runner.';
+        case 'opencode':
+            return 'Install OpenCode and verify `opencode run --help` on the runner.';
+    }
+}
+
+
+/***/ }),
+
+/***/ 7699:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildAgentConfiguration = buildAgentConfiguration;
+exports.mergeAgentTaskValues = mergeAgentTaskValues;
+exports.buildAgentTaskConfiguration = buildAgentTaskConfiguration;
+const agent_command_1 = __nccwpck_require__(77923);
+const agent_command_policy_1 = __nccwpck_require__(37011);
+const SUPPORTED_PROVIDERS = ['opencode', 'cursor', 'codex'];
+function configuredAllowlist(name, environment) {
+    const raw = environment[name]?.trim();
+    if (!raw)
+        return undefined;
+    const values = raw.split(',').map(value => value.trim().toLowerCase()).filter(Boolean);
+    if (!values.length)
+        throw new Error(`${name} must contain at least one value.`);
+    return values;
+}
+function resolveProvider(value) {
+    if (SUPPORTED_PROVIDERS.includes(value))
+        return value;
+    throw new Error(`Unsupported agent provider "${value}". Supported providers: ${SUPPORTED_PROVIDERS.join(', ')}.`);
+}
+function buildAgentConfiguration(values, environment = process.env) {
+    const provider = resolveProvider(values.provider.trim().toLowerCase());
+    const modelProvider = values.modelProvider?.trim().toLowerCase() || 'openai';
+    if (!/^[a-z0-9][a-z0-9_-]*$/.test(modelProvider))
+        throw new Error('Agent model provider must be a valid provider identifier.');
+    const allowedProviders = configuredAllowlist('AGENT_ALLOWED_MODEL_PROVIDERS', environment);
+    if (allowedProviders && !allowedProviders.includes(modelProvider))
+        throw new Error(`Agent model provider "${modelProvider}" is not allowlisted.`);
+    const model = values.model.trim();
+    if (!model)
+        throw new Error('Agent model must not be empty.');
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/.test(model)) {
+        throw new Error('Agent model must be a simple model identifier without whitespace or shell syntax.');
+    }
+    const allowedModels = environment.AGENT_ALLOWED_MODELS?.split(',').map(value => value.trim()).filter(Boolean);
+    if (allowedModels?.length && !allowedModels.includes(`${modelProvider}/${model}`) && !allowedModels.includes(model)) {
+        throw new Error(`Agent model "${modelProvider}/${model}" is not allowlisted.`);
+    }
+    const effort = values.effort?.trim() || undefined;
+    if (effort && !/^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/.test(effort)) {
+        throw new Error('Agent effort must be a simple identifier without whitespace or shell syntax.');
+    }
+    const customCommand = values.command?.trim();
+    const configuration = {
+        provider,
+        modelProvider,
+        model,
+        ...(effort ? { effort } : {}),
+        command: customCommand || (0, agent_command_1.defaultAgentCommand)({ provider, modelProvider, model, effort }),
+    };
+    if (customCommand)
+        (0, agent_command_policy_1.validateAgentCommand)(configuration);
+    return configuration;
+}
+function mergeAgentTaskValues(values, overrides) {
+    return {
+        ...values,
+        ...Object.fromEntries(Object.entries(overrides ?? {}).filter(([, value]) => typeof value === 'string' && value.trim().length > 0)),
+    };
+}
+function buildAgentTaskConfiguration(values, environment = process.env) {
+    return {
+        findings: buildAgentConfiguration(mergeAgentTaskValues(values, values.findings), environment),
+        fixer: buildAgentConfiguration(mergeAgentTaskValues(values, values.fixer), environment),
+    };
+}
+
+
+/***/ }),
+
 /***/ 25603:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -53631,6 +53776,48 @@ exports.LANGUAGE_CHECK_RESPONSE_SCHEMA = {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AGENT_PLAN = void 0;
 exports.AGENT_PLAN = 'build';
+
+
+/***/ }),
+
+/***/ 85918:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.resolveAssigneeTarget = resolveAssigneeTarget;
+exports.resolveCreatorAssignment = resolveCreatorAssignment;
+exports.calculateRemainingAssignees = calculateRemainingAssignees;
+exports.selectConfirmedAssignees = selectConfirmedAssignees;
+function resolveAssigneeTarget(context) {
+    return context.isIssue
+        ? { number: context.issue.number, desiredCount: context.issue.desiredAssigneesCount }
+        : { number: context.pullRequest.number, desiredCount: context.pullRequest.desiredAssigneesCount };
+}
+function isEligibleCreator(creator, projectMembers, currentMembers) {
+    if (!creator)
+        return false;
+    const identity = creator.toLowerCase();
+    return projectMembers.some((member) => member.toLowerCase() === identity)
+        && !currentMembers.some((member) => member.toLowerCase() === identity);
+}
+function resolveCreatorAssignment(context, projectMembers, currentMembers) {
+    if (context.isPullRequest && context.pullRequest.creator && isEligibleCreator(context.pullRequest.creator, projectMembers, currentMembers)) {
+        return { login: context.pullRequest.creator, source: 'pull request' };
+    }
+    if (context.isIssue && isEligibleCreator(context.issue.creator, projectMembers, currentMembers)) {
+        return { login: context.issue.creator, source: 'issue' };
+    }
+    return undefined;
+}
+function calculateRemainingAssignees(desiredCount, currentCount, creatorAssigned) {
+    return desiredCount - currentCount - (creatorAssigned ? 1 : 0);
+}
+function selectConfirmedAssignees(requestedMembers, assignedMembers) {
+    const requestedIdentities = new Set(requestedMembers.map((member) => member.toLowerCase()));
+    return assignedMembers.filter((member) => requestedIdentities.has(member.toLowerCase()));
+}
 
 
 /***/ }),
@@ -53803,7 +53990,7 @@ exports.MAX_STORED_RECOMMENDATION_LENGTH = 12000;
  * Copilot keeps internal state in hidden HTML blocks in the issue body. That
  * state is operational metadata, not part of the issue to be analysed.
  */
-const MANAGED_CONTENT_BLOCK_PATTERN = /<!--\s*copilot-[\w-]+-start(?:\s*-->)?[\s\S]*?copilot-[\w-]+-end\s*-->/gi;
+const MANAGED_CONTENT_BLOCK_PATTERN = /<!--\s*copilot-([\w-]+)-start(?:\s*-->)?[\s\S]*?copilot-\1-end\s*-->/gi;
 function getVisibleIssueDescription(description) {
     return description.replace(MANAGED_CONTENT_BLOCK_PATTERN, '').trim();
 }
@@ -53842,6 +54029,156 @@ function createSha256(value) {
 
 /***/ }),
 
+/***/ 88350:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.uniqueLogins = uniqueLogins;
+exports.buildReviewerExclusions = buildReviewerExclusions;
+exports.selectEligibleReviewers = selectEligibleReviewers;
+exports.selectConfirmedReviewers = selectConfirmedReviewers;
+exports.calculateReviewersStillNeeded = calculateReviewersStillNeeded;
+function uniqueLogins(logins) {
+    const identities = new Map();
+    for (const login of logins) {
+        const identity = login.toLowerCase();
+        if (!identities.has(identity))
+            identities.set(identity, login);
+    }
+    return [...identities.values()];
+}
+function buildReviewerExclusions(creator, currentReviewers, currentAssignees) {
+    return [creator, ...currentReviewers, ...currentAssignees];
+}
+function selectEligibleReviewers(members, exclusions, requiredCount) {
+    const excludedIdentities = new Set(exclusions.map((login) => login.toLowerCase()));
+    return uniqueLogins(members)
+        .filter((member) => !excludedIdentities.has(member.toLowerCase()))
+        .slice(0, requiredCount);
+}
+function selectConfirmedReviewers(requestedMembers, confirmedMembers) {
+    const requestedIdentities = new Set(requestedMembers.map((member) => member.toLowerCase()));
+    const confirmedIdentities = new Set();
+    return confirmedMembers.filter((member) => {
+        const identity = member.toLowerCase();
+        if (!requestedIdentities.has(identity) || confirmedIdentities.has(identity))
+            return false;
+        confirmedIdentities.add(identity);
+        return true;
+    });
+}
+function calculateReviewersStillNeeded(desiredCount, currentCount, confirmedCount) {
+    return Math.max(desiredCount - currentCount - confirmedCount, 0);
+}
+
+
+/***/ }),
+
+/***/ 43193:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.COPILOT_WORKFLOW_NAMES = void 0;
+/**
+ * Workflows that execute the Copilot action and therefore share its
+ * repository mutation queue. Keep these names aligned with workflow `name`
+ * values in `.github/workflows` and the setup templates.
+ */
+exports.COPILOT_WORKFLOW_NAMES = [
+    'Copilot - Issue',
+    'Copilot - Issue Comment',
+    'Copilot - Commit',
+    'Copilot - Pull Request',
+    'Copilot - Pull Request Comment',
+    'Task - Hotfix',
+    'Task - Release',
+];
+
+
+/***/ }),
+
+/***/ 6152:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.configureApplicationLogger = configureApplicationLogger;
+exports.resetApplicationLogger = resetApplicationLogger;
+exports.logInfo = logInfo;
+exports.logWarn = logWarn;
+exports.logWarning = logWarning;
+exports.logError = logError;
+exports.logDebugInfo = logDebugInfo;
+exports.logDebugWarning = logDebugWarning;
+exports.logDebugError = logDebugError;
+exports.setGlobalLoggerDebug = setGlobalLoggerDebug;
+exports.getAccumulatedLogEntries = getAccumulatedLogEntries;
+exports.getAccumulatedLogsAsText = getAccumulatedLogsAsText;
+exports.clearAccumulatedLogs = clearAccumulatedLogs;
+const noopLogger = {
+    logInfo: () => undefined,
+    logWarn: () => undefined,
+    logWarning: () => undefined,
+    logError: () => undefined,
+    logDebugInfo: () => undefined,
+    logDebugWarning: () => undefined,
+    logDebugError: () => undefined,
+    setGlobalLoggerDebug: () => undefined,
+    getAccumulatedLogEntries: () => [],
+    getAccumulatedLogsAsText: () => '',
+    clearAccumulatedLogs: () => undefined,
+};
+let activeLogger = noopLogger;
+/** Installs the runtime logger for one application lifecycle. */
+function configureApplicationLogger(logger) {
+    activeLogger = logger;
+}
+/** Restores the side-effect-free default, primarily useful for isolated runs and tests. */
+function resetApplicationLogger() {
+    activeLogger = noopLogger;
+}
+function logInfo(message, previousWasSingleLine = false, metadata, skipAccumulation) {
+    activeLogger.logInfo(message, previousWasSingleLine, metadata, skipAccumulation);
+}
+function logWarn(message, metadata) {
+    activeLogger.logWarn(message, metadata);
+}
+function logWarning(message) {
+    activeLogger.logWarning(message);
+}
+function logError(message, metadata) {
+    activeLogger.logError(message, metadata);
+}
+function logDebugInfo(message, previousWasSingleLine = false, metadata) {
+    activeLogger.logDebugInfo(message, previousWasSingleLine, metadata);
+}
+function logDebugWarning(message) {
+    activeLogger.logDebugWarning(message);
+}
+function logDebugError(message) {
+    activeLogger.logDebugError(message);
+}
+function setGlobalLoggerDebug(debug, isRemote = false) {
+    activeLogger.setGlobalLoggerDebug(debug, isRemote);
+}
+function getAccumulatedLogEntries() {
+    return activeLogger.getAccumulatedLogEntries();
+}
+function getAccumulatedLogsAsText() {
+    return activeLogger.getAccumulatedLogsAsText();
+}
+function clearAccumulatedLogs() {
+    activeLogger.clearAccumulatedLogs();
+}
+
+
+/***/ }),
+
 /***/ 46445:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -53856,6 +54193,8 @@ const ERROR_MESSAGES = {
     "assign-reviewers": "Unable to assign pull request reviewers.",
     "list-comments": "Unable to list pull request review comments.",
     "get-comment": "Unable to get the pull request review comment.",
+    "list-files": "Unable to list pull request changed files.",
+    "get-head-sha": "Unable to get the pull request head commit.",
     "publish-comments": "Failed to publish pull request review comments.",
     "update-comment": "Unable to update the pull request review comment.",
     "resolve-thread": "Unable to resolve the pull request review thread.",
@@ -53896,7 +54235,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CheckProgressUseCase = void 0;
 const agent_1 = __nccwpck_require__(79937);
 const result_1 = __nccwpck_require__(73817);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const agent_task_policy_1 = __nccwpck_require__(85712);
 const prompts_1 = __nccwpck_require__(69518);
@@ -53915,12 +54254,12 @@ class CheckProgressUseCase {
         this.aiRepository = aiRepository;
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const results = [];
         try {
             // Check if AI configuration is available
             if (!(0, agent_1.isAgentConfigurationReady)(param.ai?.getAgentConfiguration('findings'))) {
-                (0, logger_1.logError)(`Missing required agent configuration. Provide a model and a valid CLI command.`);
+                (0, logging_ports_1.logError)(`Missing required agent configuration. Provide a model and a valid CLI command.`);
                 results.push(new result_1.Result({
                     id: this.taskId,
                     success: false,
@@ -53934,7 +54273,7 @@ class CheckProgressUseCase {
             // Get issue number
             const issueNumber = param.issueNumber;
             if (issueNumber === -1) {
-                (0, logger_1.logError)(`Issue number not found. Cannot check progress without an issue number.`);
+                (0, logging_ports_1.logError)(`Issue number not found. Cannot check progress without an issue number.`);
                 results.push(new result_1.Result({
                     id: this.taskId,
                     success: false,
@@ -53945,11 +54284,11 @@ class CheckProgressUseCase {
                 }));
                 return results;
             }
-            (0, logger_1.logInfo)(`📋 Checking progress for issue #${issueNumber}`);
+            (0, logging_ports_1.logInfo)(`📋 Checking progress for issue #${issueNumber}`);
             // Get issue description
             const issueDescription = await this.issueRepository.getDescription(param.owner, param.repo, issueNumber, param.tokens.token);
             if (!issueDescription) {
-                (0, logger_1.logError)(`Could not retrieve issue description for issue #${issueNumber}`);
+                (0, logging_ports_1.logError)(`Could not retrieve issue description for issue #${issueNumber}`);
                 results.push(new result_1.Result({
                     id: this.taskId,
                     success: false,
@@ -53963,7 +54302,7 @@ class CheckProgressUseCase {
             const branch = await (0, find_issue_branch_1.findIssueBranch)(param, this.branchRepository);
             const branchError = (0, progress_prerequisite_policy_1.validateProgressPrerequisites)({ agentReady: true, issueNumber, branch });
             if (branchError) {
-                (0, logger_1.logError)(branchError);
+                (0, logging_ports_1.logError)(branchError);
                 results.push(new result_1.Result({
                     id: this.taskId,
                     success: false,
@@ -53977,7 +54316,7 @@ class CheckProgressUseCase {
             const resolvedBranch = branch;
             // Get development (parent) branch – the configured agent computes the diff
             const developmentBranch = param.branches.development || 'develop';
-            (0, logger_1.logInfo)(`📦 Progress will be assessed from workspace diff: base branch "${developmentBranch}", current branch "${resolvedBranch}" (configured agent will run git diff).`);
+            (0, logging_ports_1.logInfo)(`📦 Progress will be assessed from workspace diff: base branch "${developmentBranch}", current branch "${resolvedBranch}" (configured agent will run git diff).`);
             const prompt = (0, prompts_1.getCheckProgressPrompt)({
                 projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
                 issueNumber: String(issueNumber),
@@ -53985,29 +54324,29 @@ class CheckProgressUseCase {
                 baseBranch: developmentBranch,
                 currentBranch: resolvedBranch,
             });
-            (0, logger_1.logDebugInfo)(`CheckProgress: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`);
-            (0, logger_1.logInfo)('🤖 Analyzing progress using the configured agent...');
+            (0, logging_ports_1.logDebugInfo)(`CheckProgress: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`);
+            (0, logging_ports_1.logInfo)('🤖 Analyzing progress using the configured agent...');
             const attemptResult = await this.fetchProgressAttempt(param.ai, prompt);
             const progress = attemptResult.progress;
             const summary = attemptResult.summary;
             const reasoning = attemptResult.reasoning;
             const remaining = attemptResult.remaining;
-            (0, logger_1.logDebugInfo)(`CheckProgress: raw progress=${progress}, summary length=${summary.length}, reasoning length=${reasoning.length}, remaining length=${remaining?.length ?? 0}. Full summary:\n${summary}`);
+            (0, logging_ports_1.logDebugInfo)(`CheckProgress: raw progress=${progress}, summary length=${summary.length}, reasoning length=${reasoning.length}, remaining length=${remaining?.length ?? 0}. Full summary:\n${summary}`);
             if (reasoning) {
-                (0, logger_1.logDebugInfo)(`CheckProgress: full reasoning:\n${reasoning}`);
+                (0, logging_ports_1.logDebugInfo)(`CheckProgress: full reasoning:\n${reasoning}`);
             }
             if (remaining) {
-                (0, logger_1.logDebugInfo)(`CheckProgress: full remaining:\n${remaining}`);
+                (0, logging_ports_1.logDebugInfo)(`CheckProgress: full remaining:\n${remaining}`);
             }
             if (progress < 0 || progress > 100) {
-                (0, logger_1.logWarn)(`CheckProgress: unexpected progress value ${progress} (expected 0-100). Clamping for display.`);
+                (0, logging_ports_1.logWarn)(`CheckProgress: unexpected progress value ${progress} (expected 0-100). Clamping for display.`);
             }
             if (progress > 0) {
-                (0, logger_1.logInfo)(`✅ Progress detection completed: ${progress}%`);
+                (0, logging_ports_1.logInfo)(`✅ Progress detection completed: ${progress}%`);
             }
             const progressFailed = progress === 0;
             if (progressFailed) {
-                (0, logger_1.logError)('Progress detection returned 0%. This may be due to a model error or no changes detected.');
+                (0, logging_ports_1.logError)('Progress detection returned 0%. This may be due to a model error or no changes detected.');
                 results.push(new result_1.Result({
                     id: this.taskId,
                     success: false,
@@ -54054,14 +54393,12 @@ class CheckProgressUseCase {
             }));
         }
         catch (error) {
-            (0, logger_1.logError)(`Error in ${this.taskId}: ${JSON.stringify(error, null, 2)}`);
+            (0, logging_ports_1.logError)(`Error in ${this.taskId}: ${JSON.stringify(error, null, 2)}`);
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
                 executed: true,
-                errors: [
-                    `Error in ${this.taskId}: ${JSON.stringify(error, null, 2)}`,
-                ],
+                errors: [new Error(`Error in ${this.taskId}: ${error instanceof Error ? error.message : String(error)}`)],
             }));
         }
         return results;
@@ -54098,7 +54435,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CreateReleaseUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
 const constants_1 = __nccwpck_require__(15415);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 /** Semantic version pattern: x, x.y, or x.y.z (digits only, no leading 'v'). */
 const SEMVER_PATTERN = /^\d+(\.\d+){0,2}$/;
@@ -54125,10 +54462,10 @@ class CreateReleaseUseCase {
         this.taskId = 'CreateReleaseUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         if (param.singleAction.version.length === 0) {
-            (0, logger_1.logError)(`Version is not set.`);
+            (0, logging_ports_1.logError)(`Version is not set.`);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -54140,7 +54477,7 @@ class CreateReleaseUseCase {
             return result;
         }
         else if (param.singleAction.title.length === 0) {
-            (0, logger_1.logError)(`Title is not set.`);
+            (0, logging_ports_1.logError)(`Title is not set.`);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -54152,7 +54489,7 @@ class CreateReleaseUseCase {
             return result;
         }
         else if (param.singleAction.changelog.length === 0) {
-            (0, logger_1.logError)(`Changelog is not set.`);
+            (0, logging_ports_1.logError)(`Changelog is not set.`);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -54165,7 +54502,7 @@ class CreateReleaseUseCase {
         }
         const versionCheck = normalizeAndValidateVersion(param.singleAction.version);
         if (!versionCheck.valid) {
-            (0, logger_1.logError)(versionCheck.error);
+            (0, logging_ports_1.logError)(versionCheck.error);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -54186,7 +54523,7 @@ class CreateReleaseUseCase {
                 }));
             }
             else {
-                (0, logger_1.logWarn)(`CreateRelease: createRelease returned no URL for version ${releaseVersion}.`);
+                (0, logging_ports_1.logWarn)(`CreateRelease: createRelease returned no URL for version ${releaseVersion}.`);
                 result.push(new result_1.Result({
                     id: this.taskId,
                     success: false,
@@ -54198,15 +54535,13 @@ class CreateReleaseUseCase {
             }
         }
         catch (error) {
-            (0, logger_1.logError)(`Error executing ${this.taskId}: ${error}`);
+            (0, logging_ports_1.logError)(`Error executing ${this.taskId}: ${error}`);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
                 executed: true,
                 steps: [`Failed to create release.`],
-                errors: [
-                    JSON.stringify(error)
-                ],
+                errors: [error],
             }));
         }
         return result;
@@ -54226,7 +54561,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CreateTagUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
 const constants_1 = __nccwpck_require__(15415);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 class CreateTagUseCase {
     constructor(repositoryReleasePort) {
@@ -54234,10 +54569,10 @@ class CreateTagUseCase {
         this.taskId = 'CreateTagUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         if (param.singleAction.version.length === 0) {
-            (0, logger_1.logError)(`Version is not set.`);
+            (0, logging_ports_1.logError)(`Version is not set.`);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -54249,7 +54584,7 @@ class CreateTagUseCase {
             return result;
         }
         else if (param.currentConfiguration.releaseBranch === undefined) {
-            (0, logger_1.logError)(`Working branch not found in configuration.`);
+            (0, logging_ports_1.logError)(`Working branch not found in configuration.`);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -54272,7 +54607,7 @@ class CreateTagUseCase {
                 }));
             }
             else {
-                (0, logger_1.logWarn)(`CreateTag: createTag returned no SHA for version ${tagName}.`);
+                (0, logging_ports_1.logWarn)(`CreateTag: createTag returned no SHA for version ${tagName}.`);
                 result.push(new result_1.Result({
                     id: this.taskId,
                     success: false,
@@ -54284,15 +54619,13 @@ class CreateTagUseCase {
             }
         }
         catch (error) {
-            (0, logger_1.logError)(`Error executing ${this.taskId}: ${error}`);
+            (0, logging_ports_1.logError)(`Error executing ${this.taskId}: ${error}`);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
                 executed: true,
                 steps: [`Failed to create tag ${tagName}.`],
-                errors: [
-                    JSON.stringify(error)
-                ],
+                errors: [error],
             }));
         }
         return result;
@@ -54311,7 +54644,7 @@ exports.CreateTagUseCase = CreateTagUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DeployedActionUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 /**
  * Single action run after a successful deployment (triggered with the "deployed" action and an issue number).
@@ -54331,7 +54664,7 @@ class DeployedActionUseCase {
         this.taskId = 'DeployedActionUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         try {
             if (!param.labels.isDeploy) {
@@ -54359,8 +54692,8 @@ class DeployedActionUseCase {
             const labelNames = param.labels.currentIssueLabels.filter(name => name !== param.labels.deploy);
             labelNames.push(param.labels.deployed);
             await this.issueLabelsPort.setLabels(param.owner, param.repo, param.singleAction.issue, labelNames, param.tokens.token);
-            (0, logger_1.logDebugInfo)(`Updated labels on issue #${param.singleAction.issue}:`);
-            (0, logger_1.logDebugInfo)(`Labels: ${labelNames}`);
+            (0, logging_ports_1.logDebugInfo)(`Updated labels on issue #${param.singleAction.issue}:`);
+            (0, logging_ports_1.logDebugInfo)(`Labels: ${labelNames}`);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: true,
@@ -54392,7 +54725,7 @@ class DeployedActionUseCase {
                 const issueNumber = Number(param.singleAction.issue);
                 const closed = await this.issueClosurePort.closeIssue(param.owner, param.repo, issueNumber, param.tokens.token);
                 if (closed) {
-                    (0, logger_1.logDebugInfo)(`Issue #${issueNumber} closed after merges to default and develop.`);
+                    (0, logging_ports_1.logDebugInfo)(`Issue #${issueNumber} closed after merges to default and develop.`);
                     result.push(new result_1.Result({
                         id: this.taskId,
                         success: true,
@@ -54405,7 +54738,7 @@ class DeployedActionUseCase {
             }
             else {
                 if (mergesAttempted) {
-                    (0, logger_1.logDebugInfo)(`Skipping issue close: one or more merges failed. Issue #${param.singleAction.issue} remains open.`);
+                    (0, logging_ports_1.logDebugInfo)(`Skipping issue close: one or more merges failed. Issue #${param.singleAction.issue} remains open.`);
                     result.push(new result_1.Result({
                         id: this.taskId,
                         success: false,
@@ -54416,7 +54749,7 @@ class DeployedActionUseCase {
                     }));
                 }
                 else {
-                    (0, logger_1.logDebugInfo)(`Skipping issue close: no release or hotfix branch configured. Issue #${param.singleAction.issue} remains open.`);
+                    (0, logging_ports_1.logDebugInfo)(`Skipping issue close: no release or hotfix branch configured. Issue #${param.singleAction.issue} remains open.`);
                     result.push(new result_1.Result({
                         id: this.taskId,
                         success: false,
@@ -54430,13 +54763,13 @@ class DeployedActionUseCase {
             return result;
         }
         catch (error) {
-            (0, logger_1.logError)(error);
+            (0, logging_ports_1.logError)(error);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
                 executed: true,
                 steps: [`Tried to assign members to issue.`],
-                error: error,
+                errors: [error],
             }));
         }
         return result;
@@ -54454,11 +54787,11 @@ exports.DeployedActionUseCase = DeployedActionUseCase;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.findIssueBranch = findIssueBranch;
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 async function findIssueBranch(param, repository) {
     if (param.commit.branch)
         return param.commit.branch;
-    (0, logger_1.logInfo)(`📦 Searching for branch related to issue #${param.issueNumber}...`);
+    (0, logging_ports_1.logInfo)(`📦 Searching for branch related to issue #${param.issueNumber}...`);
     const branchTypes = [
         param.branches.featureTree,
         param.branches.bugfixTree,
@@ -54473,7 +54806,7 @@ async function findIssueBranch(param, repository) {
         .flatMap((prefix) => branches.filter((candidate) => candidate.includes(prefix)))
         .at(0);
     if (branch)
-        (0, logger_1.logInfo)(`✅ Found branch: ${branch}`);
+        (0, logging_ports_1.logInfo)(`✅ Found branch: ${branch}`);
     return branch;
 }
 
@@ -54488,8 +54821,8 @@ async function findIssueBranch(param, repository) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.InitialSetupUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
-const version_utils_1 = __nccwpck_require__(419);
-const logger_1 = __nccwpck_require__(91151);
+const version_policy_1 = __nccwpck_require__(8381);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 class InitialSetupUseCase {
     constructor(authenticatedUserPort, initialLabelProvisioningPort, issueTypeProvisioningPort, latestTagQueryPort, repositoryDefaultBranchPort, repositoryTagPort, setupWorkspacePort) {
@@ -54503,17 +54836,17 @@ class InitialSetupUseCase {
         this.taskId = 'InitialSetupUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const results = [];
         const steps = [];
         const errors = [];
         try {
             // 0. Setup files (.github/workflows, .github/ISSUE_TEMPLATE, and pull_request_template.md)
-            (0, logger_1.logInfo)('📋 Ensuring .github and copying setup files...');
+            (0, logging_ports_1.logInfo)('📋 Ensuring .github and copying setup files...');
             const filesResult = this.setupWorkspacePort.prepare();
             steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
             if (!this.setupWorkspacePort.hasValidToken()) {
-                (0, logger_1.logInfo)('  🛑 Setup requires PERSONAL_ACCESS_TOKEN (environment or .env) with a valid token.');
+                (0, logging_ports_1.logInfo)('  🛑 Setup requires PERSONAL_ACCESS_TOKEN (environment or .env) with a valid token.');
                 errors.push('PERSONAL_ACCESS_TOKEN must be set (environment or .env) with a valid token to run setup.');
                 results.push(new result_1.Result({
                     id: this.taskId,
@@ -54525,7 +54858,7 @@ class InitialSetupUseCase {
                 return results;
             }
             // 1. Verify GitHub access with Personal Access Token
-            (0, logger_1.logInfo)('🔐 Checking GitHub access...');
+            (0, logging_ports_1.logInfo)('🔐 Checking GitHub access...');
             const githubAccessResult = await this.verifyGitHubAccess(param);
             if (!githubAccessResult.success) {
                 errors.push(...githubAccessResult.errors);
@@ -54540,7 +54873,7 @@ class InitialSetupUseCase {
             }
             steps.push(`✅ GitHub access verified: ${githubAccessResult.user}`);
             // 2. Provision the complete initial label catalog in one semantic execution
-            (0, logger_1.logInfo)('🏷️  Checking configured and progress labels...');
+            (0, logging_ports_1.logInfo)('🏷️  Checking configured and progress labels...');
             const initialLabelsResult = await this.ensureInitialLabels(param);
             if (!initialLabelsResult.completed) {
                 errors.push(initialLabelsResult.error);
@@ -54549,7 +54882,7 @@ class InitialSetupUseCase {
                 const labelsResult = initialLabelsResult.configured;
                 if (labelsResult.errors.length > 0) {
                     errors.push(...labelsResult.errors);
-                    (0, logger_1.logError)(`Error checking labels: ${labelsResult.errors}`);
+                    (0, logging_ports_1.logError)(`Error checking labels: ${labelsResult.errors}`);
                 }
                 else {
                     steps.push(`✅ Labels checked: ${labelsResult.created} created, ${labelsResult.existing} already existed`);
@@ -54558,14 +54891,14 @@ class InitialSetupUseCase {
                 const progressLabelsResult = initialLabelsResult.progress;
                 if (progressLabelsResult.errors.length > 0) {
                     errors.push(...progressLabelsResult.errors);
-                    (0, logger_1.logError)(`Error checking progress labels: ${progressLabelsResult.errors}`);
+                    (0, logging_ports_1.logError)(`Error checking progress labels: ${progressLabelsResult.errors}`);
                 }
                 else {
                     steps.push(`✅ Progress labels checked: ${progressLabelsResult.created} created, ${progressLabelsResult.existing} already existed`);
                 }
             }
             // 3. Create all issue types if they do not exist
-            (0, logger_1.logInfo)('📋 Checking issue types...');
+            (0, logging_ports_1.logInfo)('📋 Checking issue types...');
             const issueTypesResult = await this.ensureIssueTypes(param);
             if (!issueTypesResult.success) {
                 errors.push(...issueTypesResult.errors);
@@ -54590,7 +54923,7 @@ class InitialSetupUseCase {
             }));
         }
         catch (error) {
-            (0, logger_1.logError)(error);
+            (0, logging_ports_1.logError)(error);
             errors.push(`Error running initial setup: ${error}`);
             results.push(new result_1.Result({
                 id: this.taskId,
@@ -54609,7 +54942,7 @@ class InitialSetupUseCase {
             return { success: true, user, errors: [] };
         }
         catch (error) {
-            (0, logger_1.logError)(`Error verifying GitHub access: ${error}`);
+            (0, logging_ports_1.logError)(`Error verifying GitHub access: ${error}`);
             errors.push(`Could not verify GitHub access: ${error}`);
             return { success: false, errors };
         }
@@ -54621,7 +54954,7 @@ class InitialSetupUseCase {
         }
         catch (error) {
             const message = `Error ensuring initial labels: ${error}`;
-            (0, logger_1.logError)(message);
+            (0, logging_ports_1.logError)(message);
             return { completed: false, error: message };
         }
     }
@@ -54636,7 +54969,7 @@ class InitialSetupUseCase {
             };
         }
         catch (error) {
-            (0, logger_1.logError)(`Error ensuring issue types: ${error}`);
+            (0, logging_ports_1.logError)(`Error ensuring issue types: ${error}`);
             return { success: false, created: 0, existing: 0, errors: [`Error ensuring issue types: ${error}`] };
         }
     }
@@ -54648,26 +54981,26 @@ class InitialSetupUseCase {
         try {
             const existingTag = await this.latestTagQueryPort.getLatestTag();
             if (existingTag !== undefined) {
-                (0, logger_1.logDebugInfo)(`Repository already has version tags (latest: ${existingTag}). Skipping default tag.`);
+                (0, logging_ports_1.logDebugInfo)(`Repository already has version tags (latest: ${existingTag}). Skipping default tag.`);
                 return {};
             }
-            (0, logger_1.logInfo)(`🏷️  No version tags found. Creating default tag ${version_utils_1.DEFAULT_INITIAL_TAG}...`);
+            (0, logging_ports_1.logInfo)(`🏷️  No version tags found. Creating default tag ${version_policy_1.DEFAULT_INITIAL_TAG}...`);
             const defaultBranch = await this.repositoryDefaultBranchPort.getDefaultBranch(param.owner, param.repo, param.tokens.token);
             if (!defaultBranch) {
                 const msg = 'Could not get default branch to create initial version tag.';
-                (0, logger_1.logError)(msg);
+                (0, logging_ports_1.logError)(msg);
                 return { error: msg };
             }
-            const sha = await this.repositoryTagPort.createTag(param.owner, param.repo, defaultBranch, version_utils_1.DEFAULT_INITIAL_TAG, param.tokens.token);
+            const sha = await this.repositoryTagPort.createTag(param.owner, param.repo, defaultBranch, version_policy_1.DEFAULT_INITIAL_TAG, param.tokens.token);
             if (sha) {
-                const step = `✅ Default version tag ${version_utils_1.DEFAULT_INITIAL_TAG} created on branch ${defaultBranch}. Run \`git fetch --tags\` to update local refs.`;
+                const step = `✅ Default version tag ${version_policy_1.DEFAULT_INITIAL_TAG} created on branch ${defaultBranch}. Run \`git fetch --tags\` to update local refs.`;
                 return { step };
             }
-            return { error: `Failed to create tag ${version_utils_1.DEFAULT_INITIAL_TAG} on ${param.owner}/${param.repo}` };
+            return { error: `Failed to create tag ${version_policy_1.DEFAULT_INITIAL_TAG} on ${param.owner}/${param.repo}` };
         }
         catch (error) {
             const msg = `Error ensuring default version: ${error}`;
-            (0, logger_1.logError)(msg);
+            (0, logging_ports_1.logError)(msg);
             return { error: msg };
         }
     }
@@ -54776,7 +55109,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PublishGithubActionUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
 const constants_1 = __nccwpck_require__(15415);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 class PublishGithubActionUseCase {
     constructor(repositoryTagPort, repositoryReleasePort) {
@@ -54785,10 +55118,10 @@ class PublishGithubActionUseCase {
         this.taskId = 'PublishGithubActionUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         if (param.singleAction.version.length === 0) {
-            (0, logger_1.logError)(`Version is not set.`);
+            (0, logging_ports_1.logError)(`Version is not set.`);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -54805,7 +55138,7 @@ class PublishGithubActionUseCase {
             await this.repositoryTagPort.updateTag(param.owner, param.repo, sourceTag, targetTag, param.tokens.token);
             const releaseId = await this.repositoryReleasePort.updateRelease(param.owner, param.repo, sourceTag, targetTag, param.tokens.token);
             if (releaseId) {
-                (0, logger_1.logInfo)(`Updated release \`${targetTag}\` from \`${sourceTag}\`: ${releaseId}`);
+                (0, logging_ports_1.logInfo)(`Updated release \`${targetTag}\` from \`${sourceTag}\`: ${releaseId}`);
                 result.push(new result_1.Result({
                     id: this.taskId,
                     success: true,
@@ -54825,15 +55158,13 @@ class PublishGithubActionUseCase {
             }
         }
         catch (error) {
-            (0, logger_1.logError)(`Error executing ${this.taskId}: ${error}`);
+            (0, logging_ports_1.logError)(`Error executing ${this.taskId}: ${error}`);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
                 executed: true,
                 steps: [`Failed to update release \`${targetTag}\` from \`${sourceTag}\`.`],
-                errors: [
-                    JSON.stringify(error)
-                ],
+                errors: [error],
             }));
         }
         return result;
@@ -54856,7 +55187,7 @@ const result_1 = __nccwpck_require__(73817);
 const agent_task_policy_1 = __nccwpck_require__(85712);
 const recommendation_policy_1 = __nccwpck_require__(39410);
 const prompts_1 = __nccwpck_require__(69518);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const project_context_instruction_1 = __nccwpck_require__(63907);
 const task_emoji_1 = __nccwpck_require__(46103);
 class RecommendStepsUseCase {
@@ -54866,7 +55197,7 @@ class RecommendStepsUseCase {
         this.aiRepository = aiRepository;
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const results = [];
         try {
             if (!(0, agent_1.isAgentConfigurationReady)(param.ai?.getAgentConfiguration('findings'))) {
@@ -54904,7 +55235,7 @@ class RecommendStepsUseCase {
             const previousRecommendation = param.previousConfiguration?.recommendationState;
             const issueDescriptionFingerprint = (0, recommendation_policy_1.createIssueDescriptionFingerprint)(issueDescription);
             if (previousRecommendation?.issueDescriptionFingerprint === issueDescriptionFingerprint) {
-                (0, logger_1.logInfo)('RecommendSteps: issue description is unchanged; skipping recommendation.');
+                (0, logging_ports_1.logInfo)('RecommendSteps: issue description is unchanged; skipping recommendation.');
                 return results;
             }
             const prompt = (0, prompts_1.getRecommendStepsPrompt)({
@@ -54913,26 +55244,35 @@ class RecommendStepsUseCase {
                 issueDescription,
                 previousRecommendation: previousRecommendation?.recommendation,
             });
-            (0, logger_1.logDebugInfo)(`RecommendSteps: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`);
-            (0, logger_1.logInfo)(`🤖 Recommending steps using the configured agent...`);
+            (0, logging_ports_1.logDebugInfo)(`RecommendSteps: prompt length=${prompt.length}, issue description length=${issueDescription.length}.`);
+            (0, logging_ports_1.logInfo)(`🤖 Recommending steps using the configured agent...`);
             const response = await this.aiRepository.query({
                 configuration: param.ai?.getAgentConfiguration('findings'),
                 agentId: agent_task_policy_1.AGENT_PLAN,
                 prompt,
             });
-            const steps = typeof response === 'string'
-                ? response
-                : (response && String(response.steps)) || 'No response.';
-            (0, logger_1.logDebugInfo)(`RecommendSteps: agent response received. Steps length=${steps.length}. Full steps:\n${steps}`);
+            const steps = extractRecommendationText(response);
+            if (!steps) {
+                const error = new Error('The configured agent returned no recommendation.');
+                (0, logging_ports_1.logError)(error);
+                results.push(new result_1.Result({
+                    id: this.taskId,
+                    success: false,
+                    executed: true,
+                    errors: [error],
+                }));
+                return results;
+            }
+            (0, logging_ports_1.logDebugInfo)(`RecommendSteps: agent response received. Steps length=${steps.length}. Full steps:\n${steps}`);
             if (previousRecommendation && (0, recommendation_policy_1.isNoNewRecommendation)(steps)) {
                 this.updateDescriptionFingerprint(param, previousRecommendation, issueDescriptionFingerprint);
-                (0, logger_1.logInfo)('RecommendSteps: agent found no material change; skipping recommendation comment.');
+                (0, logging_ports_1.logInfo)('RecommendSteps: agent found no material change; skipping recommendation comment.');
                 return results;
             }
             const recommendationFingerprint = (0, recommendation_policy_1.createRecommendationFingerprint)(steps);
             if (previousRecommendation?.recommendationFingerprint === recommendationFingerprint) {
                 this.updateDescriptionFingerprint(param, previousRecommendation, issueDescriptionFingerprint);
-                (0, logger_1.logInfo)('RecommendSteps: recommendation is unchanged; skipping recommendation comment.');
+                (0, logging_ports_1.logInfo)('RecommendSteps: recommendation is unchanged; skipping recommendation comment.');
                 return results;
             }
             const recommendationState = {
@@ -54950,7 +55290,7 @@ class RecommendStepsUseCase {
             }));
         }
         catch (error) {
-            (0, logger_1.logError)(`Error in ${this.taskId}: ${error}`);
+            (0, logging_ports_1.logError)(`Error in ${this.taskId}: ${error}`);
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -54968,6 +55308,13 @@ class RecommendStepsUseCase {
     }
 }
 exports.RecommendStepsUseCase = RecommendStepsUseCase;
+function extractRecommendationText(response) {
+    if (typeof response === 'string')
+        return response.trim();
+    if (!response || typeof response.steps !== 'string')
+        return '';
+    return response.steps.trim();
+}
 
 
 /***/ }),
@@ -54980,7 +55327,7 @@ exports.RecommendStepsUseCase = RecommendStepsUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.syncProgressLabelsToOpenPullRequests = syncProgressLabelsToOpenPullRequests;
 const progress_labels_1 = __nccwpck_require__(97890);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 async function syncProgressLabelsToOpenPullRequests(owner, repo, branch, progress, token, issueRepository, pullRequestRepository) {
     const roundedProgress = Math.min(100, Math.max(0, Math.round(progress / 5) * 5));
     const newProgressLabel = `${roundedProgress}%`;
@@ -54992,7 +55339,7 @@ async function syncProgressLabelsToOpenPullRequests(owner, repo, branch, progres
             ? withoutProgress
             : [...withoutProgress, newProgressLabel];
         await issueRepository.setLabels(owner, repo, prNumber, nextLabels, token);
-        (0, logger_1.logInfo)(`Progress label set to ${newProgressLabel} on PR #${prNumber}.`);
+        (0, logging_ports_1.logInfo)(`Progress label set to ${newProgressLabel} on PR #${prNumber}.`);
     }
 }
 
@@ -55028,7 +55375,7 @@ function resolveCommentAutomationRoute(payload, allowedToModifyFiles) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCommentAutomation = runCommentAutomation;
 const result_1 = __nccwpck_require__(73817);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const bugbot_fix_intent_payload_1 = __nccwpck_require__(25734);
 const comment_automation_route_policy_1 = __nccwpck_require__(47058);
 const commit_autofix_and_resolve_workflow_1 = __nccwpck_require__(93455);
@@ -55040,30 +55387,30 @@ class CommentAutomationError extends Error {
     }
 }
 async function runCommentAutomation(param, options, actorAuthorizationPort, authenticatedUserPort, bugbotResolutionPorts) {
-    (0, logger_1.logInfo)(`${options.taskId} started.`);
+    (0, logging_ports_1.logInfo)(`${options.taskId} started.`);
     const results = [];
     try {
         results.push(...(await options.languageUseCase.invoke(param)));
-        (0, logger_1.logInfo)("Running bugbot fix intent detection (before Think).");
+        (0, logging_ports_1.logInfo)("Running bugbot fix intent detection (before Think).");
         const intentResults = await options.intentUseCase.invoke(param);
         results.push(...intentResults);
         const intentPayload = (0, bugbot_fix_intent_payload_1.getBugbotFixIntentPayload)(intentResults);
         const runAutofix = (0, bugbot_fix_intent_payload_1.canRunBugbotAutofix)(intentPayload);
         if (intentPayload) {
-            (0, logger_1.logInfo)(`Bugbot fix intent: isFixRequest=${intentPayload.isFixRequest}, isDoRequest=${intentPayload.isDoRequest}, targetFindingIds=${intentPayload.targetFindingIds?.length ?? 0}.`);
+            (0, logging_ports_1.logInfo)(`Bugbot fix intent: isFixRequest=${intentPayload.isFixRequest}, isDoRequest=${intentPayload.isDoRequest}, targetFindingIds=${intentPayload.targetFindingIds?.length ?? 0}.`);
         }
         else {
-            (0, logger_1.logInfo)("Bugbot fix intent: no payload from intent detection.");
+            (0, logging_ports_1.logInfo)("Bugbot fix intent: no payload from intent detection.");
         }
         const allowedToModifyFiles = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.actor, param.tokens.token);
         const canModifyFiles = runAutofix || (0, bugbot_fix_intent_payload_1.canRunDoUserRequest)(intentPayload);
         const route = (0, comment_automation_route_policy_1.resolveCommentAutomationRoute)(intentPayload, allowedToModifyFiles);
         if (!allowedToModifyFiles && canModifyFiles) {
-            (0, logger_1.logInfo)("Skipping file-modifying use cases: user is not an org member or repo owner.");
+            (0, logging_ports_1.logInfo)("Skipping file-modifying use cases: user is not an org member or repo owner.");
         }
         if (route === "autofix" && intentPayload) {
             const payload = intentPayload;
-            (0, logger_1.logInfo)("Running bugbot autofix.");
+            (0, logging_ports_1.logInfo)("Running bugbot autofix.");
             const autofixResults = await options.autofixUseCase.invoke({
                 execution: param,
                 targetFindingIds: payload.targetFindingIds,
@@ -55087,7 +55434,7 @@ async function runCommentAutomation(param, options, actorAuthorizationPort, auth
         }
         else if (route === "do-user-request") {
             const payload = intentPayload;
-            (0, logger_1.logInfo)("Running do user request.");
+            (0, logging_ports_1.logInfo)("Running do user request.");
             const doResults = await options.doUserRequestUseCase.invoke({
                 execution: param,
                 userComment: options.userComment,
@@ -55097,18 +55444,18 @@ async function runCommentAutomation(param, options, actorAuthorizationPort, auth
             await (0, commit_user_request_workflow_1.commitUserRequestIfSuccessful)(param, payload.branchOverride, doResults, authenticatedUserPort, options.gitCommitPort);
         }
         else if (route === "think") {
-            (0, logger_1.logInfo)("Skipping bugbot autofix (no fix request, no targets, or no context).");
+            (0, logging_ports_1.logInfo)("Skipping bugbot autofix (no fix request, no targets, or no context).");
         }
         const ranAutofix = route === "autofix";
         const ranDoRequest = route === "do-user-request";
         if (!ranAutofix && !ranDoRequest) {
-            (0, logger_1.logInfo)("Running ThinkUseCase (no file-modifying action ran).");
+            (0, logging_ports_1.logInfo)("Running ThinkUseCase (no file-modifying action ran).");
             results.push(...(await options.thinkUseCase.invoke(param)));
         }
     }
     catch {
         const error = new CommentAutomationError();
-        (0, logger_1.logError)(error);
+        (0, logging_ports_1.logError)(error);
         results.push(new result_1.Result({
             id: options.taskId,
             success: false,
@@ -55131,7 +55478,7 @@ async function runCommentAutomation(param, options, actorAuthorizationPort, auth
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CommitUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 class CommitUseCase {
     constructor(notifyNewCommitUseCase, checkChangesIssueSizeUseCase, detectPotentialProblemsUseCase, checkProgressUseCase) {
@@ -55142,23 +55489,23 @@ class CommitUseCase {
         this.taskId = 'CommitUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const results = [];
         try {
             if (param.commit.commits.length === 0) {
-                (0, logger_1.logDebugInfo)('No commits found in this push.');
+                (0, logging_ports_1.logDebugInfo)('No commits found in this push.');
                 return results;
             }
-            (0, logger_1.logDebugInfo)(`Branch: ${param.commit.branch}`);
-            (0, logger_1.logDebugInfo)(`Commits detected: ${param.commit.commits.length}`);
-            (0, logger_1.logDebugInfo)(`Issue number: ${param.issueNumber}`);
+            (0, logging_ports_1.logDebugInfo)(`Branch: ${param.commit.branch}`);
+            (0, logging_ports_1.logDebugInfo)(`Commits detected: ${param.commit.commits.length}`);
+            (0, logging_ports_1.logDebugInfo)(`Issue number: ${param.issueNumber}`);
             results.push(...(await this.notifyNewCommitUseCase.invoke(param)));
             results.push(...(await this.checkChangesIssueSizeUseCase.invoke(param)));
             results.push(...(await this.checkProgressUseCase.invoke(param)));
             results.push(...(await this.detectPotentialProblemsUseCase.invoke(param)));
         }
         catch (error) {
-            (0, logger_1.logError)(error);
+            (0, logging_ports_1.logError)(error);
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -55166,7 +55513,7 @@ class CommitUseCase {
                 steps: [
                     `Error processing the commits.`,
                 ],
-                error: error,
+                errors: [error],
             }));
         }
         return results;
@@ -55184,6 +55531,7 @@ exports.CommitUseCase = CommitUseCase;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ExecutionBranchVersionResolver = void 0;
+const result_1 = __nccwpck_require__(73817);
 const version_resolution_application_policy_1 = __nccwpck_require__(40231);
 const version_resolution_outcome_policy_1 = __nccwpck_require__(43496);
 const version_resolution_result_policy_1 = __nccwpck_require__(11730);
@@ -55207,12 +55555,12 @@ class ExecutionBranchVersionResolver {
     async resolveRelease(execution) {
         const versionInfo = (await this.getReleaseVersion.invoke(execution)).at(-1);
         if (versionInfo?.executed && versionInfo.success) {
-            execution.release.version = (0, version_resolution_result_policy_1.releaseResolutionFromPayload)(versionInfo.payload).version;
+            execution.release.version = (0, version_resolution_result_policy_1.releaseResolutionFromPayload)((0, result_1.getResultPayload)(versionInfo.payload) ?? {}).version;
         }
         else {
             const typeInfo = (await this.getReleaseType.invoke(execution)).at(-1);
             if (typeInfo?.executed && typeInfo.success) {
-                execution.release.type = (0, version_resolution_result_policy_1.releaseResolutionFromPayload)(typeInfo.payload).type;
+                execution.release.type = (0, version_resolution_result_policy_1.releaseResolutionFromPayload)((0, result_1.getResultPayload)(typeInfo.payload) ?? {}).type;
                 if ((0, version_resolution_outcome_policy_1.shouldAbortReleaseResolution)(execution.release.type))
                     return false;
                 execution.release.version = (0, version_resolution_policy_1.nextReleaseVersion)(await this.latestTagQueryPort.getLatestTag(), execution.release.type);
@@ -55224,7 +55572,7 @@ class ExecutionBranchVersionResolver {
     async resolveHotfix(execution) {
         const versionInfo = (await this.getHotfixVersion.invoke(execution)).at(-1);
         if (versionInfo?.executed && versionInfo.success) {
-            const resolution = (0, version_resolution_result_policy_1.hotfixResolutionFromPayload)(versionInfo.payload);
+            const resolution = (0, version_resolution_result_policy_1.hotfixResolutionFromPayload)((0, result_1.getResultPayload)(versionInfo.payload) ?? {});
             execution.hotfix.baseVersion = resolution.baseVersion;
             execution.hotfix.version = resolution.version;
         }
@@ -55314,7 +55662,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupExecutionUseCase = void 0;
 const initial_labels_policy_1 = __nccwpck_require__(50293);
 const previous_branch_state_policy_1 = __nccwpck_require__(43630);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const resolve_execution_issue_number_1 = __nccwpck_require__(90972);
 class SetupExecutionUseCase {
     constructor(issueSetupPort, organizationSetupPort, configurationPort, branchVersionResolver) {
@@ -55326,7 +55674,7 @@ class SetupExecutionUseCase {
     }
     async invoke(execution) {
         var _a;
-        (0, logger_1.setGlobalLoggerDebug)(execution.debug, execution.inputs === undefined);
+        (0, logging_ports_1.setGlobalLoggerDebug)(execution.debug, execution.inputs === undefined);
         execution.tokenUser = await this.organizationSetupPort.getUserFromToken(execution.tokens.token);
         if (!execution.tokenUser)
             throw new Error('Failed to get user from token');
@@ -55347,7 +55695,7 @@ class SetupExecutionUseCase {
         catch (error) {
             if (!(0, initial_labels_policy_1.shouldSkipInitialLabelsFetch)(execution.isSingleAction, execution.singleAction.currentSingleAction))
                 throw error;
-            (0, logger_1.logDebugInfo)('Skipping initial labels fetch for setup action.');
+            (0, logging_ports_1.logDebugInfo)('Skipping initial labels fetch for setup action.');
             execution.labels.currentIssueLabels = [];
         }
         execution.release.active = execution.labels.isRelease;
@@ -55441,98 +55789,83 @@ exports.IssueCommentUseCase = IssueCommentUseCase;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueUseCase = void 0;
-const logger_1 = __nccwpck_require__(91151);
+const result_1 = __nccwpck_require__(73817);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
-const check_permissions_use_case_1 = __nccwpck_require__(18846);
-const update_title_use_case_1 = __nccwpck_require__(20556);
-const assign_members_to_issue_use_case_1 = __nccwpck_require__(55523);
-const check_priority_issue_size_use_case_1 = __nccwpck_require__(19511);
-const close_not_allowed_issue_use_case_1 = __nccwpck_require__(86675);
-const label_deploy_added_use_case_1 = __nccwpck_require__(27708);
-const label_deployed_added_use_case_1 = __nccwpck_require__(57329);
-const link_issue_project_use_case_1 = __nccwpck_require__(34100);
-const prepare_branches_use_case_1 = __nccwpck_require__(67546);
-const remove_issue_branches_use_case_1 = __nccwpck_require__(15608);
-const remove_not_needed_branches_use_case_1 = __nccwpck_require__(67129);
-const update_issue_type_use_case_1 = __nccwpck_require__(38222);
 class IssueUseCase {
-    constructor(projectBoardPriorityPort, organizationMembersPort, issueIdentityQueryPort, projectBoardPort, projectBoardLinkPort, issueTitlePort, issueAssigneePort, issueClosurePort, issueTypeAssignmentPort, issueDescriptionQueryPort, issueNotificationPort, branchLifecyclePort, branchNamePort, remoteBranchSyncPort, commitTagQueryPort, linkedBranchCommandPort, branchPropagationDelayPort, branchWorkflowPort, recommendStepsUseCase, answerIssueHelpUseCase) {
-        this.projectBoardPriorityPort = projectBoardPriorityPort;
-        this.organizationMembersPort = organizationMembersPort;
-        this.issueIdentityQueryPort = issueIdentityQueryPort;
-        this.projectBoardPort = projectBoardPort;
-        this.projectBoardLinkPort = projectBoardLinkPort;
-        this.issueTitlePort = issueTitlePort;
-        this.issueAssigneePort = issueAssigneePort;
-        this.issueClosurePort = issueClosurePort;
-        this.issueTypeAssignmentPort = issueTypeAssignmentPort;
-        this.issueDescriptionQueryPort = issueDescriptionQueryPort;
-        this.issueNotificationPort = issueNotificationPort;
-        this.branchLifecyclePort = branchLifecyclePort;
-        this.branchNamePort = branchNamePort;
-        this.remoteBranchSyncPort = remoteBranchSyncPort;
-        this.commitTagQueryPort = commitTagQueryPort;
-        this.linkedBranchCommandPort = linkedBranchCommandPort;
-        this.branchPropagationDelayPort = branchPropagationDelayPort;
-        this.branchWorkflowPort = branchWorkflowPort;
+    constructor(recommendStepsUseCase, answerIssueHelpUseCase, workflowSteps) {
         this.recommendStepsUseCase = recommendStepsUseCase;
         this.answerIssueHelpUseCase = answerIssueHelpUseCase;
+        this.workflowSteps = workflowSteps;
         this.taskId = "IssueUseCase";
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const results = [];
-        const permissionResult = await new check_permissions_use_case_1.CheckPermissionsUseCase(this.organizationMembersPort).invoke(param);
+        const permissionResult = await this.workflowSteps.checkPermissions.invoke(param);
         const lastAction = permissionResult[permissionResult.length - 1];
+        if (!lastAction) {
+            const permissionError = new Error('Permission check returned no result.');
+            (0, logging_ports_1.logError)(`Unable to continue ${this.taskId}: ${permissionError.message}`);
+            return [
+                new result_1.Result({
+                    id: this.taskId,
+                    success: false,
+                    executed: true,
+                    steps: ['Unable to verify whether the issue action is authorized.'],
+                    errors: [permissionError],
+                }),
+            ];
+        }
         if (!lastAction.success && lastAction.executed) {
             results.push(...permissionResult);
-            results.push(...(await new close_not_allowed_issue_use_case_1.CloseNotAllowedIssueUseCase(this.issueClosurePort).invoke(param)));
+            results.push(...(await this.workflowSteps.closeNotAllowedIssue.invoke(param)));
             return results;
         }
         if (param.cleanIssueBranches) {
-            results.push(...(await new remove_issue_branches_use_case_1.RemoveIssueBranchesUseCase(this.branchLifecyclePort).invoke(param)));
+            results.push(...(await this.workflowSteps.removeIssueBranches.invoke(param)));
         }
         /**
          * Assignees
          */
-        results.push(...(await new assign_members_to_issue_use_case_1.AssignMemberToIssueUseCase(this.issueAssigneePort, this.organizationMembersPort).invoke(param)));
+        results.push(...(await this.workflowSteps.assignMemberToIssue.invoke(param)));
         /**
          * Update title
          */
-        results.push(...(await new update_title_use_case_1.UpdateTitleUseCase(this.issueTitlePort).invoke(param)));
+        results.push(...(await this.workflowSteps.updateTitle.invoke(param)));
         /**
          * Update issue type
          */
-        results.push(...(await new update_issue_type_use_case_1.UpdateIssueTypeUseCase(this.issueTypeAssignmentPort).invoke(param)));
+        results.push(...(await this.workflowSteps.updateIssueType.invoke(param)));
         /**
          * Link issue to project
          */
-        results.push(...(await new link_issue_project_use_case_1.LinkIssueProjectUseCase(this.issueIdentityQueryPort, this.projectBoardPort, this.projectBoardLinkPort).invoke(param)));
+        results.push(...(await this.workflowSteps.linkIssueProject.invoke(param)));
         /**
          * Check priority issue size
          */
-        results.push(...(await new check_priority_issue_size_use_case_1.CheckPriorityIssueSizeUseCase(this.projectBoardPriorityPort).invoke(param)));
+        results.push(...(await this.workflowSteps.checkPriorityIssueSize.invoke(param)));
         /**
          * Prepare branches
          */
         if (param.isBranched) {
-            results.push(...(await new prepare_branches_use_case_1.PrepareBranchesUseCase(this.projectBoardPort, this.branchLifecyclePort, this.branchNamePort, this.remoteBranchSyncPort, this.commitTagQueryPort, this.linkedBranchCommandPort, this.branchPropagationDelayPort).invoke(param)));
+            results.push(...(await this.workflowSteps.prepareBranches.invoke(param)));
         }
         else {
-            results.push(...(await new remove_issue_branches_use_case_1.RemoveIssueBranchesUseCase(this.branchLifecyclePort).invoke(param)));
+            results.push(...(await this.workflowSteps.removeIssueBranches.invoke(param)));
         }
         /**
          * Remove unnecessary branches
          */
-        results.push(...(await new remove_not_needed_branches_use_case_1.RemoveNotNeededBranchesUseCase(this.branchLifecyclePort, this.branchNamePort).invoke(param)));
+        results.push(...(await this.workflowSteps.removeNotNeededBranches.invoke(param)));
         /**
          * Check if deploy label was added
          */
-        results.push(...(await new label_deploy_added_use_case_1.DeployAddedUseCase(this.projectBoardPort, this.branchWorkflowPort).invoke(param)));
+        results.push(...(await this.workflowSteps.deployAdded.invoke(param)));
         /**
          * Check if deployed label was added
          */
-        results.push(...(await new label_deployed_added_use_case_1.DeployedAddedUseCase().invoke(param)));
+        results.push(...(await this.workflowSteps.deployedAdded.invoke(param)));
         /**
          * Analyze new issues and issue-description changes. Other edits (title,
          * project, assignment, labels) must not invoke the agent again.
@@ -55603,70 +55936,51 @@ exports.PullRequestReviewCommentUseCase = PullRequestReviewCommentUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
-const update_title_use_case_1 = __nccwpck_require__(20556);
-const assign_members_to_issue_use_case_1 = __nccwpck_require__(55523);
-const assign_reviewers_to_issue_use_case_1 = __nccwpck_require__(80174);
-const close_issue_after_merging_use_case_1 = __nccwpck_require__(46753);
-const check_priority_pull_request_size_use_case_1 = __nccwpck_require__(12738);
-const link_pull_request_issue_use_case_1 = __nccwpck_require__(38259);
-const link_pull_request_project_use_case_1 = __nccwpck_require__(57169);
-const sync_size_and_progress_labels_from_issue_to_pr_use_case_1 = __nccwpck_require__(89085);
 class PullRequestUseCase {
-    constructor(projectBoardPriorityPort, pullRequestDescriptionCommandPort, issueDescriptionQueryPort, issueTitlePort, issueClosurePort, issueAssigneePort, pullRequestReviewPort, organizationMembersPort, issueLabelsPort, pullRequestIssueLinkPort, projectBoardLinkPort, projectBoardCommandPort, updatePullRequestDescriptionUseCase) {
-        this.projectBoardPriorityPort = projectBoardPriorityPort;
-        this.pullRequestDescriptionCommandPort = pullRequestDescriptionCommandPort;
-        this.issueDescriptionQueryPort = issueDescriptionQueryPort;
-        this.issueTitlePort = issueTitlePort;
-        this.issueClosurePort = issueClosurePort;
-        this.issueAssigneePort = issueAssigneePort;
-        this.pullRequestReviewPort = pullRequestReviewPort;
-        this.organizationMembersPort = organizationMembersPort;
-        this.issueLabelsPort = issueLabelsPort;
-        this.pullRequestIssueLinkPort = pullRequestIssueLinkPort;
-        this.projectBoardLinkPort = projectBoardLinkPort;
-        this.projectBoardCommandPort = projectBoardCommandPort;
+    constructor(updatePullRequestDescriptionUseCase, workflowSteps) {
         this.updatePullRequestDescriptionUseCase = updatePullRequestDescriptionUseCase;
+        this.workflowSteps = workflowSteps;
         this.taskId = "PullRequestUseCase";
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const results = [];
         try {
-            (0, logger_1.logDebugInfo)(`PR action ${param.pullRequest.action}`);
-            (0, logger_1.logDebugInfo)(`PR isOpened ${param.pullRequest.isOpened}`);
-            (0, logger_1.logDebugInfo)(`PR isMerged ${param.pullRequest.isMerged}`);
-            (0, logger_1.logDebugInfo)(`PR isClosed ${param.pullRequest.isClosed}`);
+            (0, logging_ports_1.logDebugInfo)(`PR action ${param.pullRequest.action}`);
+            (0, logging_ports_1.logDebugInfo)(`PR isOpened ${param.pullRequest.isOpened}`);
+            (0, logging_ports_1.logDebugInfo)(`PR isMerged ${param.pullRequest.isMerged}`);
+            (0, logging_ports_1.logDebugInfo)(`PR isClosed ${param.pullRequest.isClosed}`);
             if (param.pullRequest.isOpened) {
                 /**
                  * Update title
                  */
-                results.push(...(await new update_title_use_case_1.UpdateTitleUseCase(this.issueTitlePort).invoke(param)));
+                results.push(...(await this.workflowSteps.updateTitle.invoke(param)));
                 /**
                  * Assignees
                  */
-                results.push(...(await new assign_members_to_issue_use_case_1.AssignMemberToIssueUseCase(this.issueAssigneePort, this.organizationMembersPort).invoke(param)));
+                results.push(...(await this.workflowSteps.assignMemberToIssue.invoke(param)));
                 /**
                  * Reviewers
                  */
-                results.push(...(await new assign_reviewers_to_issue_use_case_1.AssignReviewersToIssueUseCase(this.issueAssigneePort, this.pullRequestReviewPort, this.organizationMembersPort).invoke(param)));
+                results.push(...(await this.workflowSteps.assignReviewersToIssue.invoke(param)));
                 /**
                  * Link Pull Request to projects
                  */
-                results.push(...(await new link_pull_request_project_use_case_1.LinkPullRequestProjectUseCase(this.projectBoardCommandPort, this.projectBoardLinkPort).invoke(param)));
+                results.push(...(await this.workflowSteps.linkPullRequestProject.invoke(param)));
                 /**
                  * Link Pull Request to issue
                  */
-                results.push(...(await new link_pull_request_issue_use_case_1.LinkPullRequestIssueUseCase(this.pullRequestIssueLinkPort).invoke(param)));
+                results.push(...(await this.workflowSteps.linkPullRequestIssue.invoke(param)));
                 /**
                  * Copy size and progress labels from the linked issue to this PR (corner case: PR just opened).
                  */
-                results.push(...(await new sync_size_and_progress_labels_from_issue_to_pr_use_case_1.SyncSizeAndProgressLabelsFromIssueToPrUseCase(this.issueLabelsPort).invoke(param)));
+                results.push(...(await this.workflowSteps.syncSizeAndProgressLabels.invoke(param)));
                 /**
                  * Check priority pull request size
                  */
-                results.push(...(await new check_priority_pull_request_size_use_case_1.CheckPriorityPullRequestSizeUseCase(this.projectBoardPriorityPort).invoke(param)));
+                results.push(...(await this.workflowSteps.checkPriorityPullRequestSize.invoke(param)));
                 if (param.ai.getAiPullRequestDescription()) {
                     /**
                      * Update pull request description
@@ -55689,12 +56003,12 @@ class PullRequestUseCase {
                 /**
                  * Close issue if needed
                  */
-                results.push(...(await new close_issue_after_merging_use_case_1.CloseIssueAfterMergingUseCase(this.issueClosurePort).invoke(param)));
+                results.push(...(await this.workflowSteps.closeIssueAfterMerging.invoke(param)));
             }
         }
         catch {
             const semanticError = new Error("Unable to process the pull request.");
-            (0, logger_1.logError)(semanticError);
+            (0, logging_ports_1.logError)(semanticError);
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -55719,7 +56033,7 @@ exports.PullRequestUseCase = PullRequestUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SingleActionUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 class SingleActionUseCase {
     constructor(deployedActionUseCase, publishGithubActionUseCase, createReleaseUseCase, createTagUseCase, thinkUseCase, initialSetupUseCase, checkProgressUseCase, detectPotentialProblemsUseCase, recommendStepsUseCase) {
@@ -55735,14 +56049,14 @@ class SingleActionUseCase {
         this.taskId = 'SingleActionUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const results = [];
         try {
             if (!param.singleAction.validSingleAction) {
-                (0, logger_1.logWarn)(`Single action invoked but not a valid single action: ${param.singleAction.currentSingleAction}. Skipping.`);
+                (0, logging_ports_1.logWarn)(`Single action invoked but not a valid single action: ${param.singleAction.currentSingleAction}. Skipping.`);
                 return results;
             }
-            (0, logger_1.logDebugInfo)(`SingleAction: dispatching to handler for action: ${param.singleAction.currentSingleAction}.`);
+            (0, logging_ports_1.logDebugInfo)(`SingleAction: dispatching to handler for action: ${param.singleAction.currentSingleAction}.`);
             if (param.singleAction.isDeployedAction) {
                 results.push(...await this.deployedActionUseCase.invoke(param));
             }
@@ -55772,7 +56086,7 @@ class SingleActionUseCase {
             }
         }
         catch (error) {
-            (0, logger_1.logError)(error);
+            (0, logging_ports_1.logError)(error);
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -55780,7 +56094,7 @@ class SingleActionUseCase {
                 steps: [
                     `Error executing single action: ${param.singleAction.currentSingleAction}.`,
                 ],
-                error: error,
+                errors: [error],
             }));
         }
         return results;
@@ -55878,7 +56192,7 @@ async function runUserRequestCommitAndPush(execution, options, authenticatedUser
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BugbotAutofixUseCase = void 0;
 const agent_1 = __nccwpck_require__(79937);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const result_1 = __nccwpck_require__(73817);
 const types_1 = __nccwpck_require__(32632);
@@ -55894,15 +56208,15 @@ class BugbotAutofixUseCase {
         this.taskId = TASK_ID;
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const results = [];
         const { execution, targetFindingIds, userComment, context: providedContext, branchOverride } = param;
         if (targetFindingIds.length === 0) {
-            (0, logger_1.logDebugInfo)("No target finding ids; skipping autofix.");
+            (0, logging_ports_1.logDebugInfo)("No target finding ids; skipping autofix.");
             return results;
         }
         if (!(0, agent_1.isAgentConfigurationReady)(execution.ai?.getAgentConfiguration('fixer'))) {
-            (0, logger_1.logDebugInfo)("Agent not configured; skipping autofix.");
+            (0, logging_ports_1.logDebugInfo)("Agent not configured; skipping autofix.");
             return results;
         }
         const context = providedContext ?? (await (0, load_bugbot_context_use_case_1.loadBugbotContext)(execution, branchOverride ? { branchOverride } : undefined, this.contextPorts));
@@ -55912,7 +56226,7 @@ class BugbotAutofixUseCase {
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            (0, logger_1.logError)(`Bugbot autofix: unable to inspect workspace before agent execution: ${message}`);
+            (0, logging_ports_1.logError)(`Bugbot autofix: unable to inspect workspace before agent execution: ${message}`);
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -55922,7 +56236,7 @@ class BugbotAutofixUseCase {
             return results;
         }
         if (workspacePathsBefore.length > 0) {
-            (0, logger_1.logError)(`Bugbot autofix refused because workspace is not clean: ${workspacePathsBefore.join(", ")}`);
+            (0, logging_ports_1.logError)(`Bugbot autofix refused because workspace is not clean: ${workspacePathsBefore.join(", ")}`);
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -55936,20 +56250,20 @@ class BugbotAutofixUseCase {
             .map(([id]) => id));
         const idsToFix = targetFindingIds.filter((id) => validIds.has(id));
         if (idsToFix.length === 0) {
-            (0, logger_1.logDebugInfo)("No valid unresolved target findings; skipping autofix.");
+            (0, logging_ports_1.logDebugInfo)("No valid unresolved target findings; skipping autofix.");
             return results;
         }
         const verifyCommands = execution.ai.getBugbotFixVerifyCommands?.() ?? [];
         const prompt = (0, build_bugbot_fix_prompt_1.buildBugbotFixPrompt)(execution, context, idsToFix, userComment, verifyCommands);
-        (0, logger_1.logDebugInfo)(`BugbotAutofix: prompt length=${prompt.length}, target finding ids=${idsToFix.length}, verifyCommands=${verifyCommands.length}.`);
-        (0, logger_1.logInfo)("Running configured build agent to fix selected findings (changes applied in workspace).");
+        (0, logging_ports_1.logDebugInfo)(`BugbotAutofix: prompt length=${prompt.length}, target finding ids=${idsToFix.length}, verifyCommands=${verifyCommands.length}.`);
+        (0, logging_ports_1.logInfo)("Running configured build agent to fix selected findings (changes applied in workspace).");
         const response = await this.aiRepository.fix({
             configuration: execution.ai?.getAgentConfiguration('fixer'),
             prompt,
         });
-        (0, logger_1.logDebugInfo)(`BugbotAutofix: build agent response length=${response?.text?.length ?? 0}. Full response:\n${response?.text ?? '(none)'}`);
+        (0, logging_ports_1.logDebugInfo)(`BugbotAutofix: build agent response length=${response?.text?.length ?? 0}. Full response:\n${response?.text ?? '(none)'}`);
         if (!response?.text) {
-            (0, logger_1.logError)("Bugbot autofix: no response from configured build agent.");
+            (0, logging_ports_1.logError)("Bugbot autofix: no response from configured build agent.");
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -55964,7 +56278,7 @@ class BugbotAutofixUseCase {
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            (0, logger_1.logError)(`Bugbot autofix: unable to inspect workspace after agent execution: ${message}`);
+            (0, logging_ports_1.logError)(`Bugbot autofix: unable to inspect workspace after agent execution: ${message}`);
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -55975,7 +56289,7 @@ class BugbotAutofixUseCase {
         }
         const unsafeWorkspacePaths = workspacePathsAfter.filter(workspace_changes_1.isSensitiveWorkspacePath);
         if (unsafeWorkspacePaths.length > 0) {
-            (0, logger_1.logError)(`Bugbot autofix refused sensitive workspace paths: ${unsafeWorkspacePaths.join(", ")}`);
+            (0, logging_ports_1.logError)(`Bugbot autofix refused sensitive workspace paths: ${unsafeWorkspacePaths.join(", ")}`);
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -55988,7 +56302,7 @@ class BugbotAutofixUseCase {
         }
         const workspacePaths = (0, workspace_changes_1.selectWorkspacePathsToCommit)(workspacePathsBefore, workspacePathsAfter);
         if (workspacePaths.length === 0) {
-            (0, logger_1.logError)("Bugbot autofix produced no safe workspace paths to commit.");
+            (0, logging_ports_1.logError)("Bugbot autofix produced no safe workspace paths to commit.");
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -56311,7 +56625,7 @@ function buildBugbotPrompt(param, context) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCommitAndPushWorkflow = runCommitAndPushWorkflow;
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const git_branch_checkout_1 = __nccwpck_require__(76333);
 const verify_command_policy_1 = __nccwpck_require__(96031);
 const verify_command_runner_1 = __nccwpck_require__(57742);
@@ -56330,10 +56644,10 @@ async function runCommitAndPushWorkflow(execution, options, authenticatedUserPor
     const configured = execution.ai?.getBugbotFixVerifyCommands?.() ?? [];
     const verifyCommands = (0, verify_command_policy_1.limitVerifyCommands)(Array.isArray(configured) ? configured : []);
     if (Array.isArray(configured) && configured.length > verify_command_policy_1.MAX_VERIFY_COMMANDS) {
-        (0, logger_1.logInfo)(`Limiting verify commands to ${verify_command_policy_1.MAX_VERIFY_COMMANDS} (configured: ${configured.length}).`);
+        (0, logging_ports_1.logInfo)(`Limiting verify commands to ${verify_command_policy_1.MAX_VERIFY_COMMANDS} (configured: ${configured.length}).`);
     }
     if (verifyCommands.length > 0) {
-        (0, logger_1.logInfo)(`Running ${verifyCommands.length} verify command(s)...`);
+        (0, logging_ports_1.logInfo)(`Running ${verifyCommands.length} verify command(s)...`);
         const verify = await (0, verify_command_runner_1.runVerifyCommands)(verifyCommands, (program, args) => gitCommitPort.execute(program, args));
         if (!verify.success) {
             return {
@@ -56344,7 +56658,7 @@ async function runCommitAndPushWorkflow(execution, options, authenticatedUserPor
         }
     }
     if (!(await (0, workspace_changes_1.hasWorkspaceChanges)(gitCommitPort))) {
-        (0, logger_1.logDebugInfo)(options.noChangesMessage);
+        (0, logging_ports_1.logDebugInfo)(options.noChangesMessage);
         return { success: true, committed: false };
     }
     if (options.workspacePaths && options.workspacePaths.length === 0) {
@@ -56353,7 +56667,7 @@ async function runCommitAndPushWorkflow(execution, options, authenticatedUserPor
     try {
         const { name, email } = await authenticatedUserPort.getTokenUserDetails(execution.tokens.token);
         await gitCommitPort.configureAuthor(name, email);
-        (0, logger_1.logDebugInfo)(`Git author set to ${name} <${email}>.`);
+        (0, logging_ports_1.logDebugInfo)(`Git author set to ${name} <${email}>.`);
         if (options.workspacePaths) {
             await gitCommitPort.stagePaths(options.workspacePaths);
         }
@@ -56362,12 +56676,12 @@ async function runCommitAndPushWorkflow(execution, options, authenticatedUserPor
         }
         await gitCommitPort.commit(options.commitMessage);
         await gitCommitPort.push(options.branch);
-        (0, logger_1.logInfo)(`Pushed commit to origin/${options.branch}.`);
+        (0, logging_ports_1.logInfo)(`Pushed commit to origin/${options.branch}.`);
         return { success: true, committed: true };
     }
     catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        (0, logger_1.logError)(`Commit or push failed: ${message}`);
+        (0, logging_ports_1.logError)(`Commit or push failed: ${message}`);
         return { success: false, committed: false, error: message };
     }
 }
@@ -56382,16 +56696,16 @@ async function runCommitAndPushWorkflow(execution, options, authenticatedUserPor
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.commitAutofixAndResolveFindings = commitAutofixAndResolveFindings;
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const bugbot_autofix_commit_1 = __nccwpck_require__(98158);
 const mark_findings_resolved_use_case_1 = __nccwpck_require__(96963);
 async function commitAutofixAndResolveFindings(param, payload, autofixResults, authenticatedUserPort, bugbotResolutionPorts, gitCommitPort) {
     const lastAutofix = autofixResults.at(-1);
     if (!lastAutofix?.success) {
-        (0, logger_1.logInfo)("Bugbot autofix did not succeed; skipping commit.");
+        (0, logging_ports_1.logInfo)("Bugbot autofix did not succeed; skipping commit.");
         return [];
     }
-    (0, logger_1.logInfo)("Bugbot autofix succeeded; running commit and push.");
+    (0, logging_ports_1.logInfo)("Bugbot autofix succeeded; running commit and push.");
     const autofixPayload = lastAutofix.payload;
     const commitResult = await (0, bugbot_autofix_commit_1.runBugbotAutofixCommitAndPush)(param, {
         branchOverride: payload.branchOverride,
@@ -56407,12 +56721,12 @@ async function commitAutofixAndResolveFindings(param, payload, autofixResults, a
             ports: bugbotResolutionPorts,
         });
         if (resolutionErrors.length === 0) {
-            (0, logger_1.logInfo)(`Marked ${ids.length} finding(s) as resolved.`);
+            (0, logging_ports_1.logInfo)(`Marked ${ids.length} finding(s) as resolved.`);
         }
         return resolutionErrors;
     }
     else if (!commitResult.committed) {
-        (0, logger_1.logInfo)("No commit performed (no changes or error).");
+        (0, logging_ports_1.logInfo)("No commit performed (no changes or error).");
     }
     return [];
 }
@@ -56481,14 +56795,14 @@ function buildUserRequestCommitMessage(issueNumber) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.commitUserRequestIfSuccessful = commitUserRequestIfSuccessful;
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const bugbot_autofix_commit_1 = __nccwpck_require__(98158);
 async function commitUserRequestIfSuccessful(param, branchOverride, results, authenticatedUserPort, gitCommitPort) {
     if (!results.at(-1)?.success) {
-        (0, logger_1.logInfo)('Do user request did not succeed; skipping commit.');
+        (0, logging_ports_1.logInfo)('Do user request did not succeed; skipping commit.');
         return;
     }
-    (0, logger_1.logInfo)('Do user request succeeded; running commit and push.');
+    (0, logging_ports_1.logInfo)('Do user request succeeded; running commit and push.');
     await (0, bugbot_autofix_commit_1.runUserRequestCommitAndPush)(param, { branchOverride }, authenticatedUserPort, gitCommitPort);
 }
 
@@ -56536,7 +56850,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DetectBugbotFixIntentUseCase = void 0;
 const agent_1 = __nccwpck_require__(79937);
 const agent_task_policy_1 = __nccwpck_require__(85712);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const result_1 = __nccwpck_require__(73817);
 const build_bugbot_fix_intent_prompt_1 = __nccwpck_require__(18799);
@@ -56559,14 +56873,14 @@ class DetectBugbotFixIntentUseCase {
         this.taskId = TASK_ID;
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const results = [];
         if (!(0, agent_1.isAgentConfigurationReady)(param.ai?.getAgentConfiguration('findings'))) {
-            (0, logger_1.logInfo)("Agent not configured; skipping bugbot fix intent detection.");
+            (0, logging_ports_1.logInfo)("Agent not configured; skipping bugbot fix intent detection.");
             return results;
         }
         if (param.issueNumber === -1) {
-            (0, logger_1.logInfo)("No issue number; skipping bugbot fix intent detection.");
+            (0, logging_ports_1.logInfo)("No issue number; skipping bugbot fix intent detection.");
             return results;
         }
         const commentBody = param.issue.isIssueComment
@@ -56575,7 +56889,7 @@ class DetectBugbotFixIntentUseCase {
                 ? param.pullRequest.commentBody
                 : "";
         if (!commentBody?.trim()) {
-            (0, logger_1.logInfo)("No comment body; skipping bugbot fix intent detection.");
+            (0, logging_ports_1.logInfo)("No comment body; skipping bugbot fix intent detection.");
             return results;
         }
         // On issue_comment event we may not have commit.branch; resolve from an open PR that references the issue.
@@ -56583,7 +56897,7 @@ class DetectBugbotFixIntentUseCase {
         if (!param.commit.branch?.trim()) {
             branchOverride = await this.pullRequestQueryPort.getHeadBranchForIssue(param.owner, param.repo, param.issueNumber, param.tokens.token);
             if (!branchOverride) {
-                (0, logger_1.logInfo)("Could not resolve branch for issue; skipping bugbot fix intent detection.");
+                (0, logging_ports_1.logInfo)("Could not resolve branch for issue; skipping bugbot fix intent detection.");
                 return results;
             }
         }
@@ -56593,7 +56907,7 @@ class DetectBugbotFixIntentUseCase {
         const context = await (0, load_bugbot_context_use_case_1.loadBugbotContext)(param, options, this.contextPorts);
         const unresolvedWithBody = context.unresolvedFindingsWithBody ?? [];
         if (unresolvedWithBody.length === 0) {
-            (0, logger_1.logInfo)("No unresolved bugbot findings for this issue/PR; skipping bugbot fix intent detection.");
+            (0, logging_ports_1.logInfo)("No unresolved bugbot findings for this issue/PR; skipping bugbot fix intent detection.");
             return results;
         }
         const unresolvedIds = unresolvedWithBody.map((p) => p.id);
@@ -56610,7 +56924,7 @@ class DetectBugbotFixIntentUseCase {
             parentCommentBody = parentBody ?? undefined;
         }
         const prompt = (0, build_bugbot_fix_intent_prompt_1.buildBugbotFixIntentPrompt)(commentBody, unresolvedFindings, parentCommentBody);
-        (0, logger_1.logDebugInfo)(`DetectBugbotFixIntent: prompt length=${prompt.length}, unresolved findings=${unresolvedFindings.length}. Calling configured findings agent.`);
+        (0, logging_ports_1.logDebugInfo)(`DetectBugbotFixIntent: prompt length=${prompt.length}, unresolved findings=${unresolvedFindings.length}. Calling configured findings agent.`);
         const response = await this.aiRepository.query({
             configuration: param.ai?.getAgentConfiguration('findings'),
             agentId: agent_task_policy_1.AGENT_PLAN,
@@ -56622,7 +56936,7 @@ class DetectBugbotFixIntentUseCase {
             },
         });
         if (response == null || typeof response !== "object") {
-            (0, logger_1.logInfo)("No response from configured agent for fix intent.");
+            (0, logging_ports_1.logInfo)("No response from configured agent for fix intent.");
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: true,
@@ -56640,7 +56954,7 @@ class DetectBugbotFixIntentUseCase {
             : [];
         const validIds = new Set(unresolvedIds);
         const filteredIds = targetFindingIds.filter((id) => validIds.has(id));
-        (0, logger_1.logDebugInfo)(`DetectBugbotFixIntent: agent payload is_fix_request=${isFixRequest}, is_do_request=${isDoRequest}, target_finding_ids=${JSON.stringify(targetFindingIds)}, filteredIds=${JSON.stringify(filteredIds)}.`);
+        (0, logging_ports_1.logDebugInfo)(`DetectBugbotFixIntent: agent payload is_fix_request=${isFixRequest}, is_do_request=${isDoRequest}, target_finding_ids=${JSON.stringify(targetFindingIds)}, filteredIds=${JSON.stringify(filteredIds)}.`);
         results.push(new result_1.Result({
             id: this.taskId,
             success: true,
@@ -56738,7 +57052,7 @@ function fileMatchesIgnorePatterns(filePath, ignorePatterns) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.checkoutBranch = checkoutBranch;
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const STASH_MESSAGE = "bugbot-autofix-before-checkout";
 async function hasUncommittedChanges(gitCommitPort) {
     let output = "";
@@ -56754,32 +57068,32 @@ async function checkoutBranch(branch, gitCommitPort) {
     let didStash = false;
     try {
         if (await hasUncommittedChanges(gitCommitPort)) {
-            (0, logger_1.logDebugInfo)("Uncommitted changes present; stashing before checkout.");
+            (0, logging_ports_1.logDebugInfo)("Uncommitted changes present; stashing before checkout.");
             await gitCommitPort.execute("git", ["stash", "push", "-u", "-m", STASH_MESSAGE]);
             didStash = true;
         }
         await gitCommitPort.execute("git", ["fetch", "origin", branch]);
         await gitCommitPort.execute("git", ["checkout", branch]);
-        (0, logger_1.logInfo)(`Checked out branch ${branch}.`);
+        (0, logging_ports_1.logInfo)(`Checked out branch ${branch}.`);
         if (!didStash)
             return true;
         try {
             await gitCommitPort.execute("git", ["stash", "pop"]);
-            (0, logger_1.logDebugInfo)("Restored stashed changes after checkout.");
+            (0, logging_ports_1.logDebugInfo)("Restored stashed changes after checkout.");
             return true;
         }
         catch (popErr) {
             const popMsg = popErr instanceof Error ? popErr.message : String(popErr);
-            (0, logger_1.logError)(`Failed to restore stashed changes after checkout: ${popMsg}`);
-            (0, logger_1.logError)("Changes remain stashed; run 'git stash pop' manually to restore them.");
+            (0, logging_ports_1.logError)(`Failed to restore stashed changes after checkout: ${popMsg}`);
+            (0, logging_ports_1.logError)("Changes remain stashed; run 'git stash pop' manually to restore them.");
             return false;
         }
     }
     catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        (0, logger_1.logError)(`Failed to checkout branch ${branch}: ${msg}`);
+        (0, logging_ports_1.logError)(`Failed to checkout branch ${branch}: ${msg}`);
         if (didStash) {
-            (0, logger_1.logError)("Changes were stashed; run 'git stash pop' manually to restore them.");
+            (0, logging_ports_1.logError)("Changes were stashed; run 'git stash pop' manually to restore them.");
         }
         return false;
     }
@@ -56827,7 +57141,7 @@ function applyCommentLimit(findings, maxComments = constants_1.BUGBOT_MAX_COMMEN
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.loadBugbotContext = loadBugbotContext;
 const bugbot_finding_context_1 = __nccwpck_require__(62946);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 function emptyBugbotContext() {
     return {
         existingByFindingId: {},
@@ -56865,7 +57179,7 @@ async function loadBugbotContext(param, options, ports) {
     const owner = param.owner;
     const repo = param.repo;
     if (!headBranch) {
-        (0, logger_1.logDebugInfo)("LoadBugbotContext: no head branch (branchOverride or commit.branch); returning empty context.");
+        (0, logging_ports_1.logDebugInfo)("LoadBugbotContext: no head branch (branchOverride or commit.branch); returning empty context.");
         return emptyBugbotContext();
     }
     const issueComments = await ports.issue.listIssueComments(owner, repo, issueNumber, token);
@@ -56879,7 +57193,7 @@ async function loadBugbotContext(param, options, ports) {
         id: finding.id,
         fullBody: finding.fullBody,
     }));
-    (0, logger_1.logDebugInfo)(`LoadBugbotContext: issue #${issueNumber}, branch ${headBranch}, open PRs=${openPrNumbers.length}, existing findings=${Object.keys(parsedComments.existingByFindingId).length}, unresolved with body=${unresolvedFindingsWithBody.length}.`);
+    (0, logging_ports_1.logDebugInfo)(`LoadBugbotContext: issue #${issueNumber}, branch ${headBranch}, open PRs=${openPrNumbers.length}, existing findings=${Object.keys(parsedComments.existingByFindingId).length}, unresolved with body=${unresolvedFindingsWithBody.length}.`);
     return {
         existingByFindingId: parsedComments.existingByFindingId,
         issueComments: parsedComments.issueComments,
@@ -56901,7 +57215,7 @@ async function loadBugbotContext(param, options, ports) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.markFindingsResolved = markFindingsResolved;
 const pull_request_review_errors_1 = __nccwpck_require__(46445);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const resolve_issue_finding_1 = __nccwpck_require__(35300);
 const resolve_pull_request_finding_1 = __nccwpck_require__(64567);
 function resolutionError(destination) {
@@ -56922,7 +57236,7 @@ async function tryResolvePullRequestFinding(ports, execution, findingId, destina
     }
     catch {
         const error = resolutionError("pull request");
-        (0, logger_1.logError)(error);
+        (0, logging_ports_1.logError)(error);
         errors.push(error);
     }
 }
@@ -56947,7 +57261,7 @@ async function markFindingsResolved(param) {
         const issueComment = context.issueComments.find((comment) => comment.id === issueDestination.commentId);
         if (issueComment?.body == null) {
             const error = resolutionError("issue");
-            (0, logger_1.logError)(error);
+            (0, logging_ports_1.logError)(error);
             errors.push(error);
             continue;
         }
@@ -56963,7 +57277,7 @@ async function markFindingsResolved(param) {
         }
         catch {
             const error = resolutionError("issue");
-            (0, logger_1.logError)(error);
+            (0, logging_ports_1.logError)(error);
             errors.push(error);
         }
     }
@@ -57259,17 +57573,17 @@ async function publishFindings(param) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.publishIssueFindingComment = publishIssueFindingComment;
 const marker_1 = __nccwpck_require__(62274);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 async function publishIssueFindingComment(repository, execution, finding, existing, commitSha) {
     const body = (0, marker_1.buildCommentBody)(finding, false);
     const options = commitSha ? { commitSha } : undefined;
     if (existing?.issue != null) {
         await repository.updateComment(execution.owner, execution.repo, execution.issueNumber, existing.issue.commentId, body, execution.tokens.token, options);
-        (0, logger_1.logDebugInfo)(`Updated bugbot comment for finding ${finding.id} on issue.`);
+        (0, logging_ports_1.logDebugInfo)(`Updated bugbot comment for finding ${finding.id} on issue.`);
         return;
     }
     await repository.addComment(execution.owner, execution.repo, execution.issueNumber, body, execution.tokens.token, options);
-    (0, logger_1.logDebugInfo)(`Added bugbot comment for finding ${finding.id} on issue.`);
+    (0, logging_ports_1.logDebugInfo)(`Added bugbot comment for finding ${finding.id} on issue.`);
 }
 
 
@@ -57282,7 +57596,7 @@ async function publishIssueFindingComment(repository, execution, finding, existi
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.publishOverflowComment = publishOverflowComment;
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 async function publishOverflowComment(repository, execution, overflowCount, overflowTitles, commitSha) {
     if (overflowCount <= 0)
         return;
@@ -57293,7 +57607,7 @@ async function publishOverflowComment(repository, execution, overflowCount, over
 
 There are **${overflowCount}** more finding(s) that were not published as individual comments. Review locally or in the full diff to see the list.${titlesList}`;
     await repository.addComment(execution.owner, execution.repo, execution.issueNumber, body, execution.tokens.token, commitSha ? { commitSha } : undefined);
-    (0, logger_1.logDebugInfo)(`Added overflow comment: ${overflowCount} additional finding(s) not published individually.`);
+    (0, logging_ports_1.logDebugInfo)(`Added overflow comment: ${overflowCount} additional finding(s) not published individually.`);
 }
 
 
@@ -57308,7 +57622,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentPublisher = void 0;
 const marker_1 = __nccwpck_require__(62274);
 const path_validation_1 = __nccwpck_require__(70124);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 class PullRequestReviewCommentPublisher {
     constructor(options) {
         this.options = options;
@@ -57319,7 +57633,7 @@ class PullRequestReviewCommentPublisher {
         const path = (0, path_validation_1.resolveFindingPathForPr)(finding.file, prContext.prFiles);
         if (!path) {
             if (finding.file != null && String(finding.file).trim() !== "") {
-                (0, logger_1.logInfo)(`Bugbot finding "${finding.id}" file "${finding.file}" not in PR changed files (${prContext.prFiles.length} files); skipping PR review comment.`);
+                (0, logging_ports_1.logInfo)(`Bugbot finding "${finding.id}" file "${finding.file}" not in PR changed files (${prContext.prFiles.length} files); skipping PR review comment.`);
             }
             return;
         }
@@ -57685,14 +57999,14 @@ function limitVerifyCommands(commands) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runVerifyCommands = runVerifyCommands;
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const verify_command_policy_1 = __nccwpck_require__(96031);
 async function runVerifyCommands(commands, execute) {
     for (const command of commands) {
         const parsed = (0, verify_command_policy_1.parseVerifyCommand)(command);
         if (!parsed) {
             const error = `Invalid verify command (use no shell operators; quotes allowed): ${command}`;
-            (0, logger_1.logError)(error);
+            (0, logging_ports_1.logError)(error);
             return { success: false, failedCommand: command, error };
         }
         try {
@@ -57702,7 +58016,7 @@ async function runVerifyCommands(commands, execute) {
         }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            (0, logger_1.logError)(`Verify command failed: ${command} - ${message}`);
+            (0, logging_ports_1.logError)(`Verify command failed: ${command} - ${message}`);
             return { success: false, failedCommand: command };
         }
     }
@@ -57799,8 +58113,9 @@ async function hasWorkspaceChanges(gitCommitPort) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CheckChangesIssueSizeUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
+const update_change_size_labels_1 = __nccwpck_require__(51200);
 class CheckChangesIssueSizeUseCase {
     constructor(projectBoardCommandPort, issueRepository, pullRequestRepository, branchChangeSizePort) {
         this.projectBoardCommandPort = projectBoardCommandPort;
@@ -57810,54 +58125,53 @@ class CheckChangesIssueSizeUseCase {
         this.taskId = 'CheckChangesIssueSizeUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         try {
             const baseBranch = param.currentConfiguration.parentBranch ??
                 param.branches.development ??
                 'develop';
             if (!baseBranch) {
-                (0, logger_1.logDebugInfo)(`Parent branch could not be determined.`);
+                (0, logging_ports_1.logDebugInfo)(`Parent branch could not be determined.`);
                 return result;
             }
             const headBranch = param.commit.branch;
             const { size, githubSize, reason } = await this.branchChangeSizePort.getSizeCategoryAndReason(param.owner, param.repo, headBranch, baseBranch, param.sizeThresholds, param.labels, param.tokens.token);
-            (0, logger_1.logDebugInfo)(`Size: ${size}`);
-            (0, logger_1.logDebugInfo)(`Github Size: ${githubSize}`);
-            (0, logger_1.logDebugInfo)(`Reason: ${reason}`);
-            (0, logger_1.logDebugInfo)(`Labels: ${param.labels.sizedLabelOnIssue}`);
+            (0, logging_ports_1.logDebugInfo)(`Size: ${size}`);
+            (0, logging_ports_1.logDebugInfo)(`Github Size: ${githubSize}`);
+            (0, logging_ports_1.logDebugInfo)(`Reason: ${reason}`);
+            (0, logging_ports_1.logDebugInfo)(`Labels: ${param.labels.sizedLabelOnIssue}`);
             if (param.labels.sizedLabelOnIssue !== size) {
-                const labelNames = param.labels.currentIssueLabels.filter((name) => param.labels.sizeLabels.indexOf(name) === -1);
-                labelNames.push(size);
-                await this.issueRepository.setLabels(param.owner, param.repo, param.issueNumber, labelNames, param.tokens.token);
-                for (const project of param.project.getProjects()) {
-                    await this.projectBoardCommandPort.setTaskSize(project, param.owner, param.repo, param.issueNumber, githubSize, param.tokens.token);
-                }
-                const openPrNumbers = await this.pullRequestRepository.getOpenPullRequestNumbersByHeadBranch(param.owner, param.repo, headBranch, param.tokens.token);
-                for (const prNumber of openPrNumbers) {
-                    const prLabels = await this.issueRepository.getLabels(param.owner, param.repo, prNumber, param.tokens.token);
-                    const prLabelNames = prLabels.filter((name) => param.labels.sizeLabels.indexOf(name) === -1);
-                    prLabelNames.push(size);
-                    await this.issueRepository.setLabels(param.owner, param.repo, prNumber, prLabelNames, param.tokens.token);
-                    for (const project of param.project.getProjects()) {
-                        await this.projectBoardCommandPort.setTaskSize(project, param.owner, param.repo, prNumber, githubSize, param.tokens.token);
-                    }
-                    (0, logger_1.logDebugInfo)(`Updated size label on PR #${prNumber} to ${size}.`);
-                }
-                (0, logger_1.logDebugInfo)(`Updated labels on issue #${param.issueNumber}:`);
-                (0, logger_1.logDebugInfo)(`Labels: ${labelNames}`);
+                const update = await (0, update_change_size_labels_1.updateIssueAndRelatedPullRequests)({
+                    owner: param.owner,
+                    repository: param.repo,
+                    issueNumber: param.issueNumber,
+                    headBranch,
+                    size,
+                    githubSize,
+                    currentIssueLabels: param.labels.currentIssueLabels,
+                    sizeLabels: param.labels.sizeLabels,
+                    projects: param.project.getProjects(),
+                    token: param.tokens.token,
+                }, {
+                    issueLabelsPort: this.issueRepository,
+                    projectBoardCommandPort: this.projectBoardCommandPort,
+                    pullRequestBranchQueryPort: this.pullRequestRepository,
+                });
+                (0, logging_ports_1.logDebugInfo)(`Updated labels on issue #${param.issueNumber}:`);
+                (0, logging_ports_1.logDebugInfo)(`Labels: ${update.issueLabelNames}`);
                 result.push(new result_1.Result({
                     id: this.taskId,
                     success: true,
                     executed: true,
                     steps: [
                         `${reason}, so the issue was resized to ${size}.` +
-                            (openPrNumbers.length > 0 ? ` Same label applied to ${openPrNumbers.length} open PR(s).` : ''),
+                            (update.openPullRequestNumbers.length > 0 ? ` Same label applied to ${update.openPullRequestNumbers.length} open PR(s).` : ''),
                     ],
                 }));
             }
             else {
-                (0, logger_1.logDebugInfo)(`The issue is already at the correct size.`);
+                (0, logging_ports_1.logDebugInfo)(`The issue is already at the correct size.`);
                 result.push(new result_1.Result({
                     id: this.taskId,
                     success: true,
@@ -57866,7 +58180,7 @@ class CheckChangesIssueSizeUseCase {
             }
         }
         catch (error) {
-            (0, logger_1.logError)(`CheckChangesIssueSize: failed for issue #${param.issueNumber}.`, error instanceof Error ? { stack: error.stack } : undefined);
+            (0, logging_ports_1.logError)(`CheckChangesIssueSize: failed for issue #${param.issueNumber}.`, error instanceof Error ? { stack: error.stack } : undefined);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -57895,7 +58209,7 @@ exports.DetectPotentialProblemsUseCase = void 0;
 const agent_1 = __nccwpck_require__(79937);
 const result_1 = __nccwpck_require__(73817);
 const task_emoji_1 = __nccwpck_require__(46103);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const pull_request_review_errors_1 = __nccwpck_require__(46445);
 const build_bugbot_prompt_1 = __nccwpck_require__(52483);
 const load_bugbot_context_use_case_1 = __nccwpck_require__(4050);
@@ -57910,23 +58224,29 @@ class DetectPotentialProblemsUseCase {
         this.taskId = "DetectPotentialProblemsUseCase";
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const results = [];
         try {
             if (!(0, agent_1.isAgentConfigurationReady)(param.ai?.getAgentConfiguration("findings"))) {
-                (0, logger_1.logDebugInfo)("Agent not configured; skipping potential problems detection.");
+                (0, logging_ports_1.logDebugInfo)("Agent not configured; skipping potential problems detection.");
                 return results;
             }
             if (param.issueNumber === -1) {
-                (0, logger_1.logDebugInfo)("No issue number for this branch; skipping potential problems detection.");
+                (0, logging_ports_1.logDebugInfo)("No issue number for this branch; skipping potential problems detection.");
                 return results;
             }
             const context = await (0, load_bugbot_context_use_case_1.loadBugbotContext)(param, undefined, this.contextPorts);
             const prompt = (0, build_bugbot_prompt_1.buildBugbotPrompt)(param, context);
-            (0, logger_1.logInfo)("Detecting potential problems via configured agent (agent computes changes and checks resolved)...");
+            (0, logging_ports_1.logInfo)("Detecting potential problems via configured agent (agent computes changes and checks resolved)...");
             const prepared = (0, apply_detected_findings_1.prepareDetectedFindings)(param, await (0, query_bugbot_findings_1.queryBugbotFindings)(this.aiRepository, param, prompt));
             if (prepared === undefined) {
-                (0, logger_1.logDebugInfo)("DetectPotentialProblems: No response from configured agent.");
+                (0, logging_ports_1.logDebugInfo)("DetectPotentialProblems: No response from configured agent.");
+                results.push(new result_1.Result({
+                    id: this.taskId,
+                    success: false,
+                    executed: true,
+                    errors: [new Error("The configured agent returned no potential-problem analysis.")],
+                }));
                 return results;
             }
             if (prepared.toPublish.length === 0 &&
@@ -57966,7 +58286,7 @@ class DetectPotentialProblemsUseCase {
                 ? error
                 : new Error("Unable to detect potential problems.");
             const resultError = new Error(`Error in ${this.taskId}: ${normalizedError.message}`);
-            (0, logger_1.logError)(resultError.message);
+            (0, logging_ports_1.logError)(resultError.message);
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -57991,7 +58311,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.NotifyNewCommitOnIssueUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
 const list_utils_1 = __nccwpck_require__(42277);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const execute_script_use_case_1 = __nccwpck_require__(65440);
 class NotifyNewCommitOnIssueUseCase {
@@ -58003,7 +58323,7 @@ class NotifyNewCommitOnIssueUseCase {
         this.separator = '------------------------------------------------------';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         try {
             const branchName = param.commit.branch;
@@ -58012,10 +58332,8 @@ class NotifyNewCommitOnIssueUseCase {
                 param.commitPrefixBuilderParams = {
                     branchName: branchName,
                 };
-                const executor = new execute_script_use_case_1.CommitPrefixBuilderUseCase();
-                const prefixResult = await executor.invoke(param);
-                commitPrefix = prefixResult[prefixResult.length - 1].payload['scriptResult'].toString() ?? '';
-                (0, logger_1.logDebugInfo)(`Commit prefix: ${commitPrefix}`);
+                commitPrefix = (0, execute_script_use_case_1.buildCommitPrefix)(branchName, param.commitPrefixBuilder);
+                (0, logging_ports_1.logDebugInfo)(`Commit prefix: ${commitPrefix}`);
             }
             let title = '';
             let image = '';
@@ -58098,7 +58416,7 @@ ${this.separator}
             await this.issueRepository.addComment(param.owner, param.repo, param.issueNumber, commentBody, param.tokens.token);
         }
         catch (error) {
-            (0, logger_1.logError)(`NotifyNewCommitOnIssue: failed to notify issue #${param.issueNumber}.`, error instanceof Error ? { stack: error.stack } : undefined);
+            (0, logging_ports_1.logError)(`NotifyNewCommitOnIssue: failed to notify issue #${param.issueNumber}.`, error instanceof Error ? { stack: error.stack } : undefined);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -58119,6 +58437,42 @@ exports.NotifyNewCommitOnIssueUseCase = NotifyNewCommitOnIssueUseCase;
 
 /***/ }),
 
+/***/ 51200:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.replaceSizeLabel = replaceSizeLabel;
+exports.updateIssueAndRelatedPullRequests = updateIssueAndRelatedPullRequests;
+function replaceSizeLabel(currentLabels, sizeLabels, nextSize) {
+    return [...currentLabels.filter((name) => !sizeLabels.includes(name)), nextSize];
+}
+async function updateProjectSize(projects, owner, repository, issueOrPullRequestNumber, githubSize, token, projectBoardCommandPort) {
+    for (const project of projects) {
+        await projectBoardCommandPort.setTaskSize(project, owner, repository, issueOrPullRequestNumber, githubSize, token);
+    }
+}
+async function updateOpenPullRequestSize(request, pullRequestNumber, ports) {
+    const pullRequestLabels = await ports.issueLabelsPort.getLabels(request.owner, request.repository, pullRequestNumber, request.token);
+    const pullRequestLabelNames = replaceSizeLabel(pullRequestLabels, request.sizeLabels, request.size);
+    await ports.issueLabelsPort.setLabels(request.owner, request.repository, pullRequestNumber, pullRequestLabelNames, request.token);
+    await updateProjectSize(request.projects, request.owner, request.repository, pullRequestNumber, request.githubSize, request.token, ports.projectBoardCommandPort);
+}
+async function updateIssueAndRelatedPullRequests(request, ports) {
+    const issueLabelNames = replaceSizeLabel(request.currentIssueLabels, request.sizeLabels, request.size);
+    await ports.issueLabelsPort.setLabels(request.owner, request.repository, request.issueNumber, issueLabelNames, request.token);
+    await updateProjectSize(request.projects, request.owner, request.repository, request.issueNumber, request.githubSize, request.token, ports.projectBoardCommandPort);
+    const openPullRequestNumbers = await ports.pullRequestBranchQueryPort.getOpenPullRequestNumbersByHeadBranch(request.owner, request.repository, request.headBranch, request.token);
+    for (const pullRequestNumber of openPullRequestNumbers) {
+        await updateOpenPullRequestSize(request, pullRequestNumber, ports);
+    }
+    return { issueLabelNames, openPullRequestNumbers };
+}
+
+
+/***/ }),
+
 /***/ 19004:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -58133,7 +58487,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DoUserRequestUseCase = void 0;
 const agent_1 = __nccwpck_require__(79937);
 const prompts_1 = __nccwpck_require__(69518);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const result_1 = __nccwpck_require__(73817);
 const project_context_instruction_1 = __nccwpck_require__(63907);
@@ -58145,16 +58499,16 @@ class DoUserRequestUseCase {
         this.taskId = TASK_ID;
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const results = [];
         const { execution, userComment } = param;
         if (!(0, agent_1.isAgentConfigurationReady)(execution.ai?.getAgentConfiguration('fixer'))) {
-            (0, logger_1.logInfo)("Agent not configured; skipping user request.");
+            (0, logging_ports_1.logInfo)("Agent not configured; skipping user request.");
             return results;
         }
         const commentTrimmed = userComment?.trim() ?? "";
         if (!commentTrimmed) {
-            (0, logger_1.logInfo)("No user comment; skipping user request.");
+            (0, logging_ports_1.logInfo)("No user comment; skipping user request.");
             return results;
         }
         const baseBranch = execution.currentConfiguration.parentBranch ?? execution.branches.development ?? "develop";
@@ -58167,15 +58521,15 @@ class DoUserRequestUseCase {
             issueNumber: String(execution.issueNumber),
             userComment: (0, sanitize_user_comment_for_prompt_1.sanitizeUserCommentForPrompt)(userComment),
         });
-        (0, logger_1.logDebugInfo)(`DoUserRequest: prompt length=${prompt.length}, user comment length=${commentTrimmed.length}.`);
-        (0, logger_1.logInfo)("Running configured build agent to perform user request (changes applied in workspace).");
+        (0, logging_ports_1.logDebugInfo)(`DoUserRequest: prompt length=${prompt.length}, user comment length=${commentTrimmed.length}.`);
+        (0, logging_ports_1.logInfo)("Running configured build agent to perform user request (changes applied in workspace).");
         const response = await this.aiRepository.fix({
             configuration: execution.ai?.getAgentConfiguration('fixer'),
             prompt,
         });
-        (0, logger_1.logDebugInfo)(`DoUserRequest: build agent response length=${response?.text?.length ?? 0}. Full response:\n${response?.text ?? '(none)'}`);
+        (0, logging_ports_1.logDebugInfo)(`DoUserRequest: build agent response length=${response?.text?.length ?? 0}. Full response:\n${response?.text ?? '(none)'}`);
         if (!response?.text) {
-            (0, logger_1.logError)("DoUserRequest: no response from configured build agent.");
+            (0, logging_ports_1.logError)("DoUserRequest: no response from configured build agent.");
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -58224,7 +58578,7 @@ function extractStructuredAnswer(response) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CheckPermissionsUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 class CheckPermissionsUseCase {
     constructor(organizationMembersPort) {
@@ -58232,13 +58586,13 @@ class CheckPermissionsUseCase {
         this.taskId = 'CheckPermissionsUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         /**
          * If a release/hotfix issue was opened, check if author is a member of the project.
          */
         if (param.isIssue && !param.issue.opened) {
-            (0, logger_1.logDebugInfo)(`Ignoring permission checking. Issue state is not 'opened'.`);
+            (0, logging_ports_1.logDebugInfo)(`Ignoring permission checking. Issue state is not 'opened'.`);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: true,
@@ -58247,7 +58601,7 @@ class CheckPermissionsUseCase {
             return result;
         }
         else if (param.isPullRequest && !param.pullRequest.opened) {
-            (0, logger_1.logDebugInfo)(`Ignoring permission checking. Pull request state is not 'opened'.`);
+            (0, logging_ports_1.logDebugInfo)(`Ignoring permission checking. Pull request state is not 'opened'.`);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: true,
@@ -58261,7 +58615,7 @@ class CheckPermissionsUseCase {
             const creatorIsTeamMember = creator.length > 0
                 && currentProjectMembers.indexOf(creator) > -1;
             if (param.labels.isMandatoryBranchedLabel) {
-                (0, logger_1.logDebugInfo)(`Ignoring permission checking. Issue doesn't require mandatory branch.`);
+                (0, logging_ports_1.logDebugInfo)(`Ignoring permission checking. Issue doesn't require mandatory branch.`);
                 if (creatorIsTeamMember) {
                     result.push(new result_1.Result({
                         id: this.taskId,
@@ -58270,7 +58624,7 @@ class CheckPermissionsUseCase {
                     }));
                 }
                 else {
-                    (0, logger_1.logWarn)(`CheckPermissions: @${param.issue.creator} not authorized to create [${param.labels.currentIssueLabels.join(',')}] issues.`);
+                    (0, logging_ports_1.logWarn)(`CheckPermissions: @${param.issue.creator} not authorized to create [${param.labels.currentIssueLabels.join(',')}] issues.`);
                     result.push(new result_1.Result({
                         id: this.taskId,
                         success: false,
@@ -58280,7 +58634,7 @@ class CheckPermissionsUseCase {
                 }
             }
             else {
-                (0, logger_1.logDebugInfo)(`Ignoring permission checking. Issue doesn't require mandatory branch.`);
+                (0, logging_ports_1.logDebugInfo)(`Ignoring permission checking. Issue doesn't require mandatory branch.`);
                 result.push(new result_1.Result({
                     id: this.taskId,
                     success: true,
@@ -58289,13 +58643,13 @@ class CheckPermissionsUseCase {
             }
         }
         catch (error) {
-            (0, logger_1.logError)(`CheckPermissions: failed to get project members or check creator.`, error instanceof Error ? { stack: error.stack } : undefined);
+            (0, logging_ports_1.logError)(`CheckPermissions: failed to get project members or check creator.`, error instanceof Error ? { stack: error.stack } : undefined);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
                 executed: true,
                 steps: [`Tried to check action permissions.`],
-                error: error,
+                errors: [error],
             }));
         }
         return result;
@@ -58317,7 +58671,7 @@ const result_1 = __nccwpck_require__(73817);
 const agent_task_policy_1 = __nccwpck_require__(85712);
 const agent_response_schemas_1 = __nccwpck_require__(25603);
 const prompts_1 = __nccwpck_require__(69518);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 exports.TRANSLATED_COMMENT_MARKER = `<!-- content_translated
 If you'd like this comment to be translated again, please delete the entire comment, including this message. It will then be processed as a new one.
@@ -58328,7 +58682,7 @@ class CommentLanguageTranslationWorkflow {
         this.findingsQueryPort = findingsQueryPort;
     }
     async invoke(context) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(context.taskId)} Executing ${context.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(context.taskId)} Executing ${context.taskId}.`);
         if (!context.commentBody || context.commentBody.includes(exports.TRANSLATED_COMMENT_MARKER)) {
             return [new result_1.Result({ id: context.taskId, success: true, executed: false })];
         }
@@ -58344,7 +58698,7 @@ class CommentLanguageTranslationWorkflow {
             },
         });
         const status = this.stringProperty(checkResponse, 'status');
-        (0, logger_1.logDebugInfo)(`${context.taskId}: language check status=${status}.`);
+        (0, logging_ports_1.logDebugInfo)(`${context.taskId}: language check status=${status}.`);
         if (status === 'done')
             return [new result_1.Result({ id: context.taskId, success: true, executed: true })];
         const translationResponse = await this.findingsQueryPort.query({
@@ -58360,7 +58714,7 @@ class CommentLanguageTranslationWorkflow {
         const translatedText = this.stringProperty(translationResponse, 'translatedText').trim();
         if (!translatedText) {
             const reason = this.stringProperty(translationResponse, 'reason');
-            (0, logger_1.logInfo)(`Translation returned no text; skipping comment update.${reason ? ` Reason: ${reason}` : ' The configured agent may have failed or returned an invalid response.'}`);
+            (0, logging_ports_1.logInfo)(`Translation returned no text; skipping comment update.${reason ? ` Reason: ${reason}` : ' The configured agent may have failed or returned an invalid response.'}`);
             return [new result_1.Result({ id: context.taskId, success: true, executed: false })];
         }
         await this.commentRepository.updateComment(context.owner, context.repo, context.issueNumber, context.commentId, `${translatedText}\n> ${context.commentBody}\n${exports.TRANSLATED_COMMENT_MARKER}\n`, context.token);
@@ -58385,21 +58739,24 @@ exports.CommentLanguageTranslationWorkflow = CommentLanguageTranslationWorkflow;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CommitPrefixBuilderUseCase = void 0;
+exports.buildCommitPrefix = buildCommitPrefix;
 const result_1 = __nccwpck_require__(73817);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 class CommitPrefixBuilderUseCase {
     constructor() {
         this.taskId = 'CommitPrefixBuilderUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         try {
             const branchName = param.commitPrefixBuilderParams.branchName;
             const transforms = param.commitPrefixBuilder; // Now it's a list of transforms
-            const commitPrefix = this.applyTransforms(branchName, transforms);
-            (0, logger_1.logDebugInfo)(`Commit prefix generated: ${commitPrefix}`);
+            const commitPrefix = buildCommitPrefix(branchName, transforms, (transform) => {
+                (0, logging_ports_1.logDebugInfo)(`Unknown transform: ${transform}, skipping...`);
+            });
+            (0, logging_ports_1.logDebugInfo)(`Commit prefix generated: ${commitPrefix}`);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: true,
@@ -58411,84 +58768,80 @@ class CommitPrefixBuilderUseCase {
             }));
         }
         catch (error) {
-            (0, logger_1.logError)(error);
+            (0, logging_ports_1.logError)(error);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
                 executed: true,
                 steps: [],
-                error: error,
+                errors: [error],
             }));
         }
         return result;
     }
-    applyTransforms(branchName, transforms) {
-        // Parse the list of transformations
-        const transformList = transforms.split(',').map(t => t.trim());
-        let result = branchName;
-        // Apply each transformation sequentially
-        for (const transform of transformList) {
-            result = this.applyTransform(result, transform);
-        }
-        return result;
-    }
-    applyTransform(input, transform) {
-        switch (transform) {
-            case "replace-slash":
-                return input.replace("/", "-");
-            case "replace-all":
-                return input.replace(/[^a-zA-Z0-9-]/g, "-");
-            case "lowercase":
-                return input.toLowerCase();
-            case "uppercase":
-                return input.toUpperCase();
-            case "kebab-case":
-                return input
-                    .replace(/[^a-zA-Z0-9-]/g, "-")
-                    .replace(/-+/g, "-")
-                    .replace(/^-|-$/g, "")
-                    .toLowerCase();
-            case "snake-case":
-                return input
-                    .replace(/[^a-zA-Z0-9-]/g, "_")
-                    .replace(/_+/g, "_")
-                    .replace(/^_|_$/g, "")
-                    .toLowerCase();
-            case "camel-case":
-                return input
-                    .replace(/[^a-zA-Z0-9-]/g, "-")
-                    .split("-")
-                    .map((word, index) => index === 0 ? word.toLowerCase() :
-                    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                    .join("");
-            case "trim":
-                return input.trim();
-            case "remove-numbers":
-                return input.replace(/\d+/g, "");
-            case "remove-special":
-                return input.replace(/[^a-zA-Z0-9]/g, "");
-            case "remove-spaces":
-                return input.replace(/\s+/g, "");
-            case "remove-dashes":
-                return input.replace(/-+/g, "");
-            case "remove-underscores":
-                return input.replace(/_+/g, "");
-            case "clean-dashes":
-                return input.replace(/-+/g, "-").replace(/^-|-$/g, "");
-            case "clean-underscores":
-                return input.replace(/_+/g, "_").replace(/^_|_$/g, "");
-            case "prefix":
-                return `prefix-${input}`;
-            case "suffix":
-                return `${input}-suffix`;
-            default:
-                // If not recognized, return without changes
-                (0, logger_1.logDebugInfo)(`Unknown transform: ${transform}, skipping...`);
-                return input;
-        }
-    }
 }
 exports.CommitPrefixBuilderUseCase = CommitPrefixBuilderUseCase;
+function buildCommitPrefix(branchName, transforms, onUnknownTransform) {
+    return transforms
+        .split(',')
+        .map((transform) => transform.trim())
+        .reduce((result, transform) => applyTransform(result, transform, onUnknownTransform), branchName);
+}
+function applyTransform(input, transform, onUnknownTransform) {
+    switch (transform) {
+        case "replace-slash":
+            return input.replace("/", "-");
+        case "replace-all":
+            return input.replace(/[^a-zA-Z0-9-]/g, "-");
+        case "lowercase":
+            return input.toLowerCase();
+        case "uppercase":
+            return input.toUpperCase();
+        case "kebab-case":
+            return input
+                .replace(/[^a-zA-Z0-9-]/g, "-")
+                .replace(/-+/g, "-")
+                .replace(/^-|-$/g, "")
+                .toLowerCase();
+        case "snake-case":
+            return input
+                .replace(/[^a-zA-Z0-9-]/g, "_")
+                .replace(/_+/g, "_")
+                .replace(/^_|_$/g, "")
+                .toLowerCase();
+        case "camel-case":
+            return input
+                .replace(/[^a-zA-Z0-9-]/g, "-")
+                .split("-")
+                .map((word, index) => index === 0
+                ? word.toLowerCase()
+                : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join("");
+        case "trim":
+            return input.trim();
+        case "remove-numbers":
+            return input.replace(/\d+/g, "");
+        case "remove-special":
+            return input.replace(/[^a-zA-Z0-9]/g, "");
+        case "remove-spaces":
+            return input.replace(/\s+/g, "");
+        case "remove-dashes":
+            return input.replace(/-+/g, "");
+        case "remove-underscores":
+            return input.replace(/_+/g, "");
+        case "clean-dashes":
+            return input.replace(/-+/g, "-").replace(/^-|-$/g, "");
+        case "clean-underscores":
+            return input.replace(/_+/g, "_").replace(/^_|_$/g, "");
+        case "prefix":
+            return `prefix-${input}`;
+        case "suffix":
+            return `${input}-suffix`;
+        default:
+            onUnknownTransform?.(transform);
+            return input;
+    }
+}
 
 
 /***/ }),
@@ -58502,7 +58855,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GetHotfixVersionUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
 const content_utils_1 = __nccwpck_require__(92816);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 class GetHotfixVersionUseCase {
     constructor(issueRepository) {
@@ -58510,7 +58863,7 @@ class GetHotfixVersionUseCase {
         this.taskId = 'GetHotfixVersionUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         try {
             let number = -1;
@@ -58573,13 +58926,13 @@ class GetHotfixVersionUseCase {
             }));
         }
         catch (error) {
-            (0, logger_1.logError)(error);
+            (0, logging_ports_1.logError)(error);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
                 executed: true,
                 steps: [`Tried to check action permissions.`],
-                error: error,
+                errors: [error],
             }));
         }
         return result;
@@ -58599,7 +58952,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GetReleaseTypeUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
 const content_utils_1 = __nccwpck_require__(92816);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 class GetReleaseTypeUseCase {
     constructor(issueRepository) {
@@ -58607,7 +58960,7 @@ class GetReleaseTypeUseCase {
         this.taskId = 'GetReleaseTypeUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         try {
             let number = -1;
@@ -58659,13 +59012,13 @@ class GetReleaseTypeUseCase {
             }));
         }
         catch (error) {
-            (0, logger_1.logError)(error);
+            (0, logging_ports_1.logError)(error);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
                 executed: true,
                 steps: [`Tried to check action permissions.`],
-                error: error,
+                errors: [error],
             }));
         }
         return result;
@@ -58685,7 +59038,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GetReleaseVersionUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
 const content_utils_1 = __nccwpck_require__(92816);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 class GetReleaseVersionUseCase {
     constructor(issueRepository) {
@@ -58693,7 +59046,7 @@ class GetReleaseVersionUseCase {
         this.taskId = 'GetReleaseVersionUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         try {
             let number = -1;
@@ -58717,7 +59070,7 @@ class GetReleaseVersionUseCase {
             }
             const description = await this.issueRepository.getDescription(param.owner, param.repo, number, param.tokens.token);
             if (description === undefined) {
-                (0, logger_1.logDebugInfo)(`GetReleaseVersion: no description for issue/PR ${number}.`);
+                (0, logging_ports_1.logDebugInfo)(`GetReleaseVersion: no description for issue/PR ${number}.`);
                 result.push(new result_1.Result({
                     id: this.taskId,
                     success: false,
@@ -58728,7 +59081,7 @@ class GetReleaseVersionUseCase {
             }
             const releaseVersion = (0, content_utils_1.extractVersion)('Release Version', description);
             if (releaseVersion === undefined) {
-                (0, logger_1.logDebugInfo)(`GetReleaseVersion: no "Release Version" found in description (issue/PR ${number}).`);
+                (0, logging_ports_1.logDebugInfo)(`GetReleaseVersion: no "Release Version" found in description (issue/PR ${number}).`);
                 result.push(new result_1.Result({
                     id: this.taskId,
                     success: false,
@@ -58746,13 +59099,13 @@ class GetReleaseVersionUseCase {
             }));
         }
         catch (error) {
-            (0, logger_1.logError)(`GetReleaseVersion: failed to get version for issue/PR.`, error instanceof Error ? { stack: error.stack } : undefined);
+            (0, logging_ports_1.logError)(`GetReleaseVersion: failed to get version for issue/PR.`, error instanceof Error ? { stack: error.stack } : undefined);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
                 executed: true,
                 steps: [`Tried to get the release version but there was a problem.`],
-                error: error,
+                errors: [error],
             }));
         }
         return result;
@@ -58798,7 +59151,7 @@ const result_1 = __nccwpck_require__(73817);
 const agent_task_policy_1 = __nccwpck_require__(85712);
 const agent_response_schemas_1 = __nccwpck_require__(25603);
 const prompts_1 = __nccwpck_require__(69518);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const project_context_instruction_1 = __nccwpck_require__(63907);
 const agent_answer_policy_1 = __nccwpck_require__(72063);
 const think_input_policy_1 = __nccwpck_require__(59687);
@@ -58811,7 +59164,7 @@ class ThinkUseCase {
     }
     async invoke(param) {
         const results = [];
-        (0, logger_1.logInfo)('Think: processing comment (AI Q&A).');
+        (0, logging_ports_1.logInfo)('Think: processing comment (AI Q&A).');
         try {
             const commentBody = (0, think_input_policy_1.getThinkCommentBody)({
                 issueCommentBody: param.issue.commentBody,
@@ -58828,7 +59181,7 @@ class ThinkUseCase {
                 return results;
             }
             if (!param.tokenUser?.trim()) {
-                (0, logger_1.logInfo)('Bot username (tokenUser) not set; skipping Think response.');
+                (0, logging_ports_1.logInfo)('Bot username (tokenUser) not set; skipping Think response.');
                 results.push(new result_1.Result({
                     id: this.taskId,
                     success: true,
@@ -58837,7 +59190,7 @@ class ThinkUseCase {
                 return results;
             }
             if (!commentBody.includes(`@${param.tokenUser}`)) {
-                (0, logger_1.logInfo)(`Comment does not mention @${param.tokenUser}; skipping.`);
+                (0, logging_ports_1.logInfo)(`Comment does not mention @${param.tokenUser}; skipping.`);
                 results.push(new result_1.Result({
                     id: this.taskId,
                     success: true,
@@ -58874,13 +59227,13 @@ class ThinkUseCase {
             const contextBlock = issueDescription
                 ? `\n\nContext (issue #${issueNumberForContext} description):\n${issueDescription}\n\n`
                 : '\n\n';
-            (0, logger_1.logDebugInfo)(`Think: question length=${question.length}, issue context length=${issueDescription.length}. Full question:\n${question}`);
+            (0, logging_ports_1.logDebugInfo)(`Think: question length=${question.length}, issue context length=${issueDescription.length}. Full question:\n${question}`);
             const prompt = (0, prompts_1.getThinkPrompt)({
                 projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
                 contextBlock,
                 question,
             });
-            (0, logger_1.logDebugInfo)(`Think: calling configured agent (prompt length=${prompt.length}).`);
+            (0, logging_ports_1.logDebugInfo)(`Think: calling configured agent (prompt length=${prompt.length}).`);
             const response = await this.aiRepository.query({
                 configuration: param.ai?.getAgentConfiguration('findings'),
                 agentId: agent_task_policy_1.AGENT_PLAN,
@@ -58892,9 +59245,9 @@ class ThinkUseCase {
                 },
             });
             const answer = (0, agent_answer_policy_1.extractStructuredAnswer)(response);
-            (0, logger_1.logDebugInfo)(`Think: agent response received. Answer length=${answer.length}. Full answer:\n${answer}`);
+            (0, logging_ports_1.logDebugInfo)(`Think: agent response received. Answer length=${answer.length}. Full answer:\n${answer}`);
             if (!answer) {
-                (0, logger_1.logError)('Configured agent returned no answer for Think.');
+                (0, logging_ports_1.logError)('Configured agent returned no answer for Think.');
                 results.push(new result_1.Result({
                     id: this.taskId,
                     success: false,
@@ -58907,7 +59260,7 @@ class ThinkUseCase {
                 ? param.issue.number
                 : param.pullRequest.number;
             if (issueOrPrNumber <= 0) {
-                (0, logger_1.logError)('Issue or PR number not available for adding comment.');
+                (0, logging_ports_1.logError)('Issue or PR number not available for adding comment.');
                 results.push(new result_1.Result({
                     id: this.taskId,
                     success: false,
@@ -58917,7 +59270,7 @@ class ThinkUseCase {
                 return results;
             }
             await this.issueNotificationPort.addComment(param.owner, param.repo, issueOrPrNumber, answer.trim(), param.tokens.token);
-            (0, logger_1.logInfo)(`Think response posted to ${param.issue.isIssueComment ? 'issue' : 'PR'} #${issueOrPrNumber}.`);
+            (0, logging_ports_1.logInfo)(`Think response posted to ${param.issue.isIssueComment ? 'issue' : 'PR'} #${issueOrPrNumber}.`);
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: true,
@@ -58925,7 +59278,7 @@ class ThinkUseCase {
             }));
         }
         catch (error) {
-            (0, logger_1.logError)(`Error in ThinkUseCase: ${error}`);
+            (0, logging_ports_1.logError)(`Error in ThinkUseCase: ${error}`);
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -58949,7 +59302,7 @@ exports.ThinkUseCase = ThinkUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateTitleUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 class UpdateTitleUseCase {
     constructor(issueRepository) {
@@ -58957,7 +59310,7 @@ class UpdateTitleUseCase {
         this.taskId = 'UpdateTitleUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         try {
             if (param.isIssue) {
@@ -59047,7 +59400,7 @@ class UpdateTitleUseCase {
                 steps: [
                     `Tried to update title, but there was a problem.`,
                 ],
-                error: error,
+                errors: [error],
             }));
         }
         return result;
@@ -59075,7 +59428,7 @@ const result_1 = __nccwpck_require__(73817);
 const agent_task_policy_1 = __nccwpck_require__(85712);
 const agent_response_schemas_1 = __nccwpck_require__(25603);
 const prompts_1 = __nccwpck_require__(69518);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const project_context_instruction_1 = __nccwpck_require__(63907);
 const task_emoji_1 = __nccwpck_require__(46103);
 const agent_answer_policy_1 = __nccwpck_require__(72063);
@@ -59087,7 +59440,7 @@ class AnswerIssueHelpUseCase {
     }
     async invoke(param) {
         const results = [];
-        (0, logger_1.logInfo)('AnswerIssueHelp: checking if initial help reply is needed (AI).');
+        (0, logging_ports_1.logInfo)('AnswerIssueHelp: checking if initial help reply is needed (AI).');
         try {
             if (!param.issue.opened) {
                 results.push(new result_1.Result({
@@ -59106,7 +59459,7 @@ class AnswerIssueHelpUseCase {
                 return results;
             }
             if (!(0, agent_1.isAgentConfigurationReady)(param.ai?.getAgentConfiguration('findings'))) {
-                (0, logger_1.logInfo)('Agent not configured; skipping initial help reply.');
+                (0, logging_ports_1.logInfo)('Agent not configured; skipping initial help reply.');
                 results.push(new result_1.Result({
                     id: this.taskId,
                     success: true,
@@ -59125,7 +59478,7 @@ class AnswerIssueHelpUseCase {
             }
             const description = (param.issue.body ?? '').trim();
             if (!description) {
-                (0, logger_1.logInfo)('Issue has no body; skipping initial help reply.');
+                (0, logging_ports_1.logInfo)('Issue has no body; skipping initial help reply.');
                 results.push(new result_1.Result({
                     id: this.taskId,
                     success: true,
@@ -59133,12 +59486,12 @@ class AnswerIssueHelpUseCase {
                 }));
                 return results;
             }
-            (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Posting initial help reply for question/help issue #${issueNumber}.`);
+            (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Posting initial help reply for question/help issue #${issueNumber}.`);
             const prompt = (0, prompts_1.getAnswerIssueHelpPrompt)({
                 description,
                 projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
             });
-            (0, logger_1.logDebugInfo)(`AnswerIssueHelp: prompt length=${prompt.length}, issue description length=${description.length}. Calling configured agent.`);
+            (0, logging_ports_1.logDebugInfo)(`AnswerIssueHelp: prompt length=${prompt.length}, issue description length=${description.length}. Calling configured agent.`);
             const response = await this.aiRepository.query({
                 configuration: param.ai?.getAgentConfiguration('findings'),
                 agentId: agent_task_policy_1.AGENT_PLAN,
@@ -59150,9 +59503,9 @@ class AnswerIssueHelpUseCase {
                 },
             });
             const answer = (0, agent_answer_policy_1.extractStructuredAnswer)(response);
-            (0, logger_1.logDebugInfo)(`AnswerIssueHelp: agent response. Answer length=${answer.length}. Full answer:\n${answer}`);
+            (0, logging_ports_1.logDebugInfo)(`AnswerIssueHelp: agent response. Answer length=${answer.length}. Full answer:\n${answer}`);
             if (!answer) {
-                (0, logger_1.logError)('Configured agent returned no answer for initial help.');
+                (0, logging_ports_1.logError)('Configured agent returned no answer for initial help.');
                 results.push(new result_1.Result({
                     id: this.taskId,
                     success: false,
@@ -59162,7 +59515,7 @@ class AnswerIssueHelpUseCase {
                 return results;
             }
             await this.issueNotificationPort.addComment(param.owner, param.repo, issueNumber, answer, param.tokens.token);
-            (0, logger_1.logInfo)(`Initial help reply posted to issue #${issueNumber}.`);
+            (0, logging_ports_1.logInfo)(`Initial help reply posted to issue #${issueNumber}.`);
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: true,
@@ -59170,7 +59523,7 @@ class AnswerIssueHelpUseCase {
             }));
         }
         catch (error) {
-            (0, logger_1.logError)(`Error in ${this.taskId}: ${error}`);
+            (0, logging_ports_1.logError)(`Error in ${this.taskId}: ${error}`);
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -59194,8 +59547,17 @@ exports.AnswerIssueHelpUseCase = AnswerIssueHelpUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AssignMemberToIssueUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
+const assignee_assignment_policy_1 = __nccwpck_require__(85918);
+function assignmentResult(taskId, success, step) {
+    return new result_1.Result({
+        id: taskId,
+        success,
+        executed: true,
+        steps: step ? [step] : [],
+    });
+}
 class AssignMemberToIssueUseCase {
     constructor(issueRepository, projectRepository) {
         this.issueRepository = issueRepository;
@@ -59203,51 +59565,21 @@ class AssignMemberToIssueUseCase {
         this.taskId = 'AssignMemberToIssueUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
-        const desiredAssigneesCount = param.isIssue ?
-            param.issue.desiredAssigneesCount : param.pullRequest.desiredAssigneesCount;
-        const number = param.isIssue ? param.issue.number : param.pullRequest.number;
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        const target = (0, assignee_assignment_policy_1.resolveAssigneeTarget)(param);
         const result = [];
         try {
-            (0, logger_1.logDebugInfo)(`#${number} needs ${desiredAssigneesCount} assignees.`);
+            (0, logging_ports_1.logDebugInfo)(`#${target.number} needs ${target.desiredCount} assignees.`);
             const currentProjectMembers = await this.projectRepository.getAllMembers(param.owner, param.tokens.token);
-            const currentMembers = await this.issueRepository.getCurrentAssignees(param.owner, param.repo, number, param.tokens.token);
-            let remainingAssignees = desiredAssigneesCount - currentMembers.length;
-            const pullRequestCreatorIsTeamMember = param.isPullRequest
-                && param.pullRequest.creator.length > 0
-                && currentProjectMembers.indexOf(param.pullRequest.creator) > -1
-                && !currentMembers.includes(param.pullRequest.creator);
-            const issueCreatorIsTeamMember = param.isIssue
-                && param.issue.creator.length > 0
-                && currentProjectMembers.indexOf(param.issue.creator) > -1
-                && !currentMembers.includes(param.issue.creator);
-            /**
-             * Assign PR creator if applicable
-             */
-            if (pullRequestCreatorIsTeamMember) {
-                const creator = param.pullRequest.creator;
-                await this.issueRepository.assignMembersToIssue(param.owner, param.repo, number, [creator], param.tokens.token);
-                (0, logger_1.logDebugInfo)(`Assigned PR creator @${creator} to #${number}.`);
-                result.push(new result_1.Result({
-                    id: this.taskId,
-                    success: true,
-                    executed: true,
-                    steps: [`The pull request was assigned to @${creator} (creator).`],
-                }));
-                remainingAssignees--; // Reduce the count of required assignees
+            const currentMembers = await this.issueRepository.getCurrentAssignees(param.owner, param.repo, target.number, param.tokens.token);
+            const creatorAssignment = (0, assignee_assignment_policy_1.resolveCreatorAssignment)(param, currentProjectMembers, currentMembers);
+            if (creatorAssignment) {
+                const { login: creator, source } = creatorAssignment;
+                await this.issueRepository.assignMembersToIssue(param.owner, param.repo, target.number, [creator], param.tokens.token);
+                (0, logging_ports_1.logDebugInfo)(`Assigned ${source} creator @${creator} to #${target.number}.`);
+                result.push(assignmentResult(this.taskId, true, `The ${source} was assigned to @${creator} (creator).`));
             }
-            else if (issueCreatorIsTeamMember) {
-                const creator = param.issue.creator;
-                await this.issueRepository.assignMembersToIssue(param.owner, param.repo, number, [creator], param.tokens.token);
-                (0, logger_1.logDebugInfo)(`Assigned Issue creator @${creator} to #${number}.`);
-                result.push(new result_1.Result({
-                    id: this.taskId,
-                    success: true,
-                    executed: true,
-                    steps: [`The issue was assigned to @${creator} (creator).`],
-                }));
-                remainingAssignees--; // Reduce the count of required assignees
-            }
+            const remainingAssignees = (0, assignee_assignment_policy_1.calculateRemainingAssignees)(target.desiredCount, currentMembers.length, creatorAssignment !== undefined);
             /**
              * Exit if no more assignees are needed
              */
@@ -59272,29 +59604,20 @@ class AssignMemberToIssueUseCase {
                 }));
                 return result;
             }
-            const membersAdded = await this.issueRepository.assignMembersToIssue(param.owner, param.repo, number, members, param.tokens.token);
-            for (const member of membersAdded) {
-                if (members.includes(member)) {
-                    result.push(new result_1.Result({
-                        id: this.taskId,
-                        success: true,
-                        executed: true,
-                        steps: [
-                            param.isIssue ? `The issue was assigned to @${member}.` : `The pull request was assigned to @${member}.`,
-                        ],
-                    }));
-                }
+            const membersAdded = await this.issueRepository.assignMembersToIssue(param.owner, param.repo, target.number, members, param.tokens.token);
+            for (const member of (0, assignee_assignment_policy_1.selectConfirmedAssignees)(members, membersAdded)) {
+                result.push(assignmentResult(this.taskId, true, `${param.isIssue ? 'The issue' : 'The pull request'} was assigned to @${member}.`));
             }
             return result;
         }
         catch (error) {
-            (0, logger_1.logError)(error);
+            (0, logging_ports_1.logError)(error);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
                 executed: true,
                 steps: [`Tried to assign members to issue.`],
-                error: error,
+                errors: [error],
             }));
         }
         return result;
@@ -59314,17 +59637,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AssignReviewersToIssueUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
 const pull_request_review_errors_1 = __nccwpck_require__(46445);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
-function uniqueLogins(logins) {
-    const identities = new Map();
-    for (const login of logins) {
-        const identity = login.toLowerCase();
-        if (!identities.has(identity))
-            identities.set(identity, login);
-    }
-    return [...identities.values()];
-}
+const reviewer_assignment_policy_1 = __nccwpck_require__(88350);
 class AssignReviewersToIssueUseCase {
     constructor(issueRepository, pullRequestRepository, projectRepository) {
         this.issueRepository = issueRepository;
@@ -59333,12 +59648,12 @@ class AssignReviewersToIssueUseCase {
         this.taskId = "AssignReviewersToIssueUseCase";
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const desiredReviewersCount = param.pullRequest.desiredReviewersCount;
         const number = param.pullRequest.number;
         const result = [];
         try {
-            (0, logger_1.logDebugInfo)(`#${number} needs ${desiredReviewersCount} reviewers.`);
+            (0, logging_ports_1.logDebugInfo)(`#${number} needs ${desiredReviewersCount} reviewers.`);
             if (desiredReviewersCount <= 0) {
                 result.push(new result_1.Result({
                     id: this.taskId,
@@ -59347,7 +59662,7 @@ class AssignReviewersToIssueUseCase {
                 }));
                 return result;
             }
-            const currentReviewers = uniqueLogins(await this.pullRequestRepository.getCurrentReviewers(param.owner, param.repo, number, param.tokens.token));
+            const currentReviewers = (0, reviewer_assignment_policy_1.uniqueLogins)(await this.pullRequestRepository.getCurrentReviewers(param.owner, param.repo, number, param.tokens.token));
             if (currentReviewers.length >= desiredReviewersCount) {
                 /**
                  * No more assignees needed
@@ -59359,17 +59674,11 @@ class AssignReviewersToIssueUseCase {
                 }));
                 return result;
             }
-            const currentAssignees = uniqueLogins(await this.issueRepository.getCurrentAssignees(param.owner, param.repo, number, param.tokens.token));
+            const currentAssignees = (0, reviewer_assignment_policy_1.uniqueLogins)(await this.issueRepository.getCurrentAssignees(param.owner, param.repo, number, param.tokens.token));
             const missingReviewers = desiredReviewersCount - currentReviewers.length;
-            (0, logger_1.logDebugInfo)(`#${number} needs ${missingReviewers} more reviewers.`);
-            const excludeForReview = [];
-            excludeForReview.push(param.pullRequest.creator);
-            excludeForReview.push(...currentReviewers);
-            excludeForReview.push(...currentAssignees);
-            const excludedIdentities = new Set(excludeForReview.map((login) => login.toLowerCase()));
-            const members = uniqueLogins(await this.projectRepository.getRandomMembers(param.owner, missingReviewers, excludeForReview, param.tokens.token))
-                .filter((member) => !excludedIdentities.has(member.toLowerCase()))
-                .slice(0, missingReviewers);
+            (0, logging_ports_1.logDebugInfo)(`#${number} needs ${missingReviewers} more reviewers.`);
+            const excludeForReview = (0, reviewer_assignment_policy_1.buildReviewerExclusions)(param.pullRequest.creator, currentReviewers, currentAssignees);
+            const members = (0, reviewer_assignment_policy_1.selectEligibleReviewers)(await this.projectRepository.getRandomMembers(param.owner, missingReviewers, excludeForReview, param.tokens.token), excludeForReview, missingReviewers);
             if (members.length === 0) {
                 result.push(new result_1.Result({
                     id: this.taskId,
@@ -59382,17 +59691,7 @@ class AssignReviewersToIssueUseCase {
                 return result;
             }
             const reviewersAdded = await this.pullRequestRepository.addReviewersToPullRequest(param.owner, param.repo, number, members, param.tokens.token);
-            const requestedMemberLogins = new Set(members.map((member) => member.toLowerCase()));
-            const confirmedReviewerLogins = new Set();
-            const confirmedReviewers = reviewersAdded.filter((member) => {
-                const normalizedLogin = member.toLowerCase();
-                if (!requestedMemberLogins.has(normalizedLogin) ||
-                    confirmedReviewerLogins.has(normalizedLogin)) {
-                    return false;
-                }
-                confirmedReviewerLogins.add(normalizedLogin);
-                return true;
-            });
+            const confirmedReviewers = (0, reviewer_assignment_policy_1.selectConfirmedReviewers)(members, reviewersAdded);
             if (confirmedReviewers.length === 0) {
                 result.push(new result_1.Result({
                     id: this.taskId,
@@ -59412,9 +59711,7 @@ class AssignReviewersToIssueUseCase {
                     steps: [`@${member} was requested to review the pull request.`],
                 }));
             }
-            const reviewersStillNeeded = Math.max(desiredReviewersCount -
-                currentReviewers.length -
-                confirmedReviewers.length, 0);
+            const reviewersStillNeeded = (0, reviewer_assignment_policy_1.calculateReviewersStillNeeded)(desiredReviewersCount, currentReviewers.length, confirmedReviewers.length);
             if (reviewersStillNeeded > 0) {
                 result.push(new result_1.Result({
                     id: this.taskId,
@@ -59429,7 +59726,7 @@ class AssignReviewersToIssueUseCase {
         }
         catch (error) {
             const normalizedError = (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "assign-reviewers");
-            (0, logger_1.logError)(normalizedError);
+            (0, logging_ports_1.logError)(normalizedError);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -59475,7 +59772,7 @@ function selectBranchPreparationStrategy(flags) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CheckPriorityIssueSizeUseCase = void 0;
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const priority_size_check_use_case_1 = __nccwpck_require__(98060);
 class CheckPriorityIssueSizeUseCase {
@@ -59484,7 +59781,7 @@ class CheckPriorityIssueSizeUseCase {
         this.taskId = 'CheckPriorityIssueSizeUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         return (0, priority_size_check_use_case_1.runPrioritySizeCheck)(param, this.taskId, param.issueNumber, this.projectBoardPriorityPort);
     }
 }
@@ -59501,7 +59798,7 @@ exports.CheckPriorityIssueSizeUseCase = CheckPriorityIssueSizeUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CloseIssueAfterMergingUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 class CloseIssueAfterMergingUseCase {
     constructor(issueRepository) {
@@ -59509,12 +59806,12 @@ class CloseIssueAfterMergingUseCase {
         this.taskId = 'CloseIssueAfterMergingUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         try {
             const closed = await this.issueRepository.closeIssue(param.owner, param.repo, param.issueNumber, param.tokens.token);
             if (closed) {
-                (0, logger_1.logInfo)(`Issue #${param.issueNumber} closed after merging PR #${param.pullRequest.number}.`);
+                (0, logging_ports_1.logInfo)(`Issue #${param.issueNumber} closed after merging PR #${param.pullRequest.number}.`);
                 await this.issueRepository.addComment(param.owner, param.repo, param.issueNumber, `This issue was closed after merging #${param.pullRequest.number}.`, param.tokens.token);
                 result.push(new result_1.Result({
                     id: this.taskId,
@@ -59526,7 +59823,7 @@ class CloseIssueAfterMergingUseCase {
                 }));
             }
             else {
-                (0, logger_1.logDebugInfo)(`Issue #${param.issueNumber} was already closed or close failed after merge.`);
+                (0, logging_ports_1.logDebugInfo)(`Issue #${param.issueNumber} was already closed or close failed after merge.`);
                 result.push(new result_1.Result({
                     id: this.taskId,
                     success: true,
@@ -59535,7 +59832,7 @@ class CloseIssueAfterMergingUseCase {
             }
         }
         catch (error) {
-            (0, logger_1.logError)(`CloseIssueAfterMerging: failed to close issue #${param.issueNumber}.`, error instanceof Error ? { stack: error.stack } : undefined);
+            (0, logging_ports_1.logError)(`CloseIssueAfterMerging: failed to close issue #${param.issueNumber}.`, error instanceof Error ? { stack: error.stack } : undefined);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -59543,7 +59840,7 @@ class CloseIssueAfterMergingUseCase {
                 steps: [
                     `Tried to close issue #${param.issueNumber}, but there was a problem.`,
                 ],
-                error: error,
+                errors: [error],
             }));
         }
         return result;
@@ -59562,7 +59859,7 @@ exports.CloseIssueAfterMergingUseCase = CloseIssueAfterMergingUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CloseNotAllowedIssueUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 class CloseNotAllowedIssueUseCase {
     constructor(issueRepository) {
@@ -59570,12 +59867,12 @@ class CloseNotAllowedIssueUseCase {
         this.taskId = 'CloseNotAllowedIssueUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         try {
             const closed = await this.issueRepository.closeIssue(param.owner, param.repo, param.issueNumber, param.tokens.token);
             if (closed) {
-                (0, logger_1.logInfo)(`Issue #${param.issueNumber} closed (author not allowed). Adding comment.`);
+                (0, logging_ports_1.logInfo)(`Issue #${param.issueNumber} closed (author not allowed). Adding comment.`);
                 await this.issueRepository.addComment(param.owner, param.repo, param.issueNumber, `This issue has been closed because the author is not a member of the project. The user may be banned if the fact is repeated.`, param.tokens.token);
                 result.push(new result_1.Result({
                     id: this.taskId,
@@ -59587,7 +59884,7 @@ class CloseNotAllowedIssueUseCase {
                 }));
             }
             else {
-                (0, logger_1.logDebugInfo)(`Issue #${param.issueNumber} was already closed or close failed.`);
+                (0, logging_ports_1.logDebugInfo)(`Issue #${param.issueNumber} was already closed or close failed.`);
                 result.push(new result_1.Result({
                     id: this.taskId,
                     success: true,
@@ -59596,7 +59893,7 @@ class CloseNotAllowedIssueUseCase {
             }
         }
         catch (error) {
-            (0, logger_1.logError)(`CloseNotAllowedIssue: failed to close issue #${param.issueNumber}.`, error instanceof Error ? { stack: error.stack } : undefined);
+            (0, logging_ports_1.logError)(`CloseNotAllowedIssue: failed to close issue #${param.issueNumber}.`, error instanceof Error ? { stack: error.stack } : undefined);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -59604,7 +59901,7 @@ class CloseNotAllowedIssueUseCase {
                 steps: [
                     `Tried to close issue #${param.issueNumber}, but there was a problem.`,
                 ],
-                error: error,
+                errors: [error],
             }));
         }
         return result;
@@ -59624,23 +59921,22 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DeployAddedUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
 const content_utils_1 = __nccwpck_require__(92816);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
-const move_issue_to_in_progress_1 = __nccwpck_require__(52309);
 class DeployAddedUseCase {
-    constructor(projectBoardPort, branchWorkflowPort) {
-        this.projectBoardPort = projectBoardPort;
+    constructor(branchWorkflowPort, moveIssueToInProgressUseCase) {
         this.branchWorkflowPort = branchWorkflowPort;
+        this.moveIssueToInProgressUseCase = moveIssueToInProgressUseCase;
         this.taskId = 'DeployAddedUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         try {
             if (param.issue.labeled && param.issue.labelAdded === param.labels.deploy) {
-                (0, logger_1.logDebugInfo)(`Deploying requested.`);
+                (0, logging_ports_1.logDebugInfo)(`Deploying requested.`);
                 if (param.release.active && param.release.branch !== undefined) {
-                    result.push(...await new move_issue_to_in_progress_1.MoveIssueToInProgressUseCase(this.projectBoardPort).invoke(param));
+                    result.push(...await this.moveIssueToInProgressUseCase.invoke(param));
                     const sanitizedTitle = param.issue.title
                         .replace(/\b\d+(\.\d+){2,}\b/g, '')
                         .replace(/[^\p{L}\p{N}\p{P}\p{Z}^$\n]/gu, '')
@@ -59672,7 +59968,7 @@ ${(0, content_utils_1.injectJsonAsMarkdownBlock)('Workflow Parameters', paramete
                     }));
                 }
                 else if (param.hotfix.active && param.hotfix.branch !== undefined) {
-                    result.push(...await new move_issue_to_in_progress_1.MoveIssueToInProgressUseCase(this.projectBoardPort).invoke(param));
+                    result.push(...await this.moveIssueToInProgressUseCase.invoke(param));
                     const sanitizedTitle = param.issue.title
                         .replace(/\b\d+(\.\d+){2,}\b/g, '')
                         .replace(/[^\p{L}\p{N}\p{P}\p{Z}^$\n]/gu, '')
@@ -59713,7 +60009,7 @@ ${(0, content_utils_1.injectJsonAsMarkdownBlock)('Workflow Parameters', paramete
             }
         }
         catch (error) {
-            (0, logger_1.logError)(error);
+            (0, logging_ports_1.logError)(error);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -59742,18 +60038,18 @@ exports.DeployAddedUseCase = DeployAddedUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DeployedAddedUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 class DeployedAddedUseCase {
     constructor() {
         this.taskId = 'DeployedAddedUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         try {
             if (param.issue.labeled && param.issue.labelAdded === param.labels.deployed) {
-                (0, logger_1.logDebugInfo)(`Deploy complete.`);
+                (0, logging_ports_1.logDebugInfo)(`Deploy complete.`);
                 if (param.release.active && param.release.branch !== undefined) {
                     const releaseUrl = `https://github.com/${param.owner}/${param.repo}/tree/${param.release.branch}`;
                     result.push(new result_1.Result({
@@ -59786,7 +60082,7 @@ class DeployedAddedUseCase {
             }
         }
         catch (error) {
-            (0, logger_1.logError)(error);
+            (0, logging_ports_1.logError)(error);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -59815,22 +60111,23 @@ exports.DeployedAddedUseCase = DeployedAddedUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LinkIssueProjectUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 class LinkIssueProjectUseCase {
-    constructor(issueRepository, projectCommandRepository, projectLinkRepository) {
+    constructor(issueRepository, projectCommandRepository, projectLinkRepository, eventualConsistencyDelayPort) {
         this.issueRepository = issueRepository;
         this.projectCommandRepository = projectCommandRepository;
         this.projectLinkRepository = projectLinkRepository;
+        this.eventualConsistencyDelayPort = eventualConsistencyDelayPort;
         this.taskId = 'LinkIssueProjectUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         const columnName = param.project.getProjectColumnIssueCreated();
         const projects = param.project.getProjects();
         if (projects.length === 0) {
-            (0, logger_1.logDebugInfo)('LinkIssueProject: no projects configured; skipping.');
+            (0, logging_ports_1.logDebugInfo)('LinkIssueProject: no projects configured; skipping.');
             return result;
         }
         try {
@@ -59841,7 +60138,7 @@ class LinkIssueProjectUseCase {
                     /**
                      * Wait for 10 seconds to ensure the issue is linked to the project
                      */
-                    await new Promise(resolve => setTimeout(resolve, 10000));
+                    await this.eventualConsistencyDelayPort.wait(10000);
                     actionDone = await this.projectCommandRepository.moveIssueToColumn(project, param.owner, param.repo, param.issue.number, columnName, param.tokens.token);
                     if (actionDone) {
                         result.push(new result_1.Result({
@@ -59854,7 +60151,7 @@ class LinkIssueProjectUseCase {
                         }));
                     }
                     else {
-                        (0, logger_1.logWarn)(`LinkIssueProject: linked issue to project "${project?.title}" but move to column "${columnName}" failed.`);
+                        (0, logging_ports_1.logWarn)(`LinkIssueProject: linked issue to project "${project?.title}" but move to column "${columnName}" failed.`);
                         result.push(new result_1.Result({
                             id: this.taskId,
                             success: true,
@@ -59864,13 +60161,13 @@ class LinkIssueProjectUseCase {
                     }
                 }
                 else {
-                    (0, logger_1.logDebugInfo)(`LinkIssueProject: issue already linked to project "${project?.title}" or link failed.`);
+                    (0, logging_ports_1.logDebugInfo)(`LinkIssueProject: issue already linked to project "${project?.title}" or link failed.`);
                 }
             }
             return result;
         }
         catch (error) {
-            (0, logger_1.logError)(error);
+            (0, logging_ports_1.logError)(error);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -59878,7 +60175,7 @@ class LinkIssueProjectUseCase {
                 steps: [
                     `Tried to link issue to project, but there was a problem.`,
                 ],
-                error: error,
+                errors: [error],
             }));
         }
         return result;
@@ -59897,7 +60194,7 @@ exports.LinkIssueProjectUseCase = LinkIssueProjectUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MoveIssueToInProgressUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 class MoveIssueToInProgressUseCase {
     constructor(projectRepository) {
@@ -59905,7 +60202,7 @@ class MoveIssueToInProgressUseCase {
         this.taskId = 'MoveIssueToInProgressUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         const columnName = param.project.getProjectColumnIssueInProgress();
         try {
@@ -59924,7 +60221,7 @@ class MoveIssueToInProgressUseCase {
             }
         }
         catch (error) {
-            (0, logger_1.logError)(error);
+            (0, logging_ports_1.logError)(error);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -59954,26 +60251,25 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PrepareBranchesUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
 const branch_preparation_policy_1 = __nccwpck_require__(97307);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const execute_script_use_case_1 = __nccwpck_require__(65440);
 const branch_preparation_strategy_1 = __nccwpck_require__(29988);
-const move_issue_to_in_progress_1 = __nccwpck_require__(52309);
 const prepare_hotfix_branch_1 = __nccwpck_require__(96318);
 const prepare_release_branch_1 = __nccwpck_require__(83059);
 class PrepareBranchesUseCase {
-    constructor(projectBoardPort, branchListQueryPort, branchNamePort, remoteBranchSyncPort, commitTagQueryPort, linkedBranchCommandPort, branchPropagationDelayPort) {
-        this.projectBoardPort = projectBoardPort;
+    constructor(branchListQueryPort, branchNamePort, remoteBranchSyncPort, commitTagQueryPort, linkedBranchCommandPort, branchPropagationDelayPort, moveIssueToInProgressUseCase) {
         this.branchListQueryPort = branchListQueryPort;
         this.branchNamePort = branchNamePort;
         this.remoteBranchSyncPort = remoteBranchSyncPort;
         this.commitTagQueryPort = commitTagQueryPort;
         this.linkedBranchCommandPort = linkedBranchCommandPort;
         this.branchPropagationDelayPort = branchPropagationDelayPort;
+        this.moveIssueToInProgressUseCase = moveIssueToInProgressUseCase;
         this.taskId = "PrepareBranchesUseCase";
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         try {
             const issueTitle = param.issue.title ?? "";
@@ -59995,7 +60291,7 @@ class PrepareBranchesUseCase {
                 reminders: ["Take a coffee break while you work ☕."],
             }));
             const branches = await this.branchListQueryPort.getListOfBranches(param.owner, param.repo, param.tokens.token);
-            branches.forEach((branch) => (0, logger_1.logDebugInfo)(`- ${branch}`));
+            branches.forEach((branch) => (0, logging_ports_1.logDebugInfo)(`- ${branch}`));
             const strategy = (0, branch_preparation_strategy_1.selectBranchPreparationStrategy)({
                 hotfixActive: param.hotfix.active,
                 releaseActive: param.release.active,
@@ -60010,7 +60306,7 @@ class PrepareBranchesUseCase {
             return result;
         }
         catch (error) {
-            (0, logger_1.logError)(`PrepareBranches: error preparing branches for issue #${param.issueNumber}.`, error instanceof Error ? { stack: error.stack } : undefined);
+            (0, logging_ports_1.logError)(`PrepareBranches: error preparing branches for issue #${param.issueNumber}.`, error instanceof Error ? { stack: error.stack } : undefined);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -60024,7 +60320,7 @@ class PrepareBranchesUseCase {
         }
     }
     async prepareManagedBranch(param, issueTitle, branches) {
-        (0, logger_1.logDebugInfo)(`Branch type: ${param.managementBranch}`);
+        (0, logging_ports_1.logDebugInfo)(`Branch type: ${param.managementBranch}`);
         const decision = (0, branch_preparation_policy_1.decideManagedBranchPreparation)({
             availableBranches: branches,
             issueNumber: param.issueNumber,
@@ -60053,20 +60349,25 @@ class PrepareBranchesUseCase {
         const lastAction = branchesResult.at(-1);
         if (!lastAction?.success || !lastAction.executed)
             return branchesResult;
-        const branchName = lastAction.payload?.newBranchName;
-        if (typeof branchName !== "string" || branchName.length === 0)
+        const branchPayload = (0, result_1.getResultPayload)(lastAction.payload);
+        const branchName = branchPayload?.newBranchName;
+        if (typeof branchName !== "string" ||
+            branchName.length === 0 ||
+            typeof branchPayload?.baseBranchName !== "string" ||
+            typeof branchPayload.baseBranchUrl !== "string" ||
+            typeof branchPayload.newBranchUrl !== "string")
             return branchesResult;
         param.currentConfiguration.workingBranch = branchName;
         const commitPrefix = await this.buildCommitPrefix(param, branchName);
         const developmentUrl = `https://github.com/${param.owner}/${param.repo}/tree/${param.branches.development}`;
         const step = decision.isRename
-            ? `The branch **${lastAction.payload.baseBranchName}** was renamed to [**${branchName}**](${lastAction.payload.newBranchUrl}).`
-            : `The branch [**${lastAction.payload.baseBranchName}**](${lastAction.payload.baseBranchUrl}) was used to create [**${branchName}**](${lastAction.payload.newBranchUrl}).`;
+            ? `The branch **${branchPayload.baseBranchName}** was renamed to [**${branchName}**](${branchPayload.newBranchUrl}).`
+            : `The branch [**${branchPayload.baseBranchName}**](${branchPayload.baseBranchUrl}) was used to create [**${branchName}**](${branchPayload.newBranchUrl}).`;
         const inlineCode = "`";
         const fence = "```";
         const reminder = decision.isRename
-            ? `Open a Pull Request from [${inlineCode}${branchName}${inlineCode}](${lastAction.payload.newBranchUrl}) to [${inlineCode}${param.branches.development}${inlineCode}](${developmentUrl}). [New PR](https://github.com/${param.owner}/${param.repo}/compare/${param.branches.development}...${branchName}?expand=1)`
-            : `Open a Pull Request from [${inlineCode}${branchName}${inlineCode}](${lastAction.payload.newBranchUrl}) to [${inlineCode}${lastAction.payload.baseBranchName}${inlineCode}](${lastAction.payload.baseBranchUrl}). [New PR](https://github.com/${param.owner}/${param.repo}/compare/${lastAction.payload.baseBranchName}...${branchName}?expand=1)`;
+            ? `Open a Pull Request from [${inlineCode}${branchName}${inlineCode}](${branchPayload.newBranchUrl}) to [${inlineCode}${param.branches.development}${inlineCode}](${developmentUrl}). [New PR](https://github.com/${param.owner}/${param.repo}/compare/${param.branches.development}...${branchName}?expand=1)`
+            : `Open a Pull Request from [${inlineCode}${branchName}${inlineCode}](${branchPayload.newBranchUrl}) to [${inlineCode}${branchPayload.baseBranchName}${inlineCode}](${branchPayload.baseBranchUrl}). [New PR](https://github.com/${param.owner}/${param.repo}/compare/${branchPayload.baseBranchName}...${branchName}?expand=1)`;
         const reminders = [
             `Check out the branch:\n> ${fence}bash\n> git fetch -v && git checkout ${branchName}\n> ${fence}`,
             ...(commitPrefix
@@ -60086,15 +60387,14 @@ class PrepareBranchesUseCase {
             }),
         ];
         await this.branchPropagationDelayPort.waitForLinkedBranch();
-        result.push(...(await new move_issue_to_in_progress_1.MoveIssueToInProgressUseCase(this.projectBoardPort).invoke(param)));
+        result.push(...(await this.moveIssueToInProgressUseCase.invoke(param)));
         return result;
     }
     async buildCommitPrefix(param, branchName) {
         if (!param.commitPrefixBuilder)
             return "";
         param.commitPrefixBuilderParams = { branchName };
-        const results = await new execute_script_use_case_1.CommitPrefixBuilderUseCase().invoke(param);
-        return results.at(-1)?.payload?.scriptResult?.toString() ?? "";
+        return (0, execute_script_use_case_1.buildCommitPrefix)(branchName, param.commitPrefixBuilder);
     }
 }
 exports.PrepareBranchesUseCase = PrepareBranchesUseCase;
@@ -60110,14 +60410,14 @@ exports.PrepareBranchesUseCase = PrepareBranchesUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.prepareHotfixBranch = prepareHotfixBranch;
 const result_1 = __nccwpck_require__(73817);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 async function prepareHotfixBranch(param, commitTagQuery, linkedBranchCommand, branches, taskId) {
     const { hotfix } = param;
     if (hotfix.baseVersion === undefined ||
         hotfix.version === undefined ||
         hotfix.branch === undefined ||
         hotfix.baseBranch === undefined) {
-        (0, logger_1.logWarn)("PrepareBranches: hotfix requested but no tag or base version found.");
+        (0, logging_ports_1.logWarn)("PrepareBranches: hotfix requested but no tag or base version found.");
         return [
             new result_1.Result({
                 id: taskId,
@@ -60149,7 +60449,7 @@ async function prepareHotfixBranch(param, commitTagQuery, linkedBranchCommand, b
     const lastAction = linkResult.at(-1);
     if (!lastAction?.success)
         return linkResult;
-    (0, logger_1.logDebugInfo)(`Hotfix branch successfully linked to issue: ${JSON.stringify(linkResult)}`);
+    (0, logging_ports_1.logDebugInfo)(`Hotfix branch successfully linked to issue: ${JSON.stringify(linkResult)}`);
     return [
         new result_1.Result({
             id: taskId,
@@ -60174,11 +60474,11 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.prepareReleaseBranch = prepareReleaseBranch;
 const result_1 = __nccwpck_require__(73817);
 const execute_script_use_case_1 = __nccwpck_require__(65440);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 async function prepareReleaseBranch(param, linkedBranchCommand, branches, taskId) {
     const { release } = param;
     if (release.version === undefined || release.branch === undefined) {
-        (0, logger_1.logWarn)("PrepareBranches: release requested but no release version found.");
+        (0, logging_ports_1.logWarn)("PrepareBranches: release requested but no release version found.");
         return [
             new result_1.Result({
                 id: taskId,
@@ -60210,7 +60510,7 @@ async function prepareReleaseBranch(param, linkedBranchCommand, branches, taskId
     const lastAction = linkResult.at(-1);
     if (!lastAction?.success)
         return linkResult;
-    const branchName = lastAction.payload?.newBranchName;
+    const branchName = (0, result_1.getResultPayload)(lastAction.payload)?.newBranchName;
     if (typeof branchName !== "string" || branchName.length === 0) {
         return [
             new result_1.Result({
@@ -60226,13 +60526,13 @@ async function prepareReleaseBranch(param, linkedBranchCommand, branches, taskId
     const reminders = [
         `Before deploying, apply any change needed in [**${release.branch}**](${releaseUrl}):\n> ${fence}bash\n> git fetch -v && git checkout ${release.branch}\n> ${fence}\n>\n> Version files, changelogs..`,
     ];
-    const commitPrefix = await buildCommitPrefix(param, branchName);
+    const commitPrefix = await buildConfiguredCommitPrefix(param, branchName);
     if (commitPrefix)
         reminders.push(`Commit the needed changes with this prefix:\n> ${fence}\n>${commitPrefix}\n> ${fence}`);
     reminders.push(`Create the tag version in [**${release.branch}**](${releaseUrl}).\n> Avoid using ${inlineCode}git merge --squash${inlineCode}, otherwise the created tag will be lost.`);
     reminders.push(`Add the **${param.labels.deploy}** label to run the ${inlineCode}${param.workflows.release}${inlineCode} workflow.`);
     reminders.push(buildReleaseReminder(param, releaseUrl, developmentUrl, mainUrl));
-    (0, logger_1.logDebugInfo)(`Release branch successfully linked to issue: ${JSON.stringify(linkResult)}`);
+    (0, logging_ports_1.logDebugInfo)(`Release branch successfully linked to issue: ${JSON.stringify(linkResult)}`);
     return [
         new result_1.Result({
             id: taskId,
@@ -60245,12 +60545,11 @@ async function prepareReleaseBranch(param, linkedBranchCommand, branches, taskId
         }),
     ];
 }
-async function buildCommitPrefix(param, branchName) {
+async function buildConfiguredCommitPrefix(param, branchName) {
     if (!param.commitPrefixBuilder)
         return "";
     param.commitPrefixBuilderParams = { branchName };
-    const results = await new execute_script_use_case_1.CommitPrefixBuilderUseCase().invoke(param);
-    return results.at(-1)?.payload?.scriptResult?.toString() ?? "";
+    return (0, execute_script_use_case_1.buildCommitPrefix)(branchName, param.commitPrefixBuilder);
 }
 function buildReleaseReminder(param, releaseUrl, developmentUrl, mainUrl) {
     const branch = param.release.branch;
@@ -60269,7 +60568,7 @@ function buildReleaseReminder(param, releaseUrl, developmentUrl, mainUrl) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runPrioritySizeCheck = runPrioritySizeCheck;
 const result_1 = __nccwpck_require__(73817);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 async function runPrioritySizeCheck(param, taskId, contentNumber, projectRepository) {
     const typedParam = param;
     const result = [];
@@ -60289,8 +60588,8 @@ async function runPrioritySizeCheck(param, taskId, contentNumber, projectReposit
         if (!priorityLabel) {
             return [new result_1.Result({ id: taskId, success: true, executed: false })];
         }
-        (0, logger_1.logDebugInfo)(`Priority: ${priority}`);
-        (0, logger_1.logDebugInfo)(`Github Priority Label: ${priorityLabel}`);
+        (0, logging_ports_1.logDebugInfo)(`Priority: ${priority}`);
+        (0, logging_ports_1.logDebugInfo)(`Github Priority Label: ${priorityLabel}`);
         for (const project of projects) {
             const success = await projectRepository.setTaskPriority(project, typedParam.owner, typedParam.repo, contentNumber, priorityLabel, typedParam.tokens.token);
             if (success) {
@@ -60304,7 +60603,7 @@ async function runPrioritySizeCheck(param, taskId, contentNumber, projectReposit
         }
     }
     catch (error) {
-        (0, logger_1.logError)(error);
+        (0, logging_ports_1.logError)(error);
         result.push(new result_1.Result({
             id: taskId,
             success: false,
@@ -60327,7 +60626,7 @@ async function runPrioritySizeCheck(param, taskId, contentNumber, projectReposit
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RemoveIssueBranchesUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 /**
  * Remove any branch created for this issue
@@ -60338,24 +60637,24 @@ class RemoveIssueBranchesUseCase {
         this.taskId = 'RemoveIssueBranchesUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const results = [];
         try {
             const branchTypes = [param.branches.featureTree, param.branches.bugfixTree];
             const branches = await this.branchLifecyclePort.getListOfBranches(param.owner, param.repo, param.tokens.token);
             for (const type of branchTypes) {
-                (0, logger_1.logDebugInfo)(`Checking branch type ${type}`);
+                (0, logging_ports_1.logDebugInfo)(`Checking branch type ${type}`);
                 let branchName = '';
                 const prefix = `${type}/${param.issueNumber}-`;
-                (0, logger_1.logDebugInfo)(`Checking prefix ${prefix}`);
+                (0, logging_ports_1.logDebugInfo)(`Checking prefix ${prefix}`);
                 const matchingBranch = branches.find(branch => branch.indexOf(prefix) > -1);
                 if (!matchingBranch)
                     continue;
                 branchName = matchingBranch;
-                (0, logger_1.logDebugInfo)(`RemoveIssueBranches: attempting to remove branch ${branchName}.`);
+                (0, logging_ports_1.logDebugInfo)(`RemoveIssueBranches: attempting to remove branch ${branchName}.`);
                 const removed = await this.branchLifecyclePort.removeBranch(param.owner, param.repo, branchName, param.tokens.token);
                 if (removed) {
-                    (0, logger_1.logDebugInfo)(`RemoveIssueBranches: removed branch ${branchName}.`);
+                    (0, logging_ports_1.logDebugInfo)(`RemoveIssueBranches: removed branch ${branchName}.`);
                     results.push(new result_1.Result({
                         id: this.taskId,
                         success: true,
@@ -60376,12 +60675,12 @@ class RemoveIssueBranchesUseCase {
                     }
                 }
                 else {
-                    (0, logger_1.logWarn)(`RemoveIssueBranches: failed to remove branch ${branchName}.`);
+                    (0, logging_ports_1.logWarn)(`RemoveIssueBranches: failed to remove branch ${branchName}.`);
                 }
             }
         }
         catch (error) {
-            (0, logger_1.logError)(`RemoveIssueBranches: error removing branches for issue #${param.issueNumber}.`, error instanceof Error ? { stack: error.stack } : undefined);
+            (0, logging_ports_1.logError)(`RemoveIssueBranches: error removing branches for issue #${param.issueNumber}.`, error instanceof Error ? { stack: error.stack } : undefined);
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -60389,7 +60688,7 @@ class RemoveIssueBranchesUseCase {
                 steps: [
                     `Tried to remove issue branches, but there was a problem.`,
                 ],
-                error: error,
+                errors: [error],
             }));
         }
         return results;
@@ -60408,7 +60707,7 @@ exports.RemoveIssueBranchesUseCase = RemoveIssueBranchesUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RemoveNotNeededBranchesUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 class RemoveNotNeededBranchesUseCase {
     constructor(branchLifecyclePort, branchNamePort) {
@@ -60417,7 +60716,7 @@ class RemoveNotNeededBranchesUseCase {
         this.taskId = "RemoveNotNeededBranchesUseCase";
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         try {
             const issueTitle = param.issue.title ?? "";
             if (!issueTitle)
@@ -60439,7 +60738,7 @@ class RemoveNotNeededBranchesUseCase {
                     success: false,
                     executed: true,
                     steps: ["Tried to remove not needed branches related to the issue, but there was a problem."],
-                    error,
+                    errors: [error],
                 }),
             ];
         }
@@ -60468,7 +60767,7 @@ class RemoveNotNeededBranchesUseCase {
                 }),
             ];
         }
-        (0, logger_1.logError)(`Error deleting ${branch}`);
+        (0, logging_ports_1.logError)(`Error deleting ${branch}`);
         return [
             new result_1.Result({
                 id: this.taskId,
@@ -60502,7 +60801,7 @@ exports.RemoveNotNeededBranchesUseCase = RemoveNotNeededBranchesUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.UpdateIssueTypeUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 class UpdateIssueTypeUseCase {
     constructor(issueRepository) {
@@ -60510,13 +60809,13 @@ class UpdateIssueTypeUseCase {
         this.taskId = 'UpdateIssueTypeUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         try {
             await this.issueRepository.setIssueType(param.owner, param.repo, param.issueNumber, param.labels, param.issueTypes, param.tokens.token);
         }
         catch (error) {
-            (0, logger_1.logError)(error);
+            (0, logging_ports_1.logError)(error);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -60524,7 +60823,7 @@ class UpdateIssueTypeUseCase {
                 steps: [
                     `Tried to update issue type, but there was a problem.`,
                 ],
-                error: error,
+                errors: [error],
             }));
         }
         return result;
@@ -60536,17 +60835,16 @@ exports.UpdateIssueTypeUseCase = UpdateIssueTypeUseCase;
 /***/ }),
 
 /***/ 93152:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CheckIssueCommentLanguageUseCase = void 0;
-const comment_language_translation_workflow_1 = __nccwpck_require__(72770);
 class CheckIssueCommentLanguageUseCase {
-    constructor(issueRepository, aiRepository) {
+    constructor(workflow) {
         this.taskId = 'CheckIssueCommentLanguageUseCase';
-        this.workflow = new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(issueRepository, aiRepository);
+        this.workflow = workflow;
     }
     invoke(param) {
         return this.workflow.invoke({
@@ -60574,7 +60872,7 @@ exports.CheckIssueCommentLanguageUseCase = CheckIssueCommentLanguageUseCase;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CheckPriorityPullRequestSizeUseCase = void 0;
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const priority_size_check_use_case_1 = __nccwpck_require__(98060);
 class CheckPriorityPullRequestSizeUseCase {
@@ -60583,7 +60881,7 @@ class CheckPriorityPullRequestSizeUseCase {
         this.taskId = 'CheckPriorityPullRequestSizeUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         return (0, priority_size_check_use_case_1.runPrioritySizeCheck)(param, this.taskId, param.pullRequest.number, this.projectBoardPriorityPort);
     }
 }
@@ -60600,15 +60898,16 @@ exports.CheckPriorityPullRequestSizeUseCase = CheckPriorityPullRequestSizeUseCas
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LinkPullRequestIssueUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 class LinkPullRequestIssueUseCase {
-    constructor(pullRequestIssueLinkPort) {
+    constructor(pullRequestIssueLinkPort, eventualConsistencyDelayPort) {
         this.pullRequestIssueLinkPort = pullRequestIssueLinkPort;
+        this.eventualConsistencyDelayPort = eventualConsistencyDelayPort;
         this.taskId = 'LinkPullRequestIssueUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         try {
             const isLinked = await this.pullRequestIssueLinkPort.isLinked(param.pullRequest.url);
@@ -60642,7 +60941,7 @@ class LinkPullRequestIssueUseCase {
                 /**
                  *  Await 20 seconds
                  */
-                await new Promise(resolve => setTimeout(resolve, 20 * 1000));
+                await this.eventualConsistencyDelayPort.wait(20000);
                 /**
                  *  Restore the original branch
                  */
@@ -60673,7 +60972,7 @@ class LinkPullRequestIssueUseCase {
             }
         }
         catch (error) {
-            (0, logger_1.logError)(error);
+            (0, logging_ports_1.logError)(error);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -60681,7 +60980,7 @@ class LinkPullRequestIssueUseCase {
                 steps: [
                     `Tried to link pull request to project, but there was a problem.`,
                 ],
-                error: error,
+                errors: [error],
             }));
         }
         return result;
@@ -60700,21 +60999,22 @@ exports.LinkPullRequestIssueUseCase = LinkPullRequestIssueUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LinkPullRequestProjectUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 class LinkPullRequestProjectUseCase {
-    constructor(projectBoardCommandPort, projectBoardLinkPort) {
+    constructor(projectBoardCommandPort, projectBoardLinkPort, eventualConsistencyDelayPort) {
         this.projectBoardCommandPort = projectBoardCommandPort;
         this.projectBoardLinkPort = projectBoardLinkPort;
+        this.eventualConsistencyDelayPort = eventualConsistencyDelayPort;
         this.taskId = 'LinkPullRequestProjectUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         const columnName = param.project.getProjectColumnPullRequestCreated();
         const projects = param.project.getProjects();
         if (projects.length === 0) {
-            (0, logger_1.logDebugInfo)('LinkPullRequestProject: no projects configured; skipping.');
+            (0, logging_ports_1.logDebugInfo)('LinkPullRequestProject: no projects configured; skipping.');
             return result;
         }
         try {
@@ -60724,7 +61024,7 @@ class LinkPullRequestProjectUseCase {
                     /**
                      * Wait for 10 seconds to ensure the pull request is linked to the project
                      */
-                    await new Promise(resolve => setTimeout(resolve, 10000));
+                    await this.eventualConsistencyDelayPort.wait(10000);
                     actionDone = await this.projectBoardCommandPort.moveIssueToColumn(project, param.owner, param.repo, param.pullRequest.number, columnName, param.tokens.token);
                     if (actionDone) {
                         result.push(new result_1.Result({
@@ -60737,7 +61037,7 @@ class LinkPullRequestProjectUseCase {
                         }));
                     }
                     else {
-                        (0, logger_1.logWarn)(`LinkPullRequestProject: linked PR to project "${project?.title}" but move to column "${columnName}" failed.`);
+                        (0, logging_ports_1.logWarn)(`LinkPullRequestProject: linked PR to project "${project?.title}" but move to column "${columnName}" failed.`);
                         result.push(new result_1.Result({
                             id: this.taskId,
                             success: false,
@@ -60749,13 +61049,13 @@ class LinkPullRequestProjectUseCase {
                     }
                 }
                 else {
-                    (0, logger_1.logDebugInfo)(`LinkPullRequestProject: PR already linked to project "${project?.title}" or link failed.`);
+                    (0, logging_ports_1.logDebugInfo)(`LinkPullRequestProject: PR already linked to project "${project?.title}" or link failed.`);
                 }
             }
             return result;
         }
         catch (error) {
-            (0, logger_1.logError)(error);
+            (0, logging_ports_1.logError)(error);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -60763,7 +61063,7 @@ class LinkPullRequestProjectUseCase {
                 steps: [
                     `Tried to link pull request to project, but there was a problem.`,
                 ],
-                error: error,
+                errors: [error],
             }));
         }
         return result;
@@ -60783,7 +61083,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SyncSizeAndProgressLabelsFromIssueToPrUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
 const progress_labels_1 = __nccwpck_require__(97890);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 /**
  * Copies size and progress labels from the linked issue to the PR.
@@ -60796,11 +61096,11 @@ class SyncSizeAndProgressLabelsFromIssueToPrUseCase {
         this.taskId = 'SyncSizeAndProgressLabelsFromIssueToPrUseCase';
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         try {
             if (param.issueNumber === -1) {
-                (0, logger_1.logDebugInfo)('No issue linked to this PR. Skipping sync of size/progress labels.');
+                (0, logging_ports_1.logDebugInfo)('No issue linked to this PR. Skipping sync of size/progress labels.');
                 result.push(new result_1.Result({
                     id: this.taskId,
                     success: true,
@@ -60812,7 +61112,7 @@ class SyncSizeAndProgressLabelsFromIssueToPrUseCase {
             const issueLabels = await this.issueLabelsPort.getLabels(param.owner, param.repo, param.issueNumber, param.tokens.token);
             const sizeAndProgressFromIssue = issueLabels.filter((name) => param.labels.sizeLabels.indexOf(name) !== -1 || progress_labels_1.PROGRESS_LABEL_PATTERN.test(name));
             if (sizeAndProgressFromIssue.length === 0) {
-                (0, logger_1.logDebugInfo)(`Issue #${param.issueNumber} has no size or progress labels. Nothing to sync.`);
+                (0, logging_ports_1.logDebugInfo)(`Issue #${param.issueNumber} has no size or progress labels. Nothing to sync.`);
                 result.push(new result_1.Result({
                     id: this.taskId,
                     success: true,
@@ -60831,7 +61131,7 @@ class SyncSizeAndProgressLabelsFromIssueToPrUseCase {
             }
             const nextPrLabels = Array.from(existing);
             await this.issueLabelsPort.setLabels(param.owner, param.repo, prNumber, nextPrLabels, param.tokens.token);
-            (0, logger_1.logDebugInfo)(`Synced size/progress labels from issue #${param.issueNumber} to PR #${prNumber}: ${sizeAndProgressFromIssue.join(', ')}`);
+            (0, logging_ports_1.logDebugInfo)(`Synced size/progress labels from issue #${param.issueNumber} to PR #${prNumber}: ${sizeAndProgressFromIssue.join(', ')}`);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: true,
@@ -60840,7 +61140,7 @@ class SyncSizeAndProgressLabelsFromIssueToPrUseCase {
             }));
         }
         catch (error) {
-            (0, logger_1.logError)(error);
+            (0, logging_ports_1.logError)(error);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -60867,7 +61167,7 @@ exports.UpdatePullRequestDescriptionUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
 const agent_task_policy_1 = __nccwpck_require__(85712);
 const prompts_1 = __nccwpck_require__(69518);
-const logger_1 = __nccwpck_require__(91151);
+const logging_ports_1 = __nccwpck_require__(6152);
 const project_context_instruction_1 = __nccwpck_require__(63907);
 const task_emoji_1 = __nccwpck_require__(46103);
 class UpdatePullRequestDescriptionUseCase {
@@ -60879,7 +61179,7 @@ class UpdatePullRequestDescriptionUseCase {
         this.aiRepository = aiRepository;
     }
     async invoke(param) {
-        (0, logger_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId} (AI PR description).`);
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId} (AI PR description).`);
         const result = [];
         try {
             const prNumber = param.pullRequest.number;
@@ -60896,7 +61196,7 @@ class UpdatePullRequestDescriptionUseCase {
                 }));
                 return result;
             }
-            (0, logger_1.logDebugInfo)(`PR description will be generated from workspace diff: base "${baseBranch}", head "${headBranch}" (configured agent will run git diff).`);
+            (0, logging_ports_1.logDebugInfo)(`PR description will be generated from workspace diff: base "${baseBranch}", head "${headBranch}" (configured agent will run git diff).`);
             const issueDescription = (await this.issueDescriptionQueryPort.getDescription(param.owner, param.repo, param.issueNumber, param.tokens.token)) ?? '';
             if (issueDescription.length === 0) {
                 result.push(new result_1.Result({
@@ -60930,7 +61230,7 @@ class UpdatePullRequestDescriptionUseCase {
                 issueNumber: String(param.issueNumber),
                 issueDescription,
             });
-            (0, logger_1.logDebugInfo)(`UpdatePullRequestDescription: prompt length=${prompt.length}, issue description length=${issueDescription.length}. Calling configured agent.`);
+            (0, logging_ports_1.logDebugInfo)(`UpdatePullRequestDescription: prompt length=${prompt.length}, issue description length=${issueDescription.length}. Calling configured agent.`);
             const agentResponse = await this.aiRepository.query({
                 configuration: param.ai?.getAgentConfiguration('findings'),
                 agentId: agent_task_policy_1.AGENT_PLAN,
@@ -60939,7 +61239,7 @@ class UpdatePullRequestDescriptionUseCase {
             const prBody = typeof agentResponse === 'string'
                 ? agentResponse
                 : (agentResponse && String(agentResponse.description)) || '';
-            (0, logger_1.logDebugInfo)(`UpdatePullRequestDescription: agent response received. Description length=${prBody.length}. Full description:\n${prBody}`);
+            (0, logging_ports_1.logDebugInfo)(`UpdatePullRequestDescription: agent response received. Description length=${prBody.length}. Full description:\n${prBody}`);
             if (!prBody.trim()) {
                 result.push(new result_1.Result({
                     id: this.taskId,
@@ -60958,7 +61258,7 @@ class UpdatePullRequestDescriptionUseCase {
             }));
         }
         catch (error) {
-            (0, logger_1.logError)(error);
+            (0, logging_ports_1.logError)(error);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -60975,17 +61275,16 @@ exports.UpdatePullRequestDescriptionUseCase = UpdatePullRequestDescriptionUseCas
 /***/ }),
 
 /***/ 21729:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CheckPullRequestCommentLanguageUseCase = void 0;
-const comment_language_translation_workflow_1 = __nccwpck_require__(72770);
 class CheckPullRequestCommentLanguageUseCase {
-    constructor(issueRepository, aiRepository) {
+    constructor(workflow) {
         this.taskId = 'CheckPullRequestCommentLanguageUseCase';
-        this.workflow = new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(issueRepository, aiRepository);
+        this.workflow = workflow;
     }
     invoke(param) {
         return this.workflow.invoke({
@@ -61169,7 +61468,7 @@ function registerCheckProgressCommand(program) {
         .option('-i, --issue <number>', 'Issue number to check progress for (required)', '')
         .option('-b, --branch <name>', 'Branch name (optional, will try to determine from issue)')
         .option('-d, --debug', 'Debug mode', false)
-        .option('-t, --token <token>', 'Personal access token', process.env.PERSONAL_ACCESS_TOKEN)
+        .option('-t, --token <token>', 'Personal access token (or PERSONAL_ACCESS_TOKEN from the environment)')
         .action(async (options) => {
         const gitInfo = (0, cli_context_1.getGitInfo)();
         if ('error' in gitInfo) {
@@ -61225,7 +61524,7 @@ function registerDetectPotentialProblemsCommand(program) {
         .option('-i, --issue <number>', 'Issue number (required)', '')
         .option('-b, --branch <name>', 'Branch name (optional, defaults to current git branch)', '')
         .option('-d, --debug', 'Debug mode', false)
-        .option('-t, --token <token>', 'Personal access token', process.env.PERSONAL_ACCESS_TOKEN)
+        .option('-t, --token <token>', 'Personal access token (or PERSONAL_ACCESS_TOKEN from the environment)')
         .action(async (options) => {
         const gitInfo = (0, cli_context_1.getGitInfo)();
         if ('error' in gitInfo) {
@@ -61530,7 +61829,7 @@ function registerRecommendStepsCommand(program) {
         .description(`${constants_1.TITLE} - Recommend steps to implement an issue (configured agent)`)
         .option('-i, --issue <number>', 'Issue number (required)', '')
         .option('-d, --debug', 'Debug mode', false)
-        .option('-t, --token <token>', 'Personal access token', process.env.PERSONAL_ACCESS_TOKEN)
+        .option('-t, --token <token>', 'Personal access token (or PERSONAL_ACCESS_TOKEN from the environment)')
         .action(async (options) => {
         const gitInfo = (0, cli_context_1.getGitInfo)();
         if ('error' in gitInfo) {
@@ -61570,7 +61869,7 @@ function registerSetupCommand(program) {
         .command('setup')
         .description(`${constants_1.TITLE} - Initial setup: create labels, issue types, and verify access`)
         .option('-d, --debug', 'Debug mode', false)
-        .option('-t, --token <token>', 'Personal access token', process.env.PERSONAL_ACCESS_TOKEN)
+        .option('-t, --token <token>', 'Personal access token (or PERSONAL_ACCESS_TOKEN from the environment)')
         .action(async (options) => {
         const cwd = process.cwd();
         (0, logger_1.logInfo)('🔍 Checking we are inside a git repository...');
@@ -61660,7 +61959,7 @@ function registerThinkCommand(program) {
         .option('-i, --issue <number>', 'Issue number to process (optional)', '1')
         .option('-b, --branch <name>', 'Branch name', 'master')
         .option('-d, --debug', 'Debug mode', false)
-        .option('-t, --token <token>', 'Personal access token', process.env.PERSONAL_ACCESS_TOKEN)
+        .option('-t, --token <token>', 'Personal access token (or PERSONAL_ACCESS_TOKEN from the environment)')
         .option('-q, --question <question...>', 'Question or prompt for analysis', '')
         .option('--ai-ignore-files <ai-ignore-files>', 'AI ignore files', 'node_modules/*,build/*')
         .option('--include-reasoning <include-reasoning>', 'Include reasoning', 'false')
@@ -61777,6 +62076,29 @@ function isInsideGitRepo(cwd) {
         return false;
     }
 }
+
+
+/***/ }),
+
+/***/ 19625:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ACTIONS = void 0;
+/** Supported single-action commands understood by the domain model. */
+exports.ACTIONS = {
+    DEPLOYED: 'deployed_action',
+    PUBLISH_GITHUB_ACTION: 'publish_github_action',
+    CREATE_RELEASE: 'create_release',
+    CREATE_TAG: 'create_tag',
+    THINK: 'think_action',
+    INITIAL_SETUP: 'initial_setup',
+    CHECK_PROGRESS: 'check_progress_action',
+    DETECT_POTENTIAL_PROBLEMS: 'detect_potential_problems_action',
+    RECOMMEND_STEPS: 'recommend_steps_action',
+};
 
 
 /***/ }),
@@ -62013,7 +62335,7 @@ exports.Emoji = Emoji;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Execution = void 0;
-const label_utils_1 = __nccwpck_require__(99192);
+const label_branch_policy_1 = __nccwpck_require__(53318);
 const commit_1 = __nccwpck_require__(57525);
 const config_1 = __nccwpck_require__(90450);
 class Execution {
@@ -62062,10 +62384,10 @@ class Execution {
         return this.isIssue && !this.isBranched;
     }
     get managementBranch() {
-        return (0, label_utils_1.branchesForManagement)(this, this.labels.currentIssueLabels, this.labels.feature, this.labels.enhancement, this.labels.bugfix, this.labels.bug, this.labels.hotfix, this.labels.release, this.labels.docs, this.labels.documentation, this.labels.chore, this.labels.maintenance);
+        return (0, label_branch_policy_1.branchesForManagement)(this, this.labels.currentIssueLabels, this.labels.feature, this.labels.enhancement, this.labels.bugfix, this.labels.bug, this.labels.hotfix, this.labels.release, this.labels.docs, this.labels.documentation, this.labels.chore, this.labels.maintenance);
     }
     get issueType() {
-        return (0, label_utils_1.typesForIssue)(this, this.labels.currentIssueLabels, this.labels.feature, this.labels.enhancement, this.labels.bugfix, this.labels.bug, this.labels.hotfix, this.labels.release, this.labels.docs, this.labels.documentation, this.labels.chore, this.labels.maintenance);
+        return (0, label_branch_policy_1.typesForIssue)(this, this.labels.currentIssueLabels, this.labels.feature, this.labels.enhancement, this.labels.bugfix, this.labels.bug, this.labels.hotfix, this.labels.release, this.labels.docs, this.labels.documentation, this.labels.chore, this.labels.maintenance);
     }
     get cleanIssueBranches() {
         return this.isIssue
@@ -62182,9 +62504,9 @@ exports.Images = Images;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.shouldSkipInitialLabelsFetch = shouldSkipInitialLabelsFetch;
-const constants_1 = __nccwpck_require__(15415);
+const action_types_1 = __nccwpck_require__(19625);
 function shouldSkipInitialLabelsFetch(isSingleAction, currentSingleAction) {
-    return isSingleAction && currentSingleAction === constants_1.ACTIONS.INITIAL_SETUP;
+    return isSingleAction && currentSingleAction === action_types_1.ACTIONS.INITIAL_SETUP;
 }
 
 
@@ -62304,6 +62626,49 @@ class IssueTypes {
     }
 }
 exports.IssueTypes = IssueTypes;
+
+
+/***/ }),
+
+/***/ 53318:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.typesForIssue = exports.branchesForManagement = void 0;
+const branchesForManagement = (params, labels, featureLabel, enhancementLabel, bugfixLabel, bugLabel, hotfixLabel, releaseLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel) => {
+    if (labels.includes(hotfixLabel))
+        return params.branches.bugfixTree;
+    if (labels.includes(bugfixLabel) || labels.includes(bugLabel))
+        return params.branches.bugfixTree;
+    if (labels.includes(releaseLabel))
+        return params.branches.releaseTree;
+    if (labels.includes(docsLabel) || labels.includes(documentationLabel))
+        return params.branches.docsTree;
+    if (labels.includes(choreLabel) || labels.includes(maintenanceLabel))
+        return params.branches.choreTree;
+    if (labels.includes(featureLabel) || labels.includes(enhancementLabel))
+        return params.branches.featureTree;
+    return params.branches.featureTree;
+};
+exports.branchesForManagement = branchesForManagement;
+const typesForIssue = (params, labels, featureLabel, enhancementLabel, bugfixLabel, bugLabel, hotfixLabel, releaseLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel) => {
+    if (labels.includes(hotfixLabel))
+        return params.branches.hotfixTree;
+    if (labels.includes(bugfixLabel) || labels.includes(bugLabel))
+        return params.branches.bugfixTree;
+    if (labels.includes(releaseLabel))
+        return params.branches.releaseTree;
+    if (labels.includes(docsLabel) || labels.includes(documentationLabel))
+        return params.branches.docsTree;
+    if (labels.includes(choreLabel) || labels.includes(maintenanceLabel))
+        return params.branches.choreTree;
+    if (labels.includes(featureLabel) || labels.includes(enhancementLabel))
+        return params.branches.featureTree;
+    return params.branches.featureTree;
+};
+exports.typesForIssue = typesForIssue;
 
 
 /***/ }),
@@ -62791,16 +63156,38 @@ exports.Release = Release;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Result = void 0;
+exports.getResultPayload = getResultPayload;
+function normalizeError(error) {
+    if (error instanceof Error)
+        return error;
+    if (typeof error === 'string')
+        return new Error(error);
+    try {
+        return new Error(JSON.stringify(error) ?? String(error));
+    }
+    catch {
+        return new Error(String(error));
+    }
+}
+function getResultPayload(payload) {
+    return typeof payload === 'object' && payload !== null && !Array.isArray(payload)
+        ? payload
+        : undefined;
+}
 class Result {
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- result from use cases */
     constructor(data) {
         this.id = data['id'] ?? '';
         this.success = data['success'] ?? false;
         this.executed = data['executed'] ?? false;
-        this.steps = data['steps'] ?? [];
-        this.errors = data['errors'] ?? [];
-        this.payload = data['payload'];
-        this.reminders = data['reminders'] ?? [];
+        this.steps = Array.isArray(data.steps) ? data.steps : [];
+        const rawErrors = Array.isArray(data.errors)
+            ? data.errors
+            : data.error === undefined
+                ? []
+                : [data.error];
+        this.errors = rawErrors.map(normalizeError);
+        this.payload = data.payload;
+        this.reminders = Array.isArray(data.reminders) ? data.reminders : [];
         this.stepFormat = data['stepFormat'] === 'markdown' ? 'markdown' : 'plain';
     }
 }
@@ -62816,35 +63203,34 @@ exports.Result = Result;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SingleAction = void 0;
-const constants_1 = __nccwpck_require__(15415);
-const logger_1 = __nccwpck_require__(91151);
+const action_types_1 = __nccwpck_require__(19625);
 class SingleAction {
     get isDeployedAction() {
-        return this.currentSingleAction === constants_1.ACTIONS.DEPLOYED;
+        return this.currentSingleAction === action_types_1.ACTIONS.DEPLOYED;
     }
     get isPublishGithubAction() {
-        return this.currentSingleAction === constants_1.ACTIONS.PUBLISH_GITHUB_ACTION;
+        return this.currentSingleAction === action_types_1.ACTIONS.PUBLISH_GITHUB_ACTION;
     }
     get isCreateReleaseAction() {
-        return this.currentSingleAction === constants_1.ACTIONS.CREATE_RELEASE;
+        return this.currentSingleAction === action_types_1.ACTIONS.CREATE_RELEASE;
     }
     get isCreateTagAction() {
-        return this.currentSingleAction === constants_1.ACTIONS.CREATE_TAG;
+        return this.currentSingleAction === action_types_1.ACTIONS.CREATE_TAG;
     }
     get isThinkAction() {
-        return this.currentSingleAction === constants_1.ACTIONS.THINK;
+        return this.currentSingleAction === action_types_1.ACTIONS.THINK;
     }
     get isInitialSetupAction() {
-        return this.currentSingleAction === constants_1.ACTIONS.INITIAL_SETUP;
+        return this.currentSingleAction === action_types_1.ACTIONS.INITIAL_SETUP;
     }
     get isCheckProgressAction() {
-        return this.currentSingleAction === constants_1.ACTIONS.CHECK_PROGRESS;
+        return this.currentSingleAction === action_types_1.ACTIONS.CHECK_PROGRESS;
     }
     get isDetectPotentialProblemsAction() {
-        return this.currentSingleAction === constants_1.ACTIONS.DETECT_POTENTIAL_PROBLEMS;
+        return this.currentSingleAction === action_types_1.ACTIONS.DETECT_POTENTIAL_PROBLEMS;
     }
     get isRecommendStepsAction() {
-        return this.currentSingleAction === constants_1.ACTIONS.RECOMMEND_STEPS;
+        return this.currentSingleAction === action_types_1.ACTIONS.RECOMMEND_STEPS;
     }
     get enabledSingleAction() {
         return this.currentSingleAction.length > 0;
@@ -62862,31 +63248,31 @@ class SingleAction {
     }
     constructor(currentSingleAction, issue, version, title, changelog) {
         this.actions = [
-            constants_1.ACTIONS.DEPLOYED,
-            constants_1.ACTIONS.PUBLISH_GITHUB_ACTION,
-            constants_1.ACTIONS.CREATE_TAG,
-            constants_1.ACTIONS.CREATE_RELEASE,
-            constants_1.ACTIONS.THINK,
-            constants_1.ACTIONS.INITIAL_SETUP,
-            constants_1.ACTIONS.CHECK_PROGRESS,
-            constants_1.ACTIONS.DETECT_POTENTIAL_PROBLEMS,
-            constants_1.ACTIONS.RECOMMEND_STEPS,
+            action_types_1.ACTIONS.DEPLOYED,
+            action_types_1.ACTIONS.PUBLISH_GITHUB_ACTION,
+            action_types_1.ACTIONS.CREATE_TAG,
+            action_types_1.ACTIONS.CREATE_RELEASE,
+            action_types_1.ACTIONS.THINK,
+            action_types_1.ACTIONS.INITIAL_SETUP,
+            action_types_1.ACTIONS.CHECK_PROGRESS,
+            action_types_1.ACTIONS.DETECT_POTENTIAL_PROBLEMS,
+            action_types_1.ACTIONS.RECOMMEND_STEPS,
         ];
         /**
          * Actions that throw an error if the last step failed
          */
         this.actionsThrowError = [
-            constants_1.ACTIONS.PUBLISH_GITHUB_ACTION,
-            constants_1.ACTIONS.CREATE_RELEASE,
-            constants_1.ACTIONS.DEPLOYED,
-            constants_1.ACTIONS.CREATE_TAG,
+            action_types_1.ACTIONS.PUBLISH_GITHUB_ACTION,
+            action_types_1.ACTIONS.CREATE_RELEASE,
+            action_types_1.ACTIONS.DEPLOYED,
+            action_types_1.ACTIONS.CREATE_TAG,
         ];
         /**
          * Actions that do not require an issue
          */
         this.actionsWithoutIssue = [
-            constants_1.ACTIONS.THINK,
-            constants_1.ACTIONS.INITIAL_SETUP,
+            action_types_1.ACTIONS.THINK,
+            action_types_1.ACTIONS.INITIAL_SETUP,
         ];
         this.isIssue = false;
         this.isPullRequest = false;
@@ -62903,13 +63289,8 @@ class SingleAction {
         this.changelog = changelog;
         this.currentSingleAction = currentSingleAction;
         if (!this.isSingleActionWithoutIssue) {
-            try {
-                this.issue = parseInt(issue);
-            }
-            catch (error) {
-                (0, logger_1.logError)(`Issue ${issue} is not a number.`);
-                (0, logger_1.logError)(error);
-            }
+            const parsedIssue = Number.parseInt(issue, 10);
+            this.issue = Number.isNaN(parsedIssue) ? -1 : parsedIssue;
         }
         else {
             this.issue = 0;
@@ -62979,6 +63360,55 @@ exports.Tokens = Tokens;
 
 /***/ }),
 
+/***/ 8381:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getLatestVersion = exports.incrementVersion = exports.DEFAULT_INITIAL_TAG = exports.DEFAULT_BASE_VERSION = void 0;
+/** Default base version when the repository has no existing tags. */
+exports.DEFAULT_BASE_VERSION = '1.0.0';
+/** Default initial tag name used during repository setup. */
+exports.DEFAULT_INITIAL_TAG = `v${exports.DEFAULT_BASE_VERSION}`;
+const incrementVersion = (version, releaseType) => {
+    const versionParts = version.split('.').map(Number);
+    if (versionParts.length !== 3 || versionParts.some(Number.isNaN)) {
+        throw new Error('Invalid version format');
+    }
+    const [major, minor, patch] = versionParts;
+    switch (releaseType) {
+        case 'Major':
+            return `${major + 1}.0.0`;
+        case 'Minor':
+            return `${major}.${minor + 1}.0`;
+        case 'Patch':
+            return `${major}.${minor}.${patch + 1}`;
+        default:
+            throw new Error('Unknown release type');
+    }
+};
+exports.incrementVersion = incrementVersion;
+const getLatestVersion = (versions) => {
+    return versions
+        .map(version => version.split('.').map(num => Number.parseInt(num, 10)))
+        .sort((a, b) => {
+        for (let i = 0; i < 3; i++) {
+            if (a[i] > b[i])
+                return 1;
+            if (a[i] < b[i])
+                return -1;
+        }
+        return 0;
+    })
+        .map(version => version.join('.'))
+        .pop();
+};
+exports.getLatestVersion = getLatestVersion;
+
+
+/***/ }),
+
 /***/ 40231:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -63028,15 +63458,15 @@ function shouldAbortReleaseResolution(releaseType) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.nextReleaseVersion = nextReleaseVersion;
 exports.nextHotfixVersion = nextHotfixVersion;
-const version_utils_1 = __nccwpck_require__(419);
+const version_policy_1 = __nccwpck_require__(8381);
 function nextReleaseVersion(latestTag, releaseType) {
-    return (0, version_utils_1.incrementVersion)(latestTag ?? version_utils_1.DEFAULT_BASE_VERSION, releaseType);
+    return (0, version_policy_1.incrementVersion)(latestTag ?? version_policy_1.DEFAULT_BASE_VERSION, releaseType);
 }
 function nextHotfixVersion(latestTag) {
-    const baseVersion = latestTag ?? version_utils_1.DEFAULT_BASE_VERSION;
+    const baseVersion = latestTag ?? version_policy_1.DEFAULT_BASE_VERSION;
     return {
         baseVersion,
-        version: (0, version_utils_1.incrementVersion)(baseVersion, 'Patch'),
+        version: (0, version_policy_1.incrementVersion)(baseVersion, 'Patch'),
     };
 }
 
@@ -63131,56 +63561,7 @@ exports.checkAgentAuthentication = checkAgentAuthentication;
 const node_fs_1 = __nccwpck_require__(87561);
 const node_os_1 = __nccwpck_require__(70612);
 const node_path_1 = __nccwpck_require__(49411);
-const COMMON_OPENCODE_CREDENTIALS = [
-    'OPENCODE_API_KEY',
-    'OPENAI_API_KEY',
-    'ANTHROPIC_API_KEY',
-    'GOOGLE_API_KEY',
-    'OPENROUTER_API_KEY',
-    'MISTRAL_API_KEY',
-    'GROQ_API_KEY',
-    'DEEPSEEK_API_KEY',
-    'XAI_API_KEY',
-    'TOGETHERAI_API_KEY',
-    'FIREWORKS_API_KEY',
-    'PERPLEXITY_API_KEY',
-    'CEREBRAS_API_KEY',
-    'COHERE_API_KEY',
-    'AZURE_OPENAI_API_KEY',
-];
-const MODEL_PROVIDER_CREDENTIALS = {
-    opencode: ['OPENCODE_API_KEY'],
-    openai: ['OPENAI_API_KEY'],
-    anthropic: ['ANTHROPIC_API_KEY'],
-    google: ['GOOGLE_API_KEY'],
-    openrouter: ['OPENROUTER_API_KEY'],
-    mistral: ['MISTRAL_API_KEY'],
-    groq: ['GROQ_API_KEY'],
-    deepseek: ['DEEPSEEK_API_KEY'],
-    xai: ['XAI_API_KEY'],
-    togetherai: ['TOGETHERAI_API_KEY'],
-    fireworks: ['FIREWORKS_API_KEY'],
-    perplexity: ['PERPLEXITY_API_KEY'],
-    cerebras: ['CEREBRAS_API_KEY'],
-    cohere: ['COHERE_API_KEY'],
-    zai: ['ZAI_API_KEY'],
-    moonshot: ['MOONSHOT_API_KEY'],
-    minimax: ['MINIMAX_API_KEY'],
-    cursor: ['CURSOR_API_KEY'],
-};
-const CLI_CREDENTIALS = {
-    opencode: ['OPENCODE_API_KEY'],
-    cursor: ['CURSOR_API_KEY'],
-    codex: ['CODEX_ACCESS_TOKEN', 'OPENAI_API_KEY'],
-};
-const KNOWN_AGENT_CREDENTIALS = [...new Set([
-        ...COMMON_OPENCODE_CREDENTIALS,
-        ...Object.values(MODEL_PROVIDER_CREDENTIALS).flat(),
-        ...CLI_CREDENTIALS.codex,
-    ])];
-function hasValue(environment, variable) {
-    return Boolean(environment[variable]?.trim());
-}
+const agent_credential_policy_1 = __nccwpck_require__(36529);
 function hasCodexChatGptSession(environment) {
     const codexHome = environment.CODEX_HOME?.trim()
         || (environment === process.env || environment.HOME ? (0, node_path_1.join)(environment.HOME || (0, node_os_1.homedir)(), '.codex') : undefined);
@@ -63200,42 +63581,6 @@ function hasCodexChatGptSession(environment) {
         return false;
     }
 }
-/**
- * Keeps provider credentials inside the process boundary that needs them.
- *
- * A controlled Codex runner authenticates through CODEX_HOME/auth.json. When
- * that session is available, exported API credentials must not be allowed to
- * change the authentication mode selected by the local CLI. If the session is
- * absent, the existing API-key/access-token fallback remains available.
- */
-function buildAgentCliEnvironment(provider, environment = process.env, modelProvider) {
-    if (!provider)
-        return environment;
-    const normalizedModelProvider = modelProvider?.trim().toLowerCase();
-    const selectedModelProviderCredential = normalizedModelProvider
-        && !['local', 'ollama', 'lmstudio'].includes(normalizedModelProvider)
-        ? MODEL_PROVIDER_CREDENTIALS[normalizedModelProvider]?.[0]
-            ?? `${normalizedModelProvider.replace(/-/g, '_').toUpperCase()}_API_KEY`
-        : undefined;
-    const allowedCredentials = provider === 'cursor'
-        ? CLI_CREDENTIALS.cursor
-        : provider === 'codex'
-            ? [...new Set([...CLI_CREDENTIALS.codex, ...(selectedModelProviderCredential ? [selectedModelProviderCredential] : [])])]
-            : normalizedModelProvider
-                ? [...new Set([...CLI_CREDENTIALS.opencode, ...(selectedModelProviderCredential ? [selectedModelProviderCredential] : [])])]
-                : [...new Set([...CLI_CREDENTIALS.opencode, ...COMMON_OPENCODE_CREDENTIALS])];
-    const hasLocalCodexSession = provider === 'codex' && hasCodexChatGptSession(environment);
-    const isolatedEnvironment = { ...environment };
-    for (const variable of KNOWN_AGENT_CREDENTIALS)
-        delete isolatedEnvironment[variable];
-    if (!hasLocalCodexSession) {
-        for (const variable of allowedCredentials) {
-            if (environment[variable] !== undefined)
-                isolatedEnvironment[variable] = environment[variable];
-        }
-    }
-    return isolatedEnvironment;
-}
 function hasOpenCodeLocalSession(environment) {
     const dataDirectory = environment.OPENCODE_DATA_DIR?.trim()
         || environment.XDG_DATA_HOME?.trim()
@@ -63247,48 +63592,31 @@ function hasOpenCodeLocalSession(environment) {
         return false;
     try {
         const auth = JSON.parse((0, node_fs_1.readFileSync)(authPath, 'utf8'));
-        return containsCredentialMaterial(auth);
+        return (0, agent_credential_policy_1.containsCredentialMaterial)(auth);
     }
     catch {
         return false;
     }
 }
-function containsCredentialMaterial(value, propertyName = '') {
-    if (typeof value === 'string') {
-        return Boolean(propertyName.match(/(?:api[_-]?key|access|refresh|token|secret)/i) && value.trim());
+/** Keeps only credentials relevant to the selected provider/model process. */
+function buildAgentCliEnvironment(provider, environment = process.env, modelProvider) {
+    const hasLocalCodexSession = provider === 'codex' && hasCodexChatGptSession(environment);
+    const isolatedEnvironment = (0, agent_credential_policy_1.removeAgentCredentials)(environment);
+    if (hasLocalCodexSession)
+        return isolatedEnvironment;
+    for (const variable of (0, agent_credential_policy_1.allowedCredentialVariables)(provider, modelProvider)) {
+        if (environment[variable] !== undefined)
+            isolatedEnvironment[variable] = environment[variable];
     }
-    if (!value || typeof value !== 'object')
-        return false;
-    return Object.entries(value).some(([key, nested]) => containsCredentialMaterial(nested, key));
-}
-function credentialVariables(configuration) {
-    if (configuration.provider === 'cursor')
-        return CLI_CREDENTIALS.cursor;
-    if (configuration.provider === 'codex') {
-        const modelProvider = configuration.modelProvider?.trim().toLowerCase();
-        return [...new Set([
-                ...CLI_CREDENTIALS.codex,
-                ...(modelProvider ? MODEL_PROVIDER_CREDENTIALS[modelProvider] ?? [`${modelProvider.replace(/-/g, '_').toUpperCase()}_API_KEY`] : []),
-            ])];
-    }
-    const modelProvider = configuration.modelProvider?.trim().toLowerCase();
-    if (modelProvider === 'local' || modelProvider === 'ollama' || modelProvider === 'lmstudio') {
-        return [];
-    }
-    const selectedProviderCredentials = modelProvider
-        ? MODEL_PROVIDER_CREDENTIALS[modelProvider] ?? [`${modelProvider.replace(/-/g, '_').toUpperCase()}_API_KEY`]
-        : COMMON_OPENCODE_CREDENTIALS;
-    return [...new Set([...selectedProviderCredentials, ...CLI_CREDENTIALS.opencode])];
+    return isolatedEnvironment;
 }
 function checkAgentAuthentication(configuration, environment = process.env) {
-    const variables = credentialVariables(configuration);
+    const variables = (0, agent_credential_policy_1.credentialVariables)(configuration);
     const hasCodexSession = configuration.provider === 'codex' && hasCodexChatGptSession(environment);
     const hasOpenCodeSession = configuration.provider === 'opencode' && hasOpenCodeLocalSession(environment);
     const modelProvider = configuration.modelProvider?.trim().toLowerCase();
-    const hasInspectableOpenCodeProvider = !modelProvider
-        || ['local', 'ollama', 'lmstudio'].includes(modelProvider)
-        || Object.prototype.hasOwnProperty.call(MODEL_PROVIDER_CREDENTIALS, modelProvider);
-    if (hasCodexSession || hasOpenCodeSession || variables.some((variable) => hasValue(environment, variable))) {
+    const hasConfiguredCredential = variables.some((variable) => (0, agent_credential_policy_1.hasValue)(environment, variable));
+    if (hasCodexSession || hasOpenCodeSession || hasConfiguredCredential) {
         return {
             status: 'available',
             variables,
@@ -63306,14 +63634,14 @@ function checkAgentAuthentication(configuration, environment = process.env) {
             message: 'No exported Codex credential found; authentication will be resolved by the preinitialized Codex CLI on the runner.',
         };
     }
-    if (configuration.provider === 'opencode' && modelProvider && !hasInspectableOpenCodeProvider) {
+    if (configuration.provider === 'opencode' && modelProvider && !(0, agent_credential_policy_1.hasKnownModelProvider)(modelProvider)) {
         return {
             status: 'not_required',
             variables: [],
             message: `Credential resolution for the custom OpenCode provider "${modelProvider}" is delegated to OpenCode configuration or its controlled auth store.`,
         };
     }
-    if (configuration.provider === 'opencode' && ['local', 'ollama', 'lmstudio'].includes(configuration.modelProvider?.trim().toLowerCase() || '')) {
+    if (configuration.provider === 'opencode' && (0, agent_credential_policy_1.isLocalModelProvider)(modelProvider)) {
         return {
             status: 'not_required',
             variables,
@@ -63362,7 +63690,7 @@ function runAgentAuthenticationPreflight(configuration, environment = process.en
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AgentCliClient = exports.AgentCliError = void 0;
 const node_child_process_1 = __nccwpck_require__(17718);
-const agent_command_parser_1 = __nccwpck_require__(87950);
+const agent_command_parser_1 = __nccwpck_require__(15044);
 const agent_authentication_1 = __nccwpck_require__(51371);
 const DEFAULT_MAX_OUTPUT_BYTES = 4 * 1024 * 1024;
 const MAX_STDERR_BYTES = 8 * 1024;
@@ -63481,164 +63809,6 @@ exports.AgentCliClient = AgentCliClient;
 
 /***/ }),
 
-/***/ 64678:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.defaultAgentCommand = void 0;
-exports.validateAgentCommand = validateAgentCommand;
-exports.cliInstallationHint = cliInstallationHint;
-const agent_command_parser_1 = __nccwpck_require__(87950);
-var agent_command_1 = __nccwpck_require__(77923);
-Object.defineProperty(exports, "defaultAgentCommand", ({ enumerable: true, get: function () { return agent_command_1.defaultAgentCommand; } }));
-function hasFlag(args, flag) {
-    return args.some((argument, index) => (argument === flag && index < args.length - 1) || argument.startsWith(`${flag}=`));
-}
-function flagValue(args, flags) {
-    for (const [index, argument] of args.entries()) {
-        const inlineFlag = flags.find((flag) => argument.startsWith(`${flag}=`));
-        if (inlineFlag)
-            return argument.slice(inlineFlag.length + 1);
-        if (flags.includes(argument))
-            return args[index + 1];
-    }
-    return undefined;
-}
-function configValue(args, key) {
-    for (const [index, argument] of args.entries()) {
-        const value = argument === '--config' || argument === '-c'
-            ? args[index + 1]
-            : argument;
-        if (!value?.startsWith(`${key}=`))
-            continue;
-        return value.slice(key.length + 1).replace(/^['"]/, '').replace(/['"]$/, '');
-    }
-    return undefined;
-}
-function hasCodexConfig(args, key) {
-    return args.some((argument, index) => ((argument === '--config' || argument === '-c')
-        && typeof args[index + 1] === 'string'
-        && args[index + 1].startsWith(`${key}=`)) || argument.startsWith(`${key}=`));
-}
-/**
- * Custom commands are full overrides, so validate that they cannot silently
- * discard the selected model or supported effort setting.
- */
-function validateAgentCommand(configuration) {
-    const command = configuration.command?.trim();
-    if (!command)
-        throw new Error(`CLI command is required for ${configuration.provider}.`);
-    const { args } = (0, agent_command_parser_1.parseAgentCommand)(command);
-    if (configuration.provider !== 'codex' && args.includes('-')) {
-        throw new Error(`${configuration.provider} command must not include the Codex stdin placeholder "-"; its prompt is passed as an argument.`);
-    }
-    if (!hasFlag(args, '--model') && !hasFlag(args, '-m')) {
-        throw new Error(`${configuration.provider} command must select the model explicitly with --model.`);
-    }
-    const expectedModel = configuration.provider === 'opencode'
-        ? `${configuration.modelProvider?.trim() || 'openai'}/${configuration.model.trim()}`
-        : configuration.model.trim();
-    const configuredModel = flagValue(args, ['--model', '-m']);
-    if (configuredModel !== expectedModel) {
-        throw new Error(`${configuration.provider} command must select configured model "${expectedModel}".`);
-    }
-    if (configuration.provider === 'codex' && !hasCodexConfig(args, 'model_provider')) {
-        throw new Error('Codex command must select the model provider explicitly with --config model_provider=... .');
-    }
-    if (configuration.provider === 'codex') {
-        const configuredModelProvider = configValue(args, 'model_provider');
-        const expectedModelProvider = configuration.modelProvider?.trim() || 'openai';
-        if (configuredModelProvider !== expectedModelProvider) {
-            throw new Error(`Codex command must select configured model provider "${expectedModelProvider}".`);
-        }
-    }
-    if (configuration.effort?.trim()) {
-        if (configuration.provider === 'codex' && !hasCodexConfig(args, 'model_reasoning_effort')) {
-            throw new Error('Codex command must select effort explicitly with --config model_reasoning_effort=... .');
-        }
-        if (configuration.provider === 'codex' && configValue(args, 'model_reasoning_effort') !== configuration.effort.trim()) {
-            throw new Error(`Codex command must select configured effort "${configuration.effort.trim()}".`);
-        }
-        if (configuration.provider === 'opencode' && !hasFlag(args, '--variant')) {
-            throw new Error('OpenCode command must select effort explicitly with --variant ... .');
-        }
-        if (configuration.provider === 'opencode' && flagValue(args, ['--variant']) !== configuration.effort.trim()) {
-            throw new Error(`OpenCode command must select configured effort "${configuration.effort.trim()}".`);
-        }
-    }
-}
-function cliInstallationHint(provider) {
-    switch (provider) {
-        case 'codex':
-            return 'Install the OpenAI Codex CLI and verify `codex exec --help` on the runner.';
-        case 'cursor':
-            return 'Install the Cursor CLI from https://cursor.com/install and verify `agent --help` on the runner.';
-        case 'opencode':
-            return 'Install OpenCode and verify `opencode run --help` on the runner.';
-    }
-}
-
-
-/***/ }),
-
-/***/ 87950:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-"use strict";
-
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.parseAgentCommand = parseAgentCommand;
-const shellQuote = __importStar(__nccwpck_require__(75430));
-function parseAgentCommand(command) {
-    const trimmed = command.trim();
-    if (!trimmed)
-        throw new Error('Agent CLI command must not be empty.');
-    const parsed = shellQuote.parse(trimmed, {});
-    const argv = parsed.filter((entry) => typeof entry === 'string');
-    if (argv.length !== parsed.length || argv.length === 0) {
-        throw new Error('Agent CLI command contains unsupported shell syntax. Use an executable and literal arguments only.');
-    }
-    return { executable: argv[0], args: argv.slice(1) };
-}
-
-
-/***/ }),
-
 /***/ 49616:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -63647,7 +63817,7 @@ function parseAgentCommand(command) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.isValidAgentConfiguration = isValidAgentConfiguration;
 exports.getValidatedAgentConfiguration = getValidatedAgentConfiguration;
-const agent_cli_command_policy_1 = __nccwpck_require__(64678);
+const agent_command_policy_1 = __nccwpck_require__(37011);
 function isValidAgentConfiguration(configuration) {
     if (!['opencode', 'codex', 'cursor'].includes(configuration.provider))
         return false;
@@ -63658,7 +63828,7 @@ function isValidAgentConfiguration(configuration) {
     if (configuration.effort && !/^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/.test(configuration.effort.trim()))
         return false;
     try {
-        (0, agent_cli_command_policy_1.validateAgentCommand)(configuration);
+        (0, agent_command_policy_1.validateAgentCommand)(configuration);
         return true;
     }
     catch {
@@ -63669,6 +63839,145 @@ function getValidatedAgentConfiguration(configuration, task) {
     if (!isValidAgentConfiguration(configuration))
         throw new Error(`Invalid configuration for ${task} agent.`);
     return configuration;
+}
+
+
+/***/ }),
+
+/***/ 36529:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.COMMON_OPENCODE_CREDENTIALS = void 0;
+exports.isAgentCredentialVariable = isAgentCredentialVariable;
+exports.hasValue = hasValue;
+exports.isLocalModelProvider = isLocalModelProvider;
+exports.hasKnownModelProvider = hasKnownModelProvider;
+exports.allowedCredentialVariables = allowedCredentialVariables;
+exports.credentialVariables = credentialVariables;
+exports.removeAgentCredentials = removeAgentCredentials;
+exports.containsCredentialMaterial = containsCredentialMaterial;
+exports.COMMON_OPENCODE_CREDENTIALS = [
+    'OPENCODE_API_KEY',
+    'OPENAI_API_KEY',
+    'ANTHROPIC_API_KEY',
+    'GOOGLE_API_KEY',
+    'OPENROUTER_API_KEY',
+    'MISTRAL_API_KEY',
+    'GROQ_API_KEY',
+    'DEEPSEEK_API_KEY',
+    'XAI_API_KEY',
+    'TOGETHERAI_API_KEY',
+    'FIREWORKS_API_KEY',
+    'PERPLEXITY_API_KEY',
+    'CEREBRAS_API_KEY',
+    'COHERE_API_KEY',
+    'AZURE_OPENAI_API_KEY',
+];
+const MODEL_PROVIDER_CREDENTIALS = {
+    opencode: ['OPENCODE_API_KEY'],
+    openai: ['OPENAI_API_KEY'],
+    anthropic: ['ANTHROPIC_API_KEY'],
+    google: ['GOOGLE_API_KEY'],
+    openrouter: ['OPENROUTER_API_KEY'],
+    mistral: ['MISTRAL_API_KEY'],
+    groq: ['GROQ_API_KEY'],
+    deepseek: ['DEEPSEEK_API_KEY'],
+    xai: ['XAI_API_KEY'],
+    togetherai: ['TOGETHERAI_API_KEY'],
+    fireworks: ['FIREWORKS_API_KEY'],
+    perplexity: ['PERPLEXITY_API_KEY'],
+    cerebras: ['CEREBRAS_API_KEY'],
+    cohere: ['COHERE_API_KEY'],
+    zai: ['ZAI_API_KEY'],
+    moonshot: ['MOONSHOT_API_KEY'],
+    minimax: ['MINIMAX_API_KEY'],
+    cursor: ['CURSOR_API_KEY'],
+};
+const CLI_CREDENTIALS = {
+    opencode: ['OPENCODE_API_KEY'],
+    cursor: ['CURSOR_API_KEY'],
+    codex: ['CODEX_ACCESS_TOKEN', 'OPENAI_API_KEY'],
+};
+const KNOWN_AGENT_CREDENTIALS = [...new Set([
+        ...exports.COMMON_OPENCODE_CREDENTIALS,
+        ...Object.values(MODEL_PROVIDER_CREDENTIALS).flat(),
+        ...CLI_CREDENTIALS.codex,
+    ])];
+/** Matches credential-shaped variables, including custom OpenCode providers. */
+const AGENT_CREDENTIAL_VARIABLE_PATTERN = /(?:API[_-]?KEY|API[_-]?TOKEN|ACCESS[_-]?TOKEN|REFRESH[_-]?TOKEN|AUTH[_-]?TOKEN|CLIENT[_-]?SECRET|SECRET[_-]?KEY)$/i;
+function isAgentCredentialVariable(variable) {
+    return AGENT_CREDENTIAL_VARIABLE_PATTERN.test(variable);
+}
+function hasValue(environment, variable) {
+    return Boolean(environment[variable]?.trim());
+}
+function isLocalModelProvider(modelProvider) {
+    return Boolean(modelProvider && ['local', 'ollama', 'lmstudio'].includes(modelProvider));
+}
+function hasKnownModelProvider(modelProvider) {
+    return !modelProvider
+        || isLocalModelProvider(modelProvider)
+        || Object.prototype.hasOwnProperty.call(MODEL_PROVIDER_CREDENTIALS, modelProvider);
+}
+function selectedModelProviderCredential(modelProvider) {
+    const normalized = modelProvider?.trim().toLowerCase();
+    if (!normalized || isLocalModelProvider(normalized))
+        return undefined;
+    return MODEL_PROVIDER_CREDENTIALS[normalized]?.[0]
+        ?? `${normalized.replace(/-/g, '_').toUpperCase()}_API_KEY`;
+}
+function allowedCredentialVariables(provider, modelProvider) {
+    const selected = selectedModelProviderCredential(modelProvider);
+    if (provider === 'cursor')
+        return CLI_CREDENTIALS.cursor;
+    if (provider === 'codex') {
+        return uniqueCredentials([...CLI_CREDENTIALS.codex, ...(selected ? [selected] : [])]);
+    }
+    return modelProvider?.trim()
+        ? uniqueCredentials([...CLI_CREDENTIALS.opencode, ...(selected ? [selected] : [])])
+        : uniqueCredentials([...CLI_CREDENTIALS.opencode, ...exports.COMMON_OPENCODE_CREDENTIALS]);
+}
+function credentialVariables(configuration) {
+    if (configuration.provider === 'cursor')
+        return CLI_CREDENTIALS.cursor;
+    if (configuration.provider === 'codex') {
+        return uniqueCredentials([
+            ...CLI_CREDENTIALS.codex,
+            ...(selectedModelProviderCredential(configuration.modelProvider)
+                ? [selectedModelProviderCredential(configuration.modelProvider)]
+                : []),
+        ]);
+    }
+    const modelProvider = configuration.modelProvider?.trim().toLowerCase();
+    if (isLocalModelProvider(modelProvider))
+        return [];
+    const selected = modelProvider
+        ? MODEL_PROVIDER_CREDENTIALS[modelProvider] ?? [`${modelProvider.replace(/-/g, '_').toUpperCase()}_API_KEY`]
+        : exports.COMMON_OPENCODE_CREDENTIALS;
+    return uniqueCredentials([...selected, ...CLI_CREDENTIALS.opencode]);
+}
+function removeAgentCredentials(environment) {
+    const isolatedEnvironment = { ...environment };
+    for (const variable of Object.keys(isolatedEnvironment)) {
+        if (KNOWN_AGENT_CREDENTIALS.includes(variable) || isAgentCredentialVariable(variable)) {
+            delete isolatedEnvironment[variable];
+        }
+    }
+    return isolatedEnvironment;
+}
+function containsCredentialMaterial(value, propertyName = '') {
+    if (typeof value === 'string') {
+        return Boolean(propertyName.match(/(?:api[_-]?key|access|refresh|token|secret)/i) && value.trim());
+    }
+    if (!value || typeof value !== 'object')
+        return false;
+    return Object.entries(value).some(([key, nested]) => containsCredentialMaterial(nested, key));
+}
+function uniqueCredentials(credentials) {
+    return [...new Set(credentials)];
 }
 
 
@@ -63886,9 +64195,6 @@ const agent_prompt_policy_1 = __nccwpck_require__(78804);
 const agent_findings_response_policy_1 = __nccwpck_require__(34908);
 const agent_capability_adapter_1 = __nccwpck_require__(32152);
 class FindingsAgentAdapter extends agent_capability_adapter_1.AgentCapabilityAdapter {
-    constructor(infrastructure) {
-        super(infrastructure);
-    }
     async query(request) {
         const options = request.options ?? {};
         const schemaName = options.schemaName ?? 'response';
@@ -63924,9 +64230,6 @@ exports.FixerAgentAdapter = void 0;
 const logger_1 = __nccwpck_require__(91151);
 const agent_capability_adapter_1 = __nccwpck_require__(32152);
 class FixerAgentAdapter extends agent_capability_adapter_1.AgentCapabilityAdapter {
-    constructor(infrastructure) {
-        super(infrastructure);
-    }
     async fix(request) {
         if (!request.configuration) {
             (0, logger_1.logError)('Missing required AI configuration for fixer.');
@@ -63953,6 +64256,7 @@ exports.FixerAgentAdapter = FixerAgentAdapter;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.LinkedBranchRepository = void 0;
 const result_1 = __nccwpck_require__(73817);
+const github_error_policy_1 = __nccwpck_require__(58791);
 const logger_1 = __nccwpck_require__(91151);
 class LinkedBranchRepository {
     constructor(graphqlClient) {
@@ -64082,6 +64386,16 @@ class LinkedBranchRepository {
                 }));
             }
             catch (error) {
+                if ((0, github_error_policy_1.isGithubAlreadyExists)(error)) {
+                    (0, logger_1.logInfo)(`Linked branch ${newBranchName} already exists; treating the operation as idempotently complete.`);
+                    return [
+                        new result_1.Result({
+                            id: "branch_repository",
+                            success: true,
+                            executed: false,
+                        }),
+                    ];
+                }
                 (0, logger_1.logError)(`Error Linking branch "${error}"`);
                 result.push(new result_1.Result({
                     id: "branch_repository",
@@ -64270,15 +64584,14 @@ class BranchLifecycleRepository {
         this.getListOfBranches = async (owner, repository, token) => {
             const octokit = this.branchClient.getClient(token);
             const allBranches = [];
-            let page = 1;
-            while (true) {
+            const maximumPages = 100;
+            for (let page = 1; page <= maximumPages; page += 1) {
                 const { data } = await octokit.rest.repos.listBranches({ owner, repo: repository, per_page: 100, page });
-                if (data.length === 0)
-                    break;
                 allBranches.push(...data.map(branch => branch.name));
-                page++;
+                if (data.length < 100)
+                    return allBranches;
             }
-            return allBranches;
+            throw new Error(`Branch pagination exceeded ${maximumPages} pages.`);
         };
     }
 }
@@ -64360,13 +64673,12 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GitCliRepository = void 0;
-const core = __importStar(__nccwpck_require__(81078));
 const exec = __importStar(__nccwpck_require__(1757));
 const logger_1 = __nccwpck_require__(91151);
-const version_utils_1 = __nccwpck_require__(419);
+const version_policy_1 = __nccwpck_require__(8381);
 /**
  * Repository for Git operations executed via CLI (exec).
- * Isolated to allow unit tests with mocked @actions/exec and @actions/core.
+ * Isolated to allow unit tests with mocked @actions/exec.
  */
 class GitCliRepository {
     constructor() {
@@ -64379,7 +64691,8 @@ class GitCliRepository {
                 (0, logger_1.logDebugInfo)('Successfully fetched all remote branches.');
             }
             catch (error) {
-                core.setFailed(`Error fetching remote branches: ${error}`);
+                (0, logger_1.logError)(`Error fetching remote branches: ${error}`);
+                throw error;
             }
         };
         this.getLatestTag = async () => {
@@ -64398,7 +64711,7 @@ class GitCliRepository {
                 });
                 const validTags = tags.filter(tag => /\d+\.\d+\.\d+$/.test(tag));
                 if (validTags.length > 0) {
-                    const latestTag = (0, version_utils_1.getLatestVersion)(validTags);
+                    const latestTag = (0, version_policy_1.getLatestVersion)(validTags);
                     (0, logger_1.logDebugInfo)(`Latest tag: ${latestTag}`);
                     return latestTag;
                 }
@@ -64408,15 +64721,14 @@ class GitCliRepository {
                 }
             }
             catch (error) {
-                core.setFailed(`Error fetching the latest tag: ${error}`);
-                return undefined;
+                (0, logger_1.logError)(`Error fetching the latest tag: ${error}`);
+                throw error;
             }
         };
         this.getCommitTag = async (latestTag) => {
             try {
                 if (!latestTag) {
-                    core.setFailed('No LATEST_TAG found in the environment');
-                    return undefined;
+                    throw new Error('No LATEST_TAG found in the environment');
                 }
                 let tagVersion;
                 if (latestTag.startsWith('v')) {
@@ -64439,11 +64751,12 @@ class GitCliRepository {
                     return commitOid;
                 }
                 else {
-                    core.setFailed('No commit found for the tag');
+                    throw new Error('No commit found for the tag');
                 }
             }
             catch (error) {
-                core.setFailed(`Error fetching the commit hash: ${error}`);
+                (0, logger_1.logError)(`Error fetching the commit hash: ${error}`);
+                throw error;
             }
             return undefined;
         };
@@ -64597,7 +64910,7 @@ class IssueAssignmentRepository {
             }
             catch (error) {
                 (0, logger_1.logError)(`Error getting members of issue: ${error}.`);
-                return [];
+                throw error;
             }
         };
         this.assignMembersToIssue = async (owner, repository, issueNumber, members, token) => {
@@ -64614,7 +64927,7 @@ class IssueAssignmentRepository {
             }
             catch (error) {
                 (0, logger_1.logError)(`Error assigning members to issue: ${error}.`);
-                return [];
+                throw error;
             }
         };
     }
@@ -64686,7 +64999,7 @@ class IssueContentRepository {
             }
             catch (error) {
                 (0, logger_1.logError)(`Error reading issue #${issueNumber} description: ${error}`);
-                return undefined;
+                throw error;
             }
         };
         this.getIssueDescription = async (owner, repository, issueNumber, token) => {
@@ -64855,7 +65168,7 @@ class IssueLabelRepository {
                     return [];
                 }
                 (0, logger_1.logError)(`Error fetching labels for issue #${issueNumber}: ${error}`);
-                return [];
+                throw error;
             }
         };
         this.setLabels = async (owner, repository, issueNumber, labels, token) => {
@@ -64960,7 +65273,7 @@ class IssueMetadataRepository {
             }
             catch (error) {
                 (0, logger_1.logError)(`Failed to fetch the issue title: ${error}`);
-                return undefined;
+                throw error;
             }
         };
         this.isPullRequest = async (owner, repository, issueNumber, token) => {
@@ -65066,46 +65379,12 @@ exports.IssueProgressTrackingRepository = IssueProgressTrackingRepository;
 /***/ }),
 
 /***/ 10121:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueTitleRepository = void 0;
-const core = __importStar(__nccwpck_require__(81078));
 const logger_1 = __nccwpck_require__(91151);
 const issue_emoji_policy_1 = __nccwpck_require__(81201);
 const issue_title_policy_1 = __nccwpck_require__(83179);
@@ -65121,52 +65400,43 @@ class IssueTitleRepository {
                 const formattedTitle = version.length > 0
                     ? `${emoji} - ${version} - ${sanitizedTitle}`
                     : `${emoji} - ${sanitizedTitle}`;
-                if (formattedTitle === issueTitle)
-                    return undefined;
-                await this.issueTitleClient.getClient(token).rest.issues.update({
-                    owner, repo: repository, issue_number: issueNumber, title: formattedTitle,
-                });
-                (0, logger_1.logDebugInfo)(`Issue title updated to: ${formattedTitle}`);
-                return formattedTitle;
+                return this.updateTitle(owner, repository, issueTitle, formattedTitle, issueNumber, token);
             }
             catch (error) {
-                core.setFailed(`Failed to check or update issue title: ${error}`);
-                return undefined;
+                (0, logger_1.logError)(`Failed to check or update issue title: ${error}`);
+                throw error;
             }
         };
         this.updateTitlePullRequestFormat = async (owner, repository, pullRequestTitle, issueTitle, issueNumber, pullRequestNumber, branchManagementAlways, branchManagementEmoji, labels, token) => {
             try {
                 const emoji = (0, issue_emoji_policy_1.resolvePullRequestTitleEmoji)(labels, branchManagementAlways, branchManagementEmoji);
                 const formattedTitle = `[#${issueNumber}] ${emoji} - ${(0, issue_title_policy_1.sanitizePullRequestTitle)(issueTitle)}`;
-                if (formattedTitle === pullRequestTitle)
-                    return undefined;
-                await this.issueTitleClient.getClient(token).rest.issues.update({
-                    owner, repo: repository, issue_number: pullRequestNumber, title: formattedTitle,
-                });
-                (0, logger_1.logDebugInfo)(`Issue title updated to: ${formattedTitle}`);
-                return formattedTitle;
+                return this.updateTitle(owner, repository, pullRequestTitle, formattedTitle, pullRequestNumber, token);
             }
             catch (error) {
-                core.setFailed(`Failed to check or update issue title: ${error}`);
-                return undefined;
+                (0, logger_1.logError)(`Failed to check or update issue title: ${error}`);
+                throw error;
             }
         };
         this.cleanTitle = async (owner, repository, issueTitle, issueNumber, token) => {
             try {
                 const sanitizedTitle = (0, issue_title_policy_1.sanitizePullRequestTitle)(issueTitle);
-                if (sanitizedTitle === issueTitle)
-                    return undefined;
-                await this.issueTitleClient.getClient(token).rest.issues.update({
-                    owner, repo: repository, issue_number: issueNumber, title: sanitizedTitle,
-                });
-                (0, logger_1.logDebugInfo)(`Issue title updated to: ${sanitizedTitle}`);
-                return sanitizedTitle;
+                return this.updateTitle(owner, repository, issueTitle, sanitizedTitle, issueNumber, token);
             }
             catch (error) {
-                core.setFailed(`Failed to check or update issue title: ${error}`);
-                return undefined;
+                (0, logger_1.logError)(`Failed to check or update issue title: ${error}`);
+                throw error;
             }
         };
+    }
+    async updateTitle(owner, repository, currentTitle, nextTitle, issueNumber, token) {
+        if (nextTitle === currentTitle)
+            return undefined;
+        await this.issueTitleClient.getClient(token).rest.issues.update({
+            owner, repo: repository, issue_number: issueNumber, title: nextTitle,
+        });
+        (0, logger_1.logDebugInfo)(`Issue title updated to: ${nextTitle}`);
+        return nextTitle;
     }
 }
 exports.IssueTitleRepository = IssueTitleRepository;
@@ -65265,6 +65535,31 @@ exports.IssueTypeAssignmentRepository = IssueTypeAssignmentRepository;
 
 /***/ }),
 
+/***/ 62726:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.configuredIssueTypes = configuredIssueTypes;
+/** Maps the domain issue-type catalog to the provider-neutral provisioning input. */
+function configuredIssueTypes(issueTypes) {
+    return [
+        { name: issueTypes.task, description: issueTypes.taskDescription, color: issueTypes.taskColor },
+        { name: issueTypes.bug, description: issueTypes.bugDescription, color: issueTypes.bugColor },
+        { name: issueTypes.feature, description: issueTypes.featureDescription, color: issueTypes.featureColor },
+        { name: issueTypes.documentation, description: issueTypes.documentationDescription, color: issueTypes.documentationColor },
+        { name: issueTypes.maintenance, description: issueTypes.maintenanceDescription, color: issueTypes.maintenanceColor },
+        { name: issueTypes.hotfix, description: issueTypes.hotfixDescription, color: issueTypes.hotfixColor },
+        { name: issueTypes.release, description: issueTypes.releaseDescription, color: issueTypes.releaseColor },
+        { name: issueTypes.question, description: issueTypes.questionDescription, color: issueTypes.questionColor },
+        { name: issueTypes.help, description: issueTypes.helpDescription, color: issueTypes.helpColor },
+    ];
+}
+
+
+/***/ }),
+
 /***/ 4858:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -65273,37 +65568,56 @@ exports.IssueTypeAssignmentRepository = IssueTypeAssignmentRepository;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueTypeRepository = void 0;
 const logger_1 = __nccwpck_require__(91151);
+const issue_type_configuration_1 = __nccwpck_require__(62726);
+const ISSUE_TYPES_QUERY = `
+    query ($owner: String!, $after: String) {
+        organization(login: $owner) {
+            issueTypes(first: 100, after: $after) {
+                nodes { id name }
+                pageInfo { hasNextPage endCursor }
+            }
+        }
+    }
+`;
+const ORGANIZATION_ID_QUERY = `
+    query ($owner: String!) { organization(login: $owner) { id } }
+`;
+const CREATE_ISSUE_TYPE_MUTATION = `
+    mutation ($ownerId: ID!, $name: String!, $description: String!, $color: IssueTypeColor!, $isEnabled: Boolean!) {
+        createIssueType(input: { ownerId: $ownerId, name: $name, description: $description, color: $color, isEnabled: $isEnabled }) {
+            issueType { id }
+        }
+    }
+`;
 class IssueTypeRepository {
     constructor(graphqlClient) {
         this.graphqlClient = graphqlClient;
         this.listIssueTypes = async (owner, token) => {
-            const octokit = this.graphqlClient.getClient(token);
-            const { organization } = await octokit.graphql(`
-            query ($owner: String!) {
-                organization(login: $owner) {
-                    id
-                    issueTypes(first: 20) { nodes { id name } }
+            const client = this.graphqlClient.getClient(token);
+            const issueTypes = [];
+            let cursor = null;
+            for (let page = 1; page <= 100; page += 1) {
+                const response = await this.fetchIssueTypePage(client, owner, cursor);
+                const organization = response.organization;
+                if (!organization)
+                    throw new Error(`No se pudo obtener la organización ${owner}`);
+                issueTypes.push(...organization.issueTypes.nodes);
+                const pageInfo = organization.issueTypes.pageInfo;
+                if (!pageInfo?.hasNextPage)
+                    return issueTypes;
+                if (!pageInfo.endCursor) {
+                    throw new Error(`La paginación de tipos de Issue no devolvió cursor en la página ${page}.`);
                 }
+                cursor = pageInfo.endCursor;
             }
-        `, { owner });
-            if (!organization)
-                throw new Error(`No se pudo obtener la organización ${owner}`);
-            return organization.issueTypes.nodes;
+            throw new Error('La paginación de tipos de Issue superó 100 páginas.');
         };
         this.createIssueType = async (owner, name, description, color, token) => {
-            const octokit = this.graphqlClient.getClient(token);
-            const { organization } = await octokit.graphql(`
-            query ($owner: String!) { organization(login: $owner) { id } }
-        `, { owner });
+            const client = this.graphqlClient.getClient(token);
+            const organization = await this.fetchOrganization(client, owner);
             if (!organization)
                 throw new Error(`No se pudo obtener la organización ${owner}`);
-            const result = await octokit.graphql(`
-            mutation ($ownerId: ID!, $name: String!, $description: String!, $color: IssueTypeColor!, $isEnabled: Boolean!) {
-                createIssueType(input: { ownerId: $ownerId, name: $name, description: $description, color: $color, isEnabled: $isEnabled }) {
-                    issueType { id }
-                }
-            }
-        `, { ownerId: organization.id, name, description, color: color.toUpperCase(), isEnabled: true });
+            const result = await client.graphql(CREATE_ISSUE_TYPE_MUTATION, { ownerId: organization.id, name, description, color: color.toUpperCase(), isEnabled: true });
             return result.createIssueType.issueType.id;
         };
         this.ensureIssueType = async (owner, name, description, color, token) => {
@@ -65321,36 +65635,35 @@ class IssueTypeRepository {
             }
         };
         this.ensureIssueTypes = async (owner, issueTypes, token) => {
-            const configured = [
-                [issueTypes.task, issueTypes.taskDescription, issueTypes.taskColor],
-                [issueTypes.bug, issueTypes.bugDescription, issueTypes.bugColor],
-                [issueTypes.feature, issueTypes.featureDescription, issueTypes.featureColor],
-                [issueTypes.documentation, issueTypes.documentationDescription, issueTypes.documentationColor],
-                [issueTypes.maintenance, issueTypes.maintenanceDescription, issueTypes.maintenanceColor],
-                [issueTypes.hotfix, issueTypes.hotfixDescription, issueTypes.hotfixColor],
-                [issueTypes.release, issueTypes.releaseDescription, issueTypes.releaseColor],
-                [issueTypes.question, issueTypes.questionDescription, issueTypes.questionColor],
-                [issueTypes.help, issueTypes.helpDescription, issueTypes.helpColor],
-            ];
             let created = 0;
             let existing = 0;
             const errors = [];
-            for (const [name, description, color] of configured) {
+            for (const configured of (0, issue_type_configuration_1.configuredIssueTypes)(issueTypes)) {
                 try {
-                    const result = await this.ensureIssueType(owner, name, description, color, token);
+                    const result = await this.ensureConfiguredIssueType(owner, configured, token);
                     if (result.created)
-                        created++;
+                        created += 1;
                     else
-                        existing++;
+                        existing += 1;
                 }
                 catch (error) {
-                    const message = error.message || error;
-                    (0, logger_1.logError)(`Error ensuring issue type "${name}": ${error}`);
-                    errors.push(`Error creando tipo de Issue "${name}": ${message}`);
+                    const message = error instanceof Error ? error.message : String(error);
+                    (0, logger_1.logError)(`Error ensuring issue type "${configured.name}": ${error}`);
+                    errors.push(`Error creando tipo de Issue "${configured.name}": ${message}`);
                 }
             }
             return { created, existing, errors };
         };
+    }
+    ensureConfiguredIssueType(owner, configured, token) {
+        return this.ensureIssueType(owner, configured.name, configured.description, configured.color, token);
+    }
+    async fetchIssueTypePage(client, owner, cursor) {
+        return client.graphql(ISSUE_TYPES_QUERY, { owner, after: cursor });
+    }
+    async fetchOrganization(client, owner) {
+        const response = await client.graphql(ORGANIZATION_ID_QUERY, { owner });
+        return response.organization;
     }
 }
 exports.IssueTypeRepository = IssueTypeRepository;
@@ -65471,10 +65784,19 @@ exports.sanitizePullRequestTitle = sanitizePullRequestTitle;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.blockingCheckRuns = blockingCheckRuns;
 exports.selectPullRequestChecks = selectPullRequestChecks;
 exports.pendingCheckRuns = pendingCheckRuns;
 exports.failedCheckRuns = failedCheckRuns;
 exports.pendingStatuses = pendingStatuses;
+exports.blockingStatuses = blockingStatuses;
+exports.isBlockingCombinedStatus = isBlockingCombinedStatus;
+const SUCCESSFUL_CHECK_CONCLUSIONS = new Set(['success', 'skipped', 'neutral']);
+/** GitHub has several non-success conclusions; merge policy must fail closed. */
+function blockingCheckRuns(checkRuns) {
+    return checkRuns.filter((check) => (check.status !== 'completed'
+        || !SUCCESSFUL_CHECK_CONCLUSIONS.has(check.conclusion ?? '')));
+}
 function selectPullRequestChecks(checkRuns, pullRequestNumber) {
     return checkRuns.filter((run) => run.pull_requests?.some((pullRequest) => pullRequest.number === pullRequestNumber));
 }
@@ -65486,6 +65808,168 @@ function failedCheckRuns(checkRuns) {
 }
 function pendingStatuses(statuses) {
     return statuses.filter((status) => status.state === 'pending');
+}
+function blockingStatuses(statuses) {
+    return statuses.filter((status) => status.state !== 'success' && status.state !== 'pending');
+}
+function isBlockingCombinedStatus(state) {
+    return state !== 'success' && state !== 'pending';
+}
+
+
+/***/ }),
+
+/***/ 43989:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MergeChecksWaiter = void 0;
+const logger_1 = __nccwpck_require__(91151);
+const merge_checks_policy_1 = __nccwpck_require__(39281);
+/** Polls only the checks relevant to one pull request before a merge. */
+class MergeChecksWaiter {
+    async wait(octokit, owner, repository, head, pullRequestNumber, timeout) {
+        const pollIntervalSeconds = 10;
+        const maxWaitForPrChecksAttempts = 3;
+        let attempts = 0;
+        let waitForPrChecksAttempts = 0;
+        const maxAttempts = timeout === 0
+            ? Number.POSITIVE_INFINITY
+            : Math.max(1, Math.ceil(timeout / pollIntervalSeconds));
+        while (attempts < maxAttempts) {
+            const { data: checkRuns } = await octokit.rest.checks.listForRef({ owner, repo: repository, ref: head });
+            const runsForThisPr = (0, merge_checks_policy_1.selectPullRequestChecks)(checkRuns.check_runs, pullRequestNumber);
+            const { data: commitStatus } = await octokit.rest.repos.getCombinedStatusForRef({ owner, repo: repository, ref: head });
+            (0, logger_1.logDebugInfo)(`Combined status state: ${commitStatus.state}`);
+            (0, logger_1.logDebugInfo)(`Number of check runs for this PR: ${runsForThisPr.length} (total on ref: ${checkRuns.check_runs.length})`);
+            if (runsForThisPr.length > 0) {
+                const pendingChecks = (0, merge_checks_policy_1.pendingCheckRuns)(runsForThisPr);
+                if (pendingChecks.length === 0 && commitStatus.state !== 'pending') {
+                    this.assertChecksPassed(runsForThisPr, commitStatus.state, commitStatus.statuses);
+                    (0, logger_1.logDebugInfo)('All check runs have completed.');
+                    return;
+                }
+                this.logPendingCheckRuns(pendingChecks);
+            }
+            else if (checkRuns.check_runs.length > 0) {
+                waitForPrChecksAttempts++;
+                if (waitForPrChecksAttempts >= maxWaitForPrChecksAttempts) {
+                    if (this.statusChecksAreComplete(commitStatus.state, commitStatus.statuses)) {
+                        this.assertStatusChecksPassed(commitStatus.state, commitStatus.statuses);
+                        (0, logger_1.logDebugInfo)(`No check runs for this PR after ${maxWaitForPrChecksAttempts} polls; no pending status checks; proceeding to merge.`);
+                        return;
+                    }
+                    (0, logger_1.logDebugInfo)(`No check runs for this PR after ${maxWaitForPrChecksAttempts} polls; falling back to status checks.`);
+                    this.logPendingStatusChecks(commitStatus.statuses, 'fallback');
+                }
+                else {
+                    (0, logger_1.logDebugInfo)('Check runs exist on ref but none for this PR yet; waiting for workflows to register.');
+                }
+            }
+            else if (this.statusChecksAreComplete(commitStatus.state, commitStatus.statuses)) {
+                this.assertStatusChecksPassed(commitStatus.state, commitStatus.statuses);
+                (0, logger_1.logDebugInfo)('All status checks have completed.');
+                return;
+            }
+            else {
+                this.logPendingStatusChecks(commitStatus.statuses);
+            }
+            await this.waitForNextCheckPoll(pollIntervalSeconds);
+            attempts++;
+        }
+        throw new Error('Timed out waiting for checks to complete');
+    }
+    statusChecksAreComplete(combinedStatus, statuses) {
+        return (0, merge_checks_policy_1.pendingStatuses)(statuses).length === 0 && combinedStatus !== 'pending';
+    }
+    logPendingCheckRuns(checks) {
+        (0, logger_1.logDebugInfo)(`Waiting for ${checks.length} check runs to complete:`);
+        checks.forEach(check => (0, logger_1.logDebugInfo)(`  - ${check.name} (Status: ${check.status})`));
+    }
+    logPendingStatusChecks(statuses, label = '') {
+        const prefix = label ? `Status check (${label})` : 'Status check';
+        const pendingChecks = (0, merge_checks_policy_1.pendingStatuses)(statuses);
+        statuses.forEach(status => (0, logger_1.logDebugInfo)(`${prefix}: ${status.context} (State: ${status.state})`));
+        (0, logger_1.logDebugInfo)(`Waiting for ${pendingChecks.length} status checks to complete:`);
+        pendingChecks.forEach(check => (0, logger_1.logDebugInfo)(`  - ${check.context} (State: ${check.state})`));
+    }
+    async waitForNextCheckPoll(pollIntervalSeconds) {
+        await new Promise(resolve => setTimeout(resolve, pollIntervalSeconds * 1000));
+    }
+    assertChecksPassed(checkRuns, combinedStatus, statuses) {
+        const blockingChecks = (0, merge_checks_policy_1.blockingCheckRuns)(checkRuns);
+        if (blockingChecks.length > 0) {
+            throw new Error(`Checks did not pass: ${blockingChecks.map(check => `${check.name} (${check.conclusion ?? check.status})`).join(', ')}`);
+        }
+        this.assertStatusChecksPassed(combinedStatus, statuses);
+    }
+    assertStatusChecksPassed(combinedStatus, statuses) {
+        const blockingStatusChecks = (0, merge_checks_policy_1.blockingStatuses)(statuses);
+        if ((0, merge_checks_policy_1.isBlockingCombinedStatus)(combinedStatus) || blockingStatusChecks.length > 0) {
+            const statusDescription = blockingStatusChecks.map(status => `${status.context} (${status.state})`).join(', ');
+            throw new Error(`Status checks did not pass: ${statusDescription || combinedStatus}`);
+        }
+    }
+}
+exports.MergeChecksWaiter = MergeChecksWaiter;
+
+
+/***/ }),
+
+/***/ 81775:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createMergePullRequest = createMergePullRequest;
+exports.updateMergePullRequestBody = updateMergePullRequestBody;
+exports.mergePullRequest = mergePullRequest;
+const logger_1 = __nccwpck_require__(91151);
+async function createMergePullRequest(client, owner, repository, head, base) {
+    const { data } = await client.rest.pulls.create({
+        owner,
+        repo: repository,
+        head,
+        base,
+        title: `Merge ${head} into ${base}`,
+        body: buildPullRequestBody(head, base),
+    });
+    return data;
+}
+async function updateMergePullRequestBody(client, owner, repository, pullRequestNumber, head, base) {
+    (0, logger_1.logDebugInfo)(`Pull request #${pullRequestNumber} created, getting commits...`);
+    const { data: commits } = await client.rest.pulls.listCommits({
+        owner,
+        repo: repository,
+        pull_number: pullRequestNumber,
+    });
+    const commitMessages = commits.map(commit => commit.commit.message);
+    (0, logger_1.logDebugInfo)(`Found ${commitMessages.length} commits in PR`);
+    await client.rest.pulls.update({
+        owner,
+        repo: repository,
+        pull_number: pullRequestNumber,
+        body: `${buildPullRequestBody(head, base)}\n${commitMessages.map(message => `- ${message}`).join('\n')}` +
+            '\n\nThis PR was automatically created by [`copilot`](https://github.com/vypdev/copilot).',
+    });
+}
+async function mergePullRequest(client, owner, repository, pullRequestNumber, head, base) {
+    const { data } = await client.rest.pulls.merge({
+        owner,
+        repo: repository,
+        pull_number: pullRequestNumber,
+        merge_method: 'merge',
+        commit_title: `Merge ${head} into ${base}. Forced merge with PAT token.`,
+    });
+    if (!data.merged) {
+        throw new Error(`Pull request #${pullRequestNumber} was not merged: ${data.message ?? 'GitHub rejected the merge.'}`);
+    }
+}
+function buildPullRequestBody(head, base) {
+    return `🚀 Automated Merge  \n\nThis PR merges **${head}** into **${base}**.  \n\n**Commits included:**`;
 }
 
 
@@ -65500,227 +65984,76 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MergeRepository = void 0;
 const logger_1 = __nccwpck_require__(91151);
 const result_1 = __nccwpck_require__(73817);
-const merge_checks_policy_1 = __nccwpck_require__(39281);
+const merge_checks_waiter_1 = __nccwpck_require__(43989);
+const merge_pull_request_flow_1 = __nccwpck_require__(81775);
 /**
- * Repository for merging branches: creates a PR, waits for that PR's check runs (or status checks),
- * then merges the PR; on failure, falls back to a direct Git merge.
- *
- * Check runs are filtered by PR (pull_requests) so we only wait for the current PR's checks,
- * not those of another PR sharing the same head (e.g. release→main vs release→develop).
- * If the PR has no check runs after a short wait, we proceed to merge (branch may have no required checks).
- *
- * @see docs/single-actions/deploy-label-and-merge.mdx for the deploy flow and check-wait behaviour.
+ * Repository for merging branches: creates a PR, waits for that PR's check runs
+ * (or status checks), then merges the PR. Direct merge is only attempted when
+ * PR creation itself fails, before a PR exists and before checks can be evaluated.
  */
 class MergeRepository {
-    constructor(githubClient) {
+    constructor(githubClient, checksWaiter = new merge_checks_waiter_1.MergeChecksWaiter()) {
         this.githubClient = githubClient;
+        this.checksWaiter = checksWaiter;
         this.mergeBranch = async (owner, repository, head, base, timeout, token) => {
-            const result = [];
+            let pullRequestCreated = false;
             try {
-                const octokit = this.githubClient.getClient(token);
+                const client = this.githubClient.getClient(token);
                 (0, logger_1.logDebugInfo)(`Creating merge from ${head} into ${base}`);
-                // Build PR body with commit list
-                const prBody = `🚀 Automated Merge  
-
-This PR merges **${head}** into **${base}**.  
-
-**Commits included:**`;
-                // We need PAT for creating PR to ensure it can trigger workflows
-                const { data: pullRequest } = await octokit.rest.pulls.create({
-                    owner: owner,
-                    repo: repository,
-                    head: head,
-                    base: base,
-                    title: `Merge ${head} into ${base}`,
-                    body: prBody,
-                });
-                (0, logger_1.logDebugInfo)(`Pull request #${pullRequest.number} created, getting commits...`);
-                // Get all commits in the PR
-                const { data: commits } = await octokit.rest.pulls.listCommits({
-                    owner: owner,
-                    repo: repository,
-                    pull_number: pullRequest.number,
-                });
-                const commitMessages = commits.map(commit => commit.commit.message);
-                (0, logger_1.logDebugInfo)(`Found ${commitMessages.length} commits in PR`);
-                // Update PR with commit list and footer
-                await octokit.rest.pulls.update({
-                    owner: owner,
-                    repo: repository,
-                    pull_number: pullRequest.number,
-                    body: prBody + '\n' + commitMessages.map(msg => `- ${msg}`).join('\n') +
-                        '\n\nThis PR was automatically created by [`copilot`](https://github.com/vypdev/copilot).',
-                });
-                const iteration = 10;
-                /** Give workflows a short window to register check runs for this PR; after this, we allow merge with no check runs (e.g. branch has no required checks). */
-                const maxWaitForPrChecksAttempts = 3;
-                if (timeout > iteration) {
-                    // Wait for checks to complete - can use regular token for reading checks
-                    let checksCompleted = false;
-                    let attempts = 0;
-                    let waitForPrChecksAttempts = 0;
-                    const maxAttempts = timeout > iteration ? Math.floor(timeout / iteration) : iteration;
-                    while (!checksCompleted && attempts < maxAttempts) {
-                        const { data: checkRuns } = await octokit.rest.checks.listForRef({
-                            owner: owner,
-                            repo: repository,
-                            ref: head,
-                        });
-                        // Only consider check runs that are for this PR. When the same branch is used in
-                        // multiple PRs (e.g. release→master and release→develop), listForRef returns runs
-                        // for all PRs; we must wait for runs tied to the current PR or we may see completed
-                        // runs from the other PR and merge before this PR's checks have run.
-                        const runsForThisPr = (0, merge_checks_policy_1.selectPullRequestChecks)(checkRuns.check_runs, pullRequest.number);
-                        // Get commit status checks for the PR head commit
-                        const { data: commitStatus } = await octokit.rest.repos.getCombinedStatusForRef({
-                            owner: owner,
-                            repo: repository,
-                            ref: head,
-                        });
-                        (0, logger_1.logDebugInfo)(`Combined status state: ${commitStatus.state}`);
-                        (0, logger_1.logDebugInfo)(`Number of check runs for this PR: ${runsForThisPr.length} (total on ref: ${checkRuns.check_runs.length})`);
-                        // If there are check runs for this PR, wait for them to complete
-                        if (runsForThisPr.length > 0) {
-                            const pendingChecksForPullRequest = (0, merge_checks_policy_1.pendingCheckRuns)(runsForThisPr);
-                            if (pendingChecksForPullRequest.length === 0) {
-                                checksCompleted = true;
-                                (0, logger_1.logDebugInfo)('All check runs have completed.');
-                                // Verify if all checks passed
-                                const failedChecks = (0, merge_checks_policy_1.failedCheckRuns)(runsForThisPr);
-                                if (failedChecks.length > 0) {
-                                    throw new Error(`Checks failed: ${failedChecks.map(check => check.name).join(', ')}`);
-                                }
-                            }
-                            else {
-                                (0, logger_1.logDebugInfo)(`Waiting for ${pendingChecksForPullRequest.length} check runs to complete:`);
-                                pendingChecksForPullRequest.forEach(check => {
-                                    (0, logger_1.logDebugInfo)(`  - ${check.name} (Status: ${check.status})`);
-                                });
-                                await new Promise(resolve => setTimeout(resolve, iteration * 1000));
-                                attempts++;
-                                continue;
-                            }
-                        }
-                        else if (checkRuns.check_runs.length > 0 && runsForThisPr.length === 0) {
-                            // There are runs on the ref but none for this PR. Either workflows for this PR
-                            // haven't registered yet, or this PR/base has no required checks.
-                            waitForPrChecksAttempts++;
-                            if (waitForPrChecksAttempts >= maxWaitForPrChecksAttempts) {
-                                // Give up waiting for PR-specific check runs; fall back to status checks
-                                // before proceeding to merge (PR may have required status checks).
-                                commitStatus.statuses.forEach(status => {
-                                    (0, logger_1.logDebugInfo)(`Status check (fallback): ${status.context} (State: ${status.state})`);
-                                });
-                                const pendingChecksFallback = (0, merge_checks_policy_1.pendingStatuses)(commitStatus.statuses);
-                                if (pendingChecksFallback.length === 0) {
-                                    checksCompleted = true;
-                                    (0, logger_1.logDebugInfo)(`No check runs for this PR after ${maxWaitForPrChecksAttempts} polls; no pending status checks; proceeding to merge.`);
-                                }
-                                else {
-                                    (0, logger_1.logDebugInfo)(`No check runs for this PR after ${maxWaitForPrChecksAttempts} polls; falling back to status checks. Waiting for ${pendingChecksFallback.length} status checks to complete.`);
-                                    pendingChecksFallback.forEach(check => {
-                                        (0, logger_1.logDebugInfo)(`  - ${check.context} (State: ${check.state})`);
-                                    });
-                                    await new Promise(resolve => setTimeout(resolve, iteration * 1000));
-                                    attempts++;
-                                }
-                            }
-                            else {
-                                (0, logger_1.logDebugInfo)('Check runs exist on ref but none for this PR yet; waiting for workflows to register.');
-                                await new Promise(resolve => setTimeout(resolve, iteration * 1000));
-                                attempts++;
-                            }
-                            continue;
-                        }
-                        else {
-                            // Fall back to status checks if no check runs exist
-                            commitStatus.statuses.forEach(status => {
-                                (0, logger_1.logDebugInfo)(`Status check: ${status.context} (State: ${status.state})`);
-                            });
-                            const pendingChecks = (0, merge_checks_policy_1.pendingStatuses)(commitStatus.statuses);
-                            if (pendingChecks.length === 0) {
-                                checksCompleted = true;
-                                (0, logger_1.logDebugInfo)('All status checks have completed.');
-                            }
-                            else {
-                                (0, logger_1.logDebugInfo)(`Waiting for ${pendingChecks.length} status checks to complete:`);
-                                pendingChecks.forEach(check => {
-                                    (0, logger_1.logDebugInfo)(`  - ${check.context} (State: ${check.state})`);
-                                });
-                                await new Promise(resolve => setTimeout(resolve, iteration * 1000));
-                                attempts++;
-                            }
-                        }
-                    }
-                    if (!checksCompleted) {
-                        throw new Error('Timed out waiting for checks to complete');
-                    }
-                }
-                // Need PAT for merging to ensure it can trigger subsequent workflows
-                await octokit.rest.pulls.merge({
-                    owner: owner,
-                    repo: repository,
-                    pull_number: pullRequest.number,
-                    merge_method: 'merge',
-                    commit_title: `Merge ${head} into ${base}. Forced merge with PAT token.`,
-                });
-                result.push(new result_1.Result({
-                    id: 'branch_repository',
-                    success: true,
-                    executed: true,
-                    steps: [
-                        `The branch \`${head}\` was merged into \`${base}\`.`,
-                    ],
-                }));
+                const pullRequest = await (0, merge_pull_request_flow_1.createMergePullRequest)(client, owner, repository, head, base);
+                pullRequestCreated = true;
+                await (0, merge_pull_request_flow_1.updateMergePullRequestBody)(client, owner, repository, pullRequest.number, head, base);
+                await this.checksWaiter.wait(client, owner, repository, head, pullRequest.number, timeout);
+                await (0, merge_pull_request_flow_1.mergePullRequest)(client, owner, repository, pullRequest.number, head, base);
+                return [this.successResult(head, base)];
             }
             catch (error) {
                 (0, logger_1.logError)(`Error in PR workflow: ${error}`);
-                // If the PR workflow fails, we try to merge directly - need PAT for direct merge to ensure it can trigger workflows
-                try {
-                    const octokit = this.githubClient.getClient(token);
-                    await octokit.rest.repos.merge({
-                        owner: owner,
-                        repo: repository,
-                        base: base,
-                        head: head,
-                        commit_message: `Forced merge of ${head} into ${base}. Automated merge with PAT token.`,
-                    });
-                    result.push(new result_1.Result({
-                        id: 'branch_repository',
-                        success: true,
-                        executed: true,
-                        steps: [
-                            `The branch \`${head}\` was merged into \`${base}\` using direct merge.`,
-                        ],
-                    }));
-                    return result;
+                if (!pullRequestCreated) {
+                    return this.tryDirectMerge(owner, repository, head, base, token, error);
                 }
-                catch (directMergeError) {
-                    (0, logger_1.logError)(`Error in direct merge attempt: ${directMergeError}`);
-                    result.push(new result_1.Result({
-                        id: 'branch_repository',
-                        success: false,
-                        executed: true,
-                        steps: [
-                            `Failed to merge branch \`${head}\` into \`${base}\`.`,
-                        ],
-                    }));
-                    result.push(new result_1.Result({
-                        id: 'branch_repository',
-                        success: false,
-                        executed: true,
-                        error: error,
-                    }));
-                    result.push(new result_1.Result({
-                        id: 'branch_repository',
-                        success: false,
-                        executed: true,
-                        error: directMergeError,
-                    }));
-                }
+                return this.mergeFailureResults(head, base, error);
             }
-            return result;
         };
+    }
+    async tryDirectMerge(owner, repository, head, base, token, originalError) {
+        try {
+            const client = this.githubClient.getClient(token);
+            const { data } = await client.rest.repos.merge({
+                owner,
+                repo: repository,
+                base,
+                head,
+                commit_message: `Forced merge of ${head} into ${base}. Automated merge with PAT token.`,
+            });
+            if (!data.merged) {
+                throw new Error(`Direct merge was not completed: ${data.message ?? 'GitHub rejected the merge.'}`);
+            }
+            return [this.successResult(head, base, true)];
+        }
+        catch (directMergeError) {
+            (0, logger_1.logError)(`Error in direct merge attempt: ${directMergeError}`);
+            return this.mergeFailureResults(head, base, originalError, directMergeError);
+        }
+    }
+    successResult(head, base, direct = false) {
+        return new result_1.Result({
+            id: 'branch_repository',
+            success: true,
+            executed: true,
+            steps: [`The branch \`${head}\` was merged into \`${base}\`${direct ? ' using direct merge.' : '.'}`],
+        });
+    }
+    mergeFailureResults(head, base, error, directMergeError) {
+        return [
+            new result_1.Result({
+                id: 'branch_repository',
+                success: false,
+                executed: true,
+                steps: [`Failed to merge branch \`${head}\` into \`${base}\`.`],
+                errors: [error, ...(directMergeError === undefined ? [] : [directMergeError])],
+            }),
+        ];
     }
 }
 exports.MergeRepository = MergeRepository;
@@ -65834,7 +66167,7 @@ class OrganizationMembersRepository {
             }
             catch (error) {
                 (0, logger_1.logError)(`Error getting random members: ${error}.`);
-                return [];
+                throw error;
             }
         };
         this.getAllMembers = async (organization, token) => {
@@ -65848,7 +66181,7 @@ class OrganizationMembersRepository {
             }
             catch (error) {
                 (0, logger_1.logError)(`Error getting all members: ${error}.`);
-                return [];
+                throw error;
             }
         };
     }
@@ -66377,6 +66710,7 @@ exports.BugbotPullRequestRepository = BugbotPullRequestRepository;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestChangesRepository = void 0;
 const logger_1 = __nccwpck_require__(91151);
+const pull_request_review_errors_1 = __nccwpck_require__(46445);
 class PullRequestChangesRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -66387,7 +66721,7 @@ class PullRequestChangesRepository {
             }
             catch (error) {
                 (0, logger_1.logError)(`Error getting changed files from pull request: ${error}.`);
-                return [];
+                throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "list-files");
             }
         };
         /**
@@ -66405,7 +66739,7 @@ class PullRequestChangesRepository {
             }
             catch (error) {
                 (0, logger_1.logError)(`Error getting files with diff lines (owner=${owner}, repo=${repository}, pullNumber=${pullNumber}): ${error}.`);
-                return [];
+                throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "list-files");
             }
         };
         this.getPullRequestChanges = async (owner, repository, pullNumber, token) => {
@@ -66421,7 +66755,7 @@ class PullRequestChangesRepository {
             }
             catch (error) {
                 (0, logger_1.logError)(`Error getting pull request changes: ${error}.`);
-                return [];
+                throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "list-files");
             }
         };
         /** Head commit SHA of the PR (for creating review). */
@@ -66433,11 +66767,14 @@ class PullRequestChangesRepository {
                     repo: repository,
                     pull_number: pullNumber,
                 });
-                return data.head?.sha;
+                if (!data.head?.sha) {
+                    throw new Error(`Pull request #${pullNumber} did not return a head commit SHA.`);
+                }
+                return data.head.sha;
             }
             catch (error) {
                 (0, logger_1.logError)(`Error getting PR head SHA: ${error}.`);
-                return undefined;
+                throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "get-head-sha");
             }
         };
     }
@@ -66483,19 +66820,16 @@ class PullRequestLifecycleRepository {
         this.getOpenPullRequestNumbersByHeadBranch = async (owner, repository, headBranch, token) => {
             const octokit = this.githubClient.getClient(token);
             try {
-                const { data } = await octokit.rest.pulls.list({
-                    owner,
-                    repo: repository,
-                    state: 'open',
+                const pullRequests = await this.listOpenPullRequests(octokit, owner, repository, {
                     head: `${owner}:${headBranch}`,
                 });
-                const numbers = (data || []).map((pr) => pr.number);
+                const numbers = pullRequests.map((pr) => pr.number);
                 (0, logger_1.logDebugInfo)(`Found ${numbers.length} open PR(s) for head branch "${headBranch}": ${numbers.join(', ') || 'none'}`);
                 return numbers;
             }
             catch (error) {
                 (0, logger_1.logError)(`Error listing PRs for branch ${headBranch}: ${error}`);
-                return [];
+                throw error;
             }
         };
         /**
@@ -66510,13 +66844,8 @@ class PullRequestLifecycleRepository {
             const bodyRefRegex = new RegExp(`(?:^|[^\\d])#${escaped}(?:$|[^\\d])`);
             const headRefRegex = new RegExp(`\\b${escaped}\\b`);
             try {
-                const { data } = await octokit.rest.pulls.list({
-                    owner,
-                    repo: repository,
-                    state: 'open',
-                    per_page: 100,
-                });
-                for (const pr of data || []) {
+                const pullRequests = await this.listOpenPullRequests(octokit, owner, repository);
+                for (const pr of pullRequests) {
                     const body = pr.body ?? '';
                     const headRef = pr.head?.ref ?? '';
                     if (bodyRefRegex.test(body) || headRefRegex.test(headRef)) {
@@ -66529,7 +66858,7 @@ class PullRequestLifecycleRepository {
             }
             catch (error) {
                 (0, logger_1.logError)(`Error getting head branch for issue #${issueNumber}: ${error}`);
-                return undefined;
+                throw error;
             }
         };
         this.isLinked = async (pullRequestUrl) => {
@@ -66572,6 +66901,24 @@ class PullRequestLifecycleRepository {
             });
             (0, logger_1.logDebugInfo)(`Updated PR #${pullRequestNumber} description with: ${description}`);
         };
+    }
+    async listOpenPullRequests(octokit, owner, repository, filters = {}) {
+        const allPullRequests = [];
+        const maximumPages = 100;
+        for (let page = 1; page <= maximumPages; page += 1) {
+            const { data } = await octokit.rest.pulls.list({
+                owner,
+                repo: repository,
+                state: 'open',
+                per_page: 100,
+                page,
+                ...filters,
+            });
+            allPullRequests.push(...(data ?? []));
+            if ((data ?? []).length < 100)
+                return allPullRequests;
+        }
+        throw new Error(`Open pull request pagination exceeded ${maximumPages} pages.`);
     }
 }
 exports.PullRequestLifecycleRepository = PullRequestLifecycleRepository;
@@ -66990,7 +67337,7 @@ class RepositoryDefaultBranchRepository {
             }
             catch (error) {
                 (0, logger_1.logError)(`Error getting default branch for ${owner}/${repository}: ${error}`);
-                return undefined;
+                throw error;
             }
         };
     }
@@ -67025,7 +67372,7 @@ class RepositoryReleasePublicationRepository {
                 (0, logger_1.logError)(`The '${sourceTag}' tag does not exist in the remote repository`);
                 return undefined;
             }
-            const { data: releases } = await octokit.rest.repos.listReleases({ owner, repo: repository });
+            const releases = await this.listReleases(octokit, owner, repository);
             const targetRelease = (0, release_transition_policy_1.findTargetRelease)(releases, targetTag, (release) => release.tag_name);
             let targetReleaseId;
             if (targetRelease) {
@@ -67068,9 +67415,25 @@ class RepositoryReleasePublicationRepository {
             }
             catch (error) {
                 (0, logger_1.logError)(`Error creating release: ${error}`);
-                return undefined;
+                throw error;
             }
         };
+    }
+    async listReleases(octokit, owner, repository) {
+        const releases = [];
+        const maximumPages = 100;
+        for (let page = 1; page <= maximumPages; page += 1) {
+            const { data } = await octokit.rest.repos.listReleases({
+                owner,
+                repo: repository,
+                per_page: 100,
+                page,
+            });
+            releases.push(...(data ?? []));
+            if ((data ?? []).length < 100)
+                return releases;
+        }
+        throw new Error(`Release pagination exceeded ${maximumPages} pages.`);
     }
 }
 exports.RepositoryReleasePublicationRepository = RepositoryReleasePublicationRepository;
@@ -67087,6 +67450,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RepositoryTagRepository = void 0;
 const logger_1 = __nccwpck_require__(91151);
 const release_tag_policy_1 = __nccwpck_require__(62748);
+const github_error_policy_1 = __nccwpck_require__(58791);
 class RepositoryTagRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -67100,8 +67464,10 @@ class RepositoryTagRepository {
                 });
                 return foundTag;
             }
-            catch {
-                return undefined;
+            catch (error) {
+                if ((0, github_error_policy_1.isGithubNotFound)(error))
+                    return undefined;
+                throw error;
             }
         };
         this.getTagSha = async (owner, repository, tag, token) => {
@@ -67164,7 +67530,7 @@ class RepositoryTagRepository {
             }
             catch (error) {
                 (0, logger_1.logError)(`Error creating tag '${tag}': ${JSON.stringify(error, null, 2)}`);
-                return undefined;
+                throw error;
             }
         };
     }
@@ -67264,7 +67630,8 @@ class ActivePreviousWorkflowRunsRepository {
         this.retryPolicy = retryPolicy;
     }
     async countActivePreviousRuns(query) {
-        if (!Number.isFinite(query.currentRunId) || query.workflowName.length === 0) {
+        const hasWorkflowScope = query.workflowNames?.some((name) => name.trim().length > 0) || query.workflowName.trim().length > 0;
+        if (!Number.isFinite(query.currentRunId) || !hasWorkflowScope) {
             return 0;
         }
         let activeRunCount = 0;
@@ -67274,7 +67641,9 @@ class ActivePreviousWorkflowRunsRepository {
         return activeRunCount;
     }
     async countActiveRunsForStatus(query, status) {
-        const useWorkflowEndpoint = Boolean(query.workflowIdentifier && this.client.rest.actions.listWorkflowRuns);
+        const useWorkflowEndpoint = Boolean(query.workflowIdentifier
+            && (!query.workflowNames || query.workflowNames.length === 0)
+            && this.client.rest.actions.listWorkflowRuns);
         const method = useWorkflowEndpoint
             ? this.client.rest.actions.listWorkflowRuns
             : this.client.rest.actions.listWorkflowRunsForRepo;
@@ -67330,7 +67699,10 @@ class ActivePreviousWorkflowRunsRepository {
         throw new Error('GitHub workflow runs response did not contain a workflow_runs array.');
     }
     isActivePreviousRun(run, query) {
-        return run.name === query.workflowName
+        const workflowMatches = query.workflowNames && query.workflowNames.length > 0
+            ? query.workflowNames.includes(run.name ?? '')
+            : run.name === query.workflowName;
+        return workflowMatches
             && run.id < query.currentRunId
             && constants_1.WORKFLOW_ACTIVE_STATUSES.includes(run.status ?? 'unknown');
     }
@@ -67872,6 +68244,19 @@ const github_issue_client_factory_1 = __nccwpck_require__(95883);
 const github_project_client_factory_1 = __nccwpck_require__(23691);
 const github_workflow_client_factory_1 = __nccwpck_require__(29839);
 const recommend_steps_use_case_1 = __nccwpck_require__(73746);
+const check_permissions_use_case_1 = __nccwpck_require__(18846);
+const update_title_use_case_1 = __nccwpck_require__(20556);
+const assign_members_to_issue_use_case_1 = __nccwpck_require__(55523);
+const check_priority_issue_size_use_case_1 = __nccwpck_require__(19511);
+const close_not_allowed_issue_use_case_1 = __nccwpck_require__(86675);
+const label_deploy_added_use_case_1 = __nccwpck_require__(27708);
+const label_deployed_added_use_case_1 = __nccwpck_require__(57329);
+const link_issue_project_use_case_1 = __nccwpck_require__(34100);
+const move_issue_to_in_progress_1 = __nccwpck_require__(52309);
+const prepare_branches_use_case_1 = __nccwpck_require__(67546);
+const remove_issue_branches_use_case_1 = __nccwpck_require__(15608);
+const remove_not_needed_branches_use_case_1 = __nccwpck_require__(67129);
+const update_issue_type_use_case_1 = __nccwpck_require__(38222);
 const answer_issue_help_use_case_1 = __nccwpck_require__(10706);
 const branch_lifecycle_repository_1 = __nccwpck_require__(19504);
 const branch_name_repository_1 = __nccwpck_require__(61887);
@@ -67887,6 +68272,7 @@ const issue_title_repository_1 = __nccwpck_require__(10121);
 const issue_type_assignment_repository_1 = __nccwpck_require__(19118);
 const workflow_dispatch_repository_1 = __nccwpck_require__(29509);
 const timer_branch_propagation_delay_adapter_1 = __nccwpck_require__(20846);
+const timer_delay_adapter_1 = __nccwpck_require__(71942);
 const agent_capability_composition_root_1 = __nccwpck_require__(85079);
 const issue_use_case_composition_1 = __nccwpck_require__(21239);
 const organization_members_composition_root_1 = __nccwpck_require__(50603);
@@ -67896,13 +68282,58 @@ function createIssueUseCaseCompositionRoot() {
     const issueContent = new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
     const issueLifecycle = new issue_lifecycle_repository_1.IssueLifecycleRepository((0, github_issue_client_factory_1.createIssueLifecycleClient)());
     const issueNotification = new issue_notification_repository_1.IssueNotificationRepository(issueLifecycle, issueContent);
+    const organizationMembers = (0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)();
     const branchLifecycle = new branch_lifecycle_repository_1.BranchLifecycleRepository((0, github_branch_client_factory_1.createBranchClient)());
     const branchName = new branch_name_repository_1.BranchNameRepository();
     const gitCli = new git_cli_repository_1.GitCliRepository();
     const linkedBranch = new linked_branch_repository_1.LinkedBranchRepository((0, github_project_client_factory_1.createGraphqlTransportClient)());
     const branchPropagationDelay = new timer_branch_propagation_delay_adapter_1.TimerBranchPropagationDelayAdapter();
+    const eventualConsistencyDelay = new timer_delay_adapter_1.TimerDelayAdapter();
     const projectBoard = (0, project_board_composition_root_1.createProjectBoardCompositionRoot)();
-    return (0, issue_use_case_composition_1.composeIssueUseCase)(projectBoard.command, (0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)(), issueMetadata, projectBoard.command, projectBoard.link, new issue_title_repository_1.IssueTitleRepository((0, github_issue_client_factory_1.createIssueTitleClient)(), issueMetadata), new issue_assignment_repository_1.IssueAssignmentRepository((0, github_issue_client_factory_1.createIssueAssignmentClient)()), new issue_closure_repository_1.IssueClosureRepository(issueLifecycle, issueContent), new issue_type_assignment_repository_1.IssueTypeAssignmentRepository((owner, repository, issueNumber, token) => issueMetadata.getId(owner, repository, issueNumber, token), (0, github_project_client_factory_1.createGraphqlTransportClient)()), issueContent, issueNotification, branchLifecycle, branchName, gitCli, gitCli, linkedBranch, branchPropagationDelay, new workflow_dispatch_repository_1.WorkflowDispatchRepository((0, github_workflow_client_factory_1.createWorkflowDispatchClient)()), new recommend_steps_use_case_1.RecommendStepsUseCase(issueContent, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), new answer_issue_help_use_case_1.AnswerIssueHelpUseCase(issueNotification, (0, agent_capability_composition_root_1.createFindingsQueryPort)()));
+    const issueAssignee = new issue_assignment_repository_1.IssueAssignmentRepository((0, github_issue_client_factory_1.createIssueAssignmentClient)());
+    const issueClosure = new issue_closure_repository_1.IssueClosureRepository(issueLifecycle, issueContent);
+    const issueTypeAssignment = new issue_type_assignment_repository_1.IssueTypeAssignmentRepository((owner, repository, issueNumber, token) => issueMetadata.getId(owner, repository, issueNumber, token), (0, github_project_client_factory_1.createGraphqlTransportClient)());
+    const moveIssueToInProgress = new move_issue_to_in_progress_1.MoveIssueToInProgressUseCase(projectBoard.command);
+    const workflowSteps = {
+        checkPermissions: new check_permissions_use_case_1.CheckPermissionsUseCase(organizationMembers),
+        closeNotAllowedIssue: new close_not_allowed_issue_use_case_1.CloseNotAllowedIssueUseCase(issueClosure),
+        removeIssueBranches: new remove_issue_branches_use_case_1.RemoveIssueBranchesUseCase(branchLifecycle),
+        assignMemberToIssue: new assign_members_to_issue_use_case_1.AssignMemberToIssueUseCase(issueAssignee, organizationMembers),
+        updateTitle: new update_title_use_case_1.UpdateTitleUseCase(new issue_title_repository_1.IssueTitleRepository((0, github_issue_client_factory_1.createIssueTitleClient)(), issueMetadata)),
+        updateIssueType: new update_issue_type_use_case_1.UpdateIssueTypeUseCase(issueTypeAssignment),
+        linkIssueProject: new link_issue_project_use_case_1.LinkIssueProjectUseCase(issueMetadata, projectBoard.command, projectBoard.link, eventualConsistencyDelay),
+        checkPriorityIssueSize: new check_priority_issue_size_use_case_1.CheckPriorityIssueSizeUseCase(projectBoard.command),
+        prepareBranches: new prepare_branches_use_case_1.PrepareBranchesUseCase(branchLifecycle, branchName, gitCli, gitCli, linkedBranch, branchPropagationDelay, moveIssueToInProgress),
+        removeNotNeededBranches: new remove_not_needed_branches_use_case_1.RemoveNotNeededBranchesUseCase(branchLifecycle, branchName),
+        deployAdded: new label_deploy_added_use_case_1.DeployAddedUseCase(new workflow_dispatch_repository_1.WorkflowDispatchRepository((0, github_workflow_client_factory_1.createWorkflowDispatchClient)()), moveIssueToInProgress),
+        deployedAdded: new label_deployed_added_use_case_1.DeployedAddedUseCase(),
+    };
+    return (0, issue_use_case_composition_1.composeIssueUseCase)(new recommend_steps_use_case_1.RecommendStepsUseCase(issueContent, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), new answer_issue_help_use_case_1.AnswerIssueHelpUseCase(issueNotification, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps);
+}
+
+
+/***/ }),
+
+/***/ 34760:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createLocalActionCompositionRoot = createLocalActionCompositionRoot;
+const git_cli_repository_1 = __nccwpck_require__(26331);
+const project_board_composition_root_1 = __nccwpck_require__(37194);
+/**
+ * Owns the concrete dependencies shared by the local action lifecycle.
+ * Keeping them in one root preserves the project-board query/command scope and
+ * prevents the CLI-facing entrypoint from constructing infrastructure directly.
+ */
+function createLocalActionCompositionRoot() {
+    const projectBoard = (0, project_board_composition_root_1.createProjectBoardCompositionRoot)();
+    return {
+        projectBoard,
+        latestTagQuery: new git_cli_repository_1.GitCliRepository(),
+    };
 }
 
 
@@ -67937,6 +68368,7 @@ const user_request_use_case_1 = __nccwpck_require__(19004);
 const think_use_case_1 = __nccwpck_require__(89255);
 const check_issue_comment_language_use_case_1 = __nccwpck_require__(93152);
 const check_pull_request_comment_language_use_case_1 = __nccwpck_require__(21729);
+const comment_language_translation_workflow_1 = __nccwpck_require__(72770);
 const branch_compare_repository_1 = __nccwpck_require__(95859);
 const merge_repository_1 = __nccwpck_require__(31412);
 const pull_request_lifecycle_repository_1 = __nccwpck_require__(24189);
@@ -67972,14 +68404,14 @@ function createIssueCommentUseCaseCompositionRoot() {
     const findings = (0, agent_capability_composition_root_1.createFindingsQueryPort)();
     const fixer = (0, agent_capability_composition_root_1.createFixerQueryPort)();
     const gitCommit = new git_commit_adapter_1.GitCommitAdapter();
-    return new issue_comment_use_case_1.IssueCommentUseCase(new check_issue_comment_language_use_case_1.CheckIssueCommentLanguageUseCase(bugbot.issue, findings), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), bugbot.resolution, gitCommit);
+    return new issue_comment_use_case_1.IssueCommentUseCase(new check_issue_comment_language_use_case_1.CheckIssueCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, findings)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), bugbot.resolution, gitCommit);
 }
 function createPullRequestReviewCommentUseCaseCompositionRoot() {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();
     const findings = (0, agent_capability_composition_root_1.createFindingsQueryPort)();
     const fixer = (0, agent_capability_composition_root_1.createFixerQueryPort)();
     const gitCommit = new git_commit_adapter_1.GitCommitAdapter();
-    return new pull_request_review_comment_use_case_1.PullRequestReviewCommentUseCase(new check_pull_request_comment_language_use_case_1.CheckPullRequestCommentLanguageUseCase(bugbot.issue, findings), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), bugbot.resolution, gitCommit);
+    return new pull_request_review_comment_use_case_1.PullRequestReviewCommentUseCase(new check_pull_request_comment_language_use_case_1.CheckPullRequestCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, findings)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), bugbot.resolution, gitCommit);
 }
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort) {
     return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, issue_interaction_composition_root_1.createIssueNotificationRepository)()), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase(projectBoardCommandPort, (0, issue_labels_composition_root_1.createIssueLabelRepository)(), new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)())), createDetectPotentialProblemsUseCase(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)());
@@ -68079,6 +68511,14 @@ const github_issue_client_factory_1 = __nccwpck_require__(95883);
 const github_project_client_factory_1 = __nccwpck_require__(23691);
 const github_pull_request_client_factory_1 = __nccwpck_require__(9068);
 const update_pull_request_description_use_case_1 = __nccwpck_require__(75089);
+const update_title_use_case_1 = __nccwpck_require__(20556);
+const assign_members_to_issue_use_case_1 = __nccwpck_require__(55523);
+const assign_reviewers_to_issue_use_case_1 = __nccwpck_require__(80174);
+const close_issue_after_merging_use_case_1 = __nccwpck_require__(46753);
+const check_priority_pull_request_size_use_case_1 = __nccwpck_require__(12738);
+const link_pull_request_issue_use_case_1 = __nccwpck_require__(38259);
+const link_pull_request_project_use_case_1 = __nccwpck_require__(57169);
+const sync_size_and_progress_labels_from_issue_to_pr_use_case_1 = __nccwpck_require__(89085);
 const agent_capability_composition_root_1 = __nccwpck_require__(85079);
 const issue_assignment_repository_1 = __nccwpck_require__(75023);
 const issue_closure_repository_1 = __nccwpck_require__(23231);
@@ -68092,6 +68532,7 @@ const pull_request_use_case_composition_1 = __nccwpck_require__(24);
 const pull_request_reviewer_composition_root_1 = __nccwpck_require__(72651);
 const organization_members_composition_root_1 = __nccwpck_require__(50603);
 const project_board_composition_root_1 = __nccwpck_require__(37194);
+const timer_delay_adapter_1 = __nccwpck_require__(71942);
 function createPullRequestUseCaseCompositionRoot() {
     const issueLifecycle = new issue_lifecycle_repository_1.IssueLifecycleRepository((0, github_issue_client_factory_1.createIssueLifecycleClient)());
     const issueContent = new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
@@ -68099,7 +68540,23 @@ function createPullRequestUseCaseCompositionRoot() {
     const issueMetadata = new issue_metadata_repository_1.IssueMetadataRepository((0, github_issue_client_factory_1.createIssueMetadataClient)(), (0, github_project_client_factory_1.createGraphqlTransportClient)());
     const organizationMembers = (0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)();
     const projectBoard = (0, project_board_composition_root_1.createProjectBoardCompositionRoot)();
-    return (0, pull_request_use_case_composition_1.composePullRequestUseCase)(projectBoard.command, pullRequestLifecycle, issueContent, new issue_title_repository_1.IssueTitleRepository((0, github_issue_client_factory_1.createIssueTitleClient)(), issueMetadata), new issue_closure_repository_1.IssueClosureRepository(issueLifecycle, issueContent), new issue_assignment_repository_1.IssueAssignmentRepository((0, github_issue_client_factory_1.createIssueAssignmentClient)()), (0, pull_request_reviewer_composition_root_1.createPullRequestReviewerCompositionRoot)(), organizationMembers, new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)()), pullRequestLifecycle, projectBoard.link, projectBoard.command, new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase(pullRequestLifecycle, issueContent, organizationMembers, (0, agent_capability_composition_root_1.createFindingsQueryPort)()));
+    const issueTitle = new issue_title_repository_1.IssueTitleRepository((0, github_issue_client_factory_1.createIssueTitleClient)(), issueMetadata);
+    const issueClosure = new issue_closure_repository_1.IssueClosureRepository(issueLifecycle, issueContent);
+    const issueAssignee = new issue_assignment_repository_1.IssueAssignmentRepository((0, github_issue_client_factory_1.createIssueAssignmentClient)());
+    const pullRequestLabels = new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)());
+    const pullRequestReviewer = (0, pull_request_reviewer_composition_root_1.createPullRequestReviewerCompositionRoot)();
+    const eventualConsistencyDelay = new timer_delay_adapter_1.TimerDelayAdapter();
+    const workflowSteps = {
+        updateTitle: new update_title_use_case_1.UpdateTitleUseCase(issueTitle),
+        assignMemberToIssue: new assign_members_to_issue_use_case_1.AssignMemberToIssueUseCase(issueAssignee, organizationMembers),
+        assignReviewersToIssue: new assign_reviewers_to_issue_use_case_1.AssignReviewersToIssueUseCase(issueAssignee, pullRequestReviewer, organizationMembers),
+        linkPullRequestProject: new link_pull_request_project_use_case_1.LinkPullRequestProjectUseCase(projectBoard.command, projectBoard.link, eventualConsistencyDelay),
+        linkPullRequestIssue: new link_pull_request_issue_use_case_1.LinkPullRequestIssueUseCase(pullRequestLifecycle, eventualConsistencyDelay),
+        syncSizeAndProgressLabels: new sync_size_and_progress_labels_from_issue_to_pr_use_case_1.SyncSizeAndProgressLabelsFromIssueToPrUseCase(pullRequestLabels),
+        checkPriorityPullRequestSize: new check_priority_pull_request_size_use_case_1.CheckPriorityPullRequestSizeUseCase(projectBoard.command),
+        closeIssueAfterMerging: new close_issue_after_merging_use_case_1.CloseIssueAfterMergingUseCase(issueClosure),
+    };
+    return (0, pull_request_use_case_composition_1.composePullRequestUseCase)(new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase(pullRequestLifecycle, issueContent, organizationMembers, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps);
 }
 
 
@@ -68444,6 +68901,34 @@ exports.PROJECT_BOARD_ITEM_PAGE_LIMIT = 500;
 
 /***/ }),
 
+/***/ 72762:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createLoggerAdapter = createLoggerAdapter;
+const logger_1 = __nccwpck_require__(91151);
+/** Adapts the process/GitHub logger to the semantic application port. */
+function createLoggerAdapter() {
+    return {
+        logInfo: logger_1.logInfo,
+        logWarn: logger_1.logWarn,
+        logWarning: logger_1.logWarning,
+        logError: logger_1.logError,
+        logDebugInfo: logger_1.logDebugInfo,
+        logDebugWarning: logger_1.logDebugWarning,
+        logDebugError: logger_1.logDebugError,
+        setGlobalLoggerDebug: logger_1.setGlobalLoggerDebug,
+        getAccumulatedLogEntries: logger_1.getAccumulatedLogEntries,
+        getAccumulatedLogsAsText: logger_1.getAccumulatedLogsAsText,
+        clearAccumulatedLogs: logger_1.clearAccumulatedLogs,
+    };
+}
+
+
+/***/ }),
+
 /***/ 52883:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -68504,6 +68989,23 @@ class TimerBranchPropagationDelayAdapter {
     }
 }
 exports.TimerBranchPropagationDelayAdapter = TimerBranchPropagationDelayAdapter;
+
+
+/***/ }),
+
+/***/ 71942:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TimerDelayAdapter = void 0;
+class TimerDelayAdapter {
+    async wait(milliseconds) {
+        await new Promise((resolve) => setTimeout(resolve, milliseconds));
+    }
+}
+exports.TimerDelayAdapter = TimerDelayAdapter;
 
 
 /***/ }),
@@ -69357,7 +69859,7 @@ function stripTrailingCommentWatermarks(comment) {
 /***/ }),
 
 /***/ 15415:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
@@ -69733,17 +70235,8 @@ exports.INPUT_KEYS = {
 exports.ERRORS = {
     GIT_REPOSITORY_NOT_FOUND: '❌ Git repository not found'
 };
-exports.ACTIONS = {
-    DEPLOYED: 'deployed_action',
-    PUBLISH_GITHUB_ACTION: 'publish_github_action',
-    CREATE_RELEASE: 'create_release',
-    CREATE_TAG: 'create_tag',
-    THINK: 'think_action',
-    INITIAL_SETUP: 'initial_setup',
-    CHECK_PROGRESS: 'check_progress_action',
-    DETECT_POTENTIAL_PROBLEMS: 'detect_potential_problems_action',
-    RECOMMEND_STEPS: 'recommend_steps_action',
-};
+var action_types_1 = __nccwpck_require__(19625);
+Object.defineProperty(exports, "ACTIONS", ({ enumerable: true, get: function () { return action_types_1.ACTIONS; } }));
 /** Hidden HTML comment prefix for bugbot findings (issue/PR comments). Format: <!-- copilot-bugbot finding_id:"id" resolved:true|false --> */
 exports.BUGBOT_MARKER_PREFIX = 'copilot-bugbot';
 /** Max number of individual bugbot comments to create per issue/PR. Excess findings get one summary comment suggesting to review locally. */
@@ -69807,49 +70300,6 @@ exports.injectJsonAsMarkdownBlock = injectJsonAsMarkdownBlock;
 
 /***/ }),
 
-/***/ 99192:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.typesForIssue = exports.branchesForManagement = void 0;
-const branchesForManagement = (params, labels, featureLabel, enhancementLabel, bugfixLabel, bugLabel, hotfixLabel, releaseLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel) => {
-    if (labels.includes(hotfixLabel))
-        return params.branches.bugfixTree;
-    if (labels.includes(bugfixLabel) || labels.includes(bugLabel))
-        return params.branches.bugfixTree;
-    if (labels.includes(releaseLabel))
-        return params.branches.releaseTree;
-    if (labels.includes(docsLabel) || labels.includes(documentationLabel))
-        return params.branches.docsTree;
-    if (labels.includes(choreLabel) || labels.includes(maintenanceLabel))
-        return params.branches.choreTree;
-    if (labels.includes(featureLabel) || labels.includes(enhancementLabel))
-        return params.branches.featureTree;
-    return params.branches.featureTree;
-};
-exports.branchesForManagement = branchesForManagement;
-const typesForIssue = (params, labels, featureLabel, enhancementLabel, bugfixLabel, bugLabel, hotfixLabel, releaseLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel) => {
-    if (labels.includes(hotfixLabel))
-        return params.branches.hotfixTree;
-    if (labels.includes(bugfixLabel) || labels.includes(bugLabel))
-        return params.branches.bugfixTree;
-    if (labels.includes(releaseLabel))
-        return params.branches.releaseTree;
-    if (labels.includes(docsLabel) || labels.includes(documentationLabel))
-        return params.branches.docsTree;
-    if (labels.includes(choreLabel) || labels.includes(maintenanceLabel))
-        return params.branches.choreTree;
-    if (labels.includes(featureLabel) || labels.includes(enhancementLabel))
-        return params.branches.featureTree;
-    return params.branches.featureTree;
-};
-exports.typesForIssue = typesForIssue;
-
-
-/***/ }),
-
 /***/ 42277:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -69902,9 +70352,58 @@ let loggerDebug = false;
 let loggerRemote = false;
 let structuredLogging = false;
 const accumulatedLogEntries = [];
+const MAX_LOG_MESSAGE_LENGTH = 8000;
+const SENSITIVE_KEY_PATTERN = /(api[_-]?key|access[_-]?token|refresh[_-]?token|password|secret|authorization|private[_-]?key|(?:^|[_-])(token|credential|pat)(?:$|[_-]))/i;
+const SENSITIVE_ENVIRONMENT_KEY_PATTERN = /(api[_-]?key|api[_-]?token|access[_-]?token|refresh[_-]?token|auth[_-]?token|client[_-]?secret|secret[_-]?key|password|(?:^|[_-])(?:token|pat)(?:$|[_-]))$/i;
+const SENSITIVE_ENVIRONMENT_KEYS = [
+    'PAT',
+    'PERSONAL_ACCESS_TOKEN',
+    'GITHUB_TOKEN',
+    'CODEX_ACCESS_TOKEN',
+    'OPENAI_API_KEY',
+    'OPENCODE_API_KEY',
+    'CURSOR_API_KEY',
+    'ANTHROPIC_API_KEY',
+    'GOOGLE_API_KEY',
+    'OPENROUTER_API_KEY',
+];
 /** Removes markdown code fences from message so log output does not break when visualized (e.g. GitHub Actions). */
 function sanitizeLogMessage(message) {
-    return message.replace(/```/g, '');
+    let sanitized = message.replace(/```/g, '');
+    const environmentKeys = new Set([
+        ...SENSITIVE_ENVIRONMENT_KEYS,
+        ...Object.keys(process.env).filter((key) => SENSITIVE_ENVIRONMENT_KEY_PATTERN.test(key)),
+    ]);
+    for (const key of environmentKeys) {
+        const value = process.env[key]?.trim();
+        if (value && value.length >= 6) {
+            sanitized = sanitized.split(value).join('[REDACTED]');
+        }
+    }
+    sanitized = sanitized.replace(/(api[_-]?key|access[_-]?token|refresh[_-]?token|password|secret|authorization)(\s*[:=]\s*)(["']?)[^\s,"'}\]]+\3/gi, '$1$2[REDACTED]');
+    return sanitized.length > MAX_LOG_MESSAGE_LENGTH
+        ? `${sanitized.slice(0, MAX_LOG_MESSAGE_LENGTH)}… [truncated]`
+        : sanitized;
+}
+function sanitizeMetadataValue(value, key) {
+    if (key && SENSITIVE_KEY_PATTERN.test(key))
+        return '[REDACTED]';
+    if (typeof value === 'string')
+        return sanitizeLogMessage(value);
+    if (Array.isArray(value))
+        return value.map((item) => sanitizeMetadataValue(item));
+    if (value && typeof value === 'object') {
+        return Object.fromEntries(Object.entries(value).map(([entryKey, entryValue]) => [
+            entryKey,
+            sanitizeMetadataValue(entryValue, entryKey),
+        ]));
+    }
+    return value;
+}
+function sanitizeMetadata(metadata) {
+    return metadata === undefined
+        ? undefined
+        : sanitizeMetadataValue(metadata);
 }
 function pushLogEntry(entry) {
     accumulatedLogEntries.push(entry);
@@ -69934,40 +70433,22 @@ function setStructuredLogging(enabled) {
 function formatStructuredLog(entry) {
     return JSON.stringify(entry);
 }
+function emitLog(entry, writer, previousWasSingleLine = false, skipAccumulation = false) {
+    if (!skipAccumulation)
+        pushLogEntry(entry);
+    if (previousWasSingleLine && !loggerRemote && !structuredLogging)
+        console.log();
+    writer(structuredLogging ? formatStructuredLog(entry) : entry.message);
+}
 function logInfo(message, previousWasSingleLine = false, metadata, skipAccumulation) {
     const sanitized = sanitizeLogMessage(message);
-    if (!skipAccumulation) {
-        pushLogEntry({ level: 'info', message: sanitized, timestamp: Date.now(), metadata });
-    }
-    if (previousWasSingleLine && !loggerRemote) {
-        console.log();
-    }
-    if (structuredLogging) {
-        console.log(formatStructuredLog({
-            level: 'info',
-            message: sanitized,
-            timestamp: Date.now(),
-            metadata
-        }));
-    }
-    else {
-        console.log(sanitized);
-    }
+    const sanitizedMetadata = sanitizeMetadata(metadata);
+    emitLog({ level: 'info', message: sanitized, timestamp: Date.now(), metadata: sanitizedMetadata }, console.log, previousWasSingleLine, skipAccumulation);
 }
 function logWarn(message, metadata) {
     const sanitized = sanitizeLogMessage(message);
-    pushLogEntry({ level: 'warn', message: sanitized, timestamp: Date.now(), metadata });
-    if (structuredLogging) {
-        console.warn(formatStructuredLog({
-            level: 'warn',
-            message: sanitized,
-            timestamp: Date.now(),
-            metadata
-        }));
-    }
-    else {
-        console.warn(sanitized);
-    }
+    const sanitizedMetadata = sanitizeMetadata(metadata);
+    emitLog({ level: 'warn', message: sanitized, timestamp: Date.now(), metadata: sanitizedMetadata }, console.warn);
 }
 function logWarning(message) {
     logWarn(message);
@@ -69975,38 +70456,17 @@ function logWarning(message) {
 function logError(message, metadata) {
     const errorMessage = message instanceof Error ? message.message : String(message);
     const sanitized = sanitizeLogMessage(errorMessage);
-    const metaWithStack = {
+    const metaWithStack = sanitizeMetadata({
         ...metadata,
         stack: message instanceof Error ? message.stack : undefined
-    };
-    pushLogEntry({ level: 'error', message: sanitized, timestamp: Date.now(), metadata: metaWithStack });
-    if (structuredLogging) {
-        console.error(formatStructuredLog({
-            level: 'error',
-            message: sanitized,
-            timestamp: Date.now(),
-            metadata: metaWithStack
-        }));
-    }
-    else {
-        console.error(sanitized);
-    }
+    });
+    emitLog({ level: 'error', message: sanitized, timestamp: Date.now(), metadata: metaWithStack }, console.error);
 }
 function logDebugInfo(message, previousWasSingleLine = false, metadata) {
     if (loggerDebug) {
         const sanitized = sanitizeLogMessage(message);
-        pushLogEntry({ level: 'debug', message: sanitized, timestamp: Date.now(), metadata });
-        if (structuredLogging) {
-            console.log(formatStructuredLog({
-                level: 'debug',
-                message: sanitized,
-                timestamp: Date.now(),
-                metadata
-            }));
-        }
-        else {
-            logInfo(sanitized, previousWasSingleLine, undefined, true);
-        }
+        const sanitizedMetadata = sanitizeMetadata(metadata);
+        emitLog({ level: 'debug', message: sanitized, timestamp: Date.now(), metadata: sanitizedMetadata }, console.log, previousWasSingleLine);
     }
 }
 function logDebugWarning(message) {
@@ -70379,60 +70839,6 @@ const extractIssueNumberFromPush = (branchName) => {
     return issueNumber;
 };
 exports.extractIssueNumberFromPush = extractIssueNumberFromPush;
-
-
-/***/ }),
-
-/***/ 419:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getLatestVersion = exports.incrementVersion = exports.DEFAULT_INITIAL_TAG = exports.DEFAULT_BASE_VERSION = void 0;
-const logger_1 = __nccwpck_require__(91151);
-/** Default base version when the repository has no existing tags (e.g. new repo). */
-exports.DEFAULT_BASE_VERSION = '1.0.0';
-/** Default initial tag name (with "v" prefix) for repos with no tags. Used by setup. */
-exports.DEFAULT_INITIAL_TAG = `v${exports.DEFAULT_BASE_VERSION}`;
-const incrementVersion = (version, releaseType) => {
-    (0, logger_1.logDebugInfo)(`Incrementing version ${version}.`);
-    const versionParts = version.split('.').map(Number);
-    if (versionParts.length !== 3) {
-        throw new Error('Invalid version format');
-    }
-    const [major, minor, patch] = versionParts;
-    switch (releaseType) {
-        case 'Major':
-            // Increment the major version and reset minor and patch
-            return `${major + 1}.0.0`;
-        case 'Minor':
-            // Increment the minor version and reset patch
-            return `${major}.${minor + 1}.0`;
-        case 'Patch':
-            // Increment the patch version
-            return `${major}.${minor}.${patch + 1}`;
-        default:
-            throw new Error('Unknown release type');
-    }
-};
-exports.incrementVersion = incrementVersion;
-const getLatestVersion = (versions) => {
-    return versions
-        .map(version => version.split('.').map(num => parseInt(num, 10)))
-        .sort((a, b) => {
-        for (let i = 0; i < 3; i++) {
-            if (a[i] > b[i])
-                return 1;
-            if (a[i] < b[i])
-                return -1;
-        }
-        return 0;
-    })
-        .map(version => version.join('.'))
-        .pop();
-};
-exports.getLatestVersion = getLatestVersion;
 
 
 /***/ }),

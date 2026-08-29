@@ -12,7 +12,7 @@ import {
     collectPreviousBugbotFindings,
     parseBugbotFindingComments,
 } from "./bugbot_finding_context";
-import { logDebugInfo } from "../../../../../utils/logger";
+import { logDebugInfo } from "../../../../ports/logging_ports";
 
 export interface LoadBugbotContextOptions {
     /** When set (e.g. for issue_comment when commit.branch is empty), use this branch to find open PRs. */

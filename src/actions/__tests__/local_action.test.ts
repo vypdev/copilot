@@ -138,7 +138,7 @@ describe('runLocalAction', () => {
   it('includes errors and reminders in boxen content when results have errors and reminders', async () => {
     const boxen = require('boxen');
     mockMainRun.mockResolvedValue([
-      { executed: false, steps: [], errors: ['Error one'], reminders: [] },
+      { executed: false, steps: [], errors: [new Error('Error one')], reminders: [] },
       { executed: true, steps: [], errors: [], reminders: ['Reminder text'] },
     ]);
     const params: Record<string, unknown> = {
@@ -153,6 +153,23 @@ describe('runLocalAction', () => {
     const content = boxen.mock.calls[0][0];
     expect(content).toContain('Error one');
     expect(content).toContain('Reminder text');
+  });
+
+  it('renders errors even when the failed operation was executed', async () => {
+    const boxen = require('boxen');
+    mockMainRun.mockResolvedValue([
+      { executed: true, steps: ['Attempted operation'], errors: [new Error('Executed operation failed')], reminders: [] },
+    ]);
+    const params: Record<string, unknown> = {
+      [INPUT_KEYS.TOKEN]: 't',
+      repo: { owner: 'o', repo: 'r' },
+      eventName: 'push',
+      commits: { ref: 'refs/heads/main' },
+    };
+
+    await runLocalAction(params);
+
+    expect(boxen.mock.calls[0][0]).toContain('Executed operation failed');
   });
 
   it('uses custom image URLs when provided so default image arrays are not pushed', async () => {

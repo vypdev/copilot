@@ -10,7 +10,7 @@ import type {
 } from "./types";
 import { buildCommentBody } from "./marker";
 import { resolveFindingPathForPr } from "./path_validation";
-import { logInfo } from "../../../../../utils/logger";
+import { logInfo } from "../../../../ports/logging_ports";
 
 export interface PullRequestReviewCommentPublisherOptions {
   repository: PullRequestReviewCommentCommandPort;

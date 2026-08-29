@@ -1,5 +1,5 @@
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
-import type { GithubPullRequestLifecycleClient } from "../../../application/ports/github_pull_request_ports";
+import type { GithubPullRequestLifecycleClient } from "../../../infrastructure/github/ports/github_pull_request_provider_ports";
 export declare class PullRequestLifecycleRepository {
     private readonly githubClient;
     constructor(githubClient: GithubClientPort<GithubPullRequestLifecycleClient>);
@@ -15,6 +15,7 @@ export declare class PullRequestLifecycleRepository {
      * Uses bounded matching so #12 does not match #123 and branch "feature/1234-fix" does not match issue 123.
      */
     getHeadBranchForIssue: (owner: string, repository: string, issueNumber: number, token: string) => Promise<string | undefined>;
+    private listOpenPullRequests;
     /** Default timeout (ms) for isLinked fetch. */
     private static readonly IS_LINKED_FETCH_TIMEOUT_MS;
     isLinked: (pullRequestUrl: string) => Promise<boolean>;

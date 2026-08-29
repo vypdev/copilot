@@ -118,6 +118,56 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
     });
   });
 
+  it('queries the repository endpoint and counts every Copilot workflow in the shared queue', async () => {
+    iterator.mockImplementation(async function* () {
+      yield {
+        data: {
+          workflow_runs: [
+            workflowRun({ id: 199, name: 'Copilot - Issue Comment', status: WORKFLOW_STATUS.IN_PROGRESS }),
+            workflowRun({ id: 198, name: 'Task - Release', status: WORKFLOW_STATUS.QUEUED }),
+            workflowRun({ id: 197, name: 'Unrelated workflow', status: WORKFLOW_STATUS.IN_PROGRESS }),
+          ],
+        },
+      } as GithubWorkflowRunsResponse;
+    });
+    const repository = new ActivePreviousWorkflowRunsRepository(client);
+    const workflowNames = ['Copilot - Issue', 'Copilot - Issue Comment', 'Task - Release'];
+
+    const count = await repository.countActivePreviousRuns({
+      owner: 'org',
+      repository: 'repo',
+      currentRunId: 200,
+      workflowName: 'Copilot - Issue',
+      workflowIdentifier: 'copilot_issue.yml',
+      workflowNames,
+    });
+
+    expect(count).toBe(WORKFLOW_ACTIVE_STATUSES.length * 2);
+    expect(iterator).toHaveBeenCalledWith(listWorkflowRunsForRepo, expect.objectContaining({
+      owner: 'org',
+      repo: 'repo',
+      per_page: 100,
+      status: WORKFLOW_STATUS.IN_PROGRESS,
+    }));
+    expect(iterator).not.toHaveBeenCalledWith(listWorkflowRuns, expect.anything());
+  });
+
+  it('uses the shared workflow scope even when the current workflow name is unavailable', async () => {
+    iterator.mockImplementation(async function* () {
+      yield { data: [] } as GithubWorkflowRunsResponse;
+    });
+    const repository = new ActivePreviousWorkflowRunsRepository(client);
+
+    await expect(repository.countActivePreviousRuns({
+      owner: 'org',
+      repository: 'repo',
+      currentRunId: 200,
+      workflowName: '',
+      workflowNames: ['Copilot - Issue'],
+    })).resolves.toBe(0);
+    expect(iterator).toHaveBeenCalledWith(listWorkflowRunsForRepo, expect.anything());
+  });
+
   it('reports malformed workflow run pages clearly', async () => {
     iterator.mockImplementation(async function* () {
       yield { data: {} } as GithubWorkflowRunsResponse;

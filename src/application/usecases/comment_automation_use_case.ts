@@ -1,6 +1,6 @@
 import { Execution } from "../../data/model/execution";
 import { Result } from "../../data/model/result";
-import { logError, logInfo } from "../../utils/logger";
+import { logError, logInfo } from "../ports/logging_ports";
 import { ParamUseCase } from "./base/param_usecase";
 import type { BugbotAutofixParam } from "./steps/commit/bugbot/bugbot_autofix_use_case";
 import {

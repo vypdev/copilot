@@ -74,6 +74,6 @@ For a complete list of what the action does (workflow triggers and single action
 
 ### Performance
 - Fast execution
-- **Sequential workflow handling** — The action waits for previous runs of the same workflow to finish, so you can avoid cancellations and run workflows one after another (see [Features → Workflow concurrency](/features#workflow-concurrency-and-sequential-execution)).
+- **Sequential workflow handling** — The action waits for earlier active Copilot/Task mutation runs, so related workflows run one after another without discarding intermediate triggers (see [Features → Workflow concurrency](/features#workflow-concurrency-and-sequential-execution)).
 - Efficient resource utilization
 - Reliable automation

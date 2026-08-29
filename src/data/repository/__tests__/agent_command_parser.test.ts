@@ -1,4 +1,4 @@
-import { parseAgentCommand } from '../agent_command_parser';
+import { parseAgentCommand } from '../../../application/policies/agent_command_parser';
 
 describe('parseAgentCommand', () => {
     it('preserves quoted arguments without invoking a shell', () => {

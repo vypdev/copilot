@@ -7,7 +7,7 @@ export interface AgentCapabilityInfrastructure {
 }
 export declare abstract class AgentCapabilityAdapter {
     protected readonly cliAdapter: ProviderCliAdapter;
-    protected constructor(infrastructure: AgentCapabilityInfrastructure);
+    constructor(infrastructure: AgentCapabilityInfrastructure);
     protected execute<T>(request: {
         configuration: AgentConfiguration;
         prompt: string;

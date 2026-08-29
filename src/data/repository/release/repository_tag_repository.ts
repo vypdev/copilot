@@ -1,8 +1,9 @@
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
-import type { GithubReleaseClient } from "../../../application/ports/github_release_ports";
+import type { GithubReleaseClient } from "../../../infrastructure/github/ports/github_release_provider_ports";
 import { logDebugInfo, logError, logInfo } from "../../../utils/logger";
 import { tagReference, tagReferencePath } from "../release_tag_policy";
 import type { RepositoryTagPort } from "../../../application/ports/repository_release_ports";
+import { isGithubNotFound } from "../github/github_error_policy";
 
 export class RepositoryTagRepository implements RepositoryTagPort {
     constructor(private readonly githubClient: GithubClientPort<GithubReleaseClient>) {}
@@ -21,8 +22,9 @@ export class RepositoryTagRepository implements RepositoryTagPort {
                 ref: tagReference(tag),
             });
             return foundTag;
-        } catch {
-            return undefined;
+        } catch (error) {
+            if (isGithubNotFound(error)) return undefined;
+            throw error;
         }
     };
 
@@ -104,7 +106,7 @@ export class RepositoryTagRepository implements RepositoryTagPort {
             return ref.object.sha;
         } catch (error) {
             logError(`Error creating tag '${tag}': ${JSON.stringify(error, null, 2)}`);
-            return undefined;
+            throw error;
         }
     };
 }

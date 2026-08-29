@@ -1,6 +1,6 @@
 import type { BranchListQueryPort } from '../../../application/ports/branch_lifecycle_ports';
 import { Execution } from '../../../data/model/execution';
-import { logInfo } from '../../../utils/logger';
+import { logInfo } from '../../ports/logging_ports';
 
 export async function findIssueBranch(
   param: Execution,

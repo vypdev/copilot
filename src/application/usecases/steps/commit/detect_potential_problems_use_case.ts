@@ -3,7 +3,7 @@ import { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
 import type { FindingsQueryPort } from "../../../ports/agent_findings_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
-import { logDebugInfo, logError, logInfo } from "../../../../utils/logger";
+import { logDebugInfo, logError, logInfo } from "../../../ports/logging_ports";
 import { ParamUseCase } from "../../base/param_usecase";
 import type { BugbotContextPorts } from "../../../ports/bugbot_context_ports";
 import type { BugbotFindingPublicationPorts } from "../../../ports/bugbot_finding_publication_ports";
@@ -66,6 +66,14 @@ export class DetectPotentialProblemsUseCase implements ParamUseCase<
       );
       if (prepared === undefined) {
         logDebugInfo("DetectPotentialProblems: No response from configured agent.");
+        results.push(
+          new Result({
+            id: this.taskId,
+            success: false,
+            executed: true,
+            errors: [new Error("The configured agent returned no potential-problem analysis.")],
+          }),
+        );
         return results;
       }
 

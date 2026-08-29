@@ -1,7 +1,7 @@
 import { PROGRESS_LABEL_PATTERN } from '../../../application/policies/progress_labels';
 import type { IssueLabelsPort } from '../../../application/ports/issue_management_ports';
 import type { PullRequestBranchQueryPort } from '../../../application/ports/pull_request_branch_ports';
-import { logInfo } from '../../../utils/logger';
+import { logInfo } from '../../ports/logging_ports';
 
 export async function syncProgressLabelsToOpenPullRequests(
   owner: string,

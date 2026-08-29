@@ -1,5 +1,5 @@
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
-import type { GithubReleaseClient } from "../../../application/ports/github_release_ports";
+import type { GithubReleaseClient } from "../../../infrastructure/github/ports/github_release_provider_ports";
 import { logError, logInfo } from "../../../utils/logger";
 import { hasReleaseContent, releasePayload } from "../release_content_policy";
 import { findTargetRelease, releaseIdAsString } from "../release_transition_policy";
@@ -27,7 +27,7 @@ export class RepositoryReleasePublicationRepository implements RepositoryRelease
             return undefined;
         }
 
-        const { data: releases } = await octokit.rest.repos.listReleases({ owner, repo: repository });
+        const releases = await this.listReleases(octokit, owner, repository);
         const targetRelease = findTargetRelease(releases, targetTag, (release) => release.tag_name);
         let targetReleaseId: number;
         if (targetRelease) {
@@ -55,6 +55,26 @@ export class RepositoryReleasePublicationRepository implements RepositoryRelease
         return releaseIdAsString(targetReleaseId);
     };
 
+    private async listReleases(
+        octokit: GithubReleaseClient,
+        owner: string,
+        repository: string,
+    ): Promise<Array<{ id: number; tag_name: string }>> {
+        const releases: Array<{ id: number; tag_name: string }> = [];
+        const maximumPages = 100;
+        for (let page = 1; page <= maximumPages; page += 1) {
+            const { data } = await octokit.rest.repos.listReleases({
+                owner,
+                repo: repository,
+                per_page: 100,
+                page,
+            });
+            releases.push(...(data ?? []));
+            if ((data ?? []).length < 100) return releases;
+        }
+        throw new Error(`Release pagination exceeded ${maximumPages} pages.`);
+    }
+
     createRelease = async (
         owner: string,
         repository: string,
@@ -77,7 +97,7 @@ export class RepositoryReleasePublicationRepository implements RepositoryRelease
             return release.html_url;
         } catch (error) {
             logError(`Error creating release: ${error}`);
-            return undefined;
+            throw error;
         }
     };
 }

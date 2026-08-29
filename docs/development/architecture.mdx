@@ -6,9 +6,11 @@ description: Clean Architecture boundaries for agent execution and workflow auto
 
 The repository separates semantic application ports from provider-specific adapters.
 
-- Application: use cases, policies, and semantic ports.
-- Data/repository: agent configuration, authentication, provisioning, and CLI adapters.
-- Infrastructure: GitHub and process implementations.
+- Application: use cases, pure policies (agent configuration, reviewer/assignee
+  selection, and result publication), and semantic ports.
+- Data/repository: external adapters for agent execution, authentication, provisioning, GitHub, and Git.
+- Infrastructure: runtime wiring, GitHub/process implementations, and concrete logging.
+- Domain model/policies: provider-neutral rules such as action types, label-to-branch resolution, and version arithmetic.
 - Composition roots: bind capabilities without universal facades.
 
 The application layer MUST NOT import GitHub SDKs, concrete CLIs, process libraries, or provider-specific protocols. Provider adapters MUST NOT define business policy. Configuration validation belongs at the boundary before execution.

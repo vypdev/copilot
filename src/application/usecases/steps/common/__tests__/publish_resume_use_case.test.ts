@@ -2,7 +2,7 @@ import { Result } from '../../../../../data/model/result';
 import { PublishResultUseCase } from '../publish_resume_use_case';
 
 const mockGetAccumulatedLogsAsText = jest.fn(() => '');
-jest.mock('../../../../../utils/logger', () => ({
+jest.mock('../../../../ports/logging_ports', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
   getAccumulatedLogsAsText: () => mockGetAccumulatedLogsAsText(),
@@ -73,6 +73,20 @@ describe('PublishResultUseCase', () => {
     await useCase.invoke(param);
 
     expect(mockAddComment).not.toHaveBeenCalled();
+  });
+
+  it('publishes failures even when a result has no steps', async () => {
+    mockAddComment.mockResolvedValue(undefined);
+    const param = baseParam({
+      isIssue: true,
+      currentConfiguration: {
+        results: [new Result({ id: 'x', success: false, executed: true, errors: ['Agent authentication failed'] })],
+      },
+    });
+
+    await useCase.invoke(param);
+
+    expect(mockAddComment).toHaveBeenCalledWith('o', 'r', 42, expect.stringContaining('Agent authentication failed'), 't');
   });
 
   it('calls addComment on issue when isIssue and results have steps', async () => {

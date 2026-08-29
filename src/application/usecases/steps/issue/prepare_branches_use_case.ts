@@ -1,5 +1,5 @@
 import { Execution } from "../../../../data/model/execution";
-import { Result } from "../../../../data/model/result";
+import { getResultPayload, Result } from "../../../../data/model/result";
 import { decideManagedBranchPreparation } from "../../../policies/branch_preparation_policy";
 import type {
   BranchListQueryPort,
@@ -11,13 +11,11 @@ import type {
   LinkedBranchCommandPort,
   RemoteBranchSyncPort,
 } from "../../../ports/branch_preparation_ports";
-import type { ProjectBoardCommandPort } from "../../../ports/project_board_command_ports";
-import { logDebugInfo, logError, logInfo } from "../../../../utils/logger";
+import { logDebugInfo, logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
-import { CommitPrefixBuilderUseCase } from "../common/execute_script_use_case";
+import { buildCommitPrefix } from "../common/execute_script_use_case";
 import { selectBranchPreparationStrategy } from "./branch_preparation_strategy";
-import { MoveIssueToInProgressUseCase } from "./move_issue_to_in_progress";
 import { prepareHotfixBranch } from "./prepare_hotfix_branch";
 import { prepareReleaseBranch } from "./prepare_release_branch";
 
@@ -28,13 +26,13 @@ export class PrepareBranchesUseCase implements ParamUseCase<
   taskId = "PrepareBranchesUseCase";
 
   constructor(
-    private readonly projectBoardPort: ProjectBoardCommandPort,
     private readonly branchListQueryPort: BranchListQueryPort,
     private readonly branchNamePort: BranchNamePort,
     private readonly remoteBranchSyncPort: RemoteBranchSyncPort,
     private readonly commitTagQueryPort: CommitTagQueryPort,
     private readonly linkedBranchCommandPort: LinkedBranchCommandPort,
     private readonly branchPropagationDelayPort: BranchPropagationDelayPort,
+    private readonly moveIssueToInProgressUseCase: ParamUseCase<Execution, Result[]>,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
@@ -171,21 +169,28 @@ export class PrepareBranchesUseCase implements ParamUseCase<
     const lastAction = branchesResult.at(-1);
     if (!lastAction?.success || !lastAction.executed) return branchesResult;
 
-    const branchName = lastAction.payload?.newBranchName;
-    if (typeof branchName !== "string" || branchName.length === 0)
+    const branchPayload = getResultPayload(lastAction.payload);
+    const branchName = branchPayload?.newBranchName;
+    if (
+      typeof branchName !== "string" ||
+      branchName.length === 0 ||
+      typeof branchPayload?.baseBranchName !== "string" ||
+      typeof branchPayload.baseBranchUrl !== "string" ||
+      typeof branchPayload.newBranchUrl !== "string"
+    )
       return branchesResult;
     param.currentConfiguration.workingBranch = branchName;
 
     const commitPrefix = await this.buildCommitPrefix(param, branchName);
     const developmentUrl = `https://github.com/${param.owner}/${param.repo}/tree/${param.branches.development}`;
     const step = decision.isRename
-      ? `The branch **${lastAction.payload.baseBranchName}** was renamed to [**${branchName}**](${lastAction.payload.newBranchUrl}).`
-      : `The branch [**${lastAction.payload.baseBranchName}**](${lastAction.payload.baseBranchUrl}) was used to create [**${branchName}**](${lastAction.payload.newBranchUrl}).`;
+      ? `The branch **${branchPayload.baseBranchName}** was renamed to [**${branchName}**](${branchPayload.newBranchUrl}).`
+      : `The branch [**${branchPayload.baseBranchName}**](${branchPayload.baseBranchUrl}) was used to create [**${branchName}**](${branchPayload.newBranchUrl}).`;
     const inlineCode = "`";
     const fence = "```";
     const reminder = decision.isRename
-      ? `Open a Pull Request from [${inlineCode}${branchName}${inlineCode}](${lastAction.payload.newBranchUrl}) to [${inlineCode}${param.branches.development}${inlineCode}](${developmentUrl}). [New PR](https://github.com/${param.owner}/${param.repo}/compare/${param.branches.development}...${branchName}?expand=1)`
-      : `Open a Pull Request from [${inlineCode}${branchName}${inlineCode}](${lastAction.payload.newBranchUrl}) to [${inlineCode}${lastAction.payload.baseBranchName}${inlineCode}](${lastAction.payload.baseBranchUrl}). [New PR](https://github.com/${param.owner}/${param.repo}/compare/${lastAction.payload.baseBranchName}...${branchName}?expand=1)`;
+      ? `Open a Pull Request from [${inlineCode}${branchName}${inlineCode}](${branchPayload.newBranchUrl}) to [${inlineCode}${param.branches.development}${inlineCode}](${developmentUrl}). [New PR](https://github.com/${param.owner}/${param.repo}/compare/${param.branches.development}...${branchName}?expand=1)`
+      : `Open a Pull Request from [${inlineCode}${branchName}${inlineCode}](${branchPayload.newBranchUrl}) to [${inlineCode}${branchPayload.baseBranchName}${inlineCode}](${branchPayload.baseBranchUrl}). [New PR](https://github.com/${param.owner}/${param.repo}/compare/${branchPayload.baseBranchName}...${branchName}?expand=1)`;
     const reminders = [
       `Check out the branch:\n> ${fence}bash\n> git fetch -v && git checkout ${branchName}\n> ${fence}`,
       ...(commitPrefix
@@ -206,9 +211,7 @@ export class PrepareBranchesUseCase implements ParamUseCase<
     ];
     await this.branchPropagationDelayPort.waitForLinkedBranch();
     result.push(
-      ...(await new MoveIssueToInProgressUseCase(this.projectBoardPort).invoke(
-        param,
-      )),
+      ...(await this.moveIssueToInProgressUseCase.invoke(param)),
     );
     return result;
   }
@@ -219,7 +222,6 @@ export class PrepareBranchesUseCase implements ParamUseCase<
   ): Promise<string> {
     if (!param.commitPrefixBuilder) return "";
     param.commitPrefixBuilderParams = { branchName };
-    const results = await new CommitPrefixBuilderUseCase().invoke(param);
-    return results.at(-1)?.payload?.scriptResult?.toString() ?? "";
+    return buildCommitPrefix(branchName, param.commitPrefixBuilder);
   }
 }

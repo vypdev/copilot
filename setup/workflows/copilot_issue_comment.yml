@@ -24,6 +24,16 @@ jobs:
           agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
           agent-effort: ${{ vars.AGENT_EFFORT }}
           agent-command: ${{ vars.AGENT_COMMAND }}
+          findings-provider: ${{ vars.FINDINGS_PROVIDER }}
+          findings-model-provider: ${{ vars.FINDINGS_MODEL_PROVIDER }}
+          findings-model: ${{ vars.FINDINGS_MODEL }}
+          findings-effort: ${{ vars.FINDINGS_EFFORT }}
+          findings-command: ${{ vars.FINDINGS_COMMAND }}
+          fixer-provider: ${{ vars.FIXER_PROVIDER }}
+          fixer-model-provider: ${{ vars.FIXER_MODEL_PROVIDER }}
+          fixer-model: ${{ vars.FIXER_MODEL }}
+          fixer-effort: ${{ vars.FIXER_EFFORT }}
+          fixer-command: ${{ vars.FIXER_COMMAND }}
           project-ids: ${{ vars.PROJECT_IDS }}
           bugbot-fix-verify-commands: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS }}
           token: ${{ secrets.PAT }}
@@ -44,5 +54,5 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          CURSOR_API_KEY: ${{ (vars.AGENT_PROVIDER || 'codex') == 'cursor' && secrets.CURSOR_API_KEY || '' }}
+          CURSOR_API_KEY: ${{ (vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor') && secrets.CURSOR_API_KEY || '' }}
           CODEX_ACCESS_TOKEN: ${{ secrets.CODEX_ACCESS_TOKEN }}
