@@ -4,6 +4,7 @@ import {
   buildDebugLogSection,
   hasPublishableContent,
   renderResultSections,
+  resolveResultPublicationIssueNumber,
   resolveResultPublicationPresentation,
 } from '../result_publication_policy';
 
@@ -25,6 +26,48 @@ const images = {
 } as unknown as Images;
 
 describe('result publication policy', () => {
+  it('resolves publication targets in lifecycle precedence order', () => {
+    expect(resolveResultPublicationIssueNumber({
+      isSingleAction: true,
+      singleActionIssue: 11,
+      isIssue: true,
+      issueNumber: 22,
+      isPullRequest: true,
+      pullRequestNumber: 33,
+      isPush: true,
+      pushIssueNumber: 44,
+    })).toBe(11);
+    expect(resolveResultPublicationIssueNumber({
+      isSingleAction: false,
+      singleActionIssue: 11,
+      isIssue: false,
+      issueNumber: 22,
+      isPullRequest: true,
+      pullRequestNumber: 33,
+      isPush: false,
+      pushIssueNumber: 44,
+    })).toBe(33);
+    expect(resolveResultPublicationIssueNumber({
+      isSingleAction: false,
+      singleActionIssue: 11,
+      isIssue: false,
+      issueNumber: 0,
+      isPullRequest: false,
+      pullRequestNumber: 33,
+      isPush: true,
+      pushIssueNumber: 0,
+    })).toBeUndefined();
+    expect(resolveResultPublicationIssueNumber({
+      isSingleAction: false,
+      singleActionIssue: 11,
+      isIssue: false,
+      issueNumber: 0,
+      isPullRequest: false,
+      pullRequestNumber: 0,
+      isPush: true,
+      pushIssueNumber: 44,
+    })).toBe(44);
+  });
   it('chooses the most specific issue presentation before the default', () => {
     expect(resolveResultPublicationPresentation({
       isIssue: true,

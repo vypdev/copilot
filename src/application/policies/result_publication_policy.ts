@@ -25,7 +25,27 @@ export interface ResultPublicationSections {
     errors: string;
 }
 
+export interface ResultPublicationTargetInput {
+    isSingleAction: boolean;
+    singleActionIssue: number;
+    isIssue: boolean;
+    issueNumber: number;
+    isPullRequest: boolean;
+    pullRequestNumber: number;
+    isPush: boolean;
+    pushIssueNumber: number;
+}
+
 type ImageSelector = (images: string[]) => string | undefined;
+
+/** Resolves the GitHub discussion that receives a result comment. */
+export function resolveResultPublicationIssueNumber(input: ResultPublicationTargetInput): number | undefined {
+    if (input.isSingleAction) return input.singleActionIssue;
+    if (input.isIssue) return input.issueNumber;
+    if (input.isPullRequest) return input.pullRequestNumber;
+    if (input.isPush && input.pushIssueNumber > 0) return input.pushIssueNumber;
+    return undefined;
+}
 
 export function resolveResultPublicationPresentation(
     context: ResultPublicationContext,

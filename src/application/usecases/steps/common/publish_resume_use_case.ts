@@ -1,7 +1,7 @@
 import { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
 import type { IssueNotificationPort } from "../../../ports/issue_lifecycle_ports";
-import type { ApplicationLogReportPort } from "../../../ports/logging_ports";
+import type { ApplicationLogReportReaderPort } from "../../../ports/logging_ports";
 import { getRandomElement } from "../../../../utils/list_utils";
 import { logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
@@ -9,6 +9,7 @@ import {
     buildDebugLogSection,
     hasPublishableContent,
     renderResultSections,
+    resolveResultPublicationIssueNumber,
     resolveResultPublicationPresentation,
 } from "../../../policies/result_publication_policy";
 import { ParamUseCase } from "../../base/param_usecase";
@@ -20,11 +21,7 @@ export class PublishResultUseCase implements ParamUseCase<Execution, void> {
     taskId: string = 'PublishResultUseCase';
     constructor(
         private readonly issueNotificationPort: IssueNotificationPort,
-        private readonly logReport: ApplicationLogReportPort = {
-            getAccumulatedLogEntries: () => [],
-            getAccumulatedLogsAsText: () => '',
-            clearAccumulatedLogs: () => undefined,
-        },
+        private readonly logReport: ApplicationLogReportReaderPort,
     ) {}
 
     async invoke(param: Execution): Promise<void> {
@@ -65,35 +62,21 @@ ${debugLogSection}
                 return;
             }
 
-            if (param.isSingleAction) {
+            const issueNumber = resolveResultPublicationIssueNumber({
+                isSingleAction: param.isSingleAction,
+                singleActionIssue: param.singleAction.issue,
+                isIssue: param.isIssue,
+                issueNumber: param.issue.number,
+                isPullRequest: param.isPullRequest,
+                pullRequestNumber: param.pullRequest.number,
+                isPush: param.isPush,
+                pushIssueNumber: param.issueNumber,
+            });
+            if (issueNumber !== undefined) {
                 await this.issueNotificationPort.addComment(
                     param.owner,
                     param.repo,
-                    param.singleAction.issue,
-                    commentBody,
-                    param.tokens.token,
-                )
-            } else if (param.isIssue) {
-                await this.issueNotificationPort.addComment(
-                    param.owner,
-                    param.repo,
-                    param.issue.number,
-                    commentBody,
-                    param.tokens.token,
-                )
-            } else if (param.isPullRequest) {
-                await this.issueNotificationPort.addComment(
-                    param.owner,
-                    param.repo,
-                    param.pullRequest.number,
-                    commentBody,
-                    param.tokens.token,
-                )
-            } else if (param.isPush && param.issueNumber > 0) {
-                await this.issueNotificationPort.addComment(
-                    param.owner,
-                    param.repo,
-                    param.issueNumber,
+                    issueNumber,
                     commentBody,
                     param.tokens.token,
                 )
