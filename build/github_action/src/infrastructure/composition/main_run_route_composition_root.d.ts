@@ -3,7 +3,7 @@ import { IssueCommentUseCase } from "../../application/usecases/issue_comment_us
 import type { ProjectBoardCommandPort } from "../../application/ports/project_board_command_ports";
 import { PullRequestReviewCommentUseCase } from "../../application/usecases/pull_request_review_comment_use_case";
 import { SingleActionUseCase } from "../../application/usecases/single_action_use_case";
-import type { MainRunRouteHandlers } from "../../actions/main_run_route_handlers";
+import type { MainRunRouteHandlers } from "../../application/ports/main_run_route_ports";
 export declare function createSingleActionUseCaseCompositionRoot(): SingleActionUseCase;
 export declare function createIssueCommentUseCaseCompositionRoot(): IssueCommentUseCase;
 export declare function createPullRequestReviewCommentUseCaseCompositionRoot(): PullRequestReviewCommentUseCase;
