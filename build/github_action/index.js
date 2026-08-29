@@ -59050,8 +59050,43 @@ function executableExists(executable, environment) {
         }
     }));
 }
+function installPnpmPackage(packageName, version) {
+    (0, node_child_process_1.execFileSync)('corepack', ['pnpm', 'add', '--global', `${packageName}@${version}`], { stdio: 'inherit' });
+}
+function installCursor(expectedSha256) {
+    const directory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-cursor-installer-'));
+    const installer = (0, node_path_1.join)(directory, 'install.sh');
+    try {
+        (0, node_child_process_1.execFileSync)('curl', ['--fail', '--silent', '--show-error', '--location', 'https://cursor.com/install', '--output', installer], { stdio: 'inherit' });
+        const actualSha256 = (0, node_crypto_1.createHash)('sha256').update((0, node_fs_1.readFileSync)(installer)).digest('hex');
+        if (actualSha256.toLowerCase() !== expectedSha256.toLowerCase()) {
+            throw new Error('Cursor installer checksum mismatch.');
+        }
+        (0, node_child_process_1.execFileSync)('bash', [installer], { stdio: 'inherit' });
+    }
+    finally {
+        (0, node_fs_1.rmSync)(directory, { recursive: true, force: true });
+    }
+}
+function requirePinnedVersion(packageName, version, versionVariable) {
+    if (!version?.trim())
+        throw new Error(`${packageName} CLI is not installed and ${versionVariable} is not configured. Preinstall the CLI or set ${versionVariable} to a pinned version.`);
+    return version.trim();
+}
+function requireInstallerChecksum(checksum) {
+    if (!checksum?.match(/^[a-f0-9]{64}$/i)) {
+        throw new Error('CURSOR_INSTALLER_SHA256 must be provided for verified Cursor provisioning.');
+    }
+    return checksum;
+}
+const DEFAULT_SYSTEM = {
+    executableExists,
+    installPackage: installPnpmPackage,
+    installCursor,
+};
 class AgentCliProvisioner {
-    constructor() {
+    constructor(system = DEFAULT_SYSTEM) {
+        this.system = system;
         this.provisionedExecutables = new Set();
     }
     provision(target, environment = process.env) {
@@ -59061,24 +59096,24 @@ class AgentCliProvisioner {
         const mode = this.resolveMode(environment.AGENT_PROVISIONING);
         if (this.provisionedExecutables.has(executable))
             return;
-        if (mode !== 'always' && executableExists(executable, environment))
+        if (mode !== 'always' && this.system.executableExists(executable, environment))
             return;
         if (mode === 'disabled') {
             throw new Error(`Agent provisioning is disabled and the ${provider} CLI executable "${executable}" is not available.`);
         }
         switch (provider) {
             case 'codex':
-                this.installPnpmPackage('@openai/codex', environment.codexVersion || environment.CODEX_VERSION, 'CODEX_VERSION');
+                this.system.installPackage('@openai/codex', requirePinnedVersion('@openai/codex', environment.CODEX_VERSION, 'CODEX_VERSION'));
                 this.assertInstalled(executable, provider, environment);
                 this.provisionedExecutables.add(executable);
                 return;
             case 'opencode':
-                this.installPnpmPackage('opencode-ai', environment.opencodeVersion || environment.OPENCODE_VERSION, 'OPENCODE_VERSION');
+                this.system.installPackage('opencode-ai', requirePinnedVersion('opencode-ai', environment.OPENCODE_VERSION, 'OPENCODE_VERSION'));
                 this.assertInstalled(executable, provider, environment);
                 this.provisionedExecutables.add(executable);
                 return;
             case 'cursor':
-                this.installCursor(environment.cursorInstallerSha256 || environment.CURSOR_INSTALLER_SHA256);
+                this.system.installCursor(requireInstallerChecksum(environment.CURSOR_INSTALLER_SHA256));
                 this.assertInstalled(executable, provider, environment);
                 this.provisionedExecutables.add(executable);
                 return;
@@ -59091,31 +59126,8 @@ class AgentCliProvisioner {
         throw new Error('AGENT_PROVISIONING must be one of: auto, always, disabled.');
     }
     assertInstalled(executable, provider, environment) {
-        if (!executableExists(executable, environment)) {
+        if (!this.system.executableExists(executable, environment)) {
             throw new Error(`The ${provider} CLI was provisioned but executable "${executable}" is not available on PATH.`);
-        }
-    }
-    installPnpmPackage(packageName, version, versionVariable) {
-        if (!version?.trim())
-            throw new Error(`${packageName} CLI is not installed and ${versionVariable} is not configured. Preinstall the CLI or set ${versionVariable} to a pinned version.`);
-        (0, node_child_process_1.execFileSync)('corepack', ['pnpm', 'add', '--global', `${packageName}@${version}`], { stdio: 'inherit' });
-    }
-    installCursor(expectedSha256) {
-        if (!expectedSha256?.match(/^[a-f0-9]{64}$/i)) {
-            throw new Error('CURSOR_INSTALLER_SHA256 must be provided for verified Cursor provisioning.');
-        }
-        const directory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-cursor-installer-'));
-        const installer = (0, node_path_1.join)(directory, 'install.sh');
-        try {
-            (0, node_child_process_1.execFileSync)('curl', ['--fail', '--silent', '--show-error', '--location', 'https://cursor.com/install', '--output', installer], { stdio: 'inherit' });
-            const actualSha256 = (0, node_crypto_1.createHash)('sha256').update((0, node_fs_1.readFileSync)(installer)).digest('hex');
-            if (actualSha256.toLowerCase() !== expectedSha256.toLowerCase()) {
-                throw new Error('Cursor installer checksum mismatch.');
-            }
-            (0, node_child_process_1.execFileSync)('bash', [installer], { stdio: 'inherit' });
-        }
-        finally {
-            (0, node_fs_1.rmSync)(directory, { recursive: true, force: true });
         }
     }
 }
