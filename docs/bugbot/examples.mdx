@@ -174,13 +174,13 @@ copilot detect-potential-problems -i 123 -b feature/issue-123
 copilot detect-potential-problems -i 123 -t $PAT -d
 ```
 
-See [Smoke tests](/security-operations/operations/smoke-tests) for full setup (OpenCode CLI, API keys, etc.).
+See [Smoke tests](/security-operations/operations/smoke-tests) for full setup (the selected agent CLI, API keys, etc.).
 
 ---
 
 ## Comment examples: autofix
 
-These are examples of comments that typically trigger **Bugbot autofix** (fix one or more reported findings). The exact interpretation is done by OpenCode; these are common patterns.
+These are examples of comments that typically trigger **Bugbot autofix** (fix one or more reported findings). The exact interpretation is done by the configured agent; these are common patterns.
 
 | Comment | Likely effect |
 |---------|----------------|
@@ -232,7 +232,7 @@ Each **finding** is posted as a comment with a **title**, **severity**, optional
 **Example target file (from the analyzed repository):** `src/auth/login.ts` (line 42)
 **Description:** The variable `user` may be null when passed to `validateSession`. Consider adding a null check before use.
 
-The action uses the marker to later mark this finding as resolved when OpenCode reports it fixed (e.g. after you or the bot change the code).
+The action uses the marker to later mark this finding as resolved when the configured agent reports it fixed (e.g. after you or the bot change the code).
 
 ---
 

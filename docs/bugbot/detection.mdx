@@ -13,7 +13,7 @@ Bugbot detection runs in two ways:
 
 ### 1. On every push (commit workflow)
 
-When you push to a branch that is **linked to an issue** (e.g. a feature or bugfix branch created by Copilot), the **Commit** workflow runs. If an agent CLI is configured, the action runs **DetectPotentialProblemsUseCase**: it loads existing finding context, asks OpenCode to analyze the branch vs the base, and then publishes new findings and updates or marks as resolved any previous findings that no longer apply.
+When you push to a branch that is **linked to an issue** (e.g. a feature or bugfix branch created by Copilot), the **Commit** workflow runs. If an agent CLI is configured, the action runs **DetectPotentialProblemsUseCase**: it loads existing finding context, asks the configured agent to analyze the branch vs the base, and then publishes new findings and updates or marks as resolved any previous findings that no longer apply.
 
 **Requirements:**
 
@@ -44,13 +44,13 @@ Each finding is posted as a **separate comment** on the issue. The comment inclu
 - Optional **file and line** (when the finding is tied to a specific location).
 - A **description** (and optionally a suggestion).
 
-The action embeds a **hidden marker** in each comment so it can later **update** the same comment (e.g. when the finding is fixed and OpenCode reports it as resolved) or match it when you ask to “fix it” from a PR review thread.
+The action embeds a **hidden marker** in each comment so it can later **update** the same comment (e.g. when the finding is fixed and the configured agent reports it as resolved) or match it when you ask to “fix it” from a PR review thread.
 
 ### On the pull request
 
 The **same findings** are also posted as **review comments** on any **open PR** that targets the same branch (or that is linked to the same issue and branch). Each review comment is attached to the **file and line** from the finding when that file is in the PR’s changed files; otherwise the finding is only on the issue.
 
-When OpenCode later reports a finding as **resolved** (e.g. after you or the bot fixed the code), the action:
+When the configured agent later reports a finding as **resolved** (e.g. after you or the bot fixed the code), the action:
 
 - **Updates** the corresponding issue comment so the marker shows `resolved: true`.
 - **Marks the PR review thread as resolved** so the PR review reflects the current status.
@@ -89,7 +89,7 @@ So you always see at most N+1 new comments from a single detection run when ther
 
 ## Resolved findings
 
-OpenCode is given the list of **previously reported findings** (from the existing issue/PR comments) and is asked to return:
+The configured agent is given the list of **previously reported findings** (from the existing issue/PR comments) and is asked to return:
 
 1. **New/current findings** (task 1).
 2. **Resolved finding ids** (task 2): which of the previous findings are now fixed or no longer apply.

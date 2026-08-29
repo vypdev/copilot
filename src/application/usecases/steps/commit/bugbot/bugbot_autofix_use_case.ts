@@ -179,7 +179,7 @@ export class BugbotAutofixUseCase implements ParamUseCase<BugbotAutofixParam, Re
                 success: true,
                 executed: true,
                 steps: [
-                    // `Bugbot autofix completed. The configured agent applied changes for findings: ${idsToFix.join(", ")}. Run verify commands and commit/push.`,
+                    `Bugbot autofix completed. The configured agent applied changes for findings: ${idsToFix.join(", ")}. Run verify commands and commit/push.`,
                 ],
                 payload: { targetFindingIds: idsToFix, context, workspacePaths },
             })

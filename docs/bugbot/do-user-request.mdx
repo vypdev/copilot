@@ -19,13 +19,13 @@ When you comment on an **issue** or **pull request**, the action first runs **in
 - A **do request** — “add a test for X”, “refactor this”, “implement feature Y”, etc. → **Do user request** runs (general code change).
 - **Neither** — e.g. a question → **Think** runs (answer only, no file changes).
 
-So you don’t choose a “mode”; you just write what you want. If the agent classifies it as a do request and you have permission, the action runs the **Build** agent with your request, then runs the same **verify commands** as for autofix and commits and pushes.
+So you don’t choose a “mode”; you just write what you want. If the agent classifies it as a do request and you have permission, the action runs the configured **execution role** with your request, then runs the same **verify commands** as for autofix and commits and pushes.
 
 ---
 
 ## How to ask
 
-Write a **comment** on the issue or on the PR (or, for PRs, you can reply in a review thread if the context makes sense). OpenCode receives your **sanitized** comment (trimmed, length-limited, escaped for the prompt) and the repo context.
+Write a **comment** on the issue or on the PR (or, for PRs, you can reply in a review thread if the context makes sense). The configured agent receives your **sanitized** comment (trimmed, length-limited, escaped for the prompt) and the repo context.
 
 **Example phrases:**
 
@@ -36,7 +36,7 @@ Write a **comment** on the issue or on the PR (or, for PRs, you can reply in a r
 - “add error handling for the API call”
 - “fix the typo in the docstring”
 
-You can be brief or detailed. The Build agent will apply the changes in the OpenCode workspace; the action then runs **verify commands** (from `bugbot-fix-verify-commands`) and, if they pass, commits and pushes.
+You can be brief or detailed. The configured execution role will apply the changes in its workspace; the action then runs **verify commands** (from `bugbot-fix-verify-commands`) and, if they pass, commits and pushes.
 
 ---
 
@@ -72,12 +72,12 @@ Do user request uses the **same** verify commands as autofix: **`bugbot-fix-veri
 | Fix one or more **reported Bugbot findings** | Comment “fix it”, “fix all”, or refer to specific findings → **Autofix**. |
 | Ask for a **general change** (test, refactor, feature, docs) | Comment with the request in natural language → **Do user request**. |
 
-Intent is inferred by OpenCode from the comment text and the list of unresolved findings; you don’t need to tag or label the comment.
+Intent is inferred by the configured analysis role from the comment text and the list of unresolved findings; you don’t need to tag or label the comment.
 
 ---
 
 ## Next steps
 
 - **[Autofix](/bugbot/autofix)** — Fix specific Bugbot findings from a comment.
-- **[Configuration](/bugbot/configuration)** — `bugbot-fix-verify-commands` and OpenCode inputs.
+- **[Configuration](/bugbot/configuration)** — `bugbot-fix-verify-commands` and agent runtime inputs.
 - **[Examples](/bugbot/examples)** — Comment examples and workflows.

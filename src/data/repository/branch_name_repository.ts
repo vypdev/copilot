@@ -2,19 +2,14 @@ import type { BranchNamePort } from '../../application/ports/branch_lifecycle_po
 
 export class BranchNameRepository implements BranchNamePort {
     formatBranchName = (issueTitle: string, issueNumber: number): string => {
-        let sanitizedTitle = issueTitle.toLowerCase()
-            .replace(/\b\d+(\.\d+){2,}\b/g, '')
-            .replace(/[^\p{L}\p{N}\p{P}\p{Z}^$\n]/gu, '')
-            .replace(/\u200D/g, '')
-            .replace(/[^\S\r\n]+/g, ' ')
-            .replace(/[^a-zA-Z0-9 .]/g, '')
-            .replace(/^-+|-+$/g, '')
-            .replace(/- -/g, '-').trim()
-            .replace(/-+/g, '-')
-            .trim();
-        sanitizedTitle = sanitizedTitle.replace(/[^a-z0-9 ]/g, '').replace(/ /g, '-');
+        const sanitizedTitle = issueTitle.toLowerCase()
+            .replace(/\b\d+(\.\d+){2,}\b/g, ' ')
+            .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
+            .replace(/[\s-]+/g, '-')
+            .replace(/^-+|-+$/g, '');
         const issuePrefix = `${issueNumber}-`;
-        if (sanitizedTitle.startsWith(issuePrefix)) sanitizedTitle = sanitizedTitle.substring(issuePrefix.length);
-        return sanitizedTitle.replace(/-+/g, '-').replace(/^-|-$/g, '');
+        return sanitizedTitle.startsWith(issuePrefix)
+            ? sanitizedTitle.substring(issuePrefix.length)
+            : sanitizedTitle;
     };
 }

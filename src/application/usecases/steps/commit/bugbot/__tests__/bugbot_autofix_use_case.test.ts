@@ -220,6 +220,9 @@ describe("BugbotAutofixUseCase", () => {
 
         expect(results).toHaveLength(1);
         expect(results[0].success).toBe(true);
+        expect(results[0].steps).toEqual([
+            "Bugbot autofix completed. The configured agent applied changes for findings: f1. Run verify commands and commit/push.",
+        ]);
         expect(results[0].payload).toEqual(
             expect.objectContaining({ targetFindingIds: ["f1"], workspacePaths: ["src/fix.ts"] })
         );

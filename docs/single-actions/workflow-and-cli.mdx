@@ -46,9 +46,9 @@ giik <command> [options]
 |-------------|---------------------------|-----------------|-------------|
 | `setup` | `initial_setup` | — | Labels, issue types, verify access; creates default tag `v1.0.0` if repo has no tags |
 | `check-progress` | `check_progress_action` | `-i <issue>` | Progress check on demand |
-| `detect-potential-problems` | `detect_potential_problems_action` | `-i <issue>` [-b \<branch\>] | Bugbot: detect potential problems, report on issue and PR (OpenCode) |
-| `recommend-steps` | `recommend_steps_action` | `-i <issue>` | Recommend steps from issue (OpenCode) |
-| `think` | `think_action` | `-q "<question>"` | Deep code analysis (OpenCode) |
+| `detect-potential-problems` | `detect_potential_problems_action` | `-i <issue>` [-b \<branch\>] | Bugbot: detect potential problems, report on issue and PR (configured agent) |
+| `recommend-steps` | `recommend_steps_action` | `-i <issue>` | Recommend steps from issue (configured agent) |
+| `think` | `think_action` | `-q "<question>"` | Deep code analysis (configured agent) |
 | `copilot` | (CLI only) | `-p "<prompt>"` | AI assistant: analyze/modify code via the configured agent |
 
 

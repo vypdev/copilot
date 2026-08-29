@@ -49,11 +49,11 @@ pnpm run build
 
 1. **TypeScript** – Prefer TypeScript; keep action and CLI buildable with `ncc`.
 2. **Constants** – Use `INPUT_KEYS` and `ACTIONS` from `src/utils/constants.ts` instead of ad-hoc strings.
-3. **Logging** – Use existing logger (`logInfo`, `logError`, `logDebugInfo`) from `src/utils/logger.ts`.
+3. **Logging** – Use the semantic application logging port from `src/application/ports/logging_ports.ts` in application code. Concrete logging adapters and direct `src/utils/logger.ts` usage belong only at the outer infrastructure/entrypoint boundary.
 4. **New inputs** – When adding inputs:
    - Update `action.yml`
    - Add to `INPUT_KEYS` in `src/utils/constants.ts`
-   - Read the input in `github_action.ts` (and optionally `local_action.ts`)
+   - Read the input through the appropriate input builder/reader used by the action or CLI composition root.
 
 ## Code Quality
 

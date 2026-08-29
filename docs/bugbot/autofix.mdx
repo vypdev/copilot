@@ -15,7 +15,7 @@ This page explains how to trigger autofix, who can do it, and what the action do
 
 ### From the issue
 
-Add a **comment** on the issue that references the findings you want fixed. OpenCode receives your comment plus the list of **unresolved findings** (id, title, short description) and returns whether it’s a fix request and which finding ids to fix.
+Add a **comment** on the issue that references the findings you want fixed. The configured agent receives your comment plus the list of **unresolved findings** (id, title, short description) and returns whether it’s a fix request and which finding ids to fix.
 
 **Example phrases (English):**
 
@@ -33,7 +33,7 @@ Add a **comment** on the issue that references the findings you want fixed. Open
 - “arregla todos”
 - “fix it” (also understood)
 
-You don’t have to use exact wording; the Plan agent interprets intent. Be clear when you want only **some** findings (e.g. “fix the first two” or “fix the one about the login handler”).
+You don’t have to use exact wording; the configured analysis role interprets intent. Be clear when you want only **some** findings (e.g. “fix the first two” or “fix the one about the login handler”).
 
 **Important:** On **issue comments**, the action needs an **open pull request** that references the issue so it can determine which **branch** to checkout and push to. If there is no such PR, autofix is skipped (the action cannot push without a branch). See [Troubleshooting → Bugbot autofix](/security-operations/operations/troubleshooting#bugbot-autofix).
 
@@ -41,8 +41,8 @@ You don’t have to use exact wording; the Plan agent interprets intent. Be clea
 
 You can trigger autofix from the PR in two ways:
 
-1. **Reply in a review thread** — Reply to the **review comment** that contains the finding. The action sends your reply plus the **parent comment** (the finding text) to OpenCode so it can match the finding and run the fix.
-2. **Comment on the PR** — Add a **general comment** on the PR (e.g. “fix all” or “fix the one about X”). Same as on the issue: OpenCode gets the list of unresolved findings and your comment and returns target finding ids.
+1. **Reply in a review thread** — Reply to the **review comment** that contains the finding. The action sends your reply plus the **parent comment** (the finding text) to the configured agent so it can match the finding and run the fix.
+2. **Comment on the PR** — Add a **general comment** on the PR (e.g. “fix all” or “fix the one about X”). Same as on the issue: the configured agent gets the list of unresolved findings and your comment and returns target finding ids.
 
 In both cases, the action runs on the PR’s **head branch** (it already has the branch from the event), so no extra “resolve branch from issue” step is needed.
 
@@ -85,25 +85,25 @@ bugbot-fix-verify-commands: "pnpm run build, pnpm test, pnpm run lint"
 - If **all** commands succeed, the action runs `git add`, **commit**, and **push** with a message like `fix(#123): bugbot autofix - resolve finding-1, finding-2`.
 - If **any** command fails, the action **does not commit**. No push happens, and the findings are not marked as resolved.
 
-So verify commands act as a gate: only passing runs produce a commit. If you leave `bugbot-fix-verify-commands` empty, only OpenCode’s own run is used (the action may still commit if there are file changes). See [Configuration](/bugbot/configuration#bugbot-fix-verify-commands).
+So verify commands act as a gate: only passing runs produce a commit. If you leave `bugbot-fix-verify-commands` empty, only the configured agent’s run is used (the action may still commit if there are file changes). See [Configuration](/bugbot/configuration#bugbot-fix-verify-commands).
 
 ---
 
 ## What happens after a successful fix
 
-1. OpenCode **Build** agent applies the code changes in its workspace.
+1. The configured execution role applies the code changes in its workspace.
 2. The action runs the **verify commands** in the runner; if any fails, it stops.
 3. The action runs **git add**, **commit** (message: `fix(#N): bugbot autofix - resolve <finding ids>`), and **push** to the branch.
 4. The action **marks** the fixed findings as **resolved**: it updates the corresponding issue and PR comments (hidden marker set to `resolved: true`) and, on the PR, **resolves the review threads** for those comments.
 
-So the next time detection runs (e.g. on the next push), OpenCode will see those findings as resolved and not suggest them again.
+So the next time detection runs (e.g. on the next push), the configured agent will see those findings as resolved and not suggest them again.
 
 ---
 
 ## Troubleshooting
 
 - **Bot didn’t run autofix:** Check that the selected agent CLI is configured, the comment is interpreted as a fix request (e.g. “fix it”, “fix all”), and there is at least one **unresolved** finding. On **issue comments**, ensure there is an **open PR** that references the issue so the action can resolve the branch. See [Troubleshooting → Bugbot autofix](/security-operations/operations/troubleshooting#bugbot-autofix).
-- **Commit not made:** Verify commands run after the fix; if any fails, no commit is made. If OpenCode didn’t change any files, there’s nothing to commit. If push failed (e.g. conflict or missing `contents: write`), check workflow permissions and token scope.
+- **Commit not made:** Verify commands run after the fix; if any fails, no commit is made. If the configured agent didn’t change any files, there’s nothing to commit. If push failed (e.g. conflict or missing `contents: write`), check workflow permissions and token scope.
 
 ---
 

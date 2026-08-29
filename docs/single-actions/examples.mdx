@@ -157,7 +157,7 @@ Often run once per repo or after adding new label/type config. On new repos, run
 
 ## CLI examples
 
-Run the CLI from the **repository root** (with `.env` containing `PERSONAL_ACCESS_TOKEN` and optional OpenCode vars). Commands mirror the single actions.
+Run the CLI from the **repository root** (with `.env` containing `PERSONAL_ACCESS_TOKEN` and optional agent runtime variables). Commands mirror the single actions.
 
 ### check-progress
 
@@ -187,7 +187,7 @@ copilot recommend-steps -i 789 -t $PAT
 copilot think -q "Where is authentication validated?" -t $PAT
 ```
 
-### copilot (CLI-only, Build agent)
+### copilot (CLI-only, execution role)
 
 ```bash
 copilot copilot -p "Explain the main function" -t $PAT
