@@ -1,10 +1,11 @@
 import type { AgentConfiguration, AgentProvider, AgentTaskConfiguration } from '../../domain/agent';
 import { defaultAgentCommand } from '../../domain/agent_command';
 import { validateAgentCommand } from './agent_command_policy';
+import type { AgentConfigurationEnvironment } from '../ports/agent_configuration_ports';
 
 const SUPPORTED_PROVIDERS: readonly AgentProvider[] = ['opencode', 'cursor', 'codex'];
 
-function configuredAllowlist(name: string, environment: NodeJS.ProcessEnv): readonly string[] | undefined {
+function configuredAllowlist(name: string, environment: AgentConfigurationEnvironment): readonly string[] | undefined {
     const raw = environment[name]?.trim();
     if (!raw) return undefined;
     const values = raw.split(',').map(value => value.trim().toLowerCase()).filter(Boolean);
@@ -27,7 +28,7 @@ export interface AgentTaskConfigurationValues {
 
 export function buildAgentConfiguration(
     values: AgentTaskConfigurationValues,
-    environment: NodeJS.ProcessEnv = process.env,
+    environment: AgentConfigurationEnvironment,
 ): AgentConfiguration {
     const provider = resolveProvider(values.provider.trim().toLowerCase());
     const modelProvider = values.modelProvider?.trim().toLowerCase() || 'openai';
@@ -73,7 +74,7 @@ export function mergeAgentTaskValues(
 
 export function buildAgentTaskConfiguration(
     values: AgentTaskConfigurationValues & { findings?: Partial<AgentTaskConfigurationValues>; fixer?: Partial<AgentTaskConfigurationValues> },
-    environment: NodeJS.ProcessEnv = process.env,
+    environment: AgentConfigurationEnvironment,
 ): AgentTaskConfiguration {
     return {
         findings: buildAgentConfiguration(mergeAgentTaskValues(values, values.findings), environment),

@@ -1,4 +1,5 @@
 import type { AgentTaskConfiguration } from '../domain/agent';
+import type { AgentConfigurationEnvironment } from '../application/ports/agent_configuration_ports';
 import {
     buildAgentTaskConfiguration,
     type AgentTaskConfigurationValues,
@@ -12,6 +13,9 @@ export interface AgentTasksConfigurationValues extends AgentTaskConfigurationVal
 }
 
 /** Builds the validated findings/fixer pair used by both action lifecycles. */
-export function buildAgentTasks(values: AgentTasksConfigurationValues): AgentTaskConfiguration {
-    return buildAgentTaskConfiguration(values);
+export function buildAgentTasks(
+    values: AgentTasksConfigurationValues,
+    environment: AgentConfigurationEnvironment = process.env,
+): AgentTaskConfiguration {
+    return buildAgentTaskConfiguration(values, environment);
 }

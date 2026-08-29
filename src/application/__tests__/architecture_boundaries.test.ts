@@ -89,6 +89,8 @@ describe('application architecture boundaries', () => {
         expect(applicationSources).not.toMatch(/console\.(log|warn|error)\s*\(/);
         expect(applicationSources).not.toMatch(/from ['"][^'"]*\/data\/repository\//);
         expect(applicationSources).not.toMatch(/from ['"](?:node:)?(?:child_process|fs|os|path|http|https|net|tls)['"];/);
+        expect(applicationSources).not.toMatch(/\bprocess\./);
+        expect(applicationSources).not.toMatch(/\bNodeJS\./);
     });
 
     it('allows only side-effect-free shared utilities in application production code', () => {
