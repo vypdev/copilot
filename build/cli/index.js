@@ -53937,6 +53937,59 @@ function buildInitialLabelProvisioningPlan(labels, existingLabelNames) {
 
 /***/ }),
 
+/***/ 55078:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readManagedBranchCreationPayload = readManagedBranchCreationPayload;
+exports.buildManagedBranchPresentation = buildManagedBranchPresentation;
+function readManagedBranchCreationPayload(payload) {
+    if (typeof payload !== "object" || payload === null || Array.isArray(payload))
+        return undefined;
+    const value = payload;
+    if (typeof value.baseBranchName !== "string" ||
+        typeof value.baseBranchUrl !== "string" ||
+        typeof value.newBranchName !== "string" ||
+        typeof value.newBranchUrl !== "string" ||
+        value.baseBranchName.length === 0 ||
+        value.baseBranchUrl.length === 0 ||
+        value.newBranchName.length === 0 ||
+        value.newBranchUrl.length === 0)
+        return undefined;
+    return {
+        baseBranchName: value.baseBranchName,
+        baseBranchUrl: value.baseBranchUrl,
+        newBranchName: value.newBranchName,
+        newBranchUrl: value.newBranchUrl,
+    };
+}
+function buildManagedBranchPresentation(input) {
+    const developmentUrl = `https://github.com/${input.owner}/${input.repo}/tree/${input.developmentBranch}`;
+    const inlineCode = "`";
+    const fence = "```";
+    const step = input.isRename
+        ? `The branch **${input.baseBranchName}** was renamed to [**${input.branchName}**](${input.newBranchUrl}).`
+        : `The branch [**${input.baseBranchName}**](${input.baseBranchUrl}) was used to create [**${input.branchName}**](${input.newBranchUrl}).`;
+    const reminder = input.isRename
+        ? `Open a Pull Request from [${inlineCode}${input.branchName}${inlineCode}](${input.newBranchUrl}) to [${inlineCode}${input.developmentBranch}${inlineCode}](${developmentUrl}). [New PR](https://github.com/${input.owner}/${input.repo}/compare/${input.developmentBranch}...${input.branchName}?expand=1)`
+        : `Open a Pull Request from [${inlineCode}${input.branchName}${inlineCode}](${input.newBranchUrl}) to [${inlineCode}${input.baseBranchName}${inlineCode}](${input.baseBranchUrl}). [New PR](https://github.com/${input.owner}/${input.repo}/compare/${input.baseBranchName}...${input.branchName}?expand=1)`;
+    return {
+        step,
+        reminders: [
+            `Check out the branch:\n> ${fence}bash\n> git fetch -v && git checkout ${input.branchName}\n> ${fence}`,
+            ...(input.commitPrefix
+                ? [`Commit the needed changes with this prefix:\n> ${fence}\n>${input.commitPrefix}\n> ${fence}`]
+                : []),
+            reminder,
+        ],
+    };
+}
+
+
+/***/ }),
+
 /***/ 97890:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -60239,11 +60292,10 @@ exports.MoveIssueToInProgressUseCase = MoveIssueToInProgressUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PrepareBranchesUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
-const branch_preparation_policy_1 = __nccwpck_require__(97307);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
-const execute_script_use_case_1 = __nccwpck_require__(65440);
 const branch_preparation_strategy_1 = __nccwpck_require__(29988);
+const prepare_managed_branch_1 = __nccwpck_require__(29928);
 const prepare_hotfix_branch_1 = __nccwpck_require__(96318);
 const prepare_release_branch_1 = __nccwpck_require__(83059);
 class PrepareBranchesUseCase {
@@ -60291,7 +60343,12 @@ class PrepareBranchesUseCase {
             if (strategy === "release") {
                 return result.concat(await (0, prepare_release_branch_1.prepareReleaseBranch)(param, this.linkedBranchCommandPort, branches, this.taskId));
             }
-            result.push(...(await this.prepareManagedBranch(param, issueTitle, branches)));
+            result.push(...(await (0, prepare_managed_branch_1.prepareManagedBranch)(param, issueTitle, branches, this.taskId, {
+                branchNamePort: this.branchNamePort,
+                linkedBranchCommandPort: this.linkedBranchCommandPort,
+                branchPropagationDelayPort: this.branchPropagationDelayPort,
+                moveIssueToInProgressUseCase: this.moveIssueToInProgressUseCase,
+            })));
             return result;
         }
         catch (error) {
@@ -60307,83 +60364,6 @@ class PrepareBranchesUseCase {
             }));
             return result;
         }
-    }
-    async prepareManagedBranch(param, issueTitle, branches) {
-        (0, logging_ports_1.logDebugInfo)(`Branch type: ${param.managementBranch}`);
-        const decision = (0, branch_preparation_policy_1.decideManagedBranchPreparation)({
-            availableBranches: branches,
-            issueNumber: param.issueNumber,
-            formattedIssueTitle: this.branchNamePort.formatBranchName(issueTitle, param.issueNumber),
-            targetBranchType: param.managementBranch,
-            developmentBranch: param.branches.development,
-            managedBranchTypes: [
-                param.branches.featureTree,
-                param.branches.bugfixTree,
-                param.branches.docsTree,
-                param.branches.choreTree,
-            ].filter((branchType) => typeof branchType === "string" && branchType.length > 0),
-            currentParentBranch: param.currentConfiguration.parentBranch,
-        });
-        if (decision.kind === "already-exists") {
-            return [
-                new result_1.Result({
-                    id: this.taskId,
-                    success: true,
-                    executed: false,
-                }),
-            ];
-        }
-        param.currentConfiguration.parentBranch = decision.parentBranch;
-        const branchesResult = await this.linkedBranchCommandPort.createLinkedBranch(param.owner, param.repo, decision.baseBranchName, decision.targetBranchName, param.issueNumber, undefined, param.tokens.token);
-        const lastAction = branchesResult.at(-1);
-        if (!lastAction?.success || !lastAction.executed)
-            return branchesResult;
-        const branchPayload = (0, result_1.getResultPayload)(lastAction.payload);
-        const branchName = branchPayload?.newBranchName;
-        if (typeof branchName !== "string" ||
-            branchName.length === 0 ||
-            typeof branchPayload?.baseBranchName !== "string" ||
-            typeof branchPayload.baseBranchUrl !== "string" ||
-            typeof branchPayload.newBranchUrl !== "string")
-            return branchesResult;
-        param.currentConfiguration.workingBranch = branchName;
-        const commitPrefix = await this.buildCommitPrefix(param, branchName);
-        const developmentUrl = `https://github.com/${param.owner}/${param.repo}/tree/${param.branches.development}`;
-        const step = decision.isRename
-            ? `The branch **${branchPayload.baseBranchName}** was renamed to [**${branchName}**](${branchPayload.newBranchUrl}).`
-            : `The branch [**${branchPayload.baseBranchName}**](${branchPayload.baseBranchUrl}) was used to create [**${branchName}**](${branchPayload.newBranchUrl}).`;
-        const inlineCode = "`";
-        const fence = "```";
-        const reminder = decision.isRename
-            ? `Open a Pull Request from [${inlineCode}${branchName}${inlineCode}](${branchPayload.newBranchUrl}) to [${inlineCode}${param.branches.development}${inlineCode}](${developmentUrl}). [New PR](https://github.com/${param.owner}/${param.repo}/compare/${param.branches.development}...${branchName}?expand=1)`
-            : `Open a Pull Request from [${inlineCode}${branchName}${inlineCode}](${branchPayload.newBranchUrl}) to [${inlineCode}${branchPayload.baseBranchName}${inlineCode}](${branchPayload.baseBranchUrl}). [New PR](https://github.com/${param.owner}/${param.repo}/compare/${branchPayload.baseBranchName}...${branchName}?expand=1)`;
-        const reminders = [
-            `Check out the branch:\n> ${fence}bash\n> git fetch -v && git checkout ${branchName}\n> ${fence}`,
-            ...(commitPrefix
-                ? [
-                    `Commit the needed changes with this prefix:\n> ${fence}\n>${commitPrefix}\n> ${fence}`,
-                ]
-                : []),
-            reminder,
-        ];
-        const result = [
-            new result_1.Result({
-                id: this.taskId,
-                success: true,
-                executed: true,
-                steps: [step],
-                reminders,
-            }),
-        ];
-        await this.branchPropagationDelayPort.waitForLinkedBranch();
-        result.push(...(await this.moveIssueToInProgressUseCase.invoke(param)));
-        return result;
-    }
-    async buildCommitPrefix(param, branchName) {
-        if (!param.commitPrefixBuilder)
-            return "";
-        param.commitPrefixBuilderParams = { branchName };
-        return (0, execute_script_use_case_1.buildCommitPrefix)(branchName, param.commitPrefixBuilder);
     }
 }
 exports.PrepareBranchesUseCase = PrepareBranchesUseCase;
@@ -60449,6 +60429,87 @@ async function prepareHotfixBranch(param, commitTagQuery, linkedBranchCommand, b
             ],
         }),
     ];
+}
+
+
+/***/ }),
+
+/***/ 29928:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.prepareManagedBranch = prepareManagedBranch;
+const result_1 = __nccwpck_require__(73817);
+const branch_preparation_policy_1 = __nccwpck_require__(97307);
+const managed_branch_result_policy_1 = __nccwpck_require__(55078);
+const logging_ports_1 = __nccwpck_require__(6152);
+const execute_script_use_case_1 = __nccwpck_require__(65440);
+async function prepareManagedBranch(param, issueTitle, branches, taskId, dependencies) {
+    (0, logging_ports_1.logDebugInfo)(`Branch type: ${param.managementBranch}`);
+    const decision = (0, branch_preparation_policy_1.decideManagedBranchPreparation)({
+        availableBranches: branches,
+        issueNumber: param.issueNumber,
+        formattedIssueTitle: dependencies.branchNamePort.formatBranchName(issueTitle, param.issueNumber),
+        targetBranchType: param.managementBranch,
+        developmentBranch: param.branches.development,
+        managedBranchTypes: [
+            param.branches.featureTree,
+            param.branches.bugfixTree,
+            param.branches.docsTree,
+            param.branches.choreTree,
+        ].filter((branchType) => typeof branchType === "string" && branchType.length > 0),
+        currentParentBranch: param.currentConfiguration.parentBranch,
+    });
+    if (decision.kind === "already-exists") {
+        return [
+            new result_1.Result({
+                id: taskId,
+                success: true,
+                executed: false,
+            }),
+        ];
+    }
+    param.currentConfiguration.parentBranch = decision.parentBranch;
+    const branchesResult = await dependencies.linkedBranchCommandPort.createLinkedBranch(param.owner, param.repo, decision.baseBranchName, decision.targetBranchName, param.issueNumber, undefined, param.tokens.token);
+    const lastAction = branchesResult.at(-1);
+    if (!lastAction?.success || !lastAction.executed)
+        return branchesResult;
+    const branchPayload = (0, managed_branch_result_policy_1.readManagedBranchCreationPayload)(lastAction.payload);
+    if (!branchPayload)
+        return branchesResult;
+    param.currentConfiguration.workingBranch = branchPayload.newBranchName;
+    const commitPrefix = await buildConfiguredCommitPrefix(param, branchPayload.newBranchName);
+    const presentation = (0, managed_branch_result_policy_1.buildManagedBranchPresentation)({
+        owner: param.owner,
+        repo: param.repo,
+        developmentBranch: param.branches.development,
+        baseBranchName: branchPayload.baseBranchName,
+        baseBranchUrl: branchPayload.baseBranchUrl,
+        branchName: branchPayload.newBranchName,
+        newBranchUrl: branchPayload.newBranchUrl,
+        isRename: decision.isRename,
+        commitPrefix,
+    });
+    const result = [
+        new result_1.Result({
+            id: taskId,
+            success: true,
+            executed: true,
+            steps: [presentation.step],
+            reminders: presentation.reminders,
+        }),
+    ];
+    await dependencies.branchPropagationDelayPort.waitForLinkedBranch();
+    result.push(...(await dependencies.moveIssueToInProgressUseCase.invoke(param)));
+    return result;
+}
+async function buildConfiguredCommitPrefix(param, branchName) {
+    if (!param.commitPrefixBuilder)
+        return "";
+    param.commitPrefixBuilderParams = { branchName };
+    return (0, execute_script_use_case_1.buildCommitPrefix)(branchName, param.commitPrefixBuilder);
 }
 
 

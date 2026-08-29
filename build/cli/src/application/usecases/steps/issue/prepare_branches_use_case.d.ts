@@ -14,6 +14,4 @@ export declare class PrepareBranchesUseCase implements ParamUseCase<Execution, R
     taskId: string;
     constructor(branchListQueryPort: BranchListQueryPort, branchNamePort: BranchNamePort, remoteBranchSyncPort: RemoteBranchSyncPort, commitTagQueryPort: CommitTagQueryPort, linkedBranchCommandPort: LinkedBranchCommandPort, branchPropagationDelayPort: BranchPropagationDelayPort, moveIssueToInProgressUseCase: ParamUseCase<Execution, Result[]>);
     invoke(param: Execution): Promise<Result[]>;
-    private prepareManagedBranch;
-    private buildCommitPrefix;
 }
