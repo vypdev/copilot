@@ -1,4 +1,4 @@
-import { createGraphqlTransportClient, createOwnerTypeClient, createRepositoryContextClient } from './github_project_client_factory';
+import { createGraphqlTransportClient, createOwnerTypeClient } from './github_project_client_factory';
 import type { ProjectBoardCommandPort } from '../../application/ports/project_board_command_ports';
 import type { ProjectBoardLinkPort } from '../../application/ports/project_board_link_ports';
 import type { ProjectBoardQueryPort } from '../../application/ports/project_board_query_ports';
@@ -14,7 +14,6 @@ export interface ProjectBoardComposition {
 
 export function createProjectBoardCompositionRoot(): ProjectBoardComposition {
     const query = new ProjectBoardQueryRepository(
-        createRepositoryContextClient(),
         createOwnerTypeClient(),
         createGraphqlTransportClient(),
     );

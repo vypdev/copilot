@@ -170,6 +170,16 @@ describe('mainRun', () => {
     expect(createMainRunRouteCompositionRoot).toHaveBeenCalledWith(projectBoardCommandPort);
   });
 
+  it('rejects an execution without repository context before calling use cases', async () => {
+    const execution = mockExecution({ owner: '', repo: '' });
+
+    await expect(runMain(execution)).rejects.toThrow(
+      'Repository context requires a non-empty owner and repository.',
+    );
+    expect(mockSetupExecutionInvoke).not.toHaveBeenCalled();
+    expect(mockWaitForPreviousWorkflowRunsInvoke).not.toHaveBeenCalled();
+  });
+
   it('waits for previous runs when welcome is false', async () => {
     process.env.GITHUB_RUN_ID = '200';
     process.env.GITHUB_WORKFLOW = 'CI';

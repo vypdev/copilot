@@ -7,6 +7,15 @@ import * as core from '@actions/core';
 import { runGitHubAction } from '../github_action';
 import { ACTIONS, INPUT_KEYS } from '../../utils/constants';
 
+jest.mock('@actions/github', () => ({
+  context: {
+    payload: {},
+    eventName: 'workflow_dispatch',
+    actor: 'test-actor',
+    repo: { owner: 'test-owner', repo: 'test-repo' },
+  },
+}));
+
 jest.mock('@actions/core', () => ({
   getInput: jest.fn(),
   setFailed: jest.fn(),
@@ -68,6 +77,9 @@ describe('runGitHubAction', () => {
     expect(execution.tokens).toBeDefined();
     expect(execution.ai).toBeDefined();
     expect(execution.singleAction).toBeDefined();
+    expect(execution.owner).toBe('test-owner');
+    expect(execution.repo).toBe('test-repo');
+    expect(execution.actor).toBe('test-actor');
   });
 
 

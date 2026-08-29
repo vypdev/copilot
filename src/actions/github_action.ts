@@ -47,9 +47,15 @@ import { readGithubActionIssueTypeInputs } from './github_action_issue_type_inpu
 import { readGithubActionProjectInputs } from './github_action_project_inputs';
 import { buildExecution } from './execution_builder';
 import { buildEmoji, buildImages, buildIssue, buildIssueTypes, buildLabels, buildLocale, buildProjects, buildPullRequest, buildTokens, buildWorkflows } from './configuration_builders';
+import { buildGithubActionEventInputs } from './github_event_inputs';
 
 export async function runGitHubAction(): Promise<void> {
-    const eventInputs = { ...github.context.payload, eventName: github.context.eventName };
+    const eventInputs = buildGithubActionEventInputs({
+        payload: github.context.payload as Record<string, unknown>,
+        eventName: github.context.eventName,
+        actor: github.context.actor,
+        repo: github.context.repo,
+    });
     const projectBoard = createProjectBoardCompositionRoot();
 
     logInfo('GitHub Action: runGitHubAction started.');
@@ -113,7 +119,12 @@ export async function runGitHubAction(): Promise<void> {
     const projectIdsInput: string = getGithubActionInput(INPUT_KEYS.PROJECT_IDS);
     const projectIds: string[] = parseDelimitedValues(projectIdsInput);
 
-    const projects = await loadProjectDetails(projectBoard.query, projectIds, token);
+    const projects = await loadProjectDetails(
+        projectBoard.query,
+        projectIds,
+        eventInputs.repo.owner,
+        token,
+    );
 
     const projectInputs = readGithubActionProjectInputs(getGithubActionInput, projects);
 

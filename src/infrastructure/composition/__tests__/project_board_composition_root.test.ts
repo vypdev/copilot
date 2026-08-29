@@ -1,9 +1,7 @@
-const createRepositoryContextClient = jest.fn(() => ({ kind: 'repository-context' }));
 const createOwnerTypeClient = jest.fn(() => ({ kind: 'owner-type' }));
 const createGraphqlTransportClient = jest.fn(() => ({ kind: 'graphql' }));
 
 jest.mock('../github_project_client_factory', () => ({
-  createRepositoryContextClient,
   createOwnerTypeClient,
   createGraphqlTransportClient,
 }));
@@ -52,7 +50,6 @@ describe('project board composition root', () => {
     expect(composition.command).toBe(commandInstances[0]);
     expect((linkInstances[0] as { args: unknown[] }).args[0]).toBe(queryInstances[0]);
     expect((commandInstances[0] as { args: unknown[] }).args[0]).toBe(queryInstances[0]);
-    expect(createRepositoryContextClient).toHaveBeenCalledTimes(1);
     expect(createOwnerTypeClient).toHaveBeenCalledTimes(1);
     expect(createGraphqlTransportClient).toHaveBeenCalledTimes(3);
   });

@@ -12,6 +12,7 @@ import { dispatchMainRunRoute } from './main_run_dispatcher';
 import { createSetupExecutionUseCase } from '../infrastructure/composition/execution_setup_composition_root';
 import { createWaitForPreviousWorkflowRunsUseCase } from '../infrastructure/composition/workflow_queue_composition_root';
 import { createMainRunRouteCompositionRoot } from '../infrastructure/composition/main_run_route_composition_root';
+import { requireRepositoryCoordinates } from './repository_context';
 
 export async function mainRun(
     execution: Execution,
@@ -19,9 +20,13 @@ export async function mainRun(
     latestTagQueryPort: LatestTagQueryPort,
 ): Promise<Result[]> {
     const results: Result[] = [];
+    const repository = requireRepositoryCoordinates({
+        owner: execution.owner,
+        repo: execution.repo,
+    });
 
     logInfo('GitHub Action: starting main run.');
-    logDebugInfo(`Event: ${execution.eventName}, actor: ${execution.actor}, repo: ${execution.owner}/${execution.repo}, debug: ${execution.debug}`);
+    logDebugInfo(`Event: ${execution.eventName}, actor: ${execution.actor}, repo: ${repository.owner}/${repository.repo}, debug: ${execution.debug}`);
 
     await createSetupExecutionUseCase(latestTagQueryPort).invoke(execution);
     clearAccumulatedLogs();
@@ -33,8 +38,8 @@ export async function mainRun(
          * Wait for previous runs to finish
          */
         await createWaitForPreviousWorkflowRunsUseCase(execution.tokens.token).invoke({
-            owner: execution.owner,
-            repository: execution.repo,
+            owner: repository.owner,
+            repository: repository.repo,
             currentRunId: Number.parseInt(process.env.GITHUB_RUN_ID ?? '', 10),
             workflowName: process.env.GITHUB_WORKFLOW ?? '',
         }).catch((err) => {

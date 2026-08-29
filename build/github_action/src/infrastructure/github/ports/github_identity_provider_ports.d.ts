@@ -1,10 +1,3 @@
-export interface GithubRepositoryContextClient {
-    context: {
-        repo: {
-            owner: string;
-        };
-    };
-}
 export interface GithubOwnerTypeClient {
     rest: {
         users: {

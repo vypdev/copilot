@@ -2,7 +2,6 @@ import type { GithubClientPort } from "../../../../infrastructure/github/ports/g
 import type { GithubGraphqlTransportClient } from "../../../../infrastructure/github/ports/github_graphql_transport_port";
 import type {
   GithubOwnerTypeClient,
-  GithubRepositoryContextClient,
 } from "../../../../infrastructure/github/ports/github_identity_provider_ports";
 import { ProjectDetail } from "../../../model/project_detail";
 import { ProjectBoardQueryRepository } from "../project_board_query_repository";
@@ -38,11 +37,6 @@ interface HarnessOptions {
 
 function createHarness(options: HarnessOptions = {}) {
   const owner = options.owner ?? "owner";
-  const repositoryContext = { context: { repo: { owner } } };
-  const repositoryContextClient: GithubClientPort<GithubRepositoryContextClient> =
-    {
-      getClient: jest.fn().mockReturnValue(repositoryContext),
-    };
   const getByUsername = options.ownerError
     ? jest.fn().mockRejectedValue(options.ownerError)
     : jest.fn().mockResolvedValue({
@@ -110,9 +104,7 @@ function createHarness(options: HarnessOptions = {}) {
     graphql,
     graphqlClient,
     ownerTypeClient,
-    repositoryContextClient,
     repository: new ProjectBoardQueryRepository(
-      repositoryContextClient,
       ownerTypeClient,
       graphqlClient,
     ),
@@ -135,11 +127,10 @@ describe("ProjectBoardQueryRepository", () => {
       const harness = createHarness();
 
       await expect(
-        harness.repository.getProjectDetail(projectId, "token"),
+        harness.repository.getProjectDetail(projectId, "owner", "token"),
       ).rejects.toThrow(
         `Invalid project ID: ${projectId}. Must be a positive integer.`,
       );
-      expect(harness.repositoryContextClient.getClient).not.toHaveBeenCalled();
       expect(harness.ownerTypeClient.getClient).not.toHaveBeenCalled();
       expect(harness.graphqlClient.getClient).not.toHaveBeenCalled();
     },
@@ -158,7 +149,7 @@ describe("ProjectBoardQueryRepository", () => {
       const harness = createHarness({ ownerType });
 
       await expect(
-        harness.repository.getProjectDetail("1", "token"),
+        harness.repository.getProjectDetail("1", "owner", "token"),
       ).resolves.toMatchObject({
         id: "PVT_project",
         title: "Board",
@@ -175,7 +166,7 @@ describe("ProjectBoardQueryRepository", () => {
     const harness = createHarness({ ownerError: new Error("forbidden") });
 
     await expect(
-      harness.repository.getProjectDetail("1", "token"),
+      harness.repository.getProjectDetail("1", "owner", "token"),
     ).rejects.toThrow("Failed to get owner information: forbidden");
   });
 
@@ -183,7 +174,7 @@ describe("ProjectBoardQueryRepository", () => {
     const harness = createHarness({ ownerError: "forbidden" });
 
     await expect(
-      harness.repository.getProjectDetail("1", "token"),
+      harness.repository.getProjectDetail("1", "owner", "token"),
     ).rejects.toThrow("Failed to get owner information: forbidden");
   });
 
@@ -191,7 +182,7 @@ describe("ProjectBoardQueryRepository", () => {
     const harness = createHarness({ ownerType: "Enterprise" });
 
     await expect(
-      harness.repository.getProjectDetail("1", "token"),
+      harness.repository.getProjectDetail("1", "owner", "token"),
     ).rejects.toThrow(
       "Unsupported GitHub owner type 'Enterprise' for owner owner.",
     );
@@ -204,7 +195,7 @@ describe("ProjectBoardQueryRepository", () => {
     });
 
     await expect(
-      harness.repository.getProjectDetail("1", "token"),
+      harness.repository.getProjectDetail("1", "owner", "token"),
     ).rejects.toThrow("Failed to fetch project data: network unavailable");
   });
 
@@ -212,7 +203,7 @@ describe("ProjectBoardQueryRepository", () => {
     const harness = createHarness({ projectData: null });
 
     await expect(
-      harness.repository.getProjectDetail("1", "token"),
+      harness.repository.getProjectDetail("1", "owner", "token"),
     ).rejects.toThrow(
       "Project not found: https://github.com/orgs/owner/projects/1",
     );
@@ -221,9 +212,8 @@ describe("ProjectBoardQueryRepository", () => {
   it("resolves each token-bound provider once while loading project details", async () => {
     const harness = createHarness();
 
-    await harness.repository.getProjectDetail("1", "token");
+    await harness.repository.getProjectDetail("1", "owner", "token");
 
-    expect(harness.repositoryContextClient.getClient).toHaveBeenCalledTimes(1);
     expect(harness.ownerTypeClient.getClient).toHaveBeenCalledTimes(1);
     expect(harness.graphqlClient.getClient).toHaveBeenCalledTimes(1);
   });

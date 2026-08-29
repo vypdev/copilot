@@ -68,7 +68,12 @@ export async function buildLocalActionConfiguration(
         const projectIdsInput: string = resolveActionInput(additionalParams, actionInputs, INPUT_KEYS.PROJECT_IDS);
         const projectIds: string[] = parseDelimitedValues(projectIdsInput);
 
-        const projects = await loadProjectDetails(projectRepository, projectIds, token ?? '');
+        const projects = await loadProjectDetails(
+            projectRepository,
+            projectIds,
+            additionalParams?.repo?.owner,
+            token ?? '',
+        );
 
         const projectColumnIssueCreated = resolveActionInput(additionalParams, actionInputs, INPUT_KEYS.PROJECT_COLUMN_ISSUE_CREATED)
         const projectColumnPullRequestCreated = resolveActionInput(additionalParams, actionInputs, INPUT_KEYS.PROJECT_COLUMN_PULL_REQUEST_CREATED)

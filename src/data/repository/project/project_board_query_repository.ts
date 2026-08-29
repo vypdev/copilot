@@ -4,10 +4,7 @@ import type {
 } from "../../../application/ports/project_board_query_ports";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type { GithubGraphqlTransportClient } from "../../../infrastructure/github/ports/github_graphql_transport_port";
-import type {
-  GithubOwnerTypeClient,
-  GithubRepositoryContextClient,
-} from "../../../infrastructure/github/ports/github_identity_provider_ports";
+import type { GithubOwnerTypeClient } from "../../../infrastructure/github/ports/github_identity_provider_ports";
 import { PROJECT_BOARD_ITEM_PAGE_LIMIT } from "../../../infrastructure/github/project_board_provider_limits";
 import { logDebugInfo, logError } from "../../../utils/logger";
 import { ProjectDetail } from "../../model/project_detail";
@@ -68,7 +65,6 @@ export class ProjectBoardQueryRepository
   implements ProjectBoardQueryPort, ProjectBoardContentQueryPort
 {
   constructor(
-    private readonly repositoryContextClient: GithubClientPort<GithubRepositoryContextClient>,
     private readonly ownerTypeClient: GithubClientPort<GithubOwnerTypeClient>,
     private readonly graphqlClient: GithubClientPort<GithubGraphqlTransportClient>,
   ) {}
@@ -114,6 +110,7 @@ export class ProjectBoardQueryRepository
 
   getProjectDetail = async (
     projectId: string,
+    owner: string,
     token: string,
   ): Promise<ProjectDetail> => {
     try {
@@ -124,23 +121,27 @@ export class ProjectBoardQueryRepository
       }
 
       const projectNumber = Number(projectId);
-      const repositoryContext = this.repositoryContextClient.getClient(token);
+      const ownerName = typeof owner === "string" ? owner.trim() : "";
+      if (!ownerName) {
+        throw new Error(
+          "Repository owner is required to load project details.",
+        );
+      }
       const ownerTypeProvider = this.ownerTypeClient.getClient(token);
       const graphql = this.graphqlClient.getClient(token);
-      const ownerName = repositoryContext.context.repo.owner;
-      const { data: owner } = await ownerTypeProvider.rest.users
+      const { data: ownerData } = await ownerTypeProvider.rest.users
         .getByUsername({ username: ownerName })
         .catch((error: unknown) => {
           throw new Error(
             `Failed to get owner information: ${errorMessage(error)}`,
           );
         });
-      if (owner.type !== "Organization" && owner.type !== "User") {
+      if (ownerData.type !== "Organization" && ownerData.type !== "User") {
         throw new Error(
-          `Unsupported GitHub owner type '${String(owner.type)}' for owner ${ownerName}.`,
+          `Unsupported GitHub owner type '${String(ownerData.type)}' for owner ${ownerName}.`,
         );
       }
-      const ownerPath = owner.type === "Organization" ? "orgs" : "users";
+      const ownerPath = ownerData.type === "Organization" ? "orgs" : "users";
       const ownerQueryField = ownerPath === "orgs" ? "organization" : "user";
       const projectUrl = `https://github.com/${ownerPath}/${ownerName}/projects/${projectId}`;
       const projectQuery = `

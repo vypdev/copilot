@@ -123,8 +123,16 @@ describe('runLocalAction', () => {
     await runLocalAction(params);
 
     expect(mockGetProjectDetail).toHaveBeenCalledTimes(2);
-    expect(mockGetProjectDetail).toHaveBeenCalledWith('proj-1', 't');
-    expect(mockGetProjectDetail).toHaveBeenCalledWith('proj-2', 't');
+    expect(mockGetProjectDetail).toHaveBeenCalledWith('proj-1', 'o', 't');
+    expect(mockGetProjectDetail).toHaveBeenCalledWith('proj-2', 'o', 't');
+  });
+
+  it('fails before composing dependencies when repository context is missing', async () => {
+    await expect(runLocalAction({ [INPUT_KEYS.TOKEN]: 't' }))
+      .rejects.toThrow('Repository context requires a non-empty owner and repository.');
+
+    expect(mockMainRun).not.toHaveBeenCalled();
+    expect(mockGetProjectDetail).not.toHaveBeenCalled();
   });
 
   it('includes errors and reminders in boxen content when results have errors and reminders', async () => {

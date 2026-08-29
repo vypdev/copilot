@@ -18,7 +18,6 @@ import {
   OctokitAuthenticatedUserClientAdapter,
   OctokitActorAuthorizationClientAdapter,
   OctokitOrganizationMembersClientAdapter,
-  OctokitRepositoryContextClientAdapter,
   OctokitOwnerTypeClientAdapter,
 } from "../octokit_identity_adapters";
 import {
@@ -35,7 +34,6 @@ import {
 
 jest.mock("@actions/github", () => ({
   getOctokit: jest.fn(),
-  context: { repo: { owner: "test-owner", repo: "test-repo" } },
 }));
 
 type Adapter = { getClient(token: string): unknown };
@@ -88,12 +86,4 @@ describe("Octokit client adapters contract", () => {
     },
   );
 
-  it("exposes the GitHub Actions repository context independently of the Octokit client", () => {
-    const result = new OctokitRepositoryContextClientAdapter().getClient(
-      "token-under-test",
-    );
-
-    expect(result).toEqual({ context: github.context });
-    expect(github.getOctokit).not.toHaveBeenCalled();
-  });
 });

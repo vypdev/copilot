@@ -48157,10 +48157,15 @@ const main_run_dispatcher_1 = __nccwpck_require__(8586);
 const execution_setup_composition_root_1 = __nccwpck_require__(3965);
 const workflow_queue_composition_root_1 = __nccwpck_require__(1598);
 const main_run_route_composition_root_1 = __nccwpck_require__(4706);
+const repository_context_1 = __nccwpck_require__(8958);
 async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort) {
     const results = [];
+    const repository = (0, repository_context_1.requireRepositoryCoordinates)({
+        owner: execution.owner,
+        repo: execution.repo,
+    });
     (0, logger_1.logInfo)('GitHub Action: starting main run.');
-    (0, logger_1.logDebugInfo)(`Event: ${execution.eventName}, actor: ${execution.actor}, repo: ${execution.owner}/${execution.repo}, debug: ${execution.debug}`);
+    (0, logger_1.logDebugInfo)(`Event: ${execution.eventName}, actor: ${execution.actor}, repo: ${repository.owner}/${repository.repo}, debug: ${execution.debug}`);
     await (0, execution_setup_composition_root_1.createSetupExecutionUseCase)(latestTagQueryPort).invoke(execution);
     (0, logger_1.clearAccumulatedLogs)();
     (0, logger_1.logDebugInfo)(`Setup done. Issue number: ${execution.issueNumber}, isSingleAction: ${execution.isSingleAction}, isIssue: ${execution.isIssue}, isPullRequest: ${execution.isPullRequest}, isPush: ${execution.isPush}`);
@@ -48169,8 +48174,8 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort) {
          * Wait for previous runs to finish
          */
         await (0, workflow_queue_composition_root_1.createWaitForPreviousWorkflowRunsUseCase)(execution.tokens.token).invoke({
-            owner: execution.owner,
-            repository: execution.repo,
+            owner: repository.owner,
+            repository: repository.repo,
             currentRunId: Number.parseInt(process.env.GITHUB_RUN_ID ?? '', 10),
             workflowName: process.env.GITHUB_WORKFLOW ?? '',
         }).catch((err) => {
@@ -48391,8 +48396,14 @@ const github_action_issue_type_inputs_1 = __nccwpck_require__(7939);
 const github_action_project_inputs_1 = __nccwpck_require__(1293);
 const execution_builder_1 = __nccwpck_require__(236);
 const configuration_builders_1 = __nccwpck_require__(9094);
+const github_event_inputs_1 = __nccwpck_require__(3452);
 async function runGitHubAction() {
-    const eventInputs = { ...github.context.payload, eventName: github.context.eventName };
+    const eventInputs = (0, github_event_inputs_1.buildGithubActionEventInputs)({
+        payload: github.context.payload,
+        eventName: github.context.eventName,
+        actor: github.context.actor,
+        repo: github.context.repo,
+    });
     const projectBoard = (0, project_board_composition_root_1.createProjectBoardCompositionRoot)();
     (0, logger_1.logInfo)('GitHub Action: runGitHubAction started.');
     /**
@@ -48447,7 +48458,7 @@ async function runGitHubAction() {
      */
     const projectIdsInput = (0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.PROJECT_IDS);
     const projectIds = (0, input_values_policy_1.parseDelimitedValues)(projectIdsInput);
-    const projects = await (0, project_details_loader_1.loadProjectDetails)(projectBoard.query, projectIds, token);
+    const projects = await (0, project_details_loader_1.loadProjectDetails)(projectBoard.query, projectIds, eventInputs.repo.owner, token);
     const projectInputs = (0, github_action_project_inputs_1.readGithubActionProjectInputs)(github_action_input_1.getGithubActionInput, projects);
     /**
      * Images
@@ -48904,6 +48915,28 @@ function readGithubActionWorkflowInputs(getInput) {
 
 /***/ }),
 
+/***/ 3452:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildGithubActionEventInputs = buildGithubActionEventInputs;
+const repository_context_1 = __nccwpck_require__(8958);
+/** Maps the GitHub Actions runtime context to the shape consumed by Execution. */
+function buildGithubActionEventInputs(context) {
+    const repository = (0, repository_context_1.requireRepositoryCoordinates)(context.repo);
+    return {
+        ...context.payload,
+        eventName: context.eventName,
+        actor: context.actor,
+        repo: repository,
+    };
+}
+
+
+/***/ }),
+
 /***/ 9246:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -49086,12 +49119,49 @@ function resolveMainRunRoute(input) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.loadProjectDetails = loadProjectDetails;
-async function loadProjectDetails(projectRepository, projectIds, token) {
+async function loadProjectDetails(projectRepository, projectIds, owner, token) {
+    if (projectIds.length === 0) {
+        return [];
+    }
+    const normalizedOwner = typeof owner === 'string' ? owner.trim() : '';
+    if (!normalizedOwner) {
+        throw new Error('Repository owner is required to load project details.');
+    }
     const projects = [];
     for (const projectId of projectIds) {
-        projects.push(await projectRepository.getProjectDetail(projectId, token));
+        projects.push(await projectRepository.getProjectDetail(projectId, normalizedOwner, token));
     }
     return projects;
+}
+
+
+/***/ }),
+
+/***/ 8958:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.requireRepositoryCoordinates = requireRepositoryCoordinates;
+/**
+ * Validates and normalizes repository coordinates at an action boundary.
+ *
+ * GitHub Actions and the local CLI provide the same information through
+ * different runtime objects. Keeping this conversion in one pure helper
+ * prevents downstream ports from silently receiving an empty owner/repo.
+ */
+function requireRepositoryCoordinates(value) {
+    if (!value || typeof value !== 'object') {
+        throw new Error('Repository context requires a non-empty owner and repository.');
+    }
+    const candidate = value;
+    const owner = typeof candidate.owner === 'string' ? candidate.owner.trim() : '';
+    const repo = typeof candidate.repo === 'string' ? candidate.repo.trim() : '';
+    if (!owner || !repo) {
+        throw new Error('Repository context requires a non-empty owner and repository.');
+    }
+    return { owner, repo };
 }
 
 
@@ -61108,8 +61178,7 @@ const PROJECT_ITEMS_QUERY = `
     }`;
 const errorMessage = (error) => error instanceof Error ? error.message : String(error);
 class ProjectBoardQueryRepository {
-    constructor(repositoryContextClient, ownerTypeClient, graphqlClient) {
-        this.repositoryContextClient = repositoryContextClient;
+    constructor(ownerTypeClient, graphqlClient) {
         this.ownerTypeClient = ownerTypeClient;
         this.graphqlClient = graphqlClient;
         this.findProjectItemId = async (client, project, contentId) => {
@@ -61135,25 +61204,27 @@ class ProjectBoardQueryRepository {
             }
             return undefined;
         };
-        this.getProjectDetail = async (projectId, token) => {
+        this.getProjectDetail = async (projectId, owner, token) => {
             try {
                 if (!/^[1-9]\d*$/.test(projectId)) {
                     throw new Error(`Invalid project ID: ${projectId}. Must be a positive integer.`);
                 }
                 const projectNumber = Number(projectId);
-                const repositoryContext = this.repositoryContextClient.getClient(token);
+                const ownerName = typeof owner === "string" ? owner.trim() : "";
+                if (!ownerName) {
+                    throw new Error("Repository owner is required to load project details.");
+                }
                 const ownerTypeProvider = this.ownerTypeClient.getClient(token);
                 const graphql = this.graphqlClient.getClient(token);
-                const ownerName = repositoryContext.context.repo.owner;
-                const { data: owner } = await ownerTypeProvider.rest.users
+                const { data: ownerData } = await ownerTypeProvider.rest.users
                     .getByUsername({ username: ownerName })
                     .catch((error) => {
                     throw new Error(`Failed to get owner information: ${errorMessage(error)}`);
                 });
-                if (owner.type !== "Organization" && owner.type !== "User") {
-                    throw new Error(`Unsupported GitHub owner type '${String(owner.type)}' for owner ${ownerName}.`);
+                if (ownerData.type !== "Organization" && ownerData.type !== "User") {
+                    throw new Error(`Unsupported GitHub owner type '${String(ownerData.type)}' for owner ${ownerName}.`);
                 }
-                const ownerPath = owner.type === "Organization" ? "orgs" : "users";
+                const ownerPath = ownerData.type === "Organization" ? "orgs" : "users";
                 const ownerQueryField = ownerPath === "orgs" ? "organization" : "user";
                 const projectUrl = `https://github.com/${ownerPath}/${ownerName}/projects/${projectId}`;
                 const projectQuery = `
@@ -62601,13 +62672,11 @@ exports.createIssueTitleClient = createIssueTitleClient;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.createOwnerTypeClient = exports.createRepositoryContextClient = exports.createGraphqlTransportClient = void 0;
+exports.createOwnerTypeClient = exports.createGraphqlTransportClient = void 0;
 const octokit_project_adapters_1 = __nccwpck_require__(8505);
 const octokit_identity_adapters_1 = __nccwpck_require__(9996);
 const createGraphqlTransportClient = () => new octokit_project_adapters_1.OctokitGraphqlTransportClientAdapter();
 exports.createGraphqlTransportClient = createGraphqlTransportClient;
-const createRepositoryContextClient = () => new octokit_identity_adapters_1.OctokitRepositoryContextClientAdapter();
-exports.createRepositoryContextClient = createRepositoryContextClient;
 const createOwnerTypeClient = () => new octokit_identity_adapters_1.OctokitOwnerTypeClientAdapter();
 exports.createOwnerTypeClient = createOwnerTypeClient;
 
@@ -62942,7 +63011,7 @@ const project_board_command_repository_1 = __nccwpck_require__(8952);
 const project_board_link_repository_1 = __nccwpck_require__(9285);
 const project_board_query_repository_1 = __nccwpck_require__(7301);
 function createProjectBoardCompositionRoot() {
-    const query = new project_board_query_repository_1.ProjectBoardQueryRepository((0, github_project_client_factory_1.createRepositoryContextClient)(), (0, github_project_client_factory_1.createOwnerTypeClient)(), (0, github_project_client_factory_1.createGraphqlTransportClient)());
+    const query = new project_board_query_repository_1.ProjectBoardQueryRepository((0, github_project_client_factory_1.createOwnerTypeClient)(), (0, github_project_client_factory_1.createGraphqlTransportClient)());
     return {
         query,
         link: new project_board_link_repository_1.ProjectBoardLinkRepository(query, (0, github_project_client_factory_1.createGraphqlTransportClient)()),
@@ -63187,46 +63256,12 @@ function getOctokitClient(token) {
 /***/ }),
 
 /***/ 9996:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.OctokitOwnerTypeClientAdapter = exports.OctokitRepositoryContextClientAdapter = exports.OctokitOrganizationMembersClientAdapter = exports.OctokitActorAuthorizationClientAdapter = exports.OctokitAuthenticatedUserClientAdapter = void 0;
-const github = __importStar(__nccwpck_require__(9848));
+exports.OctokitOwnerTypeClientAdapter = exports.OctokitOrganizationMembersClientAdapter = exports.OctokitActorAuthorizationClientAdapter = exports.OctokitAuthenticatedUserClientAdapter = void 0;
 const octokit_client_resolver_1 = __nccwpck_require__(4047);
 class OctokitAuthenticatedUserClientAdapter {
     getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
@@ -63240,12 +63275,6 @@ class OctokitOrganizationMembersClientAdapter {
     getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
 }
 exports.OctokitOrganizationMembersClientAdapter = OctokitOrganizationMembersClientAdapter;
-class OctokitRepositoryContextClientAdapter {
-    getClient(_token) {
-        return { context: github.context };
-    }
-}
-exports.OctokitRepositoryContextClientAdapter = OctokitRepositoryContextClientAdapter;
 class OctokitOwnerTypeClientAdapter {
     getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
 }
