@@ -41,7 +41,7 @@ Codex can use one of the following credential references:
 | Access token | `CODEX_ACCESS_TOKEN` | Explicit Codex credential supplied by the runner. |
 | Local ChatGPT session | Local Codex authentication state | Controlled self-hosted runner only; never export it to hosted CI. |
 
-Copilot never prints, copies, or serializes token values. With no exported credential, the preflight intentionally defers to the runner-local Codex CLI, which is valid for a preinitialized self-hosted runner. See [Codex authentication and compliance](/security-operations/security/authentication-compliance) for the account, billing, and terms boundaries.
+Copilot never prints, copies, or serializes token values. With no exported credential, the preflight intentionally defers to the runner-local Codex CLI, which is valid for a preinitialized self-hosted runner. When a local ChatGPT session is detected, the Codex child process does not receive `OPENAI_API_KEY` or `CODEX_ACCESS_TOKEN`, preventing those variables from overriding the local session. See [Codex authentication and compliance](/security-operations/security/authentication-compliance) for the account, billing, and terms boundaries.
 
 ## Provisioning
 

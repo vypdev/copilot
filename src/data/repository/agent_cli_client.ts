@@ -1,9 +1,14 @@
 import { spawn } from 'node:child_process';
 import { parseAgentCommand } from './agent_command_parser';
+import { buildAgentCliEnvironment } from './agent_authentication';
+import type { AgentProvider } from '../model/agent';
 
 export interface AgentCliRequest {
     command: string;
     prompt: string;
+    provider?: AgentProvider;
+    modelProvider?: string;
+    environment?: NodeJS.ProcessEnv;
     promptMode?: 'stdin' | 'argv';
     timeoutMs: number;
     signal?: AbortSignal;
@@ -53,7 +58,12 @@ export class AgentCliClient {
             const child = spawn(
                 executable,
                 promptMode === 'argv' ? [...args, request.prompt] : args,
-                { cwd: request.cwd, stdio: ['pipe', 'pipe', 'pipe'], shell: false },
+                {
+                    cwd: request.cwd,
+                    env: buildAgentCliEnvironment(request.provider, request.environment, request.modelProvider),
+                    stdio: ['pipe', 'pipe', 'pipe'],
+                    shell: false,
+                },
             );
             let stdout = '';
             let stderr = '';

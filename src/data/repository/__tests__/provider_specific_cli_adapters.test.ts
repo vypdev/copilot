@@ -6,7 +6,7 @@ describe('provider-specific CLI adapters', () => {
         const execute = jest.fn().mockResolvedValue('ok');
         const adapter = new CursorCliAdapter({ execute } as unknown as AgentCliPort);
         await expect(adapter.execute({ configuration: { provider: 'cursor', model: 'cursor', command: 'agent -p --model cursor' }, prompt: 'p', timeoutMs: 1 })).resolves.toBe('ok');
-        expect(execute).toHaveBeenCalledWith({ command: 'agent -p --model cursor', prompt: 'p', promptMode: 'argv', timeoutMs: 1, cwd: undefined, signal: undefined });
+        expect(execute).toHaveBeenCalledWith({ command: 'agent -p --model cursor', prompt: 'p', provider: 'cursor', promptMode: 'argv', timeoutMs: 1, cwd: undefined, signal: undefined });
         expect(execute).toHaveBeenCalledTimes(1);
         expect(() => adapter.execute({ configuration: { provider: 'codex', model: 'codex', command: 'codex exec --model codex --config model_provider=openai -' }, prompt: 'p', timeoutMs: 1 })).toThrow('cursor CLI adapter received codex');
     });
@@ -15,7 +15,7 @@ describe('provider-specific CLI adapters', () => {
         const execute = jest.fn().mockResolvedValue('ok');
         const adapter = new CodexCliAdapter({ execute } as unknown as AgentCliPort);
         await expect(adapter.execute({ configuration: { provider: 'codex', model: 'codex', command: 'codex exec --model codex --config model_provider=openai -' }, prompt: 'p', timeoutMs: 1 })).resolves.toBe('ok');
-        expect(execute).toHaveBeenCalledWith({ command: 'codex exec --model codex --config model_provider=openai -', prompt: 'p', promptMode: 'stdin', timeoutMs: 1, cwd: undefined, signal: undefined });
+        expect(execute).toHaveBeenCalledWith({ command: 'codex exec --model codex --config model_provider=openai -', prompt: 'p', provider: 'codex', promptMode: 'stdin', timeoutMs: 1, cwd: undefined, signal: undefined });
     });
 
     it('allows OpenCode only with opencode configuration', async () => {

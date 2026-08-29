@@ -58015,6 +58015,7 @@ function authorizationForFileModification(owner, actor, ownerType) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildAgentCliEnvironment = buildAgentCliEnvironment;
 exports.checkAgentAuthentication = checkAgentAuthentication;
 const node_fs_1 = __nccwpck_require__(7561);
 const node_os_1 = __nccwpck_require__(612);
@@ -58061,6 +58062,11 @@ const CLI_CREDENTIALS = {
     cursor: ['CURSOR_API_KEY'],
     codex: ['CODEX_ACCESS_TOKEN', 'OPENAI_API_KEY'],
 };
+const KNOWN_AGENT_CREDENTIALS = [...new Set([
+        ...COMMON_OPENCODE_CREDENTIALS,
+        ...Object.values(MODEL_PROVIDER_CREDENTIALS).flat(),
+        ...CLI_CREDENTIALS.codex,
+    ])];
 function hasValue(environment, variable) {
     return Boolean(environment[variable]?.trim());
 }
@@ -58082,6 +58088,42 @@ function hasCodexChatGptSession(environment) {
     catch {
         return false;
     }
+}
+/**
+ * Keeps provider credentials inside the process boundary that needs them.
+ *
+ * A controlled Codex runner authenticates through CODEX_HOME/auth.json. When
+ * that session is available, exported API credentials must not be allowed to
+ * change the authentication mode selected by the local CLI. If the session is
+ * absent, the existing API-key/access-token fallback remains available.
+ */
+function buildAgentCliEnvironment(provider, environment = process.env, modelProvider) {
+    if (!provider)
+        return environment;
+    const normalizedModelProvider = modelProvider?.trim().toLowerCase();
+    const selectedModelProviderCredential = normalizedModelProvider
+        && !['local', 'ollama', 'lmstudio'].includes(normalizedModelProvider)
+        ? MODEL_PROVIDER_CREDENTIALS[normalizedModelProvider]?.[0]
+            ?? `${normalizedModelProvider.replace(/-/g, '_').toUpperCase()}_API_KEY`
+        : undefined;
+    const allowedCredentials = provider === 'cursor'
+        ? CLI_CREDENTIALS.cursor
+        : provider === 'codex'
+            ? [...new Set([...CLI_CREDENTIALS.codex, ...(selectedModelProviderCredential ? [selectedModelProviderCredential] : [])])]
+            : normalizedModelProvider
+                ? [...new Set([...CLI_CREDENTIALS.opencode, ...(selectedModelProviderCredential ? [selectedModelProviderCredential] : [])])]
+                : [...new Set([...CLI_CREDENTIALS.opencode, ...COMMON_OPENCODE_CREDENTIALS])];
+    const hasLocalCodexSession = provider === 'codex' && hasCodexChatGptSession(environment);
+    const isolatedEnvironment = { ...environment };
+    for (const variable of KNOWN_AGENT_CREDENTIALS)
+        delete isolatedEnvironment[variable];
+    if (!hasLocalCodexSession) {
+        for (const variable of allowedCredentials) {
+            if (environment[variable] !== undefined)
+                isolatedEnvironment[variable] = environment[variable];
+        }
+    }
+    return isolatedEnvironment;
 }
 function hasOpenCodeLocalSession(environment) {
     const dataDirectory = environment.OPENCODE_DATA_DIR?.trim()
@@ -58210,6 +58252,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AgentCliClient = exports.AgentCliError = void 0;
 const node_child_process_1 = __nccwpck_require__(7718);
 const agent_command_parser_1 = __nccwpck_require__(7950);
+const agent_authentication_1 = __nccwpck_require__(1371);
 const DEFAULT_MAX_OUTPUT_BYTES = 4 * 1024 * 1024;
 const MAX_STDERR_BYTES = 8 * 1024;
 class AgentCliError extends Error {
@@ -58246,7 +58289,12 @@ class AgentCliClient {
             if (promptMode !== 'stdin' && promptMode !== 'argv') {
                 throw new AgentCliError('Agent CLI promptMode must be stdin or argv.', 'configuration');
             }
-            const child = (0, node_child_process_1.spawn)(executable, promptMode === 'argv' ? [...args, request.prompt] : args, { cwd: request.cwd, stdio: ['pipe', 'pipe', 'pipe'], shell: false });
+            const child = (0, node_child_process_1.spawn)(executable, promptMode === 'argv' ? [...args, request.prompt] : args, {
+                cwd: request.cwd,
+                env: (0, agent_authentication_1.buildAgentCliEnvironment)(request.provider, request.environment, request.modelProvider),
+                stdio: ['pipe', 'pipe', 'pipe'],
+                shell: false,
+            });
             let stdout = '';
             let stderr = '';
             let outputBytes = 0;
@@ -61258,6 +61306,8 @@ class SpecificCliAdapter {
         return this.client.execute({
             command,
             prompt: request.prompt,
+            provider: this.expectedProvider,
+            ...(request.configuration.modelProvider ? { modelProvider: request.configuration.modelProvider } : {}),
             promptMode: this.expectedProvider === 'codex' ? 'stdin' : 'argv',
             timeoutMs: request.timeoutMs,
             cwd: request.cwd,

@@ -24,6 +24,8 @@ abstract class SpecificCliAdapter {
         return this.client.execute({
             command,
             prompt: request.prompt,
+            provider: this.expectedProvider,
+            ...(request.configuration.modelProvider ? { modelProvider: request.configuration.modelProvider } : {}),
             promptMode: this.expectedProvider === 'codex' ? 'stdin' : 'argv',
             timeoutMs: request.timeoutMs,
             cwd: request.cwd,
