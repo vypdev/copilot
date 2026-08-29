@@ -1,22 +1,22 @@
-export class Commit {
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- GitHub context payload shape */
-    private inputs: any | undefined = undefined;
+import type { EventCommitPayload, ExecutionInputs } from './execution_inputs';
 
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- GitHub context payload shape */
-    constructor(inputs: any | undefined = undefined) {
+export class Commit {
+    private inputs: ExecutionInputs | undefined = undefined;
+
+    constructor(inputs: ExecutionInputs | undefined = undefined) {
         this.inputs = inputs;
     }
     
     get branchReference(): string {
-        return this.inputs?.commits?.ref ?? this.inputs?.ref ?? '';
+        const commits = this.inputs?.commits;
+        return (!Array.isArray(commits) ? commits?.ref : undefined) ?? this.inputs?.ref ?? '';
     }
 
     get branch(): string {
         return this.branchReference.replace('refs/heads/', '');
     }
 
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- GitHub payload.commits shape */
-    get commits(): any[] {
-        return this.inputs?.commits ?? [];
+    get commits(): EventCommitPayload[] {
+        return Array.isArray(this.inputs?.commits) ? this.inputs.commits : [];
     }
 }

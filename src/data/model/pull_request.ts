@@ -1,9 +1,10 @@
+import type { EventCommentPayload, ExecutionInputs } from './execution_inputs';
+
 export class PullRequest {
     desiredAssigneesCount: number;
     desiredReviewersCount: number;
     mergeTimeout: number;
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- GitHub payload shape */
-    inputs: any | undefined = undefined;
+    inputs: ExecutionInputs | undefined = undefined;
 
     get action(): string {
         return this.inputs?.action ?? '';
@@ -72,7 +73,7 @@ export class PullRequest {
     }
 
     /** Review comment: GitHub sends it as payload.comment for pull_request_review_comment event. */
-    private get reviewCommentPayload(): { id?: number; body?: string; user?: { login?: string }; html_url?: string; in_reply_to_id?: number } | undefined {
+    private get reviewCommentPayload(): EventCommentPayload | undefined {
         return this.inputs?.pull_request_review_comment ?? this.inputs?.comment;
     }
 
@@ -102,7 +103,7 @@ export class PullRequest {
         desiredAssigneesCount: number,
         desiredReviewersCount: number,
         mergeTimeout: number,
-        inputs: any | undefined = undefined, // eslint-disable-line @typescript-eslint/no-explicit-any
+        inputs: ExecutionInputs | undefined = undefined,
     ) {
         this.desiredAssigneesCount = desiredAssigneesCount;
         this.desiredReviewersCount = desiredReviewersCount;

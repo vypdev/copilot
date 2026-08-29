@@ -1,9 +1,10 @@
+import type { ExecutionInputs } from './execution_inputs';
+
 export class Issue {
     reopenOnPush: boolean;
     branchManagementAlways: boolean;
     desiredAssigneesCount: number;
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any -- GitHub payload shape */
-    inputs: any | undefined = undefined;
+    inputs: ExecutionInputs | undefined = undefined;
 
     get title(): string {
         return this.inputs?.issue?.title ?? '';
@@ -77,7 +78,7 @@ export class Issue {
         branchManagementAlways: boolean,
         reopenOnPush: boolean,
         desiredAssigneesCount: number,
-        inputs: any | undefined = undefined, // eslint-disable-line @typescript-eslint/no-explicit-any
+        inputs: ExecutionInputs | undefined = undefined,
     ) {
         this.branchManagementAlways = branchManagementAlways;
         this.reopenOnPush = reopenOnPush;

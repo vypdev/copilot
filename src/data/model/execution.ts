@@ -19,6 +19,7 @@ import { SizeThresholds } from "./size_thresholds";
 import { Tokens } from "./tokens";
 import { Welcome } from "./welcome";
 import { Workflows } from "./workflows";
+import type { ExecutionInputs } from './execution_inputs';
 
 
 export class Execution {
@@ -52,8 +53,7 @@ export class Execution {
     previousConfiguration: Config | undefined;
     currentConfiguration: Config;
     tokenUser: string | undefined;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- GitHub context payload shape is dynamic
-    inputs: any | undefined;
+    inputs: ExecutionInputs | undefined;
 
     get eventName(): string {
         return this.inputs?.eventName ?? '';
@@ -181,8 +181,7 @@ export class Execution {
         workflows: Workflows,
         project: Projects,
         welcome: Welcome | undefined,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- GitHub context payload
-        inputs: any | undefined
+        inputs: ExecutionInputs | undefined
     ) {
         this.debug = debug;
         this.singleAction = singleAction;

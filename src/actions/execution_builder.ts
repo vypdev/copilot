@@ -16,6 +16,7 @@ import { SizeThresholds } from '../data/model/size_thresholds';
 import { Tokens } from '../data/model/tokens';
 import { Welcome } from '../data/model/welcome';
 import { Workflows } from '../data/model/workflows';
+import type { ExecutionInputs } from '../data/model/execution_inputs';
 
 export interface ExecutionComponents {
     debug: boolean;
@@ -37,7 +38,7 @@ export interface ExecutionComponents {
     workflows: Workflows;
     projects: Projects;
     welcome?: Welcome;
-    inputs?: Record<string, unknown>;
+    inputs?: ExecutionInputs;
 }
 
 export function buildExecution(components: ExecutionComponents): Execution {

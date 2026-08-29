@@ -9,6 +9,7 @@ import { Projects } from '../data/model/projects';
 import { ProjectDetail } from '../data/model/project_detail';
 import { Tokens } from '../data/model/tokens';
 import { Workflows } from '../data/model/workflows';
+import type { ExecutionInputs } from '../data/model/execution_inputs';
 
 export interface ImageScopeValues {
     automatic: string[];
@@ -70,11 +71,11 @@ export function buildLocale(issue: string, pullRequest: string): Locale {
     return new Locale(issue, pullRequest);
 }
 
-export function buildIssue(branchManagementAlways: boolean, reopenOnPush: boolean, desiredAssigneesCount: number, inputs?: unknown): Issue {
+export function buildIssue(branchManagementAlways: boolean, reopenOnPush: boolean, desiredAssigneesCount: number, inputs?: ExecutionInputs): Issue {
     return new Issue(branchManagementAlways, reopenOnPush, desiredAssigneesCount, inputs);
 }
 
-export function buildPullRequest(desiredAssigneesCount: number, desiredReviewersCount: number, mergeTimeout: number, inputs?: unknown): PullRequest {
+export function buildPullRequest(desiredAssigneesCount: number, desiredReviewersCount: number, mergeTimeout: number, inputs?: ExecutionInputs): PullRequest {
     return new PullRequest(desiredAssigneesCount, desiredReviewersCount, mergeTimeout, inputs);
 }
 

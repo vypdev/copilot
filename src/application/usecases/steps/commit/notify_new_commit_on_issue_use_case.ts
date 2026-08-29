@@ -65,19 +65,23 @@ export class NotifyNewCommitOnIssueUseCase implements ParamUseCase<Execution, Re
 
             let shouldWarn = false
             for (const commit of param.commit.commits) {
+                const commitId = commit.id ?? 'unknown';
+                const commitAuthorName = commit.author?.name ?? 'unknown';
+                const commitAuthorUsername = commit.author?.username ?? 'unknown';
+                const commitMessage = commit.message ?? '';
                 commentBody += `
 ${this.separator}
 
-- ${commit.id} by **${commit.author.name}** (@${commit.author.username})
+- ${commitId} by **${commitAuthorName}** (@${commitAuthorUsername})
 \`\`\`
-${commit.message.replaceAll(`${commitPrefix}: `, '')}
+${commitMessage.split(`${commitPrefix}: `).join('')}
 \`\`\`
 
 `;
                 if (
-                    (commit.message.indexOf(commitPrefix) !== 0 && commitPrefix.length > 0)
-                    && commit.message.indexOf(this.mergeBranchPattern) !== 0
-                    && commit.message.indexOf(this.ghAction) !== 0
+                    (commitMessage.indexOf(commitPrefix) !== 0 && commitPrefix.length > 0)
+                    && commitMessage.indexOf(this.mergeBranchPattern) !== 0
+                    && commitMessage.indexOf(this.ghAction) !== 0
                 ) {
                     shouldWarn = true;
                 }
