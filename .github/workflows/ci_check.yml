@@ -45,6 +45,9 @@ jobs:
       - name: Build
         run: pnpm run build
 
+      - name: Validate generated bundles
+        run: pnpm run validate:build
+
       - name: Typecheck
         run: pnpm run typecheck
 

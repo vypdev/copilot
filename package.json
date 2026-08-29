@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "ncc build src/actions/github_action.ts -o build/github_action && ncc build src/cli.ts -o build/cli && chmod +x build/cli/index.js",
+    "validate:build": "node scripts/validate-build.cjs",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
