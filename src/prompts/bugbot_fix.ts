@@ -19,9 +19,7 @@ const TEMPLATE = `You are in the repository workspace. Your task is to fix the r
 {{findingsBlock}}
 
 **User request:**
-"""
 {{userComment}}
-"""
 
 **Rules:**
 1. Fix only the problems described in the findings above. Do not refactor or change other code except as strictly necessary for the fix.

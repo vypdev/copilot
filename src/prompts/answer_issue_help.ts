@@ -11,9 +11,7 @@ const TEMPLATE = `The user has just opened a question/help issue. Provide a help
 {{projectContextInstruction}}
 
 **Issue description (user's question or request):**
-"""
 {{description}}
-"""
 
 Respond with a single JSON object containing an "answer" field with your reply. Format the answer in **markdown** (headings, lists, code blocks where useful) so it is easy to read. Do not include the question in your response.`;
 

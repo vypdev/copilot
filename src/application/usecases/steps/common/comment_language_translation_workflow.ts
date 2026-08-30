@@ -7,10 +7,12 @@ import type { IssueCommentUpdatePort } from '../../../ports/issue_lifecycle_port
 import { getCheckCommentLanguagePrompt, getTranslateCommentPrompt } from '../../../../prompts';
 import { logDebugInfo, logInfo } from '../../../ports/logging_ports';
 import { getTaskEmoji } from '../../../../utils/task_emoji';
+import {
+    composeTranslatedComment,
+    hasTranslatedCommentMarker,
+} from '../../../policies/comment_translation_policy';
 
-export const TRANSLATED_COMMENT_MARKER = `<!-- content_translated
-If you'd like this comment to be translated again, please delete the entire comment, including this message. It will then be processed as a new one.
--->`;
+export { TRANSLATED_COMMENT_MARKER } from '../../../policies/comment_translation_policy';
 
 export type CommentLanguageContext = {
     taskId: string;
@@ -32,7 +34,7 @@ export class CommentLanguageTranslationWorkflow {
 
     async invoke(context: CommentLanguageContext): Promise<Result[]> {
         logInfo(`${getTaskEmoji(context.taskId)} Executing ${context.taskId}.`);
-        if (!context.commentBody || context.commentBody.includes(TRANSLATED_COMMENT_MARKER)) {
+        if (!context.commentBody || hasTranslatedCommentMarker(context.commentBody)) {
             return [new Result({ id: context.taskId, success: true, executed: false })];
         }
 
@@ -61,10 +63,11 @@ export class CommentLanguageTranslationWorkflow {
                 schemaName: 'translation_response',
             },
         });
-        const translatedText = this.stringProperty(translationResponse, 'translatedText').trim();
-        if (!translatedText) {
+        const translatedText = this.stringProperty(translationResponse, 'translatedText');
+        const publication = composeTranslatedComment(translatedText, context.commentBody);
+        if (!publication) {
             const reason = this.stringProperty(translationResponse, 'reason');
-            logInfo(`Translation returned no text; skipping comment update.${reason ? ` Reason: ${reason}` : ' The configured agent may have failed or returned an invalid response.'}`);
+            logInfo(`Translation output was rejected; skipping comment update.${reason ? ` Reason: ${reason}` : ' The configured agent may have failed or returned an invalid response.'}`);
             return [new Result({ id: context.taskId, success: true, executed: false })];
         }
 
@@ -73,7 +76,7 @@ export class CommentLanguageTranslationWorkflow {
             context.repo,
             context.issueNumber,
             context.commentId,
-            `${translatedText}\n> ${context.commentBody}\n${TRANSLATED_COMMENT_MARKER}\n`,
+            publication.commentBody,
             context.token,
         );
         return [];

@@ -46,7 +46,7 @@ describe('agent capability adapters', () => {
 
         expect(mockExecute).toHaveBeenCalledWith(expect.objectContaining({
             configuration,
-            prompt: 'inspect the change',
+            prompt: expect.stringContaining('SECURITY POLICY'),
             timeoutMs: 900000,
         }));
     });

@@ -87,7 +87,7 @@ describe("buildBugbotFixPrompt", () => {
             []
         );
         expect(prompt).toContain("find-1");
-        expect(prompt).toContain("[... truncated for length ...]");
+        expect(prompt).toContain("[untrusted content truncated]");
         const xCount = (prompt.match(/x/g) ?? []).length;
         expect(xCount).toBeLessThan(15000);
         expect(xCount).toBeLessThanOrEqual(12000);

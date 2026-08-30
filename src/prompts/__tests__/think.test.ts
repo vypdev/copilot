@@ -11,7 +11,8 @@ describe('getThinkPrompt', () => {
         expect(prompt).toContain('**Use context.**');
         expect(prompt).toContain('Context (issue #1):');
         expect(prompt).toContain('Fix the bug.');
-        expect(prompt).toContain('Question: what is 2+2?');
+        expect(prompt).toContain('Question: [BEGIN_UNTRUSTED_DATA origin=prompt.question');
+        expect(prompt).toContain('what is 2+2?');
         expect(prompt).not.toContain('{{');
     });
 
@@ -21,7 +22,8 @@ describe('getThinkPrompt', () => {
             contextBlock: '\n\n',
             question: 'q',
         });
-        expect(prompt).toContain('Question: q');
+        expect(prompt).toContain('Question: [BEGIN_UNTRUSTED_DATA origin=prompt.question');
+        expect(prompt).toContain('\nq\n');
         expect(prompt).not.toContain('{{');
     });
 });

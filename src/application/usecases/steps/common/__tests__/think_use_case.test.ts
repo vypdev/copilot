@@ -203,7 +203,8 @@ describe('ThinkUseCase', () => {
 
     expect(mockAskAgent).toHaveBeenCalledTimes(1);
     const prompt = mockAskAgent.mock.calls[0][2];
-    expect(prompt).toContain('Question: what is 2+2?');
+    expect(prompt).toContain('Question: [BEGIN_UNTRUSTED_DATA origin=prompt.question');
+    expect(prompt).toContain('what is 2+2?');
     expect(results[0].success).toBe(true);
     expect(results[0].executed).toBe(true);
   });
@@ -222,7 +223,8 @@ describe('ThinkUseCase', () => {
     const prompt = mockAskAgent.mock.calls[0][2];
     expect(prompt).toContain('Context (issue #42 description):');
     expect(prompt).toContain('Implement login feature for the app.');
-    expect(prompt).toContain('Question: how should I start?');
+    expect(prompt).toContain('Question: [BEGIN_UNTRUSTED_DATA origin=prompt.question');
+    expect(prompt).toContain('how should I start?');
   });
 
   it('for PR review comment uses issueNumber to fetch issue description', async () => {

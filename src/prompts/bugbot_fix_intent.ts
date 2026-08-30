@@ -11,9 +11,7 @@ const TEMPLATE = `You are analyzing a user comment on an issue or pull request t
 {{findingsBlock}}
 {{parentBlock}}
 **User comment:**
-"""
 {{userComment}}
-"""
 
 **Your task:** Decide:
 1. Is this comment clearly a request to fix one or more of the findings above? (e.g. "fix it", "arreglalo", "fix this", "fix all", "fix vulnerability X", "corrige", "fix the bug in src/foo.ts"). If the user is asking a question, discussing something else, or the intent is ambiguous, set \`is_fix_request\` to false.

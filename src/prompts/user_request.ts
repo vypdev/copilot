@@ -15,9 +15,7 @@ const TEMPLATE = `You are in the repository workspace. The user has asked you to
 - Issue number: {{issueNumber}}
 
 **User request:**
-"""
 {{userComment}}
-"""
 
 **Rules:**
 1. Apply all changes directly in the workspace (edit files, run commands).
