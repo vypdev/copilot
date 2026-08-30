@@ -29,7 +29,7 @@ describe("commitAutofixAndResolveFindings", () => {
     const resolutionError = new Error(
       "Unable to mark a pull request finding as resolved.",
     );
-    runBugbotAutofixCommitAndPush.mockResolvedValue({ committed: true });
+    runBugbotAutofixCommitAndPush.mockResolvedValue({ success: true, committed: true });
     markFindingsResolved.mockResolvedValue([resolutionError]);
 
     const errors = await commitAutofixAndResolveFindings(
@@ -52,7 +52,7 @@ describe("commitAutofixAndResolveFindings", () => {
   });
 
   it("does not resolve findings when no commit was created", async () => {
-    runBugbotAutofixCommitAndPush.mockResolvedValue({ committed: false });
+    runBugbotAutofixCommitAndPush.mockResolvedValue({ success: true, committed: false });
 
     await expect(
       commitAutofixAndResolveFindings(
@@ -71,8 +71,29 @@ describe("commitAutofixAndResolveFindings", () => {
     expect(markFindingsResolved).not.toHaveBeenCalled();
   });
 
+  it("returns a sanitized error when commit or push fails", async () => {
+    runBugbotAutofixCommitAndPush.mockResolvedValue({
+      success: false,
+      committed: false,
+      error: "push failed with token=secret-value",
+    });
+
+    const errors = await commitAutofixAndResolveFindings(
+      { owner: "o", repo: "r" } as Execution,
+      { targetFindingIds: ["finding-1"], context: {} } as never,
+      [{ success: true, payload: {} } as Result],
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).not.toContain("secret-value");
+    expect(markFindingsResolved).not.toHaveBeenCalled();
+  });
+
   it("does not resolve findings when the committed autofix has no context", async () => {
-    runBugbotAutofixCommitAndPush.mockResolvedValue({ committed: true });
+    runBugbotAutofixCommitAndPush.mockResolvedValue({ success: true, committed: true });
 
     await expect(
       commitAutofixAndResolveFindings(
@@ -89,7 +110,7 @@ describe("commitAutofixAndResolveFindings", () => {
   });
 
   it("reports a fully resolved committed autofix", async () => {
-    runBugbotAutofixCommitAndPush.mockResolvedValue({ committed: true });
+    runBugbotAutofixCommitAndPush.mockResolvedValue({ success: true, committed: true });
     markFindingsResolved.mockResolvedValue([]);
 
     await expect(

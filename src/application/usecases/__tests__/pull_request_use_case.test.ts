@@ -18,6 +18,7 @@ const mockSyncLabelsInvoke = jest.fn();
 const mockCheckPriorityInvoke = jest.fn();
 const mockUpdateDescriptionInvoke = jest.fn();
 const mockCloseIssueInvoke = jest.fn();
+const mockReviewPotentialProblemsInvoke = jest.fn();
 
 function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
   return {
@@ -56,6 +57,7 @@ describe("PullRequestUseCase", () => {
     mockCheckPriorityInvoke.mockResolvedValue([]);
     mockUpdateDescriptionInvoke.mockResolvedValue([]);
     mockCloseIssueInvoke.mockResolvedValue([]);
+    mockReviewPotentialProblemsInvoke.mockResolvedValue([]);
   });
 
   it("when PR is opened, runs update title, assign, link, sync, check priority", async () => {
@@ -81,6 +83,27 @@ describe("PullRequestUseCase", () => {
     expect(mockLinkIssueInvoke).toHaveBeenCalledWith(param);
     expect(mockSyncLabelsInvoke).toHaveBeenCalledWith(param);
     expect(mockCheckPriorityInvoke).toHaveBeenCalledWith(param);
+  });
+
+  it("reviews opened and synchronized PRs, but not label-only events", async () => {
+    const reviewUseCase = {
+      taskId: "DetectPotentialProblemsUseCase",
+      invoke: mockReviewPotentialProblemsInvoke,
+    };
+    const useCase = new PullRequestUseCase(
+      { taskId: "UpdatePullRequestDescriptionUseCase", invoke: mockUpdateDescriptionInvoke },
+      workflowSteps,
+      reviewUseCase,
+    );
+
+    await useCase.invoke(minimalExecution({
+      pullRequest: { isOpened: true, isSynchronize: false, isClosed: false, isMerged: false, action: "opened" },
+    }));
+    await useCase.invoke(minimalExecution({
+      pullRequest: { isOpened: true, isSynchronize: false, isClosed: false, isMerged: false, action: "labeled" },
+    }));
+
+    expect(mockReviewPotentialProblemsInvoke).toHaveBeenCalledTimes(1);
   });
 
   it("when PR is opened and ai getAiPullRequestDescription, calls UpdatePullRequestDescriptionUseCase", async () => {

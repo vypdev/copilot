@@ -23,7 +23,7 @@ export class SynchronizeLifecycleStateUseCase {
         const state = resolveLifecycleState({
             eventName: param.execution.eventName,
             action: param.execution.inputs?.action ?? '',
-            isIssue: param.execution.eventName === 'issues',
+            isIssue: ['issues', 'issue_comment'].includes(param.execution.eventName),
             isPullRequest: param.execution.eventName === 'pull_request',
             issueOpened: param.execution.issue.opened,
             issueDescriptionEdited: param.execution.issue.descriptionEdited,
@@ -67,7 +67,7 @@ export class SynchronizeLifecycleStateUseCase {
 }
 
 function targetNumber(execution: Execution): number {
-    if (execution.eventName === 'issues') return execution.issue.number;
+    if (['issues', 'issue_comment'].includes(execution.eventName)) return execution.issue.number;
     if (execution.eventName === 'pull_request') return execution.pullRequest.number;
     return -1;
 }

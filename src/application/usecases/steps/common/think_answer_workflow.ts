@@ -11,6 +11,7 @@ import { PROJECT_CONTEXT_INSTRUCTION } from '../../../../utils/project_context_i
 import { extractStructuredAnswer } from './agent_answer_policy';
 import type { ThinkRequestDecision } from './think_request_policy';
 import { sanitizeAgentMarkdown } from '../../../../application/policies/github_comment_publication_policy';
+import type { AgentTask } from '../../../../domain/agent';
 
 export interface ThinkAnswerDependencies {
     issueDescriptionQueryPort: IssueDescriptionQueryPort;
@@ -25,6 +26,7 @@ export async function runThinkAnswerWorkflow(
     taskId: string,
     request: ReadyThinkRequest,
     dependencies: ThinkAnswerDependencies,
+    agentTask: AgentTask,
 ): Promise<Result[]> {
     const issueDescription = await loadIssueDescription(
         param,
@@ -41,7 +43,7 @@ export async function runThinkAnswerWorkflow(
         contextBlock,
         question: request.question,
     });
-    const answer = sanitizeAgentMarkdown(await queryThinkAnswer(param, prompt, dependencies.aiRepository));
+    const answer = sanitizeAgentMarkdown(await queryThinkAnswer(param, prompt, dependencies.aiRepository, agentTask));
     if (!answer) {
         logError('Configured agent returned no answer for Think.');
         return [
@@ -97,10 +99,11 @@ async function queryThinkAnswer(
     param: Execution,
     prompt: string,
     repository: FindingsQueryPort,
+    agentTask: AgentTask,
 ): Promise<string> {
     logDebugInfo(`Think: calling configured agent (prompt length=${prompt.length}).`);
     const response = await repository.query({
-        configuration: param.ai?.getAgentConfiguration('findings'),
+        configuration: param.ai?.getAgentConfiguration(agentTask),
         agentId: AGENT_PLAN,
         prompt,
         options: {

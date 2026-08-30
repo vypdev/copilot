@@ -44,13 +44,15 @@ export async function runUpdatePullRequestDescriptionWorkflow(
         logDebugInfo(
             `PR description will be generated from workspace diff: base "${branches.baseBranch}", head "${branches.headBranch}" (configured agent will run git diff).`,
         );
-        const issueDescription = (await dependencies.issueDescriptionQueryPort.getDescription(
-            param.owner,
-            param.repo,
-            param.issueNumber,
-            param.tokens.token,
-        )) ?? '';
-        if (issueDescription.length === 0) {
+        const issueDescription = param.issueNumber > 0
+            ? (await dependencies.issueDescriptionQueryPort.getDescription(
+                param.owner,
+                param.repo,
+                param.issueNumber,
+                param.tokens.token,
+            )) ?? ''
+            : '';
+        if (param.issueNumber > 0 && issueDescription.length === 0) {
             return skipped(taskId, 'No issue description found. Skipping update pull request description.');
         }
 
@@ -71,14 +73,17 @@ export async function runUpdatePullRequestDescriptionWorkflow(
             projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
             baseBranch: branches.baseBranch,
             headBranch: branches.headBranch,
-            issueNumber: String(param.issueNumber),
-            issueDescription,
+            issueNumber: param.issueNumber > 0 ? String(param.issueNumber) : 'not linked',
+            issueDescription: issueDescription || 'No linked issue description is available. Infer intent from the pull request title, body, and diff.',
+            relatedIssueInstruction: param.issueNumber > 0
+                ? `Include \`Closes #${param.issueNumber}\` and "Related to #" only if relevant.`
+                : 'Do not add a Closes line because this pull request has no linked issue.',
         });
         logDebugInfo(
             `UpdatePullRequestDescription: prompt length=${prompt.length}, issue description length=${issueDescription.length}. Calling configured agent.`,
         );
         const response = await dependencies.aiRepository.query({
-            configuration: param.ai?.getAgentConfiguration('findings'),
+            configuration: param.ai?.getAgentConfiguration('planner'),
             agentId: AGENT_PLAN,
             prompt,
         });

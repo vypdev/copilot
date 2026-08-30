@@ -45,11 +45,11 @@ export async function runCommentAutomationAction(
     if (resolutionErrors.length > 0) {
       autofixResults.push(
         new Result({
-          id: `${options.taskId}.ResolveFindings`,
+          id: `${options.taskId}.AutofixPostflight`,
           success: false,
           executed: true,
           steps: [
-            "Autofix succeeded, but one or more findings could not be marked as resolved.",
+            "Autofix postflight failed: commit/push or finding reconciliation did not complete.",
           ],
           errors: resolutionErrors,
         }),
@@ -65,14 +65,14 @@ export async function runCommentAutomationAction(
       userComment: options.userComment,
       branchOverride: intentPayload.branchOverride,
     });
-    await commitUserRequestIfSuccessful(
+    const commitResults = await commitUserRequestIfSuccessful(
       param,
       intentPayload.branchOverride,
       doResults,
       ports.authenticatedUserPort,
       ports.gitCommitPort,
     );
-    return doResults;
+    return [...doResults, ...commitResults];
   }
 
   return [];

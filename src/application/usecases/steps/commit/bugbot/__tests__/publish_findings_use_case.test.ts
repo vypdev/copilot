@@ -82,6 +82,24 @@ describe("publishFindings", () => {
         expect(mockUpdateComment).not.toHaveBeenCalled();
     });
 
+    it("publishes a PR-only finding without calling the issue API", async () => {
+        await publishFindings({
+            execution: { ...baseExecution, issueNumber: -1 } as typeof baseExecution,
+            context: baseContext({
+                openPrNumbers: [50],
+                prContext: {
+                    prHeadSha: "sha1",
+                    prFiles: [{ filename: "src/foo.ts", status: "modified" }],
+                    pathToFirstDiffLine: { "src/foo.ts": 5 },
+                },
+            }),
+            findings: [finding({ file: "src/foo.ts" })],
+        });
+
+        expect(mockAddComment).not.toHaveBeenCalled();
+        expect(mockCreateReviewWithComments).toHaveBeenCalledTimes(1);
+    });
+
     it("updates issue comment when finding already has issueCommentId", async () => {
         await publishFindings({
             execution: baseExecution,

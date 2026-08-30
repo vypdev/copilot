@@ -6,6 +6,7 @@ import { loadBugbotContext } from './load_bugbot_context_use_case';
 import { markFindingsResolved } from './mark_findings_resolved_workflow';
 import { normalizeFindingIdForMarker } from './marker';
 import { logError } from '../../../../ports/logging_ports';
+import type { BugbotFindingResolution } from './types';
 
 export interface DismissBugbotFindingsParam {
     execution: Execution;
@@ -45,6 +46,7 @@ export class DismissBugbotFindingsUseCase {
                 execution: param.execution,
                 context,
                 resolvedFindingIds: dismissibleIds,
+                resolvedFindingResolutions: new Map([...dismissibleIds].map(id => [id, 'dismissed' as BugbotFindingResolution])),
                 ports: this.dependencies.resolutionPorts,
             });
             return [new Result({
@@ -66,13 +68,19 @@ async function loadDismissContext(
     execution: Execution,
     ports: BugbotContextPorts,
 ) {
-    const branch = execution.commit.branch?.trim()
-        || await ports.pullRequest.getHeadBranchForIssue(
-            execution.owner,
-            execution.repo,
-            execution.issueNumber,
-            execution.tokens.token,
-        );
-    return loadBugbotContext(execution, branch ? { branchOverride: branch } : undefined, ports);
+    const branch = execution.commit.branch?.trim() || execution.pullRequest?.head?.trim();
+    if (branch) {
+        return loadBugbotContext(execution, {
+            branchOverride: branch,
+            ...(execution.pullRequest?.number > 0 ? { pullRequestNumberOverride: execution.pullRequest.number } : {}),
+        }, ports);
+    }
+    if (execution.issueNumber <= 0) return loadBugbotContext(execution, undefined, ports);
+    const issueBranch = await ports.pullRequest.getHeadBranchForIssue(
+        execution.owner,
+        execution.repo,
+        execution.issueNumber,
+        execution.tokens.token,
+    );
+    return loadBugbotContext(execution, issueBranch ? { branchOverride: issueBranch } : undefined, ports);
 }
-

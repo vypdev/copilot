@@ -6,6 +6,7 @@ import type { PullRequestWorkflowSteps } from "./pull_request_workflow_steps";
 
 export interface PullRequestWorkflowPorts {
   updatePullRequestDescriptionUseCase: ParamUseCase<Execution, Result[]>;
+  reviewPotentialProblemsUseCase?: ParamUseCase<Execution, Result[]>;
   workflowSteps: PullRequestWorkflowSteps;
 }
 
@@ -31,13 +32,16 @@ export async function runPullRequestWorkflow(
       if (param.ai.getAiPullRequestDescription()) {
         results.push(...(await ports.updatePullRequestDescriptionUseCase.invoke(param)));
       }
+      results.push(...(await runPullRequestReview(param, ports)));
       return results;
     }
 
     if (param.pullRequest.isSynchronize) {
-      return param.ai.getAiPullRequestDescription()
-        ? ports.updatePullRequestDescriptionUseCase.invoke(param)
+      const results = param.ai.getAiPullRequestDescription()
+        ? await ports.updatePullRequestDescriptionUseCase.invoke(param)
         : [];
+      results.push(...(await runPullRequestReview(param, ports)));
+      return results;
     }
 
     if (param.pullRequest.isClosed && param.pullRequest.isMerged) {
@@ -57,6 +61,18 @@ export async function runPullRequestWorkflow(
     ];
   }
   return [];
+}
+
+async function runPullRequestReview(
+  param: Execution,
+  ports: PullRequestWorkflowPorts,
+): Promise<Result[]> {
+  if (!ports.reviewPotentialProblemsUseCase || !shouldReviewPullRequest(param)) return [];
+  return ports.reviewPotentialProblemsUseCase.invoke(param);
+}
+
+function shouldReviewPullRequest(param: Execution): boolean {
+  return ['opened', 'reopened', 'synchronize', 'edited'].includes(param.pullRequest.action);
 }
 
 async function runSteps(

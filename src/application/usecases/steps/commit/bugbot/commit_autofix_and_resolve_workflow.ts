@@ -8,6 +8,7 @@ import type { Execution } from "../../../../../data/model/execution";
 import type { AuthenticatedUserPort } from "../../../../../application/ports/authenticated_user_ports";
 import type { BugbotFindingResolutionPorts } from "../../../../../application/ports/bugbot_finding_resolution_ports";
 import type { GitCommitPort } from "../../../../../application/ports/git_ports";
+import { sanitizePublishedError } from "../../../../../application/policies/github_comment_publication_policy";
 
 export async function commitAutofixAndResolveFindings(
   param: Execution,
@@ -36,6 +37,11 @@ export async function commitAutofixAndResolveFindings(
     authenticatedUserPort,
     gitCommitPort,
   );
+  if (!commitResult.success) {
+    const message = sanitizePublishedError(commitResult.error) || 'Commit or push failed after autofix.';
+    logInfo(`Bugbot autofix commit failed: ${message}`);
+    return [new Error(message)];
+  }
   if (commitResult.committed && payload.context) {
     const ids = payload.targetFindingIds;
     const resolutionErrors = await markFindingsResolved({

@@ -29,6 +29,7 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly bugbotResolutionPorts: BugbotFindingResolutionPorts,
     private readonly gitCommitPort: GitCommitPort,
     private readonly dismissBugbotFindingsUseCase?: ParamUseCase<DismissBugbotFindingsParam, Result[]>,
+    private readonly reviewPotentialProblemsUseCase?: ParamUseCase<Execution, Result[]>,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
@@ -44,6 +45,7 @@ export class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
         userComment: param.issue.commentBody ?? "",
         gitCommitPort: this.gitCommitPort,
         dismissBugbotFindingsUseCase: this.dismissBugbotFindingsUseCase,
+        reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
       },
       this.actorAuthorizationPort,
       this.authenticatedUserPort,

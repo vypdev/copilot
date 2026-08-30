@@ -11,3 +11,22 @@ description: Provider-specific commands and process safety rules.
 | Cursor | `agent -p --output-format text --model <model> <prompt>` |
 
 Commands are parsed as argv and executed with `shell: false`. The prompt is sent through `stdin` for Codex and as one positional argument for OpenCode and Cursor. Shell operators, empty commands, embedded credentials, and commands without explicit model selection are rejected. Codex custom commands must also declare `model_provider`; Codex and OpenCode custom commands must declare the configured effort when one is set. Cursor has no documented native effort flag, so its effort value is carried as execution context. A custom `agent-command` MUST be reviewed as executable code.
+
+## Explicit issue and pull-request commands
+
+Comments beginning with `/copilot` use a deterministic command boundary. Text elsewhere in a comment remains ordinary user content and does not become an instruction to the workflow.
+
+| Command | Purpose | File mutation |
+| --- | --- | --- |
+| `/copilot plan` | Produce an actionable implementation plan. | No |
+| `/copilot clarify` | List ambiguities and questions that block implementation. | No |
+| `/copilot estimate` | Estimate effort, risk, and likely validation work. | No |
+| `/copilot test-plan` | Propose a focused test strategy. | No |
+| `/copilot status` | Summarize the current lifecycle and next step. | No |
+| `/copilot review` | Review the current issue or PR context. | No |
+| `/copilot findings` | Summarize known Bugbot findings. | No |
+| `/copilot recheck` | Request a fresh analysis of the current context. | No |
+| `/copilot fix FINDING-ID` | Request an explicit Bugbot fix. Use `all` to target all open findings. | Yes, authorized users only |
+| `/copilot dismiss FINDING-ID` | Dismiss a known finding without changing files. | Changes finding state, authorized users only |
+
+The parser accepts only a command at the beginning of the comment, limits the input size and argument count, and rejects unknown commands. File-changing operations still require the existing organization-member or repository-owner authorization policy. Agent output is treated as untrusted text and is sanitized before it is published as Markdown.

@@ -1,6 +1,7 @@
 import type { BugbotIssueCommentUpdatePort } from "../../../../../application/ports/bugbot_issue_write_ports";
 import { stripTrailingCommentWatermarks } from "../../../../../utils/comment_watermark";
 import { buildMarker, parseMarker, replaceMarkerInBody } from "./marker";
+import type { BugbotFindingResolution } from './types';
 
 export interface IssueFindingResolution {
   findingId: string;
@@ -9,10 +10,14 @@ export interface IssueFindingResolution {
   repo: string;
   issueNumber: number;
   token: string;
+  resolution?: BugbotFindingResolution;
 }
 
-const RESOLVED_NOTE =
-  "\n\n---\n**Resolved** (configured agent confirmed fixed in latest analysis).\n";
+function resolvedNote(resolution: BugbotFindingResolution): string {
+  if (resolution === 'dismissed') return "\n\n---\n**Dismissed** (explicitly dismissed by an authorized user).\n";
+  if (resolution === 'obsolete') return "\n\n---\n**Resolved** (no longer applies in the latest analysis).\n";
+  return "\n\n---\n**Resolved** (configured agent confirmed fixed in latest analysis).\n";
+}
 
 export async function resolveIssueFinding(
   repository: BugbotIssueCommentUpdatePort,
@@ -24,7 +29,8 @@ export async function resolveIssueFinding(
   );
   if (marker == null || marker.resolved) return;
 
-  const replacement = `${RESOLVED_NOTE}${buildMarker(resolution.findingId, true, marker.fingerprint)}`;
+  const reason = resolution.resolution ?? 'fixed';
+  const replacement = `${resolvedNote(reason)}${buildMarker(resolution.findingId, true, marker.fingerprint, reason)}`;
   const replaced = replaceMarkerInBody(
     body,
     resolution.findingId,

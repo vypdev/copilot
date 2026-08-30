@@ -120,6 +120,7 @@ export function createIssueCommentUseCaseCompositionRoot(): IssueCommentUseCase 
     bugbot.resolution,
     gitCommit,
     new DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }),
+    new DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution),
   );
 }
 
@@ -152,6 +153,7 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(): PullRequ
     bugbot.resolution,
     gitCommit,
     new DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }),
+    new DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution),
   );
 }
 

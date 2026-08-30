@@ -12,12 +12,14 @@ export class PullRequestUseCase implements ParamUseCase<Execution, Result[]> {
   constructor(
     private readonly updatePullRequestDescriptionUseCase: ParamUseCase<Execution, Result[]>,
     private readonly workflowSteps: PullRequestWorkflowSteps,
+    private readonly reviewPotentialProblemsUseCase?: ParamUseCase<Execution, Result[]>,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
     logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`);
     return runPullRequestWorkflow(param, this.taskId, {
       updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase,
+      reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
       workflowSteps: this.workflowSteps,
     });
   }

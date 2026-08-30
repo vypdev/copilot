@@ -6,7 +6,7 @@
  */
 
 import { BUGBOT_MARKER_PREFIX } from "../../../../../utils/constants";
-import type { BugbotFinding } from "./types";
+import type { BugbotFinding, BugbotFindingResolution } from "./types";
 import { sanitizeAgentMarkdown } from "../../../../../application/policies/github_comment_publication_policy";
 
 /** Maximum lossless finding identity accepted by the marker contract. */
@@ -48,24 +48,37 @@ function requireFindingIdForMarker(findingId: string): string {
   return safeId;
 }
 
-export function buildMarker(findingId: string, resolved: boolean, fingerprint?: string): string {
+export function buildMarker(
+  findingId: string,
+  resolved: boolean,
+  fingerprint?: string,
+  resolution?: BugbotFindingResolution,
+): string {
     const safeId = requireFindingIdForMarker(findingId);
     const safeFingerprint = fingerprint?.match(/^fp-[a-f0-9]{8}$/)?.[0];
-    return `<!-- ${BUGBOT_MARKER_PREFIX} finding_id:"${safeId}" resolved:${resolved}${safeFingerprint ? ` finding_fingerprint:"${safeFingerprint}"` : ''} -->`;
+    const safeResolution = resolved && resolution && ['fixed', 'obsolete', 'dismissed'].includes(resolution)
+      ? ` finding_resolution:"${resolution}"`
+      : '';
+    return `<!-- ${BUGBOT_MARKER_PREFIX} finding_id:"${safeId}" resolved:${resolved}${safeFingerprint ? ` finding_fingerprint:"${safeFingerprint}"` : ''}${safeResolution} -->`;
 }
 
 export function parseMarker(
   body: string | null,
-): Array<{ findingId: string; resolved: boolean; fingerprint?: string }> {
+): Array<{ findingId: string; resolved: boolean; fingerprint?: string; resolution?: BugbotFindingResolution }> {
   if (!body) return [];
-  const results: Array<{ findingId: string; resolved: boolean; fingerprint?: string }> = [];
+  const results: Array<{ findingId: string; resolved: boolean; fingerprint?: string; resolution?: BugbotFindingResolution }> = [];
   const regex = new RegExp(
-    `<!--\\s*${BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"([^"]+)"\\s+resolved:(true|false)(?:\\s+finding_fingerprint:\\s*"(fp-[a-f0-9]{8})")?\\s*-->`,
+    `<!--\\s*${BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"([^"]+)"\\s+resolved:(true|false)(?:\\s+finding_fingerprint:\\s*"(fp-[a-f0-9]{8})")?(?:\\s+finding_resolution:\\s*"(fixed|obsolete|dismissed)")?\\s*-->`,
     "g",
   );
   let m: RegExpExecArray | null;
   while ((m = regex.exec(body)) !== null) {
-    results.push({ findingId: m[1], resolved: m[2] === "true", ...(m[3] ? { fingerprint: m[3] } : {}) });
+    results.push({
+      findingId: m[1],
+      resolved: m[2] === "true",
+      ...(m[3] ? { fingerprint: m[3] } : {}),
+      ...(m[4] ? { resolution: m[4] as BugbotFindingResolution } : {}),
+    });
   }
   return results;
 }
@@ -80,7 +93,7 @@ export function markerRegexForFinding(findingId: string): RegExp {
     ? safeId
     : safeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(
-    `<!--\\s*${BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"${idForRegex}"\\s+resolved:(?:true|false)(?:\\s+finding_fingerprint:\\s*"fp-[a-f0-9]{8}")?\\s*-->`,
+    `<!--\\s*${BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"${idForRegex}"\\s+resolved:(?:true|false)(?:\\s+finding_fingerprint:\\s*"fp-[a-f0-9]{8}")?(?:\\s+finding_resolution:\\s*"(?:fixed|obsolete|dismissed)")?\\s*-->`,
     "g",
   );
 }
@@ -115,6 +128,7 @@ export function extractTitleFromBody(body: string | null): string {
 export function buildCommentBody(
   finding: BugbotFinding,
   resolved: boolean,
+  resolution?: BugbotFindingResolution,
 ): string {
   const safeTitle = sanitizeAgentMarkdown(finding.title, 500) || "Potential problem";
   const safeDescription = sanitizeAgentMarkdown(finding.description, 8_000) || "No description provided.";
@@ -134,7 +148,7 @@ export function buildCommentBody(
   const resolvedNote = resolved
     ? "\n\n---\n**Resolved** (no longer reported in latest analysis).\n"
     : "";
-  const marker = buildMarker(finding.id, resolved, finding.fingerprint);
+  const marker = buildMarker(finding.id, resolved, finding.fingerprint, resolution);
   return `## ${safeTitle}
 
 ${severity}${fileLine}${safeDescription}

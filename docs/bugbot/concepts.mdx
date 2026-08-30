@@ -17,4 +17,12 @@ A finding is a structured report produced by the configured agent after inspecti
 
 Severity and publication policy must be explicit. A missing credential, invalid model policy, malformed response, timeout, or failed verification is terminal.
 
+## Pull-request review and evidence
+
+For `opened`, `reopened`, `edited`, and `synchronize` events, Bugbot analyzes the current PR head and changed files. A PR without an issue number can still receive review comments; issue comments are only used when a valid issue is linked. Findings are published as stable review comments when their path belongs to the PR diff and are reconciled using a local fingerprint, so wording changes do not create duplicate findings.
+
+The action publishes a bounded Job Summary for every run. When the supplied token can write Checks, it also publishes one stable Check Run: `Copilot / Plan` for issue and planning work, `Copilot / Review` for pull requests, and `Copilot / Verification` for push verification. A review with active or reopened findings is reported as `failure`; a clean review is `success`. If Check Runs are unavailable, the action logs the optional failure and keeps the Job Summary as the evidence source.
+
+Finding markers preserve the resolution state. `fixed` means the agent confirmed the issue is gone, `obsolete` means the original situation no longer applies, and `dismissed` is an explicit authorized user decision. A finding that becomes active again is shown as `reopened` and is published again in the same destination.
+
 See [Detection](/bugbot/detection), [Finding publication](/bugbot/finding-publication), and [Autofix](/bugbot/autofix).

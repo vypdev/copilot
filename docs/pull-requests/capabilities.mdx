@@ -55,7 +55,7 @@ Thresholds are defined in [Configuration](/configuration) (e.g. `size-m-threshol
 - Uses the **issue description** and the **branch diff** (base..head) as context.
 - Fills the template with a structured description (summary, scope, technical details, how to test, etc.).
 
-See [AI PR description](/pull-requests/ai-description) for details, requirements (linked issue, non-empty issue description), and how to enable it in your workflow.
+See [AI PR description](/pull-requests/ai-description) for details, optional issue context, and how to enable it in your workflow.
 
 ## Comments and images
 
@@ -68,7 +68,11 @@ Use this for team branding or to show different visuals per type of PR. See [Con
 
 ## Bugbot on PRs
 
-**Bugbot** (potential problems) runs when the **push** workflow runs (or when you run the single action `detect_potential_problems_action`). It posts **review comments** on the PR at the relevant file and line for each finding. When a finding is resolved, the action **marks that review thread as resolved**. You can **ask the bot to fix findings** by replying in the thread or commenting on the PR. See [Bugbot](/bugbot).
+**Bugbot** (potential problems) reviews the PR on `opened`, `reopened`, `edited`, and `synchronize`, and also reviews changes from the **push** workflow or the single action `detect_potential_problems_action`. It posts **review comments** on the PR at the relevant file and line for each finding. When a finding is resolved, the action **marks that review thread as resolved** and preserves whether it was fixed, obsolete, or dismissed. You can **ask the bot to fix findings** by replying in the thread or commenting on the PR. See [Bugbot](/bugbot).
+
+## Review state and evidence
+
+The PR workflow maintains one lifecycle state label (`reviewing`, `changes-requested`, or `ready`) while preserving the normal business labels. Each run also writes a bounded Job Summary. When the PAT can create Checks, Copilot publishes a stable `Copilot / Review` Check Run for the PR head; the check fails when active or reopened findings remain. A missing Checks capability does not make the functional workflow fail.
 
 ## Next steps
 

@@ -33,4 +33,23 @@ describe('action summary policy', () => {
         expect(summary).not.toContain('secret-value');
         expect(summary).not.toContain('at hidden');
     });
+
+    it('reports active findings as actionable failure evidence', () => {
+        const summary = buildActionSummary({
+            owner: 'owner',
+            repository: 'repo',
+            eventName: 'pull_request',
+            issueNumber: -1,
+            pullRequestNumber: 12,
+            results: [new Result({
+                id: 'Review',
+                success: true,
+                executed: true,
+                payload: { findingStates: { open: 1, reopened: 0, fixed: 0, obsolete: 0, dismissed: 0 } },
+            })],
+        });
+
+        expect(summary).toContain('❌ Failure');
+        expect(summary).toContain('open=1');
+    });
 });

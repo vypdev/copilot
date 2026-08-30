@@ -10,12 +10,15 @@ import { logInfo } from '../utils/logger';
 import { createLogReportAdapter } from '../infrastructure/logging/logger_adapter';
 import { buildActionSummary } from '../application/policies/action_summary_policy';
 import { lifecycleStateFromLabels } from '../domain/copilot_lifecycle';
+import type { CopilotEvidencePort } from '../application/ports/copilot_evidence_ports';
+import { buildCopilotEvidence } from '../application/policies/copilot_evidence_policy';
 
 export async function finishGithubAction(
     execution: Execution,
     results: Result[],
     issueNotificationPort: ConstructorParameters<typeof PublishResultUseCase>[0],
     configurationStorePort: ConfigurationStorePort,
+    evidencePort?: CopilotEvidencePort,
 ): Promise<void> {
     const stepCount = results.reduce((acc, result) => acc + (result.steps?.length ?? 0), 0);
     const errorCount = results.reduce((acc, result) => acc + (result.errors?.length ?? 0), 0);
@@ -25,7 +28,8 @@ export async function finishGithubAction(
     await new PublishResultUseCase(issueNotificationPort, createLogReportAdapter()).invoke(execution);
     commitPublishedRecommendationState(execution, results);
     await new StoreConfigurationUseCase(configurationStorePort).invoke(execution);
-    await writeActionSummary(execution);
+    const summary = await writeActionSummary(execution);
+    await publishCopilotEvidence(execution, results, summary, evidencePort);
     logInfo('Configuration stored. Finishing.');
 
     if (execution.isSingleAction && execution.singleAction.throwError) {
@@ -33,27 +37,54 @@ export async function finishGithubAction(
     }
 }
 
-async function writeActionSummary(execution: Execution): Promise<void> {
+async function writeActionSummary(execution: Execution): Promise<string> {
+    const summaryText = buildActionSummary({
+        owner: execution.owner,
+        repository: execution.repo,
+        eventName: execution.eventName,
+        issueNumber: execution.issue?.number ?? -1,
+        pullRequestNumber: execution.pullRequest?.number ?? -1,
+        lifecycleState: lifecycleStateFromLabels(
+            execution.isPullRequest
+                ? execution.labels?.currentPullRequestLabels ?? []
+                : execution.labels?.currentIssueLabels ?? [],
+            execution.labels?.lifecycle,
+        ),
+        results: execution.currentConfiguration.results,
+    });
     const summary = core.summary;
-    if (!summary || typeof summary.addRaw !== 'function' || typeof summary.write !== 'function') return;
+    if (!summary || typeof summary.addRaw !== 'function' || typeof summary.write !== 'function') return summaryText;
     try {
-        const targetLabels = execution.isPullRequest
-            ? execution.labels.currentPullRequestLabels
-            : execution.labels.currentIssueLabels;
-        const lifecycleState = lifecycleStateFromLabels(targetLabels, execution.labels.lifecycle);
         await summary
-            .addRaw(buildActionSummary({
-                owner: execution.owner,
-                repository: execution.repo,
-                eventName: execution.eventName,
-                issueNumber: execution.issue.number,
-                pullRequestNumber: execution.pullRequest.number,
-                lifecycleState,
-                results: execution.currentConfiguration.results,
-            }))
+            .addRaw(summaryText)
             .write();
     } catch (error) {
         logInfo(`Could not write GitHub Actions summary: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    return summaryText;
+}
+
+async function publishCopilotEvidence(
+    execution: Execution,
+    results: Result[],
+    summary: string,
+    evidencePort: CopilotEvidencePort | undefined,
+): Promise<void> {
+    if (!evidencePort) return;
+    const headSha = execution.inputs?.pull_request?.head?.sha
+        || (execution.isPush ? process.env.GITHUB_SHA : undefined);
+    const evidence = buildCopilotEvidence({
+        eventName: execution.eventName,
+        headSha,
+        summary,
+        results,
+    });
+    if (!evidence) return;
+    try {
+        await evidencePort.publish(evidence, execution.owner, execution.repo, execution.tokens.token);
+        logInfo(`Published ${evidence.name} Check Run for ${evidence.headSha}.`);
+    } catch (error) {
+        logInfo(`Could not publish optional GitHub Check Run: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 

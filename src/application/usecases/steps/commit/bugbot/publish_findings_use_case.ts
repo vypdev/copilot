@@ -44,24 +44,28 @@ export async function publishFindings(param: PublishFindingsParam): Promise<void
             : undefined;
 
     for (const finding of findings) {
-        await publishIssueFindingComment(
-            ports.issueComments,
-            execution,
-            finding,
-            findExistingFindingInfo(existingByFindingId, finding),
-            commitSha
-        );
+        if (execution.issueNumber > 0) {
+            await publishIssueFindingComment(
+                ports.issueComments,
+                execution,
+                finding,
+                findExistingFindingInfo(existingByFindingId, finding),
+                commitSha
+            );
+        }
         if (reviewPublisher) {
             await reviewPublisher.publish(finding, findExistingFindingInfo(existingByFindingId, finding));
         }
     }
 
     await reviewPublisher?.flush();
-    await publishOverflowComment(
-        ports.issueComments,
-        execution,
-        overflowCount,
-        overflowTitles,
-        commitSha
-    );
+    if (execution.issueNumber > 0) {
+        await publishOverflowComment(
+            ports.issueComments,
+            execution,
+            overflowCount,
+            overflowTitles,
+            commitSha
+        );
+    }
 }

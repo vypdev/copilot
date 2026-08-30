@@ -63,6 +63,14 @@ export declare const BUGBOT_RESPONSE_SCHEMA: {
             };
             readonly description: "Ids of previously reported issues (from the list we sent) that are now fixed in the current code. Only include ids we asked you to check.";
         };
+        readonly resolved_finding_reasons: {
+            readonly type: "object";
+            readonly additionalProperties: {
+                readonly type: "string";
+                readonly enum: readonly ["fixed", "obsolete"];
+            };
+            readonly description: "Optional map from a previously reported finding id to fixed or obsolete. Only ids from the supplied previous-findings list are accepted.";
+        };
     };
     readonly required: readonly ["findings"];
     readonly additionalProperties: false;

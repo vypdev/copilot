@@ -30,6 +30,11 @@ const mockProjectBoard = {
 const mockFindingsQuery = { kind: "findings-query" };
 const mockDescriptionUseCase = { kind: "description-use-case" };
 const mockComposedUseCase = { kind: "pull-request-use-case" };
+const mockBugbot = {
+  context: { kind: "bugbot-context" },
+  publication: { kind: "bugbot-publication" },
+  resolution: { kind: "bugbot-resolution" },
+};
 
 const mockComposePullRequestUseCase = jest.fn(
   (..._arguments: unknown[]) => mockComposedUseCase,
@@ -50,6 +55,7 @@ const mockCreateOrganizationMembersCompositionRoot = jest.fn(
   () => mockOrganizationMembers,
 );
 const mockCreateProjectBoardCompositionRoot = jest.fn(() => mockProjectBoard);
+const mockCreateBugbotCompositionRoot = jest.fn(() => mockBugbot);
 const mockPullRequestLifecycleRepository = jest
   .fn()
   .mockReturnValueOnce(mockPullRequestLifecycle)
@@ -83,6 +89,10 @@ jest.mock("../organization_members_composition_root", () => ({
 
 jest.mock("../project_board_composition_root", () => ({
   createProjectBoardCompositionRoot: mockCreateProjectBoardCompositionRoot,
+}));
+
+jest.mock("../bugbot_composition_root", () => ({
+  createBugbotCompositionRoot: mockCreateBugbotCompositionRoot,
 }));
 
 jest.mock("../pull_request_reviewer_composition_root", () => ({
@@ -150,7 +160,7 @@ describe("createPullRequestUseCaseCompositionRoot", () => {
       1,
     );
     expect(mockCreateProjectBoardCompositionRoot).toHaveBeenCalledTimes(1);
-    expect(mockCreateFindingsQueryPort).toHaveBeenCalledTimes(1);
+    expect(mockCreateFindingsQueryPort).toHaveBeenCalledTimes(2);
     expect(mockCreatePullRequestReviewerCompositionRoot).toHaveBeenCalledTimes(
       1,
     );
@@ -164,7 +174,7 @@ describe("createPullRequestUseCaseCompositionRoot", () => {
     expect(mockComposePullRequestUseCase).toHaveBeenCalledTimes(1);
     const argumentsPassed = mockComposePullRequestUseCase.mock.calls[0];
     expect(argumentsPassed[0]).toBe(mockDescriptionUseCase);
-    expect(argumentsPassed).toHaveLength(2);
+    expect(argumentsPassed).toHaveLength(3);
     expect(argumentsPassed[1]).toEqual(expect.objectContaining({
       updateTitle: expect.objectContaining({ invoke: expect.any(Function) }),
       assignReviewersToIssue: expect.objectContaining({ invoke: expect.any(Function) }),

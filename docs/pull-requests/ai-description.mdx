@@ -1,6 +1,6 @@
 ---
 title: AI-Generated PR Description
-description: How OpenCode fills your pull request template from the issue and branch diff
+description: How the configured agent fills your pull request template from the issue and branch diff
 ---
 
 # AI-Generated PR Description
@@ -12,7 +12,7 @@ description: How OpenCode fills your pull request template from the issue and br
 2. The configured agent CLI runs in the repository workspace. It:
    - Reads the repository's **pull request template** (see below).
    - Computes the **diff** between base and head (e.g. `git diff base..head`) to understand what changed.
-   - Uses the **issue description** (from the issue linked to the PR branch) as context.
+   - Uses the **issue description** (when the PR branch is linked to an issue) as context; otherwise it infers intent from the PR metadata and diff.
 3. The agent **fills the template** with a structured description: summary, scope of changes, technical details, how to test, breaking changes, deployment notes, etc., following the same sections and format as your template.
 4. The action writes the result to the PR body (prefixed with the issue number for reference).
 
@@ -33,15 +33,14 @@ If you don't have a template, the agent will still produce a structured descript
 ## When the AI description runs
 
 <Info>
-  - The PR must have an **issue linked** (branch name follows the pattern that includes the issue number, e.g. `feature/123-add-feature`).
-  - The linked issue must have a **non-empty description** (used as context).
+  - A linked issue with a non-empty description enriches the result, but it is not required; PRs without an issue are supported.
   - If `ai-members-only` is enabled (default: false), the PR author must be a **project/org member**; otherwise the step is skipped.
   - The action runs on the same `pull_request` events as the rest of the PR pipeline (e.g. opened, edited).
 </Info>
 
 ## Enable in your workflow
 
-Set `ai-pull-request-description: true` and configure OpenCode in your workflow:
+Set `ai-pull-request-description: true` and configure the selected agent in your workflow:
 
 ```yaml
 - uses: vypdev/copilot@master
@@ -49,7 +48,7 @@ Set `ai-pull-request-description: true` and configure OpenCode in your workflow:
     token: ${{ secrets.PAT }}
     project-ids: '2,3'
     ai-pull-request-description: true
-    agent-provider: opencode
+    agent-provider: codex
     agent-model-provider: openai
     agent-model: gpt-5.6-luna
 ```

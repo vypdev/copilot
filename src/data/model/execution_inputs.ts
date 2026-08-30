@@ -29,7 +29,7 @@ export interface EventPullRequestPayload {
     html_url?: string;
     body?: string | null;
     user?: EventUserPayload;
-    head?: { ref?: string };
+    head?: { ref?: string; sha?: string };
     base?: { ref?: string };
     merged?: boolean;
     state?: string;

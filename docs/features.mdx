@@ -40,6 +40,7 @@ When the workflow runs on `issues` (opened, edited, labeled, unlabeled, etc.):
 | **Size labels** | Assigns size labels (XS–XXL) and checks size thresholds (lines, files, commits) for prioritization. |
 | **Comments & images** | Posts comments with optional images (per branch type: feature, bugfix, docs, chore, hotfix, release). |
 | **Smart workflow guidance** | Comments can include Git-Flow reminders and next steps. |
+| **Lifecycle state** | Maintains one setup-provisioned `copilot:state:*` label so the issue visibly moves from analysis to planning and implementation. |
 
 ### 2. Pull request events (`on: pull_request`)
 
@@ -53,6 +54,7 @@ When the workflow runs on `pull_request` (opened, edited, etc.):
 | **Priority & size** | Applies priority and size checks (labels and thresholds). |
 | **AI PR description** | If `ai-pull-request-description` is true and the selected agent CLI is configured, generates or updates the PR description by filling the repo's `.github/pull_request_template.md` from the issue and the branch diff (configured agent CLI). See [Pull Requests → AI-generated PR description](/pull-requests/ai-description). |
 | **Comments & images** | Posts comments with optional images per branch type. |
+| **Bugbot review** | Reviews the PR on open, edit, reopen, and synchronize events; publishes stable line findings, reconciles resolved/reopened status, and exposes a Check Run. |
 
 ### 3. Push events (`on: push`)
 
@@ -66,6 +68,7 @@ When the workflow runs on `push` (e.g. to any branch):
 | **Size & progress** | Computes size (XS–XXL) and progress (0–100%) from the branch diff; updates the **issue** and any **open PRs** for that branch with the same labels. Uses the configured agent runtime. No separate workflow is needed. |
 | **Bugbot (potential problems)** | the configured agent analyzes the branch vs base and reports findings as **comments on the issue** and **review comments on open PRs**; updates issue comments when findings are resolved and **marks PR review threads as resolved** when applicable. Configurable via `bugbot-severity` and `ai-ignore-files`. See [Bugbot](/bugbot), [Issues](/issues#bugbot-potential-problems), and [Pull Requests](/pull-requests#bugbot-potential-problems). |
 | **Comments & images** | Posts commit summary comments with optional images. |
+| **Finding reconciliation** | Carries stable finding fingerprints across pushes and marks findings fixed, obsolete, dismissed, or reopened without creating duplicate comments. |
 
 ---
 
@@ -109,6 +112,7 @@ Codex is the default runtime for the repository's AI feature paths. OpenCode rem
 | **Bugbot (potential problems)** | Push (commit) pipeline; optional single action `detect_potential_problems_action` / CLI `detect-potential-problems` | Analyzes branch vs base and posts findings as **comments on the issue** and **review comments on open PRs**; updates issue comments and marks PR review threads as resolved when findings are fixed. Configurable: `bugbot-severity`, `ai-ignore-files`. |
 | **Do user request** | Issue comment; PR review comment | When you comment asking to perform a change in the repo (e.g. "add a test for X", "refactor this", "implement feature Y"), the configured agent applies the changes in the workspace, runs verify commands, and the action commits and pushes with a generic message. Same permission as Bugbot autofix: **only org members or the repo owner**. Uses the same `bugbot-fix-verify-commands` and agent CLI setup. |
 | **Think / reasoning** | Issue/PR comment pipeline; single action `think_action` | Deep code analysis and change proposals (configured agent CLI). On comments: answers when mentioned (or on any comment for question/help issues). Runs when the comment was not a fix/do request or when the user is not allowed to trigger file-modifying actions. |
+| **Explicit Copilot commands** | Issue and PR comments | `/copilot plan`, `/copilot clarify`, `/copilot estimate`, `/copilot test-plan`, `/copilot status`, `/copilot review`, `/copilot findings`, `/copilot recheck`, `/copilot fix`, and `/copilot dismiss` provide a bounded, predictable interface. |
 | **Comment translation** | Issue comment; PR review comment | Translates comments to the configured locale (`issues-locale`, `pull-requests-locale`) when they are written in another language. |
 | **AI PR description** | Pull request pipeline | Fills the repo's `.github/pull_request_template.md` from issue and branch diff (configured agent CLI). |
 | **Copilot** | CLI `giik copilot` | Code analysis and file edits via the configured agent runtime. |

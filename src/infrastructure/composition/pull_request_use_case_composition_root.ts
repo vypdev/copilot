@@ -32,6 +32,8 @@ import { createPullRequestReviewerCompositionRoot } from "./pull_request_reviewe
 import { createOrganizationMembersCompositionRoot } from "./organization_members_composition_root";
 import { createProjectBoardCompositionRoot } from "./project_board_composition_root";
 import { TimerDelayAdapter } from "../time/timer_delay_adapter";
+import { DetectPotentialProblemsUseCase } from "../../application/usecases/steps/commit/detect_potential_problems_use_case";
+import { createBugbotCompositionRoot } from "./bugbot_composition_root";
 
 export function createPullRequestUseCaseCompositionRoot(): PullRequestUseCase {
   const issueLifecycle = new IssueLifecycleRepository(
@@ -48,6 +50,7 @@ export function createPullRequestUseCaseCompositionRoot(): PullRequestUseCase {
   const organizationMembers = createOrganizationMembersCompositionRoot();
 
   const projectBoard = createProjectBoardCompositionRoot();
+  const bugbot = createBugbotCompositionRoot();
   const issueTitle = new IssueTitleRepository(createIssueTitleClient(), issueMetadata);
   const issueClosure = new IssueClosureRepository(issueLifecycle, issueContent);
   const issueAssignee = new IssueAssignmentRepository(createIssueAssignmentClient());
@@ -92,5 +95,11 @@ export function createPullRequestUseCaseCompositionRoot(): PullRequestUseCase {
       createFindingsQueryPort(),
     ),
     workflowSteps,
+    new DetectPotentialProblemsUseCase(
+      createFindingsQueryPort(),
+      bugbot.context,
+      bugbot.publication,
+      bugbot.resolution,
+    ),
   );
 }

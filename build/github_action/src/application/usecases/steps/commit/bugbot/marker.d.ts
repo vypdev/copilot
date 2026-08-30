@@ -4,7 +4,7 @@
  * context, (2) update the same comment when the agent re-reports or marks resolved, (3) match
  * threads when the user replies "fix it" in a PR.
  */
-import type { BugbotFinding } from "./types";
+import type { BugbotFinding, BugbotFindingResolution } from "./types";
 /** Maximum lossless finding identity accepted by the marker contract. */
 export declare const MAX_FINDING_ID_LENGTH = 200;
 /**
@@ -13,11 +13,12 @@ export declare const MAX_FINDING_ID_LENGTH = 200;
  */
 export declare function sanitizeFindingIdForMarker(findingId: string): string;
 export declare function normalizeFindingIdForMarker(findingId: string): string | null;
-export declare function buildMarker(findingId: string, resolved: boolean, fingerprint?: string): string;
+export declare function buildMarker(findingId: string, resolved: boolean, fingerprint?: string, resolution?: BugbotFindingResolution): string;
 export declare function parseMarker(body: string | null): Array<{
     findingId: string;
     resolved: boolean;
     fingerprint?: string;
+    resolution?: BugbotFindingResolution;
 }>;
 /**
  * Regex to match the marker for a specific finding (same flexible format as parseMarker).
@@ -36,4 +37,4 @@ export declare function replaceMarkerInBody(body: string, findingId: string, new
 /** Extract title from comment body (first ## line) for context when sending to the agent. */
 export declare function extractTitleFromBody(body: string | null): string;
 /** Builds the visible comment body (title, severity, location, description, suggestion) plus the hidden marker for this finding. */
-export declare function buildCommentBody(finding: BugbotFinding, resolved: boolean): string;
+export declare function buildCommentBody(finding: BugbotFinding, resolved: boolean, resolution?: BugbotFindingResolution): string;

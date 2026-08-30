@@ -1,4 +1,4 @@
-import { AgentTask, AgentTaskConfiguration } from './agent';
+import { AgentConfiguration, AgentTask, AgentTaskConfiguration } from './agent';
 import { defaultAgentCommand } from '../../domain/agent_command';
 
 export class Ai {
@@ -64,7 +64,7 @@ export class Ai {
         return this.bugbotFixVerifyCommands;
     }
 
-    getAgentConfiguration(task: AgentTask): AgentTaskConfiguration[AgentTask] {
-        return this.agentTasks[task];
+    getAgentConfiguration(task: AgentTask): AgentConfiguration {
+        return this.agentTasks[task] ?? this.agentTasks.findings;
     }
 }

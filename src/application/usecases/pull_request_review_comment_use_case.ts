@@ -32,6 +32,7 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
     private readonly bugbotResolutionPorts: BugbotFindingResolutionPorts,
     private readonly gitCommitPort: GitCommitPort,
     private readonly dismissBugbotFindingsUseCase?: ParamUseCase<DismissBugbotFindingsParam, Result[]>,
+    private readonly reviewPotentialProblemsUseCase?: ParamUseCase<Execution, Result[]>,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
@@ -47,6 +48,7 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
         userComment: param.pullRequest.commentBody ?? "",
         gitCommitPort: this.gitCommitPort,
         dismissBugbotFindingsUseCase: this.dismissBugbotFindingsUseCase,
+        reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
       },
       this.actorAuthorizationPort,
       this.authenticatedUserPort,

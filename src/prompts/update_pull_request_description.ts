@@ -17,7 +17,7 @@ const TEMPLATE = `You are in the repository workspace. Your task is to produce a
 3. Use the issue description below for context and intent.
 4. Fill each section of the template with concrete content derived from the diff and the issue. Keep the same markdown structure (headings, horizontal rules). For checkbox sections (e.g. Test Coverage, Deployment Notes, Security): use the template's options as guidance; check or add only the items that apply, or skip the section if it does not apply.
    - **Summary:** brief explanation of what the PR does and why (intent, not implementation details).
-   - **Related Issues:** include \`Closes #{{issueNumber}}\` and "Related to #" only if relevant.
+   - **Related Issues:** {{relatedIssueInstruction}}
    - **Scope of Changes:** use Added / Updated / Removed / Refactored with short bullet points (high level, not file-by-file).
    - **Technical Details:** important decisions, trade-offs, or non-obvious aspects.
    - **How to Test:** steps a reviewer can follow (infer from the changes when possible).
@@ -38,6 +38,7 @@ export type UpdatePullRequestDescriptionParams = {
     headBranch: string;
     issueNumber: string;
     issueDescription: string;
+    relatedIssueInstruction: string;
 };
 
 export function getUpdatePullRequestDescriptionPrompt(params: UpdatePullRequestDescriptionParams): string {
@@ -47,5 +48,6 @@ export function getUpdatePullRequestDescriptionPrompt(params: UpdatePullRequestD
         headBranch: params.headBranch,
         issueNumber: String(params.issueNumber),
         issueDescription: params.issueDescription,
+        relatedIssueInstruction: params.relatedIssueInstruction,
     });
 }

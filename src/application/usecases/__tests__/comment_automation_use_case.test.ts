@@ -177,6 +177,32 @@ describe("runCommentAutomation", () => {
     expect(intent.invoke).not.toHaveBeenCalled();
   });
 
+  it('routes explicit review commands to the read-only Bugbot review use case', async () => {
+    const review = { invoke: jest.fn().mockResolvedValue([successfulResult('review')]) };
+    const think = { invoke: jest.fn() };
+    const results = await runCommentAutomation(
+      { owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' } } as Execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: {} as never,
+        intentUseCase: {} as never,
+        thinkUseCase: think as never,
+        autofixUseCase: {} as never,
+        doUserRequestUseCase: {} as never,
+        reviewPotentialProblemsUseCase: review as never,
+        userComment: '/copilot recheck',
+        gitCommitPort: {} as never,
+      },
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    expect(results.map(result => result.id)).toEqual(['CommentAutomation.ExplicitCommand', 'review']);
+    expect(review.invoke).toHaveBeenCalledTimes(1);
+    expect(think.invoke).not.toHaveBeenCalled();
+  });
+
   it('rejects an invalid explicit command without invoking an agent', async () => {
     const think = { invoke: jest.fn() };
     const results = await runCommentAutomation(

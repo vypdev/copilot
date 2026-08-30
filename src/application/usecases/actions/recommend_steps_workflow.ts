@@ -28,7 +28,7 @@ export async function runRecommendStepsWorkflow(
     logInfo(`${getTaskEmoji(taskId)} Executing ${taskId}.`);
 
     try {
-        const configuration = param.ai?.getAgentConfiguration('findings');
+        const configuration = param.ai?.getAgentConfiguration('planner');
         if (!isAgentConfigurationReady(configuration)) {
             return [failure(taskId, 'Missing agent CLI command and model.')];
         }

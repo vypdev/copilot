@@ -1,4 +1,4 @@
-import type { Result } from '../../data/model/result';
+import { getResultPayload, type Result } from '../../data/model/result';
 import { sanitizeAgentMarkdown, sanitizePublishedError } from './github_comment_publication_policy';
 
 export interface ActionSummaryContext {
@@ -14,7 +14,11 @@ export interface ActionSummaryContext {
 /** Builds a bounded, publication-safe GitHub Actions Job Summary. */
 export function buildActionSummary(context: ActionSummaryContext): string {
     const failures = context.results.filter(result => !result.success && result.executed);
-    const status = failures.length === 0 ? '✅ Success' : '❌ Failure';
+    const findingStates = context.results
+        .map(result => getFindingStateCounts(result.payload))
+        .find(Boolean);
+    const hasActionableFindings = (findingStates?.open ?? 0) + (findingStates?.reopened ?? 0) > 0;
+    const status = failures.length === 0 && !hasActionableFindings ? '✅ Success' : '❌ Failure';
     const target = context.pullRequestNumber > 0
         ? `PR #${context.pullRequestNumber}`
         : context.issueNumber > 0
@@ -27,6 +31,7 @@ export function buildActionSummary(context: ActionSummaryContext): string {
         `| Target | ${escapeTable(target)} |`,
         `| Lifecycle | ${lifecycle} |`,
         `| Results | ${context.results.length} |`,
+        `| Finding states | ${formatFindingStates(findingStates)} |`,
     ];
 
     return [
@@ -45,6 +50,23 @@ export function buildActionSummary(context: ActionSummaryContext): string {
     ].join('\n');
 }
 
+function getFindingStateCounts(value: unknown): { open: number; reopened: number; fixed: number; obsolete: number; dismissed: number } | undefined {
+    const payload = getResultPayload(value);
+    const stateCounts = getResultPayload(payload?.findingStates) as Partial<Record<'open' | 'reopened' | 'fixed' | 'obsolete' | 'dismissed', unknown>> | undefined;
+    if (!stateCounts) return undefined;
+    const states = ['open', 'reopened', 'fixed', 'obsolete', 'dismissed'] as const;
+    if (!states.every(state => typeof stateCounts[state] === 'number')) return undefined;
+    return Object.fromEntries(states.map(state => [state, stateCounts[state]])) as { open: number; reopened: number; fixed: number; obsolete: number; dismissed: number };
+}
+
+function formatFindingStates(counts: ReturnType<typeof getFindingStateCounts>): string {
+    if (!counts) return '—';
+    return Object.entries(counts)
+        .filter(([, value]) => value > 0)
+        .map(([state, value]) => `${state}=${value}`)
+        .join(', ') || 'none';
+}
+
 function renderResults(results: readonly Result[]): string {
     if (results.length === 0) return '_No application result was produced._';
     return results.map(result => {
@@ -59,6 +81,5 @@ function renderResults(results: readonly Result[]): string {
 }
 
 function escapeTable(value: string): string {
-    return value.replace(/[|\r\n]/g, match => match === '|' ? '\\|' : ' ');
+    return String(value ?? '').replace(/[|\r\n]/g, match => match === '|' ? '\\|' : ' ');
 }
-

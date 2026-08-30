@@ -160,6 +160,26 @@ describe("loadBugbotContext", () => {
         );
     });
 
+    it("uses an explicit pull request target without requiring an issue number", async () => {
+        mockGetPullRequestHeadSha.mockResolvedValue("pr-sha");
+        mockGetChangedFiles.mockResolvedValue([{ filename: "src/foo.ts", status: "modified" }]);
+        mockGetFilesWithFirstDiffLine.mockResolvedValue([{ path: "src/foo.ts", firstLine: 4 }]);
+
+        const ctx = await loadBugbotContext(
+            baseParam({
+                issueNumber: -1,
+                isPullRequest: true,
+                pullRequest: { head: "feature/no-issue", number: 50 },
+            } as unknown as Partial<Execution>),
+            { pullRequestNumberOverride: 50, issueNumberOverride: -1 },
+        );
+
+        expect(mockListIssueComments).not.toHaveBeenCalled();
+        expect(mockGetOpenPullRequestNumbersByHeadBranch).not.toHaveBeenCalled();
+        expect(ctx.openPrNumbers).toEqual([50]);
+        expect(ctx.prContext?.prHeadSha).toBe("pr-sha");
+    });
+
     it("builds prContext when open PR exists and head sha is available", async () => {
         mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([50]);
         mockGetPullRequestHeadSha.mockResolvedValue("abc123");

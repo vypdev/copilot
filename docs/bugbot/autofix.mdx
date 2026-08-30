@@ -46,6 +46,11 @@ You can trigger autofix from the PR in two ways:
 
 In both cases, the action runs on the PR’s **head branch** (it already has the branch from the event), so no extra “resolve branch from issue” step is needed.
 
+For a read-only fresh review, comment `/copilot review`, `/copilot findings`,
+or `/copilot recheck`. These commands invoke the reviewer/detection route and
+never modify the workspace. Use `/copilot fix ...` only when you explicitly
+want an authorized file-changing operation.
+
 ---
 
 ## Permissions

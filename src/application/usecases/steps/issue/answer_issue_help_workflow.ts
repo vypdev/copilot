@@ -83,7 +83,7 @@ interface HelpRequest {
 
 function resolveHelpRequest(param: Execution): HelpRequest | undefined {
     if (!param.issue.opened || (!param.labels.isQuestion && !param.labels.isHelp)) return undefined;
-    const configuration = param.ai?.getAgentConfiguration('findings');
+    const configuration = param.ai?.getAgentConfiguration('planner');
     if (!isAgentConfigurationReady(configuration)) {
         logInfo('Agent not configured; skipping initial help reply.');
         return undefined;

@@ -20,8 +20,8 @@ describe('Copilot command policy', () => {
         expect(parseCopilotCommand('/copilot fix')).toMatchObject({ kind: 'invalid' });
     });
 
+
     it('rejects oversized command input before tokenization', () => {
         expect(parseCopilotCommand(`/copilot plan ${'x'.repeat(2_000)}`)).toMatchObject({ kind: 'invalid' });
     });
 });
-

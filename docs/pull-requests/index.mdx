@@ -15,7 +15,7 @@ When your workflow runs on **`pull_request`** events (e.g. opened, edited, label
     PR–issue linking, project linking, reviewers, size and priority, AI description, comments and images.
   </Card>
   <Card title="AI PR description" icon="file-lines" href="/pull-requests/ai-description">
-    How OpenCode fills your PR template from the issue and branch diff.
+    How the configured agent fills your PR template from the issue and branch diff.
   </Card>
   <Card title="Configuration" icon="gear" href="/pull-requests/configuration">
     PR-specific inputs: project columns, reviewers, images, AI.
@@ -32,7 +32,7 @@ When your workflow runs on **`pull_request`** events (e.g. opened, edited, label
 | A **PR is opened or updated** | Links the PR to the issue (from branch name); adds the PR to configured projects and moves it to the right column; assigns reviewers; computes size and priority from diff and updates labels; optionally generates or updates the PR description with AI. |
 | **Push** to the PR branch | Commit workflow runs; Bugbot can post findings as review comments and update/sync with the issue. You can ask the bot to fix findings from a comment. See [Bugbot](/bugbot). |
 
-**Bugbot** (potential problems) runs on **push** or on demand; findings appear as **review comments** on the PR and as **comments on the linked issue**. For full details, see [Bugbot](/bugbot).
+**Bugbot** (potential problems) runs on PR review events, on **push** to an issue-linked branch, or on demand; findings appear as **review comments** on the PR and, when an issue is linked, as **comments on that issue**. For full details, see [Bugbot](/bugbot).
 
 ## Next steps
 

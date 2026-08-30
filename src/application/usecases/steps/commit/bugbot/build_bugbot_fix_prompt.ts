@@ -30,7 +30,7 @@ export function buildBugbotFixPrompt(
     userComment: string,
     verifyCommands: string[]
 ): string {
-    const headBranch = param.commit.branch;
+    const headBranch = param.pullRequest?.head?.trim() || param.commit?.branch || 'unknown';
     const baseBranch = param.currentConfiguration.parentBranch ?? param.branches.development ?? "develop";
     const issueNumber = param.issueNumber;
     const owner = param.owner;

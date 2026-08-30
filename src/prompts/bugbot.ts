@@ -18,7 +18,7 @@ const TEMPLATE = `You are analyzing the latest code changes for potential bugs a
 **Your task 1 (new/current problems):** Determine what has changed in the branch "{{headBranch}}" compared to "{{baseBranch}}" (you must compute or obtain the diff yourself using the repository context above). Then identify potential bugs, logic errors, security issues, and code quality problems. Be strict and descriptive. One finding per distinct problem. Return them in the \`findings\` array (each with id, title, description; optionally file, line, severity, suggestion). Only include findings in files that are not in the ignore list above.
 {{previousBlock}}
 
-**Output:** Return a JSON object with: "findings" (array of new/current problems from task 1), and if we gave you previously reported issues above, "resolved_finding_ids" (array of those ids that are now fixed or no longer apply, as per task 2).`;
+**Output:** Return a JSON object with: "findings" (array of new/current problems from task 1), and if we gave you previously reported issues above, "resolved_finding_ids" (array of those ids that are now fixed or no longer apply, as per task 2). Optionally return "resolved_finding_reasons" as an object mapping those exact ids to "fixed" or "obsolete". Never resolve an id that was not included in the previous-findings list.`;
 
 export type BugbotParams = {
     projectContextInstruction: string;

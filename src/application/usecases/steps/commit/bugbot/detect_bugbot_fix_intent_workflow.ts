@@ -32,8 +32,8 @@ export async function runDetectBugbotFixIntentWorkflow(
 ): Promise<Result[]> {
   const results: Result[] = [];
 
-  if (param.issueNumber === -1) {
-    logInfo("No issue number; skipping bugbot fix intent detection.");
+  if (param.issueNumber <= 0 && param.pullRequest.number <= 0) {
+    logInfo("No issue or pull request number; skipping bugbot fix intent detection.");
     return results;
   }
 
@@ -57,7 +57,10 @@ export async function runDetectBugbotFixIntentWorkflow(
   }
 
   const contextOptions: LoadBugbotContextOptions | undefined = branchOverride
-    ? { branchOverride }
+    ? {
+        branchOverride,
+        ...(param.pullRequest.number > 0 ? { pullRequestNumberOverride: param.pullRequest.number } : {}),
+      }
     : undefined;
   const context = await loadBugbotContext(param, contextOptions, ports.contextPorts);
   const unresolvedWithBody = context.unresolvedFindingsWithBody ?? [];
@@ -143,7 +146,12 @@ async function resolveBranchOverride(
   param: Execution,
   pullRequestQueryPort: BugbotPullRequestQueryPort,
 ): Promise<string | undefined | null> {
+  const pullRequestBranch = param.pullRequest.isPullRequestReviewComment
+    ? param.pullRequest.head?.trim()
+    : undefined;
+  if (pullRequestBranch) return pullRequestBranch;
   if (param.commit.branch?.trim()) return undefined;
+  if (param.issueNumber <= 0) return null;
   const branch = await pullRequestQueryPort.getHeadBranchForIssue(
     param.owner,
     param.repo,

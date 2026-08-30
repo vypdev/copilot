@@ -58,4 +58,3 @@ export function parseCopilotCommand(raw: unknown): CopilotCommandParseResult {
         command: { name: name as CopilotCommandName, arguments: tokens, raw: input },
     };
 }
-

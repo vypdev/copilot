@@ -42,4 +42,25 @@ Copilot automates **issue tracking** so that labels, branch creation, project li
 
 **Bugbot** (potential problems) runs on **push** (or single action) and posts findings on the issue and on open PRs; you can ask the bot to fix findings from a comment. See [Bugbot](/bugbot) for full details.
 
+## Lifecycle state labels
+
+During setup, Copilot creates the following state labels once. They are managed as a single mutually-exclusive state label; all business labels such as `feature`, `bugfix`, `priority`, and `branched` are preserved.
+
+| State | Meaning |
+| --- | --- |
+| `copilot:state:analyzing` | The issue or change is being analyzed. |
+| `copilot:state:planned` | A recommendation or implementation plan is available. |
+| `copilot:state:in-progress` | Branch-based implementation has started. |
+| `copilot:state:reviewing` | A pull request is being reviewed. |
+| `copilot:state:changes-requested` | The review has active findings. |
+| `copilot:state:ready` | The latest review has no active findings. |
+| `copilot:state:verified` | The pull request was merged successfully. |
+| `copilot:state:blocked` | A workflow failed or needs human input. |
+
+The names are configurable through the action inputs, but the labels are provisioned by `copilot setup` in the destination repository. They are not created dynamically during normal issue or PR runs.
+
+## Daily agent workflow
+
+Use explicit commands when you want a reproducible action from a comment: `/copilot plan`, `/copilot test-plan`, `/copilot review`, `/copilot findings`, or `/copilot recheck`. For a reported finding, use `/copilot fix FINDING-ID` or `/copilot dismiss FINDING-ID`. A repeated review reconciles the existing finding marker and updates the same publication instead of creating a second copy.
+
 For **step-by-step flows** per issue type (branch naming, source branch, deploy), see the issue type pages: [Feature](/issues/type/feature), [Bugfix](/issues/type/bugfix), [Docs](/issues/type/docs), [Chore](/issues/type/chore), [Hotfix](/issues/type/hotfix), [Release](/issues/type/release).

@@ -15,5 +15,6 @@ export function prepareBugbotFindings(
         : {
             ...prepareFindings(normalized.findings, ignorePatterns, minSeverityValue, maxComments),
             resolvedFindingIds: normalized.resolvedFindingIds,
+            resolvedFindingResolutions: normalized.resolvedFindingResolutions,
         };
 }

@@ -41,6 +41,14 @@ export const BUGBOT_RESPONSE_SCHEMA = {
             description:
                 'Ids of previously reported issues (from the list we sent) that are now fixed in the current code. Only include ids we asked you to check.',
         },
+        resolved_finding_reasons: {
+            type: 'object',
+            additionalProperties: {
+                type: 'string',
+                enum: ['fixed', 'obsolete'],
+            },
+            description: 'Optional map from a previously reported finding id to fixed or obsolete. Only ids from the supplied previous-findings list are accepted.',
+        },
     },
     required: ['findings'],
     additionalProperties: false,

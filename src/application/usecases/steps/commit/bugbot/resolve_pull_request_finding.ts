@@ -1,6 +1,7 @@
 import type { BugbotPullRequestResolutionPort } from "../../../../../application/ports/bugbot_pull_request_resolution_ports";
 import { PullRequestReviewOperationError } from "../../../../../application/ports/pull_request_review_errors";
 import { buildMarker, parseMarker, replaceMarkerInBody } from "./marker";
+import type { BugbotFindingResolution } from './types';
 
 export interface PullRequestFindingResolution {
   findingId: string;
@@ -9,10 +10,14 @@ export interface PullRequestFindingResolution {
   owner: string;
   repo: string;
   token: string;
+  resolution?: BugbotFindingResolution;
 }
 
-const RESOLVED_NOTE =
-  "\n\n---\n**Resolved** (configured agent confirmed fixed in latest analysis).\n";
+function resolvedNote(resolution: BugbotFindingResolution): string {
+  if (resolution === 'dismissed') return "\n\n---\n**Dismissed** (explicitly dismissed by an authorized user).\n";
+  if (resolution === 'obsolete') return "\n\n---\n**Resolved** (no longer applies in the latest analysis).\n";
+  return "\n\n---\n**Resolved** (configured agent confirmed fixed in latest analysis).\n";
+}
 
 export async function resolvePullRequestFinding(
   repository: BugbotPullRequestResolutionPort,
@@ -47,7 +52,8 @@ export async function resolvePullRequestFinding(
   );
 
   if (marker.resolved) return;
-  const replacement = `${RESOLVED_NOTE}${buildMarker(resolution.findingId, true, marker.fingerprint)}`;
+  const reason = resolution.resolution ?? 'fixed';
+  const replacement = `${resolvedNote(reason)}${buildMarker(resolution.findingId, true, marker.fingerprint, reason)}`;
   const replaced = replaceMarkerInBody(
     comment.body,
     resolution.findingId,

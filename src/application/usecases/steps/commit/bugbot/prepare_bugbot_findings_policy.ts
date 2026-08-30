@@ -5,15 +5,18 @@ import { normalizeFindingIdForMarker } from './marker';
 import { isSafeFindingFilePath } from './path_validation';
 import { meetsMinSeverity, normalizeMinSeverity } from './severity';
 import type { BugbotFinding } from './types';
+import type { BugbotFindingResolution } from './types';
 import { buildFindingFingerprint } from '../../../../../domain/bugbot/finding_identity';
 
 export type BugbotResponse = {
     findings?: BugbotFinding[];
     resolved_finding_ids?: string[];
+    resolved_finding_reasons?: Record<string, BugbotFindingResolution>;
 };
 
 export type PreparedBugbotFindings = ApplyLimitResult & {
     resolvedFindingIds: Set<string>;
+    resolvedFindingResolutions?: ReadonlyMap<string, BugbotFindingResolution>;
     /** All accepted findings, including overflow items, used for reconciliation. */
     activeFindings?: readonly BugbotFinding[];
 };
@@ -22,12 +25,17 @@ export type PreparedBugbotFindings = ApplyLimitResult & {
 export const MAX_AGENT_FINDINGS = 500;
 export const MAX_AGENT_RESOLVED_FINDING_IDS = 500;
 
-export function normalizeBugbotResponse(response: unknown): { findings: BugbotFinding[]; resolvedFindingIds: Set<string> } | undefined {
+export function normalizeBugbotResponse(response: unknown): {
+    findings: BugbotFinding[];
+    resolvedFindingIds: Set<string>;
+    resolvedFindingResolutions: ReadonlyMap<string, BugbotFindingResolution>;
+} | undefined {
     if (response == null || typeof response !== 'object') return undefined;
     const payload = response as Record<string, unknown>;
     return {
         findings: normalizeFindings(payload.findings),
         resolvedFindingIds: normalizeResolvedFindingIds(payload.resolved_finding_ids),
+        resolvedFindingResolutions: normalizeResolvedFindingReasons(payload.resolved_finding_reasons),
     };
 }
 
@@ -78,6 +86,16 @@ function normalizeResolvedFindingIds(findingIds: unknown): Set<string> {
         if (typeof findingId !== 'string') return [];
         const normalizedId = normalizeFindingIdForMarker(findingId);
         return normalizedId == null ? [] : [normalizedId];
+    }));
+}
+
+function normalizeResolvedFindingReasons(value: unknown): Map<string, BugbotFindingResolution> {
+    if (value == null || typeof value !== 'object' || Array.isArray(value)) return new Map();
+    return new Map(Object.entries(value as Record<string, unknown>).flatMap(([findingId, reason]) => {
+        const normalizedId = normalizeFindingIdForMarker(findingId);
+        return normalizedId && (reason === 'fixed' || reason === 'obsolete')
+            ? [[normalizedId, reason as BugbotFindingResolution]]
+            : [];
     }));
 }
 

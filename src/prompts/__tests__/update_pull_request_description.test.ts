@@ -8,6 +8,7 @@ describe('getUpdatePullRequestDescriptionPrompt', () => {
             headBranch: 'feature/123',
             issueNumber: '42',
             issueDescription: 'Add login screen.',
+            relatedIssueInstruction: 'Include `Closes #42` when relevant.',
         });
         expect(prompt).toContain('**Use repo.**');
         expect(prompt).toContain('`main`');

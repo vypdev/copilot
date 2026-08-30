@@ -53,6 +53,7 @@ export async function applyDetectedFindings(
     execution,
     context,
     resolvedFindingIds: prepared.resolvedFindingIds,
+    resolvedFindingResolutions: prepared.resolvedFindingResolutions,
     ports: resolutionPorts,
   });
   return resolutionErrors;

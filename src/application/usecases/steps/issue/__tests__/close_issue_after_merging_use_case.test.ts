@@ -58,6 +58,14 @@ describe('CloseIssueAfterMergingUseCase', () => {
     expect(mockAddComment).not.toHaveBeenCalled();
   });
 
+  it('does not call GitHub when a pull request has no linked issue', async () => {
+    const results = await useCase.invoke({ ...baseParam(), issueNumber: -1 } as unknown as Parameters<CloseIssueAfterMergingUseCase['invoke']>[0]);
+
+    expect(results[0]).toMatchObject({ success: true, executed: false });
+    expect(mockCloseIssue).not.toHaveBeenCalled();
+    expect(mockAddComment).not.toHaveBeenCalled();
+  });
+
   it('returns failure when closeIssue throws', async () => {
     mockCloseIssue.mockRejectedValue(new Error('API error'));
     const param = baseParam();

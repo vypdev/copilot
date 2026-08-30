@@ -15,5 +15,46 @@ describe('lifecycle state policy', () => {
         expect(resolveLifecycleState({ ...base, action: 'closed', pullRequestMerged: true, pullRequestClosed: true, results: [] })).toBe('verified');
         expect(resolveLifecycleState({ ...base, action: 'opened', results: [result('step', false)] })).toBe('blocked');
     });
-});
 
+    it('moves a PR to changes-requested when active findings remain', () => {
+        expect(resolveLifecycleState({
+            eventName: 'pull_request',
+            action: 'synchronize',
+            isIssue: false,
+            isPullRequest: true,
+            issueOpened: false,
+            issueDescriptionEdited: false,
+            pullRequestMerged: false,
+            pullRequestClosed: false,
+            results: [{ ...result('DetectPotentialProblemsUseCase'), payload: { findingStates: { open: 1, reopened: 0 } } }],
+        })).toBe('changes-requested');
+    });
+
+    it('moves a successful finding-free PR review to ready', () => {
+        expect(resolveLifecycleState({
+            eventName: 'pull_request',
+            action: 'synchronize',
+            isIssue: false,
+            isPullRequest: true,
+            issueOpened: false,
+            issueDescriptionEdited: false,
+            pullRequestMerged: false,
+            pullRequestClosed: false,
+            results: [{ ...result('DetectPotentialProblemsUseCase'), payload: { findingStates: { open: 0, reopened: 0 } } }],
+        })).toBe('ready');
+    });
+
+    it('moves an explicit planning command on an issue to planned', () => {
+        expect(resolveLifecycleState({
+            eventName: 'issue_comment',
+            action: 'created',
+            isIssue: true,
+            isPullRequest: false,
+            issueOpened: false,
+            issueDescriptionEdited: false,
+            pullRequestMerged: false,
+            pullRequestClosed: false,
+            results: [{ ...result('CommentAutomation.ExplicitCommand'), payload: { explicitCommand: 'plan' } }],
+        })).toBe('planned');
+    });
+});

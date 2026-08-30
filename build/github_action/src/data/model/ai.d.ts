@@ -1,4 +1,4 @@
-import { AgentTask, AgentTaskConfiguration } from './agent';
+import { AgentConfiguration, AgentTask, AgentTaskConfiguration } from './agent';
 export declare class Ai {
     private aiPullRequestDescription;
     private aiMembersOnly;
@@ -16,5 +16,5 @@ export declare class Ai {
     getBugbotMinSeverity(): string;
     getBugbotCommentLimit(): number;
     getBugbotFixVerifyCommands(): string[];
-    getAgentConfiguration(task: AgentTask): AgentTaskConfiguration[AgentTask];
+    getAgentConfiguration(task: AgentTask): AgentConfiguration;
 }

@@ -14,6 +14,15 @@ export class CloseIssueAfterMergingUseCase implements ParamUseCase<Execution, Re
         logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`)
 
         const result: Result[] = []
+        if (param.issueNumber <= 0) {
+            logDebugInfo('CloseIssueAfterMerging: no issue was inferred from the pull-request branch; skipping issue closure.');
+            return [new Result({
+                id: this.taskId,
+                success: true,
+                executed: false,
+                steps: ['No linked issue was found; the pull request was not used to close an issue.'],
+            })];
+        }
         try {
             const closed = await this.issueRepository.closeIssue(
                 param.owner,

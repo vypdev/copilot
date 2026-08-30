@@ -4,6 +4,7 @@ import type { ParamUseCase } from "./base/param_usecase";
 import type { PullRequestWorkflowSteps } from "./pull_request_workflow_steps";
 export interface PullRequestWorkflowPorts {
     updatePullRequestDescriptionUseCase: ParamUseCase<Execution, Result[]>;
+    reviewPotentialProblemsUseCase?: ParamUseCase<Execution, Result[]>;
     workflowSteps: PullRequestWorkflowSteps;
 }
 /** Coordinates pull-request lifecycle actions while preserving their sequential order. */

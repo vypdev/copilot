@@ -14,6 +14,7 @@ import { mainRun } from './common_action';
 import { INPUT_KEYS } from '../utils/constants';
 import { logDebugInfo, logError, logInfo } from '../utils/logger';
 import { createSynchronizeLifecycleStateUseCase } from '../infrastructure/composition/lifecycle_state_composition_root';
+import { createCopilotEvidenceCompositionRoot } from '../infrastructure/composition/copilot_evidence_composition_root';
 
 export async function runGitHubAction(): Promise<void> {
     const eventInputs = buildGithubActionEventInputs({
@@ -53,6 +54,7 @@ export async function runGitHubAction(): Promise<void> {
         results,
         createIssueNotificationRepository(),
         new ConfigurationHandler(issueContentPort),
+        createCopilotEvidenceCompositionRoot(),
     );
 }
 

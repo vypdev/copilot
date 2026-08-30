@@ -10,6 +10,10 @@ export type { AgentTaskConfigurationValues };
 export interface AgentTasksConfigurationValues extends AgentTaskConfigurationValues {
     findings?: Partial<AgentTaskConfigurationValues>;
     fixer?: Partial<AgentTaskConfigurationValues>;
+    planner?: Partial<AgentTaskConfigurationValues>;
+    reviewer?: Partial<AgentTaskConfigurationValues>;
+    tester?: Partial<AgentTaskConfigurationValues>;
+    release?: Partial<AgentTaskConfigurationValues>;
 }
 
 /** Builds the validated findings/fixer pair used by both action lifecycles. */

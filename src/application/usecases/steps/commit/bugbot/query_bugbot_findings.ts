@@ -9,7 +9,7 @@ export async function queryBugbotFindings(
     prompt: string,
 ): Promise<unknown> {
     return repository.query({
-        configuration: execution.ai?.getAgentConfiguration('findings'),
+        configuration: execution.ai?.getAgentConfiguration(execution.isPullRequest ? 'reviewer' : 'findings'),
         agentId: AGENT_PLAN,
         prompt,
         options: {

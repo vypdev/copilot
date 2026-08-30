@@ -18,6 +18,10 @@ import { logDebugInfo } from "../../../../ports/logging_ports";
 export interface LoadBugbotContextOptions {
     /** When set (e.g. for issue_comment when commit.branch is empty), use this branch to find open PRs. */
     branchOverride?: string;
+    /** Allows PR review to operate without an issue parsed from the branch name. */
+    issueNumberOverride?: number;
+    /** Uses the event PR directly instead of searching by branch. */
+    pullRequestNumberOverride?: number;
 }
 
 function emptyBugbotContext(): BugbotContext {
@@ -74,24 +78,26 @@ export async function loadBugbotContext(
     options: LoadBugbotContextOptions | undefined,
     ports: BugbotContextPorts
 ): Promise<BugbotContext> {
-    const issueNumber = param.issueNumber;
-    const headBranch = (options?.branchOverride ?? param.commit.branch)?.trim();
+    const issueNumber = options?.issueNumberOverride ?? param.issueNumber;
+    const headBranch = (options?.branchOverride ?? (param.isPullRequest ? param.pullRequest.head : param.commit.branch))?.trim();
     const token = param.tokens.token;
     const owner = param.owner;
     const repo = param.repo;
 
-    if (!headBranch) {
-        logDebugInfo("LoadBugbotContext: no head branch (branchOverride or commit.branch); returning empty context.");
+    const openPrNumbers = options?.pullRequestNumberOverride != null && options.pullRequestNumberOverride > 0
+        ? [options.pullRequestNumberOverride]
+        : headBranch
+            ? await ports.pullRequest.getOpenPullRequestNumbersByHeadBranch(owner, repo, headBranch, token)
+            : [];
+
+    if (!headBranch && openPrNumbers.length === 0) {
+        logDebugInfo("LoadBugbotContext: no head branch or pull request target; returning empty context.");
         return emptyBugbotContext();
     }
 
-    const issueComments = await ports.issue.listIssueComments(owner, repo, issueNumber, token);
-    const openPrNumbers = await ports.pullRequest.getOpenPullRequestNumbersByHeadBranch(
-        owner,
-        repo,
-        headBranch,
-        token
-    );
+    const issueComments = issueNumber > 0
+        ? await ports.issue.listIssueComments(owner, repo, issueNumber, token)
+        : [];
     const pullRequestComments = await loadOpenPullRequestComments(
         ports.pullRequest,
         owner,

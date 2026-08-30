@@ -18,13 +18,16 @@ export interface ExistingIssueFindingInfo {
     commentId: number;
     resolved: boolean;
     fingerprint?: string;
+    resolution?: BugbotFindingResolution;
 }
 export interface ExistingPullRequestFindingInfo {
     commentIdentity: string;
     pullRequestNumber: number;
     resolved: boolean;
     fingerprint?: string;
+    resolution?: BugbotFindingResolution;
 }
+export type BugbotFindingResolution = 'fixed' | 'obsolete' | 'dismissed';
 /** Tracks each published destination independently so partial failures remain retryable. */
 export interface ExistingFindingInfo {
     issue?: ExistingIssueFindingInfo;

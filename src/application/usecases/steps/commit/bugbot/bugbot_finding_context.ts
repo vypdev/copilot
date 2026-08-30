@@ -47,7 +47,12 @@ function parseIssueFindingMarkers(issueComments: BugbotComment[]): ExistingByFin
       if (findingId == null) continue;
       findings[findingId] = {
         ...(findings[findingId] ?? {}),
-        issue: { commentId: comment.id, resolved: marker.resolved, ...(marker.fingerprint ? { fingerprint: marker.fingerprint } : {}) },
+        issue: {
+          commentId: comment.id,
+          resolved: marker.resolved,
+          ...(marker.fingerprint ? { fingerprint: marker.fingerprint } : {}),
+          ...(marker.resolution ? { resolution: marker.resolution } : {}),
+        },
       };
     }
   }
@@ -83,6 +88,7 @@ function parsePullRequestComments(
           pullRequestNumber,
           resolved: marker.resolved,
           ...(marker.fingerprint ? { fingerprint: marker.fingerprint } : {}),
+          ...(marker.resolution ? { resolution: marker.resolution } : {}),
         },
       };
       prFindingIdToBody[findingId] = truncateFindingBody(body, MAX_FINDING_BODY_LENGTH);

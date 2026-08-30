@@ -1,5 +1,5 @@
 export type AgentProvider = 'opencode' | 'codex' | 'cursor';
-export type AgentTask = 'findings' | 'fixer';
+export type AgentTask = 'findings' | 'fixer' | 'planner' | 'reviewer' | 'tester' | 'release';
 export type AgentCapability = AgentTask | 'language';
 export declare const DEFAULT_AGENT_PROVIDER: AgentProvider;
 export declare const DEFAULT_MODEL_PROVIDER = "openai";
@@ -19,5 +19,9 @@ export interface AgentConfiguration {
 export interface AgentTaskConfiguration {
     findings: AgentConfiguration;
     fixer: AgentConfiguration;
+    planner?: AgentConfiguration;
+    reviewer?: AgentConfiguration;
+    tester?: AgentConfiguration;
+    release?: AgentConfiguration;
 }
 export declare function isAgentConfigurationReady(configuration: AgentConfiguration | undefined): boolean;

@@ -77,6 +77,15 @@ describe("buildBugbotPrompt", () => {
         expect(prompt).toContain("- Base branch: main");
     });
 
+    it('uses the actual pull-request head branch instead of the synthetic Actions ref', () => {
+        const prompt = buildBugbotPrompt(mockExecution({
+            commit: { branch: 'refs/pull/42/merge' },
+            pullRequest: { head: 'feature/42-real-head' },
+        } as unknown as Partial<Execution>), mockContext());
+        expect(prompt).toContain('feature/42-real-head');
+        expect(prompt).not.toContain('refs/pull/42/merge');
+    });
+
     it("uses develop when parentBranch and branches.development are missing", () => {
         const prompt = buildBugbotPrompt(
             mockExecution({

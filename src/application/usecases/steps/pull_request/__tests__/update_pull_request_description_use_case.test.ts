@@ -36,6 +36,10 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
   let useCase: UpdatePullRequestDescriptionUseCase;
 
   beforeEach(() => {
+    mockGetIssueDescription.mockClear();
+    mockGetAllMembers.mockClear();
+    mockAskAgent.mockClear();
+    mockUpdateDescription.mockClear();
     useCase = new UpdatePullRequestDescriptionUseCase(
       { updateDescription: mockUpdateDescription },
       { getDescription: mockGetIssueDescription },
@@ -61,6 +65,28 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
     const results = await useCase.invoke(param);
     expect(results[0].success).toBe(false);
     expect(results[0].steps?.some((s) => s.includes('No issue description'))).toBe(true);
+  });
+
+  it('generates a description for a PR without a linked issue', async () => {
+    mockGetIssueDescription.mockResolvedValue(undefined);
+    mockAskAgent.mockResolvedValue('# Summary\n\nGenerated from the PR diff.');
+    const param = baseParam({
+      issueNumber: -1,
+      pullRequest: { number: 12, head: 'feature/no-issue', base: 'develop', creator: 'alice' },
+    });
+
+    const results = await useCase.invoke(param);
+
+    expect(results[0].success).toBe(true);
+    expect(mockGetIssueDescription).not.toHaveBeenCalled();
+    expect(mockUpdateDescription).toHaveBeenCalledWith(
+      'o',
+      'r',
+      12,
+      expect.stringContaining('# Summary'),
+      't',
+    );
+    expect(mockAskAgent.mock.calls[0][2]).toContain('Do not add a Closes line');
   });
 
   it('updates PR description when AI returns body and creator is team member', async () => {

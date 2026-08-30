@@ -27,6 +27,7 @@ export interface EventPullRequestPayload {
     user?: EventUserPayload;
     head?: {
         ref?: string;
+        sha?: string;
     };
     base?: {
         ref?: string;

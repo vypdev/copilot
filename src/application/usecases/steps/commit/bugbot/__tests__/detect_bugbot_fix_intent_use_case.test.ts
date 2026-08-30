@@ -99,6 +99,30 @@ describe("DetectBugbotFixIntentUseCase", () => {
         expect(mockLoadBugbotContext).not.toHaveBeenCalled();
     });
 
+    it('supports autofix intent on a PR review without a linked issue', async () => {
+        mockLoadBugbotContext.mockResolvedValue(mockContextWithUnresolved(1));
+        mockAskAgent.mockResolvedValue({ is_fix_request: true, target_finding_ids: ['finding-0'], is_do_request: false });
+        const results = await useCase.invoke(baseExecution({
+            issueNumber: -1,
+            commit: { branch: '' },
+            issue: { ...baseExecution().issue, isIssueComment: false, commentBody: '' },
+            pullRequest: {
+                isPullRequestReviewComment: true,
+                commentBody: 'fix this finding',
+                number: 50,
+                head: 'feature/no-linked-issue',
+            },
+        } as Partial<Execution>));
+
+        expect(results[0].success).toBe(true);
+        expect(mockLoadBugbotContext).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ branchOverride: 'feature/no-linked-issue', pullRequestNumberOverride: 50 }),
+            expect.anything(),
+        );
+        expect(mockGetHeadBranchForIssue).not.toHaveBeenCalled();
+    });
+
     it("returns empty results when comment body is empty", async () => {
         const results = await useCase.invoke(
             baseExecution({ issue: { ...baseExecution().issue, commentBody: "" } } as Partial<Execution>)

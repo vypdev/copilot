@@ -462,6 +462,66 @@ inputs:
   fixer-command:
     description: "Optional CLI command override for fixer."
     default: ""
+  planner-provider:
+    description: "Optional provider override for planning and conversational commands."
+    default: ""
+  planner-model-provider:
+    description: "Optional model-provider override for planning and conversational commands."
+    default: ""
+  planner-effort:
+    description: "Optional reasoning effort or model variant override for planning."
+    default: ""
+  planner-model:
+    description: "Optional model override for planning and conversational commands."
+    default: ""
+  planner-command:
+    description: "Optional CLI command override for planning."
+    default: ""
+  reviewer-provider:
+    description: "Optional provider override for pull-request review."
+    default: ""
+  reviewer-model-provider:
+    description: "Optional model-provider override for pull-request review."
+    default: ""
+  reviewer-effort:
+    description: "Optional reasoning effort or model variant override for pull-request review."
+    default: ""
+  reviewer-model:
+    description: "Optional model override for pull-request review."
+    default: ""
+  reviewer-command:
+    description: "Optional CLI command override for pull-request review."
+    default: ""
+  tester-provider:
+    description: "Optional provider override for future test-planning and verification tasks."
+    default: ""
+  tester-model-provider:
+    description: "Optional model-provider override for future test-planning and verification tasks."
+    default: ""
+  tester-effort:
+    description: "Optional reasoning effort or model variant override for test tasks."
+    default: ""
+  tester-model:
+    description: "Optional model override for test tasks."
+    default: ""
+  tester-command:
+    description: "Optional CLI command override for test tasks."
+    default: ""
+  release-provider:
+    description: "Optional provider override for release planning tasks."
+    default: ""
+  release-model-provider:
+    description: "Optional model-provider override for release planning tasks."
+    default: ""
+  release-effort:
+    description: "Optional reasoning effort or model variant override for release tasks."
+    default: ""
+  release-model:
+    description: "Optional model override for release planning tasks."
+    default: ""
+  release-command:
+    description: "Optional CLI command override for release planning tasks."
+    default: ""
 
   ai-pull-request-description:
     description: "Enable AI-powered automatic updates for pull request descriptions."

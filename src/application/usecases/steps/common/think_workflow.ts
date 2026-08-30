@@ -8,6 +8,7 @@ import { logError, logInfo } from '../../../ports/logging_ports';
 import { resolveThinkRequest } from './think_request_policy';
 import type { ThinkRequestDecision } from './think_request_policy';
 import { runThinkAnswerWorkflow } from './think_answer_workflow';
+import { resolveThinkAgentTask } from '../../../../application/policies/agent_task_policy';
 
 export interface ThinkWorkflowDependencies {
     issueDescriptionQueryPort: IssueDescriptionQueryPort;
@@ -28,7 +29,8 @@ export async function runThinkWorkflow(
             logSkipReason(request.reason, param.tokenUser);
             return skipped(taskId);
         }
-        if (!isAgentConfigurationReady(param.ai?.getAgentConfiguration('findings'))) {
+        const agentTask = resolveThinkAgentTask(request.command?.name, request.destinationType);
+        if (!isAgentConfigurationReady(param.ai?.getAgentConfiguration(agentTask))) {
             return [
                 new Result({
                     id: taskId,
@@ -38,7 +40,7 @@ export async function runThinkWorkflow(
                 }),
             ];
         }
-        return await runThinkAnswerWorkflow(param, taskId, request, dependencies);
+        return await runThinkAnswerWorkflow(param, taskId, request, dependencies, agentTask);
     } catch (error) {
         logError(`Error in ThinkUseCase: ${error}`);
         return [

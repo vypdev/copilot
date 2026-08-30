@@ -10,6 +10,13 @@ export function buildAgentTasksFromInputs(read: AgentInputReader) {
     const model = read(INPUT_KEYS.AGENT_MODEL)?.trim() || DEFAULT_AGENT_MODEL;
     const effort = read(INPUT_KEYS.AGENT_EFFORT) ?? '';
     const command = read(INPUT_KEYS.AGENT_COMMAND) ?? '';
+    const role = (name: string) => ({
+        provider: read(`${name}-provider`),
+        modelProvider: read(`${name}-model-provider`),
+        model: read(`${name}-model`),
+        effort: read(`${name}-effort`),
+        command: read(`${name}-command`),
+    });
     return buildAgentTasks({
         provider,
         modelProvider,
@@ -30,6 +37,10 @@ export function buildAgentTasksFromInputs(read: AgentInputReader) {
             effort: read(INPUT_KEYS.FIXER_EFFORT),
             command: read(INPUT_KEYS.FIXER_COMMAND),
         },
+        planner: role('planner'),
+        reviewer: role('reviewer'),
+        tester: role('tester'),
+        release: role('release'),
     });
 }
 

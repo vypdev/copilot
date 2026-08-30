@@ -11,7 +11,15 @@ This page describes **when** Bugbot runs, **where** findings are published, and 
 
 Bugbot detection runs in two ways:
 
-### 1. On every push (commit workflow)
+### 1. On pull-request review events
+
+The pull-request workflow runs a fresh review on `opened`, `reopened`,
+`edited`, and `synchronize`. It uses the PR head SHA and changed files
+directly, so a PR does not need to contain an issue number in its branch name.
+The reviewer role publishes findings as line comments when GitHub can attach
+the location to the current diff.
+
+### 2. On every push (commit workflow)
 
 When you push to a branch that is **linked to an issue** (e.g. a feature or bugfix branch created by Copilot), the **Commit** workflow runs. If an agent CLI is configured, the action runs **DetectPotentialProblemsUseCase**: it loads existing finding context, asks the configured agent to analyze the branch vs the base, and then publishes new findings and updates or marks as resolved any previous findings that no longer apply.
 
@@ -22,7 +30,12 @@ When you push to a branch that is **linked to an issue** (e.g. a feature or bugf
 
 If the branch is not linked to an issue (e.g. `issueNumber === -1`), detection is skipped.
 
-### 2. On demand (single action or CLI)
+### 3. On demand (comment, single action, or CLI)
+
+From an issue or pull-request comment, `/copilot review`, `/copilot findings`,
+or `/copilot recheck` starts the read-only detection flow immediately. On an
+issue comment, Copilot resolves the branch from the open PR linked to the
+issue. These commands do not invoke autofix and do not modify files.
 
 You can run Bugbot detection **without pushing**:
 
@@ -100,6 +113,11 @@ For each id in “resolved”:
 - On the PR, it **resolves the review thread** when applicable.
 
 So the issue and PR stay in sync with the current code: fixed findings are marked resolved, and new ones are added up to the comment limit.
+
+Active or reopened findings make the `Copilot / Review` Check Run fail, while
+the Job Summary still contains the complete bounded state counts. This gives
+branch protection a clear signal without failing the JavaScript process solely
+because the reviewer found a problem.
 
 Finding matching is intentionally stable across agent providers and wording
 changes. The local identity uses the normalized file path, title, and a nearby

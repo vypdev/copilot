@@ -1,6 +1,6 @@
 export type AgentProvider = 'opencode' | 'codex' | 'cursor';
 
-export type AgentTask = 'findings' | 'fixer';
+export type AgentTask = 'findings' | 'fixer' | 'planner' | 'reviewer' | 'tester' | 'release';
 export type AgentCapability = AgentTask | 'language';
 
 export const DEFAULT_AGENT_PROVIDER: AgentProvider = 'codex';
@@ -23,6 +23,10 @@ export interface AgentConfiguration {
 export interface AgentTaskConfiguration {
     findings: AgentConfiguration;
     fixer: AgentConfiguration;
+    planner?: AgentConfiguration;
+    reviewer?: AgentConfiguration;
+    tester?: AgentConfiguration;
+    release?: AgentConfiguration;
 }
 
 export function isAgentConfigurationReady(configuration: AgentConfiguration | undefined): boolean {

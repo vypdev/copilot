@@ -17,7 +17,7 @@ The agent inputs are the public configuration contract for agent execution. Prov
 | `agent-effort` | No | empty | Reasoning effort or provider-specific model variant | No |
 | `agent-command` | No | Provider-specific command | Optional literal CLI override | No |
 
-Each task also supports independent overrides: `findings-provider`, `findings-model-provider`, `findings-model`, `findings-effort`, `findings-command` and the corresponding `fixer-*` inputs. Empty task overrides inherit the common selection.
+Each task also supports independent overrides: `findings-provider`, `findings-model-provider`, `findings-model`, `findings-effort`, `findings-command` and the corresponding `fixer-*` inputs. The lifecycle roles `planner-*`, `reviewer-*`, `tester-*`, and `release-*` are optional overrides for planning/conversation, PR review, test planning, and release planning. Empty role overrides inherit the common selection. The built-in mapping is `findings` for push Bugbot, `reviewer` for PR Bugbot, `planner` for plans and answers, and `fixer` for authorized file changes.
 
 The qualified model is always constructed as:
 

@@ -12,4 +12,8 @@ export declare function mergeAgentTaskValues(values: AgentTaskConfigurationValue
 export declare function buildAgentTaskConfiguration(values: AgentTaskConfigurationValues & {
     findings?: Partial<AgentTaskConfigurationValues>;
     fixer?: Partial<AgentTaskConfigurationValues>;
+    planner?: Partial<AgentTaskConfigurationValues>;
+    reviewer?: Partial<AgentTaskConfigurationValues>;
+    tester?: Partial<AgentTaskConfigurationValues>;
+    release?: Partial<AgentTaskConfigurationValues>;
 }, environment: AgentConfigurationEnvironment): AgentTaskConfiguration;

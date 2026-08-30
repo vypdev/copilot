@@ -50,11 +50,28 @@ export function mergeAgentTaskValues(
 }
 
 export function buildAgentTaskConfiguration(
-    values: AgentTaskConfigurationValues & { findings?: Partial<AgentTaskConfigurationValues>; fixer?: Partial<AgentTaskConfigurationValues> },
+    values: AgentTaskConfigurationValues & {
+        findings?: Partial<AgentTaskConfigurationValues>;
+        fixer?: Partial<AgentTaskConfigurationValues>;
+        planner?: Partial<AgentTaskConfigurationValues>;
+        reviewer?: Partial<AgentTaskConfigurationValues>;
+        tester?: Partial<AgentTaskConfigurationValues>;
+        release?: Partial<AgentTaskConfigurationValues>;
+    },
     environment: AgentConfigurationEnvironment,
 ): AgentTaskConfiguration {
-    return {
+    const configuration: AgentTaskConfiguration = {
         findings: buildAgentConfiguration(mergeAgentTaskValues(values, values.findings), environment),
         fixer: buildAgentConfiguration(mergeAgentTaskValues(values, values.fixer), environment),
     };
+    for (const task of ['planner', 'reviewer', 'tester', 'release'] as const) {
+        if (hasTaskOverride(values[task])) {
+            configuration[task] = buildAgentConfiguration(mergeAgentTaskValues(values, values[task]), environment);
+        }
+    }
+    return configuration;
+}
+
+function hasTaskOverride(value: Partial<AgentTaskConfigurationValues> | undefined): boolean {
+    return Object.values(value ?? {}).some(item => typeof item === 'string' && item.trim().length > 0);
 }

@@ -29,6 +29,7 @@ const mockAddComment = jest.fn();
 const mockUpdateComment = jest.fn();
 
 const mockGetOpenPullRequestNumbersByHeadBranch = jest.fn();
+const mockGetHeadBranchForIssue = jest.fn();
 const mockListPullRequestReviewComments = jest.fn();
 const mockGetPullRequestHeadSha = jest.fn();
 const mockGetChangedFiles = jest.fn();
@@ -73,7 +74,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       updateComment: mockUpdateComment,
     };
     const pullRequestPort = {
-      getHeadBranchForIssue: jest.fn(),
+      getHeadBranchForIssue: mockGetHeadBranchForIssue,
       getPullRequestReviewCommentBody: jest.fn(),
       getOpenPullRequestNumbersByHeadBranch:
         mockGetOpenPullRequestNumbersByHeadBranch,
@@ -109,6 +110,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     mockAddComment.mockReset();
     mockUpdateComment.mockReset();
     mockGetOpenPullRequestNumbersByHeadBranch.mockReset();
+    mockGetHeadBranchForIssue.mockReset();
     mockListPullRequestReviewComments.mockReset();
     mockGetPullRequestHeadSha.mockReset();
     mockGetChangedFiles.mockReset();
@@ -199,6 +201,23 @@ describe("DetectPotentialProblemsUseCase", () => {
     expect(results).toHaveLength(0);
     expect(mockListIssueComments).not.toHaveBeenCalled();
     expect(mockAskAgent).not.toHaveBeenCalled();
+  });
+
+  it('resolves the linked branch for an issue comment without a checkout ref', async () => {
+    mockGetHeadBranchForIssue.mockResolvedValue('feature/42-from-issue');
+    mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([]);
+    mockAskAgent.mockResolvedValue({ findings: [], resolved_finding_ids: [] });
+    const param = baseParam({
+      eventName: 'issue_comment',
+      commit: { branch: '' },
+      inputs: { eventName: 'issue_comment', repo: { owner: 'owner', repo: 'repo' } },
+    });
+
+    const results = await useCase.invoke(param);
+
+    expect(results[0].success).toBe(true);
+    expect(mockGetHeadBranchForIssue).toHaveBeenCalledWith('owner', 'repo', 42, 'token');
+    expect(mockAskAgent).toHaveBeenCalledTimes(1);
   });
 
   it("returns a failure when askAgent returns null", async () => {
@@ -393,6 +412,23 @@ describe("DetectPotentialProblemsUseCase", () => {
       "token",
     );
     expect(mockUpdateComment.mock.calls[0][4]).toContain("resolved:true");
+  });
+
+  it('keeps an existing unresolved finding actionable when the agent returns no findings', async () => {
+    mockListIssueComments.mockResolvedValue([
+      {
+        id: 889,
+        body: `## Still open\n\nDescription.\n\n<!-- copilot-bugbot finding_id:"still-open" resolved:false -->`,
+        user: { login: 'bot' },
+      },
+    ]);
+    mockAskAgent.mockResolvedValue({ findings: [], resolved_finding_ids: [] });
+
+    const results = await useCase.invoke(baseParam());
+
+    expect(results[0].payload).toEqual(expect.objectContaining({
+      findingStates: expect.objectContaining({ open: 1 }),
+    }));
   });
 
   it("when OpenCode returns resolved_finding_ids, updates PR review comment to resolved", async () => {

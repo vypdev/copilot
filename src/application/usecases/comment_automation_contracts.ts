@@ -13,6 +13,8 @@ export interface CommentAutomationOptions {
   thinkUseCase: ParamUseCase<Execution, Result[]>;
   autofixUseCase: ParamUseCase<BugbotAutofixParam, Result[]>;
   doUserRequestUseCase: ParamUseCase<DoUserRequestParam, Result[]>;
+  /** Optional read-only review route used by /copilot review/findings/recheck. */
+  reviewPotentialProblemsUseCase?: ParamUseCase<Execution, Result[]>;
   userComment: string;
   gitCommitPort: GitCommitPort;
   dismissBugbotFindingsUseCase?: ParamUseCase<DismissBugbotFindingsParam, Result[]>;

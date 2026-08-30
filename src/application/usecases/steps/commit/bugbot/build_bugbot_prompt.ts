@@ -13,7 +13,7 @@ import type { BugbotContext } from "./types";
 const MAX_IGNORE_BLOCK_LENGTH = 2000;
 
 export function buildBugbotPrompt(param: Execution, context: BugbotContext): string {
-    const headBranch = param.commit.branch;
+    const headBranch = param.pullRequest?.head?.trim() || param.commit?.branch || 'unknown';
     const baseBranch = param.currentConfiguration.parentBranch ?? param.branches.development ?? 'develop';
     const previousBlock = context.previousFindingsBlock;
     const ignorePatterns = param.ai?.getAiIgnoreFiles?.() ?? [];

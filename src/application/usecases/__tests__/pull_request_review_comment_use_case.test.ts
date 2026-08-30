@@ -191,10 +191,10 @@ describe("PullRequestReviewCommentUseCase", () => {
     ]);
     mockRunBugbotAutofixCommitAndPush
       .mockReset()
-      .mockResolvedValue({ committed: true });
+      .mockResolvedValue({ success: true, committed: true });
     mockRunUserRequestCommitAndPush
       .mockReset()
-      .mockResolvedValue({ committed: true });
+      .mockResolvedValue({ success: true, committed: true });
     mockMarkFindingsResolved.mockReset().mockResolvedValue([]);
     mockDoUserRequestInvoke.mockReset();
   });
@@ -342,7 +342,7 @@ describe("PullRequestReviewCommentUseCase", () => {
         steps: [],
       }),
     ]);
-    mockRunBugbotAutofixCommitAndPush.mockResolvedValue({ committed: false });
+    mockRunBugbotAutofixCommitAndPush.mockResolvedValue({ success: true, committed: false });
 
     await useCase.invoke(baseExecution());
 

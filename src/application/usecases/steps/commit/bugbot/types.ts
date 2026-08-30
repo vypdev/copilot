@@ -20,6 +20,7 @@ export interface ExistingIssueFindingInfo {
   commentId: number;
   resolved: boolean;
   fingerprint?: string;
+  resolution?: BugbotFindingResolution;
 }
 
 export interface ExistingPullRequestFindingInfo {
@@ -27,7 +28,10 @@ export interface ExistingPullRequestFindingInfo {
   pullRequestNumber: number;
   resolved: boolean;
   fingerprint?: string;
+  resolution?: BugbotFindingResolution;
 }
+
+export type BugbotFindingResolution = 'fixed' | 'obsolete' | 'dismissed';
 
 /** Tracks each published destination independently so partial failures remain retryable. */
 export interface ExistingFindingInfo {

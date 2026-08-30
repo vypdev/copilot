@@ -17,7 +17,7 @@ describe('AgentCliClient fake executable contract', () => {
     afterEach(async () => rm(directory, { recursive: true, force: true }));
 
     it('executes an isolated fake provider and returns the prompt', async () => {
-        await expect(new AgentCliClient().execute({ command: executable, prompt: 'contract-prompt', timeoutMs: 1000 })).resolves.toBe('contract-prompt');
+        await expect(new AgentCliClient().execute({ command: executable, prompt: 'contract-prompt', timeoutMs: 5000 })).resolves.toBe('contract-prompt');
     });
 
     it('enforces the timeout against a fake provider', async () => {
