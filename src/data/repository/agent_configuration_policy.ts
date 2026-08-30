@@ -1,4 +1,4 @@
-import type { AgentConfiguration, AgentTask, AgentTaskConfiguration } from '../model/agent';
+import type { AgentCapability, AgentConfiguration } from '../model/agent';
 import { validateAgentCommand } from '../../application/policies/agent_command_policy';
 
 const SUPPORTED_PROVIDERS = new Set(['opencode', 'codex', 'cursor']);
@@ -26,9 +26,9 @@ function hasOptionalValue(value: string | undefined, pattern: RegExp): boolean {
     return value === undefined || value.trim().length === 0 || pattern.test(value.trim().toLowerCase());
 }
 export function getValidatedAgentConfiguration(
-    configuration: AgentTaskConfiguration[AgentTask],
-    task: AgentTask,
-): AgentTaskConfiguration[AgentTask] {
+    configuration: AgentConfiguration,
+    task: AgentCapability,
+): AgentConfiguration {
     if (!isValidAgentConfiguration(configuration)) throw new Error(`Invalid configuration for ${task} agent.`);
     return configuration;
 }

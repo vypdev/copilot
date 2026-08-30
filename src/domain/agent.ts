@@ -1,6 +1,7 @@
 export type AgentProvider = 'opencode' | 'codex' | 'cursor';
 
 export type AgentTask = 'findings' | 'fixer';
+export type AgentCapability = AgentTask | 'language';
 
 export const DEFAULT_AGENT_PROVIDER: AgentProvider = 'codex';
 export const DEFAULT_MODEL_PROVIDER = 'openai';

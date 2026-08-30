@@ -1,4 +1,4 @@
-import { createFindingsQueryPort, createFixerQueryPort } from '../agent_capability_composition_root';
+import { createFindingsQueryPort, createFixerQueryPort, createLanguageQueryPort } from '../agent_capability_composition_root';
 import type { AgentCliPort } from '../../agents/ports/agent_provider_ports';
 
 describe('agent capability composition root', () => {
@@ -14,9 +14,11 @@ describe('agent capability composition root', () => {
 
         const findings = createFindingsQueryPort({ cli });
         const fixer = createFixerQueryPort({ cli });
+        const language = createLanguageQueryPort({ cli });
 
         await expect(findings.query({ configuration, agentId: 'codex', prompt: 'inspect' })).resolves.toBe('agent output');
         await expect(fixer.fix({ configuration, prompt: 'fix' })).resolves.toEqual({ text: 'agent output', sessionId: 'cli' });
-        expect(execute).toHaveBeenCalledTimes(2);
+        await expect(language.query({ configuration, agentId: 'language', prompt: 'translate' })).resolves.toBe('agent output');
+        expect(execute).toHaveBeenCalledTimes(3);
     });
 });

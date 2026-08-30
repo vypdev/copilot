@@ -1,6 +1,7 @@
 export type {
     AgentConfiguration,
     AgentProvider,
+    AgentCapability,
     AgentTask,
     AgentTaskConfiguration,
 } from '../../domain/agent';

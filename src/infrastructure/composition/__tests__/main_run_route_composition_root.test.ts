@@ -21,6 +21,7 @@ const mockPullRequest = {};
 const mockContext = { pullRequest: mockPullRequest };
 const mockResolution = { kind: "resolution" };
 const mockFindings = {};
+const mockLanguage = {};
 const mockFixer = {};
 const mockIssueInvoke = jest.fn();
 const mockPullRequestInvoke = jest.fn();
@@ -38,6 +39,7 @@ jest.mock("../bugbot_composition_root", () => ({
 jest.mock("../agent_capability_composition_root", () => ({
   createFindingsQueryPort: jest.fn(() => mockFindings),
   createFixerQueryPort: jest.fn(() => mockFixer),
+  createLanguageQueryPort: jest.fn(() => mockLanguage),
 }));
 
 jest.mock("../issue_use_case_composition_root", () => ({
@@ -79,7 +81,7 @@ describe("main run route composition root", () => {
     expect(CheckIssueCommentLanguageUseCase).toHaveBeenCalledWith(
       expect.objectContaining({
         commentRepository: mockIssue,
-        findingsQueryPort: mockFindings,
+        languageQueryPort: mockLanguage,
       }),
     );
     expect(DetectBugbotFixIntentUseCase).toHaveBeenCalledWith(

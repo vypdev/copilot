@@ -29,6 +29,7 @@ import { createActorAuthorizationRepository } from "./actor_authorization_compos
 import {
   createFindingsQueryPort,
   createFixerQueryPort,
+  createLanguageQueryPort,
 } from "./agent_capability_composition_root";
 import { createAuthenticatedUserCompositionRoot } from "./authenticated_user_composition_root";
 import { createBugbotCompositionRoot } from "./bugbot_composition_root";
@@ -92,12 +93,13 @@ export function createSingleActionUseCaseCompositionRoot(): SingleActionUseCase 
 export function createIssueCommentUseCaseCompositionRoot(): IssueCommentUseCase {
   const bugbot = createBugbotCompositionRoot();
   const findings = createFindingsQueryPort();
+  const language = createLanguageQueryPort();
   const fixer = createFixerQueryPort();
   const gitCommit = new GitCommitAdapter();
 
   return new IssueCommentUseCase(
     new CheckIssueCommentLanguageUseCase(
-      new CommentLanguageTranslationWorkflow(bugbot.issue, findings),
+      new CommentLanguageTranslationWorkflow(bugbot.issue, language),
     ),
     new DetectBugbotFixIntentUseCase(
       bugbot.context.pullRequest,
@@ -122,12 +124,13 @@ export function createIssueCommentUseCaseCompositionRoot(): IssueCommentUseCase 
 export function createPullRequestReviewCommentUseCaseCompositionRoot(): PullRequestReviewCommentUseCase {
   const bugbot = createBugbotCompositionRoot();
   const findings = createFindingsQueryPort();
+  const language = createLanguageQueryPort();
   const fixer = createFixerQueryPort();
   const gitCommit = new GitCommitAdapter();
 
   return new PullRequestReviewCommentUseCase(
     new CheckPullRequestCommentLanguageUseCase(
-      new CommentLanguageTranslationWorkflow(bugbot.issue, findings),
+      new CommentLanguageTranslationWorkflow(bugbot.issue, language),
     ),
     new DetectBugbotFixIntentUseCase(
       bugbot.context.pullRequest,

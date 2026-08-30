@@ -5,7 +5,7 @@ import { ProviderCliAdapter } from '../provider_cli_adapter';
 import { getValidatedAgentConfiguration } from '../agent_configuration_policy';
 
 import type { AgentConfiguration } from '../../../application/ports/agent_configuration_ports';
-import type { AgentTask } from '../../model/agent';
+import type { AgentCapability } from '../../../domain/agent';
 import type { AgentCliPort } from '../../../infrastructure/agents/ports/agent_provider_ports';
 
 export interface AgentCapabilityInfrastructure {
@@ -22,7 +22,7 @@ export abstract class AgentCapabilityAdapter {
     protected async execute<T>(request: {
         configuration: AgentConfiguration;
         prompt: string;
-        capability: AgentTask;
+        capability: AgentCapability;
         mapCliOutput: (output: string) => T;
     }): Promise<T | undefined> {
         const taskConfiguration = getValidatedAgentConfiguration(request.configuration, request.capability);
