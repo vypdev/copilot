@@ -1,5 +1,6 @@
 export type AgentProvider = 'opencode' | 'codex' | 'cursor';
 export type AgentTask = 'findings' | 'fixer';
+export type AgentCapability = AgentTask | 'language';
 export declare const DEFAULT_AGENT_PROVIDER: AgentProvider;
 export declare const DEFAULT_MODEL_PROVIDER = "openai";
 export declare const DEFAULT_AGENT_MODEL = "gpt-5.6-luna";

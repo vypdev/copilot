@@ -53301,6 +53301,9 @@ function buildPreviousWorkflowRunsQuery(repository) {
 }
 async function waitForPreviousWorkflowRuns(execution, repository) {
     const query = buildPreviousWorkflowRunsQuery(repository);
+    if (process.env.GITHUB_ACTIONS === 'true' && !Number.isSafeInteger(query.currentRunId)) {
+        throw new Error('GitHub workflow identity is unavailable; refusing to bypass sequential execution.');
+    }
     await (0, workflow_queue_composition_root_1.createWaitForPreviousWorkflowRunsUseCase)(execution.tokens.token)
         .invoke(query)
         .catch((error) => {
@@ -55480,7 +55483,7 @@ function buildRecommendationResult(param, taskId, response, issueDescriptionFing
         (0, logging_ports_1.logError)(error);
         return [new result_1.Result({ id: taskId, success: false, executed: true, errors: [error] })];
     }
-    (0, logging_ports_1.logDebugInfo)(`RecommendSteps: agent response received. Steps length=${steps.length}. Full steps:\n${steps}`);
+    (0, logging_ports_1.logDebugInfo)(`RecommendSteps: agent response received. Steps length=${steps.length}.`);
     if (previousRecommendation && (0, recommendation_policy_1.isNoNewRecommendation)(steps))
         return skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'agent found no material change');
     const recommendationFingerprint = (0, recommendation_policy_1.createRecommendationFingerprint)(steps);
@@ -56769,7 +56772,7 @@ async function runBugbotAutofixWorkflow(param, dependencies) {
             configuration: param.execution.ai?.getAgentConfiguration('fixer'),
             prompt: preflight.prompt,
         });
-        (0, logging_ports_1.logDebugInfo)(`BugbotAutofix: build agent response length=${response?.text?.length ?? 0}. Full response:\n${response?.text ?? '(none)'}`);
+        (0, logging_ports_1.logDebugInfo)(`BugbotAutofix: build agent response length=${response?.text?.length ?? 0}.`);
         return await (0, bugbot_autofix_postflight_1.finalizeBugbotAutofix)(param.execution, preflight.context, preflight.idsToFix, preflight.workspacePathsBefore, response?.text, dependencies.gitCommitPort);
     }
     catch (error) {
@@ -59240,7 +59243,7 @@ class DoUserRequestUseCase {
             configuration: execution.ai?.getAgentConfiguration('fixer'),
             prompt,
         });
-        (0, logging_ports_1.logDebugInfo)(`DoUserRequest: build agent response length=${response?.text?.length ?? 0}. Full response:\n${response?.text ?? '(none)'}`);
+        (0, logging_ports_1.logDebugInfo)(`DoUserRequest: build agent response length=${response?.text?.length ?? 0}.`);
         if (!response?.text) {
             (0, logging_ports_1.logError)("DoUserRequest: no response from configured build agent.");
             results.push(new result_1.Result({
@@ -59391,9 +59394,9 @@ const comment_translation_policy_1 = __nccwpck_require__(27150);
 var comment_translation_policy_2 = __nccwpck_require__(27150);
 Object.defineProperty(exports, "TRANSLATED_COMMENT_MARKER", ({ enumerable: true, get: function () { return comment_translation_policy_2.TRANSLATED_COMMENT_MARKER; } }));
 class CommentLanguageTranslationWorkflow {
-    constructor(commentRepository, findingsQueryPort) {
+    constructor(commentRepository, languageQueryPort) {
         this.commentRepository = commentRepository;
-        this.findingsQueryPort = findingsQueryPort;
+        this.languageQueryPort = languageQueryPort;
     }
     async invoke(context) {
         (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(context.taskId)} Executing ${context.taskId}.`);
@@ -59401,7 +59404,7 @@ class CommentLanguageTranslationWorkflow {
             return [new result_1.Result({ id: context.taskId, success: true, executed: false })];
         }
         const configuration = context.configuration;
-        const checkResponse = await this.findingsQueryPort.query({
+        const checkResponse = await this.languageQueryPort.query({
             configuration,
             agentId: agent_task_policy_1.AGENT_PLAN,
             prompt: (0, prompts_1.getCheckCommentLanguagePrompt)({ locale: context.locale, commentBody: context.commentBody }),
@@ -59415,7 +59418,7 @@ class CommentLanguageTranslationWorkflow {
         (0, logging_ports_1.logDebugInfo)(`${context.taskId}: language check status=${status}.`);
         if (status === 'done')
             return [new result_1.Result({ id: context.taskId, success: true, executed: true })];
-        const translationResponse = await this.findingsQueryPort.query({
+        const translationResponse = await this.languageQueryPort.query({
             configuration,
             agentId: agent_task_policy_1.AGENT_PLAN,
             prompt: (0, prompts_1.getTranslateCommentPrompt)({ locale: context.locale, commentBody: context.commentBody }),
@@ -59910,18 +59913,19 @@ const prompts_1 = __nccwpck_require__(69518);
 const logging_ports_1 = __nccwpck_require__(6152);
 const project_context_instruction_1 = __nccwpck_require__(63907);
 const agent_answer_policy_1 = __nccwpck_require__(72063);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 async function runThinkAnswerWorkflow(param, taskId, request, dependencies) {
     const issueDescription = await loadIssueDescription(param, request.issueNumberForContext, dependencies.issueDescriptionQueryPort);
     const contextBlock = issueDescription
         ? `\n\nContext (issue #${request.issueNumberForContext} description):\n${issueDescription}\n\n`
         : '\n\n';
-    (0, logging_ports_1.logDebugInfo)(`Think: question length=${request.question.length}, issue context length=${issueDescription.length}. Full question:\n${request.question}`);
+    (0, logging_ports_1.logDebugInfo)(`Think: question length=${request.question.length}, issue context length=${issueDescription.length}.`);
     const prompt = (0, prompts_1.getThinkPrompt)({
         projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
         contextBlock,
         question: request.question,
     });
-    const answer = await queryThinkAnswer(param, prompt, dependencies.aiRepository);
+    const answer = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(await queryThinkAnswer(param, prompt, dependencies.aiRepository));
     if (!answer) {
         (0, logging_ports_1.logError)('Configured agent returned no answer for Think.');
         return [
@@ -59967,7 +59971,7 @@ async function queryThinkAnswer(param, prompt, repository) {
         },
     });
     const answer = (0, agent_answer_policy_1.extractStructuredAnswer)(response);
-    (0, logging_ports_1.logDebugInfo)(`Think: agent response received. Answer length=${answer.length}. Full answer:\n${answer}`);
+    (0, logging_ports_1.logDebugInfo)(`Think: agent response received. Answer length=${answer.length}.`);
     return answer;
 }
 
@@ -60245,6 +60249,7 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const project_context_instruction_1 = __nccwpck_require__(63907);
 const task_emoji_1 = __nccwpck_require__(46103);
 const agent_answer_policy_1 = __nccwpck_require__(72063);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const TASK_ID = 'AnswerIssueHelpUseCase';
 /** Posts one contextual answer for a newly opened question/help issue. */
 async function runAnswerIssueHelpWorkflow(param, dependencies) {
@@ -60270,8 +60275,8 @@ async function runAnswerIssueHelpWorkflow(param, dependencies) {
                 schemaName: 'answer_issue_help_response',
             },
         });
-        const answer = (0, agent_answer_policy_1.extractStructuredAnswer)(response);
-        (0, logging_ports_1.logDebugInfo)(`AnswerIssueHelp: agent response. Answer length=${answer.length}. Full answer:\n${answer}`);
+        const answer = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)((0, agent_answer_policy_1.extractStructuredAnswer)(response));
+        (0, logging_ports_1.logDebugInfo)(`AnswerIssueHelp: agent response. Answer length=${answer.length}.`);
         if (!answer) {
             return [noAnswerResult()];
         }
@@ -61901,6 +61906,7 @@ const prompts_1 = __nccwpck_require__(69518);
 const logging_ports_1 = __nccwpck_require__(6152);
 const project_context_instruction_1 = __nccwpck_require__(63907);
 const task_emoji_1 = __nccwpck_require__(46103);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 /** Generates and publishes a PR description while keeping provider details behind ports. */
 async function runUpdatePullRequestDescriptionWorkflow(param, taskId, dependencies) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(taskId)} Executing ${taskId} (AI PR description).`);
@@ -61942,8 +61948,8 @@ async function runUpdatePullRequestDescriptionWorkflow(param, taskId, dependenci
             agentId: agent_task_policy_1.AGENT_PLAN,
             prompt,
         });
-        const pullRequestBody = extractDescription(response);
-        (0, logging_ports_1.logDebugInfo)(`UpdatePullRequestDescription: agent response received. Description length=${pullRequestBody.length}. Full description:\n${pullRequestBody}`);
+        const pullRequestBody = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(extractDescription(response));
+        (0, logging_ports_1.logDebugInfo)(`UpdatePullRequestDescription: agent response received. Description length=${pullRequestBody.length}.`);
         if (!pullRequestBody.trim()) {
             return newResult(taskId, false, true, ['Configured agent did not return a PR description.']);
         }
@@ -62041,6 +62047,8 @@ class WaitForPreviousWorkflowRunsUseCase {
                 this.observerPort.noActivePreviousRuns();
                 return;
             }
+            if (attempt === this.policy.maximumAttempts - 1)
+                break;
             this.observerPort.waitingForPreviousRuns(activeRunCount, this.policy.delayMilliseconds);
             await this.delayPort.wait(this.policy.delayMilliseconds);
         }
@@ -64631,7 +64639,7 @@ function runAgentCli(request) {
 }
 function createProcessLifecycle(child, request, resolve, reject) {
     let stdout = '';
-    let stderr = '';
+    let stderrBytes = 0;
     let outputBytes = 0;
     let settled = false;
     const timer = setTimeout(() => {
@@ -64668,14 +64676,13 @@ function createProcessLifecycle(child, request, resolve, reject) {
         stdout += chunk.toString();
     };
     const appendStderr = (chunk) => {
-        if (stderr.length < MAX_STDERR_BYTES)
-            stderr += chunk.toString().slice(0, MAX_STDERR_BYTES - stderr.length);
+        stderrBytes = Math.min(stderrBytes + chunk.byteLength, MAX_STDERR_BYTES);
     };
     const onError = (error) => finishReject(new agent_cli_contracts_1.AgentCliError(`Unable to start agent CLI: ${error.message}`, 'process'));
     const onClose = (code) => {
         if (code !== 0) {
-            const detail = stderr.trim() ? `: ${stderr.trim().slice(0, 1000)}` : '';
-            finishReject(new agent_cli_contracts_1.AgentCliError(`Agent CLI exited with code ${code}${detail}`, 'process', code === 75));
+            const diagnostic = stderrBytes > 0 ? ' Diagnostic output was suppressed for safety.' : '';
+            finishReject(new agent_cli_contracts_1.AgentCliError(`Agent CLI exited with code ${code}.${diagnostic}`, 'process', code === 75));
             return;
         }
         const output = stdout.trim();
@@ -65000,10 +65007,10 @@ function parseJsonFromAgentText(text) {
         const object = parseObject(extracted);
         if (object)
             return object;
-        (0, logger_1.logDebugInfo)(`Agent response (expectJson): failed to parse extracted JSON. Full text length=${trimmed.length}. Full text:\n${trimmed}`);
+        (0, logger_1.logDebugInfo)(`Agent response (expectJson): failed to parse extracted JSON. Response length=${trimmed.length}.`);
         throw new Error('Agent response is not valid JSON: extracted object is invalid');
     }
-    (0, logger_1.logDebugInfo)(`Agent response (expectJson): no JSON object found. length=${trimmed.length}. Full text:\n${trimmed}`);
+    (0, logger_1.logDebugInfo)(`Agent response (expectJson): no JSON object found. Response length=${trimmed.length}.`);
     throw new Error(`Agent response is not valid JSON: no JSON object found. Response length: ${trimmed.length} chars.`);
 }
 
@@ -65166,6 +65173,44 @@ class FixerAgentAdapter extends agent_capability_adapter_1.AgentCapabilityAdapte
     }
 }
 exports.FixerAgentAdapter = FixerAgentAdapter;
+
+
+/***/ }),
+
+/***/ 10573:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.LanguageAgentAdapter = void 0;
+const logger_1 = __nccwpck_require__(91151);
+const agent_prompt_policy_1 = __nccwpck_require__(78804);
+const agent_findings_response_policy_1 = __nccwpck_require__(34908);
+const agent_capability_adapter_1 = __nccwpck_require__(32152);
+/** Infrastructure adapter for the read-only language capability. */
+class LanguageAgentAdapter extends agent_capability_adapter_1.AgentCapabilityAdapter {
+    async query(request) {
+        const options = request.options ?? {};
+        const schemaName = options.schemaName ?? 'response';
+        const promptText = (0, agent_prompt_policy_1.buildAgentPrompt)(request.prompt, options.expectJson ?? false, options.schema, schemaName);
+        if (!request.configuration) {
+            (0, logger_1.logError)('Missing required AI configuration for language capability.');
+            return undefined;
+        }
+        return this.execute({
+            configuration: request.configuration,
+            prompt: promptText,
+            capability: 'language',
+            mapCliOutput: (output) => {
+                if (options.expectJson && options.schema)
+                    return (0, agent_findings_response_policy_1.interpretFindingsResponse)(output, options);
+                return output;
+            },
+        });
+    }
+}
+exports.LanguageAgentAdapter = LanguageAgentAdapter;
 
 
 /***/ }),
@@ -69148,9 +69193,11 @@ function createActorAuthorizationRepository() {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createFindingsQueryPort = createFindingsQueryPort;
 exports.createFixerQueryPort = createFixerQueryPort;
+exports.createLanguageQueryPort = createLanguageQueryPort;
 const agent_cli_client_1 = __nccwpck_require__(68570);
 const findings_agent_adapter_1 = __nccwpck_require__(27725);
 const fixer_agent_adapter_1 = __nccwpck_require__(62259);
+const language_agent_adapter_1 = __nccwpck_require__(10573);
 function defaultInfrastructure() {
     return {
         cli: new agent_cli_client_1.AgentCliClient(),
@@ -69161,6 +69208,9 @@ function createFindingsQueryPort(infrastructure = defaultInfrastructure()) {
 }
 function createFixerQueryPort(infrastructure = defaultInfrastructure()) {
     return new fixer_agent_adapter_1.FixerAgentAdapter(infrastructure);
+}
+function createLanguageQueryPort(infrastructure = defaultInfrastructure()) {
+    return new language_agent_adapter_1.LanguageAgentAdapter(infrastructure);
 }
 
 
@@ -69720,16 +69770,18 @@ function createSingleActionUseCaseCompositionRoot() {
 function createIssueCommentUseCaseCompositionRoot() {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();
     const findings = (0, agent_capability_composition_root_1.createFindingsQueryPort)();
+    const language = (0, agent_capability_composition_root_1.createLanguageQueryPort)();
     const fixer = (0, agent_capability_composition_root_1.createFixerQueryPort)();
     const gitCommit = new git_commit_adapter_1.GitCommitAdapter();
-    return new issue_comment_use_case_1.IssueCommentUseCase(new check_issue_comment_language_use_case_1.CheckIssueCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, findings)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), bugbot.resolution, gitCommit);
+    return new issue_comment_use_case_1.IssueCommentUseCase(new check_issue_comment_language_use_case_1.CheckIssueCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), bugbot.resolution, gitCommit);
 }
 function createPullRequestReviewCommentUseCaseCompositionRoot() {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();
     const findings = (0, agent_capability_composition_root_1.createFindingsQueryPort)();
+    const language = (0, agent_capability_composition_root_1.createLanguageQueryPort)();
     const fixer = (0, agent_capability_composition_root_1.createFixerQueryPort)();
     const gitCommit = new git_commit_adapter_1.GitCommitAdapter();
-    return new pull_request_review_comment_use_case_1.PullRequestReviewCommentUseCase(new check_pull_request_comment_language_use_case_1.CheckPullRequestCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, findings)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), bugbot.resolution, gitCommit);
+    return new pull_request_review_comment_use_case_1.PullRequestReviewCommentUseCase(new check_pull_request_comment_language_use_case_1.CheckPullRequestCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), bugbot.resolution, gitCommit);
 }
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort) {
     return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, issue_interaction_composition_root_1.createIssueNotificationRepository)()), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase(projectBoardCommandPort, (0, issue_labels_composition_root_1.createIssueLabelRepository)(), new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)())), createDetectPotentialProblemsUseCase(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)());
