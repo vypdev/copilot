@@ -5,6 +5,7 @@ import { hasReleaseContent, releasePayload } from "../release_content_policy";
 import { findTargetRelease, releaseIdAsString } from "../release_transition_policy";
 import { releaseName } from "../release_tag_policy";
 import type { RepositoryReleasePublicationPort } from "../../../application/ports/repository_release_ports";
+import { listRepositoryReleases } from './repository_release_query';
 
 export class RepositoryReleasePublicationRepository implements RepositoryReleasePublicationPort {
     constructor(private readonly githubClient: GithubClientPort<GithubReleaseClient>) {}
@@ -27,7 +28,7 @@ export class RepositoryReleasePublicationRepository implements RepositoryRelease
             return undefined;
         }
 
-        const releases = await this.listReleases(octokit, owner, repository);
+        const releases = await listRepositoryReleases(octokit, owner, repository);
         const targetRelease = findTargetRelease(releases, targetTag, (release) => release.tag_name);
         let targetReleaseId: number;
         if (targetRelease) {
@@ -54,26 +55,6 @@ export class RepositoryReleasePublicationRepository implements RepositoryRelease
         logInfo(`Updated release for targetTag '${targetTag}'`);
         return releaseIdAsString(targetReleaseId);
     };
-
-    private async listReleases(
-        octokit: GithubReleaseClient,
-        owner: string,
-        repository: string,
-    ): Promise<Array<{ id: number; tag_name: string }>> {
-        const releases: Array<{ id: number; tag_name: string }> = [];
-        const maximumPages = 100;
-        for (let page = 1; page <= maximumPages; page += 1) {
-            const { data } = await octokit.rest.repos.listReleases({
-                owner,
-                repo: repository,
-                per_page: 100,
-                page,
-            });
-            releases.push(...(data ?? []));
-            if ((data ?? []).length < 100) return releases;
-        }
-        throw new Error(`Release pagination exceeded ${maximumPages} pages.`);
-    }
 
     createRelease = async (
         owner: string,

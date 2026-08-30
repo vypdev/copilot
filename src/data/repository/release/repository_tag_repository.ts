@@ -3,44 +3,10 @@ import type { GithubReleaseClient } from "../../../infrastructure/github/ports/g
 import { logDebugInfo, logError, logInfo } from "../../../utils/logger";
 import { tagReference, tagReferencePath } from "../release_tag_policy";
 import type { RepositoryTagPort } from "../../../application/ports/repository_release_ports";
-import { isGithubNotFound } from "../github/github_error_policy";
+import { findRepositoryTag, getRepositoryTagSha } from './repository_tag_query';
 
 export class RepositoryTagRepository implements RepositoryTagPort {
     constructor(private readonly githubClient: GithubClientPort<GithubReleaseClient>) {}
-
-    private findTag = async (
-        owner: string,
-        repository: string,
-        tag: string,
-        token: string,
-    ): Promise<{ object: { sha: string } } | undefined> => {
-        const octokit = this.githubClient.getClient(token);
-        try {
-            const { data: foundTag } = await octokit.rest.git.getRef({
-                owner,
-                repo: repository,
-                ref: tagReference(tag),
-            });
-            return foundTag;
-        } catch (error) {
-            if (isGithubNotFound(error)) return undefined;
-            throw error;
-        }
-    };
-
-    private getTagSha = async (
-        owner: string,
-        repository: string,
-        tag: string,
-        token: string,
-    ): Promise<string | undefined> => {
-        const foundTag = await this.findTag(owner, repository, tag, token);
-        if (!foundTag) {
-            logError(`The '${tag}' tag does not exist in the remote repository`);
-            return undefined;
-        }
-        return foundTag.object.sha;
-    };
 
     updateTag = async (
         owner: string,
@@ -49,14 +15,14 @@ export class RepositoryTagRepository implements RepositoryTagPort {
         targetTag: string,
         token: string,
     ): Promise<void> => {
-        const sourceTagSha = await this.getTagSha(owner, repository, sourceTag, token);
+        const octokit = this.githubClient.getClient(token);
+        const sourceTagSha = await getRepositoryTagSha(octokit, owner, repository, sourceTag);
         if (!sourceTagSha) {
             logError(`The '${sourceTag}' tag does not exist in the remote repository`);
             return;
         }
 
-        const foundTargetTag = await this.findTag(owner, repository, targetTag, token);
-        const octokit = this.githubClient.getClient(token);
+        const foundTargetTag = await findRepositoryTag(octokit, owner, repository, targetTag);
         if (foundTargetTag) {
             logDebugInfo(`Updating the '${targetTag}' tag to point to the '${sourceTag}' tag`);
             await octokit.rest.git.updateRef({
@@ -85,7 +51,7 @@ export class RepositoryTagRepository implements RepositoryTagPort {
     ): Promise<string | undefined> => {
         const octokit = this.githubClient.getClient(token);
         try {
-            const existingTag = await this.findTag(owner, repository, tag, token);
+            const existingTag = await findRepositoryTag(octokit, owner, repository, tag);
             if (existingTag) {
                 logInfo(`Tag '${tag}' already exists in repository ${owner}/${repository}`);
                 return existingTag.object.sha;
