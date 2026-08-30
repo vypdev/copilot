@@ -11,6 +11,7 @@ describe('agent CLI command policy', () => {
         expect(() => validateAgentCommand({ provider: 'cursor', model: 'model', command: 'agent -p' })).toThrow('select the model');
         expect(() => validateAgentCommand({ provider: 'cursor', model: 'model', command: 'agent -p --model model -' })).toThrow('stdin placeholder');
         expect(() => validateAgentCommand({ provider: 'codex', model: 'model', command: 'codex exec --model model -' })).toThrow('model provider');
+        expect(() => validateAgentCommand({ provider: 'codex', model: 'model', command: 'codex exec --model model --config model_provider=openai' })).toThrow('stdin placeholder');
         expect(() => validateAgentCommand({ provider: 'opencode', model: 'model', effort: 'high', command: 'opencode run --model openai/model' })).toThrow('select effort');
         expect(() => validateAgentCommand({ provider: 'codex', model: 'model', effort: 'high', command: 'codex exec --model model --config model_provider=openai --config model_reasoning_effort=high -' })).not.toThrow();
         expect(() => validateAgentCommand({ provider: 'cursor', model: 'model', command: 'agent -p --model another' })).toThrow('configured model');

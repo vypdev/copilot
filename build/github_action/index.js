@@ -49322,6 +49322,9 @@ function validateCommandShape(configuration, args) {
     if (configuration.provider !== 'codex' && args.includes('-')) {
         throw new Error(`${configuration.provider} command must not include the Codex stdin placeholder "-"; its prompt is passed as an argument.`);
     }
+    if (configuration.provider === 'codex' && args.at(-1) !== '-') {
+        throw new Error('Codex command must end with the stdin placeholder "-".');
+    }
     if (!hasFlag(args, '--model') && !hasFlag(args, '-m')) {
         throw new Error(`${configuration.provider} command must select the model explicitly with --model.`);
     }
