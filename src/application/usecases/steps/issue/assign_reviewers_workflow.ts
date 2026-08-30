@@ -35,53 +35,17 @@ export async function runAssignReviewersWorkflow(
         logDebugInfo(`#${number} needs ${desiredReviewersCount} reviewers.`);
         if (desiredReviewersCount <= 0 || number <= 0) return [successResult()];
 
-        const currentReviewers = uniqueLogins(
-            await dependencies.pullRequestRepository.getCurrentReviewers(
-                param.owner,
-                param.repo,
-                number,
-                param.tokens.token,
-            ),
-        );
+        const currentReviewers = await loadCurrentReviewers(param, dependencies);
         if (currentReviewers.length >= desiredReviewersCount) return [successResult()];
 
-        const currentAssignees = uniqueLogins(
-            await dependencies.issueRepository.getCurrentAssignees(
-                param.owner,
-                param.repo,
-                number,
-                param.tokens.token,
-            ),
-        );
         const missingReviewers = desiredReviewersCount - currentReviewers.length;
         logDebugInfo(`#${number} needs ${missingReviewers} more reviewers.`);
-        const excludeForReview = buildReviewerExclusions(
-            param.pullRequest.creator,
-            currentReviewers,
-            currentAssignees,
-        );
-        const members = selectEligibleReviewers(
-            await dependencies.projectRepository.getRandomMembers(
-                param.owner,
-                missingReviewers,
-                excludeForReview,
-                param.tokens.token,
-            ),
-            excludeForReview,
-            missingReviewers,
-        );
+        const members = await selectReviewerCandidates(param, dependencies, currentReviewers, missingReviewers);
         if (members.length === 0) {
             return [failureResult('Tried to assign members as reviewers to pull request, but no one was found.')];
         }
 
-        const reviewersAdded = await dependencies.pullRequestRepository.addReviewersToPullRequest(
-            param.owner,
-            param.repo,
-            number,
-            members,
-            param.tokens.token,
-        );
-        const confirmedReviewers = selectConfirmedReviewers(members, reviewersAdded);
+        const confirmedReviewers = await requestAndConfirmReviewers(param, dependencies, members);
         if (confirmedReviewers.length === 0) {
             return [failureResult('Tried to assign members as reviewers to pull request, but no reviewer request was confirmed.')];
         }
@@ -120,6 +84,55 @@ export async function runAssignReviewersWorkflow(
             }),
         ];
     }
+}
+
+async function loadCurrentReviewers(
+    param: Execution,
+    dependencies: AssignReviewersWorkflowDependencies,
+): Promise<string[]> {
+    return uniqueLogins(await dependencies.pullRequestRepository.getCurrentReviewers(
+        param.owner,
+        param.repo,
+        param.pullRequest.number,
+        param.tokens.token,
+    ));
+}
+
+async function selectReviewerCandidates(
+    param: Execution,
+    dependencies: AssignReviewersWorkflowDependencies,
+    currentReviewers: string[],
+    missingReviewers: number,
+): Promise<string[]> {
+    const currentAssignees = uniqueLogins(await dependencies.issueRepository.getCurrentAssignees(
+        param.owner,
+        param.repo,
+        param.pullRequest.number,
+        param.tokens.token,
+    ));
+    const excluded = buildReviewerExclusions(param.pullRequest.creator, currentReviewers, currentAssignees);
+    const members = await dependencies.projectRepository.getRandomMembers(
+        param.owner,
+        missingReviewers,
+        excluded,
+        param.tokens.token,
+    );
+    return selectEligibleReviewers(members, excluded, missingReviewers);
+}
+
+async function requestAndConfirmReviewers(
+    param: Execution,
+    dependencies: AssignReviewersWorkflowDependencies,
+    members: string[],
+): Promise<string[]> {
+    const reviewersAdded = await dependencies.pullRequestRepository.addReviewersToPullRequest(
+        param.owner,
+        param.repo,
+        param.pullRequest.number,
+        members,
+        param.tokens.token,
+    );
+    return selectConfirmedReviewers(members, reviewersAdded);
 }
 
 function successResult(): Result {

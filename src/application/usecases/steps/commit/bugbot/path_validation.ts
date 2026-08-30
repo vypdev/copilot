@@ -16,12 +16,15 @@ export function isSafeFindingFilePath(path: string | undefined): boolean {
     if (path == null || typeof path !== 'string') return false;
     const trimmed = path.trim();
     if (trimmed.length === 0) return false;
-    if (trimmed.includes(NULL_BYTE)) return false;
-    if (trimmed.includes(PARENT_SEGMENT)) return false;
-    if (trimmed.startsWith(SLASH)) return false;
-    if (/^[a-zA-Z]:[/\\]/.test(trimmed)) return false;
-    if (trimmed.startsWith(BACKSLASH)) return false;
-    return true;
+    return !containsUnsafePathContent(trimmed) && !isAbsolutePath(trimmed);
+}
+
+function containsUnsafePathContent(path: string): boolean {
+    return path.includes(NULL_BYTE) || path.includes(PARENT_SEGMENT);
+}
+
+function isAbsolutePath(path: string): boolean {
+    return path.startsWith(SLASH) || /^[a-zA-Z]:[/\\]/.test(path) || path.startsWith(BACKSLASH);
 }
 
 /**

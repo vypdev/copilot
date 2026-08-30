@@ -1,5 +1,5 @@
-import { Execution } from "../../../data/model/execution";
-import { Result } from "../../../data/model/result";
+import type { Execution } from "../../../data/model/execution";
+import type { Result } from "../../../data/model/result";
 import type { RepositoryTagPort } from "../../ports/repository_release_ports";
 import { ParamUseCase } from "../base/param_usecase";
 export declare class CreateTagUseCase implements ParamUseCase<Execution, Result[]> {

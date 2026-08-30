@@ -50529,10 +50529,9 @@ function failureResult(taskId, error) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CreateTagUseCase = void 0;
-const result_1 = __nccwpck_require__(73817);
-const constants_1 = __nccwpck_require__(15415);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
+const create_tag_workflow_1 = __nccwpck_require__(23539);
 class CreateTagUseCase {
     constructor(repositoryReleasePort) {
         this.repositoryReleasePort = repositoryReleasePort;
@@ -50540,68 +50539,54 @@ class CreateTagUseCase {
     }
     async invoke(param) {
         (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
-        const result = [];
-        if (param.singleAction.version.length === 0) {
-            (0, logging_ports_1.logError)(`Version is not set.`);
-            result.push(new result_1.Result({
-                id: this.taskId,
-                success: false,
-                executed: true,
-                errors: [
-                    `${constants_1.INPUT_KEYS.SINGLE_ACTION_VERSION} is not set.`
-                ],
-            }));
-            return result;
-        }
-        else if (param.currentConfiguration.releaseBranch === undefined) {
-            (0, logging_ports_1.logError)(`Working branch not found in configuration.`);
-            result.push(new result_1.Result({
-                id: this.taskId,
-                success: false,
-                executed: true,
-                errors: [
-                    `Release branch not found in issue configuration.`
-                ],
-            }));
-            return result;
-        }
-        const tagName = `v${param.singleAction.version}`;
-        try {
-            const sha1Tag = await this.repositoryReleasePort.createTag(param.owner, param.repo, param.currentConfiguration.releaseBranch, tagName, param.tokens.token);
-            if (sha1Tag) {
-                result.push(new result_1.Result({
-                    id: this.taskId,
-                    success: true,
-                    executed: true,
-                    steps: [`Tag ${tagName} is ready: ${sha1Tag}`],
-                }));
-            }
-            else {
-                (0, logging_ports_1.logWarn)(`CreateTag: createTag returned no SHA for version ${tagName}.`);
-                result.push(new result_1.Result({
-                    id: this.taskId,
-                    success: false,
-                    executed: true,
-                    errors: [
-                        `Failed to create tag ${tagName}.`
-                    ],
-                }));
-            }
-        }
-        catch (error) {
-            (0, logging_ports_1.logError)(`Error executing ${this.taskId}: ${error}`);
-            result.push(new result_1.Result({
-                id: this.taskId,
-                success: false,
-                executed: true,
-                steps: [`Failed to create tag ${tagName}.`],
-                errors: [error],
-            }));
-        }
-        return result;
+        return (0, create_tag_workflow_1.runCreateTag)(param, this.taskId, this.repositoryReleasePort);
     }
 }
 exports.CreateTagUseCase = CreateTagUseCase;
+
+
+/***/ }),
+
+/***/ 23539:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.runCreateTag = runCreateTag;
+const result_1 = __nccwpck_require__(73817);
+const constants_1 = __nccwpck_require__(15415);
+const logging_ports_1 = __nccwpck_require__(6152);
+async function runCreateTag(param, taskId, repositoryTagPort) {
+    const validationFailure = validateTagInput(param, taskId);
+    if (validationFailure)
+        return [validationFailure];
+    const tagName = `v${param.singleAction.version}`;
+    try {
+        const sha1Tag = await repositoryTagPort.createTag(param.owner, param.repo, param.currentConfiguration.releaseBranch, tagName, param.tokens.token);
+        return sha1Tag ? [new result_1.Result({ id: taskId, success: true, executed: true, steps: [`Tag ${tagName} is ready: ${sha1Tag}`] })]
+            : noTagResult(taskId, tagName);
+    }
+    catch (error) {
+        (0, logging_ports_1.logError)(`Error executing ${taskId}: ${error}`);
+        return [new result_1.Result({ id: taskId, success: false, executed: true, steps: [`Failed to create tag ${tagName}.`], errors: [error] })];
+    }
+}
+function validateTagInput(param, taskId) {
+    if (param.singleAction.version.length === 0) {
+        (0, logging_ports_1.logError)('Version is not set.');
+        return new result_1.Result({ id: taskId, success: false, executed: true, errors: [`${constants_1.INPUT_KEYS.SINGLE_ACTION_VERSION} is not set.`] });
+    }
+    if (param.currentConfiguration.releaseBranch === undefined) {
+        (0, logging_ports_1.logError)('Working branch not found in configuration.');
+        return new result_1.Result({ id: taskId, success: false, executed: true, errors: ['Release branch not found in issue configuration.'] });
+    }
+    return undefined;
+}
+function noTagResult(taskId, tagName) {
+    (0, logging_ports_1.logWarn)(`CreateTag: createTag returned no SHA for version ${tagName}.`);
+    return [new result_1.Result({ id: taskId, success: false, executed: true, errors: [`Failed to create tag ${tagName}.`] })];
+}
 
 
 /***/ }),
@@ -51156,10 +51141,9 @@ function buildProgressSummaryMessage({ summary, progress, remaining, reasoning }
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PublishGithubActionUseCase = void 0;
-const result_1 = __nccwpck_require__(73817);
-const constants_1 = __nccwpck_require__(15415);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
+const publish_github_action_workflow_1 = __nccwpck_require__(63037);
 class PublishGithubActionUseCase {
     constructor(repositoryTagPort, repositoryReleasePort) {
         this.repositoryTagPort = repositoryTagPort;
@@ -51168,58 +51152,59 @@ class PublishGithubActionUseCase {
     }
     async invoke(param) {
         (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
-        const result = [];
-        if (param.singleAction.version.length === 0) {
-            (0, logging_ports_1.logError)(`Version is not set.`);
-            result.push(new result_1.Result({
-                id: this.taskId,
-                success: false,
-                executed: true,
-                errors: [
-                    `${constants_1.INPUT_KEYS.SINGLE_ACTION_VERSION} is not set.`
-                ],
-            }));
-            return result;
-        }
-        const sourceTag = `v${param.singleAction.version}`;
-        const targetTag = sourceTag.split('.')[0];
-        try {
-            await this.repositoryTagPort.updateTag(param.owner, param.repo, sourceTag, targetTag, param.tokens.token);
-            const releaseId = await this.repositoryReleasePort.updateRelease(param.owner, param.repo, sourceTag, targetTag, param.tokens.token);
-            if (releaseId) {
-                (0, logging_ports_1.logInfo)(`Updated release \`${targetTag}\` from \`${sourceTag}\`: ${releaseId}`);
-                result.push(new result_1.Result({
-                    id: this.taskId,
-                    success: true,
-                    executed: true,
-                    steps: [`Updated release \`${targetTag}\` from \`${sourceTag}\`.`],
-                }));
-            }
-            else {
-                result.push(new result_1.Result({
-                    id: this.taskId,
-                    success: false,
-                    executed: true,
-                    errors: [
-                        `Failed to update release \`${targetTag}\` from \`${sourceTag}\`.`
-                    ],
-                }));
-            }
-        }
-        catch (error) {
-            (0, logging_ports_1.logError)(`Error executing ${this.taskId}: ${error}`);
-            result.push(new result_1.Result({
-                id: this.taskId,
+        return (0, publish_github_action_workflow_1.runPublishGithubAction)(param, this.taskId, this.repositoryTagPort, this.repositoryReleasePort);
+    }
+}
+exports.PublishGithubActionUseCase = PublishGithubActionUseCase;
+
+
+/***/ }),
+
+/***/ 63037:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.runPublishGithubAction = runPublishGithubAction;
+const result_1 = __nccwpck_require__(73817);
+const constants_1 = __nccwpck_require__(15415);
+const logging_ports_1 = __nccwpck_require__(6152);
+async function runPublishGithubAction(param, taskId, repositoryTagPort, repositoryReleasePort) {
+    const validationFailure = validateVersion(param, taskId);
+    if (validationFailure)
+        return [validationFailure];
+    const sourceTag = `v${param.singleAction.version}`;
+    const targetTag = sourceTag.split('.')[0];
+    try {
+        await repositoryTagPort.updateTag(param.owner, param.repo, sourceTag, targetTag, param.tokens.token);
+        const releaseId = await repositoryReleasePort.updateRelease(param.owner, param.repo, sourceTag, targetTag, param.tokens.token);
+        return releaseId ? successResult(taskId, sourceTag, targetTag, releaseId) : failureResult(taskId, sourceTag, targetTag);
+    }
+    catch (error) {
+        (0, logging_ports_1.logError)(`Error executing ${taskId}: ${error}`);
+        return [new result_1.Result({
+                id: taskId,
                 success: false,
                 executed: true,
                 steps: [`Failed to update release \`${targetTag}\` from \`${sourceTag}\`.`],
                 errors: [error],
-            }));
-        }
-        return result;
+            })];
     }
 }
-exports.PublishGithubActionUseCase = PublishGithubActionUseCase;
+function validateVersion(param, taskId) {
+    if (param.singleAction.version.length > 0)
+        return undefined;
+    (0, logging_ports_1.logError)('Version is not set.');
+    return new result_1.Result({ id: taskId, success: false, executed: true, errors: [`${constants_1.INPUT_KEYS.SINGLE_ACTION_VERSION} is not set.`] });
+}
+function successResult(taskId, sourceTag, targetTag, releaseId) {
+    (0, logging_ports_1.logInfo)(`Updated release \`${targetTag}\` from \`${sourceTag}\`: ${releaseId}`);
+    return [new result_1.Result({ id: taskId, success: true, executed: true, steps: [`Updated release \`${targetTag}\` from \`${sourceTag}\`.`] })];
+}
+function failureResult(taskId, sourceTag, targetTag) {
+    return [new result_1.Result({ id: taskId, success: false, executed: true, errors: [`Failed to update release \`${targetTag}\` from \`${sourceTag}\`.`] })];
+}
 
 
 /***/ }),
@@ -51716,6 +51701,65 @@ exports.ExecutionBranchVersionResolver = ExecutionBranchVersionResolver;
 
 /***/ }),
 
+/***/ 63436:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.resolveEventIssueNumber = resolveEventIssueNumber;
+exports.resolveSingleActionIssueNumber = resolveSingleActionIssueNumber;
+const constants_1 = __nccwpck_require__(15415);
+const title_utils_1 = __nccwpck_require__(46267);
+function resolveEventIssueNumber(execution) {
+    if (execution.isIssue)
+        return execution.issue.number;
+    if (execution.isPullRequest)
+        return (0, title_utils_1.extractIssueNumberFromBranch)(execution.pullRequest.head);
+    if (execution.isPush)
+        return (0, title_utils_1.extractIssueNumberFromPush)(execution.commit.branch);
+    return execution.issueNumber;
+}
+async function resolveSingleActionIssueNumber(execution, issueRepository) {
+    const configuredIssue = execution.inputs?.[constants_1.INPUT_KEYS.SINGLE_ACTION_ISSUE];
+    if (configuredIssue)
+        return setIssueNumber(execution, Number(configuredIssue));
+    if (execution.isIssue)
+        return setIssueNumber(execution, execution.issue.number, 'issue');
+    if (execution.isPullRequest)
+        return setIssueNumber(execution, (0, title_utils_1.extractIssueNumberFromBranch)(execution.pullRequest.head), 'pullRequest');
+    if (execution.isPush)
+        return setIssueNumber(execution, (0, title_utils_1.extractIssueNumberFromPush)(execution.commit.branch), 'push');
+    return resolveConfiguredSingleAction(execution, issueRepository);
+}
+async function resolveConfiguredSingleAction(execution, issueRepository) {
+    const issueNumber = execution.singleAction.issue;
+    const isPullRequest = await issueRepository.isPullRequest(execution.owner, execution.repo, issueNumber, execution.tokens.token);
+    const isIssue = await issueRepository.isIssue(execution.owner, execution.repo, issueNumber, execution.tokens.token);
+    execution.singleAction.isPullRequest = isPullRequest;
+    execution.singleAction.isIssue = isIssue;
+    if (isIssue)
+        return setIssueNumber(execution, issueNumber);
+    if (!isPullRequest)
+        return execution.issueNumber;
+    const head = await issueRepository.getHeadBranch(execution.owner, execution.repo, issueNumber, execution.tokens.token);
+    return head === undefined ? undefined : setIssueNumber(execution, (0, title_utils_1.extractIssueNumberFromBranch)(head));
+}
+function setIssueNumber(execution, issueNumber, actionType) {
+    if (actionType === 'issue')
+        execution.singleAction.isIssue = true;
+    if (actionType === 'pullRequest')
+        execution.singleAction.isPullRequest = true;
+    if (actionType === 'push')
+        execution.singleAction.isPush = true;
+    execution.issueNumber = issueNumber;
+    execution.singleAction.issue = issueNumber;
+    return issueNumber;
+}
+
+
+/***/ }),
+
 /***/ 90972:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -51723,53 +51767,14 @@ exports.ExecutionBranchVersionResolver = ExecutionBranchVersionResolver;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveExecutionIssueNumber = resolveExecutionIssueNumber;
-const constants_1 = __nccwpck_require__(15415);
-const title_utils_1 = __nccwpck_require__(46267);
+const execution_issue_number_policy_1 = __nccwpck_require__(63436);
 async function resolveExecutionIssueNumber(execution, issueRepository) {
-    if (execution.isSingleAction) {
-        if (execution.inputs?.[constants_1.INPUT_KEYS.SINGLE_ACTION_ISSUE]) {
-            execution.issueNumber = Number(execution.inputs[constants_1.INPUT_KEYS.SINGLE_ACTION_ISSUE]);
-            execution.singleAction.issue = execution.issueNumber;
-        }
-        else if (execution.isIssue) {
-            execution.singleAction.isIssue = true;
-            execution.issueNumber = execution.issue.number;
-            execution.singleAction.issue = execution.issueNumber;
-        }
-        else if (execution.isPullRequest) {
-            execution.singleAction.isPullRequest = true;
-            execution.issueNumber = (0, title_utils_1.extractIssueNumberFromBranch)(execution.pullRequest.head);
-            execution.singleAction.issue = execution.issueNumber;
-        }
-        else if (execution.isPush) {
-            execution.singleAction.isPush = true;
-            execution.issueNumber = (0, title_utils_1.extractIssueNumberFromPush)(execution.commit.branch);
-            execution.singleAction.issue = execution.issueNumber;
-        }
-        else {
-            execution.singleAction.isPullRequest = await issueRepository.isPullRequest(execution.owner, execution.repo, execution.singleAction.issue, execution.tokens.token);
-            execution.singleAction.isIssue = await issueRepository.isIssue(execution.owner, execution.repo, execution.singleAction.issue, execution.tokens.token);
-            if (execution.singleAction.isIssue) {
-                execution.issueNumber = execution.singleAction.issue;
-            }
-            else if (execution.singleAction.isPullRequest) {
-                const head = await issueRepository.getHeadBranch(execution.owner, execution.repo, execution.singleAction.issue, execution.tokens.token);
-                if (head === undefined)
-                    return undefined;
-                execution.issueNumber = (0, title_utils_1.extractIssueNumberFromBranch)(head);
-            }
-        }
-    }
-    else if (execution.isIssue) {
-        execution.issueNumber = execution.issue.number;
-    }
-    else if (execution.isPullRequest) {
-        execution.issueNumber = (0, title_utils_1.extractIssueNumberFromBranch)(execution.pullRequest.head);
-    }
-    else if (execution.isPush) {
-        execution.issueNumber = (0, title_utils_1.extractIssueNumberFromPush)(execution.commit.branch);
-    }
-    return execution.issueNumber;
+    const resolvedIssueNumber = execution.isSingleAction
+        ? await (0, execution_issue_number_policy_1.resolveSingleActionIssueNumber)(execution, issueRepository)
+        : (0, execution_issue_number_policy_1.resolveEventIssueNumber)(execution);
+    if (resolvedIssueNumber !== undefined)
+        execution.issueNumber = resolvedIssueNumber;
+    return resolvedIssueNumber;
 }
 
 
@@ -52539,39 +52544,61 @@ const build_bugbot_fix_prompt_1 = __nccwpck_require__(89819);
 const marker_1 = __nccwpck_require__(62274);
 const types_1 = __nccwpck_require__(32632);
 function parseBugbotFindingComments(issueComments, pullRequestCommentsByNumber) {
-    const existingByFindingId = {};
+    const existingByFindingId = parseIssueFindingMarkers(issueComments);
+    const pullRequestFindings = parsePullRequestFindingMarkers(pullRequestCommentsByNumber);
+    mergeFindingContexts(existingByFindingId, pullRequestFindings.existingByFindingId);
+    return {
+        issueComments,
+        existingByFindingId,
+        prFindingIdToBody: pullRequestFindings.prFindingIdToBody,
+    };
+}
+function parseIssueFindingMarkers(issueComments) {
+    const findings = {};
     for (const comment of issueComments) {
         for (const marker of (0, marker_1.parseMarker)(comment.body)) {
             const findingId = (0, marker_1.normalizeFindingIdForMarker)(marker.findingId);
             if (findingId == null)
                 continue;
-            existingByFindingId[findingId] = {
-                ...(existingByFindingId[findingId] ?? {}),
+            findings[findingId] = {
+                ...(findings[findingId] ?? {}),
                 issue: { commentId: comment.id, resolved: marker.resolved },
             };
         }
     }
+    return findings;
+}
+function parsePullRequestFindingMarkers(pullRequestCommentsByNumber) {
+    const existingByFindingId = {};
     const prFindingIdToBody = {};
     for (const [pullRequestNumber, comments] of pullRequestCommentsByNumber) {
-        for (const comment of comments) {
-            const body = comment.body ?? "";
-            for (const marker of (0, marker_1.parseMarker)(body)) {
-                const findingId = (0, marker_1.normalizeFindingIdForMarker)(marker.findingId);
-                if (findingId == null)
-                    continue;
-                existingByFindingId[findingId] = {
-                    ...(existingByFindingId[findingId] ?? {}),
-                    pullRequest: {
-                        commentIdentity: comment.identity,
-                        pullRequestNumber,
-                        resolved: marker.resolved,
-                    },
-                };
-                prFindingIdToBody[findingId] = (0, build_bugbot_fix_prompt_1.truncateFindingBody)(body, build_bugbot_fix_prompt_1.MAX_FINDING_BODY_LENGTH);
-            }
+        parsePullRequestComments(comments, pullRequestNumber, existingByFindingId, prFindingIdToBody);
+    }
+    return { existingByFindingId, prFindingIdToBody };
+}
+function parsePullRequestComments(comments, pullRequestNumber, existingByFindingId, prFindingIdToBody) {
+    for (const comment of comments) {
+        const body = comment.body ?? "";
+        for (const marker of (0, marker_1.parseMarker)(body)) {
+            const findingId = (0, marker_1.normalizeFindingIdForMarker)(marker.findingId);
+            if (findingId == null)
+                continue;
+            existingByFindingId[findingId] = {
+                ...(existingByFindingId[findingId] ?? {}),
+                pullRequest: {
+                    commentIdentity: comment.identity,
+                    pullRequestNumber,
+                    resolved: marker.resolved,
+                },
+            };
+            prFindingIdToBody[findingId] = (0, build_bugbot_fix_prompt_1.truncateFindingBody)(body, build_bugbot_fix_prompt_1.MAX_FINDING_BODY_LENGTH);
         }
     }
-    return { issueComments, existingByFindingId, prFindingIdToBody };
+}
+function mergeFindingContexts(target, source) {
+    for (const [findingId, context] of Object.entries(source)) {
+        target[findingId] = { ...(target[findingId] ?? {}), ...context };
+    }
 }
 function collectPreviousBugbotFindings(issueComments, existingByFindingId, prFindingIdToBody) {
     return Object.entries(existingByFindingId).flatMap(([findingId, data]) => {
@@ -52674,29 +52701,44 @@ function safeForPrompt(s, maxLen) {
     return s.replace(/\r\n|\r|\n/g, " ").replace(/`/g, "\\`").slice(0, maxLen);
 }
 function buildBugbotFixIntentPrompt(userComment, unresolvedFindings, parentCommentBody) {
-    const findingsBlock = unresolvedFindings.length === 0
-        ? '(No unresolved findings.)'
-        : unresolvedFindings
-            .map((f) => `- **id:** \`${f.id.replace(/`/g, '\\`')}\` | **title:** ${safeForPrompt(f.title ?? "", MAX_TITLE_LENGTH)}` +
-            (f.file != null ? ` | **file:** ${safeForPrompt(f.file, MAX_FILE_LENGTH)}` : '') +
-            (f.line != null ? ` | **line:** ${f.line}` : '') +
-            (f.description ? ` | **description:** ${(f.description ?? "").slice(0, 200)}${(f.description?.length ?? 0) > 200 ? '...' : ''}` : ''))
-            .join('\n');
-    const parentBlock = parentCommentBody != null
-        ? (() => {
-            const sliced = parentCommentBody.slice(0, 1500);
-            const trimmed = sliced.trim();
-            return trimmed.length > 0
-                ? `\n**Parent comment (the comment the user replied to):**\n${trimmed}${parentCommentBody.length > 1500 ? '...' : ''}\n`
-                : '';
-        })()
-        : '';
+    const findingsBlock = buildFindingsBlock(unresolvedFindings);
+    const parentBlock = buildParentBlock(parentCommentBody);
     return (0, prompts_1.getBugbotFixIntentPrompt)({
         projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
         findingsBlock,
         parentBlock,
         userComment: (0, sanitize_user_comment_for_prompt_1.sanitizeUserCommentForPrompt)(userComment),
     });
+}
+function buildFindingsBlock(findings) {
+    if (findings.length === 0)
+        return '(No unresolved findings.)';
+    return findings.map(formatFinding).join('\n');
+}
+function formatFinding(finding) {
+    const fields = [
+        `- **id:** \`${finding.id.replace(/`/g, '\\`')}\``,
+        `**title:** ${safeForPrompt(finding.title ?? '', MAX_TITLE_LENGTH)}`,
+    ];
+    if (finding.file != null)
+        fields.push(`**file:** ${safeForPrompt(finding.file, MAX_FILE_LENGTH)}`);
+    if (finding.line != null)
+        fields.push(`**line:** ${finding.line}`);
+    if (finding.description)
+        fields.push(`**description:** ${truncateDescription(finding.description)}`);
+    return fields.join(' | ');
+}
+function truncateDescription(description) {
+    return `${description.slice(0, 200)}${description.length > 200 ? '...' : ''}`;
+}
+function buildParentBlock(parentCommentBody) {
+    if (parentCommentBody == null)
+        return '';
+    const sliced = parentCommentBody.slice(0, 1500);
+    const trimmed = sliced.trim();
+    if (trimmed.length === 0)
+        return '';
+    return `\n**Parent comment (the comment the user replied to):**\n${trimmed}${parentCommentBody.length > 1500 ? '...' : ''}\n`;
 }
 
 
@@ -53340,34 +53382,37 @@ async function hasUncommittedChanges(gitCommitPort) {
 async function checkoutBranch(branch, gitCommitPort) {
     let didStash = false;
     try {
-        if (await hasUncommittedChanges(gitCommitPort)) {
-            (0, logging_ports_1.logDebugInfo)("Uncommitted changes present; stashing before checkout.");
-            await gitCommitPort.execute("git", ["stash", "push", "-u", "-m", STASH_MESSAGE]);
-            didStash = true;
-        }
+        didStash = await stashWorkspaceChanges(gitCommitPort);
         await gitCommitPort.execute("git", ["fetch", "origin", branch]);
         await gitCommitPort.execute("git", ["checkout", branch]);
         (0, logging_ports_1.logInfo)(`Checked out branch ${branch}.`);
-        if (!didStash)
-            return true;
-        try {
-            await gitCommitPort.execute("git", ["stash", "pop"]);
-            (0, logging_ports_1.logDebugInfo)("Restored stashed changes after checkout.");
-            return true;
-        }
-        catch (popErr) {
-            const popMsg = popErr instanceof Error ? popErr.message : String(popErr);
-            (0, logging_ports_1.logError)(`Failed to restore stashed changes after checkout: ${popMsg}`);
-            (0, logging_ports_1.logError)("Changes remain stashed; run 'git stash pop' manually to restore them.");
-            return false;
-        }
+        return didStash ? restoreStashedChanges(gitCommitPort) : true;
     }
     catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         (0, logging_ports_1.logError)(`Failed to checkout branch ${branch}: ${msg}`);
-        if (didStash) {
+        if (didStash)
             (0, logging_ports_1.logError)("Changes were stashed; run 'git stash pop' manually to restore them.");
-        }
+        return false;
+    }
+}
+async function stashWorkspaceChanges(gitCommitPort) {
+    if (!await hasUncommittedChanges(gitCommitPort))
+        return false;
+    (0, logging_ports_1.logDebugInfo)("Uncommitted changes present; stashing before checkout.");
+    await gitCommitPort.execute("git", ["stash", "push", "-u", "-m", STASH_MESSAGE]);
+    return true;
+}
+async function restoreStashedChanges(gitCommitPort) {
+    try {
+        await gitCommitPort.execute("git", ["stash", "pop"]);
+        (0, logging_ports_1.logDebugInfo)("Restored stashed changes after checkout.");
+        return true;
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        (0, logging_ports_1.logError)(`Failed to restore stashed changes after checkout: ${message}`);
+        (0, logging_ports_1.logError)("Changes remain stashed; run 'git stash pop' manually to restore them.");
         return false;
     }
 }
@@ -53721,17 +53766,13 @@ function isSafeFindingFilePath(path) {
     const trimmed = path.trim();
     if (trimmed.length === 0)
         return false;
-    if (trimmed.includes(NULL_BYTE))
-        return false;
-    if (trimmed.includes(PARENT_SEGMENT))
-        return false;
-    if (trimmed.startsWith(SLASH))
-        return false;
-    if (/^[a-zA-Z]:[/\\]/.test(trimmed))
-        return false;
-    if (trimmed.startsWith(BACKSLASH))
-        return false;
-    return true;
+    return !containsUnsafePathContent(trimmed) && !isAbsolutePath(trimmed);
+}
+function containsUnsafePathContent(path) {
+    return path.includes(NULL_BYTE) || path.includes(PARENT_SEGMENT);
+}
+function isAbsolutePath(path) {
+    return path.startsWith(SLASH) || /^[a-zA-Z]:[/\\]/.test(path) || path.startsWith(BACKSLASH);
 }
 /**
  * Returns true if path is safe (isSafeFindingFilePath) and is in the list of PR changed files.
@@ -54309,24 +54350,30 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const verify_command_policy_1 = __nccwpck_require__(96031);
 async function runVerifyCommands(commands, execute) {
     for (const command of commands) {
-        const parsed = (0, verify_command_policy_1.parseVerifyCommand)(command);
-        if (!parsed) {
-            const error = `Invalid verify command (use no shell operators; quotes allowed): ${command}`;
-            (0, logging_ports_1.logError)(error);
-            return { success: false, failedCommand: command, error };
-        }
-        try {
-            const exitCode = await execute(parsed.program, parsed.args);
-            if (exitCode !== 0)
-                return { success: false, failedCommand: command };
-        }
-        catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            (0, logging_ports_1.logError)(`Verify command failed: ${command} - ${message}`);
-            return { success: false, failedCommand: command };
-        }
+        const result = await executeVerifyCommand(command, execute);
+        if (!result.success)
+            return result;
     }
     return { success: true };
+}
+async function executeVerifyCommand(command, execute) {
+    const parsed = (0, verify_command_policy_1.parseVerifyCommand)(command);
+    if (!parsed)
+        return invalidCommand(command);
+    try {
+        const exitCode = await execute(parsed.program, parsed.args);
+        return exitCode === 0 ? { success: true } : { success: false, failedCommand: command };
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        (0, logging_ports_1.logError)(`Verify command failed: ${command} - ${message}`);
+        return { success: false, failedCommand: command };
+    }
+}
+function invalidCommand(command) {
+    const error = `Invalid verify command (use no shell operators; quotes allowed): ${command}`;
+    (0, logging_ports_1.logError)(error);
+    return { success: false, failedCommand: command, error };
 }
 
 
@@ -55602,7 +55649,7 @@ function buildResumeComment(param, sections, debugLogSection) {
         isChore: param.isChore,
         images: param.images,
     }, list_utils_1.getRandomElement);
-    const imageMarkdown = presentation.image && ((param.isIssue && param.images.imagesOnIssue) || (param.isPullRequest && param.images.imagesOnPullRequest))
+    const imageMarkdown = shouldRenderImage(param, presentation.image)
         ? `![image](${presentation.image})`
         : '';
     return `# ${presentation.title}
@@ -55615,6 +55662,15 @@ ${sections.footer}
 ${debugLogSection}
 🚀 Happy coding!
             `;
+}
+function shouldRenderImage(param, image) {
+    if (!image)
+        return false;
+    if (param.isIssue)
+        return param.images.imagesOnIssue;
+    if (param.isPullRequest)
+        return param.images.imagesOnPullRequest;
+    return false;
 }
 
 
@@ -56217,19 +56273,16 @@ async function runAssignReviewersWorkflow(param, dependencies) {
         (0, logging_ports_1.logDebugInfo)(`#${number} needs ${desiredReviewersCount} reviewers.`);
         if (desiredReviewersCount <= 0 || number <= 0)
             return [successResult()];
-        const currentReviewers = (0, reviewer_assignment_policy_1.uniqueLogins)(await dependencies.pullRequestRepository.getCurrentReviewers(param.owner, param.repo, number, param.tokens.token));
+        const currentReviewers = await loadCurrentReviewers(param, dependencies);
         if (currentReviewers.length >= desiredReviewersCount)
             return [successResult()];
-        const currentAssignees = (0, reviewer_assignment_policy_1.uniqueLogins)(await dependencies.issueRepository.getCurrentAssignees(param.owner, param.repo, number, param.tokens.token));
         const missingReviewers = desiredReviewersCount - currentReviewers.length;
         (0, logging_ports_1.logDebugInfo)(`#${number} needs ${missingReviewers} more reviewers.`);
-        const excludeForReview = (0, reviewer_assignment_policy_1.buildReviewerExclusions)(param.pullRequest.creator, currentReviewers, currentAssignees);
-        const members = (0, reviewer_assignment_policy_1.selectEligibleReviewers)(await dependencies.projectRepository.getRandomMembers(param.owner, missingReviewers, excludeForReview, param.tokens.token), excludeForReview, missingReviewers);
+        const members = await selectReviewerCandidates(param, dependencies, currentReviewers, missingReviewers);
         if (members.length === 0) {
             return [failureResult('Tried to assign members as reviewers to pull request, but no one was found.')];
         }
-        const reviewersAdded = await dependencies.pullRequestRepository.addReviewersToPullRequest(param.owner, param.repo, number, members, param.tokens.token);
-        const confirmedReviewers = (0, reviewer_assignment_policy_1.selectConfirmedReviewers)(members, reviewersAdded);
+        const confirmedReviewers = await requestAndConfirmReviewers(param, dependencies, members);
         if (confirmedReviewers.length === 0) {
             return [failureResult('Tried to assign members as reviewers to pull request, but no reviewer request was confirmed.')];
         }
@@ -56258,6 +56311,19 @@ async function runAssignReviewersWorkflow(param, dependencies) {
             }),
         ];
     }
+}
+async function loadCurrentReviewers(param, dependencies) {
+    return (0, reviewer_assignment_policy_1.uniqueLogins)(await dependencies.pullRequestRepository.getCurrentReviewers(param.owner, param.repo, param.pullRequest.number, param.tokens.token));
+}
+async function selectReviewerCandidates(param, dependencies, currentReviewers, missingReviewers) {
+    const currentAssignees = (0, reviewer_assignment_policy_1.uniqueLogins)(await dependencies.issueRepository.getCurrentAssignees(param.owner, param.repo, param.pullRequest.number, param.tokens.token));
+    const excluded = (0, reviewer_assignment_policy_1.buildReviewerExclusions)(param.pullRequest.creator, currentReviewers, currentAssignees);
+    const members = await dependencies.projectRepository.getRandomMembers(param.owner, missingReviewers, excluded, param.tokens.token);
+    return (0, reviewer_assignment_policy_1.selectEligibleReviewers)(members, excluded, missingReviewers);
+}
+async function requestAndConfirmReviewers(param, dependencies, members) {
+    const reviewersAdded = await dependencies.pullRequestRepository.addReviewersToPullRequest(param.owner, param.repo, param.pullRequest.number, members, param.tokens.token);
+    return (0, reviewer_assignment_policy_1.selectConfirmedReviewers)(members, reviewersAdded);
 }
 function successResult() {
     return new result_1.Result({ id: TASK_ID, success: true, executed: true });
@@ -57077,6 +57143,24 @@ async function runPrioritySizeCheck(param, taskId, contentNumber, projectReposit
 
 /***/ }),
 
+/***/ 57836:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.selectIssueBranchesToRemove = selectIssueBranchesToRemove;
+function selectIssueBranchesToRemove(branches, issueNumber, branchTypes) {
+    return branchTypes.flatMap((type) => {
+        const prefix = `${type}/${issueNumber}-`;
+        const match = branches.find((branch) => branch.includes(prefix));
+        return match ? [match] : [];
+    });
+}
+
+
+/***/ }),
+
 /***/ 15608:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -57087,6 +57171,7 @@ exports.RemoveIssueBranchesUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
+const remove_issue_branches_policy_1 = __nccwpck_require__(57836);
 /**
  * Remove any branch created for this issue
  */
@@ -57099,43 +57184,10 @@ class RemoveIssueBranchesUseCase {
         (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const results = [];
         try {
-            const branchTypes = [param.branches.featureTree, param.branches.bugfixTree];
             const branches = await this.branchLifecyclePort.getListOfBranches(param.owner, param.repo, param.tokens.token);
-            for (const type of branchTypes) {
-                (0, logging_ports_1.logDebugInfo)(`Checking branch type ${type}`);
-                let branchName = '';
-                const prefix = `${type}/${param.issueNumber}-`;
-                (0, logging_ports_1.logDebugInfo)(`Checking prefix ${prefix}`);
-                const matchingBranch = branches.find(branch => branch.indexOf(prefix) > -1);
-                if (!matchingBranch)
-                    continue;
-                branchName = matchingBranch;
-                (0, logging_ports_1.logDebugInfo)(`RemoveIssueBranches: attempting to remove branch ${branchName}.`);
-                const removed = await this.branchLifecyclePort.removeBranch(param.owner, param.repo, branchName, param.tokens.token);
-                if (removed) {
-                    (0, logging_ports_1.logDebugInfo)(`RemoveIssueBranches: removed branch ${branchName}.`);
-                    results.push(new result_1.Result({
-                        id: this.taskId,
-                        success: true,
-                        executed: true,
-                        steps: [
-                            `The branch \`${branchName}\` was removed.`,
-                        ],
-                    }));
-                    if (param.previousConfiguration?.branchType === param.branches.hotfixTree) {
-                        results.push(new result_1.Result({
-                            id: this.taskId,
-                            success: true,
-                            executed: true,
-                            reminders: [
-                                `Determine if the \`${param.branches.hotfixTree}\` branch is no longer required and can be removed.`,
-                            ],
-                        }));
-                    }
-                }
-                else {
-                    (0, logging_ports_1.logWarn)(`RemoveIssueBranches: failed to remove branch ${branchName}.`);
-                }
+            const branchNames = (0, remove_issue_branches_policy_1.selectIssueBranchesToRemove)(branches, param.issueNumber, [param.branches.featureTree, param.branches.bugfixTree]);
+            for (const branchName of branchNames) {
+                results.push(...await removeIssueBranch(param, this.taskId, branchName, this.branchLifecyclePort));
             }
         }
         catch (error) {
@@ -57154,6 +57206,30 @@ class RemoveIssueBranchesUseCase {
     }
 }
 exports.RemoveIssueBranchesUseCase = RemoveIssueBranchesUseCase;
+async function removeIssueBranch(param, taskId, branchName, branchLifecyclePort) {
+    (0, logging_ports_1.logDebugInfo)(`RemoveIssueBranches: attempting to remove branch ${branchName}.`);
+    const removed = await branchLifecyclePort.removeBranch(param.owner, param.repo, branchName, param.tokens.token);
+    if (!removed) {
+        (0, logging_ports_1.logWarn)(`RemoveIssueBranches: failed to remove branch ${branchName}.`);
+        return [];
+    }
+    (0, logging_ports_1.logDebugInfo)(`RemoveIssueBranches: removed branch ${branchName}.`);
+    const results = [new result_1.Result({
+            id: taskId,
+            success: true,
+            executed: true,
+            steps: [`The branch \`${branchName}\` was removed.`],
+        })];
+    if (param.previousConfiguration?.branchType === param.branches.hotfixTree) {
+        results.push(new result_1.Result({
+            id: taskId,
+            success: true,
+            executed: true,
+            reminders: [`Determine if the \`${param.branches.hotfixTree}\` branch is no longer required and can be removed.`],
+        }));
+    }
+    return results;
+}
 
 
 /***/ }),
@@ -57359,6 +57435,7 @@ exports.LinkPullRequestIssueUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
+const link_pull_request_issue_workflow_1 = __nccwpck_require__(19033);
 class LinkPullRequestIssueUseCase {
     constructor(pullRequestIssueLinkPort, eventualConsistencyDelayPort) {
         this.pullRequestIssueLinkPort = pullRequestIssueLinkPort;
@@ -57367,85 +57444,80 @@ class LinkPullRequestIssueUseCase {
     }
     async invoke(param) {
         (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
-        const result = [];
         try {
-            const isLinked = await this.pullRequestIssueLinkPort.isLinked(param.pullRequest.url);
-            if (!isLinked) {
-                /**
-                 *  Set the primary/default branch
-                 */
-                await this.pullRequestIssueLinkPort.updateBaseBranch(param.owner, param.repo, param.pullRequest.number, param.branches.defaultBranch, param.tokens.token);
-                result.push(new result_1.Result({
-                    id: this.taskId,
-                    success: true,
-                    executed: true,
-                    steps: [
-                        `The base branch was temporarily updated to \`${param.branches.defaultBranch}\`.`,
-                    ],
-                }));
-                /**
-                 *  Update PR's description.
-                 */
-                let prBody = param.pullRequest.body;
-                let updatedBody = `${prBody}\n\nResolves #${param.issueNumber}`;
-                await this.pullRequestIssueLinkPort.updateDescription(param.owner, param.repo, param.pullRequest.number, updatedBody, param.tokens.token);
-                result.push(new result_1.Result({
-                    id: this.taskId,
-                    success: true,
-                    executed: true,
-                    steps: [
-                        `The description was temporarily modified to include a reference to issue **#${param.issueNumber}**.`,
-                    ],
-                }));
-                /**
-                 *  Await 20 seconds
-                 */
-                await this.eventualConsistencyDelayPort.wait(20000);
-                /**
-                 *  Restore the original branch
-                 */
-                await this.pullRequestIssueLinkPort.updateBaseBranch(param.owner, param.repo, param.pullRequest.number, param.pullRequest.base, param.tokens.token);
-                result.push(new result_1.Result({
-                    id: this.taskId,
-                    success: true,
-                    executed: true,
-                    steps: [
-                        `The base branch was reverted to its original value: \`${param.pullRequest.base}\`.`,
-                    ],
-                }));
-                /**
-                 * Restore comment on description
-                 */
-                prBody = param.pullRequest.body;
-                updatedBody = prBody.replace(`\n\nResolves #${param.issueNumber}`, "");
-                await this.pullRequestIssueLinkPort.updateDescription(param.owner, param.repo, param.pullRequest.number, updatedBody, param.tokens.token);
-                result.push(new result_1.Result({
-                    id: this.taskId,
-                    success: true,
-                    executed: true,
-                    steps: [
-                        `The temporary issue reference **#${param.issueNumber}** was removed from the description.`,
-                    ],
-                }));
-                return result;
-            }
+            return await (0, link_pull_request_issue_workflow_1.runLinkPullRequestIssue)(param, this.taskId, this.pullRequestIssueLinkPort, this.eventualConsistencyDelayPort);
         }
         catch (error) {
             (0, logging_ports_1.logError)(error);
-            result.push(new result_1.Result({
-                id: this.taskId,
-                success: false,
-                executed: true,
-                steps: [
-                    `Tried to link pull request to project, but there was a problem.`,
-                ],
-                errors: [error],
-            }));
+            return [
+                new result_1.Result({
+                    id: this.taskId,
+                    success: false,
+                    executed: true,
+                    steps: [
+                        `Tried to link pull request to project, but there was a problem.`,
+                    ],
+                    errors: [error],
+                }),
+            ];
         }
-        return result;
     }
 }
 exports.LinkPullRequestIssueUseCase = LinkPullRequestIssueUseCase;
+
+
+/***/ }),
+
+/***/ 19033:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.runLinkPullRequestIssue = runLinkPullRequestIssue;
+const result_1 = __nccwpck_require__(73817);
+async function runLinkPullRequestIssue(param, taskId, pullRequestIssueLinkPort, eventualConsistencyDelayPort) {
+    if (await pullRequestIssueLinkPort.isLinked(param.pullRequest.url))
+        return [];
+    const results = await addTemporaryIssueReference(param, taskId, pullRequestIssueLinkPort);
+    await eventualConsistencyDelayPort.wait(20000);
+    results.push(...await restorePullRequestState(param, taskId, pullRequestIssueLinkPort));
+    return results;
+}
+async function addTemporaryIssueReference(param, taskId, port) {
+    await port.updateBaseBranch(param.owner, param.repo, param.pullRequest.number, param.branches.defaultBranch, param.tokens.token);
+    const results = [new result_1.Result({
+            id: taskId,
+            success: true,
+            executed: true,
+            steps: [`The base branch was temporarily updated to \`${param.branches.defaultBranch}\`.`],
+        })];
+    await port.updateDescription(param.owner, param.repo, param.pullRequest.number, `${param.pullRequest.body}\n\nResolves #${param.issueNumber}`, param.tokens.token);
+    results.push(new result_1.Result({
+        id: taskId,
+        success: true,
+        executed: true,
+        steps: [`The description was temporarily modified to include a reference to issue **#${param.issueNumber}**.`],
+    }));
+    return results;
+}
+async function restorePullRequestState(param, taskId, port) {
+    await port.updateBaseBranch(param.owner, param.repo, param.pullRequest.number, param.pullRequest.base, param.tokens.token);
+    const results = [new result_1.Result({
+            id: taskId,
+            success: true,
+            executed: true,
+            steps: [`The base branch was reverted to its original value: \`${param.pullRequest.base}\`.`],
+        })];
+    await port.updateDescription(param.owner, param.repo, param.pullRequest.number, param.pullRequest.body.replace(`\n\nResolves #${param.issueNumber}`, ''), param.tokens.token);
+    results.push(new result_1.Result({
+        id: taskId,
+        success: true,
+        executed: true,
+        steps: [`The temporary issue reference **#${param.issueNumber}** was removed from the description.`],
+    }));
+    return results;
+}
 
 
 /***/ }),
@@ -58316,37 +58388,47 @@ exports.IssueTypes = IssueTypes;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.typesForIssue = exports.branchesForManagement = void 0;
 const branchesForManagement = (params, labels, featureLabel, enhancementLabel, bugfixLabel, bugLabel, hotfixLabel, releaseLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel) => {
-    if (labels.includes(hotfixLabel))
-        return params.branches.bugfixTree;
-    if (labels.includes(bugfixLabel) || labels.includes(bugLabel))
-        return params.branches.bugfixTree;
-    if (labels.includes(releaseLabel))
-        return params.branches.releaseTree;
-    if (labels.includes(docsLabel) || labels.includes(documentationLabel))
-        return params.branches.docsTree;
-    if (labels.includes(choreLabel) || labels.includes(maintenanceLabel))
-        return params.branches.choreTree;
-    if (labels.includes(featureLabel) || labels.includes(enhancementLabel))
-        return params.branches.featureTree;
-    return params.branches.featureTree;
+    return resolveBranch(params, labels, {
+        feature: featureLabel,
+        enhancement: enhancementLabel,
+        bugfix: bugfixLabel,
+        bug: bugLabel,
+        hotfix: hotfixLabel,
+        release: releaseLabel,
+        docs: docsLabel,
+        documentation: documentationLabel,
+        chore: choreLabel,
+        maintenance: maintenanceLabel,
+    }, 'bugfixTree');
 };
 exports.branchesForManagement = branchesForManagement;
 const typesForIssue = (params, labels, featureLabel, enhancementLabel, bugfixLabel, bugLabel, hotfixLabel, releaseLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel) => {
-    if (labels.includes(hotfixLabel))
-        return params.branches.hotfixTree;
-    if (labels.includes(bugfixLabel) || labels.includes(bugLabel))
-        return params.branches.bugfixTree;
-    if (labels.includes(releaseLabel))
-        return params.branches.releaseTree;
-    if (labels.includes(docsLabel) || labels.includes(documentationLabel))
-        return params.branches.docsTree;
-    if (labels.includes(choreLabel) || labels.includes(maintenanceLabel))
-        return params.branches.choreTree;
-    if (labels.includes(featureLabel) || labels.includes(enhancementLabel))
-        return params.branches.featureTree;
-    return params.branches.featureTree;
+    return resolveBranch(params, labels, {
+        feature: featureLabel,
+        enhancement: enhancementLabel,
+        bugfix: bugfixLabel,
+        bug: bugLabel,
+        hotfix: hotfixLabel,
+        release: releaseLabel,
+        docs: docsLabel,
+        documentation: documentationLabel,
+        chore: choreLabel,
+        maintenance: maintenanceLabel,
+    }, 'hotfixTree');
 };
 exports.typesForIssue = typesForIssue;
+function resolveBranch(params, labels, names, hotfixBranch) {
+    const rules = [
+        { names: [names.hotfix], branch: hotfixBranch },
+        { names: [names.bugfix, names.bug], branch: 'bugfixTree' },
+        { names: [names.release], branch: 'releaseTree' },
+        { names: [names.docs, names.documentation], branch: 'docsTree' },
+        { names: [names.chore, names.maintenance], branch: 'choreTree' },
+        { names: [names.feature, names.enhancement], branch: 'featureTree' },
+    ];
+    const matchingRule = rules.find((rule) => rule.names.some((name) => labels.includes(name)));
+    return params.branches[matchingRule?.branch ?? 'featureTree'];
+}
 
 
 /***/ }),
@@ -59251,38 +59333,34 @@ const agent_credential_policy_1 = __nccwpck_require__(36529);
 function hasCodexChatGptSession(environment) {
     const codexHome = environment.CODEX_HOME?.trim()
         || (environment === process.env || environment.HOME ? (0, node_path_1.join)(environment.HOME || (0, node_os_1.homedir)(), '.codex') : undefined);
-    if (!codexHome)
-        return false;
-    const authPath = (0, node_path_1.join)(codexHome, 'auth.json');
-    if (!(0, node_fs_1.existsSync)(authPath))
-        return false;
-    try {
-        const auth = JSON.parse((0, node_fs_1.readFileSync)(authPath, 'utf8'));
-        return auth.auth_mode === 'chatgpt'
-            && auth.OPENAI_API_KEY == null
-            && typeof auth.tokens?.access_token === 'string'
-            && typeof auth.tokens?.refresh_token === 'string';
-    }
-    catch {
-        return false;
-    }
+    return isCodexChatGptAuth(readAuthFile(codexHome ? (0, node_path_1.join)(codexHome, 'auth.json') : undefined));
 }
 function hasOpenCodeLocalSession(environment) {
     const dataDirectory = environment.OPENCODE_DATA_DIR?.trim()
         || environment.XDG_DATA_HOME?.trim()
         || (environment === process.env || environment.HOME ? (0, node_path_1.join)(environment.HOME || (0, node_os_1.homedir)(), '.local', 'share') : undefined);
-    if (!dataDirectory)
-        return false;
-    const authPath = environment.OPENCODE_AUTH_FILE?.trim() || (0, node_path_1.join)(dataDirectory, 'opencode', 'auth.json');
-    if (!(0, node_fs_1.existsSync)(authPath))
-        return false;
+    const authPath = environment.OPENCODE_AUTH_FILE?.trim()
+        || (dataDirectory ? (0, node_path_1.join)(dataDirectory, 'opencode', 'auth.json') : undefined);
+    return Boolean(dataDirectory && (0, agent_credential_policy_1.containsCredentialMaterial)(readAuthFile(authPath)));
+}
+function readAuthFile(path) {
+    if (!path || !(0, node_fs_1.existsSync)(path))
+        return undefined;
     try {
-        const auth = JSON.parse((0, node_fs_1.readFileSync)(authPath, 'utf8'));
-        return (0, agent_credential_policy_1.containsCredentialMaterial)(auth);
+        return JSON.parse((0, node_fs_1.readFileSync)(path, 'utf8'));
     }
     catch {
-        return false;
+        return undefined;
     }
+}
+function isCodexChatGptAuth(auth) {
+    if (!auth || typeof auth !== 'object')
+        return false;
+    const candidate = auth;
+    return candidate.auth_mode === 'chatgpt'
+        && candidate.OPENAI_API_KEY == null
+        && typeof candidate.tokens?.access_token === 'string'
+        && typeof candidate.tokens?.refresh_token === 'string';
 }
 /** Keeps only credentials relevant to the selected provider/model process. */
 function buildAgentCliEnvironment(provider, environment = process.env, modelProvider) {
@@ -59302,17 +59380,18 @@ function checkAgentAuthentication(configuration, environment = process.env) {
     const hasOpenCodeSession = configuration.provider === 'opencode' && hasOpenCodeLocalSession(environment);
     const modelProvider = configuration.modelProvider?.trim().toLowerCase();
     const hasConfiguredCredential = variables.some((variable) => (0, agent_credential_policy_1.hasValue)(environment, variable));
-    if (hasCodexSession || hasOpenCodeSession || hasConfiguredCredential) {
-        return {
-            status: 'available',
-            variables,
-            message: hasCodexSession
-                ? 'Local ChatGPT Codex session available from CODEX_HOME/auth.json.'
-                : hasOpenCodeSession
-                    ? 'Local OpenCode authentication available from its controlled auth store.'
-                    : `Local credentials available for ${configuration.provider}.`,
-        };
-    }
+    if (hasCodexSession)
+        return availableStatus(variables, 'Local ChatGPT Codex session available from CODEX_HOME/auth.json.');
+    if (hasOpenCodeSession)
+        return availableStatus(variables, 'Local OpenCode authentication available from its controlled auth store.');
+    if (hasConfiguredCredential)
+        return availableStatus(variables, `Local credentials available for ${configuration.provider}.`);
+    return resolveMissingAuthentication(configuration, variables, modelProvider);
+}
+function availableStatus(variables, message) {
+    return { status: 'available', variables, message };
+}
+function resolveMissingAuthentication(configuration, variables, modelProvider) {
     if (configuration.provider === 'codex') {
         return {
             status: 'not_required',
@@ -61381,17 +61460,9 @@ async function assignIssueType(getIssueId, client, owner, repository, issueNumbe
     (0, logger_1.logDebugInfo)(`Setting issue type for issue ${issueNumber} to ${selected.name}`);
     const issueId = await getIssueId(owner, repository, issueNumber, token);
     const { organization } = await loadOrganizationIssueTypes(client, owner);
-    let issueTypeId = organization.issueTypes.nodes.find((type) => type.name.toLowerCase() === selected.name.toLowerCase())?.id;
-    if (!issueTypeId) {
-        try {
-            issueTypeId = await createIssueType(client, organization.id, selected.name, selected.description, selected.color);
-        }
-        catch (error) {
-            if (error instanceof IssueTypeCreationSkippedError)
-                return;
-            throw error;
-        }
-    }
+    const issueTypeId = await findOrCreateIssueType(client, organization, selected);
+    if (!issueTypeId)
+        return;
     await client.graphql(`
                 mutation ($issueId: ID!, $issueTypeId: ID!) {
                     updateIssueIssueType(input: { issueId: $issueId, issueTypeId: $issueTypeId }) {
@@ -61400,6 +61471,19 @@ async function assignIssueType(getIssueId, client, owner, repository, issueNumbe
                 }
             `, { issueId, issueTypeId });
     (0, logger_1.logDebugInfo)(`Successfully updated issue type to ${selected.name}`);
+}
+async function findOrCreateIssueType(client, organization, selected) {
+    const existingId = organization.issueTypes.nodes.find((type) => type.name.toLowerCase() === selected.name.toLowerCase())?.id;
+    if (existingId)
+        return existingId;
+    try {
+        return await createIssueType(client, organization.id, selected.name, selected.description, selected.color);
+    }
+    catch (error) {
+        if (error instanceof IssueTypeCreationSkippedError)
+            return undefined;
+        throw error;
+    }
 }
 async function loadOrganizationIssueTypes(client, owner) {
     return client.graphql(`
@@ -61497,20 +61581,26 @@ async function ensureIssueTypes(client, owner, issueTypes) {
     let existing = 0;
     const errors = [];
     for (const configured of (0, issue_type_configuration_1.configuredIssueTypes)(issueTypes)) {
-        try {
-            const result = await ensureConfiguredIssueType(client, owner, configured);
-            if (result.created)
-                created += 1;
-            else
-                existing += 1;
-        }
-        catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            (0, logger_1.logError)(`Error ensuring issue type "${configured.name}": ${error}`);
-            errors.push(`Error creando tipo de Issue "${configured.name}": ${message}`);
-        }
+        const result = await ensureConfiguredIssueTypeSafely(client, owner, configured);
+        if (result.kind === 'created')
+            created += 1;
+        if (result.kind === 'existing')
+            existing += 1;
+        if (result.kind === 'error')
+            errors.push(result.message);
     }
     return { created, existing, errors };
+}
+async function ensureConfiguredIssueTypeSafely(client, owner, configured) {
+    try {
+        const result = await ensureConfiguredIssueType(client, owner, configured);
+        return { kind: result.created ? 'created' : 'existing' };
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        (0, logger_1.logError)(`Error ensuring issue type "${configured.name}": ${error}`);
+        return { kind: 'error', message: `Error creando tipo de Issue "${configured.name}": ${message}` };
+    }
 }
 function ensureConfiguredIssueType(client, owner, configured) {
     return ensureIssueType(client, owner, configured.name, configured.description, configured.color);

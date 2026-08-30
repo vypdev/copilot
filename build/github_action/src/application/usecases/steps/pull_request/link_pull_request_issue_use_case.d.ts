@@ -1,4 +1,4 @@
-import { Execution } from "../../../../data/model/execution";
+import type { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
 import type { PullRequestIssueLinkPort } from "../../../ports/pull_request_issue_link_ports";
 import type { EventualConsistencyDelayPort } from "../../../ports/eventual_consistency_ports";

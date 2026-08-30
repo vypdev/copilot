@@ -69,7 +69,7 @@ function buildResumeComment(
         isChore: param.isChore,
         images: param.images,
     }, getRandomElement);
-    const imageMarkdown = presentation.image && ((param.isIssue && param.images.imagesOnIssue) || (param.isPullRequest && param.images.imagesOnPullRequest))
+    const imageMarkdown = shouldRenderImage(param, presentation.image)
         ? `![image](${presentation.image})`
         : '';
     return `# ${presentation.title}
@@ -82,4 +82,11 @@ ${sections.footer}
 ${debugLogSection}
 🚀 Happy coding!
             `;
+}
+
+function shouldRenderImage(param: Execution, image: string | undefined): image is string {
+    if (!image) return false;
+    if (param.isIssue) return param.images.imagesOnIssue;
+    if (param.isPullRequest) return param.images.imagesOnPullRequest;
+    return false;
 }

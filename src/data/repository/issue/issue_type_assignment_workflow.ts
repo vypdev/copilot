@@ -20,18 +20,8 @@ export async function assignIssueType(
   logDebugInfo(`Setting issue type for issue ${issueNumber} to ${selected.name}`);
   const issueId = await getIssueId(owner, repository, issueNumber, token);
   const { organization } = await loadOrganizationIssueTypes(client, owner);
-  let issueTypeId = organization.issueTypes.nodes.find(
-    (type) => type.name.toLowerCase() === selected.name.toLowerCase(),
-  )?.id;
-
-  if (!issueTypeId) {
-    try {
-      issueTypeId = await createIssueType(client, organization.id, selected.name, selected.description, selected.color);
-    } catch (error) {
-      if (error instanceof IssueTypeCreationSkippedError) return;
-      throw error;
-    }
-  }
+  const issueTypeId = await findOrCreateIssueType(client, organization, selected);
+  if (!issueTypeId) return;
   await client.graphql(
     `
                 mutation ($issueId: ID!, $issueTypeId: ID!) {
@@ -43,6 +33,23 @@ export async function assignIssueType(
     { issueId, issueTypeId },
   );
   logDebugInfo(`Successfully updated issue type to ${selected.name}`);
+}
+
+async function findOrCreateIssueType(
+  client: GithubGraphqlTransportClient,
+  organization: { id: string; issueTypes: { nodes: { id: string; name: string }[] } },
+  selected: { name: string; description: string; color: string },
+): Promise<string | undefined> {
+  const existingId = organization.issueTypes.nodes.find(
+    (type) => type.name.toLowerCase() === selected.name.toLowerCase(),
+  )?.id;
+  if (existingId) return existingId;
+  try {
+    return await createIssueType(client, organization.id, selected.name, selected.description, selected.color);
+  } catch (error) {
+    if (error instanceof IssueTypeCreationSkippedError) return undefined;
+    throw error;
+  }
 }
 
 async function loadOrganizationIssueTypes(

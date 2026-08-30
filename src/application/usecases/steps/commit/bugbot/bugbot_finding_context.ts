@@ -29,43 +29,70 @@ export function parseBugbotFindingComments(
     PullRequestReviewComment[]
   >,
 ): ParsedBugbotFindingComments {
-  const existingByFindingId: ExistingByFindingId = {};
+  const existingByFindingId = parseIssueFindingMarkers(issueComments);
+  const pullRequestFindings = parsePullRequestFindingMarkers(pullRequestCommentsByNumber);
+  mergeFindingContexts(existingByFindingId, pullRequestFindings.existingByFindingId);
+  return {
+    issueComments,
+    existingByFindingId,
+    prFindingIdToBody: pullRequestFindings.prFindingIdToBody,
+  };
+}
 
+function parseIssueFindingMarkers(issueComments: BugbotComment[]): ExistingByFindingId {
+  const findings: ExistingByFindingId = {};
   for (const comment of issueComments) {
     for (const marker of parseMarker(comment.body)) {
       const findingId = normalizeFindingIdForMarker(marker.findingId);
       if (findingId == null) continue;
-      existingByFindingId[findingId] = {
-        ...(existingByFindingId[findingId] ?? {}),
+      findings[findingId] = {
+        ...(findings[findingId] ?? {}),
         issue: { commentId: comment.id, resolved: marker.resolved },
       };
     }
   }
+  return findings;
+}
 
+function parsePullRequestFindingMarkers(
+  pullRequestCommentsByNumber: ReadonlyMap<number, PullRequestReviewComment[]>,
+): { existingByFindingId: ExistingByFindingId; prFindingIdToBody: Record<string, string> } {
+  const existingByFindingId: ExistingByFindingId = {};
   const prFindingIdToBody: Record<string, string> = {};
   for (const [pullRequestNumber, comments] of pullRequestCommentsByNumber) {
-    for (const comment of comments) {
-      const body = comment.body ?? "";
-      for (const marker of parseMarker(body)) {
-        const findingId = normalizeFindingIdForMarker(marker.findingId);
-        if (findingId == null) continue;
-        existingByFindingId[findingId] = {
-          ...(existingByFindingId[findingId] ?? {}),
-          pullRequest: {
-            commentIdentity: comment.identity,
-            pullRequestNumber,
-            resolved: marker.resolved,
-          },
-        };
-        prFindingIdToBody[findingId] = truncateFindingBody(
-          body,
-          MAX_FINDING_BODY_LENGTH,
-        );
-      }
+    parsePullRequestComments(comments, pullRequestNumber, existingByFindingId, prFindingIdToBody);
+  }
+  return { existingByFindingId, prFindingIdToBody };
+}
+
+function parsePullRequestComments(
+  comments: PullRequestReviewComment[],
+  pullRequestNumber: number,
+  existingByFindingId: ExistingByFindingId,
+  prFindingIdToBody: Record<string, string>,
+): void {
+  for (const comment of comments) {
+    const body = comment.body ?? "";
+    for (const marker of parseMarker(body)) {
+      const findingId = normalizeFindingIdForMarker(marker.findingId);
+      if (findingId == null) continue;
+      existingByFindingId[findingId] = {
+        ...(existingByFindingId[findingId] ?? {}),
+        pullRequest: {
+          commentIdentity: comment.identity,
+          pullRequestNumber,
+          resolved: marker.resolved,
+        },
+      };
+      prFindingIdToBody[findingId] = truncateFindingBody(body, MAX_FINDING_BODY_LENGTH);
     }
   }
+}
 
-  return { issueComments, existingByFindingId, prFindingIdToBody };
+function mergeFindingContexts(target: ExistingByFindingId, source: ExistingByFindingId): void {
+  for (const [findingId, context] of Object.entries(source)) {
+    target[findingId] = { ...(target[findingId] ?? {}), ...context };
+  }
 }
 
 export interface PreviousBugbotFinding {

@@ -23,37 +23,38 @@ export interface AgentAuthenticationCheck {
 function hasCodexChatGptSession(environment: NodeJS.ProcessEnv): boolean {
     const codexHome = environment.CODEX_HOME?.trim()
         || (environment === process.env || environment.HOME ? join(environment.HOME || homedir(), '.codex') : undefined);
-    if (!codexHome) return false;
-    const authPath = join(codexHome, 'auth.json');
-    if (!existsSync(authPath)) return false;
-    try {
-        const auth = JSON.parse(readFileSync(authPath, 'utf8')) as {
-            auth_mode?: unknown;
-            OPENAI_API_KEY?: unknown;
-            tokens?: { access_token?: unknown; refresh_token?: unknown };
-        };
-        return auth.auth_mode === 'chatgpt'
-            && auth.OPENAI_API_KEY == null
-            && typeof auth.tokens?.access_token === 'string'
-            && typeof auth.tokens?.refresh_token === 'string';
-    } catch {
-        return false;
-    }
+    return isCodexChatGptAuth(readAuthFile(codexHome ? join(codexHome, 'auth.json') : undefined));
 }
 
 function hasOpenCodeLocalSession(environment: NodeJS.ProcessEnv): boolean {
     const dataDirectory = environment.OPENCODE_DATA_DIR?.trim()
         || environment.XDG_DATA_HOME?.trim()
         || (environment === process.env || environment.HOME ? join(environment.HOME || homedir(), '.local', 'share') : undefined);
-    if (!dataDirectory) return false;
-    const authPath = environment.OPENCODE_AUTH_FILE?.trim() || join(dataDirectory, 'opencode', 'auth.json');
-    if (!existsSync(authPath)) return false;
+    const authPath = environment.OPENCODE_AUTH_FILE?.trim()
+        || (dataDirectory ? join(dataDirectory, 'opencode', 'auth.json') : undefined);
+    return Boolean(dataDirectory && containsCredentialMaterial(readAuthFile(authPath)));
+}
+
+function readAuthFile(path: string | undefined): unknown {
+    if (!path || !existsSync(path)) return undefined;
     try {
-        const auth = JSON.parse(readFileSync(authPath, 'utf8')) as unknown;
-        return containsCredentialMaterial(auth);
+        return JSON.parse(readFileSync(path, 'utf8')) as unknown;
     } catch {
-        return false;
+        return undefined;
     }
+}
+
+function isCodexChatGptAuth(auth: unknown): boolean {
+    if (!auth || typeof auth !== 'object') return false;
+    const candidate = auth as {
+        auth_mode?: unknown;
+        OPENAI_API_KEY?: unknown;
+        tokens?: { access_token?: unknown; refresh_token?: unknown };
+    };
+    return candidate.auth_mode === 'chatgpt'
+        && candidate.OPENAI_API_KEY == null
+        && typeof candidate.tokens?.access_token === 'string'
+        && typeof candidate.tokens?.refresh_token === 'string';
 }
 
 /** Keeps only credentials relevant to the selected provider/model process. */
@@ -81,18 +82,21 @@ export function checkAgentAuthentication(
     const hasOpenCodeSession = configuration.provider === 'opencode' && hasOpenCodeLocalSession(environment);
     const modelProvider = configuration.modelProvider?.trim().toLowerCase();
     const hasConfiguredCredential = variables.some((variable) => hasValue(environment, variable));
-    if (hasCodexSession || hasOpenCodeSession || hasConfiguredCredential) {
-        return {
-            status: 'available',
-            variables,
-            message: hasCodexSession
-                ? 'Local ChatGPT Codex session available from CODEX_HOME/auth.json.'
-                : hasOpenCodeSession
-                    ? 'Local OpenCode authentication available from its controlled auth store.'
-                    : `Local credentials available for ${configuration.provider}.`,
-        };
-    }
+    if (hasCodexSession) return availableStatus(variables, 'Local ChatGPT Codex session available from CODEX_HOME/auth.json.');
+    if (hasOpenCodeSession) return availableStatus(variables, 'Local OpenCode authentication available from its controlled auth store.');
+    if (hasConfiguredCredential) return availableStatus(variables, `Local credentials available for ${configuration.provider}.`);
+    return resolveMissingAuthentication(configuration, variables, modelProvider);
+}
 
+function availableStatus(variables: readonly string[], message: string): AgentAuthenticationCheck {
+    return { status: 'available', variables, message };
+}
+
+function resolveMissingAuthentication(
+    configuration: AgentConfiguration,
+    variables: readonly string[],
+    modelProvider: string | undefined,
+): AgentAuthenticationCheck {
     if (configuration.provider === 'codex') {
         return {
             status: 'not_required',
@@ -100,7 +104,6 @@ export function checkAgentAuthentication(
             message: 'No exported Codex credential found; authentication will be resolved by the preinitialized Codex CLI on the runner.',
         };
     }
-
     if (configuration.provider === 'opencode' && modelProvider && !hasKnownModelProvider(modelProvider)) {
         return {
             status: 'not_required',
@@ -108,7 +111,6 @@ export function checkAgentAuthentication(
             message: `Credential resolution for the custom OpenCode provider "${modelProvider}" is delegated to OpenCode configuration or its controlled auth store.`,
         };
     }
-
     if (configuration.provider === 'opencode' && isLocalModelProvider(modelProvider)) {
         return {
             status: 'not_required',
@@ -116,7 +118,6 @@ export function checkAgentAuthentication(
             message: `No external credential is required for the local ${configuration.modelProvider} model provider.`,
         };
     }
-
     return {
         status: 'missing',
         variables,

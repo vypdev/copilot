@@ -44,17 +44,27 @@ export async function ensureIssueTypes(
   let existing = 0;
   const errors: string[] = [];
   for (const configured of configuredIssueTypes(issueTypes)) {
-    try {
-      const result = await ensureConfiguredIssueType(client, owner, configured);
-      if (result.created) created += 1;
-      else existing += 1;
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
-      logError(`Error ensuring issue type "${configured.name}": ${error}`);
-      errors.push(`Error creando tipo de Issue "${configured.name}": ${message}`);
-    }
+    const result = await ensureConfiguredIssueTypeSafely(client, owner, configured);
+    if (result.kind === 'created') created += 1;
+    if (result.kind === 'existing') existing += 1;
+    if (result.kind === 'error') errors.push(result.message);
   }
   return { created, existing, errors };
+}
+
+async function ensureConfiguredIssueTypeSafely(
+  client: GithubGraphqlTransportClient,
+  owner: string,
+  configured: ConfiguredIssueType,
+): Promise<{ kind: 'created' | 'existing' } | { kind: 'error'; message: string }> {
+  try {
+    const result = await ensureConfiguredIssueType(client, owner, configured);
+    return { kind: result.created ? 'created' : 'existing' };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    logError(`Error ensuring issue type "${configured.name}": ${error}`);
+    return { kind: 'error', message: `Error creando tipo de Issue "${configured.name}": ${message}` };
+  }
 }
 
 function ensureConfiguredIssueType(

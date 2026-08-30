@@ -17,33 +17,35 @@ async function hasUncommittedChanges(gitCommitPort: GitCommitPort): Promise<bool
 export async function checkoutBranch(branch: string, gitCommitPort: GitCommitPort): Promise<boolean> {
     let didStash = false;
     try {
-        if (await hasUncommittedChanges(gitCommitPort)) {
-            logDebugInfo("Uncommitted changes present; stashing before checkout.");
-            await gitCommitPort.execute("git", ["stash", "push", "-u", "-m", STASH_MESSAGE]);
-            didStash = true;
-        }
-
+        didStash = await stashWorkspaceChanges(gitCommitPort);
         await gitCommitPort.execute("git", ["fetch", "origin", branch]);
         await gitCommitPort.execute("git", ["checkout", branch]);
         logInfo(`Checked out branch ${branch}.`);
-
-        if (!didStash) return true;
-        try {
-            await gitCommitPort.execute("git", ["stash", "pop"]);
-            logDebugInfo("Restored stashed changes after checkout.");
-            return true;
-        } catch (popErr) {
-            const popMsg = popErr instanceof Error ? popErr.message : String(popErr);
-            logError(`Failed to restore stashed changes after checkout: ${popMsg}`);
-            logError("Changes remain stashed; run 'git stash pop' manually to restore them.");
-            return false;
-        }
+        return didStash ? restoreStashedChanges(gitCommitPort) : true;
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         logError(`Failed to checkout branch ${branch}: ${msg}`);
-        if (didStash) {
-            logError("Changes were stashed; run 'git stash pop' manually to restore them.");
-        }
+        if (didStash) logError("Changes were stashed; run 'git stash pop' manually to restore them.");
+        return false;
+    }
+}
+
+async function stashWorkspaceChanges(gitCommitPort: GitCommitPort): Promise<boolean> {
+    if (!await hasUncommittedChanges(gitCommitPort)) return false;
+    logDebugInfo("Uncommitted changes present; stashing before checkout.");
+    await gitCommitPort.execute("git", ["stash", "push", "-u", "-m", STASH_MESSAGE]);
+    return true;
+}
+
+async function restoreStashedChanges(gitCommitPort: GitCommitPort): Promise<boolean> {
+    try {
+        await gitCommitPort.execute("git", ["stash", "pop"]);
+        logDebugInfo("Restored stashed changes after checkout.");
+        return true;
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logError(`Failed to restore stashed changes after checkout: ${message}`);
+        logError("Changes remain stashed; run 'git stash pop' manually to restore them.");
         return false;
     }
 }

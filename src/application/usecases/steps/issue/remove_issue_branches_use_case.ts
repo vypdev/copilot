@@ -4,6 +4,7 @@ import type { BranchLifecyclePort } from "../../../ports/branch_lifecycle_ports"
 import { logDebugInfo, logError, logInfo, logWarn } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
+import { selectIssueBranchesToRemove } from './remove_issue_branches_policy';
 
 /**
  * Remove any branch created for this issue
@@ -17,58 +18,19 @@ export class RemoveIssueBranchesUseCase implements ParamUseCase<Execution, Resul
 
         const results: Result[] = []
         try {
-            const branchTypes = [param.branches.featureTree, param.branches.bugfixTree];
-
             const branches = await this.branchLifecyclePort.getListOfBranches(
                 param.owner,
                 param.repo,
                 param.tokens.token,
             );
 
-            for (const type of branchTypes) {
-                logDebugInfo(`Checking branch type ${type}`)
-
-                let branchName = '';
-                const prefix = `${type}/${param.issueNumber}-`;
-                logDebugInfo(`Checking prefix ${prefix}`)
-
-                const matchingBranch = branches.find(branch => branch.indexOf(prefix) > -1);
-                if (!matchingBranch) continue;
-                branchName = matchingBranch;
-                logDebugInfo(`RemoveIssueBranches: attempting to remove branch ${branchName}.`);
-                const removed = await this.branchLifecyclePort.removeBranch(
-                    param.owner,
-                    param.repo,
-                    branchName,
-                    param.tokens.token,
-                );
-                if (removed) {
-                    logDebugInfo(`RemoveIssueBranches: removed branch ${branchName}.`);
-                    results.push(
-                        new Result({
-                            id: this.taskId,
-                            success: true,
-                            executed: true,
-                            steps: [
-                                `The branch \`${branchName}\` was removed.`,
-                            ],
-                        })
-                    )
-                    if (param.previousConfiguration?.branchType === param.branches.hotfixTree) {
-                        results.push(
-                            new Result({
-                                id: this.taskId,
-                                success: true,
-                                executed: true,
-                                reminders: [
-                                    `Determine if the \`${param.branches.hotfixTree}\` branch is no longer required and can be removed.`,
-                                ],
-                            })
-                        )
-                    }
-                } else {
-                    logWarn(`RemoveIssueBranches: failed to remove branch ${branchName}.`);
-                }
+            const branchNames = selectIssueBranchesToRemove(
+                branches,
+                param.issueNumber,
+                [param.branches.featureTree, param.branches.bugfixTree],
+            );
+            for (const branchName of branchNames) {
+                results.push(...await removeIssueBranch(param, this.taskId, branchName, this.branchLifecyclePort));
             }
         } catch (error) {
             logError(`RemoveIssueBranches: error removing branches for issue #${param.issueNumber}.`, error instanceof Error ? { stack: (error as Error).stack } : undefined);
@@ -86,4 +48,39 @@ export class RemoveIssueBranchesUseCase implements ParamUseCase<Execution, Resul
         }
         return results;
     }
+}
+
+async function removeIssueBranch(
+    param: Execution,
+    taskId: string,
+    branchName: string,
+    branchLifecyclePort: BranchLifecyclePort,
+): Promise<Result[]> {
+    logDebugInfo(`RemoveIssueBranches: attempting to remove branch ${branchName}.`);
+    const removed = await branchLifecyclePort.removeBranch(
+        param.owner,
+        param.repo,
+        branchName,
+        param.tokens.token,
+    );
+    if (!removed) {
+        logWarn(`RemoveIssueBranches: failed to remove branch ${branchName}.`);
+        return [];
+    }
+    logDebugInfo(`RemoveIssueBranches: removed branch ${branchName}.`);
+    const results = [new Result({
+        id: taskId,
+        success: true,
+        executed: true,
+        steps: [`The branch \`${branchName}\` was removed.`],
+    })];
+    if (param.previousConfiguration?.branchType === param.branches.hotfixTree) {
+        results.push(new Result({
+            id: taskId,
+            success: true,
+            executed: true,
+            reminders: [`Determine if the \`${param.branches.hotfixTree}\` branch is no longer required and can be removed.`],
+        }));
+    }
+    return results;
 }
