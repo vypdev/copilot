@@ -237,10 +237,9 @@ describe("runBugbotAutofixCommitAndPush", () => {
 
         const result = await runBugbotAutofixCommitAndPush(exec);
 
-        expect(result.success).toBe(false);
-        expect(result.error).toContain("Invalid verify command");
-        expect(result.error).toContain("  ");
-    });
+       expect(result.success).toBe(false);
+       expect(result.error).toContain("Invalid verify command");
+   });
 
     it("rejects verify command when shell-quote parse throws", async () => {
         shellQuoteParse.mockImplementationOnce(() => {
@@ -281,10 +280,10 @@ describe("runBugbotAutofixCommitAndPush", () => {
         expect(result.success).toBe(false);
         expect(result.error).toContain("Verify command failed");
         const { logError } = require("../../../../../ports/logging_ports");
-        expect(logError).toHaveBeenCalledWith(
-            expect.stringContaining("Verify command failed")
-        );
-    });
+       expect(logError).toHaveBeenCalledWith(
+           expect.stringContaining("Verify command failed")
+       );
+   });
 
     it("treats non-array getBugbotFixVerifyCommands as empty (no verify run)", async () => {
         (mockExec.mockImplementation as (fn: ExecCallback) => void)((_cmd, args, opts) => {

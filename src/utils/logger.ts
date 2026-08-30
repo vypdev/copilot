@@ -28,7 +28,15 @@ const SENSITIVE_ENVIRONMENT_KEYS = [
 
 /** Removes markdown code fences from message so log output does not break when visualized (e.g. GitHub Actions). */
 function sanitizeLogMessage(message: string): string {
-    let sanitized = message.replace(/```/g, '');
+    let sanitized = message
+        .replace(/```/g, '')
+        // GitHub Actions interprets lines beginning with :: as workflow commands.
+        // Keep diagnostics readable while making user/provider-controlled text inert.
+        .replace(/(^|[\r\n])([ \t]*)::/g, '$1$2:\u200b:');
+    // Do not allow terminal/control bytes to alter the rendered log stream.
+    sanitized = Array.from(sanitized)
+        .filter((character) => !isUnsafeLogControl(character))
+        .join('');
     const environmentKeys = new Set([
         ...SENSITIVE_ENVIRONMENT_KEYS,
         ...Object.keys(process.env).filter((key) => SENSITIVE_ENVIRONMENT_KEY_PATTERN.test(key)),
@@ -46,6 +54,15 @@ function sanitizeLogMessage(message: string): string {
     return sanitized.length > MAX_LOG_MESSAGE_LENGTH
         ? `${sanitized.slice(0, MAX_LOG_MESSAGE_LENGTH)}… [truncated]`
         : sanitized;
+}
+
+function isUnsafeLogControl(character: string): boolean {
+    const codePoint = character.codePointAt(0) ?? 0;
+    return (codePoint >= 0 && codePoint <= 8)
+        || codePoint === 11
+        || codePoint === 12
+        || (codePoint >= 14 && codePoint <= 31)
+        || codePoint === 127;
 }
 
 function sanitizeMetadataValue(value: unknown, key?: string): unknown {

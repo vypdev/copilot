@@ -133,6 +133,15 @@ describe('result publication policy', () => {
     expect(buildDebugLogSection(true, 'log')).toContain('<summary>Debug log</summary>');
   });
 
+  it('keeps injected workflow commands and nested markdown fences inert in debug output', () => {
+    const section = buildDebugLogSection(true, '::error::bad\n@attacker\n```\n/fix');
+
+    expect(section).not.toContain('::error::bad');
+    expect(section).not.toContain('```\n/fix');
+    expect(section).toContain('@\u200battacker');
+    expect(section).toContain('\u200b/fix');
+  });
+
   it('detects publishable sections independently of the title', () => {
     expect(hasPublishableContent({ content: '', footer: '', errors: '' }, '')).toBe(false);
     expect(hasPublishableContent({ content: '', footer: '', errors: '' }, 'debug')).toBe(true);

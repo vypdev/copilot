@@ -27,4 +27,22 @@ describe('verify command runner', () => {
         });
         expect(error).toEqual({ success: false, failedCommand: 'pnpm test' });
     });
+
+    it('redacts sensitive command arguments from diagnostics while preserving execution arguments', async () => {
+        const execute = jest.fn().mockResolvedValue(1);
+        const result = await runVerifyCommands(['pnpm test --token top-secret'], execute);
+
+        expect(execute).toHaveBeenCalledWith('pnpm', ['test', '--token', 'top-secret']);
+        expect(result).toEqual({ success: false, failedCommand: 'pnpm test --token [REDACTED]' });
+    });
+
+    it('does not echo invalid command text into the returned error', async () => {
+        const result = await runVerifyCommands(['pnpm test; echo top-secret'], jest.fn());
+
+        expect(result).toEqual({
+            success: false,
+            error: 'Invalid verify command (use no shell operators; quotes allowed).',
+        });
+        expect(JSON.stringify(result)).not.toContain('top-secret');
+    });
 });

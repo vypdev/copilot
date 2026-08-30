@@ -23,6 +23,7 @@ function neutralizeGithubControls(value: string): string {
     return value
         .replace(/<!--/g, '&lt;!--')
         .replace(/-->/g, '--&gt;')
+        .replace(/(^|\n)([ \t]*)::/g, '$1$2:\u200b:')
         .replace(/(^|\n)([ \t]*)\/(?!\/)/g, '$1$2\u200b/')
         .replace(/@(?=[a-zA-Z0-9][a-zA-Z0-9-])/g, '@\u200b');
 }

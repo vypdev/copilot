@@ -44,6 +44,16 @@ describe('logger', () => {
       expect(entries[0].message).toBe('some json\n{"x":1}\n content');
     });
 
+    it('neutralizes GitHub workflow commands and control bytes in untrusted log text', () => {
+      logInfo('before\n::error::injected\u0007\n::warning::also injected');
+
+      const message = getAccumulatedLogEntries()[0].message;
+      expect(message).not.toContain('::error::');
+      expect(message).not.toContain('::warning::');
+      expect(message).not.toContain('\u0007');
+      expect(message).toContain(':\u200b:error::injected');
+    });
+
     it('logInfo logs JSON when structured logging is on', () => {
       setStructuredLogging(true);
       logInfo('hello');
