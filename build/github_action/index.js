@@ -55970,6 +55970,7 @@ class StoreConfigurationUseCase {
         }
         catch (error) {
             (0, logging_ports_1.logError)(`StoreConfiguration: failed to update configuration.`, error instanceof Error ? { stack: error.stack } : undefined);
+            throw new Error('Configuration persistence failed.');
         }
     }
 }
@@ -65905,7 +65906,7 @@ class IssueContentInterface extends content_interface_1.ContentInterface {
                 return this.getContent(description);
             }
             catch (error) {
-                (0, logger_1.logError)(`Error reading issue configuration: ${error}`);
+                (0, logger_1.logError)(`Error reading issue content: ${error}`);
                 throw error;
             }
         };
@@ -65917,13 +65918,13 @@ class IssueContentInterface extends content_interface_1.ContentInterface {
                 const description = await this.issueDescriptionPort.getDescription(execution.owner, execution.repo, number, execution.tokens.token);
                 const updated = this.updateContent(description, content);
                 if (updated === undefined) {
-                    return undefined;
+                    throw new Error('Issue content markers are missing or inconsistent.');
                 }
                 await this.issueDescriptionPort.updateDescription(execution.owner, execution.repo, number, updated, execution.tokens.token);
                 return updated;
             }
             catch (error) {
-                (0, logger_1.logError)(`Error reading issue configuration: ${error}`);
+                (0, logger_1.logError)(`Error updating issue content: ${error}`);
                 throw error;
             }
         };
@@ -65982,14 +65983,8 @@ class ConfigurationHandler extends issue_content_interface_1.IssueContentInterfa
     constructor() {
         super(...arguments);
         this.update = async (execution) => {
-            try {
-                const storedRaw = await this.internalGetter(execution);
-                return await this.internalUpdate(execution, (0, configuration_payload_policy_1.buildConfigurationPayload)(execution, storedRaw));
-            }
-            catch (error) {
-                (0, logger_1.logError)(`Error updating issue description: ${error}`);
-                return undefined;
-            }
+            const storedRaw = await this.internalGetter(execution);
+            return await this.internalUpdate(execution, (0, configuration_payload_policy_1.buildConfigurationPayload)(execution, storedRaw));
         };
         this.get = async (query) => {
             try {
