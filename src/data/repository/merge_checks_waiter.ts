@@ -4,10 +4,9 @@ import {
     blockingCheckRuns,
     blockingStatuses,
     isBlockingCombinedStatus,
-    pendingCheckRuns,
     pendingStatuses,
-    selectPullRequestChecks,
 } from './merge_checks_policy';
+import { assessMergeChecksPoll, type MergeChecksPollAssessment } from './merge_checks_waiter_policy';
 
 /** Polls only the checks relevant to one pull request before a merge. */
 export class MergeChecksWaiter {
@@ -29,40 +28,19 @@ export class MergeChecksWaiter {
 
         while (attempts < maxAttempts) {
             const { data: checkRuns } = await octokit.rest.checks.listForRef({ owner, repo: repository, ref: head });
-            const runsForThisPr = selectPullRequestChecks(checkRuns.check_runs, pullRequestNumber);
             const { data: commitStatus } = await octokit.rest.repos.getCombinedStatusForRef({ owner, repo: repository, ref: head });
 
             logDebugInfo(`Combined status state: ${commitStatus.state}`);
-            logDebugInfo(`Number of check runs for this PR: ${runsForThisPr.length} (total on ref: ${checkRuns.check_runs.length})`);
-
-            if (runsForThisPr.length > 0) {
-                const pendingChecks = pendingCheckRuns(runsForThisPr);
-                if (pendingChecks.length === 0 && commitStatus.state !== 'pending') {
-                    this.assertChecksPassed(runsForThisPr, commitStatus.state, commitStatus.statuses);
-                    logDebugInfo('All check runs have completed.');
-                    return;
-                }
-                this.logPendingCheckRuns(pendingChecks);
-            } else if (checkRuns.check_runs.length > 0) {
-                waitForPrChecksAttempts++;
-                if (waitForPrChecksAttempts >= maxWaitForPrChecksAttempts) {
-                    if (this.statusChecksAreComplete(commitStatus.state, commitStatus.statuses)) {
-                        this.assertStatusChecksPassed(commitStatus.state, commitStatus.statuses);
-                        logDebugInfo(`No check runs for this PR after ${maxWaitForPrChecksAttempts} polls; no pending status checks; proceeding to merge.`);
-                        return;
-                    }
-                    logDebugInfo(`No check runs for this PR after ${maxWaitForPrChecksAttempts} polls; falling back to status checks.`);
-                    this.logPendingStatusChecks(commitStatus.statuses, 'fallback');
-                } else {
-                    logDebugInfo('Check runs exist on ref but none for this PR yet; waiting for workflows to register.');
-                }
-            } else if (this.statusChecksAreComplete(commitStatus.state, commitStatus.statuses)) {
-                this.assertStatusChecksPassed(commitStatus.state, commitStatus.statuses);
-                logDebugInfo('All status checks have completed.');
-                return;
-            } else {
-                this.logPendingStatusChecks(commitStatus.statuses);
-            }
+            const assessment = assessMergeChecksPoll({
+                checkRuns: checkRuns.check_runs,
+                pullRequestNumber,
+                combinedStatus: commitStatus.state,
+                statuses: commitStatus.statuses,
+                registrationAttempts: waitForPrChecksAttempts,
+                maximumRegistrationAttempts: maxWaitForPrChecksAttempts,
+            });
+            waitForPrChecksAttempts = assessment.nextRegistrationAttempts;
+            if (this.handleAssessment(assessment, commitStatus.state, commitStatus.statuses, maxWaitForPrChecksAttempts)) return;
 
             await this.waitForNextCheckPoll(pollIntervalSeconds);
             attempts++;
@@ -71,11 +49,33 @@ export class MergeChecksWaiter {
         throw new Error('Timed out waiting for checks to complete');
     }
 
-    private statusChecksAreComplete(
+    private handleAssessment(
+        assessment: MergeChecksPollAssessment,
         combinedStatus: string,
         statuses: ReadonlyArray<{ context: string; state: string }>,
+        maximumRegistrationAttempts: number,
     ): boolean {
-        return pendingStatuses(statuses).length === 0 && combinedStatus !== 'pending';
+        if (assessment.kind === 'completed') {
+            if (assessment.source === 'pull-request-checks') {
+                this.assertChecksPassed(assessment.checkRuns, combinedStatus, statuses);
+                logDebugInfo('All check runs have completed.');
+            } else {
+                this.assertStatusChecksPassed(combinedStatus, statuses);
+                logDebugInfo(`No check runs for this PR after ${maximumRegistrationAttempts} polls; no pending status checks; proceeding to merge.`);
+            }
+            return true;
+        }
+        if (assessment.kind === 'pending-check-runs') {
+            this.logPendingCheckRuns(assessment.pendingChecks);
+        } else if (assessment.kind === 'waiting-for-registration') {
+            logDebugInfo('Check runs exist on ref but none for this PR yet; waiting for workflows to register.');
+        } else if (assessment.kind === 'fallback-status-checks') {
+            logDebugInfo(`No check runs for this PR after ${maximumRegistrationAttempts} polls; falling back to status checks.`);
+            this.logPendingStatusChecks(assessment.statuses, 'fallback');
+        } else {
+            this.logPendingStatusChecks(assessment.statuses);
+        }
+        return false;
     }
 
     private logPendingCheckRuns(checks: ReadonlyArray<{ name: string; status: string }>): void {

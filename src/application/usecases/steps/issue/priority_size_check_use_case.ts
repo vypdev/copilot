@@ -29,51 +29,49 @@ export async function runPrioritySizeCheck(
     projectRepository: ProjectBoardPriorityPort,
 ): Promise<Result[]> {
     const typedParam = param as unknown as PrioritySizeParam;
-    const result: Result[] = [];
     try {
-        const priority = typedParam.labels.priorityLabelOnIssue;
-        const projects = typedParam.project.getProjects();
-
-        if (!typedParam.labels.priorityLabelOnIssueProcessable || projects.length === 0) {
-            return [new Result({ id: taskId, success: true, executed: false })];
-        }
-
-        const priorityLabel = resolveGithubPriorityLabel(priority, typedParam.labels);
-
-        if (!priorityLabel) {
-            return [new Result({ id: taskId, success: true, executed: false })];
-        }
-
-        logDebugInfo(`Priority: ${priority}`);
-        logDebugInfo(`Github Priority Label: ${priorityLabel}`);
-
-        for (const project of projects) {
-            const success = await projectRepository.setTaskPriority(
-                project,
-                typedParam.owner,
-                typedParam.repo,
-                contentNumber,
-                priorityLabel,
-                typedParam.tokens.token,
-            );
-            if (success) {
-                result.push(new Result({
-                    id: taskId,
-                    success: true,
-                    executed: true,
-                    steps: [`Priority set to \`${priorityLabel}\` in [${project.title}](${project.publicUrl}).`],
-                }));
-            }
-        }
-    } catch (error) {
+        return await applyPriorityToProjects(typedParam, taskId, contentNumber, projectRepository);
+    } catch (error: unknown) {
         logError(error);
-        result.push(new Result({
+        return [new Result({
             id: taskId,
             success: false,
             executed: true,
             steps: ['Tried to check the priority of the issue, but there was a problem.'],
             errors: [error?.toString() ?? 'Unknown error'],
+        })];
+    }
+}
+
+async function applyPriorityToProjects(
+    param: PrioritySizeParam,
+    taskId: string,
+    contentNumber: number,
+    projectRepository: ProjectBoardPriorityPort,
+): Promise<Result[]> {
+    const projects = param.project.getProjects();
+    const priorityLabel = resolveGithubPriorityLabel(param.labels.priorityLabelOnIssue, param.labels);
+    if (!param.labels.priorityLabelOnIssueProcessable || projects.length === 0 || !priorityLabel) {
+        return [new Result({ id: taskId, success: true, executed: false })];
+    }
+    logDebugInfo(`Priority: ${param.labels.priorityLabelOnIssue}`);
+    logDebugInfo(`Github Priority Label: ${priorityLabel}`);
+    const results: Result[] = [];
+    for (const project of projects) {
+        if (!await projectRepository.setTaskPriority(
+            project,
+            param.owner,
+            param.repo,
+            contentNumber,
+            priorityLabel,
+            param.tokens.token,
+        )) continue;
+        results.push(new Result({
+            id: taskId,
+            success: true,
+            executed: true,
+            steps: [`Priority set to \`${priorityLabel}\` in [${project.title}](${project.publicUrl}).`],
         }));
     }
-    return result;
+    return results;
 }

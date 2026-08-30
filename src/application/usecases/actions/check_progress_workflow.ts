@@ -30,64 +30,11 @@ export async function runCheckProgressWorkflow(
         logProgressAssessment(progress, summary, reasoning, remaining);
 
         if (progress === 0) {
-            const message = 'Progress detection returned 0%. This may be due to a model error or no changes detected. Consider re-running the check.';
-            logError(message);
-            return [
-                new Result({
-                    id: taskId,
-                    success: false,
-                    executed: true,
-                    steps: [`Progress for issue #${issueNumber}: 0%`, summary],
-                    errors: [message],
-                    payload: {
-                        progress: 0,
-                        summary,
-                        reasoning: reasoning || undefined,
-                        issueNumber,
-                        branch,
-                        developmentBranch,
-                    },
-                }),
-            ];
+            return [buildZeroProgressResult(taskId, issueNumber, branch, developmentBranch, summary, reasoning)];
         }
 
-        await dependencies.issueRepository.setProgressLabel(
-            param.owner,
-            param.repo,
-            issueNumber,
-            progress,
-            param.tokens.token,
-        );
-        await syncProgressLabelsToOpenPullRequests(
-            param.owner,
-            param.repo,
-            branch,
-            progress,
-            param.tokens.token,
-            dependencies.issueRepository,
-            dependencies.pullRequestRepository,
-        );
-
-        return [
-            new Result({
-                id: taskId,
-                success: true,
-                executed: true,
-                steps: [
-                    `Progress updated to: ${progress}%`,
-                    buildProgressSummaryMessage({ summary, progress, remaining, reasoning }),
-                ],
-                payload: {
-                    progress,
-                    summary,
-                    reasoning: reasoning || undefined,
-                    remaining: progress < 100 && remaining ? remaining : undefined,
-                    issueNumber,
-                    branch,
-                    developmentBranch,
-                },
-            }),
-        ];
+        await persistProgress(param, issueNumber, branch, progress, dependencies);
+        return [buildProgressResult(taskId, issueNumber, branch, developmentBranch, progress, summary, reasoning, remaining)];
     } catch (error) {
         logError(`Error in ${taskId}: ${JSON.stringify(error, null, 2)}`);
         return [
@@ -103,6 +50,72 @@ export async function runCheckProgressWorkflow(
             }),
         ];
     }
+}
+
+function buildZeroProgressResult(
+    taskId: string,
+    issueNumber: number,
+    branch: string,
+    developmentBranch: string,
+    summary: string,
+    reasoning: string,
+): Result {
+    const message = 'Progress detection returned 0%. This may be due to a model error or no changes detected. Consider re-running the check.';
+    logError(message);
+    return new Result({
+        id: taskId,
+        success: false,
+        executed: true,
+        steps: [`Progress for issue #${issueNumber}: 0%`, summary],
+        errors: [message],
+        payload: { progress: 0, summary, reasoning: reasoning || undefined, issueNumber, branch, developmentBranch },
+    });
+}
+
+async function persistProgress(
+    param: Execution,
+    issueNumber: number,
+    branch: string,
+    progress: number,
+    dependencies: CheckProgressWorkflowDependencies,
+): Promise<void> {
+    await dependencies.issueRepository.setProgressLabel(param.owner, param.repo, issueNumber, progress, param.tokens.token);
+    await syncProgressLabelsToOpenPullRequests(
+        param.owner,
+        param.repo,
+        branch,
+        progress,
+        param.tokens.token,
+        dependencies.issueRepository,
+        dependencies.pullRequestRepository,
+    );
+}
+
+function buildProgressResult(
+    taskId: string,
+    issueNumber: number,
+    branch: string,
+    developmentBranch: string,
+    progress: number,
+    summary: string,
+    reasoning: string,
+    remaining: string,
+): Result {
+    return new Result({
+        id: taskId,
+        success: true,
+        executed: true,
+        steps: [`Progress updated to: ${progress}%`, buildProgressSummaryMessage({ summary, progress, remaining, reasoning })],
+        payload: {
+            progress,
+            summary,
+            reasoning: reasoning || undefined,
+            remaining: progress < 100 && remaining ? remaining : undefined,
+            issueNumber,
+            branch,
+            developmentBranch,
+        },
+    });
 }
 
 function logProgressAssessment(

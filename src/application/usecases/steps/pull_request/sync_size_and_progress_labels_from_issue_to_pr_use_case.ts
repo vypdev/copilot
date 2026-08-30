@@ -1,10 +1,10 @@
 import { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
-import { PROGRESS_LABEL_PATTERN } from "../../../../application/policies/progress_labels";
 import type { IssueLabelsPort } from "../../../ports/issue_management_ports";
 import { logDebugInfo, logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
+import { mergeSizeAndProgressLabels, selectSizeAndProgressLabels } from './sync_size_and_progress_labels_policy';
 
 /**
  * Copies size and progress labels from the linked issue to the PR.
@@ -40,10 +40,7 @@ export class SyncSizeAndProgressLabelsFromIssueToPrUseCase implements ParamUseCa
                 param.issueNumber,
                 param.tokens.token,
             );
-            const sizeAndProgressFromIssue = issueLabels.filter(
-                (name) =>
-                    param.labels.sizeLabels.indexOf(name) !== -1 || PROGRESS_LABEL_PATTERN.test(name),
-            );
+            const sizeAndProgressFromIssue = selectSizeAndProgressLabels(issueLabels, param.labels.sizeLabels);
             if (sizeAndProgressFromIssue.length === 0) {
                 logDebugInfo(`Issue #${param.issueNumber} has no size or progress labels. Nothing to sync.`);
                 result.push(
@@ -64,15 +61,7 @@ export class SyncSizeAndProgressLabelsFromIssueToPrUseCase implements ParamUseCa
                 prNumber,
                 param.tokens.token,
             );
-            const prWithoutSizeOrProgress = prLabels.filter(
-                (name) =>
-                    param.labels.sizeLabels.indexOf(name) === -1 && !PROGRESS_LABEL_PATTERN.test(name),
-            );
-            const existing = new Set(prWithoutSizeOrProgress);
-            for (const label of sizeAndProgressFromIssue) {
-                if (!existing.has(label)) existing.add(label);
-            }
-            const nextPrLabels = Array.from(existing);
+            const nextPrLabels = mergeSizeAndProgressLabels(prLabels, sizeAndProgressFromIssue, param.labels.sizeLabels);
 
             await this.issueLabelsPort.setLabels(
                 param.owner,

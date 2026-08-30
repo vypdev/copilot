@@ -2,7 +2,7 @@ import type { GithubBranchMergeClient } from '../../infrastructure/github/ports/
 /** Polls only the checks relevant to one pull request before a merge. */
 export declare class MergeChecksWaiter {
     wait(octokit: GithubBranchMergeClient, owner: string, repository: string, head: string, pullRequestNumber: number, timeout: number): Promise<void>;
-    private statusChecksAreComplete;
+    private handleAssessment;
     private logPendingCheckRuns;
     private logPendingStatusChecks;
     private waitForNextCheckPoll;

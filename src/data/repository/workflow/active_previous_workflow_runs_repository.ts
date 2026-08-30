@@ -10,13 +10,7 @@ import type {
     GithubWorkflowRunsMethod,
 } from '../../../infrastructure/github/ports/github_workflow_provider_ports';
 import { WORKFLOW_ACTIVE_STATUSES } from '../../../utils/constants';
-
-export interface WorkflowRunsRetryPolicy {
-    maximumAttempts: number;
-    initialDelayMilliseconds: number;
-    backoffMultiplier: number;
-    maximumDelayMilliseconds: number;
-}
+import { withWorkflowRunsRetry, type WorkflowRunsRetryPolicy } from './workflow_runs_retry';
 
 const DEFAULT_RETRY_POLICY: WorkflowRunsRetryPolicy = {
     maximumAttempts: 5,
@@ -72,51 +66,13 @@ export class ActivePreviousWorkflowRunsRepository implements PreviousWorkflowRun
             ...(useWorkflowEndpoint ? { workflow_id: query.workflowIdentifier } : {}),
         };
 
-        return this.withTransientErrorRetry(async () => {
+        return withWorkflowRunsRetry(async () => {
             let activeRunCount = 0;
             for await (const response of this.client.paginate.iterator(method, parameters)) {
-                activeRunCount += this.extractWorkflowRuns(response).filter(
-                    (run) => this.isActivePreviousRun(run, query),
-                ).length;
+                activeRunCount += countMatchingRuns(this.extractWorkflowRuns(response), query);
             }
             return activeRunCount;
-        });
-    }
-
-    private async withTransientErrorRetry<T>(operation: () => Promise<T>): Promise<T> {
-        let delayMilliseconds = this.retryPolicy.initialDelayMilliseconds;
-
-        for (let attempt = 1; attempt <= this.retryPolicy.maximumAttempts; attempt++) {
-            try {
-                return await operation();
-            } catch (error: unknown) {
-                if (attempt === this.retryPolicy.maximumAttempts || !this.isTransientError(error)) {
-                    throw error;
-                }
-
-                await this.retryDelayPort.wait(delayMilliseconds);
-                delayMilliseconds = Math.min(
-                    delayMilliseconds * this.retryPolicy.backoffMultiplier,
-                    this.retryPolicy.maximumDelayMilliseconds,
-                );
-            }
-        }
-
-        throw new Error('Workflow runs request retry policy was exhausted.');
-    }
-
-    private isTransientError(error: unknown): boolean {
-        if (!error || typeof error !== 'object') {
-            return false;
-        }
-
-        const candidate = error as { status?: unknown; code?: unknown };
-        if (typeof candidate.status === 'number') {
-            return candidate.status === 408 || candidate.status === 429 || candidate.status >= 500;
-        }
-
-        return typeof candidate.code === 'string'
-            && ['ECONNRESET', 'ETIMEDOUT', 'EAI_AGAIN', 'ENETUNREACH'].includes(candidate.code);
+        }, this.retryDelayPort, this.retryPolicy);
     }
 
     private extractWorkflowRuns(response: GithubWorkflowRunsResponse): GithubWorkflowRun[] {
@@ -131,12 +87,17 @@ export class ActivePreviousWorkflowRunsRepository implements PreviousWorkflowRun
         throw new Error('GitHub workflow runs response did not contain a workflow_runs array.');
     }
 
-    private isActivePreviousRun(run: GithubWorkflowRun, query: PreviousWorkflowRunsQuery): boolean {
-        const workflowMatches = query.workflowNames && query.workflowNames.length > 0
-            ? query.workflowNames.includes(run.name ?? '')
-            : run.name === query.workflowName;
-        return workflowMatches
-            && run.id < query.currentRunId
-            && WORKFLOW_ACTIVE_STATUSES.includes(run.status ?? 'unknown');
-    }
+}
+
+function countMatchingRuns(runs: ReadonlyArray<GithubWorkflowRun>, query: PreviousWorkflowRunsQuery): number {
+    return runs.filter((run) => isActivePreviousRun(run, query)).length;
+}
+
+function isActivePreviousRun(run: GithubWorkflowRun, query: PreviousWorkflowRunsQuery): boolean {
+    const workflowMatches = query.workflowNames && query.workflowNames.length > 0
+        ? query.workflowNames.includes(run.name ?? '')
+        : run.name === query.workflowName;
+    return workflowMatches
+        && run.id < query.currentRunId
+        && WORKFLOW_ACTIVE_STATUSES.includes(run.status ?? 'unknown');
 }

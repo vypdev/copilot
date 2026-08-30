@@ -11,6 +11,6 @@ export declare class AgentCliProvisioner {
     private readonly provisionedExecutables;
     constructor(system?: AgentCliProvisioningSystem);
     provision(target: AgentCliProvisioningTarget, environment?: AgentCliProvisioningEnvironment): void;
-    private resolveMode;
+    private installProvider;
     private assertInstalled;
 }

@@ -5,16 +5,16 @@ import { tmpdir } from 'node:os';
 import { delimiter, isAbsolute, join } from 'node:path';
 import type { AgentConfiguration, AgentProvider } from '../model/agent';
 import { parseAgentCommand } from '../../application/policies/agent_command_parser';
+import {
+    DEFAULT_AGENT_EXECUTABLES,
+    provisioningDisabledError,
+    resolveAgentProvisioningMode,
+    shouldSkipProvisioning,
+} from './agent_cli_provisioning_policy';
 
 export type AgentCliProvisioningEnvironment = NodeJS.ProcessEnv;
 
 export type AgentCliProvisioningTarget = AgentProvider | Pick<AgentConfiguration, 'provider' | 'command'>;
-
-const DEFAULT_EXECUTABLES: Readonly<Record<AgentProvider, string>> = {
-    codex: 'codex',
-    opencode: 'opencode',
-    cursor: 'agent',
-};
 
 function executableExists(executable: string, environment: NodeJS.ProcessEnv): boolean {
     if (isAbsolute(executable) || executable.includes('/')) {
@@ -91,38 +91,31 @@ export class AgentCliProvisioner {
     provision(target: AgentCliProvisioningTarget, environment: AgentCliProvisioningEnvironment = process.env): void {
         const provider = typeof target === 'string' ? target : target.provider;
         const configuredCommand = typeof target === 'string' ? undefined : target.command;
-        const executable = configuredCommand ? parseAgentCommand(configuredCommand).executable : DEFAULT_EXECUTABLES[provider];
-        const mode = this.resolveMode(environment.AGENT_PROVISIONING);
+        const executable = configuredCommand ? parseAgentCommand(configuredCommand).executable : DEFAULT_AGENT_EXECUTABLES[provider];
+        const mode = resolveAgentProvisioningMode(environment.AGENT_PROVISIONING);
 
-        if (this.provisionedExecutables.has(executable)) return;
-        if (mode !== 'always' && this.system.executableExists(executable, environment)) return;
+        if (shouldSkipProvisioning(
+            mode,
+            executable,
+            this.provisionedExecutables,
+            this.system.executableExists(executable, environment),
+        )) return;
         if (mode === 'disabled') {
-            throw new Error(`Agent provisioning is disabled and the ${provider} CLI executable "${executable}" is not available.`);
+            throw provisioningDisabledError(provider, executable);
         }
 
-        switch (provider) {
-            case 'codex':
-                this.system.installPackage('@openai/codex', requirePinnedVersion('@openai/codex', environment.CODEX_VERSION, 'CODEX_VERSION'));
-                this.assertInstalled(executable, provider, environment);
-                this.provisionedExecutables.add(executable);
-                return;
-            case 'opencode':
-                this.system.installPackage('opencode-ai', requirePinnedVersion('opencode-ai', environment.OPENCODE_VERSION, 'OPENCODE_VERSION'));
-                this.assertInstalled(executable, provider, environment);
-                this.provisionedExecutables.add(executable);
-                return;
-            case 'cursor':
-                this.system.installCursor(requireInstallerChecksum(environment.CURSOR_INSTALLER_SHA256));
-                this.assertInstalled(executable, provider, environment);
-                this.provisionedExecutables.add(executable);
-                return;
-        }
+        this.installProvider(provider, environment);
+        this.assertInstalled(executable, provider, environment);
+        this.provisionedExecutables.add(executable);
     }
 
-    private resolveMode(value: string | undefined): 'auto' | 'always' | 'disabled' {
-        const mode = value?.trim().toLowerCase() || 'auto';
-        if (mode === 'auto' || mode === 'always' || mode === 'disabled') return mode;
-        throw new Error('AGENT_PROVISIONING must be one of: auto, always, disabled.');
+    private installProvider(provider: AgentProvider, environment: NodeJS.ProcessEnv): void {
+        const installers: Record<AgentProvider, () => void> = {
+            codex: () => this.system.installPackage('@openai/codex', requirePinnedVersion('@openai/codex', environment.CODEX_VERSION, 'CODEX_VERSION')),
+            opencode: () => this.system.installPackage('opencode-ai', requirePinnedVersion('opencode-ai', environment.OPENCODE_VERSION, 'OPENCODE_VERSION')),
+            cursor: () => this.system.installCursor(requireInstallerChecksum(environment.CURSOR_INSTALLER_SHA256)),
+        };
+        installers[provider]();
     }
 
     private assertInstalled(executable: string, provider: AgentProvider, environment: NodeJS.ProcessEnv): void {

@@ -4,6 +4,7 @@ import { Result } from '../../model/result';
 import { isGithubAlreadyExists } from '../github/github_error_policy';
 import { logDebugInfo, logError, logInfo } from '../../../utils/logger';
 import { createLinkedBranchMutation, loadLinkedBranchContext } from './linked_branch_graphql';
+import { isExpectedLinkedBranchRef, qualifyLinkedBranchRef, resolveLinkedBranchIdentifiers } from './linked_branch_policy';
 import { createdLinkedBranchResult, idempotentLinkedBranchResult, linkedBranchFailureResult, missingLinkedBranchContextResult, missingLinkedBranchResult, unexpectedLinkedBranchResult } from './linked_branch_result_policy';
 
 export async function runCreateLinkedBranch(
@@ -18,30 +19,30 @@ export async function runCreateLinkedBranch(
 ): Promise<Result[]> {
     try {
         logDebugInfo(`Creating linked branch ${newBranchName} from ${oid ?? baseBranchName}`);
-        const qualifiedRef = baseBranchName.startsWith('tags/') ? `refs/${baseBranchName}` : `refs/heads/${baseBranchName}`;
+        const qualifiedRef = qualifyLinkedBranchRef(baseBranchName);
         const graphql = client.getClient(token).graphql;
         const { repository } = await loadLinkedBranchContext(graphql, { repo, owner, issueNumber, ref: qualifiedRef });
         logDebugInfo(`Repository information retrieved: ${JSON.stringify(repository?.ref)}`);
-        const repositoryId = repository?.id;
-        const issueId = repository?.issue?.id;
-        const branchOid = oid ?? repository?.ref?.target?.oid;
-        if (!repositoryId || !issueId || !branchOid) {
-            logError(`Error searching repository "${baseBranchName}": id: ${repositoryId}, issue: ${issueId}, oid: ${branchOid}), issue #${issueNumber}`);
-            return [missingLinkedBranchContextResult(newBranchName, issueNumber, { repositoryId, issueId, branchOid })];
+        const identifiers = resolveLinkedBranchIdentifiers(repository, oid);
+        if (!identifiers) {
+            logError(`Error searching repository "${baseBranchName}" for issue #${issueNumber}.`);
+            return [missingLinkedBranchContextResult(newBranchName, issueNumber, {
+                repositoryId: repository?.id,
+                issueId: repository?.issue?.id,
+                branchOid: oid ?? repository?.ref?.target?.oid,
+            })];
         }
-        logDebugInfo(`Linking branch "${newBranchName}" (oid: ${branchOid}) to issue #${issueNumber}`);
+        logDebugInfo(`Linking branch "${newBranchName}" (oid: ${identifiers.branchOid}) to issue #${issueNumber}`);
         const mutationResponse = await createLinkedBranchMutation(graphql, {
-            issueId,
+            issueId: identifiers.issueId,
             name: `/${newBranchName}`,
-            repositoryId,
-            oid: branchOid,
+            repositoryId: identifiers.repositoryId,
+            oid: identifiers.branchOid,
         });
         const linkedBranch = mutationResponse.createLinkedBranch?.linkedBranch;
         logDebugInfo(`Linked branch: ${JSON.stringify(linkedBranch)}`);
         if (linkedBranch == null) return [missingLinkedBranchResult(newBranchName)];
-        const createdRefName = linkedBranch.ref?.name;
-        const normalizedRefName = createdRefName?.replace(/^refs\/heads\//, '').replace(/^\/+/, '');
-        if (normalizedRefName !== newBranchName) return [unexpectedLinkedBranchResult(newBranchName)];
+        if (!isExpectedLinkedBranchRef(linkedBranch.ref?.name, newBranchName)) return [unexpectedLinkedBranchResult(newBranchName)];
         return [createdLinkedBranchResult(owner, repo, baseBranchName, newBranchName)];
     } catch (error) {
         if (isGithubAlreadyExists(error)) {

@@ -65,41 +65,7 @@ export class PrepareBranchesUseCase implements ParamUseCase<
         param.tokens.token,
       );
       branches.forEach((branch) => logDebugInfo(`- ${branch}`));
-
-      const strategy = selectBranchPreparationStrategy({
-        hotfixActive: param.hotfix.active,
-        releaseActive: param.release.active,
-      });
-      if (strategy === "hotfix") {
-        return result.concat(
-          await prepareHotfixBranch(
-            param,
-            this.commitTagQueryPort,
-            this.linkedBranchCommandPort,
-            branches,
-            this.taskId,
-          ),
-        );
-      }
-      if (strategy === "release") {
-        return result.concat(
-          await prepareReleaseBranch(
-            param,
-            this.linkedBranchCommandPort,
-            branches,
-            this.taskId,
-          ),
-        );
-      }
-
-      result.push(
-        ...(await prepareManagedBranch(param, issueTitle, branches, this.taskId, {
-          branchNamePort: this.branchNamePort,
-          linkedBranchCommandPort: this.linkedBranchCommandPort,
-          branchPropagationDelayPort: this.branchPropagationDelayPort,
-          moveIssueToInProgressUseCase: this.moveIssueToInProgressUseCase,
-        })),
-      );
+      result.push(...await this.prepareBranchByStrategy(param, issueTitle, branches));
       return result;
     } catch (error) {
       logError(
@@ -119,6 +85,35 @@ export class PrepareBranchesUseCase implements ParamUseCase<
       );
       return result;
     }
+  }
+
+  private async prepareBranchByStrategy(
+    param: Execution,
+    issueTitle: string,
+    branches: string[],
+  ): Promise<Result[]> {
+    const strategy = selectBranchPreparationStrategy({
+      hotfixActive: param.hotfix.active,
+      releaseActive: param.release.active,
+    });
+    if (strategy === "hotfix") {
+      return prepareHotfixBranch(
+        param,
+        this.commitTagQueryPort,
+        this.linkedBranchCommandPort,
+        branches,
+        this.taskId,
+      );
+    }
+    if (strategy === "release") {
+      return prepareReleaseBranch(param, this.linkedBranchCommandPort, branches, this.taskId);
+    }
+    return prepareManagedBranch(param, issueTitle, branches, this.taskId, {
+      branchNamePort: this.branchNamePort,
+      linkedBranchCommandPort: this.linkedBranchCommandPort,
+      branchPropagationDelayPort: this.branchPropagationDelayPort,
+      moveIssueToInProgressUseCase: this.moveIssueToInProgressUseCase,
+    });
   }
 
 }

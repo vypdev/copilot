@@ -5,35 +5,50 @@ export function extractFirstJsonObject(text: string): string | null {
     const start = text.indexOf('{');
     if (start === -1) return null;
 
-    let depth = 1;
-    let inString = false;
-    let escape = false;
-    let quoteChar = '"';
+    const end = findJsonObjectEnd(text, start + 1);
+    return end === null ? null : text.slice(start, end + 1);
+}
 
-    for (let index = start + 1; index < text.length; index += 1) {
-        const character = text[index];
-        if (escape) {
-            escape = false;
-            continue;
-        }
-        if (character === '\\' && inString) {
-            escape = true;
-            continue;
-        }
-        if (inString) {
-            if (character === quoteChar) inString = false;
-            continue;
-        }
-        if (character === '"' || character === "'") {
-            inString = true;
-            quoteChar = character;
-        } else if (character === '{') {
-            depth += 1;
-        } else if (character === '}' && --depth === 0) {
-            return text.slice(start, index + 1);
-        }
+interface JsonScanState {
+    depth: number;
+    inString: boolean;
+    escape: boolean;
+    quoteChar: string;
+}
+
+function findJsonObjectEnd(text: string, start: number): number | null {
+    const state: JsonScanState = { depth: 1, inString: false, escape: false, quoteChar: '"' };
+    for (let index = start; index < text.length; index += 1) {
+        if (consumeJsonCharacter(state, text[index])) return index;
     }
     return null;
+}
+
+function consumeJsonCharacter(state: JsonScanState, character: string): boolean {
+    if (state.escape) {
+        state.escape = false;
+        return false;
+    }
+    if (character === '\\' && state.inString) {
+        state.escape = true;
+        return false;
+    }
+    if (state.inString) {
+        if (character === state.quoteChar) state.inString = false;
+        return false;
+    }
+    if (character === '"' || character === "'") {
+        state.inString = true;
+        state.quoteChar = character;
+        return false;
+    }
+    if (character === '{') {
+        state.depth += 1;
+        return false;
+    }
+    if (character !== '}') return false;
+    state.depth -= 1;
+    return state.depth === 0;
 }
 
 function parseObject(text: string): Record<string, unknown> | null {

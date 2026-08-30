@@ -11,6 +11,7 @@ import { PullRequestReviewOperationError } from '../../../ports/pull_request_rev
 import { buildBugbotPrompt } from './bugbot/build_bugbot_prompt';
 import { loadBugbotContext } from './bugbot/load_bugbot_context_use_case';
 import { applyDetectedFindings, prepareDetectedFindings } from './bugbot/apply_detected_findings';
+import type { PreparedBugbotFindings } from './bugbot/prepare_bugbot_findings';
 import { queryBugbotFindings } from './bugbot/query_bugbot_findings';
 
 export interface DetectPotentialProblemsWorkflowDependencies {
@@ -29,14 +30,7 @@ export async function runDetectPotentialProblemsWorkflow(
 ): Promise<Result[]> {
     logInfo(`${getTaskEmoji(TASK_ID)} Executing ${TASK_ID}.`);
     try {
-        if (!isAgentConfigurationReady(param.ai?.getAgentConfiguration('findings'))) {
-            logDebugInfo('Agent not configured; skipping potential problems detection.');
-            return [];
-        }
-        if (param.issueNumber === -1) {
-            logDebugInfo('No issue number for this branch; skipping potential problems detection.');
-            return [];
-        }
+        if (shouldSkipDetection(param)) return [];
 
         const context = await loadBugbotContext(param, undefined, dependencies.contextPorts);
         const prompt = buildBugbotPrompt(param, context);
@@ -46,21 +40,10 @@ export async function runDetectPotentialProblemsWorkflow(
             await queryBugbotFindings(dependencies.aiRepository, param, prompt),
         );
         if (prepared === undefined) {
-            logDebugInfo('DetectPotentialProblems: No response from configured agent.');
-            return [new Result({
-                id: TASK_ID,
-                success: false,
-                executed: true,
-                errors: [new Error('The configured agent returned no potential-problem analysis.')],
-            })];
+            return [noAnalysisResult()];
         }
         if (prepared.toPublish.length === 0 && prepared.resolvedFindingIds.size === 0) {
-            return [new Result({
-                id: TASK_ID,
-                success: true,
-                executed: true,
-                steps: ['Potential problems detection completed (no new findings, no resolved).'],
-            })];
+            return [noFindingsResult()];
         }
 
         const resolutionErrors = await applyDetectedFindings(
@@ -70,16 +53,7 @@ export async function runDetectPotentialProblemsWorkflow(
             dependencies.publicationPorts,
             dependencies.resolutionPorts,
         );
-        const stepParts = [`${prepared.toPublish.length} new/current finding(s) from configured agent`];
-        if (prepared.overflowCount > 0) stepParts.push(`${prepared.overflowCount} more not published (see summary comment)`);
-        if (prepared.resolvedFindingIds.size > 0) stepParts.push(`${prepared.resolvedFindingIds.size} marked as resolved by configured agent`);
-        return [new Result({
-            id: TASK_ID,
-            success: resolutionErrors.length === 0,
-            executed: true,
-            steps: [`Potential problems detection completed. ${stepParts.join('; ')}.`],
-            errors: resolutionErrors,
-        })];
+        return [detectionResult(prepared, resolutionErrors)];
     } catch (error) {
         const normalizedError = error instanceof PullRequestReviewOperationError
             ? error
@@ -93,4 +67,51 @@ export async function runDetectPotentialProblemsWorkflow(
             errors: [resultError],
         })];
     }
+}
+
+function shouldSkipDetection(param: Execution): boolean {
+    if (!isAgentConfigurationReady(param.ai?.getAgentConfiguration('findings'))) {
+        logDebugInfo('Agent not configured; skipping potential problems detection.');
+        return true;
+    }
+    if (param.issueNumber === -1) {
+        logDebugInfo('No issue number for this branch; skipping potential problems detection.');
+        return true;
+    }
+    return false;
+}
+
+function noAnalysisResult(): Result {
+    logDebugInfo('DetectPotentialProblems: No response from configured agent.');
+    return new Result({
+        id: TASK_ID,
+        success: false,
+        executed: true,
+        errors: [new Error('The configured agent returned no potential-problem analysis.')],
+    });
+}
+
+function noFindingsResult(): Result {
+    return new Result({
+        id: TASK_ID,
+        success: true,
+        executed: true,
+        steps: ['Potential problems detection completed (no new findings, no resolved).'],
+    });
+}
+
+function detectionResult(
+    prepared: PreparedBugbotFindings,
+    resolutionErrors: Error[],
+): Result {
+    const stepParts = [`${prepared.toPublish.length} new/current finding(s) from configured agent`];
+    if (prepared.overflowCount > 0) stepParts.push(`${prepared.overflowCount} more not published (see summary comment)`);
+    if (prepared.resolvedFindingIds.size > 0) stepParts.push(`${prepared.resolvedFindingIds.size} marked as resolved by configured agent`);
+    return new Result({
+        id: TASK_ID,
+        success: resolutionErrors.length === 0,
+        executed: true,
+        steps: [`Potential problems detection completed. ${stepParts.join('; ')}.`],
+        errors: resolutionErrors,
+    });
 }
