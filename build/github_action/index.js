@@ -48782,12 +48782,20 @@ const repository_context_1 = __nccwpck_require__(78958);
 /** Maps the GitHub Actions runtime context to the shape consumed by Execution. */
 function buildGithubActionEventInputs(context) {
     const repository = (0, repository_context_1.requireRepositoryCoordinates)(context.repo);
+    const eventName = requireNonEmptyContextValue(context.eventName, 'event name');
+    const actor = requireNonEmptyContextValue(context.actor, 'actor');
     return {
         ...context.payload,
-        eventName: context.eventName,
-        actor: context.actor,
+        eventName,
+        actor,
         repo: repository,
     };
+}
+function requireNonEmptyContextValue(value, label) {
+    if (typeof value !== 'string' || value.trim().length === 0) {
+        throw new Error(`GitHub event context requires a non-empty ${label}.`);
+    }
+    return value.trim();
 }
 
 
