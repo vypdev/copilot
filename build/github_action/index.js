@@ -54561,10 +54561,7 @@ async function executeVerifyCommand(command, execute) {
             : { success: false, failedCommand: formatCommandForDiagnostics(parsed) };
     }
     catch {
-        (0, logging_ports_1.logError)('Verify command failed.', {
-            program: parsed.program,
-            argumentCount: parsed.args.length,
-        });
+        (0, logging_ports_1.logError)('Verify command failed.');
         return { success: false, failedCommand: formatCommandForDiagnostics(parsed) };
     }
 }
