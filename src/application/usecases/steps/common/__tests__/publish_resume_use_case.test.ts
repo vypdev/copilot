@@ -83,6 +83,26 @@ describe('PublishResultUseCase', () => {
     expect(mockAddComment).not.toHaveBeenCalled();
   });
 
+  it('does not publish a GIF-only comment when debug logs are the only output', async () => {
+    mockGetAccumulatedLogsAsText.mockReturnValue('[INFO] no-op');
+    const param = baseParam({
+      isIssue: true,
+      debug: true,
+      release: { active: true },
+      images: {
+        ...baseParam().images,
+        issueReleaseGifs: ['release.gif'],
+      },
+      currentConfiguration: {
+        results: [new Result({ id: 'x', success: true, executed: false, steps: [] })],
+      },
+    });
+
+    await useCase.invoke(param);
+
+    expect(mockAddComment).not.toHaveBeenCalled();
+  });
+
   it('publishes failures even when a result has no steps', async () => {
     mockAddComment.mockResolvedValue(undefined);
     const param = baseParam({

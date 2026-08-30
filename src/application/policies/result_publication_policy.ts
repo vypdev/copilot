@@ -56,8 +56,11 @@ ${safeLogs}
 }
 
 export function hasPublishableContent(sections: ResultPublicationSections, debugLogSection: string): boolean {
-    return sections.content.length > 0
-        || sections.errors.length > 0
-        || sections.footer.length > 0
-        || debugLogSection.length > 0;
+    // Debug output belongs in the job summary/logs. Publishing it as the only
+    // result creates a comment with just the presentation GIF and metadata,
+    // which can retrigger `issue_comment` workflows indefinitely.
+    void debugLogSection;
+    return sections.content.trim().length > 0
+        || sections.errors.trim().length > 0
+        || sections.footer.trim().length > 0;
 }

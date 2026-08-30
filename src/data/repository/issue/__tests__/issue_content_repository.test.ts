@@ -65,6 +65,14 @@ describe('IssueContentRepository', () => {
         expect(mockUpdateComment).toHaveBeenCalledWith(expect.objectContaining({ comment_id: 12 }));
     });
 
+    it.each(['', '   ', '\n<!-- copilot metadata -->\n'])('does not publish an empty comment body: %j', async (comment) => {
+        await repository.addComment('owner', 'repo', 7, comment, 'token');
+        await repository.updateComment('owner', 'repo', 7, 12, comment, 'token');
+
+        expect(mockCreateComment).not.toHaveBeenCalled();
+        expect(mockUpdateComment).not.toHaveBeenCalled();
+    });
+
     it('aggregates paginated comments', async () => {
         mockIterator.mockReturnValue((async function* () {
             yield { data: [{ id: 1, body: 'first', user: { login: 'one' } }] };

@@ -66612,6 +66612,7 @@ exports.IssueClosureRepository = IssueClosureRepository;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueContentRepository = void 0;
 const comment_watermark_1 = __nccwpck_require__(23623);
+const comment_content_policy_1 = __nccwpck_require__(77454);
 const logger_1 = __nccwpck_require__(91151);
 const github_pagination_policy_1 = __nccwpck_require__(44812);
 class IssueContentRepository {
@@ -66660,6 +66661,10 @@ class IssueContentRepository {
             return issue.body ?? '';
         };
         this.addComment = async (owner, repository, issueNumber, comment, token, options) => {
+            if (!(0, comment_content_policy_1.hasVisibleCommentContent)(comment)) {
+                (0, logger_1.logDebugInfo)(`Skipped empty comment publication for Issue ${issueNumber}.`);
+                return;
+            }
             const watermark = (0, comment_watermark_1.getCommentWatermark)(options?.commitSha ? { commitSha: options.commitSha, owner, repo: repository } : undefined);
             const octokit = this.githubClient.getClient(token);
             await octokit.rest.issues.createComment({
@@ -66671,6 +66676,10 @@ class IssueContentRepository {
             (0, logger_1.logDebugInfo)(`Comment added to Issue ${issueNumber}.`);
         };
         this.updateComment = async (owner, repository, issueNumber, commentId, comment, token, options) => {
+            if (!(0, comment_content_policy_1.hasVisibleCommentContent)(comment)) {
+                (0, logger_1.logDebugInfo)(`Skipped empty comment update for Issue ${issueNumber}.`);
+                return;
+            }
             const watermark = (0, comment_watermark_1.getCommentWatermark)(options?.commitSha ? { commitSha: options.commitSha, owner, repo: repository } : undefined);
             const octokit = this.githubClient.getClient(token);
             await octokit.rest.issues.updateComment({
@@ -69772,6 +69781,29 @@ function fnv1a(value) {
         hash = Math.imul(hash, 0x01000193);
     }
     return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+
+/***/ }),
+
+/***/ 77454:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.hasVisibleCommentContent = hasVisibleCommentContent;
+/**
+ * Returns whether a comment contains content visible to a GitHub user.
+ *
+ * HTML comments are metadata and must not be enough to trigger a new
+ * `issue_comment` workflow. This policy deliberately does not try to parse
+ * Markdown: images and other rich Markdown are valid user-visible content.
+ */
+function hasVisibleCommentContent(value) {
+    if (typeof value !== 'string')
+        return false;
+    return value.replace(/<!--[\s\S]*?-->/gu, '').trim().length > 0;
 }
 
 

@@ -1,4 +1,5 @@
 import type { Result } from '../../data/model/result';
+import { hasVisibleCommentContent } from '../../domain/comment_content_policy';
 import type { ResultPublicationSections } from './result_publication_contracts';
 import { sanitizeAgentMarkdown, sanitizePublishedError } from './github_comment_publication_policy';
 
@@ -10,8 +11,12 @@ export function renderResultSections(results: ReadonlyArray<Result>): ResultPubl
 
     for (const result of results) {
         stepIndex = appendSteps(renderedSteps, result, stepIndex);
-        reminders.push(...result.reminders.map(reminder => sanitizeAgentMarkdown(reminder)));
-        errors.push(...result.errors.map(error => sanitizePublishedError(error.message)));
+        reminders.push(...result.reminders
+            .map(reminder => sanitizeAgentMarkdown(reminder))
+            .filter(hasVisibleCommentContent));
+        errors.push(...result.errors
+            .map(error => sanitizePublishedError(error.message))
+            .filter(hasVisibleCommentContent));
     }
 
     return {

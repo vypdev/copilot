@@ -136,6 +136,15 @@ describe('result publication policy', () => {
     expect(sections.errors).not.toContain('gho_secret-value');
   });
 
+  it('does not create sections from whitespace-only reminders or errors', () => {
+    const sections = renderResultSections([
+      new Result({ reminders: ['   '], errors: [new Error('\n')] }),
+    ]);
+
+    expect(sections.footer).toBe('');
+    expect(sections.errors).toBe('');
+  });
+
   it('builds debug content only when enabled and populated', () => {
     expect(buildDebugLogSection(false, 'log')).toBe('');
     expect(buildDebugLogSection(true, '')).toBe('');
@@ -153,6 +162,7 @@ describe('result publication policy', () => {
 
   it('detects publishable sections independently of the title', () => {
     expect(hasPublishableContent({ content: '', footer: '', errors: '' }, '')).toBe(false);
-    expect(hasPublishableContent({ content: '', footer: '', errors: '' }, 'debug')).toBe(true);
+    expect(hasPublishableContent({ content: '', footer: '', errors: '' }, 'debug')).toBe(false);
+    expect(hasPublishableContent({ content: 'recommendation', footer: '', errors: '' }, 'debug')).toBe(true);
   });
 });

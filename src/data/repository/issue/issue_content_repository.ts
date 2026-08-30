@@ -1,4 +1,5 @@
 import { getCommentWatermark } from "../../../utils/comment_watermark";
+import { hasVisibleCommentContent } from '../../../domain/comment_content_policy';
 import { logDebugInfo, logError } from "../../../utils/logger";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type { GithubIssueContentClient } from "../../../infrastructure/github/ports/github_issue_provider_ports";
@@ -79,6 +80,11 @@ export class IssueContentRepository {
         token: string,
         options?: { commitSha?: string },
     ): Promise<void> => {
+        if (!hasVisibleCommentContent(comment)) {
+            logDebugInfo(`Skipped empty comment publication for Issue ${issueNumber}.`);
+            return;
+        }
+
         const watermark = getCommentWatermark(
             options?.commitSha ? { commitSha: options.commitSha, owner, repo: repository } : undefined,
         );
@@ -101,6 +107,11 @@ export class IssueContentRepository {
         token: string,
         options?: { commitSha?: string },
     ): Promise<void> => {
+        if (!hasVisibleCommentContent(comment)) {
+            logDebugInfo(`Skipped empty comment update for Issue ${issueNumber}.`);
+            return;
+        }
+
         const watermark = getCommentWatermark(
             options?.commitSha ? { commitSha: options.commitSha, owner, repo: repository } : undefined,
         );
