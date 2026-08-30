@@ -6,4 +6,5 @@ export declare class PullRequestReviewThreadRepository implements PullRequestRev
     private readonly githubClient;
     constructor(githubClient: GithubClientPort<GithubGraphqlTransportClient>);
     resolvePullRequestReviewThread: (owner: string, repository: string, pullNumber: number, commentIdentity: string, token: string) => Promise<void>;
+    unresolvePullRequestReviewThread: (owner: string, repository: string, pullNumber: number, commentIdentity: string, token: string) => Promise<void>;
 }

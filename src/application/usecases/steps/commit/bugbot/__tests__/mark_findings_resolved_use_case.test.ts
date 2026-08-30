@@ -19,6 +19,7 @@ const mockUpdateComment = jest.fn();
 const mockListPrReviewComments = jest.fn();
 const mockUpdatePrReviewComment = jest.fn();
 const mockResolveThread = jest.fn();
+const mockUnresolveThread = jest.fn();
 
 function markFindingsResolved(param: Omit<MarkFindingsResolvedParam, "ports">) {
   return markFindingsResolvedImpl({
@@ -29,6 +30,7 @@ function markFindingsResolved(param: Omit<MarkFindingsResolvedParam, "ports">) {
         listPullRequestReviewComments: mockListPrReviewComments,
         updatePullRequestReviewComment: mockUpdatePrReviewComment,
         resolvePullRequestReviewThread: mockResolveThread,
+        unresolvePullRequestReviewThread: mockUnresolveThread,
       },
     },
   });

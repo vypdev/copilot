@@ -54,4 +54,45 @@ export class PullRequestReviewThreadRepository implements PullRequestReviewThrea
             throw toPullRequestReviewOperationError(error, 'resolve-thread');
         }
     };
+
+    unresolvePullRequestReviewThread = async (
+        owner: string,
+        repository: string,
+        pullNumber: number,
+        commentIdentity: string,
+        token: string,
+    ): Promise<void> => {
+        try {
+            const client = this.githubClient.getClient(token);
+            const thread = await findPullRequestReviewThread(
+                client,
+                owner,
+                repository,
+                pullNumber,
+                commentIdentity,
+            );
+            if (thread == null) throw new PullRequestReviewOperationError('unresolve-thread');
+            if (!thread.isResolved) {
+                logDebugInfo('Pull request review thread is already unresolved.');
+                return;
+            }
+
+            const result = await client.graphql<{
+                unresolveReviewThread?: { thread?: { id: string } | null };
+            }>(
+                `mutation ($threadId: ID!) {
+                    unresolveReviewThread(input: { threadId: $threadId }) {
+                        thread { id }
+                    }
+                }`,
+                { threadId: thread.id },
+            );
+            if (result.unresolveReviewThread?.thread?.id !== thread.id) {
+                throw new PullRequestReviewOperationError('unresolve-thread');
+            }
+            logDebugInfo('Reopened pull request review thread.');
+        } catch (error) {
+            throw toPullRequestReviewOperationError(error, 'unresolve-thread');
+        }
+    };
 }

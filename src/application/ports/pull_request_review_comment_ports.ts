@@ -72,4 +72,12 @@ export interface PullRequestReviewThreadCommandPort {
     commentIdentity: string,
     token: string,
   ): Promise<void>;
+
+  unresolvePullRequestReviewThread(
+    owner: string,
+    repository: string,
+    pullRequestNumber: number,
+    commentIdentity: string,
+    token: string,
+  ): Promise<void>;
 }

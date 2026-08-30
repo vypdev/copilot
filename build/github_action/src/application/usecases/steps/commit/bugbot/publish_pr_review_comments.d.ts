@@ -1,8 +1,8 @@
-import type { PullRequestReviewCommentCommandPort } from "../../../../ports/pull_request_review_comment_ports";
+import type { BugbotPullRequestWritePort } from "../../../../ports/bugbot_pull_request_write_ports";
 import type { Execution } from "../../../../../data/model/execution";
 import type { BugbotFinding, BugbotPrContext, ExistingFindingInfo } from "./types";
 export interface PullRequestReviewCommentPublisherOptions {
-    repository: PullRequestReviewCommentCommandPort;
+    repository: BugbotPullRequestWritePort;
     execution: Execution;
     openPrNumber: number;
     prContext: BugbotPrContext;

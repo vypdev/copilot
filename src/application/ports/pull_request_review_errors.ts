@@ -9,6 +9,7 @@ export type PullRequestReviewOperation =
   | "publish-comments"
   | "update-comment"
   | "resolve-thread"
+  | "unresolve-thread"
   | "mark-resolved";
 
 interface PullRequestReviewErrorContext {
@@ -27,6 +28,7 @@ const ERROR_MESSAGES: Record<PullRequestReviewOperation, string> = {
   "publish-comments": "Failed to publish pull request review comments.",
   "update-comment": "Unable to update the pull request review comment.",
   "resolve-thread": "Unable to resolve the pull request review thread.",
+  "unresolve-thread": "Unable to reopen the pull request review thread.",
   "mark-resolved": "Unable to mark a pull request finding as resolved.",
 };
 

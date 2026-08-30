@@ -15,6 +15,7 @@ const mockAddComment = jest.fn();
 const mockUpdateComment = jest.fn();
 const mockCreateReviewWithComments = jest.fn();
 const mockUpdatePullRequestReviewComment = jest.fn();
+const mockUnresolvePullRequestReviewThread = jest.fn();
 
 
 
@@ -26,6 +27,7 @@ function publishFindings(param: Omit<PublishFindingsParam, "ports">) {
             pullRequestComments: {
                 createReviewWithComments: mockCreateReviewWithComments,
                 updatePullRequestReviewComment: mockUpdatePullRequestReviewComment,
+                unresolvePullRequestReviewThread: mockUnresolvePullRequestReviewThread,
             },
         },
     });
@@ -65,6 +67,7 @@ describe("publishFindings", () => {
         mockUpdateComment.mockReset().mockResolvedValue(undefined);
         mockCreateReviewWithComments.mockReset().mockResolvedValue(undefined);
         mockUpdatePullRequestReviewComment.mockReset().mockResolvedValue(undefined);
+        mockUnresolvePullRequestReviewThread.mockReset().mockResolvedValue(undefined);
     });
 
     it("adds issue comment for new finding", async () => {
@@ -197,6 +200,38 @@ describe("publishFindings", () => {
             "t"
         );
         expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+    });
+
+    it("reopens a resolved PR thread before refreshing a finding that is active again", async () => {
+        await publishFindings({
+            execution: baseExecution,
+            context: baseContext({
+                openPrNumbers: [50],
+                existingByFindingId: {
+                    f1: {
+                        pullRequest: {
+                            commentIdentity: "PRRC_resolved",
+                            pullRequestNumber: 50,
+                            resolved: true,
+                        },
+                    },
+                },
+                prContext: {
+                    prHeadSha: "sha1",
+                    prFiles: [{ filename: "src/foo.ts", status: "modified" }],
+                    pathToFirstDiffLine: {},
+                },
+            }),
+            findings: [finding({ file: "src/foo.ts" })],
+        });
+
+        expect(mockUnresolvePullRequestReviewThread).toHaveBeenCalledWith(
+            "o", "r", 50, "PRRC_resolved", "t",
+        );
+        expect(mockUpdatePullRequestReviewComment).toHaveBeenCalledTimes(1);
+        expect(mockUnresolvePullRequestReviewThread.mock.invocationCallOrder[0]).toBeLessThan(
+            mockUpdatePullRequestReviewComment.mock.invocationCallOrder[0],
+        );
     });
 
     it("adds overflow comment when overflowCount > 0", async () => {

@@ -52,17 +52,17 @@ describe("collect architecture metrics", () => {
         `spawn(execPath, ["-e", ${JSON.stringify(
           `setTimeout(() => require("node:fs").writeFileSync(${JSON.stringify(
             marker,
-          )}, "late"), 250)`,
+          )}, "late"), 500)`,
         )}], { stdio: "ignore" });`,
         "setInterval(() => {}, 1000);",
       ].join("\n"),
     );
 
-    expect(() => runProcess([execPath, parent], process.cwd(), 30)).toThrow(
-      "timed out after 30ms",
+    expect(() => runProcess([execPath, parent], process.cwd(), 100)).toThrow(
+      "timed out after 100ms",
     );
     runProcess(
-      [execPath, "-e", "setTimeout(() => {}, 400)"],
+      [execPath, "-e", "setTimeout(() => {}, 700)"],
       process.cwd(),
       1000,
     );

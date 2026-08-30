@@ -36,6 +36,7 @@ const mockGetFilesWithFirstDiffLine = jest.fn();
 const mockCreateReviewWithComments = jest.fn();
 const mockUpdatePullRequestReviewComment = jest.fn();
 const mockResolvePullRequestReviewThread = jest.fn();
+const mockUnresolvePullRequestReviewThread = jest.fn();
 
 const mockAskAgent = jest.fn();
 
@@ -83,6 +84,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       createReviewWithComments: mockCreateReviewWithComments,
       updatePullRequestReviewComment: mockUpdatePullRequestReviewComment,
       resolvePullRequestReviewThread: mockResolvePullRequestReviewThread,
+      unresolvePullRequestReviewThread: mockUnresolvePullRequestReviewThread,
     };
     useCase = new DetectPotentialProblemsUseCase(
       {
@@ -114,6 +116,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     mockCreateReviewWithComments.mockReset();
     mockUpdatePullRequestReviewComment.mockReset();
     mockResolvePullRequestReviewThread.mockReset();
+    mockUnresolvePullRequestReviewThread.mockReset();
     mockAskAgent.mockReset();
 
     mockListIssueComments.mockResolvedValue([]);
@@ -533,6 +536,7 @@ describe("DetectPotentialProblemsUseCase", () => {
         commandRepository.createReviewWithComments.bind(commandRepository),
       updatePullRequestReviewComment: jest.fn(),
       resolvePullRequestReviewThread: jest.fn(),
+      unresolvePullRequestReviewThread: jest.fn(),
     };
     const issuePort = {
       listIssueComments: mockListIssueComments,

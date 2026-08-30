@@ -50385,6 +50385,7 @@ const ERROR_MESSAGES = {
     "publish-comments": "Failed to publish pull request review comments.",
     "update-comment": "Unable to update the pull request review comment.",
     "resolve-thread": "Unable to resolve the pull request review thread.",
+    "unresolve-thread": "Unable to reopen the pull request review thread.",
     "mark-resolved": "Unable to mark a pull request finding as resolved.",
 };
 function buildMessage(operation, context) {
@@ -54162,6 +54163,9 @@ class PullRequestReviewCommentPublisher {
         const line = finding.line ?? prContext.pathToFirstDiffLine[path] ?? 1;
         if (existing?.pullRequest != null &&
             existing.pullRequest.pullRequestNumber === openPrNumber) {
+            if (existing.pullRequest.resolved) {
+                await this.options.repository.unresolvePullRequestReviewThread(execution.owner, execution.repo, openPrNumber, existing.pullRequest.commentIdentity, execution.tokens.token);
+            }
             await this.options.repository.updatePullRequestReviewComment(execution.owner, execution.repo, existing.pullRequest.commentIdentity, body, execution.tokens.token);
             return;
         }
@@ -63189,6 +63193,7 @@ class BugbotPullRequestRepository {
         this.createReviewWithComments = (...args) => this.reviewCommand.createReviewWithComments(...args);
         this.updatePullRequestReviewComment = (...args) => this.reviewCommand.updatePullRequestReviewComment(...args);
         this.resolvePullRequestReviewThread = (...args) => this.threadCommand.resolvePullRequestReviewThread(...args);
+        this.unresolvePullRequestReviewThread = (...args) => this.threadCommand.unresolvePullRequestReviewThread(...args);
     }
 }
 exports.BugbotPullRequestRepository = BugbotPullRequestRepository;
@@ -63717,6 +63722,30 @@ class PullRequestReviewThreadRepository {
             }
             catch (error) {
                 throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, 'resolve-thread');
+            }
+        };
+        this.unresolvePullRequestReviewThread = async (owner, repository, pullNumber, commentIdentity, token) => {
+            try {
+                const client = this.githubClient.getClient(token);
+                const thread = await (0, pull_request_review_thread_locator_1.findPullRequestReviewThread)(client, owner, repository, pullNumber, commentIdentity);
+                if (thread == null)
+                    throw new pull_request_review_errors_1.PullRequestReviewOperationError('unresolve-thread');
+                if (!thread.isResolved) {
+                    (0, logger_1.logDebugInfo)('Pull request review thread is already unresolved.');
+                    return;
+                }
+                const result = await client.graphql(`mutation ($threadId: ID!) {
+                    unresolveReviewThread(input: { threadId: $threadId }) {
+                        thread { id }
+                    }
+                }`, { threadId: thread.id });
+                if (result.unresolveReviewThread?.thread?.id !== thread.id) {
+                    throw new pull_request_review_errors_1.PullRequestReviewOperationError('unresolve-thread');
+                }
+                (0, logger_1.logDebugInfo)('Reopened pull request review thread.');
+            }
+            catch (error) {
+                throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, 'unresolve-thread');
             }
         };
     }

@@ -4,7 +4,6 @@ import type { BugbotFindingPublicationPorts } from "../bugbot_finding_publicatio
 import type { BugbotFindingResolutionPorts } from "../bugbot_finding_resolution_ports";
 import type { BugbotPullRequestResolutionPort } from "../bugbot_pull_request_resolution_ports";
 import type { BugbotPullRequestWritePort } from "../bugbot_pull_request_write_ports";
-import type { PullRequestReviewCommentCommandPort } from "../pull_request_review_comment_ports";
 
 type Equal<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 type Assert<T extends true> = T;
@@ -14,13 +13,18 @@ type PublicationKeysAreExact = Assert<
 type ResolutionKeysAreExact = Assert<
   Equal<keyof BugbotFindingResolutionPorts, "issueComments" | "pullRequestComments">
 >;
+type PullRequestWriteKeys =
+  | "createReviewWithComments"
+  | "updatePullRequestReviewComment"
+  | "unresolvePullRequestReviewThread";
 type PullRequestWriteKeysAreExact = Assert<
-  Equal<keyof BugbotPullRequestWritePort, keyof PullRequestReviewCommentCommandPort>
+  Equal<keyof BugbotPullRequestWritePort, PullRequestWriteKeys>
 >;
 type PullRequestResolutionKeys =
   | "listPullRequestReviewComments"
   | "updatePullRequestReviewComment"
-  | "resolvePullRequestReviewThread";
+  | "resolvePullRequestReviewThread"
+  | "unresolvePullRequestReviewThread";
 type PullRequestResolutionKeysAreExact = Assert<
   Equal<keyof BugbotPullRequestResolutionPort, PullRequestResolutionKeys>
 >;
@@ -111,5 +115,14 @@ describe("Bugbot port boundaries", () => {
     expect(markResolvedSource).toContain("BugbotFindingResolutionPorts");
     expect(workflowSource).not.toContain("BugbotWritePorts");
     expect(workflowSource).toContain("BugbotFindingResolutionPorts");
+  });
+
+  it("allows publication to reopen an existing resolved thread without granting resolution writes", () => {
+    const writePortSource = readFileSync(
+      join(portsDirectory, "bugbot_pull_request_write_ports.ts"),
+      "utf8",
+    );
+    expect(writePortSource).toContain("unresolvePullRequestReviewThread");
+    expect(writePortSource).not.toContain("resolvePullRequestReviewThread(");
   });
 });

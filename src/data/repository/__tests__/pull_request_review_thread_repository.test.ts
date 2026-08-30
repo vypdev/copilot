@@ -60,6 +60,79 @@ describe("PullRequestReviewThreadRepository", () => {
     expect(mockGraphql.mock.calls[1][1]).toEqual({ threadId: "THREAD_1" });
   });
 
+  it("reopens a resolved thread containing the requested comment", async () => {
+    mockGraphql
+      .mockResolvedValueOnce({
+        repository: {
+          pullRequest: {
+            reviewThreads: {
+              nodes: [
+                {
+                  id: "THREAD_REOPEN",
+                  isResolved: true,
+                  comments: {
+                    nodes: [{ id: "101" }],
+                    pageInfo: { hasNextPage: false, endCursor: null },
+                  },
+                },
+              ],
+              pageInfo: { hasNextPage: false, endCursor: null },
+            },
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        unresolveReviewThread: { thread: { id: "THREAD_REOPEN" } },
+      });
+
+    await repository.unresolvePullRequestReviewThread(
+      "owner",
+      "repo",
+      7,
+      "101",
+      "token",
+    );
+
+    expect(mockGraphql).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining("unresolveReviewThread"),
+      { threadId: "THREAD_REOPEN" },
+    );
+  });
+
+  it("treats an already-unresolved thread as an idempotent reopen", async () => {
+    mockGraphql.mockResolvedValueOnce({
+      repository: {
+        pullRequest: {
+          reviewThreads: {
+            nodes: [
+              {
+                id: "THREAD_OPEN",
+                isResolved: false,
+                comments: {
+                  nodes: [{ id: "101" }],
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                },
+              },
+            ],
+            pageInfo: { hasNextPage: false, endCursor: null },
+          },
+        },
+      },
+    });
+
+    await expect(
+      repository.unresolvePullRequestReviewThread(
+        "owner",
+        "repo",
+        7,
+        "101",
+        "token",
+      ),
+    ).resolves.toBeUndefined();
+    expect(mockGraphql).toHaveBeenCalledTimes(1);
+  });
+
   it("resolves a comment whose full database id exceeds GraphQL Int range", async () => {
     mockGraphql
       .mockResolvedValueOnce({

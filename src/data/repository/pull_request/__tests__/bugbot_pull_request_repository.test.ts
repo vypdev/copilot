@@ -33,6 +33,7 @@ describe("BugbotPullRequestRepository capabilities", () => {
     };
     const threadCommand: PullRequestReviewThreadCommandPort = {
       resolvePullRequestReviewThread: jest.fn().mockResolvedValue(undefined),
+      unresolvePullRequestReviewThread: jest.fn().mockResolvedValue(undefined),
     };
     const repository = new BugbotPullRequestRepository(
       lifecycle,

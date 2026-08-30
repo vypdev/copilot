@@ -62,4 +62,8 @@ export class BugbotPullRequestRepository
       BugbotPullRequestResolutionPort["resolvePullRequestReviewThread"]
     >
   ) => this.threadCommand.resolvePullRequestReviewThread(...args);
+
+  unresolvePullRequestReviewThread = (
+    ...args: Parameters<BugbotPullRequestResolutionPort["unresolvePullRequestReviewThread"]>
+  ) => this.threadCommand.unresolvePullRequestReviewThread(...args);
 }

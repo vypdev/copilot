@@ -157,6 +157,7 @@ describe("PullRequestReviewCommentUseCase", () => {
           updatePullRequestReviewComment: jest.fn(),
           listPullRequestReviewComments: jest.fn(),
           resolvePullRequestReviewThread: jest.fn(),
+          unresolvePullRequestReviewThread: jest.fn(),
         },
       },
       {

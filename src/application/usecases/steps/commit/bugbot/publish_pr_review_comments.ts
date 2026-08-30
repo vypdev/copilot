@@ -1,7 +1,5 @@
-import type {
-  PullRequestReviewCommentCommandPort,
-  PullRequestReviewCommentDraft,
-} from "../../../../ports/pull_request_review_comment_ports";
+import type { BugbotPullRequestWritePort } from "../../../../ports/bugbot_pull_request_write_ports";
+import type { PullRequestReviewCommentDraft } from "../../../../ports/pull_request_review_comment_ports";
 import type { Execution } from "../../../../../data/model/execution";
 import type {
   BugbotFinding,
@@ -13,7 +11,7 @@ import { resolveFindingPathForPr } from "./path_validation";
 import { logInfo } from "../../../../ports/logging_ports";
 
 export interface PullRequestReviewCommentPublisherOptions {
-  repository: PullRequestReviewCommentCommandPort;
+  repository: BugbotPullRequestWritePort;
   execution: Execution;
   openPrNumber: number;
   prContext: BugbotPrContext;
@@ -48,6 +46,15 @@ export class PullRequestReviewCommentPublisher {
       existing?.pullRequest != null &&
       existing.pullRequest.pullRequestNumber === openPrNumber
     ) {
+      if (existing.pullRequest.resolved) {
+        await this.options.repository.unresolvePullRequestReviewThread(
+          execution.owner,
+          execution.repo,
+          openPrNumber,
+          existing.pullRequest.commentIdentity,
+          execution.tokens.token,
+        );
+      }
       await this.options.repository.updatePullRequestReviewComment(
         execution.owner,
         execution.repo,

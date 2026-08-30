@@ -25,4 +25,5 @@ export declare class BugbotPullRequestRepository implements BugbotPullRequestRea
     createReviewWithComments: (...args: Parameters<BugbotPullRequestWritePort["createReviewWithComments"]>) => Promise<void>;
     updatePullRequestReviewComment: (...args: Parameters<BugbotPullRequestWritePort["updatePullRequestReviewComment"]>) => Promise<void>;
     resolvePullRequestReviewThread: (...args: Parameters<BugbotPullRequestResolutionPort["resolvePullRequestReviewThread"]>) => Promise<void>;
+    unresolvePullRequestReviewThread: (...args: Parameters<BugbotPullRequestResolutionPort["unresolvePullRequestReviewThread"]>) => Promise<void>;
 }
