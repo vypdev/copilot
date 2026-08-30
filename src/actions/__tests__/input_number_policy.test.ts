@@ -1,9 +1,16 @@
 import { parseBoundedPositiveIntegerInput, parseIntegerInput, parseNonNegativeIntegerInput } from '../input_number_policy';
 
 describe('input number policy', () => {
-    it('parses integer strings and numbers', () => {
+  it('parses integer strings and numbers', () => {
         expect(parseIntegerInput('42', 0)).toBe(42);
     expect(parseIntegerInput(7, 0)).toBe(7);
+  });
+
+  it('rejects partial, decimal, exponential and unsafe integer values', () => {
+    expect(parseIntegerInput('42abc', 9)).toBe(9);
+    expect(parseIntegerInput('1.5', 9)).toBe(9);
+    expect(parseIntegerInput('1e3', 9)).toBe(9);
+    expect(parseIntegerInput(Number.MAX_SAFE_INTEGER + 1, 9)).toBe(9);
   });
 
   it('uses the fallback for negative timeout-like values', () => {
