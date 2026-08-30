@@ -2,6 +2,7 @@ import {
     createUntrustedContent,
     DEFAULT_UNTRUSTED_CONTENT_LIMIT,
 } from '../../domain/security/untrusted_content';
+import { escapeHtml, sanitizeAgentMarkdown } from './github_comment_publication_policy';
 
 /** Opaque marker: it is metadata, not an instruction for another agent. */
 export const TRANSLATED_COMMENT_MARKER = '<!-- copilot:translated-comment:v2 -->';
@@ -38,7 +39,7 @@ export function composeTranslatedComment(
     ).text;
     if (!boundedTranslated.trim()) return undefined;
 
-    const safeTranslated = neutralizeGithubControls(boundedTranslated);
+    const safeTranslated = sanitizeAgentMarkdown(boundedTranslated, MAX_TRANSLATED_COMMENT_LENGTH);
     const safeOriginal = escapeHtml(originalComment);
     return {
         translatedText: safeTranslated,
@@ -57,23 +58,4 @@ export function composeTranslatedComment(
             '',
         ].join('\n'),
     };
-}
-
-function neutralizeGithubControls(value: string): string {
-    return value
-        .replace(/<!--/g, '&lt;!--')
-        .replace(/-->/g, '--&gt;')
-        // Keep the rendered text while preventing line-based bot commands.
-        .replace(/(^|\n)([ \t]*)\/(?!\/)/g, '$1$2\u200b/')
-        // Do not notify arbitrary users mentioned by a translation.
-        .replace(/@(?=[a-zA-Z0-9][a-zA-Z0-9-])/g, '@\u200b');
-}
-
-function escapeHtml(value: string): string {
-    return value
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
 }

@@ -7,6 +7,7 @@
 
 import { BUGBOT_MARKER_PREFIX } from "../../../../../utils/constants";
 import type { BugbotFinding } from "./types";
+import { sanitizeAgentMarkdown } from "../../../../../application/policies/github_comment_publication_policy";
 
 /** Maximum lossless finding identity accepted by the marker contract. */
 export const MAX_FINDING_ID_LENGTH = 200;
@@ -115,22 +116,27 @@ export function buildCommentBody(
   finding: BugbotFinding,
   resolved: boolean,
 ): string {
-  const severity = finding.severity
-    ? `**Severity:** ${finding.severity}\n\n`
+  const safeTitle = sanitizeAgentMarkdown(finding.title, 500) || "Potential problem";
+  const safeDescription = sanitizeAgentMarkdown(finding.description, 8_000) || "No description provided.";
+  const safeSeverity = sanitizeAgentMarkdown(finding.severity, 32);
+  const safeFile = sanitizeAgentMarkdown(finding.file, 500).replace(/`/g, "\\`");
+  const safeSuggestion = sanitizeAgentMarkdown(finding.suggestion, 8_000);
+  const severity = safeSeverity
+    ? `**Severity:** ${safeSeverity}\n\n`
     : "";
   const fileLine =
-    finding.file != null
-      ? `**Location:** \`${finding.file}${finding.line != null ? `:${finding.line}` : ""}\`\n\n`
+    safeFile
+      ? `**Location:** \`${safeFile}${finding.line != null ? `:${finding.line}` : ""}\`\n\n`
       : "";
-  const suggestion = finding.suggestion
-    ? `**Suggested fix:**\n${finding.suggestion}\n\n`
+  const suggestion = safeSuggestion
+    ? `**Suggested fix:**\n${safeSuggestion}\n\n`
     : "";
   const resolvedNote = resolved
     ? "\n\n---\n**Resolved** (no longer reported in latest analysis).\n"
     : "";
   const marker = buildMarker(finding.id, resolved, finding.fingerprint);
-  return `## ${finding.title}
+  return `## ${safeTitle}
 
-${severity}${fileLine}${finding.description}
+${severity}${fileLine}${safeDescription}
 ${suggestion}${resolvedNote}${marker}`;
 }
