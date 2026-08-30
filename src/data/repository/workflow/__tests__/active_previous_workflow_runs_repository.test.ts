@@ -182,6 +182,20 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
     })).rejects.toThrow('GitHub workflow runs response did not contain a workflow_runs array.');
   });
 
+  it('reports an absent workflow response clearly', async () => {
+    iterator.mockImplementation(async function* () {
+      yield { data: undefined } as unknown as GithubWorkflowRunsResponse;
+    });
+    const repository = new ActivePreviousWorkflowRunsRepository(client);
+
+    await expect(repository.countActivePreviousRuns({
+      owner: 'org',
+      repository: 'repo',
+      currentRunId: 200,
+      workflowName: 'CI',
+    })).rejects.toThrow('GitHub workflow runs response did not contain a workflow_runs array.');
+  });
+
   it('retries transient provider failures before returning active runs', async () => {
     const retryDelayPort = { wait: jest.fn().mockResolvedValue(undefined) };
     let attempts = 0;

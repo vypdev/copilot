@@ -76,12 +76,13 @@ export class ActivePreviousWorkflowRunsRepository implements PreviousWorkflowRun
     }
 
     private extractWorkflowRuns(response: GithubWorkflowRunsResponse): GithubWorkflowRun[] {
-        if (Array.isArray(response.data)) {
-            return response.data;
+        const data = response?.data;
+        if (Array.isArray(data)) {
+            return data;
         }
 
-        if (Array.isArray(response.data.workflow_runs)) {
-            return response.data.workflow_runs;
+        if (data !== null && typeof data === 'object' && Array.isArray(data.workflow_runs)) {
+            return data.workflow_runs;
         }
 
         throw new Error('GitHub workflow runs response did not contain a workflow_runs array.');

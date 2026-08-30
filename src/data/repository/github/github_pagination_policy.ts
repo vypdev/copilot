@@ -10,3 +10,10 @@ export function requireArrayPage<T>(data: unknown, operation: string): T[] {
     }
     return data as T[];
 }
+
+export function requireObject<T extends object>(data: unknown, operation: string): T {
+    if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+        throw new Error(`GitHub ${operation} response did not contain an object.`);
+    }
+    return data as T;
+}

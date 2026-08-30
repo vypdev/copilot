@@ -1,6 +1,7 @@
 import { logDebugInfo, logError } from "../../../utils/logger";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type { GithubIssueLabelsClient } from "../../../infrastructure/github/ports/github_issue_provider_ports";
+import { requireArrayPage } from "../github/github_pagination_policy";
 
 export class IssueLabelRepository {
     constructor(private readonly githubClient: GithubClientPort<GithubIssueLabelsClient>) {}
@@ -13,7 +14,7 @@ export class IssueLabelRepository {
                 repo: repository,
                 issue_number: issueNumber,
             });
-            return labels.map(label => label.name);
+            return requireArrayPage<{ name: string }>(labels, 'issue labels').map(label => label.name);
         } catch (error: unknown) {
             const err = error as { status?: number };
             if (err.status === 404) {
