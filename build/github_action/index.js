@@ -49829,6 +49829,7 @@ function buildDeploymentMergePlan(configuration) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.sanitizeAgentMarkdown = sanitizeAgentMarkdown;
+exports.sanitizePublishedError = sanitizePublishedError;
 exports.escapeHtml = escapeHtml;
 const untrusted_content_1 = __nccwpck_require__(67057);
 /**
@@ -49840,6 +49841,21 @@ function sanitizeAgentMarkdown(raw, maxLength = 12000) {
         return '';
     const bounded = (0, untrusted_content_1.createUntrustedContent)(raw, 'agent.comment.output', maxLength).text;
     return neutralizeGithubControls(bounded);
+}
+/**
+ * Error messages can originate in an SDK or CLI and are not trusted publication
+ * content. Keep a short diagnostic, but redact common credential formats before
+ * applying the same GitHub-control protections used for agent output.
+ */
+function sanitizePublishedError(raw) {
+    if (typeof raw !== 'string')
+        return '';
+    const withoutStack = raw.split(/\n\s+at\s+/u, 1)[0];
+    const redacted = withoutStack
+        .replace(/\bBearer\s+[^\s,;]+/giu, 'Bearer [redacted]')
+        .replace(/\b(token|api[_-]?key|secret|password|client[_-]?secret)\s*[:=]\s*["']?[^\s,"']+/giu, '$1=[redacted]')
+        .replace(/\b(?:gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+|sk-[A-Za-z0-9_-]+)\b/gu, '[redacted]');
+    return sanitizeAgentMarkdown(redacted, 2000);
 }
 function escapeHtml(raw) {
     return String(raw ?? '')
@@ -50213,7 +50229,7 @@ function renderResultSections(results) {
     for (const result of results) {
         stepIndex = appendSteps(renderedSteps, result, stepIndex);
         reminders.push(...result.reminders.map(reminder => (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(reminder)));
-        errors.push(...result.errors.map(error => (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(error.message)));
+        errors.push(...result.errors.map(error => (0, github_comment_publication_policy_1.sanitizePublishedError)(error.message)));
     }
     return {
         content: renderedSteps.length > 0 ? `${renderedSteps.join('\n\n')}\n` : '',
