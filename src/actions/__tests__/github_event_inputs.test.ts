@@ -44,4 +44,30 @@ describe('buildGithubActionEventInputs', () => {
             repo: { owner: '', repo: '' },
         })).toThrow('Repository context requires a non-empty owner and repository.');
     });
+
+    it.each([
+        ['eventName', { eventName: '' }],
+        ['actor', { actor: '  ' }],
+    ])('rejects a runtime context without a non-empty %s', (_label, override) => {
+        expect(() => buildGithubActionEventInputs({
+            payload: {},
+            eventName: 'issues',
+            actor: 'octocat',
+            repo: { owner: 'vypdev', repo: 'copilot' },
+            ...override,
+        })).toThrow(/GitHub event context requires a non-empty/);
+    });
+
+    it('normalizes surrounding whitespace in trusted runtime context', () => {
+        expect(buildGithubActionEventInputs({
+            payload: {},
+            eventName: ' issues ',
+            actor: ' octocat ',
+            repo: { owner: ' vypdev ', repo: ' copilot ' },
+        })).toMatchObject({
+            eventName: 'issues',
+            actor: 'octocat',
+            repo: { owner: 'vypdev', repo: 'copilot' },
+        });
+    });
 });

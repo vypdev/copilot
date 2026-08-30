@@ -24,11 +24,20 @@ export function buildGithubActionEventInputs(
     context: GithubActionEventContext,
 ): GithubActionEventInputs {
     const repository = requireRepositoryCoordinates(context.repo);
+    const eventName = requireNonEmptyContextValue(context.eventName, 'event name');
+    const actor = requireNonEmptyContextValue(context.actor, 'actor');
 
     return {
         ...context.payload,
-        eventName: context.eventName,
-        actor: context.actor,
+        eventName,
+        actor,
         repo: repository,
     };
+}
+
+function requireNonEmptyContextValue(value: unknown, label: string): string {
+    if (typeof value !== 'string' || value.trim().length === 0) {
+        throw new Error(`GitHub event context requires a non-empty ${label}.`);
+    }
+    return value.trim();
 }
