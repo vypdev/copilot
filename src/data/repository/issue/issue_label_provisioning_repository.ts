@@ -12,6 +12,7 @@ import type { GithubIssueLabelProvisioningClient } from "../../../infrastructure
 import { logError } from "../../../utils/logger";
 import { Labels } from "../../model/labels";
 import { isGithubAlreadyExists } from "../github/github_error_policy";
+import { requireArrayPage } from "../github/github_pagination_policy";
 
 interface RepositoryLabel {
     name: string;
@@ -67,7 +68,8 @@ export class IssueLabelProvisioningRepository implements InitialLabelProvisionin
             client.rest.issues.listLabelsForRepo,
             { owner, repo: repository, per_page: 100 },
         )) {
-            labels.push(...page.data.map(label => ({
+            const labelsPage = requireArrayPage<RepositoryLabel>(page.data, 'repository labels');
+            labels.push(...labelsPage.map(label => ({
                 name: label.name,
                 color: label.color,
                 description: label.description ?? null,

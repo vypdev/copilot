@@ -2,6 +2,7 @@ import { getCommentWatermark } from "../../../utils/comment_watermark";
 import { logDebugInfo, logError } from "../../../utils/logger";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type { GithubIssueContentClient } from "../../../infrastructure/github/ports/github_issue_provider_ports";
+import { requireArrayPage } from "../github/github_pagination_policy";
 
 export interface IssueComment {
     id: number;
@@ -127,7 +128,8 @@ export class IssueContentRepository {
             issue_number: issueNumber,
             per_page: 100,
         })) {
-            for (const comment of response.data || []) {
+            const page = requireArrayPage<IssueComment>(response.data, 'issue comments');
+            for (const comment of page) {
                 all.push({
                     id: comment.id,
                     body: comment.body ?? null,

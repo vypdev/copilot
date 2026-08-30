@@ -12,6 +12,7 @@ import type {
   GithubPullRequestReviewCommentCreateClient,
   GithubPullRequestReviewCommentQueryClient,
 } from "../../../infrastructure/github/ports/github_pull_request_review_protocol";
+import { requireArrayPage } from "../github/github_pagination_policy";
 
 const MAX_CONCURRENT_COMMENTS = 10;
 
@@ -49,7 +50,8 @@ export class PullRequestReviewCommentCommandRepository implements PullRequestRev
       client.rest.pulls.listReviewComments,
       { owner, repo: repository, pull_number: pullRequestNumber },
     )) {
-      for (const comment of page.data) {
+      const comments = requireArrayPage<{ body?: unknown }>(page.data, 'existing pull request review comments');
+      for (const comment of comments) {
         if (typeof comment.body === "string") bodies.add(comment.body);
       }
     }

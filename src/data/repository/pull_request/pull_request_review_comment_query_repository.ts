@@ -8,6 +8,7 @@ import type {
   GithubPullRequestReviewCommentQueryClient,
   GithubReviewComment,
 } from "../../../infrastructure/github/ports/github_pull_request_review_protocol";
+import { requireArrayPage } from "../github/github_pagination_policy";
 
 function toReviewComment(
   comment: GithubReviewComment,
@@ -47,7 +48,7 @@ export class PullRequestReviewCommentQueryRepository implements PullRequestRevie
           per_page: 100,
         },
       )) {
-        const page = response.data as GithubReviewComment[];
+        const page = requireArrayPage<GithubReviewComment>(response.data, 'pull request review comments');
         comments.push(...page.map(toReviewComment));
       }
       return comments;

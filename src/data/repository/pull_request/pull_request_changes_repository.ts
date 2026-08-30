@@ -2,6 +2,7 @@ import { logError } from "../../../utils/logger";
 import { toPullRequestReviewOperationError } from "../../../application/ports/pull_request_review_errors";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type { GithubPullRequestChangesClient, GithubPullRequestFile } from "../../../infrastructure/github/ports/github_pull_request_provider_ports";
+import { requireArrayPage } from "../github/github_pagination_policy";
 
 export class PullRequestChangesRepository {
     constructor(private readonly githubClient: GithubClientPort<GithubPullRequestChangesClient>) {}
@@ -20,7 +21,7 @@ export class PullRequestChangesRepository {
             pull_number: pullNumber,
             per_page: 100,
         })) {
-            allFiles.push(...(response.data ?? []));
+            allFiles.push(...requireArrayPage<GithubPullRequestFile>(response.data, 'pull request files'));
         }
         return allFiles;
     }

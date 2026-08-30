@@ -6,6 +6,7 @@ import type {
   GithubRequestedReviewersPage,
   GithubReview,
 } from "../../../infrastructure/github/ports/github_pull_request_review_protocol";
+import { requireArrayPage } from "../github/github_pagination_policy";
 
 const COMPLETED_REVIEW_STATES = new Set([
   "APPROVED",
@@ -85,7 +86,8 @@ export class PullRequestReviewerRepository implements PullRequestReviewerPort {
   ): Promise<string[]> {
     const { data } = await client.rest.pulls.listRequestedReviewers(parameters);
     const page = data as GithubRequestedReviewersPage;
-    return page.users.map(({ login }) => login);
+    return requireArrayPage<{ login: string }>(page.users, 'requested pull request reviewers')
+      .map(({ login }) => login);
   }
 
   private async listCompletedReviewers(
@@ -97,7 +99,7 @@ export class PullRequestReviewerRepository implements PullRequestReviewerPort {
       client.rest.pulls.listReviews,
       parameters,
     )) {
-      const page = response.data as GithubReview[];
+      const page = requireArrayPage<GithubReview>(response.data, 'pull request reviews');
       for (const review of page) {
         if (
           review.user?.login &&

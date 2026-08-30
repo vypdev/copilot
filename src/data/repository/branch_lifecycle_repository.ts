@@ -2,6 +2,7 @@ import type { BranchLifecyclePort } from '../../application/ports/branch_lifecyc
 import type { GithubBranchClient } from '../../infrastructure/github/ports/github_branch_provider_ports';
 import type { GithubClientPort } from '../../infrastructure/github/ports/github_client_provider_port';
 import { logDebugInfo, logError } from '../../utils/logger';
+import { requireArrayPage } from './github/github_pagination_policy';
 
 export class BranchLifecycleRepository implements BranchLifecyclePort {
     constructor(private readonly branchClient: GithubClientPort<GithubBranchClient>) {}
@@ -27,8 +28,9 @@ export class BranchLifecycleRepository implements BranchLifecyclePort {
         const maximumPages = 100;
         for (let page = 1; page <= maximumPages; page += 1) {
             const { data } = await octokit.rest.repos.listBranches({ owner, repo: repository, per_page: 100, page });
-            allBranches.push(...data.map(branch => branch.name));
-            if (data.length < 100) return allBranches;
+            const branches = requireArrayPage<{ name: string }>(data, 'repository branches');
+            allBranches.push(...branches.map(branch => branch.name));
+            if (branches.length < 100) return allBranches;
         }
         throw new Error(`Branch pagination exceeded ${maximumPages} pages.`);
     };
