@@ -61312,6 +61312,7 @@ async function* paginateCursor(fetchPage, options = {}) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.requireArrayPage = requireArrayPage;
+exports.requireObject = requireObject;
 /**
  * Validates the runtime shape of a paginated GitHub response before callers
  * iterate over it. SDK types describe the happy path, but malformed adapter
@@ -61321,6 +61322,12 @@ exports.requireArrayPage = requireArrayPage;
 function requireArrayPage(data, operation) {
     if (!Array.isArray(data)) {
         throw new Error(`GitHub ${operation} response did not contain an array page.`);
+    }
+    return data;
+}
+function requireObject(data, operation) {
+    if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+        throw new Error(`GitHub ${operation} response did not contain an object.`);
     }
     return data;
 }
@@ -61633,6 +61640,7 @@ function providerErrorMessage(error) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueLabelRepository = void 0;
 const logger_1 = __nccwpck_require__(91151);
+const github_pagination_policy_1 = __nccwpck_require__(44812);
 class IssueLabelRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -61646,7 +61654,7 @@ class IssueLabelRepository {
                     repo: repository,
                     issue_number: issueNumber,
                 });
-                return labels.map(label => label.name);
+                return (0, github_pagination_policy_1.requireArrayPage)(labels, 'issue labels').map(label => label.name);
             }
             catch (error) {
                 const err = error;
@@ -64003,7 +64011,7 @@ class PullRequestReviewerRepository {
     }
     async listRequestedReviewers(client, parameters) {
         const { data } = await client.rest.pulls.listRequestedReviewers(parameters);
-        const page = data;
+        const page = (0, github_pagination_policy_1.requireObject)(data, 'requested pull request reviewers');
         return (0, github_pagination_policy_1.requireArrayPage)(page.users, 'requested pull request reviewers')
             .map(({ login }) => login);
     }
@@ -64385,11 +64393,12 @@ class ActivePreviousWorkflowRunsRepository {
         }, this.retryDelayPort, this.retryPolicy);
     }
     extractWorkflowRuns(response) {
-        if (Array.isArray(response.data)) {
-            return response.data;
+        const data = response?.data;
+        if (Array.isArray(data)) {
+            return data;
         }
-        if (Array.isArray(response.data.workflow_runs)) {
-            return response.data.workflow_runs;
+        if (data !== null && typeof data === 'object' && Array.isArray(data.workflow_runs)) {
+            return data.workflow_runs;
         }
         throw new Error('GitHub workflow runs response did not contain a workflow_runs array.');
     }

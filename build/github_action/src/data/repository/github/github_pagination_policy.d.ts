@@ -5,3 +5,4 @@
  * opaque `.filter`/`.map` TypeError.
  */
 export declare function requireArrayPage<T>(data: unknown, operation: string): T[];
+export declare function requireObject<T extends object>(data: unknown, operation: string): T;
