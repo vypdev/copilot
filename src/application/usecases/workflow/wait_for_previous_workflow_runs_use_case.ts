@@ -34,6 +34,7 @@ export class WaitForPreviousWorkflowRunsUseCase implements ParamUseCase<Previous
                 return;
             }
 
+            if (attempt === this.policy.maximumAttempts - 1) break;
             this.observerPort.waitingForPreviousRuns(activeRunCount, this.policy.delayMilliseconds);
             await this.delayPort.wait(this.policy.delayMilliseconds);
         }

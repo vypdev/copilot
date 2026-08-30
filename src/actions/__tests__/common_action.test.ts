@@ -135,6 +135,7 @@ const runMain = (execution: Execution) => productionMainRun(
 const originalRunId = process.env.GITHUB_RUN_ID;
 const originalWorkflow = process.env.GITHUB_WORKFLOW;
 const originalWorkflowRef = process.env.GITHUB_WORKFLOW_REF;
+const originalGithubActions = process.env.GITHUB_ACTIONS;
 
 function restoreEnvironmentVariable(name: string, value: string | undefined): void {
   if (value === undefined) {
@@ -161,6 +162,7 @@ describe('mainRun', () => {
     restoreEnvironmentVariable('GITHUB_RUN_ID', originalRunId);
     restoreEnvironmentVariable('GITHUB_WORKFLOW', originalWorkflow);
     restoreEnvironmentVariable('GITHUB_WORKFLOW_REF', originalWorkflowRef);
+    restoreEnvironmentVariable('GITHUB_ACTIONS', originalGithubActions);
   });
 
   it('delegates setup to the composed use case and clears accumulated logs', async () => {
@@ -219,6 +221,17 @@ describe('mainRun', () => {
     await runMain(mockExecution({ welcome: undefined }));
 
     expect(order).toEqual(['wait', 'setup']);
+  });
+
+  it('fails closed when a GitHub Actions run has no numeric run identity', async () => {
+    process.env.GITHUB_ACTIONS = 'true';
+    delete process.env.GITHUB_RUN_ID;
+
+    await expect(runMain(mockExecution({ welcome: undefined }))).rejects.toThrow(
+      'GitHub workflow identity is unavailable; refusing to bypass sequential execution.',
+    );
+    expect(createWaitForPreviousWorkflowRunsUseCase).not.toHaveBeenCalled();
+    expect(mockSetupExecutionInvoke).not.toHaveBeenCalled();
   });
 
   it('skips wait when welcome is set', async () => {

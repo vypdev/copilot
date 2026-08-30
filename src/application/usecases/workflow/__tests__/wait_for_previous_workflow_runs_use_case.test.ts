@@ -86,7 +86,7 @@ describe('WaitForPreviousWorkflowRunsUseCase', () => {
     await expect(useCase.invoke(query)).rejects.toThrow('Timeout waiting for previous runs to finish.');
 
     expect(queryPort.countActivePreviousRuns).toHaveBeenCalledTimes(2000);
-    expect(delayPort.wait).toHaveBeenCalledTimes(2000);
+    expect(delayPort.wait).toHaveBeenCalledTimes(1999);
     expect(delayPort.wait).toHaveBeenCalledWith(2000);
   });
 
@@ -105,7 +105,7 @@ describe('WaitForPreviousWorkflowRunsUseCase', () => {
       'Timeout waiting for previous runs to finish.',
     );
     expect(queryPort.countActivePreviousRuns).toHaveBeenCalledTimes(3);
-    expect(delayPort.wait).toHaveBeenCalledTimes(3);
-    expect(observerPort.waitingForPreviousRuns).toHaveBeenCalledTimes(3);
+    expect(delayPort.wait).toHaveBeenCalledTimes(2);
+    expect(observerPort.waitingForPreviousRuns).toHaveBeenCalledTimes(2);
   });
 });

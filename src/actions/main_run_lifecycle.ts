@@ -36,6 +36,9 @@ export async function waitForPreviousWorkflowRuns(
     repository: RepositoryCoordinates,
 ): Promise<void> {
     const query = buildPreviousWorkflowRunsQuery(repository);
+    if (process.env.GITHUB_ACTIONS === 'true' && !Number.isSafeInteger(query.currentRunId)) {
+        throw new Error('GitHub workflow identity is unavailable; refusing to bypass sequential execution.');
+    }
     await createWaitForPreviousWorkflowRunsUseCase(execution.tokens.token)
         .invoke(query)
         .catch((error: unknown) => {
