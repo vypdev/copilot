@@ -59876,6 +59876,7 @@ function runAgentCli(request) {
         const lifecycle = createProcessLifecycle(child, request, resolve, reject);
         child.stdout.on('data', lifecycle.appendStdout);
         child.stderr.on('data', lifecycle.appendStderr);
+        child.stdin.once('error', lifecycle.onStdinError);
         child.once('error', lifecycle.onError);
         child.once('close', lifecycle.onClose);
         if (request.signal?.aborted)
@@ -59914,6 +59915,8 @@ function createProcessLifecycle(child, request, resolve, reject) {
         finishReject(new agent_cli_contracts_1.AgentCliError('Agent CLI execution was cancelled.', 'cancelled'));
     };
     const appendStdout = (chunk) => {
+        if (settled)
+            return;
         outputBytes += chunk.byteLength;
         if (outputBytes > request.maxOutputBytes) {
             terminate(child);
@@ -59923,8 +59926,11 @@ function createProcessLifecycle(child, request, resolve, reject) {
         stdout += chunk.toString();
     };
     const appendStderr = (chunk) => {
+        if (settled)
+            return;
         stderrBytes = Math.min(stderrBytes + chunk.byteLength, MAX_STDERR_BYTES);
     };
+    const onStdinError = () => finishReject(new agent_cli_contracts_1.AgentCliError('Unable to send the prompt to the agent CLI.', 'process'));
     const onError = (error) => finishReject(new agent_cli_contracts_1.AgentCliError(`Unable to start agent CLI: ${error.message}`, 'process'));
     const onClose = (code) => {
         if (code !== 0) {
@@ -59939,7 +59945,7 @@ function createProcessLifecycle(child, request, resolve, reject) {
         }
         finishResolve(output);
     };
-    return { appendStdout, appendStderr, onError, onClose, abort };
+    return { appendStdout, appendStderr, onStdinError, onError, onClose, abort };
 }
 function terminate(child) {
     if (child.exitCode !== null)
