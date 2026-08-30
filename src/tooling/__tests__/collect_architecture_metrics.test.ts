@@ -84,6 +84,7 @@ describe("collect architecture metrics", () => {
         "--no-agents",
         "--no-codex",
         "--no-editor-setup",
+        "--no-distill-hook",
         "--coverage-report",
         "coverage/lcov.info",
         "--progress",
