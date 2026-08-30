@@ -12,10 +12,9 @@ export function deduplicateFindings(findings: BugbotFinding[]): BugbotFinding[] 
     for (const f of findings) {
         const file = f.file?.trim() ?? '';
         const line = f.line ?? 0;
-        const key =
-            file || line
-                ? `${file}:${line}`
-                : `title:${(f.title ?? '').toLowerCase().trim().slice(0, 80)}`;
+        const key = file || line
+            ? `location:${file}:${line}`
+            : `title:${(f.title ?? '').toLowerCase().trim().slice(0, 80)}`;
         if (seen.has(key)) continue;
         seen.add(key);
         result.push(f);

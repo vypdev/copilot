@@ -47,10 +47,7 @@ export async function resolvePullRequestFinding(
   );
 
   if (marker.resolved) return;
-  const replacement = `${RESOLVED_NOTE}${buildMarker(
-    resolution.findingId,
-    true,
-  )}`;
+  const replacement = `${RESOLVED_NOTE}${buildMarker(resolution.findingId, true, marker.fingerprint)}`;
   const replaced = replaceMarkerInBody(
     comment.body,
     resolution.findingId,

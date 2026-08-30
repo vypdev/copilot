@@ -24,10 +24,7 @@ export async function resolveIssueFinding(
   );
   if (marker == null || marker.resolved) return;
 
-  const replacement = `${RESOLVED_NOTE}${buildMarker(
-    resolution.findingId,
-    true,
-  )}`;
+  const replacement = `${RESOLVED_NOTE}${buildMarker(resolution.findingId, true, marker.fingerprint)}`;
   const replaced = replaceMarkerInBody(
     body,
     resolution.findingId,

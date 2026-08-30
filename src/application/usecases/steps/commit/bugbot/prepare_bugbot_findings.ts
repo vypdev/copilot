@@ -12,5 +12,8 @@ export function prepareBugbotFindings(
     const normalized = normalizeBugbotResponse(response as BugbotResponse | undefined);
     return normalized === undefined
         ? undefined
-        : { ...prepareFindings(normalized.findings, ignorePatterns, minSeverityValue, maxComments), resolvedFindingIds: normalized.resolvedFindingIds };
+        : {
+            ...prepareFindings(normalized.findings, ignorePatterns, minSeverityValue, maxComments),
+            resolvedFindingIds: normalized.resolvedFindingIds,
+        };
 }

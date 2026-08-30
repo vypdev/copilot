@@ -7,7 +7,14 @@ export interface WorkflowRunsRetryPolicy {
     maximumDelayMilliseconds: number;
 }
 
-const TRANSIENT_NETWORK_ERRORS = new Set(['ECONNRESET', 'ETIMEDOUT', 'EAI_AGAIN', 'ENETUNREACH']);
+const TRANSIENT_NETWORK_ERRORS = new Set([
+    'ECONNRESET',
+    'ETIMEDOUT',
+    'EAI_AGAIN',
+    'ENETUNREACH',
+    'ECONNREFUSED',
+    'UND_ERR_CONNECT_TIMEOUT',
+]);
 
 export async function withWorkflowRunsRetry<T>(
     operation: () => Promise<T>,
@@ -52,9 +59,22 @@ function nextRetryDelay(currentDelay: number, policy: WorkflowRunsRetryPolicy): 
 
 function isTransientWorkflowRunsError(error: unknown): boolean {
     if (!error || typeof error !== 'object') return false;
-    const candidate = error as { status?: unknown; code?: unknown };
-    if (typeof candidate.status === 'number') {
-        return candidate.status === 408 || candidate.status === 429 || candidate.status >= 500;
+    const candidate = error as {
+        status?: unknown;
+        statusCode?: unknown;
+        code?: unknown;
+        response?: { status?: unknown };
+        message?: unknown;
+    };
+    const status = firstNumericValue(candidate.status, candidate.statusCode, candidate.response?.status);
+    if (status !== undefined) {
+        return status === 408 || status === 429 || status >= 500;
     }
-    return typeof candidate.code === 'string' && TRANSIENT_NETWORK_ERRORS.has(candidate.code);
+    if (typeof candidate.code === 'string' && TRANSIENT_NETWORK_ERRORS.has(candidate.code)) return true;
+    return typeof candidate.message === 'string'
+        && /\b(server error|service unavailable|bad gateway|gateway timeout|temporarily unavailable)\b/i.test(candidate.message);
+}
+
+function firstNumericValue(...values: unknown[]): number | undefined {
+    return values.find((value): value is number => typeof value === 'number' && Number.isFinite(value));
 }

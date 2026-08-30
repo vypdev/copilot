@@ -51,6 +51,17 @@ describe("marker", () => {
       expect(m).toContain("resolved:true");
     });
 
+    it("round-trips a locally computed fingerprint without breaking legacy markers", () => {
+      const marker = buildMarker("finding-1", false, "fp-0123abcd");
+
+      expect(marker).toContain('finding_fingerprint:"fp-0123abcd"');
+      expect(parseMarker(marker)).toEqual([{
+        findingId: "finding-1",
+        resolved: false,
+        fingerprint: "fp-0123abcd",
+      }]);
+    });
+
     it("rejects marker-breaking ids instead of changing identity", () => {
       expect(() => buildMarker("id-->x", false)).toThrow(
         "Finding ID contains marker-breaking characters.",

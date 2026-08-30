@@ -13,6 +13,7 @@ import { loadBugbotContext } from './bugbot/load_bugbot_context_use_case';
 import { applyDetectedFindings, prepareDetectedFindings } from './bugbot/apply_detected_findings';
 import type { PreparedBugbotFindings } from './bugbot/prepare_bugbot_findings';
 import { queryBugbotFindings } from './bugbot/query_bugbot_findings';
+import { reconcileResolvedFindingIds } from '../../../policies/bugbot_reconciliation_policy';
 
 export interface DetectPotentialProblemsWorkflowDependencies {
     aiRepository: FindingsQueryPort;
@@ -35,13 +36,21 @@ export async function runDetectPotentialProblemsWorkflow(
         const context = await loadBugbotContext(param, undefined, dependencies.contextPorts);
         const prompt = buildBugbotPrompt(param, context);
         logInfo('Detecting potential problems via configured agent (agent computes changes and checks resolved)...');
-        const prepared = prepareDetectedFindings(
+        const preparedResponse = prepareDetectedFindings(
             param,
             await queryBugbotFindings(dependencies.aiRepository, param, prompt),
         );
-        if (prepared === undefined) {
+        if (preparedResponse === undefined) {
             return [noAnalysisResult()];
         }
+        const prepared: PreparedBugbotFindings = {
+            ...preparedResponse,
+            resolvedFindingIds: reconcileResolvedFindingIds(
+                preparedResponse.resolvedFindingIds,
+                context.existingByFindingId,
+                preparedResponse.activeFindings ?? preparedResponse.toPublish,
+            ),
+        };
         if (prepared.toPublish.length === 0 && prepared.resolvedFindingIds.size === 0) {
             return [noFindingsResult()];
         }

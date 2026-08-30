@@ -47,23 +47,24 @@ function requireFindingIdForMarker(findingId: string): string {
   return safeId;
 }
 
-export function buildMarker(findingId: string, resolved: boolean): string {
-  const safeId = requireFindingIdForMarker(findingId);
-  return `<!-- ${BUGBOT_MARKER_PREFIX} finding_id:"${safeId}" resolved:${resolved} -->`;
+export function buildMarker(findingId: string, resolved: boolean, fingerprint?: string): string {
+    const safeId = requireFindingIdForMarker(findingId);
+    const safeFingerprint = fingerprint?.match(/^fp-[a-f0-9]{8}$/)?.[0];
+    return `<!-- ${BUGBOT_MARKER_PREFIX} finding_id:"${safeId}" resolved:${resolved}${safeFingerprint ? ` finding_fingerprint:"${safeFingerprint}"` : ''} -->`;
 }
 
 export function parseMarker(
   body: string | null,
-): Array<{ findingId: string; resolved: boolean }> {
+): Array<{ findingId: string; resolved: boolean; fingerprint?: string }> {
   if (!body) return [];
-  const results: Array<{ findingId: string; resolved: boolean }> = [];
+  const results: Array<{ findingId: string; resolved: boolean; fingerprint?: string }> = [];
   const regex = new RegExp(
-    `<!--\\s*${BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"([^"]+)"\\s+resolved:(true|false)\\s*-->`,
+    `<!--\\s*${BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"([^"]+)"\\s+resolved:(true|false)(?:\\s+finding_fingerprint:\\s*"(fp-[a-f0-9]{8})")?\\s*-->`,
     "g",
   );
   let m: RegExpExecArray | null;
   while ((m = regex.exec(body)) !== null) {
-    results.push({ findingId: m[1], resolved: m[2] === "true" });
+    results.push({ findingId: m[1], resolved: m[2] === "true", ...(m[3] ? { fingerprint: m[3] } : {}) });
   }
   return results;
 }
@@ -78,7 +79,7 @@ export function markerRegexForFinding(findingId: string): RegExp {
     ? safeId
     : safeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(
-    `<!--\\s*${BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"${idForRegex}"\\s+resolved:(?:true|false)\\s*-->`,
+    `<!--\\s*${BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"${idForRegex}"\\s+resolved:(?:true|false)(?:\\s+finding_fingerprint:\\s*"fp-[a-f0-9]{8}")?\\s*-->`,
     "g",
   );
 }
@@ -127,7 +128,7 @@ export function buildCommentBody(
   const resolvedNote = resolved
     ? "\n\n---\n**Resolved** (no longer reported in latest analysis).\n"
     : "";
-  const marker = buildMarker(finding.id, resolved);
+  const marker = buildMarker(finding.id, resolved, finding.fingerprint);
   return `## ${finding.title}
 
 ${severity}${fileLine}${finding.description}

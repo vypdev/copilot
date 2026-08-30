@@ -6,7 +6,7 @@
 import type { Execution } from "../../../../../data/model/execution";
 import type { BugbotFindingPublicationPorts } from "../../../../../application/ports/bugbot_finding_publication_ports";
 import { getCommentWatermark } from "../../../../../utils/comment_watermark";
-import type { BugbotContext, BugbotFinding } from "./types";
+import { findExistingFindingInfo, type BugbotContext, type BugbotFinding } from "./types";
 import { publishIssueFindingComment } from "./publish_issue_finding_comment";
 import { PullRequestReviewCommentPublisher } from "./publish_pr_review_comments";
 import { publishOverflowComment } from "./publish_overflow_comment";
@@ -48,11 +48,11 @@ export async function publishFindings(param: PublishFindingsParam): Promise<void
             ports.issueComments,
             execution,
             finding,
-            existingByFindingId[finding.id],
+            findExistingFindingInfo(existingByFindingId, finding),
             commitSha
         );
         if (reviewPublisher) {
-            await reviewPublisher.publish(finding, existingByFindingId[finding.id]);
+            await reviewPublisher.publish(finding, findExistingFindingInfo(existingByFindingId, finding));
         }
     }
 
