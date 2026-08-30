@@ -9,6 +9,7 @@ import { getUpdatePullRequestDescriptionPrompt } from '../../../../prompts';
 import { logDebugInfo, logError, logInfo } from '../../../ports/logging_ports';
 import { PROJECT_CONTEXT_INSTRUCTION } from '../../../../utils/project_context_instruction';
 import { getTaskEmoji } from '../../../../utils/task_emoji';
+import { sanitizeAgentMarkdown } from '../../../../application/policies/github_comment_publication_policy';
 
 export interface UpdatePullRequestDescriptionWorkflowDependencies {
     pullRequestDescriptionCommandPort: PullRequestDescriptionCommandPort;
@@ -81,10 +82,8 @@ export async function runUpdatePullRequestDescriptionWorkflow(
             agentId: AGENT_PLAN,
             prompt,
         });
-        const pullRequestBody = extractDescription(response);
-        logDebugInfo(
-            `UpdatePullRequestDescription: agent response received. Description length=${pullRequestBody.length}. Full description:\n${pullRequestBody}`,
-        );
+        const pullRequestBody = sanitizeAgentMarkdown(extractDescription(response));
+        logDebugInfo(`UpdatePullRequestDescription: agent response received. Description length=${pullRequestBody.length}.`);
         if (!pullRequestBody.trim()) {
             return newResult(taskId, false, true, ['Configured agent did not return a PR description.']);
         }

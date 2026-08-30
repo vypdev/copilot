@@ -10,6 +10,7 @@ import { logDebugInfo, logError, logInfo } from '../../../ports/logging_ports';
 import { PROJECT_CONTEXT_INSTRUCTION } from '../../../../utils/project_context_instruction';
 import { extractStructuredAnswer } from './agent_answer_policy';
 import type { ThinkRequestDecision } from './think_request_policy';
+import { sanitizeAgentMarkdown } from '../../../../application/policies/github_comment_publication_policy';
 
 export interface ThinkAnswerDependencies {
     issueDescriptionQueryPort: IssueDescriptionQueryPort;
@@ -33,16 +34,14 @@ export async function runThinkAnswerWorkflow(
     const contextBlock = issueDescription
         ? `\n\nContext (issue #${request.issueNumberForContext} description):\n${issueDescription}\n\n`
         : '\n\n';
-    logDebugInfo(
-        `Think: question length=${request.question.length}, issue context length=${issueDescription.length}. Full question:\n${request.question}`,
-    );
+    logDebugInfo(`Think: question length=${request.question.length}, issue context length=${issueDescription.length}.`);
 
     const prompt = getThinkPrompt({
         projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
         contextBlock,
         question: request.question,
     });
-    const answer = await queryThinkAnswer(param, prompt, dependencies.aiRepository);
+    const answer = sanitizeAgentMarkdown(await queryThinkAnswer(param, prompt, dependencies.aiRepository));
     if (!answer) {
         logError('Configured agent returned no answer for Think.');
         return [
@@ -111,8 +110,6 @@ async function queryThinkAnswer(
         },
     });
     const answer = extractStructuredAnswer(response);
-    logDebugInfo(
-        `Think: agent response received. Answer length=${answer.length}. Full answer:\n${answer}`,
-    );
+    logDebugInfo(`Think: agent response received. Answer length=${answer.length}.`);
     return answer;
 }

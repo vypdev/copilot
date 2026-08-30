@@ -110,6 +110,23 @@ describe('result publication policy', () => {
     expect(sections.errors).toContain('1.\n```\nfailure\n```');
   });
 
+  it('neutralizes agent-controlled GitHub semantics before publication', () => {
+    const sections = renderResultSections([
+      new Result({
+        id: 'untrusted',
+        stepFormat: 'markdown',
+        steps: ['<!-- hidden -->\n@octocat\n/fix --force'],
+        reminders: ['@maintainer /close'],
+        errors: [new Error('token=should-not-become-a-control')],
+      }),
+    ]);
+
+    expect(sections.content).toContain('&lt;!-- hidden --&gt;');
+    expect(sections.content).toContain('@\u200b octocat'.replace(' ', ''));
+    expect(sections.content).toContain('\u200b/fix'.replace('\\u200b', '\u200b'));
+    expect(sections.footer).toContain('@\u200bmaintainer'.replace('\\u200b', '\u200b'));
+  });
+
   it('builds debug content only when enabled and populated', () => {
     expect(buildDebugLogSection(false, 'log')).toBe('');
     expect(buildDebugLogSection(true, '')).toBe('');

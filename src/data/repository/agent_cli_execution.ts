@@ -37,7 +37,7 @@ function createProcessLifecycle(
     reject: (error: Error) => void,
 ) {
     let stdout = '';
-    let stderr = '';
+    let stderrBytes = 0;
     let outputBytes = 0;
     let settled = false;
     const timer = setTimeout(() => {
@@ -73,13 +73,13 @@ function createProcessLifecycle(
         stdout += chunk.toString();
     };
     const appendStderr = (chunk: Buffer) => {
-        if (stderr.length < MAX_STDERR_BYTES) stderr += chunk.toString().slice(0, MAX_STDERR_BYTES - stderr.length);
+        stderrBytes = Math.min(stderrBytes + chunk.byteLength, MAX_STDERR_BYTES);
     };
     const onError = (error: Error) => finishReject(new AgentCliError(`Unable to start agent CLI: ${error.message}`, 'process'));
     const onClose = (code: number | null) => {
         if (code !== 0) {
-            const detail = stderr.trim() ? `: ${stderr.trim().slice(0, 1000)}` : '';
-            finishReject(new AgentCliError(`Agent CLI exited with code ${code}${detail}`, 'process', code === 75));
+            const diagnostic = stderrBytes > 0 ? ' Diagnostic output was suppressed for safety.' : '';
+            finishReject(new AgentCliError(`Agent CLI exited with code ${code}.${diagnostic}`, 'process', code === 75));
             return;
         }
         const output = stdout.trim();

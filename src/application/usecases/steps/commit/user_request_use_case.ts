@@ -64,7 +64,7 @@ export class DoUserRequestUseCase implements ParamUseCase<DoUserRequestParam, Re
             prompt,
         });
 
-        logDebugInfo(`DoUserRequest: build agent response length=${response?.text?.length ?? 0}. Full response:\n${response?.text ?? '(none)'}`);
+        logDebugInfo(`DoUserRequest: build agent response length=${response?.text?.length ?? 0}.`);
 
         if (!response?.text) {
             logError("DoUserRequest: no response from configured build agent.");

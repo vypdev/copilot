@@ -90,14 +90,12 @@ export function parseJsonFromAgentText(text: string): Record<string, unknown> {
     if (extracted) {
         const object = parseObject(extracted);
         if (object) return object;
-        logDebugInfo(
-            `Agent response (expectJson): failed to parse extracted JSON. Full text length=${trimmed.length}. Full text:\n${trimmed}`
-        );
+        logDebugInfo(`Agent response (expectJson): failed to parse extracted JSON. Response length=${trimmed.length}.`);
         throw new Error('Agent response is not valid JSON: extracted object is invalid');
     }
 
     logDebugInfo(
-        `Agent response (expectJson): no JSON object found. length=${trimmed.length}. Full text:\n${trimmed}`
+        `Agent response (expectJson): no JSON object found. Response length=${trimmed.length}.`
     );
     throw new Error(
         `Agent response is not valid JSON: no JSON object found. Response length: ${trimmed.length} chars.`

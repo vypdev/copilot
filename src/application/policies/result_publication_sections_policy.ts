@@ -1,5 +1,6 @@
 import type { Result } from '../../data/model/result';
 import type { ResultPublicationSections } from './result_publication_contracts';
+import { sanitizeAgentMarkdown } from './github_comment_publication_policy';
 
 export function renderResultSections(results: ReadonlyArray<Result>): ResultPublicationSections {
     const renderedSteps: string[] = [];
@@ -9,8 +10,8 @@ export function renderResultSections(results: ReadonlyArray<Result>): ResultPubl
 
     for (const result of results) {
         stepIndex = appendSteps(renderedSteps, result, stepIndex);
-        reminders.push(...result.reminders);
-        errors.push(...result.errors.map(error => error.message));
+        reminders.push(...result.reminders.map(reminder => sanitizeAgentMarkdown(reminder)));
+        errors.push(...result.errors.map(error => sanitizeAgentMarkdown(error.message)));
     }
 
     return {
@@ -25,7 +26,9 @@ export function renderResultSections(results: ReadonlyArray<Result>): ResultPubl
 function appendSteps(renderedSteps: string[], result: Result, stepIndex: number): number {
     for (const step of result.steps) {
         if (!step.trim()) continue;
-        renderedSteps.push(result.stepFormat === 'markdown' ? step : `${stepIndex + 1}. ${step}`);
+        const safeStep = sanitizeAgentMarkdown(step);
+        if (!safeStep.trim()) continue;
+        renderedSteps.push(result.stepFormat === 'markdown' ? safeStep : `${stepIndex + 1}. ${safeStep}`);
         if (result.stepFormat !== 'markdown') stepIndex += 1;
     }
     return stepIndex;

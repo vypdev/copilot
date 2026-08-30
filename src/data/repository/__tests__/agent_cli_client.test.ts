@@ -75,6 +75,18 @@ describe('AgentCliClient', () => {
         await expect(new AgentCliClient().execute({ command: 'missing-agent-binary', prompt: 'prompt', timeoutMs: 2000 })).rejects.toMatchObject({ category: 'process' });
     });
 
+    it('does not include provider stderr in process errors', async () => {
+        const script = "process.stderr.write('TOP_SECRET_PROVIDER_DIAGNOSTIC'); process.exit(7)";
+        await expect(new AgentCliClient().execute({
+            command: `${process.execPath} -e ${JSON.stringify(script)}`,
+            prompt: 'ignored',
+            timeoutMs: 2000,
+        })).rejects.toMatchObject({
+            category: 'process',
+            message: expect.not.stringContaining('TOP_SECRET_PROVIDER_DIAGNOSTIC'),
+        });
+    });
+
     it('rejects output above the configured limit and terminates the process', async () => {
         const script = "process.stdout.write('0123456789')";
         await expect(new AgentCliClient().execute({ command: `${process.execPath} -e ${JSON.stringify(script)}`, prompt: 'ignored', timeoutMs: 5000, maxOutputBytes: 4 })).rejects.toMatchObject({ category: 'output' });

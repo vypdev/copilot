@@ -43,9 +43,7 @@ export async function runBugbotAutofixWorkflow(
             configuration: param.execution.ai?.getAgentConfiguration('fixer'),
             prompt: preflight.prompt,
         });
-        logDebugInfo(
-            `BugbotAutofix: build agent response length=${response?.text?.length ?? 0}. Full response:\n${response?.text ?? '(none)'}`,
-        );
+        logDebugInfo(`BugbotAutofix: build agent response length=${response?.text?.length ?? 0}.`);
 
         return await finalizeBugbotAutofix(
             param.execution,

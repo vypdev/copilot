@@ -11,6 +11,7 @@ import { logDebugInfo, logError, logInfo } from '../../../ports/logging_ports';
 import { PROJECT_CONTEXT_INSTRUCTION } from '../../../../utils/project_context_instruction';
 import { getTaskEmoji } from '../../../../utils/task_emoji';
 import { extractStructuredAnswer } from '../common/agent_answer_policy';
+import { sanitizeAgentMarkdown } from '../../../../application/policies/github_comment_publication_policy';
 
 export interface AnswerIssueHelpWorkflowDependencies {
     issueNotificationPort: IssueNotificationPort;
@@ -48,8 +49,8 @@ export async function runAnswerIssueHelpWorkflow(
                 schemaName: 'answer_issue_help_response',
             },
         });
-        const answer = extractStructuredAnswer(response);
-        logDebugInfo(`AnswerIssueHelp: agent response. Answer length=${answer.length}. Full answer:\n${answer}`);
+        const answer = sanitizeAgentMarkdown(extractStructuredAnswer(response));
+        logDebugInfo(`AnswerIssueHelp: agent response. Answer length=${answer.length}.`);
         if (!answer) {
             return [noAnswerResult()];
         }

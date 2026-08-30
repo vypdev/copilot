@@ -18,7 +18,7 @@ export function buildRecommendationResult(
         logError(error);
         return [new Result({ id: taskId, success: false, executed: true, errors: [error] })];
     }
-    logDebugInfo(`RecommendSteps: agent response received. Steps length=${steps.length}. Full steps:\n${steps}`);
+    logDebugInfo(`RecommendSteps: agent response received. Steps length=${steps.length}.`);
     if (previousRecommendation && isNoNewRecommendation(steps)) return skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'agent found no material change');
     const recommendationFingerprint = createRecommendationFingerprint(steps);
     if (previousRecommendation?.recommendationFingerprint === recommendationFingerprint) return skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'recommendation is unchanged');
