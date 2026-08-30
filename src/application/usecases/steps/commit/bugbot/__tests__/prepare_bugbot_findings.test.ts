@@ -66,4 +66,20 @@ describe('prepareBugbotFindings', () => {
         expect(result?.toPublish[0]).not.toHaveProperty('secretCommand');
         expect(result?.toPublish[0].fingerprint).toMatch(/^fp-[a-f0-9]{8}$/);
     });
+
+    it('bounds model-controlled finding and resolution arrays before processing', () => {
+        const findings = Array.from({ length: 501 }, (_, index) => ({
+            id: `finding-${index}`,
+            title: `Finding ${index}`,
+            description: 'Description',
+        }));
+        const resolvedFindingIds = Array.from({ length: 501 }, (_, index) => `resolved-${index}`);
+
+        const result = prepareBugbotFindings({ findings, resolved_finding_ids: resolvedFindingIds }, [], 'low', 200);
+
+        expect(result?.activeFindings).toHaveLength(500);
+        expect(result?.resolvedFindingIds.size).toBe(500);
+        expect(result?.activeFindings?.at(-1)?.id).toBe('finding-499');
+        expect(result?.resolvedFindingIds.has('resolved-500')).toBe(false);
+    });
 });

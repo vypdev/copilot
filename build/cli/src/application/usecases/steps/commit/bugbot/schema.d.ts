@@ -19,31 +19,39 @@ export declare const BUGBOT_RESPONSE_SCHEMA: {
                     };
                     readonly title: {
                         readonly type: "string";
+                        readonly minLength: 1;
+                        readonly maxLength: 500;
                         readonly description: "Short title of the problem";
                     };
                     readonly description: {
                         readonly type: "string";
+                        readonly minLength: 1;
+                        readonly maxLength: 8000;
                         readonly description: "Clear explanation of the issue";
                     };
                     readonly file: {
                         readonly type: "string";
+                        readonly maxLength: 500;
                         readonly description: "Repository-relative path when applicable";
                     };
                     readonly line: {
-                        readonly type: "number";
+                        readonly type: "integer";
+                        readonly minimum: 1;
                         readonly description: "Line number when applicable";
                     };
                     readonly severity: {
                         readonly type: "string";
-                        readonly description: "Severity: high, medium, low, or info. Findings below the configured minimum are not published.";
+                        readonly enum: readonly ["high", "medium", "low", "info"];
+                        readonly description: "Severity. Findings below the configured minimum are not published.";
                     };
                     readonly suggestion: {
                         readonly type: "string";
+                        readonly maxLength: 8000;
                         readonly description: "Suggested fix when applicable";
                     };
                 };
                 readonly required: readonly ["id", "title", "description"];
-                readonly additionalProperties: true;
+                readonly additionalProperties: false;
             };
         };
         readonly resolved_finding_ids: {

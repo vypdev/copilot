@@ -10,6 +10,7 @@ import type { BugbotContext } from "./types";
 import {
     buildPreviousFindingsBlock,
     collectPreviousBugbotFindings,
+    limitPreviousBugbotFindings,
     parseBugbotFindingComments,
 } from "./bugbot_finding_context";
 import { logDebugInfo } from "../../../../ports/logging_ports";
@@ -104,6 +105,7 @@ export async function loadBugbotContext(
         parsedComments.existingByFindingId,
         parsedComments.prFindingIdToBody
     );
+    const boundedPreviousFindings = limitPreviousBugbotFindings(previousFindings);
     const previousFindingsBlock = buildPreviousFindingsBlock(previousFindings);
     const prContext = await loadPullRequestContext(
         ports.pullRequest,
@@ -112,7 +114,7 @@ export async function loadBugbotContext(
         openPrNumbers[0],
         token
     );
-    const unresolvedFindingsWithBody = previousFindings.map((finding) => ({
+    const unresolvedFindingsWithBody = boundedPreviousFindings.map((finding) => ({
         id: finding.id,
         fullBody: finding.fullBody,
     }));

@@ -25,4 +25,23 @@ describe('finding identity', () => {
 
         expect(changed).not.toBe(original);
     });
+
+    it('does not change when the provider rephrases the finding details', () => {
+        const original = buildFindingFingerprint({
+            file: 'src/auth.ts',
+            line: 21,
+            title: 'Unchecked token',
+            description: 'The token is used before validation.',
+            suggestion: 'Validate the token first.',
+        });
+        const rephrased = buildFindingFingerprint({
+            file: 'src/auth.ts',
+            line: 22,
+            title: 'Unchecked token',
+            description: 'Authentication data reaches this branch without a guard.',
+            suggestion: 'Add a guard before using authentication data.',
+        });
+
+        expect(rephrased).toBe(original);
+    });
 });

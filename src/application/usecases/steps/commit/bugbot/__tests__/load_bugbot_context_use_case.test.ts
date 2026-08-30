@@ -255,4 +255,19 @@ describe("loadBugbotContext", () => {
             "[... truncated for length ...]",
         );
     });
+
+    it('bounds the previous-findings context sent to the agent', async () => {
+        mockListIssueComments.mockResolvedValue(
+            Array.from({ length: 120 }, (_, index) => ({
+                id: index + 1,
+                body: `## Finding ${index}\n\n${'x'.repeat(700)}\n\n<!-- copilot-bugbot finding_id:"finding-${index}" resolved:false -->`,
+            })),
+        );
+
+        const ctx = await loadBugbotContext(baseParam());
+
+        expect(ctx.unresolvedFindingsWithBody.length).toBeLessThan(120);
+        expect(ctx.previousFindingsBlock.length).toBeLessThanOrEqual(48_000 + 500);
+        expect(ctx.previousFindingsBlock).toContain('older finding(s) were omitted');
+    });
 });

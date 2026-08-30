@@ -18,6 +18,10 @@ export type PreparedBugbotFindings = ApplyLimitResult & {
     activeFindings?: readonly BugbotFinding[];
 };
 
+/** Hard cap for model-controlled arrays before any filtering or publication. */
+export const MAX_AGENT_FINDINGS = 500;
+export const MAX_AGENT_RESOLVED_FINDING_IDS = 500;
+
 export function normalizeBugbotResponse(response: unknown): { findings: BugbotFinding[]; resolvedFindingIds: Set<string> } | undefined {
     if (response == null || typeof response !== 'object') return undefined;
     const payload = response as Record<string, unknown>;
@@ -42,7 +46,7 @@ export function prepareFindings(
 }
 
 function normalizeFindings(findings: unknown): BugbotFinding[] {
-    return (Array.isArray(findings) ? findings : []).flatMap(value => {
+    return (Array.isArray(findings) ? findings : []).slice(0, MAX_AGENT_FINDINGS).flatMap(value => {
         if (!isRecord(value)) return [];
         const normalizedId = typeof value.id === 'string' ? normalizeFindingIdForMarker(value.id) : null;
         const title = boundedText(value.title, 500);
@@ -70,7 +74,7 @@ function normalizeFindings(findings: unknown): BugbotFinding[] {
 }
 
 function normalizeResolvedFindingIds(findingIds: unknown): Set<string> {
-    return new Set((Array.isArray(findingIds) ? findingIds : []).flatMap(findingId => {
+    return new Set((Array.isArray(findingIds) ? findingIds : []).slice(0, MAX_AGENT_RESOLVED_FINDING_IDS).flatMap(findingId => {
         if (typeof findingId !== 'string') return [];
         const normalizedId = normalizeFindingIdForMarker(findingId);
         return normalizedId == null ? [] : [normalizedId];

@@ -1,6 +1,11 @@
 /**
  * Stable, provider-independent identity for a Bugbot finding. The model may
  * choose a display id, but it must not control reconciliation identity.
+ *
+ * The identity deliberately excludes the finding's prose and suggestion.
+ * Providers often rephrase those fields between runs even when the underlying
+ * issue is unchanged. Including them would turn harmless wording changes into
+ * duplicate comments and would make resolution reconciliation unreliable.
  */
 
 export interface FindingIdentityInput {
@@ -15,8 +20,6 @@ export function buildFindingFingerprint(finding: FindingIdentityInput): string {
     const canonical = [
         normalizePath(finding.file),
         normalizeText(finding.title),
-        normalizeText(finding.description).slice(0, 240),
-        normalizeText(finding.suggestion).slice(0, 120),
         normalizeLine(finding.line),
     ].join('|');
     return `fp-${fnv1a(canonical)}`;

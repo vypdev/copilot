@@ -9,6 +9,9 @@ export type PreparedBugbotFindings = ApplyLimitResult & {
     /** All accepted findings, including overflow items, used for reconciliation. */
     activeFindings?: readonly BugbotFinding[];
 };
+/** Hard cap for model-controlled arrays before any filtering or publication. */
+export declare const MAX_AGENT_FINDINGS = 500;
+export declare const MAX_AGENT_RESOLVED_FINDING_IDS = 500;
 export declare function normalizeBugbotResponse(response: unknown): {
     findings: BugbotFinding[];
     resolvedFindingIds: Set<string>;

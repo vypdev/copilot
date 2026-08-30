@@ -52674,7 +52674,9 @@ function newResultFailure(message) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MAX_PREVIOUS_FINDINGS_BLOCK_LENGTH = exports.MAX_PREVIOUS_FINDINGS = void 0;
 exports.parseBugbotFindingComments = parseBugbotFindingComments;
+exports.limitPreviousBugbotFindings = limitPreviousBugbotFindings;
 exports.collectPreviousBugbotFindings = collectPreviousBugbotFindings;
 exports.buildPreviousFindingsBlock = buildPreviousFindingsBlock;
 const build_bugbot_fix_prompt_1 = __nccwpck_require__(89819);
@@ -52738,6 +52740,27 @@ function mergeFindingContexts(target, source) {
         target[findingId] = { ...(target[findingId] ?? {}), ...context };
     }
 }
+/**
+ * Prompt budgets are an application safety boundary. A repository can contain
+ * many historical findings, and sending every full comment to a model would
+ * create unbounded cost and reduce the quality of the current analysis.
+ */
+exports.MAX_PREVIOUS_FINDINGS = 100;
+exports.MAX_PREVIOUS_FINDINGS_BLOCK_LENGTH = 48000;
+function limitPreviousBugbotFindings(previousFindings) {
+    const selected = [];
+    let totalLength = 0;
+    for (const finding of previousFindings) {
+        if (selected.length >= exports.MAX_PREVIOUS_FINDINGS)
+            break;
+        const itemLength = formatPreviousFinding(finding).length;
+        if (selected.length > 0 && totalLength + itemLength > exports.MAX_PREVIOUS_FINDINGS_BLOCK_LENGTH)
+            break;
+        selected.push(finding);
+        totalLength += itemLength;
+    }
+    return selected;
+}
 function collectPreviousBugbotFindings(issueComments, existingByFindingId, prFindingIdToBody) {
     return Object.entries(existingByFindingId).flatMap(([findingId, data]) => {
         if ((0, types_1.isExistingFindingFullyResolved)(data))
@@ -52762,19 +52785,25 @@ function collectPreviousBugbotFindings(issueComments, existingByFindingId, prFin
 function buildPreviousFindingsBlock(previousFindings) {
     if (previousFindings.length === 0)
         return "";
-    const items = previousFindings
-        .map((finding) => `---\n**Finding id (use this exact id in resolved_finding_ids if resolved/no longer applies):** \`${finding.id.replace(/`/g, "\\`")}\`\n\n**Full comment as posted (including metadata at the end):**\n${finding.fullBody}\n`)
-        .join("\n");
+    const boundedFindings = limitPreviousBugbotFindings(previousFindings);
+    const items = boundedFindings.map(formatPreviousFinding).join("\n");
+    const omittedCount = previousFindings.length - boundedFindings.length;
+    const omissionNote = omittedCount > 0
+        ? `\n\n**${omittedCount} older finding(s) were omitted from this prompt because of the context budget. Do not resolve an omitted finding in this response.**`
+        : "";
     return `
 **Previously reported issues (not yet marked resolved).** For each one we show the exact comment we posted (title, description, location, suggestion, and a hidden marker with the finding id at the end).
 
-${items}
+${items}${omissionNote}
 **Your task 2:** For each finding above, analyze the current code and decide:
 - If the problem **still exists** (same code or same issue present): do **not** include its id in \`resolved_finding_ids\`.
 - If the problem **no longer applies** (e.g. that code was removed or refactored away): include its id in \`resolved_finding_ids\`.
 - If the problem **has been fixed** (code was changed and the issue is resolved): include its id in \`resolved_finding_ids\`.
 
 Return in \`resolved_finding_ids\` only the ids from the list above that are now fixed or no longer apply. Use the exact id shown in each "Finding id" line.`;
+}
+function formatPreviousFinding(finding) {
+    return `---\n**Finding id (use this exact id in resolved_finding_ids if resolved/no longer applies):** \`${finding.id.replace(/`/g, "\\`")}\`\n\n**Full comment as posted (including metadata at the end):**\n${finding.fullBody}\n`;
 }
 
 
@@ -53643,9 +53672,10 @@ async function loadBugbotContext(param, options, ports) {
     const pullRequestComments = await loadOpenPullRequestComments(ports.pullRequest, owner, repo, openPrNumbers, token);
     const parsedComments = (0, bugbot_finding_context_1.parseBugbotFindingComments)(issueComments, pullRequestComments);
     const previousFindings = (0, bugbot_finding_context_1.collectPreviousBugbotFindings)(parsedComments.issueComments, parsedComments.existingByFindingId, parsedComments.prFindingIdToBody);
+    const boundedPreviousFindings = (0, bugbot_finding_context_1.limitPreviousBugbotFindings)(previousFindings);
     const previousFindingsBlock = (0, bugbot_finding_context_1.buildPreviousFindingsBlock)(previousFindings);
     const prContext = await loadPullRequestContext(ports.pullRequest, owner, repo, openPrNumbers[0], token);
-    const unresolvedFindingsWithBody = previousFindings.map((finding) => ({
+    const unresolvedFindingsWithBody = boundedPreviousFindings.map((finding) => ({
         id: finding.id,
         fullBody: finding.fullBody,
     }));
@@ -53974,6 +54004,7 @@ function prepareBugbotFindings(response, ignorePatterns, minSeverityValue, maxCo
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MAX_AGENT_RESOLVED_FINDING_IDS = exports.MAX_AGENT_FINDINGS = void 0;
 exports.normalizeBugbotResponse = normalizeBugbotResponse;
 exports.prepareFindings = prepareFindings;
 const deduplicate_findings_1 = __nccwpck_require__(62908);
@@ -53983,6 +54014,9 @@ const marker_1 = __nccwpck_require__(62274);
 const path_validation_1 = __nccwpck_require__(70124);
 const severity_1 = __nccwpck_require__(14626);
 const finding_identity_1 = __nccwpck_require__(91853);
+/** Hard cap for model-controlled arrays before any filtering or publication. */
+exports.MAX_AGENT_FINDINGS = 500;
+exports.MAX_AGENT_RESOLVED_FINDING_IDS = 500;
 function normalizeBugbotResponse(response) {
     if (response == null || typeof response !== 'object')
         return undefined;
@@ -54001,7 +54035,7 @@ function prepareFindings(findings, ignorePatterns, minSeverityValue, maxComments
     return { ...(0, limit_comments_1.applyCommentLimit)(filteredFindings, maxComments), activeFindings: filteredFindings };
 }
 function normalizeFindings(findings) {
-    return (Array.isArray(findings) ? findings : []).flatMap(value => {
+    return (Array.isArray(findings) ? findings : []).slice(0, exports.MAX_AGENT_FINDINGS).flatMap(value => {
         if (!isRecord(value))
             return [];
         const normalizedId = typeof value.id === 'string' ? (0, marker_1.normalizeFindingIdForMarker)(value.id) : null;
@@ -54030,7 +54064,7 @@ function normalizeFindings(findings) {
     });
 }
 function normalizeResolvedFindingIds(findingIds) {
-    return new Set((Array.isArray(findingIds) ? findingIds : []).flatMap(findingId => {
+    return new Set((Array.isArray(findingIds) ? findingIds : []).slice(0, exports.MAX_AGENT_RESOLVED_FINDING_IDS).flatMap(findingId => {
         if (typeof findingId !== 'string')
             return [];
         const normalizedId = (0, marker_1.normalizeFindingIdForMarker)(findingId);
@@ -54345,15 +54379,15 @@ exports.BUGBOT_RESPONSE_SCHEMA = {
                         maxLength: marker_1.MAX_FINDING_ID_LENGTH,
                         description: 'Stable unique id for this finding (e.g. file:line:summary)',
                     },
-                    title: { type: 'string', description: 'Short title of the problem' },
-                    description: { type: 'string', description: 'Clear explanation of the issue' },
-                    file: { type: 'string', description: 'Repository-relative path when applicable' },
-                    line: { type: 'number', description: 'Line number when applicable' },
-                    severity: { type: 'string', description: 'Severity: high, medium, low, or info. Findings below the configured minimum are not published.' },
-                    suggestion: { type: 'string', description: 'Suggested fix when applicable' },
+                    title: { type: 'string', minLength: 1, maxLength: 500, description: 'Short title of the problem' },
+                    description: { type: 'string', minLength: 1, maxLength: 8000, description: 'Clear explanation of the issue' },
+                    file: { type: 'string', maxLength: 500, description: 'Repository-relative path when applicable' },
+                    line: { type: 'integer', minimum: 1, description: 'Line number when applicable' },
+                    severity: { type: 'string', enum: ['high', 'medium', 'low', 'info'], description: 'Severity. Findings below the configured minimum are not published.' },
+                    suggestion: { type: 'string', maxLength: 8000, description: 'Suggested fix when applicable' },
                 },
                 required: ['id', 'title', 'description'],
-                additionalProperties: true,
+                additionalProperties: false,
             },
         },
         resolved_finding_ids: {
@@ -64412,6 +64446,11 @@ function defaultAgentCommand(configuration) {
 /**
  * Stable, provider-independent identity for a Bugbot finding. The model may
  * choose a display id, but it must not control reconciliation identity.
+ *
+ * The identity deliberately excludes the finding's prose and suggestion.
+ * Providers often rephrase those fields between runs even when the underlying
+ * issue is unchanged. Including them would turn harmless wording changes into
+ * duplicate comments and would make resolution reconciliation unreliable.
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildFindingFingerprint = buildFindingFingerprint;
@@ -64419,8 +64458,6 @@ function buildFindingFingerprint(finding) {
     const canonical = [
         normalizePath(finding.file),
         normalizeText(finding.title),
-        normalizeText(finding.description).slice(0, 240),
-        normalizeText(finding.suggestion).slice(0, 120),
         normalizeLine(finding.line),
     ].join('|');
     return `fp-${fnv1a(canonical)}`;
