@@ -26,20 +26,20 @@ CURSOR_INSTALLER_SHA256=<approved-installer-sha256>
 AGENT_PROVISIONING=auto
 ```
 
-The GitHub workflows pass these values to the Action. The selected provider is provisioned only when the Action runs in GitHub Actions and its executable is absent. Set `always` to force a pinned installation or `disabled` to require the runner image to provide the executable. Local development can use already-installed binaries.
+The GitHub workflows pass these values to the Action. The selected provider is provisioned only when the Action runs in GitHub Actions and its executable is absent. Set `always` to force a pinned installation or `disabled` to require the runner image to provide the executable. Local development can use already-installed binaries. `CODEX_VERSION` and `OPENCODE_VERSION` must be pinned semantic versions such as `1.2.3`; floating tags, local paths, and arbitrary package specifications are rejected before any download.
 
 ## Approved installation methods
 
-Codex and OpenCode are installed with the pinned package versions using Corepack and pnpm:
+Codex and OpenCode are installed with the pinned package versions using the runner's system `npm`. This avoids depending on a Corepack/pnpm binary on the runner (including the Intel macOS SEA failure mode):
 
 ```bash
-corepack pnpm add --global "@openai/codex@${CODEX_VERSION}"
-corepack pnpm add --global "opencode-ai@${OPENCODE_VERSION}"
+npm install --global "@openai/codex@${CODEX_VERSION}"
+npm install --global "opencode-ai@${OPENCODE_VERSION}"
 ```
 
-Cursor uses the official installer and verifies its SHA-256 against `CURSOR_INSTALLER_SHA256` before execution. Do not substitute an unofficial npm package.
+Cursor uses the official installer and verifies its SHA-256 against `CURSOR_INSTALLER_SHA256` before execution. Do not substitute an unofficial npm package. The installer is deleted after verification/execution.
 
-Do not use `npm`, `npx`, Yarn, Bun, floating `@latest`, unverified shell downloads, or secrets in command-line arguments.
+Do not use `npx`, Yarn, Bun, floating `@latest`, unverified shell downloads, or secrets in command-line arguments.
 
 ## Workflow environment
 

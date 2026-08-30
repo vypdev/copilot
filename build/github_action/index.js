@@ -59992,8 +59992,10 @@ function executableExists(executable, environment) {
         }
     }));
 }
-function installPnpmPackage(packageName, version) {
-    (0, node_child_process_1.execFileSync)('corepack', ['pnpm', 'add', '--global', `${packageName}@${version}`], { stdio: 'inherit' });
+function installPackageGlobally(packageName, version) {
+    // npm uses the runner's system Node directly and avoids the Intel macOS
+    // SEA binary issue that can affect Corepack-managed pnpm installations.
+    (0, node_child_process_1.execFileSync)('npm', ['install', '--global', `${packageName}@${version}`], { stdio: 'inherit' });
 }
 function installCursor(expectedSha256) {
     const directory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-cursor-installer-'));
@@ -60011,9 +60013,11 @@ function installCursor(expectedSha256) {
     }
 }
 function requirePinnedVersion(packageName, version, versionVariable) {
-    if (!version?.trim())
-        throw new Error(`${packageName} CLI is not installed and ${versionVariable} is not configured. Preinstall the CLI or set ${versionVariable} to a pinned version.`);
-    return version.trim();
+    const normalized = version?.trim();
+    if (!normalized || !/^v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(normalized)) {
+        throw new Error(`${packageName} CLI is not installed and ${versionVariable} must contain a pinned semantic version (for example 1.2.3). Preinstall the CLI or set ${versionVariable} to a pinned version.`);
+    }
+    return normalized;
 }
 function requireInstallerChecksum(checksum) {
     if (!checksum?.match(/^[a-f0-9]{64}$/i)) {
@@ -60023,7 +60027,7 @@ function requireInstallerChecksum(checksum) {
 }
 const DEFAULT_SYSTEM = {
     executableExists,
-    installPackage: installPnpmPackage,
+    installPackage: installPackageGlobally,
     installCursor,
 };
 class AgentCliProvisioner {

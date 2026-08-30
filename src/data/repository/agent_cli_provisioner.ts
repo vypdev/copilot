@@ -46,8 +46,10 @@ export interface AgentCliProvisioningSystem {
     installCursor(expectedSha256: string): void;
 }
 
-function installPnpmPackage(packageName: string, version: string): void {
-    execFileSync('corepack', ['pnpm', 'add', '--global', `${packageName}@${version}`], { stdio: 'inherit' });
+function installPackageGlobally(packageName: string, version: string): void {
+    // npm uses the runner's system Node directly and avoids the Intel macOS
+    // SEA binary issue that can affect Corepack-managed pnpm installations.
+    execFileSync('npm', ['install', '--global', `${packageName}@${version}`], { stdio: 'inherit' });
 }
 
 function installCursor(expectedSha256: string): void {
@@ -66,8 +68,11 @@ function installCursor(expectedSha256: string): void {
 }
 
 function requirePinnedVersion(packageName: string, version: string | undefined, versionVariable: string): string {
-    if (!version?.trim()) throw new Error(`${packageName} CLI is not installed and ${versionVariable} is not configured. Preinstall the CLI or set ${versionVariable} to a pinned version.`);
-    return version.trim();
+    const normalized = version?.trim();
+    if (!normalized || !/^v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(normalized)) {
+        throw new Error(`${packageName} CLI is not installed and ${versionVariable} must contain a pinned semantic version (for example 1.2.3). Preinstall the CLI or set ${versionVariable} to a pinned version.`);
+    }
+    return normalized;
 }
 
 function requireInstallerChecksum(checksum: string | undefined): string {
@@ -79,7 +84,7 @@ function requireInstallerChecksum(checksum: string | undefined): string {
 
 const DEFAULT_SYSTEM: AgentCliProvisioningSystem = {
     executableExists,
-    installPackage: installPnpmPackage,
+    installPackage: installPackageGlobally,
     installCursor,
 };
 

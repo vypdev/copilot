@@ -100,6 +100,16 @@ describe('AgentCliProvisioner', () => {
         expect(system.installPackage).not.toHaveBeenCalled();
     });
 
+    it.each(['latest', '10.12', 'file:///tmp/agent.tgz', '1.2.3 && touch compromised'])('rejects an unpinned or non-semver version before downloading: %s', (version) => {
+        const system = provisioningSystem(false);
+
+        expect(() => new AgentCliProvisioner(system).provision('codex', {
+            PATH: '',
+            CODEX_VERSION: version,
+        })).toThrow('CODEX_VERSION must contain a pinned semantic version');
+        expect(system.installPackage).not.toHaveBeenCalled();
+    });
+
     it('fails before downloading Cursor when its checksum is missing', () => {
         const system = provisioningSystem(false);
 
