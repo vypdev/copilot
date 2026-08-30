@@ -66,8 +66,11 @@ and bounded. A model response cannot introduce a new executable command.
 Agent-generated Markdown is not trusted for GitHub semantics. Before it is
 published, Copilot bounds it and neutralizes control sequences that could
 create hidden metadata, accidental mentions, or slash-command behaviour.
-The publication layer is independent from prompt construction so a future
-provider adapter cannot bypass it accidentally.
+Infrastructure error messages are treated as untrusted too: the publication
+policy removes stack traces, bounds the diagnostic, and redacts common token,
+Bearer, GitHub-token, and API-key formats. The publication layer is independent
+from prompt construction so a future provider adapter cannot bypass it
+accidentally.
 
 ## Operator rules
 

@@ -127,6 +127,15 @@ describe('result publication policy', () => {
     expect(sections.footer).toContain('@\u200bmaintainer'.replace('\\u200b', '\u200b'));
   });
 
+  it('redacts credential-like values from infrastructure errors before publication', () => {
+    const sections = renderResultSections([
+      new Result({ errors: [new Error('GitHub rejected token=gho_secret-value')] }),
+    ]);
+
+    expect(sections.errors).toContain('token=[redacted]');
+    expect(sections.errors).not.toContain('gho_secret-value');
+  });
+
   it('builds debug content only when enabled and populated', () => {
     expect(buildDebugLogSection(false, 'log')).toBe('');
     expect(buildDebugLogSection(true, '')).toBe('');

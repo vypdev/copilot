@@ -1,6 +1,6 @@
 import type { Result } from '../../data/model/result';
 import type { ResultPublicationSections } from './result_publication_contracts';
-import { sanitizeAgentMarkdown } from './github_comment_publication_policy';
+import { sanitizeAgentMarkdown, sanitizePublishedError } from './github_comment_publication_policy';
 
 export function renderResultSections(results: ReadonlyArray<Result>): ResultPublicationSections {
     const renderedSteps: string[] = [];
@@ -11,7 +11,7 @@ export function renderResultSections(results: ReadonlyArray<Result>): ResultPubl
     for (const result of results) {
         stepIndex = appendSteps(renderedSteps, result, stepIndex);
         reminders.push(...result.reminders.map(reminder => sanitizeAgentMarkdown(reminder)));
-        errors.push(...result.errors.map(error => sanitizeAgentMarkdown(error.message)));
+        errors.push(...result.errors.map(error => sanitizePublishedError(error.message)));
     }
 
     return {
