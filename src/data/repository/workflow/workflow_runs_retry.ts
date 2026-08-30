@@ -14,17 +14,29 @@ export async function withWorkflowRunsRetry<T>(
     delayPort: WorkflowPollingDelayPort,
     policy: WorkflowRunsRetryPolicy,
 ): Promise<T> {
-    let delayMilliseconds = policy.initialDelayMilliseconds;
-    for (let attempt = 1; attempt <= policy.maximumAttempts; attempt += 1) {
-        try {
-            return await operation();
-        } catch (error: unknown) {
-            if (!shouldRetry(error, attempt, policy.maximumAttempts)) throw error;
-            await delayPort.wait(delayMilliseconds);
-            delayMilliseconds = nextRetryDelay(delayMilliseconds, policy);
-        }
+    return executeWithRetry(operation, delayPort, policy, 1, policy.initialDelayMilliseconds);
+}
+
+async function executeWithRetry<T>(
+    operation: () => Promise<T>,
+    delayPort: WorkflowPollingDelayPort,
+    policy: WorkflowRunsRetryPolicy,
+    attempt: number,
+    delayMilliseconds: number,
+): Promise<T> {
+    try {
+        return await operation();
+    } catch (error: unknown) {
+        if (!shouldRetry(error, attempt, policy.maximumAttempts)) throw error;
+        await delayPort.wait(delayMilliseconds);
+        return executeWithRetry(
+            operation,
+            delayPort,
+            policy,
+            attempt + 1,
+            nextRetryDelay(delayMilliseconds, policy),
+        );
     }
-    throw new Error('Workflow runs request retry policy was exhausted.');
 }
 
 function shouldRetry(error: unknown, attempt: number, maximumAttempts: number): boolean {

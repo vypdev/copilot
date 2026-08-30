@@ -60279,33 +60279,7 @@ async function runAssignReviewersWorkflow(param, dependencies) {
     const desiredReviewersCount = param.pullRequest.desiredReviewersCount;
     const number = param.pullRequest.number;
     try {
-        (0, logging_ports_1.logDebugInfo)(`#${number} needs ${desiredReviewersCount} reviewers.`);
-        if (desiredReviewersCount <= 0 || number <= 0)
-            return [successResult()];
-        const currentReviewers = await loadCurrentReviewers(param, dependencies);
-        if (currentReviewers.length >= desiredReviewersCount)
-            return [successResult()];
-        const missingReviewers = desiredReviewersCount - currentReviewers.length;
-        (0, logging_ports_1.logDebugInfo)(`#${number} needs ${missingReviewers} more reviewers.`);
-        const members = await selectReviewerCandidates(param, dependencies, currentReviewers, missingReviewers);
-        if (members.length === 0) {
-            return [failureResult('Tried to assign members as reviewers to pull request, but no one was found.')];
-        }
-        const confirmedReviewers = await requestAndConfirmReviewers(param, dependencies, members);
-        if (confirmedReviewers.length === 0) {
-            return [failureResult('Tried to assign members as reviewers to pull request, but no reviewer request was confirmed.')];
-        }
-        const results = confirmedReviewers.map((member) => new result_1.Result({
-            id: TASK_ID,
-            success: true,
-            executed: true,
-            steps: [`@${member} was requested to review the pull request.`],
-        }));
-        const reviewersStillNeeded = (0, reviewer_assignment_policy_1.calculateReviewersStillNeeded)(desiredReviewersCount, currentReviewers.length, confirmedReviewers.length);
-        if (reviewersStillNeeded > 0) {
-            results.push(failureResult(`Confirmed ${confirmedReviewers.length} of ${missingReviewers} required reviewer requests; pull request still needs ${reviewersStillNeeded} ${reviewersStillNeeded === 1 ? 'reviewer' : 'reviewers'}.`));
-        }
-        return results;
+        return await executeReviewerAssignment(param, dependencies, desiredReviewersCount, number);
     }
     catch (error) {
         const normalizedError = (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, 'assign-reviewers');
@@ -60320,6 +60294,38 @@ async function runAssignReviewersWorkflow(param, dependencies) {
             }),
         ];
     }
+}
+async function executeReviewerAssignment(param, dependencies, desiredReviewersCount, number) {
+    (0, logging_ports_1.logDebugInfo)(`#${number} needs ${desiredReviewersCount} reviewers.`);
+    if (desiredReviewersCount <= 0 || number <= 0)
+        return [successResult()];
+    const currentReviewers = await loadCurrentReviewers(param, dependencies);
+    if (currentReviewers.length >= desiredReviewersCount)
+        return [successResult()];
+    const missingReviewers = desiredReviewersCount - currentReviewers.length;
+    (0, logging_ports_1.logDebugInfo)(`#${number} needs ${missingReviewers} more reviewers.`);
+    const members = await selectReviewerCandidates(param, dependencies, currentReviewers, missingReviewers);
+    if (members.length === 0) {
+        return [failureResult('Tried to assign members as reviewers to pull request, but no one was found.')];
+    }
+    const confirmedReviewers = await requestAndConfirmReviewers(param, dependencies, members);
+    if (confirmedReviewers.length === 0) {
+        return [failureResult('Tried to assign members as reviewers to pull request, but no reviewer request was confirmed.')];
+    }
+    return buildReviewerResults(desiredReviewersCount, currentReviewers.length, missingReviewers, confirmedReviewers);
+}
+function buildReviewerResults(desiredReviewersCount, currentReviewersCount, missingReviewers, confirmedReviewers) {
+    const results = confirmedReviewers.map((member) => new result_1.Result({
+        id: TASK_ID,
+        success: true,
+        executed: true,
+        steps: [`@${member} was requested to review the pull request.`],
+    }));
+    const reviewersStillNeeded = (0, reviewer_assignment_policy_1.calculateReviewersStillNeeded)(desiredReviewersCount, currentReviewersCount, confirmedReviewers.length);
+    if (reviewersStillNeeded > 0) {
+        results.push(failureResult(`Confirmed ${confirmedReviewers.length} of ${missingReviewers} required reviewer requests; pull request still needs ${reviewersStillNeeded} ${reviewersStillNeeded === 1 ? 'reviewer' : 'reviewers'}.`));
+    }
+    return results;
 }
 async function loadCurrentReviewers(param, dependencies) {
     return (0, reviewer_assignment_policy_1.uniqueLogins)(await dependencies.pullRequestRepository.getCurrentReviewers(param.owner, param.repo, param.pullRequest.number, param.tokens.token));
@@ -64218,12 +64224,20 @@ function hasCodexChatGptSession(environment) {
     return isCodexChatGptAuth(readAuthFile(codexHome ? (0, node_path_1.join)(codexHome, 'auth.json') : undefined));
 }
 function hasOpenCodeLocalSession(environment) {
-    const dataDirectory = environment.OPENCODE_DATA_DIR?.trim()
-        || environment.XDG_DATA_HOME?.trim()
-        || (environment === process.env || environment.HOME ? (0, node_path_1.join)(environment.HOME || (0, node_os_1.homedir)(), '.local', 'share') : undefined);
-    const authPath = environment.OPENCODE_AUTH_FILE?.trim()
-        || (dataDirectory ? (0, node_path_1.join)(dataDirectory, 'opencode', 'auth.json') : undefined);
-    return Boolean(dataDirectory && (0, agent_credential_policy_1.containsCredentialMaterial)(readAuthFile(authPath)));
+    const dataDirectory = resolveOpenCodeDataDirectory(environment);
+    return dataDirectory !== undefined
+        && (0, agent_credential_policy_1.containsCredentialMaterial)(readAuthFile(resolveOpenCodeAuthPath(environment, dataDirectory)));
+}
+function resolveOpenCodeDataDirectory(environment) {
+    const configuredDirectory = environment.OPENCODE_DATA_DIR?.trim() || environment.XDG_DATA_HOME?.trim();
+    if (configuredDirectory)
+        return configuredDirectory;
+    if (environment !== process.env && !environment.HOME)
+        return undefined;
+    return (0, node_path_1.join)(environment.HOME || (0, node_os_1.homedir)(), '.local', 'share');
+}
+function resolveOpenCodeAuthPath(environment, dataDirectory) {
+    return environment.OPENCODE_AUTH_FILE?.trim() || (0, node_path_1.join)(dataDirectory, 'opencode', 'auth.json');
 }
 function readAuthFile(path) {
     if (!path || !(0, node_fs_1.existsSync)(path))
@@ -64738,15 +64752,20 @@ function consumeJsonCharacter(state, character) {
         state.escape = false;
         return false;
     }
-    if (character === '\\' && state.inString) {
+    return state.inString
+        ? consumeStringCharacter(state, character)
+        : consumeStructuralCharacter(state, character);
+}
+function consumeStringCharacter(state, character) {
+    if (character === '\\') {
         state.escape = true;
         return false;
     }
-    if (state.inString) {
-        if (character === state.quoteChar)
-            state.inString = false;
-        return false;
-    }
+    if (character === state.quoteChar)
+        state.inString = false;
+    return false;
+}
+function consumeStructuralCharacter(state, character) {
     if (character === '"' || character === "'") {
         state.inString = true;
         state.quoteChar = character;
@@ -64756,10 +64775,11 @@ function consumeJsonCharacter(state, character) {
         state.depth += 1;
         return false;
     }
-    if (character !== '}')
-        return false;
-    state.depth -= 1;
-    return state.depth === 0;
+    if (character === '}') {
+        state.depth -= 1;
+        return state.depth === 0;
+    }
+    return false;
 }
 function parseObject(text) {
     try {
@@ -68057,14 +68077,7 @@ async function findPullRequestReviewThread(client, owner, repository, pullNumber
             if (located)
                 return located;
         }
-        const nextThreadsCursor = threads.pageInfo?.endCursor ?? null;
-        if (!threads.pageInfo?.hasNextPage || nextThreadsCursor == null)
-            return null;
-        if (seenThreadCursors.has(nextThreadsCursor)) {
-            throw new pull_request_review_errors_1.PullRequestReviewOperationError('resolve-thread');
-        }
-        seenThreadCursors.add(nextThreadsCursor);
-        threadsCursor = nextThreadsCursor;
+        threadsCursor = nextConnectionCursor(threads.pageInfo, seenThreadCursors);
     } while (threadsCursor != null);
     return null;
 }
@@ -68077,14 +68090,9 @@ async function findThreadComment(client, thread, commentIdentity) {
         if (commentNodes.some((comment) => comment?.id === commentIdentity)) {
             return { id: thread.id, isResolved: thread.isResolved === true };
         }
-        const nextCommentsCursor = commentsPageInfo?.endCursor ?? null;
-        if (!commentsPageInfo?.hasNextPage || nextCommentsCursor == null)
+        commentsCursor = nextConnectionCursor(commentsPageInfo, seenCommentCursors);
+        if (commentsCursor === null)
             return null;
-        if (seenCommentCursors.has(nextCommentsCursor)) {
-            throw new pull_request_review_errors_1.PullRequestReviewOperationError('resolve-thread');
-        }
-        seenCommentCursors.add(nextCommentsCursor);
-        commentsCursor = nextCommentsCursor;
         const nextComments = await client.graphql(THREAD_COMMENTS_QUERY, {
             threadId: thread.id,
             commentsAfter: commentsCursor,
@@ -68095,6 +68103,15 @@ async function findThreadComment(client, thread, commentIdentity) {
             endCursor: null,
         };
     }
+}
+function nextConnectionCursor(pageInfo, seenCursors) {
+    const cursor = pageInfo?.endCursor ?? null;
+    if (!pageInfo?.hasNextPage || cursor === null)
+        return null;
+    if (seenCursors.has(cursor))
+        throw new pull_request_review_errors_1.PullRequestReviewOperationError('resolve-thread');
+    seenCursors.add(cursor);
+    return cursor;
 }
 
 
@@ -68656,19 +68673,18 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.withWorkflowRunsRetry = withWorkflowRunsRetry;
 const TRANSIENT_NETWORK_ERRORS = new Set(['ECONNRESET', 'ETIMEDOUT', 'EAI_AGAIN', 'ENETUNREACH']);
 async function withWorkflowRunsRetry(operation, delayPort, policy) {
-    let delayMilliseconds = policy.initialDelayMilliseconds;
-    for (let attempt = 1; attempt <= policy.maximumAttempts; attempt += 1) {
-        try {
-            return await operation();
-        }
-        catch (error) {
-            if (!shouldRetry(error, attempt, policy.maximumAttempts))
-                throw error;
-            await delayPort.wait(delayMilliseconds);
-            delayMilliseconds = nextRetryDelay(delayMilliseconds, policy);
-        }
+    return executeWithRetry(operation, delayPort, policy, 1, policy.initialDelayMilliseconds);
+}
+async function executeWithRetry(operation, delayPort, policy, attempt, delayMilliseconds) {
+    try {
+        return await operation();
     }
-    throw new Error('Workflow runs request retry policy was exhausted.');
+    catch (error) {
+        if (!shouldRetry(error, attempt, policy.maximumAttempts))
+            throw error;
+        await delayPort.wait(delayMilliseconds);
+        return executeWithRetry(operation, delayPort, policy, attempt + 1, nextRetryDelay(delayMilliseconds, policy));
+    }
 }
 function shouldRetry(error, attempt, maximumAttempts) {
     return attempt < maximumAttempts && isTransientWorkflowRunsError(error);

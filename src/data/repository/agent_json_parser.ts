@@ -29,14 +29,21 @@ function consumeJsonCharacter(state: JsonScanState, character: string): boolean 
         state.escape = false;
         return false;
     }
-    if (character === '\\' && state.inString) {
+    return state.inString
+        ? consumeStringCharacter(state, character)
+        : consumeStructuralCharacter(state, character);
+}
+
+function consumeStringCharacter(state: JsonScanState, character: string): boolean {
+    if (character === '\\') {
         state.escape = true;
         return false;
     }
-    if (state.inString) {
-        if (character === state.quoteChar) state.inString = false;
-        return false;
-    }
+    if (character === state.quoteChar) state.inString = false;
+    return false;
+}
+
+function consumeStructuralCharacter(state: JsonScanState, character: string): boolean {
     if (character === '"' || character === "'") {
         state.inString = true;
         state.quoteChar = character;
@@ -46,9 +53,11 @@ function consumeJsonCharacter(state: JsonScanState, character: string): boolean 
         state.depth += 1;
         return false;
     }
-    if (character !== '}') return false;
-    state.depth -= 1;
-    return state.depth === 0;
+    if (character === '}') {
+        state.depth -= 1;
+        return state.depth === 0;
+    }
+    return false;
 }
 
 function parseObject(text: string): Record<string, unknown> | null {

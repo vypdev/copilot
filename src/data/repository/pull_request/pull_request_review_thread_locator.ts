@@ -91,13 +91,7 @@ export async function findPullRequestReviewThread(
             if (located) return located;
         }
 
-        const nextThreadsCursor: string | null = threads.pageInfo?.endCursor ?? null;
-        if (!threads.pageInfo?.hasNextPage || nextThreadsCursor == null) return null;
-        if (seenThreadCursors.has(nextThreadsCursor)) {
-            throw new PullRequestReviewOperationError('resolve-thread');
-        }
-        seenThreadCursors.add(nextThreadsCursor);
-        threadsCursor = nextThreadsCursor;
+        threadsCursor = nextConnectionCursor(threads.pageInfo, seenThreadCursors);
     } while (threadsCursor != null);
 
     return null;
@@ -117,13 +111,8 @@ async function findThreadComment(
         if (commentNodes.some((comment) => comment?.id === commentIdentity)) {
             return { id: thread.id, isResolved: thread.isResolved === true };
         }
-        const nextCommentsCursor = commentsPageInfo?.endCursor ?? null;
-        if (!commentsPageInfo?.hasNextPage || nextCommentsCursor == null) return null;
-        if (seenCommentCursors.has(nextCommentsCursor)) {
-            throw new PullRequestReviewOperationError('resolve-thread');
-        }
-        seenCommentCursors.add(nextCommentsCursor);
-        commentsCursor = nextCommentsCursor;
+        commentsCursor = nextConnectionCursor(commentsPageInfo, seenCommentCursors);
+        if (commentsCursor === null) return null;
         const nextComments = await client.graphql<ThreadCommentsResult>(THREAD_COMMENTS_QUERY, {
             threadId: thread.id,
             commentsAfter: commentsCursor,
@@ -134,4 +123,15 @@ async function findThreadComment(
             endCursor: null,
         };
     }
+}
+
+function nextConnectionCursor(
+    pageInfo: ThreadPageInfo | null | undefined,
+    seenCursors: Set<string>,
+): string | null {
+    const cursor = pageInfo?.endCursor ?? null;
+    if (!pageInfo?.hasNextPage || cursor === null) return null;
+    if (seenCursors.has(cursor)) throw new PullRequestReviewOperationError('resolve-thread');
+    seenCursors.add(cursor);
+    return cursor;
 }

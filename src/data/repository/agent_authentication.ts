@@ -27,12 +27,20 @@ function hasCodexChatGptSession(environment: NodeJS.ProcessEnv): boolean {
 }
 
 function hasOpenCodeLocalSession(environment: NodeJS.ProcessEnv): boolean {
-    const dataDirectory = environment.OPENCODE_DATA_DIR?.trim()
-        || environment.XDG_DATA_HOME?.trim()
-        || (environment === process.env || environment.HOME ? join(environment.HOME || homedir(), '.local', 'share') : undefined);
-    const authPath = environment.OPENCODE_AUTH_FILE?.trim()
-        || (dataDirectory ? join(dataDirectory, 'opencode', 'auth.json') : undefined);
-    return Boolean(dataDirectory && containsCredentialMaterial(readAuthFile(authPath)));
+    const dataDirectory = resolveOpenCodeDataDirectory(environment);
+    return dataDirectory !== undefined
+        && containsCredentialMaterial(readAuthFile(resolveOpenCodeAuthPath(environment, dataDirectory)));
+}
+
+function resolveOpenCodeDataDirectory(environment: NodeJS.ProcessEnv): string | undefined {
+    const configuredDirectory = environment.OPENCODE_DATA_DIR?.trim() || environment.XDG_DATA_HOME?.trim();
+    if (configuredDirectory) return configuredDirectory;
+    if (environment !== process.env && !environment.HOME) return undefined;
+    return join(environment.HOME || homedir(), '.local', 'share');
+}
+
+function resolveOpenCodeAuthPath(environment: NodeJS.ProcessEnv, dataDirectory: string): string {
+    return environment.OPENCODE_AUTH_FILE?.trim() || join(dataDirectory, 'opencode', 'auth.json');
 }
 
 function readAuthFile(path: string | undefined): unknown {

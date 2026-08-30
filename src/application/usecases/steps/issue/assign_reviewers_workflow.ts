@@ -32,45 +32,7 @@ export async function runAssignReviewersWorkflow(
     const number = param.pullRequest.number;
 
     try {
-        logDebugInfo(`#${number} needs ${desiredReviewersCount} reviewers.`);
-        if (desiredReviewersCount <= 0 || number <= 0) return [successResult()];
-
-        const currentReviewers = await loadCurrentReviewers(param, dependencies);
-        if (currentReviewers.length >= desiredReviewersCount) return [successResult()];
-
-        const missingReviewers = desiredReviewersCount - currentReviewers.length;
-        logDebugInfo(`#${number} needs ${missingReviewers} more reviewers.`);
-        const members = await selectReviewerCandidates(param, dependencies, currentReviewers, missingReviewers);
-        if (members.length === 0) {
-            return [failureResult('Tried to assign members as reviewers to pull request, but no one was found.')];
-        }
-
-        const confirmedReviewers = await requestAndConfirmReviewers(param, dependencies, members);
-        if (confirmedReviewers.length === 0) {
-            return [failureResult('Tried to assign members as reviewers to pull request, but no reviewer request was confirmed.')];
-        }
-
-        const results = confirmedReviewers.map(
-            (member) => new Result({
-                id: TASK_ID,
-                success: true,
-                executed: true,
-                steps: [`@${member} was requested to review the pull request.`],
-            }),
-        );
-        const reviewersStillNeeded = calculateReviewersStillNeeded(
-            desiredReviewersCount,
-            currentReviewers.length,
-            confirmedReviewers.length,
-        );
-        if (reviewersStillNeeded > 0) {
-            results.push(
-                failureResult(
-                    `Confirmed ${confirmedReviewers.length} of ${missingReviewers} required reviewer requests; pull request still needs ${reviewersStillNeeded} ${reviewersStillNeeded === 1 ? 'reviewer' : 'reviewers'}.`,
-                ),
-            );
-        }
-        return results;
+        return await executeReviewerAssignment(param, dependencies, desiredReviewersCount, number);
     } catch (error) {
         const normalizedError = toPullRequestReviewOperationError(error, 'assign-reviewers');
         logError(normalizedError);
@@ -84,6 +46,66 @@ export async function runAssignReviewersWorkflow(
             }),
         ];
     }
+}
+
+async function executeReviewerAssignment(
+    param: Execution,
+    dependencies: AssignReviewersWorkflowDependencies,
+    desiredReviewersCount: number,
+    number: number,
+): Promise<Result[]> {
+    logDebugInfo(`#${number} needs ${desiredReviewersCount} reviewers.`);
+    if (desiredReviewersCount <= 0 || number <= 0) return [successResult()];
+
+    const currentReviewers = await loadCurrentReviewers(param, dependencies);
+    if (currentReviewers.length >= desiredReviewersCount) return [successResult()];
+
+    const missingReviewers = desiredReviewersCount - currentReviewers.length;
+    logDebugInfo(`#${number} needs ${missingReviewers} more reviewers.`);
+    const members = await selectReviewerCandidates(param, dependencies, currentReviewers, missingReviewers);
+    if (members.length === 0) {
+        return [failureResult('Tried to assign members as reviewers to pull request, but no one was found.')];
+    }
+
+    const confirmedReviewers = await requestAndConfirmReviewers(param, dependencies, members);
+    if (confirmedReviewers.length === 0) {
+        return [failureResult('Tried to assign members as reviewers to pull request, but no reviewer request was confirmed.')];
+    }
+    return buildReviewerResults(
+        desiredReviewersCount,
+        currentReviewers.length,
+        missingReviewers,
+        confirmedReviewers,
+    );
+}
+
+function buildReviewerResults(
+    desiredReviewersCount: number,
+    currentReviewersCount: number,
+    missingReviewers: number,
+    confirmedReviewers: string[],
+): Result[] {
+    const results = confirmedReviewers.map(
+        (member) => new Result({
+            id: TASK_ID,
+            success: true,
+            executed: true,
+            steps: [`@${member} was requested to review the pull request.`],
+        }),
+    );
+    const reviewersStillNeeded = calculateReviewersStillNeeded(
+        desiredReviewersCount,
+        currentReviewersCount,
+        confirmedReviewers.length,
+    );
+    if (reviewersStillNeeded > 0) {
+        results.push(
+            failureResult(
+                `Confirmed ${confirmedReviewers.length} of ${missingReviewers} required reviewer requests; pull request still needs ${reviewersStillNeeded} ${reviewersStillNeeded === 1 ? 'reviewer' : 'reviewers'}.`,
+            ),
+        );
+    }
+    return results;
 }
 
 async function loadCurrentReviewers(
