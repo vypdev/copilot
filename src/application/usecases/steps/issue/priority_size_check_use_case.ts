@@ -3,6 +3,7 @@ import { Result } from '../../../../data/model/result';
 import type { ProjectDetail } from '../../../../data/model/project_detail';
 import type { ProjectBoardCommandPort } from '../../../../application/ports/project_board_command_ports';
 import { logDebugInfo, logError } from '../../../ports/logging_ports';
+import { resolveGithubPriorityLabel } from './priority_label_policy';
 
 interface PrioritySizeParam {
     labels: {
@@ -37,13 +38,7 @@ export async function runPrioritySizeCheck(
             return [new Result({ id: taskId, success: true, executed: false })];
         }
 
-        const priorityLabel = priority === typedParam.labels.priorityHigh
-            ? 'P0'
-            : priority === typedParam.labels.priorityMedium
-                ? 'P1'
-                : priority === typedParam.labels.priorityLow
-                    ? 'P2'
-                    : '';
+        const priorityLabel = resolveGithubPriorityLabel(priority, typedParam.labels);
 
         if (!priorityLabel) {
             return [new Result({ id: taskId, success: true, executed: false })];
