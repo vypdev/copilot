@@ -8,6 +8,8 @@ import { StoreConfigurationUseCase } from '../application/usecases/steps/common/
 
 import { logInfo } from '../utils/logger';
 import { createLogReportAdapter } from '../infrastructure/logging/logger_adapter';
+import { buildActionSummary } from '../application/policies/action_summary_policy';
+import { lifecycleStateFromLabels } from '../domain/copilot_lifecycle';
 
 export async function finishGithubAction(
     execution: Execution,
@@ -23,10 +25,35 @@ export async function finishGithubAction(
     await new PublishResultUseCase(issueNotificationPort, createLogReportAdapter()).invoke(execution);
     commitPublishedRecommendationState(execution, results);
     await new StoreConfigurationUseCase(configurationStorePort).invoke(execution);
+    await writeActionSummary(execution);
     logInfo('Configuration stored. Finishing.');
 
     if (execution.isSingleAction && execution.singleAction.throwError) {
         setFirstErrorIfExists(results);
+    }
+}
+
+async function writeActionSummary(execution: Execution): Promise<void> {
+    const summary = core.summary;
+    if (!summary || typeof summary.addRaw !== 'function' || typeof summary.write !== 'function') return;
+    try {
+        const targetLabels = execution.isPullRequest
+            ? execution.labels.currentPullRequestLabels
+            : execution.labels.currentIssueLabels;
+        const lifecycleState = lifecycleStateFromLabels(targetLabels, execution.labels.lifecycle);
+        await summary
+            .addRaw(buildActionSummary({
+                owner: execution.owner,
+                repository: execution.repo,
+                eventName: execution.eventName,
+                issueNumber: execution.issue.number,
+                pullRequestNumber: execution.pullRequest.number,
+                lifecycleState,
+                results: execution.currentConfiguration.results,
+            }))
+            .write();
+    } catch (error) {
+        logInfo(`Could not write GitHub Actions summary: ${error instanceof Error ? error.message : String(error)}`);
     }
 }
 

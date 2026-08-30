@@ -9,6 +9,7 @@ import { createMainRunRouteCompositionRoot } from '../infrastructure/composition
 import { requireRepositoryCoordinates } from './repository_context';
 import { configureApplicationLogger } from '../application/ports/logging_ports';
 import { createLoggerAdapter } from '../infrastructure/logging/logger_adapter';
+import type { SynchronizeLifecycleStateUseCase } from '../application/usecases/actions/synchronize_lifecycle_state_use_case';
 import {
     logWelcomeMessage,
     runMainRoute,
@@ -21,6 +22,7 @@ export async function mainRun(
     execution: Execution,
     projectBoardCommandPort: ProjectBoardCommandPort,
     latestTagQueryPort: LatestTagQueryPort,
+    lifecycleStateUseCase?: SynchronizeLifecycleStateUseCase,
 ): Promise<Result[]> {
     configureApplicationLogger(createLoggerAdapter());
     const repository = requireRepositoryCoordinates({
@@ -60,5 +62,7 @@ export async function mainRun(
         isPullRequestReviewComment: execution.pullRequest.isPullRequestReviewComment,
         isPush: execution.isPush,
     });
-    return runMainRoute(execution, route, routeHandlers);
+    const results = await runMainRoute(execution, route, routeHandlers);
+    if (!lifecycleStateUseCase) return results;
+    return [...results, ...(await lifecycleStateUseCase.invoke({ execution, results }))];
 }

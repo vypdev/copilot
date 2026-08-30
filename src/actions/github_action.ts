@@ -13,6 +13,7 @@ import { buildGithubActionEventInputs } from './github_event_inputs';
 import { mainRun } from './common_action';
 import { INPUT_KEYS } from '../utils/constants';
 import { logDebugInfo, logError, logInfo } from '../utils/logger';
+import { createSynchronizeLifecycleStateUseCase } from '../infrastructure/composition/lifecycle_state_composition_root';
 
 export async function runGitHubAction(): Promise<void> {
     const eventInputs = buildGithubActionEventInputs({
@@ -40,7 +41,12 @@ export async function runGitHubAction(): Promise<void> {
         `AI PR description: ${execution.ai.getAiPullRequestDescription()}, bugbot min severity: ${execution.ai.getBugbotMinSeverity()}.`,
     );
 
-    const results = await mainRun(execution, projectBoard.command, new GitCliRepository());
+    const results = await mainRun(
+        execution,
+        projectBoard.command,
+        new GitCliRepository(),
+        createSynchronizeLifecycleStateUseCase(),
+    );
     const issueContentPort = createIssueContentCompositionRoot();
     await finishGithubAction(
         execution,
