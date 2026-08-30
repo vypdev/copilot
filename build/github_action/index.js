@@ -51883,30 +51883,41 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveEventIssueNumber = resolveEventIssueNumber;
 exports.resolveSingleActionIssueNumber = resolveSingleActionIssueNumber;
 const constants_1 = __nccwpck_require__(15415);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
 const title_utils_1 = __nccwpck_require__(46267);
 function resolveEventIssueNumber(execution) {
     if (execution.isIssue)
-        return execution.issue.number;
+        return positiveIssueNumberOrUndefined(execution.issue.number);
     if (execution.isPullRequest)
-        return (0, title_utils_1.extractIssueNumberFromBranch)(execution.pullRequest.head);
+        return positiveIssueNumberOrUndefined((0, title_utils_1.extractIssueNumberFromBranch)(execution.pullRequest.head));
     if (execution.isPush)
-        return (0, title_utils_1.extractIssueNumberFromPush)(execution.commit.branch);
-    return execution.issueNumber;
+        return positiveIssueNumberOrUndefined((0, title_utils_1.extractIssueNumberFromPush)(execution.commit.branch));
+    return positiveIssueNumberOrUndefined(execution.issueNumber);
 }
 async function resolveSingleActionIssueNumber(execution, issueRepository) {
     const configuredIssue = execution.inputs?.[constants_1.INPUT_KEYS.SINGLE_ACTION_ISSUE];
-    if (configuredIssue)
-        return setIssueNumber(execution, Number(configuredIssue));
-    if (execution.isIssue)
-        return setIssueNumber(execution, execution.issue.number, 'issue');
+    if (configuredIssue !== undefined && configuredIssue !== null && String(configuredIssue).trim() !== '') {
+        const issueNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(configuredIssue);
+        return issueNumber === undefined ? undefined : setIssueNumber(execution, issueNumber);
+    }
+    if (execution.isIssue) {
+        const issueNumber = positiveIssueNumberOrUndefined(execution.issue.number);
+        return issueNumber === undefined ? undefined : setIssueNumber(execution, issueNumber, 'issue');
+    }
     if (execution.isPullRequest)
-        return setIssueNumber(execution, (0, title_utils_1.extractIssueNumberFromBranch)(execution.pullRequest.head), 'pullRequest');
+        return setResolvedIssueNumber(execution, (0, title_utils_1.extractIssueNumberFromBranch)(execution.pullRequest.head), 'pullRequest');
     if (execution.isPush)
-        return setIssueNumber(execution, (0, title_utils_1.extractIssueNumberFromPush)(execution.commit.branch), 'push');
+        return setResolvedIssueNumber(execution, (0, title_utils_1.extractIssueNumberFromPush)(execution.commit.branch), 'push');
+    // SingleAction uses zero as its explicit domain value for actions that do
+    // not need an issue. Do not query GitHub with that sentinel.
+    if (execution.singleAction.issue === 0)
+        return undefined;
     return resolveConfiguredSingleAction(execution, issueRepository);
 }
 async function resolveConfiguredSingleAction(execution, issueRepository) {
     const issueNumber = execution.singleAction.issue;
+    if (!positiveIssueNumberOrUndefined(issueNumber))
+        return undefined;
     const isPullRequest = await issueRepository.isPullRequest(execution.owner, execution.repo, issueNumber, execution.tokens.token);
     const isIssue = await issueRepository.isIssue(execution.owner, execution.repo, issueNumber, execution.tokens.token);
     execution.singleAction.isPullRequest = isPullRequest;
@@ -51914,9 +51925,20 @@ async function resolveConfiguredSingleAction(execution, issueRepository) {
     if (isIssue)
         return setIssueNumber(execution, issueNumber);
     if (!isPullRequest)
-        return execution.issueNumber;
+        return undefined;
     const head = await issueRepository.getHeadBranch(execution.owner, execution.repo, issueNumber, execution.tokens.token);
-    return head === undefined ? undefined : setIssueNumber(execution, (0, title_utils_1.extractIssueNumberFromBranch)(head));
+    return head === undefined
+        ? undefined
+        : setResolvedIssueNumber(execution, (0, title_utils_1.extractIssueNumberFromBranch)(head));
+}
+function setResolvedIssueNumber(execution, issueNumber, actionType) {
+    const resolvedIssueNumber = positiveIssueNumberOrUndefined(issueNumber);
+    return resolvedIssueNumber === undefined
+        ? undefined
+        : setIssueNumber(execution, resolvedIssueNumber, actionType);
+}
+function positiveIssueNumberOrUndefined(value) {
+    return (0, positive_integer_policy_1.parsePositiveSafeInteger)(value);
 }
 function setIssueNumber(execution, issueNumber, actionType) {
     if (actionType === 'issue')
@@ -52060,12 +52082,15 @@ function restoreBranchState(execution) {
 }
 function configurationIssueNumber(execution) {
     if (execution.isSingleAction || execution.isPush)
-        return execution.issueNumber;
+        return positiveIssueNumberOrUndefined(execution.issueNumber);
     if (execution.isIssue)
-        return execution.issue.number;
+        return positiveIssueNumberOrUndefined(execution.issue.number);
     if (execution.isPullRequest)
-        return execution.pullRequest.number;
+        return positiveIssueNumberOrUndefined(execution.pullRequest.number);
     return undefined;
+}
+function positiveIssueNumberOrUndefined(value) {
+    return value > 0 && Number.isSafeInteger(value) ? value : undefined;
 }
 
 
@@ -58604,18 +58629,19 @@ function shouldSkipInitialLabelsFetch(isSingleAction, currentSingleAction) {
 /***/ }),
 
 /***/ 46760:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Issue = void 0;
+const positive_integer_policy_1 = __nccwpck_require__(19879);
 class Issue {
     get title() {
         return this.inputs?.issue?.title ?? '';
     }
     get number() {
-        return this.inputs?.issue?.number ?? -1;
+        return (0, positive_integer_policy_1.parsePositiveSafeInteger)(this.inputs?.issue?.number) ?? -1;
     }
     get creator() {
         return this.inputs?.issue?.user?.login ?? '';
@@ -58653,7 +58679,7 @@ class Issue {
         return this.inputs?.eventName === 'issue_comment';
     }
     get commentId() {
-        return this.inputs?.comment?.id ?? -1;
+        return (0, positive_integer_policy_1.parsePositiveSafeInteger)(this.inputs?.comment?.id) ?? -1;
     }
     get commentBody() {
         return this.inputs?.comment?.body ?? '';
@@ -59170,12 +59196,13 @@ exports.Projects = Projects;
 /***/ }),
 
 /***/ 55713:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequest = void 0;
+const positive_integer_policy_1 = __nccwpck_require__(19879);
 class PullRequest {
     get action() {
         return this.inputs?.action ?? '';
@@ -59190,7 +59217,7 @@ class PullRequest {
         return this.inputs?.pull_request?.user?.login ?? '';
     }
     get number() {
-        return this.inputs?.pull_request?.number ?? -1;
+        return (0, positive_integer_policy_1.parsePositiveSafeInteger)(this.inputs?.pull_request?.number) ?? -1;
     }
     get url() {
         return this.inputs?.pull_request?.html_url ?? '';
@@ -59232,7 +59259,7 @@ class PullRequest {
         return this.inputs?.pull_request_review_comment ?? this.inputs?.comment;
     }
     get commentId() {
-        return this.reviewCommentPayload?.id ?? -1;
+        return (0, positive_integer_policy_1.parsePositiveSafeInteger)(this.reviewCommentPayload?.id) ?? -1;
     }
     get commentBody() {
         return this.reviewCommentPayload?.body ?? '';
@@ -59246,7 +59273,7 @@ class PullRequest {
     /** When the comment is a reply, the id of the parent review comment (for bugbot: include parent body in intent prompt). */
     get commentInReplyToId() {
         const raw = this.reviewCommentPayload?.in_reply_to_id;
-        return raw != null ? Number(raw) : undefined;
+        return (0, positive_integer_policy_1.parsePositiveSafeInteger)(raw);
     }
     constructor(desiredAssigneesCount, desiredReviewersCount, mergeTimeout, inputs = undefined) {
         this.inputs = undefined;
@@ -59355,6 +59382,7 @@ exports.Result = Result;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SingleAction = void 0;
 const action_types_1 = __nccwpck_require__(19625);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
 class SingleAction {
     get isDeployedAction() {
         return this.currentSingleAction === action_types_1.ACTIONS.DEPLOYED;
@@ -59440,8 +59468,7 @@ class SingleAction {
         this.changelog = changelog;
         this.currentSingleAction = currentSingleAction;
         if (!this.isSingleActionWithoutIssue) {
-            const parsedIssue = Number.parseInt(issue, 10);
-            this.issue = Number.isNaN(parsedIssue) ? -1 : parsedIssue;
+            this.issue = (0, positive_integer_policy_1.parsePositiveSafeInteger)(issue) ?? -1;
         }
         else {
             this.issue = 0;
@@ -64537,6 +64564,36 @@ function fnv1a(value) {
 
 /***/ }),
 
+/***/ 19879:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.parsePositiveSafeInteger = parsePositiveSafeInteger;
+/**
+ * Parses an identifier received from an external boundary.
+ *
+ * GitHub identifiers are positive safe integers. Keeping this policy in the
+ * domain makes models and application policies share the same invariant
+ * without depending on an adapter or runtime-specific input helper.
+ */
+function parsePositiveSafeInteger(value) {
+    if (typeof value === 'number') {
+        return Number.isSafeInteger(value) && value > 0 ? value : undefined;
+    }
+    if (typeof value !== 'string')
+        return undefined;
+    const normalized = value.trim();
+    if (!/^\+?\d+$/u.test(normalized))
+        return undefined;
+    const parsed = Number(normalized);
+    return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+
+/***/ }),
+
 /***/ 67057:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -67674,27 +67731,21 @@ function getTaskEmoji(taskId) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.extractIssueNumberFromPush = exports.extractIssueNumberFromBranch = void 0;
-const logger_1 = __nccwpck_require__(91151);
+const positive_integer_policy_1 = __nccwpck_require__(19879);
 const extractIssueNumberFromBranch = (branchName) => {
     const match = branchName?.match(/[a-zA-Z]+\/([0-9]+)-.*/);
     if (match) {
-        return parseInt(match[1]);
+        return (0, positive_integer_policy_1.parsePositiveSafeInteger)(match[1]) ?? -1;
     }
-    else {
-        (0, logger_1.logDebugInfo)('No issue number found in the branch name.');
-        return -1;
-    }
+    return -1;
 };
 exports.extractIssueNumberFromBranch = extractIssueNumberFromBranch;
 const extractIssueNumberFromPush = (branchName) => {
-    const issueNumberMatch = branchName.match(/^[^/]+\/(\d+)-/);
+    const issueNumberMatch = branchName?.match(/^[^/]+\/(\d+)-/);
     if (!issueNumberMatch) {
-        (0, logger_1.logDebugInfo)('No issue number found in the branch name.');
         return -1;
     }
-    const issueNumber = parseInt(issueNumberMatch[1], 10);
-    (0, logger_1.logDebugInfo)(`Linked Issue: #${issueNumber}`);
-    return issueNumber;
+    return (0, positive_integer_policy_1.parsePositiveSafeInteger)(issueNumberMatch[1]) ?? -1;
 };
 exports.extractIssueNumberFromPush = extractIssueNumberFromPush;
 
