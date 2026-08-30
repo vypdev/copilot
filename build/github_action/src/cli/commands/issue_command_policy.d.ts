@@ -6,5 +6,5 @@ export interface IssueCommandOptions {
     token?: string;
 }
 export declare function parseIssueNumber(value: unknown): number | undefined;
-export declare function buildCheckProgressParams(options: IssueCommandOptions, gitInfo: GitInfo): any | undefined;
-export declare function buildRecommendStepsParams(options: IssueCommandOptions, gitInfo: GitInfo): any | undefined;
+export declare function buildCheckProgressParams(options: IssueCommandOptions, gitInfo: GitInfo): Record<string, unknown> | undefined;
+export declare function buildRecommendStepsParams(options: IssueCommandOptions, gitInfo: GitInfo): Record<string, unknown> | undefined;

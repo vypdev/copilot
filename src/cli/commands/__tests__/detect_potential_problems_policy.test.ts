@@ -11,6 +11,7 @@ describe('detect potential problems policy', () => {
 
   it('uses the explicit branch before the current branch', () => {
     const params = buildDetectPotentialProblemsParams({ issue: '4', branch: 'bugfix/test' }, gitInfo, 'main');
+    if (!params) throw new Error('Expected valid detection parameters.');
     expect(params).toMatchObject({
       [INPUT_KEYS.SINGLE_ACTION]: ACTIONS.DETECT_POTENTIAL_PROBLEMS,
       commits: { ref: 'refs/heads/bugfix/test' },
@@ -20,6 +21,7 @@ describe('detect potential problems policy', () => {
 
   it('falls back to the current branch', () => {
     const params = buildDetectPotentialProblemsParams({ issue: '4' }, gitInfo, 'develop');
-    expect(params.commits.ref).toBe('refs/heads/develop');
+    if (!params) throw new Error('Expected valid detection parameters.');
+    expect(params.commits).toEqual({ ref: 'refs/heads/develop' });
   });
 });

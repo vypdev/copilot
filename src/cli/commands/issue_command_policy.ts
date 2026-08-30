@@ -20,8 +20,10 @@ export function parseIssueNumber(value: unknown): number | undefined {
   return parsePositiveCliInteger(cleanCliArgument(value));
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- CLI action params are dynamically shaped
-export function buildCheckProgressParams(options: IssueCommandOptions, gitInfo: GitInfo): any | undefined {
+export function buildCheckProgressParams(
+  options: IssueCommandOptions,
+  gitInfo: GitInfo,
+): Record<string, unknown> | undefined {
   if ('error' in gitInfo) return undefined;
   const issueNumber = parseIssueNumber(options.issue);
   if (issueNumber === undefined) return undefined;
@@ -39,8 +41,10 @@ export function buildCheckProgressParams(options: IssueCommandOptions, gitInfo: 
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- CLI action params are dynamically shaped
-export function buildRecommendStepsParams(options: IssueCommandOptions, gitInfo: GitInfo): any | undefined {
+export function buildRecommendStepsParams(
+  options: IssueCommandOptions,
+  gitInfo: GitInfo,
+): Record<string, unknown> | undefined {
   if ('error' in gitInfo) return undefined;
   const issueNumber = parseIssueNumber(options.issue);
   if (issueNumber === undefined) return undefined;

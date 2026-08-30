@@ -101,6 +101,14 @@ For each id in “resolved”:
 
 So the issue and PR stay in sync with the current code: fixed findings are marked resolved, and new ones are added up to the comment limit.
 
+Finding matching is intentionally stable across agent providers and wording
+changes. The local identity uses the normalized file path, title, and a nearby
+line bucket; descriptions and suggestions are treated as mutable explanation,
+not identity. A finding that is reported again with improved wording therefore
+updates its existing publication. Resolution is only accepted for findings
+present in the loaded, bounded history, so an agent cannot resolve an arbitrary
+identifier invented in its response.
+
 ---
 
 ## Next steps

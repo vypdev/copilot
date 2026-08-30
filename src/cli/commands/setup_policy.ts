@@ -5,8 +5,11 @@ export interface SetupCommandOptions {
   debug?: boolean;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- CLI action params are dynamically shaped
-export function buildSetupParams(options: SetupCommandOptions, gitInfo: GitInfo, token: string): any | undefined {
+export function buildSetupParams(
+  options: SetupCommandOptions,
+  gitInfo: GitInfo,
+  token: string,
+): Record<string, unknown> | undefined {
   if ('error' in gitInfo) return undefined;
   return {
     [INPUT_KEYS.DEBUG]: options.debug?.toString() ?? 'false',

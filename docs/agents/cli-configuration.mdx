@@ -96,7 +96,7 @@ The built-in commands are provider-specific:
 | Codex | `codex exec --ephemeral --skip-git-repo-check --model model --config 'model_provider="provider"' [--config 'model_reasoning_effort="effort"'] -` |
 | Cursor | `agent -p --output-format text --model model <prompt>` |
 
-Custom commands are optional. They must remain compatible with the selected runtime and explicitly carry the selected model; Codex must carry `model_provider`, and Codex/OpenCode must carry configured effort. Shell execution and automatic provider fallback are not used.
+Custom commands are optional. They must remain compatible with the selected runtime and explicitly carry the selected model; Codex must carry `model_provider`, Codex/OpenCode must carry configured effort, and a Codex command must end with the standalone `-` stdin placeholder. Shell execution and automatic provider fallback are not used. The action rejects a command that violates these transport invariants before starting the CLI.
 
 ## Credentials
 

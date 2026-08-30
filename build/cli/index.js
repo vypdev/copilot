@@ -52789,9 +52789,7 @@ const local_action_output_1 = __nccwpck_require__(94290);
 const local_action_configuration_1 = __nccwpck_require__(66645);
 const local_action_execution_1 = __nccwpck_require__(47047);
 const repository_context_1 = __nccwpck_require__(78958);
-async function runLocalAction(
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Params shape is dynamic (CLI/action inputs)
-additionalParams) {
+async function runLocalAction(additionalParams) {
     const repository = (0, repository_context_1.requireRepositoryCoordinates)(additionalParams?.repo);
     const normalizedParams = { ...(additionalParams ?? {}), repo: repository };
     const composition = (0, local_action_composition_root_1.createLocalActionCompositionRoot)();
@@ -62345,7 +62343,6 @@ exports.buildDetectPotentialProblemsParams = buildDetectPotentialProblemsParams;
 exports.resolveDetectIssueNumber = resolveDetectIssueNumber;
 const constants_1 = __nccwpck_require__(15415);
 const command_input_policy_1 = __nccwpck_require__(95212);
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- CLI action params are dynamically shaped
 function buildDetectPotentialProblemsParams(options, gitInfo, currentBranch) {
     if ('error' in gitInfo)
         return undefined;
@@ -62617,7 +62614,6 @@ function sharedOptions(options) {
 function parseIssueNumber(value) {
     return (0, command_input_policy_1.parsePositiveCliInteger)((0, command_input_policy_1.cleanCliArgument)(value));
 }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- CLI action params are dynamically shaped
 function buildCheckProgressParams(options, gitInfo) {
     if ('error' in gitInfo)
         return undefined;
@@ -62637,7 +62633,6 @@ function buildCheckProgressParams(options, gitInfo) {
         [constants_1.INPUT_KEYS.WELCOME_MESSAGES]: [`Checking progress for issue #${issueNumber} in ${gitInfo.owner}/${gitInfo.repo}...`],
     };
 }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- CLI action params are dynamically shaped
 function buildRecommendStepsParams(options, gitInfo) {
     if ('error' in gitInfo)
         return undefined;
@@ -62765,7 +62760,6 @@ function registerSetupCommand(program) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildSetupParams = buildSetupParams;
 const constants_1 = __nccwpck_require__(15415);
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- CLI action params are dynamically shaped
 function buildSetupParams(options, gitInfo, token) {
     if ('error' in gitInfo)
         return undefined;

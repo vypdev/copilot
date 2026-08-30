@@ -9,8 +9,11 @@ export interface DetectProblemsOptions {
   token?: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- CLI action params are dynamically shaped
-export function buildDetectPotentialProblemsParams(options: DetectProblemsOptions, gitInfo: GitInfo, currentBranch: string): any | undefined {
+export function buildDetectPotentialProblemsParams(
+  options: DetectProblemsOptions,
+  gitInfo: GitInfo,
+  currentBranch: string,
+): Record<string, unknown> | undefined {
   if ('error' in gitInfo) return undefined;
   const issueNumber = parsePositiveCliInteger(cleanCliArgument(options.issue));
   if (issueNumber === undefined) return undefined;
