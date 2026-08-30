@@ -23,7 +23,7 @@ export abstract class IssueContentInterface extends ContentInterface {
 
             return this.getContent(description);
         } catch (error) {
-            logError(`Error reading issue configuration: ${error}`);
+            logError(`Error reading issue content: ${error}`);
             throw error;
         }
     }
@@ -42,7 +42,7 @@ export abstract class IssueContentInterface extends ContentInterface {
 
             const updated = this.updateContent(description, content);
             if (updated === undefined) {
-                return undefined
+                throw new Error('Issue content markers are missing or inconsistent.');
             }
 
             await this.issueDescriptionPort.updateDescription(
@@ -55,7 +55,7 @@ export abstract class IssueContentInterface extends ContentInterface {
 
             return updated;
         } catch (error) {
-            logError(`Error reading issue configuration: ${error}`);
+            logError(`Error updating issue content: ${error}`);
             throw error;
         }
     }

@@ -20,6 +20,7 @@ export class StoreConfigurationUseCase implements ParamUseCase<Execution, void> 
             )
         } catch (error) {
             logError(`StoreConfiguration: failed to update configuration.`, error instanceof Error ? { stack: (error as Error).stack } : undefined);
+            throw new Error('Configuration persistence failed.');
         }
     }
 }

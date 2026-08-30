@@ -143,3 +143,11 @@ When updating the configuration (e.g. after a push or a label change), Copilot f
 4. **Exclusions**: The `results` field is explicitly excluded from being saved to prevent payload bloat.
 
 This ensures that manual configuration or metadata added by other tools is not lost during routine updates.
+
+### Persistence failures
+
+If GitHub cannot read or update the issue description, the run fails closed after
+reporting the persistence error. Copilot does not treat a failed write as a
+successful run: the recommendation state is therefore not considered
+committed, so a later retry cannot silently rely on stale state. Runs that do
+not have an issue target simply skip this persistence step.

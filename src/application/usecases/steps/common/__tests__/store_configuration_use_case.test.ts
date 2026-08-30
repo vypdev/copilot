@@ -23,9 +23,10 @@ describe('StoreConfigurationUseCase', () => {
     expect(mockUpdate).toHaveBeenCalledWith(param);
   });
 
-  it('does not throw when handler.update throws (caught and logged)', async () => {
+  it('fails the action when configuration persistence throws', async () => {
     mockUpdate.mockRejectedValue(new Error('Update failed'));
 
-    await expect(useCase.invoke({} as Parameters<StoreConfigurationUseCase['invoke']>[0])).resolves.not.toThrow();
+    await expect(useCase.invoke({} as Parameters<StoreConfigurationUseCase['invoke']>[0]))
+      .rejects.toThrow('Configuration persistence failed.');
   });
 });

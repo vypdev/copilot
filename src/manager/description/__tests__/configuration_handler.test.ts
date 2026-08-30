@@ -210,10 +210,9 @@ describe('ConfigurationHandler', () => {
       mockGetDescription.mockResolvedValue(mangledDesc);
 
       const execution = minimalExecution();
-      const result = await handler.update(execution);
 
-      // Should log error and return undefined instead of corrupting or crashing
-      expect(result).toBeUndefined();
+      // A malformed hidden block must fail closed instead of silently losing state.
+      await expect(handler.update(execution)).rejects.toThrow('Issue content markers are missing or inconsistent.');
       const { logError } = require('../../../utils/logger');
       expect(logError).toHaveBeenCalledWith(expect.stringContaining('problem with open-close tags'));
     });
@@ -253,13 +252,11 @@ describe('ConfigurationHandler', () => {
       expect(mockUpdateDescription.mock.calls[0][3]).toContain('"branchType": "feature"');
     });
 
-    it('returns undefined on error', async () => {
+    it('propagates update errors to the persistence use case', async () => {
       const execution = minimalExecution();
       (execution as { currentConfiguration?: unknown }).currentConfiguration = undefined;
 
-      const result = await handler.update(execution);
-
-      expect(result).toBeUndefined();
+      await expect(handler.update(execution)).rejects.toThrow();
     });
   });
 

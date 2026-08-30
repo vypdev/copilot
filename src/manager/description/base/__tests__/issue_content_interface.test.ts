@@ -255,14 +255,13 @@ describe('IssueContentInterface', () => {
       expect(result).toBeUndefined();
     });
 
-    it('returns undefined when updateContent returns undefined', async () => {
+    it('fails when updateContent cannot safely update an existing block', async () => {
       mockGetDescription.mockResolvedValue('only start<!-- copilot-test-block-start');
       const execution = minimalExecution();
 
-      const result = await handler.internalUpdate(execution, 'content');
-
+      await expect(handler.internalUpdate(execution, 'content'))
+        .rejects.toThrow('Issue content markers are missing or inconsistent.');
       expect(mockUpdateDescription).not.toHaveBeenCalled();
-      expect(result).toBeUndefined();
     });
 
     it('throws when getDescription rejects', async () => {

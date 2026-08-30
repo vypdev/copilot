@@ -16,13 +16,8 @@ export class ConfigurationHandler extends IssueContentInterface {
     }
 
     update = async (execution: Execution) => {
-        try {
-            const storedRaw = await this.internalGetter(execution);
-            return await this.internalUpdate(execution, buildConfigurationPayload(execution, storedRaw));
-        } catch (error) {
-            logError(`Error updating issue description: ${error}`);
-            return undefined;
-        }
+        const storedRaw = await this.internalGetter(execution);
+        return await this.internalUpdate(execution, buildConfigurationPayload(execution, storedRaw));
     }
 
     get = async (query: ExecutionConfigurationQuery): Promise<Config | undefined> => {
