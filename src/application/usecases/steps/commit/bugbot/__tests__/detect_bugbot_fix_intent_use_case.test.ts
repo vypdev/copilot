@@ -162,6 +162,29 @@ describe("DetectBugbotFixIntentUseCase", () => {
         expect(payload.targetFindingIds).toEqual(["finding-0", "finding-1"]);
     });
 
+    it('resolves an explicit fix command without calling the intent model', async () => {
+        const context = mockContextWithUnresolved(2);
+        mockLoadBugbotContext.mockResolvedValue(context);
+
+        const results = await useCase.invoke(baseExecution({
+            issue: { ...baseExecution().issue, commentBody: '/copilot fix finding-0' },
+        } as Partial<Execution>));
+
+        expect(mockAskAgent).not.toHaveBeenCalled();
+        expect((results[0].payload as { targetFindingIds: string[] }).targetFindingIds).toEqual(['finding-0']);
+    });
+
+    it('supports selecting all unresolved findings with an explicit command', async () => {
+        mockLoadBugbotContext.mockResolvedValue(mockContextWithUnresolved(2));
+
+        const results = await useCase.invoke(baseExecution({
+            issue: { ...baseExecution().issue, commentBody: '/copilot fix all' },
+        } as Partial<Execution>));
+
+        expect(mockAskAgent).not.toHaveBeenCalled();
+        expect((results[0].payload as { targetFindingIds: string[] }).targetFindingIds).toEqual(['finding-0', 'finding-1']);
+    });
+
     it("returns no response payload when askAgent returns null", async () => {
         mockLoadBugbotContext.mockResolvedValue(mockContextWithUnresolved(1));
         mockAskAgent.mockResolvedValue(null);

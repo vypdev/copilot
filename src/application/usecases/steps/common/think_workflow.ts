@@ -64,5 +64,7 @@ function logSkipReason(
         logInfo('Bot username (tokenUser) not set; skipping Think response.');
     } else if (reason === 'not-mentioned') {
         logInfo(`Comment does not mention @${tokenUser}; skipping.`);
+    } else if (reason === 'invalid-command') {
+        logInfo('Invalid explicit Copilot command; skipping.');
     }
 }

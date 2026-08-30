@@ -1,3 +1,8 @@
+import {
+    DEFAULT_COPILOT_LIFECYCLE_LABELS,
+    type CopilotLifecycleLabels,
+} from '../../domain/copilot_lifecycle';
+
 export class Labels {
     branchManagementLauncherLabel: string;
 
@@ -27,6 +32,8 @@ export class Labels {
     priorityMedium: string;
     priorityLow: string;
     priorityNone: string;
+
+    readonly lifecycle: CopilotLifecycleLabels;
     
     currentIssueLabels: string[] = [];
     currentPullRequestLabels: string[] = [];
@@ -217,6 +224,7 @@ export class Labels {
         sizeM: string,
         sizeS: string,
         sizeXs: string,
+        lifecycle: Partial<CopilotLifecycleLabels> = {},
     ) {
         this.branchManagementLauncherLabel = branchManagementLauncherLabel;
         this.bug = bug;
@@ -243,5 +251,6 @@ export class Labels {
         this.priorityMedium = priorityMedium;
         this.priorityLow = priorityLow;
         this.priorityNone = priorityNone;
+        this.lifecycle = { ...DEFAULT_COPILOT_LIFECYCLE_LABELS, ...lifecycle };
     }
 }

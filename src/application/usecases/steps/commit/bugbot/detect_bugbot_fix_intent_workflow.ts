@@ -6,6 +6,7 @@ import type { BugbotContextPorts } from "../../../../../application/ports/bugbot
 import type { BugbotPullRequestQueryPort } from "../../../../../application/ports/bugbot_pull_request_read_ports";
 import { logDebugInfo, logInfo } from "../../../../ports/logging_ports";
 import { Result } from "../../../../../data/model/result";
+import { parseCopilotCommand } from '../../../../../domain/copilot_command';
 import { buildBugbotFixIntentPrompt } from "./build_bugbot_fix_intent_prompt";
 import { loadBugbotContext, type LoadBugbotContextOptions } from "./load_bugbot_context_use_case";
 import { BUGBOT_FIX_INTENT_RESPONSE_SCHEMA } from "./schema";
@@ -31,11 +32,6 @@ export async function runDetectBugbotFixIntentWorkflow(
 ): Promise<Result[]> {
   const results: Result[] = [];
 
-  if (!isAgentConfigurationReady(param.ai?.getAgentConfiguration("findings"))) {
-    logInfo("Agent not configured; skipping bugbot fix intent detection.");
-    return results;
-  }
-
   if (param.issueNumber === -1) {
     logInfo("No issue number; skipping bugbot fix intent detection.");
     return results;
@@ -44,6 +40,13 @@ export async function runDetectBugbotFixIntentWorkflow(
   const commentBody = selectBugbotCommentBody(param);
   if (!commentBody?.trim()) {
     logInfo("No comment body; skipping bugbot fix intent detection.");
+    return results;
+  }
+
+  const explicitCommand = parseCopilotCommand(commentBody);
+  const isExplicitFix = explicitCommand.kind === 'command' && explicitCommand.command.name === 'fix';
+  if (!isExplicitFix && !isAgentConfigurationReady(param.ai?.getAgentConfiguration("findings"))) {
+    logInfo("Agent not configured; skipping bugbot fix intent detection.");
     return results;
   }
 
@@ -66,6 +69,26 @@ export async function runDetectBugbotFixIntentWorkflow(
   const unresolvedIds = new Set(unresolvedWithBody.map((finding) => finding.id));
   const unresolvedFindings = buildUnresolvedFindingSummaries(unresolvedWithBody);
   const parentCommentBody = await resolveParentCommentBody(param, ports.pullRequestQueryPort);
+  if (explicitCommand.kind === 'command' && explicitCommand.command.name === 'fix') {
+    const requestedIds = explicitCommand.command.arguments.includes('all')
+      ? [...unresolvedIds]
+      : explicitCommand.command.arguments.filter(id => unresolvedIds.has(id));
+    results.push(new Result({
+      id: TASK_ID,
+      success: true,
+      executed: true,
+      steps: [`Explicit fix command selected ${requestedIds.length} unresolved finding(s) without model intent detection.`],
+      payload: {
+        isFixRequest: requestedIds.length > 0,
+        isDoRequest: false,
+        targetFindingIds: [...new Set(requestedIds)],
+        context,
+        branchOverride,
+      } as BugbotFixIntent & { context?: typeof context; branchOverride?: string },
+    }));
+    return results;
+  }
+
   const prompt = buildBugbotFixIntentPrompt(commentBody, unresolvedFindings, parentCommentBody);
 
   logDebugInfo(

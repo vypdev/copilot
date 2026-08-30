@@ -144,6 +144,16 @@ export function readLocalLabelsAndIssueTypes(
             sizeMLabel: label(INPUT_KEYS.SIZE_M_LABEL),
             sizeSLabel: label(INPUT_KEYS.SIZE_S_LABEL),
             sizeXsLabel: label(INPUT_KEYS.SIZE_XS_LABEL),
+            lifecycle: {
+                analyzing: label(INPUT_KEYS.COPILOT_STATE_ANALYZING_LABEL),
+                planned: label(INPUT_KEYS.COPILOT_STATE_PLANNED_LABEL),
+                inProgress: label(INPUT_KEYS.COPILOT_STATE_IN_PROGRESS_LABEL),
+                reviewing: label(INPUT_KEYS.COPILOT_STATE_REVIEWING_LABEL),
+                changesRequested: label(INPUT_KEYS.COPILOT_STATE_CHANGES_REQUESTED_LABEL),
+                verified: label(INPUT_KEYS.COPILOT_STATE_VERIFIED_LABEL),
+                ready: label(INPUT_KEYS.COPILOT_STATE_READY_LABEL),
+                blocked: label(INPUT_KEYS.COPILOT_STATE_BLOCKED_LABEL),
+            },
         },
         issueTypes: {
             issueTypeBug: issueTypeBug.name,

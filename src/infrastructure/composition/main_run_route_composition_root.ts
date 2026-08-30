@@ -12,6 +12,7 @@ import { RecommendStepsUseCase } from "../../application/usecases/actions/recomm
 import { CheckChangesIssueSizeUseCase } from "../../application/usecases/steps/commit/check_changes_issue_size_use_case";
 import { BugbotAutofixUseCase } from "../../application/usecases/steps/commit/bugbot/bugbot_autofix_use_case";
 import { DetectBugbotFixIntentUseCase } from "../../application/usecases/steps/commit/bugbot/detect_bugbot_fix_intent_use_case";
+import { DismissBugbotFindingsUseCase } from "../../application/usecases/steps/commit/bugbot/dismiss_bugbot_findings_use_case";
 import { DetectPotentialProblemsUseCase } from "../../application/usecases/steps/commit/detect_potential_problems_use_case";
 import { NotifyNewCommitOnIssueUseCase } from "../../application/usecases/steps/commit/notify_new_commit_on_issue_use_case";
 import { DoUserRequestUseCase } from "../../application/usecases/steps/commit/user_request_use_case";
@@ -118,6 +119,7 @@ export function createIssueCommentUseCaseCompositionRoot(): IssueCommentUseCase 
     createAuthenticatedUserCompositionRoot(),
     bugbot.resolution,
     gitCommit,
+    new DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }),
   );
 }
 
@@ -149,6 +151,7 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(): PullRequ
     createAuthenticatedUserCompositionRoot(),
     bugbot.resolution,
     gitCommit,
+    new DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }),
   );
 }
 

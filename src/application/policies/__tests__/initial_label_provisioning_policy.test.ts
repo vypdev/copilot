@@ -22,7 +22,7 @@ describe('initial label provisioning policy', () => {
       [],
     );
 
-    expect(plan.configured.missing).toHaveLength(25);
+    expect(plan.configured.missing).toHaveLength(33);
     expect(plan.configured).toEqual({
       existing: 0,
       missing: expect.arrayContaining([
@@ -30,6 +30,11 @@ describe('initial label provisioning policy', () => {
           name: 'branched',
           color: '0E8A16',
           description: 'Label to trigger branch management actions',
+        },
+        {
+          name: 'copilot:state:planned',
+          color: '1D76DB',
+          description: 'Copilot has produced an implementation plan.',
         },
       ]),
     });
@@ -63,6 +68,14 @@ describe('initial label provisioning policy', () => {
       missing: [
         expect.objectContaining({ name: '0%' }),
         expect.objectContaining({ name: 'new' }),
+        expect.objectContaining({ name: 'copilot:state:analyzing' }),
+        expect.objectContaining({ name: 'copilot:state:planned' }),
+        expect.objectContaining({ name: 'copilot:state:in-progress' }),
+        expect.objectContaining({ name: 'copilot:state:reviewing' }),
+        expect.objectContaining({ name: 'copilot:state:changes-requested' }),
+        expect.objectContaining({ name: 'copilot:state:verified' }),
+        expect.objectContaining({ name: 'copilot:state:ready' }),
+        expect.objectContaining({ name: 'copilot:state:blocked' }),
       ],
     });
     expect(plan.progress.existing).toBe(0);

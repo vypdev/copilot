@@ -22,5 +22,15 @@ export function readGithubActionLabelInputs(getInput: (key: string) => string): 
             l: getInput(INPUT_KEYS.SIZE_L_LABEL), m: getInput(INPUT_KEYS.SIZE_M_LABEL),
             s: getInput(INPUT_KEYS.SIZE_S_LABEL), xs: getInput(INPUT_KEYS.SIZE_XS_LABEL),
         },
+        lifecycle: {
+            analyzing: getInput(INPUT_KEYS.COPILOT_STATE_ANALYZING_LABEL),
+            planned: getInput(INPUT_KEYS.COPILOT_STATE_PLANNED_LABEL),
+            inProgress: getInput(INPUT_KEYS.COPILOT_STATE_IN_PROGRESS_LABEL),
+            reviewing: getInput(INPUT_KEYS.COPILOT_STATE_REVIEWING_LABEL),
+            changesRequested: getInput(INPUT_KEYS.COPILOT_STATE_CHANGES_REQUESTED_LABEL),
+            verified: getInput(INPUT_KEYS.COPILOT_STATE_VERIFIED_LABEL),
+            ready: getInput(INPUT_KEYS.COPILOT_STATE_READY_LABEL),
+            blocked: getInput(INPUT_KEYS.COPILOT_STATE_BLOCKED_LABEL),
+        },
     };
 }

@@ -3,6 +3,7 @@ import {
     PROGRESS_LABEL_PERCENTS,
     progressPercentToColor,
 } from './progress_labels';
+import { lifecycleLabelDefinitions } from '../../domain/copilot_lifecycle';
 
 export interface InitialLabelDefinition {
     name: string;
@@ -63,6 +64,14 @@ function progressLabelDefinitions(): InitialLabelDefinition[] {
     }));
 }
 
+function lifecycleLabelDefinitionsFor(labels: Labels): InitialLabelDefinition[] {
+    return lifecycleLabelDefinitions(labels.lifecycle).map(definition => ({
+        name: definition.name,
+        color: definition.color,
+        description: definition.description,
+    }));
+}
+
 export function buildInitialLabelProvisioningPlan(
     labels: Labels,
     existingLabelNames: readonly string[],
@@ -86,7 +95,10 @@ export function buildInitialLabelProvisioningPlan(
     };
 
     return {
-        configured: planGroup(configuredLabelDefinitions(labels)),
+        configured: planGroup([
+            ...configuredLabelDefinitions(labels),
+            ...lifecycleLabelDefinitionsFor(labels),
+        ]),
         progress: planGroup(progressLabelDefinitions()),
     };
 }

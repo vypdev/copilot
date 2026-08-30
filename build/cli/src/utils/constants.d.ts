@@ -133,6 +133,14 @@ export declare const INPUT_KEYS: {
     readonly SIZE_M_LABEL: "size-m-label";
     readonly SIZE_S_LABEL: "size-s-label";
     readonly SIZE_XS_LABEL: "size-xs-label";
+    readonly COPILOT_STATE_ANALYZING_LABEL: "copilot-state-analyzing-label";
+    readonly COPILOT_STATE_PLANNED_LABEL: "copilot-state-planned-label";
+    readonly COPILOT_STATE_IN_PROGRESS_LABEL: "copilot-state-in-progress-label";
+    readonly COPILOT_STATE_REVIEWING_LABEL: "copilot-state-reviewing-label";
+    readonly COPILOT_STATE_CHANGES_REQUESTED_LABEL: "copilot-state-changes-requested-label";
+    readonly COPILOT_STATE_VERIFIED_LABEL: "copilot-state-verified-label";
+    readonly COPILOT_STATE_READY_LABEL: "copilot-state-ready-label";
+    readonly COPILOT_STATE_BLOCKED_LABEL: "copilot-state-blocked-label";
     readonly ISSUE_TYPE_BUG: "issue-type-bug";
     readonly ISSUE_TYPE_BUG_DESCRIPTION: "issue-type-bug-description";
     readonly ISSUE_TYPE_BUG_COLOR: "issue-type-bug-color";

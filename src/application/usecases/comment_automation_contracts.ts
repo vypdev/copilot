@@ -4,6 +4,7 @@ import type { ParamUseCase } from "./base/param_usecase";
 import type { BugbotAutofixParam } from "./steps/commit/bugbot/bugbot_autofix_use_case";
 import type { DoUserRequestParam } from "./steps/commit/user_request_use_case";
 import type { GitCommitPort } from "../ports/git_ports";
+import type { DismissBugbotFindingsParam } from './steps/commit/bugbot/dismiss_bugbot_findings_use_case';
 
 export interface CommentAutomationOptions {
   taskId: string;
@@ -14,4 +15,5 @@ export interface CommentAutomationOptions {
   doUserRequestUseCase: ParamUseCase<DoUserRequestParam, Result[]>;
   userComment: string;
   gitCommitPort: GitCommitPort;
+  dismissBugbotFindingsUseCase?: ParamUseCase<DismissBugbotFindingsParam, Result[]>;
 }

@@ -42,7 +42,7 @@ describe('IssueLabelProvisioningRepository', () => {
     await expect(
       repository.ensureInitialLabels('owner', 'repo', labels, 'token'),
     ).resolves.toEqual({
-      configured: { created: 1, existing: 1, errors: [] },
+      configured: { created: 9, existing: 1, errors: [] },
       progress: { created: 21, existing: 0, errors: [] },
     });
 
@@ -53,7 +53,7 @@ describe('IssueLabelProvisioningRepository', () => {
       repo: 'repo',
       per_page: 100,
     });
-    expect(createLabel).toHaveBeenCalledTimes(22);
+    expect(createLabel).toHaveBeenCalledTimes(30);
     expect(createLabel).not.toHaveBeenCalledWith(
       expect.objectContaining({ name: 'existing' }),
     );
@@ -95,10 +95,10 @@ describe('IssueLabelProvisioningRepository', () => {
         'token',
       ),
     ).resolves.toEqual({
-      configured: { created: 0, existing: 1, errors: [] },
+      configured: { created: 8, existing: 1, errors: [] },
       progress: { created: 21, existing: 0, errors: [] },
     });
-    expect(createLabel).toHaveBeenCalledTimes(22);
+    expect(createLabel).toHaveBeenCalledTimes(30);
   });
 
   it('serializes provider mutations', async () => {
@@ -139,7 +139,7 @@ describe('IssueLabelProvisioningRepository', () => {
     expect(createLabel).toHaveBeenCalledTimes(1);
     releaseFirstMutation();
     await provisioning;
-    expect(createLabel).toHaveBeenCalledTimes(23);
+    expect(createLabel).toHaveBeenCalledTimes(31);
   });
 
   it('aggregates provider errors by category and continues with remaining labels', async () => {
@@ -168,7 +168,7 @@ describe('IssueLabelProvisioningRepository', () => {
       ),
     ).resolves.toEqual({
       configured: {
-        created: 1,
+        created: 9,
         existing: 0,
         errors: ['Error creating label "bug": bug unavailable'],
       },
@@ -178,6 +178,6 @@ describe('IssueLabelProvisioningRepository', () => {
         errors: ['Error creating label "10%": progress unavailable'],
       },
     });
-    expect(createLabel).toHaveBeenCalledTimes(23);
+    expect(createLabel).toHaveBeenCalledTimes(31);
   });
 });

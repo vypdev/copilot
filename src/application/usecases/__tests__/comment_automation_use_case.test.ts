@@ -148,4 +148,80 @@ describe("runCommentAutomation", () => {
     expect(JSON.stringify(results)).not.toContain("secret-token");
     expect(authorization.isActorAllowedToModifyFiles).not.toHaveBeenCalled();
   });
+
+  it('routes an explicit planning command directly to Think without intent detection', async () => {
+    const language = { invoke: jest.fn().mockResolvedValue([]) };
+    const intent = { invoke: jest.fn().mockResolvedValue([]) };
+    const think = { invoke: jest.fn().mockResolvedValue([successfulResult('think')]) };
+
+    const results = await runCommentAutomation(
+      { owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' } } as Execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: language as never,
+        intentUseCase: intent as never,
+        thinkUseCase: think as never,
+        autofixUseCase: {} as never,
+        doUserRequestUseCase: {} as never,
+        userComment: '/copilot plan',
+        gitCommitPort: {} as never,
+      },
+      { isActorAllowedToModifyFiles: jest.fn() },
+      {} as never,
+      {} as never,
+    );
+
+    expect(results.map(result => result.id)).toEqual(['CommentAutomation.ExplicitCommand', 'think']);
+    expect(think.invoke).toHaveBeenCalledTimes(1);
+    expect(language.invoke).not.toHaveBeenCalled();
+    expect(intent.invoke).not.toHaveBeenCalled();
+  });
+
+  it('rejects an invalid explicit command without invoking an agent', async () => {
+    const think = { invoke: jest.fn() };
+    const results = await runCommentAutomation(
+      { owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' } } as Execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: {} as never,
+        intentUseCase: {} as never,
+        thinkUseCase: think as never,
+        autofixUseCase: {} as never,
+        doUserRequestUseCase: {} as never,
+        userComment: '/copilot execute-shell rm -rf',
+        gitCommitPort: {} as never,
+      },
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    expect(results[0]).toMatchObject({ success: false, executed: false });
+    expect(think.invoke).not.toHaveBeenCalled();
+  });
+
+  it('delegates explicit dismiss commands only after authorization', async () => {
+    const dismiss = { invoke: jest.fn().mockResolvedValue([successfulResult('dismiss')]) };
+    const authorization = { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) };
+    const results = await runCommentAutomation(
+      { owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' } } as Execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: {} as never,
+        intentUseCase: {} as never,
+        thinkUseCase: {} as never,
+        autofixUseCase: {} as never,
+        doUserRequestUseCase: {} as never,
+        userComment: '/copilot dismiss FINDING-1',
+        gitCommitPort: {} as never,
+        dismissBugbotFindingsUseCase: dismiss as never,
+      },
+      authorization,
+      {} as never,
+      {} as never,
+    );
+
+    expect(results).toEqual([expect.objectContaining({ id: 'dismiss' })]);
+    expect(dismiss.invoke).toHaveBeenCalledWith(expect.objectContaining({ findingIds: ['FINDING-1'] }));
+  });
 });

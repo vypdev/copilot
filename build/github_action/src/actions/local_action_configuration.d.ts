@@ -93,6 +93,16 @@ export declare function buildLocalActionConfiguration(additionalParams: ActionIn
     sizeMLabel: string;
     sizeSLabel: string;
     sizeXsLabel: string;
+    lifecycle: {
+        analyzing: string;
+        planned: string;
+        inProgress: string;
+        reviewing: string;
+        changesRequested: string;
+        verified: string;
+        ready: string;
+        blocked: string;
+    };
     projectIdsInput: string;
     projectIds: string[];
     projects: import("../data/model/project_detail").ProjectDetail[];

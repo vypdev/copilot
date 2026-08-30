@@ -1,3 +1,4 @@
+import { type CopilotLifecycleLabels } from '../../domain/copilot_lifecycle';
 export declare class Labels {
     branchManagementLauncherLabel: string;
     bug: string;
@@ -24,6 +25,7 @@ export declare class Labels {
     priorityMedium: string;
     priorityLow: string;
     priorityNone: string;
+    readonly lifecycle: CopilotLifecycleLabels;
     currentIssueLabels: string[];
     currentPullRequestLabels: string[];
     get isMandatoryBranchedLabel(): boolean;
@@ -54,5 +56,5 @@ export declare class Labels {
     get priorityLabelOnPullRequestProcessable(): boolean;
     get isIssuePrioritized(): boolean;
     get isPullRequestPrioritized(): boolean;
-    constructor(branchManagementLauncherLabel: string, bug: string, bugfix: string, hotfix: string, enhancement: string, feature: string, release: string, question: string, help: string, deploy: string, deployed: string, docs: string, documentation: string, chore: string, maintenance: string, priorityHigh: string, priorityMedium: string, priorityLow: string, priorityNone: string, sizeXxl: string, sizeXl: string, sizeL: string, sizeM: string, sizeS: string, sizeXs: string);
+    constructor(branchManagementLauncherLabel: string, bug: string, bugfix: string, hotfix: string, enhancement: string, feature: string, release: string, question: string, help: string, deploy: string, deployed: string, docs: string, documentation: string, chore: string, maintenance: string, priorityHigh: string, priorityMedium: string, priorityLow: string, priorityNone: string, sizeXxl: string, sizeXl: string, sizeL: string, sizeM: string, sizeS: string, sizeXs: string, lifecycle?: Partial<CopilotLifecycleLabels>);
 }

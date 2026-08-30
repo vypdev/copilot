@@ -7,6 +7,7 @@ import type { BugbotFindingResolutionPorts } from "../ports/bugbot_finding_resol
 import type { CommentAutomationOptions } from "./comment_automation_contracts";
 import { resolveCommentAutomationDecision } from "./comment_automation_decision_workflow";
 import { completeCommentAutomation } from './comment_automation_completion_workflow';
+import { parseCopilotCommand } from '../../domain/copilot_command';
 
 export type { CommentAutomationOptions } from "./comment_automation_contracts";
 
@@ -27,6 +28,47 @@ export async function runCommentAutomation(
   logInfo(`${options.taskId} started.`);
   const results: Result[] = [];
   try {
+    const command = parseCopilotCommand(options.userComment);
+    if (command.kind === 'invalid') {
+      return [new Result({
+        id: options.taskId,
+        success: false,
+        executed: false,
+        errors: [command.reason],
+      })];
+    }
+
+    if (command.kind === 'command' && command.command.name === 'dismiss') {
+      const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(
+        param.owner,
+        param.actor,
+        param.tokens.token,
+      );
+      if (!allowed || !options.dismissBugbotFindingsUseCase) {
+        return [new Result({
+          id: options.taskId,
+          success: true,
+          executed: false,
+          steps: ['Explicit dismiss command skipped because the actor is not authorized or dismissal is unavailable.'],
+        })];
+      }
+      return options.dismissBugbotFindingsUseCase.invoke({
+        execution: param,
+        findingIds: command.command.arguments,
+      });
+    }
+
+    if (command.kind === 'command' && command.command.name !== 'fix') {
+      results.push(new Result({
+        id: `${options.taskId}.ExplicitCommand`,
+        success: true,
+        executed: true,
+        steps: [`Executing explicit /copilot ${command.command.name} command.`],
+      }));
+      results.push(...(await options.thinkUseCase.invoke(param)));
+      return results;
+    }
+
     results.push(...(await options.languageUseCase.invoke(param)));
 
     const decision = await resolveCommentAutomationDecision(

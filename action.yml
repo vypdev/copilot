@@ -104,6 +104,30 @@ inputs:
   size-xs-label:
     description: "Label to indicate a task of size XS."
     default: "size: XS"
+  copilot-state-analyzing-label:
+    description: "Label for the Copilot lifecycle state: analyzing."
+    default: "copilot:state:analyzing"
+  copilot-state-planned-label:
+    description: "Label for the Copilot lifecycle state: planned."
+    default: "copilot:state:planned"
+  copilot-state-in-progress-label:
+    description: "Label for the Copilot lifecycle state: implementation in progress."
+    default: "copilot:state:in-progress"
+  copilot-state-reviewing-label:
+    description: "Label for the Copilot lifecycle state: reviewing."
+    default: "copilot:state:reviewing"
+  copilot-state-changes-requested-label:
+    description: "Label for the Copilot lifecycle state: changes requested."
+    default: "copilot:state:changes-requested"
+  copilot-state-verified-label:
+    description: "Label for the Copilot lifecycle state: verified."
+    default: "copilot:state:verified"
+  copilot-state-ready-label:
+    description: "Label for the Copilot lifecycle state: ready."
+    default: "copilot:state:ready"
+  copilot-state-blocked-label:
+    description: "Label for the Copilot lifecycle state: blocked."
+    default: "copilot:state:blocked"
   size-xxl-threshold-lines:
     description: "Threshold for size XXL in lines."
     default: "1000"

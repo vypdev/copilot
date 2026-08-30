@@ -10,6 +10,7 @@ import { ProjectDetail } from '../data/model/project_detail';
 import { Tokens } from '../data/model/tokens';
 import { Workflows } from '../data/model/workflows';
 import type { ExecutionInputs } from '../data/model/execution_inputs';
+import type { CopilotLifecycleLabels } from '../domain/copilot_lifecycle';
 
 export interface ImageScopeValues {
     automatic: string[];
@@ -35,6 +36,7 @@ export interface LabelValues {
     workflow: { bug: string; bugfix: string; hotfix: string; enhancement: string; feature: string; release: string; question: string; help: string; deploy: string; deployed: string; docs: string; documentation: string; chore: string; maintenance: string };
     priorities: { high: string; medium: string; low: string; none: string };
     sizes: { xxl: string; xl: string; l: string; m: string; s: string; xs: string };
+    lifecycle?: Partial<CopilotLifecycleLabels>;
 }
 
 export interface IssueTypeDefinition {
@@ -114,6 +116,7 @@ export function buildLabels(values: LabelValues): Labels {
         values.sizes.m,
         values.sizes.s,
         values.sizes.xs,
+        values.lifecycle,
     );
 }
 

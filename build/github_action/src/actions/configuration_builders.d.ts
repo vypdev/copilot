@@ -10,6 +10,7 @@ import { ProjectDetail } from '../data/model/project_detail';
 import { Tokens } from '../data/model/tokens';
 import { Workflows } from '../data/model/workflows';
 import type { ExecutionInputs } from '../data/model/execution_inputs';
+import type { CopilotLifecycleLabels } from '../domain/copilot_lifecycle';
 export interface ImageScopeValues {
     automatic: string[];
     feature: string[];
@@ -61,6 +62,7 @@ export interface LabelValues {
         s: string;
         xs: string;
     };
+    lifecycle?: Partial<CopilotLifecycleLabels>;
 }
 export interface IssueTypeDefinition {
     name: string;

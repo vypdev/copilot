@@ -314,6 +314,16 @@ export const INPUT_KEYS = {
     SIZE_S_LABEL: 'size-s-label',
     SIZE_XS_LABEL: 'size-xs-label',
 
+    // Copilot lifecycle labels
+    COPILOT_STATE_ANALYZING_LABEL: 'copilot-state-analyzing-label',
+    COPILOT_STATE_PLANNED_LABEL: 'copilot-state-planned-label',
+    COPILOT_STATE_IN_PROGRESS_LABEL: 'copilot-state-in-progress-label',
+    COPILOT_STATE_REVIEWING_LABEL: 'copilot-state-reviewing-label',
+    COPILOT_STATE_CHANGES_REQUESTED_LABEL: 'copilot-state-changes-requested-label',
+    COPILOT_STATE_VERIFIED_LABEL: 'copilot-state-verified-label',
+    COPILOT_STATE_READY_LABEL: 'copilot-state-ready-label',
+    COPILOT_STATE_BLOCKED_LABEL: 'copilot-state-blocked-label',
+
     // Issue Types
     ISSUE_TYPE_BUG: 'issue-type-bug',
     ISSUE_TYPE_BUG_DESCRIPTION: 'issue-type-bug-description',

@@ -52628,7 +52628,7 @@ function buildTokens(token) {
     return new tokens_1.Tokens(token);
 }
 function buildLabels(values) {
-    return new labels_1.Labels(values.branching.launcher, values.workflow.bug, values.workflow.bugfix, values.workflow.hotfix, values.workflow.enhancement, values.workflow.feature, values.workflow.release, values.workflow.question, values.workflow.help, values.workflow.deploy, values.workflow.deployed, values.workflow.docs, values.workflow.documentation, values.workflow.chore, values.workflow.maintenance, values.priorities.high, values.priorities.medium, values.priorities.low, values.priorities.none, values.sizes.xxl, values.sizes.xl, values.sizes.l, values.sizes.m, values.sizes.s, values.sizes.xs);
+    return new labels_1.Labels(values.branching.launcher, values.workflow.bug, values.workflow.bugfix, values.workflow.hotfix, values.workflow.enhancement, values.workflow.feature, values.workflow.release, values.workflow.question, values.workflow.help, values.workflow.deploy, values.workflow.deployed, values.workflow.docs, values.workflow.documentation, values.workflow.chore, values.workflow.maintenance, values.priorities.high, values.priorities.medium, values.priorities.low, values.priorities.none, values.sizes.xxl, values.sizes.xl, values.sizes.l, values.sizes.m, values.sizes.s, values.sizes.xs, values.lifecycle);
 }
 function buildIssueTypes(values) {
     return new issue_types_1.IssueTypes(values.task.name, values.task.description, values.task.color, values.bug.name, values.bug.description, values.bug.color, values.feature.name, values.feature.description, values.feature.color, values.documentation.name, values.documentation.description, values.documentation.color, values.maintenance.name, values.maintenance.description, values.maintenance.color, values.hotfix.name, values.hotfix.description, values.hotfix.color, values.release.name, values.release.description, values.release.color, values.question.name, values.question.description, values.question.color, values.help.name, values.help.description, values.help.color);
@@ -52962,6 +52962,16 @@ function readLocalLabelsAndIssueTypes(additionalParams, actionInputs) {
             sizeMLabel: label(constants_1.INPUT_KEYS.SIZE_M_LABEL),
             sizeSLabel: label(constants_1.INPUT_KEYS.SIZE_S_LABEL),
             sizeXsLabel: label(constants_1.INPUT_KEYS.SIZE_XS_LABEL),
+            lifecycle: {
+                analyzing: label(constants_1.INPUT_KEYS.COPILOT_STATE_ANALYZING_LABEL),
+                planned: label(constants_1.INPUT_KEYS.COPILOT_STATE_PLANNED_LABEL),
+                inProgress: label(constants_1.INPUT_KEYS.COPILOT_STATE_IN_PROGRESS_LABEL),
+                reviewing: label(constants_1.INPUT_KEYS.COPILOT_STATE_REVIEWING_LABEL),
+                changesRequested: label(constants_1.INPUT_KEYS.COPILOT_STATE_CHANGES_REQUESTED_LABEL),
+                verified: label(constants_1.INPUT_KEYS.COPILOT_STATE_VERIFIED_LABEL),
+                ready: label(constants_1.INPUT_KEYS.COPILOT_STATE_READY_LABEL),
+                blocked: label(constants_1.INPUT_KEYS.COPILOT_STATE_BLOCKED_LABEL),
+            },
         },
         issueTypes: {
             issueTypeBug: issueTypeBug.name,
@@ -53079,7 +53089,7 @@ const configuration_builders_1 = __nccwpck_require__(19094);
 const branches_builder_1 = __nccwpck_require__(30085);
 const size_threshold_builder_1 = __nccwpck_require__(39757);
 function buildLocalActionExecution(configuration, additionalParams) {
-    const { debug, singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog, commitPrefixBuilder, branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount, pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, pullRequestMergeTimeout, titleEmoji, branchManagementEmoji, imageConfiguration, token, agentModel, aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, agentTasks, branchManagementLauncherLabel, bugLabel, bugfixLabel, hotfixLabel, enhancementLabel, featureLabel, releaseLabel, questionLabel, helpLabel, deployLabel, deployedLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel, priorityHighLabel, priorityMediumLabel, priorityLowLabel, priorityNoneLabel, sizeXxlLabel, sizeXlLabel, sizeLLabel, sizeMLabel, sizeSLabel, sizeXsLabel, issueTypeTask, issueTypeTaskDescription, issueTypeTaskColor, issueTypeBug, issueTypeBugDescription, issueTypeBugColor, issueTypeFeature, issueTypeFeatureDescription, issueTypeFeatureColor, issueTypeDocumentation, issueTypeDocumentationDescription, issueTypeDocumentationColor, issueTypeMaintenance, issueTypeMaintenanceDescription, issueTypeMaintenanceColor, issueTypeHotfix, issueTypeHotfixDescription, issueTypeHotfixColor, issueTypeRelease, issueTypeReleaseDescription, issueTypeReleaseColor, issueTypeQuestion, issueTypeQuestionDescription, issueTypeQuestionColor, issueTypeHelp, issueTypeHelpDescription, issueTypeHelpColor, issueLocale, pullRequestLocale, sizeXxlThresholdLines, sizeXxlThresholdFiles, sizeXxlThresholdCommits, sizeXlThresholdLines, sizeXlThresholdFiles, sizeXlThresholdCommits, sizeLThresholdLines, sizeLThresholdFiles, sizeLThresholdCommits, sizeMThresholdLines, sizeMThresholdFiles, sizeMThresholdCommits, sizeSThresholdLines, sizeSThresholdFiles, sizeSThresholdCommits, sizeXsThresholdLines, sizeXsThresholdFiles, sizeXsThresholdCommits, mainBranch, developmentBranch, featureTree, bugfixTree, hotfixTree, releaseTree, docsTree, choreTree, releaseWorkflow, hotfixWorkflow, projects, projectColumnIssueCreated, projectColumnPullRequestCreated, projectColumnIssueInProgress, projectColumnPullRequestInProgress, welcomeTitle, welcomeMessages, } = configuration;
+    const { debug, singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog, commitPrefixBuilder, branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount, pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, pullRequestMergeTimeout, titleEmoji, branchManagementEmoji, imageConfiguration, token, agentModel, aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, agentTasks, branchManagementLauncherLabel, bugLabel, bugfixLabel, hotfixLabel, enhancementLabel, featureLabel, releaseLabel, questionLabel, helpLabel, deployLabel, deployedLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel, priorityHighLabel, priorityMediumLabel, priorityLowLabel, priorityNoneLabel, sizeXxlLabel, sizeXlLabel, sizeLLabel, sizeMLabel, sizeSLabel, sizeXsLabel, lifecycle, issueTypeTask, issueTypeTaskDescription, issueTypeTaskColor, issueTypeBug, issueTypeBugDescription, issueTypeBugColor, issueTypeFeature, issueTypeFeatureDescription, issueTypeFeatureColor, issueTypeDocumentation, issueTypeDocumentationDescription, issueTypeDocumentationColor, issueTypeMaintenance, issueTypeMaintenanceDescription, issueTypeMaintenanceColor, issueTypeHotfix, issueTypeHotfixDescription, issueTypeHotfixColor, issueTypeRelease, issueTypeReleaseDescription, issueTypeReleaseColor, issueTypeQuestion, issueTypeQuestionDescription, issueTypeQuestionColor, issueTypeHelp, issueTypeHelpDescription, issueTypeHelpColor, issueLocale, pullRequestLocale, sizeXxlThresholdLines, sizeXxlThresholdFiles, sizeXxlThresholdCommits, sizeXlThresholdLines, sizeXlThresholdFiles, sizeXlThresholdCommits, sizeLThresholdLines, sizeLThresholdFiles, sizeLThresholdCommits, sizeMThresholdLines, sizeMThresholdFiles, sizeMThresholdCommits, sizeSThresholdLines, sizeSThresholdFiles, sizeSThresholdCommits, sizeXsThresholdLines, sizeXsThresholdFiles, sizeXsThresholdCommits, mainBranch, developmentBranch, featureTree, bugfixTree, hotfixTree, releaseTree, docsTree, choreTree, releaseWorkflow, hotfixWorkflow, projects, projectColumnIssueCreated, projectColumnPullRequestCreated, projectColumnIssueInProgress, projectColumnPullRequestInProgress, welcomeTitle, welcomeMessages, } = configuration;
     return (0, execution_builder_1.buildExecution)({
         debug,
         singleAction: new single_action_1.SingleAction(singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog),
@@ -53102,6 +53112,7 @@ function buildLocalActionExecution(configuration, additionalParams) {
             workflow: { bug: bugLabel, bugfix: bugfixLabel, hotfix: hotfixLabel, enhancement: enhancementLabel, feature: featureLabel, release: releaseLabel, question: questionLabel, help: helpLabel, deploy: deployLabel, deployed: deployedLabel, docs: docsLabel, documentation: documentationLabel, chore: choreLabel, maintenance: maintenanceLabel },
             priorities: { high: priorityHighLabel, medium: priorityMediumLabel, low: priorityLowLabel, none: priorityNoneLabel },
             sizes: { xxl: sizeXxlLabel, xl: sizeXlLabel, l: sizeLLabel, m: sizeMLabel, s: sizeSLabel, xs: sizeXsLabel },
+            lifecycle,
         }),
         issueTypes: (0, configuration_builders_1.buildIssueTypes)({
             task: { name: issueTypeTask, description: issueTypeTaskDescription, color: issueTypeTaskColor },
@@ -54170,6 +54181,7 @@ function neutralizeGithubControls(value) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildInitialLabelProvisioningPlan = buildInitialLabelProvisioningPlan;
 const progress_labels_1 = __nccwpck_require__(97890);
+const copilot_lifecycle_1 = __nccwpck_require__(72418);
 const normalizeLabelName = (name) => name.trim().toLowerCase();
 function configuredLabelDefinitions(labels) {
     const metadata = [
@@ -54210,6 +54222,13 @@ function progressLabelDefinitions() {
         description: `Progress: ${percent}%`,
     }));
 }
+function lifecycleLabelDefinitionsFor(labels) {
+    return (0, copilot_lifecycle_1.lifecycleLabelDefinitions)(labels.lifecycle).map(definition => ({
+        name: definition.name,
+        color: definition.color,
+        description: definition.description,
+    }));
+}
 function buildInitialLabelProvisioningPlan(labels, existingLabelNames) {
     const existingNames = new Set(existingLabelNames.map(normalizeLabelName));
     const requestedNames = new Set();
@@ -54230,7 +54249,10 @@ function buildInitialLabelProvisioningPlan(labels, existingLabelNames) {
         return plan;
     };
     return {
-        configured: planGroup(configuredLabelDefinitions(labels)),
+        configured: planGroup([
+            ...configuredLabelDefinitions(labels),
+            ...lifecycleLabelDefinitionsFor(labels),
+        ]),
         progress: planGroup(progressLabelDefinitions()),
     };
 }
@@ -55827,6 +55849,7 @@ const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const comment_automation_decision_workflow_1 = __nccwpck_require__(46175);
 const comment_automation_completion_workflow_1 = __nccwpck_require__(46187);
+const copilot_command_1 = __nccwpck_require__(11771);
 class CommentAutomationError extends Error {
     constructor() {
         super("Comment automation failed.");
@@ -55837,6 +55860,40 @@ async function runCommentAutomation(param, options, actorAuthorizationPort, auth
     (0, logging_ports_1.logInfo)(`${options.taskId} started.`);
     const results = [];
     try {
+        const command = (0, copilot_command_1.parseCopilotCommand)(options.userComment);
+        if (command.kind === 'invalid') {
+            return [new result_1.Result({
+                    id: options.taskId,
+                    success: false,
+                    executed: false,
+                    errors: [command.reason],
+                })];
+        }
+        if (command.kind === 'command' && command.command.name === 'dismiss') {
+            const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.actor, param.tokens.token);
+            if (!allowed || !options.dismissBugbotFindingsUseCase) {
+                return [new result_1.Result({
+                        id: options.taskId,
+                        success: true,
+                        executed: false,
+                        steps: ['Explicit dismiss command skipped because the actor is not authorized or dismissal is unavailable.'],
+                    })];
+            }
+            return options.dismissBugbotFindingsUseCase.invoke({
+                execution: param,
+                findingIds: command.command.arguments,
+            });
+        }
+        if (command.kind === 'command' && command.command.name !== 'fix') {
+            results.push(new result_1.Result({
+                id: `${options.taskId}.ExplicitCommand`,
+                success: true,
+                executed: true,
+                steps: [`Executing explicit /copilot ${command.command.name} command.`],
+            }));
+            results.push(...(await options.thinkUseCase.invoke(param)));
+            return results;
+        }
         results.push(...(await options.languageUseCase.invoke(param)));
         const decision = await (0, comment_automation_decision_workflow_1.resolveCommentAutomationDecision)(param, options, actorAuthorizationPort);
         results.push(...decision.intentResults);
@@ -56217,7 +56274,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueCommentUseCase = void 0;
 const comment_automation_use_case_1 = __nccwpck_require__(9661);
 class IssueCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, issueCommentUpdatePort, actorAuthorizationPort, authenticatedUserPort, bugbotResolutionPorts, gitCommitPort) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, issueCommentUpdatePort, actorAuthorizationPort, authenticatedUserPort, bugbotResolutionPorts, gitCommitPort, dismissBugbotFindingsUseCase) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
@@ -56228,6 +56285,7 @@ class IssueCommentUseCase {
         this.authenticatedUserPort = authenticatedUserPort;
         this.bugbotResolutionPorts = bugbotResolutionPorts;
         this.gitCommitPort = gitCommitPort;
+        this.dismissBugbotFindingsUseCase = dismissBugbotFindingsUseCase;
         this.taskId = "IssueCommentUseCase";
     }
     async invoke(param) {
@@ -56240,6 +56298,7 @@ class IssueCommentUseCase {
             doUserRequestUseCase: this.doUserRequestUseCase,
             userComment: param.issue.commentBody ?? "",
             gitCommitPort: this.gitCommitPort,
+            dismissBugbotFindingsUseCase: this.dismissBugbotFindingsUseCase,
         }, this.actorAuthorizationPort, this.authenticatedUserPort, this.bugbotResolutionPorts);
     }
 }
@@ -56358,7 +56417,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentUseCase = void 0;
 const comment_automation_use_case_1 = __nccwpck_require__(9661);
 class PullRequestReviewCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, issueCommentUpdatePort, actorAuthorizationPort, authenticatedUserPort, bugbotResolutionPorts, gitCommitPort) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, issueCommentUpdatePort, actorAuthorizationPort, authenticatedUserPort, bugbotResolutionPorts, gitCommitPort, dismissBugbotFindingsUseCase) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
@@ -56369,6 +56428,7 @@ class PullRequestReviewCommentUseCase {
         this.authenticatedUserPort = authenticatedUserPort;
         this.bugbotResolutionPorts = bugbotResolutionPorts;
         this.gitCommitPort = gitCommitPort;
+        this.dismissBugbotFindingsUseCase = dismissBugbotFindingsUseCase;
         this.taskId = "PullRequestReviewCommentUseCase";
     }
     async invoke(param) {
@@ -56381,6 +56441,7 @@ class PullRequestReviewCommentUseCase {
             doUserRequestUseCase: this.doUserRequestUseCase,
             userComment: param.pullRequest.commentBody ?? "",
             gitCommitPort: this.gitCommitPort,
+            dismissBugbotFindingsUseCase: this.dismissBugbotFindingsUseCase,
         }, this.actorAuthorizationPort, this.authenticatedUserPort, this.bugbotResolutionPorts);
     }
 }
@@ -57538,6 +57599,7 @@ const agent_1 = __nccwpck_require__(79937);
 const agent_task_policy_1 = __nccwpck_require__(85712);
 const logging_ports_1 = __nccwpck_require__(6152);
 const result_1 = __nccwpck_require__(73817);
+const copilot_command_1 = __nccwpck_require__(11771);
 const build_bugbot_fix_intent_prompt_1 = __nccwpck_require__(18799);
 const load_bugbot_context_use_case_1 = __nccwpck_require__(4050);
 const schema_1 = __nccwpck_require__(16808);
@@ -57546,10 +57608,6 @@ const TASK_ID = "DetectBugbotFixIntentUseCase";
 /** Detects whether a comment targets Bugbot findings and returns the validated intent payload. */
 async function runDetectBugbotFixIntentWorkflow(param, ports) {
     const results = [];
-    if (!(0, agent_1.isAgentConfigurationReady)(param.ai?.getAgentConfiguration("findings"))) {
-        (0, logging_ports_1.logInfo)("Agent not configured; skipping bugbot fix intent detection.");
-        return results;
-    }
     if (param.issueNumber === -1) {
         (0, logging_ports_1.logInfo)("No issue number; skipping bugbot fix intent detection.");
         return results;
@@ -57557,6 +57615,12 @@ async function runDetectBugbotFixIntentWorkflow(param, ports) {
     const commentBody = (0, detect_bugbot_fix_intent_policy_1.selectBugbotCommentBody)(param);
     if (!commentBody?.trim()) {
         (0, logging_ports_1.logInfo)("No comment body; skipping bugbot fix intent detection.");
+        return results;
+    }
+    const explicitCommand = (0, copilot_command_1.parseCopilotCommand)(commentBody);
+    const isExplicitFix = explicitCommand.kind === 'command' && explicitCommand.command.name === 'fix';
+    if (!isExplicitFix && !(0, agent_1.isAgentConfigurationReady)(param.ai?.getAgentConfiguration("findings"))) {
+        (0, logging_ports_1.logInfo)("Agent not configured; skipping bugbot fix intent detection.");
         return results;
     }
     const branchOverride = await resolveBranchOverride(param, ports.pullRequestQueryPort);
@@ -57576,6 +57640,25 @@ async function runDetectBugbotFixIntentWorkflow(param, ports) {
     const unresolvedIds = new Set(unresolvedWithBody.map((finding) => finding.id));
     const unresolvedFindings = (0, detect_bugbot_fix_intent_policy_1.buildUnresolvedFindingSummaries)(unresolvedWithBody);
     const parentCommentBody = await resolveParentCommentBody(param, ports.pullRequestQueryPort);
+    if (explicitCommand.kind === 'command' && explicitCommand.command.name === 'fix') {
+        const requestedIds = explicitCommand.command.arguments.includes('all')
+            ? [...unresolvedIds]
+            : explicitCommand.command.arguments.filter(id => unresolvedIds.has(id));
+        results.push(new result_1.Result({
+            id: TASK_ID,
+            success: true,
+            executed: true,
+            steps: [`Explicit fix command selected ${requestedIds.length} unresolved finding(s) without model intent detection.`],
+            payload: {
+                isFixRequest: requestedIds.length > 0,
+                isDoRequest: false,
+                targetFindingIds: [...new Set(requestedIds)],
+                context,
+                branchOverride,
+            },
+        }));
+        return results;
+    }
     const prompt = (0, build_bugbot_fix_intent_prompt_1.buildBugbotFixIntentPrompt)(commentBody, unresolvedFindings, parentCommentBody);
     (0, logging_ports_1.logDebugInfo)(`DetectBugbotFixIntent: prompt length=${prompt.length}, unresolved findings=${unresolvedFindings.length}. Calling configured findings agent.`);
     const response = await ports.aiRepository.query({
@@ -57626,6 +57709,72 @@ async function resolveParentCommentBody(param, pullRequestQueryPort) {
     }
     const parentBody = await pullRequestQueryPort.getPullRequestReviewCommentBody(param.owner, param.repo, param.pullRequest.number, param.pullRequest.commentInReplyToId, param.tokens.token);
     return parentBody ?? undefined;
+}
+
+
+/***/ }),
+
+/***/ 281:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DismissBugbotFindingsUseCase = void 0;
+const result_1 = __nccwpck_require__(73817);
+const load_bugbot_context_use_case_1 = __nccwpck_require__(4050);
+const mark_findings_resolved_workflow_1 = __nccwpck_require__(65916);
+const marker_1 = __nccwpck_require__(62274);
+const logging_ports_1 = __nccwpck_require__(6152);
+/** Dismisses only findings present in the current persisted Bugbot context. */
+class DismissBugbotFindingsUseCase {
+    constructor(dependencies) {
+        this.dependencies = dependencies;
+        this.taskId = 'DismissBugbotFindingsUseCase';
+    }
+    async invoke(param) {
+        try {
+            const context = await loadDismissContext(param.execution, this.dependencies.contextPorts);
+            const requestedIds = new Set(param.findingIds.flatMap(id => {
+                const normalized = (0, marker_1.normalizeFindingIdForMarker)(id);
+                return normalized ? [normalized] : [];
+            }));
+            const existingIds = new Set(Object.keys(context.existingByFindingId));
+            const dismissibleIds = new Set([...requestedIds].filter(id => existingIds.has(id)));
+            if (dismissibleIds.size === 0) {
+                return [new result_1.Result({
+                        id: this.taskId,
+                        success: true,
+                        executed: true,
+                        steps: ['No matching Bugbot findings were found; nothing was dismissed.'],
+                    })];
+            }
+            const errors = await (0, mark_findings_resolved_workflow_1.markFindingsResolved)({
+                execution: param.execution,
+                context,
+                resolvedFindingIds: dismissibleIds,
+                ports: this.dependencies.resolutionPorts,
+            });
+            return [new result_1.Result({
+                    id: this.taskId,
+                    success: errors.length === 0,
+                    executed: true,
+                    steps: [`Dismissed ${dismissibleIds.size} Bugbot finding(s) by explicit user command.`],
+                    errors,
+                })];
+        }
+        catch (error) {
+            const message = `Unable to dismiss Bugbot findings: ${error instanceof Error ? error.message : String(error)}`;
+            (0, logging_ports_1.logError)(message);
+            return [new result_1.Result({ id: this.taskId, success: false, executed: true, errors: [message] })];
+        }
+    }
+}
+exports.DismissBugbotFindingsUseCase = DismissBugbotFindingsUseCase;
+async function loadDismissContext(execution, ports) {
+    const branch = execution.commit.branch?.trim()
+        || await ports.pullRequest.getHeadBranchForIssue(execution.owner, execution.repo, execution.issueNumber, execution.tokens.token);
+    return (0, load_bugbot_context_use_case_1.loadBugbotContext)(execution, branch ? { branchOverride: branch } : undefined, ports);
 }
 
 
@@ -60117,6 +60266,7 @@ function extractMentionQuestion(commentBody, tokenUser) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveThinkRequest = resolveThinkRequest;
+const copilot_command_1 = __nccwpck_require__(11771);
 const think_input_policy_1 = __nccwpck_require__(59687);
 /** Resolves the comment input and destination without performing I/O. */
 function resolveThinkRequest(param) {
@@ -60128,11 +60278,18 @@ function resolveThinkRequest(param) {
     });
     if (!commentBody.trim())
         return { kind: 'skip', reason: 'empty-comment' };
-    if (!param.tokenUser?.trim())
-        return { kind: 'skip', reason: 'missing-token' };
-    if (!commentBody.includes(`@${param.tokenUser}`))
-        return { kind: 'skip', reason: 'not-mentioned' };
-    const question = (0, think_input_policy_1.extractMentionQuestion)(commentBody, param.tokenUser);
+    const command = (0, copilot_command_1.parseCopilotCommand)(commentBody);
+    if (command.kind === 'invalid')
+        return { kind: 'skip', reason: 'invalid-command', detail: command.reason };
+    if (command.kind === 'none') {
+        if (!param.tokenUser?.trim())
+            return { kind: 'skip', reason: 'missing-token' };
+        if (!commentBody.includes(`@${param.tokenUser}`))
+            return { kind: 'skip', reason: 'not-mentioned' };
+    }
+    const question = command.kind === 'command'
+        ? buildExplicitCommandQuestion(command.command)
+        : (0, think_input_policy_1.extractMentionQuestion)(commentBody, param.tokenUser ?? '');
     if (!question)
         return { kind: 'skip', reason: 'empty-question' };
     const isIssueComment = param.issue.isIssueComment;
@@ -60143,7 +60300,12 @@ function resolveThinkRequest(param) {
         issueNumberForContext: isIssueComment ? param.issue.number : param.issueNumber,
         destinationNumber: isIssueComment ? param.issue.number : param.pullRequest.number,
         destinationType: isIssueComment ? 'issue' : 'PR',
+        ...(command.kind === 'command' ? { command: command.command } : {}),
     };
+}
+function buildExplicitCommandQuestion(command) {
+    const suffix = command.arguments.length > 0 ? ` ${command.arguments.join(' ')}` : '';
+    return `Execute the explicit Copilot command /copilot ${command.name}${suffix}. Use the issue or pull request context and return a concise, actionable Markdown response.`;
 }
 
 
@@ -60230,6 +60392,9 @@ function logSkipReason(reason, tokenUser) {
     }
     else if (reason === 'not-mentioned') {
         (0, logging_ports_1.logInfo)(`Comment does not mention @${tokenUser}; skipping.`);
+    }
+    else if (reason === 'invalid-command') {
+        (0, logging_ports_1.logInfo)('Invalid explicit Copilot command; skipping.');
     }
 }
 
@@ -63581,12 +63746,13 @@ function resolveBranch(params, labels, names, hotfixBranch) {
 /***/ }),
 
 /***/ 79463:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Labels = void 0;
+const copilot_lifecycle_1 = __nccwpck_require__(72418);
 class Labels {
     get isMandatoryBranchedLabel() {
         return this.isHotfix || this.isRelease;
@@ -63736,7 +63902,7 @@ class Labels {
     get isPullRequestPrioritized() {
         return this.priorityLabelOnPullRequest !== undefined && this.priorityLabelOnPullRequest !== this.priorityNone;
     }
-    constructor(branchManagementLauncherLabel, bug, bugfix, hotfix, enhancement, feature, release, question, help, deploy, deployed, docs, documentation, chore, maintenance, priorityHigh, priorityMedium, priorityLow, priorityNone, sizeXxl, sizeXl, sizeL, sizeM, sizeS, sizeXs) {
+    constructor(branchManagementLauncherLabel, bug, bugfix, hotfix, enhancement, feature, release, question, help, deploy, deployed, docs, documentation, chore, maintenance, priorityHigh, priorityMedium, priorityLow, priorityNone, sizeXxl, sizeXl, sizeL, sizeM, sizeS, sizeXs, lifecycle = {}) {
         this.currentIssueLabels = [];
         this.currentPullRequestLabels = [];
         this.branchManagementLauncherLabel = branchManagementLauncherLabel;
@@ -63764,6 +63930,7 @@ class Labels {
         this.priorityMedium = priorityMedium;
         this.priorityLow = priorityLow;
         this.priorityNone = priorityNone;
+        this.lifecycle = { ...copilot_lifecycle_1.DEFAULT_COPILOT_LIFECYCLE_LABELS, ...lifecycle };
     }
 }
 exports.Labels = Labels;
@@ -69274,6 +69441,120 @@ function fnv1a(value) {
 
 /***/ }),
 
+/***/ 11771:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.COPILOT_COMMAND_NAMES = void 0;
+exports.parseCopilotCommand = parseCopilotCommand;
+/** Explicit commands are the safe, deterministic entry point for mutations. */
+exports.COPILOT_COMMAND_NAMES = [
+    'plan',
+    'clarify',
+    'estimate',
+    'test-plan',
+    'status',
+    'review',
+    'findings',
+    'fix',
+    'dismiss',
+    'recheck',
+];
+const COMMAND_PREFIX = /^\/copilot(?:\s+|$)/iu;
+const MAX_COMMAND_LENGTH = 2000;
+const MAX_ARGUMENTS = 20;
+/**
+ * Parses only a command at the beginning of a comment. Everything else is
+ * ordinary user data and must continue through the existing agent flow.
+ */
+function parseCopilotCommand(raw) {
+    if (typeof raw !== 'string' || !/^\s*\/copilot(?:\s|$)/iu.test(raw))
+        return { kind: 'none' };
+    const input = raw.trim();
+    if (input.length > MAX_COMMAND_LENGTH) {
+        return { kind: 'invalid', reason: `Copilot commands must be at most ${MAX_COMMAND_LENGTH} characters.` };
+    }
+    const withoutPrefix = input.replace(COMMAND_PREFIX, '').trim();
+    if (!withoutPrefix)
+        return { kind: 'invalid', reason: 'Use /copilot followed by a command.' };
+    const tokens = withoutPrefix.split(/\s+/u).filter(Boolean);
+    const name = tokens.shift()?.toLowerCase();
+    if (!name || !exports.COPILOT_COMMAND_NAMES.includes(name)) {
+        return { kind: 'invalid', reason: `Unknown Copilot command. Supported commands: ${exports.COPILOT_COMMAND_NAMES.join(', ')}.` };
+    }
+    if (tokens.length > MAX_ARGUMENTS) {
+        return { kind: 'invalid', reason: `Copilot commands accept at most ${MAX_ARGUMENTS} arguments.` };
+    }
+    if ((name === 'fix' || name === 'dismiss') && tokens.length === 0) {
+        return { kind: 'invalid', reason: `/${name} requires at least one finding id.` };
+    }
+    return {
+        kind: 'command',
+        command: { name: name, arguments: tokens, raw: input },
+    };
+}
+
+
+/***/ }),
+
+/***/ 72418:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DEFAULT_COPILOT_LIFECYCLE_LABELS = void 0;
+exports.lifecycleLabelDefinitions = lifecycleLabelDefinitions;
+exports.lifecycleLabelNames = lifecycleLabelNames;
+exports.lifecycleStateLabel = lifecycleStateLabel;
+exports.lifecycleStateFromLabels = lifecycleStateFromLabels;
+exports.DEFAULT_COPILOT_LIFECYCLE_LABELS = {
+    analyzing: 'copilot:state:analyzing',
+    planned: 'copilot:state:planned',
+    inProgress: 'copilot:state:in-progress',
+    reviewing: 'copilot:state:reviewing',
+    changesRequested: 'copilot:state:changes-requested',
+    verified: 'copilot:state:verified',
+    ready: 'copilot:state:ready',
+    blocked: 'copilot:state:blocked',
+};
+const LIFECYCLE_METADATA = [
+    ['analyzing', 'analyzing', 'FBCA04', 'Copilot is analyzing the issue or change.'],
+    ['planned', 'planned', '1D76DB', 'Copilot has produced an implementation plan.'],
+    ['in-progress', 'inProgress', '0E8A16', 'Implementation work is in progress.'],
+    ['reviewing', 'reviewing', '5319E7', 'A pull request is being reviewed.'],
+    ['changes-requested', 'changesRequested', 'D93F0B', 'Review identified changes that are required.'],
+    ['verified', 'verified', '0E8A16', 'The change has passed Copilot verification.'],
+    ['ready', 'ready', '6F42C1', 'The change is ready for human approval or merge.'],
+    ['blocked', 'blocked', 'B60205', 'The workflow is blocked and needs human input.'],
+];
+function lifecycleLabelDefinitions(labels = exports.DEFAULT_COPILOT_LIFECYCLE_LABELS) {
+    return LIFECYCLE_METADATA.map(([state, key, color, description]) => ({
+        state,
+        name: labels[key],
+        color,
+        description,
+    }));
+}
+function lifecycleLabelNames(labels = exports.DEFAULT_COPILOT_LIFECYCLE_LABELS) {
+    return lifecycleLabelDefinitions(labels).map(definition => definition.name);
+}
+function lifecycleStateLabel(state, labels = exports.DEFAULT_COPILOT_LIFECYCLE_LABELS) {
+    const definition = lifecycleLabelDefinitions(labels).find(candidate => candidate.state === state);
+    if (!definition)
+        throw new Error(`Unknown Copilot lifecycle state: ${state}`);
+    return definition.name;
+}
+function lifecycleStateFromLabels(currentLabels, labels = exports.DEFAULT_COPILOT_LIFECYCLE_LABELS) {
+    const normalized = new Set(currentLabels.map(label => label.trim().toLowerCase()));
+    return lifecycleLabelDefinitions(labels).find(definition => normalized.has(definition.name.trim().toLowerCase()))?.state;
+}
+
+
+/***/ }),
+
 /***/ 19879:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -69957,6 +70238,7 @@ const recommend_steps_use_case_1 = __nccwpck_require__(73746);
 const check_changes_issue_size_use_case_1 = __nccwpck_require__(28356);
 const bugbot_autofix_use_case_1 = __nccwpck_require__(45446);
 const detect_bugbot_fix_intent_use_case_1 = __nccwpck_require__(76234);
+const dismiss_bugbot_findings_use_case_1 = __nccwpck_require__(281);
 const detect_potential_problems_use_case_1 = __nccwpck_require__(6287);
 const notify_new_commit_on_issue_use_case_1 = __nccwpck_require__(33276);
 const user_request_use_case_1 = __nccwpck_require__(19004);
@@ -70000,7 +70282,7 @@ function createIssueCommentUseCaseCompositionRoot() {
     const language = (0, agent_capability_composition_root_1.createLanguageQueryPort)();
     const fixer = (0, agent_capability_composition_root_1.createFixerQueryPort)();
     const gitCommit = new git_commit_adapter_1.GitCommitAdapter();
-    return new issue_comment_use_case_1.IssueCommentUseCase(new check_issue_comment_language_use_case_1.CheckIssueCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), bugbot.resolution, gitCommit);
+    return new issue_comment_use_case_1.IssueCommentUseCase(new check_issue_comment_language_use_case_1.CheckIssueCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), bugbot.resolution, gitCommit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }));
 }
 function createPullRequestReviewCommentUseCaseCompositionRoot() {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();
@@ -70008,7 +70290,7 @@ function createPullRequestReviewCommentUseCaseCompositionRoot() {
     const language = (0, agent_capability_composition_root_1.createLanguageQueryPort)();
     const fixer = (0, agent_capability_composition_root_1.createFixerQueryPort)();
     const gitCommit = new git_commit_adapter_1.GitCommitAdapter();
-    return new pull_request_review_comment_use_case_1.PullRequestReviewCommentUseCase(new check_pull_request_comment_language_use_case_1.CheckPullRequestCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), bugbot.resolution, gitCommit);
+    return new pull_request_review_comment_use_case_1.PullRequestReviewCommentUseCase(new check_pull_request_comment_language_use_case_1.CheckPullRequestCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), bugbot.resolution, gitCommit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }));
 }
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort) {
     return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, issue_interaction_composition_root_1.createIssueNotificationRepository)()), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase(projectBoardCommandPort, (0, issue_labels_composition_root_1.createIssueLabelRepository)(), new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)())), createDetectPotentialProblemsUseCase(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)());
@@ -71794,6 +72076,15 @@ exports.INPUT_KEYS = {
     SIZE_M_LABEL: 'size-m-label',
     SIZE_S_LABEL: 'size-s-label',
     SIZE_XS_LABEL: 'size-xs-label',
+    // Copilot lifecycle labels
+    COPILOT_STATE_ANALYZING_LABEL: 'copilot-state-analyzing-label',
+    COPILOT_STATE_PLANNED_LABEL: 'copilot-state-planned-label',
+    COPILOT_STATE_IN_PROGRESS_LABEL: 'copilot-state-in-progress-label',
+    COPILOT_STATE_REVIEWING_LABEL: 'copilot-state-reviewing-label',
+    COPILOT_STATE_CHANGES_REQUESTED_LABEL: 'copilot-state-changes-requested-label',
+    COPILOT_STATE_VERIFIED_LABEL: 'copilot-state-verified-label',
+    COPILOT_STATE_READY_LABEL: 'copilot-state-ready-label',
+    COPILOT_STATE_BLOCKED_LABEL: 'copilot-state-blocked-label',
     // Issue Types
     ISSUE_TYPE_BUG: 'issue-type-bug',
     ISSUE_TYPE_BUG_DESCRIPTION: 'issue-type-bug-description',

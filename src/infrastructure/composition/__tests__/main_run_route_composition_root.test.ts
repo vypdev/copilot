@@ -116,6 +116,7 @@ describe("main run route composition root", () => {
       expect.anything(),
       mockResolution,
       gitCommit,
+      expect.anything(),
     );
   });
 
@@ -133,6 +134,7 @@ describe("main run route composition root", () => {
       expect.anything(),
       expect.anything(),
       mockResolution,
+      expect.anything(),
       expect.anything(),
     );
   });
