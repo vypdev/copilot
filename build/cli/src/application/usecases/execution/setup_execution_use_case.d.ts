@@ -11,6 +11,4 @@ export declare class SetupExecutionUseCase implements ParamUseCase<Execution, vo
     taskId: string;
     constructor(issueSetupPort: ExecutionIssueSetupPort, organizationSetupPort: ExecutionOrganizationSetupPort, configurationPort: ExecutionConfigurationPort, branchVersionResolver: ExecutionBranchVersionResolution);
     invoke(execution: Execution): Promise<void>;
-    private restorePreviousState;
-    private configurationIssueNumber;
 }

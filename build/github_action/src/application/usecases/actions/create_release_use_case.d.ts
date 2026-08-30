@@ -1,7 +1,7 @@
-import { Execution } from "../../../data/model/execution";
-import { Result } from "../../../data/model/result";
-import type { RepositoryReleasePublicationPort } from "../../ports/repository_release_ports";
-import { ParamUseCase } from "../base/param_usecase";
+import type { Execution } from '../../../data/model/execution';
+import type { Result } from '../../../data/model/result';
+import type { RepositoryReleasePublicationPort } from '../../ports/repository_release_ports';
+import { ParamUseCase } from '../base/param_usecase';
 export declare class CreateReleaseUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly repositoryReleasePort;
     taskId: string;

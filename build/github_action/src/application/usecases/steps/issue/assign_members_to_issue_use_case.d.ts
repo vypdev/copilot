@@ -1,8 +1,9 @@
-import { Execution } from "../../../../data/model/execution";
-import { Result } from "../../../../data/model/result";
-import type { IssueAssigneePort } from "../../../../application/ports/issue_management_ports";
-import type { OrganizationMembersPort } from "../../../../application/ports/organization_members_ports";
-import { ParamUseCase } from "../../base/param_usecase";
+import { Execution } from '../../../../data/model/execution';
+import { Result } from '../../../../data/model/result';
+import type { IssueAssigneePort } from '../../../../application/ports/issue_management_ports';
+import type { OrganizationMembersPort } from '../../../../application/ports/organization_members_ports';
+import { ParamUseCase } from '../../base/param_usecase';
+/** Application boundary for assigning issue or pull-request members. */
 export declare class AssignMemberToIssueUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly issueRepository;
     private readonly projectRepository;

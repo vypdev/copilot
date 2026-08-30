@@ -5,6 +5,5 @@ export declare class RepositoryReleasePublicationRepository implements Repositor
     private readonly githubClient;
     constructor(githubClient: GithubClientPort<GithubReleaseClient>);
     updateRelease: (owner: string, repository: string, sourceTag: string, targetTag: string, token: string) => Promise<string | undefined>;
-    private listReleases;
     createRelease: (owner: string, repository: string, version: string, title: string, changelog: string, token: string) => Promise<string | undefined>;
 }

@@ -4,8 +4,6 @@ import type { GithubOrganizationMembersClient } from "../../../infrastructure/gi
 export declare class OrganizationMembersRepository implements OrganizationMembersPort {
     private readonly githubClient;
     constructor(githubClient: GithubClientPort<GithubOrganizationMembersClient>);
-    private listAllTeams;
-    private listAllTeamMembers;
     getRandomMembers: (organization: string, membersToAdd: number, currentMembers: string[], token: string) => Promise<string[]>;
     getAllMembers: (organization: string, token: string) => Promise<string[]>;
 }

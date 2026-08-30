@@ -1,4 +1,6 @@
 import type { AgentConfiguration, AgentTaskConfiguration } from '../../domain/agent';
+export { buildDoAgentTasks } from './do_agent_task_policy';
+export type { DoAgentOptions } from './do_command_contracts';
 export type DoOutputFormat = 'text' | 'json';
 export type DoAuthenticationTask = 'findings' | 'fixer';
 export interface DoAuthenticationPreflightResult {
@@ -15,24 +17,6 @@ export interface DoAuthenticationNotice {
     severity: 'error' | 'warning';
     message: string;
 }
-export interface DoAgentOptions {
-    agentProvider?: string;
-    agentModelProvider?: string;
-    agentModel?: string;
-    agentEffort?: string;
-    agentCommand?: string;
-    findingsProvider?: string;
-    findingsModelProvider?: string;
-    findingsEffort?: string;
-    findingsModel?: string;
-    findingsCommand?: string;
-    fixerProvider?: string;
-    fixerModelProvider?: string;
-    fixerEffort?: string;
-    fixerModel?: string;
-    fixerCommand?: string;
-}
-export declare function buildDoAgentTasks(options: DoAgentOptions): AgentTaskConfiguration;
 export declare function resolveDoPrompt(value: unknown): string | undefined;
 export declare function resolveDoOutputFormat(value: unknown): DoOutputFormat | undefined;
 /** Converts authentication preflight outcomes into CLI-neutral notices. */

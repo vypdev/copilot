@@ -1,10 +1,11 @@
-import { Execution } from "../../../../data/model/execution";
-import { Result } from "../../../../data/model/result";
-import type { IssueIdentityQueryPort } from "../../../../application/ports/issue_identity_ports";
-import type { ProjectBoardCommandPort } from "../../../../application/ports/project_board_command_ports";
-import type { ProjectBoardLinkPort } from "../../../../application/ports/project_board_link_ports";
-import type { EventualConsistencyDelayPort } from "../../../../application/ports/eventual_consistency_ports";
-import { ParamUseCase } from "../../base/param_usecase";
+import { Execution } from '../../../../data/model/execution';
+import { Result } from '../../../../data/model/result';
+import type { IssueIdentityQueryPort } from '../../../../application/ports/issue_identity_ports';
+import type { ProjectBoardCommandPort } from '../../../../application/ports/project_board_command_ports';
+import type { ProjectBoardLinkPort } from '../../../../application/ports/project_board_link_ports';
+import type { EventualConsistencyDelayPort } from '../../../../application/ports/eventual_consistency_ports';
+import { ParamUseCase } from '../../base/param_usecase';
+/** Application boundary for linking issues to configured ProjectV2 boards. */
 export declare class LinkIssueProjectUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly issueRepository;
     private readonly projectCommandRepository;

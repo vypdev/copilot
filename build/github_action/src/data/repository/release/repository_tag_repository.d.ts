@@ -4,8 +4,6 @@ import type { RepositoryTagPort } from "../../../application/ports/repository_re
 export declare class RepositoryTagRepository implements RepositoryTagPort {
     private readonly githubClient;
     constructor(githubClient: GithubClientPort<GithubReleaseClient>);
-    private findTag;
-    private getTagSha;
     updateTag: (owner: string, repository: string, sourceTag: string, targetTag: string, token: string) => Promise<void>;
     createTag: (owner: string, repository: string, branch: string, tag: string, token: string) => Promise<string | undefined>;
 }

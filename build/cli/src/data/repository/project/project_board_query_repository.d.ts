@@ -7,7 +7,6 @@ export declare class ProjectBoardQueryRepository implements ProjectBoardQueryPor
     private readonly ownerTypeClient;
     private readonly graphqlClient;
     constructor(ownerTypeClient: GithubClientPort<GithubOwnerTypeClient>, graphqlClient: GithubClientPort<GithubGraphqlTransportClient>);
-    private findProjectItemId;
     getProjectDetail: (projectId: string, owner: string, token: string) => Promise<ProjectDetail>;
     getProjectItemId: (project: ProjectDetail, owner: string, repo: string, issueOrPullRequestNumber: number, token: string) => Promise<string | undefined>;
     isContentLinked: (project: ProjectDetail, contentId: string, token: string) => Promise<boolean>;

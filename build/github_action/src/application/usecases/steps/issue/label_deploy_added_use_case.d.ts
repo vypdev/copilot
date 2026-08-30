@@ -1,4 +1,4 @@
-import { Execution } from "../../../../data/model/execution";
+import type { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
 import type { BranchWorkflowPort } from "../../../ports/branch_workflow_ports";
 import { ParamUseCase } from "../../base/param_usecase";

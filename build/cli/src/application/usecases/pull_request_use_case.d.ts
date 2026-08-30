@@ -1,4 +1,4 @@
-import { Execution } from "../../data/model/execution";
+import type { Execution } from "../../data/model/execution";
 import { Result } from "../../data/model/result";
 import type { ParamUseCase } from "./base/param_usecase";
 import type { PullRequestWorkflowSteps } from "./pull_request_workflow_steps";
