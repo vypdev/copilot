@@ -1,3 +1,5 @@
+import { redactSecretLikeValues } from './secret_redaction';
+
 let loggerDebug = false;
 let loggerRemote = false;
 let structuredLogging = false;
@@ -47,10 +49,7 @@ function sanitizeLogMessage(message: string): string {
             sanitized = sanitized.split(value).join('[REDACTED]');
         }
     }
-    sanitized = sanitized.replace(
-        /(api[_-]?key|access[_-]?token|refresh[_-]?token|password|secret|authorization)(\s*[:=]\s*)(["']?)[^\s,"'}\]]+\3/gi,
-        '$1$2[REDACTED]',
-    );
+    sanitized = redactSecretLikeValues(sanitized);
     return sanitized.length > MAX_LOG_MESSAGE_LENGTH
         ? `${sanitized.slice(0, MAX_LOG_MESSAGE_LENGTH)}… [truncated]`
         : sanitized;

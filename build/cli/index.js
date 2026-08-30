@@ -54118,6 +54118,7 @@ exports.sanitizeAgentMarkdown = sanitizeAgentMarkdown;
 exports.sanitizePublishedError = sanitizePublishedError;
 exports.escapeHtml = escapeHtml;
 const untrusted_content_1 = __nccwpck_require__(67057);
+const secret_redaction_1 = __nccwpck_require__(254);
 /**
  * Model output is untrusted too. Keep useful Markdown, but neutralize the
  * GitHub automation surfaces that could create side effects when published.
@@ -54137,10 +54138,8 @@ function sanitizePublishedError(raw) {
     if (typeof raw !== 'string')
         return '';
     const withoutStack = raw.split(/\n\s+at\s+/u, 1)[0];
-    const redacted = withoutStack
-        .replace(/\bBearer\s+[^\s,;]+/giu, 'Bearer [redacted]')
-        .replace(/\b(token|api[_-]?key|secret|password|client[_-]?secret)\s*[:=]\s*["']?[^\s,"']+/giu, '$1=[redacted]')
-        .replace(/\b(?:gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+|sk-[A-Za-z0-9_-]+)\b/gu, '[redacted]');
+    const redacted = (0, secret_redaction_1.redactSecretLikeValues)(withoutStack)
+        .replace(/\[REDACTED\]/gu, '[redacted]');
     return sanitizeAgentMarkdown(redacted, 2000);
 }
 function escapeHtml(raw) {
@@ -71851,7 +71850,7 @@ exports.getRandomElement = getRandomElement;
 /***/ }),
 
 /***/ 91151:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
@@ -71868,6 +71867,7 @@ exports.logError = logError;
 exports.logDebugInfo = logDebugInfo;
 exports.logDebugWarning = logDebugWarning;
 exports.logDebugError = logDebugError;
+const secret_redaction_1 = __nccwpck_require__(254);
 let loggerDebug = false;
 let loggerRemote = false;
 let structuredLogging = false;
@@ -71908,7 +71908,7 @@ function sanitizeLogMessage(message) {
             sanitized = sanitized.split(value).join('[REDACTED]');
         }
     }
-    sanitized = sanitized.replace(/(api[_-]?key|access[_-]?token|refresh[_-]?token|password|secret|authorization)(\s*[:=]\s*)(["']?)[^\s,"'}\]]+\3/gi, '$1$2[REDACTED]');
+    sanitized = (0, secret_redaction_1.redactSecretLikeValues)(sanitized);
     return sanitized.length > MAX_LOG_MESSAGE_LENGTH
         ? `${sanitized.slice(0, MAX_LOG_MESSAGE_LENGTH)}… [truncated]`
         : sanitized;
@@ -72028,6 +72028,24 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PROJECT_CONTEXT_INSTRUCTION = void 0;
 /** Shared repository-context instruction for every supported agent runtime. */
 exports.PROJECT_CONTEXT_INSTRUCTION = `**Important – use full project context:** In addition to reading the relevant code (respecting any file ignore patterns specified), read the repository documentation (e.g. README, docs/) and any defined rules or conventions (e.g. .cursor/rules, CONTRIBUTING, project guidelines). This gives you a complete picture of the project and leads to better decisions in both quality of reasoning and efficiency.`;
+
+
+/***/ }),
+
+/***/ 254:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.redactSecretLikeValues = redactSecretLikeValues;
+/** Redacts common credential formats from text before it reaches logs or GitHub. */
+function redactSecretLikeValues(value) {
+    return value
+        .replace(/\bBearer\s+[^\s,;]+/giu, 'Bearer [REDACTED]')
+        .replace(/\b(token|api[_-]?key|secret|password|client[_-]?secret)\s*[:=]\s*["']?[^\s,"']+/giu, '$1=[REDACTED]')
+        .replace(/\b(?:gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+|sk-[A-Za-z0-9_-]+)\b/gu, '[REDACTED]');
+}
 
 
 /***/ }),

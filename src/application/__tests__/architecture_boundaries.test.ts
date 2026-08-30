@@ -100,6 +100,7 @@ describe('application architecture boundaries', () => {
             'content_utils',
             'list_utils',
             'project_context_instruction',
+            'secret_redaction',
             'task_emoji',
             'title_utils',
         ]);

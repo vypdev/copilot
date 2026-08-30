@@ -121,7 +121,7 @@ describe('logger', () => {
       expect(call).toMatch(/stack/);
     });
 
-    it('redacts configured credentials from messages and metadata', () => {
+  it('redacts configured credentials from messages and metadata', () => {
       const previous = process.env.OPENAI_API_KEY;
       process.env.OPENAI_API_KEY = 'secret-openai-key';
 
@@ -162,6 +162,15 @@ describe('logger', () => {
       expect(getAccumulatedLogEntries()[0].message).toHaveLength(8013);
       expect(getAccumulatedLogEntries()[0].message).toContain('[truncated]');
     });
+  });
+
+  it('redacts token-shaped diagnostics even when the value is not in the environment', () => {
+    logError('Request failed with token=gho_unexported-example and Bearer opaque-value');
+
+    expect(getAccumulatedLogsAsText()).toContain('token=[REDACTED]');
+    expect(getAccumulatedLogsAsText()).toContain('Bearer [REDACTED]');
+    expect(getAccumulatedLogsAsText()).not.toContain('gho_unexported-example');
+    expect(getAccumulatedLogsAsText()).not.toContain('opaque-value');
   });
 
   describe('logDebugInfo', () => {

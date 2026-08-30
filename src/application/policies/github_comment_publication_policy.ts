@@ -1,4 +1,5 @@
 import { createUntrustedContent } from '../../domain/security/untrusted_content';
+import { redactSecretLikeValues } from '../../utils/secret_redaction';
 
 /**
  * Model output is untrusted too. Keep useful Markdown, but neutralize the
@@ -18,10 +19,8 @@ export function sanitizeAgentMarkdown(raw: unknown, maxLength = 12_000): string 
 export function sanitizePublishedError(raw: unknown): string {
     if (typeof raw !== 'string') return '';
     const withoutStack = raw.split(/\n\s+at\s+/u, 1)[0];
-    const redacted = withoutStack
-        .replace(/\bBearer\s+[^\s,;]+/giu, 'Bearer [redacted]')
-        .replace(/\b(token|api[_-]?key|secret|password|client[_-]?secret)\s*[:=]\s*["']?[^\s,"']+/giu, '$1=[redacted]')
-        .replace(/\b(?:gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+|sk-[A-Za-z0-9_-]+)\b/gu, '[redacted]');
+    const redacted = redactSecretLikeValues(withoutStack)
+        .replace(/\[REDACTED\]/gu, '[redacted]');
     return sanitizeAgentMarkdown(redacted, 2_000);
 }
 
