@@ -89,6 +89,49 @@ describe("Project release capability repositories", () => {
         expect(mockCreateRef).not.toHaveBeenCalled();
     });
 
+    it("updates an existing tag from the source tag", async () => {
+        mockGetRef
+            .mockResolvedValueOnce({ data: { object: { sha: "source-sha" } } })
+            .mockResolvedValueOnce({ data: { object: { sha: "old-target-sha" } } });
+        mockUpdateRef.mockResolvedValue(undefined);
+
+        await tagRepository.updateTag("owner", "repo", "source", "target", "token");
+
+        expect(mockUpdateRef).toHaveBeenCalledWith({
+            owner: "owner",
+            repo: "repo",
+            ref: "tags/target",
+            sha: "source-sha",
+            force: true,
+        });
+        expect(mockCreateRef).not.toHaveBeenCalled();
+    });
+
+    it("creates the target tag when it does not exist", async () => {
+        mockGetRef
+            .mockResolvedValueOnce({ data: { object: { sha: "source-sha" } } })
+            .mockRejectedValueOnce({ status: 404 });
+        mockCreateRef.mockResolvedValue(undefined);
+
+        await tagRepository.updateTag("owner", "repo", "source", "target", "token");
+
+        expect(mockCreateRef).toHaveBeenCalledWith({
+            owner: "owner",
+            repo: "repo",
+            ref: "refs/tags/target",
+            sha: "source-sha",
+        });
+    });
+
+    it("skips tag updates when the source tag is missing", async () => {
+        mockGetRef.mockRejectedValueOnce({ status: 404 });
+
+        await tagRepository.updateTag("owner", "repo", "source", "target", "token");
+
+        expect(mockUpdateRef).not.toHaveBeenCalled();
+        expect(mockCreateRef).not.toHaveBeenCalled();
+    });
+
     it("maps release creation to the release capability result", async () => {
         mockCreateRelease.mockResolvedValue({ data: { html_url: "https://github.com/owner/repo/releases/tag/v1.0.0" } });
 
@@ -118,5 +161,33 @@ describe("Project release capability repositories", () => {
             .resolves.toBe("101");
         expect(mockListReleases).toHaveBeenNthCalledWith(2, { owner: "owner", repo: "repo", per_page: 100, page: 2 });
         expect(mockUpdateRelease).toHaveBeenCalledWith(expect.objectContaining({ release_id: 101 }));
+    });
+
+    it("creates a target release when updating a release that does not exist", async () => {
+        mockGetReleaseByTag.mockResolvedValue({
+            data: { name: "Source", body: "Changes", draft: false, prerelease: true },
+        });
+        mockListReleases.mockResolvedValue({ data: [] });
+        mockCreateRelease.mockResolvedValue({ data: { id: 202 } });
+
+        await expect(releaseRepository.updateRelease("owner", "repo", "v1.0.0", "v2.0.0", "token"))
+            .resolves.toBe("202");
+        expect(mockCreateRelease).toHaveBeenCalledWith({
+            owner: "owner",
+            repo: "repo",
+            tag_name: "v2.0.0",
+            name: "Source",
+            body: "Changes",
+            draft: false,
+            prerelease: true,
+        });
+    });
+
+    it("rejects release updates when the source has no content", async () => {
+        mockGetReleaseByTag.mockResolvedValue({ data: { name: "", body: "" } });
+
+        await expect(releaseRepository.updateRelease("owner", "repo", "missing", "target", "token"))
+            .resolves.toBeUndefined();
+        expect(mockListReleases).not.toHaveBeenCalled();
     });
 });

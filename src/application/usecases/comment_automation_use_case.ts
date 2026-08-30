@@ -2,16 +2,15 @@ import { Execution } from "../../data/model/execution";
 import { Result } from "../../data/model/result";
 import { logError, logInfo } from "../ports/logging_ports";
 import {
-  getBugbotFixIntentPayload,
   canRunBugbotAutofix,
   canRunDoUserRequest,
 } from "./steps/commit/bugbot/bugbot_fix_intent_payload";
-import { resolveCommentAutomationRoute } from "./comment_automation_route_policy";
 import type { AuthenticatedUserPort } from "../ports/authenticated_user_ports";
 import type { ActorAuthorizationPort } from "../ports/actor_authorization_ports";
 import type { BugbotFindingResolutionPorts } from "../ports/bugbot_finding_resolution_ports";
 import { runCommentAutomationAction } from "./comment_automation_action_workflow";
 import type { CommentAutomationOptions } from "./comment_automation_contracts";
+import { resolveCommentAutomationDecision } from "./comment_automation_decision_workflow";
 
 export type { CommentAutomationOptions } from "./comment_automation_contracts";
 
@@ -34,50 +33,34 @@ export async function runCommentAutomation(
   try {
     results.push(...(await options.languageUseCase.invoke(param)));
 
-    logInfo("Running bugbot fix intent detection (before Think).");
-    const intentResults = await options.intentUseCase.invoke(param);
-    results.push(...intentResults);
-    const intentPayload = getBugbotFixIntentPayload(intentResults);
-    const runAutofix = canRunBugbotAutofix(intentPayload);
-
-    if (intentPayload) {
-      logInfo(
-        `Bugbot fix intent: isFixRequest=${intentPayload.isFixRequest}, isDoRequest=${intentPayload.isDoRequest}, targetFindingIds=${intentPayload.targetFindingIds?.length ?? 0}.`,
-      );
-    } else {
-      logInfo("Bugbot fix intent: no payload from intent detection.");
-    }
-
-    const allowedToModifyFiles =
-      await actorAuthorizationPort.isActorAllowedToModifyFiles(
-        param.owner,
-        param.actor,
-        param.tokens.token,
-      );
-    const canModifyFiles = runAutofix || canRunDoUserRequest(intentPayload);
-    const route = resolveCommentAutomationRoute(
-      intentPayload,
-      allowedToModifyFiles,
+    const decision = await resolveCommentAutomationDecision(
+      param,
+      options,
+      actorAuthorizationPort,
     );
-    if (!allowedToModifyFiles && canModifyFiles) {
-      logInfo(
-        "Skipping file-modifying use cases: user is not an org member or repo owner.",
-      );
+    results.push(...decision.intentResults);
+    if (decision.route === "think") {
+      const intentPayload = decision.intentPayload;
+      if (intentPayload && (canRunBugbotAutofix(intentPayload) || canRunDoUserRequest(intentPayload))) {
+        logInfo(
+          "Skipping file-modifying use cases: user is not an org member or repo owner.",
+        );
+      }
     }
 
-    if (route === "think") {
+    if (decision.route === "think") {
       logInfo(
         "Skipping bugbot autofix (no fix request, no targets, or no context).",
       );
     }
 
-    if (route !== "think") {
+    if (decision.route !== "think") {
       results.push(
         ...(await runCommentAutomationAction(
           param,
           options,
-          route,
-          intentPayload,
+          decision.route,
+          decision.intentPayload,
           {
             authenticatedUserPort,
             bugbotResolutionPorts,
@@ -87,8 +70,8 @@ export async function runCommentAutomation(
       );
     }
 
-    const ranAutofix = route === "autofix";
-    const ranDoRequest = route === "do-user-request";
+    const ranAutofix = decision.route === "autofix";
+    const ranDoRequest = decision.route === "do-user-request";
     if (!ranAutofix && !ranDoRequest) {
       logInfo("Running ThinkUseCase (no file-modifying action ran).");
       results.push(...(await options.thinkUseCase.invoke(param)));

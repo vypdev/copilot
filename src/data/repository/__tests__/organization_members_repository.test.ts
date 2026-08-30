@@ -4,6 +4,7 @@ import type { GithubOrganizationMembersClient } from '../../../infrastructure/gi
 
 jest.mock('../../../utils/logger', () => ({
   logError: jest.fn(),
+  logDebugInfo: jest.fn(),
 }));
 
 describe('OrganizationMembersRepository', () => {
@@ -54,5 +55,27 @@ describe('OrganizationMembersRepository', () => {
     const repository = new OrganizationMembersRepository(provider);
 
     await expect(repository.getAllMembers('acme', 'token')).rejects.toThrow('organization access denied');
+  });
+
+  it('does not query GitHub when no members are requested', async () => {
+    const { repository, iterator } = createRepository();
+
+    await expect(repository.getRandomMembers('acme', 0, [], 'token')).resolves.toEqual([]);
+    expect(iterator).not.toHaveBeenCalled();
+  });
+
+  it('returns an empty list when the organization has no teams', async () => {
+    const iterator = jest.fn(async function* (_method: unknown, parameters: Record<string, unknown>) {
+      if (parameters.team_slug) return;
+      yield { data: [] };
+    });
+    const client = {
+      paginate: { iterator },
+      rest: { teams: { list: jest.fn(), listMembersInOrg: jest.fn() } },
+    } as unknown as GithubOrganizationMembersClient;
+    const provider = { getClient: jest.fn(() => client) } as unknown as GithubClientPort<GithubOrganizationMembersClient>;
+    const repository = new OrganizationMembersRepository(provider);
+
+    await expect(repository.getAllMembers('acme', 'token')).resolves.toEqual([]);
   });
 });

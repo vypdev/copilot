@@ -2,10 +2,7 @@ import type { GitCommitPort } from '../../../../../application/ports/git_ports';
 import type { AuthenticatedUserPort } from '../../../../../application/ports/authenticated_user_ports';
 import type { Execution } from '../../../../../data/model/execution';
 import { logDebugInfo, logError, logInfo } from '../../../../ports/logging_ports';
-import { checkoutBranch } from './git_branch_checkout';
-import { MAX_VERIFY_COMMANDS, limitVerifyCommands } from './verify_command_policy';
-import { runVerifyCommands } from './verify_command_runner';
-import { hasWorkspaceChanges } from './workspace_changes';
+import { runCommitAndPushPreflight } from './commit_and_push_preflight';
 export interface CommitAndPushWorkflowResult {
     success: boolean;
     committed: boolean;
@@ -26,42 +23,13 @@ export async function runCommitAndPushWorkflow(
     authenticatedUserPort: AuthenticatedUserPort,
     gitCommitPort: GitCommitPort,
 ): Promise<CommitAndPushWorkflowResult> {
-    if (!options.branch?.trim()) {
-        return { success: false, committed: false, error: 'No branch to commit to.' };
+    const preflight = await runCommitAndPushPreflight(execution, options, gitCommitPort);
+    if (preflight.status === 'failure') {
+        return { success: false, committed: false, error: preflight.error };
     }
-
-    if (options.branchOverride && !(await checkoutBranch(options.branch, gitCommitPort))) {
-        return {
-            success: false,
-            committed: false,
-            error: `Failed to checkout branch ${options.branch}.`,
-        };
-    }
-
-    const configured = execution.ai?.getBugbotFixVerifyCommands?.() ?? [];
-    const verifyCommands = limitVerifyCommands(Array.isArray(configured) ? configured : []);
-    if (Array.isArray(configured) && configured.length > MAX_VERIFY_COMMANDS) {
-        logInfo(`Limiting verify commands to ${MAX_VERIFY_COMMANDS} (configured: ${configured.length}).`);
-    }
-    if (verifyCommands.length > 0) {
-        logInfo(`Running ${verifyCommands.length} verify command(s)...`);
-        const verify = await runVerifyCommands(verifyCommands, (program, args) => gitCommitPort.execute(program, args));
-        if (!verify.success) {
-            return {
-                success: false,
-                committed: false,
-                error: verify.error ?? `Verify command failed: ${verify.failedCommand ?? 'unknown'}.`,
-            };
-        }
-    }
-
-    if (!(await hasWorkspaceChanges(gitCommitPort))) {
+    if (preflight.status === 'success') {
         logDebugInfo(options.noChangesMessage);
         return { success: true, committed: false };
-    }
-
-    if (options.workspacePaths && options.workspacePaths.length === 0) {
-        return { success: false, committed: false, error: 'No safe workspace paths to commit.' };
     }
 
     try {
