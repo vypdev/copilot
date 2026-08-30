@@ -4,7 +4,7 @@
  */
 import type { Execution } from "../../../../../data/model/execution";
 import type { BugbotFindingPublicationPorts } from "../../../../../application/ports/bugbot_finding_publication_ports";
-import type { BugbotContext, BugbotFinding } from "./types";
+import { type BugbotContext, type BugbotFinding } from "./types";
 export interface PublishFindingsParam {
     execution: Execution;
     context: BugbotContext;

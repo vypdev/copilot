@@ -13,10 +13,11 @@ export declare const MAX_FINDING_ID_LENGTH = 200;
  */
 export declare function sanitizeFindingIdForMarker(findingId: string): string;
 export declare function normalizeFindingIdForMarker(findingId: string): string | null;
-export declare function buildMarker(findingId: string, resolved: boolean): string;
+export declare function buildMarker(findingId: string, resolved: boolean, fingerprint?: string): string;
 export declare function parseMarker(body: string | null): Array<{
     findingId: string;
     resolved: boolean;
+    fingerprint?: string;
 }>;
 /**
  * Regex to match the marker for a specific finding (same flexible format as parseMarker).

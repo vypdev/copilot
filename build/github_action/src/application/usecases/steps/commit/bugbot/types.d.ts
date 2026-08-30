@@ -7,6 +7,8 @@ export interface BugbotFinding {
     id: string;
     title: string;
     description: string;
+    /** Computed locally; never accepted from the agent as an authority. */
+    fingerprint?: string;
     file?: string;
     line?: number;
     severity?: string;
@@ -15,11 +17,13 @@ export interface BugbotFinding {
 export interface ExistingIssueFindingInfo {
     commentId: number;
     resolved: boolean;
+    fingerprint?: string;
 }
 export interface ExistingPullRequestFindingInfo {
     commentIdentity: string;
     pullRequestNumber: number;
     resolved: boolean;
+    fingerprint?: string;
 }
 /** Tracks each published destination independently so partial failures remain retryable. */
 export interface ExistingFindingInfo {
@@ -50,6 +54,7 @@ export interface UnresolvedFindingSummary {
     file?: string;
     line?: number;
 }
+export declare function findExistingFindingInfo(existingByFindingId: ExistingByFindingId, finding: Pick<BugbotFinding, 'id' | 'fingerprint'>): ExistingFindingInfo | undefined;
 /** Full context for detection, mutation, publishing, and autofix intent. */
 export interface BugbotContext {
     existingByFindingId: ExistingByFindingId;

@@ -49647,6 +49647,33 @@ function findPreviousIssueBranch(branches, issueNumber, branchTypes) {
 
 /***/ }),
 
+/***/ 78128:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.reconcileResolvedFindingIds = reconcileResolvedFindingIds;
+/**
+ * Accepts a model's resolution claims only when they refer to an existing
+ * finding and no active finding with the same id or local fingerprint remains.
+ * This prevents a stale or injected response from resolving a live finding.
+ */
+function reconcileResolvedFindingIds(resolvedFindingIds, existingByFindingId, activeFindings) {
+    const activeIds = new Set(activeFindings.map((finding) => finding.id));
+    const activeFingerprints = new Set(activeFindings.flatMap((finding) => finding.fingerprint ? [finding.fingerprint] : []));
+    return new Set([...resolvedFindingIds].filter((findingId) => {
+        const existing = existingByFindingId[findingId];
+        if (!existing || activeIds.has(findingId))
+            return false;
+        const fingerprint = existing.issue?.fingerprint ?? existing.pullRequest?.fingerprint;
+        return !fingerprint || !activeFingerprints.has(fingerprint);
+    }));
+}
+
+
+/***/ }),
+
 /***/ 27150:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -52629,7 +52656,7 @@ function parseIssueFindingMarkers(issueComments) {
                 continue;
             findings[findingId] = {
                 ...(findings[findingId] ?? {}),
-                issue: { commentId: comment.id, resolved: marker.resolved },
+                issue: { commentId: comment.id, resolved: marker.resolved, ...(marker.fingerprint ? { fingerprint: marker.fingerprint } : {}) },
             };
         }
     }
@@ -52656,6 +52683,7 @@ function parsePullRequestComments(comments, pullRequestNumber, existingByFinding
                     commentIdentity: comment.identity,
                     pullRequestNumber,
                     resolved: marker.resolved,
+                    ...(marker.fingerprint ? { fingerprint: marker.fingerprint } : {}),
                 },
             };
             prFindingIdToBody[findingId] = (0, build_bugbot_fix_prompt_1.truncateFindingBody)(body, build_bugbot_fix_prompt_1.MAX_FINDING_BODY_LENGTH);
@@ -53155,7 +53183,7 @@ function deduplicateFindings(findings) {
         const file = f.file?.trim() ?? '';
         const line = f.line ?? 0;
         const key = file || line
-            ? `${file}:${line}`
+            ? `location:${file}:${line}`
             : `title:${(f.title ?? '').toLowerCase().trim().slice(0, 80)}`;
         if (seen.has(key))
             continue;
@@ -53735,18 +53763,19 @@ function requireFindingIdForMarker(findingId) {
     }
     return safeId;
 }
-function buildMarker(findingId, resolved) {
+function buildMarker(findingId, resolved, fingerprint) {
     const safeId = requireFindingIdForMarker(findingId);
-    return `<!-- ${constants_1.BUGBOT_MARKER_PREFIX} finding_id:"${safeId}" resolved:${resolved} -->`;
+    const safeFingerprint = fingerprint?.match(/^fp-[a-f0-9]{8}$/)?.[0];
+    return `<!-- ${constants_1.BUGBOT_MARKER_PREFIX} finding_id:"${safeId}" resolved:${resolved}${safeFingerprint ? ` finding_fingerprint:"${safeFingerprint}"` : ''} -->`;
 }
 function parseMarker(body) {
     if (!body)
         return [];
     const results = [];
-    const regex = new RegExp(`<!--\\s*${constants_1.BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"([^"]+)"\\s+resolved:(true|false)\\s*-->`, "g");
+    const regex = new RegExp(`<!--\\s*${constants_1.BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"([^"]+)"\\s+resolved:(true|false)(?:\\s+finding_fingerprint:\\s*"(fp-[a-f0-9]{8})")?\\s*-->`, "g");
     let m;
     while ((m = regex.exec(body)) !== null) {
-        results.push({ findingId: m[1], resolved: m[2] === "true" });
+        results.push({ findingId: m[1], resolved: m[2] === "true", ...(m[3] ? { fingerprint: m[3] } : {}) });
     }
     return results;
 }
@@ -53759,7 +53788,7 @@ function markerRegexForFinding(findingId) {
     const idForRegex = SAFE_FINDING_ID_REGEX_CHARS.test(safeId)
         ? safeId
         : safeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return new RegExp(`<!--\\s*${constants_1.BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"${idForRegex}"\\s+resolved:(?:true|false)\\s*-->`, "g");
+    return new RegExp(`<!--\\s*${constants_1.BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"${idForRegex}"\\s+resolved:(?:true|false)(?:\\s+finding_fingerprint:\\s*"fp-[a-f0-9]{8}")?\\s*-->`, "g");
 }
 /**
  * Find the marker for this finding in body (using same pattern as parseMarker) and replace it.
@@ -53796,7 +53825,7 @@ function buildCommentBody(finding, resolved) {
     const resolvedNote = resolved
         ? "\n\n---\n**Resolved** (no longer reported in latest analysis).\n"
         : "";
-    const marker = buildMarker(finding.id, resolved);
+    const marker = buildMarker(finding.id, resolved, finding.fingerprint);
     return `## ${finding.title}
 
 ${severity}${fileLine}${finding.description}
@@ -53881,7 +53910,10 @@ function prepareBugbotFindings(response, ignorePatterns, minSeverityValue, maxCo
     const normalized = (0, prepare_bugbot_findings_policy_1.normalizeBugbotResponse)(response);
     return normalized === undefined
         ? undefined
-        : { ...(0, prepare_bugbot_findings_policy_1.prepareFindings)(normalized.findings, ignorePatterns, minSeverityValue, maxComments), resolvedFindingIds: normalized.resolvedFindingIds };
+        : {
+            ...(0, prepare_bugbot_findings_policy_1.prepareFindings)(normalized.findings, ignorePatterns, minSeverityValue, maxComments),
+            resolvedFindingIds: normalized.resolvedFindingIds,
+        };
 }
 
 
@@ -53901,6 +53933,7 @@ const limit_comments_1 = __nccwpck_require__(31643);
 const marker_1 = __nccwpck_require__(62274);
 const path_validation_1 = __nccwpck_require__(70124);
 const severity_1 = __nccwpck_require__(14626);
+const finding_identity_1 = __nccwpck_require__(91853);
 function normalizeBugbotResponse(response) {
     if (response == null || typeof response !== 'object')
         return undefined;
@@ -53916,12 +53949,14 @@ function prepareFindings(findings, ignorePatterns, minSeverityValue, maxComments
         .filter(finding => finding.file == null || String(finding.file).trim() === '' || (0, path_validation_1.isSafeFindingFilePath)(finding.file))
         .filter(finding => !(0, file_ignore_1.fileMatchesIgnorePatterns)(finding.file, ignorePatterns))
         .filter(finding => (0, severity_1.meetsMinSeverity)(finding.severity, minSeverity)));
-    return { ...(0, limit_comments_1.applyCommentLimit)(filteredFindings, maxComments) };
+    return { ...(0, limit_comments_1.applyCommentLimit)(filteredFindings, maxComments), activeFindings: filteredFindings };
 }
 function normalizeFindings(findings) {
     return (Array.isArray(findings) ? findings : []).flatMap(finding => {
         const normalizedId = typeof finding?.id === 'string' ? (0, marker_1.normalizeFindingIdForMarker)(finding.id) : null;
-        return normalizedId == null ? [] : [{ ...finding, id: normalizedId }];
+        return normalizedId == null
+            ? []
+            : [{ ...finding, id: normalizedId, fingerprint: (0, finding_identity_1.buildFindingFingerprint)(finding) }];
     });
 }
 function normalizeResolvedFindingIds(findingIds) {
@@ -53948,6 +53983,7 @@ function normalizeResolvedFindingIds(findingIds) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.publishFindings = publishFindings;
 const comment_watermark_1 = __nccwpck_require__(23623);
+const types_1 = __nccwpck_require__(32632);
 const publish_issue_finding_comment_1 = __nccwpck_require__(84950);
 const publish_pr_review_comments_1 = __nccwpck_require__(50352);
 const publish_overflow_comment_1 = __nccwpck_require__(10974);
@@ -53967,9 +54003,9 @@ async function publishFindings(param) {
         })
         : undefined;
     for (const finding of findings) {
-        await (0, publish_issue_finding_comment_1.publishIssueFindingComment)(ports.issueComments, execution, finding, existingByFindingId[finding.id], commitSha);
+        await (0, publish_issue_finding_comment_1.publishIssueFindingComment)(ports.issueComments, execution, finding, (0, types_1.findExistingFindingInfo)(existingByFindingId, finding), commitSha);
         if (reviewPublisher) {
-            await reviewPublisher.publish(finding, existingByFindingId[finding.id]);
+            await reviewPublisher.publish(finding, (0, types_1.findExistingFindingInfo)(existingByFindingId, finding));
         }
     }
     await reviewPublisher?.flush();
@@ -54112,7 +54148,7 @@ async function resolveIssueFinding(repository, resolution) {
     const marker = (0, marker_1.parseMarker)(body).find((candidate) => candidate.findingId === resolution.findingId);
     if (marker == null || marker.resolved)
         return;
-    const replacement = `${RESOLVED_NOTE}${(0, marker_1.buildMarker)(resolution.findingId, true)}`;
+    const replacement = `${RESOLVED_NOTE}${(0, marker_1.buildMarker)(resolution.findingId, true, marker.fingerprint)}`;
     const replaced = (0, marker_1.replaceMarkerInBody)(body, resolution.findingId, true, replacement);
     if (!replaced.found || !replaced.changed)
         return;
@@ -54145,7 +54181,7 @@ async function resolvePullRequestFinding(repository, resolution) {
     await repository.resolvePullRequestReviewThread(resolution.owner, resolution.repo, resolution.pullRequestNumber, resolution.commentIdentity, resolution.token);
     if (marker.resolved)
         return;
-    const replacement = `${RESOLVED_NOTE}${(0, marker_1.buildMarker)(resolution.findingId, true)}`;
+    const replacement = `${RESOLVED_NOTE}${(0, marker_1.buildMarker)(resolution.findingId, true, marker.fingerprint)}`;
     const replaced = (0, marker_1.replaceMarkerInBody)(comment.body, resolution.findingId, true, replacement);
     if (!replaced.found || !replaced.changed)
         return;
@@ -54329,10 +54365,20 @@ function meetsMinSeverity(findingSeverity, minSeverity) {
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.isExistingFindingFullyResolved = isExistingFindingFullyResolved;
+exports.findExistingFindingInfo = findExistingFindingInfo;
 function isExistingFindingFullyResolved(finding) {
     const destinations = [finding.issue, finding.pullRequest].filter((destination) => destination != null);
     return (destinations.length > 0 &&
         destinations.every((destination) => destination.resolved));
+}
+function findExistingFindingInfo(existingByFindingId, finding) {
+    const direct = existingByFindingId[finding.id];
+    if (direct)
+        return direct;
+    if (!finding.fingerprint)
+        return undefined;
+    return Object.values(existingByFindingId).find((candidate) => candidate.issue?.fingerprint === finding.fingerprint
+        || candidate.pullRequest?.fingerprint === finding.fingerprint);
 }
 
 
@@ -54753,6 +54799,7 @@ const build_bugbot_prompt_1 = __nccwpck_require__(52483);
 const load_bugbot_context_use_case_1 = __nccwpck_require__(4050);
 const apply_detected_findings_1 = __nccwpck_require__(20793);
 const query_bugbot_findings_1 = __nccwpck_require__(13059);
+const bugbot_reconciliation_policy_1 = __nccwpck_require__(78128);
 const TASK_ID = 'DetectPotentialProblemsUseCase';
 /** Coordinates Bugbot context, analysis and finding publication behind application ports. */
 async function runDetectPotentialProblemsWorkflow(param, dependencies) {
@@ -54763,10 +54810,14 @@ async function runDetectPotentialProblemsWorkflow(param, dependencies) {
         const context = await (0, load_bugbot_context_use_case_1.loadBugbotContext)(param, undefined, dependencies.contextPorts);
         const prompt = (0, build_bugbot_prompt_1.buildBugbotPrompt)(param, context);
         (0, logging_ports_1.logInfo)('Detecting potential problems via configured agent (agent computes changes and checks resolved)...');
-        const prepared = (0, apply_detected_findings_1.prepareDetectedFindings)(param, await (0, query_bugbot_findings_1.queryBugbotFindings)(dependencies.aiRepository, param, prompt));
-        if (prepared === undefined) {
+        const preparedResponse = (0, apply_detected_findings_1.prepareDetectedFindings)(param, await (0, query_bugbot_findings_1.queryBugbotFindings)(dependencies.aiRepository, param, prompt));
+        if (preparedResponse === undefined) {
             return [noAnalysisResult()];
         }
+        const prepared = {
+            ...preparedResponse,
+            resolvedFindingIds: (0, bugbot_reconciliation_policy_1.reconcileResolvedFindingIds)(preparedResponse.resolvedFindingIds, context.existingByFindingId, preparedResponse.activeFindings ?? preparedResponse.toPublish),
+        };
         if (prepared.toPublish.length === 0 && prepared.resolvedFindingIds.size === 0) {
             return [noFindingsResult()];
         }
@@ -64071,7 +64122,14 @@ exports.WorkflowDispatchRepository = WorkflowDispatchRepository;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.withWorkflowRunsRetry = withWorkflowRunsRetry;
-const TRANSIENT_NETWORK_ERRORS = new Set(['ECONNRESET', 'ETIMEDOUT', 'EAI_AGAIN', 'ENETUNREACH']);
+const TRANSIENT_NETWORK_ERRORS = new Set([
+    'ECONNRESET',
+    'ETIMEDOUT',
+    'EAI_AGAIN',
+    'ENETUNREACH',
+    'ECONNREFUSED',
+    'UND_ERR_CONNECT_TIMEOUT',
+]);
 async function withWorkflowRunsRetry(operation, delayPort, policy) {
     return executeWithRetry(operation, delayPort, policy, 1, policy.initialDelayMilliseconds);
 }
@@ -64096,10 +64154,17 @@ function isTransientWorkflowRunsError(error) {
     if (!error || typeof error !== 'object')
         return false;
     const candidate = error;
-    if (typeof candidate.status === 'number') {
-        return candidate.status === 408 || candidate.status === 429 || candidate.status >= 500;
+    const status = firstNumericValue(candidate.status, candidate.statusCode, candidate.response?.status);
+    if (status !== undefined) {
+        return status === 408 || status === 429 || status >= 500;
     }
-    return typeof candidate.code === 'string' && TRANSIENT_NETWORK_ERRORS.has(candidate.code);
+    if (typeof candidate.code === 'string' && TRANSIENT_NETWORK_ERRORS.has(candidate.code))
+        return true;
+    return typeof candidate.message === 'string'
+        && /\b(server error|service unavailable|bad gateway|gateway timeout|temporarily unavailable)\b/i.test(candidate.message);
+}
+function firstNumericValue(...values) {
+    return values.find((value) => typeof value === 'number' && Number.isFinite(value));
 }
 
 
@@ -64167,6 +64232,55 @@ function defaultAgentCommand(configuration) {
             return parts.join(' ');
         }
     }
+}
+
+
+/***/ }),
+
+/***/ 91853:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+/**
+ * Stable, provider-independent identity for a Bugbot finding. The model may
+ * choose a display id, but it must not control reconciliation identity.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildFindingFingerprint = buildFindingFingerprint;
+function buildFindingFingerprint(finding) {
+    const canonical = [
+        normalizePath(finding.file),
+        normalizeText(finding.title),
+        normalizeText(finding.description).slice(0, 240),
+        normalizeText(finding.suggestion).slice(0, 120),
+        normalizeLine(finding.line),
+    ].join('|');
+    return `fp-${fnv1a(canonical)}`;
+}
+function normalizePath(value) {
+    return typeof value === 'string'
+        ? value.trim().replace(/\\/g, '/').replace(/^\.\//, '').toLowerCase()
+        : '';
+}
+function normalizeText(value) {
+    return typeof value === 'string'
+        ? value.normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim()
+        : '';
+}
+function normalizeLine(value) {
+    if (typeof value !== 'number' || !Number.isSafeInteger(value) || value <= 0)
+        return '';
+    // A small line bucket keeps identity stable when a nearby edit shifts code.
+    return String(Math.floor(value / 5));
+}
+function fnv1a(value) {
+    let hash = 0x811c9dc5;
+    for (const character of value) {
+        hash ^= character.codePointAt(0) ?? 0;
+        hash = Math.imul(hash, 0x01000193);
+    }
+    return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
 
