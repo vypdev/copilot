@@ -11,6 +11,8 @@ The repository separates semantic application ports from provider-specific adapt
 - Data/repository: external adapters for agent execution, authentication, provisioning, GitHub, and Git.
 - Infrastructure: runtime wiring, GitHub/process implementations, and concrete logging.
 - Domain model/policies: provider-neutral rules such as action types, label-to-branch resolution, and version arithmetic.
-- Composition roots: bind capabilities without universal facades.
+- Composition roots: bind capabilities without universal facades. Findings,
+  language translation, and fixer execution use separate application ports;
+  provider-specific CLI adapters remain behind those ports.
 
-The application layer MUST NOT import GitHub SDKs, concrete CLIs, process libraries, or provider-specific protocols. Provider adapters MUST NOT define business policy. Configuration validation belongs at the boundary before execution.
+The application layer MUST NOT import GitHub SDKs, concrete CLIs, process libraries, or provider-specific protocols. Provider adapters MUST NOT define business policy. Configuration validation belongs at the boundary before execution. Prompt construction, untrusted-content handling, and GitHub publication sanitization are separate policies so no agent capability can bypass the security boundary.

@@ -33,6 +33,12 @@ repowise init . --no-workspace --no-prose --no-agents --no-editor-setup \
 repowise dead-code --safe-only --format json --no-workspace
 ```
 
+Security regression tests must cover untrusted prompt fields, control-sequence
+neutralization, schema rejection, local finding fingerprints, stale finding
+resolution, provider credential isolation, and the language capability's
+separate application port. A passing model smoke test does not replace these
+deterministic tests.
+
 The reproducible `metrics:architecture` collector is the full evidence
 workflow; it requires a clean working tree and writes reports outside the
 repository.

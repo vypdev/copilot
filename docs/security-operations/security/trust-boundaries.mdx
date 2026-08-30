@@ -13,4 +13,4 @@ Treat workflow events as different trust zones:
 | `pull_request_target` | Base workflow, untrusted PR data | MUST NOT check out and execute the PR code with secrets |
 | `issue_comment` | User-controlled text | Authorization MUST run before any write-capable agent |
 
-Self-hosted runners MUST be isolated, ephemeral where possible, and cleaned after agent execution. Agent prompts MUST treat repository content and comments as untrusted data.
+Self-hosted runners MUST be isolated, ephemeral where possible, and cleaned after agent execution. Agent prompts MUST treat repository content and comments as untrusted data. See [Prompt-injection controls](/security-operations/security/prompt-injection) for the complete threat model, output-sanitization rules, and incident response procedure.

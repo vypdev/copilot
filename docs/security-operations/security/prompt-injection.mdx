@@ -1,0 +1,107 @@
+---
+title: Prompt-injection controls
+description: Threat model and operational controls for untrusted GitHub and repository content.
+---
+
+# Prompt-injection controls
+
+Every issue title, issue body, issue comment, pull-request description, review
+comment, diff, file, generated output, and provider diagnostic is data. It is
+never an instruction source for Copilot. A sentence such as “ignore previous
+instructions”, a fake system message, a request to reveal credentials, or a
+request to run a command remains untrusted text even when it appears in a
+trusted-looking Markdown block.
+
+## Trust boundaries
+
+The execution path has four independent boundaries:
+
+| Boundary | Untrusted input | Required decision |
+| --- | --- | --- |
+| Ingestion | GitHub event payloads and repository content | Normalize, bound, and label before prompt construction |
+| Reasoning | Model response and provider diagnostics | Parse against the capability schema; reject invalid output |
+| Execution | Agent command, verification command, and workspace mutations | Validate command shape, use `shell: false`, and apply the capability policy |
+| Publication | Markdown returned by the agent | Sanitize GitHub controls and publish only bounded, inert output |
+
+The trusted application task is composed by Copilot. Dynamic content is
+inserted into labelled untrusted-data blocks. The model is instructed to
+analyse those blocks without following instructions in them. This is a
+defence-in-depth measure, not a claim that a language model can make a
+security decision by itself.
+
+## Controls by capability
+
+### Language detection and translation
+
+Comment translation receives the original comment as untrusted data and asks
+only for a structured language decision or translation. The workflow:
+
+- rejects empty, malformed, marker-bearing, or overlong agent output;
+- preserves the original comment as escaped inert text;
+- neutralizes mentions, slash commands, and HTML-comment markers in the
+  translated publication;
+- writes a versioned marker so a translated comment is not translated again;
+- never treats translated text as an action request.
+
+### Findings and recommendations
+
+Findings are accepted only when their required fields match the bounded
+contract. Finding identifiers are not trusted as stable identity: Copilot
+computes a local fingerprint from the normalized path, finding text, and line
+bucket. Resolution is accepted only when the finding is absent from the
+current active set by both identifier and fingerprint. A stale or injected
+model claim therefore cannot resolve a still-live finding.
+
+### Autofix and command execution
+
+Autofix requests are interpreted by a dedicated policy and must refer to an
+unresolved finding. The request text is data in the fixer prompt; it cannot
+change the configured provider, model, credentials, or command. Commands are
+parsed and executed without a shell, and provider/model/effort selections are
+validated before execution. Verification commands are separately allowlisted
+and bounded. A model response cannot introduce a new executable command.
+
+### Publication
+
+Agent-generated Markdown is not trusted for GitHub semantics. Before it is
+published, Copilot bounds it and neutralizes control sequences that could
+create hidden metadata, accidental mentions, or slash-command behaviour.
+The publication layer is independent from prompt construction so a future
+provider adapter cannot bypass it accidentally.
+
+## Operator rules
+
+Operators MUST:
+
+- keep API keys in protected runner environment variables only;
+- use explicit provider, model, and effort allowlists;
+- review custom agent and verification commands as executable code;
+- keep write permissions limited to the workflow step that needs them;
+- treat provider output and diagnostics as potentially hostile;
+- use a read-only prompt for any authorized provider smoke test;
+- stop the run if a sanitizer, schema parser, authorization check, or command
+  validator fails.
+
+Operators MUST NOT:
+
+- paste secrets, authentication files, or tokens into issues, comments,
+  prompts, action inputs, or repository files;
+- allow an agent response to select credentials or change its own policy;
+- publish raw model output directly to GitHub;
+- use a translated comment as an authorization signal;
+- bypass the bounded parser because a provider returned “valid-looking” JSON.
+
+## Incident response
+
+If prompt injection is suspected, preserve the run URL and sanitized logs,
+disable the affected workflow or credential, and do not rerun with broader
+permissions. Rotate any credential that may have been exposed, inspect
+workspace and GitHub mutations, and review the exact untrusted input and
+provider output. A security report must include the event type, selected
+capability, provider/model identifiers (never credential values), mutation
+attempts, and whether publication or autofix was reached.
+
+These controls reduce instruction-confusion and output-confusion risk. They do
+not make a workflow safe to run untrusted checkout code on a trusted
+self-hosted runner; that runner boundary remains an independent operational
+requirement described in [Trust boundaries](/security-operations/security/trust-boundaries).
