@@ -100,4 +100,13 @@ describe('Issue', () => {
     expect(i.labeled).toBe(true);
     expect(i.labelAdded).toBe('from-inputs');
   });
+
+  it('normalizes invalid issue and comment identifiers', () => {
+    const i = new Issue(false, false, 1, {
+      issue: { number: Number.NaN },
+      comment: { id: 0 },
+    });
+    expect(i.number).toBe(-1);
+    expect(i.commentId).toBe(-1);
+  });
 });

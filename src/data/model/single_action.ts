@@ -1,4 +1,5 @@
 import { ACTIONS } from './action_types';
+import { parsePositiveSafeInteger } from '../../domain/positive_integer_policy';
 
 export class SingleAction {
     currentSingleAction: string;
@@ -109,8 +110,7 @@ export class SingleAction {
         this.changelog = changelog;
         this.currentSingleAction = currentSingleAction;
         if (!this.isSingleActionWithoutIssue) {
-            const parsedIssue = Number.parseInt(issue, 10);
-            this.issue = Number.isNaN(parsedIssue) ? -1 : parsedIssue;
+            this.issue = parsePositiveSafeInteger(issue) ?? -1;
         } else {
             this.issue = 0;
         }

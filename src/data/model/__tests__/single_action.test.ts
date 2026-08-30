@@ -112,5 +112,10 @@ describe('SingleAction', () => {
       expect(s.issue).toBe(-1);
       expect(s.validSingleAction).toBe(false);
     });
+
+    it('rejects partially numeric and unsafe issue values', () => {
+      expect(new SingleAction(ACTIONS.CHECK_PROGRESS, '42abc', '', '', '').issue).toBe(-1);
+      expect(new SingleAction(ACTIONS.CHECK_PROGRESS, '9007199254740992', '', '', '').issue).toBe(-1);
+    });
   });
 });

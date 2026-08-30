@@ -1,4 +1,5 @@
 import type { EventCommentPayload, ExecutionInputs } from './execution_inputs';
+import { parsePositiveSafeInteger } from '../../domain/positive_integer_policy';
 
 export class PullRequest {
     desiredAssigneesCount: number;
@@ -23,7 +24,7 @@ export class PullRequest {
     }
 
     get number(): number {
-        return this.inputs?.pull_request?.number ?? -1;
+        return parsePositiveSafeInteger(this.inputs?.pull_request?.number) ?? -1;
     }
 
     get url(): string {
@@ -78,7 +79,7 @@ export class PullRequest {
     }
 
     get commentId(): number {
-        return this.reviewCommentPayload?.id ?? -1;
+        return parsePositiveSafeInteger(this.reviewCommentPayload?.id) ?? -1;
     }
 
     get commentBody(): string {
@@ -96,7 +97,7 @@ export class PullRequest {
     /** When the comment is a reply, the id of the parent review comment (for bugbot: include parent body in intent prompt). */
     get commentInReplyToId(): number | undefined {
         const raw = this.reviewCommentPayload?.in_reply_to_id;
-        return raw != null ? Number(raw) : undefined;
+        return parsePositiveSafeInteger(raw);
     }
 
     constructor(

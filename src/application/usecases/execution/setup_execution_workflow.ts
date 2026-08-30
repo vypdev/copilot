@@ -89,8 +89,12 @@ function restoreBranchState(execution: Execution): void {
 }
 
 function configurationIssueNumber(execution: Execution): number | undefined {
-    if (execution.isSingleAction || execution.isPush) return execution.issueNumber;
-    if (execution.isIssue) return execution.issue.number;
-    if (execution.isPullRequest) return execution.pullRequest.number;
+    if (execution.isSingleAction || execution.isPush) return positiveIssueNumberOrUndefined(execution.issueNumber);
+    if (execution.isIssue) return positiveIssueNumberOrUndefined(execution.issue.number);
+    if (execution.isPullRequest) return positiveIssueNumberOrUndefined(execution.pullRequest.number);
     return undefined;
+}
+
+function positiveIssueNumberOrUndefined(value: number): number | undefined {
+    return value > 0 && Number.isSafeInteger(value) ? value : undefined;
 }

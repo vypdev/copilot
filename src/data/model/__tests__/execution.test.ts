@@ -562,6 +562,34 @@ describe('Execution', () => {
       expect(mockConfigGet).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 123 }));
     });
 
+    it('rejects malformed configured issue numbers before querying GitHub', async () => {
+      const singleAction = new SingleAction('check_progress', '0', '', '', '');
+      const e = buildExecution(
+        { [INPUT_KEYS.SINGLE_ACTION_ISSUE]: '123abc' },
+        { singleAction },
+      );
+
+      await setupExecution(e);
+
+      expect(e.issueNumber).toBe(-1);
+      expect(mockIsIssue).not.toHaveBeenCalled();
+      expect(mockIsPullRequest).not.toHaveBeenCalled();
+      expect(mockConfigGet).not.toHaveBeenCalled();
+      expect(mockGetLabels).not.toHaveBeenCalled();
+    });
+
+    it('does not query GitHub for a single action that has no issue', async () => {
+      const e = buildExecution(undefined, { singleAction: new SingleAction(ACTIONS.THINK, '0', '', '', '') });
+
+      await setupExecution(e);
+
+      expect(e.issueNumber).toBe(-1);
+      expect(mockIsIssue).not.toHaveBeenCalled();
+      expect(mockIsPullRequest).not.toHaveBeenCalled();
+      expect(mockConfigGet).not.toHaveBeenCalled();
+      expect(mockGetLabels).not.toHaveBeenCalled();
+    });
+
     it('single action isIssue path sets issueNumber from issue.number', async () => {
       const singleAction = new SingleAction('check_progress', '0', '', '', '');
       const issue = makeIssue({ eventName: 'issues', issue: { number: 88 } } as never);

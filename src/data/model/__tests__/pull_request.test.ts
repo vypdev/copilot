@@ -90,4 +90,14 @@ describe('PullRequest', () => {
     const p = new PullRequest(1, 2, 30, inputs);
     expect(p.commentInReplyToId).toBeUndefined();
   });
+
+  it('normalizes invalid pull request and comment identifiers', () => {
+    const p = new PullRequest(1, 2, 30, {
+      pull_request: { number: 0 },
+      comment: { id: Number.NaN, in_reply_to_id: -1 },
+    });
+    expect(p.number).toBe(-1);
+    expect(p.commentId).toBe(-1);
+    expect(p.commentInReplyToId).toBeUndefined();
+  });
 });

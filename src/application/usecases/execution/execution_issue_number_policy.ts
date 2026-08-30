@@ -1,4 +1,5 @@
 import { INPUT_KEYS } from '../../../utils/constants';
+import { parsePositiveSafeInteger } from '../../../domain/positive_integer_policy';
 import { extractIssueNumberFromBranch, extractIssueNumberFromPush } from '../../../utils/title_utils';
 import type { ExecutionIssueResolutionContext } from '../../ports/execution_resolution_ports';
 import type { ExecutionIssueSetupPort } from '../../ports/execution_setup_ports';
@@ -6,10 +7,10 @@ import type { ExecutionIssueSetupPort } from '../../ports/execution_setup_ports'
 type IssueRepository = Pick<ExecutionIssueSetupPort, 'isPullRequest' | 'isIssue' | 'getHeadBranch'>;
 
 export function resolveEventIssueNumber(execution: ExecutionIssueResolutionContext): number | undefined {
-    if (execution.isIssue) return execution.issue.number;
-    if (execution.isPullRequest) return extractIssueNumberFromBranch(execution.pullRequest.head);
-    if (execution.isPush) return extractIssueNumberFromPush(execution.commit.branch);
-    return execution.issueNumber;
+    if (execution.isIssue) return positiveIssueNumberOrUndefined(execution.issue.number);
+    if (execution.isPullRequest) return positiveIssueNumberOrUndefined(extractIssueNumberFromBranch(execution.pullRequest.head));
+    if (execution.isPush) return positiveIssueNumberOrUndefined(extractIssueNumberFromPush(execution.commit.branch));
+    return positiveIssueNumberOrUndefined(execution.issueNumber);
 }
 
 export async function resolveSingleActionIssueNumber(
@@ -17,18 +18,27 @@ export async function resolveSingleActionIssueNumber(
     issueRepository: IssueRepository,
 ): Promise<number | undefined> {
     const configuredIssue = execution.inputs?.[INPUT_KEYS.SINGLE_ACTION_ISSUE];
-    if (configuredIssue) return setIssueNumber(execution, Number(configuredIssue));
-    if (execution.isIssue) return setIssueNumber(execution, execution.issue.number, 'issue');
-    if (execution.isPullRequest) return setIssueNumber(
+    if (configuredIssue !== undefined && configuredIssue !== null && String(configuredIssue).trim() !== '') {
+        const issueNumber = parsePositiveSafeInteger(configuredIssue);
+        return issueNumber === undefined ? undefined : setIssueNumber(execution, issueNumber);
+    }
+    if (execution.isIssue) {
+        const issueNumber = positiveIssueNumberOrUndefined(execution.issue.number);
+        return issueNumber === undefined ? undefined : setIssueNumber(execution, issueNumber, 'issue');
+    }
+    if (execution.isPullRequest) return setResolvedIssueNumber(
         execution,
         extractIssueNumberFromBranch(execution.pullRequest.head),
         'pullRequest',
     );
-    if (execution.isPush) return setIssueNumber(
+    if (execution.isPush) return setResolvedIssueNumber(
         execution,
         extractIssueNumberFromPush(execution.commit.branch),
         'push',
     );
+    // SingleAction uses zero as its explicit domain value for actions that do
+    // not need an issue. Do not query GitHub with that sentinel.
+    if (execution.singleAction.issue === 0) return undefined;
     return resolveConfiguredSingleAction(execution, issueRepository);
 }
 
@@ -37,6 +47,7 @@ async function resolveConfiguredSingleAction(
     issueRepository: IssueRepository,
 ): Promise<number | undefined> {
     const issueNumber = execution.singleAction.issue;
+    if (!positiveIssueNumberOrUndefined(issueNumber)) return undefined;
     const isPullRequest = await issueRepository.isPullRequest(
         execution.owner,
         execution.repo,
@@ -52,7 +63,7 @@ async function resolveConfiguredSingleAction(
     execution.singleAction.isPullRequest = isPullRequest;
     execution.singleAction.isIssue = isIssue;
     if (isIssue) return setIssueNumber(execution, issueNumber);
-    if (!isPullRequest) return execution.issueNumber;
+    if (!isPullRequest) return undefined;
 
     const head = await issueRepository.getHeadBranch(
         execution.owner,
@@ -60,7 +71,24 @@ async function resolveConfiguredSingleAction(
         issueNumber,
         execution.tokens.token,
     );
-    return head === undefined ? undefined : setIssueNumber(execution, extractIssueNumberFromBranch(head));
+    return head === undefined
+        ? undefined
+        : setResolvedIssueNumber(execution, extractIssueNumberFromBranch(head));
+}
+
+function setResolvedIssueNumber(
+    execution: ExecutionIssueResolutionContext,
+    issueNumber: number,
+    actionType?: 'issue' | 'pullRequest' | 'push',
+): number | undefined {
+    const resolvedIssueNumber = positiveIssueNumberOrUndefined(issueNumber);
+    return resolvedIssueNumber === undefined
+        ? undefined
+        : setIssueNumber(execution, resolvedIssueNumber, actionType);
+}
+
+function positiveIssueNumberOrUndefined(value: unknown): number | undefined {
+    return parsePositiveSafeInteger(value);
 }
 
 function setIssueNumber(

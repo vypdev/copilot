@@ -1,4 +1,5 @@
 import type { ExecutionInputs } from './execution_inputs';
+import { parsePositiveSafeInteger } from '../../domain/positive_integer_policy';
 
 export class Issue {
     reopenOnPush: boolean;
@@ -11,7 +12,7 @@ export class Issue {
     }
 
     get number(): number {
-        return this.inputs?.issue?.number ?? -1;
+        return parsePositiveSafeInteger(this.inputs?.issue?.number) ?? -1;
     }
 
     get creator(): string {
@@ -59,7 +60,7 @@ export class Issue {
     }
 
     get commentId(): number {
-        return this.inputs?.comment?.id ?? -1;
+        return parsePositiveSafeInteger(this.inputs?.comment?.id) ?? -1;
     }
 
     get commentBody(): string {

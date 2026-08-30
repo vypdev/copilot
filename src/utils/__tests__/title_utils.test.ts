@@ -24,6 +24,11 @@ describe('title_utils', () => {
       expect(extractIssueNumberFromBranch('')).toBe(-1);
       expect(extractIssueNumberFromBranch(undefined as unknown as string)).toBe(-1);
     });
+
+    it('rejects zero and unsafe identifiers', () => {
+      expect(extractIssueNumberFromBranch('feature/0-invalid')).toBe(-1);
+      expect(extractIssueNumberFromBranch('feature/9007199254740992-invalid')).toBe(-1);
+    });
   });
 
   describe('extractIssueNumberFromPush', () => {
@@ -35,6 +40,15 @@ describe('title_utils', () => {
     it('returns -1 when no match', () => {
       expect(extractIssueNumberFromPush('main')).toBe(-1);
       expect(extractIssueNumberFromPush('release/1.0.0')).toBe(-1);
+    });
+
+    it('handles an absent branch safely', () => {
+      expect(extractIssueNumberFromPush(undefined as unknown as string)).toBe(-1);
+    });
+
+    it('rejects zero and unsafe identifiers', () => {
+      expect(extractIssueNumberFromPush('feature/0-invalid')).toBe(-1);
+      expect(extractIssueNumberFromPush('feature/9007199254740992-invalid')).toBe(-1);
     });
   });
 });
