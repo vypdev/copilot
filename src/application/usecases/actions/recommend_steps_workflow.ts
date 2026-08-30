@@ -1,14 +1,10 @@
 import { isAgentConfigurationReady } from '../../../data/model/agent';
 import type { Execution } from '../../../data/model/execution';
 import { Result } from '../../../data/model/result';
-import type { RecommendationState } from '../../../data/model/recommendation_state';
 import { AGENT_PLAN } from '../../../application/policies/agent_task_policy';
 import {
     createIssueDescriptionFingerprint,
-    createRecommendationFingerprint,
     getVisibleIssueDescription,
-    isNoNewRecommendation,
-    limitStoredRecommendation,
 } from '../../../application/policies/recommendation_policy';
 import type { FindingsQueryPort } from '../../ports/agent_findings_ports';
 import type { IssueDescriptionQueryPort } from '../../ports/issue_description_ports';
@@ -16,6 +12,7 @@ import { getRecommendStepsPrompt } from '../../../prompts';
 import { logDebugInfo, logError, logInfo } from '../../ports/logging_ports';
 import { PROJECT_CONTEXT_INSTRUCTION } from '../../../utils/project_context_instruction';
 import { getTaskEmoji } from '../../../utils/task_emoji';
+import { buildRecommendationResult } from './recommend_steps_result_policy';
 
 export interface RecommendStepsWorkflowDependencies {
     issueDescriptionQueryPort: IssueDescriptionQueryPort;
@@ -78,51 +75,7 @@ export async function runRecommendStepsWorkflow(
             agentId: AGENT_PLAN,
             prompt,
         });
-        const steps = extractRecommendationText(response);
-        if (!steps) {
-            const error = new Error('The configured agent returned no recommendation.');
-            logError(error);
-            return [
-                new Result({
-                    id: taskId,
-                    success: false,
-                    executed: true,
-                    errors: [error],
-                }),
-            ];
-        }
-
-        logDebugInfo(
-            `RecommendSteps: agent response received. Steps length=${steps.length}. Full steps:\n${steps}`,
-        );
-        if (previousRecommendation && isNoNewRecommendation(steps)) {
-            updateDescriptionFingerprint(param, previousRecommendation, issueDescriptionFingerprint);
-            logInfo('RecommendSteps: agent found no material change; skipping recommendation comment.');
-            return [];
-        }
-
-        const recommendationFingerprint = createRecommendationFingerprint(steps);
-        if (previousRecommendation?.recommendationFingerprint === recommendationFingerprint) {
-            updateDescriptionFingerprint(param, previousRecommendation, issueDescriptionFingerprint);
-            logInfo('RecommendSteps: recommendation is unchanged; skipping recommendation comment.');
-            return [];
-        }
-
-        const recommendationState: RecommendationState = {
-            issueDescriptionFingerprint,
-            recommendationFingerprint,
-            recommendation: limitStoredRecommendation(steps),
-        };
-        return [
-            new Result({
-                id: taskId,
-                success: true,
-                executed: true,
-                stepFormat: 'markdown',
-                steps: ['## Recommended implementation steps', steps],
-                payload: { issueNumber, recommendedSteps: steps, recommendationState },
-            }),
-        ];
+        return buildRecommendationResult(param, taskId, response, issueDescriptionFingerprint, previousRecommendation, issueNumber);
     } catch (error) {
         logError(`Error in ${taskId}: ${error}`);
         return [
@@ -136,17 +89,6 @@ export async function runRecommendStepsWorkflow(
     }
 }
 
-function updateDescriptionFingerprint(
-    param: Execution,
-    previousRecommendation: RecommendationState,
-    issueDescriptionFingerprint: string,
-): void {
-    param.currentConfiguration.recommendationState = {
-        ...previousRecommendation,
-        issueDescriptionFingerprint,
-    };
-}
-
 function failure(taskId: string, message: string): Result {
     return new Result({
         id: taskId,
@@ -154,10 +96,4 @@ function failure(taskId: string, message: string): Result {
         executed: true,
         errors: [message],
     });
-}
-
-function extractRecommendationText(response: string | Record<string, unknown> | undefined): string {
-    if (typeof response === 'string') return response.trim();
-    if (!response || typeof response.steps !== 'string') return '';
-    return response.steps.trim();
 }

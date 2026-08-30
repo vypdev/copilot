@@ -3,10 +3,8 @@ import type { BugbotContextPorts } from '../../../../../application/ports/bugbot
 import type { GitCommitPort } from '../../../../../application/ports/git_ports';
 import { ParamUseCase } from '../../../base/param_usecase';
 import { Result } from '../../../../../data/model/result';
-import {
-    BugbotAutofixParam,
-    runBugbotAutofixWorkflow,
-} from './bugbot_autofix_workflow';
+import { runBugbotAutofixWorkflow } from './bugbot_autofix_workflow';
+import type { BugbotAutofixParam } from './bugbot_autofix_workflow';
 
 export type { BugbotAutofixParam } from './bugbot_autofix_workflow';
 

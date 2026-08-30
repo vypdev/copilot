@@ -3,6 +3,7 @@ import type { Execution } from "../../data/model/execution";
 import type { ExecutionConfigurationQuery } from "../../application/ports/execution_configuration_ports";
 import { logError } from "../../utils/logger";
 import { IssueContentInterface } from "./base/issue_content_interface";
+import { buildConfigurationPayload } from './configuration_payload_policy';
 
 
 export class ConfigurationHandler extends IssueContentInterface {
@@ -16,37 +17,8 @@ export class ConfigurationHandler extends IssueContentInterface {
 
     update = async (execution: Execution) => {
         try {
-            const current = execution.currentConfiguration;
-            const payload: Record<string, unknown> = {
-                branchType: current.branchType,
-                releaseBranch: current.releaseBranch,
-                workingBranch: current.workingBranch,
-                parentBranch: current.parentBranch,
-                hotfixOriginBranch: current.hotfixOriginBranch,
-                hotfixBranch: current.hotfixBranch,
-                branchConfiguration: current.branchConfiguration,
-                recommendationState: current.recommendationState,
-            };
-
             const storedRaw = await this.internalGetter(execution);
-            if (storedRaw != null && storedRaw.trim().length > 0) {
-                try {
-                    const stored = JSON.parse(storedRaw) as Record<string, unknown>;
-                    // Merge all fields from stored that are undefined in current payload
-                    for (const key in stored) {
-                        if (payload[key] === undefined && stored[key] !== undefined) {
-                            payload[key] = stored[key];
-                        }
-                    }
-                } catch {
-                    /* ignore parse errors, save current as-is */
-                }
-            }
-
-            // Ensure results is never saved to prevent payload bloat
-            delete payload['results'];
-
-            return await this.internalUpdate(execution, JSON.stringify(payload, null, 4));
+            return await this.internalUpdate(execution, buildConfigurationPayload(execution, storedRaw));
         } catch (error) {
             logError(`Error updating issue description: ${error}`);
             return undefined;
