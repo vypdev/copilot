@@ -57,6 +57,16 @@ describe('buildAgentTasks', () => {
         expect(cursor.command).toBe('agent -p --output-format text --model composer-1');
     });
 
+    it('accepts Cursor effort as advisory when a custom command has no provider-specific effort flag', () => {
+        expect(() => buildAgentTasks({
+            provider: 'cursor',
+            modelProvider: 'cursor',
+            model: 'composer-1',
+            effort: 'high',
+            command: 'agent -p --output-format text --model composer-1',
+        })).not.toThrow();
+    });
+
     it('rejects unsafe model and effort values before command construction', () => {
         expect(() => buildAgentTasks({ provider: 'codex', modelProvider: 'openai', model: 'gpt 5' })).toThrow('simple model identifier');
         expect(() => buildAgentTasks({ provider: 'codex', modelProvider: 'openai', model: 'gpt-5', effort: 'high; rm' })).toThrow('simple identifier');

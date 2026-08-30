@@ -53,6 +53,13 @@ function validateEffortSelection(configuration: AgentConfiguration, args: readon
         }
         return;
     }
+    if (configuration.provider === 'cursor') {
+        // Cursor's CLI does not expose a provider-independent effort flag.
+        // Keep the value in the domain configuration for future CLI support,
+        // but do not reject a valid custom command because of that advisory
+        // setting.
+        return;
+    }
     if (!hasFlag(args, '--variant')) {
         throw new Error('OpenCode command must select effort explicitly with --variant ... .');
     }
