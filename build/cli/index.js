@@ -65677,6 +65677,7 @@ exports.BranchCompareRepository = BranchCompareRepository;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BranchLifecycleRepository = void 0;
 const logger_1 = __nccwpck_require__(91151);
+const github_pagination_policy_1 = __nccwpck_require__(44812);
 class BranchLifecycleRepository {
     constructor(branchClient) {
         this.branchClient = branchClient;
@@ -65701,8 +65702,9 @@ class BranchLifecycleRepository {
             const maximumPages = 100;
             for (let page = 1; page <= maximumPages; page += 1) {
                 const { data } = await octokit.rest.repos.listBranches({ owner, repo: repository, per_page: 100, page });
-                allBranches.push(...data.map(branch => branch.name));
-                if (data.length < 100)
+                const branches = (0, github_pagination_policy_1.requireArrayPage)(data, 'repository branches');
+                allBranches.push(...branches.map(branch => branch.name));
+                if (branches.length < 100)
                     return allBranches;
             }
             throw new Error(`Branch pagination exceeded ${maximumPages} pages.`);
@@ -65957,6 +65959,29 @@ async function* paginateCursor(fetchPage, options = {}) {
 
 /***/ }),
 
+/***/ 44812:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.requireArrayPage = requireArrayPage;
+/**
+ * Validates the runtime shape of a paginated GitHub response before callers
+ * iterate over it. SDK types describe the happy path, but malformed adapter
+ * responses must fail with an actionable boundary error rather than an
+ * opaque `.filter`/`.map` TypeError.
+ */
+function requireArrayPage(data, operation) {
+    if (!Array.isArray(data)) {
+        throw new Error(`GitHub ${operation} response did not contain an array page.`);
+    }
+    return data;
+}
+
+
+/***/ }),
+
 /***/ 82726:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -66078,6 +66103,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueContentRepository = void 0;
 const comment_watermark_1 = __nccwpck_require__(23623);
 const logger_1 = __nccwpck_require__(91151);
+const github_pagination_policy_1 = __nccwpck_require__(44812);
 class IssueContentRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -66154,7 +66180,8 @@ class IssueContentRepository {
                 issue_number: issueNumber,
                 per_page: 100,
             })) {
-                for (const comment of response.data || []) {
+                const page = (0, github_pagination_policy_1.requireArrayPage)(response.data, 'issue comments');
+                for (const comment of page) {
                     all.push({
                         id: comment.id,
                         body: comment.body ?? null,
@@ -66181,6 +66208,7 @@ exports.IssueLabelProvisioningRepository = void 0;
 const initial_label_provisioning_policy_1 = __nccwpck_require__(73160);
 const logger_1 = __nccwpck_require__(91151);
 const github_error_policy_1 = __nccwpck_require__(58791);
+const github_pagination_policy_1 = __nccwpck_require__(44812);
 class IssueLabelProvisioningRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -66197,7 +66225,8 @@ class IssueLabelProvisioningRepository {
         this.listLabelsForRepo = async (client, owner, repository) => {
             const labels = [];
             for await (const page of client.paginate.iterator(client.rest.issues.listLabelsForRepo, { owner, repo: repository, per_page: 100 })) {
-                labels.push(...page.data.map(label => ({
+                const labelsPage = (0, github_pagination_policy_1.requireArrayPage)(page.data, 'repository labels');
+                labels.push(...labelsPage.map(label => ({
                     name: label.name,
                     color: label.color,
                     description: label.description ?? null,
@@ -67373,20 +67402,22 @@ exports.AuthenticatedUserRepository = AuthenticatedUserRepository;
 /***/ }),
 
 /***/ 84916:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.listOrganizationTeams = listOrganizationTeams;
 exports.listOrganizationTeamMembers = listOrganizationTeamMembers;
+const github_pagination_policy_1 = __nccwpck_require__(44812);
 async function listOrganizationTeams(client, organization) {
     const teams = [];
     for await (const response of client.paginate.iterator(client.rest.teams.list, {
         org: organization,
         per_page: 100,
     })) {
-        teams.push(...response.data.filter((team) => "slug" in team));
+        const page = (0, github_pagination_policy_1.requireArrayPage)(response.data, 'organization teams');
+        teams.push(...page.flatMap((team) => isTeam(team) ? [team] : []));
     }
     return teams;
 }
@@ -67397,9 +67428,19 @@ async function listOrganizationTeamMembers(client, organization, teamSlug) {
         team_slug: teamSlug,
         per_page: 100,
     })) {
-        members.push(...response.data.filter((member) => "login" in member));
+        const page = (0, github_pagination_policy_1.requireArrayPage)(response.data, 'organization team members');
+        members.push(...page.flatMap((member) => isMember(member) ? [member] : []));
     }
     return members;
+}
+function isTeam(value) {
+    return isRecord(value) && typeof value.slug === 'string';
+}
+function isMember(value) {
+    return isRecord(value) && typeof value.login === 'string';
+}
+function isRecord(value) {
+    return typeof value === 'object' && value !== null;
 }
 
 
@@ -67997,6 +68038,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestChangesRepository = void 0;
 const logger_1 = __nccwpck_require__(91151);
 const pull_request_review_errors_1 = __nccwpck_require__(46445);
+const github_pagination_policy_1 = __nccwpck_require__(44812);
 class PullRequestChangesRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -68073,7 +68115,7 @@ class PullRequestChangesRepository {
             pull_number: pullNumber,
             per_page: 100,
         })) {
-            allFiles.push(...(response.data ?? []));
+            allFiles.push(...(0, github_pagination_policy_1.requireArrayPage)(response.data, 'pull request files'));
         }
         return allFiles;
     }
@@ -68222,6 +68264,7 @@ PullRequestLifecycleRepository.IS_LINKED_FETCH_TIMEOUT_MS = 10000;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentCommandRepository = void 0;
 const pull_request_review_errors_1 = __nccwpck_require__(46445);
+const github_pagination_policy_1 = __nccwpck_require__(44812);
 const MAX_CONCURRENT_COMMENTS = 10;
 function chunkComments(comments) {
     const chunks = [];
@@ -68242,7 +68285,8 @@ class PullRequestReviewCommentCommandRepository {
         const client = this.queryClient.getClient(token);
         const bodies = new Set();
         for await (const page of client.paginate.iterator(client.rest.pulls.listReviewComments, { owner, repo: repository, pull_number: pullRequestNumber })) {
-            for (const comment of page.data) {
+            const comments = (0, github_pagination_policy_1.requireArrayPage)(page.data, 'existing pull request review comments');
+            for (const comment of comments) {
                 if (typeof comment.body === "string")
                     bodies.add(comment.body);
             }
@@ -68316,6 +68360,7 @@ exports.PullRequestReviewCommentCommandRepository = PullRequestReviewCommentComm
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentQueryRepository = void 0;
 const pull_request_review_errors_1 = __nccwpck_require__(46445);
+const github_pagination_policy_1 = __nccwpck_require__(44812);
 function toReviewComment(comment) {
     if (typeof comment.node_id !== "string" || comment.node_id.length === 0) {
         throw new Error("Review comment identity is unavailable.");
@@ -68342,7 +68387,7 @@ class PullRequestReviewCommentQueryRepository {
                 pull_number: pullRequestNumber,
                 per_page: 100,
             })) {
-                const page = response.data;
+                const page = (0, github_pagination_policy_1.requireArrayPage)(response.data, 'pull request review comments');
                 comments.push(...page.map(toReviewComment));
             }
             return comments;
@@ -68550,6 +68595,7 @@ exports.PullRequestReviewThreadRepository = PullRequestReviewThreadRepository;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewerRepository = void 0;
 const pull_request_review_errors_1 = __nccwpck_require__(46445);
+const github_pagination_policy_1 = __nccwpck_require__(44812);
 const COMPLETED_REVIEW_STATES = new Set([
     "APPROVED",
     "CHANGES_REQUESTED",
@@ -68612,12 +68658,13 @@ class PullRequestReviewerRepository {
     async listRequestedReviewers(client, parameters) {
         const { data } = await client.rest.pulls.listRequestedReviewers(parameters);
         const page = data;
-        return page.users.map(({ login }) => login);
+        return (0, github_pagination_policy_1.requireArrayPage)(page.users, 'requested pull request reviewers')
+            .map(({ login }) => login);
     }
     async listCompletedReviewers(client, parameters) {
         const reviewers = [];
         for await (const response of client.paginate.iterator(client.rest.pulls.listReviews, parameters)) {
-            const page = response.data;
+            const page = (0, github_pagination_policy_1.requireArrayPage)(response.data, 'pull request reviews');
             for (const review of page) {
                 if (review.user?.login &&
                     review.state != null &&
