@@ -103,6 +103,24 @@ describe('PublishResultUseCase', () => {
     expect(mockAddComment).not.toHaveBeenCalled();
   });
 
+  it('does not publish a reminder-only comment', async () => {
+    const param = baseParam({
+      isIssue: true,
+      release: { active: true },
+      images: {
+        ...baseParam().images,
+        issueReleaseGifs: ['release.gif'],
+      },
+      currentConfiguration: {
+        results: [new Result({ id: 'x', success: true, executed: true, steps: [], reminders: ['Remember this'] })],
+      },
+    });
+
+    await useCase.invoke(param);
+
+    expect(mockAddComment).not.toHaveBeenCalled();
+  });
+
   it('publishes failures even when a result has no steps', async () => {
     mockAddComment.mockResolvedValue(undefined);
     const param = baseParam({

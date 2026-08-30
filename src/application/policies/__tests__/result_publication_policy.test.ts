@@ -163,6 +163,7 @@ describe('result publication policy', () => {
   it('detects publishable sections independently of the title', () => {
     expect(hasPublishableContent({ content: '', footer: '', errors: '' }, '')).toBe(false);
     expect(hasPublishableContent({ content: '', footer: '', errors: '' }, 'debug')).toBe(false);
+    expect(hasPublishableContent({ content: '', footer: 'Reminder', errors: '' }, '')).toBe(false);
     expect(hasPublishableContent({ content: 'recommendation', footer: '', errors: '' }, 'debug')).toBe(true);
   });
 });

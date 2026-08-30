@@ -50550,10 +50550,11 @@ function hasPublishableContent(sections, debugLogSection) {
     // Debug output belongs in the job summary/logs. Publishing it as the only
     // result creates a comment with just the presentation GIF and metadata,
     // which can retrigger `issue_comment` workflows indefinitely.
+    // Reminders are supplementary guidance and must accompany primary result
+    // content; they are not a result by themselves.
     void debugLogSection;
     return sections.content.trim().length > 0
-        || sections.errors.trim().length > 0
-        || sections.footer.trim().length > 0;
+        || sections.errors.trim().length > 0;
 }
 
 
