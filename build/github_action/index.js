@@ -49684,6 +49684,7 @@ exports.TRANSLATED_COMMENT_MARKER = void 0;
 exports.hasTranslatedCommentMarker = hasTranslatedCommentMarker;
 exports.composeTranslatedComment = composeTranslatedComment;
 const untrusted_content_1 = __nccwpck_require__(67057);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 /** Opaque marker: it is metadata, not an instruction for another agent. */
 exports.TRANSLATED_COMMENT_MARKER = '<!-- copilot:translated-comment:v2 -->';
 const LEGACY_TRANSLATED_COMMENT_MARKER = '<!-- content_translated';
@@ -49705,8 +49706,8 @@ function composeTranslatedComment(translatedValue, originalComment) {
     const boundedTranslated = (0, untrusted_content_1.createUntrustedContent)(translated, 'agent.translation.output', MAX_TRANSLATED_COMMENT_LENGTH).text;
     if (!boundedTranslated.trim())
         return undefined;
-    const safeTranslated = neutralizeGithubControls(boundedTranslated);
-    const safeOriginal = escapeHtml(originalComment);
+    const safeTranslated = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(boundedTranslated, MAX_TRANSLATED_COMMENT_LENGTH);
+    const safeOriginal = (0, github_comment_publication_policy_1.escapeHtml)(originalComment);
     return {
         translatedText: safeTranslated,
         commentBody: [
@@ -49724,23 +49725,6 @@ function composeTranslatedComment(translatedValue, originalComment) {
             '',
         ].join('\n'),
     };
-}
-function neutralizeGithubControls(value) {
-    return value
-        .replace(/<!--/g, '&lt;!--')
-        .replace(/-->/g, '--&gt;')
-        // Keep the rendered text while preventing line-based bot commands.
-        .replace(/(^|\n)([ \t]*)\/(?!\/)/g, '$1$2\u200b/')
-        // Do not notify arbitrary users mentioned by a translation.
-        .replace(/@(?=[a-zA-Z0-9][a-zA-Z0-9-])/g, '@\u200b');
-}
-function escapeHtml(value) {
-    return value
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
 }
 
 
@@ -49820,6 +49804,44 @@ function buildDeploymentMergePlan(configuration) {
         ];
     }
     return [];
+}
+
+
+/***/ }),
+
+/***/ 72712:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.sanitizeAgentMarkdown = sanitizeAgentMarkdown;
+exports.escapeHtml = escapeHtml;
+const untrusted_content_1 = __nccwpck_require__(67057);
+/**
+ * Model output is untrusted too. Keep useful Markdown, but neutralize the
+ * GitHub automation surfaces that could create side effects when published.
+ */
+function sanitizeAgentMarkdown(raw, maxLength = 12000) {
+    if (typeof raw !== 'string')
+        return '';
+    const bounded = (0, untrusted_content_1.createUntrustedContent)(raw, 'agent.comment.output', maxLength).text;
+    return neutralizeGithubControls(bounded);
+}
+function escapeHtml(raw) {
+    return String(raw ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+function neutralizeGithubControls(value) {
+    return value
+        .replace(/<!--/g, '&lt;!--')
+        .replace(/-->/g, '--&gt;')
+        .replace(/(^|\n)([ \t]*)\/(?!\/)/g, '$1$2\u200b/')
+        .replace(/@(?=[a-zA-Z0-9][a-zA-Z0-9-])/g, '@\u200b');
 }
 
 
@@ -53733,6 +53755,7 @@ exports.replaceMarkerInBody = replaceMarkerInBody;
 exports.extractTitleFromBody = extractTitleFromBody;
 exports.buildCommentBody = buildCommentBody;
 const constants_1 = __nccwpck_require__(15415);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 /** Maximum lossless finding identity accepted by the marker contract. */
 exports.MAX_FINDING_ID_LENGTH = 200;
 /** Safe character set for finding IDs in regex (alphanumeric, path/segment chars). */
@@ -53813,22 +53836,27 @@ function extractTitleFromBody(body) {
 }
 /** Builds the visible comment body (title, severity, location, description, suggestion) plus the hidden marker for this finding. */
 function buildCommentBody(finding, resolved) {
-    const severity = finding.severity
-        ? `**Severity:** ${finding.severity}\n\n`
+    const safeTitle = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.title, 500) || "Potential problem";
+    const safeDescription = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.description, 8000) || "No description provided.";
+    const safeSeverity = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.severity, 32);
+    const safeFile = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.file, 500).replace(/`/g, "\\`");
+    const safeSuggestion = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.suggestion, 8000);
+    const severity = safeSeverity
+        ? `**Severity:** ${safeSeverity}\n\n`
         : "";
-    const fileLine = finding.file != null
-        ? `**Location:** \`${finding.file}${finding.line != null ? `:${finding.line}` : ""}\`\n\n`
+    const fileLine = safeFile
+        ? `**Location:** \`${safeFile}${finding.line != null ? `:${finding.line}` : ""}\`\n\n`
         : "";
-    const suggestion = finding.suggestion
-        ? `**Suggested fix:**\n${finding.suggestion}\n\n`
+    const suggestion = safeSuggestion
+        ? `**Suggested fix:**\n${safeSuggestion}\n\n`
         : "";
     const resolvedNote = resolved
         ? "\n\n---\n**Resolved** (no longer reported in latest analysis).\n"
         : "";
     const marker = buildMarker(finding.id, resolved, finding.fingerprint);
-    return `## ${finding.title}
+    return `## ${safeTitle}
 
-${severity}${fileLine}${finding.description}
+${severity}${fileLine}${safeDescription}
 ${suggestion}${resolvedNote}${marker}`;
 }
 
@@ -53952,11 +53980,32 @@ function prepareFindings(findings, ignorePatterns, minSeverityValue, maxComments
     return { ...(0, limit_comments_1.applyCommentLimit)(filteredFindings, maxComments), activeFindings: filteredFindings };
 }
 function normalizeFindings(findings) {
-    return (Array.isArray(findings) ? findings : []).flatMap(finding => {
-        const normalizedId = typeof finding?.id === 'string' ? (0, marker_1.normalizeFindingIdForMarker)(finding.id) : null;
+    return (Array.isArray(findings) ? findings : []).flatMap(value => {
+        if (!isRecord(value))
+            return [];
+        const normalizedId = typeof value.id === 'string' ? (0, marker_1.normalizeFindingIdForMarker)(value.id) : null;
+        const title = boundedText(value.title, 500);
+        const description = boundedText(value.description, 8000);
+        if (normalizedId == null || !title || !description)
+            return [];
+        const file = boundedText(value.file, 500) || undefined;
+        const line = typeof value.line === 'number' && Number.isSafeInteger(value.line) && value.line > 0
+            ? value.line
+            : undefined;
+        const severity = boundedText(value.severity, 32) || undefined;
+        const suggestion = boundedText(value.suggestion, 8000) || undefined;
         return normalizedId == null
             ? []
-            : [{ ...finding, id: normalizedId, fingerprint: (0, finding_identity_1.buildFindingFingerprint)(finding) }];
+            : [{
+                    id: normalizedId,
+                    title,
+                    description,
+                    ...(file ? { file } : {}),
+                    ...(line ? { line } : {}),
+                    ...(severity ? { severity } : {}),
+                    ...(suggestion ? { suggestion } : {}),
+                    fingerprint: (0, finding_identity_1.buildFindingFingerprint)({ file, line, title, description, suggestion }),
+                }];
     });
 }
 function normalizeResolvedFindingIds(findingIds) {
@@ -53966,6 +54015,14 @@ function normalizeResolvedFindingIds(findingIds) {
         const normalizedId = (0, marker_1.normalizeFindingIdForMarker)(findingId);
         return normalizedId == null ? [] : [normalizedId];
     }));
+}
+function boundedText(value, maxLength) {
+    if (typeof value !== 'string')
+        return '';
+    return value.normalize('NFKC').replace(/\r\n?/g, '\n').trim().slice(0, maxLength);
+}
+function isRecord(value) {
+    return value != null && typeof value === 'object' && !Array.isArray(value);
 }
 
 
