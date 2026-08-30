@@ -52741,19 +52741,29 @@ exports.parseIntegerInput = parseIntegerInput;
 exports.parseNonNegativeIntegerInput = parseNonNegativeIntegerInput;
 exports.parseBoundedPositiveIntegerInput = parseBoundedPositiveIntegerInput;
 function parseIntegerInput(value, fallback) {
-    const parsed = typeof value === 'number' ? value : Number.parseInt(String(value ?? ''), 10);
-    return Number.isFinite(parsed) ? parsed : fallback;
+    const parsed = parseStrictInteger(value);
+    return parsed ?? fallback;
 }
 function parseNonNegativeIntegerInput(value, fallback) {
-    const parsed = typeof value === 'number' ? value : Number.parseInt(String(value ?? ''), 10);
-    return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+    const parsed = parseStrictInteger(value);
+    return parsed !== undefined && parsed >= 0 ? parsed : fallback;
 }
 function parseBoundedPositiveIntegerInput(value, fallback, maximum) {
-    const parsed = typeof value === 'number' ? value : Number.parseInt(String(value ?? ''), 10);
-    if (!Number.isFinite(parsed) || parsed < 1) {
+    const parsed = parseStrictInteger(value);
+    if (parsed === undefined || parsed < 1) {
         return fallback;
     }
     return Math.min(parsed, maximum);
+}
+function parseStrictInteger(value) {
+    if (typeof value === 'number') {
+        return Number.isSafeInteger(value) ? value : undefined;
+    }
+    if (typeof value !== 'string' || !/^[+-]?\d+$/u.test(value.trim())) {
+        return undefined;
+    }
+    const parsed = Number(value.trim());
+    return Number.isSafeInteger(parsed) ? parsed : undefined;
 }
 
 
