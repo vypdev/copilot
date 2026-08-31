@@ -65362,6 +65362,12 @@ class ActivePreviousWorkflowRunsRepository {
         const names = workflowNames.length > 0 ? workflowNames : [query.workflowName];
         return (0, workflow_runs_retry_1.withWorkflowRunsRetry)(async () => {
             let activeRunCount = 0;
+            // Keep one complete sequential traversal: GitHub cannot safely express
+            // the seven shared workflow names, five active statuses, or the strict
+            // lower-ID predicate in this endpoint. Do not add provider filters or
+            // early-stop on page order; a matching run may occur on a later page.
+            // The residual cost is deep-history pagination, with retries restarting
+            // from page one, in exchange for an exact fail-closed count.
             for await (const response of this.client.paginate.iterator(method, parameters)) {
                 activeRunCount += extractWorkflowRuns(response)
                     .filter(run => isActivePreviousRun(run, query, names)).length;
@@ -65435,6 +65441,7 @@ exports.withWorkflowRunsRetry = withWorkflowRunsRetry;
 const workflow_queue_policy_1 = __nccwpck_require__(43193);
 exports.WORKFLOW_RUNS_RETRY_POLICY = {
     maximumAttempts: 5,
+    rateLimitMaximumAttempts: 5,
     initialDelayMilliseconds: 1000,
     backoffMultiplier: 2,
     maximumDelayMilliseconds: 30000,
@@ -65463,9 +65470,9 @@ function withWorkflowRunsRetry(operation, dependenciesOrDelayPort, legacyPolicy)
             },
             deadlineAtMilliseconds: Number.POSITIVE_INFINITY,
         };
-    return executeWithRetry(operation, dependencies, 1);
+    return executeWithRetry(operation, dependencies, 0, 0);
 }
-async function executeWithRetry(operation, dependencies, attempt) {
+async function executeWithRetry(operation, dependencies, transientFailures, rateLimitFailures) {
     if (dependencies.clock.nowMilliseconds() >= dependencies.deadlineAtMilliseconds) {
         throw new WorkflowQueueDeadlineError();
     }
@@ -65474,24 +65481,29 @@ async function executeWithRetry(operation, dependencies, attempt) {
     }
     catch (error) {
         const classification = classifyWorkflowRunsError(error, dependencies.clock);
-        if (!classification.retryable
-            || (classification.reason === 'transient' && attempt >= dependencies.policy.maximumAttempts)) {
+        const failureCount = classification.reason === 'rate_limit'
+            ? rateLimitFailures + 1
+            : transientFailures + 1;
+        const maximumAttempts = classification.reason === 'rate_limit'
+            ? dependencies.policy.rateLimitMaximumAttempts
+            : dependencies.policy.maximumAttempts;
+        if (!classification.retryable || failureCount >= maximumAttempts) {
             throw error;
         }
-        const delayMilliseconds = retryDelay(classification, attempt, dependencies);
+        const delayMilliseconds = retryDelay(classification, failureCount, dependencies);
         if (dependencies.clock.nowMilliseconds() + delayMilliseconds >= dependencies.deadlineAtMilliseconds) {
             throw new WorkflowQueueDeadlineError();
         }
         dependencies.observer?.providerRetry?.({
             reason: classification.reason,
-            attempt,
+            attempt: failureCount,
             delayMilliseconds,
             ...(classification.resetEpochSeconds === undefined
                 ? {}
                 : { resetEpochSeconds: classification.resetEpochSeconds }),
         });
         await dependencies.delayPort.wait(delayMilliseconds);
-        return executeWithRetry(operation, dependencies, attempt + 1);
+        return executeWithRetry(operation, dependencies, classification.reason === 'transient' ? failureCount : transientFailures, classification.reason === 'rate_limit' ? failureCount : rateLimitFailures);
     }
 }
 const TRANSIENT_NETWORK_ERRORS = new Set([
@@ -65534,7 +65546,9 @@ function classifyWorkflowRunsError(error, clock) {
         const resetEpochSeconds = parseEpochSeconds(header(headers, 'x-ratelimit-reset'));
         const resetDelay = resetEpochSeconds === undefined
             ? undefined
-            : Math.max(0, resetEpochSeconds * 1000 - clock.nowMilliseconds());
+            : resetEpochSeconds * 1000 > clock.nowMilliseconds()
+                ? resetEpochSeconds * 1000 - clock.nowMilliseconds()
+                : undefined;
         return {
             retryable: true,
             reason: 'rate_limit',
@@ -65571,11 +65585,13 @@ function parseRetryAfter(value, clock) {
     if (!value)
         return undefined;
     const seconds = Number(value);
-    if (Number.isFinite(seconds) && seconds >= 0)
-        return Math.round(seconds * 1000);
+    if (Number.isFinite(seconds)) {
+        const milliseconds = Math.round(seconds * 1000);
+        return milliseconds > 0 ? milliseconds : undefined;
+    }
     const timestamp = Date.parse(value);
-    return Number.isFinite(timestamp)
-        ? Math.max(0, timestamp - clock.nowMilliseconds())
+    return Number.isFinite(timestamp) && timestamp > clock.nowMilliseconds()
+        ? timestamp - clock.nowMilliseconds()
         : undefined;
 }
 function parseEpochSeconds(value) {

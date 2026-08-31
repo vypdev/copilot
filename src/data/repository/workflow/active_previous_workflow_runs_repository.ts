@@ -56,6 +56,12 @@ export class ActivePreviousWorkflowRunsRepository implements PreviousWorkflowRun
 
         return withWorkflowRunsRetry(async () => {
             let activeRunCount = 0;
+            // Keep one complete sequential traversal: GitHub cannot safely express
+            // the seven shared workflow names, five active statuses, or the strict
+            // lower-ID predicate in this endpoint. Do not add provider filters or
+            // early-stop on page order; a matching run may occur on a later page.
+            // The residual cost is deep-history pagination, with retries restarting
+            // from page one, in exchange for an exact fail-closed count.
             for await (const response of this.client.paginate.iterator(method, parameters)) {
                 activeRunCount += extractWorkflowRuns(response)
                     .filter(run => isActivePreviousRun(run, query, names)).length;

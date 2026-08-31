@@ -5,6 +5,8 @@ import type {
   GithubWorkflowRunsResponse,
 } from '../../../../infrastructure/github/ports/github_workflow_provider_ports';
 import { ActivePreviousWorkflowRunsRepository } from '../active_previous_workflow_runs_repository';
+import { COPILOT_WORKFLOW_NAMES } from '../../../../application/policies/workflow_queue_policy';
+import { WORKFLOW_ACTIVE_STATUSES } from '../../../../utils/constants';
 
 const listWorkflowRunsForRepo = jest.fn();
 const listWorkflowRuns = jest.fn();
@@ -81,6 +83,25 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
     expect(iterator).toHaveBeenCalledTimes(1);
   });
 
+  it('counts all seven shared workflow names and five active statuses across every page', async () => {
+    const runs = COPILOT_WORKFLOW_NAMES.flatMap((name, nameIndex) => WORKFLOW_ACTIVE_STATUSES.map((status, statusIndex) => workflowRun({
+      id: 1 + nameIndex * WORKFLOW_ACTIVE_STATUSES.length + statusIndex,
+      name,
+      status,
+    })));
+    iterator.mockImplementation(async function* () {
+      yield { data: { workflow_runs: runs.slice(0, 17) } } as GithubWorkflowRunsResponse;
+      yield { data: { workflow_runs: runs.slice(17) } } as GithubWorkflowRunsResponse;
+    });
+    const repository = new ActivePreviousWorkflowRunsRepository(client);
+
+    await expect(repository.countActivePreviousRuns({
+      ...query,
+      workflowNames: [...COPILOT_WORKFLOW_NAMES],
+    })).resolves.toBe(COPILOT_WORKFLOW_NAMES.length * WORKFLOW_ACTIVE_STATUSES.length);
+    expect(iterator).toHaveBeenCalledTimes(1);
+  });
+
   it('counts multiple earlier queue runs while excluding cancelled and skipped terminals', async () => {
     iterator.mockImplementation(async function* () {
       yield {
@@ -154,6 +175,7 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
     });
     const repository = new ActivePreviousWorkflowRunsRepository(client, retryDelayPort, {
       maximumAttempts: 3,
+      rateLimitMaximumAttempts: 5,
       initialDelayMilliseconds: 10,
       backoffMultiplier: 2,
       maximumDelayMilliseconds: 100,

@@ -36,6 +36,14 @@ describe('workflow runs retry policy', () => {
     expect(deps.observer.providerRetry).toHaveBeenCalledWith(expect.objectContaining({ reason: 'rate_limit' }));
   });
 
+  it('uses the bounded fallback when Retry-After is non-positive', async () => {
+    const operation = jest.fn().mockRejectedValueOnce({ status: 429, response: { headers: { 'retry-after': '0' } } }).mockResolvedValue('ok');
+    const deps = dependencies();
+
+    await expect(withWorkflowRunsRetry(operation, deps)).resolves.toBe('ok');
+    expect(deps.delayPort.wait).toHaveBeenCalledWith(60000);
+  });
+
   it('honors x-ratelimit-reset for a rate-limited 403', async () => {
     const operation = jest.fn().mockRejectedValueOnce({
       status: 403,
@@ -46,6 +54,17 @@ describe('workflow runs retry policy', () => {
     await expect(withWorkflowRunsRetry(operation, deps)).resolves.toBe('ok');
     expect(deps.delayPort.wait).toHaveBeenCalledWith(12000);
     expect(deps.observer.providerRetry).toHaveBeenCalledWith(expect.objectContaining({ resetEpochSeconds: 12 }));
+  });
+
+  it('uses the bounded fallback when x-ratelimit-reset is expired', async () => {
+    const operation = jest.fn().mockRejectedValueOnce({
+      status: 403,
+      response: { headers: { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '12' } },
+    }).mockResolvedValue('ok');
+    const deps = dependencies({ clock: { nowMilliseconds: jest.fn().mockReturnValue(13_000) } });
+
+    await expect(withWorkflowRunsRetry(operation, deps)).resolves.toBe('ok');
+    expect(deps.delayPort.wait).toHaveBeenCalledWith(60000);
   });
 
   it('classifies a message-based rate-limited 403 and retries it', async () => {
@@ -80,6 +99,33 @@ describe('workflow runs retry policy', () => {
 
     await expect(withWorkflowRunsRetry(operation, deps)).resolves.toBe('ok');
     expect(deps.delayPort.wait.mock.calls.map(([delay]: [number]) => delay)).toEqual([50, 250, 250]);
+  });
+
+  it('exhausts rate-limit retries independently and preserves the original provider error', async () => {
+    const providerError = { status: 429, message: 'rate-limited provider failure' };
+    let nowMilliseconds = 0;
+    const operation = jest.fn().mockRejectedValue(providerError);
+    const deps = dependencies({
+      clock: { nowMilliseconds: jest.fn(() => nowMilliseconds) },
+      delayPort: { wait: jest.fn(async (delay: number) => { nowMilliseconds += delay; }) },
+      deadlineAtMilliseconds: 1_000_000,
+    });
+
+    await expect(withWorkflowRunsRetry(operation, deps)).rejects.toBe(providerError);
+    expect(operation).toHaveBeenCalledTimes(5);
+    expect(deps.delayPort.wait).toHaveBeenCalledTimes(4);
+  });
+
+  it('keeps transient and rate-limit backoff counters independent', async () => {
+    const operation = jest.fn()
+      .mockRejectedValueOnce({ status: 503 })
+      .mockRejectedValueOnce({ status: 429 })
+      .mockResolvedValue('ok');
+    const deps = dependencies();
+
+    await expect(withWorkflowRunsRetry(operation, deps)).resolves.toBe('ok');
+    expect(deps.delayPort.wait.mock.calls.map(([delay]: [number]) => delay)).toEqual([1000, 60000]);
+    expect(deps.observer.providerRetry.mock.calls.map(([observation]) => observation.attempt)).toEqual([1, 1]);
   });
 
   it('exhausts transient retries without converting the provider failure to success', async () => {

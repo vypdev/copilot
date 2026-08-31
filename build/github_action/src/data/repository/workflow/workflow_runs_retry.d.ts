@@ -1,6 +1,7 @@
 import type { WorkflowPollingDelayPort, WorkflowPollingObserverPort, WorkflowPollingRandomPort, WorkflowQueueClockPort } from '../../../application/ports/workflow_run_ports';
 export interface WorkflowRunsRetryPolicy {
     maximumAttempts: number;
+    rateLimitMaximumAttempts: number;
     initialDelayMilliseconds: number;
     backoffMultiplier: number;
     maximumDelayMilliseconds: number;

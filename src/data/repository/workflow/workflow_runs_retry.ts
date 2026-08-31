@@ -11,6 +11,7 @@ import {
 
 export interface WorkflowRunsRetryPolicy {
     maximumAttempts: number;
+    rateLimitMaximumAttempts: number;
     initialDelayMilliseconds: number;
     backoffMultiplier: number;
     maximumDelayMilliseconds: number;
@@ -21,6 +22,7 @@ export interface WorkflowRunsRetryPolicy {
 
 export const WORKFLOW_RUNS_RETRY_POLICY: WorkflowRunsRetryPolicy = {
     maximumAttempts: 5,
+    rateLimitMaximumAttempts: 5,
     initialDelayMilliseconds: 1000,
     backoffMultiplier: 2,
     maximumDelayMilliseconds: 30000,
@@ -72,13 +74,14 @@ export function withWorkflowRunsRetry<T>(
             },
             deadlineAtMilliseconds: Number.POSITIVE_INFINITY,
         };
-    return executeWithRetry(operation, dependencies, 1);
+    return executeWithRetry(operation, dependencies, 0, 0);
 }
 
 async function executeWithRetry<T>(
     operation: () => Promise<T>,
     dependencies: WorkflowRunsRetryDependencies,
-    attempt: number,
+    transientFailures: number,
+    rateLimitFailures: number,
 ): Promise<T> {
     if (dependencies.clock.nowMilliseconds() >= dependencies.deadlineAtMilliseconds) {
         throw new WorkflowQueueDeadlineError();
@@ -88,25 +91,35 @@ async function executeWithRetry<T>(
         return await operation();
     } catch (error: unknown) {
         const classification = classifyWorkflowRunsError(error, dependencies.clock);
-        if (!classification.retryable
-            || (classification.reason === 'transient' && attempt >= dependencies.policy.maximumAttempts)) {
+        const failureCount = classification.reason === 'rate_limit'
+            ? rateLimitFailures + 1
+            : transientFailures + 1;
+        const maximumAttempts = classification.reason === 'rate_limit'
+            ? dependencies.policy.rateLimitMaximumAttempts
+            : dependencies.policy.maximumAttempts;
+        if (!classification.retryable || failureCount >= maximumAttempts) {
             throw error;
         }
 
-        const delayMilliseconds = retryDelay(classification, attempt, dependencies);
+        const delayMilliseconds = retryDelay(classification, failureCount, dependencies);
         if (dependencies.clock.nowMilliseconds() + delayMilliseconds >= dependencies.deadlineAtMilliseconds) {
             throw new WorkflowQueueDeadlineError();
         }
         dependencies.observer?.providerRetry?.({
             reason: classification.reason,
-            attempt,
+            attempt: failureCount,
             delayMilliseconds,
             ...(classification.resetEpochSeconds === undefined
                 ? {}
                 : { resetEpochSeconds: classification.resetEpochSeconds }),
         });
         await dependencies.delayPort.wait(delayMilliseconds);
-        return executeWithRetry(operation, dependencies, attempt + 1);
+        return executeWithRetry(
+            operation,
+            dependencies,
+            classification.reason === 'transient' ? failureCount : transientFailures,
+            classification.reason === 'rate_limit' ? failureCount : rateLimitFailures,
+        );
     }
 }
 
@@ -181,7 +194,9 @@ function classifyWorkflowRunsError(
         const resetEpochSeconds = parseEpochSeconds(header(headers, 'x-ratelimit-reset'));
         const resetDelay = resetEpochSeconds === undefined
             ? undefined
-            : Math.max(0, resetEpochSeconds * 1000 - clock.nowMilliseconds());
+            : resetEpochSeconds * 1000 > clock.nowMilliseconds()
+                ? resetEpochSeconds * 1000 - clock.nowMilliseconds()
+                : undefined;
         return {
             retryable: true,
             reason: 'rate_limit',
@@ -217,10 +232,13 @@ function header(headers: unknown, name: string): string | undefined {
 function parseRetryAfter(value: string | undefined, clock: WorkflowQueueClockPort): number | undefined {
     if (!value) return undefined;
     const seconds = Number(value);
-    if (Number.isFinite(seconds) && seconds >= 0) return Math.round(seconds * 1000);
+    if (Number.isFinite(seconds)) {
+        const milliseconds = Math.round(seconds * 1000);
+        return milliseconds > 0 ? milliseconds : undefined;
+    }
     const timestamp = Date.parse(value);
-    return Number.isFinite(timestamp)
-        ? Math.max(0, timestamp - clock.nowMilliseconds())
+    return Number.isFinite(timestamp) && timestamp > clock.nowMilliseconds()
+        ? timestamp - clock.nowMilliseconds()
         : undefined;
 }
 
