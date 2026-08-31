@@ -11,6 +11,14 @@ const workflowDirectories = [
 ];
 const QUEUE_WAIT_MINUTES = 90;
 const MIN_QUEUE_JOB_TIMEOUT_MINUTES = 120;
+function assertQueueBudget(queueWaitMinutes, minimumJobTimeoutMinutes) {
+  if (!Number.isFinite(queueWaitMinutes)
+    || !Number.isFinite(minimumJobTimeoutMinutes)
+    || minimumJobTimeoutMinutes < queueWaitMinutes) {
+    throw new Error(`minimum job timeout must be >= queue wait (${queueWaitMinutes}m).`);
+  }
+}
+assertQueueBudget(QUEUE_WAIT_MINUTES, MIN_QUEUE_JOB_TIMEOUT_MINUTES);
 const QUEUE_WORKFLOW_MANIFEST = Object.freeze([
   ['copilot_commit.yml', 'Copilot - Commit', 'copilot-commits'],
   ['copilot_issue.yml', 'Copilot - Issue', 'copilot-issues'],
@@ -140,6 +148,7 @@ module.exports = {
   MIN_QUEUE_JOB_TIMEOUT_MINUTES,
   QUEUE_WORKFLOW_MANIFEST,
   assertAgentInputs,
+  assertQueueBudget,
   assertQueueWorkflow,
   assertRunner,
   assertSequentialMutationWorkflow,

@@ -48,6 +48,52 @@ describe('workflow runs retry policy', () => {
     expect(deps.observer.providerRetry).toHaveBeenCalledWith(expect.objectContaining({ resetEpochSeconds: 12 }));
   });
 
+  it('classifies a message-based rate-limited 403 and retries it', async () => {
+    const operation = jest.fn()
+      .mockRejectedValueOnce({ status: 403, response: { data: { message: 'You have exceeded the secondary rate limit.' } } })
+      .mockResolvedValue('ok');
+    const deps = dependencies({
+      policy: { ...WORKFLOW_RUNS_RETRY_POLICY, jitterRatio: 0 },
+    });
+
+    await expect(withWorkflowRunsRetry(operation, deps)).resolves.toBe('ok');
+    expect(operation).toHaveBeenCalledTimes(2);
+    expect(deps.delayPort.wait).toHaveBeenCalledWith(60000);
+    expect(deps.observer.providerRetry).toHaveBeenCalledWith(expect.objectContaining({ reason: 'rate_limit' }));
+  });
+
+  it('uses bounded rate-limit fallback backoff with jitter and a cap', async () => {
+    const operation = jest.fn()
+      .mockRejectedValueOnce({ status: 429 })
+      .mockRejectedValueOnce({ status: 429 })
+      .mockRejectedValueOnce({ status: 429 })
+      .mockResolvedValue('ok');
+    const deps = dependencies({
+      random: { next: jest.fn().mockReturnValueOnce(0).mockReturnValueOnce(1).mockReturnValueOnce(1) },
+      policy: {
+        ...WORKFLOW_RUNS_RETRY_POLICY,
+        rateLimitInitialDelayMilliseconds: 100,
+        rateLimitMaximumDelayMilliseconds: 250,
+        jitterRatio: 0.5,
+      },
+    });
+
+    await expect(withWorkflowRunsRetry(operation, deps)).resolves.toBe('ok');
+    expect(deps.delayPort.wait.mock.calls.map(([delay]: [number]) => delay)).toEqual([50, 250, 250]);
+  });
+
+  it('exhausts transient retries without converting the provider failure to success', async () => {
+    const providerError = { statusCode: 503, message: 'transient provider failure' };
+    const operation = jest.fn().mockRejectedValue(providerError);
+    const deps = dependencies({
+      policy: { ...WORKFLOW_RUNS_RETRY_POLICY, maximumAttempts: 3, jitterRatio: 0 },
+    });
+
+    await expect(withWorkflowRunsRetry(operation, deps)).rejects.toBe(providerError);
+    expect(operation).toHaveBeenCalledTimes(3);
+    expect(deps.delayPort.wait.mock.calls.map(([delay]: [number]) => delay)).toEqual([1000, 2000]);
+  });
+
   it('does not retry an unrelated 403 and never converts failures to zero', async () => {
     const operation = jest.fn().mockRejectedValue({ status: 403, message: 'forbidden' });
     const deps = dependencies();

@@ -53303,6 +53303,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WorkflowQueueFailureError = exports.WORKFLOW_QUEUE_FAILURE_MESSAGE = void 0;
 exports.buildPreviousWorkflowRunsQuery = buildPreviousWorkflowRunsQuery;
 exports.waitForPreviousWorkflowRuns = waitForPreviousWorkflowRuns;
 exports.logWelcomeMessage = logWelcomeMessage;
@@ -53318,6 +53319,18 @@ const main_run_dispatcher_1 = __nccwpck_require__(28586);
 const workflow_context_1 = __nccwpck_require__(55224);
 const workflow_queue_composition_root_1 = __nccwpck_require__(21598);
 const workflow_queue_policy_1 = __nccwpck_require__(43193);
+exports.WORKFLOW_QUEUE_FAILURE_MESSAGE = 'Workflow queue check failed; sequential execution was not bypassed.';
+/**
+ * Keeps provider diagnostics out of the action's externally visible failure
+ * channel while preserving fail-closed queue behavior.
+ */
+class WorkflowQueueFailureError extends Error {
+    constructor() {
+        super(exports.WORKFLOW_QUEUE_FAILURE_MESSAGE);
+        this.name = 'WorkflowQueueFailureError';
+    }
+}
+exports.WorkflowQueueFailureError = WorkflowQueueFailureError;
 function buildPreviousWorkflowRunsQuery(repository) {
     const query = {
         owner: repository.owner,
@@ -53339,9 +53352,11 @@ async function waitForPreviousWorkflowRuns(execution, repository) {
     }
     await (0, workflow_queue_composition_root_1.createWaitForPreviousWorkflowRunsUseCase)(execution.tokens.token)
         .invoke(query)
-        .catch((error) => {
-        (0, logger_1.logError)(`Error waiting for previous runs: ${error}`);
-        throw error;
+        .catch(() => {
+        // Provider/Octokit errors can contain response bodies, URLs,
+        // headers, and credentials. Never interpolate or forward them.
+        (0, logger_1.logError)(exports.WORKFLOW_QUEUE_FAILURE_MESSAGE);
+        throw new WorkflowQueueFailureError();
     });
 }
 function logWelcomeMessage(execution) {

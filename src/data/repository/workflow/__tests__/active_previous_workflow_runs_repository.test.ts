@@ -81,6 +81,34 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
     expect(iterator).toHaveBeenCalledTimes(1);
   });
 
+  it('counts multiple earlier queue runs while excluding cancelled and skipped terminals', async () => {
+    iterator.mockImplementation(async function* () {
+      yield {
+        data: {
+          workflow_runs: [
+            workflowRun({ id: 199, name: 'Copilot - Issue', status: WORKFLOW_STATUS.IN_PROGRESS }),
+            workflowRun({ id: 198, name: 'Task - Release', status: WORKFLOW_STATUS.QUEUED }),
+            workflowRun({ id: 197, name: 'Copilot - Commit', status: WORKFLOW_STATUS.CANCELLED }),
+            workflowRun({ id: 196, name: 'Copilot - Pull Request', status: WORKFLOW_STATUS.SKIPPED }),
+            workflowRun({ id: 200, name: 'Copilot - Issue Comment', status: WORKFLOW_STATUS.IN_PROGRESS }),
+          ],
+        },
+      } as GithubWorkflowRunsResponse;
+    });
+    const repository = new ActivePreviousWorkflowRunsRepository(client);
+
+    await expect(repository.countActivePreviousRuns({
+      ...query,
+      workflowNames: [
+        'Copilot - Issue',
+        'Copilot - Issue Comment',
+        'Task - Release',
+        'Copilot - Commit',
+        'Copilot - Pull Request',
+      ],
+    })).resolves.toBe(2);
+  });
+
   it('supports both Octokit page shapes and the compatibility workflow endpoint', async () => {
     iterator.mockImplementation(async function* () {
       yield {
