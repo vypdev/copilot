@@ -12,6 +12,7 @@ import { buildActionSummary } from '../application/policies/action_summary_polic
 import { lifecycleStateFromLabels } from '../domain/copilot_lifecycle';
 import type { CopilotEvidencePort } from '../application/ports/copilot_evidence_ports';
 import { buildCopilotEvidence } from '../application/policies/copilot_evidence_policy';
+import type { ActionSummaryPort } from '../application/ports/action_summary_ports';
 
 export async function finishGithubAction(
     execution: Execution,
@@ -19,6 +20,7 @@ export async function finishGithubAction(
     issueNotificationPort: ConstructorParameters<typeof PublishResultUseCase>[0],
     configurationStorePort: ConfigurationStorePort,
     evidencePort?: CopilotEvidencePort,
+    summaryPort?: ActionSummaryPort,
 ): Promise<void> {
     const stepCount = results.reduce((acc, result) => acc + (result.steps?.length ?? 0), 0);
     const errorCount = results.reduce((acc, result) => acc + (result.errors?.length ?? 0), 0);
@@ -28,7 +30,7 @@ export async function finishGithubAction(
     await new PublishResultUseCase(issueNotificationPort, createLogReportAdapter()).invoke(execution);
     commitPublishedRecommendationState(execution, results);
     await new StoreConfigurationUseCase(configurationStorePort).invoke(execution);
-    const summary = await writeActionSummary(execution);
+    const summary = await writeActionSummary(execution, summaryPort);
     await publishCopilotEvidence(execution, results, summary, evidencePort);
     logInfo('Configuration stored. Finishing.');
 
@@ -37,7 +39,7 @@ export async function finishGithubAction(
     }
 }
 
-async function writeActionSummary(execution: Execution): Promise<string> {
+async function writeActionSummary(execution: Execution, summaryPort?: ActionSummaryPort): Promise<string> {
     const summaryText = buildActionSummary({
         owner: execution.owner,
         repository: execution.repo,
@@ -52,12 +54,9 @@ async function writeActionSummary(execution: Execution): Promise<string> {
         ),
         results: execution.currentConfiguration.results,
     });
-    const summary = core.summary;
-    if (!summary || typeof summary.addRaw !== 'function' || typeof summary.write !== 'function') return summaryText;
+    if (!summaryPort) return summaryText;
     try {
-        await summary
-            .addRaw(summaryText)
-            .write();
+        await summaryPort.publish(summaryText);
     } catch (error) {
         logInfo(`Could not write GitHub Actions summary: ${error instanceof Error ? error.message : String(error)}`);
     }

@@ -3,4 +3,5 @@ import { type Result } from '../data/model/result';
 import type { ConfigurationStorePort } from '../application/ports/configuration_store_ports';
 import { PublishResultUseCase } from '../application/usecases/steps/common/publish_resume_use_case';
 import type { CopilotEvidencePort } from '../application/ports/copilot_evidence_ports';
-export declare function finishGithubAction(execution: Execution, results: Result[], issueNotificationPort: ConstructorParameters<typeof PublishResultUseCase>[0], configurationStorePort: ConfigurationStorePort, evidencePort?: CopilotEvidencePort): Promise<void>;
+import type { ActionSummaryPort } from '../application/ports/action_summary_ports';
+export declare function finishGithubAction(execution: Execution, results: Result[], issueNotificationPort: ConstructorParameters<typeof PublishResultUseCase>[0], configurationStorePort: ConfigurationStorePort, evidencePort?: CopilotEvidencePort, summaryPort?: ActionSummaryPort): Promise<void>;

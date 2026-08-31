@@ -48248,6 +48248,7 @@ const constants_1 = __nccwpck_require__(15415);
 const logger_1 = __nccwpck_require__(91151);
 const lifecycle_state_composition_root_1 = __nccwpck_require__(4673);
 const copilot_evidence_composition_root_1 = __nccwpck_require__(64686);
+const github_action_summary_composition_root_1 = __nccwpck_require__(75305);
 async function runGitHubAction() {
     const eventInputs = (0, github_event_inputs_1.buildGithubActionEventInputs)({
         payload: github.context.payload,
@@ -48271,7 +48272,7 @@ async function runGitHubAction() {
         `AI PR description: ${execution.ai.getAiPullRequestDescription()}, bugbot min severity: ${execution.ai.getBugbotMinSeverity()}.`);
     const results = await (0, common_action_1.mainRun)(execution, projectBoard.command, new git_cli_repository_1.GitCliRepository(), (0, lifecycle_state_composition_root_1.createSynchronizeLifecycleStateUseCase)());
     const issueContentPort = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
-    await (0, github_action_completion_1.finishGithubAction)(execution, results, (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), new configuration_handler_1.ConfigurationHandler(issueContentPort), (0, copilot_evidence_composition_root_1.createCopilotEvidenceCompositionRoot)());
+    await (0, github_action_completion_1.finishGithubAction)(execution, results, (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), new configuration_handler_1.ConfigurationHandler(issueContentPort), (0, copilot_evidence_composition_root_1.createCopilotEvidenceCompositionRoot)(), (0, github_action_summary_composition_root_1.createGithubActionSummaryCompositionRoot)());
 }
 // Only auto-run when executed as the action entry (not when imported by tests)
 if (typeof process.env.JEST_WORKER_ID === 'undefined') {
@@ -48400,7 +48401,7 @@ const logger_adapter_1 = __nccwpck_require__(72762);
 const action_summary_policy_1 = __nccwpck_require__(72995);
 const copilot_lifecycle_1 = __nccwpck_require__(72418);
 const copilot_evidence_policy_1 = __nccwpck_require__(47632);
-async function finishGithubAction(execution, results, issueNotificationPort, configurationStorePort, evidencePort) {
+async function finishGithubAction(execution, results, issueNotificationPort, configurationStorePort, evidencePort, summaryPort) {
     const stepCount = results.reduce((acc, result) => acc + (result.steps?.length ?? 0), 0);
     const errorCount = results.reduce((acc, result) => acc + (result.errors?.length ?? 0), 0);
     (0, logger_1.logInfo)(`Publishing result: ${results.length} result(s), ${stepCount} step(s), ${errorCount} error(s).`);
@@ -48408,14 +48409,14 @@ async function finishGithubAction(execution, results, issueNotificationPort, con
     await new publish_resume_use_case_1.PublishResultUseCase(issueNotificationPort, (0, logger_adapter_1.createLogReportAdapter)()).invoke(execution);
     commitPublishedRecommendationState(execution, results);
     await new store_configuration_use_case_1.StoreConfigurationUseCase(configurationStorePort).invoke(execution);
-    const summary = await writeActionSummary(execution);
+    const summary = await writeActionSummary(execution, summaryPort);
     await publishCopilotEvidence(execution, results, summary, evidencePort);
     (0, logger_1.logInfo)('Configuration stored. Finishing.');
     if (execution.isSingleAction && execution.singleAction.throwError) {
         setFirstErrorIfExists(results);
     }
 }
-async function writeActionSummary(execution) {
+async function writeActionSummary(execution, summaryPort) {
     const summaryText = (0, action_summary_policy_1.buildActionSummary)({
         owner: execution.owner,
         repository: execution.repo,
@@ -48427,13 +48428,10 @@ async function writeActionSummary(execution) {
             : execution.labels?.currentIssueLabels ?? [], execution.labels?.lifecycle),
         results: execution.currentConfiguration.results,
     });
-    const summary = core.summary;
-    if (!summary || typeof summary.addRaw !== 'function' || typeof summary.write !== 'function')
+    if (!summaryPort)
         return summaryText;
     try {
-        await summary
-            .addRaw(summaryText)
-            .write();
+        await summaryPort.publish(summaryText);
     }
     catch (error) {
         (0, logger_1.logInfo)(`Could not write GitHub Actions summary: ${error instanceof Error ? error.message : String(error)}`);
@@ -65977,6 +65975,21 @@ function createSetupExecutionUseCase(latestTagQueryPort) {
 
 /***/ }),
 
+/***/ 75305:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createGithubActionSummaryCompositionRoot = createGithubActionSummaryCompositionRoot;
+const github_action_summary_adapter_1 = __nccwpck_require__(60029);
+function createGithubActionSummaryCompositionRoot() {
+    return new github_action_summary_adapter_1.GithubActionSummaryAdapter();
+}
+
+
+/***/ }),
+
 /***/ 30144:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -66635,6 +66648,63 @@ class GitCommitAdapter {
     }
 }
 exports.GitCommitAdapter = GitCommitAdapter;
+
+
+/***/ }),
+
+/***/ 60029:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GithubActionSummaryAdapter = void 0;
+const core = __importStar(__nccwpck_require__(81078));
+/** Writes an application-generated summary to the current GitHub Actions job. */
+class GithubActionSummaryAdapter {
+    constructor(summary = core.summary) {
+        this.summary = summary;
+    }
+    async publish(summaryText) {
+        if (!this.summary || typeof this.summary.addRaw !== 'function' || typeof this.summary.write !== 'function')
+            return;
+        await this.summary.addRaw(summaryText).write();
+    }
+}
+exports.GithubActionSummaryAdapter = GithubActionSummaryAdapter;
 
 
 /***/ }),
