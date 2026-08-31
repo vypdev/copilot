@@ -30,6 +30,14 @@ function execution(): Execution {
     } as unknown as Execution;
 }
 
+function singleActionExecution(isRecommendStepsAction = false): Execution {
+    return {
+        currentConfiguration: { results: [] },
+        isSingleAction: true,
+        singleAction: { throwError: true, isRecommendStepsAction },
+    } as unknown as Execution;
+}
+
 describe('finishGithubAction', () => {
     beforeEach(() => {
         jest.clearAllMocks();
@@ -74,6 +82,22 @@ describe('finishGithubAction', () => {
         await finishGithubAction(action, results, {} as never, {} as never);
 
         expect(action.currentConfiguration.recommendationState).toBeUndefined();
+    });
+
+    it('does not persist configuration for a non-stateful single action', async () => {
+        const action = singleActionExecution();
+
+        await finishGithubAction(action, [], {} as never, {} as never);
+
+        expect(mockStoreInvoke).not.toHaveBeenCalled();
+    });
+
+    it('persists configuration for the recommendation single action', async () => {
+        const action = singleActionExecution(true);
+
+        await finishGithubAction(action, [], {} as never, {} as never);
+
+        expect(mockStoreInvoke).toHaveBeenCalledWith(action);
     });
 
     it('publishes the summary only through the explicitly provided output port', async () => {

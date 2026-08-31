@@ -13,6 +13,7 @@ import { lifecycleStateFromLabels } from '../domain/copilot_lifecycle';
 import type { CopilotEvidencePort } from '../application/ports/copilot_evidence_ports';
 import { buildCopilotEvidence } from '../application/policies/copilot_evidence_policy';
 import type { ActionSummaryPort } from '../application/ports/action_summary_ports';
+import { shouldPersistConfiguration } from '../application/policies/configuration_persistence_policy';
 
 export async function finishGithubAction(
     execution: Execution,
@@ -29,10 +30,14 @@ export async function finishGithubAction(
     execution.currentConfiguration.results = results;
     await new PublishResultUseCase(issueNotificationPort, createLogReportAdapter()).invoke(execution);
     commitPublishedRecommendationState(execution, results);
-    await new StoreConfigurationUseCase(configurationStorePort).invoke(execution);
+    if (shouldPersistConfiguration(execution)) {
+        await new StoreConfigurationUseCase(configurationStorePort).invoke(execution);
+        logInfo('Configuration stored. Finishing.');
+    } else {
+        logInfo('Configuration persistence skipped: this single action does not modify execution configuration.');
+    }
     const summary = await writeActionSummary(execution, summaryPort);
     await publishCopilotEvidence(execution, results, summary, evidencePort);
-    logInfo('Configuration stored. Finishing.');
 
     if (execution.isSingleAction && execution.singleAction.throwError) {
         setFirstErrorIfExists(results);

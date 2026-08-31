@@ -48401,6 +48401,7 @@ const logger_adapter_1 = __nccwpck_require__(72762);
 const action_summary_policy_1 = __nccwpck_require__(72995);
 const copilot_lifecycle_1 = __nccwpck_require__(72418);
 const copilot_evidence_policy_1 = __nccwpck_require__(47632);
+const configuration_persistence_policy_1 = __nccwpck_require__(65388);
 async function finishGithubAction(execution, results, issueNotificationPort, configurationStorePort, evidencePort, summaryPort) {
     const stepCount = results.reduce((acc, result) => acc + (result.steps?.length ?? 0), 0);
     const errorCount = results.reduce((acc, result) => acc + (result.errors?.length ?? 0), 0);
@@ -48408,10 +48409,15 @@ async function finishGithubAction(execution, results, issueNotificationPort, con
     execution.currentConfiguration.results = results;
     await new publish_resume_use_case_1.PublishResultUseCase(issueNotificationPort, (0, logger_adapter_1.createLogReportAdapter)()).invoke(execution);
     commitPublishedRecommendationState(execution, results);
-    await new store_configuration_use_case_1.StoreConfigurationUseCase(configurationStorePort).invoke(execution);
+    if ((0, configuration_persistence_policy_1.shouldPersistConfiguration)(execution)) {
+        await new store_configuration_use_case_1.StoreConfigurationUseCase(configurationStorePort).invoke(execution);
+        (0, logger_1.logInfo)('Configuration stored. Finishing.');
+    }
+    else {
+        (0, logger_1.logInfo)('Configuration persistence skipped: this single action does not modify execution configuration.');
+    }
     const summary = await writeActionSummary(execution, summaryPort);
     await publishCopilotEvidence(execution, results, summary, evidencePort);
-    (0, logger_1.logInfo)('Configuration stored. Finishing.');
     if (execution.isSingleAction && execution.singleAction.throwError) {
         setFirstErrorIfExists(results);
     }
@@ -50005,6 +50011,31 @@ function composeTranslatedComment(translatedValue, originalComment) {
             '',
         ].join('\n'),
     };
+}
+
+
+/***/ }),
+
+/***/ 65388:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.shouldPersistConfiguration = shouldPersistConfiguration;
+/**
+ * Decides whether the completion phase has persistent execution state to save.
+ *
+ * Release/deployment single actions use the issue configuration as read-only
+ * context. Writing it back after every action is unnecessary and can race with
+ * the issue-comment workflow triggered by the action's own notification.
+ * Recommendation actions are the exception because they persist their
+ * fingerprint and latest recommendation in the hidden issue configuration.
+ */
+function shouldPersistConfiguration(execution) {
+    if (!execution.isSingleAction)
+        return true;
+    return execution.singleAction.isRecommendStepsAction;
 }
 
 
