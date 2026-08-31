@@ -30,6 +30,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+
       - name: Validate inputs
         env:
           VERSION: ${{ github.event.inputs.version }}
@@ -92,17 +97,17 @@ jobs:
           version: 10.12.4
           standalone: false
 
-      - name: Pull latest changes
-        run: |
-          git config user.email "efraespada@gmail.com"
-          git config user.name "Efra Espada"
-          git pull --no-ff --no-edit
-
       - name: Set up Node.js 24
         uses: actions/setup-node@v7
         with:
           node-version: '24.x'
           cache: pnpm
+
+      - name: Pull latest changes
+        run: |
+          git config user.email "efraespada@gmail.com"
+          git config user.name "Efra Espada"
+          git pull --no-ff --no-edit
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile

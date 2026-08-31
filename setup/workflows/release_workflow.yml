@@ -30,6 +30,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+
       - name: Validate inputs
         env:
           VERSION: ${{ github.event.inputs.version }}
