@@ -86,7 +86,7 @@ jobs:
   tag:
     name: Publish version
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 120
     needs: [ prepare-version-files ]
     permissions:
       contents: read

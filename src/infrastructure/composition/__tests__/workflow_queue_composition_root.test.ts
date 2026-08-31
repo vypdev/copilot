@@ -1,6 +1,6 @@
 import * as github from '@actions/github';
 import { createWaitForPreviousWorkflowRunsUseCase } from '../workflow_queue_composition_root';
-import { WORKFLOW_ACTIVE_STATUSES, WORKFLOW_STATUS } from '../../../utils/constants';
+
 
 jest.mock('@actions/github');
 
@@ -31,9 +31,8 @@ describe('workflow queue composition root', () => {
       owner: 'org',
       repo: 'repo',
       per_page: 100,
-      status: WORKFLOW_STATUS.IN_PROGRESS,
     });
-    expect(iterator).toHaveBeenCalledTimes(WORKFLOW_ACTIVE_STATUSES.length);
+    expect(iterator).toHaveBeenCalledTimes(1);
   });
 
   it('uses the workflow-scoped endpoint when the workflow identifier is available', async () => {
@@ -60,7 +59,6 @@ describe('workflow queue composition root', () => {
       owner: 'org',
       repo: 'repo',
       per_page: 100,
-      status: WORKFLOW_STATUS.IN_PROGRESS,
       workflow_id: 'copilot_issue.yml',
     });
     expect(iterator).not.toHaveBeenCalledWith(listWorkflowRunsForRepo, expect.anything());

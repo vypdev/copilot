@@ -2,103 +2,92 @@ import type {
     PreviousWorkflowRunsQuery,
     PreviousWorkflowRunsQueryPort,
     WorkflowPollingDelayPort,
+    WorkflowPollingObserverPort,
+    WorkflowPollingRandomPort,
+    WorkflowQueueClockPort,
+    WorkflowQueueRequestContext,
 } from '../../../application/ports/workflow_run_ports';
 import type {
     GithubWorkflowRunsClient,
     GithubWorkflowRun,
     GithubWorkflowRunsResponse,
-    GithubWorkflowRunsMethod,
 } from '../../../infrastructure/github/ports/github_workflow_provider_ports';
 import { WORKFLOW_ACTIVE_STATUSES } from '../../../utils/constants';
-import { withWorkflowRunsRetry, type WorkflowRunsRetryPolicy } from './workflow_runs_retry';
+import { withWorkflowRunsRetry, WORKFLOW_RUNS_RETRY_POLICY, type WorkflowRunsRetryPolicy } from './workflow_runs_retry';
 
-const DEFAULT_RETRY_POLICY: WorkflowRunsRetryPolicy = {
-    maximumAttempts: 5,
-    initialDelayMilliseconds: 1000,
-    backoffMultiplier: 2,
-    maximumDelayMilliseconds: 8000,
-};
-
-const NO_OP_DELAY_PORT: WorkflowPollingDelayPort = {
-    async wait(): Promise<void> {
-        return Promise.resolve();
-    },
-};
+const NO_OP_DELAY_PORT: WorkflowPollingDelayPort = { wait: async () => undefined };
+const SYSTEM_CLOCK: WorkflowQueueClockPort = { nowMilliseconds: () => Date.now() };
+const SYSTEM_RANDOM: WorkflowPollingRandomPort = { next: () => Math.random() };
 
 export class ActivePreviousWorkflowRunsRepository implements PreviousWorkflowRunsQueryPort {
     constructor(
         private readonly client: GithubWorkflowRunsClient,
         private readonly retryDelayPort: WorkflowPollingDelayPort = NO_OP_DELAY_PORT,
-        private readonly retryPolicy: WorkflowRunsRetryPolicy = DEFAULT_RETRY_POLICY,
+        private readonly retryPolicy: WorkflowRunsRetryPolicy = WORKFLOW_RUNS_RETRY_POLICY,
+        private readonly clock: WorkflowQueueClockPort = SYSTEM_CLOCK,
+        private readonly random: WorkflowPollingRandomPort = SYSTEM_RANDOM,
+        private readonly observer?: WorkflowPollingObserverPort,
     ) {}
 
-    async countActivePreviousRuns(query: PreviousWorkflowRunsQuery): Promise<number> {
-        const hasWorkflowScope = query.workflowNames?.some((name) => name.trim().length > 0) || query.workflowName.trim().length > 0;
-        if (!Number.isFinite(query.currentRunId) || !hasWorkflowScope) {
-            return 0;
-        }
-
-        let activeRunCount = 0;
-        for (const status of WORKFLOW_ACTIVE_STATUSES) {
-            activeRunCount += await this.countActiveRunsForStatus(query, status);
-        }
-
-        return activeRunCount;
-    }
-
-    private async countActiveRunsForStatus(
+    async countActivePreviousRuns(
         query: PreviousWorkflowRunsQuery,
-        status: string,
+        context: WorkflowQueueRequestContext = { deadlineAtMilliseconds: Number.POSITIVE_INFINITY },
     ): Promise<number> {
-        const useWorkflowEndpoint = Boolean(
-            query.workflowIdentifier
-            && (!query.workflowNames || query.workflowNames.length === 0)
-            && this.client.rest.actions.listWorkflowRuns,
-        );
-        const method: GithubWorkflowRunsMethod = useWorkflowEndpoint
-            ? this.client.rest.actions.listWorkflowRuns!
+        if (!Number.isSafeInteger(query.currentRunId)) {
+            throw new Error('GitHub workflow identity is unavailable; refusing to bypass sequential execution.');
+        }
+        const workflowNames = query.workflowNames?.filter(name => name.trim().length > 0) ?? [];
+        if (workflowNames.length === 0 && query.workflowName.trim().length === 0) {
+            throw new Error('GitHub workflow name is unavailable; refusing to bypass sequential execution.');
+        }
+        const method = query.workflowIdentifier && workflowNames.length === 0
+            ? this.client.rest.actions.listWorkflowRuns
             : this.client.rest.actions.listWorkflowRunsForRepo;
+        if (!method) throw new Error('GitHub workflow-scoped runs endpoint is unavailable.');
         const parameters = {
             owner: query.owner,
             repo: query.repository,
             per_page: 100,
-            status,
-            ...(useWorkflowEndpoint ? { workflow_id: query.workflowIdentifier } : {}),
+            ...(method === this.client.rest.actions.listWorkflowRuns && query.workflowIdentifier
+                ? { workflow_id: query.workflowIdentifier }
+                : {}),
         };
+        const names = workflowNames.length > 0 ? workflowNames : [query.workflowName];
 
         return withWorkflowRunsRetry(async () => {
             let activeRunCount = 0;
             for await (const response of this.client.paginate.iterator(method, parameters)) {
-                activeRunCount += countMatchingRuns(this.extractWorkflowRuns(response), query);
+                activeRunCount += extractWorkflowRuns(response)
+                    .filter(run => isActivePreviousRun(run, query, names)).length;
             }
             return activeRunCount;
-        }, this.retryDelayPort, this.retryPolicy);
+        }, {
+            delayPort: this.retryDelayPort,
+            clock: this.clock,
+            random: this.random,
+            observer: this.observer,
+            policy: this.retryPolicy,
+            deadlineAtMilliseconds: context.deadlineAtMilliseconds,
+        });
     }
-
-    private extractWorkflowRuns(response: GithubWorkflowRunsResponse): GithubWorkflowRun[] {
-        const data = response?.data;
-        if (Array.isArray(data)) {
-            return data;
-        }
-
-        if (data !== null && typeof data === 'object' && Array.isArray(data.workflow_runs)) {
-            return data.workflow_runs;
-        }
-
-        throw new Error('GitHub workflow runs response did not contain a workflow_runs array.');
-    }
-
 }
 
-function countMatchingRuns(runs: ReadonlyArray<GithubWorkflowRun>, query: PreviousWorkflowRunsQuery): number {
-    return runs.filter((run) => isActivePreviousRun(run, query)).length;
+function extractWorkflowRuns(response: GithubWorkflowRunsResponse): GithubWorkflowRun[] {
+    const data = response?.data;
+    if (Array.isArray(data)) return data;
+    if (data !== null && typeof data === 'object' && Array.isArray(data.workflow_runs)) {
+        return data.workflow_runs;
+    }
+    throw new Error('GitHub workflow runs response did not contain a workflow_runs array.');
 }
 
-function isActivePreviousRun(run: GithubWorkflowRun, query: PreviousWorkflowRunsQuery): boolean {
-    const workflowMatches = query.workflowNames && query.workflowNames.length > 0
-        ? query.workflowNames.includes(run.name ?? '')
-        : run.name === query.workflowName;
-    return workflowMatches
+function isActivePreviousRun(
+    run: GithubWorkflowRun,
+    query: PreviousWorkflowRunsQuery,
+    workflowNames: readonly string[],
+): boolean {
+    return typeof run.name === 'string'
+        && workflowNames.includes(run.name)
         && run.id < query.currentRunId
         && WORKFLOW_ACTIVE_STATUSES.includes(run.status ?? 'unknown');
 }

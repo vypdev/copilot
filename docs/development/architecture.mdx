@@ -16,3 +16,20 @@ The repository separates semantic application ports from provider-specific adapt
   provider-specific CLI adapters remain behind those ports.
 
 The application layer MUST NOT import GitHub SDKs, concrete CLIs, process libraries, or provider-specific protocols. Provider adapters MUST NOT define business policy. Configuration validation belongs at the boundary before execution. Prompt construction, untrusted-content handling, and GitHub publication sanitization are separate policies so no agent capability can bypass the security boundary.
+
+## Workflow queue boundary
+
+The repository-wide mutation queue is an application use case backed by semantic
+ports. `workflow_queue_policy.ts` owns the seven shared workflow names, the 90-minute
+queue budget, adaptive polling schedule, jitter bounds, and retry budgets. The use
+case receives a clock and random-value port so deadline and delay behavior remain
+deterministic in tests; concrete system clock/random and timer adapters are wired in
+`workflow_queue_composition_root.ts`.
+
+`ActivePreviousWorkflowRunsRepository` performs one paginated repository traversal
+per poll and filters workflow names, active statuses, and lower run IDs locally.
+Provider errors remain at the repository boundary: rate-limited 429/403 responses,
+transient HTTP/network failures, server wait headers, and malformed pages are
+classified there and never become a synthetic zero count. Retry logging exposes only
+sanitized reason, attempt, delay, and reset metadata. Queue-bearing jobs use a
+120-minute workflow timeout, leaving 30 minutes of headroom beyond the queue budget.

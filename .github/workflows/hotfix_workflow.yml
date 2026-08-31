@@ -138,7 +138,7 @@ jobs:
   tag:
     name: Publish version
     runs-on: [self-hosted, codex]
-    timeout-minutes: 30
+    timeout-minutes: 120
     needs: [ prepare-compiled-files ]
     env:
       AGENT_PROVIDER: ${{ vars.AGENT_PROVIDER || 'codex' }}
