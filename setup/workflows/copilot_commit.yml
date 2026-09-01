@@ -16,7 +16,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v5
 
-      - uses: vypdev/copilot@v2
+      - uses: vypdev/copilot@v3
         with:
           debug: ${{ vars.DEBUG }}
           project-ids: ${{ vars.PROJECT_IDS }}

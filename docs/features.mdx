@@ -134,8 +134,8 @@ the Action with the internal `queue-gate-only` mode and only the ephemeral
 `${{ github.token }}` read permissions; it admits the run and exits before project
 composition, agent provisioning, setup, or mutation work. The version-preparation and
 publication jobs depend on that gate transitively, so a failed or skipped admission
-cannot start a write-capable descendant. The setup templates use `vypdev/copilot@v2`
-for this gate and therefore require a published v2 bundle that supports
+cannot start a write-capable descendant. The setup templates use `vypdev/copilot@v3`
+for this gate and therefore require a published v3 bundle that supports
 `queue-gate-only`.
 
 This workflow-level gate is distinct from the ordinary Action-level queue wait: the

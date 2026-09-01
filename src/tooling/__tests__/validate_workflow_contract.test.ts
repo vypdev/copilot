@@ -195,7 +195,7 @@ describe('workflow contract validator', () => {
           permissions: { actions: 'read', contents: 'read' },
           steps: [
             { uses: 'actions/checkout@v5', with: { 'persist-credentials': false } },
-            { uses: 'vypdev/copilot@v2', with: { 'queue-gate-only': 'true', token: '${{ github.token }}' } },
+            { uses: 'vypdev/copilot@v3', with: { 'queue-gate-only': 'true', token: '${{ github.token }}' } },
           ],
         },
         'prepare-version-files': {

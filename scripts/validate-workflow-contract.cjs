@@ -232,7 +232,7 @@ function assertMutationWorkflow(file, workflow) {
     throw new Error(`${relativeFile} must define the exact gate-first job graph.`);
   }
   assertNoConcurrency(relativeFile, workflow);
-  assertQueueGateJob(file, workflow, setup ? 'vypdev/copilot@v2' : './');
+  assertQueueGateJob(file, workflow, setup ? 'vypdev/copilot@v3' : './');
   assertExactTimeout(relativeFile, 'queue-gate', workflow.jobs['queue-gate'], QUEUE_GATE_TIMEOUT_MINUTES);
   assertExactTimeout(relativeFile, 'prepare-version-files', workflow.jobs['prepare-version-files'], PREPARE_VERSION_TIMEOUT_MINUTES);
   assertExactNeeds(relativeFile, 'queue-gate', workflow.jobs['queue-gate'], []);
