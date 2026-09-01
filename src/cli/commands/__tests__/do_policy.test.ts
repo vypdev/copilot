@@ -54,7 +54,11 @@ describe('do command policy', () => {
   });
 
   it('collects only actionable authentication notices for each agent task', () => {
-    const tasks = buildDoAgentTasks({});
+    const tasks = buildDoAgentTasks({
+      agentCommand: 'codex exec --model gpt-5.6-luna --config model_provider=openai -',
+      findingsCommand: 'codex exec --model gpt-5.6-luna --config model_provider=openai -',
+      fixerCommand: 'codex exec --model gpt-5.6-luna --config model_provider=openai -',
+    });
     const runPreflight = jest.fn()
       .mockReturnValueOnce({ check: { status: 'missing', message: 'findings credentials missing' }, mode: 'warn', shouldFail: false })
       .mockReturnValueOnce({ check: { status: 'missing', message: 'fixer credentials missing' }, mode: 'required', shouldFail: true });

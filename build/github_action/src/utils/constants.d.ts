@@ -53,6 +53,7 @@ export declare const INPUT_KEYS: {
     readonly SINGLE_ACTION_TITLE: "single-action-title";
     readonly SINGLE_ACTION_CHANGELOG: "single-action-changelog";
     readonly TOKEN: "token";
+    readonly QUEUE_GATE_ONLY: "queue-gate-only";
     readonly AGENT_PROVIDER: "agent-provider";
     readonly AGENT_MODEL_PROVIDER: "agent-model-provider";
     readonly AGENT_EFFORT: "agent-effort";

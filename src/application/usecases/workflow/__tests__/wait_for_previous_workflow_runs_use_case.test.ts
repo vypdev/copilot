@@ -3,109 +3,146 @@ import type {
   PreviousWorkflowRunsQueryPort,
   WorkflowPollingDelayPort,
   WorkflowPollingObserverPort,
+  WorkflowPollingRandomPort,
+  WorkflowQueueClockPort,
 } from '../../../ports/workflow_run_ports';
+import { WORKFLOW_QUEUE_POLICY, type WorkflowPollingPolicy } from '../../../policies/workflow_queue_policy';
 import { WaitForPreviousWorkflowRunsUseCase } from '../wait_for_previous_workflow_runs_use_case';
 
 const query: PreviousWorkflowRunsQuery = {
   owner: 'org',
   repository: 'repo',
   currentRunId: 200,
-  workflowName: 'CI',
+  workflowName: 'Copilot - Issue',
 };
 
 function observer(): jest.Mocked<WorkflowPollingObserverPort> {
   return {
     noActivePreviousRuns: jest.fn(),
     waitingForPreviousRuns: jest.fn(),
+    providerRetry: jest.fn(),
   };
 }
 
+function policy(overrides: Partial<WorkflowPollingPolicy> = {}): WorkflowPollingPolicy {
+  return { ...WORKFLOW_QUEUE_POLICY, ...overrides };
+}
+
 describe('WaitForPreviousWorkflowRunsUseCase', () => {
-  it('returns immediately and reports when no previous runs are active', async () => {
+  it('queries immediately and reports when no previous runs are active', async () => {
     const queryPort: PreviousWorkflowRunsQueryPort = {
       countActivePreviousRuns: jest.fn().mockResolvedValue(0),
     };
     const delayPort: WorkflowPollingDelayPort = { wait: jest.fn() };
     const observerPort = observer();
-    const useCase = new WaitForPreviousWorkflowRunsUseCase(queryPort, delayPort, observerPort);
+    const clock: WorkflowQueueClockPort = { nowMilliseconds: () => 1000 };
+    const useCase = new WaitForPreviousWorkflowRunsUseCase(queryPort, delayPort, observerPort, policy(), clock, { next: () => 0.5 });
 
     await useCase.invoke(query);
 
-    expect(queryPort.countActivePreviousRuns).toHaveBeenCalledWith(query);
+    expect(queryPort.countActivePreviousRuns).toHaveBeenCalledWith(query, { deadlineAtMilliseconds: 5401000 });
     expect(delayPort.wait).not.toHaveBeenCalled();
     expect(observerPort.noActivePreviousRuns).toHaveBeenCalledTimes(1);
   });
 
-  it('reports and waits between queries until no previous run remains', async () => {
+  it('uses deterministic exponential polling capped at one minute', async () => {
     const queryPort: PreviousWorkflowRunsQueryPort = {
       countActivePreviousRuns: jest.fn()
         .mockResolvedValueOnce(2)
         .mockResolvedValueOnce(1)
-        .mockResolvedValueOnce(0),
-    };
-    const delayPort: WorkflowPollingDelayPort = { wait: jest.fn().mockResolvedValue(undefined) };
-    const observerPort = observer();
-    const useCase = new WaitForPreviousWorkflowRunsUseCase(queryPort, delayPort, observerPort, {
-      maximumAttempts: 3,
-      delayMilliseconds: 25,
-    });
-
-    await useCase.invoke(query);
-
-    expect(queryPort.countActivePreviousRuns).toHaveBeenCalledTimes(3);
-    expect(delayPort.wait).toHaveBeenNthCalledWith(1, 25);
-    expect(delayPort.wait).toHaveBeenNthCalledWith(2, 25);
-    expect(observerPort.waitingForPreviousRuns).toHaveBeenNthCalledWith(1, 2, 25);
-    expect(observerPort.waitingForPreviousRuns).toHaveBeenNthCalledWith(2, 1, 25);
-    expect(observerPort.noActivePreviousRuns).toHaveBeenCalledTimes(1);
-  });
-
-  it('uses the historical two-second polling interval by default', async () => {
-    const queryPort: PreviousWorkflowRunsQueryPort = {
-      countActivePreviousRuns: jest.fn()
         .mockResolvedValueOnce(1)
         .mockResolvedValueOnce(0),
     };
-    const delayPort: WorkflowPollingDelayPort = { wait: jest.fn().mockResolvedValue(undefined) };
+    const delays: number[] = [];
+    const delayPort: WorkflowPollingDelayPort = {
+      wait: jest.fn(async milliseconds => { delays.push(milliseconds); }),
+    };
     const observerPort = observer();
+    const useCase = new WaitForPreviousWorkflowRunsUseCase(
+      queryPort,
+      delayPort,
+      observerPort,
+      policy({ maximumQueueWaitMilliseconds: 10 * 60 * 1000 }),
+      { nowMilliseconds: () => 0 },
+      { next: () => 0.5 },
+    );
 
-    await new WaitForPreviousWorkflowRunsUseCase(queryPort, delayPort, observerPort).invoke(query);
+    await useCase.invoke(query);
 
-    expect(delayPort.wait).toHaveBeenCalledWith(2000);
-    expect(observerPort.waitingForPreviousRuns).toHaveBeenCalledWith(1, 2000);
+    expect(delays).toEqual([5000, 10000, 20000]);
+    expect(observerPort.waitingForPreviousRuns).toHaveBeenNthCalledWith(1, 2, 5000);
+    expect(observerPort.waitingForPreviousRuns).toHaveBeenNthCalledWith(2, 1, 10000);
   });
 
-  it('uses 2000 attempts by default', async () => {
+  it('continues polling through the configured delay cap before observing an empty queue', async () => {
+    const queryPort: PreviousWorkflowRunsQueryPort = {
+      countActivePreviousRuns: jest.fn()
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(1)
+        .mockResolvedValueOnce(0),
+    };
+    const delays: number[] = [];
+    const delayPort: WorkflowPollingDelayPort = {
+      wait: jest.fn(async milliseconds => { delays.push(milliseconds); }),
+    };
+    const observerPort = observer();
+    const useCase = new WaitForPreviousWorkflowRunsUseCase(
+      queryPort,
+      delayPort,
+      observerPort,
+      policy({ maximumQueueWaitMilliseconds: 10 * 60 * 1000 }),
+      { nowMilliseconds: () => 0 },
+      { next: () => 0.5 },
+    );
+
+    await useCase.invoke(query);
+
+    expect(delays).toEqual([5000, 10000, 20000, 40000, 60000, 60000, 60000]);
+    expect(queryPort.countActivePreviousRuns).toHaveBeenCalledTimes(8);
+    expect(observerPort.noActivePreviousRuns).toHaveBeenCalledTimes(1);
+  });
+
+  it('applies injected jitter and fails closed at the queue deadline', async () => {
     const queryPort: PreviousWorkflowRunsQueryPort = {
       countActivePreviousRuns: jest.fn().mockResolvedValue(1),
     };
     const delayPort: WorkflowPollingDelayPort = { wait: jest.fn().mockResolvedValue(undefined) };
     const observerPort = observer();
-    const useCase = new WaitForPreviousWorkflowRunsUseCase(queryPort, delayPort, observerPort);
+    let now = 0;
+    const clock: WorkflowQueueClockPort = { nowMilliseconds: () => now };
+    delayPort.wait = jest.fn(async milliseconds => { now += milliseconds; });
+    const useCase = new WaitForPreviousWorkflowRunsUseCase(
+      queryPort,
+      delayPort,
+      observerPort,
+      policy({ maximumQueueWaitMilliseconds: 10000 }),
+      clock,
+      { next: () => 0 },
+    );
 
     await expect(useCase.invoke(query)).rejects.toThrow('Timeout waiting for previous runs to finish.');
-
-    expect(queryPort.countActivePreviousRuns).toHaveBeenCalledTimes(2000);
-    expect(delayPort.wait).toHaveBeenCalledTimes(1999);
-    expect(delayPort.wait).toHaveBeenCalledWith(2000);
+    expect(delayPort.wait).toHaveBeenCalledWith(4000);
+    expect(observerPort.noActivePreviousRuns).not.toHaveBeenCalled();
   });
 
-  it('throws after the configured maximum number of active queries', async () => {
+  it('does not start a provider query after the deadline', async () => {
     const queryPort: PreviousWorkflowRunsQueryPort = {
-      countActivePreviousRuns: jest.fn().mockResolvedValue(1),
+      countActivePreviousRuns: jest.fn().mockResolvedValue(0),
     };
-    const delayPort: WorkflowPollingDelayPort = { wait: jest.fn().mockResolvedValue(undefined) };
     const observerPort = observer();
-    const useCase = new WaitForPreviousWorkflowRunsUseCase(queryPort, delayPort, observerPort, {
-      maximumAttempts: 3,
-      delayMilliseconds: 25,
-    });
-
-    await expect(useCase.invoke(query)).rejects.toThrow(
-      'Timeout waiting for previous runs to finish.',
-    );
-    expect(queryPort.countActivePreviousRuns).toHaveBeenCalledTimes(3);
-    expect(delayPort.wait).toHaveBeenCalledTimes(2);
-    expect(observerPort.waitingForPreviousRuns).toHaveBeenCalledTimes(2);
+    await expect(new WaitForPreviousWorkflowRunsUseCase(
+      queryPort,
+      { wait: jest.fn() },
+      observerPort,
+      policy({ maximumQueueWaitMilliseconds: 100 }),
+      { nowMilliseconds: jest.fn().mockReturnValueOnce(0).mockReturnValue(100) },
+      { next: () => 0.5 },
+    ).invoke(query)).rejects.toThrow('Timeout waiting for previous runs to finish.');
+    expect(queryPort.countActivePreviousRuns).not.toHaveBeenCalled();
   });
 });

@@ -8,12 +8,12 @@ jobs:
   copilot-pull-requests:
     name: Copilot - Pull Request
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 120
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v5
 
-      - uses: vypdev/copilot@v2
+      - uses: vypdev/copilot@v3
         with:
           ai-ignore-files: build/*
           debug: ${{ vars.DEBUG }}

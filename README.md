@@ -33,7 +33,7 @@ Full documentation: **[docs.page/vypdev/copilot](https://docs.page/vypdev/copilo
 1. **Create a PAT** and store it as a repo secret (e.g. `PAT`). See [Authentication](https://docs.page/vypdev/copilot/authentication).
 2. **Use the action** from the marketplace so versions are stable:
    ```yaml
-   uses: vypdev/copilot@v2
+   uses: vypdev/copilot@v3
    ```
 3. **Add workflows** — Copy the files from `setup/workflows/` into your `.github/workflows/`, or run **`copilot setup`** from your repo root (with `PERSONAL_ACCESS_TOKEN` in `.env`). See [How to use](https://docs.page/vypdev/copilot/how-to-use).
 
@@ -47,7 +47,7 @@ Full documentation: **[docs.page/vypdev/copilot](https://docs.page/vypdev/copilo
 - **Projects** — Link issues and PRs to boards and move them to the right columns.
 - **Single actions** — On-demand: check progress, think, create release/tag, mark deployed, etc.
 - **Evidence and safety** — Every run writes a bounded Job Summary; PR reviews expose a `Copilot / Review` Check Run, active findings fail that check, and all agent/comment content remains bounded and treated as untrusted data.
-- **Concurrency** — Waits for previous runs of the same workflow so runs can be sequential. See [Features → Workflow concurrency](https://docs.page/vypdev/copilot/features#workflow-concurrency-and-sequential-execution).
+- **Concurrency** — Uses a repository-wide application queue across the seven Copilot/Task mutation workflows. Polling is adaptive and rate-limit-aware, with a 90-minute queue deadline and no cancellation or overwrite of intermediate runs. See [Features → Workflow concurrency](https://docs.page/vypdev/copilot/features#workflow-concurrency-and-sequential-execution).
 
 AI features use the configured agent runtime and qualified model; see the [Agents](https://docs.page/vypdev/copilot/agents) and [Security & Operations](https://docs.page/vypdev/copilot/security-operations) documentation. You can run progress and Bugbot locally through the [Single actions → Workflow & CLI](https://docs.page/vypdev/copilot/single-actions/workflow-and-cli) path.
 
