@@ -19,6 +19,14 @@ git diff --check
 
 Tests MUST isolate environment variables such as `AGENT_PROVIDER`, `AGENT_MODEL_PROVIDER`, `AGENT_MODEL`, and `AGENT_COMMAND`. Real provider smoke tests are separate from deterministic unit tests and MUST NOT run without authorization and cost controls. Coverage thresholds are enforced by Jest and must not be reduced to accommodate a new code path; add focused tests instead.
 
+Workflow queue tests inject a clock, random source, and scheduler/delay port. They
+cover one repository traversal with mixed statuses and later-page matches, strict
+lower-ID/name filtering, malformed responses, fail-closed provider errors, 429 and
+rate-limited 403 headers, bounded fallback backoff/jitter, and the absolute deadline.
+The workflow contract test keeps the seven workflow names synchronized with the
+validator and verifies the `90m queue / 120m job` budget, required runners, action
+inputs, missing/short timeouts, and forbidden mutation-workflow concurrency.
+
 Architecture tests additionally verify that production imports remain acyclic,
 application code does not depend on concrete adapters, and pure model/policy
 code remains free of runtime, provider, and logging dependencies. Refresh the

@@ -11,4 +11,20 @@ export class LoggerWorkflowPollingObserverAdapter implements WorkflowPollingObse
             `⏳ Found ${activeRunCount} previous run(s) still active. Waiting ${delayMilliseconds / 1000}s...`,
         );
     }
+
+    providerRetry(observation: {
+        reason: 'rate_limit' | 'transient';
+        attempt: number;
+        delayMilliseconds: number;
+        resetEpochSeconds?: number;
+    }): void {
+        logDebugInfo('GitHub workflow polling retry scheduled.', false, {
+            reason: observation.reason,
+            attempt: observation.attempt,
+            delayMilliseconds: observation.delayMilliseconds,
+            ...(observation.resetEpochSeconds === undefined
+                ? {}
+                : { resetEpochSeconds: observation.resetEpochSeconds }),
+        });
+    }
 }

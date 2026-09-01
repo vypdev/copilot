@@ -11,6 +11,7 @@ jobs:
   copilot-commits:
     name: Copilot - Commit
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v5

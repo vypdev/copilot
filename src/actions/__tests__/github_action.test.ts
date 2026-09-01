@@ -4,6 +4,10 @@
  */
 
 import * as core from '@actions/core';
+import * as projectBoardCompositionRoot from '../../infrastructure/composition/project_board_composition_root';
+import * as executionBuilder from '../github_action_execution';
+import * as agentRuntime from '../github_action_runtime';
+import * as actionCompletion from '../github_action_completion';
 import { runGitHubAction } from '../github_action';
 import { ACTIONS, INPUT_KEYS } from '../../utils/constants';
 
@@ -33,6 +37,17 @@ jest.mock('../common_action', () => ({
   mainRun: (...args: unknown[]) => mockMainRun(...args),
 }));
 
+const mockWaitForPreviousWorkflowRuns = jest.fn();
+jest.mock('../main_run_lifecycle', () => ({
+  WORKFLOW_QUEUE_FAILURE_MESSAGE: 'Workflow queue check failed; sequential execution was not bypassed.',
+  WorkflowQueueFailureError: class WorkflowQueueFailureError extends Error {
+    constructor() {
+      super('Workflow queue check failed; sequential execution was not bypassed.');
+    }
+  },
+  waitForPreviousWorkflowRuns: (...args: unknown[]) => mockWaitForPreviousWorkflowRuns(...args),
+}));
+
 const mockProvision = jest.fn();
 jest.mock('../../data/repository/agent_cli_provisioner', () => ({
   AgentCliProvisioner: jest.fn().mockImplementation(() => ({ provision: mockProvision })),
@@ -54,6 +69,11 @@ jest.mock('../../data/repository/project/project_board_query_repository', () => 
   })),
 }));
 
+const projectCompositionSpy = jest.spyOn(projectBoardCompositionRoot, 'createProjectBoardCompositionRoot');
+const executionBuilderSpy = jest.spyOn(executionBuilder, 'buildGithubActionExecution');
+const agentProvisioningSpy = jest.spyOn(agentRuntime, 'prepareGithubAgentRuntime');
+const finishActionSpy = jest.spyOn(actionCompletion, 'finishGithubAction');
+
 describe('runGitHubAction', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -65,6 +85,7 @@ describe('runGitHubAction', () => {
     mockMainRun.mockResolvedValue([]);
     mockPublishInvoke.mockResolvedValue([]);
     mockStoreInvoke.mockResolvedValue([]);
+    mockWaitForPreviousWorkflowRuns.mockResolvedValue(undefined);
   });
 
   it('builds Execution and calls mainRun', async () => {
@@ -80,6 +101,50 @@ describe('runGitHubAction', () => {
     expect(execution.owner).toBe('test-owner');
     expect(execution.repo).toBe('test-repo');
     expect(execution.actor).toBe('test-actor');
+  });
+
+  it('admits a queue-gate-only run before project composition or execution construction', async () => {
+    (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
+      if (key === INPUT_KEYS.QUEUE_GATE_ONLY) return 'true';
+      if (opts?.required && key === INPUT_KEYS.TOKEN) return 'github-token';
+      return '';
+    });
+
+    await runGitHubAction();
+
+    expect(mockWaitForPreviousWorkflowRuns).toHaveBeenCalledWith(
+      'github-token',
+      { owner: 'test-owner', repo: 'test-repo' },
+    );
+    expect(mockMainRun).not.toHaveBeenCalled();
+    expect(projectCompositionSpy).not.toHaveBeenCalled();
+    expect(executionBuilderSpy).not.toHaveBeenCalled();
+    expect(agentProvisioningSpy).not.toHaveBeenCalled();
+    expect(finishActionSpy).not.toHaveBeenCalled();
+    expect(mockGetProjectDetail).not.toHaveBeenCalled();
+    expect(mockPublishInvoke).not.toHaveBeenCalled();
+    expect(mockStoreInvoke).not.toHaveBeenCalled();
+  });
+
+  it('fails a queue-gate-only run closed with the canonical sanitized error', async () => {
+    mockWaitForPreviousWorkflowRuns.mockRejectedValue(new Error('provider response body and token should not escape'));
+    (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
+      if (key === INPUT_KEYS.QUEUE_GATE_ONLY) return 'true';
+      if (opts?.required && key === INPUT_KEYS.TOKEN) return 'github-token';
+      return '';
+    });
+
+    await expect(runGitHubAction()).rejects.toThrow(
+      'Workflow queue check failed; sequential execution was not bypassed.',
+    );
+    expect(mockMainRun).not.toHaveBeenCalled();
+    expect(projectCompositionSpy).not.toHaveBeenCalled();
+    expect(executionBuilderSpy).not.toHaveBeenCalled();
+    expect(agentProvisioningSpy).not.toHaveBeenCalled();
+    expect(finishActionSpy).not.toHaveBeenCalled();
+    expect(mockGetProjectDetail).not.toHaveBeenCalled();
+    expect(mockPublishInvoke).not.toHaveBeenCalled();
+    expect(mockStoreInvoke).not.toHaveBeenCalled();
   });
 
 

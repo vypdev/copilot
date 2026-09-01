@@ -425,12 +425,30 @@ describe('mainRun', () => {
     expect(results).toEqual([]);
   });
 
-  it('propagates workflow queue errors when polling rejects and welcome is false', async () => {
-    mockWaitForPreviousWorkflowRunsInvoke.mockRejectedValue(new Error('Queue error'));
+  it('propagates a canonical queue failure without exposing provider diagnostics', async () => {
+    const markers = [
+      'provider-message-marker',
+      'response-body-marker',
+      'https://api.example.test/repos/org/repo?token=url-marker',
+      'authorization-header-marker',
+      'credential-marker',
+    ];
+    const providerError = Object.assign(new Error(markers.join(' ')), {
+      response: {
+        data: { message: markers[1] },
+        headers: { authorization: markers[3], location: markers[2] },
+      },
+      request: { headers: { authorization: markers[3] } },
+    });
+    mockWaitForPreviousWorkflowRunsInvoke.mockRejectedValue(providerError);
     const execution = mockExecution({ welcome: undefined });
 
-    await expect(runMain(execution)).rejects.toThrow('Queue error');
+    await expect(runMain(execution)).rejects.toThrow(
+      'Workflow queue check failed; sequential execution was not bypassed.',
+    );
 
-    expect(logger.logError).toHaveBeenCalledWith('Error waiting for previous runs: Error: Queue error');
+    const logCalls = logger.logError.mock.calls.flat().map(String).join('\n');
+    expect(logCalls).toContain('Workflow queue check failed; sequential execution was not bypassed.');
+    for (const marker of markers) expect(logCalls).not.toContain(marker);
   });
 });

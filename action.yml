@@ -414,6 +414,9 @@ inputs:
   token:
     description: "Fine-grained personal access token for branch and project operations"
     required: true
+  queue-gate-only:
+    description: "Admit this workflow to the sequential queue and return before constructing or executing a project action."
+    default: "false"
   agent-provider:
     description: "Single agent provider used by findings and fixer tasks: codex, opencode, or cursor. A provider failure is terminal; no fallback provider is attempted."
     default: "codex"

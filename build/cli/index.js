@@ -52564,7 +52564,7 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, l
     (0, logger_1.logDebugInfo)(`Event: ${execution.eventName}, actor: ${execution.actor}, repo: ${repository.owner}/${repository.repo}, debug: ${execution.debug}`);
     if (!execution.welcome) {
         // Queue before setup or route work so executions cannot overlap mutations.
-        await (0, main_run_lifecycle_1.waitForPreviousWorkflowRuns)(execution, repository);
+        await (0, main_run_lifecycle_1.waitForPreviousWorkflowRuns)(execution.tokens.token, repository);
     }
     await (0, execution_setup_composition_root_1.createSetupExecutionUseCase)(latestTagQueryPort).invoke(execution);
     (0, logger_1.clearAccumulatedLogs)();
@@ -53303,6 +53303,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WorkflowQueueFailureError = exports.WORKFLOW_QUEUE_FAILURE_MESSAGE = void 0;
 exports.buildPreviousWorkflowRunsQuery = buildPreviousWorkflowRunsQuery;
 exports.waitForPreviousWorkflowRuns = waitForPreviousWorkflowRuns;
 exports.logWelcomeMessage = logWelcomeMessage;
@@ -53318,6 +53319,18 @@ const main_run_dispatcher_1 = __nccwpck_require__(28586);
 const workflow_context_1 = __nccwpck_require__(55224);
 const workflow_queue_composition_root_1 = __nccwpck_require__(21598);
 const workflow_queue_policy_1 = __nccwpck_require__(43193);
+exports.WORKFLOW_QUEUE_FAILURE_MESSAGE = 'Workflow queue check failed; sequential execution was not bypassed.';
+/**
+ * Keeps provider diagnostics out of the action's externally visible failure
+ * channel while preserving fail-closed queue behavior.
+ */
+class WorkflowQueueFailureError extends Error {
+    constructor() {
+        super(exports.WORKFLOW_QUEUE_FAILURE_MESSAGE);
+        this.name = 'WorkflowQueueFailureError';
+    }
+}
+exports.WorkflowQueueFailureError = WorkflowQueueFailureError;
 function buildPreviousWorkflowRunsQuery(repository) {
     const query = {
         owner: repository.owner,
@@ -53332,16 +53345,18 @@ function buildPreviousWorkflowRunsQuery(repository) {
     }
     return query;
 }
-async function waitForPreviousWorkflowRuns(execution, repository) {
+async function waitForPreviousWorkflowRuns(token, repository) {
     const query = buildPreviousWorkflowRunsQuery(repository);
     if (process.env.GITHUB_ACTIONS === 'true' && !Number.isSafeInteger(query.currentRunId)) {
         throw new Error('GitHub workflow identity is unavailable; refusing to bypass sequential execution.');
     }
-    await (0, workflow_queue_composition_root_1.createWaitForPreviousWorkflowRunsUseCase)(execution.tokens.token)
+    await (0, workflow_queue_composition_root_1.createWaitForPreviousWorkflowRunsUseCase)(token)
         .invoke(query)
-        .catch((error) => {
-        (0, logger_1.logError)(`Error waiting for previous runs: ${error}`);
-        throw error;
+        .catch(() => {
+        // Provider/Octokit errors can contain response bodies, URLs,
+        // headers, and credentials. Never interpolate or forward them.
+        (0, logger_1.logError)(exports.WORKFLOW_QUEUE_FAILURE_MESSAGE);
+        throw new WorkflowQueueFailureError();
     });
 }
 function logWelcomeMessage(execution) {
@@ -54553,7 +54568,9 @@ function calculateReviewersStillNeeded(desiredCount, currentCount, confirmedCoun
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.COPILOT_WORKFLOW_NAMES = void 0;
+exports.WORKFLOW_QUEUE_POLICY = exports.COPILOT_WORKFLOW_NAMES = void 0;
+exports.calculateWorkflowPollingDelay = calculateWorkflowPollingDelay;
+exports.calculateJitteredWorkflowDelay = calculateJitteredWorkflowDelay;
 /**
  * Workflows that execute the Copilot action and therefore share its
  * repository mutation queue. Keep these names aligned with workflow `name`
@@ -54568,6 +54585,22 @@ exports.COPILOT_WORKFLOW_NAMES = [
     'Task - Hotfix',
     'Task - Release',
 ];
+exports.WORKFLOW_QUEUE_POLICY = {
+    maximumQueueWaitMilliseconds: 90 * 60 * 1000,
+    initialDelayMilliseconds: 5 * 1000,
+    backoffMultiplier: 2,
+    maximumDelayMilliseconds: 60 * 1000,
+    jitterRatio: 0.2,
+};
+function calculateWorkflowPollingDelay(pollIndex, randomValue, policy = exports.WORKFLOW_QUEUE_POLICY) {
+    const baseDelay = Math.min(policy.initialDelayMilliseconds * policy.backoffMultiplier ** pollIndex, policy.maximumDelayMilliseconds);
+    return calculateJitteredWorkflowDelay(baseDelay, randomValue, policy);
+}
+function calculateJitteredWorkflowDelay(baseDelayMilliseconds, randomValue, policy) {
+    const boundedRandom = Math.min(1, Math.max(0, randomValue));
+    const jitter = (boundedRandom * 2 - 1) * policy.jitterRatio;
+    return Math.min(policy.maximumDelayMilliseconds, Math.max(0, Math.round(baseDelayMilliseconds * (1 + jitter))));
+}
 
 
 /***/ }),
@@ -62632,37 +62665,50 @@ exports.CheckPullRequestCommentLanguageUseCase = CheckPullRequestCommentLanguage
 /***/ }),
 
 /***/ 38301:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WaitForPreviousWorkflowRunsUseCase = void 0;
-const DEFAULT_POLICY = {
-    maximumAttempts: 2000,
-    delayMilliseconds: 2000,
-};
+const workflow_queue_policy_1 = __nccwpck_require__(43193);
+const SYSTEM_CLOCK = { nowMilliseconds: () => Date.now() };
+const SYSTEM_RANDOM = { next: () => Math.random() };
 class WaitForPreviousWorkflowRunsUseCase {
-    constructor(queryPort, delayPort, observerPort, policy = DEFAULT_POLICY) {
+    constructor(queryPort, delayPort, observerPort, policy = workflow_queue_policy_1.WORKFLOW_QUEUE_POLICY, clock = SYSTEM_CLOCK, random = SYSTEM_RANDOM) {
         this.queryPort = queryPort;
         this.delayPort = delayPort;
         this.observerPort = observerPort;
         this.policy = policy;
+        this.clock = clock;
+        this.random = random;
         this.taskId = 'WaitForPreviousWorkflowRunsUseCase';
     }
     async invoke(query) {
-        for (let attempt = 0; attempt < this.policy.maximumAttempts; attempt++) {
-            const activeRunCount = await this.queryPort.countActivePreviousRuns(query);
+        const deadlineAtMilliseconds = this.clock.nowMilliseconds() + this.policy.maximumQueueWaitMilliseconds;
+        let pollIndex = 0;
+        while (true) {
+            if (this.clock.nowMilliseconds() >= deadlineAtMilliseconds) {
+                throw new Error('Timeout waiting for previous runs to finish.');
+            }
+            const activeRunCount = await this.queryPort.countActivePreviousRuns(query, {
+                deadlineAtMilliseconds,
+            });
+            if (this.clock.nowMilliseconds() >= deadlineAtMilliseconds) {
+                throw new Error('Timeout waiting for previous runs to finish.');
+            }
             if (activeRunCount === 0) {
                 this.observerPort.noActivePreviousRuns();
                 return;
             }
-            if (attempt === this.policy.maximumAttempts - 1)
-                break;
-            this.observerPort.waitingForPreviousRuns(activeRunCount, this.policy.delayMilliseconds);
-            await this.delayPort.wait(this.policy.delayMilliseconds);
+            const delayMilliseconds = (0, workflow_queue_policy_1.calculateWorkflowPollingDelay)(pollIndex, this.random.next(), this.policy);
+            if (this.clock.nowMilliseconds() + delayMilliseconds >= deadlineAtMilliseconds) {
+                throw new Error('Timeout waiting for previous runs to finish.');
+            }
+            this.observerPort.waitingForPreviousRuns(activeRunCount, delayMilliseconds);
+            await this.delayPort.wait(delayMilliseconds);
+            pollIndex += 1;
         }
-        throw new Error('Timeout waiting for previous runs to finish.');
     }
 }
 exports.WaitForPreviousWorkflowRunsUseCase = WaitForPreviousWorkflowRunsUseCase;
@@ -69508,76 +69554,77 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ActivePreviousWorkflowRunsRepository = void 0;
 const constants_1 = __nccwpck_require__(15415);
 const workflow_runs_retry_1 = __nccwpck_require__(86434);
-const DEFAULT_RETRY_POLICY = {
-    maximumAttempts: 5,
-    initialDelayMilliseconds: 1000,
-    backoffMultiplier: 2,
-    maximumDelayMilliseconds: 8000,
-};
-const NO_OP_DELAY_PORT = {
-    async wait() {
-        return Promise.resolve();
-    },
-};
+const NO_OP_DELAY_PORT = { wait: async () => undefined };
+const SYSTEM_CLOCK = { nowMilliseconds: () => Date.now() };
+const SYSTEM_RANDOM = { next: () => Math.random() };
 class ActivePreviousWorkflowRunsRepository {
-    constructor(client, retryDelayPort = NO_OP_DELAY_PORT, retryPolicy = DEFAULT_RETRY_POLICY) {
+    constructor(client, retryDelayPort = NO_OP_DELAY_PORT, retryPolicy = workflow_runs_retry_1.WORKFLOW_RUNS_RETRY_POLICY, clock = SYSTEM_CLOCK, random = SYSTEM_RANDOM, observer) {
         this.client = client;
         this.retryDelayPort = retryDelayPort;
         this.retryPolicy = retryPolicy;
+        this.clock = clock;
+        this.random = random;
+        this.observer = observer;
     }
-    async countActivePreviousRuns(query) {
-        const hasWorkflowScope = query.workflowNames?.some((name) => name.trim().length > 0) || query.workflowName.trim().length > 0;
-        if (!Number.isFinite(query.currentRunId) || !hasWorkflowScope) {
-            return 0;
+    async countActivePreviousRuns(query, context = { deadlineAtMilliseconds: Number.POSITIVE_INFINITY }) {
+        if (!Number.isSafeInteger(query.currentRunId)) {
+            throw new Error('GitHub workflow identity is unavailable; refusing to bypass sequential execution.');
         }
-        let activeRunCount = 0;
-        for (const status of constants_1.WORKFLOW_ACTIVE_STATUSES) {
-            activeRunCount += await this.countActiveRunsForStatus(query, status);
+        const workflowNames = query.workflowNames?.filter(name => name.trim().length > 0) ?? [];
+        if (workflowNames.length === 0 && query.workflowName.trim().length === 0) {
+            throw new Error('GitHub workflow name is unavailable; refusing to bypass sequential execution.');
         }
-        return activeRunCount;
-    }
-    async countActiveRunsForStatus(query, status) {
-        const useWorkflowEndpoint = Boolean(query.workflowIdentifier
-            && (!query.workflowNames || query.workflowNames.length === 0)
-            && this.client.rest.actions.listWorkflowRuns);
-        const method = useWorkflowEndpoint
-            ? this.client.rest.actions.listWorkflowRuns
-            : this.client.rest.actions.listWorkflowRunsForRepo;
+        const actions = this.client.rest.actions;
+        const workflowIdentifier = workflowNames.length === 0 ? query.workflowIdentifier : undefined;
+        const workflowMethod = workflowIdentifier ? actions.listWorkflowRuns : undefined;
+        const method = workflowMethod ?? actions.listWorkflowRunsForRepo;
+        if (!method)
+            throw new Error('GitHub workflow-scoped runs endpoint is unavailable.');
         const parameters = {
             owner: query.owner,
             repo: query.repository,
             per_page: 100,
-            status,
-            ...(useWorkflowEndpoint ? { workflow_id: query.workflowIdentifier } : {}),
+            ...(workflowMethod && workflowIdentifier
+                ? { workflow_id: workflowIdentifier }
+                : {}),
         };
+        const names = workflowNames.length > 0 ? workflowNames : [query.workflowName];
         return (0, workflow_runs_retry_1.withWorkflowRunsRetry)(async () => {
             let activeRunCount = 0;
+            // Keep one complete sequential traversal: GitHub cannot safely express
+            // the seven shared workflow names, five active statuses, or the strict
+            // lower-ID predicate in this endpoint. Do not add provider filters or
+            // early-stop on page order; a matching run may occur on a later page.
+            // The residual cost is deep-history pagination, with retries restarting
+            // from page one, in exchange for an exact fail-closed count.
             for await (const response of this.client.paginate.iterator(method, parameters)) {
-                activeRunCount += countMatchingRuns(this.extractWorkflowRuns(response), query);
+                activeRunCount += extractWorkflowRuns(response)
+                    .filter(run => isActivePreviousRun(run, query, names)).length;
             }
             return activeRunCount;
-        }, this.retryDelayPort, this.retryPolicy);
-    }
-    extractWorkflowRuns(response) {
-        const data = response?.data;
-        if (Array.isArray(data)) {
-            return data;
-        }
-        if (data !== null && typeof data === 'object' && Array.isArray(data.workflow_runs)) {
-            return data.workflow_runs;
-        }
-        throw new Error('GitHub workflow runs response did not contain a workflow_runs array.');
+        }, {
+            delayPort: this.retryDelayPort,
+            clock: this.clock,
+            random: this.random,
+            observer: this.observer,
+            policy: this.retryPolicy,
+            deadlineAtMilliseconds: context.deadlineAtMilliseconds,
+        });
     }
 }
 exports.ActivePreviousWorkflowRunsRepository = ActivePreviousWorkflowRunsRepository;
-function countMatchingRuns(runs, query) {
-    return runs.filter((run) => isActivePreviousRun(run, query)).length;
+function extractWorkflowRuns(response) {
+    const data = response?.data;
+    if (Array.isArray(data))
+        return data;
+    if (data !== null && typeof data === 'object' && Array.isArray(data.workflow_runs)) {
+        return data.workflow_runs;
+    }
+    throw new Error('GitHub workflow runs response did not contain a workflow_runs array.');
 }
-function isActivePreviousRun(run, query) {
-    const workflowMatches = query.workflowNames && query.workflowNames.length > 0
-        ? query.workflowNames.includes(run.name ?? '')
-        : run.name === query.workflowName;
-    return workflowMatches
+function isActivePreviousRun(run, query, workflowNames) {
+    return typeof run.name === 'string'
+        && workflowNames.includes(run.name)
         && run.id < query.currentRunId
         && constants_1.WORKFLOW_ACTIVE_STATUSES.includes(run.status ?? 'unknown');
 }
@@ -69613,12 +69660,81 @@ exports.WorkflowDispatchRepository = WorkflowDispatchRepository;
 /***/ }),
 
 /***/ 86434:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WorkflowQueueDeadlineError = exports.WORKFLOW_RUNS_RETRY_POLICY = void 0;
 exports.withWorkflowRunsRetry = withWorkflowRunsRetry;
+const workflow_queue_policy_1 = __nccwpck_require__(43193);
+exports.WORKFLOW_RUNS_RETRY_POLICY = {
+    maximumAttempts: 5,
+    rateLimitMaximumAttempts: 5,
+    initialDelayMilliseconds: 1000,
+    backoffMultiplier: 2,
+    maximumDelayMilliseconds: 30000,
+    jitterRatio: 0.2,
+    rateLimitInitialDelayMilliseconds: 60000,
+    rateLimitMaximumDelayMilliseconds: 300000,
+};
+class WorkflowQueueDeadlineError extends Error {
+    constructor() {
+        super('Timeout waiting for previous runs to finish.');
+        this.name = 'WorkflowQueueDeadlineError';
+    }
+}
+exports.WorkflowQueueDeadlineError = WorkflowQueueDeadlineError;
+function withWorkflowRunsRetry(operation, dependenciesOrDelayPort, legacyPolicy) {
+    const dependencies = 'clock' in dependenciesOrDelayPort
+        ? dependenciesOrDelayPort
+        : {
+            delayPort: dependenciesOrDelayPort,
+            clock: { nowMilliseconds: () => Date.now() },
+            random: { next: () => 0.5 },
+            policy: {
+                ...exports.WORKFLOW_RUNS_RETRY_POLICY,
+                ...legacyPolicy,
+                jitterRatio: 0,
+            },
+            deadlineAtMilliseconds: Number.POSITIVE_INFINITY,
+        };
+    return executeWithRetry(operation, dependencies, 0, 0);
+}
+async function executeWithRetry(operation, dependencies, transientFailures, rateLimitFailures) {
+    if (dependencies.clock.nowMilliseconds() >= dependencies.deadlineAtMilliseconds) {
+        throw new WorkflowQueueDeadlineError();
+    }
+    try {
+        return await operation();
+    }
+    catch (error) {
+        const classification = classifyWorkflowRunsError(error, dependencies.clock);
+        const failureCount = classification.reason === 'rate_limit'
+            ? rateLimitFailures + 1
+            : transientFailures + 1;
+        const maximumAttempts = classification.reason === 'rate_limit'
+            ? dependencies.policy.rateLimitMaximumAttempts
+            : dependencies.policy.maximumAttempts;
+        if (!classification.retryable || failureCount >= maximumAttempts) {
+            throw error;
+        }
+        const delayMilliseconds = retryDelay(classification, failureCount, dependencies);
+        if (dependencies.clock.nowMilliseconds() + delayMilliseconds >= dependencies.deadlineAtMilliseconds) {
+            throw new WorkflowQueueDeadlineError();
+        }
+        dependencies.observer?.providerRetry?.({
+            reason: classification.reason,
+            attempt: failureCount,
+            delayMilliseconds,
+            ...(classification.resetEpochSeconds === undefined
+                ? {}
+                : { resetEpochSeconds: classification.resetEpochSeconds }),
+        });
+        await dependencies.delayPort.wait(delayMilliseconds);
+        return executeWithRetry(operation, dependencies, classification.reason === 'transient' ? failureCount : transientFailures, classification.reason === 'rate_limit' ? failureCount : rateLimitFailures);
+    }
+}
 const TRANSIENT_NETWORK_ERRORS = new Set([
     'ECONNRESET',
     'ETIMEDOUT',
@@ -69627,38 +69743,91 @@ const TRANSIENT_NETWORK_ERRORS = new Set([
     'ECONNREFUSED',
     'UND_ERR_CONNECT_TIMEOUT',
 ]);
-async function withWorkflowRunsRetry(operation, delayPort, policy) {
-    return executeWithRetry(operation, delayPort, policy, 1, policy.initialDelayMilliseconds);
+function retryDelay(classification, attempt, dependencies) {
+    if (classification.retryAfterMilliseconds !== undefined)
+        return classification.retryAfterMilliseconds;
+    const { policy } = dependencies;
+    const rateLimit = classification.reason === 'rate_limit';
+    const baseDelay = Math.min((rateLimit ? (policy.rateLimitInitialDelayMilliseconds ?? 60000) : policy.initialDelayMilliseconds)
+        * policy.backoffMultiplier ** (attempt - 1), rateLimit ? (policy.rateLimitMaximumDelayMilliseconds ?? 300000) : policy.maximumDelayMilliseconds);
+    const jitterPolicy = {
+        maximumDelayMilliseconds: rateLimit
+            ? (policy.rateLimitMaximumDelayMilliseconds ?? 300000)
+            : policy.maximumDelayMilliseconds,
+        jitterRatio: policy.jitterRatio ?? 0,
+    };
+    return (0, workflow_queue_policy_1.calculateJitteredWorkflowDelay)(baseDelay, dependencies.random.next(), jitterPolicy);
 }
-async function executeWithRetry(operation, delayPort, policy, attempt, delayMilliseconds) {
-    try {
-        return await operation();
-    }
-    catch (error) {
-        if (!shouldRetry(error, attempt, policy.maximumAttempts))
-            throw error;
-        await delayPort.wait(delayMilliseconds);
-        return executeWithRetry(operation, delayPort, policy, attempt + 1, nextRetryDelay(delayMilliseconds, policy));
-    }
-}
-function shouldRetry(error, attempt, maximumAttempts) {
-    return attempt < maximumAttempts && isTransientWorkflowRunsError(error);
-}
-function nextRetryDelay(currentDelay, policy) {
-    return Math.min(currentDelay * policy.backoffMultiplier, policy.maximumDelayMilliseconds);
-}
-function isTransientWorkflowRunsError(error) {
+function classifyWorkflowRunsError(error, clock) {
     if (!error || typeof error !== 'object')
-        return false;
+        return { retryable: false, reason: 'transient' };
     const candidate = error;
     const status = firstNumericValue(candidate.status, candidate.statusCode, candidate.response?.status);
-    if (status !== undefined) {
-        return status === 408 || status === 429 || status >= 500;
+    const headers = candidate.response?.headers ?? candidate.headers;
+    const message = [candidate.response?.data?.message, candidate.data?.message, candidate.message]
+        .find(value => typeof value === 'string');
+    const remaining = header(headers, 'x-ratelimit-remaining');
+    const isRateLimited = status === 429
+        || (status === 403 && (remaining === '0'
+            || /(?:rate limit|secondary rate|abuse limit|too many requests)/i.test(message ?? '')));
+    if (isRateLimited) {
+        const retryAfterMilliseconds = parseRetryAfter(header(headers, 'retry-after'), clock);
+        const resetEpochSeconds = parseEpochSeconds(header(headers, 'x-ratelimit-reset'));
+        const resetDelay = resetEpochSeconds === undefined
+            ? undefined
+            : resetEpochSeconds * 1000 > clock.nowMilliseconds()
+                ? resetEpochSeconds * 1000 - clock.nowMilliseconds()
+                : undefined;
+        return {
+            retryable: true,
+            reason: 'rate_limit',
+            retryAfterMilliseconds: retryAfterMilliseconds ?? resetDelay,
+            resetEpochSeconds,
+        };
     }
-    if (typeof candidate.code === 'string' && TRANSIENT_NETWORK_ERRORS.has(candidate.code))
-        return true;
-    return typeof candidate.message === 'string'
-        && /\b(server error|service unavailable|bad gateway|gateway timeout|temporarily unavailable)\b/i.test(candidate.message);
+    if (status === 408 || (status !== undefined && status >= 500)) {
+        return { retryable: true, reason: 'transient' };
+    }
+    if (typeof candidate.code === 'string' && TRANSIENT_NETWORK_ERRORS.has(candidate.code)) {
+        return { retryable: true, reason: 'transient' };
+    }
+    return {
+        retryable: typeof message === 'string'
+            && /\b(server error|service unavailable|bad gateway|gateway timeout|temporarily unavailable)\b/i.test(message),
+        reason: 'transient',
+    };
+}
+function header(headers, name) {
+    if (!headers)
+        return undefined;
+    if (typeof headers.get === 'function') {
+        const value = headers.get(name);
+        return value === undefined || value === null ? undefined : String(value);
+    }
+    if (typeof headers !== 'object')
+        return undefined;
+    const entry = Object.entries(headers)
+        .find(([key]) => key.toLowerCase() === name);
+    return entry?.[1] === undefined || entry?.[1] === null ? undefined : String(entry[1]);
+}
+function parseRetryAfter(value, clock) {
+    if (!value)
+        return undefined;
+    const seconds = Number(value);
+    if (Number.isFinite(seconds)) {
+        const milliseconds = Math.round(seconds * 1000);
+        return milliseconds > 0 ? milliseconds : undefined;
+    }
+    const timestamp = Date.parse(value);
+    return Number.isFinite(timestamp) && timestamp > clock.nowMilliseconds()
+        ? timestamp - clock.nowMilliseconds()
+        : undefined;
+}
+function parseEpochSeconds(value) {
+    if (!value)
+        return undefined;
+    const epoch = Number(value);
+    return Number.isFinite(epoch) && epoch >= 0 ? epoch : undefined;
 }
 function firstNumericValue(...values) {
     return values.find((value) => typeof value === 'number' && Number.isFinite(value));
@@ -70823,11 +70992,14 @@ const wait_for_previous_workflow_runs_use_case_1 = __nccwpck_require__(38301);
 const active_previous_workflow_runs_repository_1 = __nccwpck_require__(40941);
 const timer_workflow_polling_delay_adapter_1 = __nccwpck_require__(10339);
 const logger_workflow_polling_observer_adapter_1 = __nccwpck_require__(52883);
+const system_workflow_queue_clock_adapter_1 = __nccwpck_require__(49664);
+const system_workflow_polling_random_adapter_1 = __nccwpck_require__(32679);
 const github_workflow_client_factory_1 = __nccwpck_require__(29839);
 function createWaitForPreviousWorkflowRunsUseCase(token) {
     const client = (0, github_workflow_client_factory_1.createWorkflowRunsClient)().getClient(token);
     const delayPort = new timer_workflow_polling_delay_adapter_1.TimerWorkflowPollingDelayAdapter();
-    return new wait_for_previous_workflow_runs_use_case_1.WaitForPreviousWorkflowRunsUseCase(new active_previous_workflow_runs_repository_1.ActivePreviousWorkflowRunsRepository(client, delayPort), delayPort, new logger_workflow_polling_observer_adapter_1.LoggerWorkflowPollingObserverAdapter());
+    const observerPort = new logger_workflow_polling_observer_adapter_1.LoggerWorkflowPollingObserverAdapter();
+    return new wait_for_previous_workflow_runs_use_case_1.WaitForPreviousWorkflowRunsUseCase(new active_previous_workflow_runs_repository_1.ActivePreviousWorkflowRunsRepository(client, delayPort, undefined, new system_workflow_queue_clock_adapter_1.SystemWorkflowQueueClockAdapter(), new system_workflow_polling_random_adapter_1.SystemWorkflowPollingRandomAdapter(), observerPort), delayPort, observerPort);
 }
 
 
@@ -71199,6 +71371,16 @@ class LoggerWorkflowPollingObserverAdapter {
     waitingForPreviousRuns(activeRunCount, delayMilliseconds) {
         (0, logger_1.logDebugInfo)(`⏳ Found ${activeRunCount} previous run(s) still active. Waiting ${delayMilliseconds / 1000}s...`);
     }
+    providerRetry(observation) {
+        (0, logger_1.logDebugInfo)('GitHub workflow polling retry scheduled.', false, {
+            reason: observation.reason,
+            attempt: observation.attempt,
+            delayMilliseconds: observation.delayMilliseconds,
+            ...(observation.resetEpochSeconds === undefined
+                ? {}
+                : { resetEpochSeconds: observation.resetEpochSeconds }),
+        });
+    }
 }
 exports.LoggerWorkflowPollingObserverAdapter = LoggerWorkflowPollingObserverAdapter;
 
@@ -71224,6 +71406,40 @@ class SetupWorkspaceAdapter {
     }
 }
 exports.SetupWorkspaceAdapter = SetupWorkspaceAdapter;
+
+
+/***/ }),
+
+/***/ 32679:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SystemWorkflowPollingRandomAdapter = void 0;
+class SystemWorkflowPollingRandomAdapter {
+    next() {
+        return Math.random();
+    }
+}
+exports.SystemWorkflowPollingRandomAdapter = SystemWorkflowPollingRandomAdapter;
+
+
+/***/ }),
+
+/***/ 49664:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SystemWorkflowQueueClockAdapter = void 0;
+class SystemWorkflowQueueClockAdapter {
+    nowMilliseconds() {
+        return Date.now();
+    }
+}
+exports.SystemWorkflowQueueClockAdapter = SystemWorkflowQueueClockAdapter;
 
 
 /***/ }),
@@ -72361,6 +72577,7 @@ exports.INPUT_KEYS = {
     SINGLE_ACTION_CHANGELOG: 'single-action-changelog',
     // Tokens
     TOKEN: 'token',
+    QUEUE_GATE_ONLY: 'queue-gate-only',
     // Agent selection
     AGENT_PROVIDER: 'agent-provider',
     AGENT_MODEL_PROVIDER: 'agent-model-provider',
