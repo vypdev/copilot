@@ -56402,6 +56402,8 @@ async function runSetupExecution(execution, dependencies) {
     execution.currentConfiguration.branchType = execution.issueType;
 }
 async function loadTokenUser(execution, organizationSetupPort) {
+    if (execution.tokenUser !== undefined)
+        return;
     execution.tokenUser = await organizationSetupPort.getUserFromToken(execution.tokens.token);
     if (!execution.tokenUser)
         throw new Error('Failed to get user from token');
@@ -63784,6 +63786,7 @@ exports.Execution = void 0;
 const label_branch_policy_1 = __nccwpck_require__(53318);
 const commit_1 = __nccwpck_require__(57525);
 const config_1 = __nccwpck_require__(90450);
+const github_user_policy_1 = __nccwpck_require__(84403);
 class Execution {
     get eventName() {
         return this.inputs?.eventName ?? '';
@@ -63844,7 +63847,7 @@ class Execution {
         return new commit_1.Commit(this.inputs);
     }
     get runnedByToken() {
-        return this.tokenUser === this.actor;
+        return (0, github_user_policy_1.githubUsersMatch)(this.tokenUser ?? '', this.actor);
     }
     constructor(components) {
         this.debug = false;
@@ -63874,6 +63877,7 @@ class Execution {
         this.hotfix = components.hotfix;
         this.project = components.projects;
         this.workflows = components.workflows;
+        this.tokenUser = components.tokenUser;
         this.currentConfiguration = new config_1.Config({});
         this.inputs = components.inputs;
         this.welcome = components.welcome;
@@ -70087,6 +70091,22 @@ function lifecycleStateLabel(state, labels = exports.DEFAULT_COPILOT_LIFECYCLE_L
 function lifecycleStateFromLabels(currentLabels, labels = exports.DEFAULT_COPILOT_LIFECYCLE_LABELS) {
     const normalized = new Set(currentLabels.map(label => label.trim().toLowerCase()));
     return lifecycleLabelDefinitions(labels).find(definition => normalized.has(definition.name.trim().toLowerCase()))?.state;
+}
+
+
+/***/ }),
+
+/***/ 84403:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.githubUsersMatch = githubUsersMatch;
+function githubUsersMatch(left, right) {
+    const normalizedLeft = left.trim().toLocaleLowerCase('en-US');
+    const normalizedRight = right.trim().toLocaleLowerCase('en-US');
+    return normalizedLeft.length > 0 && normalizedLeft === normalizedRight;
 }
 
 

@@ -459,6 +459,15 @@ describe('Execution', () => {
   });
 
   describe('SetupExecutionUseCase', () => {
+    it('reuses a tokenUser resolved before setup', async () => {
+      const e = buildExecution(undefined, {});
+      e.tokenUser = 'pre-resolved-user';
+
+      await setupExecution(e);
+
+      expect(mockGetUserFromToken).not.toHaveBeenCalled();
+    });
+
     it('sets tokenUser and throws if getUserFromToken returns null', async () => {
       mockGetUserFromToken.mockResolvedValue(null);
       const e = buildExecution(undefined, {});

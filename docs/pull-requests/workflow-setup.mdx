@@ -60,7 +60,7 @@ jobs:
 
 ## What runs when
 
-1. **On every trigger** (with valid `token`): The action loads the PR and repository context. If the **event actor** is the same as the **token owner**, the action may skip the normal pipeline (see [Troubleshooting](/security-operations/operations/troubleshooting)); use a **bot account** for the PAT if you want full behavior when you open your own PRs.
+1. **Admission on every trigger** (with valid `token`): The action first compares the **event actor** with the **token owner**. If they are the same, the normal pipeline completes successfully before queueing or loading PR context (see [Troubleshooting](/security-operations/operations/troubleshooting)); use a **bot account** for the PAT if you want full behavior when you open your own PRs. Valid explicit single actions still run.
 
 2. **PR–issue linking:** The action infers the **issue number** from the PR branch name (e.g. `feature/123-add-login` → issue `123`) and **links the PR to that issue** (and posts a comment on the PR when configured).
 

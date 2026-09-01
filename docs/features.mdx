@@ -124,7 +124,7 @@ Codex is the default runtime for the repository's AI feature paths. OpenCode rem
 ## Workflow concurrency and sequential execution
 
 <Info>
-  **Sequential runs:** When a new run starts, the action **waits** for any earlier active Copilot/Task mutation run to finish. Runs execute one after another instead of in parallel or being cancelled — something GitHub does not offer natively.
+  **Sequential runs:** An admissible mutation run **waits** for any earlier active Copilot/Task mutation run to finish. Runs execute one after another instead of in parallel or being cancelled — something GitHub does not offer natively. Runs triggered by the PAT owner that would only re-trigger the normal pipeline complete before entering this queue.
 </Info>
 
 GitHub's native [concurrency](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#concurrency) can cancel in-progress runs when a new one starts (`cancel-in-progress: true`) and can retain only one pending run. Copilot adds an application-level queue: every started Copilot/Task mutation run waits for earlier active runs, including runs from the other Copilot event workflows, so intermediate issue changes are not discarded by a native concurrency group.
@@ -145,8 +145,8 @@ an execution or publish results.
 
 ### How it works
 
-1. At the start of each run (except welcome/single-action-only flows), the action resolves the current workflow file from `GITHUB_WORKFLOW_REF`.
-2. It performs one paginated repository workflow-runs traversal per poll with `per_page: 100`, then locally filters the active statuses (`in_progress`, `queued`, `requested`, `waiting`, and `pending`), the seven known Copilot/Task mutation workflow names, and runs with a **lower run ID** (i.e. started earlier). For compatibility queries that provide a workflow identifier without names, it uses the workflow-scoped endpoint when the provider exposes it; otherwise it uses the repository endpoint without `workflow_id`.
+1. For a GitHub Action run with a PAT, the action first compares the event actor with the authenticated PAT user. A normal run from the same account completes successfully before project composition, agent provisioning, setup, or queue polling. A valid explicit single action continues through the normal lifecycle.
+2. An admitted run resolves the current workflow file from `GITHUB_WORKFLOW_REF` and performs one paginated repository workflow-runs traversal per poll with `per_page: 100`, then locally filters the active statuses (`in_progress`, `queued`, `requested`, `waiting`, and `pending`), the seven known Copilot/Task mutation workflow names, and runs with a **lower run ID** (i.e. started earlier). For compatibility queries that provide a workflow identifier without names, it uses the workflow-scoped endpoint when the provider exposes it; otherwise it uses the repository endpoint without `workflow_id`.
 3. Provider failures fail closed. Transient 408/5xx/network errors use bounded exponential retry; HTTP 429 and rate-limited 403 responses honor `Retry-After` or `x-ratelimit-reset`, then use a slower bounded fallback. Diagnostics contain only the retry reason, attempt, delay, and safe reset timestamp metadata.
 4. If any such run exists, the action polls immediately and then uses adaptive 5s, 10s, 20s, 40s, and 60s maximum delays with bounded ±20% jitter. The absolute queue wait is limited to 90 minutes.
 5. When no earlier active run in the mutation queue remains, the action continues. A provider failure or queue deadline never becomes an empty result, so setup and mutation work cannot proceed with an unknown queue state.

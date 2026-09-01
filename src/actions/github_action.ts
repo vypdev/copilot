@@ -8,12 +8,13 @@ import { createProjectBoardCompositionRoot } from '../infrastructure/composition
 import { finishGithubAction } from './github_action_completion';
 import { getGithubActionInput } from './github_action_input';
 import { isEnabledInput } from './input_boolean_policy';
-import { buildGithubActionExecution } from './github_action_execution';
+import { buildGithubActionExecution, readGithubActionSingleAction } from './github_action_execution';
 import { buildGithubActionEventInputs } from './github_event_inputs';
 import { mainRun } from './common_action';
 import { waitForPreviousWorkflowRuns, WorkflowQueueFailureError, WORKFLOW_QUEUE_FAILURE_MESSAGE } from './main_run_lifecycle';
 import { INPUT_KEYS } from '../utils/constants';
 import { logDebugInfo, logError, logInfo } from '../utils/logger';
+import { createGithubExecutionAdmissionUseCase } from '../infrastructure/composition/github_execution_admission_composition_root';
 import { createSynchronizeLifecycleStateUseCase } from '../infrastructure/composition/lifecycle_state_composition_root';
 import { createCopilotEvidenceCompositionRoot } from '../infrastructure/composition/copilot_evidence_composition_root';
 import { createGithubActionSummaryCompositionRoot } from '../infrastructure/composition/github_action_summary_composition_root';
@@ -36,6 +37,19 @@ export async function runGitHubAction(): Promise<void> {
         logInfo('Debug mode is enabled. Full logs will be included in the report.');
     }
 
+    const token = getGithubActionInput(INPUT_KEYS.TOKEN, { required: true });
+    const singleAction = readGithubActionSingleAction(getGithubActionInput);
+    const admission = await createGithubExecutionAdmissionUseCase().invoke({
+        actor: eventInputs.actor,
+        token,
+        isSingleAction: singleAction.enabledSingleAction,
+        validSingleAction: singleAction.validSingleAction,
+    });
+    if (admission.decision === 'discard') {
+        logInfo('GitHub Action: event actor matches the PAT user. Skipping normal pipeline before queue and mutation work.');
+        return;
+    }
+
     const projectBoard = createProjectBoardCompositionRoot();
 
     const execution = await buildGithubActionExecution({
@@ -43,6 +57,9 @@ export async function runGitHubAction(): Promise<void> {
         eventInputs,
         getInput: getGithubActionInput,
         projectQuery: projectBoard.query,
+        token,
+        tokenUser: admission.tokenUser,
+        singleAction,
     });
     logDebugInfo(
         `Execution built. Event will be resolved in mainRun. Single action: ${execution.singleAction.currentSingleAction ?? 'none'}, ` +

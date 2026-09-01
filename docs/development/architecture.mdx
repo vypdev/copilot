@@ -42,3 +42,10 @@ still requires exhaustive pagination: the current provider contract cannot expre
 seven workflow names, five active statuses, and strict lower-ID predicate as one safe
 server-side request. `per_page: 100` and one traversal minimize fan-out, but deep-history
 API pressure remains a bounded-retry residual risk rather than a correctness shortcut.
+
+GitHub Action runs also perform an admission preflight before constructing the full
+execution. The preflight uses the semantic authenticated-user port and a pure
+application policy to identify normal runs triggered by the PAT owner. Those runs
+complete without entering the queue; valid explicit single actions remain admitted.
+This decision belongs to the GitHub lifecycle and is deliberately not added to the
+shared `mainRun` path used by the local action.

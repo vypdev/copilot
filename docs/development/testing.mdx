@@ -27,6 +27,11 @@ The workflow contract test keeps the seven workflow names synchronized with the
 validator and verifies the `90m queue / 120m job` budget, required runners, action
 inputs, missing/short timeouts, and forbidden mutation-workflow concurrency.
 
+GitHub lifecycle tests cover admission before queue polling, PAT-owner normal-run
+discard, valid single-action preservation, identity lookup failure, and the absence
+of project composition, agent provisioning, setup, publication, and persistence on
+discarded runs.
+
 Architecture tests additionally verify that production imports remain acyclic,
 application code does not depend on concrete adapters, and pure model/policy
 code remains free of runtime, provider, and logging dependencies. Refresh the

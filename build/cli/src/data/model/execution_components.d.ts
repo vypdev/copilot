@@ -36,6 +36,7 @@ export interface ExecutionComponents {
     hotfix: Hotfix;
     workflows: Workflows;
     projects: Projects;
+    tokenUser?: string;
     welcome?: Welcome;
     inputs?: ExecutionInputs;
 }

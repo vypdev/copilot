@@ -37,6 +37,13 @@ jest.mock('../common_action', () => ({
   mainRun: (...args: unknown[]) => mockMainRun(...args),
 }));
 
+const mockExecutionAdmissionInvoke = jest.fn();
+jest.mock('../../infrastructure/composition/github_execution_admission_composition_root', () => ({
+  createGithubExecutionAdmissionUseCase: jest.fn().mockImplementation(() => ({
+    invoke: mockExecutionAdmissionInvoke,
+  })),
+}));
+
 const mockWaitForPreviousWorkflowRuns = jest.fn();
 jest.mock('../main_run_lifecycle', () => ({
   WORKFLOW_QUEUE_FAILURE_MESSAGE: 'Workflow queue check failed; sequential execution was not bypassed.',
@@ -86,6 +93,7 @@ describe('runGitHubAction', () => {
     mockPublishInvoke.mockResolvedValue([]);
     mockStoreInvoke.mockResolvedValue([]);
     mockWaitForPreviousWorkflowRuns.mockResolvedValue(undefined);
+    mockExecutionAdmissionInvoke.mockResolvedValue({ decision: 'execute', tokenUser: 'token-user' });
   });
 
   it('builds Execution and calls mainRun', async () => {
@@ -103,6 +111,59 @@ describe('runGitHubAction', () => {
     expect(execution.actor).toBe('test-actor');
   });
 
+  it('discards a normal PAT-triggered run before composing dependencies or entering the queue', async () => {
+    mockExecutionAdmissionInvoke.mockResolvedValue({ decision: 'discard', tokenUser: 'test-actor' });
+
+    await runGitHubAction();
+
+    expect(mockExecutionAdmissionInvoke).toHaveBeenCalledWith({
+      actor: 'test-actor',
+      token: 'fake-token',
+      isSingleAction: false,
+      validSingleAction: false,
+    });
+    expect(projectCompositionSpy).not.toHaveBeenCalled();
+    expect(executionBuilderSpy).not.toHaveBeenCalled();
+    expect(agentProvisioningSpy).not.toHaveBeenCalled();
+    expect(mockWaitForPreviousWorkflowRuns).not.toHaveBeenCalled();
+    expect(mockMainRun).not.toHaveBeenCalled();
+    expect(finishActionSpy).not.toHaveBeenCalled();
+    expect(mockGetProjectDetail).not.toHaveBeenCalled();
+    expect(mockPublishInvoke).not.toHaveBeenCalled();
+    expect(mockStoreInvoke).not.toHaveBeenCalled();
+  });
+
+  it('passes a valid single action through admission and the normal lifecycle', async () => {
+    (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
+      if (key === INPUT_KEYS.SINGLE_ACTION) return ACTIONS.CREATE_TAG;
+      if (key === INPUT_KEYS.SINGLE_ACTION_ISSUE) return '42';
+      if (opts?.required && key === INPUT_KEYS.TOKEN) return 'fake-token';
+      return '';
+    });
+
+    await runGitHubAction();
+
+    expect(mockExecutionAdmissionInvoke).toHaveBeenCalledWith({
+      actor: 'test-actor',
+      token: 'fake-token',
+      isSingleAction: true,
+      validSingleAction: true,
+    });
+    expect(mockMainRun).toHaveBeenCalledTimes(1);
+    expect(mockMainRun.mock.calls[0][0].tokenUser).toBe('token-user');
+  });
+
+  it('fails closed when PAT identity cannot be resolved', async () => {
+    mockExecutionAdmissionInvoke.mockRejectedValue(new Error('identity lookup failed'));
+
+    await expect(runGitHubAction()).rejects.toThrow('identity lookup failed');
+
+    expect(projectCompositionSpy).not.toHaveBeenCalled();
+    expect(executionBuilderSpy).not.toHaveBeenCalled();
+    expect(mockMainRun).not.toHaveBeenCalled();
+    expect(finishActionSpy).not.toHaveBeenCalled();
+  });
+
   it('admits a queue-gate-only run before project composition or execution construction', async () => {
     (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
       if (key === INPUT_KEYS.QUEUE_GATE_ONLY) return 'true';
@@ -116,6 +177,7 @@ describe('runGitHubAction', () => {
       'github-token',
       { owner: 'test-owner', repo: 'test-repo' },
     );
+    expect(mockExecutionAdmissionInvoke).not.toHaveBeenCalled();
     expect(mockMainRun).not.toHaveBeenCalled();
     expect(projectCompositionSpy).not.toHaveBeenCalled();
     expect(executionBuilderSpy).not.toHaveBeenCalled();

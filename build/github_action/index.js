@@ -48247,6 +48247,7 @@ const common_action_1 = __nccwpck_require__(42238);
 const main_run_lifecycle_1 = __nccwpck_require__(916);
 const constants_1 = __nccwpck_require__(15415);
 const logger_1 = __nccwpck_require__(91151);
+const github_execution_admission_composition_root_1 = __nccwpck_require__(54954);
 const lifecycle_state_composition_root_1 = __nccwpck_require__(4673);
 const copilot_evidence_composition_root_1 = __nccwpck_require__(64686);
 const github_action_summary_composition_root_1 = __nccwpck_require__(75305);
@@ -48266,12 +48267,27 @@ async function runGitHubAction() {
     if (debug) {
         (0, logger_1.logInfo)('Debug mode is enabled. Full logs will be included in the report.');
     }
+    const token = (0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.TOKEN, { required: true });
+    const singleAction = (0, github_action_execution_1.readGithubActionSingleAction)(github_action_input_1.getGithubActionInput);
+    const admission = await (0, github_execution_admission_composition_root_1.createGithubExecutionAdmissionUseCase)().invoke({
+        actor: eventInputs.actor,
+        token,
+        isSingleAction: singleAction.enabledSingleAction,
+        validSingleAction: singleAction.validSingleAction,
+    });
+    if (admission.decision === 'discard') {
+        (0, logger_1.logInfo)('GitHub Action: event actor matches the PAT user. Skipping normal pipeline before queue and mutation work.');
+        return;
+    }
     const projectBoard = (0, project_board_composition_root_1.createProjectBoardCompositionRoot)();
     const execution = await (0, github_action_execution_1.buildGithubActionExecution)({
         debug,
         eventInputs,
         getInput: github_action_input_1.getGithubActionInput,
         projectQuery: projectBoard.query,
+        token,
+        tokenUser: admission.tokenUser,
+        singleAction,
     });
     (0, logger_1.logDebugInfo)(`Execution built. Event will be resolved in mainRun. Single action: ${execution.singleAction.currentSingleAction ?? 'none'}, ` +
         `AI PR description: ${execution.ai.getAiPullRequestDescription()}, bugbot min severity: ${execution.ai.getBugbotMinSeverity()}.`);
@@ -48516,6 +48532,7 @@ function setFirstErrorIfExists(results) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildGithubActionExecution = buildGithubActionExecution;
+exports.readGithubActionSingleAction = readGithubActionSingleAction;
 const ai_1 = __nccwpck_require__(37478);
 const hotfix_1 = __nccwpck_require__(18537);
 const release_1 = __nccwpck_require__(74715);
@@ -48540,9 +48557,7 @@ const execution_builder_1 = __nccwpck_require__(20236);
 const configuration_builders_1 = __nccwpck_require__(19094);
 const project_details_loader_1 = __nccwpck_require__(73448);
 async function buildGithubActionExecution(input) {
-    const { getInput, eventInputs, projectQuery, debug } = input;
-    const singleAction = readSingleAction(getInput);
-    const token = getInput(constants_1.INPUT_KEYS.TOKEN, { required: true });
+    const { getInput, eventInputs, projectQuery, debug, singleAction, token } = input;
     const aiInputs = (0, github_action_ai_inputs_1.readGithubActionAiInputs)(getInput);
     (0, github_action_runtime_1.prepareGithubAgentRuntime)(aiInputs.requestedAgentTasks);
     const projects = await (0, project_details_loader_1.loadProjectDetails)(projectQuery, (0, input_values_policy_1.parseDelimitedValues)(getInput(constants_1.INPUT_KEYS.PROJECT_IDS)), eventInputs.repo.owner, token);
@@ -48573,10 +48588,11 @@ async function buildGithubActionExecution(input) {
         hotfix: new hotfix_1.Hotfix(),
         workflows: (0, configuration_builders_1.buildWorkflows)(workflowInputs.release, workflowInputs.hotfix),
         projects: (0, configuration_builders_1.buildProjects)(projectInputs),
+        tokenUser: input.tokenUser,
         inputs: eventInputs,
     });
 }
-function readSingleAction(getInput) {
+function readGithubActionSingleAction(getInput) {
     return new single_action_1.SingleAction(getInput(constants_1.INPUT_KEYS.SINGLE_ACTION), getInput(constants_1.INPUT_KEYS.SINGLE_ACTION_ISSUE), getInput(constants_1.INPUT_KEYS.SINGLE_ACTION_VERSION), getInput(constants_1.INPUT_KEYS.SINGLE_ACTION_TITLE), getInput(constants_1.INPUT_KEYS.SINGLE_ACTION_CHANGELOG));
 }
 function getCommitPrefixBuilder(getInput) {
@@ -50256,6 +50272,32 @@ function neutralizeGithubControls(value) {
         .replace(/(^|\n)([ \t]*)::/g, '$1$2:\u200b:')
         .replace(/(^|\n)([ \t]*)\/(?!\/)/g, '$1$2\u200b/')
         .replace(/@(?=[a-zA-Z0-9][a-zA-Z0-9-])/g, '@\u200b');
+}
+
+
+/***/ }),
+
+/***/ 80765:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.resolveGithubExecutionAdmission = resolveGithubExecutionAdmission;
+const github_user_policy_1 = __nccwpck_require__(84403);
+/**
+ * Decides whether a GitHub Action should enter the mutation lifecycle.
+ *
+ * A run triggered by the account that owns the PAT must not react to its own
+ * normal issue, pull-request, or push events. Explicit valid single actions
+ * remain executable so release and deployment workflows keep working.
+ */
+function resolveGithubExecutionAdmission(input) {
+    if (!(0, github_user_policy_1.githubUsersMatch)(input.actor, input.tokenUser))
+        return 'execute';
+    if (input.isSingleAction && input.validSingleAction)
+        return 'execute';
+    return 'discard';
 }
 
 
@@ -52645,6 +52687,40 @@ async function resolveExecutionIssueNumber(execution, issueRepository) {
 
 /***/ }),
 
+/***/ 3599:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ResolveGithubExecutionAdmissionUseCase = void 0;
+const github_execution_admission_policy_1 = __nccwpck_require__(80765);
+class ResolveGithubExecutionAdmissionUseCase {
+    constructor(authenticatedUserPort) {
+        this.authenticatedUserPort = authenticatedUserPort;
+        this.taskId = 'ResolveGithubExecutionAdmissionUseCase';
+    }
+    async invoke(request) {
+        const tokenUser = await this.authenticatedUserPort.getUserFromToken(request.token);
+        if (typeof tokenUser !== 'string' || tokenUser.trim().length === 0) {
+            throw new Error('Failed to get user from token');
+        }
+        return {
+            tokenUser,
+            decision: (0, github_execution_admission_policy_1.resolveGithubExecutionAdmission)({
+                actor: request.actor,
+                tokenUser,
+                isSingleAction: request.isSingleAction,
+                validSingleAction: request.validSingleAction,
+            }),
+        };
+    }
+}
+exports.ResolveGithubExecutionAdmissionUseCase = ResolveGithubExecutionAdmissionUseCase;
+
+
+/***/ }),
+
 /***/ 88512:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -52705,6 +52781,8 @@ async function runSetupExecution(execution, dependencies) {
     execution.currentConfiguration.branchType = execution.issueType;
 }
 async function loadTokenUser(execution, organizationSetupPort) {
+    if (execution.tokenUser !== undefined)
+        return;
     execution.tokenUser = await organizationSetupPort.getUserFromToken(execution.tokens.token);
     if (!execution.tokenUser)
         throw new Error('Failed to get user from token');
@@ -59418,6 +59496,7 @@ exports.Execution = void 0;
 const label_branch_policy_1 = __nccwpck_require__(53318);
 const commit_1 = __nccwpck_require__(57525);
 const config_1 = __nccwpck_require__(90450);
+const github_user_policy_1 = __nccwpck_require__(84403);
 class Execution {
     get eventName() {
         return this.inputs?.eventName ?? '';
@@ -59478,7 +59557,7 @@ class Execution {
         return new commit_1.Commit(this.inputs);
     }
     get runnedByToken() {
-        return this.tokenUser === this.actor;
+        return (0, github_user_policy_1.githubUsersMatch)(this.tokenUser ?? '', this.actor);
     }
     constructor(components) {
         this.debug = false;
@@ -59508,6 +59587,7 @@ class Execution {
         this.hotfix = components.hotfix;
         this.project = components.projects;
         this.workflows = components.workflows;
+        this.tokenUser = components.tokenUser;
         this.currentConfiguration = new config_1.Config({});
         this.inputs = components.inputs;
         this.welcome = components.welcome;
@@ -65885,6 +65965,22 @@ function lifecycleStateFromLabels(currentLabels, labels = exports.DEFAULT_COPILO
 
 /***/ }),
 
+/***/ 84403:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.githubUsersMatch = githubUsersMatch;
+function githubUsersMatch(left, right) {
+    const normalizedLeft = left.trim().toLocaleLowerCase('en-US');
+    const normalizedRight = right.trim().toLocaleLowerCase('en-US');
+    return normalizedLeft.length > 0 && normalizedLeft === normalizedRight;
+}
+
+
+/***/ }),
+
 /***/ 19879:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -66225,6 +66321,22 @@ const createBranchMergeClient = () => new octokit_branch_adapters_1.OctokitBranc
 exports.createBranchMergeClient = createBranchMergeClient;
 const createBranchComparisonClient = () => new octokit_branch_adapters_1.OctokitBranchComparisonClientAdapter();
 exports.createBranchComparisonClient = createBranchComparisonClient;
+
+
+/***/ }),
+
+/***/ 54954:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createGithubExecutionAdmissionUseCase = createGithubExecutionAdmissionUseCase;
+const resolve_github_execution_admission_use_case_1 = __nccwpck_require__(3599);
+const authenticated_user_composition_root_1 = __nccwpck_require__(33885);
+function createGithubExecutionAdmissionUseCase() {
+    return new resolve_github_execution_admission_use_case_1.ResolveGithubExecutionAdmissionUseCase((0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)());
+}
 
 
 /***/ }),

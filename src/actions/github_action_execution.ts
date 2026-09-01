@@ -31,14 +31,15 @@ export interface GithubActionExecutionInput {
     readonly eventInputs: ReturnType<typeof buildGithubActionEventInputs>;
     readonly projectQuery: ProjectDetailQueryPort;
     readonly debug: boolean;
+    readonly token: string;
+    readonly tokenUser: string;
+    readonly singleAction: SingleAction;
 }
 
 export async function buildGithubActionExecution(
     input: GithubActionExecutionInput,
 ): Promise<Execution> {
-    const { getInput, eventInputs, projectQuery, debug } = input;
-    const singleAction = readSingleAction(getInput);
-    const token = getInput(INPUT_KEYS.TOKEN, { required: true });
+    const { getInput, eventInputs, projectQuery, debug, singleAction, token } = input;
     const aiInputs = readGithubActionAiInputs(getInput);
     prepareGithubAgentRuntime(aiInputs.requestedAgentTasks);
 
@@ -100,11 +101,12 @@ export async function buildGithubActionExecution(
         hotfix: new Hotfix(),
         workflows: buildWorkflows(workflowInputs.release, workflowInputs.hotfix),
         projects: buildProjects(projectInputs),
+        tokenUser: input.tokenUser,
         inputs: eventInputs,
     });
 }
 
-function readSingleAction(getInput: typeof getGithubActionInput): SingleAction {
+export function readGithubActionSingleAction(getInput: typeof getGithubActionInput): SingleAction {
     return new SingleAction(
         getInput(INPUT_KEYS.SINGLE_ACTION),
         getInput(INPUT_KEYS.SINGLE_ACTION_ISSUE),

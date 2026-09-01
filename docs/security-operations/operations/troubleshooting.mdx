@@ -46,10 +46,10 @@ This guide helps you resolve common issues you might encounter while using Copil
 
   <Accordion title="Action skips issue/PR/push pipelines" icon="user-slash" defaultOpen={true}>
     **Symptoms:**
-    - The workflow runs but nothing happens (no branches created, no project linking, no comments).
+    - The workflow completes quickly but nothing happens (no queue wait, branches, project linking, or comments).
     - Logs say something like "User from token (...) matches actor. Ignoring."
 
-    **Cause:** When the **event actor** (the user who triggered the event: e.g. who opened the issue, who pushed, who opened the PR) is the **same** as the user who owns the PAT (`token`), the action intentionally skips the normal issue, PR, and push pipelines. It will only run a **single action** if you passed `single-action`; otherwise it exits without doing anything.
+    **Cause:** At the start of the GitHub Action, when the **event actor** (the user who triggered the event: e.g. who opened the issue, who pushed, who opened the PR) is the **same** as the user who owns the PAT (`token`), the action completes successfully before waiting for previous runs or entering the normal issue, PR, and push pipelines. It will still run a valid **single action** if you passed `single-action`; otherwise it exits without doing anything.
 
     **Solutions:**
     1. Use a **dedicated bot account** for the PAT (e.g. `giik-bot`) so that the actor (developer) is different from the token user. Then the full pipelines run as expected.

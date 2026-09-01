@@ -33,6 +33,7 @@ export async function runSetupExecution(execution: Execution, dependencies: Setu
 }
 
 async function loadTokenUser(execution: Execution, organizationSetupPort: ExecutionOrganizationSetupPort): Promise<void> {
+    if (execution.tokenUser !== undefined) return;
     execution.tokenUser = await organizationSetupPort.getUserFromToken(execution.tokens.token);
     if (!execution.tokenUser) throw new Error('Failed to get user from token');
 }

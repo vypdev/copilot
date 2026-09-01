@@ -7,7 +7,7 @@ Copilot requires a fine-grained personal access token to perform certain actions
 
 <Info>Originally, the workflow also made use of the GITHUB_TOKEN for some basic tasks executed within the workflow's scope. However, to simplify the configuration and maintain a single unified bot, the use of this token has been removed, leaving only the necessary PAT.</Info>
 
-<Warning>**When the event actor is the same as the token user**: If the user who triggers the workflow (e.g. the person who opened the issue or pushed the branch) is the same as the account that owns the PAT, the action **only runs single actions** (if one is requested) or **skips** the normal issue/PR/push pipelines. This avoids the bot reacting to its own actions. Use a dedicated bot account (different from the actor) if you want full pipeline behavior on every event.</Warning>
+<Warning>**When the event actor is the same as the token user**: The action detects this before entering the workflow queue. It completes successfully without waiting or running the normal issue/PR/push pipeline. A valid explicit single action still runs. This avoids the bot reacting to its own actions. Use a dedicated bot account (different from the actor) if you want full pipeline behavior on every event.</Warning>
 
 <Steps>
   <Step title="Who is the bot?">

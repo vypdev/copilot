@@ -19,6 +19,7 @@ import { SizeThresholds } from "./size_thresholds";
 import { Tokens } from "./tokens";
 import { Welcome } from "./welcome";
 import { Workflows } from "./workflows";
+import { githubUsersMatch } from '../../domain/github_user_policy';
 import type { ExecutionInputs } from './execution_inputs';
 import type { ExecutionComponents } from './execution_components';
 
@@ -159,7 +160,7 @@ export class Execution {
     }
 
     get runnedByToken(): boolean {
-        return this.tokenUser === this.actor;
+        return githubUsersMatch(this.tokenUser ?? '', this.actor);
     }
 
     constructor(components: ExecutionComponents) {
@@ -181,6 +182,7 @@ export class Execution {
         this.hotfix = components.hotfix;
         this.project = components.projects;
         this.workflows = components.workflows;
+        this.tokenUser = components.tokenUser;
         this.currentConfiguration = new Config({});
         this.inputs = components.inputs;
         this.welcome = components.welcome;
