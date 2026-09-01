@@ -11,6 +11,7 @@ const workflowDirectories = [
 ];
 const QUEUE_WAIT_MINUTES = 90;
 const MIN_QUEUE_JOB_TIMEOUT_MINUTES = 120;
+
 function assertQueueBudget(queueWaitMinutes, minimumJobTimeoutMinutes) {
   if (!Number.isFinite(queueWaitMinutes)
     || !Number.isFinite(minimumJobTimeoutMinutes)
@@ -19,6 +20,7 @@ function assertQueueBudget(queueWaitMinutes, minimumJobTimeoutMinutes) {
   }
 }
 assertQueueBudget(QUEUE_WAIT_MINUTES, MIN_QUEUE_JOB_TIMEOUT_MINUTES);
+
 const QUEUE_WORKFLOW_MANIFEST = Object.freeze([
   ['copilot_commit.yml', 'Copilot - Commit', 'copilot-commits'],
   ['copilot_issue.yml', 'Copilot - Issue', 'copilot-issues'],
@@ -28,6 +30,12 @@ const QUEUE_WORKFLOW_MANIFEST = Object.freeze([
   ['hotfix_workflow.yml', 'Task - Hotfix', 'tag'],
   ['release_workflow.yml', 'Task - Release', 'tag'],
 ].map(([file, workflowName, jobId]) => ({ file, workflowName, jobId })));
+
+const MUTATION_WORKFLOW_MANIFEST = Object.freeze([
+  { file: 'release_workflow.yml', workflowName: 'Task - Release' },
+  { file: 'hotfix_workflow.yml', workflowName: 'Task - Hotfix' },
+]);
+
 const requiredAgentInputs = [
   'agent-provider', 'agent-model-provider', 'agent-model', 'agent-effort', 'agent-command',
   'findings-provider', 'findings-model-provider', 'findings-model', 'findings-effort', 'findings-command',
@@ -47,6 +55,10 @@ function relativeWorkflow(file) {
 function isCopilotAction(step) {
   return typeof step?.uses === 'string'
     && (step.uses === './' || /(?:^|\/)copilot@/.test(step.uses));
+}
+
+function isQueueGateAction(step) {
+  return isCopilotAction(step) && step.with?.['queue-gate-only'] === 'true';
 }
 
 function runnerLabels(value) {
@@ -72,7 +84,7 @@ function assertAgentInputs(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
     for (const [stepIndex, step] of (job.steps ?? []).entries()) {
-      if (!isCopilotAction(step)) continue;
+      if (!isCopilotAction(step) || isQueueGateAction(step)) continue;
       const missing = requiredAgentInputs.filter(input => !(input in (step.with ?? {})));
       if (missing.length > 0) {
         throw new Error(`${relativeFile} job ${jobId} step ${stepIndex + 1} is missing agent inputs: ${missing.join(', ')}.`);
@@ -81,10 +93,145 @@ function assertAgentInputs(file, workflow) {
   }
 }
 
+function needsFor(job) {
+  if (job?.needs === undefined) return [];
+  return (Array.isArray(job.needs) ? job.needs : [job.needs]).map(String);
+}
+
+function assertNoUnsafeCondition(relativeFile, jobId, job) {
+  if (typeof job.if === 'string' && /\b(always|failure|cancelled)\s*\(/i.test(job.if)) {
+    throw new Error(`${relativeFile} job ${jobId} has a bypass-capable if condition.`);
+  }
+  for (const [stepIndex, step] of (job.steps ?? []).entries()) {
+    if (typeof step.if === 'string' && /\b(always|failure|cancelled)\s*\(/i.test(step.if)) {
+      throw new Error(`${relativeFile} job ${jobId} step ${stepIndex + 1} has a bypass-capable if condition.`);
+    }
+  }
+}
+
+function assertNoConcurrency(relativeFile, workflow) {
+  if (workflow.concurrency !== undefined) {
+    throw new Error(`${relativeFile} must not define GitHub concurrency.`);
+  }
+  for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
+    if (job.concurrency !== undefined) {
+      throw new Error(`${relativeFile} job ${jobId} must not define GitHub concurrency.`);
+    }
+  }
+}
+
+function assertQueueGateJob(file, workflow, expectedUses) {
+  const relativeFile = relativeWorkflow(file);
+  const queueGate = workflow.jobs?.['queue-gate'];
+  if (!queueGate) throw new Error(`${relativeFile} must define queue-gate.`);
+  if (queueGate['timeout-minutes'] !== MIN_QUEUE_JOB_TIMEOUT_MINUTES) {
+    throw new Error(`${relativeFile} queue-gate must have timeout-minutes ${MIN_QUEUE_JOB_TIMEOUT_MINUTES}.`);
+  }
+  const permissions = queueGate.permissions ?? {};
+  const permissionKeys = Object.keys(permissions).sort();
+  if (permissionKeys.join(',') !== 'actions,contents'
+    || permissions.actions !== 'read'
+    || permissions.contents !== 'read') {
+    throw new Error(`${relativeFile} queue-gate must have only actions: read and contents: read permissions.`);
+  }
+  if (queueGate.env !== undefined || queueGate['continue-on-error'] !== undefined && queueGate['continue-on-error'] !== false) {
+    throw new Error(`${relativeFile} queue-gate must not define bypass or agent environment.`);
+  }
+  assertNoUnsafeCondition(relativeFile, 'queue-gate', queueGate);
+
+  const steps = queueGate.steps ?? [];
+  if (steps.length !== 2 || steps.some(step => step.run !== undefined)) {
+    throw new Error(`${relativeFile} queue-gate may contain only a safe checkout and one gate action.`);
+  }
+  const checkout = steps[0];
+  if (typeof checkout?.uses !== 'string' || !/^actions\/checkout@/.test(checkout.uses)
+    || checkout.with?.['persist-credentials'] !== false
+    || Object.keys(checkout.with ?? {}).some(key => key !== 'persist-credentials')) {
+    throw new Error(`${relativeFile} queue-gate checkout must set persist-credentials: false.`);
+  }
+  const action = steps[1];
+  if (action?.uses !== expectedUses || !isQueueGateAction(action)) {
+    throw new Error(`${relativeFile} queue-gate must invoke ${expectedUses} with queue-gate-only: 'true'.`);
+  }
+  const actionInputs = action.with ?? {};
+  if (actionInputs.token !== '${{ github.token }}'
+    || Object.keys(actionInputs).some(key => key !== 'queue-gate-only' && key !== 'token')) {
+    throw new Error(`${relativeFile} queue-gate must pass only queue-gate-only and github.token.`);
+  }
+  const gateText = JSON.stringify(queueGate);
+  if (/\b(secrets\.|PAT|API_KEY|AGENT_|CODEX_|OPENCODE_|CURSOR_|ANTHROPIC_|OPENROUTER_)/i.test(gateText)) {
+    throw new Error(`${relativeFile} queue-gate must not contain PAT, provider secrets, or agent environment.`);
+  }
+}
+
+function assertExactNeeds(relativeFile, jobId, job, expected) {
+  const actual = needsFor(job);
+  if (actual.length !== expected.length || actual.some((value, index) => value !== expected[index])) {
+    throw new Error(`${relativeFile} job ${jobId} must need exactly ${expected.join(', ') || 'no jobs'}.`);
+  }
+}
+
+function assertTransitiveQueueGateAncestry(file, workflow, gateJobId) {
+  const relativeFile = relativeWorkflow(file);
+  const jobs = workflow.jobs ?? {};
+  const ancestry = new Map();
+  const visiting = new Set();
+  const reachesGate = (jobId) => {
+    if (jobId === gateJobId) return true;
+    if (ancestry.has(jobId)) return ancestry.get(jobId);
+    if (visiting.has(jobId)) throw new Error(`${relativeFile} has a cycle in job needs.`);
+    const job = jobs[jobId];
+    if (!job) throw new Error(`${relativeFile} references missing job ${jobId}.`);
+    visiting.add(jobId);
+    const result = needsFor(job).some(parent => reachesGate(parent));
+    visiting.delete(jobId);
+    ancestry.set(jobId, result);
+    return result;
+  };
+
+  for (const [jobId, job] of Object.entries(jobs)) {
+    assertNoUnsafeCondition(relativeFile, jobId, job);
+    if (jobId !== gateJobId && !reachesGate(jobId)) {
+      throw new Error(`${relativeFile} job ${jobId} is not a transitive descendant of ${gateJobId}.`);
+    }
+  }
+}
+
+function assertMutationWorkflow(file, workflow) {
+  const relativeFile = relativeWorkflow(file);
+  const manifest = MUTATION_WORKFLOW_MANIFEST.find(entry => relativeFile.endsWith(`/${entry.file}`));
+  if (!manifest) return false;
+  if (workflow.name !== manifest.workflowName) {
+    throw new Error(`${relativeFile} must have workflow name ${JSON.stringify(manifest.workflowName)}.`);
+  }
+  const setup = relativeFile.startsWith('setup/workflows/');
+  const expectedJobs = setup
+    ? ['queue-gate', 'prepare-version-files', 'tag']
+    : ['queue-gate', 'prepare-version-files', 'prepare-compiled-files', 'tag'];
+  const actualJobs = Object.keys(workflow.jobs ?? {});
+  if (actualJobs.length !== expectedJobs.length || expectedJobs.some(jobId => !actualJobs.includes(jobId))) {
+    throw new Error(`${relativeFile} must define the exact gate-first job graph.`);
+  }
+  assertNoConcurrency(relativeFile, workflow);
+  assertQueueGateJob(file, workflow, setup ? 'vypdev/copilot@v2' : './');
+  assertExactNeeds(relativeFile, 'queue-gate', workflow.jobs['queue-gate'], []);
+  assertExactNeeds(relativeFile, 'prepare-version-files', workflow.jobs['prepare-version-files'], ['queue-gate']);
+  if (setup) {
+    assertExactNeeds(relativeFile, 'tag', workflow.jobs.tag, ['prepare-version-files']);
+  } else {
+    assertExactNeeds(relativeFile, 'prepare-compiled-files', workflow.jobs['prepare-compiled-files'], ['prepare-version-files']);
+    assertExactNeeds(relativeFile, 'tag', workflow.jobs.tag, ['prepare-compiled-files']);
+  }
+  assertTransitiveQueueGateAncestry(file, workflow, 'queue-gate');
+  return true;
+}
+
 function assertQueueWorkflow(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   const manifest = QUEUE_WORKFLOW_MANIFEST.find(entry => relativeFile.endsWith(`/${entry.file}`));
   if (!manifest) return;
+  assertNoConcurrency(relativeFile, workflow);
+  if (assertMutationWorkflow(file, workflow)) return;
   if (workflow.name !== manifest.workflowName) {
     throw new Error(`${relativeFile} must have workflow name ${JSON.stringify(manifest.workflowName)}.`);
   }
@@ -93,9 +240,6 @@ function assertQueueWorkflow(file, workflow) {
   if (typeof queueJob['timeout-minutes'] !== 'number'
     || queueJob['timeout-minutes'] < MIN_QUEUE_JOB_TIMEOUT_MINUTES) {
     throw new Error(`${relativeFile} queue job ${manifest.jobId} must have timeout-minutes >= ${MIN_QUEUE_JOB_TIMEOUT_MINUTES}.`);
-  }
-  if (workflow.concurrency !== undefined || queueJob.concurrency !== undefined) {
-    throw new Error(`${relativeFile} must not define workflow or queue-job concurrency.`);
   }
   if (!(queueJob.steps ?? []).some(isCopilotAction)) {
     throw new Error(`${relativeFile} queue job ${manifest.jobId} must invoke the Copilot action.`);
@@ -110,9 +254,7 @@ function assertQueueWorkflow(file, workflow) {
 function assertSequentialMutationWorkflow(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   if (!QUEUE_WORKFLOW_MANIFEST.some(entry => relativeFile.endsWith(`/${entry.file}`))) return;
-  if (workflow.concurrency !== undefined) {
-    throw new Error(`${relativeFile} must not define GitHub concurrency.`);
-  }
+  assertNoConcurrency(relativeFile, workflow);
 }
 
 function validateWorkflow(file, workflow) {
@@ -147,10 +289,15 @@ module.exports = {
   QUEUE_WAIT_MINUTES,
   MIN_QUEUE_JOB_TIMEOUT_MINUTES,
   QUEUE_WORKFLOW_MANIFEST,
+  MUTATION_WORKFLOW_MANIFEST,
   assertAgentInputs,
+  assertMutationWorkflow,
+  assertNoConcurrency,
   assertQueueBudget,
+  assertQueueGateJob,
   assertQueueWorkflow,
   assertRunner,
   assertSequentialMutationWorkflow,
+  assertTransitiveQueueGateAncestry,
   validateWorkflow,
 };

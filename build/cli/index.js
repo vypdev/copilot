@@ -52564,7 +52564,7 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, l
     (0, logger_1.logDebugInfo)(`Event: ${execution.eventName}, actor: ${execution.actor}, repo: ${repository.owner}/${repository.repo}, debug: ${execution.debug}`);
     if (!execution.welcome) {
         // Queue before setup or route work so executions cannot overlap mutations.
-        await (0, main_run_lifecycle_1.waitForPreviousWorkflowRuns)(execution, repository);
+        await (0, main_run_lifecycle_1.waitForPreviousWorkflowRuns)(execution.tokens.token, repository);
     }
     await (0, execution_setup_composition_root_1.createSetupExecutionUseCase)(latestTagQueryPort).invoke(execution);
     (0, logger_1.clearAccumulatedLogs)();
@@ -53345,12 +53345,12 @@ function buildPreviousWorkflowRunsQuery(repository) {
     }
     return query;
 }
-async function waitForPreviousWorkflowRuns(execution, repository) {
+async function waitForPreviousWorkflowRuns(token, repository) {
     const query = buildPreviousWorkflowRunsQuery(repository);
     if (process.env.GITHUB_ACTIONS === 'true' && !Number.isSafeInteger(query.currentRunId)) {
         throw new Error('GitHub workflow identity is unavailable; refusing to bypass sequential execution.');
     }
-    await (0, workflow_queue_composition_root_1.createWaitForPreviousWorkflowRunsUseCase)(execution.tokens.token)
+    await (0, workflow_queue_composition_root_1.createWaitForPreviousWorkflowRunsUseCase)(token)
         .invoke(query)
         .catch(() => {
         // Provider/Octokit errors can contain response bodies, URLs,
@@ -72577,6 +72577,7 @@ exports.INPUT_KEYS = {
     SINGLE_ACTION_CHANGELOG: 'single-action-changelog',
     // Tokens
     TOKEN: 'token',
+    QUEUE_GATE_ONLY: 'queue-gate-only',
     // Agent selection
     AGENT_PROVIDER: 'agent-provider',
     AGENT_MODEL_PROVIDER: 'agent-model-provider',

@@ -62,6 +62,66 @@ describe('workflow contract validator', () => {
     }
   });
 
+  it('validates the exact gate-first DAG for active and setup release/hotfix workflows', () => {
+    for (const directory of ['.github/workflows', 'setup/workflows']) {
+      for (const fileName of ['release_workflow.yml', 'hotfix_workflow.yml']) {
+        const file = path.join(process.cwd(), directory, fileName);
+        const workflow = yaml.load(readFileSync(file, 'utf8')) as Record<string, unknown>;
+        expect(() => validateWorkflow(file, workflow)).not.toThrow();
+      }
+    }
+  });
+
+  it('rejects a release workflow when a mutation job bypasses the queue gate', () => {
+    const workflow = {
+      name: 'Task - Release',
+      jobs: {
+        'queue-gate': {
+          'runs-on': 'ubuntu-latest',
+          'timeout-minutes': 120,
+          permissions: { actions: 'read', contents: 'read' },
+          steps: [
+            { uses: 'actions/checkout@v5', with: { 'persist-credentials': false } },
+            { uses: 'vypdev/copilot@v2', with: { 'queue-gate-only': 'true', token: '${{ github.token }}' } },
+          ],
+        },
+        'prepare-version-files': {
+          'runs-on': 'ubuntu-latest',
+          'timeout-minutes': 15,
+          permissions: { contents: 'write' },
+          needs: 'unrelated',
+          steps: [],
+        },
+        unrelated: { 'runs-on': 'ubuntu-latest', steps: [] },
+        'prepare-compiled-files': { 'runs-on': 'ubuntu-latest', needs: 'prepare-version-files', steps: [] },
+        tag: { 'runs-on': 'ubuntu-latest', needs: 'prepare-compiled-files', steps: [] },
+      },
+    };
+
+    expect(() => validateWorkflow(path.join(process.cwd(), 'setup/workflows/release_workflow.yml'), workflow)).toThrow();
+  });
+
+  it.each([
+    ['gate write permission', (gate: Record<string, unknown>) => { gate.permissions = { actions: 'write', contents: 'read' }; }],
+    ['gate provider environment', (gate: Record<string, unknown>) => { gate.env = { OPENAI_API_KEY: '${{ secrets.OPENAI_API_KEY }}' }; }],
+    ['gate false mode', (gate: Record<string, unknown>) => {
+      const steps = gate.steps as Record<string, unknown>[];
+      (steps[1].with as Record<string, unknown>)['queue-gate-only'] = 'false';
+    }],
+    ['gate unsafe condition', (gate: Record<string, unknown>) => { gate.if = '${{ always() }}'; }],
+    ['persistent gate checkout', (gate: Record<string, unknown>) => {
+      const steps = gate.steps as Record<string, unknown>[];
+      (steps[0].with as Record<string, unknown>)['persist-credentials'] = true;
+    }],
+  ])('rejects %s in a release gate', (_reason, mutate) => {
+    const file = path.join(process.cwd(), 'setup/workflows/release_workflow.yml');
+    const workflow = JSON.parse(JSON.stringify(yaml.load(readFileSync(file, 'utf8')))) as {
+      jobs: Record<string, Record<string, unknown>>;
+    };
+    mutate(workflow.jobs['queue-gate']);
+    expect(() => validateWorkflow(file, workflow)).toThrow();
+  });
+
   it.each([
     ['wrong workflow name', { ...validWorkflow, name: 'Wrong' }],
     ['missing timeout', { ...validWorkflow, jobs: { 'copilot-issues': { ...validWorkflow.jobs['copilot-issues'], 'timeout-minutes': undefined } } }],

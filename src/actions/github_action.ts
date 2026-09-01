@@ -11,6 +11,7 @@ import { isEnabledInput } from './input_boolean_policy';
 import { buildGithubActionExecution } from './github_action_execution';
 import { buildGithubActionEventInputs } from './github_event_inputs';
 import { mainRun } from './common_action';
+import { waitForPreviousWorkflowRuns, WorkflowQueueFailureError, WORKFLOW_QUEUE_FAILURE_MESSAGE } from './main_run_lifecycle';
 import { INPUT_KEYS } from '../utils/constants';
 import { logDebugInfo, logError, logInfo } from '../utils/logger';
 import { createSynchronizeLifecycleStateUseCase } from '../infrastructure/composition/lifecycle_state_composition_root';
@@ -18,19 +19,24 @@ import { createCopilotEvidenceCompositionRoot } from '../infrastructure/composit
 import { createGithubActionSummaryCompositionRoot } from '../infrastructure/composition/github_action_summary_composition_root';
 
 export async function runGitHubAction(): Promise<void> {
+    if (isEnabledInput(getGithubActionInput(INPUT_KEYS.QUEUE_GATE_ONLY))) {
+        await runQueueGateOnly();
+        return;
+    }
+
     const eventInputs = buildGithubActionEventInputs({
         payload: github.context.payload as Record<string, unknown>,
         eventName: github.context.eventName,
         actor: github.context.actor,
         repo: github.context.repo,
     });
-    const projectBoard = createProjectBoardCompositionRoot();
-
     logInfo('GitHub Action: runGitHubAction started.');
     const debug = isEnabledInput(getGithubActionInput(INPUT_KEYS.DEBUG));
     if (debug) {
         logInfo('Debug mode is enabled. Full logs will be included in the report.');
     }
+
+    const projectBoard = createProjectBoardCompositionRoot();
 
     const execution = await buildGithubActionExecution({
         debug,
@@ -58,6 +64,22 @@ export async function runGitHubAction(): Promise<void> {
         createCopilotEvidenceCompositionRoot(),
         createGithubActionSummaryCompositionRoot(),
     );
+}
+
+async function runQueueGateOnly(): Promise<void> {
+    try {
+        const eventInputs = buildGithubActionEventInputs({
+            payload: github.context.payload as Record<string, unknown>,
+            eventName: github.context.eventName,
+            actor: github.context.actor,
+            repo: github.context.repo,
+        });
+        const token = getGithubActionInput(INPUT_KEYS.TOKEN, { required: true });
+        await waitForPreviousWorkflowRuns(token, eventInputs.repo);
+    } catch {
+        logError(WORKFLOW_QUEUE_FAILURE_MESSAGE);
+        throw new WorkflowQueueFailureError();
+    }
 }
 
 // Only auto-run when executed as the action entry (not when imported by tests)

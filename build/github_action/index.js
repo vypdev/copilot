@@ -48086,7 +48086,7 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, l
     (0, logger_1.logDebugInfo)(`Event: ${execution.eventName}, actor: ${execution.actor}, repo: ${repository.owner}/${repository.repo}, debug: ${execution.debug}`);
     if (!execution.welcome) {
         // Queue before setup or route work so executions cannot overlap mutations.
-        await (0, main_run_lifecycle_1.waitForPreviousWorkflowRuns)(execution, repository);
+        await (0, main_run_lifecycle_1.waitForPreviousWorkflowRuns)(execution.tokens.token, repository);
     }
     await (0, execution_setup_composition_root_1.createSetupExecutionUseCase)(latestTagQueryPort).invoke(execution);
     (0, logger_1.clearAccumulatedLogs)();
@@ -48244,24 +48244,29 @@ const input_boolean_policy_1 = __nccwpck_require__(18330);
 const github_action_execution_1 = __nccwpck_require__(39691);
 const github_event_inputs_1 = __nccwpck_require__(63452);
 const common_action_1 = __nccwpck_require__(42238);
+const main_run_lifecycle_1 = __nccwpck_require__(916);
 const constants_1 = __nccwpck_require__(15415);
 const logger_1 = __nccwpck_require__(91151);
 const lifecycle_state_composition_root_1 = __nccwpck_require__(4673);
 const copilot_evidence_composition_root_1 = __nccwpck_require__(64686);
 const github_action_summary_composition_root_1 = __nccwpck_require__(75305);
 async function runGitHubAction() {
+    if ((0, input_boolean_policy_1.isEnabledInput)((0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.QUEUE_GATE_ONLY))) {
+        await runQueueGateOnly();
+        return;
+    }
     const eventInputs = (0, github_event_inputs_1.buildGithubActionEventInputs)({
         payload: github.context.payload,
         eventName: github.context.eventName,
         actor: github.context.actor,
         repo: github.context.repo,
     });
-    const projectBoard = (0, project_board_composition_root_1.createProjectBoardCompositionRoot)();
     (0, logger_1.logInfo)('GitHub Action: runGitHubAction started.');
     const debug = (0, input_boolean_policy_1.isEnabledInput)((0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.DEBUG));
     if (debug) {
         (0, logger_1.logInfo)('Debug mode is enabled. Full logs will be included in the report.');
     }
+    const projectBoard = (0, project_board_composition_root_1.createProjectBoardCompositionRoot)();
     const execution = await (0, github_action_execution_1.buildGithubActionExecution)({
         debug,
         eventInputs,
@@ -48273,6 +48278,22 @@ async function runGitHubAction() {
     const results = await (0, common_action_1.mainRun)(execution, projectBoard.command, new git_cli_repository_1.GitCliRepository(), (0, lifecycle_state_composition_root_1.createSynchronizeLifecycleStateUseCase)());
     const issueContentPort = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
     await (0, github_action_completion_1.finishGithubAction)(execution, results, (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), new configuration_handler_1.ConfigurationHandler(issueContentPort), (0, copilot_evidence_composition_root_1.createCopilotEvidenceCompositionRoot)(), (0, github_action_summary_composition_root_1.createGithubActionSummaryCompositionRoot)());
+}
+async function runQueueGateOnly() {
+    try {
+        const eventInputs = (0, github_event_inputs_1.buildGithubActionEventInputs)({
+            payload: github.context.payload,
+            eventName: github.context.eventName,
+            actor: github.context.actor,
+            repo: github.context.repo,
+        });
+        const token = (0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.TOKEN, { required: true });
+        await (0, main_run_lifecycle_1.waitForPreviousWorkflowRuns)(token, eventInputs.repo);
+    }
+    catch {
+        (0, logger_1.logError)(main_run_lifecycle_1.WORKFLOW_QUEUE_FAILURE_MESSAGE);
+        throw new main_run_lifecycle_1.WorkflowQueueFailureError();
+    }
 }
 // Only auto-run when executed as the action entry (not when imported by tests)
 if (typeof process.env.JEST_WORKER_ID === 'undefined') {
@@ -49144,12 +49165,12 @@ function buildPreviousWorkflowRunsQuery(repository) {
     }
     return query;
 }
-async function waitForPreviousWorkflowRuns(execution, repository) {
+async function waitForPreviousWorkflowRuns(token, repository) {
     const query = buildPreviousWorkflowRunsQuery(repository);
     if (process.env.GITHUB_ACTIONS === 'true' && !Number.isSafeInteger(query.currentRunId)) {
         throw new Error('GitHub workflow identity is unavailable; refusing to bypass sequential execution.');
     }
-    await (0, workflow_queue_composition_root_1.createWaitForPreviousWorkflowRunsUseCase)(execution.tokens.token)
+    await (0, workflow_queue_composition_root_1.createWaitForPreviousWorkflowRunsUseCase)(token)
         .invoke(query)
         .catch(() => {
         // Provider/Octokit errors can contain response bodies, URLs,
@@ -68429,6 +68450,7 @@ exports.INPUT_KEYS = {
     SINGLE_ACTION_CHANGELOG: 'single-action-changelog',
     // Tokens
     TOKEN: 'token',
+    QUEUE_GATE_ONLY: 'queue-gate-only',
     // Agent selection
     AGENT_PROVIDER: 'agent-provider',
     AGENT_MODEL_PROVIDER: 'agent-model-provider',

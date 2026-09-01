@@ -12,7 +12,7 @@ export declare class WorkflowQueueFailureError extends Error {
     constructor();
 }
 export declare function buildPreviousWorkflowRunsQuery(repository: RepositoryCoordinates): PreviousWorkflowRunsQuery;
-export declare function waitForPreviousWorkflowRuns(execution: Execution, repository: RepositoryCoordinates): Promise<void>;
+export declare function waitForPreviousWorkflowRuns(token: string, repository: RepositoryCoordinates): Promise<void>;
 export declare function logWelcomeMessage(execution: Execution): void;
 export declare function runTokenExecution(execution: Execution, routeHandlers: MainRunRouteHandlers): Promise<Result[]>;
 export declare function runNoIssueExecution(execution: Execution, routeHandlers: MainRunRouteHandlers): Promise<Result[]>;

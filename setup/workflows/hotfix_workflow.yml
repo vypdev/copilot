@@ -21,9 +21,27 @@ on:
         default: '-1'
 
 jobs:
+  queue-gate:
+    name: Wait for previous mutation workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Admit workflow to mutation queue
+        uses: vypdev/copilot@v2
+        with:
+          queue-gate-only: 'true'
+          token: ${{ github.token }}
+
   prepare-version-files:
     name: Prepare files for hotfix
     runs-on: ubuntu-latest
+    needs: queue-gate
     timeout-minutes: 15
     permissions:
       contents: write

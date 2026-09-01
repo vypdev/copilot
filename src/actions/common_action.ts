@@ -35,7 +35,7 @@ export async function mainRun(
 
     if (!execution.welcome) {
         // Queue before setup or route work so executions cannot overlap mutations.
-        await waitForPreviousWorkflowRuns(execution, repository);
+        await waitForPreviousWorkflowRuns(execution.tokens.token, repository);
     }
 
     await createSetupExecutionUseCase(latestTagQueryPort).invoke(execution);

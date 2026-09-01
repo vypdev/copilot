@@ -216,6 +216,7 @@ export const INPUT_KEYS = {
 
     // Tokens
     TOKEN: 'token',
+    QUEUE_GATE_ONLY: 'queue-gate-only',
 
     // Agent selection
     AGENT_PROVIDER: 'agent-provider',
