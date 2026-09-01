@@ -65346,17 +65346,18 @@ class ActivePreviousWorkflowRunsRepository {
         if (workflowNames.length === 0 && query.workflowName.trim().length === 0) {
             throw new Error('GitHub workflow name is unavailable; refusing to bypass sequential execution.');
         }
-        const method = query.workflowIdentifier && workflowNames.length === 0
-            ? this.client.rest.actions.listWorkflowRuns
-            : this.client.rest.actions.listWorkflowRunsForRepo;
+        const actions = this.client.rest.actions;
+        const workflowIdentifier = workflowNames.length === 0 ? query.workflowIdentifier : undefined;
+        const workflowMethod = workflowIdentifier ? actions.listWorkflowRuns : undefined;
+        const method = workflowMethod ?? actions.listWorkflowRunsForRepo;
         if (!method)
             throw new Error('GitHub workflow-scoped runs endpoint is unavailable.');
         const parameters = {
             owner: query.owner,
             repo: query.repository,
             per_page: 100,
-            ...(method === this.client.rest.actions.listWorkflowRuns && query.workflowIdentifier
-                ? { workflow_id: query.workflowIdentifier }
+            ...(workflowMethod && workflowIdentifier
+                ? { workflow_id: workflowIdentifier }
                 : {}),
         };
         const names = workflowNames.length > 0 ? workflowNames : [query.workflowName];

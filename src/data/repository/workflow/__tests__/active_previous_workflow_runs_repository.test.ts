@@ -151,8 +151,56 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
     });
   });
 
+  it('falls back to repository traversal when the workflow endpoint is unavailable', async () => {
+    iterator.mockImplementation(async function* () {
+      yield {
+        data: {
+          workflow_runs: [workflowRun({ id: 199, name: 'Copilot - Issue', status: WORKFLOW_STATUS.PENDING })],
+        },
+      } as GithubWorkflowRunsResponse;
+    });
+    const fallbackClient = {
+      rest: { actions: { listWorkflowRunsForRepo } },
+      paginate: { iterator },
+    } as unknown as GithubWorkflowRunsClient;
+    const repository = new ActivePreviousWorkflowRunsRepository(fallbackClient);
+
+    await expect(repository.countActivePreviousRuns({
+      ...query,
+      workflowNames: undefined,
+      workflowIdentifier: 'copilot_issue.yml',
+    })).resolves.toBe(1);
+    expect(iterator).toHaveBeenCalledWith(listWorkflowRunsForRepo, {
+      owner: 'org',
+      repo: 'repo',
+      per_page: 100,
+    });
+  });
+
+  it('does not switch endpoints after a scoped provider failure', async () => {
+    iterator.mockImplementation(async function* () {
+      yield* [];
+      throw { status: 404 };
+    });
+    const repository = new ActivePreviousWorkflowRunsRepository(client);
+
+    await expect(repository.countActivePreviousRuns({
+      ...query,
+      workflowNames: undefined,
+      workflowIdentifier: 'copilot_issue.yml',
+    })).rejects.toMatchObject({ status: 404 });
+    expect(iterator).toHaveBeenCalledWith(listWorkflowRuns, {
+      owner: 'org',
+      repo: 'repo',
+      per_page: 100,
+      workflow_id: 'copilot_issue.yml',
+    });
+    expect(iterator).not.toHaveBeenCalledWith(listWorkflowRunsForRepo, expect.anything());
+  });
+
   it('rejects malformed provider pages instead of treating them as empty', async () => {
     iterator.mockImplementation(async function* () {
+      yield { data: { workflow_runs: [] } } as GithubWorkflowRunsResponse;
       yield { data: {} } as GithubWorkflowRunsResponse;
     });
     const repository = new ActivePreviousWorkflowRunsRepository(client);

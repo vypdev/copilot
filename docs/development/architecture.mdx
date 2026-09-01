@@ -33,3 +33,12 @@ transient HTTP/network failures, server wait headers, and malformed pages are
 classified there and never become a synthetic zero count. Retry logging exposes only
 sanitized reason, attempt, delay, and reset metadata. Queue-bearing jobs use a
 120-minute workflow timeout, leaving 30 minutes of headroom beyond the queue budget.
+
+When a query has a workflow identifier but no workflow-name list, the repository uses
+the optional workflow-scoped provider endpoint when available. Repository-only clients
+fall back to `listWorkflowRunsForRepo` without sending `workflow_id`; an error from an
+invoked provider endpoint is not converted into a capability fallback. Exact counting
+still requires exhaustive pagination: the current provider contract cannot express the
+seven workflow names, five active statuses, and strict lower-ID predicate as one safe
+server-side request. `per_page: 100` and one traversal minimize fan-out, but deep-history
+API pressure remains a bounded-retry residual risk rather than a correctness shortcut.
