@@ -10,12 +10,32 @@ You can install the Copilot CLI **from any directory**. For example, from your h
 ```bash
 git clone https://github.com/vypdev/copilot.git
 cd copilot
-pnpm install . -g
+corepack pnpm install . --global
 ```
 
-If the repo does not include the compiled `build/` folder (e.g. it is gitignored), run `pnpm install` and `pnpm run build` before `pnpm install . -g`.
+If the repo does not include the compiled `build/` folder (e.g. it is gitignored), run `corepack pnpm install` and `corepack pnpm run build` before `corepack pnpm install . --global`.
 
 Once installed, the `copilot` command is available globally. **All Copilot CLI commands** (including `copilot setup`, `copilot check-progress -i 123`, etc.) must be run **from inside the repository** where you want Copilot to run. That repository must have a **`.env`** file in its root with **`PERSONAL_ACCESS_TOKEN`** set so the CLI can access the repo. See [CLI commands](/single-actions/workflow-and-cli).
+
+### Update or reinstall the global CLI
+
+When a new Copilot version is available, update the checkout and reinstall the local package globally:
+
+```bash
+cd /path/to/copilot
+git pull --ff-only origin master
+corepack pnpm install . --global --force
+```
+
+Confirm the executable and installed package:
+
+```bash
+command -v copilot
+copilot --help
+corepack pnpm list --global --depth 0 copilot
+```
+
+The CLI currently has no `copilot --version` option. The complete command reference, including every supported option, is in [Workflow & CLI](/single-actions/workflow-and-cli).
 
 ---
 
@@ -49,7 +69,7 @@ Once installed, the `copilot` command is available globally. **All Copilot CLI c
     `copilot setup` will:
     - Create `.github/`, `.github/workflows/`, and `.github/ISSUE_TEMPLATE/` if they do not exist.
     - Copy all files from the Copilot `setup/` folder into your repo (workflows, issue templates, pull request template). Existing files are **not** overwritten.
-    - Verify GitHub access using `PERSONAL_ACCESS_TOKEN` from `.env` (or the token you pass when prompted).
+    - Verify GitHub access using `PERSONAL_ACCESS_TOKEN` from `.env`, the environment, or the `--token` option.
     - Create all required **labels** in the repository (type, action, priority, size, progress 0%–100%).
     - Create all required **issue types** in the organization (Task, Bug, Feature, Release, Hotfix, etc.), if your plan supports it.
 

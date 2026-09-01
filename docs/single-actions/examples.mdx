@@ -157,40 +157,46 @@ Often run once per repo or after adding new label/type config. On new repos, run
 
 ## CLI examples
 
-Run the CLI from the **repository root** (with `.env` containing `PERSONAL_ACCESS_TOKEN` and optional agent runtime variables). Commands mirror the single actions.
+Run the CLI from the **target repository root** (with `.env` containing `PERSONAL_ACCESS_TOKEN` and optional agent runtime variables). The first five commands mirror single actions; `copilot do` is CLI-only. See [Workflow & CLI](/single-actions/workflow-and-cli) for installation, updates, and the complete option reference.
+
+### setup
+
+```bash
+copilot setup
+```
 
 ### check-progress
 
 ```bash
-copilot check-progress -i 123 -t $PAT
+copilot check-progress -i 123
 # Or with branch
-node build/cli/index.js check-progress -i 123 -b feature/123-add-login -t $PAT
+copilot check-progress -i 123 -b feature/123-add-login
 ```
 
 ### detect-potential-problems (Bugbot)
 
 ```bash
-copilot detect-potential-problems -i 456 -t $PAT
+copilot detect-potential-problems -i 456
 # With branch and debug
-copilot detect-potential-problems -i 456 -b feature/456-fix-bug -t $PAT -d
+copilot detect-potential-problems -i 456 -b feature/456-fix-bug --debug
 ```
 
 ### recommend-steps
 
 ```bash
-copilot recommend-steps -i 789 -t $PAT
+copilot recommend-steps -i 789
 ```
 
 ### think
 
 ```bash
-copilot think -q "Where is authentication validated?" -t $PAT
+copilot think -q "Where is authentication validated?"
 ```
 
-### copilot (CLI-only, execution role)
+### do (CLI-only, execution role)
 
 ```bash
-copilot copilot -p "Explain the main function" -t $PAT
+copilot do -p "Explain the main function"
 ```
 
 

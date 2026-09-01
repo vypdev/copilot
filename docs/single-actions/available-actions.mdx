@@ -39,9 +39,9 @@ These single actions **throw an error** if their last step fails, so the **workf
 
 Use them when you want the workflow to **fail** if the action does not succeed (e.g. release creation or tag creation fails).
 
-## CLI-only: copilot (no single-action equivalent)
+## CLI-only: do (no single-action equivalent)
 
-The **`copilot`** CLI command (e.g. `giik copilot -p "..."`) uses the configured execution role to analyze or modify code. There is **no** `single-action` equivalent in the GitHub Action; it is available only from the CLI. Use it for interactive or scripted code changes with AI.
+The **`copilot do`** CLI command (for example, `copilot do -p "..."`) uses the configured fixer/build agent to analyze or modify code. There is **no** `single-action` equivalent in the GitHub Action; it is available only from the CLI. Use it for interactive or scripted code changes with AI. See [Workflow & CLI](/single-actions/workflow-and-cli) for all options, provider overrides, output formats, and environment variables.
 
 ## Summary table (inputs)
 

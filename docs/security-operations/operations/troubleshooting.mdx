@@ -52,7 +52,7 @@ This guide helps you resolve common issues you might encounter while using Copil
     **Cause:** At the start of the GitHub Action, when the **event actor** (the user who triggered the event: e.g. who opened the issue, who pushed, who opened the PR) is the **same** as the user who owns the PAT (`token`), the action completes successfully before waiting for previous runs or entering the normal issue, PR, and push pipelines. It will still run a valid **single action** if you passed `single-action`; otherwise it exits without doing anything.
 
     **Solutions:**
-    1. Use a **dedicated bot account** for the PAT (e.g. `giik-bot`) so that the actor (developer) is different from the token user. Then the full pipelines run as expected.
+    1. Use a **dedicated bot account** for the PAT (e.g. `copilot-bot`) so that the actor (developer) is different from the token user. Then the full pipelines run as expected.
     2. If you want to run only specific actions when you are the actor, use `single-action` (e.g. `check_progress_action`, `deployed_action`) so the action runs that single action and exits.
 
     See [Authentication](/authentication) for token setup and the note on token user vs. actor.

@@ -1,11 +1,11 @@
 ---
 title: Workflow & CLI
-description: Run single actions from GitHub Actions workflows and from the giik CLI
+description: Run single actions from GitHub Actions workflows and from the Copilot CLI.
 ---
 
 # Workflow & CLI
 
-You can run single actions in two ways: from a **GitHub Actions workflow** (e.g. a scheduled job or manual trigger) or from the **`giik` CLI** locally.
+You can run single actions in two ways: from a **GitHub Actions workflow** (for example, a scheduled job or manual trigger) or from the **`copilot` CLI** locally.
 
 ## From a GitHub Actions workflow
 
@@ -17,55 +17,200 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: vypdev/copilot@master
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
           single-action: check_progress_action
           single-action-issue: '123'
 ```
 
-Use `workflow_dispatch` to run on demand, or trigger from another event. See [Configuration](/single-actions/configuration) for all inputs.
+Use `workflow_dispatch` to run on demand, or trigger the workflow from another event. See [Single Actions Configuration](/single-actions/configuration) for the workflow inputs.
 
-## From the CLI (`giik`)
+## Install or update the CLI
 
-Build the CLI from the copilot repo, then run it from **any repo** that has `origin` pointing to GitHub (or from the same repo):
+The package exposes one global executable: **`copilot`**. Install it from a clone of this repository, not from the repository where you intend to run a command.
 
-```bash
-nvm use 24
-pnpm install
-pnpm run build
-# From the repo you want to analyze:
-node build/cli/index.js <command> [options]
-# Or if giik is on PATH:
-giik <command> [options]
-```
-
-### Commands that mirror single actions
-
-| CLI command | Single action equivalent | Required option | Description |
-|-------------|---------------------------|-----------------|-------------|
-| `setup` | `initial_setup` | — | Labels, issue types, verify access; creates default tag `v1.0.0` if repo has no tags |
-| `check-progress` | `check_progress_action` | `-i <issue>` | Progress check on demand |
-| `detect-potential-problems` | `detect_potential_problems_action` | `-i <issue>` [-b \<branch\>] | Bugbot: detect potential problems, report on issue and PR (configured agent) |
-| `recommend-steps` | `recommend_steps_action` | `-i <issue>` | Recommend steps from issue (configured agent) |
-| `think` | `think_action` | `-q "<question>"` | Deep code analysis (configured agent) |
-| `copilot` | (CLI only) | `-p "<prompt>"` | AI assistant: analyze/modify code via the configured agent |
-
-
-### Examples
+### First installation
 
 ```bash
-# Progress check for issue 123
-node build/cli/index.js check-progress -i 123 -t $PAT
-
-# Detect potential problems (bugbot) for issue 456 on current branch
-node build/cli/index.js detect-potential-problems -i 456 -t $PAT
-
-# Think / reasoning with a question
-node build/cli/index.js think -q "Where is authentication validated?" -t $PAT
-
-# Copilot (CLI-only, no workflow equivalent)
-node build/cli/index.js copilot -p "Explain the main function" -t $PAT
+git clone https://github.com/vypdev/copilot.git
+cd copilot
+corepack pnpm install . --global
 ```
 
-For a step-by-step guide to testing the configured agent flows locally, see [Smoke tests](/security-operations/operations/smoke-tests).
+The repository includes the generated `build/` directory. If you are installing from a checkout where `build/` is missing, build it first:
+
+```bash
+corepack pnpm install
+corepack pnpm run build
+corepack pnpm install . --global --force
+```
+
+### Reinstall or update an existing global installation
+
+Pull the version you want into the Copilot checkout, then reinstall the local package globally:
+
+```bash
+cd /path/to/copilot
+git pull --ff-only origin master
+corepack pnpm install . --global --force
+```
+
+Verify that the executable is on `PATH` and that the installed package is the expected one:
+
+```bash
+command -v copilot
+copilot --help
+corepack pnpm list --global --depth 0 copilot
+```
+
+The CLI does not currently expose a `copilot --version` option; use the global package listing to inspect its package version. If the command is not found after installation, configure the global pnpm bin directory in your shell's `PATH` and open a new shell.
+
+## Local CLI prerequisites
+
+Run every command from the **root of the target repository**, not necessarily from the Copilot checkout. The target repository must:
+
+- be a Git worktree;
+- have an `origin` remote pointing to a GitHub repository;
+- have `PERSONAL_ACCESS_TOKEN` available through the environment or a `.env` file in its root for commands that access GitHub;
+- have the selected agent runtime and credentials configured for AI commands.
+
+For local use, prefer a `.env` file or an environment variable instead of putting a token in shell history:
+
+```bash
+cd /path/to/target-repository
+printf 'PERSONAL_ACCESS_TOKEN=your_fine_grained_token_here\n' > .env
+```
+
+Keep `.env` ignored and never commit it. The commands that access GitHub accept `-t, --token` as an explicit alternative; `copilot do` does not use that option and reads the configured agent environment instead. See [Authentication](/authentication) and [Agent CLI configuration](/agents/cli-configuration).
+
+## Command reference
+
+All commands support `-h, --help`. The `-d, --debug` option enables additional diagnostics where listed below.
+
+### `copilot setup`
+
+Initializes the current GitHub repository by copying workflows and templates, verifying access, and creating the configured labels and issue types. If the repository has no version tags, setup also creates the default `v1.0.0` tag.
+
+| Option | Required | Description |
+| --- | --- | --- |
+| `-t, --token <token>` | No | PAT override. Otherwise uses `PERSONAL_ACCESS_TOKEN` from the environment or `.env`. |
+| `-d, --debug` | No | Enables debug logging. |
+
+```bash
+copilot setup
+```
+
+Run it from the target repository root. Existing setup files are not overwritten.
+
+### `copilot check-progress`
+
+Checks the progress of an issue from the selected branch and updates the progress label on the issue and its related open pull requests.
+
+| Option | Required | Default | Description |
+| --- | --- | --- | --- |
+| `-i, --issue <number>` | Yes | — | Positive issue number. |
+| `-b, --branch <name>` | No | Resolved from the issue | Branch to analyze. |
+| `-t, --token <token>` | No | `PERSONAL_ACCESS_TOKEN` | PAT override. |
+| `-d, --debug` | No | `false` | Enables debug logging. |
+
+```bash
+copilot check-progress -i 123
+copilot check-progress -i 123 -b feature/123-add-login
+```
+
+### `copilot detect-potential-problems`
+
+Runs Bugbot against an issue and branch. Findings are published as issue comments and, when applicable, pull-request review comments.
+
+| Option | Required | Default | Description |
+| --- | --- | --- | --- |
+| `-i, --issue <number>` | Yes | — | Positive issue number. |
+| `-b, --branch <name>` | No | Current Git branch | Branch to analyze. |
+| `-t, --token <token>` | No | `PERSONAL_ACCESS_TOKEN` | PAT override. |
+| `-d, --debug` | No | `false` | Enables debug logging. |
+
+The selected agent runtime, model, credentials, and Bugbot policy must be configured. See [Bugbot detection](/bugbot/detection).
+
+```bash
+copilot detect-potential-problems -i 456
+copilot detect-potential-problems -i 456 -b feature/456-fix-bug --debug
+```
+
+### `copilot recommend-steps`
+
+Uses the configured analysis agent to recommend implementation steps from an issue and posts the recommendation as an issue comment.
+
+| Option | Required | Description |
+| --- | --- | --- |
+| `-i, --issue <number>` | Yes | Positive issue number. |
+| `-t, --token <token>` | No | PAT override; otherwise uses `PERSONAL_ACCESS_TOKEN`. |
+| `-d, --debug` | No | Enables debug logging. |
+
+```bash
+copilot recommend-steps -i 789
+```
+
+### `copilot think`
+
+Runs deep code analysis and returns change proposals from the configured agent. The question is required; the issue and branch options provide repository context.
+
+| Option | Required | Default | Description |
+| --- | --- | --- | --- |
+| `-q, --question <question...>` | Yes | — | Question or prompt. Multiple words may be supplied without shell quoting each word. |
+| `-i, --issue <number>` | No | `1` | Issue number used when the repository has that issue context. |
+| `-b, --branch <name>` | No | `master` | Branch to use for the analysis context. |
+| `-t, --token <token>` | No | `PERSONAL_ACCESS_TOKEN` | PAT override. |
+| `--ai-ignore-files <patterns>` | No | `node_modules/*,build/*` | Comma-separated file patterns excluded from AI context. |
+| `--include-reasoning <true\|false>` | No | `false` | Include the agent's reasoning when supported by the configured flow. |
+| `-d, --debug` | No | `false` | Enables debug logging. |
+
+```bash
+copilot think -q "Where is authentication validated?"
+copilot think -i 123 -b feature/123-auth -q "Review the authentication flow"
+```
+
+### `copilot do`
+
+Runs the configured **fixer/build agent** locally with a prompt. This is the CLI-only development assistant: it may edit files directly in the current workspace. It does not have a single-action equivalent and does not accept a GitHub PAT option.
+
+| Option | Required | Default | Description |
+| --- | --- | --- | --- |
+| `-p, --prompt <prompt...>` | Yes | — | Request to execute in the current repository. |
+| `--output <text\|json>` | No | `text` | Select human-readable or JSON output. |
+| `--agent-provider <codex\|opencode\|cursor>` | No | `AGENT_PROVIDER` / `codex` | Runtime CLI override. |
+| `--agent-model-provider <provider>` | No | `AGENT_MODEL_PROVIDER` | Model provider override. |
+| `--agent-model <model>` | No | `AGENT_MODEL` | Model override. |
+| `--agent-effort <effort>` | No | `AGENT_EFFORT` | Reasoning effort or provider-specific variant. |
+| `--agent-command <command>` | No | `AGENT_COMMAND` | Audited common agent command override. |
+| `--findings-provider <provider>` | No | `FINDINGS_PROVIDER` | Findings task runtime override. |
+| `--findings-model-provider <provider>` | No | `FINDINGS_MODEL_PROVIDER` | Findings model provider override. |
+| `--findings-model <model>` | No | `FINDINGS_MODEL` | Findings model override. |
+| `--findings-effort <effort>` | No | `FINDINGS_EFFORT` | Findings effort override. |
+| `--findings-command <command>` | No | `FINDINGS_COMMAND` | Findings command override. |
+| `--fixer-provider <provider>` | No | `FIXER_PROVIDER` | Fixer task runtime override. |
+| `--fixer-model-provider <provider>` | No | `FIXER_MODEL_PROVIDER` | Fixer model provider override. |
+| `--fixer-model <model>` | No | `FIXER_MODEL` | Fixer model override. |
+| `--fixer-effort <effort>` | No | `FIXER_EFFORT` | Fixer effort override. |
+| `--fixer-command <command>` | No | `FIXER_COMMAND` | Fixer command override. |
+| `-d, --debug` | No | `false` | Enables debug logging. |
+
+The primary agent values fall back to `AGENT_*` variables; task-specific values fall back to `FINDINGS_*` and `FIXER_*`. Credentials remain in the provider's supported environment or local credential store. Do not put credentials in command arguments or custom command values.
+
+```bash
+copilot do -p "Add tests for the authentication flow"
+copilot do --output json -p "Explain the current release flow"
+```
+
+## Quick command summary
+
+| CLI command | GitHub access | Required option | Main effect |
+| --- | --- | --- | --- |
+| `copilot setup` | PAT | — | Provision repository labels, types, templates, and workflows. |
+| `copilot check-progress` | PAT | `-i, --issue` | Update progress from issue and branch changes. |
+| `copilot detect-potential-problems` | PAT and agent | `-i, --issue` | Publish Bugbot findings. |
+| `copilot recommend-steps` | PAT and agent | `-i, --issue` | Comment implementation recommendations. |
+| `copilot think` | PAT and agent | `-q, --question` | Return analysis and change proposals. |
+| `copilot do` | Agent only | `-p, --prompt` | Analyze or modify the local workspace. |
+
+For the corresponding GitHub Action inputs, see [Available actions](/single-actions/available-actions). For provider credentials and model policy, see [Agent CLI configuration](/agents/cli-configuration).
