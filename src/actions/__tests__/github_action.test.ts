@@ -4,6 +4,10 @@
  */
 
 import * as core from '@actions/core';
+import * as projectBoardCompositionRoot from '../../infrastructure/composition/project_board_composition_root';
+import * as executionBuilder from '../github_action_execution';
+import * as agentRuntime from '../github_action_runtime';
+import * as actionCompletion from '../github_action_completion';
 import { runGitHubAction } from '../github_action';
 import { ACTIONS, INPUT_KEYS } from '../../utils/constants';
 
@@ -65,6 +69,11 @@ jest.mock('../../data/repository/project/project_board_query_repository', () => 
   })),
 }));
 
+const projectCompositionSpy = jest.spyOn(projectBoardCompositionRoot, 'createProjectBoardCompositionRoot');
+const executionBuilderSpy = jest.spyOn(executionBuilder, 'buildGithubActionExecution');
+const agentProvisioningSpy = jest.spyOn(agentRuntime, 'prepareGithubAgentRuntime');
+const finishActionSpy = jest.spyOn(actionCompletion, 'finishGithubAction');
+
 describe('runGitHubAction', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -108,6 +117,10 @@ describe('runGitHubAction', () => {
       { owner: 'test-owner', repo: 'test-repo' },
     );
     expect(mockMainRun).not.toHaveBeenCalled();
+    expect(projectCompositionSpy).not.toHaveBeenCalled();
+    expect(executionBuilderSpy).not.toHaveBeenCalled();
+    expect(agentProvisioningSpy).not.toHaveBeenCalled();
+    expect(finishActionSpy).not.toHaveBeenCalled();
     expect(mockGetProjectDetail).not.toHaveBeenCalled();
     expect(mockPublishInvoke).not.toHaveBeenCalled();
     expect(mockStoreInvoke).not.toHaveBeenCalled();
@@ -125,6 +138,10 @@ describe('runGitHubAction', () => {
       'Workflow queue check failed; sequential execution was not bypassed.',
     );
     expect(mockMainRun).not.toHaveBeenCalled();
+    expect(projectCompositionSpy).not.toHaveBeenCalled();
+    expect(executionBuilderSpy).not.toHaveBeenCalled();
+    expect(agentProvisioningSpy).not.toHaveBeenCalled();
+    expect(finishActionSpy).not.toHaveBeenCalled();
     expect(mockGetProjectDetail).not.toHaveBeenCalled();
     expect(mockPublishInvoke).not.toHaveBeenCalled();
     expect(mockStoreInvoke).not.toHaveBeenCalled();

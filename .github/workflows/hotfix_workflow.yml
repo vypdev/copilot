@@ -158,6 +158,8 @@ jobs:
     runs-on: [self-hosted, codex]
     timeout-minutes: 120
     needs: [ prepare-compiled-files ]
+    permissions:
+      contents: read
     env:
       AGENT_PROVIDER: ${{ vars.AGENT_PROVIDER || 'codex' }}
       AGENT_MODEL_PROVIDER: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}

@@ -10,7 +10,11 @@ const workflowDirectories = [
   path.join(repositoryRoot, 'setup', 'workflows'),
 ];
 const QUEUE_WAIT_MINUTES = 90;
-const MIN_QUEUE_JOB_TIMEOUT_MINUTES = 120;
+const QUEUE_GATE_TIMEOUT_MINUTES = 120;
+const PREPARE_VERSION_TIMEOUT_MINUTES = 15;
+const PREPARE_COMPILED_TIMEOUT_MINUTES = 20;
+const TAG_TIMEOUT_MINUTES = 120;
+const MIN_QUEUE_JOB_TIMEOUT_MINUTES = QUEUE_GATE_TIMEOUT_MINUTES;
 
 function assertQueueBudget(queueWaitMinutes, minimumJobTimeoutMinutes) {
   if (!Number.isFinite(queueWaitMinutes)
@@ -84,7 +88,7 @@ function assertAgentInputs(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
     for (const [stepIndex, step] of (job.steps ?? []).entries()) {
-      if (!isCopilotAction(step) || isQueueGateAction(step)) continue;
+      if (jobId === 'queue-gate' || !isCopilotAction(step) || isQueueGateAction(step)) continue;
       const missing = requiredAgentInputs.filter(input => !(input in (step.with ?? {})));
       if (missing.length > 0) {
         throw new Error(`${relativeFile} job ${jobId} step ${stepIndex + 1} is missing agent inputs: ${missing.join(', ')}.`);
@@ -124,9 +128,7 @@ function assertQueueGateJob(file, workflow, expectedUses) {
   const relativeFile = relativeWorkflow(file);
   const queueGate = workflow.jobs?.['queue-gate'];
   if (!queueGate) throw new Error(`${relativeFile} must define queue-gate.`);
-  if (queueGate['timeout-minutes'] !== MIN_QUEUE_JOB_TIMEOUT_MINUTES) {
-    throw new Error(`${relativeFile} queue-gate must have timeout-minutes ${MIN_QUEUE_JOB_TIMEOUT_MINUTES}.`);
-  }
+  assertExactTimeout(relativeFile, 'queue-gate', queueGate, QUEUE_GATE_TIMEOUT_MINUTES);
   const permissions = queueGate.permissions ?? {};
   const permissionKeys = Object.keys(permissions).sort();
   if (permissionKeys.join(',') !== 'actions,contents'
@@ -134,7 +136,7 @@ function assertQueueGateJob(file, workflow, expectedUses) {
     || permissions.contents !== 'read') {
     throw new Error(`${relativeFile} queue-gate must have only actions: read and contents: read permissions.`);
   }
-  if (queueGate.env !== undefined || queueGate['continue-on-error'] !== undefined && queueGate['continue-on-error'] !== false) {
+  if (queueGate.env !== undefined || Object.prototype.hasOwnProperty.call(queueGate, 'continue-on-error')) {
     throw new Error(`${relativeFile} queue-gate must not define bypass or agent environment.`);
   }
   assertNoUnsafeCondition(relativeFile, 'queue-gate', queueGate);
@@ -153,6 +155,9 @@ function assertQueueGateJob(file, workflow, expectedUses) {
   if (action?.uses !== expectedUses || !isQueueGateAction(action)) {
     throw new Error(`${relativeFile} queue-gate must invoke ${expectedUses} with queue-gate-only: 'true'.`);
   }
+  if (Object.prototype.hasOwnProperty.call(action, 'continue-on-error')) {
+    throw new Error(`${relativeFile} queue-gate action must not define continue-on-error.`);
+  }
   const actionInputs = action.with ?? {};
   if (actionInputs.token !== '${{ github.token }}'
     || Object.keys(actionInputs).some(key => key !== 'queue-gate-only' && key !== 'token')) {
@@ -168,6 +173,20 @@ function assertExactNeeds(relativeFile, jobId, job, expected) {
   const actual = needsFor(job);
   if (actual.length !== expected.length || actual.some((value, index) => value !== expected[index])) {
     throw new Error(`${relativeFile} job ${jobId} must need exactly ${expected.join(', ') || 'no jobs'}.`);
+  }
+}
+
+function assertExactTimeout(relativeFile, jobId, job, expected) {
+  if (job?.['timeout-minutes'] !== expected) {
+    throw new Error(`${relativeFile} job ${jobId} must have timeout-minutes ${expected}.`);
+  }
+}
+
+function assertTagPermissions(relativeFile, job) {
+  const permissions = job?.permissions ?? {};
+  const permissionKeys = Object.keys(permissions).sort();
+  if (permissionKeys.length !== 1 || permissionKeys[0] !== 'contents' || permissions.contents !== 'read') {
+    throw new Error(`${relativeFile} tag must have only contents: read permissions.`);
   }
 }
 
@@ -214,11 +233,18 @@ function assertMutationWorkflow(file, workflow) {
   }
   assertNoConcurrency(relativeFile, workflow);
   assertQueueGateJob(file, workflow, setup ? 'vypdev/copilot@v2' : './');
+  assertExactTimeout(relativeFile, 'queue-gate', workflow.jobs['queue-gate'], QUEUE_GATE_TIMEOUT_MINUTES);
+  assertExactTimeout(relativeFile, 'prepare-version-files', workflow.jobs['prepare-version-files'], PREPARE_VERSION_TIMEOUT_MINUTES);
   assertExactNeeds(relativeFile, 'queue-gate', workflow.jobs['queue-gate'], []);
   assertExactNeeds(relativeFile, 'prepare-version-files', workflow.jobs['prepare-version-files'], ['queue-gate']);
   if (setup) {
+    assertExactTimeout(relativeFile, 'tag', workflow.jobs.tag, TAG_TIMEOUT_MINUTES);
+    assertTagPermissions(relativeFile, workflow.jobs.tag);
     assertExactNeeds(relativeFile, 'tag', workflow.jobs.tag, ['prepare-version-files']);
   } else {
+    assertExactTimeout(relativeFile, 'prepare-compiled-files', workflow.jobs['prepare-compiled-files'], PREPARE_COMPILED_TIMEOUT_MINUTES);
+    assertExactTimeout(relativeFile, 'tag', workflow.jobs.tag, TAG_TIMEOUT_MINUTES);
+    assertTagPermissions(relativeFile, workflow.jobs.tag);
     assertExactNeeds(relativeFile, 'prepare-compiled-files', workflow.jobs['prepare-compiled-files'], ['prepare-version-files']);
     assertExactNeeds(relativeFile, 'tag', workflow.jobs.tag, ['prepare-compiled-files']);
   }
@@ -288,12 +314,18 @@ if (require.main === module) main();
 module.exports = {
   QUEUE_WAIT_MINUTES,
   MIN_QUEUE_JOB_TIMEOUT_MINUTES,
+  QUEUE_GATE_TIMEOUT_MINUTES,
+  PREPARE_VERSION_TIMEOUT_MINUTES,
+  PREPARE_COMPILED_TIMEOUT_MINUTES,
+  TAG_TIMEOUT_MINUTES,
   QUEUE_WORKFLOW_MANIFEST,
   MUTATION_WORKFLOW_MANIFEST,
   assertAgentInputs,
   assertMutationWorkflow,
   assertNoConcurrency,
   assertQueueBudget,
+  assertExactTimeout,
+  assertTagPermissions,
   assertQueueGateJob,
   assertQueueWorkflow,
   assertRunner,
