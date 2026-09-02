@@ -40,7 +40,7 @@ issue. These commands do not invoke autofix and do not modify files.
 You can run Bugbot detection **without pushing**:
 
 - **Single action:** In a workflow, set `single-action: detect_potential_problems_action` and `single-action-issue: <issue number>`. The workflow must run in a context where the **branch** to analyze is the current checkout (e.g. trigger on `workflow_dispatch` after checking out the branch you want to analyze).
-- **CLI:** From the repository root, run `copilot detect-potential-problems -i <issue>` (optionally `-b <branch>`). Requires a `.env` with `PERSONAL_ACCESS_TOKEN` and the configured agent CLI credentials/model. See [Examples → CLI](/bugbot/examples#cli) and [Smoke tests](/security-operations/operations/smoke-tests).
+- **CLI:** From the repository root, run `copilot detect-potential-problems -i <issue>` (optionally `-b <branch>`). Provide `--token` or `PERSONAL_ACCESS_TOKEN` in the environment, plus the configured agent CLI credentials/model. See [Examples → CLI](/bugbot/examples#cli) and [Smoke tests](/security-operations/operations/smoke-tests).
 
 In both cases, the action uses the same detection flow: load context for that issue/branch, call the configured agent, filter and apply comment limit, then publish to the issue and to any open PR for that branch.
 

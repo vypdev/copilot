@@ -12,12 +12,15 @@ import { RepositoryTagRepository } from "../../data/repository/release/repositor
 import { GitCliRepository } from "../../data/repository/git_cli_repository";
 import { composeInitialSetupUseCase } from "./initial_setup_use_case_composition";
 import { SetupWorkspaceAdapter } from "../setup_workspace_adapter";
+import { RepositoryVariablesRepository } from '../../data/repository/repository_variables_repository';
+import { createRepositoryVariablesClient } from './github_identity_client_factory';
 
 export function createInitialSetupCompositionRoot(): InitialSetupUseCase {
     const labelProvisioning = new IssueLabelProvisioningRepository(
         createIssueLabelProvisioningClient(),
     );
 
+    const repositoryConfiguration = new RepositoryVariablesRepository(createRepositoryVariablesClient());
     return composeInitialSetupUseCase(
         new AuthenticatedUserRepository(createAuthenticatedUserClient()),
         labelProvisioning,
@@ -26,5 +29,7 @@ export function createInitialSetupCompositionRoot(): InitialSetupUseCase {
         new RepositoryDefaultBranchRepository(createReleaseClient()),
         new RepositoryTagRepository(createReleaseClient()),
         new SetupWorkspaceAdapter(),
+        repositoryConfiguration,
+        repositoryConfiguration,
     );
 }

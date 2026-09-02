@@ -44,6 +44,10 @@ jest.mock('../utils/setup_files', () => {
   };
 });
 
+jest.mock('../infrastructure/composition/setup_credentials_composition_root', () => ({
+  createSetupCredentialsUseCase: () => ({ collect: jest.fn().mockResolvedValue({ collection: { apiKeys: [] }, checks: [], existingSecretNames: [] }) }),
+}));
+
 describe('CLI', () => {
   let exitSpy: jest.SpyInstance;
   let consoleErrorSpy: jest.SpyInstance;
@@ -312,6 +316,7 @@ describe('CLI', () => {
         'setup',
         '--token',
         'ghp_setup_test_token_xxxxxxxxxxxxxxxxxxxx',
+        '--skip-secrets',
       ]);
 
       expect(runLocalAction).toHaveBeenCalledTimes(1);
@@ -322,7 +327,7 @@ describe('CLI', () => {
     });
 
     it('proceeds when --token is provided even if env/.env has no token', async () => {
-      await program.parseAsync(['node', 'cli', 'setup', '--token', 'ghp_abcdefghijklmnopqrstuvwxyz12']);
+      await program.parseAsync(['node', 'cli', 'setup', '--token', 'ghp_abcdefghijklmnopqrstuvwxyz12', '--skip-secrets']);
 
       expect(exitSpy).not.toHaveBeenCalled();
       expect(runLocalAction).toHaveBeenCalledTimes(1);
@@ -362,30 +367,28 @@ describe('CLI', () => {
       expect(ranWithValidRepo).not.toBe(true);
     });
 
-    it('exits when no valid token and suggests creating .env when .env does not exist', async () => {
+    it('exits when no valid setup token is available', async () => {
       mockGetSetupToken.mockReturnValue(undefined);
-      mockSetupEnvFileExists.mockReturnValue(false);
       const { logError, logInfo } = require('../utils/logger');
       (runLocalAction as jest.Mock).mockClear();
 
       await program.parseAsync(['node', 'cli', 'setup']);
 
       expect(logError).toHaveBeenCalledWith(expect.stringContaining('Setup requires PERSONAL_ACCESS_TOKEN'));
-      expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('create a .env file'));
+      expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('PERSONAL_ACCESS_TOKEN'));
       expect(runLocalAction).not.toHaveBeenCalled();
       expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
-    it('exits when no valid token and suggests adding to existing .env when .env exists', async () => {
+    it('does not offer local .env configuration when the setup token is missing', async () => {
       mockGetSetupToken.mockReturnValue(undefined);
-      mockSetupEnvFileExists.mockReturnValue(true);
       const { logError, logInfo } = require('../utils/logger');
       (runLocalAction as jest.Mock).mockClear();
 
       await program.parseAsync(['node', 'cli', 'setup']);
 
       expect(logError).toHaveBeenCalledWith(expect.stringContaining('Setup requires PERSONAL_ACCESS_TOKEN'));
-      expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('existing .env file'));
+      expect(logInfo).not.toHaveBeenCalledWith(expect.stringContaining('.env'));
       expect(runLocalAction).not.toHaveBeenCalled();
       expect(exitSpy).toHaveBeenCalledWith(1);
     });

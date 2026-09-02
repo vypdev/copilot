@@ -6,6 +6,7 @@ import { registerRecommendStepsCommand } from './commands/recommend_steps';
 import { registerDetectPotentialProblemsCommand } from './commands/detect_potential_problems';
 import { registerSetupCommand } from './commands/setup';
 import { registerUpgradeCommand } from './commands/upgrade';
+import { registerDoctorCommand } from './commands/doctor';
 
 export function registerCliCommands(program: Command): Command {
   registerThinkCommand(program);
@@ -15,5 +16,6 @@ export function registerCliCommands(program: Command): Command {
   registerDetectPotentialProblemsCommand(program);
   registerSetupCommand(program);
   registerUpgradeCommand(program);
+  registerDoctorCommand(program);
   return program;
 }

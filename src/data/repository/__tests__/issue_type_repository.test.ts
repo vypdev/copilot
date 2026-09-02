@@ -54,14 +54,14 @@ describe('IssueTypeRepository', () => {
         });
 
         await expect(new IssueTypeRepository(new OctokitGraphqlTransportClientAdapter()).listIssueTypes('owner', 'token'))
-            .rejects.toThrow('no devolvió cursor');
+            .rejects.toThrow('did not return a cursor');
     });
 
     it('fails clearly when the organization does not exist', async () => {
         mockGraphql.mockResolvedValue({ organization: null });
 
         await expect(new IssueTypeRepository(new OctokitGraphqlTransportClientAdapter()).listIssueTypes('missing', 'token'))
-            .rejects.toThrow('No se pudo obtener la organización missing');
+            .rejects.toThrow('Could not resolve the organization missing');
     });
 
     it('creates an issue type after resolving the organization id', async () => {
@@ -86,7 +86,7 @@ describe('IssueTypeRepository', () => {
 
         await expect(new IssueTypeRepository(new OctokitGraphqlTransportClientAdapter()).createIssueType(
             'missing', 'Bug', 'description', 'ff0000', 'token',
-        )).rejects.toThrow('No se pudo obtener la organización missing');
+        )).rejects.toThrow('Could not resolve the organization missing');
     });
 
     it('does not create an issue type that already exists', async () => {
@@ -137,7 +137,7 @@ describe('IssueTypeRepository', () => {
         await expect(new IssueTypeRepository(new OctokitGraphqlTransportClientAdapter()).ensureIssueTypes(
             'owner', issueTypes, 'token',
         )).resolves.toMatchObject({ created: 0, existing: 0, errors: expect.arrayContaining([
-            expect.stringContaining('Error creando tipo de Issue "task"'),
+            expect.stringContaining('Error creating Issue type "task"'),
         ]) });
     });
 

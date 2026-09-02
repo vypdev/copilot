@@ -17,8 +17,34 @@ jobs:
 
       - uses: vypdev/copilot@v3
         with:
-          ai-ignore-files: build/*
+          ai-ignore-files: ${{ vars.AI_IGNORE_FILES || 'build/*' }}
           debug: ${{ vars.DEBUG }}
+          main-branch: ${{ vars.MAIN_BRANCH || 'master' }}
+          development-branch: ${{ vars.DEVELOPMENT_BRANCH || 'develop' }}
+          feature-tree: ${{ vars.FEATURE_TREE || 'feature' }}
+          bugfix-tree: ${{ vars.BUGFIX_TREE || 'bugfix' }}
+          hotfix-tree: ${{ vars.HOTFIX_TREE || 'hotfix' }}
+          release-tree: ${{ vars.RELEASE_TREE || 'release' }}
+          docs-tree: ${{ vars.DOCS_TREE || 'docs' }}
+          chore-tree: ${{ vars.CHORE_TREE || 'chore' }}
+          branch-management-always: ${{ vars.BRANCH_MANAGEMENT_ALWAYS || 'false' }}
+          reopen-issue-on-push: ${{ vars.REOPEN_ISSUE_ON_PUSH || 'true' }}
+          desired-assignees-count: ${{ vars.DESIRED_ASSIGNEES_COUNT || '1' }}
+          desired-reviewers-count: ${{ vars.DESIRED_REVIEWERS_COUNT || '1' }}
+          merge-timeout: ${{ vars.MERGE_TIMEOUT || '600' }}
+          issues-locale: ${{ vars.ISSUES_LOCALE || 'en-US' }}
+          pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || 'en-US' }}
+          commit-prefix-transforms: ${{ vars.COMMIT_PREFIX_TRANSFORMS || 'replace-slash' }}
+          ai-pull-request-description: ${{ vars.AI_PULL_REQUEST_DESCRIPTION || 'true' }}
+          ai-members-only: ${{ vars.AI_MEMBERS_ONLY || 'false' }}
+          ai-include-reasoning: ${{ vars.AI_INCLUDE_REASONING || 'true' }}
+          bugbot-severity: ${{ vars.BUGBOT_SEVERITY || 'low' }}
+          bugbot-comment-limit: ${{ vars.BUGBOT_COMMENT_LIMIT || '20' }}
+          bugbot-fix-verify-commands: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS }}
+          project-column-issue-created: ${{ vars.PROJECT_COLUMN_ISSUE_CREATED || 'Todo' }}
+          project-column-pull-request-created: ${{ vars.PROJECT_COLUMN_PULL_REQUEST_CREATED || 'In Progress' }}
+          project-column-issue-in-progress: ${{ vars.PROJECT_COLUMN_ISSUE_IN_PROGRESS || 'In Progress' }}
+          project-column-pull-request-in-progress: ${{ vars.PROJECT_COLUMN_PULL_REQUEST_IN_PROGRESS || 'In Progress' }}
           agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
           agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
           agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
@@ -40,7 +66,6 @@ jobs:
           planner-effort: ${{ vars.PLANNER_EFFORT }}
           planner-command: ${{ vars.PLANNER_COMMAND }}
           project-ids: ${{ vars.PROJECT_IDS }}
-          bugbot-fix-verify-commands: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS }}
           token: ${{ secrets.PAT }}
         env:
           AGENT_PROVIDER: ${{ vars.AGENT_PROVIDER || 'codex' }}

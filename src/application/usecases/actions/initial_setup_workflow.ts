@@ -12,6 +12,10 @@ import type { SetupWorkspacePort } from '../../ports/setup_workspace_ports';
 import { DEFAULT_INITIAL_TAG } from '../../../data/model/version_policy';
 import { logDebugInfo, logError, logInfo } from '../../ports/logging_ports';
 import { getTaskEmoji } from '../../../utils/task_emoji';
+import type { SetupConfiguration } from '../../../domain/setup';
+import type { SetupRepositorySecretsPort, SetupRepositoryVariablesPort } from '../../ports/setup_wizard_ports';
+import type { SetupCredentialCollection } from '../../../domain/setup';
+import { buildSetupRepositoryVariables } from '../../policies/setup_configuration_policy';
 
 export interface InitialSetupWorkflowDependencies {
     authenticatedUserPort: AuthenticatedUserPort;
@@ -21,6 +25,8 @@ export interface InitialSetupWorkflowDependencies {
     repositoryDefaultBranchPort: RepositoryDefaultBranchPort;
     repositoryTagPort: RepositoryTagPort;
     setupWorkspacePort: SetupWorkspacePort;
+    setupRepositoryVariablesPort?: SetupRepositoryVariablesPort;
+    setupRepositorySecretsPort?: SetupRepositorySecretsPort;
 }
 
 type InitialLabelProvisioningOutcome =
@@ -39,15 +45,23 @@ export async function runInitialSetupWorkflow(
     const errors: string[] = [];
 
     try {
-        logInfo('📋 Ensuring .github and copying setup files...');
-        const filesResult = dependencies.setupWorkspacePort.prepare();
-        steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
-        if (!dependencies.setupWorkspacePort.hasValidToken()) {
-            logInfo('  🛑 Setup requires PERSONAL_ACCESS_TOKEN (environment or .env) with a valid token.');
-            errors.push('PERSONAL_ACCESS_TOKEN must be set (environment or .env) with a valid token to run setup.');
+        const setupConfiguration = getSetupConfiguration(param);
+        if (!dependencies.setupWorkspacePort.hasValidToken(param.tokens.token)) {
+            logInfo('  🛑 Setup requires the setup PAT provided for this command with a valid token.');
+            errors.push('A valid setup PAT must be provided to run setup. It is separate from the workflow PAT Secret.');
             return [buildResult(errors, steps)];
         }
-
+        logInfo('📋 Ensuring .github and copying setup files...');
+        const workflowUpdates = getWorkflowUpdates(param);
+        const workspaceSelection = {
+            features: setupConfiguration?.features,
+            ...(workflowUpdates.length > 0 ? {
+                updateExistingWorkflows: true,
+                approvedWorkflowFiles: workflowUpdates,
+            } : {}),
+        };
+        const filesResult = dependencies.setupWorkspacePort.prepare(workspaceSelection);
+        steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
         logInfo('🔐 Checking GitHub access...');
         const githubAccess = await verifyGitHubAccess(param, dependencies.authenticatedUserPort);
         if (!githubAccess.success) {
@@ -55,6 +69,10 @@ export async function runInitialSetupWorkflow(
             return [buildResult(errors, steps)];
         }
         steps.push(`✅ GitHub access verified: ${githubAccess.user}`);
+
+        const secrets = await ensureRepositorySecrets(param, dependencies, setupConfiguration);
+        if (secrets.step) steps.push(secrets.step);
+        if (secrets.errors.length > 0) errors.push(...secrets.errors);
 
         logInfo('🏷️  Checking configured and progress labels...');
         const labels = await ensureInitialLabels(param, dependencies.initialLabelProvisioningPort);
@@ -73,7 +91,11 @@ export async function runInitialSetupWorkflow(
             steps.push(`✅ Issue types checked: ${issueTypes.created} created, ${issueTypes.existing} already existed`);
         }
 
-        const defaultVersion = await ensureDefaultVersion(param, dependencies);
+        const variables = await ensureRepositoryVariables(param, dependencies, setupConfiguration);
+        if (variables.step) steps.push(variables.step);
+        if (variables.errors.length > 0) errors.push(...variables.errors);
+
+        const defaultVersion = await ensureDefaultVersion(param, dependencies, setupConfiguration);
         if (defaultVersion.step) steps.push(defaultVersion.step);
         if (defaultVersion.error) errors.push(defaultVersion.error);
         return [buildResult(errors, steps)];
@@ -141,7 +163,11 @@ async function ensureIssueTypes(
 async function ensureDefaultVersion(
     param: Execution,
     dependencies: InitialSetupWorkflowDependencies,
+    setupConfiguration?: SetupConfiguration,
 ): Promise<{ step?: string; error?: string }> {
+    if (setupConfiguration?.createInitialTag === false) {
+        return { step: '⏭️  Initial version tag creation disabled by setup configuration.' };
+    }
     try {
         const existingTag = await dependencies.latestTagQueryPort.getLatestTag();
         if (existingTag !== undefined) {
@@ -176,6 +202,87 @@ async function ensureDefaultVersion(
         logError(message);
         return { error: message };
     }
+}
+
+function getSetupConfiguration(param: Execution): SetupConfiguration | undefined {
+    const configuration = param.inputs?.setupConfiguration;
+    return configuration && typeof configuration === 'object'
+        ? configuration as SetupConfiguration
+        : undefined;
+}
+
+function getWorkflowUpdates(param: Execution): string[] {
+    const updates = param.inputs?.setupWorkflowUpdates;
+    return Array.isArray(updates) ? updates.filter((file): file is string => typeof file === 'string') : [];
+}
+
+async function ensureRepositoryVariables(
+    param: Execution,
+    dependencies: InitialSetupWorkflowDependencies,
+    setupConfiguration?: SetupConfiguration,
+): Promise<{ step?: string; errors: string[] }> {
+    if (!setupConfiguration?.manageRepositoryVariables || !dependencies.setupRepositoryVariablesPort) {
+        return { errors: [] };
+    }
+    try {
+        const result = await dependencies.setupRepositoryVariablesPort.upsert(
+            param.owner,
+            param.repo,
+            param.tokens.token,
+            buildSetupRepositoryVariables(setupConfiguration),
+        );
+        if (result.errors.length > 0) return { errors: result.errors };
+        return {
+            step: `✅ Repository Variables: ${result.created} created, ${result.updated} updated`,
+            errors: [],
+        };
+    } catch (error) {
+        const message = `Error configuring repository Variables: ${error}`;
+        logError(message);
+        return { errors: [message] };
+    }
+}
+
+async function ensureRepositorySecrets(
+    param: Execution,
+    dependencies: InitialSetupWorkflowDependencies,
+    setupConfiguration?: SetupConfiguration,
+): Promise<{ step?: string; errors: string[] }> {
+    if (!setupConfiguration?.manageRepositorySecrets || !dependencies.setupRepositorySecretsPort) {
+        return { errors: [] };
+    }
+    const credentials = getSetupCredentialCollection(param);
+    if (!credentials) {
+        return { step: '⚠️  Repository Secrets were not changed: run interactive setup to validate and provide credentials.', errors: [] };
+    }
+    const values = [
+        ...(credentials.workflowPat ? [credentials.workflowPat] : []),
+        ...credentials.apiKeys,
+    ];
+    if (values.length === 0) return { step: '✅ Existing Repository Secrets kept unchanged.', errors: [] };
+    try {
+        const result = await dependencies.setupRepositorySecretsPort.upsertSecrets(
+            param.owner,
+            param.repo,
+            param.tokens.token,
+            values,
+        );
+        if (result.errors.length > 0) return { errors: result.errors };
+        return {
+            step: `✅ Repository Secrets: ${result.created} created, ${result.updated} updated; existing values kept when no replacement was selected.`,
+            errors: [],
+        };
+    } catch (error) {
+        const message = `Error configuring repository Secrets: ${error}`;
+        logError(message);
+        return { errors: [message] };
+    }
+}
+
+function getSetupCredentialCollection(param: Execution): SetupCredentialCollection | undefined {
+    const credentials = param.inputs?.setupCredentials;
+    if (!credentials || typeof credentials !== 'object') return undefined;
+    return credentials as SetupCredentialCollection;
 }
 
 function appendLabelSummary(

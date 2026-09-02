@@ -46,16 +46,16 @@ export async function listIssueTypes(
   for (let page = 1; page <= 100; page += 1) {
     const response: IssueTypePage = await client.graphql<IssueTypePage>(ISSUE_TYPES_QUERY, { owner, after: cursor });
     const organization: IssueTypePage["organization"] = response.organization;
-    if (!organization) throw new Error(`No se pudo obtener la organización ${owner}`);
+    if (!organization) throw new Error(`Could not resolve the organization ${owner}`);
     issueTypes.push(...organization.issueTypes.nodes);
     const pageInfo: NonNullable<IssueTypePage["organization"]>["issueTypes"]["pageInfo"] = organization.issueTypes.pageInfo;
     if (!pageInfo?.hasNextPage) return issueTypes;
     if (!pageInfo.endCursor) {
-      throw new Error(`La paginación de tipos de Issue no devolvió cursor en la página ${page}.`);
+      throw new Error(`Issue type pagination did not return a cursor on page ${page}.`);
     }
     cursor = pageInfo.endCursor;
   }
-  throw new Error("La paginación de tipos de Issue superó 100 páginas.");
+  throw new Error('Issue type pagination exceeded 100 pages.');
 }
 
 export async function createIssueType(
@@ -69,7 +69,7 @@ export async function createIssueType(
     ORGANIZATION_ID_QUERY,
     { owner },
   );
-  if (!response.organization) throw new Error(`No se pudo obtener la organización ${owner}`);
+  if (!response.organization) throw new Error(`Could not resolve the organization ${owner}`);
 
   const result = await client.graphql<{ createIssueType: { issueType: { id: string } } }>(
     CREATE_ISSUE_TYPE_MUTATION,

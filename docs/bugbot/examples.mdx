@@ -161,7 +161,7 @@ After the run, findings appear on the issue and on any open PR for that branch.
 
 ## CLI: detect potential problems
 
-From the **repository root** (with a `.env` that has `PERSONAL_ACCESS_TOKEN` and, if needed, agent CLI environment variables), you can run Bugbot detection locally:
+From the **repository root** (with `PERSONAL_ACCESS_TOKEN` in the environment and, if needed, agent CLI environment variables), you can run Bugbot detection locally:
 
 ```bash
 # Require issue number; optional branch (default: current branch)
@@ -170,7 +170,7 @@ copilot detect-potential-problems -i 123
 # Specify branch explicitly
 copilot detect-potential-problems -i 123 -b feature/issue-123
 
-# With token and debug (if not in .env)
+# With an explicit token and debug
 copilot detect-potential-problems -i 123 -t $PAT -d
 ```
 

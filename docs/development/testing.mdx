@@ -52,6 +52,10 @@ resolution, provider credential isolation, and the language capability's
 separate application port. A passing model smoke test does not replace these
 deterministic tests.
 
+Setup tests also cover the setup/workflow PAT separation, provider validation,
+per-credential remote health results, invalid-secret replacement, workflow update
+approval and backups, `.env` exclusion, and the read-only doctor path.
+
 The reproducible `metrics:architecture` collector is the full evidence
 workflow; it requires a clean working tree and writes reports outside the
 repository.

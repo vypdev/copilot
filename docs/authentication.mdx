@@ -3,9 +3,14 @@ title: Authentication
 description: Securely authenticate your workflows using personal access tokens (PATs).
 ---
 
-Copilot requires a fine-grained personal access token to perform certain actions, such as creating branches, updating pull requests, or managing project boards.
+Copilot uses two deliberately separate credentials:
 
-<Info>Originally, the workflow also made use of the GITHUB_TOKEN for some basic tasks executed within the workflow's scope. However, to simplify the configuration and maintain a single unified bot, the use of this token has been removed, leaving only the necessary PAT.</Info>
+- **Setup PAT (operator token):** entered in `copilot setup` or `copilot doctor`, used only for that local command, and never stored in the repository or in a GitHub Secret. The wizard validates it before making changes.
+- **Workflow PAT (bot token):** owned by the bot account, stored as the repository or organization Secret `PAT`, and consumed by GitHub Actions at runtime. This is the token that gives the workflows their bot identity.
+
+The setup PAT and workflow PAT may have different owners and permissions. Do not paste the workflow PAT into the setup prompt unless you intentionally want the same token to perform both roles.
+
+<Info>GitHub does not reveal Secret values through its API. Copilot validates new credentials with provider metadata requests and validates existing remote Secrets through the read-only `copilot_credential_health.yml` workflow when it is installed on the repository's default branch. The health workflow reports each requested credential independently.</Info>
 
 <Warning>**When the event actor is the same as the token user**: The action detects this before entering the workflow queue. It completes successfully without waiting or running the normal issue/PR/push pipeline. A valid explicit single action still runs. This avoids the bot reacting to its own actions. Use a dedicated bot account (different from the actor) if you want full pipeline behavior on every event.</Warning>
 
@@ -15,8 +20,14 @@ Copilot requires a fine-grained personal access token to perform certain actions
     - For individual developers, it is recommended to use your own account as the bot.
     - In organizations and enterprise accounts, it is better to use a separate, dedicated account. For example, this project belongs to [**vypdev**](https://github.com/vypdev), and the selected bot account is [**vypbot**](https://github.com/vypbot).
   </Step>
+
+  <Step title="Create the setup PAT">
+    The person running setup needs a separate fine-grained PAT. Give it only the permissions required by the selected setup features: repository Metadata read and repository Contents/Workflows read for inspection; Issues write for labels; Variables write for Repository Variables; Secrets read/write when provisioning Secrets; Actions read/write when checking or dispatching credential health; and organization Issue Types or Projects permissions only when those integrations are selected. Contents write and Workflows write are required only if the operator chooses to modify workflow files through the GitHub API.
+
+    Enter it in the hidden prompt, or use `--token`/`PERSONAL_ACCESS_TOKEN` for automation. It remains in memory for the command and is not written to `.env`, a config file, or the `PAT` Secret.
+  </Step>
   
-  <Step title="Create the PAT">
+  <Step title="Create the workflow PAT">
     Once you’ve selected the account that will act as the bot:
     - Go to [**Settings**](https://github.com/settings/profile).
     - Navigate to [**Developer settings**](https://github.com/settings/apps).
@@ -42,7 +53,7 @@ Copilot requires a fine-grained personal access token to perform certain actions
     - **Metadata**: Read-only
     - **Pull requests**: Read and write
     - **Secrets**: Read-only
-    - **Variables**: Read-only
+    - **Variables**: Read and write
     - **Webhooks**: Read and write
     - **Workflows**: Read and write
 
@@ -52,24 +63,24 @@ Copilot requires a fine-grained personal access token to perform certain actions
     - **Issue Types**: Read and write
     - **Members**: Read-only
     - **Projects**: Admin
-    - **Secrets**: Read-only
+    - **Secrets**: Read-only unless the workflow itself must administer Secrets
     - **Self-hosted runners**: Read and write
-    - **Variables**: Read-only
+    - **Variables**: Read and write
 
     Finally press the **Generate new token** button.
 
     <Warning>Make sure to **copy the generated PAT**, as it will not be visible again.</Warning>
   </Step>
 
-  <Step title="Create the secret">
-    It’s time to create a new Secret:
+  <Step title="Create the PAT Secret">
+    It’s time to create the `PAT` Secret used by the workflows. The interactive setup can validate and create/update it directly when the setup PAT has Secrets write permission. Otherwise create it manually:
 
     If your bot account does **not** belong to an organization (individual developer):
     - Go to the repository where you want to implement Copilot.
     - Then, navigate to **Settings**.
     - In the left sidebar, click on **Secrets and variables**, then **Actions**.
     - Click **New repository secret**.
-    - Define a name for the secret and paste the previously created PAT in the **Secret** field.
+    - Define the name as `PAT` and paste the workflow PAT in the **Secret** field.
     - Finally, click **Add secret**.
 
     If your bot account **does** belong to an organization:

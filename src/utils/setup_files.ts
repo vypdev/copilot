@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { copySetupDirectory, copySetupFile } from './setup_file_copy';
 import { logInfo } from './logger';
+import type { SetupFeatures, SetupWorkflowComparison } from '../domain/setup';
 
 /**
  * Ensure .github, .github/workflows and .github/ISSUE_TEMPLATE exist; create them if missing.
@@ -34,72 +35,99 @@ export function ensureGitHubDirs(cwd: string): void {
  * @param setupDirOverride - Optional path to setup/ folder (for tests). If not set, uses package root.
  * @returns { copied, skipped }
  */
-export function copySetupFiles(cwd: string, setupDirOverride?: string): { copied: number; skipped: number } {
+export function copySetupFiles(
+  cwd: string,
+  setupDirOverride?: string,
+  features?: SetupFeatures,
+  options: { updateExistingWorkflows?: boolean; approvedWorkflowFiles?: readonly string[] } = {},
+): { copied: number; skipped: number } {
   const setupDir = setupDirOverride ?? path.join(__dirname, '..', '..', 'setup');
   if (!fs.existsSync(setupDir)) return { copied: 0, skipped: 0 };
 
+  const workflowFeatures: Readonly<Record<string, string>> = {
+    'copilot_issue.yml': 'issues',
+    'copilot_pull_request.yml': 'pullRequests',
+    'copilot_commit.yml': 'commits',
+    'copilot_issue_comment.yml': 'issueComments',
+    'copilot_pull_request_comment.yml': 'pullRequestComments',
+    'release_workflow.yml': 'release',
+    'hotfix_workflow.yml': 'hotfix',
+    'agent-cli-provisioning.yml': 'agentProvisioning',
+    'copilot_credential_health.yml': 'credentialHealth',
+  };
+  const approvedWorkflowFiles = new Set(options.approvedWorkflowFiles ?? []);
+  const backupDirectory = options.updateExistingWorkflows ? path.join(cwd, '.copilot', 'setup-backups', new Date().toISOString().replace(/[:.]/g, '-')) : undefined;
   const workflows = copySetupDirectory(
     path.join(setupDir, 'workflows'),
     path.join(cwd, '.github', 'workflows'),
-    (fileName) => fileName.endsWith('.yml') || fileName.endsWith('.yaml'),
+    (fileName) => (fileName.endsWith('.yml') || fileName.endsWith('.yaml'))
+      && (features === undefined || features[workflowFeatures[fileName]] !== false)
+      && (!options.updateExistingWorkflows
+        || approvedWorkflowFiles.has(fileName)
+        || !fs.existsSync(path.join(cwd, '.github', 'workflows', fileName))),
     'setup/workflows',
+    {
+      overwrite: options.updateExistingWorkflows,
+      backupDirectory,
+    },
   );
   const issueTemplates = copySetupDirectory(
     path.join(setupDir, 'ISSUE_TEMPLATE'),
     path.join(cwd, '.github', 'ISSUE_TEMPLATE'),
-    () => true,
+    (fileName) => features?.issueTemplates !== false
+      && (features?.release !== false || fileName !== 'release.yml')
+      && (features?.hotfix !== false || fileName !== 'hotfix.yml'),
     'setup/ISSUE_TEMPLATE',
   );
-  const pullRequestTemplate = copySetupFile(
-    path.join(setupDir, 'pull_request_template.md'),
-    path.join(cwd, '.github', 'pull_request_template.md'),
-    'setup/pull_request_template.md',
-    '.github/pull_request_template.md',
-  );
-  // Credentials are deliberately never copied from the package. Keep the
-  // destination check here so setup can guide users to their local .env.
-  ensureEnvWithToken(cwd);
+  const pullRequestTemplate = features?.pullRequestTemplate === false
+    ? { copied: 0, skipped: 0 }
+    : copySetupFile(
+      path.join(setupDir, 'pull_request_template.md'),
+      path.join(cwd, '.github', 'pull_request_template.md'),
+      'setup/pull_request_template.md',
+      '.github/pull_request_template.md',
+    );
   return [workflows, issueTemplates, pullRequestTemplate].reduce((total, current) => ({
     copied: total.copied + current.copied,
     skipped: total.skipped + current.skipped,
   }), { copied: 0, skipped: 0 });
 }
 
+export function compareSetupWorkflows(
+  cwd: string,
+  features?: SetupFeatures,
+  setupDirOverride?: string,
+): SetupWorkflowComparison[] {
+  const setupDir = setupDirOverride ?? path.join(__dirname, '..', '..', 'setup');
+  const workflowFeatures: Readonly<Record<string, string>> = {
+    'copilot_issue.yml': 'issues',
+    'copilot_pull_request.yml': 'pullRequests',
+    'copilot_commit.yml': 'commits',
+    'copilot_issue_comment.yml': 'issueComments',
+    'copilot_pull_request_comment.yml': 'pullRequestComments',
+    'release_workflow.yml': 'release',
+    'hotfix_workflow.yml': 'hotfix',
+    'agent-cli-provisioning.yml': 'agentProvisioning',
+    'copilot_credential_health.yml': 'credentialHealth',
+  };
+  const sourceDirectory = path.join(setupDir, 'workflows');
+  if (!fs.existsSync(sourceDirectory)) return [];
+  return fs.readdirSync(sourceDirectory)
+    .filter(file => (file.endsWith('.yml') || file.endsWith('.yaml')) && (features === undefined || features[workflowFeatures[file]] !== false))
+    .filter(file => fs.statSync(path.join(sourceDirectory, file)).isFile())
+    .map(file => {
+      const source = path.join(sourceDirectory, file);
+      const destination = path.join(cwd, '.github', 'workflows', file);
+      if (!fs.existsSync(destination)) return { file, destination: `.github/workflows/${file}`, status: 'missing' as const };
+      const equal = fs.readFileSync(source, 'utf8') === fs.readFileSync(destination, 'utf8');
+      return { file, destination: `.github/workflows/${file}`, status: equal ? 'unchanged' as const : 'changed' as const };
+    });
+}
+
 const ENV_TOKEN_KEY = 'PERSONAL_ACCESS_TOKEN';
 const ENV_PLACEHOLDER_VALUE = 'github_pat_11..';
 /** Minimum length for a token to be considered "defined" (not placeholder). */
 const MIN_VALID_TOKEN_LENGTH = 20;
-
-function getTokenFromEnvFile(envPath: string): string | null {
-  if (!fs.existsSync(envPath) || !fs.statSync(envPath).isFile()) return null;
-  const content = fs.readFileSync(envPath, 'utf8');
-  const match = content.match(new RegExp(`^${ENV_TOKEN_KEY}=(.+)$`, 'm'));
-  if (!match) return null;
-  const value = match[1].trim().replace(/^["']|["']$/g, '');
-  return value.length > 0 ? value : null;
-}
-
-/**
- * Logs the current state of PERSONAL_ACCESS_TOKEN (environment or .env). Does not create .env.
- */
-export function ensureEnvWithToken(cwd: string): void {
-  const envPath = path.join(cwd, '.env');
-  const tokenInEnv = process.env[ENV_TOKEN_KEY]?.trim();
-  if (tokenInEnv) {
-    logInfo('  🔑 PERSONAL_ACCESS_TOKEN is set in environment; .env not needed.');
-    return;
-  }
-  if (fs.existsSync(envPath)) {
-    const tokenInFile = getTokenFromEnvFile(envPath);
-    if (tokenInFile) {
-      logInfo('  ✅ .env exists and contains PERSONAL_ACCESS_TOKEN.');
-    } else {
-      logInfo('  ⚠️  .env exists but PERSONAL_ACCESS_TOKEN is missing or empty.');
-    }
-    return;
-  }
-  logInfo('  💡 You can create a .env file here with PERSONAL_ACCESS_TOKEN=your_token or set it in your environment.');
-}
 
 function isTokenValueValid(token: string): boolean {
   const t = token.trim();
@@ -109,18 +137,14 @@ function isTokenValueValid(token: string): boolean {
 /**
  * Resolves the PERSONAL_ACCESS_TOKEN for setup from a single priority order:
  * 1. override (e.g. CLI --token) if provided and valid,
- * 2. process.env.PERSONAL_ACCESS_TOKEN,
- * 3. .env file in cwd.
+ * 2. process.env.PERSONAL_ACCESS_TOKEN.
  * Returns undefined if no valid token is found.
  */
-export function getSetupToken(cwd: string, override?: string): string | undefined {
+export function getSetupToken(_cwd: string, override?: string): string | undefined {
   const overrideTrimmed = override?.trim();
   if (overrideTrimmed && isTokenValueValid(overrideTrimmed)) return overrideTrimmed;
   const fromEnv = process.env[ENV_TOKEN_KEY]?.trim();
   if (fromEnv && isTokenValueValid(fromEnv)) return fromEnv;
-  const envPath = path.join(cwd, '.env');
-  const fromFile = getTokenFromEnvFile(envPath);
-  if (fromFile !== null && isTokenValueValid(fromFile)) return fromFile;
   return undefined;
 }
 
@@ -130,10 +154,4 @@ export function getSetupToken(cwd: string, override?: string): string | undefine
  */
 export function hasValidSetupToken(cwd: string, override?: string): boolean {
   return getSetupToken(cwd, override) !== undefined;
-}
-
-/** Returns true if a .env file exists in the given directory. */
-export function setupEnvFileExists(cwd: string): boolean {
-  const envPath = path.join(cwd, '.env');
-  return fs.existsSync(envPath) && fs.statSync(envPath).isFile();
 }

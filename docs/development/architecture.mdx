@@ -17,6 +17,13 @@ The repository separates semantic application ports from provider-specific adapt
 
 The application layer MUST NOT import GitHub SDKs, concrete CLIs, process libraries, or provider-specific protocols. Provider adapters MUST NOT define business policy. Configuration validation belongs at the boundary before execution. Prompt construction, untrusted-content handling, and GitHub publication sanitization are separate policies so no agent capability can bypass the security boundary.
 
+Setup follows the same boundary: credential collection, workflow comparison,
+approval, and doctor decisions live in application use cases and semantic ports.
+GitHub Secret encryption, workflow dispatch, provider metadata requests, and the
+temporary health-workflow bootstrap are infrastructure adapters. Secret values
+never enter setup override files, Variables, logs, or the generated workflow
+templates.
+
 ## Workflow queue boundary
 
 The repository-wide mutation queue is an application use case backed by semantic

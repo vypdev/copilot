@@ -30,7 +30,7 @@ corepack pnpm install . --global
 
 If the checkout does not include the compiled `build/` folder (e.g. it is gitignored), run `corepack pnpm install` and `corepack pnpm run build` before `corepack pnpm install . --global`.
 
-Once installed, the `copilot` command is available globally. **All Copilot CLI commands** (including `copilot setup`, `copilot check-progress -i 123`, etc.) must be run **from inside the repository** where you want Copilot to run. Commands that access GitHub require **`PERSONAL_ACCESS_TOKEN`** in the environment or in a **`.env`** file at the repository root; `copilot setup` can copy static setup files before a token is available. See [CLI commands](/single-actions/workflow-and-cli).
+Once installed, the `copilot` command is available globally. **All Copilot CLI commands** (including `copilot setup`, `copilot doctor`, and `copilot check-progress -i 123`) must be run **from inside the repository** where you want Copilot to run. Commands that access GitHub accept `--token` or `PERSONAL_ACCESS_TOKEN` from the environment. `copilot setup` and `copilot doctor` securely prompt for the setup PAT when run interactively; no `.env` file is read or created. `copilot setup --dry-run` is the only setup mode that can run without a token. See [CLI commands](/single-actions/workflow-and-cli).
 
 If you previously installed Copilot from a local checkout, installing the npm package switches the same `copilot` command to the published package. Check which executable and package are active:
 
@@ -92,8 +92,7 @@ The complete command reference, including every supported option, is in [Workflo
 
 <Steps>
   <Step title="1. Create a PAT">
-    The action needs a **Personal Access Token** to manage issues, branches, projects, and workflows. You must create it manually; `copilot setup` does not create it.
-    Follow the [Authentication](/authentication) guide to create a **fine-grained PAT** with the right permissions (Actions, Administration, Contents, Issues, Metadata, Pull requests, etc.) and store it as a secret (e.g. `PAT`) in your repository or organization.
+    Create the **workflow PAT** for the dedicated bot account. Follow the [Authentication](/authentication) guide to create a **fine-grained PAT** with the runtime permissions required by your workflows and store it as the `PAT` Secret in your repository or organization. During `copilot setup`, the operator will provide a separate **setup PAT** in a hidden prompt; that token is used locally to configure the repository and is never stored as `PAT`.
   </Step>
 
   <Step title="2. Run copilot setup in your repository root">
@@ -104,25 +103,27 @@ The complete command reference, including every supported option, is in [Workflo
     copilot setup
     ```
 
-    **About the token the first time:**  
-    The first time you run `copilot setup`, there will usually be **no `.env` file** in that repo with the PAT. The command will copy setup files (workflows, templates, etc.) but may fail or skip the step that needs GitHub access (labels, issue types). In that case:
+    Before applying the plan, the wizard securely asks for the setup PAT. For automation, pass it explicitly or through the environment:
 
-    - Create a **`.env`** file in the **repository root** with your token:
-      ```bash
-      PERSONAL_ACCESS_TOKEN=your_fine_grained_token_here
-      ```
-    - Run **`copilot setup` again**. This time it will have access to the repository and will create labels and issue types.
+    ```bash
+    PERSONAL_ACCESS_TOKEN=your_setup_pat copilot setup --non-interactive --yes --skip-secrets
+    # or: copilot setup --token your_setup_pat
+    ```
 
-    Alternatively, you can create the `.env` file with `PERSONAL_ACCESS_TOKEN` and its value **before** the first run and execute `copilot setup` once; it will then complete all steps (copy files + create labels and issue types) in a single pass.
+    The wizard shows a reviewable plan and asks for confirmation. Use `copilot setup --dry-run` to inspect it without a token or changes.
 
     `copilot setup` will:
     - Create `.github/`, `.github/workflows/`, and `.github/ISSUE_TEMPLATE/` if they do not exist.
-    - Copy all files from the Copilot `setup/` folder into your repo (workflows, issue templates, pull request template). Existing files are **not** overwritten.
-    - Verify GitHub access using `PERSONAL_ACCESS_TOKEN` from `.env`, the environment, or the `--token` option.
+    - Copy only the selected files from the Copilot `setup/` folder into your repo (workflows, issue templates, pull request template). Existing files are **not** overwritten unless you approve an update.
+    - Detect existing setup workflows and ask before updating them. Use `--update-workflows` to approve updates non-interactively; existing workflow files are backed up under `.copilot/setup-backups/` before replacement.
+    - Verify GitHub access using the setup PAT. This operator token is used only for the setup operation and is never stored as a workflow Secret.
+    - Ask for the separate workflow PAT owned by the bot account. It is validated and stored remotely as the `PAT` Secret; it is not the setup PAT.
+    - Ask for each selected provider API key, validate it with a metadata-only provider request, and store it as a GitHub Secret. Existing Secrets are never overwritten unless you explicitly replace them. If a remote credential health workflow is already available, existing values are validated remotely before you choose to keep them.
+    - Create or update non-sensitive Repository Variables for the selected runtimes, model policy, branches, Projects, AI behavior (including `AI_IGNORE_FILES`), and Bugbot settings. Use `--skip-variables` to leave them unchanged.
     - Create all required **labels** in the repository (type, action, priority, size, progress 0%–100%, and the lifecycle/activity/waiting labels).
     - Create all required **issue types** in the organization (Task, Bug, Feature, Release, Hotfix, etc.), if your plan supports it.
 
-    After this step you have a working baseline: labels, templates, and workflow files are in place.
+    After this step you have a working baseline: labels, selected templates/workflows, agent routing, operational Variables, and validated credentials are in place.
   </Step>
 
   <Step title="3. Adapt files to your repository">
@@ -149,7 +150,7 @@ The complete command reference, including every supported option, is in [Workflo
 
 ## What lives in `setup/` (and what gets created)
 
-The workflow and template files under `setup/` are copied into your repo by `copySetupFiles` (run during `copilot setup`). The `setup/.env` file is a local, developer-friendly credential-key template and is intentionally not copied. Below is a desglose of labels (with defaults), issue types, and the contents of `setup/` so you know what you can customize and what must stay consistent.
+The workflow and template files under `setup/` are copied into your repo by `copilot setup`. Credentials are never shipped in the package or written to local configuration files. Below is a breakdown of labels (with defaults), issue types, and the contents of `setup/` so you know what you can customize and what must stay consistent.
 
 ### Coherence when customizing
 
@@ -304,9 +305,9 @@ The **labels** in each template must match the label names configured in the act
 
 Copied to `.github/pull_request_template.md`. Used as the default body for new PRs. The AI PR description feature can fill this structure; you can edit the sections (Summary, Related Issues, Scope, Technical Details, How to Test, etc.) to fit your repo. No Copilot logic depends on specific headings; only the deploy/release/hotfix flows depend on **workflow filenames** and **label names**.
 
-### `setup/.env`
+### `setup/workflows/copilot_credential_health.yml`
 
-The setup package keeps a developer-friendly `setup/.env` template containing only `PERSONAL_ACCESS_TOKEN=` and no value. For local CLI usage, create an ignored `.env` file in the root of the target repository and set the token there. This file is not used by the GitHub Action; workflow credentials come from GitHub Secrets.
+This manual workflow verifies selected remote credentials without printing or returning their values. `copilot doctor` dispatches it when the workflow is present on the repository's default branch. GitHub only exposes Secret names through its API, so this workflow is required to verify the value of an existing Secret.
 
 ---
 

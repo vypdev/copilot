@@ -30,7 +30,7 @@ Full documentation: **[docs.page/vypdev/copilot](https://docs.page/vypdev/copilo
 
 ## Getting started
 
-1. **Create a PAT** and store it as a repo secret (e.g. `PAT`). See [Authentication](https://docs.page/vypdev/copilot/authentication).
+1. **Create the workflow PAT** for the bot account and store it as a repo secret (e.g. `PAT`). `copilot setup` separately asks the operator for a setup PAT that is used only during local configuration. See [Authentication](https://docs.page/vypdev/copilot/authentication).
 2. **Use the action** from the marketplace so versions are stable:
    ```yaml
    uses: vypdev/copilot@v3
@@ -41,7 +41,7 @@ Full documentation: **[docs.page/vypdev/copilot](https://docs.page/vypdev/copilo
    copilot --version
    ```
    Update the published CLI later with **`copilot upgrade`**.
-4. **Add workflows** — Copy the files from `setup/workflows/` into your `.github/workflows/`, or run **`copilot setup`** from your repo root (with `PERSONAL_ACCESS_TOKEN` in `.env`). See [How to use](https://docs.page/vypdev/copilot/how-to-use).
+4. **Add workflows** — Copy the files from `setup/workflows/` into your `.github/workflows/`, or run **`copilot setup`** from your repo root. The setup wizard securely prompts for its separate operator PAT and can validate/provision the workflow PAT and provider credentials. See [How to use](https://docs.page/vypdev/copilot/how-to-use).
 
 ---
 
