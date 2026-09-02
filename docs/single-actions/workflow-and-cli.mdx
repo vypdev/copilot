@@ -62,8 +62,11 @@ corepack pnpm install . --global --force
 Update to the latest published version with:
 
 ```bash
-npm install --global @vypdev/copilot@latest
+copilot upgrade
+copilot --version
 ```
+
+Run `copilot upgrade` from any directory. It updates the published npm installation and does not require a target repository or GitHub token. If the installed version does not include this command, run `npm install --global @vypdev/copilot@latest` once and then use `copilot upgrade`.
 
 Verify the installed package and executable:
 

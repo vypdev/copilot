@@ -12,7 +12,14 @@ description: Controlled procedure for changing CLI versions and reverting safely
 4. Run provisioning, help, focused tests, and a read-only smoke test.
 5. Run the complete gates before enabling the version for write workflows.
 
-For the published Copilot CLI, install a specific package version explicitly:
+For the published Copilot CLI, use `copilot upgrade` to select the latest version:
+
+```bash
+copilot upgrade
+copilot --version
+```
+
+For a controlled rollout or rollback, install a specific package version explicitly:
 
 ```bash
 VERSION=3.2.0 # replace with the selected release version
@@ -20,7 +27,7 @@ npm install --global "@vypdev/copilot@${VERSION}"
 copilot --version
 ```
 
-Use `@latest` only when the latest published release is intentionally selected. The current CLI does not self-update; `copilot upgrade` can be added later once the npm distribution is established.
+Use `@latest` only when the latest published release is intentionally selected. Keep explicit versions for reproducible rollback procedures.
 
 ## Rollback
 

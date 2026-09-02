@@ -62666,6 +62666,27 @@ exports.CheckPullRequestCommentLanguageUseCase = CheckPullRequestCommentLanguage
 
 /***/ }),
 
+/***/ 45762:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UpgradeCliUseCase = void 0;
+/** Coordinates a CLI upgrade without coupling application behavior to npm. */
+class UpgradeCliUseCase {
+    constructor(cliUpgradePort) {
+        this.cliUpgradePort = cliUpgradePort;
+    }
+    async execute() {
+        await this.cliUpgradePort.upgrade();
+    }
+}
+exports.UpgradeCliUseCase = UpgradeCliUseCase;
+
+
+/***/ }),
+
 /***/ 38301:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -62822,6 +62843,7 @@ const check_progress_1 = __nccwpck_require__(61464);
 const recommend_steps_1 = __nccwpck_require__(91523);
 const detect_potential_problems_1 = __nccwpck_require__(70850);
 const setup_1 = __nccwpck_require__(32139);
+const upgrade_1 = __nccwpck_require__(27087);
 function registerCliCommands(program) {
     (0, think_1.registerThinkCommand)(program);
     (0, do_1.registerDoCommand)(program);
@@ -62829,6 +62851,7 @@ function registerCliCommands(program) {
     (0, recommend_steps_1.registerRecommendStepsCommand)(program);
     (0, detect_potential_problems_1.registerDetectPotentialProblemsCommand)(program);
     (0, setup_1.registerSetupCommand)(program);
+    (0, upgrade_1.registerUpgradeCommand)(program);
     return program;
 }
 
@@ -63483,6 +63506,37 @@ async function addIssueContext(params, owner, repo, issueNumber, token, question
     params.eventName = "issue";
     params.issue = { number: parsedIssueNumber };
     params.comment = { body: question };
+}
+
+
+/***/ }),
+
+/***/ 27087:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.runUpgradeCommand = runUpgradeCommand;
+exports.registerUpgradeCommand = registerUpgradeCommand;
+const cli_upgrade_composition_root_1 = __nccwpck_require__(74142);
+async function runUpgradeCommand(runner = (0, cli_upgrade_composition_root_1.createUpgradeCliUseCase)()) {
+    console.log('⬆️ Updating the global @vypdev/copilot installation...');
+    try {
+        await runner.execute();
+        console.log('✅ Copilot was upgraded successfully. Run "copilot --version" to verify.');
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`❌ Unable to upgrade Copilot: ${message}`);
+        process.exitCode = 1;
+    }
+}
+function registerUpgradeCommand(program) {
+    program
+        .command('upgrade')
+        .description('Upgrade the global @vypdev/copilot installation to the latest published version')
+        .action(() => runUpgradeCommand());
 }
 
 
@@ -70245,6 +70299,58 @@ function normalizeOrigin(origin) {
 
 /***/ }),
 
+/***/ 97258:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.NpmCliUpgradeAdapter = exports.COPILOT_PACKAGE_NAME = void 0;
+exports.resolveNpmExecutable = resolveNpmExecutable;
+const node_child_process_1 = __nccwpck_require__(17718);
+exports.COPILOT_PACKAGE_NAME = '@vypdev/copilot';
+function resolveNpmExecutable(platform = process.platform) {
+    return platform === 'win32' ? 'npm.cmd' : 'npm';
+}
+/** Executes the npm installation without invoking a shell or interpolating user input. */
+class NpmCliUpgradeAdapter {
+    upgrade() {
+        const executable = resolveNpmExecutable();
+        const args = ['install', '--global', `${exports.COPILOT_PACKAGE_NAME}@latest`];
+        return new Promise((resolve, reject) => {
+            const child = (0, node_child_process_1.spawn)(executable, args, {
+                shell: false,
+                stdio: 'inherit',
+            });
+            let settled = false;
+            const fail = (error) => {
+                if (settled)
+                    return;
+                settled = true;
+                reject(error);
+            };
+            child.once('error', (error) => {
+                fail(new Error(`Unable to start npm upgrade: ${error.message}`));
+            });
+            child.once('close', (code, signal) => {
+                if (settled)
+                    return;
+                settled = true;
+                if (code === 0) {
+                    resolve();
+                    return;
+                }
+                const status = signal ? `signal ${signal}` : `exit code ${code ?? 'unknown'}`;
+                reject(new Error(`npm upgrade failed with ${status}.`));
+            });
+        });
+    }
+}
+exports.NpmCliUpgradeAdapter = NpmCliUpgradeAdapter;
+
+
+/***/ }),
+
 /***/ 233:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -70367,6 +70473,22 @@ const pull_request_lifecycle_repository_1 = __nccwpck_require__(24189);
 function createCheckProgressCompositionRoot() {
     const labels = new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)());
     return new check_progress_use_case_1.CheckProgressUseCase(new issue_progress_tracking_repository_1.IssueProgressTrackingRepository(new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)()), labels, new issue_progress_label_repository_1.IssueProgressLabelRepository(new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)()))), new branch_lifecycle_repository_1.BranchLifecycleRepository((0, github_branch_client_factory_1.createBranchClient)()), new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
+}
+
+
+/***/ }),
+
+/***/ 74142:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createUpgradeCliUseCase = createUpgradeCliUseCase;
+const upgrade_cli_use_case_1 = __nccwpck_require__(45762);
+const npm_cli_upgrade_adapter_1 = __nccwpck_require__(97258);
+function createUpgradeCliUseCase(cliUpgradePort = new npm_cli_upgrade_adapter_1.NpmCliUpgradeAdapter()) {
+    return new upgrade_cli_use_case_1.UpgradeCliUseCase(cliUpgradePort);
 }
 
 

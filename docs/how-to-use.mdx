@@ -55,8 +55,11 @@ corepack pnpm remove --global copilot
 For a published release, update the global npm package:
 
 ```bash
-npm install --global @vypdev/copilot@latest
+copilot upgrade
+copilot --version
 ```
+
+`copilot upgrade` can be run from any directory; it updates the published npm installation and does not require a GitHub repository or `PERSONAL_ACCESS_TOKEN`. If you are using a version older than `3.3.0`, update it once with `npm install --global @vypdev/copilot@latest`, then use `copilot upgrade` for future updates.
 
 For an unreleased checkout, update the checkout and reinstall the local package globally:
 
