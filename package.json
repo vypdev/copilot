@@ -1,15 +1,42 @@
 {
-  "name": "copilot",
-  "version": "3.1.0",
+  "name": "@vypdev/copilot",
+  "version": "3.2.0",
   "packageManager": "pnpm@10.12.4",
   "description": "Automates branch management, GitHub project linking, and issue/PR tracking with Git-Flow methodology.",
+  "homepage": "https://github.com/vypdev/copilot",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vypdev/copilot.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vypdev/copilot/issues"
+  },
   "main": "build/github_action/index.js",
   "bin": {
     "copilot": "./build/cli/index.js"
   },
+  "files": [
+    "action.yml",
+    "build/cli/index.js",
+    "build/github_action/index.js",
+    "setup/ISSUE_TEMPLATE/",
+    "setup/workflows/",
+    "setup/pull_request_template.md",
+    "scripts/install-git-hooks.cjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "build": "ncc build src/actions/github_action.ts -o build/github_action && ncc build src/cli.ts -o build/cli && chmod +x build/cli/index.js",
     "validate:build": "node scripts/validate-build.cjs",
+    "validate:npm-package": "node scripts/validate-npm-package.cjs",
+    "smoke:npm-package": "node scripts/smoke-test-npm-package.cjs",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -24,7 +51,7 @@
   },
   "keywords": [],
   "author": "Efra Espada",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "@actions/cache": "^4.1.0",
     "@actions/core": "^1.11.1",

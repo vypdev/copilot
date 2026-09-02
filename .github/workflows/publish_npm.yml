@@ -1,0 +1,41 @@
+name: Publish Copilot CLI to npm
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish @vypdev/copilot
+    if: ${{ vars.NPM_PUBLISH_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout published release
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 1
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+
+      - name: Validate release identity and package contents
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          test "$RELEASE_TAG" = "v$(node -p "require('./package.json').version")"
+          test "$(node -p "require('./package.json').name")" = "@vypdev/copilot"
+          npm run validate:npm-package
+          npm run smoke:npm-package
+
+      - name: Publish @vypdev/copilot
+        run: npm publish --access public

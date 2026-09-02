@@ -73,6 +73,8 @@ function assertRunner(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   const expected = relativeFile.startsWith('setup/workflows/')
     ? ['ubuntu-latest']
+    : relativeFile === '.github/workflows/publish_npm.yml'
+      ? ['ubuntu-latest']
     : relativeFile === '.github/workflows/repowise.yml'
       ? ['self-hosted', 'coolify']
       : ['self-hosted', 'codex'];

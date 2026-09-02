@@ -5,11 +5,44 @@ description: Evidence required before publishing a Copilot release.
 # Release process
 
 1. Confirm the candidate branch and working tree.
-2. Review source, generated bundles, workflows, `action.yml`, and MDX navigation.
-3. Run all quality and documentation gates.
-4. Review the diff for credentials, legacy inputs, implicit defaults, and unauthorized fallback.
-5. Commit with a specific message.
-6. Push explicitly to the intended branch.
-7. Verify local and remote SHAs match and the working tree is clean.
+2. Review source, generated bundles, workflows, `action.yml`, npm package metadata, and MDX navigation.
+3. Run all quality, package, and documentation gates.
+4. Review the diff for credentials, legacy inputs, implicit defaults, unauthorized fallback, and files that must not enter the npm tarball.
+5. Confirm the release version will be identical in `package.json`, the Git tag, the GitHub release, and npm.
+6. Commit with a specific message.
+7. Push explicitly to the intended branch.
+8. Verify local and remote SHAs match and the working tree is clean.
+
+## npm package
+
+The CLI is published as the public scoped package `@vypdev/copilot`. The package exposes the global `copilot` executable and includes the compiled Action and CLI bundles, `action.yml`, and the setup templates needed by `copilot setup`.
+
+Before publishing locally, validate the package contents:
+
+```bash
+corepack pnpm run build
+corepack pnpm run validate:npm-package
+corepack pnpm run smoke:npm-package
+```
+
+The internal release and hotfix workflows create the GitHub release. The separate [`publish_npm.yml`](https://github.com/vypdev/copilot/blob/master/.github/workflows/publish_npm.yml) workflow then publishes the exact release tag with npm trusted publishing on a GitHub-hosted runner:
+
+```yaml
+permissions:
+  contents: read
+  id-token: write
+```
+
+The npm package must be configured to trust this repository and workflow before the first automated publication. The workflow is enabled only when the repository variable `NPM_PUBLISH_ENABLED` is set to `true`. It publishes with `npm publish --access public`; trusted publishing generates provenance automatically and does not store an npm token in the repository. npm trusted publishing currently requires a GitHub-hosted runner.
+
+Configure the trusted publisher for `vypdev/copilot` and the workflow filename `publish_npm.yml`, then set the repository variable `NPM_PUBLISH_ENABLED=true`. Subsequent GitHub releases publish automatically. The package must exist before its trusted publisher can be configured.
+
+To verify a published version independently:
+
+```bash
+npm view @vypdev/copilot version
+npm install --global @vypdev/copilot@<version>
+copilot --version
+```
 
 A release MUST NOT be described as complete without current command output proving these steps.

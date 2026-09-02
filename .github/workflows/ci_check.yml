@@ -48,6 +48,12 @@ jobs:
       - name: Validate generated bundles
         run: pnpm run validate:build
 
+      - name: Validate npm package contents
+        run: pnpm run validate:npm-package
+
+      - name: Smoke test npm package
+        run: pnpm run smoke:npm-package
+
       - name: Typecheck
         run: pnpm run typecheck
 

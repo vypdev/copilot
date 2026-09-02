@@ -35,7 +35,12 @@ Full documentation: **[docs.page/vypdev/copilot](https://docs.page/vypdev/copilo
    ```yaml
    uses: vypdev/copilot@v3
    ```
-3. **Add workflows** — Copy the files from `setup/workflows/` into your `.github/workflows/`, or run **`copilot setup`** from your repo root (with `PERSONAL_ACCESS_TOKEN` in `.env`). See [How to use](https://docs.page/vypdev/copilot/how-to-use).
+3. **Install the CLI** when you want to run setup or single actions locally:
+   ```bash
+   npm install --global @vypdev/copilot
+   copilot --version
+   ```
+4. **Add workflows** — Copy the files from `setup/workflows/` into your `.github/workflows/`, or run **`copilot setup`** from your repo root (with `PERSONAL_ACCESS_TOKEN` in `.env`). See [How to use](https://docs.page/vypdev/copilot/how-to-use).
 
 ---
 

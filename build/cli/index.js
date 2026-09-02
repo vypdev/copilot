@@ -62758,12 +62758,23 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createCliProgram = createCliProgram;
+const node_fs_1 = __nccwpck_require__(87561);
+const path = __importStar(__nccwpck_require__(49411));
 const dotenv = __importStar(__nccwpck_require__(11406));
 const commander_1 = __nccwpck_require__(12239);
 const command_registry_1 = __nccwpck_require__(94415);
 dotenv.config();
+function loadPackageVersion() {
+    const packagePath = path.join(__dirname, '..', '..', 'package.json');
+    const packageJson = JSON.parse((0, node_fs_1.readFileSync)(packagePath, 'utf8'));
+    return typeof packageJson.version === 'string' ? packageJson.version : '0.0.0';
+}
 function createCliProgram() {
-    return (0, command_registry_1.registerCliCommands)(new commander_1.Command());
+    const program = new commander_1.Command()
+        .name('copilot')
+        .description('GitHub workflow automation and repository management CLI')
+        .version(loadPackageVersion(), '-V, --version', 'Display the installed Copilot version');
+    return (0, command_registry_1.registerCliCommands)(program);
 }
 
 

@@ -5,7 +5,22 @@ description: Quick setup with copilot setup, then customize labels, templates, a
 
 ## Quick installation (CLI)
 
-You can install the Copilot CLI **from any directory**. For example, from your home or projects folder:
+The recommended installation is the public npm package. The package is scoped as `@vypdev/copilot`, but it exposes the global `copilot` executable:
+
+```bash
+npm install --global @vypdev/copilot
+copilot --version
+```
+
+Use Node.js 24 or newer. You can check the active version before installing:
+
+```bash
+node --version
+```
+
+Run the command from the root of the repository where you want Copilot to operate, not from the package installation directory.
+
+For local development or when testing an unreleased checkout, install from the repository instead:
 
 ```bash
 git clone https://github.com/vypdev/copilot.git
@@ -13,13 +28,37 @@ cd copilot
 corepack pnpm install . --global
 ```
 
-If the repo does not include the compiled `build/` folder (e.g. it is gitignored), run `corepack pnpm install` and `corepack pnpm run build` before `corepack pnpm install . --global`.
+If the checkout does not include the compiled `build/` folder (e.g. it is gitignored), run `corepack pnpm install` and `corepack pnpm run build` before `corepack pnpm install . --global`.
 
-Once installed, the `copilot` command is available globally. **All Copilot CLI commands** (including `copilot setup`, `copilot check-progress -i 123`, etc.) must be run **from inside the repository** where you want Copilot to run. That repository must have a **`.env`** file in its root with **`PERSONAL_ACCESS_TOKEN`** set so the CLI can access the repo. See [CLI commands](/single-actions/workflow-and-cli).
+Once installed, the `copilot` command is available globally. **All Copilot CLI commands** (including `copilot setup`, `copilot check-progress -i 123`, etc.) must be run **from inside the repository** where you want Copilot to run. Commands that access GitHub require **`PERSONAL_ACCESS_TOKEN`** in the environment or in a **`.env`** file at the repository root; `copilot setup` can copy static setup files before a token is available. See [CLI commands](/single-actions/workflow-and-cli).
+
+If you previously installed Copilot from a local checkout, installing the npm package switches the same `copilot` command to the published package. Check which executable and package are active:
+
+```bash
+command -v copilot
+npm list --global --depth 0 @vypdev/copilot
+copilot --version
+```
+
+If `command -v copilot` still points to the checkout's package manager directory, remove that older global installation or update your shell's `PATH`, then open a new shell.
+
+For the previous unscoped installation, use the package manager that installed it:
+
+```bash
+npm uninstall --global copilot
+# or, if it was installed with pnpm:
+corepack pnpm remove --global copilot
+```
 
 ### Update or reinstall the global CLI
 
-When a new Copilot version is available, update the checkout and reinstall the local package globally:
+For a published release, update the global npm package:
+
+```bash
+npm install --global @vypdev/copilot@latest
+```
+
+For an unreleased checkout, update the checkout and reinstall the local package globally:
 
 ```bash
 cd /path/to/copilot
@@ -27,15 +66,22 @@ git pull --ff-only origin master
 corepack pnpm install . --global --force
 ```
 
-Confirm the executable and installed package:
+After an npm installation, confirm the executable and installed package:
 
 ```bash
 command -v copilot
 copilot --help
-corepack pnpm list --global --depth 0 copilot
+copilot --version
+npm list --global --depth 0 @vypdev/copilot
 ```
 
-The CLI currently has no `copilot --version` option. The complete command reference, including every supported option, is in [Workflow & CLI](/single-actions/workflow-and-cli).
+If you installed from a checkout with pnpm, use this package listing instead:
+
+```bash
+corepack pnpm list --global --depth 0 @vypdev/copilot
+```
+
+The complete command reference, including every supported option, is in [Workflow & CLI](/single-actions/workflow-and-cli).
 
 ---
 

@@ -13,6 +13,14 @@ Every runtime must have a deliberate version policy. A missing version is not an
 | OpenCode | `OPENCODE_VERSION` | Corepack pnpm global install | CLI version output |
 | Cursor | installer and `CURSOR_INSTALLER_SHA256` | Official installer download | SHA-256 comparison |
 
+The Copilot CLI is distributed as `@vypdev/copilot` and exposes the `copilot` executable. Pin it for reproducible local tooling:
+
+```bash
+VERSION=3.2.0 # replace with the selected release version
+npm install --global "@vypdev/copilot@${VERSION}"
+copilot --version
+```
+
 ## Rules
 
 1. Pin the version in repository or organization variables.
