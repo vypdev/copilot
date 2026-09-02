@@ -104,30 +104,36 @@ inputs:
   size-xs-label:
     description: "Label to indicate a task of size XS."
     default: "size: XS"
-  copilot-state-analyzing-label:
-    description: "Label for the Copilot lifecycle state: analyzing."
-    default: "copilot:state:analyzing"
-  copilot-state-planned-label:
+  state-ai-processing-label:
+    description: "Temporary label while a Copilot agent is analyzing or working."
+    default: "state:ai-processing"
+  state-planned-label:
     description: "Label for the Copilot lifecycle state: planned."
-    default: "copilot:state:planned"
-  copilot-state-in-progress-label:
+    default: "state:planned"
+  state-in-progress-label:
     description: "Label for the Copilot lifecycle state: implementation in progress."
-    default: "copilot:state:in-progress"
-  copilot-state-reviewing-label:
+    default: "state:in-progress"
+  state-reviewing-label:
     description: "Label for the Copilot lifecycle state: reviewing."
-    default: "copilot:state:reviewing"
-  copilot-state-changes-requested-label:
+    default: "state:reviewing"
+  state-changes-requested-label:
     description: "Label for the Copilot lifecycle state: changes requested."
-    default: "copilot:state:changes-requested"
-  copilot-state-verified-label:
+    default: "state:changes-requested"
+  state-verified-label:
     description: "Label for the Copilot lifecycle state: verified."
-    default: "copilot:state:verified"
-  copilot-state-ready-label:
+    default: "state:verified"
+  state-ready-label:
     description: "Label for the Copilot lifecycle state: ready."
-    default: "copilot:state:ready"
-  copilot-state-blocked-label:
+    default: "state:ready"
+  state-blocked-label:
     description: "Label for the Copilot lifecycle state: blocked."
-    default: "copilot:state:blocked"
+    default: "state:blocked"
+  state-awaiting-maintainer-label:
+    description: "Label for work waiting on a maintainer response or approval."
+    default: "state:awaiting-maintainer"
+  state-awaiting-issue-author-label:
+    description: "Label for work waiting on more information or changes from the issue author."
+    default: "state:awaiting-issue-author"
   size-xxl-threshold-lines:
     description: "Threshold for size XXL in lines."
     default: "1000"

@@ -40,7 +40,7 @@ When the workflow runs on `issues` (opened, edited, labeled, unlabeled, etc.):
 | **Size labels** | Assigns size labels (XS–XXL) and checks size thresholds (lines, files, commits) for prioritization. |
 | **Comments & images** | Posts comments with optional images (per branch type: feature, bugfix, docs, chore, hotfix, release). |
 | **Smart workflow guidance** | Comments can include Git-Flow reminders and next steps. |
-| **Lifecycle state** | Maintains one setup-provisioned `copilot:state:*` label so the issue visibly moves from analysis to planning and implementation. |
+| **Lifecycle labels** | Maintains an exclusive durable `state:*` phase, an optional `state:ai-processing` activity marker, and an optional human-waiting label. Activity can coexist with the durable phase and is removed when the agent run finishes. |
 
 ### 2. Pull request events (`on: pull_request`)
 

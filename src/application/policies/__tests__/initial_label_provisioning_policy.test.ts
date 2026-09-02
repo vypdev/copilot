@@ -22,7 +22,7 @@ describe('initial label provisioning policy', () => {
       [],
     );
 
-    expect(plan.configured.missing).toHaveLength(33);
+    expect(plan.configured.missing).toHaveLength(35);
     expect(plan.configured).toEqual({
       existing: 0,
       missing: expect.arrayContaining([
@@ -32,7 +32,7 @@ describe('initial label provisioning policy', () => {
           description: 'Label to trigger branch management actions',
         },
         {
-          name: 'copilot:state:planned',
+          name: 'state:planned',
           color: '1D76DB',
           description: 'Copilot has produced an implementation plan.',
         },
@@ -63,20 +63,23 @@ describe('initial label provisioning policy', () => {
       ['EXISTING'],
     );
 
+    expect(plan.configured.missing).toHaveLength(12);
     expect(plan.configured).toEqual({
       existing: 1,
-      missing: [
+      missing: expect.arrayContaining([
         expect.objectContaining({ name: '0%' }),
         expect.objectContaining({ name: 'new' }),
-        expect.objectContaining({ name: 'copilot:state:analyzing' }),
-        expect.objectContaining({ name: 'copilot:state:planned' }),
-        expect.objectContaining({ name: 'copilot:state:in-progress' }),
-        expect.objectContaining({ name: 'copilot:state:reviewing' }),
-        expect.objectContaining({ name: 'copilot:state:changes-requested' }),
-        expect.objectContaining({ name: 'copilot:state:verified' }),
-        expect.objectContaining({ name: 'copilot:state:ready' }),
-        expect.objectContaining({ name: 'copilot:state:blocked' }),
-      ],
+        expect.objectContaining({ name: 'state:ai-processing' }),
+        expect.objectContaining({ name: 'state:planned' }),
+        expect.objectContaining({ name: 'state:in-progress' }),
+        expect.objectContaining({ name: 'state:reviewing' }),
+        expect.objectContaining({ name: 'state:changes-requested' }),
+        expect.objectContaining({ name: 'state:verified' }),
+        expect.objectContaining({ name: 'state:ready' }),
+        expect.objectContaining({ name: 'state:blocked' }),
+        expect.objectContaining({ name: 'state:awaiting-maintainer' }),
+        expect.objectContaining({ name: 'state:awaiting-issue-author' }),
+      ]),
     });
     expect(plan.progress.existing).toBe(0);
     expect(plan.progress.missing).toHaveLength(20);

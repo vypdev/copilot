@@ -94,7 +94,7 @@ export declare function buildLocalActionConfiguration(additionalParams: ActionIn
     sizeSLabel: string;
     sizeXsLabel: string;
     lifecycle: {
-        analyzing: string;
+        aiProcessing: string;
         planned: string;
         inProgress: string;
         reviewing: string;
@@ -102,6 +102,8 @@ export declare function buildLocalActionConfiguration(additionalParams: ActionIn
         verified: string;
         ready: string;
         blocked: string;
+        awaitingMaintainer: string;
+        awaitingIssueAuthor: string;
     };
     projectIdsInput: string;
     projectIds: string[];

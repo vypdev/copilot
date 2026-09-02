@@ -65,7 +65,7 @@ export declare function readLocalLabelsAndIssueTypes(additionalParams: ActionInp
         sizeSLabel: string;
         sizeXsLabel: string;
         lifecycle: {
-            analyzing: string;
+            aiProcessing: string;
             planned: string;
             inProgress: string;
             reviewing: string;
@@ -73,6 +73,8 @@ export declare function readLocalLabelsAndIssueTypes(additionalParams: ActionInp
             verified: string;
             ready: string;
             blocked: string;
+            awaitingMaintainer: string;
+            awaitingIssueAuthor: string;
         };
     };
     issueTypes: {

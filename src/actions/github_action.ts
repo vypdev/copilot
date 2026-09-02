@@ -18,6 +18,7 @@ import { createGithubExecutionAdmissionUseCase } from '../infrastructure/composi
 import { createSynchronizeLifecycleStateUseCase } from '../infrastructure/composition/lifecycle_state_composition_root';
 import { createCopilotEvidenceCompositionRoot } from '../infrastructure/composition/copilot_evidence_composition_root';
 import { createGithubActionSummaryCompositionRoot } from '../infrastructure/composition/github_action_summary_composition_root';
+import { createSynchronizeAgentActivityUseCase } from '../infrastructure/composition/agent_activity_composition_root';
 
 export async function runGitHubAction(): Promise<void> {
     if (isEnabledInput(getGithubActionInput(INPUT_KEYS.QUEUE_GATE_ONLY))) {
@@ -71,6 +72,7 @@ export async function runGitHubAction(): Promise<void> {
         projectBoard.command,
         new GitCliRepository(),
         createSynchronizeLifecycleStateUseCase(),
+        createSynchronizeAgentActivityUseCase(),
     );
     const issueContentPort = createIssueContentCompositionRoot();
     await finishGithubAction(

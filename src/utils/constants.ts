@@ -335,15 +335,17 @@ export const INPUT_KEYS = {
     SIZE_S_LABEL: 'size-s-label',
     SIZE_XS_LABEL: 'size-xs-label',
 
-    // Copilot lifecycle labels
-    COPILOT_STATE_ANALYZING_LABEL: 'copilot-state-analyzing-label',
-    COPILOT_STATE_PLANNED_LABEL: 'copilot-state-planned-label',
-    COPILOT_STATE_IN_PROGRESS_LABEL: 'copilot-state-in-progress-label',
-    COPILOT_STATE_REVIEWING_LABEL: 'copilot-state-reviewing-label',
-    COPILOT_STATE_CHANGES_REQUESTED_LABEL: 'copilot-state-changes-requested-label',
-    COPILOT_STATE_VERIFIED_LABEL: 'copilot-state-verified-label',
-    COPILOT_STATE_READY_LABEL: 'copilot-state-ready-label',
-    COPILOT_STATE_BLOCKED_LABEL: 'copilot-state-blocked-label',
+    // Lifecycle label inputs
+    STATE_AI_PROCESSING_LABEL: 'state-ai-processing-label',
+    STATE_PLANNED_LABEL: 'state-planned-label',
+    STATE_IN_PROGRESS_LABEL: 'state-in-progress-label',
+    STATE_REVIEWING_LABEL: 'state-reviewing-label',
+    STATE_CHANGES_REQUESTED_LABEL: 'state-changes-requested-label',
+    STATE_VERIFIED_LABEL: 'state-verified-label',
+    STATE_READY_LABEL: 'state-ready-label',
+    STATE_BLOCKED_LABEL: 'state-blocked-label',
+    STATE_AWAITING_MAINTAINER_LABEL: 'state-awaiting-maintainer-label',
+    STATE_AWAITING_ISSUE_AUTHOR_LABEL: 'state-awaiting-issue-author-label',
 
     // Issue Types
     ISSUE_TYPE_BUG: 'issue-type-bug',

@@ -72,7 +72,7 @@ Use this for team branding or to show different visuals per type of PR. See [Con
 
 ## Review state and evidence
 
-The PR workflow maintains one lifecycle state label (`reviewing`, `changes-requested`, or `ready`) while preserving the normal business labels. Each run also writes a bounded Job Summary. When the PAT can create Checks, Copilot publishes a stable `Copilot / Review` Check Run for the PR head; the check fails when active or reopened findings remain. A missing Checks capability does not make the functional workflow fail.
+The PR workflow maintains one durable lifecycle label (`state:reviewing`, `state:changes-requested`, or `state:ready`) while preserving the normal business labels. Active findings also set `state:awaiting-issue-author`; a clean review sets `state:awaiting-maintainer`. While the reviewer is running, `state:ai-processing` may coexist with these labels and is removed at the end of the run. Each run also writes a bounded Job Summary. When the PAT can create Checks, Copilot publishes a stable `Copilot / Review` Check Run for the PR head; the check fails when active or reopened findings remain. A missing Checks capability does not make the functional workflow fail.
 
 ## Next steps
 

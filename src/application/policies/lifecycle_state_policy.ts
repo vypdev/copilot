@@ -43,7 +43,6 @@ export function resolveLifecycleState(
     if (hasResult(input.results, 'PrepareBranchesUseCase')) return 'in-progress';
     if (hasSuccessfulResult(input.results, 'RecommendStepsUseCase')) return 'planned';
     if (hasExplicitPlanningCommand(input.results)) return 'planned';
-    if (input.issueOpened || input.issueDescriptionEdited) return 'analyzing';
     return undefined;
 }
 

@@ -119,7 +119,7 @@ The complete command reference, including every supported option, is in [Workflo
     - Create `.github/`, `.github/workflows/`, and `.github/ISSUE_TEMPLATE/` if they do not exist.
     - Copy all files from the Copilot `setup/` folder into your repo (workflows, issue templates, pull request template). Existing files are **not** overwritten.
     - Verify GitHub access using `PERSONAL_ACCESS_TOKEN` from `.env`, the environment, or the `--token` option.
-    - Create all required **labels** in the repository (type, action, priority, size, progress 0%–100%).
+    - Create all required **labels** in the repository (type, action, priority, size, progress 0%–100%, and the lifecycle/activity/waiting labels).
     - Create all required **issue types** in the organization (Task, Bug, Feature, Release, Hotfix, etc.), if your plan supports it.
 
     After this step you have a working baseline: labels, templates, and workflow files are in place.
@@ -208,6 +208,25 @@ The setup creates the following labels. Names come from the action input default
 ### Progress labels
 
 The setup creates **21 progress labels**: `0%`, `5%`, `10%`, … `100%`. Colors go from red (0%) to yellow (50%) to green (100%). These are used by the Check Progress action and commit steps to update issue progress.
+
+### Lifecycle, activity, and waiting labels
+
+The setup creates three related label dimensions. The durable lifecycle phase is exclusive; the temporary activity label and the waiting label are independent, so a target can have (for example) `state:in-progress` and `state:ai-processing` at the same time.
+
+| Input key | Default label name | Purpose |
+|-----------|--------------------|--------|
+| `state-planned-label` | `state:planned` | An implementation plan is available |
+| `state-in-progress-label` | `state:in-progress` | Implementation has started |
+| `state-reviewing-label` | `state:reviewing` | A pull request is under review |
+| `state-changes-requested-label` | `state:changes-requested` | The review has active findings |
+| `state-verified-label` | `state:verified` | The pull request was merged successfully |
+| `state-ready-label` | `state:ready` | The latest review is ready for human action |
+| `state-blocked-label` | `state:blocked` | The workflow needs human intervention |
+| `state-ai-processing-label` | `state:ai-processing` | Temporary marker while a Copilot agent is working; removed at run end |
+| `state-awaiting-maintainer-label` | `state:awaiting-maintainer` | Waiting for maintainer response, approval, or merge |
+| `state-awaiting-issue-author-label` | `state:awaiting-issue-author` | Waiting for information or changes from the issue author |
+
+Existing `copilot:state:*` labels are not migrated automatically and can be removed manually.
 
 ---
 

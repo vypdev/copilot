@@ -52553,8 +52553,9 @@ const main_run_route_composition_root_1 = __nccwpck_require__(4706);
 const repository_context_1 = __nccwpck_require__(78958);
 const logging_ports_1 = __nccwpck_require__(6152);
 const logger_adapter_1 = __nccwpck_require__(72762);
+const agent_activity_policy_1 = __nccwpck_require__(15375);
 const main_run_lifecycle_1 = __nccwpck_require__(916);
-async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, lifecycleStateUseCase) {
+async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, lifecycleStateUseCase, agentActivityUseCase) {
     (0, logging_ports_1.configureApplicationLogger)((0, logger_adapter_1.createLoggerAdapter)());
     const repository = (0, repository_context_1.requireRepositoryCoordinates)({
         owner: execution.owner,
@@ -52571,10 +52572,10 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, l
     (0, logger_1.logDebugInfo)(`Setup done. Issue number: ${execution.issueNumber}, isSingleAction: ${execution.isSingleAction}, isIssue: ${execution.isIssue}, isPullRequest: ${execution.isPullRequest}, isPush: ${execution.isPush}`);
     const routeHandlers = (0, main_run_route_composition_root_1.createMainRunRouteCompositionRoot)(projectBoardCommandPort);
     if (execution.runnedByToken) {
-        return (0, main_run_lifecycle_1.runTokenExecution)(execution, routeHandlers);
+        return runTrackedRoute(execution, 'single-action', () => (0, main_run_lifecycle_1.runTokenExecution)(execution, routeHandlers), undefined, agentActivityUseCase);
     }
     if (execution.issueNumber === -1) {
-        return (0, main_run_lifecycle_1.runNoIssueExecution)(execution, routeHandlers);
+        return runTrackedRoute(execution, 'single-action', () => (0, main_run_lifecycle_1.runNoIssueExecution)(execution, routeHandlers), undefined, agentActivityUseCase);
     }
     (0, main_run_lifecycle_1.logWelcomeMessage)(execution);
     const route = (0, main_run_route_1.resolveMainRunRoute)({
@@ -52585,10 +52586,24 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, l
         isPullRequestReviewComment: execution.pullRequest.isPullRequestReviewComment,
         isPush: execution.isPush,
     });
-    const results = await (0, main_run_lifecycle_1.runMainRoute)(execution, route, routeHandlers);
-    if (!lifecycleStateUseCase)
-        return results;
-    return [...results, ...(await lifecycleStateUseCase.invoke({ execution, results }))];
+    if (route === 'unhandled')
+        return (0, main_run_lifecycle_1.runMainRoute)(execution, route, routeHandlers);
+    return runTrackedRoute(execution, route, () => (0, main_run_lifecycle_1.runMainRoute)(execution, route, routeHandlers), lifecycleStateUseCase, agentActivityUseCase);
+}
+async function runTrackedRoute(execution, route, run, lifecycleStateUseCase, agentActivityUseCase) {
+    const trackActivity = agentActivityUseCase !== undefined && (0, agent_activity_policy_1.shouldTrackAgentActivity)(execution, route);
+    if (trackActivity)
+        await agentActivityUseCase.start(execution);
+    try {
+        const results = await run();
+        if (!lifecycleStateUseCase)
+            return results;
+        return [...results, ...(await lifecycleStateUseCase.invoke({ execution, results }))];
+    }
+    finally {
+        if (trackActivity)
+            await agentActivityUseCase.finish(execution);
+    }
 }
 
 
@@ -52813,13 +52828,14 @@ const local_action_output_1 = __nccwpck_require__(94290);
 const local_action_configuration_1 = __nccwpck_require__(66645);
 const local_action_execution_1 = __nccwpck_require__(47047);
 const repository_context_1 = __nccwpck_require__(78958);
+const agent_activity_composition_root_1 = __nccwpck_require__(94253);
 async function runLocalAction(additionalParams) {
     const repository = (0, repository_context_1.requireRepositoryCoordinates)(additionalParams?.repo);
     const normalizedParams = { ...(additionalParams ?? {}), repo: repository };
     const composition = (0, local_action_composition_root_1.createLocalActionCompositionRoot)();
     const configuration = await (0, local_action_configuration_1.buildLocalActionConfiguration)(normalizedParams, composition.projectBoard.query);
     const execution = (0, local_action_execution_1.buildLocalActionExecution)(configuration, normalizedParams);
-    const results = await (0, common_action_1.mainRun)(execution, composition.projectBoard.command, composition.latestTagQuery);
+    const results = await (0, common_action_1.mainRun)(execution, composition.projectBoard.command, composition.latestTagQuery, undefined, (0, agent_activity_composition_root_1.createSynchronizeAgentActivityUseCase)());
     (0, local_action_output_1.renderLocalActionResults)(results);
 }
 
@@ -52977,14 +52993,16 @@ function readLocalLabelsAndIssueTypes(additionalParams, actionInputs) {
             sizeSLabel: label(constants_1.INPUT_KEYS.SIZE_S_LABEL),
             sizeXsLabel: label(constants_1.INPUT_KEYS.SIZE_XS_LABEL),
             lifecycle: {
-                analyzing: label(constants_1.INPUT_KEYS.COPILOT_STATE_ANALYZING_LABEL),
-                planned: label(constants_1.INPUT_KEYS.COPILOT_STATE_PLANNED_LABEL),
-                inProgress: label(constants_1.INPUT_KEYS.COPILOT_STATE_IN_PROGRESS_LABEL),
-                reviewing: label(constants_1.INPUT_KEYS.COPILOT_STATE_REVIEWING_LABEL),
-                changesRequested: label(constants_1.INPUT_KEYS.COPILOT_STATE_CHANGES_REQUESTED_LABEL),
-                verified: label(constants_1.INPUT_KEYS.COPILOT_STATE_VERIFIED_LABEL),
-                ready: label(constants_1.INPUT_KEYS.COPILOT_STATE_READY_LABEL),
-                blocked: label(constants_1.INPUT_KEYS.COPILOT_STATE_BLOCKED_LABEL),
+                aiProcessing: label(constants_1.INPUT_KEYS.STATE_AI_PROCESSING_LABEL),
+                planned: label(constants_1.INPUT_KEYS.STATE_PLANNED_LABEL),
+                inProgress: label(constants_1.INPUT_KEYS.STATE_IN_PROGRESS_LABEL),
+                reviewing: label(constants_1.INPUT_KEYS.STATE_REVIEWING_LABEL),
+                changesRequested: label(constants_1.INPUT_KEYS.STATE_CHANGES_REQUESTED_LABEL),
+                verified: label(constants_1.INPUT_KEYS.STATE_VERIFIED_LABEL),
+                ready: label(constants_1.INPUT_KEYS.STATE_READY_LABEL),
+                blocked: label(constants_1.INPUT_KEYS.STATE_BLOCKED_LABEL),
+                awaitingMaintainer: label(constants_1.INPUT_KEYS.STATE_AWAITING_MAINTAINER_LABEL),
+                awaitingIssueAuthor: label(constants_1.INPUT_KEYS.STATE_AWAITING_ISSUE_AUTHOR_LABEL),
             },
         },
         issueTypes: {
@@ -53534,6 +53552,84 @@ function resolveWorkflowIdentifier(workflowRef) {
     }
     const workflowIdentifier = workflowPath.slice(markerIndex + workflowMarker.length).trim();
     return workflowIdentifier || undefined;
+}
+
+
+/***/ }),
+
+/***/ 79966:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.replaceAgentActivityLabel = replaceAgentActivityLabel;
+/** Adds or removes one activity label without touching unrelated labels. */
+function replaceAgentActivityLabel(currentLabels, activityLabel, active) {
+    const normalizedActivityLabel = activityLabel.trim().toLowerCase();
+    if (!normalizedActivityLabel)
+        return [...currentLabels];
+    const retained = currentLabels.filter(label => label.trim().toLowerCase() !== normalizedActivityLabel);
+    return active ? [...retained, activityLabel] : retained;
+}
+
+
+/***/ }),
+
+/***/ 15375:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.shouldTrackAgentActivity = shouldTrackAgentActivity;
+const agent_1 = __nccwpck_require__(89040);
+/** Decides whether a route can invoke an agent for its current event. */
+function shouldTrackAgentActivity(execution, route) {
+    if (!hasTarget(execution))
+        return false;
+    switch (route) {
+        case 'issue':
+            return (execution.issue.opened || execution.issue.descriptionEdited)
+                && isAgentReady(execution, 'planner');
+        case 'issue-comment':
+        case 'pull-request-review-comment':
+            return hasComment(execution)
+                && (isAgentReady(execution, 'planner')
+                    || isAgentReady(execution, 'findings')
+                    || isAgentReady(execution, 'fixer'));
+        case 'pull-request':
+            return ['opened', 'reopened', 'edited', 'synchronize'].includes(execution.pullRequest.action)
+                && (isAgentReady(execution, 'reviewer')
+                    || (execution.ai.getAiPullRequestDescription() && isAgentReady(execution, 'planner')));
+        case 'push':
+            return execution.commit.commits.length > 0 && isAgentReady(execution, 'findings');
+        case 'single-action':
+            return isAgentBackedSingleAction(execution);
+        default:
+            return false;
+    }
+}
+function isAgentBackedSingleAction(execution) {
+    if (execution.singleAction.isThinkAction || execution.singleAction.isRecommendStepsAction) {
+        return isAgentReady(execution, 'planner');
+    }
+    if (execution.singleAction.isCheckProgressAction || execution.singleAction.isDetectPotentialProblemsAction) {
+        return isAgentReady(execution, 'findings');
+    }
+    return false;
+}
+function isAgentReady(execution, task) {
+    return (0, agent_1.isAgentConfigurationReady)(execution.ai?.getAgentConfiguration(task));
+}
+function hasComment(execution) {
+    return (execution.issue.commentBody || execution.pullRequest.commentBody).trim().length > 0;
+}
+function hasTarget(execution) {
+    if (execution.eventName === 'pull_request' || execution.eventName === 'pull_request_review_comment') {
+        return execution.pullRequest.number > 0;
+    }
+    return execution.issue.number > 0 || execution.issueNumber > 0;
 }
 
 
@@ -54331,7 +54427,7 @@ function progressLabelDefinitions() {
     }));
 }
 function lifecycleLabelDefinitionsFor(labels) {
-    return (0, copilot_lifecycle_1.lifecycleLabelDefinitions)(labels.lifecycle).map(definition => ({
+    return (0, copilot_lifecycle_1.managedLifecycleLabelDefinitions)(labels.lifecycle).map(definition => ({
         name: definition.name,
         color: definition.color,
         description: definition.description,
@@ -55824,6 +55920,87 @@ async function syncProgressLabelsToOpenPullRequests(owner, repo, branch, progres
         await issueRepository.setLabels(owner, repo, prNumber, nextLabels, token);
         (0, logging_ports_1.logInfo)(`Progress label set to ${newProgressLabel} on PR #${prNumber}.`);
     }
+}
+
+
+/***/ }),
+
+/***/ 44880:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SynchronizeAgentActivityUseCase = void 0;
+const copilot_lifecycle_1 = __nccwpck_require__(72418);
+const agent_activity_label_policy_1 = __nccwpck_require__(79966);
+const logging_ports_1 = __nccwpck_require__(6152);
+/**
+ * Maintains the temporary agent-activity label around a complete route.
+ * Cleanup is deliberately best-effort so a label outage never hides the
+ * actual route result; the in-memory execution remains synchronized after a
+ * successful mutation so later lifecycle writes preserve the activity label.
+ */
+class SynchronizeAgentActivityUseCase {
+    constructor(issueLabelsPort) {
+        this.issueLabelsPort = issueLabelsPort;
+        this.taskId = 'SynchronizeAgentActivityUseCase';
+    }
+    async start(execution) {
+        await this.synchronize(execution, true);
+    }
+    async finish(execution) {
+        await this.synchronize(execution, false);
+    }
+    async synchronize(execution, active) {
+        const target = resolveTarget(execution);
+        if (!target) {
+            (0, logging_ports_1.logDebugInfo)(`${this.taskId}: no issue or pull request target; skipping activity label.`);
+            return;
+        }
+        try {
+            // Route steps may have changed labels through their own ports. Read
+            // the latest server inventory before cleanup so removing the
+            // transient marker cannot overwrite those changes.
+            const currentLabels = active
+                ? target.labels
+                : await this.issueLabelsPort.getLabels(execution.owner, execution.repo, target.number, execution.tokens.token);
+            const configuredLabel = (0, copilot_lifecycle_1.activityLabel)(execution.labels.lifecycle);
+            const nextLabels = (0, agent_activity_label_policy_1.replaceAgentActivityLabel)(currentLabels, configuredLabel, active);
+            if (sameLabels(currentLabels, nextLabels))
+                return;
+            await this.issueLabelsPort.setLabels(execution.owner, execution.repo, target.number, nextLabels, execution.tokens.token);
+            target.setLabels(nextLabels);
+            (0, logging_ports_1.logInfo)(`${active ? 'Added' : 'Removed'} Copilot agent activity label on target #${target.number}.`);
+        }
+        catch (error) {
+            const message = `${this.taskId}: unable to ${active ? 'add' : 'remove'} agent activity label.`;
+            (0, logging_ports_1.logError)(message, error instanceof Error ? { stack: error.stack } : undefined);
+        }
+    }
+}
+exports.SynchronizeAgentActivityUseCase = SynchronizeAgentActivityUseCase;
+function resolveTarget(execution) {
+    if (execution.eventName === 'pull_request' || execution.eventName === 'pull_request_review_comment') {
+        if (execution.pullRequest.number <= 0)
+            return undefined;
+        return {
+            number: execution.pullRequest.number,
+            labels: execution.labels.currentPullRequestLabels,
+            setLabels: labels => { execution.labels.currentPullRequestLabels = labels; },
+        };
+    }
+    const number = execution.issue.number > 0 ? execution.issue.number : execution.issueNumber;
+    if (number <= 0)
+        return undefined;
+    return {
+        number,
+        labels: execution.labels.currentIssueLabels,
+        setLabels: labels => { execution.labels.currentIssueLabels = labels; },
+    };
+}
+function sameLabels(left, right) {
+    return left.length === right.length && left.every((label, index) => label === right[index]);
 }
 
 
@@ -70113,21 +70290,30 @@ function parseCopilotCommand(raw) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DEFAULT_COPILOT_LIFECYCLE_LABELS = void 0;
 exports.lifecycleLabelDefinitions = lifecycleLabelDefinitions;
+exports.activityLabelDefinitions = activityLabelDefinitions;
+exports.waitingLabelDefinitions = waitingLabelDefinitions;
+exports.managedLifecycleLabelDefinitions = managedLifecycleLabelDefinitions;
 exports.lifecycleLabelNames = lifecycleLabelNames;
+exports.activityLabelNames = activityLabelNames;
+exports.waitingLabelNames = waitingLabelNames;
+exports.managedLifecycleLabelNames = managedLifecycleLabelNames;
 exports.lifecycleStateLabel = lifecycleStateLabel;
+exports.activityLabel = activityLabel;
+exports.waitingStateLabel = waitingStateLabel;
 exports.lifecycleStateFromLabels = lifecycleStateFromLabels;
 exports.DEFAULT_COPILOT_LIFECYCLE_LABELS = {
-    analyzing: 'copilot:state:analyzing',
-    planned: 'copilot:state:planned',
-    inProgress: 'copilot:state:in-progress',
-    reviewing: 'copilot:state:reviewing',
-    changesRequested: 'copilot:state:changes-requested',
-    verified: 'copilot:state:verified',
-    ready: 'copilot:state:ready',
-    blocked: 'copilot:state:blocked',
+    aiProcessing: 'state:ai-processing',
+    planned: 'state:planned',
+    inProgress: 'state:in-progress',
+    reviewing: 'state:reviewing',
+    changesRequested: 'state:changes-requested',
+    verified: 'state:verified',
+    ready: 'state:ready',
+    blocked: 'state:blocked',
+    awaitingMaintainer: 'state:awaiting-maintainer',
+    awaitingIssueAuthor: 'state:awaiting-issue-author',
 };
-const LIFECYCLE_METADATA = [
-    ['analyzing', 'analyzing', 'FBCA04', 'Copilot is analyzing the issue or change.'],
+const STABLE_LIFECYCLE_METADATA = [
     ['planned', 'planned', '1D76DB', 'Copilot has produced an implementation plan.'],
     ['in-progress', 'inProgress', '0E8A16', 'Implementation work is in progress.'],
     ['reviewing', 'reviewing', '5319E7', 'A pull request is being reviewed.'],
@@ -70136,22 +70322,80 @@ const LIFECYCLE_METADATA = [
     ['ready', 'ready', '6F42C1', 'The change is ready for human approval or merge.'],
     ['blocked', 'blocked', 'B60205', 'The workflow is blocked and needs human input.'],
 ];
-function lifecycleLabelDefinitions(labels = exports.DEFAULT_COPILOT_LIFECYCLE_LABELS) {
-    return LIFECYCLE_METADATA.map(([state, key, color, description]) => ({
+const ACTIVITY_METADATA = [
+    ['ai-processing', 'aiProcessing', 'FBCA04', 'A Copilot agent is analyzing or working on the issue or change.'],
+];
+const WAITING_METADATA = [
+    ['awaiting-maintainer', 'awaitingMaintainer', '5319E7', 'The next action requires a maintainer response or approval.'],
+    ['awaiting-issue-author', 'awaitingIssueAuthor', 'D93F0B', 'The next action requires more information or changes from the issue author.'],
+];
+function stableDefinitions(labels) {
+    return STABLE_LIFECYCLE_METADATA.map(([state, key, color, description]) => ({
+        category: 'lifecycle',
         state,
         name: labels[key],
         color,
         description,
     }));
 }
+function activityDefinitions(labels) {
+    return ACTIVITY_METADATA.map(([, key, color, description]) => ({
+        category: 'activity',
+        name: labels[key],
+        color,
+        description,
+    }));
+}
+function waitingDefinitions(labels) {
+    return WAITING_METADATA.map(([, key, color, description]) => ({
+        category: 'waiting',
+        name: labels[key],
+        color,
+        description,
+    }));
+}
+function lifecycleLabelDefinitions(labels = exports.DEFAULT_COPILOT_LIFECYCLE_LABELS) {
+    return stableDefinitions(labels);
+}
+function activityLabelDefinitions(labels = exports.DEFAULT_COPILOT_LIFECYCLE_LABELS) {
+    return activityDefinitions(labels);
+}
+function waitingLabelDefinitions(labels = exports.DEFAULT_COPILOT_LIFECYCLE_LABELS) {
+    return waitingDefinitions(labels);
+}
+function managedLifecycleLabelDefinitions(labels = exports.DEFAULT_COPILOT_LIFECYCLE_LABELS) {
+    return [
+        ...stableDefinitions(labels),
+        ...activityDefinitions(labels),
+        ...waitingDefinitions(labels),
+    ];
+}
 function lifecycleLabelNames(labels = exports.DEFAULT_COPILOT_LIFECYCLE_LABELS) {
     return lifecycleLabelDefinitions(labels).map(definition => definition.name);
+}
+function activityLabelNames(labels = exports.DEFAULT_COPILOT_LIFECYCLE_LABELS) {
+    return activityLabelDefinitions(labels).map(definition => definition.name);
+}
+function waitingLabelNames(labels = exports.DEFAULT_COPILOT_LIFECYCLE_LABELS) {
+    return waitingLabelDefinitions(labels).map(definition => definition.name);
+}
+function managedLifecycleLabelNames(labels = exports.DEFAULT_COPILOT_LIFECYCLE_LABELS) {
+    return managedLifecycleLabelDefinitions(labels).map(definition => definition.name);
 }
 function lifecycleStateLabel(state, labels = exports.DEFAULT_COPILOT_LIFECYCLE_LABELS) {
     const definition = lifecycleLabelDefinitions(labels).find(candidate => candidate.state === state);
     if (!definition)
         throw new Error(`Unknown Copilot lifecycle state: ${state}`);
     return definition.name;
+}
+function activityLabel(labels = exports.DEFAULT_COPILOT_LIFECYCLE_LABELS) {
+    return labels.aiProcessing;
+}
+function waitingStateLabel(state, labels = exports.DEFAULT_COPILOT_LIFECYCLE_LABELS) {
+    const metadata = WAITING_METADATA.find(([metadataState]) => metadataState === state);
+    if (!metadata)
+        throw new Error(`Unknown Copilot waiting state: ${state}`);
+    return labels[metadata[1]];
 }
 function lifecycleStateFromLabels(currentLabels, labels = exports.DEFAULT_COPILOT_LIFECYCLE_LABELS) {
     const normalized = new Set(currentLabels.map(label => label.trim().toLowerCase()));
@@ -70362,6 +70606,22 @@ const github_identity_client_factory_1 = __nccwpck_require__(93081);
 const actor_authorization_repository_1 = __nccwpck_require__(96711);
 function createActorAuthorizationRepository() {
     return new actor_authorization_repository_1.ActorAuthorizationRepository((0, github_identity_client_factory_1.createActorAuthorizationClient)());
+}
+
+
+/***/ }),
+
+/***/ 94253:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createSynchronizeAgentActivityUseCase = createSynchronizeAgentActivityUseCase;
+const synchronize_agent_activity_use_case_1 = __nccwpck_require__(44880);
+const issue_labels_composition_root_1 = __nccwpck_require__(34780);
+function createSynchronizeAgentActivityUseCase() {
+    return new synchronize_agent_activity_use_case_1.SynchronizeAgentActivityUseCase((0, issue_labels_composition_root_1.createIssueLabelRepository)());
 }
 
 
@@ -72838,15 +73098,17 @@ exports.INPUT_KEYS = {
     SIZE_M_LABEL: 'size-m-label',
     SIZE_S_LABEL: 'size-s-label',
     SIZE_XS_LABEL: 'size-xs-label',
-    // Copilot lifecycle labels
-    COPILOT_STATE_ANALYZING_LABEL: 'copilot-state-analyzing-label',
-    COPILOT_STATE_PLANNED_LABEL: 'copilot-state-planned-label',
-    COPILOT_STATE_IN_PROGRESS_LABEL: 'copilot-state-in-progress-label',
-    COPILOT_STATE_REVIEWING_LABEL: 'copilot-state-reviewing-label',
-    COPILOT_STATE_CHANGES_REQUESTED_LABEL: 'copilot-state-changes-requested-label',
-    COPILOT_STATE_VERIFIED_LABEL: 'copilot-state-verified-label',
-    COPILOT_STATE_READY_LABEL: 'copilot-state-ready-label',
-    COPILOT_STATE_BLOCKED_LABEL: 'copilot-state-blocked-label',
+    // Lifecycle label inputs
+    STATE_AI_PROCESSING_LABEL: 'state-ai-processing-label',
+    STATE_PLANNED_LABEL: 'state-planned-label',
+    STATE_IN_PROGRESS_LABEL: 'state-in-progress-label',
+    STATE_REVIEWING_LABEL: 'state-reviewing-label',
+    STATE_CHANGES_REQUESTED_LABEL: 'state-changes-requested-label',
+    STATE_VERIFIED_LABEL: 'state-verified-label',
+    STATE_READY_LABEL: 'state-ready-label',
+    STATE_BLOCKED_LABEL: 'state-blocked-label',
+    STATE_AWAITING_MAINTAINER_LABEL: 'state-awaiting-maintainer-label',
+    STATE_AWAITING_ISSUE_AUTHOR_LABEL: 'state-awaiting-issue-author-label',
     // Issue Types
     ISSUE_TYPE_BUG: 'issue-type-bug',
     ISSUE_TYPE_BUG_DESCRIPTION: 'issue-type-bug-description',
