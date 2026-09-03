@@ -6,6 +6,7 @@
  */
 
 import { BUGBOT_MARKER_PREFIX } from "../../../../../utils/constants";
+import { ApplicationError } from "../../../../errors/application_error";
 import type { BugbotFinding, BugbotFindingResolution } from "./types";
 import { sanitizeAgentMarkdown } from "../../../../../application/policies/github_comment_publication_policy";
 
@@ -37,12 +38,13 @@ export function normalizeFindingIdForMarker(
 function requireFindingIdForMarker(findingId: string): string {
   const safeId = normalizeFindingIdForMarker(findingId);
   if (safeId == null) {
-    throw new Error(
+    throw new ApplicationError(
       findingId.trim().length === 0
         ? "Finding ID is empty after marker sanitization."
         : findingId.trim().length > MAX_FINDING_ID_LENGTH
           ? "Finding ID exceeds the maximum marker length."
           : "Finding ID contains marker-breaking characters.",
+      'validation',
     );
   }
   return safeId;

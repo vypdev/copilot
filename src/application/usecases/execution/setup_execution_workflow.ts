@@ -1,4 +1,5 @@
 import type { ExecutionConfigurationPort } from '../../ports/execution_configuration_ports';
+import { ApplicationError } from '../../errors/application_error';
 import type { ExecutionIssueSetupPort, ExecutionOrganizationSetupPort } from '../../ports/execution_setup_ports';
 import type { Execution } from '../../../data/model/execution';
 import { shouldSkipInitialLabelsFetch } from '../../../data/model/initial_labels_policy';
@@ -35,7 +36,7 @@ export async function runSetupExecution(execution: Execution, dependencies: Setu
 async function loadTokenUser(execution: Execution, organizationSetupPort: ExecutionOrganizationSetupPort): Promise<void> {
     if (execution.tokenUser !== undefined) return;
     execution.tokenUser = await organizationSetupPort.getUserFromToken(execution.tokens.token);
-    if (!execution.tokenUser) throw new Error('Failed to get user from token');
+    if (!execution.tokenUser) throw new ApplicationError('Failed to get user from token', 'authorization');
 }
 
 async function loadPreviousConfiguration(execution: Execution, configurationPort: ExecutionConfigurationPort) {

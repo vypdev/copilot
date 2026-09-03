@@ -1,8 +1,21 @@
-import type { Execution } from '../../data/model/execution';
-import { CONFIG_SCHEMA_VERSION } from '../../data/model/config';
+import { CONFIG_SCHEMA_VERSION, migrateConfigurationPayload } from '../../data/model/config';
 
-export function buildConfigurationPayload(execution: Execution, storedRaw: string | undefined): string {
+export interface ConfigurationPayloadContext {
+    readonly currentConfiguration: {
+        readonly branchType: string;
+        readonly releaseBranch?: string;
+        readonly workingBranch?: string;
+        readonly parentBranch?: string;
+        readonly hotfixOriginBranch?: string;
+        readonly hotfixBranch?: string;
+        readonly branchConfiguration?: unknown;
+        readonly recommendationState?: unknown;
+    };
+}
+
+export function buildConfigurationPayload(execution: ConfigurationPayloadContext, storedRaw: string | undefined): string {
     const current = execution.currentConfiguration;
+    const stored = parseStoredConfiguration(storedRaw);
     const payload: Record<string, unknown> = {
         schemaVersion: CONFIG_SCHEMA_VERSION,
         branchType: current.branchType,
@@ -14,7 +27,8 @@ export function buildConfigurationPayload(execution: Execution, storedRaw: strin
         branchConfiguration: current.branchConfiguration,
         recommendationState: current.recommendationState,
     };
-    mergeMissingValues(payload, parseStoredConfiguration(storedRaw));
+    mergeMissingValues(payload, stored);
+    preserveFutureSchemaVersion(payload, stored);
     delete payload.results;
     return JSON.stringify(payload, null, 4);
 }
@@ -22,7 +36,7 @@ export function buildConfigurationPayload(execution: Execution, storedRaw: strin
 function parseStoredConfiguration(storedRaw: string | undefined): Record<string, unknown> | undefined {
     if (!storedRaw?.trim()) return undefined;
     try {
-        return JSON.parse(storedRaw) as Record<string, unknown>;
+        return migrateConfigurationPayload(JSON.parse(storedRaw)).payload;
     } catch {
         return undefined;
     }
@@ -32,5 +46,14 @@ function mergeMissingValues(payload: Record<string, unknown>, stored: Record<str
     if (!stored) return;
     for (const key of Object.keys(stored)) {
         if (payload[key] === undefined && stored[key] !== undefined) payload[key] = stored[key];
+    }
+}
+
+function preserveFutureSchemaVersion(
+    payload: Record<string, unknown>,
+    stored: Record<string, unknown> | undefined,
+): void {
+    if (typeof stored?.schemaVersion === 'number' && stored.schemaVersion > CONFIG_SCHEMA_VERSION) {
+        payload.schemaVersion = stored.schemaVersion;
     }
 }

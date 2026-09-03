@@ -1,4 +1,4 @@
-import { Config } from '../config';
+import { CONFIG_SCHEMA_VERSION, Config, migrateConfigurationPayload } from '../config';
 
 describe('Config', () => {
   it('ignores malformed external data without throwing', () => {
@@ -66,5 +66,47 @@ describe('Config', () => {
     const c = new Config({ recommendationState: { recommendation: 'incomplete' } });
 
     expect(c.recommendationState).toBeUndefined();
+  });
+
+  it('migrates legacy payloads and removes transient execution results', () => {
+    const migration = migrateConfigurationPayload({
+      branchType: 'feature',
+      results: [{ id: 'runtime-only' }],
+    });
+
+    expect(migration).toMatchObject({
+      sourceVersion: 0,
+      migrated: true,
+      futureVersion: false,
+    });
+    expect(migration.payload).toEqual({
+      branchType: 'feature',
+      schemaVersion: CONFIG_SCHEMA_VERSION,
+    });
+    expect(new Config({ branchType: 'feature', results: [] }).schemaVersion).toBe(CONFIG_SCHEMA_VERSION);
+  });
+
+  it('drops malformed durable values during migration', () => {
+    const migration = migrateConfigurationPayload({
+      schemaVersion: 1,
+      branchConfiguration: null,
+      recommendationState: { recommendation: 'incomplete' },
+    });
+
+    expect(migration.payload).toEqual({ schemaVersion: CONFIG_SCHEMA_VERSION });
+  });
+
+  it('does not downgrade a payload produced by a newer version', () => {
+    const migration = migrateConfigurationPayload({
+      schemaVersion: CONFIG_SCHEMA_VERSION + 10,
+      futureField: 'preserve-me',
+    });
+
+    expect(migration).toMatchObject({
+      sourceVersion: CONFIG_SCHEMA_VERSION + 10,
+      migrated: false,
+      futureVersion: true,
+    });
+    expect(new Config(migration.payload).schemaVersion).toBe(CONFIG_SCHEMA_VERSION + 10);
   });
 });

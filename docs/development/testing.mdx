@@ -33,6 +33,17 @@ discard, valid single-action preservation, identity lookup failure, and the abse
 of project composition, agent provisioning, setup, publication, and persistence on
 discarded runs.
 
+The lifecycle replay integration suite feeds normalized, serialized-shaped
+`pull_request_review`, `check_suite`, and `workflow_run` payloads through the
+real lifecycle synchronization use case. It verifies deterministic labels for
+approved reviews, requested changes, pending checks, failed checks, successful
+checks, and ambiguous multi-PR events without invoking an agent route.
+
+Configuration migration tests cover legacy payloads, transient `results`,
+malformed durable values, and future-schema preservation. Architecture tests
+also guard the narrow context contracts used by extracted policies and lifecycle
+reconciliation.
+
 Architecture tests additionally verify that production imports remain acyclic,
 application code does not depend on concrete adapters, and pure model/policy
 code remains free of runtime, provider, and logging dependencies. Refresh the

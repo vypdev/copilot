@@ -1,5 +1,6 @@
-import type { Execution } from '../../../data/model/execution';
 import { Result } from '../../../data/model/result';
+import type { ExecutionInputs } from '../../../data/model/execution_inputs';
+import type { CopilotLifecycleLabels } from '../../../domain/copilot_lifecycle';
 import { lifecycleLabelNames, lifecycleStateLabel, waitingLabelNames, waitingStateLabel } from '../../../domain/copilot_lifecycle';
 import { readLifecycleExternalEvidence, resolveLifecycleState } from '../../policies/lifecycle_state_policy';
 import { resolveLifecycleWaitingState, type LifecycleWaitingStateDecision } from '../../policies/lifecycle_waiting_state_policy';
@@ -7,8 +8,35 @@ import type { IssueLabelsPort } from '../../ports/issue_management_ports';
 import { logDebugInfo, logError } from '../../ports/logging_ports';
 
 export interface SynchronizeLifecycleStateParam {
-    execution: Execution;
+    execution: LifecycleSynchronizationExecution;
     results: readonly Result[];
+}
+
+/** Narrow runtime context required by lifecycle reconciliation. */
+export interface LifecycleSynchronizationExecution {
+    readonly owner: string;
+    readonly repo: string;
+    readonly eventName: string;
+    readonly inputs: ExecutionInputs | undefined;
+    readonly issueNumber: number;
+    readonly isIssue: boolean;
+    readonly isPullRequest: boolean;
+    readonly issue: {
+        readonly number: number;
+        readonly opened: boolean;
+        readonly descriptionEdited: boolean;
+    };
+    readonly pullRequest: {
+        readonly number: number;
+        readonly isMerged: boolean;
+        readonly isClosed: boolean;
+    };
+    readonly labels: {
+        currentIssueLabels: string[];
+        currentPullRequestLabels: string[];
+        readonly lifecycle: CopilotLifecycleLabels;
+    };
+    readonly tokens: { readonly token: string };
 }
 
 const PULL_REQUEST_LIFECYCLE_EVENTS = [
@@ -92,7 +120,7 @@ export class SynchronizeLifecycleStateUseCase {
     }
 }
 
-function targetNumber(execution: Execution): number {
+function targetNumber(execution: LifecycleSynchronizationExecution): number {
     if (['issues', 'issue_comment', 'push'].includes(execution.eventName)) {
         return execution.issue.number > 0 ? execution.issue.number : execution.issueNumber;
     }
@@ -100,13 +128,13 @@ function targetNumber(execution: Execution): number {
     return -1;
 }
 
-function targetLabels(execution: Execution): string[] {
+function targetLabels(execution: LifecycleSynchronizationExecution): string[] {
     return PULL_REQUEST_LIFECYCLE_EVENTS.includes(execution.eventName)
         ? execution.labels.currentPullRequestLabels
         : execution.labels.currentIssueLabels;
 }
 
-function setTargetLabels(execution: Execution, labels: string[]): void {
+function setTargetLabels(execution: LifecycleSynchronizationExecution, labels: string[]): void {
     if (PULL_REQUEST_LIFECYCLE_EVENTS.includes(execution.eventName)) {
         execution.labels.currentPullRequestLabels = labels;
     }

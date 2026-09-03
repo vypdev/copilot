@@ -24,6 +24,19 @@ temporary health-workflow bootstrap are infrastructure adapters. Secret values
 never enter setup override files, Variables, logs, or the generated workflow
 templates.
 
+Runtime aggregates are kept at the composition boundary. Extracted policies and
+reconciliation use cases receive narrow context contracts containing only the
+facts they need; they do not depend on the complete `Execution` aggregate.
+This keeps pure decisions independently testable and makes new event sources
+less likely to couple unrelated capabilities. Application failures use the
+typed `ApplicationError` contract with a category, retry hint, and diagnostic
+cause; the cause is never published as user-facing workflow output.
+
+Configuration embedded in issue or pull-request content is versioned. Readers
+migrate legacy payloads, remove transient execution data, retain unknown keys,
+and preserve future schema versions so an older workflow cannot silently
+downgrade configuration written by a newer one.
+
 ## Workflow queue boundary
 
 The repository-wide mutation queue is an application use case backed by semantic

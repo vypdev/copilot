@@ -10,6 +10,7 @@ import type {
     SetupRepositorySecretsPort,
     SetupRemoteCredentialHealthPort,
 } from '../../ports/setup_wizard_ports';
+import { ApplicationError } from '../../errors/application_error';
 
 export interface SetupCredentialsRequest {
     owner: string;
@@ -38,13 +39,13 @@ export class SetupCredentialsUseCase {
     async collect(request: SetupCredentialsRequest): Promise<SetupCredentialsResult> {
         const setupCheck = await this.validation.validateSetupPat(request.owner, request.repository, request.setupToken);
         if (setupCheck.status !== 'valid') {
-            throw new Error(`Setup PAT validation failed: ${setupCheck.message}`);
+            throw new ApplicationError(`Setup PAT validation failed: ${setupCheck.message}`, 'authorization');
         }
         if (!request.manageSecrets) {
             this.prompt.showCredentialChecks([setupCheck]);
             return { collection: { apiKeys: [] }, checks: [setupCheck], existingSecretNames: [] };
         }
-        if (!this.secrets) throw new Error('Repository Secret provisioning is not available in this installation.');
+        if (!this.secrets) throw new ApplicationError('Repository Secret provisioning is not available in this installation.', 'configuration');
 
         const existingSecretNames = await this.secrets.list(request.owner, request.repository, request.setupToken);
         const requirements = request.requirements.filter(requirement => requirement.name !== 'SETUP_PAT');
@@ -74,7 +75,7 @@ export class SetupCredentialsUseCase {
                 checks.push(remoteCheck);
                 const decision = await this.prompt.chooseExistingCredential(requirement, remoteCheck);
                 if (remoteCheck.status === 'invalid' && decision !== 'replace') {
-                    throw new Error(`${requirement.name} is invalid and must be replaced before setup can continue.`);
+                    throw new ApplicationError(`${requirement.name} is invalid and must be replaced before setup can continue.`, 'authorization');
                 }
                 if (decision === 'keep') continue;
                 if (decision === 'skip') continue;
@@ -85,14 +86,14 @@ export class SetupCredentialsUseCase {
                 : await this.prompt.requestApiKey(requirement, existing ? checks[checks.length - 1] : undefined);
             if (!value) {
                 if (!existing) checks.push({ name: requirement.name, status: 'missing', message: 'No value was provided.' });
-                throw new Error(`${requirement.name} is required by the selected workflows.`);
+                throw new ApplicationError(`${requirement.name} is required by the selected workflows.`, 'configuration');
             }
             const check = requirement.kind === 'workflowPat'
                 ? await this.validation.validateSetupPat(request.owner, request.repository, value.value)
                 : await this.validation.validateCredential(requirement, value.value);
             checks.push({ ...check, name: requirement.name });
             if (check.status !== 'valid') {
-                throw new Error(`${requirement.name} validation failed: ${check.message}`);
+                throw new ApplicationError(`${requirement.name} validation failed: ${check.message}`, 'authorization');
             }
             values.push(value);
         }

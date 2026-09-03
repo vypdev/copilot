@@ -24,6 +24,9 @@ describe("collect architecture metrics", () => {
     expect(commandTimeout(["pnpm", "exec", "jest", "--coverage"])).toBe(
       600_000,
     );
+    expect(commandTimeout(["/repo/node_modules/.bin/jest", "--coverage"])).toBe(
+      600_000,
+    );
     expect(commandTimeout(["/opt/repowise", "init", "."])).toBe(900_000);
     expect(commandTimeout(["/opt/repowise", "health", "."])).toBe(300_000);
     expect(commandTimeout(["/opt/graphify", "update", "."])).toBe(600_000);

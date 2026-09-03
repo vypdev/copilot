@@ -1,4 +1,5 @@
 import type { AuthenticatedUserPort } from '../../ports/authenticated_user_ports';
+import { ApplicationError } from '../../errors/application_error';
 import type { ParamUseCase } from '../base/param_usecase';
 import {
     resolveGithubExecutionAdmission,
@@ -25,7 +26,7 @@ export class ResolveGithubExecutionAdmissionUseCase implements ParamUseCase<Gith
     async invoke(request: GithubExecutionAdmissionRequest): Promise<GithubExecutionAdmissionResult> {
         const tokenUser = await this.authenticatedUserPort.getUserFromToken(request.token);
         if (typeof tokenUser !== 'string' || tokenUser.trim().length === 0) {
-            throw new Error('Failed to get user from token');
+            throw new ApplicationError('Failed to get user from token', 'authorization');
         }
 
         return {

@@ -52029,15 +52029,16 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.parseAgentCommand = parseAgentCommand;
 const shellQuote = __importStar(__nccwpck_require__(75430));
+const application_error_1 = __nccwpck_require__(75999);
 /** Parses a literal agent command without allowing shell operators or substitutions. */
 function parseAgentCommand(command) {
     const trimmed = command.trim();
     if (!trimmed)
-        throw new Error('Agent CLI command must not be empty.');
+        throw new application_error_1.ApplicationError('Agent CLI command must not be empty.', 'validation');
     const parsed = shellQuote.parse(trimmed, {});
     const argv = parsed.filter((entry) => typeof entry === 'string');
     if (argv.length !== parsed.length || argv.length === 0) {
-        throw new Error('Agent CLI command contains unsupported shell syntax. Use an executable and literal arguments only.');
+        throw new application_error_1.ApplicationError('Agent CLI command contains unsupported shell syntax. Use an executable and literal arguments only.', 'validation');
     }
     return { executable: argv[0], args: argv.slice(1) };
 }
@@ -52082,11 +52083,12 @@ function cliInstallationHint(provider) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.validateConfiguredAgentCommand = validateConfiguredAgentCommand;
+const application_error_1 = __nccwpck_require__(75999);
 const agent_command_parser_1 = __nccwpck_require__(15044);
 function validateConfiguredAgentCommand(configuration) {
     const command = configuration.command?.trim();
     if (!command)
-        throw new Error(`CLI command is required for ${configuration.provider}.`);
+        throw new application_error_1.ApplicationError(`CLI command is required for ${configuration.provider}.`, 'validation');
     const { args } = (0, agent_command_parser_1.parseAgentCommand)(command);
     validateCommandShape(configuration, args);
     validateModelSelection(configuration, args);
@@ -52095,13 +52097,13 @@ function validateConfiguredAgentCommand(configuration) {
 }
 function validateCommandShape(configuration, args) {
     if (configuration.provider !== 'codex' && args.includes('-')) {
-        throw new Error(`${configuration.provider} command must not include the Codex stdin placeholder "-"; its prompt is passed as an argument.`);
+        throw new application_error_1.ApplicationError(`${configuration.provider} command must not include the Codex stdin placeholder "-"; its prompt is passed as an argument.`, 'validation');
     }
     if (configuration.provider === 'codex' && args.at(-1) !== '-') {
-        throw new Error('Codex command must end with the stdin placeholder "-".');
+        throw new application_error_1.ApplicationError('Codex command must end with the stdin placeholder "-".', 'validation');
     }
     if (!hasFlag(args, '--model') && !hasFlag(args, '-m')) {
-        throw new Error(`${configuration.provider} command must select the model explicitly with --model.`);
+        throw new application_error_1.ApplicationError(`${configuration.provider} command must select the model explicitly with --model.`, 'validation');
     }
 }
 function validateModelSelection(configuration, args) {
@@ -52110,18 +52112,18 @@ function validateModelSelection(configuration, args) {
         : configuration.model.trim();
     const configuredModel = flagValue(args, ['--model', '-m']);
     if (configuredModel !== expectedModel) {
-        throw new Error(`${configuration.provider} command must select configured model "${expectedModel}".`);
+        throw new application_error_1.ApplicationError(`${configuration.provider} command must select configured model "${expectedModel}".`, 'validation');
     }
 }
 function validateProviderConfiguration(configuration, args) {
     if (configuration.provider !== 'codex')
         return;
     if (!hasConfig(args, 'model_provider')) {
-        throw new Error('Codex command must select the model provider explicitly with --config model_provider=... .');
+        throw new application_error_1.ApplicationError('Codex command must select the model provider explicitly with --config model_provider=... .', 'validation');
     }
     const expectedProvider = configuration.modelProvider?.trim() || 'openai';
     if (configValue(args, 'model_provider') !== expectedProvider) {
-        throw new Error(`Codex command must select configured model provider "${expectedProvider}".`);
+        throw new application_error_1.ApplicationError(`Codex command must select configured model provider "${expectedProvider}".`, 'validation');
     }
 }
 function validateEffortSelection(configuration, args) {
@@ -52130,10 +52132,10 @@ function validateEffortSelection(configuration, args) {
         return;
     if (configuration.provider === 'codex') {
         if (!hasConfig(args, 'model_reasoning_effort')) {
-            throw new Error('Codex command must select effort explicitly with --config model_reasoning_effort=... .');
+            throw new application_error_1.ApplicationError('Codex command must select effort explicitly with --config model_reasoning_effort=... .', 'validation');
         }
         if (configValue(args, 'model_reasoning_effort') !== effort) {
-            throw new Error(`Codex command must select configured effort "${effort}".`);
+            throw new application_error_1.ApplicationError(`Codex command must select configured effort "${effort}".`, 'validation');
         }
         return;
     }
@@ -52145,10 +52147,10 @@ function validateEffortSelection(configuration, args) {
         return;
     }
     if (!hasFlag(args, '--variant')) {
-        throw new Error('OpenCode command must select effort explicitly with --variant ... .');
+        throw new application_error_1.ApplicationError('OpenCode command must select effort explicitly with --variant ... .', 'validation');
     }
     if (flagValue(args, ['--variant']) !== effort) {
-        throw new Error(`OpenCode command must select configured effort "${effort}".`);
+        throw new application_error_1.ApplicationError(`OpenCode command must select configured effort "${effort}".`, 'validation');
     }
 }
 function hasFlag(args, flag) {
@@ -52238,7 +52240,7 @@ function hasTaskOverride(value) {
 /***/ }),
 
 /***/ 60596:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
@@ -52249,11 +52251,12 @@ exports.resolveModelProvider = resolveModelProvider;
 exports.resolveModel = resolveModel;
 exports.resolveEffort = resolveEffort;
 exports.assertModelAllowlisted = assertModelAllowlisted;
+const application_error_1 = __nccwpck_require__(75999);
 exports.SUPPORTED_AGENT_PROVIDERS = ['opencode', 'cursor', 'codex'];
 function resolveAgentProvider(value) {
     if (exports.SUPPORTED_AGENT_PROVIDERS.includes(value))
         return value;
-    throw new Error(`Unsupported agent provider "${value}". Supported providers: ${exports.SUPPORTED_AGENT_PROVIDERS.join(', ')}.`);
+    throw new application_error_1.ApplicationError(`Unsupported agent provider "${value}". Supported providers: ${exports.SUPPORTED_AGENT_PROVIDERS.join(', ')}.`, 'validation');
 }
 function resolveModelProvider(value, environment) {
     const provider = value?.trim().toLowerCase() || 'openai';
@@ -52264,7 +52267,7 @@ function resolveModelProvider(value, environment) {
 function resolveModel(value) {
     const model = value.trim();
     if (!model)
-        throw new Error('Agent model must not be empty.');
+        throw new application_error_1.ApplicationError('Agent model must not be empty.', 'validation');
     assertIdentifier(model, 'Agent model must be a simple model identifier without whitespace or shell syntax.', /^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/);
     return model;
 }
@@ -52277,25 +52280,25 @@ function resolveEffort(value) {
 function assertModelAllowlisted(modelProvider, model, environment) {
     const allowedModels = parseAllowlist(environment.AGENT_ALLOWED_MODELS);
     if (allowedModels.length > 0 && !allowedModels.includes(`${modelProvider}/${model}`) && !allowedModels.includes(model)) {
-        throw new Error(`Agent model "${modelProvider}/${model}" is not allowlisted.`);
+        throw new application_error_1.ApplicationError(`Agent model "${modelProvider}/${model}" is not allowlisted.`, 'authorization');
     }
 }
 function assertAllowlisted(name, value, environment) {
     const values = parseAllowlist(environment[name]);
     if (values.length > 0 && !values.includes(value))
-        throw new Error(`Agent model provider "${value}" is not allowlisted.`);
+        throw new application_error_1.ApplicationError(`Agent model provider "${value}" is not allowlisted.`, 'authorization');
 }
 function parseAllowlist(raw) {
     if (!raw?.trim())
         return [];
     const values = raw.split(',').map(value => value.trim().toLowerCase()).filter(Boolean);
     if (values.length === 0)
-        throw new Error('Agent allowlist must contain at least one value.');
+        throw new application_error_1.ApplicationError('Agent allowlist must contain at least one value.', 'configuration');
     return values;
 }
 function assertIdentifier(value, message, pattern = /^[a-z0-9][a-z0-9_-]*$/i) {
     if (!pattern.test(value))
-        throw new Error(message);
+        throw new application_error_1.ApplicationError(message, 'validation');
 }
 
 
@@ -54183,6 +54186,7 @@ exports.validateReleaseInput = validateReleaseInput;
 exports.normalizeVersion = normalizeVersion;
 exports.versionForRelease = versionForRelease;
 const constants_1 = __nccwpck_require__(15415);
+const application_error_1 = __nccwpck_require__(75999);
 const SEMVER_PATTERN = /^\d+(\.\d+){0,2}$/;
 function validateReleaseInput(input) {
     if (!input.version.length)
@@ -54203,7 +54207,7 @@ function normalizeVersion(version) {
 function versionForRelease(version) {
     const normalized = normalizeVersion(version);
     if (normalized === undefined)
-        throw new Error('Cannot build a release version from invalid input.');
+        throw new application_error_1.ApplicationError('Cannot build a release version from invalid input.', 'validation');
     return `v${normalized}`;
 }
 
@@ -56002,6 +56006,7 @@ async function resolveExecutionIssueNumber(execution, issueRepository) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ResolveGithubExecutionAdmissionUseCase = void 0;
+const application_error_1 = __nccwpck_require__(75999);
 const github_execution_admission_policy_1 = __nccwpck_require__(80765);
 class ResolveGithubExecutionAdmissionUseCase {
     constructor(authenticatedUserPort) {
@@ -56011,7 +56016,7 @@ class ResolveGithubExecutionAdmissionUseCase {
     async invoke(request) {
         const tokenUser = await this.authenticatedUserPort.getUserFromToken(request.token);
         if (typeof tokenUser !== 'string' || tokenUser.trim().length === 0) {
-            throw new Error('Failed to get user from token');
+            throw new application_error_1.ApplicationError('Failed to get user from token', 'authorization');
         }
         return {
             tokenUser,
@@ -56066,6 +56071,7 @@ exports.SetupExecutionUseCase = SetupExecutionUseCase;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runSetupExecution = runSetupExecution;
+const application_error_1 = __nccwpck_require__(75999);
 const initial_labels_policy_1 = __nccwpck_require__(50293);
 const previous_branch_state_policy_1 = __nccwpck_require__(43630);
 const logging_ports_1 = __nccwpck_require__(6152);
@@ -56093,7 +56099,7 @@ async function loadTokenUser(execution, organizationSetupPort) {
         return;
     execution.tokenUser = await organizationSetupPort.getUserFromToken(execution.tokens.token);
     if (!execution.tokenUser)
-        throw new Error('Failed to get user from token');
+        throw new application_error_1.ApplicationError('Failed to get user from token', 'authorization');
 }
 async function loadPreviousConfiguration(execution, configurationPort) {
     const issueNumber = configurationIssueNumber(execution);
@@ -56646,6 +56652,7 @@ async function runUserRequestCommitAndPush(execution, options, authenticatedUser
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.finalizeBugbotAutofix = finalizeBugbotAutofix;
 const result_1 = __nccwpck_require__(73817);
+const application_error_1 = __nccwpck_require__(75999);
 const workspace_changes_1 = __nccwpck_require__(93370);
 const logging_ports_1 = __nccwpck_require__(6152);
 async function finalizeBugbotAutofix(execution, context, idsToFix, workspacePathsBefore, responseText, gitCommitPort) {
@@ -56678,7 +56685,7 @@ async function inspectWorkspace(gitCommitPort, phase) {
         return await (0, workspace_changes_1.listWorkspacePaths)(gitCommitPort);
     }
     catch (error) {
-        throw new Error(`Unable to inspect workspace ${phase} autofix: ${error instanceof Error ? error.message : String(error)}`);
+        throw new application_error_1.ApplicationError(`Unable to inspect workspace ${phase} autofix: ${error instanceof Error ? error.message : String(error)}`, 'provider', { cause: error, retryable: true });
     }
 }
 function failure(message) {
@@ -56696,6 +56703,7 @@ function failure(message) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.prepareBugbotAutofix = prepareBugbotAutofix;
 const result_1 = __nccwpck_require__(73817);
+const application_error_1 = __nccwpck_require__(75999);
 const types_1 = __nccwpck_require__(32632);
 const build_bugbot_fix_prompt_1 = __nccwpck_require__(89819);
 const load_bugbot_context_use_case_1 = __nccwpck_require__(4050);
@@ -56729,7 +56737,7 @@ async function inspectWorkspace(gitCommitPort, phase) {
         return await (0, workspace_changes_1.listWorkspacePaths)(gitCommitPort);
     }
     catch (error) {
-        throw new Error(`Unable to inspect workspace ${phase} autofix: ${error instanceof Error ? error.message : String(error)}`);
+        throw new application_error_1.ApplicationError(`Unable to inspect workspace ${phase} autofix: ${error instanceof Error ? error.message : String(error)}`, 'provider', { cause: error, retryable: true });
     }
 }
 function failure(message) {
@@ -58101,6 +58109,7 @@ exports.replaceMarkerInBody = replaceMarkerInBody;
 exports.extractTitleFromBody = extractTitleFromBody;
 exports.buildCommentBody = buildCommentBody;
 const constants_1 = __nccwpck_require__(15415);
+const application_error_1 = __nccwpck_require__(75999);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 /** Maximum lossless finding identity accepted by the marker contract. */
 exports.MAX_FINDING_ID_LENGTH = 200;
@@ -58124,11 +58133,11 @@ function normalizeFindingIdForMarker(findingId) {
 function requireFindingIdForMarker(findingId) {
     const safeId = normalizeFindingIdForMarker(findingId);
     if (safeId == null) {
-        throw new Error(findingId.trim().length === 0
+        throw new application_error_1.ApplicationError(findingId.trim().length === 0
             ? "Finding ID is empty after marker sanitization."
             : findingId.trim().length > exports.MAX_FINDING_ID_LENGTH
                 ? "Finding ID exceeds the maximum marker length."
-                : "Finding ID contains marker-breaking characters.");
+                : "Finding ID contains marker-breaking characters.", 'validation');
     }
     return safeId;
 }
@@ -60322,6 +60331,7 @@ function shouldRenderImage(param, image) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.StoreConfigurationUseCase = void 0;
+const application_error_1 = __nccwpck_require__(75999);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 /**
@@ -60339,7 +60349,7 @@ class StoreConfigurationUseCase {
         }
         catch (error) {
             (0, logging_ports_1.logError)(`StoreConfiguration: failed to update configuration.`, error instanceof Error ? { stack: error.stack } : undefined);
-            throw new Error('Configuration persistence failed.');
+            throw new application_error_1.ApplicationError('Configuration persistence failed.', 'provider', { cause: error, retryable: true });
         }
     }
 }
@@ -62553,6 +62563,7 @@ exports.CheckPullRequestCommentLanguageUseCase = CheckPullRequestCommentLanguage
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WaitForPreviousWorkflowRunsUseCase = void 0;
 const workflow_queue_policy_1 = __nccwpck_require__(43193);
+const application_error_1 = __nccwpck_require__(75999);
 const SYSTEM_CLOCK = { nowMilliseconds: () => Date.now() };
 const SYSTEM_RANDOM = { next: () => Math.random() };
 class WaitForPreviousWorkflowRunsUseCase {
@@ -62570,13 +62581,13 @@ class WaitForPreviousWorkflowRunsUseCase {
         let pollIndex = 0;
         while (true) {
             if (this.clock.nowMilliseconds() >= deadlineAtMilliseconds) {
-                throw new Error('Timeout waiting for previous runs to finish.');
+                throw queueTimeoutError();
             }
             const activeRunCount = await this.queryPort.countActivePreviousRuns(query, {
                 deadlineAtMilliseconds,
             });
             if (this.clock.nowMilliseconds() >= deadlineAtMilliseconds) {
-                throw new Error('Timeout waiting for previous runs to finish.');
+                throw queueTimeoutError();
             }
             if (activeRunCount === 0) {
                 this.observerPort.noActivePreviousRuns();
@@ -62584,7 +62595,7 @@ class WaitForPreviousWorkflowRunsUseCase {
             }
             const delayMilliseconds = (0, workflow_queue_policy_1.calculateWorkflowPollingDelay)(pollIndex, this.random.next(), this.policy);
             if (this.clock.nowMilliseconds() + delayMilliseconds >= deadlineAtMilliseconds) {
-                throw new Error('Timeout waiting for previous runs to finish.');
+                throw queueTimeoutError();
             }
             this.observerPort.waitingForPreviousRuns(activeRunCount, delayMilliseconds);
             await this.delayPort.wait(delayMilliseconds);
@@ -62593,6 +62604,9 @@ class WaitForPreviousWorkflowRunsUseCase {
     }
 }
 exports.WaitForPreviousWorkflowRunsUseCase = WaitForPreviousWorkflowRunsUseCase;
+function queueTimeoutError() {
+    return new application_error_1.ApplicationError('Timeout waiting for previous runs to finish.', 'workflow', { retryable: true });
+}
 
 
 /***/ }),
@@ -62806,19 +62820,51 @@ exports.Commit = Commit;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Config = exports.CONFIG_SCHEMA_VERSION = void 0;
+exports.migrateConfigurationPayload = migrateConfigurationPayload;
 const branch_configuration_1 = __nccwpck_require__(71934);
 const recommendation_state_1 = __nccwpck_require__(68514);
 const model_input_1 = __nccwpck_require__(14637);
-exports.CONFIG_SCHEMA_VERSION = 1;
+/** Version of the durable configuration contract stored in issue/PR content. */
+exports.CONFIG_SCHEMA_VERSION = 2;
+/**
+ * Normalizes persisted configuration without silently losing fields from a
+ * newer installation. Unknown keys are deliberately retained so a downgrade
+ * or a mixed-version workflow can round-trip data safely.
+ */
+function migrateConfigurationPayload(value) {
+    const original = { ...(0, model_input_1.asModelInput)(value) };
+    const sourceVersion = readSchemaVersion(original['schemaVersion']);
+    if (sourceVersion > exports.CONFIG_SCHEMA_VERSION) {
+        return {
+            payload: original,
+            sourceVersion,
+            migrated: false,
+            futureVersion: true,
+        };
+    }
+    const payload = { ...original };
+    const hadTransientResults = Object.prototype.hasOwnProperty.call(payload, 'results');
+    delete payload.results;
+    if (payload.branchConfiguration === null)
+        delete payload.branchConfiguration;
+    if (!(0, recommendation_state_1.isRecommendationState)(payload.recommendationState))
+        delete payload.recommendationState;
+    payload.schemaVersion = exports.CONFIG_SCHEMA_VERSION;
+    return {
+        payload,
+        sourceVersion,
+        migrated: sourceVersion !== exports.CONFIG_SCHEMA_VERSION || hadTransientResults,
+        futureVersion: false,
+    };
+}
+function readSchemaVersion(value) {
+    return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : 0;
+}
 class Config {
     constructor(data) {
         this.results = [];
-        const input = (0, model_input_1.asModelInput)(data);
-        this.schemaVersion = typeof input.schemaVersion === 'number'
-            && Number.isInteger(input.schemaVersion)
-            && input.schemaVersion > 0
-            ? input.schemaVersion
-            : exports.CONFIG_SCHEMA_VERSION;
+        const input = (0, model_input_1.asModelInput)(migrateConfigurationPayload(data).payload);
+        this.schemaVersion = readSchemaVersion(input.schemaVersion) || exports.CONFIG_SCHEMA_VERSION;
         this.branchType = (0, model_input_1.readString)(input, 'branchType');
         this.hotfixOriginBranch = (0, model_input_1.readOptionalString)(input, 'hotfixOriginBranch');
         this.hotfixBranch = (0, model_input_1.readOptionalString)(input, 'hotfixBranch');
@@ -71423,6 +71469,7 @@ exports.buildConfigurationPayload = buildConfigurationPayload;
 const config_1 = __nccwpck_require__(90450);
 function buildConfigurationPayload(execution, storedRaw) {
     const current = execution.currentConfiguration;
+    const stored = parseStoredConfiguration(storedRaw);
     const payload = {
         schemaVersion: config_1.CONFIG_SCHEMA_VERSION,
         branchType: current.branchType,
@@ -71434,7 +71481,8 @@ function buildConfigurationPayload(execution, storedRaw) {
         branchConfiguration: current.branchConfiguration,
         recommendationState: current.recommendationState,
     };
-    mergeMissingValues(payload, parseStoredConfiguration(storedRaw));
+    mergeMissingValues(payload, stored);
+    preserveFutureSchemaVersion(payload, stored);
     delete payload.results;
     return JSON.stringify(payload, null, 4);
 }
@@ -71442,7 +71490,7 @@ function parseStoredConfiguration(storedRaw) {
     if (!storedRaw?.trim())
         return undefined;
     try {
-        return JSON.parse(storedRaw);
+        return (0, config_1.migrateConfigurationPayload)(JSON.parse(storedRaw)).payload;
     }
     catch {
         return undefined;
@@ -71454,6 +71502,11 @@ function mergeMissingValues(payload, stored) {
     for (const key of Object.keys(stored)) {
         if (payload[key] === undefined && stored[key] !== undefined)
             payload[key] = stored[key];
+    }
+}
+function preserveFutureSchemaVersion(payload, stored) {
+    if (typeof stored?.schemaVersion === 'number' && stored.schemaVersion > config_1.CONFIG_SCHEMA_VERSION) {
+        payload.schemaVersion = stored.schemaVersion;
     }
 }
 

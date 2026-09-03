@@ -1,5 +1,32 @@
-import type { Execution } from '../../data/model/execution';
 import { getResultPayload, Result } from '../../data/model/result';
+import type { CopilotLifecycleLabels } from '../../domain/copilot_lifecycle';
+
+export interface CopilotStatusExecutionContext {
+    readonly owner: string;
+    readonly repo: string;
+    readonly eventName: string;
+    readonly issueNumber: number;
+    readonly isIssue: boolean;
+    readonly isPush: boolean;
+    readonly isPullRequest: boolean;
+    readonly inputs?: { readonly action?: string };
+    readonly issue: { readonly number: number };
+    readonly pullRequest: {
+        readonly number: number;
+        readonly isPullRequestReviewComment: boolean;
+    };
+    readonly commit: { readonly branch: string };
+    readonly labels: {
+        readonly currentIssueLabels?: readonly string[];
+        readonly currentPullRequestLabels?: readonly string[];
+        readonly lifecycle?: CopilotLifecycleLabels;
+    };
+    readonly currentConfiguration: { readonly results?: readonly { readonly payload: unknown }[] };
+    readonly ai: {
+        readonly getAiPullRequestDescription: () => boolean;
+        readonly getPullRequestDescriptionMode?: () => string;
+    };
+}
 
 export interface CopilotStatusSnapshot {
     readonly owner: string;
@@ -19,12 +46,12 @@ export interface CopilotStatusSnapshot {
 }
 
 /** Builds a read-only status snapshot from the facts already loaded by setup. */
-export function buildCopilotStatusSnapshot(execution: Execution): CopilotStatusSnapshot {
+export function buildCopilotStatusSnapshot(execution: CopilotStatusExecutionContext): CopilotStatusSnapshot {
     const issueLabels = [...(execution.labels?.currentIssueLabels ?? [])];
     const pullRequestLabels = [...(execution.labels?.currentPullRequestLabels ?? [])];
     const isPullRequestTarget = execution.isPullRequest || execution.pullRequest?.number > 0 || execution.pullRequest?.isPullRequestReviewComment;
     const targetLabels = isPullRequestTarget ? pullRequestLabels : issueLabels;
-    const lifecycleLabels = execution.labels?.lifecycle ?? {};
+    const lifecycleLabels: Partial<CopilotLifecycleLabels> = execution.labels?.lifecycle ?? {};
     const lifecycle = Object.entries({
         planned: lifecycleLabels.planned,
         'in-progress': lifecycleLabels.inProgress,
@@ -67,7 +94,7 @@ export function buildCopilotStatusSnapshot(execution: Execution): CopilotStatusS
     };
 }
 
-export function buildCopilotStatusResult(execution: Execution, taskId: string): Result {
+export function buildCopilotStatusResult(execution: CopilotStatusExecutionContext, taskId: string): Result {
     const snapshot = buildCopilotStatusSnapshot(execution);
     return new Result({
         id: `${taskId}.Status`,

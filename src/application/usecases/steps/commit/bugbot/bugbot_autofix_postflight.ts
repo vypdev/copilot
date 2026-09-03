@@ -1,5 +1,6 @@
 import type { Execution } from '../../../../../data/model/execution';
 import { Result } from '../../../../../data/model/result';
+import { ApplicationError } from '../../../../errors/application_error';
 import type { GitCommitPort } from '../../../../../application/ports/git_ports';
 import type { BugbotContext } from './types';
 import { isSensitiveWorkspacePath, listWorkspacePaths, selectWorkspacePathsToCommit } from './workspace_changes';
@@ -42,7 +43,11 @@ async function inspectWorkspace(gitCommitPort: GitCommitPort, phase: string): Pr
     try {
         return await listWorkspacePaths(gitCommitPort);
     } catch (error) {
-        throw new Error(`Unable to inspect workspace ${phase} autofix: ${error instanceof Error ? error.message : String(error)}`);
+        throw new ApplicationError(
+            `Unable to inspect workspace ${phase} autofix: ${error instanceof Error ? error.message : String(error)}`,
+            'provider',
+            { cause: error, retryable: true },
+        );
     }
 }
 

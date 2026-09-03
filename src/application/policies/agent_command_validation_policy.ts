@@ -1,9 +1,10 @@
 import type { AgentConfiguration } from '../../domain/agent';
+import { ApplicationError } from '../errors/application_error';
 import { parseAgentCommand } from './agent_command_parser';
 
 export function validateConfiguredAgentCommand(configuration: AgentConfiguration): void {
     const command = configuration.command?.trim();
-    if (!command) throw new Error(`CLI command is required for ${configuration.provider}.`);
+    if (!command) throw new ApplicationError(`CLI command is required for ${configuration.provider}.`, 'validation');
     const { args } = parseAgentCommand(command);
     validateCommandShape(configuration, args);
     validateModelSelection(configuration, args);
@@ -13,13 +14,13 @@ export function validateConfiguredAgentCommand(configuration: AgentConfiguration
 
 function validateCommandShape(configuration: AgentConfiguration, args: readonly string[]): void {
     if (configuration.provider !== 'codex' && args.includes('-')) {
-        throw new Error(`${configuration.provider} command must not include the Codex stdin placeholder "-"; its prompt is passed as an argument.`);
+        throw new ApplicationError(`${configuration.provider} command must not include the Codex stdin placeholder "-"; its prompt is passed as an argument.`, 'validation');
     }
     if (configuration.provider === 'codex' && args.at(-1) !== '-') {
-        throw new Error('Codex command must end with the stdin placeholder "-".');
+        throw new ApplicationError('Codex command must end with the stdin placeholder "-".', 'validation');
     }
     if (!hasFlag(args, '--model') && !hasFlag(args, '-m')) {
-        throw new Error(`${configuration.provider} command must select the model explicitly with --model.`);
+        throw new ApplicationError(`${configuration.provider} command must select the model explicitly with --model.`, 'validation');
     }
 }
 
@@ -29,18 +30,18 @@ function validateModelSelection(configuration: AgentConfiguration, args: readonl
         : configuration.model.trim();
     const configuredModel = flagValue(args, ['--model', '-m']);
     if (configuredModel !== expectedModel) {
-        throw new Error(`${configuration.provider} command must select configured model "${expectedModel}".`);
+        throw new ApplicationError(`${configuration.provider} command must select configured model "${expectedModel}".`, 'validation');
     }
 }
 
 function validateProviderConfiguration(configuration: AgentConfiguration, args: readonly string[]): void {
     if (configuration.provider !== 'codex') return;
     if (!hasConfig(args, 'model_provider')) {
-        throw new Error('Codex command must select the model provider explicitly with --config model_provider=... .');
+        throw new ApplicationError('Codex command must select the model provider explicitly with --config model_provider=... .', 'validation');
     }
     const expectedProvider = configuration.modelProvider?.trim() || 'openai';
     if (configValue(args, 'model_provider') !== expectedProvider) {
-        throw new Error(`Codex command must select configured model provider "${expectedProvider}".`);
+        throw new ApplicationError(`Codex command must select configured model provider "${expectedProvider}".`, 'validation');
     }
 }
 
@@ -49,10 +50,10 @@ function validateEffortSelection(configuration: AgentConfiguration, args: readon
     if (!effort) return;
     if (configuration.provider === 'codex') {
         if (!hasConfig(args, 'model_reasoning_effort')) {
-            throw new Error('Codex command must select effort explicitly with --config model_reasoning_effort=... .');
+            throw new ApplicationError('Codex command must select effort explicitly with --config model_reasoning_effort=... .', 'validation');
         }
         if (configValue(args, 'model_reasoning_effort') !== effort) {
-            throw new Error(`Codex command must select configured effort "${effort}".`);
+            throw new ApplicationError(`Codex command must select configured effort "${effort}".`, 'validation');
         }
         return;
     }
@@ -64,10 +65,10 @@ function validateEffortSelection(configuration: AgentConfiguration, args: readon
         return;
     }
     if (!hasFlag(args, '--variant')) {
-        throw new Error('OpenCode command must select effort explicitly with --variant ... .');
+        throw new ApplicationError('OpenCode command must select effort explicitly with --variant ... .', 'validation');
     }
     if (flagValue(args, ['--variant']) !== effort) {
-        throw new Error(`OpenCode command must select configured effort "${effort}".`);
+        throw new ApplicationError(`OpenCode command must select configured effort "${effort}".`, 'validation');
     }
 }
 

@@ -1,4 +1,4 @@
-import type { Execution } from '../../data/model/execution';
+import type { AgentConfiguration, AgentTask } from '../../domain/agent';
 import { isAgentConfigurationReady } from '../../domain/agent';
 
 export type AgentActivityRoute =
@@ -9,9 +9,38 @@ export type AgentActivityRoute =
     | 'pull-request'
     | 'push';
 
+export interface AgentActivityExecutionContext {
+    readonly eventName: string;
+    readonly issueNumber: number;
+    readonly issue: {
+        readonly number: number;
+        readonly opened: boolean;
+        readonly descriptionEdited: boolean;
+        readonly commentBody: string;
+    };
+    readonly pullRequest: {
+        readonly number: number;
+        readonly action: string;
+        readonly commentBody: string;
+    };
+    readonly commit: {
+        readonly commits: readonly unknown[];
+    };
+    readonly singleAction: {
+        readonly isThinkAction: boolean;
+        readonly isRecommendStepsAction: boolean;
+        readonly isCheckProgressAction: boolean;
+        readonly isDetectPotentialProblemsAction: boolean;
+    };
+    readonly ai: {
+        readonly getAiPullRequestDescription: () => boolean;
+        readonly getAgentConfiguration: (task: AgentTask) => AgentConfiguration | undefined;
+    };
+}
+
 /** Decides whether a route can invoke an agent for its current event. */
 export function shouldTrackAgentActivity(
-    execution: Execution,
+    execution: AgentActivityExecutionContext,
     route: AgentActivityRoute,
 ): boolean {
     if (!hasTarget(execution)) return false;
@@ -39,7 +68,7 @@ export function shouldTrackAgentActivity(
     }
 }
 
-function isAgentBackedSingleAction(execution: Execution): boolean {
+function isAgentBackedSingleAction(execution: AgentActivityExecutionContext): boolean {
     if (execution.singleAction.isThinkAction || execution.singleAction.isRecommendStepsAction) {
         return isAgentReady(execution, 'planner');
     }
@@ -49,15 +78,15 @@ function isAgentBackedSingleAction(execution: Execution): boolean {
     return false;
 }
 
-function isAgentReady(execution: Execution, task: Parameters<Execution['ai']['getAgentConfiguration']>[0]): boolean {
+function isAgentReady(execution: AgentActivityExecutionContext, task: AgentTask): boolean {
     return isAgentConfigurationReady(execution.ai?.getAgentConfiguration(task));
 }
 
-function hasComment(execution: Execution): boolean {
+function hasComment(execution: AgentActivityExecutionContext): boolean {
     return (execution.issue.commentBody || execution.pullRequest.commentBody).trim().length > 0;
 }
 
-function hasTarget(execution: Execution): boolean {
+function hasTarget(execution: AgentActivityExecutionContext): boolean {
     if (['pull_request', 'pull_request_review', 'pull_request_review_comment', 'check_suite', 'workflow_run'].includes(execution.eventName)) {
         return execution.pullRequest.number > 0;
     }

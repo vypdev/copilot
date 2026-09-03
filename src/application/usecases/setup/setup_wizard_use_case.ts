@@ -1,4 +1,5 @@
 import type { SetupPromptPort } from '../../ports/setup_wizard_ports';
+import { ApplicationError } from '../../errors/application_error';
 import type { SetupConfiguration, SetupPlan } from '../../../domain/setup';
 import {
     buildSetupPlan,
@@ -30,7 +31,10 @@ export class SetupWizardUseCase {
             : collected;
         const validationErrors = validateSetupConfiguration(configuration);
         if (validationErrors.length > 0) {
-            throw new Error(`Invalid setup configuration:\n${validationErrors.map(error => `- ${error}`).join('\n')}`);
+            throw new ApplicationError(
+                `Invalid setup configuration:\n${validationErrors.map(error => `- ${error}`).join('\n')}`,
+                'validation',
+            );
         }
         const plan = buildSetupPlan(configuration);
         this.prompt.showPlan(plan);

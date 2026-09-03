@@ -129,6 +129,30 @@ describe('ConfigurationHandler', () => {
       expect(parsed.branchConfiguration).toEqual({ name: 'leaf' });
     });
 
+    it('does not downgrade a configuration written by a newer workflow version', async () => {
+      const storedJson = JSON.stringify({
+        schemaVersion: 99,
+        parentBranch: 'main',
+        futurePolicy: { preserve: true },
+      });
+      mockGetDescription.mockResolvedValue(descriptionWithConfig(storedJson));
+      mockUpdateDescription.mockResolvedValue(undefined);
+
+      await handler.update(minimalExecution({
+        currentConfiguration: {
+          branchType: 'feature',
+          parentBranch: undefined,
+          branchConfiguration: undefined,
+        },
+      }));
+
+      const fullDesc = mockUpdateDescription.mock.calls[0][3];
+      const parsed = JSON.parse(handler.getContent(fullDesc)!.trim());
+      expect(parsed.schemaVersion).toBe(99);
+      expect(parsed.futurePolicy).toEqual({ preserve: true });
+      expect(parsed.parentBranch).toBe('main');
+    });
+
     it('preserves workingBranch from stored when current workingBranch is undefined (PR edited event)', async () => {
       const storedJson = JSON.stringify({
         branchType: 'bugfix',

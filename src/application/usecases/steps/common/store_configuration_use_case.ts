@@ -1,4 +1,5 @@
 import { Execution } from "../../../../data/model/execution";
+import { ApplicationError } from '../../../errors/application_error';
 import type { ConfigurationStorePort } from "../../../ports/configuration_store_ports";
 import { logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
@@ -20,7 +21,7 @@ export class StoreConfigurationUseCase implements ParamUseCase<Execution, void> 
             )
         } catch (error) {
             logError(`StoreConfiguration: failed to update configuration.`, error instanceof Error ? { stack: (error as Error).stack } : undefined);
-            throw new Error('Configuration persistence failed.');
+            throw new ApplicationError('Configuration persistence failed.', 'provider', { cause: error, retryable: true });
         }
     }
 }
