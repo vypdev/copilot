@@ -1,7 +1,7 @@
 import type { Execution } from '../../../data/model/execution';
 import { Result } from '../../../data/model/result';
 import { lifecycleLabelNames, lifecycleStateLabel, waitingLabelNames, waitingStateLabel } from '../../../domain/copilot_lifecycle';
-import { resolveLifecycleState } from '../../policies/lifecycle_state_policy';
+import { readLifecycleExternalEvidence, resolveLifecycleState } from '../../policies/lifecycle_state_policy';
 import { resolveLifecycleWaitingState, type LifecycleWaitingStateDecision } from '../../policies/lifecycle_waiting_state_policy';
 import type { IssueLabelsPort } from '../../ports/issue_management_ports';
 import { logDebugInfo, logError } from '../../ports/logging_ports';
@@ -10,6 +10,14 @@ export interface SynchronizeLifecycleStateParam {
     execution: Execution;
     results: readonly Result[];
 }
+
+const PULL_REQUEST_LIFECYCLE_EVENTS = [
+    'pull_request',
+    'pull_request_review',
+    'pull_request_review_comment',
+    'check_suite',
+    'workflow_run',
+];
 
 /**
  * Reconciles one state label after a route completes. The existing business
@@ -25,11 +33,12 @@ export class SynchronizeLifecycleStateUseCase {
             eventName: param.execution.eventName,
             action: param.execution.inputs?.action ?? '',
             isIssue: ['issues', 'issue_comment'].includes(param.execution.eventName),
-            isPullRequest: ['pull_request', 'pull_request_review_comment'].includes(param.execution.eventName),
+            isPullRequest: param.execution.isPullRequest || PULL_REQUEST_LIFECYCLE_EVENTS.includes(param.execution.eventName),
             issueOpened: param.execution.issue.opened,
             issueDescriptionEdited: param.execution.issue.descriptionEdited,
             pullRequestMerged: param.execution.pullRequest.isMerged,
             pullRequestClosed: param.execution.pullRequest.isClosed,
+            externalEvidence: readLifecycleExternalEvidence(param.execution.inputs),
             results: param.results,
         });
         const waitingDecision = resolveLifecycleWaitingState({
@@ -87,18 +96,18 @@ function targetNumber(execution: Execution): number {
     if (['issues', 'issue_comment', 'push'].includes(execution.eventName)) {
         return execution.issue.number > 0 ? execution.issue.number : execution.issueNumber;
     }
-    if (['pull_request', 'pull_request_review_comment'].includes(execution.eventName)) return execution.pullRequest.number;
+    if (PULL_REQUEST_LIFECYCLE_EVENTS.includes(execution.eventName)) return execution.pullRequest.number;
     return -1;
 }
 
 function targetLabels(execution: Execution): string[] {
-    return ['pull_request', 'pull_request_review_comment'].includes(execution.eventName)
+    return PULL_REQUEST_LIFECYCLE_EVENTS.includes(execution.eventName)
         ? execution.labels.currentPullRequestLabels
         : execution.labels.currentIssueLabels;
 }
 
 function setTargetLabels(execution: Execution, labels: string[]): void {
-    if (['pull_request', 'pull_request_review_comment'].includes(execution.eventName)) {
+    if (PULL_REQUEST_LIFECYCLE_EVENTS.includes(execution.eventName)) {
         execution.labels.currentPullRequestLabels = labels;
     }
     else execution.labels.currentIssueLabels = labels;

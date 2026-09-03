@@ -58,7 +58,7 @@ function hasComment(execution: Execution): boolean {
 }
 
 function hasTarget(execution: Execution): boolean {
-    if (execution.eventName === 'pull_request' || execution.eventName === 'pull_request_review_comment') {
+    if (['pull_request', 'pull_request_review', 'pull_request_review_comment', 'check_suite', 'workflow_run'].includes(execution.eventName)) {
         return execution.pullRequest.number > 0;
     }
     return execution.issue.number > 0 || execution.issueNumber > 0;

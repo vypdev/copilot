@@ -90,6 +90,7 @@ export declare const INPUT_KEYS: {
     readonly RELEASE_MODEL: "release-model";
     readonly RELEASE_COMMAND: "release-command";
     readonly AI_PULL_REQUEST_DESCRIPTION: "ai-pull-request-description";
+    readonly AI_PULL_REQUEST_DESCRIPTION_MODE: "ai-pull-request-description-mode";
     readonly AI_MEMBERS_ONLY: "ai-members-only";
     readonly AI_IGNORE_FILES: "ai-ignore-files";
     readonly AI_INCLUDE_REASONING: "ai-include-reasoning";

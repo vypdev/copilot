@@ -66,6 +66,7 @@ describe('setup configuration policy', () => {
         expect(buildSetupActionInputs(configuration)).toMatchObject({
             'planner-provider': 'cursor',
             'reviewer-model': 'claude-3-7-sonnet',
+            'ai-pull-request-description-mode': 'replace',
         });
         expect(buildSetupPlan(configuration).warnings).toEqual(expect.arrayContaining([
             expect.stringContaining('Cursor is an experimental runtime'),
@@ -103,5 +104,17 @@ describe('setup configuration policy', () => {
             'Bugbot comment limit must be between 1 and 100.',
             'Model provider and model for planner cannot contain whitespace.',
         ]));
+    });
+
+    it('validates and persists the PR description policy', () => {
+        const configuration = mergeSetupConfiguration(createDefaultSetupConfiguration(), {
+            ai: { pullRequestDescriptionMode: 'append' },
+        });
+
+        expect(validateSetupConfiguration(configuration)).toEqual([]);
+        expect(buildSetupRepositoryVariables(configuration)).toEqual(expect.arrayContaining([
+            { name: 'AI_PULL_REQUEST_DESCRIPTION_MODE', value: 'append' },
+        ]));
+        expect(buildSetupActionInputs(configuration)['ai-pull-request-description-mode']).toBe('append');
     });
 });

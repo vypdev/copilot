@@ -38,6 +38,21 @@ If you don't have a template, the agent will still produce a structured descript
   - The action runs on the same `pull_request` events as the rest of the PR pipeline (e.g. opened, edited).
 </Info>
 
+## Description policies
+
+Use `ai-pull-request-description-mode` when a team needs a different ownership model for the PR body:
+
+| Mode | Automatic runs | `/copilot description` | Behavior |
+| --- | --- | --- | --- |
+| `replace` | Yes | Yes | Preserves the existing legacy behavior: the generated text owns the complete body. |
+| `append` | Yes | Yes | Keeps human-authored text and replaces only the bounded Copilot-managed section. |
+| `preserve` | No | Yes | Does not touch the body automatically; a maintainer can request an update explicitly from a PR comment. |
+| `disabled` | No | No | Description automation is fully disabled. |
+
+The mode can be set directly on the Action input or through the `AI_PULL_REQUEST_DESCRIPTION_MODE` Repository Variable written by `copilot setup`. The legacy boolean remains supported: setting `ai-pull-request-description: false` resolves to `disabled`.
+
+For an explicit update, comment `/copilot description` on the PR or its issue conversation. The command fetches the current PR body and branch metadata, so it also works from an `issue_comment` workflow.
+
 ## Enable in your workflow
 
 Set `ai-pull-request-description: true` and configure the selected agent in your workflow:
@@ -48,6 +63,7 @@ Set `ai-pull-request-description: true` and configure the selected agent in your
     token: ${{ secrets.PAT }}
     project-ids: '2,3'
     ai-pull-request-description: true
+    ai-pull-request-description-mode: append
     agent-provider: codex
     agent-model-provider: openai
     agent-model: gpt-5.6-luna

@@ -1,4 +1,5 @@
 import { AgentConfiguration, AgentTask, AgentTaskConfiguration } from './agent';
+import { type PullRequestDescriptionMode } from '../../domain/pull_request_description';
 export declare class Ai {
     private aiPullRequestDescription;
     private aiMembersOnly;
@@ -8,8 +9,10 @@ export declare class Ai {
     private bugbotCommentLimit;
     private bugbotFixVerifyCommands;
     private agentTasks;
-    constructor(_configurationSource: string, model: string, aiPullRequestDescription: boolean, aiMembersOnly: boolean, aiIgnoreFiles: string[], aiIncludeReasoning: boolean, bugbotMinSeverity: string, bugbotCommentLimit: number, bugbotFixVerifyCommands?: string[], agentTasks?: AgentTaskConfiguration);
+    private pullRequestDescriptionMode;
+    constructor(_configurationSource: string, model: string, aiPullRequestDescription: boolean, aiMembersOnly: boolean, aiIgnoreFiles: string[], aiIncludeReasoning: boolean, bugbotMinSeverity: string, bugbotCommentLimit: number, bugbotFixVerifyCommands?: string[], agentTasks?: AgentTaskConfiguration, pullRequestDescriptionMode?: PullRequestDescriptionMode);
     getAiPullRequestDescription(): boolean;
+    getPullRequestDescriptionMode(): PullRequestDescriptionMode;
     getAiMembersOnly(): boolean;
     getAiIgnoreFiles(): string[];
     getAiIncludeReasoning(): boolean;

@@ -1,4 +1,4 @@
-import { resolveLifecycleState } from '../lifecycle_state_policy';
+import { readLifecycleExternalEvidence, resolveLifecycleState } from '../lifecycle_state_policy';
 
 const result = (id: string, success = true) => ({ id, success, executed: true, steps: [], errors: [] });
 
@@ -42,6 +42,39 @@ describe('lifecycle state policy', () => {
             pullRequestClosed: false,
             results: [{ ...result('DetectPotentialProblemsUseCase'), payload: { findingStates: { open: 0, reopened: 0 } } }],
         })).toBe('ready');
+    });
+
+    it('uses external review and check evidence without changing the legacy fallback', () => {
+        const base = {
+            eventName: 'pull_request_review',
+            action: 'submitted',
+            isIssue: false,
+            isPullRequest: true,
+            issueOpened: false,
+            issueDescriptionEdited: false,
+            pullRequestMerged: false,
+            pullRequestClosed: false,
+            results: [],
+        };
+        expect(resolveLifecycleState({ ...base, externalEvidence: { review: 'changes-requested' } })).toBe('changes-requested');
+        expect(resolveLifecycleState({ ...base, externalEvidence: { review: 'approved', checks: 'pending' } })).toBe('reviewing');
+        expect(resolveLifecycleState({ ...base, externalEvidence: { review: 'approved', checks: 'success' } })).toBe('ready');
+        expect(resolveLifecycleState({ ...base, externalEvidence: { checks: 'failure' } })).toBe('blocked');
+    });
+
+    it('normalizes GitHub review and check payloads into stable evidence', () => {
+        expect(readLifecycleExternalEvidence({
+            eventName: 'pull_request_review',
+            review: { state: 'changes_requested' },
+        })).toEqual({ review: 'changes-requested' });
+        expect(readLifecycleExternalEvidence({
+            eventName: 'check_suite',
+            check_suite: { status: 'completed', conclusion: 'success' },
+        })).toEqual({ checks: 'success' });
+        expect(readLifecycleExternalEvidence({
+            eventName: 'workflow_run',
+            workflow_run: { status: 'in_progress', conclusion: null },
+        })).toEqual({ checks: 'pending' });
     });
 
     it('moves an explicit planning command on an issue to planned', () => {

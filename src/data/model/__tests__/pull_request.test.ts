@@ -57,6 +57,26 @@ describe('PullRequest', () => {
     expect(p.isSynchronize).toBe(true);
   });
 
+  it('resolves pull request identity from review and check-suite payloads', () => {
+    const review = new PullRequest(1, 2, 30, {
+      eventName: 'pull_request_review',
+      review: { pull_request: { number: 43 } },
+    });
+    const checkSuite = new PullRequest(1, 2, 30, {
+      eventName: 'check_suite',
+      check_suite: {
+        head_branch: 'feature/43-checks',
+        pull_requests: [{ number: 43 }],
+      },
+    });
+
+    expect(review.number).toBe(43);
+    expect(review.isPullRequest).toBe(true);
+    expect(checkSuite.number).toBe(43);
+    expect(checkSuite.head).toBe('feature/43-checks');
+    expect(checkSuite.isPullRequest).toBe(true);
+  });
+
   it('isPullRequestReviewComment when eventName is pull_request_review_comment', () => {
     const inputs = { eventName: 'pull_request_review_comment', pull_request: pr };
     const p = new PullRequest(1, 2, 30, inputs);

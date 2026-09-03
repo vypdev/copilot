@@ -21,6 +21,7 @@ These inputs apply when the action runs on `pull_request` events. For the comple
 | Input | Description | Default |
 |-------|-------------|---------|
 | `ai-pull-request-description` | Enable AI-generated PR descriptions using the configured `planner` agent runtime | "true" |
+| `ai-pull-request-description-mode` | `replace`, `append`, `preserve`, or `disabled`; controls automatic ownership and explicit `/copilot description` updates | `replace` |
 | `pull-requests-locale` | Target locale for PR review comment translation | "en-US" |
 | `ai-members-only` | Restrict AI PR description to org/project members only | "false" |
 

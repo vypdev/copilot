@@ -37,6 +37,7 @@ jobs:
           pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || 'en-US' }}
           commit-prefix-transforms: ${{ vars.COMMIT_PREFIX_TRANSFORMS || 'replace-slash' }}
           ai-pull-request-description: ${{ vars.AI_PULL_REQUEST_DESCRIPTION || 'true' }}
+          ai-pull-request-description-mode: ${{ vars.AI_PULL_REQUEST_DESCRIPTION_MODE || 'replace' }}
           ai-members-only: ${{ vars.AI_MEMBERS_ONLY || 'false' }}
           ai-include-reasoning: ${{ vars.AI_INCLUDE_REASONING || 'true' }}
           bugbot-severity: ${{ vars.BUGBOT_SEVERITY || 'low' }}

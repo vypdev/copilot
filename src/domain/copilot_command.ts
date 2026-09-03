@@ -5,6 +5,7 @@ export const COPILOT_COMMAND_NAMES = [
     'estimate',
     'test-plan',
     'status',
+    'description',
     'review',
     'findings',
     'fix',

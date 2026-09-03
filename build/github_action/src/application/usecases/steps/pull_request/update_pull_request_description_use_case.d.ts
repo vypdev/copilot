@@ -14,4 +14,6 @@ export declare class UpdatePullRequestDescriptionUseCase implements ParamUseCase
     taskId: string;
     constructor(pullRequestDescriptionCommandPort: PullRequestDescriptionCommandPort, issueDescriptionQueryPort: IssueDescriptionQueryPort, organizationMembersPort: OrganizationMembersPort, aiRepository: FindingsQueryPort);
     invoke(param: Execution): Promise<Result[]>;
+    /** Explicit comment commands may update a preserved PR body on demand. */
+    invokeExplicit(param: Execution): Promise<Result[]>;
 }

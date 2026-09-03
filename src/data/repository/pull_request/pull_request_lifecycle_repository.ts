@@ -1,4 +1,5 @@
 import { logDebugInfo, logError } from "../../../utils/logger";
+import type { PullRequestDescriptionDetails } from '../../../application/ports/pull_request_description_ports';
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type {
     GithubPullRequestLifecycleClient,
@@ -146,5 +147,25 @@ export class PullRequestLifecycleRepository {
 
         logDebugInfo(`Updated PR #${pullRequestNumber} description with: ${description}`);
     }
+
+    getDetails = async (
+        owner: string,
+        repository: string,
+        pullRequestNumber: number,
+        token: string,
+    ): Promise<PullRequestDescriptionDetails> => {
+        const octokit = this.githubClient.getClient(token);
+        if (!octokit.rest.pulls.get) throw new Error('Pull-request details query is not available.');
+        const { data } = await octokit.rest.pulls.get({
+            owner,
+            repo: repository,
+            pull_number: pullRequestNumber,
+        });
+        return {
+            body: data.body ?? '',
+            headBranch: data.head?.ref ?? '',
+            baseBranch: data.base?.ref ?? '',
+        };
+    };
 
 }

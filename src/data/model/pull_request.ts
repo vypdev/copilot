@@ -24,7 +24,11 @@ export class PullRequest {
     }
 
     get number(): number {
-        return parsePositiveSafeInteger(this.inputs?.pull_request?.number) ?? -1;
+        return parsePositiveSafeInteger(this.inputs?.pull_request?.number)
+            ?? parsePositiveSafeInteger(this.inputs?.review?.pull_request?.number)
+            ?? uniquePullRequestNumber(this.inputs?.check_suite?.pull_requests)
+            ?? uniquePullRequestNumber(this.inputs?.workflow_run?.pull_requests)
+            ?? -1;
     }
 
     get url(): string {
@@ -36,7 +40,10 @@ export class PullRequest {
     }
 
     get head(): string {
-        return this.inputs?.pull_request?.head?.ref ?? '';
+        return this.inputs?.pull_request?.head?.ref
+            ?? this.inputs?.check_suite?.head_branch
+            ?? this.inputs?.workflow_run?.head_branch
+            ?? '';
     }
 
     get base(): string {
@@ -66,7 +73,12 @@ export class PullRequest {
     }
 
     get isPullRequest(): boolean {
-        return this.inputs?.eventName === 'pull_request';
+        return [
+            'pull_request',
+            'pull_request_review',
+            'check_suite',
+            'workflow_run',
+        ].includes(this.inputs?.eventName ?? '');
     }
 
     get isPullRequestReviewComment(): boolean {
@@ -111,4 +123,12 @@ export class PullRequest {
         this.mergeTimeout = mergeTimeout;
         this.inputs = inputs;
     }
+}
+
+function uniquePullRequestNumber(
+    pullRequests: ReadonlyArray<{ number?: number }> | undefined,
+): number | undefined {
+    return pullRequests?.length === 1
+        ? parsePositiveSafeInteger(pullRequests[0]?.number)
+        : undefined;
 }

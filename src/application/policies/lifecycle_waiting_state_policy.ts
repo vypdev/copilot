@@ -36,7 +36,10 @@ function isHumanInteraction(eventName: string): boolean {
         'issues',
         'issue_comment',
         'pull_request',
+        'pull_request_review',
         'pull_request_review_comment',
+        'check_suite',
+        'workflow_run',
         'push',
     ].includes(eventName);
 }

@@ -105,6 +105,11 @@ export class SetupPromptAdapter implements SetupPromptPort, SetupCredentialPromp
         console.log(color('\n4. Configure AI, projects, and release safety\n', 36));
         const ai = defaults.ai;
         ai.pullRequestDescription = await this.askBoolean('Generate AI pull-request descriptions?', ai.pullRequestDescription);
+        ai.pullRequestDescriptionMode = await this.askChoice(
+            'Pull-request description mode',
+            ['replace', 'append', 'preserve', 'disabled'],
+            ai.pullRequestDescriptionMode ?? 'replace',
+        ) as SetupConfiguration['ai']['pullRequestDescriptionMode'];
         ai.ignoreFiles = await this.askText('AI ignore file patterns (comma-separated)', ai.ignoreFiles);
         ai.membersOnly = await this.askBoolean('Restrict AI processing to repository members?', ai.membersOnly);
         ai.includeReasoning = await this.askBoolean('Include agent reasoning where supported?', ai.includeReasoning);

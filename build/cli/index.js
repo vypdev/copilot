@@ -54896,6 +54896,7 @@ const input_number_policy_1 = __nccwpck_require__(47165);
 const input_values_policy_1 = __nccwpck_require__(68841);
 const agent_input_builder_1 = __nccwpck_require__(71404);
 const image_configuration_builder_1 = __nccwpck_require__(9246);
+const pull_request_description_1 = __nccwpck_require__(45315);
 function input(additionalParams, actionInputs, key) {
     return (0, action_input_source_1.resolveActionInput)(additionalParams, actionInputs, key);
 }
@@ -54916,10 +54917,14 @@ function readLocalCoreConfiguration(additionalParams, actionInputs) {
 function readLocalAgentConfiguration(additionalParams, actionInputs) {
     const agentTasks = (0, agent_input_builder_1.buildAgentTasksFromValues)({ ...actionInputs, ...additionalParams });
     const bugbotFixVerifyCommandsInput = input(additionalParams, actionInputs, constants_1.INPUT_KEYS.BUGBOT_FIX_VERIFY_COMMANDS) ?? '';
+    const pullRequestDescription = (0, input_boolean_policy_1.isEnabledInput)(input(additionalParams, actionInputs, constants_1.INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION));
     return {
         agentTasks,
         agentModel: agentTasks.findings.model,
-        aiPullRequestDescription: (0, input_boolean_policy_1.isEnabledInput)(input(additionalParams, actionInputs, constants_1.INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION)),
+        aiPullRequestDescription: pullRequestDescription,
+        aiPullRequestDescriptionMode: pullRequestDescription
+            ? (0, pull_request_description_1.normalizePullRequestDescriptionMode)(input(additionalParams, actionInputs, constants_1.INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION_MODE))
+            : 'disabled',
         aiMembersOnly: (0, input_boolean_policy_1.isEnabledInput)(input(additionalParams, actionInputs, constants_1.INPUT_KEYS.AI_MEMBERS_ONLY)),
         aiIncludeReasoning: (0, input_boolean_policy_1.isEnabledInput)(input(additionalParams, actionInputs, constants_1.INPUT_KEYS.AI_INCLUDE_REASONING)),
         aiIgnoreFilesInput: input(additionalParams, actionInputs, constants_1.INPUT_KEYS.AI_IGNORE_FILES),
@@ -55126,7 +55131,7 @@ const configuration_builders_1 = __nccwpck_require__(19094);
 const branches_builder_1 = __nccwpck_require__(30085);
 const size_threshold_builder_1 = __nccwpck_require__(39757);
 function buildLocalActionExecution(configuration, additionalParams) {
-    const { debug, singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog, commitPrefixBuilder, branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount, pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, pullRequestMergeTimeout, titleEmoji, branchManagementEmoji, imageConfiguration, token, agentModel, aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, agentTasks, branchManagementLauncherLabel, bugLabel, bugfixLabel, hotfixLabel, enhancementLabel, featureLabel, releaseLabel, questionLabel, helpLabel, deployLabel, deployedLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel, priorityHighLabel, priorityMediumLabel, priorityLowLabel, priorityNoneLabel, sizeXxlLabel, sizeXlLabel, sizeLLabel, sizeMLabel, sizeSLabel, sizeXsLabel, lifecycle, issueTypeTask, issueTypeTaskDescription, issueTypeTaskColor, issueTypeBug, issueTypeBugDescription, issueTypeBugColor, issueTypeFeature, issueTypeFeatureDescription, issueTypeFeatureColor, issueTypeDocumentation, issueTypeDocumentationDescription, issueTypeDocumentationColor, issueTypeMaintenance, issueTypeMaintenanceDescription, issueTypeMaintenanceColor, issueTypeHotfix, issueTypeHotfixDescription, issueTypeHotfixColor, issueTypeRelease, issueTypeReleaseDescription, issueTypeReleaseColor, issueTypeQuestion, issueTypeQuestionDescription, issueTypeQuestionColor, issueTypeHelp, issueTypeHelpDescription, issueTypeHelpColor, issueLocale, pullRequestLocale, sizeXxlThresholdLines, sizeXxlThresholdFiles, sizeXxlThresholdCommits, sizeXlThresholdLines, sizeXlThresholdFiles, sizeXlThresholdCommits, sizeLThresholdLines, sizeLThresholdFiles, sizeLThresholdCommits, sizeMThresholdLines, sizeMThresholdFiles, sizeMThresholdCommits, sizeSThresholdLines, sizeSThresholdFiles, sizeSThresholdCommits, sizeXsThresholdLines, sizeXsThresholdFiles, sizeXsThresholdCommits, mainBranch, developmentBranch, featureTree, bugfixTree, hotfixTree, releaseTree, docsTree, choreTree, releaseWorkflow, hotfixWorkflow, projects, projectColumnIssueCreated, projectColumnPullRequestCreated, projectColumnIssueInProgress, projectColumnPullRequestInProgress, welcomeTitle, welcomeMessages, } = configuration;
+    const { debug, singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog, commitPrefixBuilder, branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount, pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, pullRequestMergeTimeout, titleEmoji, branchManagementEmoji, imageConfiguration, token, agentModel, aiPullRequestDescription, aiPullRequestDescriptionMode, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, agentTasks, branchManagementLauncherLabel, bugLabel, bugfixLabel, hotfixLabel, enhancementLabel, featureLabel, releaseLabel, questionLabel, helpLabel, deployLabel, deployedLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel, priorityHighLabel, priorityMediumLabel, priorityLowLabel, priorityNoneLabel, sizeXxlLabel, sizeXlLabel, sizeLLabel, sizeMLabel, sizeSLabel, sizeXsLabel, lifecycle, issueTypeTask, issueTypeTaskDescription, issueTypeTaskColor, issueTypeBug, issueTypeBugDescription, issueTypeBugColor, issueTypeFeature, issueTypeFeatureDescription, issueTypeFeatureColor, issueTypeDocumentation, issueTypeDocumentationDescription, issueTypeDocumentationColor, issueTypeMaintenance, issueTypeMaintenanceDescription, issueTypeMaintenanceColor, issueTypeHotfix, issueTypeHotfixDescription, issueTypeHotfixColor, issueTypeRelease, issueTypeReleaseDescription, issueTypeReleaseColor, issueTypeQuestion, issueTypeQuestionDescription, issueTypeQuestionColor, issueTypeHelp, issueTypeHelpDescription, issueTypeHelpColor, issueLocale, pullRequestLocale, sizeXxlThresholdLines, sizeXxlThresholdFiles, sizeXxlThresholdCommits, sizeXlThresholdLines, sizeXlThresholdFiles, sizeXlThresholdCommits, sizeLThresholdLines, sizeLThresholdFiles, sizeLThresholdCommits, sizeMThresholdLines, sizeMThresholdFiles, sizeMThresholdCommits, sizeSThresholdLines, sizeSThresholdFiles, sizeSThresholdCommits, sizeXsThresholdLines, sizeXsThresholdFiles, sizeXsThresholdCommits, mainBranch, developmentBranch, featureTree, bugfixTree, hotfixTree, releaseTree, docsTree, choreTree, releaseWorkflow, hotfixWorkflow, projects, projectColumnIssueCreated, projectColumnPullRequestCreated, projectColumnIssueInProgress, projectColumnPullRequestInProgress, welcomeTitle, welcomeMessages, } = configuration;
     return (0, execution_builder_1.buildExecution)({
         debug,
         singleAction: new single_action_1.SingleAction(singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog),
@@ -55143,7 +55148,7 @@ function buildLocalActionExecution(configuration, additionalParams) {
             commit: imageConfiguration.commit,
         }),
         tokens: (0, configuration_builders_1.buildTokens)(token),
-        ai: new ai_1.Ai('', agentModel, aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, agentTasks),
+        ai: new ai_1.Ai('', agentModel, aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, agentTasks, aiPullRequestDescriptionMode),
         labels: (0, configuration_builders_1.buildLabels)({
             branching: { launcher: branchManagementLauncherLabel },
             workflow: { bug: bugLabel, bugfix: bugfixLabel, hotfix: hotfixLabel, enhancement: enhancementLabel, feature: featureLabel, release: releaseLabel, question: questionLabel, help: helpLabel, deploy: deployLabel, deployed: deployedLabel, docs: docsLabel, documentation: documentationLabel, chore: choreLabel, maintenance: maintenanceLabel },
@@ -55562,6 +55567,34 @@ function resolveWorkflowIdentifier(workflowRef) {
 
 /***/ }),
 
+/***/ 75999:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ApplicationError = void 0;
+exports.toApplicationError = toApplicationError;
+/** Semantic error contract: safe to publish, while the original cause stays available to diagnostics. */
+class ApplicationError extends Error {
+    constructor(message, kind = 'unknown', options = {}) {
+        super(message);
+        this.name = 'ApplicationError';
+        this.kind = kind;
+        this.retryable = options.retryable ?? false;
+        this.cause = options.cause;
+    }
+}
+exports.ApplicationError = ApplicationError;
+function toApplicationError(error, message, kind = 'unknown', options = {}) {
+    return error instanceof ApplicationError
+        ? error
+        : new ApplicationError(message, kind, { ...options, cause: error });
+}
+
+
+/***/ }),
+
 /***/ 79966:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -55631,7 +55664,7 @@ function hasComment(execution) {
     return (execution.issue.commentBody || execution.pullRequest.commentBody).trim().length > 0;
 }
 function hasTarget(execution) {
-    if (execution.eventName === 'pull_request' || execution.eventName === 'pull_request_review_comment') {
+    if (['pull_request', 'pull_request_review', 'pull_request_review_comment', 'check_suite', 'workflow_run'].includes(execution.eventName)) {
         return execution.pullRequest.number > 0;
     }
     return execution.issue.number > 0 || execution.issueNumber > 0;
@@ -56679,6 +56712,7 @@ exports.buildSetupRepositoryVariables = buildSetupRepositoryVariables;
 exports.buildSetupActionInputs = buildSetupActionInputs;
 const agent_1 = __nccwpck_require__(89040);
 const agent_configuration_validation_policy_1 = __nccwpck_require__(60596);
+const pull_request_description_1 = __nccwpck_require__(45315);
 exports.SETUP_AGENT_TASKS = [
     'planner',
     'findings',
@@ -56759,6 +56793,7 @@ function createDefaultSetupConfiguration() {
         },
         ai: {
             pullRequestDescription: true,
+            pullRequestDescriptionMode: 'replace',
             ignoreFiles: 'build/*',
             membersOnly: false,
             includeReasoning: true,
@@ -56827,6 +56862,10 @@ function validateSetupConfiguration(configuration) {
     }
     if (!['info', 'low', 'medium', 'high'].includes(configuration.ai.bugbotSeverity)) {
         errors.push('Bugbot severity must be info, low, medium, or high.');
+    }
+    if (configuration.ai.pullRequestDescriptionMode !== undefined
+        && !['replace', 'append', 'preserve', 'disabled'].includes(configuration.ai.pullRequestDescriptionMode)) {
+        errors.push('Pull-request description mode must be replace, append, preserve, or disabled.');
     }
     if (!['auto', 'always', 'disabled'].includes(configuration.ai.provisioningMode)) {
         errors.push('Agent provisioning must be auto, always, or disabled.');
@@ -56933,6 +56972,7 @@ function buildSetupRepositoryVariables(configuration) {
     add('PULL_REQUESTS_LOCALE', repository.pullRequestLocale);
     add('COMMIT_PREFIX_TRANSFORMS', repository.commitPrefixTransforms);
     add('AI_PULL_REQUEST_DESCRIPTION', configuration.ai.pullRequestDescription);
+    add('AI_PULL_REQUEST_DESCRIPTION_MODE', configuration.ai.pullRequestDescriptionMode);
     add('AI_IGNORE_FILES', configuration.ai.ignoreFiles);
     add('AI_MEMBERS_ONLY', configuration.ai.membersOnly);
     add('AI_INCLUDE_REASONING', configuration.ai.includeReasoning);
@@ -56968,6 +57008,7 @@ function buildSetupActionInputs(configuration) {
         'pull-requests-locale': repository.pullRequestLocale,
         'commit-prefix-transforms': repository.commitPrefixTransforms,
         'ai-pull-request-description': String(ai.pullRequestDescription),
+        'ai-pull-request-description-mode': (0, pull_request_description_1.normalizePullRequestDescriptionMode)(ai.pullRequestDescriptionMode),
         'ai-ignore-files': ai.ignoreFiles,
         'ai-members-only': String(ai.membersOnly),
         'ai-include-reasoning': String(ai.includeReasoning),
@@ -57023,6 +57064,103 @@ function buildSetupWarnings(configuration) {
 }
 function unique(values) {
     return [...new Set(values.map(value => value.trim()).filter(Boolean))];
+}
+
+
+/***/ }),
+
+/***/ 3449:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildCopilotStatusSnapshot = buildCopilotStatusSnapshot;
+exports.buildCopilotStatusResult = buildCopilotStatusResult;
+exports.formatCopilotStatus = formatCopilotStatus;
+const result_1 = __nccwpck_require__(73817);
+/** Builds a read-only status snapshot from the facts already loaded by setup. */
+function buildCopilotStatusSnapshot(execution) {
+    const issueLabels = [...(execution.labels?.currentIssueLabels ?? [])];
+    const pullRequestLabels = [...(execution.labels?.currentPullRequestLabels ?? [])];
+    const isPullRequestTarget = execution.isPullRequest || execution.pullRequest?.number > 0 || execution.pullRequest?.isPullRequestReviewComment;
+    const targetLabels = isPullRequestTarget ? pullRequestLabels : issueLabels;
+    const lifecycleLabels = execution.labels?.lifecycle ?? {};
+    const lifecycle = Object.entries({
+        planned: lifecycleLabels.planned,
+        'in-progress': lifecycleLabels.inProgress,
+        reviewing: lifecycleLabels.reviewing,
+        'changes-requested': lifecycleLabels.changesRequested,
+        verified: lifecycleLabels.verified,
+        ready: lifecycleLabels.ready,
+        blocked: lifecycleLabels.blocked,
+    }).find(([, label]) => label && targetLabels.includes(label))?.[0];
+    const waitingFor = Object.entries({
+        maintainer: lifecycleLabels.awaitingMaintainer,
+        'issue-author': lifecycleLabels.awaitingIssueAuthor,
+    }).find(([, label]) => label && targetLabels.includes(label))?.[0];
+    const findingStates = execution.currentConfiguration?.results
+        ?.map(result => (0, result_1.getResultPayload)(result.payload)?.findingStates)
+        .find(isFindingStateCounts);
+    return {
+        owner: execution.owner,
+        repository: execution.repo,
+        event: execution.eventName || 'unknown',
+        action: execution.inputs?.action ?? '',
+        target: execution.pullRequest?.number > 0 || execution.pullRequest?.isPullRequestReviewComment
+            ? 'pull-request'
+            : execution.isPush
+                ? 'push'
+                : execution.issue?.number > 0 || execution.isIssue
+                    ? 'issue'
+                    : 'repository',
+        ...(execution.issue?.number > 0 ? { issueNumber: execution.issue.number } : {}),
+        ...(execution.pullRequest?.number > 0 ? { pullRequestNumber: execution.pullRequest.number } : {}),
+        ...(execution.commit?.branch ? { branch: execution.commit.branch } : {}),
+        ...(lifecycle ? { lifecycle } : {}),
+        ...(waitingFor ? { waitingFor } : {}),
+        issueLabels,
+        pullRequestLabels,
+        ...(findingStates ? { activeFindings: findingStates } : {}),
+        pullRequestDescriptionMode: execution.ai.getPullRequestDescriptionMode?.()
+            ?? (execution.ai.getAiPullRequestDescription() ? 'replace' : 'disabled'),
+    };
+}
+function buildCopilotStatusResult(execution, taskId) {
+    const snapshot = buildCopilotStatusSnapshot(execution);
+    return new result_1.Result({
+        id: `${taskId}.Status`,
+        success: true,
+        executed: true,
+        stepFormat: 'markdown',
+        steps: [formatCopilotStatus(snapshot)],
+        payload: { status: snapshot },
+    });
+}
+function formatCopilotStatus(snapshot) {
+    const lines = [
+        '## Copilot status',
+        `- **Repository:** ${snapshot.owner}/${snapshot.repository}`,
+        `- **Target:** ${snapshot.target}${snapshot.issueNumber ? ` #${snapshot.issueNumber}` : ''}${snapshot.pullRequestNumber ? ` / PR #${snapshot.pullRequestNumber}` : ''}`,
+        `- **Event:** ${snapshot.event}${snapshot.action ? ` (${snapshot.action})` : ''}`,
+        `- **Branch:** ${snapshot.branch ?? 'unknown'}`,
+        `- **Lifecycle:** ${snapshot.lifecycle ?? 'not set'}`,
+        `- **Waiting for:** ${snapshot.waitingFor ?? 'no pending human response'}`,
+        `- **PR description policy:** ${snapshot.pullRequestDescriptionMode}`,
+        `- **Issue labels:** ${snapshot.issueLabels.length > 0 ? snapshot.issueLabels.join(', ') : 'none'}`,
+        `- **PR labels:** ${snapshot.pullRequestLabels.length > 0 ? snapshot.pullRequestLabels.join(', ') : 'none'}`,
+    ];
+    if (snapshot.activeFindings) {
+        lines.push(`- **Bugbot findings:** ${snapshot.activeFindings.open} open, ${snapshot.activeFindings.reopened} reopened, ${snapshot.activeFindings.resolved} resolved`);
+    }
+    return lines.join('\n');
+}
+function isFindingStateCounts(value) {
+    return typeof value === 'object'
+        && value !== null
+        && typeof value.open === 'number'
+        && typeof value.reopened === 'number'
+        && typeof value.resolved === 'number';
 }
 
 
@@ -58553,15 +58691,31 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runExplicitCommentCommand = runExplicitCommentCommand;
 exports.invalidCommentCommandResult = invalidCommentCommandResult;
 const result_1 = __nccwpck_require__(73817);
+const status_command_policy_1 = __nccwpck_require__(3449);
 /** Executes deterministic /copilot commands without routing them through intent detection. */
 async function runExplicitCommentCommand(param, options, command, actorAuthorizationPort) {
+    if (command.name === 'status')
+        return [(0, status_command_policy_1.buildCopilotStatusResult)(param, options.taskId)];
     if (command.name === 'dismiss')
         return runDismissCommand(param, options, command, actorAuthorizationPort);
+    if (command.name === 'description')
+        return runDescriptionCommand(param, options);
     if (['review', 'findings', 'recheck'].includes(command.name))
         return runReviewCommand(param, options, command);
     if (command.name === 'fix')
         return undefined;
     return runThinkCommand(param, options, command);
+}
+async function runDescriptionCommand(param, options) {
+    if (!options.updatePullRequestDescriptionUseCase) {
+        return [new result_1.Result({
+                id: `${options.taskId}.Description`,
+                success: false,
+                executed: false,
+                errors: ['Explicit pull-request description command is not available in this composition.'],
+            })];
+    }
+    return options.updatePullRequestDescriptionUseCase.invokeExplicit(param);
 }
 async function runDismissCommand(param, options, command, actorAuthorizationPort) {
     const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.actor, param.tokens.token);
@@ -58739,12 +58893,7 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const copilot_command_1 = __nccwpck_require__(11771);
 const comment_automation_command_workflow_1 = __nccwpck_require__(63134);
 const comment_automation_natural_language_workflow_1 = __nccwpck_require__(10554);
-class CommentAutomationError extends Error {
-    constructor() {
-        super("Comment automation failed.");
-        this.name = "CommentAutomationError";
-    }
-}
+const application_error_1 = __nccwpck_require__(75999);
 async function runCommentAutomation(param, options, actorAuthorizationPort, authenticatedUserPort, bugbotResolutionPorts) {
     (0, logging_ports_1.logInfo)(`${options.taskId} started.`);
     let languageResults = [];
@@ -58764,8 +58913,8 @@ async function runCommentAutomation(param, options, actorAuthorizationPort, auth
             bugbotResolutionPorts,
         });
     }
-    catch {
-        const error = new CommentAutomationError();
+    catch (cause) {
+        const error = new application_error_1.ApplicationError("Comment automation failed.", 'workflow', { cause });
         (0, logging_ports_1.logError)(error);
         return [...languageResults, new result_1.Result({
                 id: options.taskId,
@@ -58918,8 +59067,13 @@ const title_utils_1 = __nccwpck_require__(46267);
 function resolveEventIssueNumber(execution) {
     if (execution.isIssue)
         return positiveIssueNumberOrUndefined(execution.issue.number);
-    if (execution.isPullRequest)
-        return positiveIssueNumberOrUndefined((0, title_utils_1.extractIssueNumberFromBranch)(execution.pullRequest.head));
+    if (execution.isPullRequest) {
+        if (['check_suite', 'workflow_run'].includes(String(execution.inputs?.eventName ?? ''))) {
+            return positiveIssueNumberOrUndefined(execution.pullRequest.number);
+        }
+        return positiveIssueNumberOrUndefined((0, title_utils_1.extractIssueNumberFromBranch)(execution.pullRequest.head))
+            ?? positiveIssueNumberOrUndefined(execution.pullRequest.number);
+    }
     if (execution.isPush)
         return positiveIssueNumberOrUndefined((0, title_utils_1.extractIssueNumberFromPush)(execution.commit.branch));
     return positiveIssueNumberOrUndefined(execution.issueNumber);
@@ -59137,7 +59291,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueCommentUseCase = void 0;
 const comment_automation_use_case_1 = __nccwpck_require__(9661);
 class IssueCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, issueCommentUpdatePort, actorAuthorizationPort, authenticatedUserPort, bugbotResolutionPorts, gitCommitPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, issueCommentUpdatePort, actorAuthorizationPort, authenticatedUserPort, bugbotResolutionPorts, gitCommitPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
@@ -59150,6 +59304,7 @@ class IssueCommentUseCase {
         this.gitCommitPort = gitCommitPort;
         this.dismissBugbotFindingsUseCase = dismissBugbotFindingsUseCase;
         this.reviewPotentialProblemsUseCase = reviewPotentialProblemsUseCase;
+        this.updatePullRequestDescriptionUseCase = updatePullRequestDescriptionUseCase;
         this.taskId = "IssueCommentUseCase";
     }
     async invoke(param) {
@@ -59164,6 +59319,7 @@ class IssueCommentUseCase {
             gitCommitPort: this.gitCommitPort,
             dismissBugbotFindingsUseCase: this.dismissBugbotFindingsUseCase,
             reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
+            updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase,
         }, this.actorAuthorizationPort, this.authenticatedUserPort, this.bugbotResolutionPorts);
     }
 }
@@ -59282,7 +59438,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentUseCase = void 0;
 const comment_automation_use_case_1 = __nccwpck_require__(9661);
 class PullRequestReviewCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, issueCommentUpdatePort, actorAuthorizationPort, authenticatedUserPort, bugbotResolutionPorts, gitCommitPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, issueCommentUpdatePort, actorAuthorizationPort, authenticatedUserPort, bugbotResolutionPorts, gitCommitPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
@@ -59295,6 +59451,7 @@ class PullRequestReviewCommentUseCase {
         this.gitCommitPort = gitCommitPort;
         this.dismissBugbotFindingsUseCase = dismissBugbotFindingsUseCase;
         this.reviewPotentialProblemsUseCase = reviewPotentialProblemsUseCase;
+        this.updatePullRequestDescriptionUseCase = updatePullRequestDescriptionUseCase;
         this.taskId = "PullRequestReviewCommentUseCase";
     }
     async invoke(param) {
@@ -59309,6 +59466,7 @@ class PullRequestReviewCommentUseCase {
             gitCommitPort: this.gitCommitPort,
             dismissBugbotFindingsUseCase: this.dismissBugbotFindingsUseCase,
             reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
+            updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase,
         }, this.actorAuthorizationPort, this.authenticatedUserPort, this.bugbotResolutionPorts);
     }
 }
@@ -59357,6 +59515,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runPullRequestWorkflow = runPullRequestWorkflow;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
 /** Coordinates pull-request lifecycle actions while preserving their sequential order. */
 async function runPullRequestWorkflow(param, taskId, ports) {
     try {
@@ -59372,14 +59531,14 @@ async function runPullRequestWorkflow(param, taskId, ports) {
                 ports.workflowSteps.checkPriorityPullRequestSize,
             ];
             const results = await runSteps(param, steps);
-            if (param.ai.getAiPullRequestDescription()) {
+            if (shouldUpdatePullRequestDescriptionAutomatically(param)) {
                 results.push(...(await ports.updatePullRequestDescriptionUseCase.invoke(param)));
             }
             results.push(...(await runPullRequestReview(param, ports)));
             return results;
         }
         if (param.pullRequest.isSynchronize) {
-            const results = param.ai.getAiPullRequestDescription()
+            const results = shouldUpdatePullRequestDescriptionAutomatically(param)
                 ? await ports.updatePullRequestDescriptionUseCase.invoke(param)
                 : [];
             results.push(...(await runPullRequestReview(param, ports)));
@@ -59389,8 +59548,8 @@ async function runPullRequestWorkflow(param, taskId, ports) {
             return ports.workflowSteps.closeIssueAfterMerging.invoke(param);
         }
     }
-    catch {
-        const semanticError = new Error("Unable to process the pull request.");
+    catch (cause) {
+        const semanticError = new application_error_1.ApplicationError("Unable to process the pull request.", 'workflow', { cause });
         (0, logging_ports_1.logError)(semanticError);
         return [
             new result_1.Result({
@@ -59403,6 +59562,12 @@ async function runPullRequestWorkflow(param, taskId, ports) {
         ];
     }
     return [];
+}
+function shouldUpdatePullRequestDescriptionAutomatically(param) {
+    const mode = param.ai.getPullRequestDescriptionMode?.();
+    return mode === undefined
+        ? param.ai.getAiPullRequestDescription()
+        : mode === 'replace' || mode === 'append';
 }
 async function runPullRequestReview(param, ports) {
     if (!ports.reviewPotentialProblemsUseCase || !shouldReviewPullRequest(param))
@@ -65407,6 +65572,15 @@ class UpdatePullRequestDescriptionUseCase {
             aiRepository: this.aiRepository,
         });
     }
+    /** Explicit comment commands may update a preserved PR body on demand. */
+    async invokeExplicit(param) {
+        return await (0, update_pull_request_description_workflow_1.runUpdatePullRequestDescriptionWorkflow)(param, this.taskId, {
+            pullRequestDescriptionCommandPort: this.pullRequestDescriptionCommandPort,
+            issueDescriptionQueryPort: this.issueDescriptionQueryPort,
+            organizationMembersPort: this.organizationMembersPort,
+            aiRepository: this.aiRepository,
+        }, true);
+    }
 }
 exports.UpdatePullRequestDescriptionUseCase = UpdatePullRequestDescriptionUseCase;
 
@@ -65427,11 +65601,15 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const project_context_instruction_1 = __nccwpck_require__(63907);
 const task_emoji_1 = __nccwpck_require__(46103);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+const pull_request_description_1 = __nccwpck_require__(45315);
+const application_error_1 = __nccwpck_require__(75999);
 /** Generates and publishes a PR description while keeping provider details behind ports. */
-async function runUpdatePullRequestDescriptionWorkflow(param, taskId, dependencies) {
+async function runUpdatePullRequestDescriptionWorkflow(param, taskId, dependencies, force = false) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(taskId)} Executing ${taskId} (AI PR description).`);
     try {
-        const branches = getPullRequestBranches(param);
+        const pullRequestNumber = getPullRequestNumber(param);
+        const details = await loadPullRequestDetails(param, dependencies, pullRequestNumber, force);
+        const branches = getPullRequestBranches(param, details);
         if (!branches) {
             return [
                 new result_1.Result({
@@ -65443,6 +65621,10 @@ async function runUpdatePullRequestDescriptionWorkflow(param, taskId, dependenci
                     ],
                 }),
             ];
+        }
+        const mode = getPullRequestDescriptionMode(param);
+        if (mode === 'disabled' || (!force && !(0, pull_request_description_1.shouldAutomaticallyUpdatePullRequestDescription)(mode))) {
+            return skipped(taskId, `Automatic PR description updates are disabled by the "${mode}" mode.`);
         }
         (0, logging_ports_1.logDebugInfo)(`PR description will be generated from workspace diff: base "${branches.baseBranch}", head "${branches.headBranch}" (configured agent will run git diff).`);
         const issueDescription = param.issueNumber > 0
@@ -65473,30 +65655,53 @@ async function runUpdatePullRequestDescriptionWorkflow(param, taskId, dependenci
             agentId: agent_task_policy_1.AGENT_PLAN,
             prompt,
         });
-        const pullRequestBody = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(extractDescription(response));
+        const generatedDescription = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(extractDescription(response));
+        const pullRequestBody = mode === 'replace'
+            ? generatedDescription
+            : (0, pull_request_description_1.mergeManagedPullRequestDescription)(details?.body ?? param.pullRequest.body, generatedDescription);
         (0, logging_ports_1.logDebugInfo)(`UpdatePullRequestDescription: agent response received. Description length=${pullRequestBody.length}.`);
         if (!pullRequestBody.trim()) {
             return newResult(taskId, false, true, ['Configured agent did not return a PR description.']);
         }
-        await dependencies.pullRequestDescriptionCommandPort.updateDescription(param.owner, param.repo, param.pullRequest.number, pullRequestBody, param.tokens.token);
+        await dependencies.pullRequestDescriptionCommandPort.updateDescription(param.owner, param.repo, pullRequestNumber, pullRequestBody, param.tokens.token);
         return [new result_1.Result({ id: taskId, success: true, executed: true, steps: [] })];
     }
-    catch (error) {
+    catch (cause) {
+        const error = new application_error_1.ApplicationError('Unable to update pull request description.', 'workflow', { cause });
         (0, logging_ports_1.logError)(error);
         return [
             new result_1.Result({
                 id: taskId,
                 success: false,
                 executed: true,
-                steps: [`Error updating pull request description: ${error}`],
+                steps: [error.message],
+                errors: [error],
             }),
         ];
     }
 }
-function getPullRequestBranches(param) {
-    const headBranch = param.pullRequest.head;
-    const baseBranch = param.pullRequest.base;
+function getPullRequestBranches(param, details) {
+    const headBranch = param.pullRequest.head || details?.headBranch;
+    const baseBranch = param.pullRequest.base || details?.baseBranch;
     return headBranch && baseBranch ? { headBranch, baseBranch } : undefined;
+}
+function getPullRequestNumber(param) {
+    return param.pullRequest.number > 0 ? param.pullRequest.number : param.issue.number;
+}
+async function loadPullRequestDetails(param, dependencies, pullRequestNumber, force) {
+    if (pullRequestNumber <= 0 || !dependencies.pullRequestDescriptionCommandPort.getDetails)
+        return undefined;
+    const needsRemoteDetails = param.eventName === 'issue_comment'
+        || force
+        || !param.pullRequest.head
+        || !param.pullRequest.base;
+    if (!needsRemoteDetails)
+        return undefined;
+    return dependencies.pullRequestDescriptionCommandPort.getDetails(param.owner, param.repo, pullRequestNumber, param.tokens.token);
+}
+function getPullRequestDescriptionMode(param) {
+    return param.ai.getPullRequestDescriptionMode?.()
+        ?? (param.ai.getAiPullRequestDescription() ? 'replace' : 'disabled');
 }
 function extractDescription(response) {
     if (typeof response === 'string')
@@ -65778,6 +65983,7 @@ const detect_potential_problems_1 = __nccwpck_require__(70850);
 const setup_1 = __nccwpck_require__(32139);
 const upgrade_1 = __nccwpck_require__(27087);
 const doctor_1 = __nccwpck_require__(74364);
+const reconcile_1 = __nccwpck_require__(4718);
 function registerCliCommands(program) {
     (0, think_1.registerThinkCommand)(program);
     (0, do_1.registerDoCommand)(program);
@@ -65787,6 +65993,7 @@ function registerCliCommands(program) {
     (0, setup_1.registerSetupCommand)(program);
     (0, upgrade_1.registerUpgradeCommand)(program);
     (0, doctor_1.registerDoctorCommand)(program);
+    (0, reconcile_1.registerReconcileCommand)(program);
     return program;
 }
 
@@ -66322,6 +66529,86 @@ function registerRecommendStepsCommand(program) {
 
 /***/ }),
 
+/***/ 4718:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.registerReconcileCommand = registerReconcileCommand;
+exports.runReconcileCommand = runReconcileCommand;
+const cli_context_1 = __nccwpck_require__(21307);
+const setup_configuration_policy_1 = __nccwpck_require__(56637);
+const setup_config_file_1 = __nccwpck_require__(11196);
+const setup_workspace_adapter_1 = __nccwpck_require__(5729);
+/** Reconciles setup-managed workflow files locally; remote GitHub state is never changed. */
+function registerReconcileCommand(program) {
+    program
+        .command('reconcile')
+        .description('Detect setup drift and optionally reconcile setup-managed workflow files')
+        .option('--config <path>', 'YAML or JSON setup configuration used as the expected contract')
+        .option('--apply', 'Apply local workflow/template reconciliation after showing the drift')
+        .option('--json', 'Print a machine-readable reconciliation report')
+        .action((options) => runReconcileCommand(options));
+}
+function runReconcileCommand(options, workspace = new setup_workspace_adapter_1.SetupWorkspaceAdapter()) {
+    const cwd = process.cwd();
+    if (!(0, cli_context_1.isInsideGitRepo)(cwd))
+        throw new Error('Run "copilot reconcile" from the root of a git repository.');
+    const gitInfo = (0, cli_context_1.getGitInfo)();
+    if ('error' in gitInfo)
+        throw new Error(gitInfo.error);
+    const overrides = options.config ? (0, setup_config_file_1.loadSetupConfigurationOverrides)(options.config) : {};
+    const configuration = (0, setup_configuration_policy_1.mergeSetupConfiguration)((0, setup_configuration_policy_1.createDefaultSetupConfiguration)(), overrides);
+    const comparisons = [...(workspace.compareWorkflows?.(configuration.features) ?? [])];
+    const drift = comparisons.filter(comparison => comparison.status !== 'unchanged');
+    const report = {
+        repository: `${gitInfo.owner}/${gitInfo.repo}`,
+        scope: 'setup-workflows',
+        driftDetected: drift.length > 0,
+        applied: false,
+        files: comparisons,
+        result: undefined,
+    };
+    if (options.apply && drift.length > 0) {
+        report.result = workspace.prepare({
+            features: configuration.features,
+            updateExistingWorkflows: true,
+            approvedWorkflowFiles: drift.map(comparison => comparison.file),
+        });
+        report.applied = true;
+    }
+    if (options.json) {
+        console.log(JSON.stringify(report, null, 2));
+    }
+    else {
+        console.log(`🔎 Reconciling ${report.scope} for ${report.repository}...`);
+        if (comparisons.length === 0)
+            console.log('  No setup-managed workflows were found in the package contract.');
+        for (const comparison of comparisons) {
+            const icon = comparison.status === 'unchanged' ? '✅' : comparison.status === 'missing' ? '❌' : '⚠️';
+            console.log(`  ${icon} ${comparison.destination} (${comparison.status})`);
+        }
+        if (report.result)
+            console.log(`✅ Reconciliation applied: ${report.result.copied} copied, ${report.result.skipped} skipped.`);
+    }
+    if (report.applied) {
+        process.exitCode = 0;
+        return;
+    }
+    if (drift.length > 0) {
+        if (!options.json)
+            console.log('ℹ️  Run with --apply to reconcile the local setup-managed files.');
+        process.exitCode = 1;
+    }
+    else {
+        process.exitCode = 0;
+    }
+}
+
+
+/***/ }),
+
 /***/ 32139:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -66752,7 +67039,7 @@ const REPOSITORY_STRING_KEYS = new Set([
 const REPOSITORY_BOOLEAN_KEYS = new Set(['branchManagementAlways', 'reopenIssueOnPush']);
 const REPOSITORY_NUMBER_KEYS = new Set(['desiredAssigneesCount', 'desiredReviewersCount', 'mergeTimeout']);
 const AI_BOOLEAN_KEYS = new Set(['pullRequestDescription', 'membersOnly', 'includeReasoning']);
-const AI_STRING_KEYS = new Set(['ignoreFiles', 'bugbotSeverity', 'bugbotFixVerifyCommands', 'provisioningMode']);
+const AI_STRING_KEYS = new Set(['ignoreFiles', 'pullRequestDescriptionMode', 'bugbotSeverity', 'bugbotFixVerifyCommands', 'provisioningMode']);
 const AI_NUMBER_KEYS = new Set(['bugbotCommentLimit']);
 const PROJECT_KEYS = new Set([
     'ids',
@@ -66933,6 +67220,7 @@ class SetupPromptAdapter {
         console.log(color('\n4. Configure AI, projects, and release safety\n', 36));
         const ai = defaults.ai;
         ai.pullRequestDescription = await this.askBoolean('Generate AI pull-request descriptions?', ai.pullRequestDescription);
+        ai.pullRequestDescriptionMode = await this.askChoice('Pull-request description mode', ['replace', 'append', 'preserve', 'disabled'], ai.pullRequestDescriptionMode ?? 'replace');
         ai.ignoreFiles = await this.askText('AI ignore file patterns (comma-separated)', ai.ignoreFiles);
         ai.membersOnly = await this.askBoolean('Restrict AI processing to repository members?', ai.membersOnly);
         ai.includeReasoning = await this.askBoolean('Include agent reasoning where supported?', ai.includeReasoning);
@@ -67250,11 +67538,12 @@ Object.defineProperty(exports, "isAgentConfigurationReady", ({ enumerable: true,
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Ai = void 0;
 const agent_command_1 = __nccwpck_require__(77923);
+const pull_request_description_1 = __nccwpck_require__(45315);
 class Ai {
     constructor(_configurationSource, model, aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotMinSeverity, bugbotCommentLimit, bugbotFixVerifyCommands = [], agentTasks = {
         findings: { provider: 'codex', modelProvider: 'openai', model, command: (0, agent_command_1.defaultAgentCommand)({ provider: 'codex', modelProvider: 'openai', model }) },
         fixer: { provider: 'codex', modelProvider: 'openai', model, command: (0, agent_command_1.defaultAgentCommand)({ provider: 'codex', modelProvider: 'openai', model }) },
-    }) {
+    }, pullRequestDescriptionMode = pull_request_description_1.DEFAULT_PULL_REQUEST_DESCRIPTION_MODE) {
         this.aiPullRequestDescription = aiPullRequestDescription;
         this.aiMembersOnly = aiMembersOnly;
         this.aiIgnoreFiles = aiIgnoreFiles;
@@ -67263,9 +67552,13 @@ class Ai {
         this.bugbotCommentLimit = bugbotCommentLimit;
         this.bugbotFixVerifyCommands = bugbotFixVerifyCommands;
         this.agentTasks = agentTasks;
+        this.pullRequestDescriptionMode = (0, pull_request_description_1.normalizePullRequestDescriptionMode)(pullRequestDescriptionMode);
     }
     getAiPullRequestDescription() {
         return this.aiPullRequestDescription;
+    }
+    getPullRequestDescriptionMode() {
+        return this.pullRequestDescriptionMode;
     }
     getAiMembersOnly() {
         return this.aiMembersOnly;
@@ -67409,14 +67702,20 @@ exports.Commit = Commit;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Config = void 0;
+exports.Config = exports.CONFIG_SCHEMA_VERSION = void 0;
 const branch_configuration_1 = __nccwpck_require__(71934);
 const recommendation_state_1 = __nccwpck_require__(68514);
 const model_input_1 = __nccwpck_require__(14637);
+exports.CONFIG_SCHEMA_VERSION = 1;
 class Config {
     constructor(data) {
         this.results = [];
         const input = (0, model_input_1.asModelInput)(data);
+        this.schemaVersion = typeof input.schemaVersion === 'number'
+            && Number.isInteger(input.schemaVersion)
+            && input.schemaVersion > 0
+            ? input.schemaVersion
+            : exports.CONFIG_SCHEMA_VERSION;
         this.branchType = (0, model_input_1.readString)(input, 'branchType');
         this.hotfixOriginBranch = (0, model_input_1.readOptionalString)(input, 'hotfixOriginBranch');
         this.hotfixBranch = (0, model_input_1.readOptionalString)(input, 'hotfixBranch');
@@ -68229,7 +68528,11 @@ class PullRequest {
         return this.inputs?.pull_request?.user?.login ?? '';
     }
     get number() {
-        return (0, positive_integer_policy_1.parsePositiveSafeInteger)(this.inputs?.pull_request?.number) ?? -1;
+        return (0, positive_integer_policy_1.parsePositiveSafeInteger)(this.inputs?.pull_request?.number)
+            ?? (0, positive_integer_policy_1.parsePositiveSafeInteger)(this.inputs?.review?.pull_request?.number)
+            ?? uniquePullRequestNumber(this.inputs?.check_suite?.pull_requests)
+            ?? uniquePullRequestNumber(this.inputs?.workflow_run?.pull_requests)
+            ?? -1;
     }
     get url() {
         return this.inputs?.pull_request?.html_url ?? '';
@@ -68238,7 +68541,10 @@ class PullRequest {
         return this.inputs?.pull_request?.body ?? '';
     }
     get head() {
-        return this.inputs?.pull_request?.head?.ref ?? '';
+        return this.inputs?.pull_request?.head?.ref
+            ?? this.inputs?.check_suite?.head_branch
+            ?? this.inputs?.workflow_run?.head_branch
+            ?? '';
     }
     get base() {
         return this.inputs?.pull_request?.base?.ref ?? '';
@@ -68261,7 +68567,12 @@ class PullRequest {
         return this.action === 'synchronize';
     }
     get isPullRequest() {
-        return this.inputs?.eventName === 'pull_request';
+        return [
+            'pull_request',
+            'pull_request_review',
+            'check_suite',
+            'workflow_run',
+        ].includes(this.inputs?.eventName ?? '');
     }
     get isPullRequestReviewComment() {
         return this.inputs?.eventName === 'pull_request_review_comment';
@@ -68296,6 +68607,11 @@ class PullRequest {
     }
 }
 exports.PullRequest = PullRequest;
+function uniquePullRequestNumber(pullRequests) {
+    return pullRequests?.length === 1
+        ? (0, positive_integer_policy_1.parsePositiveSafeInteger)(pullRequests[0]?.number)
+        : undefined;
+}
 
 
 /***/ }),
@@ -72477,6 +72793,21 @@ class PullRequestLifecycleRepository {
             });
             (0, logger_1.logDebugInfo)(`Updated PR #${pullRequestNumber} description with: ${description}`);
         };
+        this.getDetails = async (owner, repository, pullRequestNumber, token) => {
+            const octokit = this.githubClient.getClient(token);
+            if (!octokit.rest.pulls.get)
+                throw new Error('Pull-request details query is not available.');
+            const { data } = await octokit.rest.pulls.get({
+                owner,
+                repo: repository,
+                pull_number: pullRequestNumber,
+            });
+            return {
+                body: data.body ?? '',
+                headBranch: data.head?.ref ?? '',
+                baseBranch: data.base?.ref ?? '',
+            };
+        };
     }
     async listOpenPullRequests(octokit, owner, repository, filters = {}) {
         const allPullRequests = [];
@@ -73851,6 +74182,7 @@ exports.COPILOT_COMMAND_NAMES = [
     'estimate',
     'test-plan',
     'status',
+    'description',
     'review',
     'findings',
     'fix',
@@ -74058,6 +74390,65 @@ function parsePositiveSafeInteger(value) {
         return undefined;
     const parsed = Number(normalized);
     return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+
+/***/ }),
+
+/***/ 45315:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MANAGED_PULL_REQUEST_DESCRIPTION_END = exports.MANAGED_PULL_REQUEST_DESCRIPTION_START = exports.DEFAULT_PULL_REQUEST_DESCRIPTION_MODE = exports.PULL_REQUEST_DESCRIPTION_MODES = void 0;
+exports.normalizePullRequestDescriptionMode = normalizePullRequestDescriptionMode;
+exports.hasManagedPullRequestDescription = hasManagedPullRequestDescription;
+exports.renderManagedPullRequestDescription = renderManagedPullRequestDescription;
+exports.mergeManagedPullRequestDescription = mergeManagedPullRequestDescription;
+exports.shouldAutomaticallyUpdatePullRequestDescription = shouldAutomaticallyUpdatePullRequestDescription;
+exports.PULL_REQUEST_DESCRIPTION_MODES = [
+    'replace',
+    'append',
+    'preserve',
+    'disabled',
+];
+exports.DEFAULT_PULL_REQUEST_DESCRIPTION_MODE = 'replace';
+exports.MANAGED_PULL_REQUEST_DESCRIPTION_START = '<!-- copilot:managed-pr-description -->';
+exports.MANAGED_PULL_REQUEST_DESCRIPTION_END = '<!-- /copilot:managed-pr-description -->';
+/** Normalizes public configuration while keeping invalid values safe and backwards compatible. */
+function normalizePullRequestDescriptionMode(value) {
+    const normalized = String(value ?? '').trim().toLowerCase();
+    return exports.PULL_REQUEST_DESCRIPTION_MODES.includes(normalized)
+        ? normalized
+        : exports.DEFAULT_PULL_REQUEST_DESCRIPTION_MODE;
+}
+function hasManagedPullRequestDescription(body) {
+    return typeof body === 'string' && body.includes(exports.MANAGED_PULL_REQUEST_DESCRIPTION_START);
+}
+/** Renders one bounded Copilot-owned section without taking ownership of the rest of the body. */
+function renderManagedPullRequestDescription(generated) {
+    return [
+        exports.MANAGED_PULL_REQUEST_DESCRIPTION_START,
+        generated.trim(),
+        exports.MANAGED_PULL_REQUEST_DESCRIPTION_END,
+    ].join('\n');
+}
+/** Replaces the existing managed section, or appends one when none exists. */
+function mergeManagedPullRequestDescription(currentBody, generated) {
+    const current = typeof currentBody === 'string' ? currentBody.trim() : '';
+    const managed = renderManagedPullRequestDescription(generated);
+    const start = current.indexOf(exports.MANAGED_PULL_REQUEST_DESCRIPTION_START);
+    const end = current.indexOf(exports.MANAGED_PULL_REQUEST_DESCRIPTION_END, start + exports.MANAGED_PULL_REQUEST_DESCRIPTION_START.length);
+    if (start >= 0 && end >= start) {
+        const before = current.slice(0, start).trimEnd();
+        const after = current.slice(end + exports.MANAGED_PULL_REQUEST_DESCRIPTION_END.length).trimStart();
+        return [before, managed, after].filter(Boolean).join('\n\n').trim();
+    }
+    return current ? `${current}\n\n${managed}` : managed;
+}
+function shouldAutomaticallyUpdatePullRequestDescription(mode) {
+    return mode === 'replace' || mode === 'append';
 }
 
 
@@ -74946,7 +75337,6 @@ const check_pull_request_comment_language_use_case_1 = __nccwpck_require__(21729
 const comment_language_translation_workflow_1 = __nccwpck_require__(72770);
 const branch_compare_repository_1 = __nccwpck_require__(95859);
 const merge_repository_1 = __nccwpck_require__(31412);
-const pull_request_lifecycle_repository_1 = __nccwpck_require__(24189);
 const repository_release_publication_repository_1 = __nccwpck_require__(42075);
 const repository_tag_repository_1 = __nccwpck_require__(58717);
 const git_commit_adapter_1 = __nccwpck_require__(18606);
@@ -74964,6 +75354,9 @@ const issue_interaction_composition_root_1 = __nccwpck_require__(92503);
 const issue_labels_composition_root_1 = __nccwpck_require__(34780);
 const issue_use_case_composition_root_1 = __nccwpck_require__(43022);
 const pull_request_use_case_composition_root_1 = __nccwpck_require__(70636);
+const organization_members_composition_root_1 = __nccwpck_require__(50603);
+const update_pull_request_description_use_case_1 = __nccwpck_require__(75089);
+const pull_request_lifecycle_repository_1 = __nccwpck_require__(24189);
 function createDetectPotentialProblemsUseCase() {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();
     return new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.context, bugbot.publication, bugbot.resolution);
@@ -74980,7 +75373,8 @@ function createIssueCommentUseCaseCompositionRoot() {
     const language = (0, agent_capability_composition_root_1.createLanguageQueryPort)();
     const fixer = (0, agent_capability_composition_root_1.createFixerQueryPort)();
     const gitCommit = new git_commit_adapter_1.GitCommitAdapter();
-    return new issue_comment_use_case_1.IssueCommentUseCase(new check_issue_comment_language_use_case_1.CheckIssueCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), bugbot.resolution, gitCommit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution));
+    const pullRequestDescription = new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), (0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
+    return new issue_comment_use_case_1.IssueCommentUseCase(new check_issue_comment_language_use_case_1.CheckIssueCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), bugbot.resolution, gitCommit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution), pullRequestDescription);
 }
 function createPullRequestReviewCommentUseCaseCompositionRoot() {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();
@@ -74988,20 +75382,33 @@ function createPullRequestReviewCommentUseCaseCompositionRoot() {
     const language = (0, agent_capability_composition_root_1.createLanguageQueryPort)();
     const fixer = (0, agent_capability_composition_root_1.createFixerQueryPort)();
     const gitCommit = new git_commit_adapter_1.GitCommitAdapter();
-    return new pull_request_review_comment_use_case_1.PullRequestReviewCommentUseCase(new check_pull_request_comment_language_use_case_1.CheckPullRequestCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), bugbot.resolution, gitCommit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution));
+    const pullRequestDescription = new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), (0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
+    return new pull_request_review_comment_use_case_1.PullRequestReviewCommentUseCase(new check_pull_request_comment_language_use_case_1.CheckPullRequestCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), bugbot.resolution, gitCommit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution), pullRequestDescription);
 }
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort) {
     return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, issue_interaction_composition_root_1.createIssueNotificationRepository)()), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase(projectBoardCommandPort, (0, issue_labels_composition_root_1.createIssueLabelRepository)(), new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)())), createDetectPotentialProblemsUseCase(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)());
 }
 function createMainRunRouteCompositionRoot(projectBoardCommandPort) {
+    // Composition is scoped to one main run. Each route is built only when it is
+    // actually selected, while repeated calls in the same run reuse its graph.
+    const singleAction = lazy(() => createSingleActionUseCaseCompositionRoot());
+    const issueComment = lazy(() => createIssueCommentUseCaseCompositionRoot());
+    const issue = lazy(() => (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)());
+    const pullRequestReviewComment = lazy(() => createPullRequestReviewCommentUseCaseCompositionRoot());
+    const pullRequest = lazy(() => (0, pull_request_use_case_composition_root_1.createPullRequestUseCaseCompositionRoot)());
+    const push = lazy(() => createCommitUseCaseCompositionRoot(projectBoardCommandPort));
     return {
-        "single-action": async (execution) => createSingleActionUseCaseCompositionRoot().invoke(execution),
-        "issue-comment": async (execution) => createIssueCommentUseCaseCompositionRoot().invoke(execution),
-        issue: async (execution) => (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)().invoke(execution),
-        "pull-request-review-comment": async (execution) => createPullRequestReviewCommentUseCaseCompositionRoot().invoke(execution),
-        "pull-request": async (execution) => (0, pull_request_use_case_composition_root_1.createPullRequestUseCaseCompositionRoot)().invoke(execution),
-        push: async (execution) => createCommitUseCaseCompositionRoot(projectBoardCommandPort).invoke(execution),
+        "single-action": async (execution) => singleAction().invoke(execution),
+        "issue-comment": async (execution) => issueComment().invoke(execution),
+        issue: async (execution) => issue().invoke(execution),
+        "pull-request-review-comment": async (execution) => pullRequestReviewComment().invoke(execution),
+        "pull-request": async (execution) => pullRequest().invoke(execution),
+        push: async (execution) => push().invoke(execution),
     };
+}
+function lazy(factory) {
+    let value;
+    return () => value ?? (value = factory());
 }
 
 
@@ -76306,15 +76713,17 @@ exports.ConfigurationHandler = ConfigurationHandler;
 /***/ }),
 
 /***/ 58043:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildConfigurationPayload = buildConfigurationPayload;
+const config_1 = __nccwpck_require__(90450);
 function buildConfigurationPayload(execution, storedRaw) {
     const current = execution.currentConfiguration;
     const payload = {
+        schemaVersion: config_1.CONFIG_SCHEMA_VERSION,
         branchType: current.branchType,
         releaseBranch: current.releaseBranch,
         workingBranch: current.workingBranch,
@@ -77196,6 +77605,7 @@ exports.INPUT_KEYS = {
     RELEASE_COMMAND: 'release-command',
     // AI configuration
     AI_PULL_REQUEST_DESCRIPTION: 'ai-pull-request-description',
+    AI_PULL_REQUEST_DESCRIPTION_MODE: 'ai-pull-request-description-mode',
     AI_MEMBERS_ONLY: 'ai-members-only',
     AI_IGNORE_FILES: 'ai-ignore-files',
     AI_INCLUDE_REASONING: 'ai-include-reasoning',

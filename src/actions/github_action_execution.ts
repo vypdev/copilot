@@ -91,6 +91,7 @@ export async function buildGithubActionExecution(
             aiInputs.bugbotCommentLimit,
             aiInputs.bugbotFixVerifyCommands,
             aiInputs.requestedAgentTasks,
+            aiInputs.pullRequestDescriptionMode,
         ),
         labels: buildLabels(labelInputs),
         issueTypes: buildIssueTypes(issueTypeInputs),

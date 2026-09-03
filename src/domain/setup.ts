@@ -1,4 +1,5 @@
 import type { AgentProvider, AgentTask } from './agent';
+import type { PullRequestDescriptionMode } from './pull_request_description';
 
 export type SetupFeature =
     | 'issues'
@@ -47,6 +48,8 @@ export interface SetupRepositoryConfiguration {
 
 export interface SetupAiConfiguration {
     pullRequestDescription: boolean;
+    /** Optional for backwards-compatible setup files created before v3.3.0. */
+    pullRequestDescriptionMode?: PullRequestDescriptionMode;
     ignoreFiles: string;
     membersOnly: boolean;
     includeReasoning: boolean;

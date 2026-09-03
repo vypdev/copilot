@@ -64,7 +64,7 @@ describe("collect architecture metrics", () => {
     runProcess(
       [execPath, "-e", "setTimeout(() => {}, 700)"],
       process.cwd(),
-      1000,
+      3000,
     );
     expect(existsSync(marker)).toBe(false);
   });

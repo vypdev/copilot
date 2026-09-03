@@ -1,7 +1,9 @@
 import { BranchConfiguration } from "./branch_configuration";
 import { RecommendationState } from "./recommendation_state";
 import { Result } from "./result";
+export declare const CONFIG_SCHEMA_VERSION = 1;
 export declare class Config {
+    readonly schemaVersion: number;
     branchType: string;
     releaseBranch: string | undefined;
     workingBranch: string | undefined;

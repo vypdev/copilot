@@ -1,8 +1,10 @@
 import type { Execution } from '../../data/model/execution';
+import { CONFIG_SCHEMA_VERSION } from '../../data/model/config';
 
 export function buildConfigurationPayload(execution: Execution, storedRaw: string | undefined): string {
     const current = execution.currentConfiguration;
     const payload: Record<string, unknown> = {
+        schemaVersion: CONFIG_SCHEMA_VERSION,
         branchType: current.branchType,
         releaseBranch: current.releaseBranch,
         workingBranch: current.workingBranch,

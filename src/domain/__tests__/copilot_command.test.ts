@@ -4,6 +4,8 @@ describe('Copilot command policy', () => {
     it.each([
         ['/copilot plan', 'plan'],
         ['/copilot review security regression', 'review'],
+        ['/copilot status', 'status'],
+        ['/copilot description', 'description'],
         ['/copilot fix FINDING-1 FINDING-2', 'fix'],
     ])('parses %s as an explicit command', (input, name) => {
         const result = parseCopilotCommand(input);

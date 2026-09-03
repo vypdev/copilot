@@ -7,6 +7,7 @@ import { registerDetectPotentialProblemsCommand } from './commands/detect_potent
 import { registerSetupCommand } from './commands/setup';
 import { registerUpgradeCommand } from './commands/upgrade';
 import { registerDoctorCommand } from './commands/doctor';
+import { registerReconcileCommand } from './commands/reconcile';
 
 export function registerCliCommands(program: Command): Command {
   registerThinkCommand(program);
@@ -17,5 +18,6 @@ export function registerCliCommands(program: Command): Command {
   registerSetupCommand(program);
   registerUpgradeCommand(program);
   registerDoctorCommand(program);
+  registerReconcileCommand(program);
   return program;
 }

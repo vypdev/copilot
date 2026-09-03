@@ -3,9 +3,10 @@ import { OctokitPullRequestLifecycleClientAdapter } from "../../../infrastructur
 
 const mockList = jest.fn();
 const mockUpdate = jest.fn();
+const mockGet = jest.fn();
 
 jest.mock("@actions/github", () => ({
-    getOctokit: jest.fn(() => ({ rest: { pulls: { list: mockList, update: mockUpdate } } })),
+    getOctokit: jest.fn(() => ({ rest: { pulls: { list: mockList, update: mockUpdate, get: mockGet } } })),
 }));
 
 jest.mock("../../../utils/logger", () => ({
@@ -17,6 +18,7 @@ describe("PullRequestLifecycleRepository", () => {
     beforeEach(() => {
         jest.clearAllMocks();
         mockUpdate.mockResolvedValue({});
+        mockGet.mockReset();
     });
 
     it("lists open pull requests by head branch", async () => {
@@ -77,6 +79,18 @@ describe("PullRequestLifecycleRepository", () => {
         expect(mockUpdate).toHaveBeenNthCalledWith(2, {
             owner: "owner", repo: "repo", pull_number: 12, body: "## Summary",
         });
+    });
+
+    it('reads pull-request details for explicit description commands', async () => {
+        mockGet.mockResolvedValue({ data: { body: 'Human text', head: { ref: 'feature/12' }, base: { ref: 'develop' } } });
+        const repository = new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter());
+
+        await expect(repository.getDetails('owner', 'repo', 12, 'token')).resolves.toEqual({
+            body: 'Human text',
+            headBranch: 'feature/12',
+            baseBranch: 'develop',
+        });
+        expect(mockGet).toHaveBeenCalledWith({ owner: 'owner', repo: 'repo', pull_number: 12 });
     });
 
     it("returns false for non-success responses and network failures when checking linkage", async () => {

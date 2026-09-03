@@ -34,7 +34,7 @@ const REPOSITORY_STRING_KEYS = new Set([
 const REPOSITORY_BOOLEAN_KEYS = new Set(['branchManagementAlways', 'reopenIssueOnPush']);
 const REPOSITORY_NUMBER_KEYS = new Set(['desiredAssigneesCount', 'desiredReviewersCount', 'mergeTimeout']);
 const AI_BOOLEAN_KEYS = new Set(['pullRequestDescription', 'membersOnly', 'includeReasoning']);
-const AI_STRING_KEYS = new Set(['ignoreFiles', 'bugbotSeverity', 'bugbotFixVerifyCommands', 'provisioningMode']);
+const AI_STRING_KEYS = new Set(['ignoreFiles', 'pullRequestDescriptionMode', 'bugbotSeverity', 'bugbotFixVerifyCommands', 'provisioningMode']);
 const AI_NUMBER_KEYS = new Set(['bugbotCommentLimit']);
 const PROJECT_KEYS = new Set([
     'ids',

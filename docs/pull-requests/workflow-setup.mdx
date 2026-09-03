@@ -15,6 +15,12 @@ Use the `pull_request` trigger with the types you need. Common setup:
 on:
   pull_request:
     types: [opened, reopened, edited, labeled, unlabeled, closed, assigned, unassigned, synchronize]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+  check_suite:
+    types: [completed, rerequested]
+  workflow_run:
+    types: [completed]
 ```
 
 | Event type | When it runs | Typical use |
@@ -75,6 +81,8 @@ jobs:
 7. **Comments and images:** The action can post a comment on the PR with optional images per branch type (feature, bugfix, etc.). See [Capabilities](/pull-requests/capabilities).
 
 8. **Bugbot review:** On `opened`, `reopened`, `edited`, and `synchronize`, the reviewer role analyzes the PR head and publishes stable finding comments. Active findings move the PR to `state:changes-requested` and `state:awaiting-issue-author`; a clean review moves it to `state:ready` and `state:awaiting-maintainer`. During the run, `state:ai-processing` may coexist with those labels and is removed when the agent finishes. Configure `reviewer-provider`, `reviewer-model-provider`, `reviewer-model`, `reviewer-effort`, and `reviewer-command` only when the reviewer should differ from the base agent.
+
+9. **External lifecycle evidence:** `pull_request_review` and check/workflow completion events update only the managed lifecycle label. A failed check blocks the PR, a pending check keeps it reviewing, an approved review plus successful/unknown checks marks it ready, and a requested change marks it as changes requested. These events do not invoke an agent pipeline.
 
 ## Next steps
 

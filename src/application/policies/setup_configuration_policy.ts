@@ -14,6 +14,7 @@ import type {
     SetupCredentialRequirement,
 } from '../../domain/setup';
 import { SUPPORTED_AGENT_PROVIDERS } from './agent_configuration_validation_policy';
+import { normalizePullRequestDescriptionMode } from '../../domain/pull_request_description';
 
 export const SETUP_AGENT_TASKS: readonly AgentTask[] = [
     'planner',
@@ -104,6 +105,7 @@ export function createDefaultSetupConfiguration(): SetupConfiguration {
         },
         ai: {
             pullRequestDescription: true,
+            pullRequestDescriptionMode: 'replace',
             ignoreFiles: 'build/*',
             membersOnly: false,
             includeReasoning: true,
@@ -187,6 +189,10 @@ export function validateSetupConfiguration(configuration: SetupConfiguration): s
     }
     if (!['info', 'low', 'medium', 'high'].includes(configuration.ai.bugbotSeverity)) {
         errors.push('Bugbot severity must be info, low, medium, or high.');
+    }
+    if (configuration.ai.pullRequestDescriptionMode !== undefined
+        && !['replace', 'append', 'preserve', 'disabled'].includes(configuration.ai.pullRequestDescriptionMode)) {
+        errors.push('Pull-request description mode must be replace, append, preserve, or disabled.');
     }
     if (!['auto', 'always', 'disabled'].includes(configuration.ai.provisioningMode)) {
         errors.push('Agent provisioning must be auto, always, or disabled.');
@@ -292,6 +298,7 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
     add('COMMIT_PREFIX_TRANSFORMS', repository.commitPrefixTransforms);
 
     add('AI_PULL_REQUEST_DESCRIPTION', configuration.ai.pullRequestDescription);
+    add('AI_PULL_REQUEST_DESCRIPTION_MODE', configuration.ai.pullRequestDescriptionMode);
     add('AI_IGNORE_FILES', configuration.ai.ignoreFiles);
     add('AI_MEMBERS_ONLY', configuration.ai.membersOnly);
     add('AI_INCLUDE_REASONING', configuration.ai.includeReasoning);
@@ -329,6 +336,7 @@ export function buildSetupActionInputs(configuration: SetupConfiguration): Recor
         'pull-requests-locale': repository.pullRequestLocale,
         'commit-prefix-transforms': repository.commitPrefixTransforms,
         'ai-pull-request-description': String(ai.pullRequestDescription),
+        'ai-pull-request-description-mode': normalizePullRequestDescriptionMode(ai.pullRequestDescriptionMode),
         'ai-ignore-files': ai.ignoreFiles,
         'ai-members-only': String(ai.membersOnly),
         'ai-include-reasoning': String(ai.includeReasoning),

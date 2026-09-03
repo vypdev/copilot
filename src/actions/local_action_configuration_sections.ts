@@ -10,6 +10,7 @@ import { parseBoundedPositiveIntegerInput, parseIntegerInput, parseNonNegativeIn
 import { parseDelimitedValues } from './input_values_policy';
 import { buildAgentTasksFromValues } from './agent_input_builder';
 import { buildImageConfiguration } from './image_configuration_builder';
+import { normalizePullRequestDescriptionMode } from '../domain/pull_request_description';
 
 export type LocalActionInputs = ReturnType<typeof getActionInputsWithDefaults>;
 
@@ -41,10 +42,14 @@ export function readLocalAgentConfiguration(
 ) {
     const agentTasks = buildAgentTasksFromValues({ ...actionInputs, ...additionalParams });
     const bugbotFixVerifyCommandsInput = input(additionalParams, actionInputs, INPUT_KEYS.BUGBOT_FIX_VERIFY_COMMANDS) ?? '';
+    const pullRequestDescription = isEnabledInput(input(additionalParams, actionInputs, INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION));
     return {
         agentTasks,
         agentModel: agentTasks.findings.model,
-        aiPullRequestDescription: isEnabledInput(input(additionalParams, actionInputs, INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION)),
+        aiPullRequestDescription: pullRequestDescription,
+        aiPullRequestDescriptionMode: pullRequestDescription
+            ? normalizePullRequestDescriptionMode(input(additionalParams, actionInputs, INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION_MODE))
+            : 'disabled',
         aiMembersOnly: isEnabledInput(input(additionalParams, actionInputs, INPUT_KEYS.AI_MEMBERS_ONLY)),
         aiIncludeReasoning: isEnabledInput(input(additionalParams, actionInputs, INPUT_KEYS.AI_INCLUDE_REASONING)),
         aiIgnoreFilesInput: input(additionalParams, actionInputs, INPUT_KEYS.AI_IGNORE_FILES),

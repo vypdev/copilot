@@ -8,15 +8,9 @@ import type { CommentAutomationOptions } from './comment_automation_contracts';
 import { parseCopilotCommand } from '../../domain/copilot_command';
 import { invalidCommentCommandResult, runExplicitCommentCommand } from './comment_automation_command_workflow';
 import { runNaturalLanguageCommentAutomation } from './comment_automation_natural_language_workflow';
+import { ApplicationError } from '../errors/application_error';
 
 export type { CommentAutomationOptions } from "./comment_automation_contracts";
-
-class CommentAutomationError extends Error {
-  constructor() {
-    super("Comment automation failed.");
-    this.name = "CommentAutomationError";
-  }
-}
 
 export async function runCommentAutomation(
   param: Execution,
@@ -41,8 +35,8 @@ export async function runCommentAutomation(
       authenticatedUserPort,
       bugbotResolutionPorts,
     });
-  } catch {
-    const error = new CommentAutomationError();
+  } catch (cause) {
+    const error = new ApplicationError("Comment automation failed.", 'workflow', { cause });
     logError(error);
     return [...languageResults, new Result({
         id: options.taskId,

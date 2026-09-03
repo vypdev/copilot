@@ -1,7 +1,9 @@
 import type { AgentTaskConfiguration } from '../data/model/agent';
+import { type PullRequestDescriptionMode } from '../domain/pull_request_description';
 export interface GithubActionAiInputs {
     readonly requestedAgentTasks: AgentTaskConfiguration;
     readonly pullRequestDescription: boolean;
+    readonly pullRequestDescriptionMode: PullRequestDescriptionMode;
     readonly membersOnly: boolean;
     readonly includeReasoning: boolean;
     readonly ignoreFiles: string[];

@@ -10,6 +10,7 @@ import type { ActorAuthorizationPort } from "../ports/actor_authorization_ports"
 import type { BugbotFindingResolutionPorts } from "../ports/bugbot_finding_resolution_ports";
 import type { GitCommitPort } from "../ports/git_ports";
 import type { DismissBugbotFindingsParam } from './steps/commit/bugbot/dismiss_bugbot_findings_use_case';
+import type { UpdatePullRequestDescriptionUseCase } from './steps/pull_request/update_pull_request_description_use_case';
 
 export class PullRequestReviewCommentUseCase implements ParamUseCase<
   Execution,
@@ -33,6 +34,7 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
     private readonly gitCommitPort: GitCommitPort,
     private readonly dismissBugbotFindingsUseCase?: ParamUseCase<DismissBugbotFindingsParam, Result[]>,
     private readonly reviewPotentialProblemsUseCase?: ParamUseCase<Execution, Result[]>,
+    private readonly updatePullRequestDescriptionUseCase?: UpdatePullRequestDescriptionUseCase,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
@@ -49,6 +51,7 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
         gitCommitPort: this.gitCommitPort,
         dismissBugbotFindingsUseCase: this.dismissBugbotFindingsUseCase,
         reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
+        updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase,
       },
       this.actorAuthorizationPort,
       this.authenticatedUserPort,

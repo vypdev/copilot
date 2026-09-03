@@ -202,11 +202,24 @@ ai:
   bugbotSeverity: medium
   bugbotCommentLimit: 10
   ignoreFiles: node_modules/*,build/*,dist/*
+  pullRequestDescriptionMode: append
 createInitialTag: true
 manageRepositoryVariables: true
 ```
 
 Run it with `copilot setup --config .copilot-setup.yml`. The wizard rejects values that look like tokens, API keys, passwords, or other credential material. Secret values are accepted only through the hidden prompt or explicit CLI inputs and are written directly to GitHub Secrets after validation; they are never written to repository files or Variables. The required secret names are shown in the final plan; normally they include `PAT` plus the credentials needed by the selected runtime/model providers.
+
+### `copilot reconcile`
+
+Checks whether the setup-managed workflow files in the current repository match the installed Copilot contract. It is read-only by default and does not call GitHub or change remote configuration. Use `--apply` to update only the detected setup-managed workflow files; those updates go through the same local backup/reconciliation path as setup.
+
+```bash
+copilot reconcile
+copilot reconcile --json
+copilot reconcile --apply
+```
+
+The first version deliberately scopes reconciliation to workflow templates. Branches, labels, Repository Variables, and Secrets remain under `copilot setup`/`copilot doctor` until their remote diff and approval contracts are added.
 
 ### `copilot check-progress`
 

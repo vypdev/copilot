@@ -3,7 +3,10 @@ import {isRecommendationState, RecommendationState} from "./recommendation_state
 import {Result} from "./result";
 import { asModelInput, readOptionalString, readString } from './model_input';
 
+export const CONFIG_SCHEMA_VERSION = 1;
+
 export class Config {
+    readonly schemaVersion: number;
     branchType: string;
     releaseBranch: string | undefined;
     workingBranch: string | undefined;
@@ -16,6 +19,11 @@ export class Config {
 
     constructor(data: unknown) {
         const input = asModelInput(data);
+        this.schemaVersion = typeof input.schemaVersion === 'number'
+            && Number.isInteger(input.schemaVersion)
+            && input.schemaVersion > 0
+            ? input.schemaVersion
+            : CONFIG_SCHEMA_VERSION;
         this.branchType = readString(input, 'branchType');
         this.hotfixOriginBranch = readOptionalString(input, 'hotfixOriginBranch');
         this.hotfixBranch = readOptionalString(input, 'hotfixBranch');

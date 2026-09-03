@@ -260,6 +260,7 @@ export const INPUT_KEYS = {
 
     // AI configuration
     AI_PULL_REQUEST_DESCRIPTION: 'ai-pull-request-description',
+    AI_PULL_REQUEST_DESCRIPTION_MODE: 'ai-pull-request-description-mode',
     AI_MEMBERS_ONLY: 'ai-members-only',
     AI_IGNORE_FILES: 'ai-ignore-files',
     AI_INCLUDE_REASONING: 'ai-include-reasoning',

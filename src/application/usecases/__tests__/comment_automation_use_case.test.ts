@@ -203,6 +203,34 @@ describe("runCommentAutomation", () => {
     expect(think.invoke).not.toHaveBeenCalled();
   });
 
+  it('routes explicit PR description commands without language or intent detection', async () => {
+    const description = { invokeExplicit: jest.fn().mockResolvedValue([successfulResult('description')]) };
+    const language = { invoke: jest.fn() };
+    const intent = { invoke: jest.fn() };
+    const results = await runCommentAutomation(
+      { owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' } } as Execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: language as never,
+        intentUseCase: intent as never,
+        thinkUseCase: {} as never,
+        autofixUseCase: {} as never,
+        doUserRequestUseCase: {} as never,
+        userComment: '/copilot description',
+        gitCommitPort: {} as never,
+        updatePullRequestDescriptionUseCase: description,
+      },
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    expect(results).toEqual([expect.objectContaining({ id: 'description' })]);
+    expect(description.invokeExplicit).toHaveBeenCalledTimes(1);
+    expect(language.invoke).not.toHaveBeenCalled();
+    expect(intent.invoke).not.toHaveBeenCalled();
+  });
+
   it('rejects an invalid explicit command without invoking an agent', async () => {
     const think = { invoke: jest.fn() };
     const results = await runCommentAutomation(

@@ -18,7 +18,7 @@ export function buildLocalActionExecution(
         commitPrefixBuilder, branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount,
         pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, pullRequestMergeTimeout,
         titleEmoji, branchManagementEmoji, imageConfiguration, token, agentModel,
-        aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity,
+        aiPullRequestDescription, aiPullRequestDescriptionMode, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity,
         bugbotCommentLimit, bugbotFixVerifyCommands, agentTasks, branchManagementLauncherLabel, bugLabel,
         bugfixLabel, hotfixLabel, enhancementLabel, featureLabel, releaseLabel, questionLabel, helpLabel,
         deployLabel, deployedLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel,
@@ -71,6 +71,7 @@ export function buildLocalActionExecution(
             bugbotCommentLimit,
             bugbotFixVerifyCommands,
             agentTasks,
+            aiPullRequestDescriptionMode,
         ),
         labels: buildLabels({
             branching: { launcher: branchManagementLauncherLabel },

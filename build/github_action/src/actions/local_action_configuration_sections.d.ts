@@ -18,6 +18,7 @@ export declare function readLocalAgentConfiguration(additionalParams: ActionInpu
     agentTasks: import("../domain/agent").AgentTaskConfiguration;
     agentModel: string;
     aiPullRequestDescription: boolean;
+    aiPullRequestDescriptionMode: "replace" | "append" | "preserve" | "disabled";
     aiMembersOnly: boolean;
     aiIncludeReasoning: boolean;
     aiIgnoreFilesInput: string;

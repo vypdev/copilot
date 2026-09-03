@@ -57,6 +57,7 @@ async function writeActionSummary(execution: Execution, summaryPort?: ActionSumm
                 : execution.labels?.currentIssueLabels ?? [],
             execution.labels?.lifecycle,
         ),
+        pullRequestDescriptionMode: execution.ai?.getPullRequestDescriptionMode?.(),
         results: execution.currentConfiguration.results,
     });
     if (!summaryPort) return summaryText;

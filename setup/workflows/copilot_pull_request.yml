@@ -3,6 +3,12 @@ name: Copilot - Pull Request
 on:
   pull_request:
     types: [opened, reopened, edited, labeled, unlabeled, closed, assigned, unassigned, synchronize]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+  check_suite:
+    types: [completed, rerequested]
+  workflow_run:
+    types: [completed]
 
 jobs:
   copilot-pull-requests:
@@ -34,6 +40,7 @@ jobs:
           pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || 'en-US' }}
           commit-prefix-transforms: ${{ vars.COMMIT_PREFIX_TRANSFORMS || 'replace-slash' }}
           ai-pull-request-description: ${{ vars.AI_PULL_REQUEST_DESCRIPTION || 'true' }}
+          ai-pull-request-description-mode: ${{ vars.AI_PULL_REQUEST_DESCRIPTION_MODE || 'replace' }}
           ai-members-only: ${{ vars.AI_MEMBERS_ONLY || 'false' }}
           ai-include-reasoning: ${{ vars.AI_INCLUDE_REASONING || 'true' }}
           bugbot-severity: ${{ vars.BUGBOT_SEVERITY || 'low' }}

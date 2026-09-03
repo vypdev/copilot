@@ -9,6 +9,7 @@ import type { ActorAuthorizationPort } from "../ports/actor_authorization_ports"
 import type { BugbotFindingResolutionPorts } from "../ports/bugbot_finding_resolution_ports";
 import type { GitCommitPort } from "../ports/git_ports";
 import type { DismissBugbotFindingsParam } from './steps/commit/bugbot/dismiss_bugbot_findings_use_case';
+import type { UpdatePullRequestDescriptionUseCase } from './steps/pull_request/update_pull_request_description_use_case';
 export declare class IssueCommentUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly languageUseCase;
     private readonly intentUseCase;
@@ -22,7 +23,8 @@ export declare class IssueCommentUseCase implements ParamUseCase<Execution, Resu
     private readonly gitCommitPort;
     private readonly dismissBugbotFindingsUseCase?;
     private readonly reviewPotentialProblemsUseCase?;
+    private readonly updatePullRequestDescriptionUseCase?;
     taskId: string;
-    constructor(languageUseCase: ParamUseCase<Execution, Result[]>, intentUseCase: ParamUseCase<Execution, Result[]>, thinkUseCase: ParamUseCase<Execution, Result[]>, autofixUseCase: ParamUseCase<BugbotAutofixParam, Result[]>, doUserRequestUseCase: ParamUseCase<DoUserRequestParam, Result[]>, issueCommentUpdatePort: IssueCommentUpdatePort, actorAuthorizationPort: ActorAuthorizationPort, authenticatedUserPort: AuthenticatedUserPort, bugbotResolutionPorts: BugbotFindingResolutionPorts, gitCommitPort: GitCommitPort, dismissBugbotFindingsUseCase?: ParamUseCase<DismissBugbotFindingsParam, Result[]> | undefined, reviewPotentialProblemsUseCase?: ParamUseCase<Execution, Result[]> | undefined);
+    constructor(languageUseCase: ParamUseCase<Execution, Result[]>, intentUseCase: ParamUseCase<Execution, Result[]>, thinkUseCase: ParamUseCase<Execution, Result[]>, autofixUseCase: ParamUseCase<BugbotAutofixParam, Result[]>, doUserRequestUseCase: ParamUseCase<DoUserRequestParam, Result[]>, issueCommentUpdatePort: IssueCommentUpdatePort, actorAuthorizationPort: ActorAuthorizationPort, authenticatedUserPort: AuthenticatedUserPort, bugbotResolutionPorts: BugbotFindingResolutionPorts, gitCommitPort: GitCommitPort, dismissBugbotFindingsUseCase?: ParamUseCase<DismissBugbotFindingsParam, Result[]> | undefined, reviewPotentialProblemsUseCase?: ParamUseCase<Execution, Result[]> | undefined, updatePullRequestDescriptionUseCase?: UpdatePullRequestDescriptionUseCase | undefined);
     invoke(param: Execution): Promise<Result[]>;
 }

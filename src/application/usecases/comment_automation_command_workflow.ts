@@ -3,6 +3,7 @@ import type { Execution } from '../../data/model/execution';
 import type { ActorAuthorizationPort } from '../ports/actor_authorization_ports';
 import type { CommentAutomationOptions } from './comment_automation_contracts';
 import type { ParsedCopilotCommand } from '../../domain/copilot_command';
+import { buildCopilotStatusResult } from '../policies/status_command_policy';
 
 /** Executes deterministic /copilot commands without routing them through intent detection. */
 export async function runExplicitCommentCommand(
@@ -11,10 +12,27 @@ export async function runExplicitCommentCommand(
     command: ParsedCopilotCommand,
     actorAuthorizationPort: ActorAuthorizationPort,
 ): Promise<Result[] | undefined> {
+    if (command.name === 'status') return [buildCopilotStatusResult(param, options.taskId)];
     if (command.name === 'dismiss') return runDismissCommand(param, options, command, actorAuthorizationPort);
+    if (command.name === 'description') return runDescriptionCommand(param, options);
     if (['review', 'findings', 'recheck'].includes(command.name)) return runReviewCommand(param, options, command);
     if (command.name === 'fix') return undefined;
     return runThinkCommand(param, options, command);
+}
+
+async function runDescriptionCommand(
+    param: Execution,
+    options: CommentAutomationOptions,
+): Promise<Result[]> {
+    if (!options.updatePullRequestDescriptionUseCase) {
+        return [new Result({
+            id: `${options.taskId}.Description`,
+            success: false,
+            executed: false,
+            errors: ['Explicit pull-request description command is not available in this composition.'],
+        })];
+    }
+    return options.updatePullRequestDescriptionUseCase.invokeExplicit(param);
 }
 
 async function runDismissCommand(

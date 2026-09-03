@@ -1,5 +1,5 @@
 /** Explicit commands are the safe, deterministic entry point for mutations. */
-export declare const COPILOT_COMMAND_NAMES: readonly ["plan", "clarify", "estimate", "test-plan", "status", "review", "findings", "fix", "dismiss", "recheck"];
+export declare const COPILOT_COMMAND_NAMES: readonly ["plan", "clarify", "estimate", "test-plan", "status", "description", "review", "findings", "fix", "dismiss", "recheck"];
 export type CopilotCommandName = typeof COPILOT_COMMAND_NAMES[number];
 export interface ParsedCopilotCommand {
     readonly name: CopilotCommandName;
