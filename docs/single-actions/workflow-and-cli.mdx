@@ -28,7 +28,7 @@ Use `workflow_dispatch` to run on demand, or trigger the workflow from another e
 
 ## Install or update the CLI
 
-The published package is `@vypdev/copilot` and exposes one global executable: **`copilot`**. Install it from npm, then run commands from the target repository.
+The published package is `@vypdev/copilot` and exposes one global executable: **`copilot`**. Install it from npm, then run repository-dependent commands from the target repository.
 
 ### Install the published package
 
@@ -68,6 +68,8 @@ copilot --version
 
 Run `copilot upgrade` from any directory. It updates the published npm installation and does not require a target repository or GitHub token. If the installed version does not include this command, run `npm install --global @vypdev/copilot@latest` once and then use `copilot upgrade`.
 
+Normal Copilot CLI commands also perform a lightweight update check against npm. It is informational only: the result is cached locally for 24 hours, the network request has a short timeout, and failures are ignored so the command continues normally. When a newer release is found, the CLI prints `A new version (x.y.z) is available. Run "copilot upgrade".` The check is skipped for `copilot upgrade`, `--version`, and help. Set `COPILOT_DISABLE_UPDATE_CHECK=1` to opt out.
+
 Verify the installed package and executable:
 
 ```bash
@@ -101,7 +103,7 @@ For an npm installation, `npm prefix --global` shows the npm global prefix; on m
 
 ## Local CLI prerequisites
 
-Run every command from the **root of the target repository**, not necessarily from the Copilot checkout. The target repository must:
+Run repository-dependent commands from the **root of the target repository**, not necessarily from the Copilot checkout. `copilot upgrade`, `copilot --version`, and help can run from any directory. The target repository must:
 
 - be a Git worktree;
 - have an `origin` remote pointing to a GitHub repository;

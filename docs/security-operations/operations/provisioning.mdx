@@ -4,12 +4,12 @@ description: Pinned installation and verification of the selected agent CLI.
 ---
 # CLI provisioning
 
-When running in GitHub Actions, the Action provisions and verifies the selected runtime. It first reuses an executable already present on the runner (`AGENT_PROVISIONING=auto`, the default), which allows a preinitialized Codex CLI to run without a credential or package version in the repository. If the executable is absent, versions MUST be explicit. It MUST use `pnpm`, never `npm`, `npx`, Yarn, Bun, or an unpinned installer. A setup workflow using `ubuntu-latest` therefore needs an approved version variable when the selected CLI is not already installed on the runner.
+When running in GitHub Actions, the Action provisions and verifies the selected runtime. It first reuses an executable already present on the runner (`AGENT_PROVISIONING=auto`, the default), which allows a preinitialized Codex CLI to run without a credential or package version in the repository. If the executable is absent, versions MUST be explicit. Codex and OpenCode are installed with the runner's system `npm`; Cursor uses its official installer with checksum verification. The Action never uses `npx`, Yarn, Bun, or an unpinned installer. A setup workflow using `ubuntu-latest` therefore needs an approved version variable when the selected CLI is not already installed on the runner.
 
 | Runtime | Provisioning source | Required pin |
 | --- | --- | --- |
-| OpenCode | `opencode-ai@<version>` through Corepack pnpm | `OPENCODE_VERSION` only when absent |
-| Codex | `@openai/codex@<version>` through Corepack pnpm | `CODEX_VERSION` only when absent |
+| OpenCode | `opencode-ai@<version>` through runner `npm` | `OPENCODE_VERSION` only when absent |
+| Codex | `@openai/codex@<version>` through runner `npm` | `CODEX_VERSION` only when absent |
 | Cursor | Official installer with SHA-256 verification | `CURSOR_INSTALLER_SHA256` only when absent |
 
 Provisioning failure is terminal. The Action MUST NOT install another runtime as a fallback.

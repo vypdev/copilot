@@ -45,6 +45,7 @@
     "lint": "eslint src",
     "validate:agent-docs": "node scripts/validate-agent-documentation.cjs",
     "validate:docs-page": "node scripts/validate-docs-page-assets.cjs",
+    "validate:documentation": "node scripts/validate-documentation-contract.cjs",
     "validate:workflows": "node scripts/validate-workflow-contract.cjs",
     "lint:fix": "eslint src --fix",
     "postinstall": "node scripts/install-git-hooks.cjs"

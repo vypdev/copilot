@@ -40,7 +40,7 @@ Full documentation: **[docs.page/vypdev/copilot](https://docs.page/vypdev/copilo
    npm install --global @vypdev/copilot
    copilot --version
    ```
-   Update the published CLI later with **`copilot upgrade`**.
+   Update the published CLI later with **`copilot upgrade`**. Normal CLI commands may show a non-blocking notice when a newer release is available.
 4. **Add workflows** — Copy the files from `setup/workflows/` into your `.github/workflows/`, or run **`copilot setup`** from your repo root. The setup wizard securely prompts for its separate operator PAT and can validate/provision the workflow PAT and provider credentials. See [How to use](https://docs.page/vypdev/copilot/how-to-use).
 
 ---

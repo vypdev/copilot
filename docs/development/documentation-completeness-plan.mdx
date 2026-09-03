@@ -27,4 +27,8 @@ Every public page MUST:
 - use MDX and appear in `docs.json` when it is a user-facing reference;
 - avoid secrets, authentication values, and unverifiable success claims.
 
-The repository validator checks action inputs, defaults, allowlists, workflow references, navigation routes, and forbidden legacy identifiers. A documentation change is incomplete until the validator, tests, lint, build, and diff checks pass.
+The repository validators check action inputs, defaults, allowlists, workflow references,
+navigation routes, local links, YAML snippets, Action version references, and forbidden
+legacy identifiers. Run `corepack pnpm run validate:documentation` for the cross-page
+contract check. A documentation change is incomplete until the documentation validators,
+tests, lint, build, and diff checks pass.

@@ -35,14 +35,14 @@ For CI, provide the selected model provider's credential through a GitHub Secret
 
 Do not put API keys in action inputs, command arguments, prompts, repository files, or logs. A local OAuth login may work on a controlled self-hosted runner, but local authentication files must not be copied into GitHub-hosted CI.
 
-OpenCode supports many providers and local models. That flexibility does not change the Bugbot contract: the effective provider/model must be explicitly selected and, when configured, must pass the allowlists before the CLI starts.
+OpenCode supports many providers and local models. That flexibility does not change the Copilot agent contract: the effective provider/model must be explicitly selected and, when configured, must pass the allowlists before the CLI starts.
 
 ## Runtime and provisioning
 
 The Action can provision only the selected runtime in GitHub Actions using pinned version variables. OpenCode is installed as:
 
 ```bash
-corepack pnpm add --global "opencode-ai@${OPENCODE_VERSION}"
+npm install --global "opencode-ai@${OPENCODE_VERSION}"
 ```
 
 The binary must pass version and headless-help checks before use:
@@ -79,7 +79,7 @@ The expected evidence is `READY` and exit code `0`. A successful binary/help che
 
 ### Missing executable
 
-Install the pinned OpenCode version with Corepack and pnpm, then rerun:
+Install the pinned OpenCode version with the runner's `npm`, then rerun:
 
 ```bash
 command -v opencode

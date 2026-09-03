@@ -22,7 +22,7 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - uses: vypdev/copilot@master
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.COPILOT_TOKEN }}
           agent-provider: codex
@@ -33,7 +33,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-Pin a released Action ref in production. The example uses `master` only to show the current contract.
+The example uses the stable `v3` major ref. For strict reproducibility, replace it with an immutable release tag after selecting the version you have validated.
 
 ## Verify before enabling writes
 

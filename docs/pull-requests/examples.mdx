@@ -26,7 +26,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - uses: vypdev/copilot@v2
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
           project-ids: ${{ vars.PROJECT_IDS }}
@@ -64,7 +64,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: vypdev/copilot@v2
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
           ai-pull-request-description: true
@@ -73,14 +73,14 @@ jobs:
           agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
 ```
 
-The PR must have an **issue linked** (via branch name) and the issue must have a **non-empty description**. See [AI PR description](/pull-requests/ai-description).
+A linked issue with a non-empty description enriches the generated result, but it is **optional**. PRs without a linked issue are supported; the branch diff and repository template still provide the description context. See [AI PR description](/pull-requests/ai-description).
 
 ## Example: Project columns and reviewers
 
 Link PRs to a board and assign two reviewers:
 
 ```yaml
-- uses: vypdev/copilot@v2
+- uses: vypdev/copilot@v3
   with:
     token: ${{ secrets.PAT }}
     project-ids: "2,3"
@@ -95,7 +95,7 @@ Ensure the project has a column named **"In Review"** (or use your actual column
 Enable images in PR comments and set URLs for feature PRs:
 
 ```yaml
-- uses: vypdev/copilot@v2
+- uses: vypdev/copilot@v3
   with:
     token: ${{ secrets.PAT }}
     images-on-pull-request: true

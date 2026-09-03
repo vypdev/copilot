@@ -47,7 +47,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - uses: vypdev/copilot@v2
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
           project-ids: ${{ vars.PROJECT_IDS }}

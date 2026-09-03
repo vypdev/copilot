@@ -58467,6 +58467,31 @@ function sameLabels(left, right) {
 
 /***/ }),
 
+/***/ 55721:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CheckCliUpdateUseCase = void 0;
+const cli_version_1 = __nccwpck_require__(27089);
+/** Checks for a newer published CLI version without coupling the application to npm. */
+class CheckCliUpdateUseCase {
+    constructor(cliUpdateCheckPort) {
+        this.cliUpdateCheckPort = cliUpdateCheckPort;
+    }
+    async execute(installedVersion) {
+        const publishedVersion = await this.cliUpdateCheckPort.getLatestPublishedVersion();
+        if (!publishedVersion || !(0, cli_version_1.isNewerCliVersion)(installedVersion, publishedVersion))
+            return undefined;
+        return { installedVersion, publishedVersion };
+    }
+}
+exports.CheckCliUpdateUseCase = CheckCliUpdateUseCase;
+
+
+/***/ }),
+
 /***/ 42442:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -65637,18 +65662,73 @@ exports.createCliProgram = createCliProgram;
 const node_fs_1 = __nccwpck_require__(87561);
 const path = __importStar(__nccwpck_require__(49411));
 const commander_1 = __nccwpck_require__(12239);
+const cli_update_check_composition_root_1 = __nccwpck_require__(78998);
 const command_registry_1 = __nccwpck_require__(94415);
+const cli_update_check_policy_1 = __nccwpck_require__(82434);
+const cli_update_notification_1 = __nccwpck_require__(91033);
 function loadPackageVersion() {
     const packagePath = path.join(__dirname, '..', '..', 'package.json');
     const packageJson = JSON.parse((0, node_fs_1.readFileSync)(packagePath, 'utf8'));
     return typeof packageJson.version === 'string' ? packageJson.version : '0.0.0';
 }
-function createCliProgram() {
+function createCliProgram(updateChecker = (0, cli_update_check_composition_root_1.createCliUpdateCheckUseCase)()) {
+    const installedVersion = loadPackageVersion();
     const program = new commander_1.Command()
         .name('copilot')
         .description('GitHub workflow automation and repository management CLI')
-        .version(loadPackageVersion(), '-V, --version', 'Display the installed Copilot version');
+        .version(installedVersion, '-V, --version', 'Display the installed Copilot version');
+    program.hook('preAction', async (_thisCommand, actionCommand) => {
+        if ((0, cli_update_check_policy_1.isUpdateCheckDisabled)() || !(0, cli_update_check_policy_1.shouldCheckForUpdates)(actionCommand.name()))
+            return;
+        await (0, cli_update_notification_1.notifyAboutCliUpdate)(updateChecker, installedVersion);
+    });
     return (0, command_registry_1.registerCliCommands)(program);
+}
+
+
+/***/ }),
+
+/***/ 82434:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.UPDATE_CHECK_DISABLED_ENV = void 0;
+exports.isUpdateCheckDisabled = isUpdateCheckDisabled;
+exports.shouldCheckForUpdates = shouldCheckForUpdates;
+const UPDATE_CHECK_DISABLED_VALUES = new Set(['1', 'true', 'yes', 'on']);
+const COMMANDS_WITHOUT_UPDATE_CHECK = new Set(['help', 'upgrade']);
+exports.UPDATE_CHECK_DISABLED_ENV = 'COPILOT_DISABLE_UPDATE_CHECK';
+function isUpdateCheckDisabled(environment = process.env) {
+    const value = environment[exports.UPDATE_CHECK_DISABLED_ENV]?.trim().toLowerCase();
+    return value !== undefined && UPDATE_CHECK_DISABLED_VALUES.has(value);
+}
+function shouldCheckForUpdates(commandName) {
+    return !COMMANDS_WITHOUT_UPDATE_CHECK.has(commandName);
+}
+
+
+/***/ }),
+
+/***/ 91033:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.notifyAboutCliUpdate = notifyAboutCliUpdate;
+/** Displays advisory update information while keeping update failures invisible to users. */
+async function notifyAboutCliUpdate(checker, installedVersion, output = console) {
+    try {
+        const update = await checker.execute(installedVersion);
+        if (update) {
+            output.log(`A new version (${update.publishedVersion}) is available. Run "copilot upgrade".`);
+        }
+    }
+    catch {
+        // Version checks are advisory and must never change the command outcome.
+    }
 }
 
 
@@ -73665,6 +73745,74 @@ function fnv1a(value) {
 
 /***/ }),
 
+/***/ 27089:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.compareCliVersions = compareCliVersions;
+exports.isNewerCliVersion = isNewerCliVersion;
+const CLI_VERSION_PATTERN = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/;
+function parseCliVersion(version) {
+    const match = CLI_VERSION_PATTERN.exec(version.trim());
+    if (!match)
+        return undefined;
+    return {
+        major: Number.parseInt(match[1], 10),
+        minor: Number.parseInt(match[2], 10),
+        patch: Number.parseInt(match[3], 10),
+        prerelease: match[4]?.split('.') ?? [],
+    };
+}
+function comparePrereleaseIdentifiers(left, right) {
+    const leftNumber = /^\d+$/.test(left) ? Number.parseInt(left, 10) : undefined;
+    const rightNumber = /^\d+$/.test(right) ? Number.parseInt(right, 10) : undefined;
+    if (leftNumber !== undefined && rightNumber !== undefined)
+        return Math.sign(leftNumber - rightNumber);
+    if (leftNumber !== undefined)
+        return -1;
+    if (rightNumber !== undefined)
+        return 1;
+    return left < right ? -1 : left > right ? 1 : 0;
+}
+/** Compares two CLI versions using release and prerelease precedence. */
+function compareCliVersions(left, right) {
+    const leftVersion = parseCliVersion(left);
+    const rightVersion = parseCliVersion(right);
+    if (!leftVersion || !rightVersion)
+        return undefined;
+    for (const component of ['major', 'minor', 'patch']) {
+        if (leftVersion[component] !== rightVersion[component]) {
+            return leftVersion[component] < rightVersion[component] ? -1 : 1;
+        }
+    }
+    if (leftVersion.prerelease.length === 0 && rightVersion.prerelease.length > 0)
+        return 1;
+    if (leftVersion.prerelease.length > 0 && rightVersion.prerelease.length === 0)
+        return -1;
+    const length = Math.max(leftVersion.prerelease.length, rightVersion.prerelease.length);
+    for (let index = 0; index < length; index += 1) {
+        const leftIdentifier = leftVersion.prerelease[index];
+        const rightIdentifier = rightVersion.prerelease[index];
+        if (leftIdentifier === undefined)
+            return -1;
+        if (rightIdentifier === undefined)
+            return 1;
+        const comparison = comparePrereleaseIdentifiers(leftIdentifier, rightIdentifier);
+        if (comparison !== 0)
+            return comparison;
+    }
+    return 0;
+}
+/** Returns true only when the published version is newer than the installed one. */
+function isNewerCliVersion(installedVersion, publishedVersion) {
+    return compareCliVersions(installedVersion, publishedVersion) === -1;
+}
+
+
+/***/ }),
+
 /***/ 77454:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -74007,6 +74155,120 @@ function normalizeOrigin(origin) {
 
 /***/ }),
 
+/***/ 62007:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.NpmCliUpdateCheckAdapter = exports.FileCliUpdateCheckCache = exports.UPDATE_CHECK_TIMEOUT_MS = exports.UPDATE_CHECK_CACHE_TTL_MS = exports.NPM_REGISTRY_URL = void 0;
+exports.resolveUpdateCheckCachePath = resolveUpdateCheckCachePath;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_os_1 = __nccwpck_require__(70612);
+const node_path_1 = __nccwpck_require__(49411);
+const npm_cli_upgrade_adapter_1 = __nccwpck_require__(97258);
+exports.NPM_REGISTRY_URL = `https://registry.npmjs.org/${encodeURIComponent(npm_cli_upgrade_adapter_1.COPILOT_PACKAGE_NAME)}`;
+exports.UPDATE_CHECK_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+exports.UPDATE_CHECK_TIMEOUT_MS = 1500;
+function resolveUpdateCheckCachePath(platform = process.platform, environment = process.env, homeDirectory = (0, node_os_1.homedir)()) {
+    const cacheRoot = platform === 'win32'
+        ? environment.LOCALAPPDATA || (0, node_path_1.join)(homeDirectory, 'AppData', 'Local')
+        : environment.XDG_CACHE_HOME || (0, node_path_1.join)(homeDirectory, '.cache');
+    return (0, node_path_1.join)(cacheRoot, 'copilot', 'update-check.json');
+}
+class FileCliUpdateCheckCache {
+    constructor(filePath = resolveUpdateCheckCachePath()) {
+        this.filePath = filePath;
+    }
+    read() {
+        try {
+            const value = JSON.parse((0, node_fs_1.readFileSync)(this.filePath, 'utf8'));
+            if (!value || typeof value !== 'object')
+                return undefined;
+            const entry = value;
+            if (typeof entry.checkedAt !== 'number' || !Number.isFinite(entry.checkedAt))
+                return undefined;
+            return {
+                checkedAt: entry.checkedAt,
+                ...(typeof entry.latestVersion === 'string' ? { latestVersion: entry.latestVersion } : {}),
+            };
+        }
+        catch {
+            return undefined;
+        }
+    }
+    write(entry) {
+        try {
+            (0, node_fs_1.mkdirSync)((0, node_path_1.dirname)(this.filePath), { recursive: true });
+            (0, node_fs_1.writeFileSync)(this.filePath, `${JSON.stringify(entry)}\n`, { encoding: 'utf8', mode: 0o600 });
+        }
+        catch {
+            // A cache failure must not affect the CLI command.
+        }
+    }
+}
+exports.FileCliUpdateCheckCache = FileCliUpdateCheckCache;
+/** Reads npm's latest dist-tag with bounded latency and a non-sensitive local cache. */
+class NpmCliUpdateCheckAdapter {
+    constructor(options = {}) {
+        this.cache = options.cache ?? new FileCliUpdateCheckCache();
+        this.fetcher = options.fetcher ?? fetch;
+        this.now = options.now ?? Date.now;
+        this.cacheTtlMs = options.cacheTtlMs ?? exports.UPDATE_CHECK_CACHE_TTL_MS;
+        this.timeoutMs = options.timeoutMs ?? exports.UPDATE_CHECK_TIMEOUT_MS;
+    }
+    async getLatestPublishedVersion() {
+        const checkedAt = this.now();
+        let cached;
+        try {
+            cached = this.cache.read();
+        }
+        catch {
+            cached = undefined;
+        }
+        if (cached && checkedAt >= cached.checkedAt && checkedAt - cached.checkedAt < this.cacheTtlMs) {
+            return cached.latestVersion;
+        }
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+            try {
+                const response = await this.fetcher(exports.NPM_REGISTRY_URL, {
+                    headers: { accept: 'application/json' },
+                    signal: controller.signal,
+                });
+                if (!response.ok)
+                    throw new Error(`npm registry returned HTTP ${response.status}`);
+                const payload = await response.json();
+                const latestVersion = typeof payload['dist-tags']?.latest === 'string'
+                    ? payload['dist-tags'].latest
+                    : undefined;
+                this.writeCache({ checkedAt, ...(latestVersion ? { latestVersion } : {}) });
+                return latestVersion;
+            }
+            finally {
+                clearTimeout(timeout);
+            }
+        }
+        catch {
+            this.writeCache({ checkedAt });
+            return undefined;
+        }
+    }
+    writeCache(entry) {
+        try {
+            this.cache.write(entry);
+        }
+        catch {
+            // A cache failure must not affect the CLI command.
+        }
+    }
+}
+exports.NpmCliUpdateCheckAdapter = NpmCliUpdateCheckAdapter;
+
+
+/***/ }),
+
 /***/ 97258:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -74197,6 +74459,22 @@ const pull_request_lifecycle_repository_1 = __nccwpck_require__(24189);
 function createCheckProgressCompositionRoot() {
     const labels = new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)());
     return new check_progress_use_case_1.CheckProgressUseCase(new issue_progress_tracking_repository_1.IssueProgressTrackingRepository(new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)()), labels, new issue_progress_label_repository_1.IssueProgressLabelRepository(new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)()))), new branch_lifecycle_repository_1.BranchLifecycleRepository((0, github_branch_client_factory_1.createBranchClient)()), new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
+}
+
+
+/***/ }),
+
+/***/ 78998:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createCliUpdateCheckUseCase = createCliUpdateCheckUseCase;
+const check_cli_update_use_case_1 = __nccwpck_require__(55721);
+const npm_cli_update_check_adapter_1 = __nccwpck_require__(62007);
+function createCliUpdateCheckUseCase() {
+    return new check_cli_update_use_case_1.CheckCliUpdateUseCase(new npm_cli_update_check_adapter_1.NpmCliUpdateCheckAdapter());
 }
 
 

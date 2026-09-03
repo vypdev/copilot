@@ -71,7 +71,7 @@ This guide helps you resolve common issues you might encounter while using Copil
   </Accordion>
 
   <Accordion title="Bugbot autofix" icon="wrench">
-    - **Bot didn't run autofix**: OpenCode must be configured and the comment must be interpreted as a fix request (e.g. "fix it", "arregla", "fix all"). There must be at least one unresolved finding. On issue comments, the action needs an open PR that references the issue so it can resolve the branch to checkout and push; otherwise autofix is skipped.
+    - **Bot didn't run autofix**: A configured `fixer` agent runtime must be available and the comment must be interpreted as a fix request (e.g. "fix it", "arregla", "fix all"). There must be at least one unresolved finding. On issue comments, the action needs an open PR that references the issue so it can resolve the branch to checkout and push; otherwise autofix is skipped.
     - **Commit not made**: Verify commands (`bugbot-fix-verify-commands`) run after the configured agent applies changes; if any command fails, the action does not commit. If there are no file changes after the fix, nothing is committed. If push fails (e.g. conflict or permissions), check workflow `contents: write` and that the token can push to the branch.
   </Accordion>
 

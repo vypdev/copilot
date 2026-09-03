@@ -85,7 +85,7 @@ When you set `single-action` (and, when required, `single-action-issue`, `single
 | **`initial_setup`** | — | Performs initial setup: creates labels, issue types, verifies access. If the repo has no version tags, creates default tag `v1.0.0` so release/hotfix issues get a base version. No issue required. |
 | **`create_release`** | `single-action-version`, `single-action-title`, `single-action-changelog` | Creates a GitHub release with the given version, title, and changelog. |
 | **`create_tag`** | `single-action-version` | Creates a Git tag with prefix `v` (e.g. `v1.2.0`) for the given version from the release branch. |
-| **`publish_github_action`** | `single-action-version` | Publishes or updates the GitHub Action: creates/updates the major version tag (e.g. `v2` from `v2.0.4`). Requires `create_tag` to have been run first. |
+| **`publish_github_action`** | `single-action-version` | Publishes or updates the GitHub Action: creates/updates the major version tag (for example, `v3` from a `v3.x.y` release). Requires `create_tag` to have been run first. |
 | **`deployed_action`** | `single-action-issue` | Marks the issue as deployed; updates labels and project state (e.g. "deployed"). |
 
 Single actions that **throw an error** if the last step fails: `publish_github_action`, `create_release`, `deployed_action`, `create_tag`. This lets the workflow fail the job when the action does not succeed.
@@ -174,7 +174,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: vypdev/copilot@master
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
           project-ids: '2,3'

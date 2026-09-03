@@ -130,6 +130,82 @@ Copilot provides extensive configuration options to customize your workflow. Use
   </Tab>
 </Tabs>
 
+## Complete input reference
+
+The tables above group the most commonly changed inputs. The following inputs are
+also part of the public `action.yml` contract and are easy to miss when copying a
+workflow. Defaults below are the action defaults; values supplied by `copilot setup`
+may be forwarded through Repository Variables instead.
+
+### Operational and single-action inputs
+
+| Input | Default | Description |
+| --- | --- | --- |
+| `debug` | `false` | Enable verbose diagnostic logging. Do not enable it when credential-bearing values could be exposed by surrounding steps. |
+| `single-action` | empty | Run one explicit action instead of the event-driven pipeline. |
+| `single-action-issue` | empty | Issue number for a single action that operates on an issue. |
+| `single-action-version` | empty | Version used by release and tag single actions. |
+| `single-action-title` | empty | Title used by `create_release`. |
+| `single-action-changelog` | empty | Markdown body used by `create_release`. |
+| `queue-gate-only` | `false` | Internal control-plane mode used by the release and hotfix setup workflows to admit a run before mutation work. Do not use it as a replacement for a normal action invocation. |
+
+### Task-specific agent overrides
+
+The common `agent-*` inputs define the baseline runtime/model tuple. `findings-*`
+and `fixer-*` override that tuple for Bugbot analysis and autofix. The other roles
+are optional overrides: when at least one role-specific value is supplied, that
+role gets its own validated configuration; otherwise it inherits the common tuple.
+
+| Role | Provider | Model provider | Model | Effort | Command |
+| --- | --- | --- | --- | --- | --- |
+| Planner | `planner-provider` | `planner-model-provider` | `planner-model` | `planner-effort` | `planner-command` |
+| Findings | `findings-provider` | `findings-model-provider` | `findings-model` | `findings-effort` | `findings-command` |
+| Reviewer | `reviewer-provider` | `reviewer-model-provider` | `reviewer-model` | `reviewer-effort` | `reviewer-command` |
+| Fixer | `fixer-provider` | `fixer-model-provider` | `fixer-model` | `fixer-effort` | `fixer-command` |
+| Tester | `tester-provider` | `tester-model-provider` | `tester-model` | `tester-effort` | `tester-command` |
+| Release | `release-provider` | `release-model-provider` | `release-model` | `release-effort` | `release-command` |
+
+`copilot setup` can configure the provider, model provider, model, and effort for
+these six roles independently. The setup workflow templates also accept the
+corresponding `*_COMMAND` variables when you deliberately define a custom command;
+custom commands are executable configuration and are not inferred automatically.
+
+### Lifecycle labels
+
+These inputs configure the labels synchronized by issue, pull request, and agent
+activity flows. The durable lifecycle phase is exclusive; the temporary activity
+and waiting dimensions can coexist with it.
+
+| Input | Default | Meaning |
+| --- | --- | --- |
+| `state-planned-label` | `state:planned` | A plan is available. |
+| `state-in-progress-label` | `state:in-progress` | Implementation is in progress. |
+| `state-reviewing-label` | `state:reviewing` | A pull request is under review. |
+| `state-changes-requested-label` | `state:changes-requested` | Review findings require changes. |
+| `state-verified-label` | `state:verified` | The pull request was merged successfully. |
+| `state-ready-label` | `state:ready` | The latest result is ready for human action. |
+| `state-blocked-label` | `state:blocked` | Human intervention is required. |
+| `state-ai-processing-label` | `state:ai-processing` | Temporary marker while an agent is analyzing or working; removed at run end. |
+| `state-awaiting-maintainer-label` | `state:awaiting-maintainer` | Waiting for a maintainer response, approval, or merge. |
+| `state-awaiting-issue-author-label` | `state:awaiting-issue-author` | Waiting for information or changes from the issue author. |
+
+### Issue type inputs
+
+`copilot setup` uses these inputs when creating or updating organization Issue
+Types. Each type has a configurable name, description, and color.
+
+| Type | Name | Description | Color | Defaults (name / color) |
+| --- | --- | --- | --- | --- |
+| Task | `issue-type-task` | `issue-type-task-description` | `issue-type-task-color` | `Task` / `blue` |
+| Bug | `issue-type-bug` | `issue-type-bug-description` | `issue-type-bug-color` | `Bug` / `orange` |
+| Feature | `issue-type-feature` | `issue-type-feature-description` | `issue-type-feature-color` | `Feature` / `green` |
+| Documentation | `issue-type-documentation` | `issue-type-documentation-description` | `issue-type-documentation-color` | `Documentation` / `pink` |
+| Maintenance | `issue-type-maintenance` | `issue-type-maintenance-description` | `issue-type-maintenance-color` | `Maintenance` / `purple` |
+| Hotfix | `issue-type-hotfix` | `issue-type-hotfix-description` | `issue-type-hotfix-color` | `Hotfix` / `red` |
+| Release | `issue-type-release` | `issue-type-release-description` | `issue-type-release-color` | `Release` / `yellow` |
+| Question | `issue-type-question` | `issue-type-question-description` | `issue-type-question-color` | `Question` / `gray` |
+| Help | `issue-type-help` | `issue-type-help-description` | `issue-type-help-color` | `Help` / `purple` |
+
 ## Persistence & Merging
 
 Copilot persists certain configuration fields directly in the **GitHub Issue description** as a hidden JSON block. This allows the action to "remember" state across different runs and across issues/PRs.

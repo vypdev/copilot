@@ -23,6 +23,7 @@ Before publishing locally, validate the package contents:
 corepack pnpm run build
 corepack pnpm run validate:npm-package
 corepack pnpm run smoke:npm-package
+corepack pnpm run validate:documentation
 ```
 
 The internal release and hotfix workflows create the GitHub release. The separate [`publish_npm.yml`](https://github.com/vypdev/copilot/blob/master/.github/workflows/publish_npm.yml) workflow then publishes the exact release tag with npm trusted publishing on a GitHub-hosted runner:

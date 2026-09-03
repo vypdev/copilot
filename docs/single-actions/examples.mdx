@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: feature/123-add-login   # optional: branch to analyze
-      - uses: vypdev/copilot@v2
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
           single-action: check_progress_action
@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: vypdev/copilot@v2
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
           single-action: detect_potential_problems_action
@@ -56,7 +56,7 @@ See [Bugbot](/bugbot) for full documentation.
 Get implementation steps for issue `789` and post them as a comment:
 
 ```yaml
-- uses: vypdev/copilot@v2
+- uses: vypdev/copilot@v3
   with:
     token: ${{ secrets.PAT }}
     single-action: recommend_steps_action
@@ -84,7 +84,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: vypdev/copilot@v2
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
           single-action: think_action
@@ -98,7 +98,7 @@ For a **question** from the CLI, use the **CLI** (see below); the workflow `thin
 Create a GitHub release with version, title, and changelog:
 
 ```yaml
-- uses: vypdev/copilot@v2
+- uses: vypdev/copilot@v3
   with:
     token: ${{ secrets.PAT }}
     single-action: create_release
@@ -118,7 +118,7 @@ Changelog can be read from a file or generated in a previous step and passed as 
 Create a Git tag with prefix `v` (e.g. `v1.2.0`) from the release branch:
 
 ```yaml
-- uses: vypdev/copilot@v2
+- uses: vypdev/copilot@v3
   with:
     token: ${{ secrets.PAT }}
     single-action: create_tag
@@ -133,7 +133,7 @@ Create a Git tag with prefix `v` (e.g. `v1.2.0`) from the release branch:
 Mark issue `100` as deployed (e.g. from your release workflow):
 
 ```yaml
-- uses: vypdev/copilot@v2
+- uses: vypdev/copilot@v3
   with:
     token: ${{ secrets.PAT }}
     single-action: deployed_action
@@ -145,7 +145,7 @@ Mark issue `100` as deployed (e.g. from your release workflow):
 Run initial setup (labels, issue types, verify access). If the repo has no version tags, Copilot creates default tag **`v1.0.0`** so release/hotfix issues get a base version and do not get stuck in an "Unknown Version" loop:
 
 ```yaml
-- uses: vypdev/copilot@v2
+- uses: vypdev/copilot@v3
   with:
     token: ${{ secrets.PAT }}
     single-action: initial_setup
@@ -157,7 +157,7 @@ Often run once per repo or after adding new label/type config. On new repos, run
 
 ## CLI examples
 
-Run the CLI from the **target repository root**. `copilot setup` and `copilot doctor` prompt for the setup PAT; other commands accept `--token` or `PERSONAL_ACCESS_TOKEN` from the environment. The first five commands mirror single actions; `copilot do` is CLI-only. See [Workflow & CLI](/single-actions/workflow-and-cli) for installation, updates, and the complete option reference.
+Run repository-dependent commands from the **target repository root**. `copilot setup` and `copilot doctor` prompt for the setup PAT; other GitHub commands accept `--token` or `PERSONAL_ACCESS_TOKEN` from the environment. `copilot upgrade`, `copilot --version`, and help can run from any directory. `copilot check-progress`, `copilot detect-potential-problems`, `copilot recommend-steps`, and `copilot think` correspond to supported action capabilities; `copilot setup`, `copilot doctor`, and `copilot do` are CLI-specific workflows. See [Workflow & CLI](/single-actions/workflow-and-cli) for installation, updates, and the complete option reference.
 
 ### setup
 
