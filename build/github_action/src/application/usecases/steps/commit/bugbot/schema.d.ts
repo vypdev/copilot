@@ -76,9 +76,9 @@ export declare const BUGBOT_RESPONSE_SCHEMA: {
     readonly additionalProperties: false;
 };
 /**
- * Findings-agent response schema for bugbot fix intent.
+ * Findings-agent response schema for comment intent.
  * Given the user comment and the list of unresolved findings, the agent decides whether
- * the user is asking to fix one or more of them and which finding ids to target.
+ * the user is asking to fix findings, apply a general change, or run a read-only review.
  */
 export declare const BUGBOT_FIX_INTENT_RESPONSE_SCHEMA: {
     readonly type: "object";
@@ -98,7 +98,11 @@ export declare const BUGBOT_FIX_INTENT_RESPONSE_SCHEMA: {
             readonly type: "boolean";
             readonly description: "True if the user is asking to perform some change or task in the repository (e.g. \"add a test for X\", \"refactor this\", \"implement feature Y\"). False for pure questions or when the only intent is to fix the reported findings (use is_fix_request for that).";
         };
+        readonly is_review_request: {
+            readonly type: "boolean";
+            readonly description: "True if the user is asking for a read-only analysis or review of the current issue, branch, or pull request (e.g. \"analyze the changes for security issues\", \"review this PR for bugs\"). False for pure questions or file-changing requests.";
+        };
     };
-    readonly required: readonly ["is_fix_request", "target_finding_ids", "is_do_request"];
+    readonly required: readonly ["is_fix_request", "target_finding_ids", "is_do_request", "is_review_request"];
     readonly additionalProperties: false;
 };

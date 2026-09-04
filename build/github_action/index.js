@@ -52676,6 +52676,85 @@ function getFindingStateCounts(value) {
 
 /***/ }),
 
+/***/ 90108:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.COPILOT_WELCOME_MARKER = exports.DEFAULT_COPILOT_BOT_USERNAME = void 0;
+exports.normalizeCopilotBotUsername = normalizeCopilotBotUsername;
+exports.buildCopilotHelpMessage = buildCopilotHelpMessage;
+exports.buildCopilotWelcomeMessage = buildCopilotWelcomeMessage;
+exports.buildCopilotWelcomeResult = buildCopilotWelcomeResult;
+const result_1 = __nccwpck_require__(73817);
+exports.DEFAULT_COPILOT_BOT_USERNAME = 'vypbot';
+exports.COPILOT_WELCOME_MARKER = '<!-- copilot:welcome -->';
+const SAFE_GITHUB_USERNAME = /^[A-Za-z0-9-]+$/u;
+/** Keeps the bot identity safe when it is rendered into a GitHub comment. */
+function normalizeCopilotBotUsername(username) {
+    const candidate = username?.trim().replace(/^@/u, '');
+    return candidate && SAFE_GITHUB_USERNAME.test(candidate)
+        ? candidate
+        : exports.DEFAULT_COPILOT_BOT_USERNAME;
+}
+/** Renders the stable command reference used by /copilot help. */
+function buildCopilotHelpMessage(username) {
+    const bot = normalizeCopilotBotUsername(username);
+    return `## Copilot commands
+
+I’m **@${bot}**, the repository assistant. Use these commands on an issue or pull request:
+
+### Read-only
+
+- \`/copilot help\` — show this command reference.
+- \`/copilot plan\` — propose an implementation plan.
+- \`/copilot clarify\` — identify missing information and assumptions.
+- \`/copilot estimate\` — estimate scope and complexity.
+- \`/copilot test-plan\` — propose a focused testing strategy.
+- \`/copilot explain <path or symbol>\` — explain code or behavior.
+- \`/copilot diagnose\` — investigate a reported problem and suggest likely causes.
+- \`/copilot analyze\` — review the current issue, branch, or pull request for potential problems.
+- \`/copilot review\` — run the Bugbot review.
+- \`/copilot findings\` — show potential findings from the current code.
+- \`/copilot recheck\` — re-run the review and reconcile findings.
+- \`/copilot description\` — refresh the pull-request description.
+- \`/copilot status\` — show the current automation status.
+
+### Changes
+
+- \`/copilot fix <finding-id>\` — fix one reported finding.
+- \`/copilot fix all\` — fix all unresolved findings.
+- \`/copilot dismiss <finding-id>\` — dismiss a finding.
+- \`/copilot implement <request>\` — apply an explicitly requested repository change.
+
+You can also ask a question in natural language by mentioning **@${bot}**. File-changing commands are restricted to authorized maintainers, run the configured checks, and report the resulting changes.`;
+}
+/** Renders the one-time onboarding comment for a newly created issue. */
+function buildCopilotWelcomeMessage(username) {
+    const bot = normalizeCopilotBotUsername(username);
+    return `${exports.COPILOT_WELCOME_MARKER}
+
+Hi! I’m **@${bot}**, the Copilot assistant for this repository.
+
+I can answer questions, explain the codebase, propose implementation and test plans, review issues and pull requests for potential bugs or security problems, and help authorized maintainers apply changes.
+
+Try \`/copilot help\` to see the available commands, or mention **@${bot}** with your question.`;
+}
+/** Creates a publishable result for issues that have no agent-generated reply. */
+function buildCopilotWelcomeResult(username) {
+    return new result_1.Result({
+        id: 'CopilotWelcomeUseCase',
+        success: true,
+        executed: true,
+        stepFormat: 'markdown',
+        steps: [buildCopilotWelcomeMessage(username)],
+    });
+}
+
+
+/***/ }),
+
 /***/ 8428:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -55080,6 +55159,7 @@ exports.buildRecommendationResult = buildRecommendationResult;
 const result_1 = __nccwpck_require__(73817);
 const recommendation_policy_1 = __nccwpck_require__(39410);
 const logging_ports_1 = __nccwpck_require__(6152);
+const copilot_interaction_policy_1 = __nccwpck_require__(90108);
 function buildRecommendationResult(param, taskId, response, issueDescriptionFingerprint, previousRecommendation, issueNumber) {
     const steps = extractRecommendationText(response);
     if (!steps) {
@@ -55098,14 +55178,20 @@ function buildRecommendationResult(param, taskId, response, issueDescriptionFing
         recommendationFingerprint,
         recommendation: (0, recommendation_policy_1.limitStoredRecommendation)(steps),
     };
+    const stepsWithWelcome = isNewIssue(param)
+        ? [(0, copilot_interaction_policy_1.buildCopilotWelcomeMessage)(param.tokenUser), '## Recommended implementation steps', steps]
+        : ['## Recommended implementation steps', steps];
     return [new result_1.Result({
             id: taskId,
             success: true,
             executed: true,
             stepFormat: 'markdown',
-            steps: ['## Recommended implementation steps', steps],
+            steps: stepsWithWelcome,
             payload: { issueNumber, recommendedSteps: steps, recommendationState },
         })];
+}
+function isNewIssue(param) {
+    return param.eventName === 'issues' && param.inputs?.action === 'opened';
 }
 function skipUnchangedRecommendation(param, previous, fingerprint, reason) {
     param.currentConfiguration.recommendationState = { ...previous, issueDescriptionFingerprint: fingerprint };
@@ -55483,40 +55569,62 @@ const commit_user_request_workflow_1 = __nccwpck_require__(43393);
 const logging_ports_1 = __nccwpck_require__(6152);
 /** Runs the selected mutating action and returns any result records it produces. */
 async function runCommentAutomationAction(param, options, route, intentPayload, ports) {
-    if (route === "autofix" && intentPayload) {
-        (0, logging_ports_1.logInfo)("Running bugbot autofix.");
-        const autofixResults = await options.autofixUseCase.invoke({
-            execution: param,
-            targetFindingIds: intentPayload.targetFindingIds,
-            userComment: options.userComment,
-            context: intentPayload.context,
-            branchOverride: intentPayload.branchOverride,
-        });
-        const resolutionErrors = await (0, commit_autofix_and_resolve_workflow_1.commitAutofixAndResolveFindings)(param, intentPayload, autofixResults, ports.authenticatedUserPort, ports.bugbotResolutionPorts, ports.gitCommitPort);
-        if (resolutionErrors.length > 0) {
-            autofixResults.push(new result_1.Result({
-                id: `${options.taskId}.AutofixPostflight`,
-                success: false,
-                executed: true,
-                steps: [
-                    "Autofix postflight failed: commit/push or finding reconciliation did not complete.",
-                ],
-                errors: resolutionErrors,
-            }));
-        }
-        return autofixResults;
-    }
-    if (route === "do-user-request" && intentPayload) {
-        (0, logging_ports_1.logInfo)("Running do user request.");
-        const doResults = await options.doUserRequestUseCase.invoke({
-            execution: param,
-            userComment: options.userComment,
-            branchOverride: intentPayload.branchOverride,
-        });
-        const commitResults = await (0, commit_user_request_workflow_1.commitUserRequestIfSuccessful)(param, intentPayload.branchOverride, doResults, ports.authenticatedUserPort, ports.gitCommitPort);
-        return [...doResults, ...commitResults];
-    }
+    if (route === "review")
+        return runReviewAction(param, options);
+    if (route === "autofix")
+        return runAutofixAction(param, options, intentPayload, ports);
+    if (route === "do-user-request")
+        return runDoUserRequestAction(param, options, intentPayload, ports);
     return [];
+}
+async function runReviewAction(param, options) {
+    if (!options.reviewPotentialProblemsUseCase) {
+        return [new result_1.Result({
+                id: `${options.taskId}.Review`,
+                success: false,
+                executed: false,
+                errors: ["Read-only review is not available in this composition."],
+            })];
+    }
+    (0, logging_ports_1.logInfo)("Running natural-language read-only review.");
+    return options.reviewPotentialProblemsUseCase.invoke(param);
+}
+async function runAutofixAction(param, options, intentPayload, ports) {
+    if (!intentPayload)
+        return [];
+    (0, logging_ports_1.logInfo)("Running bugbot autofix.");
+    const autofixResults = await options.autofixUseCase.invoke({
+        execution: param,
+        targetFindingIds: intentPayload.targetFindingIds,
+        userComment: options.userComment,
+        context: intentPayload.context,
+        branchOverride: intentPayload.branchOverride,
+    });
+    const resolutionErrors = await (0, commit_autofix_and_resolve_workflow_1.commitAutofixAndResolveFindings)(param, intentPayload, autofixResults, ports.authenticatedUserPort, ports.bugbotResolutionPorts, ports.gitCommitPort);
+    if (resolutionErrors.length > 0) {
+        autofixResults.push(new result_1.Result({
+            id: `${options.taskId}.AutofixPostflight`,
+            success: false,
+            executed: true,
+            steps: [
+                "Autofix postflight failed: commit/push or finding reconciliation did not complete.",
+            ],
+            errors: resolutionErrors,
+        }));
+    }
+    return autofixResults;
+}
+async function runDoUserRequestAction(param, options, intentPayload, ports) {
+    if (!intentPayload)
+        return [];
+    (0, logging_ports_1.logInfo)("Running do user request.");
+    const doResults = await options.doUserRequestUseCase.invoke({
+        execution: param,
+        userComment: intentPayload.requestText?.trim() || options.userComment,
+        branchOverride: intentPayload.branchOverride,
+    });
+    const commitResults = await (0, commit_user_request_workflow_1.commitUserRequestIfSuccessful)(param, intentPayload.branchOverride, doResults, ports.authenticatedUserPort, ports.gitCommitPort);
+    return [...doResults, ...commitResults];
 }
 
 
@@ -55532,19 +55640,31 @@ exports.runExplicitCommentCommand = runExplicitCommentCommand;
 exports.invalidCommentCommandResult = invalidCommentCommandResult;
 const result_1 = __nccwpck_require__(73817);
 const status_command_policy_1 = __nccwpck_require__(3449);
+const copilot_interaction_policy_1 = __nccwpck_require__(90108);
 /** Executes deterministic /copilot commands without routing them through intent detection. */
 async function runExplicitCommentCommand(param, options, command, actorAuthorizationPort) {
+    if (command.name === 'help')
+        return runHelpCommand(param, options);
     if (command.name === 'status')
         return [(0, status_command_policy_1.buildCopilotStatusResult)(param, options.taskId)];
     if (command.name === 'dismiss')
         return runDismissCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'description')
         return runDescriptionCommand(param, options);
-    if (['review', 'findings', 'recheck'].includes(command.name))
+    if (['analyze', 'review', 'findings', 'recheck'].includes(command.name))
         return runReviewCommand(param, options, command);
-    if (command.name === 'fix')
+    if (command.name === 'fix' || command.name === 'implement')
         return undefined;
     return runThinkCommand(param, options, command);
+}
+function runHelpCommand(param, options) {
+    return [new result_1.Result({
+            id: `${options.taskId}.Help`,
+            success: true,
+            executed: true,
+            stepFormat: 'markdown',
+            steps: [(0, copilot_interaction_policy_1.buildCopilotHelpMessage)(param.tokenUser)],
+        })];
 }
 async function runDescriptionCommand(param, options) {
     if (!options.updatePullRequestDescriptionUseCase) {
@@ -55558,7 +55678,7 @@ async function runDescriptionCommand(param, options) {
     return options.updatePullRequestDescriptionUseCase.invokeExplicit(param);
 }
 async function runDismissCommand(param, options, command, actorAuthorizationPort) {
-    const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.actor, param.tokens.token);
+    const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token);
     if (!allowed || !options.dismissBugbotFindingsUseCase) {
         return [new result_1.Result({
                 id: options.taskId,
@@ -55658,11 +55778,16 @@ exports.resolveCommentAutomationDecision = resolveCommentAutomationDecision;
 const logging_ports_1 = __nccwpck_require__(6152);
 const bugbot_fix_intent_payload_1 = __nccwpck_require__(25734);
 const comment_automation_route_policy_1 = __nccwpck_require__(47058);
+const think_input_policy_1 = __nccwpck_require__(59687);
+const copilot_command_1 = __nccwpck_require__(11771);
 async function resolveCommentAutomationDecision(param, options, actorAuthorizationPort) {
     (0, logging_ports_1.logInfo)("Running bugbot fix intent detection (before Think).");
     const intentResults = await options.intentUseCase.invoke(param);
     const intentPayload = (0, bugbot_fix_intent_payload_1.getBugbotFixIntentPayload)(intentResults);
-    const route = (0, comment_automation_route_policy_1.resolveCommentAutomationRoute)(intentPayload, await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.actor, param.tokens.token));
+    const parsedCommand = (0, copilot_command_1.parseCopilotCommand)(options.userComment);
+    const explicitMutationCommand = parsedCommand.kind === 'command'
+        && (parsedCommand.command.name === 'fix' || parsedCommand.command.name === 'implement');
+    const route = (0, comment_automation_route_policy_1.resolveCommentAutomationRoute)(intentPayload, await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token), (0, think_input_policy_1.containsBotMention)(options.userComment, param.tokenUser ?? ''), explicitMutationCommand);
     logIntent(intentPayload);
     return { intentResults, intentPayload, route };
 }
@@ -55708,7 +55833,11 @@ async function runNaturalLanguageCommentAutomation(param, options, actorAuthoriz
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveCommentAutomationRoute = resolveCommentAutomationRoute;
 const bugbot_fix_intent_payload_1 = __nccwpck_require__(25734);
-function resolveCommentAutomationRoute(payload, allowedToModifyFiles) {
+function resolveCommentAutomationRoute(payload, allowedToModifyFiles, botMentioned = false, explicitMutationCommand = false) {
+    if (!botMentioned && !explicitMutationCommand)
+        return 'think';
+    if (botMentioned && payload?.isReviewRequest)
+        return 'review';
     if (!allowedToModifyFiles)
         return 'think';
     if ((0, bugbot_fix_intent_payload_1.canRunBugbotAutofix)(payload))
@@ -56244,6 +56373,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runIssueWorkflow = runIssueWorkflow;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
+const copilot_interaction_policy_1 = __nccwpck_require__(90108);
 /** Coordinates issue lifecycle steps in their required sequential order. */
 async function runIssueWorkflow(param, taskId, ports) {
     const results = [];
@@ -56288,9 +56418,23 @@ async function runIssueWorkflow(param, taskId, ports) {
     }
     const recommendation = resolveIssueRecommendation(param, ports);
     if (recommendation) {
-        results.push(...(await recommendation.invoke(param)));
+        const recommendationResults = await recommendation.invoke(param);
+        results.push(...recommendationResults);
+        if (isNewIssue(param) && !containsWelcome(recommendationResults)) {
+            results.push((0, copilot_interaction_policy_1.buildCopilotWelcomeResult)(param.tokenUser));
+        }
+    }
+    else if (isNewIssue(param)) {
+        results.push((0, copilot_interaction_policy_1.buildCopilotWelcomeResult)(param.tokenUser));
     }
     return results;
+}
+function containsWelcome(results) {
+    return results.some((result) => result.steps.some((step) => step.includes(copilot_interaction_policy_1.COPILOT_WELCOME_MARKER))
+        || (0, result_1.getResultPayload)(result.payload)?.welcomePublished === true);
+}
+function isNewIssue(param) {
+    return param.eventName === 'issues' && param.inputs?.action === 'opened';
 }
 function resolveIssueRecommendation(param, ports) {
     if (!param.issue.opened && !param.issue.descriptionEdited)
@@ -57493,13 +57637,14 @@ function parseBugbotFixIntentResponse(response, unresolvedFindingIds) {
     const payload = response;
     const isFixRequest = payload.is_fix_request === true;
     const isDoRequest = payload.is_do_request === true;
+    const isReviewRequest = payload.is_review_request === true;
     const requestedIds = Array.isArray(payload.target_finding_ids)
         ? payload.target_finding_ids.filter((id) => typeof id === "string")
         : [];
     const targetFindingIds = isFixRequest
         ? unique(requestedIds.filter((id) => unresolvedFindingIds.has(id)))
         : [];
-    return { isFixRequest, isDoRequest, targetFindingIds };
+    return { isFixRequest, isDoRequest, targetFindingIds, isReviewRequest };
 }
 function unique(values) {
     return [...new Set(values)];
@@ -57558,7 +57703,7 @@ const load_bugbot_context_use_case_1 = __nccwpck_require__(4050);
 const schema_1 = __nccwpck_require__(16808);
 const detect_bugbot_fix_intent_policy_1 = __nccwpck_require__(14796);
 const TASK_ID = "DetectBugbotFixIntentUseCase";
-/** Detects whether a comment targets Bugbot findings and returns the validated intent payload. */
+/** Detects whether a comment requests a finding fix, repository change, or read-only review. */
 async function runDetectBugbotFixIntentWorkflow(param, ports) {
     const results = [];
     if (param.issueNumber <= 0 && param.pullRequest.number <= 0) {
@@ -57572,7 +57717,8 @@ async function runDetectBugbotFixIntentWorkflow(param, ports) {
     }
     const explicitCommand = (0, copilot_command_1.parseCopilotCommand)(commentBody);
     const isExplicitFix = explicitCommand.kind === 'command' && explicitCommand.command.name === 'fix';
-    if (!isExplicitFix && !(0, agent_1.isAgentConfigurationReady)(param.ai?.getAgentConfiguration("findings"))) {
+    const isExplicitImplement = explicitCommand.kind === 'command' && explicitCommand.command.name === 'implement';
+    if (!isExplicitFix && !isExplicitImplement && !(0, agent_1.isAgentConfigurationReady)(param.ai?.getAgentConfiguration("findings"))) {
         (0, logging_ports_1.logInfo)("Agent not configured; skipping bugbot fix intent detection.");
         return results;
     }
@@ -57589,14 +57735,33 @@ async function runDetectBugbotFixIntentWorkflow(param, ports) {
         : undefined;
     const context = await (0, load_bugbot_context_use_case_1.loadBugbotContext)(param, contextOptions, ports.contextPorts);
     const unresolvedWithBody = context.unresolvedFindingsWithBody ?? [];
-    if (unresolvedWithBody.length === 0) {
-        (0, logging_ports_1.logInfo)("No unresolved bugbot findings for this issue/PR; skipping bugbot fix intent detection.");
-        return results;
-    }
     const unresolvedIds = new Set(unresolvedWithBody.map((finding) => finding.id));
     const unresolvedFindings = (0, detect_bugbot_fix_intent_policy_1.buildUnresolvedFindingSummaries)(unresolvedWithBody);
     const parentCommentBody = await resolveParentCommentBody(param, ports.pullRequestQueryPort);
+    if (isExplicitImplement) {
+        const requestText = explicitCommand.command.arguments.join(' ').trim();
+        results.push(new result_1.Result({
+            id: TASK_ID,
+            success: true,
+            executed: true,
+            steps: ['Explicit implement command selected the authorized repository-change route.'],
+            payload: {
+                isFixRequest: false,
+                isDoRequest: true,
+                isReviewRequest: false,
+                targetFindingIds: [],
+                requestText,
+                context,
+                branchOverride,
+            },
+        }));
+        return results;
+    }
     if (explicitCommand.kind === 'command' && explicitCommand.command.name === 'fix') {
+        if (unresolvedIds.size === 0) {
+            (0, logging_ports_1.logInfo)("No unresolved bugbot findings for explicit fix command; skipping autofix.");
+            return results;
+        }
         const requestedIds = explicitCommand.command.arguments.includes('all')
             ? [...unresolvedIds]
             : explicitCommand.command.arguments.filter(id => unresolvedIds.has(id));
@@ -57635,7 +57800,12 @@ async function runDetectBugbotFixIntentWorkflow(param, ports) {
             success: true,
             executed: true,
             steps: ["Bugbot fix intent: no response; skipping autofix."],
-            payload: { isFixRequest: false, isDoRequest: false, targetFindingIds: [] },
+            payload: {
+                isFixRequest: false,
+                isDoRequest: false,
+                isReviewRequest: false,
+                targetFindingIds: [],
+            },
         }));
         return results;
     }
@@ -58754,9 +58924,9 @@ exports.BUGBOT_RESPONSE_SCHEMA = {
     additionalProperties: false,
 };
 /**
- * Findings-agent response schema for bugbot fix intent.
+ * Findings-agent response schema for comment intent.
  * Given the user comment and the list of unresolved findings, the agent decides whether
- * the user is asking to fix one or more of them and which finding ids to target.
+ * the user is asking to fix findings, apply a general change, or run a read-only review.
  */
 exports.BUGBOT_FIX_INTENT_RESPONSE_SCHEMA = {
     type: 'object',
@@ -58774,8 +58944,12 @@ exports.BUGBOT_FIX_INTENT_RESPONSE_SCHEMA = {
             type: 'boolean',
             description: 'True if the user is asking to perform some change or task in the repository (e.g. "add a test for X", "refactor this", "implement feature Y"). False for pure questions or when the only intent is to fix the reported findings (use is_fix_request for that).',
         },
+        is_review_request: {
+            type: 'boolean',
+            description: 'True if the user is asking for a read-only analysis or review of the current issue, branch, or pull request (e.g. "analyze the changes for security issues", "review this PR for bugs"). False for pure questions or file-changing requests.',
+        },
     },
-    required: ['is_fix_request', 'target_finding_ids', 'is_do_request'],
+    required: ['is_fix_request', 'target_finding_ids', 'is_do_request', 'is_review_request'],
     additionalProperties: false,
 };
 
@@ -60445,6 +60619,7 @@ async function queryThinkAnswer(param, prompt, repository, agentTask) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getThinkCommentBody = getThinkCommentBody;
 exports.extractMentionQuestion = extractMentionQuestion;
+exports.containsBotMention = containsBotMention;
 function getThinkCommentBody(source) {
     if (source.isIssueComment)
         return source.issueCommentBody ?? '';
@@ -60455,6 +60630,14 @@ function getThinkCommentBody(source) {
 function extractMentionQuestion(commentBody, tokenUser) {
     const escapedUsername = tokenUser.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return commentBody.replace(new RegExp(`@${escapedUsername}`, 'gi'), '').trim();
+}
+/** Matches GitHub usernames case-insensitively without matching a larger username. */
+function containsBotMention(commentBody, tokenUser) {
+    const normalizedUser = tokenUser.trim().replace(/^@/u, '');
+    if (!normalizedUser)
+        return false;
+    const escapedUsername = normalizedUser.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`(^|[^A-Za-z0-9_-])@${escapedUsername}(?=$|[^A-Za-z0-9_-])`, 'iu').test(commentBody);
 }
 
 
@@ -60486,7 +60669,7 @@ function resolveThinkRequest(param) {
     if (command.kind === 'none') {
         if (!param.tokenUser?.trim())
             return { kind: 'skip', reason: 'missing-token' };
-        if (!commentBody.includes(`@${param.tokenUser}`))
+        if (!(0, think_input_policy_1.containsBotMention)(commentBody, param.tokenUser))
             return { kind: 'skip', reason: 'not-mentioned' };
     }
     const question = command.kind === 'command'
@@ -60730,6 +60913,7 @@ const project_context_instruction_1 = __nccwpck_require__(63907);
 const task_emoji_1 = __nccwpck_require__(46103);
 const agent_answer_policy_1 = __nccwpck_require__(72063);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+const copilot_interaction_policy_1 = __nccwpck_require__(90108);
 const TASK_ID = 'AnswerIssueHelpUseCase';
 /** Posts one contextual answer for a newly opened question/help issue. */
 async function runAnswerIssueHelpWorkflow(param, dependencies) {
@@ -60760,9 +60944,17 @@ async function runAnswerIssueHelpWorkflow(param, dependencies) {
         if (!answer) {
             return [noAnswerResult()];
         }
-        await dependencies.issueNotificationPort.addComment(param.owner, param.repo, issueNumber, answer, param.tokens.token);
+        const publishedAnswer = isNewIssue(param)
+            ? `${(0, copilot_interaction_policy_1.buildCopilotWelcomeMessage)(param.tokenUser)}\n\n${answer}`
+            : answer;
+        await dependencies.issueNotificationPort.addComment(param.owner, param.repo, issueNumber, publishedAnswer, param.tokens.token);
         (0, logging_ports_1.logInfo)(`Initial help reply posted to issue #${issueNumber}.`);
-        return [new result_1.Result({ id: TASK_ID, success: true, executed: true })];
+        return [new result_1.Result({
+                id: TASK_ID,
+                success: true,
+                executed: true,
+                payload: { welcomePublished: isNewIssue(param) },
+            })];
     }
     catch (error) {
         (0, logging_ports_1.logError)(`Error in ${TASK_ID}: ${error}`);
@@ -60773,6 +60965,9 @@ async function runAnswerIssueHelpWorkflow(param, dependencies) {
                 errors: [`Error in ${TASK_ID}: ${error}`],
             })];
     }
+}
+function isNewIssue(param) {
+    return param.eventName === 'issues' && param.inputs?.action === 'opened';
 }
 function resolveHelpRequest(param) {
     if (!param.issue.opened || (!param.labels.isQuestion && !param.labels.isHelp))
@@ -64171,17 +64366,23 @@ exports.Workflows = Workflows;
 /***/ }),
 
 /***/ 34737:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.authorizationForFileModification = authorizationForFileModification;
+const github_user_policy_1 = __nccwpck_require__(84403);
 function authorizationForFileModification(owner, actor, ownerType) {
     if (ownerType === 'Organization') {
         return { kind: 'organization-membership', organization: owner, actor };
     }
-    return { kind: 'owner', allowed: actor === owner };
+    return {
+        kind: 'user-repository-collaborator',
+        owner,
+        actor,
+        ownerMatches: (0, github_user_policy_1.githubUsersMatch)(actor, owner),
+    };
 }
 
 
@@ -67208,17 +67409,20 @@ const actor_modification_policy_1 = __nccwpck_require__(34737);
 class ActorAuthorizationRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
-        this.isActorAllowedToModifyFiles = async (owner, actor, token) => {
+        this.isActorAllowedToModifyFiles = async (owner, repo, actor, token) => {
             try {
                 const octokit = this.githubClient.getClient(token);
                 const { data: ownerUser } = await octokit.rest.users.getByUsername({ username: owner });
                 const authorization = (0, actor_modification_policy_1.authorizationForFileModification)(owner, actor, ownerUser.type);
-                if (authorization.kind === 'owner')
-                    return authorization.allowed;
-                return this.checkOrganizationMembership(octokit, authorization.organization, authorization.actor, owner, actor);
+                if (authorization.kind === 'organization-membership') {
+                    return this.checkOrganizationMembership(octokit, authorization.organization, authorization.actor, owner, actor);
+                }
+                if (authorization.ownerMatches)
+                    return true;
+                return this.checkUserRepositoryPermission(octokit, owner, actor, repo);
             }
             catch (err) {
-                (0, logger_1.logDebugInfo)(`isActorAllowedToModifyFiles(${owner}, ${actor}): ${err instanceof Error ? err.message : String(err)}`);
+                (0, logger_1.logDebugInfo)(`isActorAllowedToModifyFiles(${owner}, ${repo}, ${actor}): ${err instanceof Error ? err.message : String(err)}`);
                 return false;
             }
         };
@@ -67229,15 +67433,31 @@ class ActorAuthorizationRepository {
             return true;
         }
         catch (membershipErr) {
-            const status = membershipErr?.status;
-            if (status === 404)
-                return false;
-            (0, logger_1.logDebugInfo)(`checkMembershipForUser(${owner}, ${originalActor}): ${membershipErr instanceof Error ? membershipErr.message : String(membershipErr)}`);
+            logUnlessNotFound(membershipErr, `checkMembershipForUser(${owner}, ${originalActor})`);
+            return false;
+        }
+    }
+    async checkUserRepositoryPermission(octokit, owner, actor, repo) {
+        try {
+            const response = await octokit.rest.repos.getCollaboratorPermissionLevel({
+                owner,
+                repo,
+                username: actor,
+            });
+            return ['admin', 'maintain', 'push'].includes(response.data.permission ?? '');
+        }
+        catch (permissionErr) {
+            logUnlessNotFound(permissionErr, `getCollaboratorPermissionLevel(${owner}, ${repo}, ${actor})`);
             return false;
         }
     }
 }
 exports.ActorAuthorizationRepository = ActorAuthorizationRepository;
+function logUnlessNotFound(error, operation) {
+    if (error?.status === 404)
+        return;
+    (0, logger_1.logDebugInfo)(`${operation}: ${error instanceof Error ? error.message : String(error)}`);
+}
 
 
 /***/ }),
@@ -69417,17 +69637,22 @@ exports.COPILOT_COMMAND_NAMES = void 0;
 exports.parseCopilotCommand = parseCopilotCommand;
 /** Explicit commands are the safe, deterministic entry point for mutations. */
 exports.COPILOT_COMMAND_NAMES = [
+    'help',
+    'analyze',
     'plan',
     'clarify',
     'estimate',
     'test-plan',
     'status',
     'description',
+    'explain',
+    'diagnose',
     'review',
     'findings',
     'fix',
     'dismiss',
     'recheck',
+    'implement',
 ];
 const COMMAND_PREFIX = /^\/copilot(?:\s+|$)/iu;
 const MAX_COMMAND_LENGTH = 2000;
@@ -69454,8 +69679,8 @@ function parseCopilotCommand(raw) {
     if (tokens.length > MAX_ARGUMENTS) {
         return { kind: 'invalid', reason: `Copilot commands accept at most ${MAX_ARGUMENTS} arguments.` };
     }
-    if ((name === 'fix' || name === 'dismiss') && tokens.length === 0) {
-        return { kind: 'invalid', reason: `/${name} requires at least one finding id.` };
+    if ((name === 'fix' || name === 'dismiss' || name === 'implement') && tokens.length === 0) {
+        return { kind: 'invalid', reason: `/${name} requires at least one argument.` };
     }
     return {
         kind: 'command',
@@ -71637,10 +71862,10 @@ function getBugbotFixPrompt(params) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getBugbotFixIntentPrompt = getBugbotFixIntentPrompt;
 /**
- * Prompt for detecting if user comment is a fix request and which finding ids to target.
+ * Prompt for detecting the action requested by a user comment.
  */
 const fill_1 = __nccwpck_require__(2559);
-const TEMPLATE = `You are analyzing a user comment on an issue or pull request to decide whether they are asking to fix one or more reported code findings (bugs, vulnerabilities, or quality issues).
+const TEMPLATE = `You are analyzing a user comment on an issue or pull request to classify the requested Copilot action. The available actions are: fix reported findings, apply a general repository change, run a read-only code review, or answer a question.
 
 {{projectContextInstruction}}
 
@@ -71654,8 +71879,9 @@ const TEMPLATE = `You are analyzing a user comment on an issue or pull request t
 1. Is this comment clearly a request to fix one or more of the findings above? (e.g. "fix it", "arreglalo", "fix this", "fix all", "fix vulnerability X", "corrige", "fix the bug in src/foo.ts"). If the user is asking a question, discussing something else, or the intent is ambiguous, set \`is_fix_request\` to false.
 2. If it is a fix request, which finding ids should be fixed? Return their exact ids in \`target_finding_ids\`. If the user says "fix all" or equivalent, include every id from the list above. If they refer to a specific finding (e.g. by replying to a comment that contains one finding), return only that finding's id. Use only ids that appear in the list above.
 3. Is the user asking to perform some other change or task in the repo? (e.g. "add a test for X", "refactor this", "implement feature Y", "haz que Z"). If yes, set \`is_do_request\` to true. Set false for pure questions or when the only intent is to fix the listed findings.
+4. Is the user asking for a read-only review or analysis of the current code? (e.g. "analyze the changes for security issues", "review this PR for bugs", "look for performance problems"). If yes, set \`is_review_request\` to true. Do not set it for a question about how the code works or for a request that changes files.
 
-Respond with a JSON object: \`is_fix_request\` (boolean), \`target_finding_ids\` (array of strings; empty when \`is_fix_request\` is false), and \`is_do_request\` (boolean).`;
+Respond with a JSON object: \`is_fix_request\` (boolean), \`target_finding_ids\` (array of strings; empty when \`is_fix_request\` is false), \`is_do_request\` (boolean), and \`is_review_request\` (boolean).`;
 function getBugbotFixIntentPrompt(params) {
     return (0, fill_1.fillTemplate)(TEMPLATE, params);
 }

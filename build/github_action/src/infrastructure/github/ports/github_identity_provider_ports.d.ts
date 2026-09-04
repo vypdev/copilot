@@ -41,6 +41,17 @@ export interface GithubActorAuthorizationClient {
                 username: string;
             }): Promise<unknown>;
         };
+        repos: {
+            getCollaboratorPermissionLevel(parameters: {
+                owner: string;
+                repo: string;
+                username: string;
+            }): Promise<{
+                data: {
+                    permission?: string;
+                };
+            }>;
+        };
     };
 }
 export interface GithubOrganizationMembersClient {

@@ -8,5 +8,5 @@ export interface DetectBugbotFixIntentWorkflowPorts {
     aiRepository: FindingsQueryPort;
     contextPorts: BugbotContextPorts;
 }
-/** Detects whether a comment targets Bugbot findings and returns the validated intent payload. */
+/** Detects whether a comment requests a finding fix, repository change, or read-only review. */
 export declare function runDetectBugbotFixIntentWorkflow(param: Execution, ports: DetectBugbotFixIntentWorkflowPorts): Promise<Result[]>;

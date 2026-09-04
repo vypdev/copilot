@@ -5,7 +5,7 @@ import type { BugbotFindingResolutionPorts } from "../ports/bugbot_finding_resol
 import type { GitCommitPort } from "../ports/git_ports";
 import type { CommentAutomationOptions } from "./comment_automation_contracts";
 import type { BugbotFixIntentPayload } from "./steps/commit/bugbot/bugbot_fix_intent_payload";
-export type CommentAutomationAction = "autofix" | "do-user-request" | "think";
+export type CommentAutomationAction = "autofix" | "do-user-request" | "review" | "think";
 export interface CommentAutomationActionPorts {
     authenticatedUserPort: AuthenticatedUserPort;
     bugbotResolutionPorts: BugbotFindingResolutionPorts;
