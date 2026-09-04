@@ -65,13 +65,13 @@ Bugbot has two main modes: **detection** (on push or single action) and **fix/do
    - `loadBugbotContext(param, { branchOverride })` → unresolved findings.  
    - Build `UnresolvedFindingSummary[]` (id, title from `extractTitleFromBody`, description = fullBody.slice(0, 4000)).  
    - If PR review comment and `commentInReplyToId`: fetch parent comment body (`getPullRequestReviewCommentBody`), slice(0,1500).trim for prompt.  
-   - `buildBugbotFixIntentPrompt(commentBody, unresolvedFindings, parentCommentBody?)` → prompt asks: is_fix_request?, target_finding_ids?, is_do_request?  
-   - `askAgent(OPENCODE_AGENT_PLAN, prompt, BUGBOT_FIX_INTENT_RESPONSE_SCHEMA)` → `{ is_fix_request, target_finding_ids, is_do_request }`.  
-   - Payload: `isFixRequest`, `isDoRequest`, `targetFindingIds` (filtered to valid unresolved ids), `context`, `branchOverride`.
+   - `buildBugbotFixIntentPrompt(commentBody, unresolvedFindings, parentCommentBody?)` → prompt asks: is_fix_request?, target_finding_ids?, is_do_request?, is_review_request?.
+   - `askAgent(OPENCODE_AGENT_PLAN, prompt, BUGBOT_FIX_INTENT_RESPONSE_SCHEMA)` → `{ is_fix_request, target_finding_ids, is_do_request, is_review_request }`.
+   - Payload: `isFixRequest`, `isDoRequest`, `isReviewRequest`, `targetFindingIds` (filtered to valid unresolved ids), `context`, `branchOverride`.
 
 2. **Permission:** `ProjectRepository.isActorAllowedToModifyFiles(owner, actor, token)`.  
    - If owner is Organization: `orgs.checkMembershipForUser` (204 = allowed).  
-   - If owner is User: allowed only if `actor === owner`.
+   - If owner is User: allowed for the owner or a repository collaborator with `push`, `maintain`, or `admin` permission.
 
 3. **Branch A – Bugbot autofix** (when `canRunBugbotAutofix(payload)` and `allowedToModifyFiles`):  
    - `BugbotAutofixUseCase.invoke({ execution, targetFindingIds, userComment, context, branchOverride })`  
@@ -84,12 +84,13 @@ Bugbot has two main modes: **detection** (on push or single action) and **fix/do
    - `buildUserRequestPrompt(execution, userComment)` – repo context + sanitized user request; `copilotMessage(ai, prompt)`.  
    - If success: `runUserRequestCommitAndPush(execution, { branchOverride })` – same verify/checkout/add/commit/push with message `chore(#N): apply user request` or `chore: apply user request`.
 
-5. **Think** (when no file-modifying action ran): `ThinkUseCase.invoke(param)` – answers the user (e.g. question).
+5. **Review** (when the bot is mentioned and the request is read-only analysis): the existing findings/review flow runs without file changes.
+6. **Think** (when no file-modifying action ran): `ThinkUseCase.invoke(param)` – answers the user (e.g. question).
 
 **Key paths (fix/do):**
 
 - `detect_bugbot_fix_intent_use_case.ts` – intent detection, branch resolution for issue_comment
-- `build_bugbot_fix_intent_prompt.ts` – prompt for is_fix_request / is_do_request / target_finding_ids
+- `build_bugbot_fix_intent_prompt.ts` – prompt for is_fix_request / is_do_request / is_review_request / target_finding_ids
 - `bugbot_fix_intent_payload.ts` – getBugbotFixIntentPayload, canRunBugbotAutofix, canRunDoUserRequest
 - `schema.ts` – BUGBOT_FIX_INTENT_RESPONSE_SCHEMA (is_fix_request, target_finding_ids, is_do_request)
 - `bugbot_autofix_use_case.ts` – build prompt, copilotMessage (build agent)

@@ -158,13 +158,41 @@ describe("DetectBugbotFixIntentUseCase", () => {
         );
     });
 
-    it("returns empty results when no unresolved findings", async () => {
+    it("still classifies a comment when no unresolved findings exist", async () => {
         mockLoadBugbotContext.mockResolvedValue(mockContextWithUnresolved(0));
+        mockAskAgent.mockResolvedValue({ is_fix_request: false, target_finding_ids: [], is_do_request: true, is_review_request: false });
 
         const results = await useCase.invoke(baseExecution());
 
-        expect(results).toEqual([]);
+        expect(results).toHaveLength(1);
+        expect(mockAskAgent).toHaveBeenCalledTimes(1);
+        expect((results[0].payload as { isDoRequest: boolean }).isDoRequest).toBe(true);
+    });
+
+    it('classifies a natural-language read-only review request', async () => {
+        mockLoadBugbotContext.mockResolvedValue(mockContextWithUnresolved(0));
+        mockAskAgent.mockResolvedValue({ is_fix_request: false, target_finding_ids: [], is_do_request: false, is_review_request: true });
+
+        const results = await useCase.invoke(baseExecution({
+            issue: { ...baseExecution().issue, commentBody: '@bot analyze the changes for security issues' },
+        } as Partial<Execution>));
+
+        expect((results[0].payload as { isReviewRequest?: boolean }).isReviewRequest).toBe(true);
+    });
+
+    it('routes explicit implement commands without requiring intent model classification', async () => {
+        const context = mockContextWithUnresolved(0);
+        mockLoadBugbotContext.mockResolvedValue(context);
+
+        const results = await useCase.invoke(baseExecution({
+            issue: { ...baseExecution().issue, commentBody: '/copilot implement add a regression test' },
+        } as Partial<Execution>));
+
         expect(mockAskAgent).not.toHaveBeenCalled();
+        expect(results[0].payload).toMatchObject({
+            isDoRequest: true,
+            requestText: 'add a regression test',
+        });
     });
 
     it("calls askAgent and returns payload with filtered target ids", async () => {
@@ -196,6 +224,17 @@ describe("DetectBugbotFixIntentUseCase", () => {
 
         expect(mockAskAgent).not.toHaveBeenCalled();
         expect((results[0].payload as { targetFindingIds: string[] }).targetFindingIds).toEqual(['finding-0']);
+    });
+
+    it('skips an explicit fix command when there are no unresolved findings', async () => {
+        mockLoadBugbotContext.mockResolvedValue(mockContextWithUnresolved(0));
+
+        const results = await useCase.invoke(baseExecution({
+            issue: { ...baseExecution().issue, commentBody: '/copilot fix finding-0' },
+        } as Partial<Execution>));
+
+        expect(results).toEqual([]);
+        expect(mockAskAgent).not.toHaveBeenCalled();
     });
 
     it('supports selecting all unresolved findings with an explicit command', async () => {

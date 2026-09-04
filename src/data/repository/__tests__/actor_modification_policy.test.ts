@@ -7,8 +7,12 @@ describe('authorizationForFileModification', () => {
         });
     });
 
-    it('allows only the owner for user-owned repositories', () => {
-        expect(authorizationForFileModification('alice', 'alice', 'User')).toEqual({ kind: 'owner', allowed: true });
-        expect(authorizationForFileModification('alice', 'bob', 'User')).toEqual({ kind: 'owner', allowed: false });
+    it('identifies the owner and collaborators for user-owned repositories', () => {
+        expect(authorizationForFileModification('alice', 'alice', 'User')).toEqual({
+            kind: 'user-repository-collaborator', owner: 'alice', actor: 'alice', ownerMatches: true,
+        });
+        expect(authorizationForFileModification('alice', 'bob', 'User')).toEqual({
+            kind: 'user-repository-collaborator', owner: 'alice', actor: 'bob', ownerMatches: false,
+        });
     });
 });

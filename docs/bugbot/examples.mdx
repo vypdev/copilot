@@ -191,7 +191,7 @@ These are examples of comments that typically trigger **Bugbot autofix** (fix on
 | `please fix the null reference and the off-by-one` | Fix findings that match those descriptions. |
 | `fix finding xyz-123` | Fix the finding with id `xyz-123` if it exists and is unresolved. |
 
-Post these on the **issue** or on the **PR** (or reply in the **review thread** of a finding). The action will run only if you have permission (org member or repo owner) and, for issue comments, there is an open PR for the issue.
+Post these on the **issue** or on the **PR** (or reply in the **review thread** of a finding). The action will run only if you have permission (organization member, or repository owner / `push`/`maintain`/`admin` collaborator in a personal repository) and, for issue comments, there is an open PR for the issue.
 
 ---
 
@@ -207,7 +207,7 @@ These are examples of comments that typically trigger **do user request** (gener
 | `implement the missing validation in the form` | Add validation logic. |
 | `add error handling for the API call` | Wrap or extend the API call with error handling. |
 
-Same permission and workflow requirements as autofix: `contents: write` and org member or repo owner.
+Same permission and workflow requirements as autofix: `contents: write` and an organization member, or repository owner / `push`/`maintain`/`admin` collaborator in a personal repository. Natural-language requests should mention `@vypbot`; use `/copilot implement <request>` when you want an explicit command.
 
 ---
 

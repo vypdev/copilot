@@ -48,6 +48,7 @@ describe("runCommentAutomation", () => {
         owner: "o",
         repo: "r",
         actor: "actor",
+        tokenUser: "vypbot",
         tokens: { token: "t" },
       } as Execution,
       {
@@ -72,7 +73,7 @@ describe("runCommentAutomation", () => {
           taskId: "do-user-request",
           invoke: jest.fn().mockResolvedValue([]),
         },
-        userComment: "fix it",
+        userComment: "@vypbot fix it",
         gitCommitPort: {} as never,
       },
       {
@@ -177,6 +178,45 @@ describe("runCommentAutomation", () => {
     expect(intent.invoke).not.toHaveBeenCalled();
   });
 
+  it('returns static help without invoking language or intent agents', async () => {
+    const language = { invoke: jest.fn() };
+    const intent = { invoke: jest.fn() };
+    const think = { invoke: jest.fn() };
+
+    const results = await runCommentAutomation(
+      {
+        owner: 'o',
+        repo: 'r',
+        actor: 'actor',
+        tokenUser: 'vypbot',
+        tokens: { token: 't' },
+      } as Execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: language as never,
+        intentUseCase: intent as never,
+        thinkUseCase: think as never,
+        autofixUseCase: {} as never,
+        doUserRequestUseCase: {} as never,
+        userComment: '/copilot help',
+        gitCommitPort: {} as never,
+      },
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    expect(results[0]).toMatchObject({
+      id: 'CommentAutomation.Help',
+      success: true,
+      stepFormat: 'markdown',
+    });
+    expect(results[0].steps[0]).toContain('@vypbot');
+    expect(language.invoke).not.toHaveBeenCalled();
+    expect(intent.invoke).not.toHaveBeenCalled();
+    expect(think.invoke).not.toHaveBeenCalled();
+  });
+
   it('routes explicit review commands to the read-only Bugbot review use case', async () => {
     const review = { invoke: jest.fn().mockResolvedValue([successfulResult('review')]) };
     const think = { invoke: jest.fn() };
@@ -201,6 +241,107 @@ describe("runCommentAutomation", () => {
     expect(results.map(result => result.id)).toEqual(['CommentAutomation.ExplicitCommand', 'review']);
     expect(review.invoke).toHaveBeenCalledTimes(1);
     expect(think.invoke).not.toHaveBeenCalled();
+  });
+
+  it('reports when an explicit analysis command has no review composition', async () => {
+    const results = await runCommentAutomation(
+      { owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' } } as Execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: {} as never,
+        intentUseCase: {} as never,
+        thinkUseCase: {} as never,
+        autofixUseCase: {} as never,
+        doUserRequestUseCase: {} as never,
+        userComment: '/copilot analyze',
+        gitCommitPort: {} as never,
+      },
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    expect(results.at(-1)).toMatchObject({
+      id: 'CommentAutomation.Review',
+      success: false,
+      executed: true,
+    });
+  });
+
+  it('routes a mentioned natural-language analysis request to the read-only review use case', async () => {
+    const review = { invoke: jest.fn().mockResolvedValue([successfulResult('review')]) };
+    const intent = {
+      invoke: jest.fn().mockResolvedValue([successfulResult('intent', {
+        isFixRequest: false,
+        isDoRequest: false,
+        isReviewRequest: true,
+        targetFindingIds: [],
+      })]),
+    };
+    const think = { invoke: jest.fn() };
+
+    const results = await runCommentAutomation(
+      {
+        owner: 'o',
+        repo: 'r',
+        actor: 'actor',
+        tokenUser: 'vypbot',
+        tokens: { token: 't' },
+      } as Execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: { invoke: jest.fn().mockResolvedValue([]) } as never,
+        intentUseCase: intent as never,
+        thinkUseCase: think as never,
+        autofixUseCase: {} as never,
+        doUserRequestUseCase: {} as never,
+        reviewPotentialProblemsUseCase: review as never,
+        userComment: '@VYPBOT analyze the changes for security issues',
+        gitCommitPort: {} as never,
+      },
+      { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(false) } as never,
+      {} as never,
+      {} as never,
+    );
+
+    expect(results.map(result => result.id)).toEqual(['intent', 'review']);
+    expect(review.invoke).toHaveBeenCalledTimes(1);
+    expect(think.invoke).not.toHaveBeenCalled();
+  });
+
+  it('keeps an explicit implement request on the authorized mutation route', async () => {
+    const doUserRequest = { invoke: jest.fn().mockResolvedValue([]) };
+    const intent = {
+      invoke: jest.fn().mockResolvedValue([successfulResult('intent', {
+        isFixRequest: false,
+        isDoRequest: true,
+        isReviewRequest: false,
+        targetFindingIds: [],
+        requestText: 'add a regression test',
+      })]),
+    };
+
+    const results = await runCommentAutomation(
+      { owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' } } as Execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: { invoke: jest.fn().mockResolvedValue([]) } as never,
+        intentUseCase: intent as never,
+        thinkUseCase: { invoke: jest.fn() } as never,
+        autofixUseCase: {} as never,
+        doUserRequestUseCase: doUserRequest as never,
+        userComment: '/copilot implement add a regression test',
+        gitCommitPort: {} as never,
+      },
+      { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) } as never,
+      {} as never,
+      {} as never,
+    );
+
+    expect(doUserRequest.invoke).toHaveBeenCalledWith(expect.objectContaining({
+      userComment: 'add a regression test',
+    }));
+    expect(results).toContainEqual(expect.objectContaining({ id: 'intent' }));
   });
 
   it('routes explicit PR description commands without language or intent detection', async () => {
@@ -229,6 +370,31 @@ describe("runCommentAutomation", () => {
     expect(description.invokeExplicit).toHaveBeenCalledTimes(1);
     expect(language.invoke).not.toHaveBeenCalled();
     expect(intent.invoke).not.toHaveBeenCalled();
+  });
+
+  it('reports when an explicit PR description command is unavailable', async () => {
+    const results = await runCommentAutomation(
+      { owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' } } as Execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: {} as never,
+        intentUseCase: {} as never,
+        thinkUseCase: {} as never,
+        autofixUseCase: {} as never,
+        doUserRequestUseCase: {} as never,
+        userComment: '/copilot description',
+        gitCommitPort: {} as never,
+      },
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    expect(results.at(-1)).toMatchObject({
+      id: 'CommentAutomation.Description',
+      success: false,
+      executed: false,
+    });
   });
 
   it('rejects an invalid explicit command without invoking an agent', async () => {
@@ -277,5 +443,30 @@ describe("runCommentAutomation", () => {
 
     expect(results).toEqual([expect.objectContaining({ id: 'dismiss' })]);
     expect(dismiss.invoke).toHaveBeenCalledWith(expect.objectContaining({ findingIds: ['FINDING-1'] }));
+  });
+
+  it('skips explicit dismiss commands when the actor is not authorized', async () => {
+    const authorization = { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(false) };
+    const dismiss = { invoke: jest.fn() };
+    const results = await runCommentAutomation(
+      { owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' } } as Execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: {} as never,
+        intentUseCase: {} as never,
+        thinkUseCase: {} as never,
+        autofixUseCase: {} as never,
+        doUserRequestUseCase: {} as never,
+        dismissBugbotFindingsUseCase: dismiss as never,
+        userComment: '/copilot dismiss FINDING-1',
+        gitCommitPort: {} as never,
+      },
+      authorization as never,
+      {} as never,
+      {} as never,
+    );
+
+    expect(dismiss.invoke).not.toHaveBeenCalled();
+    expect(results[0]).toMatchObject({ success: true, executed: false });
   });
 });

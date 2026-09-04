@@ -17,6 +17,7 @@ describe('getBugbotFixIntentPrompt', () => {
         expect(prompt).toContain('is_fix_request');
         expect(prompt).toContain('target_finding_ids');
         expect(prompt).toContain('is_do_request');
+        expect(prompt).toContain('is_review_request');
         expect(prompt).not.toContain('{{');
     });
 
@@ -29,6 +30,7 @@ describe('getBugbotFixIntentPrompt', () => {
         });
         expect(prompt).toContain('(No unresolved findings.)');
         expect(prompt).toContain('fix all');
+        expect(prompt).toContain('is_review_request');
         expect(prompt).not.toContain('{{');
     });
 });

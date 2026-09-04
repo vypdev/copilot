@@ -15,3 +15,11 @@ export function extractMentionQuestion(commentBody: string, tokenUser: string): 
     const escapedUsername = tokenUser.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return commentBody.replace(new RegExp(`@${escapedUsername}`, 'gi'), '').trim();
 }
+
+/** Matches GitHub usernames case-insensitively without matching a larger username. */
+export function containsBotMention(commentBody: string, tokenUser: string): boolean {
+    const normalizedUser = tokenUser.trim().replace(/^@/u, '');
+    if (!normalizedUser) return false;
+    const escapedUsername = normalizedUser.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`(^|[^A-Za-z0-9_-])@${escapedUsername}(?=$|[^A-Za-z0-9_-])`, 'iu').test(commentBody);
+}

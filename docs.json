@@ -342,6 +342,11 @@
           "title": "Examples",
           "href": "/issues/examples",
           "icon": "file-code"
+        },
+        {
+          "title": "Comment commands",
+          "href": "/issues/comment-commands",
+          "icon": "comment"
         }
       ]
     },

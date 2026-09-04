@@ -1,8 +1,9 @@
 import type { Execution } from "../../data/model/execution";
-import { Result } from "../../data/model/result";
+import { getResultPayload, Result } from "../../data/model/result";
 import { logError } from "../ports/logging_ports";
 import type { ParamUseCase } from "./base/param_usecase";
 import type { IssueWorkflowSteps } from "./issue_workflow_steps";
+import { buildCopilotWelcomeResult, COPILOT_WELCOME_MARKER } from '../policies/copilot_interaction_policy';
 
 export interface IssueWorkflowPorts {
   recommendStepsUseCase: ParamUseCase<Execution, Result[]>;
@@ -62,9 +63,26 @@ export async function runIssueWorkflow(
 
   const recommendation = resolveIssueRecommendation(param, ports);
   if (recommendation) {
-    results.push(...(await recommendation.invoke(param)));
+    const recommendationResults = await recommendation.invoke(param);
+    results.push(...recommendationResults);
+    if (isNewIssue(param) && !containsWelcome(recommendationResults)) {
+      results.push(buildCopilotWelcomeResult(param.tokenUser));
+    }
+  } else if (isNewIssue(param)) {
+    results.push(buildCopilotWelcomeResult(param.tokenUser));
   }
   return results;
+}
+
+function containsWelcome(results: readonly Result[]): boolean {
+  return results.some((result) =>
+    result.steps.some((step) => step.includes(COPILOT_WELCOME_MARKER))
+    || getResultPayload(result.payload)?.welcomePublished === true,
+  );
+}
+
+function isNewIssue(param: Execution): boolean {
+  return param.eventName === 'issues' && param.inputs?.action === 'opened';
 }
 
 function resolveIssueRecommendation(

@@ -16,6 +16,7 @@ This page describes the **internal flow** of Bugbot: how detection runs, how the
 | **Push** to branch (or run `detect_potential_problems_action`) | Detection: load context → configured agent (findings + resolved ids) → filter → mark resolved → publish | New/updated comments on issue and PR; resolved threads on PR. |
 | **Comment** “fix it” / “fix all” (with permission) | Intent (analysis role) → Autofix (execution role) → verify commands → commit & push → mark findings resolved | Code change on branch; those findings marked resolved. |
 | **Comment** “add a test for X” (with permission) | Intent (analysis role) → Do user request (execution role) → verify commands → commit & push | Code change on branch. |
+| **Comment** “analyze this PR for vulnerabilities” | Review (analysis/detection role) | Read-only findings; no file changes. |
 | **Comment** without permission or not a fix/do request | Think (analysis role) | Answer in comment; no file changes. |
 
 ---
@@ -47,7 +48,7 @@ This page describes the **internal flow** of Bugbot: how detection runs, how the
 
 ---
 
-## Fix intent and file-modifying actions (comment on issue or PR)
+## Comment intent and file-modifying actions (comment on issue or PR)
 
 When you post a comment on an **issue** or **pull request** (or reply in a PR review thread), the action runs **intent detection** before doing anything that modifies files.
 
@@ -58,8 +59,9 @@ When you post a comment on an **issue** or **pull request** (or reply in a PR re
    - **is_fix_request:** whether you are asking to fix one or more findings.
    - **target_finding_ids:** which finding ids to fix (if any).
    - **is_do_request:** whether you are asking for a general code change (not tied to findings).
+   - **is_review_request:** whether you are asking for a read-only review or vulnerability analysis.
 
-2. **Permission check:** The action checks if the **comment author** is allowed to modify files: **organization member** (for org repos) or **repository owner** (for user repos). If not, it does **not** run autofix or do-user-request; it can still run **Think** to answer.
+2. **Permission check:** The action checks if the **comment author** is allowed to modify files: **organization member** (for org repos), or **repository owner / collaborator with `push`, `maintain`, or `admin` permission** (for personal repos). If not, it does **not** run autofix or do-user-request; it can still run **Think** or a read-only review.
 
 3. **Branch resolution (issue comment only):** On **issue_comment**, the action needs a **branch** to checkout and push to. It looks up an **open PR** that references the issue and uses that PR’s **head branch**. If there is no such PR, autofix and do-user-request are skipped.
 
@@ -75,7 +77,9 @@ When you post a comment on an **issue** or **pull request** (or reply in a PR re
    - Call the configured execution role; it applies the changes.
    - Same **verify** and **commit/push** flow, with message `chore(#N): apply user request` or `chore: apply user request`.
 
-6. **Think (when no file-modifying action ran):** If the comment was not a fix/do request or the user was not allowed, the action runs **Think** (analysis role) and posts an **answer** as a comment (e.g. explanation or suggestion), without editing files.
+6. **Review:** If the bot is mentioned and intent detection classifies the request as a review, the action runs the read-only Bugbot detection flow. It never edits files or commits.
+
+7. **Think (when no file-modifying action ran):** If the comment was not a fix/do/review request or the user was not allowed, the action runs **Think** (analysis role) and posts an **answer** as a comment (e.g. explanation or suggestion), without editing files.
 
 ---
 

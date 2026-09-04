@@ -8,7 +8,7 @@ description: Minimum permissions and authorization rules for detection, autofix,
 | --- | --- | --- |
 | Detection and issue comments | `issues: write` | Workflow policy |
 | PR review comments | `pull-requests: write` | Workflow policy |
-| Autofix commit/push | `contents: write` | Organization member or repository owner |
-| User-request changes | `contents: write` | Organization member or repository owner |
+| Autofix commit/push | `contents: write` | Organization member; or repository owner / `push`, `maintain`, or `admin` collaborator in personal repositories |
+| User-request changes | `contents: write` | Organization member; or repository owner / `push`, `maintain`, or `admin` collaborator in personal repositories |
 
 Detection SHOULD run read-only where possible. Write permissions MUST be granted only to the event-specific job that needs them. See [Trust boundaries](/security-operations/security/trust-boundaries).

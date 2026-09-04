@@ -1,6 +1,8 @@
+import { githubUsersMatch } from '../../domain/github_user_policy';
+
 export type ModificationAuthorization =
-    | { kind: 'owner'; allowed: boolean }
-    | { kind: 'organization-membership'; organization: string; actor: string };
+    | { kind: 'organization-membership'; organization: string; actor: string }
+    | { kind: 'user-repository-collaborator'; owner: string; actor: string; ownerMatches: boolean };
 
 export function authorizationForFileModification(
     owner: string,
@@ -10,5 +12,10 @@ export function authorizationForFileModification(
     if (ownerType === 'Organization') {
         return { kind: 'organization-membership', organization: owner, actor };
     }
-    return { kind: 'owner', allowed: actor === owner };
+    return {
+        kind: 'user-repository-collaborator',
+        owner,
+        actor,
+        ownerMatches: githubUsersMatch(actor, owner),
+    };
 }

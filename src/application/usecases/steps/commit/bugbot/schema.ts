@@ -55,9 +55,9 @@ export const BUGBOT_RESPONSE_SCHEMA = {
 } as const;
 
 /**
- * Findings-agent response schema for bugbot fix intent.
+ * Findings-agent response schema for comment intent.
  * Given the user comment and the list of unresolved findings, the agent decides whether
- * the user is asking to fix one or more of them and which finding ids to target.
+ * the user is asking to fix findings, apply a general change, or run a read-only review.
  */
 export const BUGBOT_FIX_INTENT_RESPONSE_SCHEMA = {
     type: 'object',
@@ -78,7 +78,12 @@ export const BUGBOT_FIX_INTENT_RESPONSE_SCHEMA = {
             description:
                 'True if the user is asking to perform some change or task in the repository (e.g. "add a test for X", "refactor this", "implement feature Y"). False for pure questions or when the only intent is to fix the reported findings (use is_fix_request for that).',
         },
+        is_review_request: {
+            type: 'boolean',
+            description:
+                'True if the user is asking for a read-only analysis or review of the current issue, branch, or pull request (e.g. "analyze the changes for security issues", "review this PR for bugs"). False for pure questions or file-changing requests.',
+        },
     },
-    required: ['is_fix_request', 'target_finding_ids', 'is_do_request'],
+    required: ['is_fix_request', 'target_finding_ids', 'is_do_request', 'is_review_request'],
     additionalProperties: false,
 } as const;

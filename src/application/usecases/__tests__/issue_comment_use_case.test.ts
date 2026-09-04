@@ -537,6 +537,7 @@ describe("IssueCommentUseCase", () => {
     expect(mockIsActorAllowedToModifyFiles).toHaveBeenCalledTimes(1);
     expect(mockIsActorAllowedToModifyFiles).toHaveBeenCalledWith(
       "o",
+      "r",
       undefined,
       "t",
     );

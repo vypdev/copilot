@@ -47,8 +47,8 @@ Full documentation: **[docs.page/vypdev/copilot](https://docs.page/vypdev/copilo
 
 ## What it does
 
-- **Issues** — Branch creation from labels (feature, bugfix, hotfix, release, docs, chore), project linking, assignees, lifecycle/size/progress labels; optional Bugbot (AI) on the issue; from a comment you can plan, recheck, fix, or dismiss findings.
-- **Pull requests** — Link PRs to issues, update project columns, assign reviewers; optional AI-generated PR description and automatic Bugbot review with stable finding threads; from a PR review comment you can request a read-only recheck or an authorized autofix.
+- **Issues** — Branch creation from labels (feature, bugfix, hotfix, release, docs, chore), project linking, assignees, lifecycle/size/progress labels; new issues receive a contextual `@vypbot` welcome; from comments you can ask for help, explain/diagnose/analyze code, plan work, fix findings, or request an authorized implementation.
+- **Pull requests** — Link PRs to issues, update project columns, assign reviewers; optional AI-generated PR description and automatic Bugbot review with stable finding threads; use `/copilot analyze` or `@vypbot analyze ...` for read-only review, or request an authorized change.
 - **Push (commits)** — Notify the issue, update size/progress; optional Bugbot (detection) and prefix checks.
 - **Projects** — Link issues and PRs to boards and move them to the right columns.
 - **Single actions** — On-demand: check progress, think, create release/tag, mark deployed, etc.

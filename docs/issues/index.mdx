@@ -29,6 +29,9 @@ Copilot automates **issue tracking** so that labels, branch creation, project li
   <Card title="Examples" icon="file-code" href="/issues/examples">
     Full workflow YAML and label examples.
   </Card>
+  <Card title="Comment commands" icon="comment" href="/issues/comment-commands">
+    Ask @vypbot for help, analysis, diagnosis, plans, or authorized implementation from an issue or PR.
+  </Card>
 </CardGroup>
 
 ## Quick summary
@@ -72,6 +75,6 @@ Existing legacy labels such as `copilot:state:ready` are intentionally not migra
 
 ## Daily agent workflow
 
-Use explicit commands when you want a reproducible action from a comment: `/copilot plan`, `/copilot test-plan`, `/copilot review`, `/copilot findings`, or `/copilot recheck`. For a reported finding, use `/copilot fix FINDING-ID` or `/copilot dismiss FINDING-ID`. A repeated review reconciles the existing finding marker and updates the same publication instead of creating a second copy.
+Use [comment commands](/issues/comment-commands) when you want a reproducible action from an issue or PR. `/copilot help` shows the complete catalog. For a read-only analysis, use `/copilot analyze` (or `/copilot review`, `/copilot findings`, or `/copilot recheck`). For a reported finding, use `/copilot fix FINDING-ID` or `/copilot dismiss FINDING-ID`; for a general change, use `/copilot implement <request>`. You can also mention `@vypbot` and describe the request in natural language. A repeated review reconciles the existing finding marker and updates the same publication instead of creating a second copy.
 
 For **step-by-step flows** per issue type (branch naming, source branch, deploy), see the issue type pages: [Feature](/issues/type/feature), [Bugfix](/issues/type/bugfix), [Docs](/issues/type/docs), [Chore](/issues/type/chore), [Hotfix](/issues/type/hotfix), [Release](/issues/type/release).

@@ -146,6 +146,23 @@ describe('AnswerIssueHelpUseCase', () => {
     expect(results[0].executed).toBe(true);
   });
 
+  it('includes the bot welcome in the first answer for a newly opened issue', async () => {
+    mockAskAgent.mockResolvedValue({ answer: 'Here is some help.' });
+    mockAddComment.mockResolvedValue(undefined);
+    const param = baseParam({
+      tokenUser: 'vypbot',
+      eventName: 'issues',
+      inputs: { eventName: 'issues', action: 'opened' },
+    });
+
+    await useCase.invoke(param);
+
+    const publishedComment = mockAddComment.mock.calls[0][3] as string;
+    expect(publishedComment).toContain('<!-- copilot:welcome -->');
+    expect(publishedComment).toContain('Hi! I’m **@vypbot**');
+    expect(publishedComment).toContain('Here is some help.');
+  });
+
   it('returns failure when OpenCode returns no answer', async () => {
     mockAskAgent.mockResolvedValue(undefined);
     const param = baseParam();

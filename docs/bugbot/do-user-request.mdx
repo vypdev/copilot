@@ -5,7 +5,7 @@ description: Ask the bot to apply general code changes (tests, refactors, featur
 
 # Do user request
 
-Besides fixing **specific Bugbot findings**, you can ask the bot to perform **general code changes** in the repository: add tests, refactor a function, implement a small feature, update docs, etc. This is called **do user request**. The same permission and workflow setup as [Autofix](/bugbot/autofix) apply: only org members or the repo owner can trigger it, and the workflow must grant **`contents: write`**.
+Besides fixing **specific Bugbot findings**, you can ask the bot to perform **general code changes** in the repository: add tests, refactor a function, implement a small feature, update docs, etc. This is called **do user request**. Use `/copilot implement <request>` for an explicit command, or mention `@vypbot` and describe the request naturally. The same permission and workflow setup as [Autofix](/bugbot/autofix) apply: organization members can trigger it in organization repositories; in personal repositories the repository owner or a collaborator with `push`, `maintain`, or `admin` permission can trigger it. The workflow must grant **`contents: write`**.
 
 This page explains how to use it and how it differs from autofix.
 
@@ -17,6 +17,7 @@ When you comment on an **issue** or **pull request**, the action first runs **in
 
 - A **fix request** — “fix it”, “fix all”, etc. → [Autofix](/bugbot/autofix) runs (fix specific findings).
 - A **do request** — “add a test for X”, “refactor this”, “implement feature Y”, etc. → **Do user request** runs (general code change).
+- **Read-only review** — “analyze this PR for vulnerabilities” → the review flow runs (no file changes).
 - **Neither** — e.g. a question → **Think** runs (answer only, no file changes).
 
 So you don’t choose a “mode”; you just write what you want. If the agent classifies it as a do request and you have permission, the action runs the configured **execution role** with your request, then runs the same **verify commands** as for autofix and commits and pushes.
@@ -36,13 +37,21 @@ Write a **comment** on the issue or on the PR (or, for PRs, you can reply in a r
 - “add error handling for the API call”
 - “fix the typo in the docstring”
 
+Explicit form:
+
+```text
+/copilot implement add regression tests for the null response case
+```
+
+The `implement` command is useful when you want an auditable, unambiguous request. General requests are now classified even when the issue has no previously reported Bugbot findings.
+
 You can be brief or detailed. The configured execution role will apply the changes in its workspace; the action then runs **verify commands** (from `bugbot-fix-verify-commands`) and, if they pass, commits and pushes.
 
 ---
 
 ## Permissions and workflow
 
-- **Who can trigger:** Same as [Autofix](/bugbot/autofix): **organization members** (for org repos) or the **repository owner** (for user repos). Others get a Think response only.
+- **Who can trigger:** Organization members for organization repositories. For personal repositories, the repository owner or a collaborator with `push`, `maintain`, or `admin` permission. Others get a Think response only.
 - **Workflow:** The workflow that runs on `issue_comment` or `pull_request_review_comment` must grant **`contents: write`** so the action can push.
 - **Branch:** On **issue comment**, the action resolves the branch from an open PR that references the issue (same as autofix). On **PR comment** or **PR review comment**, it uses the PR’s head branch.
 
@@ -70,9 +79,9 @@ Do user request uses the **same** verify commands as autofix: **`bugbot-fix-veri
 | Use case | What to do |
 |----------|------------|
 | Fix one or more **reported Bugbot findings** | Comment “fix it”, “fix all”, or refer to specific findings → **Autofix**. |
-| Ask for a **general change** (test, refactor, feature, docs) | Comment with the request in natural language → **Do user request**. |
+| Ask for a **general change** (test, refactor, feature, docs) | Comment with the request in natural language or use `/copilot implement <request>` → **Do user request**. |
 
-Intent is inferred by the configured analysis role from the comment text and the list of unresolved findings; you don’t need to tag or label the comment.
+Intent is inferred by the configured analysis role from the comment text and the list of unresolved findings; you don’t need to tag or label the comment. A natural-language request must mention the configured bot user (`@vypbot` by default) to invoke the agent. Explicit commands do not require a mention.
 
 ---
 

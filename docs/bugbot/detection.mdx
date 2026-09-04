@@ -32,10 +32,13 @@ If the branch is not linked to an issue (e.g. `issueNumber === -1`), detection i
 
 ### 3. On demand (comment, single action, or CLI)
 
-From an issue or pull-request comment, `/copilot review`, `/copilot findings`,
-or `/copilot recheck` starts the read-only detection flow immediately. On an
-issue comment, Copilot resolves the branch from the open PR linked to the
-issue. These commands do not invoke autofix and do not modify files.
+From an issue or pull-request comment, `/copilot analyze`, `/copilot review`,
+`/copilot findings`, or `/copilot recheck` starts the read-only detection flow
+immediately. You can also write a natural-language request such as
+`@vypbot review this PR for authentication vulnerabilities`; the bot mention
+is matched case-insensitively and the request is routed to the same review
+flow. On an issue comment, Copilot resolves the branch from the open PR linked
+to the issue. These commands do not invoke autofix and do not modify files.
 
 You can run Bugbot detection **without pushing**:
 

@@ -1,0 +1,74 @@
+---
+title: Comment commands
+description: Use @vypbot from issues and pull requests for help, analysis, planning, and authorized implementation.
+---
+
+# Comment commands
+
+Copilot can act as a project assistant directly from an issue or pull-request comment. With the default workflow PAT, the bot user is `@vypbot`; if your installation uses another account, replace that mention with the configured PAT user.
+
+## Fast start
+
+Comment this on an issue or PR:
+
+```text
+@vypbot analyze this change for security and reliability risks
+```
+
+This starts a read-only analysis when the mention matches the bot account. It does not edit files, commit, or push. You can write the request in English, Spanish, or another language supported by the configured locale/agent flow.
+
+## Explicit commands
+
+Commands are recognized at the beginning of a comment, case-insensitively. They are deterministic and easier to audit in automation logs.
+
+| Command | Purpose | Writes files? |
+| --- | --- | --- |
+| `/copilot help` | Show this command reference. | No |
+| `/copilot plan` | Propose an implementation plan. | No |
+| `/copilot clarify` | Identify missing information and questions. | No |
+| `/copilot estimate` | Estimate implementation effort. | No |
+| `/copilot test-plan` | Propose a test strategy. | No |
+| `/copilot explain` | Explain the relevant code or behavior. | No |
+| `/copilot diagnose` | Investigate a reported error or failure. | No |
+| `/copilot analyze` | Run a fresh Bugbot-style review for potential problems, including security risks. | No |
+| `/copilot review` | Run the read-only review flow. | No |
+| `/copilot findings` | Reconcile and publish current findings. | No |
+| `/copilot recheck` | Re-run the review against the current branch. | No |
+| `/copilot status` | Show the current Copilot status. | No |
+| `/copilot description` | Refresh the PR description when that action is configured. | No |
+| `/copilot fix <finding-id>` | Fix one or more existing Bugbot findings. | Yes, if authorized |
+| `/copilot dismiss <finding-id>` | Dismiss one or more findings. | No file changes |
+| `/copilot implement <request>` | Apply a general code, test, refactoring, or documentation request. | Yes, if authorized |
+
+`/copilot fix`, `/copilot dismiss`, and `/copilot implement` require arguments. The bot never treats a missing argument as permission to make a broad change.
+
+## Natural-language requests
+
+Mention the bot and describe the outcome you want:
+
+```text
+@vypbot explain why this test is flaky
+@vypbot diagnose the 500 error described above
+@vypbot review the PR for authentication and injection vulnerabilities
+@vypbot add regression tests for the null response case
+```
+
+The first three are read-only requests. The last one may be classified as a general implementation request. Natural-language file changes require an authorized actor and an available branch; the action runs the configured verification commands before committing and pushing.
+
+## Authorization and safety
+
+- Read-only commands and answers can be requested by any participant who can comment.
+- File-modifying requests require the comment author to be an organization member for organization-owned repositories.
+- In personal repositories, the author must be the repository owner or a collaborator with `push`, `maintain`, or `admin` permission.
+- `/copilot dismiss` does not edit files, but it changes finding state and therefore uses the same authorization guard.
+- An issue comment that changes files also needs an open PR referencing the issue so the action has a branch to update. PR comments use the PR head branch.
+- The workflow must grant `contents: write` for file-modifying actions. Verification failures prevent the commit.
+- Bot mentions are matched case-insensitively and with username boundaries, so `@vypbot-extra` does not accidentally trigger `@vypbot`.
+
+## New-issue welcome
+
+When a new issue is opened, Copilot adds one contextual welcome message. For question/help issues it is combined with the initial answer; for other issue types it is combined with the recommendation when available. If no recommendation can run, the static welcome still explains how to use `/copilot help` and `@vypbot`.
+
+The welcome contains a hidden marker so later workflow changes can recognize it without relying on the visible wording.
+
+See [Bugbot detection](/bugbot/detection), [Autofix](/bugbot/autofix), and [Do user request](/bugbot/do-user-request) for the execution details.

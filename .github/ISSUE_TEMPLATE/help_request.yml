@@ -17,6 +17,11 @@ body:
       value: |
         ---
 
+  - type: markdown
+    attributes:
+      value: |
+        **Copilot assistance:** After opening this issue, mention `@vypbot` in a comment to ask for an explanation, diagnosis, or read-only code/security analysis. Use `/copilot help` to see all available commands.
+
   - type: dropdown
     id: help_area
     attributes:

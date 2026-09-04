@@ -6,15 +6,18 @@ import type { GithubActorAuthorizationClient } from "../../../infrastructure/git
 
 export class ActorAuthorizationRepository implements ActorAuthorizationPort {
     constructor(private readonly githubClient: GithubClientPort<GithubActorAuthorizationClient>) {}
-    isActorAllowedToModifyFiles = async (owner: string, actor: string, token: string): Promise<boolean> => {
+    isActorAllowedToModifyFiles = async (owner: string, repo: string, actor: string, token: string): Promise<boolean> => {
         try {
             const octokit = this.githubClient.getClient(token);
             const { data: ownerUser } = await octokit.rest.users.getByUsername({ username: owner });
             const authorization = authorizationForFileModification(owner, actor, ownerUser.type);
-            if (authorization.kind === 'owner') return authorization.allowed;
-            return this.checkOrganizationMembership(octokit, authorization.organization, authorization.actor, owner, actor);
+            if (authorization.kind === 'organization-membership') {
+                return this.checkOrganizationMembership(octokit, authorization.organization, authorization.actor, owner, actor);
+            }
+            if (authorization.ownerMatches) return true;
+            return this.checkUserRepositoryPermission(octokit, owner, actor, repo);
         } catch (err) {
-            logDebugInfo(`isActorAllowedToModifyFiles(${owner}, ${actor}): ${err instanceof Error ? err.message : String(err)}`);
+            logDebugInfo(`isActorAllowedToModifyFiles(${owner}, ${repo}, ${actor}): ${err instanceof Error ? err.message : String(err)}`);
             return false;
         }
     };
@@ -30,10 +33,38 @@ export class ActorAuthorizationRepository implements ActorAuthorizationPort {
             await octokit.rest.orgs.checkMembershipForUser({ org: organization, username: actor });
             return true;
         } catch (membershipErr: unknown) {
-            const status = (membershipErr as { status?: number })?.status;
-            if (status === 404) return false;
-            logDebugInfo(`checkMembershipForUser(${owner}, ${originalActor}): ${membershipErr instanceof Error ? membershipErr.message : String(membershipErr)}`);
+            logUnlessNotFound(
+                membershipErr,
+                `checkMembershipForUser(${owner}, ${originalActor})`,
+            );
             return false;
         }
     }
+
+    private async checkUserRepositoryPermission(
+        octokit: GithubActorAuthorizationClient,
+        owner: string,
+        actor: string,
+        repo: string,
+    ): Promise<boolean> {
+        try {
+            const response = await octokit.rest.repos.getCollaboratorPermissionLevel({
+                owner,
+                repo,
+                username: actor,
+            });
+            return ['admin', 'maintain', 'push'].includes(response.data.permission ?? '');
+        } catch (permissionErr: unknown) {
+            logUnlessNotFound(
+                permissionErr,
+                `getCollaboratorPermissionLevel(${owner}, ${repo}, ${actor})`,
+            );
+            return false;
+        }
+    }
+}
+
+function logUnlessNotFound(error: unknown, operation: string): void {
+    if ((error as { status?: number })?.status === 404) return;
+    logDebugInfo(`${operation}: ${error instanceof Error ? error.message : String(error)}`);
 }

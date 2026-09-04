@@ -5,6 +5,8 @@ export interface BugbotFixIntent {
     isFixRequest: boolean;
     isDoRequest: boolean;
     targetFindingIds: string[];
+    isReviewRequest?: boolean;
+    requestText?: string;
 }
 
 export interface BugbotCommentSources {
@@ -53,6 +55,7 @@ export function parseBugbotFixIntentResponse(
     const payload = response as Record<string, unknown>;
     const isFixRequest = payload.is_fix_request === true;
     const isDoRequest = payload.is_do_request === true;
+    const isReviewRequest = payload.is_review_request === true;
     const requestedIds = Array.isArray(payload.target_finding_ids)
         ? payload.target_finding_ids.filter((id): id is string => typeof id === "string")
         : [];
@@ -61,7 +64,7 @@ export function parseBugbotFixIntentResponse(
         ? unique(requestedIds.filter((id) => unresolvedFindingIds.has(id)))
         : [];
 
-    return { isFixRequest, isDoRequest, targetFindingIds };
+    return { isFixRequest, isDoRequest, targetFindingIds, isReviewRequest };
 }
 
 function unique(values: readonly string[]): string[] {

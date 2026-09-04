@@ -14,6 +14,8 @@ The setup PAT and workflow PAT may have different owners and permissions. Do not
 
 <Warning>**When the event actor is the same as the token user**: The action detects this before entering the workflow queue. It completes successfully without waiting or running the normal issue/PR/push pipeline. A valid explicit single action still runs. This avoids the bot reacting to its own actions. Use a dedicated bot account (different from the actor) if you want full pipeline behavior on every event.</Warning>
 
+For comment-driven assistance, read-only commands are available to anyone who can comment. File-modifying commands are restricted to organization members in organization repositories. In personal repositories, the repository owner or a collaborator with `push`, `maintain`, or `admin` permission may request changes. The workflow PAT still needs the relevant `contents: write` permission, and issue comments need an open PR to provide a branch for the change.
+
 <Steps>
   <Step title="Who is the bot?">
     Choose which account will be used to create your PAT. This account will act as your bot.

@@ -143,6 +143,6 @@ Invoked when:
 
 ## 8. Flow dependencies
 
-- **Bugbot autofix / Do user request**: require OpenCode, `isActorAllowedToModifyFiles` (org member or repo owner), and on issue_comment optionally branch from PR (`getHeadBranchForIssue`).
+- **Bugbot autofix / Do user request**: require OpenCode for natural-language intent, an explicit `@vypbot` mention for natural-language file changes, `isActorAllowedToModifyFiles` (org member, or repo owner / write collaborator for personal repos), and on issue_comment a branch from an open PR (`getHeadBranchForIssue`). Explicit `/copilot fix` and `/copilot implement` commands are deterministic and auditable.
 - **Think**: used in IssueComment and PullRequestReviewComment when neither autofix nor do user request runs (by intent or by permission).
 - **CommitUseCase**: NotifyNewCommitOnIssue, CheckChangesIssueSize, CheckProgress, DetectPotentialProblems (bugbot) always run in that order on every push with commits.

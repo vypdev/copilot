@@ -1,6 +1,6 @@
 import type { Execution } from '../../../../data/model/execution';
 import { parseCopilotCommand, type ParsedCopilotCommand } from '../../../../domain/copilot_command';
-import { extractMentionQuestion, getThinkCommentBody } from './think_input_policy';
+import { containsBotMention, extractMentionQuestion, getThinkCommentBody } from './think_input_policy';
 import { sanitizeUserCommentForPrompt } from '../commit/bugbot/sanitize_user_comment_for_prompt';
 
 export type ThinkRequestDecision =
@@ -30,7 +30,7 @@ export function resolveThinkRequest(
     if (command.kind === 'invalid') return { kind: 'skip', reason: 'invalid-command', detail: command.reason };
     if (command.kind === 'none') {
         if (!param.tokenUser?.trim()) return { kind: 'skip', reason: 'missing-token' };
-        if (!commentBody.includes(`@${param.tokenUser}`)) return { kind: 'skip', reason: 'not-mentioned' };
+        if (!containsBotMention(commentBody, param.tokenUser)) return { kind: 'skip', reason: 'not-mentioned' };
     }
 
     const question = command.kind === 'command'
