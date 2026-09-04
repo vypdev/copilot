@@ -7,7 +7,24 @@ description: Run single actions from GitHub Actions workflows and from the Copil
 
 You can run single actions in two ways: from a **GitHub Actions workflow** (for example, a scheduled job or manual trigger) or from the **`copilot` CLI** locally.
 
-## From a GitHub Actions workflow
+## Recommended: initialize with the CLI
+
+For a new repository, install the published package globally with `pnpm` and let
+`copilot setup` initialize the repository. This is the supported onboarding path:
+
+```bash
+pnpm add --global @vypdev/copilot
+copilot --version
+cd /path/to/your/repository
+copilot setup
+```
+
+The wizard copies the selected workflows and templates, creates the required
+labels and issue types, and configures the Variables and Secrets required by the
+selected features. Use `copilot setup --dry-run` to review the plan first. See
+[How to use](/how-to-use) for the setup PAT, workflow PAT, and scope details.
+
+## Manual: run the Action from a GitHub Actions workflow
 
 Add a job that sets `single-action` and any required inputs (`single-action-issue`, `single-action-version`, etc.):
 
@@ -28,16 +45,19 @@ Use `workflow_dispatch` to run on demand, or trigger the workflow from another e
 
 ## Install or update the CLI
 
-The published package is `@vypdev/copilot` and exposes one global executable: **`copilot`**. Install it from npm, then run repository-dependent commands from the target repository.
+The published package is `@vypdev/copilot` and exposes one global executable:
+**`copilot`**. Install it with pnpm, then run repository-dependent commands from
+the target repository.
 
 ### Install the published package
 
 ```bash
-npm install --global @vypdev/copilot
+pnpm add --global @vypdev/copilot
 copilot --version
 ```
 
-The package requires Node.js 24 or newer. The npm scope does not change the executable name: the command remains `copilot`.
+The package requires Node.js 24 or newer. The npm scope does not change the
+executable name: the command remains `copilot`.
 
 ### Install from a checkout
 
@@ -57,7 +77,7 @@ corepack pnpm run build
 corepack pnpm install . --global --force
 ```
 
-### Update an npm installation
+### Update the global pnpm installation
 
 Update to the latest published version with:
 
@@ -66,7 +86,11 @@ copilot upgrade
 copilot --version
 ```
 
-Run `copilot upgrade` from any directory. It updates the published npm installation and does not require a target repository or GitHub token. If the installed version does not include this command, run `npm install --global @vypdev/copilot@latest` once and then use `copilot upgrade`.
+Run `copilot upgrade` from any directory. It updates the published pnpm
+installation and does not require a target repository or GitHub token. If the
+installed version does not include this command, run
+`pnpm add --global @vypdev/copilot@latest` once. You can also update it directly
+with `pnpm update --global @vypdev/copilot`.
 
 Normal Copilot CLI commands also perform a lightweight update check against npm. It is informational only: the result is cached locally for 24 hours, the network request has a short timeout, and failures are ignored so the command continues normally. When a newer release is found, the CLI prints `A new version (x.y.z) is available. Run "copilot upgrade".` The check is skipped for `copilot upgrade`, `--version`, and help. Set `COPILOT_DISABLE_UPDATE_CHECK=1` to opt out.
 
@@ -75,7 +99,7 @@ Verify the installed package and executable:
 ```bash
 command -v copilot
 copilot --version
-npm list --global --depth 0 @vypdev/copilot
+pnpm list --global --depth 0 @vypdev/copilot
 ```
 
 ### Reinstall or update from a checkout
@@ -97,9 +121,11 @@ copilot --version
 corepack pnpm list --global --depth 0 @vypdev/copilot
 ```
 
-If the command is not found after installation, configure the npm or pnpm global bin directory in your shell's `PATH` and open a new shell.
+If the command is not found after installation, configure pnpm's global bin
+directory in your shell's `PATH` and open a new shell.
 
-For an npm installation, `npm prefix --global` shows the npm global prefix; on macOS and Linux, the executable directory is normally its `bin` subdirectory. For a checkout installation, use the equivalent global bin directory reported by pnpm.
+Run `pnpm bin --global` or consult `pnpm setup` to locate the global executable
+directory when configuring `PATH`.
 
 ## Local CLI prerequisites
 

@@ -76381,6 +76381,18 @@ function normalizeOrigin(origin) {
 
 /***/ }),
 
+/***/ 76182:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.COPILOT_PACKAGE_NAME = void 0;
+exports.COPILOT_PACKAGE_NAME = '@vypdev/copilot';
+
+
+/***/ }),
+
 /***/ 62007:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -76392,8 +76404,8 @@ exports.resolveUpdateCheckCachePath = resolveUpdateCheckCachePath;
 const node_fs_1 = __nccwpck_require__(87561);
 const node_os_1 = __nccwpck_require__(70612);
 const node_path_1 = __nccwpck_require__(49411);
-const npm_cli_upgrade_adapter_1 = __nccwpck_require__(97258);
-exports.NPM_REGISTRY_URL = `https://registry.npmjs.org/${encodeURIComponent(npm_cli_upgrade_adapter_1.COPILOT_PACKAGE_NAME)}`;
+const copilot_package_1 = __nccwpck_require__(76182);
+exports.NPM_REGISTRY_URL = `https://registry.npmjs.org/${encodeURIComponent(copilot_package_1.COPILOT_PACKAGE_NAME)}`;
 exports.UPDATE_CHECK_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 exports.UPDATE_CHECK_TIMEOUT_MS = 1500;
 function resolveUpdateCheckCachePath(platform = process.platform, environment = process.env, homeDirectory = (0, node_os_1.homedir)()) {
@@ -76495,24 +76507,24 @@ exports.NpmCliUpdateCheckAdapter = NpmCliUpdateCheckAdapter;
 
 /***/ }),
 
-/***/ 97258:
+/***/ 64975:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.NpmCliUpgradeAdapter = exports.COPILOT_PACKAGE_NAME = void 0;
-exports.resolveNpmExecutable = resolveNpmExecutable;
+exports.PnpmCliUpgradeAdapter = void 0;
+exports.resolvePnpmExecutable = resolvePnpmExecutable;
 const node_child_process_1 = __nccwpck_require__(17718);
-exports.COPILOT_PACKAGE_NAME = '@vypdev/copilot';
-function resolveNpmExecutable(platform = process.platform) {
-    return platform === 'win32' ? 'npm.cmd' : 'npm';
+const copilot_package_1 = __nccwpck_require__(76182);
+function resolvePnpmExecutable(platform = process.platform) {
+    return platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 }
-/** Executes the npm installation without invoking a shell or interpolating user input. */
-class NpmCliUpgradeAdapter {
+/** Executes the pnpm installation without invoking a shell or interpolating user input. */
+class PnpmCliUpgradeAdapter {
     upgrade() {
-        const executable = resolveNpmExecutable();
-        const args = ['install', '--global', `${exports.COPILOT_PACKAGE_NAME}@latest`];
+        const executable = resolvePnpmExecutable();
+        const args = ['add', '--global', `${copilot_package_1.COPILOT_PACKAGE_NAME}@latest`];
         return new Promise((resolve, reject) => {
             const child = (0, node_child_process_1.spawn)(executable, args, {
                 shell: false,
@@ -76526,7 +76538,7 @@ class NpmCliUpgradeAdapter {
                 reject(error);
             };
             child.once('error', (error) => {
-                fail(new Error(`Unable to start npm upgrade: ${error.message}`));
+                fail(new Error(`Unable to start pnpm upgrade: ${error.message}`));
             });
             child.once('close', (code, signal) => {
                 if (settled)
@@ -76537,12 +76549,12 @@ class NpmCliUpgradeAdapter {
                     return;
                 }
                 const status = signal ? `signal ${signal}` : `exit code ${code ?? 'unknown'}`;
-                reject(new Error(`npm upgrade failed with ${status}.`));
+                reject(new Error(`pnpm upgrade failed with ${status}.`));
             });
         });
     }
 }
-exports.NpmCliUpgradeAdapter = NpmCliUpgradeAdapter;
+exports.PnpmCliUpgradeAdapter = PnpmCliUpgradeAdapter;
 
 
 /***/ }),
@@ -76714,8 +76726,8 @@ function createCliUpdateCheckUseCase() {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createUpgradeCliUseCase = createUpgradeCliUseCase;
 const upgrade_cli_use_case_1 = __nccwpck_require__(45762);
-const npm_cli_upgrade_adapter_1 = __nccwpck_require__(97258);
-function createUpgradeCliUseCase(cliUpgradePort = new npm_cli_upgrade_adapter_1.NpmCliUpgradeAdapter()) {
+const pnpm_cli_upgrade_adapter_1 = __nccwpck_require__(64975);
+function createUpgradeCliUseCase(cliUpgradePort = new pnpm_cli_upgrade_adapter_1.PnpmCliUpgradeAdapter()) {
     return new upgrade_cli_use_case_1.UpgradeCliUseCase(cliUpgradePort);
 }
 

@@ -2,7 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { CliUpdateCheckPort } from '../../application/ports/cli_update_check_ports';
-import { COPILOT_PACKAGE_NAME } from './npm_cli_upgrade_adapter';
+import { COPILOT_PACKAGE_NAME } from './copilot_package';
 
 export const NPM_REGISTRY_URL = `https://registry.npmjs.org/${encodeURIComponent(COPILOT_PACKAGE_NAME)}`;
 export const UPDATE_CHECK_CACHE_TTL_MS = 24 * 60 * 60 * 1000;

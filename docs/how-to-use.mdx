@@ -3,12 +3,14 @@ title: How To Use
 description: Quick setup with copilot setup, then customize labels, templates, and workflows.
 ---
 
-## Quick installation (CLI)
+## Recommended installation and initialization
 
-The recommended installation is the public npm package. The package is scoped as `@vypdev/copilot`, but it exposes the global `copilot` executable:
+The recommended path is to install the published package globally with `pnpm` and
+then initialize the target repository with `copilot setup`. The package is scoped
+as `@vypdev/copilot`, but it exposes the global `copilot` executable:
 
 ```bash
-npm install --global @vypdev/copilot
+pnpm add --global @vypdev/copilot
 copilot --version
 ```
 
@@ -34,11 +36,13 @@ If the checkout does not include the compiled `build/` folder (e.g. it is gitign
 
 Once installed, the `copilot` command is available globally. Repository-dependent commands such as `copilot setup`, `copilot doctor`, `copilot check-progress`, `copilot think`, and `copilot do` must be run **from the root of the target repository**. The `copilot upgrade`, `copilot --version`, and help flows can run from any directory. Commands that access GitHub accept `--token` or `PERSONAL_ACCESS_TOKEN` from the environment. `copilot setup` and `copilot doctor` securely prompt for the setup PAT when run interactively; no `.env` file is read or created. `copilot setup --dry-run` is the only setup mode that can run without a token. See [CLI commands](/single-actions/workflow-and-cli).
 
-If you previously installed Copilot from a local checkout, installing the npm package switches the same `copilot` command to the published package. Check which executable and package are active:
+If you previously installed Copilot from a local checkout, installing the published
+package with pnpm switches the same `copilot` command to the published package.
+Check which executable and package are active:
 
 ```bash
 command -v copilot
-npm list --global --depth 0 @vypdev/copilot
+pnpm list --global --depth 0 @vypdev/copilot
 copilot --version
 ```
 
@@ -54,14 +58,19 @@ corepack pnpm remove --global copilot
 
 ### Update or reinstall the global CLI
 
-For a published release, update the global npm package:
+For a published release, update the global pnpm package:
 
 ```bash
 copilot upgrade
 copilot --version
 ```
 
-`copilot upgrade` can be run from any directory; it updates the published npm installation and does not require a GitHub repository or `PERSONAL_ACCESS_TOKEN`. If the installed version does not include the `upgrade` command, bootstrap it once with `npm install --global @vypdev/copilot@latest`, then use `copilot upgrade` for future updates.
+`copilot upgrade` can be run from any directory; it updates the published pnpm
+installation and does not require a GitHub repository or `PERSONAL_ACCESS_TOKEN`.
+If the installed version does not include the `upgrade` command, bootstrap it once
+with `pnpm add --global @vypdev/copilot@latest`, then use `copilot upgrade` for
+future updates. Running `pnpm update --global @vypdev/copilot` directly is also
+supported.
 
 Before running a normal CLI command, Copilot performs a lightweight, informational check for a newer published version. The check uses a local 24-hour cache, has a short timeout, never blocks or changes the command result, and stays silent when npm is unavailable. If an update is found, Copilot prints `A new version (x.y.z) is available. Run "copilot upgrade".` The `upgrade`, `--version`, and help flows do not trigger this check. To disable it, set `COPILOT_DISABLE_UPDATE_CHECK=1`.
 
@@ -73,18 +82,12 @@ git pull --ff-only origin master
 corepack pnpm install . --global --force
 ```
 
-After an npm installation, confirm the executable and installed package:
+After installation, confirm the executable and installed package:
 
 ```bash
 command -v copilot
 copilot --help
 copilot --version
-npm list --global --depth 0 @vypdev/copilot
-```
-
-If you installed from a checkout with pnpm, use this package listing instead:
-
-```bash
 corepack pnpm list --global --depth 0 @vypdev/copilot
 ```
 
@@ -92,7 +95,7 @@ The complete command reference, including every supported option, is in [Workflo
 
 ---
 
-## Tutorial: Get Copilot running in three steps
+## Tutorial: Initialize a repository
 
 <Steps>
   <Step title="1. Create a PAT">
@@ -152,9 +155,42 @@ The complete command reference, including every supported option, is in [Workflo
 
 ---
 
+## Manual workflow integration (advanced)
+
+The Action can also be wired manually from a GitHub Actions workflow. This is a
+lower-level integration path for repositories that cannot run the setup wizard;
+it is not equivalent to the recommended `copilot setup` flow.
+
+1. Copy only the workflow files you need from the installed package's `setup/workflows/`
+   directory into `.github/workflows/`.
+2. Ensure every Copilot step uses a stable Action reference such as
+   `vypdev/copilot@v3` and passes a write-capable `token` where required.
+3. Configure the labels, issue types, Variables, Secrets, templates, permissions,
+   and workflow dependencies yourself.
+
+For example:
+
+```yaml
+- uses: vypdev/copilot@v3
+  with:
+    token: ${{ secrets.PAT }}
+```
+
+Manual workflow installation only adds execution wiring. It does not initialize
+the repository metadata or install the complete set of Copilot workflows. Prefer
+`copilot setup` unless this manual control is intentional. See [Workflow setup](/issues/workflow-setup)
+for the action-level contract.
+
+---
+
 ## What lives in `setup/` (and what gets created)
 
-The workflow and template files under `setup/` are copied into your repo by `copilot setup`. Credentials are never shipped in the package or written to local configuration files. Below is a breakdown of labels (with defaults), issue types, and the contents of `setup/` so you know what you can customize and what must stay consistent.
+The workflow and template files under `setup/` are copied into your repo by
+`copilot setup`. Manual copying is supported as an advanced integration path, but
+it does not perform the rest of initialization. Credentials are never shipped in
+the package or written to local configuration files. Below is a breakdown of
+labels (with defaults), issue types, and the contents of `setup/` so you know what
+you can customize and what must stay consistent.
 
 ### Coherence when customizing
 

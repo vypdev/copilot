@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { registerUpgradeCommand, runUpgradeCommand } from '../upgrade';
 
 describe('upgrade command adapter', () => {
-    it('registers the upgrade command with npm-specific help', () => {
+    it('registers the upgrade command with package-specific help', () => {
         const program = new Command();
         registerUpgradeCommand(program);
 
@@ -24,7 +24,7 @@ describe('upgrade command adapter', () => {
     });
 
     it('sets a failure exit code when the upgrade fails', async () => {
-        const runner = { execute: jest.fn().mockRejectedValue(new Error('npm failed')) };
+        const runner = { execute: jest.fn().mockRejectedValue(new Error('pnpm failed')) };
         const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
         const previousExitCode = process.exitCode;
         process.exitCode = undefined;
@@ -32,7 +32,7 @@ describe('upgrade command adapter', () => {
         await runUpgradeCommand(runner);
 
         expect(process.exitCode).toBe(1);
-        expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('npm failed'));
+        expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining('pnpm failed'));
         process.exitCode = previousExitCode;
         errorSpy.mockRestore();
     });
