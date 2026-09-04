@@ -28,7 +28,8 @@ const mockGetReleaseVersionInvoke = jest.fn();
 const mockGetReleaseTypeInvoke = jest.fn();
 const mockGetHotfixVersionInvoke = jest.fn();
 
-import { ACTIONS, INPUT_KEYS } from '../../../utils/constants';
+import { ACTIONS } from '../action_types';
+import { INPUT_KEYS } from '../../../application/contracts/input_keys';
 import { Ai } from '../ai';
 import { Branches } from '../branches';
 import { Emoji } from '../emoji';

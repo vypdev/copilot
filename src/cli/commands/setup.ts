@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { runLocalAction } from '../../actions/local_action';
-import { TITLE } from '../../utils/constants';
+import { TITLE } from '../../application/contracts/product_identity';
 import { getSetupToken } from '../../utils/setup_files';
 import { logError, logInfo } from '../../utils/logger';
 import { getGitInfo, isInsideGitRepo } from '../../cli_context';

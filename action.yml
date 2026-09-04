@@ -20,6 +20,9 @@ inputs:
   single-action-changelog:
     description: "Changelog target for executing single action."
     default: ""
+  inactivity-threshold-hours:
+    description: "Hours without issue activity before the scheduled inactivity action closes a waiting issue."
+    default: "168"
   emoji-labeled-title:
     description: "Enable titles with emojis based on issue labels."
     default: "true"

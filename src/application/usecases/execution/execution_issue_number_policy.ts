@@ -1,4 +1,4 @@
-import { INPUT_KEYS } from '../../../utils/constants';
+import { INPUT_KEYS } from '../../contracts/input_keys';
 import { parsePositiveSafeInteger } from '../../../domain/positive_integer_policy';
 import { extractIssueNumberFromBranch, extractIssueNumberFromPush } from '../../../utils/title_utils';
 import type { ExecutionIssueResolutionContext } from '../../ports/execution_resolution_ports';

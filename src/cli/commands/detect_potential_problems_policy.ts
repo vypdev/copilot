@@ -1,4 +1,5 @@
-import { ACTIONS, INPUT_KEYS } from '../../utils/constants';
+import { ACTIONS } from '../../data/model/action_types';
+import { INPUT_KEYS } from '../../application/contracts/input_keys';
 import type { GitInfo } from '../../cli_context';
 import { cleanCliArgument, parsePositiveCliInteger } from '../command_input_policy';
 

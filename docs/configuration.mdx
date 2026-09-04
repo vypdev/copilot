@@ -103,6 +103,7 @@ Copilot provides extensive configuration options to customize your workflow. Use
     - `commit-prefix-transforms`: Comma-separated list of transforms for commit prefix from branch name (e.g. "replace-slash", "kebab-case"). See README for full list.
     - `reopen-issue-on-push`: Reopen closed issues on new commits (default: "true")
     - `merge-timeout`: Timeout for merge operations in seconds (default: 600)
+    - `inactivity-threshold-hours`: Hours without activity before a waiting issue is closed by the scheduled cleanup (default: 168; valid range: 1–8760)
 
     ## Workflow Files
 
@@ -118,6 +119,7 @@ Copilot provides extensive configuration options to customize your workflow. Use
     - `single-action-version`: Version for `create_release` or `create_tag`
     - `single-action-title`: Title for `create_release`
     - `single-action-changelog`: Changelog body for `create_release`
+    - `inactivity-threshold-hours`: Inactivity window for `close_inactive_issues_action` (default: `168` hours; valid range: `1`–`8760`)
 
     ## Image Configuration
 
@@ -171,6 +173,7 @@ may be forwarded through Repository Variables instead.
 | `single-action-version` | empty | Version used by release and tag single actions. |
 | `single-action-title` | empty | Title used by `create_release`. |
 | `single-action-changelog` | empty | Markdown body used by `create_release`. |
+| `inactivity-threshold-hours` | `168` | Hours without activity before the scheduled action closes an eligible waiting issue. |
 | `queue-gate-only` | `false` | Internal control-plane mode used by the release and hotfix setup workflows to admit a run before mutation work. Do not use it as a replacement for a normal action invocation. |
 
 ### Task-specific agent overrides

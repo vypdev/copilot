@@ -4,10 +4,10 @@ import { Release } from '../data/model/release';
 import { SingleAction } from '../data/model/single_action';
 import type { Execution } from '../data/model/execution';
 import type { ProjectDetailQueryPort } from '../application/ports/project_detail_ports';
-import { INPUT_KEYS } from '../utils/constants';
+import { INPUT_KEYS } from '../application/contracts/input_keys';
 import { isEnabledInput } from './input_boolean_policy';
 import { getGithubActionInput } from './github_action_input';
-import { parseIntegerInput, parseNonNegativeIntegerInput } from './input_number_policy';
+import { parseBoundedPositiveIntegerInput, parseIntegerInput, parseNonNegativeIntegerInput } from './input_number_policy';
 import { parseDelimitedValues } from './input_values_policy';
 import { readGithubActionAiInputs } from './github_action_ai_inputs';
 import { prepareGithubAgentRuntime } from './github_action_runtime';
@@ -25,6 +25,7 @@ import { buildExecution } from './execution_builder';
 import { buildEmoji, buildImages, buildIssue, buildIssueTypes, buildLabels, buildLocale, buildProjects, buildPullRequest, buildTokens, buildWorkflows } from './configuration_builders';
 import { loadProjectDetails } from './project_details_loader';
 import type { buildGithubActionEventInputs } from './github_event_inputs';
+import { DEFAULT_INACTIVITY_THRESHOLD_HOURS, MAX_INACTIVITY_THRESHOLD_HOURS } from '../domain/issue_inactivity';
 
 export interface GithubActionExecutionInput {
     readonly getInput: typeof getGithubActionInput;
@@ -41,7 +42,9 @@ export async function buildGithubActionExecution(
 ): Promise<Execution> {
     const { getInput, eventInputs, projectQuery, debug, singleAction, token } = input;
     const aiInputs = readGithubActionAiInputs(getInput);
-    prepareGithubAgentRuntime(aiInputs.requestedAgentTasks);
+    if (!singleAction.isCloseInactiveIssuesAction) {
+        prepareGithubAgentRuntime(aiInputs.requestedAgentTasks);
+    }
 
     const projects = await loadProjectDetails(
         projectQuery,
@@ -60,6 +63,11 @@ export async function buildGithubActionExecution(
 
     return buildExecution({
         debug,
+        inactivityThresholdHours: parseBoundedPositiveIntegerInput(
+            getInput(INPUT_KEYS.INACTIVITY_THRESHOLD_HOURS),
+            DEFAULT_INACTIVITY_THRESHOLD_HOURS,
+            MAX_INACTIVITY_THRESHOLD_HOURS,
+        ),
         singleAction,
         commitPrefixBuilder: getCommitPrefixBuilder(getInput),
         issue: buildIssue(

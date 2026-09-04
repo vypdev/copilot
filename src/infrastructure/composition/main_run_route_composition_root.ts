@@ -52,6 +52,7 @@ import { createPullRequestUseCaseCompositionRoot } from "./pull_request_use_case
 import { createOrganizationMembersCompositionRoot } from "./organization_members_composition_root";
 import { UpdatePullRequestDescriptionUseCase } from "../../application/usecases/steps/pull_request/update_pull_request_description_use_case";
 import { PullRequestLifecycleRepository } from "../../data/repository/pull_request/pull_request_lifecycle_repository";
+import { createCloseInactiveIssuesUseCase } from "./issue_inactivity_composition_root";
 
 function createDetectPotentialProblemsUseCase(): DetectPotentialProblemsUseCase {
   const bugbot = createBugbotCompositionRoot();
@@ -90,6 +91,7 @@ export function createSingleActionUseCaseCompositionRoot(): SingleActionUseCase 
       issueDescriptionQueryPort,
       createFindingsQueryPort(),
     ),
+    createCloseInactiveIssuesUseCase(),
   );
 }
 

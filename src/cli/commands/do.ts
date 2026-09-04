@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { TITLE } from '../../utils/constants';
+import { TITLE } from '../../application/contracts/product_identity';
 import { runDoCommand, type DoCommandOptions } from './do_command_handler';
 
 export function registerDoCommand(program: Command): void {

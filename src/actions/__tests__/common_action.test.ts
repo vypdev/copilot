@@ -219,6 +219,7 @@ describe('mainRun', () => {
         'Copilot - Commit',
         'Copilot - Pull Request',
         'Copilot - Pull Request Comment',
+        'Copilot - Close Inactive Issues',
         'Task - Hotfix',
         'Task - Release',
       ],

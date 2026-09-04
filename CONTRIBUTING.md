@@ -39,20 +39,20 @@ pnpm run build
 - **`src/infrastructure/composition/`** – Capability and use-case composition roots.
 - **`src/infrastructure/github/`** – GitHub provider clients and transport adapters.
 - **`src/manager/`** – Content handlers for PR descriptions, hotfix changelog, and markdown (e.g. `configuration_handler`, `markdown_content_hotfix_handler`).
-- **`src/data/model/`** – Models and model policies; the directory still contains some transitional orchestration and is not uniformly pure domain.
+- **`src/data/model/`** – Provider-neutral models and pure model policies. Runtime orchestration belongs under `src/application/usecases/`.
 - **`src/data/repository/`** – Specialized capability adapters and repository policies.
-- **`src/utils/`** – Constants, logger, content utils, etc.
+- **`src/utils/`** – Small side-effect-free utilities and the concrete logger; feature contracts live with their owning layer.
 - **`action.yml`** – Action metadata and input definitions.
 - **`build/`** – Compiled output (bundled JS); do not edit directly.
 
 ## Conventions
 
 1. **TypeScript** – Prefer TypeScript; keep action and CLI buildable with `ncc`.
-2. **Constants** – Use `INPUT_KEYS` and `ACTIONS` from `src/utils/constants.ts` instead of ad-hoc strings.
+2. **Contracts and constants** – Use `INPUT_KEYS` from `src/application/contracts/input_keys.ts` and `ACTIONS` from `src/data/model/action_types.ts` instead of ad-hoc strings.
 3. **Logging** – Use the semantic application logging port from `src/application/ports/logging_ports.ts` in application code. Concrete logging adapters and direct `src/utils/logger.ts` usage belong only at the outer infrastructure/entrypoint boundary.
 4. **New inputs** – When adding inputs:
    - Update `action.yml`
-   - Add to `INPUT_KEYS` in `src/utils/constants.ts`
+   - Add to `INPUT_KEYS` in `src/application/contracts/input_keys.ts`
    - Read the input through the appropriate input builder/reader used by the action or CLI composition root.
 
 ## Code Quality

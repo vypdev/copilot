@@ -1,6 +1,6 @@
 import { PublishGithubActionUseCase } from '../publish_github_action_use_case';
 import { Result } from '../../../../data/model/result';
-import { INPUT_KEYS } from '../../../../utils/constants';
+import { INPUT_KEYS } from '../../../contracts/input_keys';
 import type { Execution } from '../../../../data/model/execution';
 
 jest.mock('../../../../utils/logger', () => ({

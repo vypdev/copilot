@@ -1,6 +1,6 @@
 import type { AgentProvider, AgentTask } from './agent';
 import type { PullRequestDescriptionMode } from './pull_request_description';
-export type SetupFeature = 'issues' | 'pullRequests' | 'commits' | 'issueComments' | 'pullRequestComments' | 'release' | 'hotfix' | 'agentProvisioning' | 'credentialHealth' | 'issueTemplates' | 'pullRequestTemplate';
+export type SetupFeature = 'issues' | 'pullRequests' | 'commits' | 'issueComments' | 'pullRequestComments' | 'release' | 'hotfix' | 'agentProvisioning' | 'credentialHealth' | 'inactiveIssueClosure' | 'issueTemplates' | 'pullRequestTemplate';
 export interface SetupFeatures {
     [feature: string]: boolean;
 }
@@ -25,6 +25,7 @@ export interface SetupRepositoryConfiguration {
     desiredAssigneesCount: number;
     desiredReviewersCount: number;
     mergeTimeout: number;
+    inactivityThresholdHours: number;
     issueLocale: string;
     pullRequestLocale: string;
     commitPrefixTransforms: string;

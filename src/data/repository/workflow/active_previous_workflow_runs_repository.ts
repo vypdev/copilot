@@ -12,7 +12,7 @@ import type {
     GithubWorkflowRun,
     GithubWorkflowRunsResponse,
 } from '../../../infrastructure/github/ports/github_workflow_provider_ports';
-import { WORKFLOW_ACTIVE_STATUSES } from '../../../utils/constants';
+import { WORKFLOW_ACTIVE_STATUSES } from './workflow_status';
 import { withWorkflowRunsRetry, WORKFLOW_RUNS_RETRY_POLICY, type WorkflowRunsRetryPolicy } from './workflow_runs_retry';
 
 const NO_OP_DELAY_PORT: WorkflowPollingDelayPort = { wait: async () => undefined };
@@ -58,7 +58,7 @@ export class ActivePreviousWorkflowRunsRepository implements PreviousWorkflowRun
         return withWorkflowRunsRetry(async () => {
             let activeRunCount = 0;
             // Keep one complete sequential traversal: GitHub cannot safely express
-            // the seven shared workflow names, five active statuses, or the strict
+            // the eight shared workflow names, five active statuses, or the strict
             // lower-ID predicate in this endpoint. Do not add provider filters or
             // early-stop on page order; a matching run may occur on a later page.
             // The residual cost is deep-history pagination, with retries restarting

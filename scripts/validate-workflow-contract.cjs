@@ -31,6 +31,7 @@ const QUEUE_WORKFLOW_MANIFEST = Object.freeze([
   ['copilot_issue_comment.yml', 'Copilot - Issue Comment', 'copilot-issues'],
   ['copilot_pull_request.yml', 'Copilot - Pull Request', 'copilot-pull-requests'],
   ['copilot_pull_request_comment.yml', 'Copilot - Pull Request Comment', 'copilot-pull-requests'],
+  ['copilot_close_inactive_issues.yml', 'Copilot - Close Inactive Issues', 'copilot-inactive-issues'],
   ['hotfix_workflow.yml', 'Task - Hotfix', 'tag'],
   ['release_workflow.yml', 'Task - Release', 'tag'],
 ].map(([file, workflowName, jobId]) => ({ file, workflowName, jobId })));

@@ -18,6 +18,7 @@ export class SingleActionUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly checkProgressUseCase: ParamUseCase<Execution, Result[]>,
     private readonly detectPotentialProblemsUseCase: ParamUseCase<Execution, Result[]>,
     private readonly recommendStepsUseCase: ParamUseCase<Execution, Result[]>,
+    private readonly closeInactiveIssuesUseCase?: ParamUseCase<Execution, Result[]>,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
@@ -36,6 +37,7 @@ export class SingleActionUseCase implements ParamUseCase<Execution, Result[]> {
       checkProgressUseCase: this.checkProgressUseCase,
       detectPotentialProblemsUseCase: this.detectPotentialProblemsUseCase,
       recommendStepsUseCase: this.recommendStepsUseCase,
+      closeInactiveIssuesUseCase: this.closeInactiveIssuesUseCase,
     });
   }
 }

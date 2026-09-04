@@ -7,6 +7,7 @@ import type { InitialLabelProvisioningPort, IssueTypeProvisioningPort } from '..
 import type { SetupWorkspacePort } from '../../ports/setup_workspace_ports';
 import { ParamUseCase } from '../base/param_usecase';
 import { runInitialSetupWorkflow } from './initial_setup_workflow';
+import { createInitialSetupRequest } from './initial_setup_request';
 import type {
     SetupRemoteConfigurationReadPort,
     SetupRepositorySecretsPort,
@@ -31,7 +32,7 @@ export class InitialSetupUseCase implements ParamUseCase<Execution, Result[]> {
     ) {}
 
     async invoke(param: Execution): Promise<Result[]> {
-        return await runInitialSetupWorkflow(param, {
+        return await runInitialSetupWorkflow(createInitialSetupRequest(param), {
             authenticatedUserPort: this.authenticatedUserPort,
             initialLabelProvisioningPort: this.initialLabelProvisioningPort,
             issueTypeProvisioningPort: this.issueTypeProvisioningPort,

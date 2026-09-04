@@ -287,6 +287,7 @@ All `.yml` / `.yaml` files here are copied to `.github/workflows/`. Default file
 | `hotfix_workflow.yml` | **Manual** (`workflow_dispatch`): hotfix flow. Filename must match the action input `hotfix-workflow` (default: `hotfix_workflow.yml`). |
 | `agent-cli-provisioning.yml` | **Manual** (`workflow_dispatch`): verifies that the selected agent runtimes are available, pinned, and usable on the runner. |
 | `copilot_credential_health.yml` | **Manual** (`workflow_dispatch`): validates selected remote credentials without exposing their values; used by `copilot doctor`. |
+| `copilot_close_inactive_issues.yml` | **Scheduled every 6 hours** (also `workflow_dispatch`): closes open issues waiting for a maintainer or issue author after the configured inactivity threshold. Opt-in. |
 
 Each Copilot workflow step passes at least `token` and the configured agent CLI inputs via `vars.*`. The **release** and **hotfix** workflows are **dispatched by the action** when an issue has the deploy label and the corresponding release/hotfix context (branch, version, etc.); they are not triggered by issue events directly.
 
@@ -304,6 +305,12 @@ project variables, and the AI/Bugbot variables. The workflow templates read
 `*_COMMAND` pass-through variables too, but custom commands are executable
 configuration and must be reviewed and added deliberately; setup does not invent
 them from a model selection.
+
+When enabled, inactivity cleanup also creates `INACTIVITY_THRESHOLD_HOURS` (168
+by default). The scheduled workflow closes only issues marked
+`state:awaiting-maintainer` or `state:awaiting-issue-author`; it rechecks the
+issue immediately before mutating it and skips candidates that became active or
+entered `state:ai-processing`.
 
 ### `setup/ISSUE_TEMPLATE/`
 
@@ -333,6 +340,7 @@ Copied to `.github/pull_request_template.md`. Used as the default body for new P
 After the tutorial and file customization, you can:
 
 - Set **repository or organization variables** for the agent CLI contract (`AGENT_PROVIDER`, `AGENT_MODEL_PROVIDER`, `AGENT_MODEL`, `AGENT_EFFORT`, `AGENT_ALLOWED_MODEL_PROVIDERS`, and `AGENT_ALLOWED_MODELS`) and, when needed, independent task overrides for `FINDINGS_*`, `REVIEWER_*`, `PLANNER_*`, `FIXER_*`, `TESTER_*`, and `RELEASE_*`. The supplied Copilot workflow templates forward these values to the action. Keep `CURSOR_API_KEY` available only when one of the configured task providers is Cursor.
+- Enable the `inactiveIssueClosure` setup feature when you want the scheduled cleanup, and adjust `INACTIVITY_THRESHOLD_HOURS` (1–8760 hours) to match your retention policy. This feature is disabled by default because it closes GitHub issues.
 - Adjust **project column names** and **branch names** via action inputs so the action moves issues/PRs to the right columns and uses your branch naming.
 - Customize **issue templates** (copy, add fields, change labels) while keeping label and workflow names consistent as above.
 - Add or modify **release/hotfix** workflow steps (e.g. build, deploy) while keeping the workflow **filenames** and the action inputs `release-workflow` and `hotfix-workflow` in sync.

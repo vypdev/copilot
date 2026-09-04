@@ -72,6 +72,17 @@ When the workflow runs on `push` (e.g. to any branch):
 
 ---
 
+### 4. Scheduled inactivity cleanup (`on: schedule`)
+
+The optional `copilot_close_inactive_issues.yml` workflow runs every six hours
+and invokes `close_inactive_issues_action`. It closes only open issues with
+`state:awaiting-maintainer` or `state:awaiting-issue-author` whose GitHub
+`updated_at` is older than `inactivity-threshold-hours` (168 hours by default).
+Pull requests, issues marked `state:ai-processing`, and candidates that become
+active while the scan is running are skipped. Setup keeps this feature disabled
+by default because it changes issue state; enable `inactiveIssueClosure` after
+reviewing the threshold and the workflow PAT permissions.
+
 ## Single actions
 
 When you set `single-action` (and, when required, `single-action-issue`, `single-action-version`, `single-action-title`, `single-action-changelog`), the action runs **only** that action and skips the normal issue/PR/push pipelines.
@@ -87,8 +98,9 @@ When you set `single-action` (and, when required, `single-action-issue`, `single
 | **`create_tag`** | `single-action-version` | Creates a Git tag with prefix `v` (e.g. `v1.2.0`) for the given version from the release branch. |
 | **`publish_github_action`** | `single-action-version` | Publishes or updates the GitHub Action: creates/updates the major version tag (for example, `v3` from a `v3.x.y` release). Requires `create_tag` to have been run first. |
 | **`deployed_action`** | `single-action-issue` | Marks the issue as deployed; updates labels and project state (e.g. "deployed"). |
+| **`close_inactive_issues_action`** | `inactivity-threshold-hours` (optional) | Scans waiting issues and closes those inactive for the configured threshold; no issue number is required. |
 
-Single actions that **throw an error** if the last step fails: `publish_github_action`, `create_release`, `deployed_action`, `create_tag`. This lets the workflow fail the job when the action does not succeed.
+Single actions that **throw an error** if the last step fails: `publish_github_action`, `create_release`, `deployed_action`, `create_tag`, `close_inactive_issues_action`. This lets the workflow fail the job when the action does not succeed.
 
 ---
 
@@ -146,14 +158,14 @@ an execution or publish results.
 ### How it works
 
 1. For a GitHub Action run with a PAT, the action first compares the event actor with the authenticated PAT user. A normal run from the same account completes successfully before project composition, agent provisioning, setup, or queue polling. A valid explicit single action continues through the normal lifecycle.
-2. An admitted run resolves the current workflow file from `GITHUB_WORKFLOW_REF` and performs one paginated repository workflow-runs traversal per poll with `per_page: 100`, then locally filters the active statuses (`in_progress`, `queued`, `requested`, `waiting`, and `pending`), the seven known Copilot/Task mutation workflow names, and runs with a **lower run ID** (i.e. started earlier). For compatibility queries that provide a workflow identifier without names, it uses the workflow-scoped endpoint when the provider exposes it; otherwise it uses the repository endpoint without `workflow_id`.
+2. An admitted run resolves the current workflow file from `GITHUB_WORKFLOW_REF` and performs one paginated repository workflow-runs traversal per poll with `per_page: 100`, then locally filters the active statuses (`in_progress`, `queued`, `requested`, `waiting`, and `pending`), the eight known Copilot/Task mutation workflow names, and runs with a **lower run ID** (i.e. started earlier). For compatibility queries that provide a workflow identifier without names, it uses the workflow-scoped endpoint when the provider exposes it; otherwise it uses the repository endpoint without `workflow_id`.
 3. Provider failures fail closed. Transient 408/5xx/network errors use bounded exponential retry; HTTP 429 and rate-limited 403 responses honor `Retry-After` or `x-ratelimit-reset`, then use a slower bounded fallback. Diagnostics contain only the retry reason, attempt, delay, and safe reset timestamp metadata.
 4. If any such run exists, the action polls immediately and then uses adaptive 5s, 10s, 20s, 40s, and 60s maximum delays with bounded ±20% jitter. The absolute queue wait is limited to 90 minutes.
 5. When no earlier active run in the mutation queue remains, the action continues. A provider failure or queue deadline never becomes an empty result, so setup and mutation work cannot proceed with an unknown queue state.
 
 The queue deliberately traverses every provider page because exact counting must detect
 matching runs on later pages. GitHub's current adapter contract cannot safely combine
-all seven workflow names, all five active statuses, and the strict lower-ID predicate
+all eight workflow names, all five active statuses, and the strict lower-ID predicate
 in one server-side filter. A full traversal with `per_page: 100` and one sequential
 request path reduces fan-out while preserving correctness; deep-history pagination
 therefore remains an explicit API-pressure risk, not an early-stop optimization.

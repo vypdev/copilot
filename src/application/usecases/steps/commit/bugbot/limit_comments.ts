@@ -1,4 +1,4 @@
-import { BUGBOT_MAX_COMMENTS } from "../../../../../utils/constants";
+import { BUGBOT_MAX_COMMENTS } from '../../../../policies/bugbot_constants';
 import type { BugbotFinding } from "./types";
 
 export interface ApplyLimitResult {

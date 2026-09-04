@@ -1,5 +1,6 @@
 import { buildCheckProgressParams, buildRecommendStepsParams, parseIssueNumber } from '../issue_command_policy';
-import { ACTIONS, INPUT_KEYS } from '../../../utils/constants';
+import { ACTIONS } from '../../../data/model/action_types';
+import { INPUT_KEYS } from '../../../application/contracts/input_keys';
 
 const gitInfo = { owner: 'owner', repo: 'repo' } as const;
 

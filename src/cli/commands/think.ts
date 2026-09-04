@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { TITLE } from "../../utils/constants";
+import { TITLE } from '../../application/contracts/product_identity';
 import { runThinkCommand, type ThinkCommandOptions } from "./think_command_handler";
 
 export function registerThinkCommand(program: Command): void {

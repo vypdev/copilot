@@ -33,6 +33,19 @@ When the **branch** created for the issue (e.g. `feature/123-title`) is **merged
 - **How it works:** The action listens for the merge (via the push/PR pipeline and branch state). When the branch no longer exists (merged and deleted) or the merge is detected, it closes the linked issue.
 - **No extra input** is required for this behavior; it is part of the normal flow when the Commit and/or PR workflows run and the branch is merged.
 
+## Auto-close by inactivity
+
+Waiting issues can also be closed automatically when nobody has interacted with
+them for a configured period. This is an opt-in scheduled workflow, so existing
+repositories do not change behavior until `copilot setup` enables the
+`inactiveIssueClosure` feature or the workflow is added manually.
+
+- **Workflow:** `copilot_close_inactive_issues.yml`, scheduled every 6 hours and also runnable with `workflow_dispatch`.
+- **Eligibility:** open issues carrying `state:awaiting-maintainer` or `state:awaiting-issue-author`.
+- **Activity:** GitHub's `updated_at` timestamp is used as the last observed issue activity. Pull requests, issues with `state:ai-processing`, missing/future timestamps, and recently updated issues are skipped.
+- **Default threshold:** 168 hours (7 days), configurable with `inactivity-threshold-hours` or the `INACTIVITY_THRESHOLD_HOURS` Repository Variable. Valid values are 1–8760 hours.
+- **Safety:** the issue is fetched again immediately before closing. If its state, waiting label, activity timestamp, or processing marker changed, it is left open. A closing comment explains the action; adding a new comment allows the issue to be reopened and re-evaluated.
+
 ## Summary
 
 | Behavior | Controlled by | Where it runs |
@@ -40,9 +53,10 @@ When the **branch** created for the issue (e.g. `feature/123-title`) is **merged
 | Commit notifications on issue | Commit workflow + optional images config | Push (Commit) workflow |
 | Reopen closed issue on push | `reopen-issue-on-push` (default: true) | Push (Commit) workflow |
 | Auto-close issue when branch merged | Built-in | Push / PR workflow when merge is detected |
+| Auto-close waiting issue after inactivity | `inactiveIssueClosure` + `inactivity-threshold-hours` | Scheduled workflow every 6 hours |
 
 ## Next steps
 
-- **[Workflow setup](/issues/workflow-setup)** — Issue workflow events.
+- **[Workflow setup](/issues/workflow-setup)** — Issue workflow events and scheduled inactivity cleanup.
 - **[Configuration](/issues/configuration)** — `reopen-issue-on-push`, images on commit.
 - [How to use](/how-to-use) — Full setup including Commit workflow.

@@ -1,4 +1,4 @@
-import { INPUT_KEYS } from '../utils/constants';
+import { INPUT_KEYS } from '../application/contracts/input_keys';
 
 export interface GithubActionWorkflowInputs {
     readonly release: string;

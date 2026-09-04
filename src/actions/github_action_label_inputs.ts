@@ -1,4 +1,4 @@
-import { INPUT_KEYS } from '../utils/constants';
+import { INPUT_KEYS } from '../application/contracts/input_keys';
 import type { LabelValues } from './configuration_builders';
 
 export function readGithubActionLabelInputs(getInput: (key: string) => string): LabelValues {

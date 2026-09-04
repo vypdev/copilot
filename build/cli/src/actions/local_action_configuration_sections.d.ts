@@ -12,6 +12,7 @@ export declare function readLocalCoreConfiguration(additionalParams: ActionInput
     singleActionVersion: string;
     singleActionTitle: string;
     singleActionChangelog: string;
+    inactivityThresholdHours: number;
     token: string;
 };
 export declare function readLocalAgentConfiguration(additionalParams: ActionInputValues, actionInputs: LocalActionInputs): {

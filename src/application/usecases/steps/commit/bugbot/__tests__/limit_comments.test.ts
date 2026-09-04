@@ -2,7 +2,7 @@
  * Unit tests for applyCommentLimit: max comments and overflow titles.
  */
 
-import { BUGBOT_MAX_COMMENTS } from '../../../../../../utils/constants';
+import { BUGBOT_MAX_COMMENTS } from '../../../../../policies/bugbot_constants';
 import { applyCommentLimit } from '../limit_comments';
 import type { BugbotFinding } from '../types';
 

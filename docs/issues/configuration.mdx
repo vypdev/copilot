@@ -14,6 +14,7 @@ The following parameters can be configured in the workflow:
 #### Action Control
 - `single-action`: Launch single actions
 - `single-action-issue`: Issue target for executing single action
+- `inactivity-threshold-hours`: Hours without activity before `close_inactive_issues_action` closes a waiting issue (default: `168`, valid range: `1`–`8760`)
 
 #### Branch Management
 - `branch-management-launcher-label`: Label to trigger branch management actions (default: "branched")
@@ -150,5 +151,5 @@ SDK and HTTP server transports are not part of the current public contract. CLI 
 - `release-workflow`: Release workflow for running release deploys (default: "release_workflow.yml")
 - `hotfix-workflow`: Hotfix workflow for running hotfix deploys (default: "hotfix_workflow.yml")
 - `merge-timeout`: Timeout for the merge workflow in seconds (default: "600")
+- `inactivity-threshold-hours`: Inactivity window for the scheduled waiting-issue cleanup (default: "168" hours)
 - `commit-prefix-transforms`: Transforms for commit prefix from branch name (e.g. "replace-slash", "kebab-case")
-

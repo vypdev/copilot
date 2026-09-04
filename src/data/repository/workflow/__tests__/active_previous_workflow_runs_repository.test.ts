@@ -1,4 +1,4 @@
-import { WORKFLOW_STATUS } from '../../../../utils/constants';
+import { WORKFLOW_STATUS } from '../workflow_status';
 import type {
   GithubWorkflowRun,
   GithubWorkflowRunsClient,
@@ -6,7 +6,7 @@ import type {
 } from '../../../../infrastructure/github/ports/github_workflow_provider_ports';
 import { ActivePreviousWorkflowRunsRepository } from '../active_previous_workflow_runs_repository';
 import { COPILOT_WORKFLOW_NAMES } from '../../../../application/policies/workflow_queue_policy';
-import { WORKFLOW_ACTIVE_STATUSES } from '../../../../utils/constants';
+import { WORKFLOW_ACTIVE_STATUSES } from '../workflow_status';
 
 const listWorkflowRunsForRepo = jest.fn();
 const listWorkflowRuns = jest.fn();
@@ -83,7 +83,7 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
     expect(iterator).toHaveBeenCalledTimes(1);
   });
 
-  it('counts all seven shared workflow names and five active statuses across every page', async () => {
+    it('counts all eight shared workflow names and five active statuses across every page', async () => {
     const runs = COPILOT_WORKFLOW_NAMES.flatMap((name, nameIndex) => WORKFLOW_ACTIVE_STATUSES.map((status, statusIndex) => workflowRun({
       id: 1 + nameIndex * WORKFLOW_ACTIVE_STATUSES.length + statusIndex,
       name,

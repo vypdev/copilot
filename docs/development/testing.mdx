@@ -24,7 +24,7 @@ Workflow queue tests inject a clock, random source, and scheduler/delay port. Th
 cover one repository traversal with mixed statuses and later-page matches, strict
 lower-ID/name filtering, malformed responses, fail-closed provider errors, 429 and
 rate-limited 403 headers, bounded fallback backoff/jitter, and the absolute deadline.
-The workflow contract test keeps the seven workflow names synchronized with the
+The workflow contract test keeps the eight workflow names synchronized with the
 validator and verifies the `90m queue / 120m job` budget, required runners, action
 inputs, missing/short timeouts, and forbidden mutation-workflow concurrency.
 

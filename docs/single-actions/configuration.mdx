@@ -22,6 +22,11 @@ For `check_progress_action`, `detect_potential_problems_action`, `recommend_step
 |-------|-------------|---------|
 | `single-action-issue` | Issue number to run the action on | `'123'` |
 
+`close_inactive_issues_action` does not use `single-action-issue`. It scans the
+repository's open issues carrying a waiting-state label. Configure its optional
+`inactivity-threshold-hours` input (default: `168`) or the
+`INACTIVITY_THRESHOLD_HOURS` Repository Variable.
+
 ## When the action needs a version (release or tag)
 
 For `create_release` and `create_tag`:

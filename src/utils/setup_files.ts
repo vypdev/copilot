@@ -54,6 +54,7 @@ export function copySetupFiles(
     'hotfix_workflow.yml': 'hotfix',
     'agent-cli-provisioning.yml': 'agentProvisioning',
     'copilot_credential_health.yml': 'credentialHealth',
+    'copilot_close_inactive_issues.yml': 'inactiveIssueClosure',
   };
   const approvedWorkflowFiles = new Set(options.approvedWorkflowFiles ?? []);
   const backupDirectory = options.updateExistingWorkflows ? path.join(cwd, '.copilot', 'setup-backups', new Date().toISOString().replace(/[:.]/g, '-')) : undefined;
@@ -109,6 +110,7 @@ export function compareSetupWorkflows(
     'hotfix_workflow.yml': 'hotfix',
     'agent-cli-provisioning.yml': 'agentProvisioning',
     'copilot_credential_health.yml': 'credentialHealth',
+    'copilot_close_inactive_issues.yml': 'inactiveIssueClosure',
   };
   const sourceDirectory = path.join(setupDir, 'workflows');
   if (!fs.existsSync(sourceDirectory)) return [];

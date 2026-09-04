@@ -1,4 +1,5 @@
-import { DEFAULT_IMAGE_CONFIG, INPUT_KEYS } from '../../utils/constants';
+import { DEFAULT_IMAGE_CONFIG } from '../default_image_config';
+import { INPUT_KEYS } from '../../application/contracts/input_keys';
 import { buildImageConfiguration } from '../image_configuration_builder';
 
 describe('buildImageConfiguration', () => {

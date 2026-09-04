@@ -27,6 +27,7 @@ These actions need **`single-action-issue`** set to the issue number. The workfl
 | **`create_release`** | `single-action-version`, `single-action-title`, `single-action-changelog` | Creates a **GitHub release** with the given version, title, and changelog (markdown body). | From a workflow after tests pass; use version and changelog from your build or inputs. |
 | **`create_tag`** | `single-action-version` | Creates a **Git tag** with prefix `v` (e.g. `v1.2.3`) for the given version from the release branch. | When you only need a tag (e.g. for versioning) without a full release. The tag is created from the `releaseBranch` stored in issue configuration. |
 | **`publish_github_action`** | `single-action-version` | **Publishes or updates** the GitHub Action: creates/updates the major version tag (for example, `v3` from a `v3.x.y` release) and the corresponding GitHub Release. Requires that `create_tag` has been run first to create the source tag `v{version}`. | In a CI job that builds and publishes the action, after `create_tag` and `create_release` have run. |
+| **`close_inactive_issues_action`** | — (`inactivity-threshold-hours` optional) | Scans open issues waiting for a maintainer or issue author and closes those whose `updated_at` exceeds the configured inactivity window. Revalidates each candidate before closing and posts an explanation. | From the scheduled `copilot_close_inactive_issues.yml` workflow; no issue number is required. |
 
 ## Actions that fail the job on failure
 
@@ -36,6 +37,7 @@ These single actions **throw an error** if their last step fails, so the **workf
 - **`create_release`**
 - **`deployed_action`**
 - **`create_tag`**
+- **`close_inactive_issues_action`**
 
 Use them when you want the workflow to **fail** if the action does not succeed (e.g. release creation or tag creation fails).
 
@@ -56,6 +58,7 @@ The **`copilot do`** CLI command (for example, `copilot do -p "..."`) uses the c
 | `create_release` | — | ✅ | ✅ | ✅ |
 | `create_tag` | — | ✅ | — | — |
 | `publish_github_action` | — | ✅ | — | — |
+| `close_inactive_issues_action` | — | — | — | — |
 
 ## Next steps
 

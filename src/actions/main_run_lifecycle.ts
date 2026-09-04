@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import boxen from 'boxen';
 import type { Execution } from '../data/model/execution';
 import type { Result } from '../data/model/result';
-import { TITLE } from '../utils/constants';
+import { TITLE } from '../application/contracts/product_identity';
 import { logError, logInfo } from '../utils/logger';
 import { dispatchMainRunRoute } from './main_run_dispatcher';
 import type { ExecutableMainRunRoute, MainRunRouteHandlers } from './main_run_route_handlers';

@@ -1,4 +1,4 @@
-import { INPUT_KEYS } from '../../utils/constants';
+import { INPUT_KEYS } from '../../application/contracts/input_keys';
 import { buildAgentTasksFromValues } from '../agent_input_builder';
 
 describe('agent input builder', () => {

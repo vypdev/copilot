@@ -51,6 +51,23 @@ describe('setup configuration policy', () => {
         expect(plan.selectedFiles).toHaveLength(6);
     });
 
+    it('keeps inactivity closure opt-in and wires its threshold when enabled', () => {
+        const configuration = mergeSetupConfiguration(createDefaultSetupConfiguration(), {
+            features: { inactiveIssueClosure: true },
+            repository: { inactivityThresholdHours: 72 },
+        });
+        const plan = buildSetupPlan(configuration);
+
+        expect(plan.workflowFiles).toContain('copilot_close_inactive_issues.yml');
+        expect(buildSetupRepositoryVariables(configuration)).toEqual(expect.arrayContaining([
+            { name: 'INACTIVITY_THRESHOLD_HOURS', value: '72' },
+        ]));
+        expect(buildSetupActionInputs(configuration)['inactivity-threshold-hours']).toBe('72');
+        expect(plan.warnings).toEqual(expect.arrayContaining([
+            expect.stringContaining('Inactive issue closure is enabled'),
+        ]));
+    });
+
     it('supports independent agent runtime and model settings for every task', () => {
         const configuration = mergeSetupConfiguration(createDefaultSetupConfiguration(), {
             agents: {
@@ -97,6 +114,7 @@ describe('setup configuration policy', () => {
     it('rejects invalid operational and agent values', () => {
         const configuration = createDefaultSetupConfiguration();
         configuration.repository.desiredReviewersCount = 16;
+        configuration.repository.inactivityThresholdHours = 0;
         configuration.repository.mainBranch = 'main branch';
         configuration.ai.bugbotCommentLimit = 0;
         configuration.agents.planner.model = 'unsafe model';
@@ -105,6 +123,7 @@ describe('setup configuration policy', () => {
             'Desired reviewers must be between 0 and 15.',
             'The main branch must be non-empty and contain no whitespace.',
             'Bugbot comment limit must be between 1 and 100.',
+            'Inactivity threshold must be between 1 and 8760 hours.',
             'Model provider and model for planner cannot contain whitespace.',
         ]));
     });

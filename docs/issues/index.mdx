@@ -21,7 +21,7 @@ Copilot automates **issue tracking** so that labels, branch creation, project li
     Launcher label, naming conventions, and hotfix/release rules.
   </Card>
   <Card title="Notifications and auto-close" icon="bell" href="/issues/notifications-and-auto-close">
-    Commit notifications on the issue, reopen on push, and auto-close when merged.
+    Commit notifications on the issue, reopen on push, and auto-close when merged or inactive.
   </Card>
   <Card title="Configuration" icon="gear" href="/issues/configuration">
     All issue-related inputs: labels, branches, size, images, workflow.
@@ -42,6 +42,7 @@ Copilot automates **issue tracking** so that labels, branch creation, project li
 | Add **`deploy`** to a release/hotfix issue | Trigger the release or hotfix workflow (e.g. deploy). |
 | Push commits to the issue’s branch | Post commit notifications on the issue; optionally reopen the issue if it was closed. |
 | Merge the branch (e.g. into develop) | Automatically close the issue when the branch is merged. |
+| Leave an issue waiting for 7 days (with cleanup enabled) | Automatically close it with an explanation; reopen it with a new comment if needed. |
 
 **Bugbot** (potential problems) runs on **push** (or single action) and posts findings on the issue and on open PRs; you can ask the bot to fix findings from a comment. See [Bugbot](/bugbot) for full details.
 

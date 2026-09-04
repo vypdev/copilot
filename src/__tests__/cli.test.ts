@@ -6,7 +6,8 @@
 import { execSync } from 'child_process';
 import { program } from '../cli';
 import { runLocalAction } from '../actions/local_action';
-import { ACTIONS, INPUT_KEYS } from '../utils/constants';
+import { ACTIONS } from '../data/model/action_types';
+import { INPUT_KEYS } from '../application/contracts/input_keys';
 
 jest.mock('child_process', () => ({
   execSync: jest.fn(),

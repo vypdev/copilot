@@ -1,6 +1,7 @@
 import { runLocalAction } from "../../actions/local_action";
 import { createIssueMetadataCompositionRoot } from "../../infrastructure/composition/issue_metadata_composition_root";
-import { ACTIONS, INPUT_KEYS } from "../../utils/constants";
+import { ACTIONS } from '../../data/model/action_types';
+import { INPUT_KEYS } from '../../application/contracts/input_keys';
 import { logError } from "../../utils/logger";
 import { getGitInfo } from "../../cli_context";
 import { cleanCliArgument, joinCliArguments } from "../command_input_policy";

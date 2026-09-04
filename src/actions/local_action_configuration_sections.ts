@@ -1,5 +1,6 @@
 import { Locale } from '../data/model/locale';
-import { BUGBOT_MAX_COMMENTS, BUGBOT_MIN_SEVERITY, INPUT_KEYS } from '../utils/constants';
+import { BUGBOT_MAX_COMMENTS, BUGBOT_MIN_SEVERITY } from '../application/policies/bugbot_constants';
+import { INPUT_KEYS } from '../application/contracts/input_keys';
 import type { ProjectDetailQueryPort } from '../application/ports/project_detail_ports';
 import type { ActionInputValues } from './action_input_source';
 import { getActionInputsWithDefaults } from '../utils/yml_utils';
@@ -11,6 +12,7 @@ import { parseDelimitedValues } from './input_values_policy';
 import { buildAgentTasksFromValues } from './agent_input_builder';
 import { buildImageConfiguration } from './image_configuration_builder';
 import { normalizePullRequestDescriptionMode } from '../domain/pull_request_description';
+import { DEFAULT_INACTIVITY_THRESHOLD_HOURS, MAX_INACTIVITY_THRESHOLD_HOURS } from '../domain/issue_inactivity';
 
 export type LocalActionInputs = ReturnType<typeof getActionInputsWithDefaults>;
 
@@ -32,6 +34,11 @@ export function readLocalCoreConfiguration(
         singleActionVersion: input<string>(additionalParams, actionInputs, INPUT_KEYS.SINGLE_ACTION_VERSION),
         singleActionTitle: input<string>(additionalParams, actionInputs, INPUT_KEYS.SINGLE_ACTION_TITLE),
         singleActionChangelog: input<string>(additionalParams, actionInputs, INPUT_KEYS.SINGLE_ACTION_CHANGELOG),
+        inactivityThresholdHours: parseBoundedPositiveIntegerInput(
+            input(additionalParams, actionInputs, INPUT_KEYS.INACTIVITY_THRESHOLD_HOURS),
+            DEFAULT_INACTIVITY_THRESHOLD_HOURS,
+            MAX_INACTIVITY_THRESHOLD_HOURS,
+        ),
         token: input<string>(additionalParams, actionInputs, INPUT_KEYS.TOKEN),
     };
 }

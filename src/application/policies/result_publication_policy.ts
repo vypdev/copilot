@@ -21,7 +21,7 @@ const MAX_DEBUG_LOG_LENGTH = 12_000;
 
 /** Resolves the GitHub discussion that receives a result comment. */
 export function resolveResultPublicationIssueNumber(input: ResultPublicationTargetInput): number | undefined {
-    if (input.isSingleAction) return input.singleActionIssue;
+    if (input.isSingleAction) return input.singleActionIssue > 0 ? input.singleActionIssue : undefined;
     if (input.isIssue) return input.issueNumber;
     if (input.isPullRequest) return input.pullRequestNumber;
     if (input.isPush && input.pushIssueNumber > 0) return input.pushIssueNumber;

@@ -1,4 +1,4 @@
-import { AGENT_REQUEST_TIMEOUT_MS } from '../../../utils/constants';
+import { AGENT_REQUEST_TIMEOUT_MS } from './agent_constants';
 import { logError } from '../../../utils/logger';
 import { ProviderCliAdapter } from '../provider_cli_adapter';
 

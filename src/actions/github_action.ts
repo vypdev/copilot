@@ -12,7 +12,7 @@ import { buildGithubActionExecution, readGithubActionSingleAction } from './gith
 import { buildGithubActionEventInputs } from './github_event_inputs';
 import { mainRun } from './common_action';
 import { waitForPreviousWorkflowRuns, WorkflowQueueFailureError, WORKFLOW_QUEUE_FAILURE_MESSAGE } from './main_run_lifecycle';
-import { INPUT_KEYS } from '../utils/constants';
+import { INPUT_KEYS } from '../application/contracts/input_keys';
 import { logDebugInfo, logError, logInfo } from '../utils/logger';
 import { createGithubExecutionAdmissionUseCase } from '../infrastructure/composition/github_execution_admission_composition_root';
 import { createSynchronizeLifecycleStateUseCase } from '../infrastructure/composition/lifecycle_state_composition_root';

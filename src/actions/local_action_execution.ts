@@ -15,6 +15,7 @@ export function buildLocalActionExecution(
 ) {
     const {
         debug, singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog,
+        inactivityThresholdHours,
         commitPrefixBuilder, branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount,
         pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, pullRequestMergeTimeout,
         titleEmoji, branchManagementEmoji, imageConfiguration, token, agentModel,
@@ -40,6 +41,7 @@ export function buildLocalActionExecution(
     } = configuration;
     return buildExecution({
         debug,
+        inactivityThresholdHours,
         singleAction: new SingleAction(
             singleAction,
             singleActionIssue,

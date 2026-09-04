@@ -11,6 +11,7 @@ export type SetupFeature =
     | 'hotfix'
     | 'agentProvisioning'
     | 'credentialHealth'
+    | 'inactiveIssueClosure'
     | 'issueTemplates'
     | 'pullRequestTemplate';
 
@@ -41,6 +42,7 @@ export interface SetupRepositoryConfiguration {
     desiredAssigneesCount: number;
     desiredReviewersCount: number;
     mergeTimeout: number;
+    inactivityThresholdHours: number;
     issueLocale: string;
     pullRequestLocale: string;
     commitPrefixTransforms: string;

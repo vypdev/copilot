@@ -1,4 +1,5 @@
-import { BUGBOT_MAX_COMMENTS, BUGBOT_MIN_SEVERITY, INPUT_KEYS } from '../utils/constants';
+import { BUGBOT_MAX_COMMENTS, BUGBOT_MIN_SEVERITY } from '../application/policies/bugbot_constants';
+import { INPUT_KEYS } from '../application/contracts/input_keys';
 import { isEnabledInput } from './input_boolean_policy';
 import { parseBoundedPositiveIntegerInput } from './input_number_policy';
 import { parseDelimitedValues } from './input_values_policy';

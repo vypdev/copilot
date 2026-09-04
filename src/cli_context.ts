@@ -1,5 +1,5 @@
 import { execSync } from 'child_process';
-import { ERRORS } from './utils/constants';
+import { ERRORS } from './cli/cli_errors';
 
 export type GitInfo = { owner: string; repo: string } | { error: string };
 

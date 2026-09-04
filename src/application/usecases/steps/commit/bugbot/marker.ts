@@ -5,7 +5,7 @@
  * threads when the user replies "fix it" in a PR.
  */
 
-import { BUGBOT_MARKER_PREFIX } from "../../../../../utils/constants";
+import { BUGBOT_MARKER_PREFIX } from '../../../../policies/bugbot_constants';
 import { ApplicationError } from "../../../../errors/application_error";
 import type { BugbotFinding, BugbotFindingResolution } from "./types";
 import { sanitizeAgentMarkdown } from "../../../../../application/policies/github_comment_publication_policy";

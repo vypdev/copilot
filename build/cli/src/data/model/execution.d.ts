@@ -50,6 +50,7 @@ export declare class Execution {
     previousConfiguration: Config | undefined;
     currentConfiguration: Config;
     tokenUser: string | undefined;
+    inactivityThresholdHours: number;
     inputs: ExecutionInputs | undefined;
     get eventName(): string;
     get actor(): string;

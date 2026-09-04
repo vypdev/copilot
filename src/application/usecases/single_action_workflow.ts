@@ -13,6 +13,7 @@ export interface SingleActionWorkflowPorts {
   checkProgressUseCase: ParamUseCase<Execution, Result[]>;
   detectPotentialProblemsUseCase: ParamUseCase<Execution, Result[]>;
   recommendStepsUseCase: ParamUseCase<Execution, Result[]>;
+  closeInactiveIssuesUseCase?: ParamUseCase<Execution, Result[]>;
 }
 
 export async function runSingleActionWorkflow(
@@ -38,9 +39,10 @@ export async function runSingleActionWorkflow(
     { active: param.singleAction.isCheckProgressAction, useCase: ports.checkProgressUseCase },
     { active: param.singleAction.isDetectPotentialProblemsAction, useCase: ports.detectPotentialProblemsUseCase },
     { active: param.singleAction.isRecommendStepsAction, useCase: ports.recommendStepsUseCase },
-  ].find(({ active }) => active);
+    { active: param.singleAction.isCloseInactiveIssuesAction, useCase: ports.closeInactiveIssuesUseCase },
+  ].find(({ active, useCase }) => active && useCase !== undefined);
 
-  if (!action) return [];
+  if (!action || !action.useCase) return [];
 
   try {
     return await action.useCase.invoke(param);

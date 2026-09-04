@@ -1,4 +1,4 @@
-import { INPUT_KEYS } from '../../../utils/constants';
+import { INPUT_KEYS } from '../../contracts/input_keys';
 import { ApplicationError } from '../../errors/application_error';
 
 const SEMVER_PATTERN = /^\d+(\.\d+){0,2}$/;

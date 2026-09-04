@@ -1,4 +1,4 @@
-import { ACTIONS } from '../../../utils/constants';
+import { ACTIONS } from '../action_types';
 import { SingleAction } from '../single_action';
 
 describe('SingleAction', () => {
@@ -45,8 +45,15 @@ describe('SingleAction', () => {
     });
 
     it('isRecommendStepsAction', () => {
-      const s = new SingleAction(ACTIONS.RECOMMEND_STEPS, '5', '', '', '');
-      expect(s.isRecommendStepsAction).toBe(true);
+        const s = new SingleAction(ACTIONS.RECOMMEND_STEPS, '5', '', '', '');
+        expect(s.isRecommendStepsAction).toBe(true);
+    });
+
+    it('isCloseInactiveIssuesAction', () => {
+        const s = new SingleAction(ACTIONS.CLOSE_INACTIVE_ISSUES, '0', '', '', '');
+        expect(s.isCloseInactiveIssuesAction).toBe(true);
+        expect(s.validSingleAction).toBe(true);
+        expect(s.isSingleActionWithoutIssue).toBe(true);
     });
   });
 

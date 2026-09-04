@@ -11,5 +11,6 @@ export interface SingleActionWorkflowPorts {
     checkProgressUseCase: ParamUseCase<Execution, Result[]>;
     detectPotentialProblemsUseCase: ParamUseCase<Execution, Result[]>;
     recommendStepsUseCase: ParamUseCase<Execution, Result[]>;
+    closeInactiveIssuesUseCase?: ParamUseCase<Execution, Result[]>;
 }
 export declare function runSingleActionWorkflow(param: Execution, taskId: string, ports: SingleActionWorkflowPorts): Promise<Result[]>;

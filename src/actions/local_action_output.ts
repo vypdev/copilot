@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import boxen from 'boxen';
-import { TITLE } from '../utils/constants';
+import { TITLE } from '../application/contracts/product_identity';
 import { logInfo } from '../utils/logger';
 
 type LocalActionResult = {

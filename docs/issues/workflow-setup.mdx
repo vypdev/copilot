@@ -70,6 +70,34 @@ Add other inputs as needed: `branch-management-launcher-label`, `desired-assigne
 
 5. **Deploy trigger:** When the `deploy` label is added to an issue that has a release or hotfix type, the action **dispatches** the workflow named in `release-workflow` or `hotfix-workflow` (e.g. `release_workflow.yml`, `hotfix_workflow.yml`). Filenames must match exactly.
 
+## Scheduled inactivity cleanup
+
+To close issues that remain waiting for a maintainer or issue author, add
+`setup/workflows/copilot_close_inactive_issues.yml` to the destination repository
+or enable the `inactiveIssueClosure` feature in `copilot setup`. The template runs
+every six hours and can also be started manually:
+
+```yaml
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      inactivity_threshold_hours:
+        description: Hours without activity before closing a waiting issue
+        required: false
+        default: '168'
+        type: string
+```
+
+The workflow invokes `single-action: close_inactive_issues_action` and needs the
+write-capable `PAT` Secret. The default threshold is 168 hours (7 days); set
+`INACTIVITY_THRESHOLD_HOURS` as a Repository Variable or pass
+`inactivity-threshold-hours` to override it. The action uses the existing
+`state:awaiting-maintainer`, `state:awaiting-issue-author`, and
+`state:ai-processing` labels, which can be customized through the normal label
+inputs.
+
 ## Next steps
 
 - **[Assignees and projects](/issues/assignees-and-projects)** — Member assignment and project linking.

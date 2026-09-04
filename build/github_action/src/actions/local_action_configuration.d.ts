@@ -134,6 +134,7 @@ export declare function buildLocalActionConfiguration(additionalParams: ActionIn
     singleActionVersion: string;
     singleActionTitle: string;
     singleActionChangelog: string;
+    inactivityThresholdHours: number;
     token: string;
 }>;
 export type LocalActionConfiguration = Awaited<ReturnType<typeof buildLocalActionConfiguration>>;

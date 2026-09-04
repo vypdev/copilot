@@ -50392,15 +50392,15 @@ function buildAgentTasks(values, environment = process.env) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildAgentTasksFromInputs = buildAgentTasksFromInputs;
 exports.buildAgentTasksFromValues = buildAgentTasksFromValues;
-const constants_1 = __nccwpck_require__(15415);
+const input_keys_1 = __nccwpck_require__(88539);
 const agent_configuration_builder_1 = __nccwpck_require__(81248);
 const agent_1 = __nccwpck_require__(89040);
 function buildAgentTasksFromInputs(read) {
-    const provider = read(constants_1.INPUT_KEYS.AGENT_PROVIDER)?.trim() || agent_1.DEFAULT_AGENT_PROVIDER;
-    const modelProvider = read(constants_1.INPUT_KEYS.AGENT_MODEL_PROVIDER)?.trim() || agent_1.DEFAULT_MODEL_PROVIDER;
-    const model = read(constants_1.INPUT_KEYS.AGENT_MODEL)?.trim() || agent_1.DEFAULT_AGENT_MODEL;
-    const effort = read(constants_1.INPUT_KEYS.AGENT_EFFORT) ?? '';
-    const command = read(constants_1.INPUT_KEYS.AGENT_COMMAND) ?? '';
+    const provider = read(input_keys_1.INPUT_KEYS.AGENT_PROVIDER)?.trim() || agent_1.DEFAULT_AGENT_PROVIDER;
+    const modelProvider = read(input_keys_1.INPUT_KEYS.AGENT_MODEL_PROVIDER)?.trim() || agent_1.DEFAULT_MODEL_PROVIDER;
+    const model = read(input_keys_1.INPUT_KEYS.AGENT_MODEL)?.trim() || agent_1.DEFAULT_AGENT_MODEL;
+    const effort = read(input_keys_1.INPUT_KEYS.AGENT_EFFORT) ?? '';
+    const command = read(input_keys_1.INPUT_KEYS.AGENT_COMMAND) ?? '';
     const role = (name) => ({
         provider: read(`${name}-provider`),
         modelProvider: read(`${name}-model-provider`),
@@ -50415,18 +50415,18 @@ function buildAgentTasksFromInputs(read) {
         effort,
         command,
         findings: {
-            provider: read(constants_1.INPUT_KEYS.FINDINGS_PROVIDER),
-            modelProvider: read(constants_1.INPUT_KEYS.FINDINGS_MODEL_PROVIDER),
-            model: read(constants_1.INPUT_KEYS.FINDINGS_MODEL),
-            effort: read(constants_1.INPUT_KEYS.FINDINGS_EFFORT),
-            command: read(constants_1.INPUT_KEYS.FINDINGS_COMMAND),
+            provider: read(input_keys_1.INPUT_KEYS.FINDINGS_PROVIDER),
+            modelProvider: read(input_keys_1.INPUT_KEYS.FINDINGS_MODEL_PROVIDER),
+            model: read(input_keys_1.INPUT_KEYS.FINDINGS_MODEL),
+            effort: read(input_keys_1.INPUT_KEYS.FINDINGS_EFFORT),
+            command: read(input_keys_1.INPUT_KEYS.FINDINGS_COMMAND),
         },
         fixer: {
-            provider: read(constants_1.INPUT_KEYS.FIXER_PROVIDER),
-            modelProvider: read(constants_1.INPUT_KEYS.FIXER_MODEL_PROVIDER),
-            model: read(constants_1.INPUT_KEYS.FIXER_MODEL),
-            effort: read(constants_1.INPUT_KEYS.FIXER_EFFORT),
-            command: read(constants_1.INPUT_KEYS.FIXER_COMMAND),
+            provider: read(input_keys_1.INPUT_KEYS.FIXER_PROVIDER),
+            modelProvider: read(input_keys_1.INPUT_KEYS.FIXER_MODEL_PROVIDER),
+            model: read(input_keys_1.INPUT_KEYS.FIXER_MODEL),
+            effort: read(input_keys_1.INPUT_KEYS.FIXER_EFFORT),
+            command: read(input_keys_1.INPUT_KEYS.FIXER_COMMAND),
         },
         planner: role('planner'),
         reviewer: role('reviewer'),
@@ -50589,6 +50589,192 @@ function buildImages(values) {
 
 /***/ }),
 
+/***/ 14387:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DEFAULT_IMAGE_CONFIG = void 0;
+/** Default illustration URLs used when an action does not receive custom images. */
+exports.DEFAULT_IMAGE_CONFIG = {
+    issue: {
+        automatic: [
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMm5iZHJydTJ4NGticXdxd3ZxYnZqNXdvaDQwOHdtb3o5NTRhdnRhOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LSX49vHf7JHGyGjrC0/giphy.gif",
+            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExYzRsNGFicndqMXgzMTVwdnhpeXNyZGsydXVxamV4eGxndWhna291OSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ktcUyw6mBlMVa/200.webp",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdjkyeWVubngzM28xODFrbXZ4Nng3Y2hubmM4cXJqNGpic3Bheml0NSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/M11UVCRrc0LUk/giphy.webp",
+            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExenQwNDJmZnZraDBzNXBoNjUwZjEzMzFlanMxcHVodmF4b3l3bDl2biZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/zrdUjl6N99nLq/200.webp",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmozN3plMWNiYjZoemh6N2RmeTB1MG9ieHlqYTJsb3BrZmNoY3h0dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/stv1Dliu5TrMs/giphy.webp"
+        ],
+        feature: [
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMm5iZHJydTJ4NGticXdxd3ZxYnZqNXdvaDQwOHdtb3o5NTRhdnRhOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LSX49vHf7JHGyGjrC0/giphy.gif",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExYmc4YWplZWs0Y2c3ZXNtbGpwZnQzdWpncmNjNXpodjg3MHdtbnJ5NiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/OMK7LRBedcnhm/200.webp",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHBrYXpmd2poeGU5cWswbjRqNmJlZ2U2dWc0ejVpY3RpcXVuYTY3dSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/llKJGxQ1ESmac/giphy.webp",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMnFleXV0MXZteGN6c2s2b3R3ZGc2cWY1aXB0Y3ZzNmpvZHhyNDVmNSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/10FwycrnAkpshW/giphy.webp",
+            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExcHo0MjIzaGIycTRmeWFwZmp6bGExczJicXcyZTQxemsxaTY1b3V1NiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/QKkV58ufpV4ksJ1Okh/giphy.gif",
+        ],
+        bugfix: [
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExazc3OWszenA5c2FlemE3a25oNnlmZDBra3liMWRqMW82NzM2b2FveCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/xPGkOAdiIO3Is/giphy.webp",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmozN3plMWNiYjZoemh6N2RmeTB1MG9ieHlqYTJsb3BrZmNoY3h0dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/stv1Dliu5TrMs/giphy.webp",
+            "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExY3liaGF2NzI3bzM1YjRmdHFsaGdyenp4b3o3M3dqM3F0bGN5MHZtNSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/npUpB306c3EStRK6qP/200.webp",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExZWh6d3Nld3E0MTF1eTk2YXFibnI3MTBhbGtpamJiemRwejl3YmkzMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/gU25raLP4pUu4/giphy.webp",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExdmM1OWR0cnk5eXI0dXpoNWRzbmVseTVyd2l3MzdrOHZueHJ6bjhjMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/12yjKJaLB7DuG4/giphy.webp"
+        ],
+        hotfix: [
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmozN3plMWNiYjZoemh6N2RmeTB1MG9ieHlqYTJsb3BrZmNoY3h0dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/stv1Dliu5TrMs/giphy.webp",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExd2R0cjNxbXBjZjRjNmg4NmN3MGlhazVkNHJsaDkxMHZkY2hweGRtZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/pCU4bC7kC6sxy/200.webp",
+            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExenkyZTc3aDlweWl0MnI0cXJsZGptY3g0bzE2NTY1aWMyaHd4Y201ZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/dbtDDSvWErdf2/giphy.webp",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExM25ndGd2d3Uya3g3dnlnenJ1bjh0Y2NtNHdwZHY3Mjh2NnBmZDJpbyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2xF8gHUf085aNyyAQR/200.webp",
+            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExdjU3bHdsc3FtamlyazBlbWppNHc3MTV3MW4xdHd2cWo4b2tzbTkwcSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/1EghTrigJJhq8/200.webp",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExdmM1OWR0cnk5eXI0dXpoNWRzbmVseTVyd2l3MzdrOHZueHJ6bjhjMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/12yjKJaLB7DuG4/giphy.webp"
+        ],
+        release: [
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExY2NxcHEzam92enRtd29xc21pMHhmbHozMWljamF1cmt4cjhwZTI0ayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/PApUm1HPVYlDNLoMmr/giphy.webp",
+            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNXU4dnhwOWVqZzc4NXVsdTY3c2I4Mm9lOHF1c253MDJya25zNXU0ZyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/dxn6fRlTIShoeBr69N/giphy.webp",
+            "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExbXN2bjJob3pxazE2NDJhbGE3ZWY5d2dzbDM4czgwZnA4ejlxY3ZqeCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/9D37RaHngWP7ZmmsEt/giphy.webp",
+            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExZnI0YTM2N2hwamd2dXYwNmN2MjRpYXIyN203cnNpbW13YjNhZGRhdyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LYWPXVUNz30ze/giphy.gif",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdW1jZ3F4ZGRwMWkyc3ZocHJ3aXhyb2FuZGppcnMyMWtsYXpjbDY2ZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tXLpxypfSXvUc/giphy.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHRianpoOW51MzZ4Yjk3MmNpbmdseTJlb3o3dWVpYzJpazc5ZHNoayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/b85mPT4Usz7fq/giphy.gif",
+        ],
+        docs: [
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExaGRpZHJqYzRvZ25xcjR3ZXcwbzVudXF2Z2hsaHoyc2g1ZjZuam81YiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/eDArHBLT4aATKEKtCd/giphy.gif",
+            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExa2NubXR1b2M1dDQ2Z2UxYmk5bzltbHdudWI1emVzOGFlbDNsOGU1bSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/wpgYasZ0tBrP4lCgS3/giphy.gif",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExMmEyNzc3M2V0anp4d2JtOTJuMTZ2dXNnMmEyN3A4MmE0ZGpiaDhnNCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orifaQEOagjYJ1EXe/giphy.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExZjUyenc2eG5pZ3NjYzcyZXg2dDFndm5qZHRqMHk5amNoYjhhNnNvZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/7E8lI6TkLrvvAcPXso/giphy.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExaWFxcXZ3MTMxM3Bjd2IwNG43ZDJjdndreXNmdTVvZ2g3Z2Q4NjczMCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3tJdi9wQQ10BD2H47g/giphy.gif",
+            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNjFrejZmaHQ2Z2o1Y3B2MDl6cmU5bzNybG84eXFrYjBjZjV0dGFpeSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/fsXOS3oBboiYf6fSsY/giphy.gif",
+            "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHdhOHRianU1YmtrNHE0c2R2M2I2MTBzNnZhdnBrMW5ueG02eHF6OSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieOEBYMAwTClHqM/giphy.gif",
+        ],
+        chore: [
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExNjFtNXY0ZXdmdGxkdno2Nm5odGk3Nzd3aTRuYnJtbDA4MXIxdHFhdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/10zsjaH4g0GgmY/giphy.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExZG1sNXB6eTZvdDNtNzJwNXVxenNjendwaGgxb2xzNWI1dGNpdTVmZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/NHHYRm7mAUQ6Y/giphy.gif",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHd4bDJrc216YWpicDQ5emczdWF3bTk0dXYzeGQ4ajg2a3IyYjV6diZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/FHEjBpiqMwSuA/giphy.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3d5b2U1Z3Jic3AxY2llYjQwNW5wODFpNWp5NHY0dGV5Z2cxdThkdCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/kLZNLNqUZ6bC0/giphy.gif",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExbTNpZ2w0c3NrMmc0cmZobTd2eTM3YTRlM2lnbWpoZDUzNnRjdnNmZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/NV4cSrRYXXwfUcYnua/giphy.gif",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmFzZHNuODg0dDRheGt0aGU2bjVvd2xiNDI1bWFmYTVsbHJ2eHI2dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/XaAbmtzzz35IgW3Ntn/giphy.gif",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExYWM2OHkzYmNkajZxa204Njg0bmQzaWp1M3NobnJjbWxyYWJrbDNnciZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/OiwOPq0fFqqyainyMu/giphy.gif",
+        ],
+    },
+    pullRequest: {
+        automatic: [
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMm5iZHJydTJ4NGticXdxd3ZxYnZqNXdvaDQwOHdtb3o5NTRhdnRhOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LSX49vHf7JHGyGjrC0/giphy.gif",
+            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExYzRsNGFicndqMXgzMTVwdnhpeXNyZGsydXVxamV4eGxndWhna291OSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ktcUyw6mBlMVa/200.webp",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdjkyeWVubngzM28xODFrbXZ4Nng3Y2hubmM4cXJqNGpic3Bheml0NSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/M11UVCRrc0LUk/giphy.webp",
+            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExenQwNDJmZnZraDBzNXBoNjUwZjEzMzFlanMxcHVodmF4b3l3bDl2biZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/zrdUjl6N99nLq/200.webp",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmozN3plMWNiYjZoemh6N2RmeTB1MG9ieHlqYTJsb3BrZmNoY3h0dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/stv1Dliu5TrMs/giphy.webp",
+        ],
+        feature: [
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMm5iZHJydTJ4NGticXdxd3ZxYnZqNXdvaDQwOHdtb3o5NTRhdnRhOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LSX49vHf7JHGyGjrC0/giphy.gif",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExYmc4YWplZWs0Y2c3ZXNtbGpwZnQzdWpncmNjNXpodjg3MHdtbnJ5NiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/OMK7LRBedcnhm/200.webp",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHBrYXpmd2poeGU5cWswbjRqNmJlZ2U2dWc0ejVpY3RpcXVuYTY3dSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/llKJGxQ1ESmac/giphy.webp",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMnFleXV0MXZteGN6c2s2b3R3ZGc2cWY1aXB0Y3ZzNmpvZHhyNDVmNSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/10FwycrnAkpshW/giphy.webp",
+            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExcHo0MjIzaGIycTRmeWFwZmp6bGExczJicXcyZTQxemsxaTY1b3V1NiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/QKkV58ufpV4ksJ1Okh/giphy.gif",
+        ],
+        bugfix: [
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExazc3OWszenA5c2FlemE3a25oNnlmZDBra3liMWRqMW82NzM2b2FveCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/xPGkOAdiIO3Is/giphy.webp",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmozN3plMWNiYjZoemh6N2RmeTB1MG9ieHlqYTJsb3BrZmNoY3h0dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/stv1Dliu5TrMs/giphy.webp",
+            "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExY3liaGF2NzI3bzM1YjRmdHFsaGdyenp4b3o3M3dqM3F0bGN5MHZtNSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/npUpB306c3EStRK6qP/200.webp",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExZWh6d3Nld3E0MTF1eTk2YXFibnI3MTBhbGtpamJiemRwejl3YmkzMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/gU25raLP4pUu4/giphy.webp",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExdmM1OWR0cnk5eXI0dXpoNWRzbmVseTVyd2l3MzdrOHZueHJ6bjhjMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/12yjKJaLB7DuG4/giphy.webp",
+        ],
+        hotfix: [
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmozN3plMWNiYjZoemh6N2RmeTB1MG9ieHlqYTJsb3BrZmNoY3h0dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/stv1Dliu5TrMs/giphy.webp",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExd2R0cjNxbXBjZjRjNmg4NmN3MGlhazVkNHJsaDkxMHZkY2hweGRtZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/pCU4bC7kC6sxy/200.webp",
+            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExenkyZTc3aDlweWl0MnI0cXJsZGptY3g0bzE2NTY1aWMyaHd4Y201ZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/dbtDDSvWErdf2/giphy.webp",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExM25ndGd2d3Uya3g3dnlnenJ1bjh0Y2NtNHdwZHY3Mjh2NnBmZDJpbyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2xF8gHUf085aNyyAQR/200.webp",
+            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExdjU3bHdsc3FtamlyazBlbWppNHc3MTV3MW4xdHd2cWo4b2tzbTkwcSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/1EghTrigJJhq8/200.webp",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExdmM1OWR0cnk5eXI0dXpoNWRzbmVseTVyd2l3MzdrOHZueHJ6bjhjMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/12yjKJaLB7DuG4/giphy.webp",
+        ],
+        release: [
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExY2NxcHEzam92enRtd29xc21pMHhmbHozMWljamF1cmt4cjhwZTI0ayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/PApUm1HPVYlDNLoMmr/giphy.webp",
+            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNXU4dnhwOWVqZzc4NXVsdTY3c2I4Mm9lOHF1c253MDJya25zNXU0ZyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/dxn6fRlTIShoeBr69N/giphy.webp",
+            "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExbXN2bjJob3pxazE2NDJhbGE3ZWY5d2dzbDM4czgwZnA4ejlxY3ZqeCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/9D37RaHngWP7ZmmsEt/giphy.webp",
+            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExZnI0YTM2N2hwamd2dXYwNmN2MjRpYXIyN203cnNpbW13YjNhZGRhdyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LYWPXVUNz30ze/giphy.gif",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdW1jZ3F4ZGRwMWkyc3ZocHJ3aXhyb2FuZGppcnMyMWtsYXpjbDY2ZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tXLpxypfSXvUc/giphy.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHRianpoOW51MzZ4Yjk3MmNpbmdseTJlb3o3dWVpYzJpazc5ZHNoayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/b85mPT4Usz7fq/giphy.gif",
+        ],
+        docs: [
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExaGRpZHJqYzRvZ25xcjR3ZXcwbzVudXF2Z2hsaHoyc2g1ZjZuam81YiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/eDArHBLT4aATKEKtCd/giphy.gif",
+            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExa2NubXR1b2M1dDQ2Z2UxYmk5bzltbHdudWI1emVzOGFlbDNsOGU1bSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/wpgYasZ0tBrP4lCgS3/giphy.gif",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExMmEyNzc3M2V0anp4d2JtOTJuMTZ2dXNnMmEyN3A4MmE0ZGpiaDhnNCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orifaQEOagjYJ1EXe/giphy.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExZjUyenc2eG5pZ3NjYzcyZXg2dDFndm5qZHRqMHk5amNoYjhhNnNvZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/7E8lI6TkLrvvAcPXso/giphy.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExaWFxcXZ3MTMxM3Bjd2IwNG43ZDJjdndreXNmdTVvZ2g3Z2Q4NjczMCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3tJdi9wQQ10BD2H47g/giphy.gif",
+            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNjFrejZmaHQ2Z2o1Y3B2MDl6cmU5bzNybG84eXFrYjBjZjV0dGFpeSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/fsXOS3oBboiYf6fSsY/giphy.gif",
+            "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHdhOHRianU1YmtrNHE0c2R2M2I2MTBzNnZhdnBrMW5ueG02eHF6OSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieOEBYMAwTClHqM/giphy.gif",
+        ],
+        chore: [
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExNjFtNXY0ZXdmdGxkdno2Nm5odGk3Nzd3aTRuYnJtbDA4MXIxdHFhdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/10zsjaH4g0GgmY/giphy.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExZG1sNXB6eTZvdDNtNzJwNXVxenNjendwaGgxb2xzNWI1dGNpdTVmZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/NHHYRm7mAUQ6Y/giphy.gif",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHd4bDJrc216YWpicDQ5emczdWF3bTk0dXYzeGQ4ajg2a3IyYjV6diZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/FHEjBpiqMwSuA/giphy.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3d5b2U1Z3Jic3AxY2llYjQwNW5wODFpNWp5NHY0dGV5Z2cxdThkdCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/kLZNLNqUZ6bC0/giphy.gif",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExbTNpZ2w0c3NrMmc0cmZobTd2eTM3YTRlM2lnbWpoZDUzNnRjdnNmZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/NV4cSrRYXXwfUcYnua/giphy.gif",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmFzZHNuODg0dDRheGt0aGU2bjVvd2xiNDI1bWFmYTVsbHJ2eHI2dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/XaAbmtzzz35IgW3Ntn/giphy.gif",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExYWM2OHkzYmNkajZxa204Njg0bmQzaWp1M3NobnJjbWxyYWJrbDNnciZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/OiwOPq0fFqqyainyMu/giphy.gif",
+        ],
+    },
+    commit: {
+        automatic: [
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWp2OGJ5ZmczaGhiMmVxdjRxMWZnYnRrNW5uemlmd2Ewam1nNGd0aSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2XflxzEtr4EPIEzioLu/giphy.gif",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaTkzeTFveHd6N3Fubm8yZDlpYTVuMnp0bm1rODQyZDdpbTF4YzAxaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/n2IPMYMthV0m4/giphy.gif",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ3BmNXV1YzZod2NkYjZ3aTE1Z3BwMWJ0ZG9uMXN0bm5pbDQ4ajBvaCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3WxRbhsvQjYw8/giphy.gif",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWs5YXEyajhoNWI1aHdxeHNwcmt2czY2NW1mNjZrbnViYm9reXJsZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/loLqo6AzjUcMdjS1Jj/giphy.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdHh5MndyMzBmY3c3bDRxeGhpanF2ZjIycGpmbzlkMDV5cDJkeXhjMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieQDBZVlki2mJLW/giphy.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGdkaHFsMTlzM2ZuY3R5ZXJpZmo3cHRqZWJieXVlOHQwc2F3eGVrdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tELuxgGsoL62ihEtQs/giphy.gif",
+        ],
+        feature: [
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWp2OGJ5ZmczaGhiMmVxdjRxMWZnYnRrNW5uemlmd2Ewam1nNGd0aSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2XflxzEtr4EPIEzioLu/giphy.gif",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaTkzeTFveHd6N3Fubm8yZDlpYTVuMnp0bm1rODQyZDdpbTF4YzAxaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/n2IPMYMthV0m4/giphy.gif",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ3BmNXV1YzZod2NkYjZ3aTE1Z3BwMWJ0ZG9uMXN0bm5pbDQ4ajBvaCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3WxRbhsvQjYw8/giphy.gif",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWs5YXEyajhoNWI1aHdxeHNwcmt2czY2NW1mNjZrbnViYm9reXJsZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/loLqo6AzjUcMdjS1Jj/giphy.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdHh5MndyMzBmY3c3bDRxeGhpanF2ZjIycGpmbzlkMDV5cDJkeXhjMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieQDBZVlki2mJLW/giphy.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGdkaHFsMTlzM2ZuY3R5ZXJpZmo3cHRqZWJieXVlOHQwc2F3eGVrdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tELuxgGsoL62ihEtQs/giphy.gif",
+        ],
+        bugfix: [
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWp2OGJ5ZmczaGhiMmVxdjRxMWZnYnRrNW5uemlmd2Ewam1nNGd0aSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2XflxzEtr4EPIEzioLu/giphy.gif",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaTkzeTFveHd6N3Fubm8yZDlpYTVuMnp0bm1rODQyZDdpbTF4YzAxaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/n2IPMYMthV0m4/giphy.gif",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ3BmNXV1YzZod2NkYjZ3aTE1Z3BwMWJ0ZG9uMXN0bm5pbDQ4ajBvaCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3WxRbhsvQjYw8/giphy.gif",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWs5YXEyajhoNWI1aHdxeHNwcmt2czY2NW1mNjZrbnViYm9reXJsZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/loLqo6AzjUcMdjS1Jj/giphy.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdHh5MndyMzBmY3c3bDRxeGhpanF2ZjIycGpmbzlkMDV5cDJkeXhjMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieQDBZVlki2mJLW/giphy.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGdkaHFsMTlzM2ZuY3R5ZXJpZmo3cHRqZWJieXVlOHQwc2F3eGVrdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tELuxgGsoL62ihEtQs/giphy.gif",
+        ],
+        hotfix: [
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWp2OGJ5ZmczaGhiMmVxdjRxMWZnYnRrNW5uemlmd2Ewam1nNGd0aSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2XflxzEtr4EPIEzioLu/giphy.gif",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaTkzeTFveHd6N3Fubm8yZDlpYTVuMnp0bm1rODQyZDdpbTF4YzAxaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/n2IPMYMthV0m4/giphy.gif",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ3BmNXV1YzZod2NkYjZ3aTE1Z3BwMWJ0ZG9uMXN0bm5pbDQ4ajBvaCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3WxRbhsvQjYw8/giphy.gif",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWs5YXEyajhoNWI1aHdxeHNwcmt2czY2NW1mNjZrbnViYm9reXJsZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/loLqo6AzjUcMdjS1Jj/giphy.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdHh5MndyMzBmY3c3bDRxeGhpanF2ZjIycGpmbzlkMDV5cDJkeXhjMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieQDBZVlki2mJLW/giphy.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGdkaHFsMTlzM2ZuY3R5ZXJpZmo3cHRqZWJieXVlOHQwc2F3eGVrdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tELuxgGsoL62ihEtQs/giphy.gif",
+        ],
+        release: [
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWp2OGJ5ZmczaGhiMmVxdjRxMWZnYnRrNW5uemlmd2Ewam1nNGd0aSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2XflxzEtr4EPIEzioLu/giphy.gif",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaTkzeTFveHd6N3Fubm8yZDlpYTVuMnp0bm1rODQyZDdpbTF4YzAxaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/n2IPMYMthV0m4/giphy.gif",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ3BmNXV1YzZod2NkYjZ3aTE1Z3BwMWJ0ZG9uMXN0bm5pbDQ4ajBvaCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3WxRbhsvQjYw8/giphy.gif",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWs5YXEyajhoNWI1aHdxeHNwcmt2czY2NW1mNjZrbnViYm9reXJsZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/loLqo6AzjUcMdjS1Jj/giphy.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdHh5MndyMzBmY3c3bDRxeGhpanF2ZjIycGpmbzlkMDV5cDJkeXhjMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieQDBZVlki2mJLW/giphy.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGdkaHFsMTlzM2ZuY3R5ZXJpZmo3cHRqZWJieXVlOHQwc2F3eGVrdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tELuxgGsoL62ihEtQs/giphy.gif",
+        ],
+        docs: [
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWp2OGJ5ZmczaGhiMmVxdjRxMWZnYnRrNW5uemlmd2Ewam1nNGd0aSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2XflxzEtr4EPIEzioLu/giphy.gif",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaTkzeTFveHd6N3Fubm8yZDlpYTVuMnp0bm1rODQyZDdpbTF4YzAxaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/n2IPMYMthV0m4/giphy.gif",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ3BmNXV1YzZod2NkYjZ3aTE1Z3BwMWJ0ZG9uMXN0bm5pbDQ4ajBvaCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3WxRbhsvQjYw8/giphy.gif",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWs5YXEyajhoNWI1aHdxeHNwcmt2czY2NW1mNjZrbnViYm9reXJsZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/loLqo6AzjUcMdjS1Jj/giphy.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdHh5MndyMzBmY3c3bDRxeGhpanF2ZjIycGpmbzlkMDV5cDJkeXhjMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieQDBZVlki2mJLW/giphy.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGdkaHFsMTlzM2ZuY3R5ZXJpZmo3cHRqZWJieXVlOHQwc2F3eGVrdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tELuxgGsoL62ihEtQs/giphy.gif",
+        ],
+        chore: [
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWp2OGJ5ZmczaGhiMmVxdjRxMWZnYnRrNW5uemlmd2Ewam1nNGd0aSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2XflxzEtr4EPIEzioLu/giphy.gif",
+            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaTkzeTFveHd6N3Fubm8yZDlpYTVuMnp0bm1rODQyZDdpbTF4YzAxaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/n2IPMYMthV0m4/giphy.gif",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ3BmNXV1YzZod2NkYjZ3aTE1Z3BwMWJ0ZG9uMXN0bm5pbDQ4ajBvaCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3WxRbhsvQjYw8/giphy.gif",
+            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWs5YXEyajhoNWI1aHdxeHNwcmt2czY2NW1mNjZrbnViYm9reXJsZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/loLqo6AzjUcMdjS1Jj/giphy.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdHh5MndyMzBmY3c3bDRxeGhpanF2ZjIycGpmbzlkMDV5cDJkeXhjMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieQDBZVlki2mJLW/giphy.gif",
+            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGdkaHFsMTlzM2ZuY3R5ZXJpZmo3cHRqZWJieXVlOHQwc2F3eGVrdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tELuxgGsoL62ihEtQs/giphy.gif",
+        ]
+    }
+};
+
+
+/***/ }),
+
 /***/ 20236:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -50658,7 +50844,7 @@ const github_action_execution_1 = __nccwpck_require__(39691);
 const github_event_inputs_1 = __nccwpck_require__(63452);
 const common_action_1 = __nccwpck_require__(42238);
 const main_run_lifecycle_1 = __nccwpck_require__(916);
-const constants_1 = __nccwpck_require__(15415);
+const input_keys_1 = __nccwpck_require__(88539);
 const logger_1 = __nccwpck_require__(91151);
 const github_execution_admission_composition_root_1 = __nccwpck_require__(54954);
 const lifecycle_state_composition_root_1 = __nccwpck_require__(4673);
@@ -50666,7 +50852,7 @@ const copilot_evidence_composition_root_1 = __nccwpck_require__(64686);
 const github_action_summary_composition_root_1 = __nccwpck_require__(75305);
 const agent_activity_composition_root_1 = __nccwpck_require__(94253);
 async function runGitHubAction() {
-    if ((0, input_boolean_policy_1.isEnabledInput)((0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.QUEUE_GATE_ONLY))) {
+    if ((0, input_boolean_policy_1.isEnabledInput)((0, github_action_input_1.getGithubActionInput)(input_keys_1.INPUT_KEYS.QUEUE_GATE_ONLY))) {
         await runQueueGateOnly();
         return;
     }
@@ -50677,11 +50863,11 @@ async function runGitHubAction() {
         repo: github.context.repo,
     });
     (0, logger_1.logInfo)('GitHub Action: runGitHubAction started.');
-    const debug = (0, input_boolean_policy_1.isEnabledInput)((0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.DEBUG));
+    const debug = (0, input_boolean_policy_1.isEnabledInput)((0, github_action_input_1.getGithubActionInput)(input_keys_1.INPUT_KEYS.DEBUG));
     if (debug) {
         (0, logger_1.logInfo)('Debug mode is enabled. Full logs will be included in the report.');
     }
-    const token = (0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.TOKEN, { required: true });
+    const token = (0, github_action_input_1.getGithubActionInput)(input_keys_1.INPUT_KEYS.TOKEN, { required: true });
     const singleAction = (0, github_action_execution_1.readGithubActionSingleAction)(github_action_input_1.getGithubActionInput);
     const admission = await (0, github_execution_admission_composition_root_1.createGithubExecutionAdmissionUseCase)().invoke({
         actor: eventInputs.actor,
@@ -50717,7 +50903,7 @@ async function runQueueGateOnly() {
             actor: github.context.actor,
             repo: github.context.repo,
         });
-        const token = (0, github_action_input_1.getGithubActionInput)(constants_1.INPUT_KEYS.TOKEN, { required: true });
+        const token = (0, github_action_input_1.getGithubActionInput)(input_keys_1.INPUT_KEYS.TOKEN, { required: true });
         await (0, main_run_lifecycle_1.waitForPreviousWorkflowRuns)(token, eventInputs.repo);
     }
     catch {
@@ -50747,7 +50933,8 @@ if (typeof process.env.JEST_WORKER_ID === 'undefined') {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.readGithubActionAgentTasks = readGithubActionAgentTasks;
 exports.readGithubActionAiInputs = readGithubActionAiInputs;
-const constants_1 = __nccwpck_require__(15415);
+const bugbot_constants_1 = __nccwpck_require__(51389);
+const input_keys_1 = __nccwpck_require__(88539);
 const input_boolean_policy_1 = __nccwpck_require__(18330);
 const input_number_policy_1 = __nccwpck_require__(47165);
 const input_values_policy_1 = __nccwpck_require__(68841);
@@ -50758,8 +50945,8 @@ function readGithubActionAgentTasks(getInput, _configurationSource) {
 }
 function readGithubActionAiInputs(getInput) {
     const requestedAgentTasks = (0, agent_input_builder_1.buildAgentTasksFromInputs)(getInput);
-    const pullRequestDescription = (0, input_boolean_policy_1.isEnabledInput)(getInput(constants_1.INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION));
-    const verifyCommands = getInput(constants_1.INPUT_KEYS.BUGBOT_FIX_VERIFY_COMMANDS)
+    const pullRequestDescription = (0, input_boolean_policy_1.isEnabledInput)(getInput(input_keys_1.INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION));
+    const verifyCommands = getInput(input_keys_1.INPUT_KEYS.BUGBOT_FIX_VERIFY_COMMANDS)
         .split(',')
         .map((command) => command.trim())
         .filter((command) => command.length > 0);
@@ -50767,13 +50954,13 @@ function readGithubActionAiInputs(getInput) {
         requestedAgentTasks,
         pullRequestDescription,
         pullRequestDescriptionMode: pullRequestDescription
-            ? (0, pull_request_description_1.normalizePullRequestDescriptionMode)(getInput(constants_1.INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION_MODE))
+            ? (0, pull_request_description_1.normalizePullRequestDescriptionMode)(getInput(input_keys_1.INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION_MODE))
             : 'disabled',
-        membersOnly: (0, input_boolean_policy_1.isEnabledInput)(getInput(constants_1.INPUT_KEYS.AI_MEMBERS_ONLY)),
-        includeReasoning: (0, input_boolean_policy_1.isEnabledInput)(getInput(constants_1.INPUT_KEYS.AI_INCLUDE_REASONING)),
-        ignoreFiles: (0, input_values_policy_1.parseDelimitedValues)(getInput(constants_1.INPUT_KEYS.AI_IGNORE_FILES)),
-        bugbotSeverity: getInput(constants_1.INPUT_KEYS.BUGBOT_SEVERITY) || constants_1.BUGBOT_MIN_SEVERITY,
-        bugbotCommentLimit: (0, input_number_policy_1.parseBoundedPositiveIntegerInput)(getInput(constants_1.INPUT_KEYS.BUGBOT_COMMENT_LIMIT), constants_1.BUGBOT_MAX_COMMENTS, 200),
+        membersOnly: (0, input_boolean_policy_1.isEnabledInput)(getInput(input_keys_1.INPUT_KEYS.AI_MEMBERS_ONLY)),
+        includeReasoning: (0, input_boolean_policy_1.isEnabledInput)(getInput(input_keys_1.INPUT_KEYS.AI_INCLUDE_REASONING)),
+        ignoreFiles: (0, input_values_policy_1.parseDelimitedValues)(getInput(input_keys_1.INPUT_KEYS.AI_IGNORE_FILES)),
+        bugbotSeverity: getInput(input_keys_1.INPUT_KEYS.BUGBOT_SEVERITY) || bugbot_constants_1.BUGBOT_MIN_SEVERITY,
+        bugbotCommentLimit: (0, input_number_policy_1.parseBoundedPositiveIntegerInput)(getInput(input_keys_1.INPUT_KEYS.BUGBOT_COMMENT_LIMIT), bugbot_constants_1.BUGBOT_MAX_COMMENTS, 200),
         bugbotFixVerifyCommands: verifyCommands,
     };
 }
@@ -50788,19 +50975,19 @@ function readGithubActionAiInputs(getInput) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.readGithubActionBranchInputs = readGithubActionBranchInputs;
-const constants_1 = __nccwpck_require__(15415);
+const input_keys_1 = __nccwpck_require__(88539);
 function readGithubActionBranchInputs(getInput) {
-    const main = getInput(constants_1.INPUT_KEYS.MAIN_BRANCH);
+    const main = getInput(input_keys_1.INPUT_KEYS.MAIN_BRANCH);
     return {
         main,
         defaultBranch: main,
-        development: getInput(constants_1.INPUT_KEYS.DEVELOPMENT_BRANCH),
-        featureTree: getInput(constants_1.INPUT_KEYS.FEATURE_TREE),
-        bugfixTree: getInput(constants_1.INPUT_KEYS.BUGFIX_TREE),
-        hotfixTree: getInput(constants_1.INPUT_KEYS.HOTFIX_TREE),
-        releaseTree: getInput(constants_1.INPUT_KEYS.RELEASE_TREE),
-        docsTree: getInput(constants_1.INPUT_KEYS.DOCS_TREE),
-        choreTree: getInput(constants_1.INPUT_KEYS.CHORE_TREE),
+        development: getInput(input_keys_1.INPUT_KEYS.DEVELOPMENT_BRANCH),
+        featureTree: getInput(input_keys_1.INPUT_KEYS.FEATURE_TREE),
+        bugfixTree: getInput(input_keys_1.INPUT_KEYS.BUGFIX_TREE),
+        hotfixTree: getInput(input_keys_1.INPUT_KEYS.HOTFIX_TREE),
+        releaseTree: getInput(input_keys_1.INPUT_KEYS.RELEASE_TREE),
+        docsTree: getInput(input_keys_1.INPUT_KEYS.DOCS_TREE),
+        choreTree: getInput(input_keys_1.INPUT_KEYS.CHORE_TREE),
     };
 }
 
@@ -50957,7 +51144,7 @@ const ai_1 = __nccwpck_require__(37478);
 const hotfix_1 = __nccwpck_require__(18537);
 const release_1 = __nccwpck_require__(74715);
 const single_action_1 = __nccwpck_require__(45898);
-const constants_1 = __nccwpck_require__(15415);
+const input_keys_1 = __nccwpck_require__(88539);
 const input_boolean_policy_1 = __nccwpck_require__(18330);
 const input_number_policy_1 = __nccwpck_require__(47165);
 const input_values_policy_1 = __nccwpck_require__(68841);
@@ -50976,11 +51163,14 @@ const github_action_project_inputs_1 = __nccwpck_require__(1293);
 const execution_builder_1 = __nccwpck_require__(20236);
 const configuration_builders_1 = __nccwpck_require__(19094);
 const project_details_loader_1 = __nccwpck_require__(73448);
+const issue_inactivity_1 = __nccwpck_require__(38572);
 async function buildGithubActionExecution(input) {
     const { getInput, eventInputs, projectQuery, debug, singleAction, token } = input;
     const aiInputs = (0, github_action_ai_inputs_1.readGithubActionAiInputs)(getInput);
-    (0, github_action_runtime_1.prepareGithubAgentRuntime)(aiInputs.requestedAgentTasks);
-    const projects = await (0, project_details_loader_1.loadProjectDetails)(projectQuery, (0, input_values_policy_1.parseDelimitedValues)(getInput(constants_1.INPUT_KEYS.PROJECT_IDS)), eventInputs.repo.owner, token);
+    if (!singleAction.isCloseInactiveIssuesAction) {
+        (0, github_action_runtime_1.prepareGithubAgentRuntime)(aiInputs.requestedAgentTasks);
+    }
+    const projects = await (0, project_details_loader_1.loadProjectDetails)(projectQuery, (0, input_values_policy_1.parseDelimitedValues)(getInput(input_keys_1.INPUT_KEYS.PROJECT_IDS)), eventInputs.repo.owner, token);
     const projectInputs = (0, github_action_project_inputs_1.readGithubActionProjectInputs)(getInput, projects);
     const imageConfiguration = (0, github_action_image_inputs_1.readGithubActionImageInputs)(getInput);
     const workflowInputs = (0, github_action_workflow_inputs_1.readGithubActionWorkflowInputs)(getInput);
@@ -50991,11 +51181,12 @@ async function buildGithubActionExecution(input) {
     const branchInputs = (0, github_action_branch_inputs_1.readGithubActionBranchInputs)(getInput);
     return (0, execution_builder_1.buildExecution)({
         debug,
+        inactivityThresholdHours: (0, input_number_policy_1.parseBoundedPositiveIntegerInput)(getInput(input_keys_1.INPUT_KEYS.INACTIVITY_THRESHOLD_HOURS), issue_inactivity_1.DEFAULT_INACTIVITY_THRESHOLD_HOURS, issue_inactivity_1.MAX_INACTIVITY_THRESHOLD_HOURS),
         singleAction,
         commitPrefixBuilder: getCommitPrefixBuilder(getInput),
-        issue: (0, configuration_builders_1.buildIssue)((0, input_boolean_policy_1.isEnabledInput)(getInput(constants_1.INPUT_KEYS.BRANCH_MANAGEMENT_ALWAYS)), (0, input_boolean_policy_1.isEnabledInput)(getInput(constants_1.INPUT_KEYS.REOPEN_ISSUE_ON_PUSH)), (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.DESIRED_ASSIGNEES_COUNT), 0), eventInputs),
-        pullRequest: (0, configuration_builders_1.buildPullRequest)((0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.PULL_REQUEST_DESIRED_ASSIGNEES_COUNT), 0), (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.PULL_REQUEST_DESIRED_REVIEWERS_COUNT), 0), (0, input_number_policy_1.parseNonNegativeIntegerInput)(getInput(constants_1.INPUT_KEYS.PULL_REQUEST_MERGE_TIMEOUT), 0), eventInputs),
-        emoji: (0, configuration_builders_1.buildEmoji)(getInput(constants_1.INPUT_KEYS.EMOJI_LABELED_TITLE) === 'true', getInput(constants_1.INPUT_KEYS.BRANCH_MANAGEMENT_EMOJI)),
+        issue: (0, configuration_builders_1.buildIssue)((0, input_boolean_policy_1.isEnabledInput)(getInput(input_keys_1.INPUT_KEYS.BRANCH_MANAGEMENT_ALWAYS)), (0, input_boolean_policy_1.isEnabledInput)(getInput(input_keys_1.INPUT_KEYS.REOPEN_ISSUE_ON_PUSH)), (0, input_number_policy_1.parseIntegerInput)(getInput(input_keys_1.INPUT_KEYS.DESIRED_ASSIGNEES_COUNT), 0), eventInputs),
+        pullRequest: (0, configuration_builders_1.buildPullRequest)((0, input_number_policy_1.parseIntegerInput)(getInput(input_keys_1.INPUT_KEYS.PULL_REQUEST_DESIRED_ASSIGNEES_COUNT), 0), (0, input_number_policy_1.parseIntegerInput)(getInput(input_keys_1.INPUT_KEYS.PULL_REQUEST_DESIRED_REVIEWERS_COUNT), 0), (0, input_number_policy_1.parseNonNegativeIntegerInput)(getInput(input_keys_1.INPUT_KEYS.PULL_REQUEST_MERGE_TIMEOUT), 0), eventInputs),
+        emoji: (0, configuration_builders_1.buildEmoji)(getInput(input_keys_1.INPUT_KEYS.EMOJI_LABELED_TITLE) === 'true', getInput(input_keys_1.INPUT_KEYS.BRANCH_MANAGEMENT_EMOJI)),
         images: (0, configuration_builders_1.buildImages)(imageConfiguration),
         tokens: (0, configuration_builders_1.buildTokens)(token),
         ai: new ai_1.Ai('', aiInputs.requestedAgentTasks.findings.model, aiInputs.pullRequestDescription, aiInputs.membersOnly, aiInputs.ignoreFiles, aiInputs.includeReasoning, aiInputs.bugbotSeverity, aiInputs.bugbotCommentLimit, aiInputs.bugbotFixVerifyCommands, aiInputs.requestedAgentTasks, aiInputs.pullRequestDescriptionMode),
@@ -51013,10 +51204,10 @@ async function buildGithubActionExecution(input) {
     });
 }
 function readGithubActionSingleAction(getInput) {
-    return new single_action_1.SingleAction(getInput(constants_1.INPUT_KEYS.SINGLE_ACTION), getInput(constants_1.INPUT_KEYS.SINGLE_ACTION_ISSUE), getInput(constants_1.INPUT_KEYS.SINGLE_ACTION_VERSION), getInput(constants_1.INPUT_KEYS.SINGLE_ACTION_TITLE), getInput(constants_1.INPUT_KEYS.SINGLE_ACTION_CHANGELOG));
+    return new single_action_1.SingleAction(getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_ISSUE), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_VERSION), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_TITLE), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_CHANGELOG));
 }
 function getCommitPrefixBuilder(getInput) {
-    return getInput(constants_1.INPUT_KEYS.COMMIT_PREFIX_TRANSFORMS) || 'replace-slash';
+    return getInput(input_keys_1.INPUT_KEYS.COMMIT_PREFIX_TRANSFORMS) || 'replace-slash';
 }
 
 
@@ -51104,21 +51295,21 @@ function getGithubActionInput(key, options) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.readGithubActionIssueTypeInputs = readGithubActionIssueTypeInputs;
-const constants_1 = __nccwpck_require__(15415);
+const input_keys_1 = __nccwpck_require__(88539);
 function readIssueType(getInput, name, description, color) {
     return { name: getInput(name), description: getInput(description), color: getInput(color) };
 }
 function readGithubActionIssueTypeInputs(getInput) {
     return {
-        task: readIssueType(getInput, constants_1.INPUT_KEYS.ISSUE_TYPE_TASK, constants_1.INPUT_KEYS.ISSUE_TYPE_TASK_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_TASK_COLOR),
-        bug: readIssueType(getInput, constants_1.INPUT_KEYS.ISSUE_TYPE_BUG, constants_1.INPUT_KEYS.ISSUE_TYPE_BUG_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_BUG_COLOR),
-        feature: readIssueType(getInput, constants_1.INPUT_KEYS.ISSUE_TYPE_FEATURE, constants_1.INPUT_KEYS.ISSUE_TYPE_FEATURE_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_FEATURE_COLOR),
-        documentation: readIssueType(getInput, constants_1.INPUT_KEYS.ISSUE_TYPE_DOCUMENTATION, constants_1.INPUT_KEYS.ISSUE_TYPE_DOCUMENTATION_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_DOCUMENTATION_COLOR),
-        maintenance: readIssueType(getInput, constants_1.INPUT_KEYS.ISSUE_TYPE_MAINTENANCE, constants_1.INPUT_KEYS.ISSUE_TYPE_MAINTENANCE_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_MAINTENANCE_COLOR),
-        hotfix: readIssueType(getInput, constants_1.INPUT_KEYS.ISSUE_TYPE_HOTFIX, constants_1.INPUT_KEYS.ISSUE_TYPE_HOTFIX_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_HOTFIX_COLOR),
-        release: readIssueType(getInput, constants_1.INPUT_KEYS.ISSUE_TYPE_RELEASE, constants_1.INPUT_KEYS.ISSUE_TYPE_RELEASE_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_RELEASE_COLOR),
-        question: readIssueType(getInput, constants_1.INPUT_KEYS.ISSUE_TYPE_QUESTION, constants_1.INPUT_KEYS.ISSUE_TYPE_QUESTION_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_QUESTION_COLOR),
-        help: readIssueType(getInput, constants_1.INPUT_KEYS.ISSUE_TYPE_HELP, constants_1.INPUT_KEYS.ISSUE_TYPE_HELP_DESCRIPTION, constants_1.INPUT_KEYS.ISSUE_TYPE_HELP_COLOR),
+        task: readIssueType(getInput, input_keys_1.INPUT_KEYS.ISSUE_TYPE_TASK, input_keys_1.INPUT_KEYS.ISSUE_TYPE_TASK_DESCRIPTION, input_keys_1.INPUT_KEYS.ISSUE_TYPE_TASK_COLOR),
+        bug: readIssueType(getInput, input_keys_1.INPUT_KEYS.ISSUE_TYPE_BUG, input_keys_1.INPUT_KEYS.ISSUE_TYPE_BUG_DESCRIPTION, input_keys_1.INPUT_KEYS.ISSUE_TYPE_BUG_COLOR),
+        feature: readIssueType(getInput, input_keys_1.INPUT_KEYS.ISSUE_TYPE_FEATURE, input_keys_1.INPUT_KEYS.ISSUE_TYPE_FEATURE_DESCRIPTION, input_keys_1.INPUT_KEYS.ISSUE_TYPE_FEATURE_COLOR),
+        documentation: readIssueType(getInput, input_keys_1.INPUT_KEYS.ISSUE_TYPE_DOCUMENTATION, input_keys_1.INPUT_KEYS.ISSUE_TYPE_DOCUMENTATION_DESCRIPTION, input_keys_1.INPUT_KEYS.ISSUE_TYPE_DOCUMENTATION_COLOR),
+        maintenance: readIssueType(getInput, input_keys_1.INPUT_KEYS.ISSUE_TYPE_MAINTENANCE, input_keys_1.INPUT_KEYS.ISSUE_TYPE_MAINTENANCE_DESCRIPTION, input_keys_1.INPUT_KEYS.ISSUE_TYPE_MAINTENANCE_COLOR),
+        hotfix: readIssueType(getInput, input_keys_1.INPUT_KEYS.ISSUE_TYPE_HOTFIX, input_keys_1.INPUT_KEYS.ISSUE_TYPE_HOTFIX_DESCRIPTION, input_keys_1.INPUT_KEYS.ISSUE_TYPE_HOTFIX_COLOR),
+        release: readIssueType(getInput, input_keys_1.INPUT_KEYS.ISSUE_TYPE_RELEASE, input_keys_1.INPUT_KEYS.ISSUE_TYPE_RELEASE_DESCRIPTION, input_keys_1.INPUT_KEYS.ISSUE_TYPE_RELEASE_COLOR),
+        question: readIssueType(getInput, input_keys_1.INPUT_KEYS.ISSUE_TYPE_QUESTION, input_keys_1.INPUT_KEYS.ISSUE_TYPE_QUESTION_DESCRIPTION, input_keys_1.INPUT_KEYS.ISSUE_TYPE_QUESTION_COLOR),
+        help: readIssueType(getInput, input_keys_1.INPUT_KEYS.ISSUE_TYPE_HELP, input_keys_1.INPUT_KEYS.ISSUE_TYPE_HELP_DESCRIPTION, input_keys_1.INPUT_KEYS.ISSUE_TYPE_HELP_COLOR),
     };
 }
 
@@ -51132,39 +51323,39 @@ function readGithubActionIssueTypeInputs(getInput) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.readGithubActionLabelInputs = readGithubActionLabelInputs;
-const constants_1 = __nccwpck_require__(15415);
+const input_keys_1 = __nccwpck_require__(88539);
 function readGithubActionLabelInputs(getInput) {
     return {
-        branching: { launcher: getInput(constants_1.INPUT_KEYS.BRANCH_MANAGEMENT_LAUNCHER_LABEL) },
+        branching: { launcher: getInput(input_keys_1.INPUT_KEYS.BRANCH_MANAGEMENT_LAUNCHER_LABEL) },
         workflow: {
-            bug: getInput(constants_1.INPUT_KEYS.BUG_LABEL), bugfix: getInput(constants_1.INPUT_KEYS.BUGFIX_LABEL),
-            hotfix: getInput(constants_1.INPUT_KEYS.HOTFIX_LABEL), enhancement: getInput(constants_1.INPUT_KEYS.ENHANCEMENT_LABEL),
-            feature: getInput(constants_1.INPUT_KEYS.FEATURE_LABEL), release: getInput(constants_1.INPUT_KEYS.RELEASE_LABEL),
-            question: getInput(constants_1.INPUT_KEYS.QUESTION_LABEL), help: getInput(constants_1.INPUT_KEYS.HELP_LABEL),
-            deploy: getInput(constants_1.INPUT_KEYS.DEPLOY_LABEL), deployed: getInput(constants_1.INPUT_KEYS.DEPLOYED_LABEL),
-            docs: getInput(constants_1.INPUT_KEYS.DOCS_LABEL), documentation: getInput(constants_1.INPUT_KEYS.DOCUMENTATION_LABEL),
-            chore: getInput(constants_1.INPUT_KEYS.CHORE_LABEL), maintenance: getInput(constants_1.INPUT_KEYS.MAINTENANCE_LABEL),
+            bug: getInput(input_keys_1.INPUT_KEYS.BUG_LABEL), bugfix: getInput(input_keys_1.INPUT_KEYS.BUGFIX_LABEL),
+            hotfix: getInput(input_keys_1.INPUT_KEYS.HOTFIX_LABEL), enhancement: getInput(input_keys_1.INPUT_KEYS.ENHANCEMENT_LABEL),
+            feature: getInput(input_keys_1.INPUT_KEYS.FEATURE_LABEL), release: getInput(input_keys_1.INPUT_KEYS.RELEASE_LABEL),
+            question: getInput(input_keys_1.INPUT_KEYS.QUESTION_LABEL), help: getInput(input_keys_1.INPUT_KEYS.HELP_LABEL),
+            deploy: getInput(input_keys_1.INPUT_KEYS.DEPLOY_LABEL), deployed: getInput(input_keys_1.INPUT_KEYS.DEPLOYED_LABEL),
+            docs: getInput(input_keys_1.INPUT_KEYS.DOCS_LABEL), documentation: getInput(input_keys_1.INPUT_KEYS.DOCUMENTATION_LABEL),
+            chore: getInput(input_keys_1.INPUT_KEYS.CHORE_LABEL), maintenance: getInput(input_keys_1.INPUT_KEYS.MAINTENANCE_LABEL),
         },
         priorities: {
-            high: getInput(constants_1.INPUT_KEYS.PRIORITY_HIGH_LABEL), medium: getInput(constants_1.INPUT_KEYS.PRIORITY_MEDIUM_LABEL),
-            low: getInput(constants_1.INPUT_KEYS.PRIORITY_LOW_LABEL), none: getInput(constants_1.INPUT_KEYS.PRIORITY_NONE_LABEL),
+            high: getInput(input_keys_1.INPUT_KEYS.PRIORITY_HIGH_LABEL), medium: getInput(input_keys_1.INPUT_KEYS.PRIORITY_MEDIUM_LABEL),
+            low: getInput(input_keys_1.INPUT_KEYS.PRIORITY_LOW_LABEL), none: getInput(input_keys_1.INPUT_KEYS.PRIORITY_NONE_LABEL),
         },
         sizes: {
-            xxl: getInput(constants_1.INPUT_KEYS.SIZE_XXL_LABEL), xl: getInput(constants_1.INPUT_KEYS.SIZE_XL_LABEL),
-            l: getInput(constants_1.INPUT_KEYS.SIZE_L_LABEL), m: getInput(constants_1.INPUT_KEYS.SIZE_M_LABEL),
-            s: getInput(constants_1.INPUT_KEYS.SIZE_S_LABEL), xs: getInput(constants_1.INPUT_KEYS.SIZE_XS_LABEL),
+            xxl: getInput(input_keys_1.INPUT_KEYS.SIZE_XXL_LABEL), xl: getInput(input_keys_1.INPUT_KEYS.SIZE_XL_LABEL),
+            l: getInput(input_keys_1.INPUT_KEYS.SIZE_L_LABEL), m: getInput(input_keys_1.INPUT_KEYS.SIZE_M_LABEL),
+            s: getInput(input_keys_1.INPUT_KEYS.SIZE_S_LABEL), xs: getInput(input_keys_1.INPUT_KEYS.SIZE_XS_LABEL),
         },
         lifecycle: {
-            aiProcessing: getInput(constants_1.INPUT_KEYS.STATE_AI_PROCESSING_LABEL),
-            planned: getInput(constants_1.INPUT_KEYS.STATE_PLANNED_LABEL),
-            inProgress: getInput(constants_1.INPUT_KEYS.STATE_IN_PROGRESS_LABEL),
-            reviewing: getInput(constants_1.INPUT_KEYS.STATE_REVIEWING_LABEL),
-            changesRequested: getInput(constants_1.INPUT_KEYS.STATE_CHANGES_REQUESTED_LABEL),
-            verified: getInput(constants_1.INPUT_KEYS.STATE_VERIFIED_LABEL),
-            ready: getInput(constants_1.INPUT_KEYS.STATE_READY_LABEL),
-            blocked: getInput(constants_1.INPUT_KEYS.STATE_BLOCKED_LABEL),
-            awaitingMaintainer: getInput(constants_1.INPUT_KEYS.STATE_AWAITING_MAINTAINER_LABEL),
-            awaitingIssueAuthor: getInput(constants_1.INPUT_KEYS.STATE_AWAITING_ISSUE_AUTHOR_LABEL),
+            aiProcessing: getInput(input_keys_1.INPUT_KEYS.STATE_AI_PROCESSING_LABEL),
+            planned: getInput(input_keys_1.INPUT_KEYS.STATE_PLANNED_LABEL),
+            inProgress: getInput(input_keys_1.INPUT_KEYS.STATE_IN_PROGRESS_LABEL),
+            reviewing: getInput(input_keys_1.INPUT_KEYS.STATE_REVIEWING_LABEL),
+            changesRequested: getInput(input_keys_1.INPUT_KEYS.STATE_CHANGES_REQUESTED_LABEL),
+            verified: getInput(input_keys_1.INPUT_KEYS.STATE_VERIFIED_LABEL),
+            ready: getInput(input_keys_1.INPUT_KEYS.STATE_READY_LABEL),
+            blocked: getInput(input_keys_1.INPUT_KEYS.STATE_BLOCKED_LABEL),
+            awaitingMaintainer: getInput(input_keys_1.INPUT_KEYS.STATE_AWAITING_MAINTAINER_LABEL),
+            awaitingIssueAuthor: getInput(input_keys_1.INPUT_KEYS.STATE_AWAITING_ISSUE_AUTHOR_LABEL),
         },
     };
 }
@@ -51180,11 +51371,11 @@ function readGithubActionLabelInputs(getInput) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.readGithubActionLocaleInputs = readGithubActionLocaleInputs;
 const locale_1 = __nccwpck_require__(9832);
-const constants_1 = __nccwpck_require__(15415);
+const input_keys_1 = __nccwpck_require__(88539);
 function readGithubActionLocaleInputs(getInput) {
     return {
-        issue: getInput(constants_1.INPUT_KEYS.ISSUES_LOCALE) || locale_1.Locale.DEFAULT,
-        pullRequest: getInput(constants_1.INPUT_KEYS.PULL_REQUESTS_LOCALE) || locale_1.Locale.DEFAULT,
+        issue: getInput(input_keys_1.INPUT_KEYS.ISSUES_LOCALE) || locale_1.Locale.DEFAULT,
+        pullRequest: getInput(input_keys_1.INPUT_KEYS.PULL_REQUESTS_LOCALE) || locale_1.Locale.DEFAULT,
     };
 }
 
@@ -51198,14 +51389,14 @@ function readGithubActionLocaleInputs(getInput) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.readGithubActionProjectInputs = readGithubActionProjectInputs;
-const constants_1 = __nccwpck_require__(15415);
+const input_keys_1 = __nccwpck_require__(88539);
 function readGithubActionProjectInputs(getInput, projects) {
     return {
         projects,
-        issueCreated: getInput(constants_1.INPUT_KEYS.PROJECT_COLUMN_ISSUE_CREATED),
-        pullRequestCreated: getInput(constants_1.INPUT_KEYS.PROJECT_COLUMN_PULL_REQUEST_CREATED),
-        issueInProgress: getInput(constants_1.INPUT_KEYS.PROJECT_COLUMN_ISSUE_IN_PROGRESS),
-        pullRequestInProgress: getInput(constants_1.INPUT_KEYS.PROJECT_COLUMN_PULL_REQUEST_IN_PROGRESS),
+        issueCreated: getInput(input_keys_1.INPUT_KEYS.PROJECT_COLUMN_ISSUE_CREATED),
+        pullRequestCreated: getInput(input_keys_1.INPUT_KEYS.PROJECT_COLUMN_PULL_REQUEST_CREATED),
+        issueInProgress: getInput(input_keys_1.INPUT_KEYS.PROJECT_COLUMN_ISSUE_IN_PROGRESS),
+        pullRequestInProgress: getInput(input_keys_1.INPUT_KEYS.PROJECT_COLUMN_PULL_REQUEST_IN_PROGRESS),
     };
 }
 
@@ -51264,39 +51455,39 @@ function uniqueAgentConfigurations(agentTasks) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.readGithubActionThresholdInputs = readGithubActionThresholdInputs;
-const constants_1 = __nccwpck_require__(15415);
+const input_keys_1 = __nccwpck_require__(88539);
 const input_number_policy_1 = __nccwpck_require__(47165);
 function readGithubActionThresholdInputs(getInput) {
     return {
         xxl: {
-            lines: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XXL_THRESHOLD_LINES), 1000),
-            files: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XXL_THRESHOLD_FILES), 20),
-            commits: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XXL_THRESHOLD_COMMITS), 10),
+            lines: (0, input_number_policy_1.parseIntegerInput)(getInput(input_keys_1.INPUT_KEYS.SIZE_XXL_THRESHOLD_LINES), 1000),
+            files: (0, input_number_policy_1.parseIntegerInput)(getInput(input_keys_1.INPUT_KEYS.SIZE_XXL_THRESHOLD_FILES), 20),
+            commits: (0, input_number_policy_1.parseIntegerInput)(getInput(input_keys_1.INPUT_KEYS.SIZE_XXL_THRESHOLD_COMMITS), 10),
         },
         xl: {
-            lines: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XL_THRESHOLD_LINES), 500),
-            files: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XL_THRESHOLD_FILES), 10),
-            commits: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XL_THRESHOLD_COMMITS), 5),
+            lines: (0, input_number_policy_1.parseIntegerInput)(getInput(input_keys_1.INPUT_KEYS.SIZE_XL_THRESHOLD_LINES), 500),
+            files: (0, input_number_policy_1.parseIntegerInput)(getInput(input_keys_1.INPUT_KEYS.SIZE_XL_THRESHOLD_FILES), 10),
+            commits: (0, input_number_policy_1.parseIntegerInput)(getInput(input_keys_1.INPUT_KEYS.SIZE_XL_THRESHOLD_COMMITS), 5),
         },
         l: {
-            lines: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_L_THRESHOLD_LINES), 250),
-            files: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_L_THRESHOLD_FILES), 5),
-            commits: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_L_THRESHOLD_COMMITS), 3),
+            lines: (0, input_number_policy_1.parseIntegerInput)(getInput(input_keys_1.INPUT_KEYS.SIZE_L_THRESHOLD_LINES), 250),
+            files: (0, input_number_policy_1.parseIntegerInput)(getInput(input_keys_1.INPUT_KEYS.SIZE_L_THRESHOLD_FILES), 5),
+            commits: (0, input_number_policy_1.parseIntegerInput)(getInput(input_keys_1.INPUT_KEYS.SIZE_L_THRESHOLD_COMMITS), 3),
         },
         m: {
-            lines: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_M_THRESHOLD_LINES), 100),
-            files: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_M_THRESHOLD_FILES), 3),
-            commits: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_M_THRESHOLD_COMMITS), 2),
+            lines: (0, input_number_policy_1.parseIntegerInput)(getInput(input_keys_1.INPUT_KEYS.SIZE_M_THRESHOLD_LINES), 100),
+            files: (0, input_number_policy_1.parseIntegerInput)(getInput(input_keys_1.INPUT_KEYS.SIZE_M_THRESHOLD_FILES), 3),
+            commits: (0, input_number_policy_1.parseIntegerInput)(getInput(input_keys_1.INPUT_KEYS.SIZE_M_THRESHOLD_COMMITS), 2),
         },
         s: {
-            lines: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_S_THRESHOLD_LINES), 50),
-            files: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_S_THRESHOLD_FILES), 2),
-            commits: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_S_THRESHOLD_COMMITS), 1),
+            lines: (0, input_number_policy_1.parseIntegerInput)(getInput(input_keys_1.INPUT_KEYS.SIZE_S_THRESHOLD_LINES), 50),
+            files: (0, input_number_policy_1.parseIntegerInput)(getInput(input_keys_1.INPUT_KEYS.SIZE_S_THRESHOLD_FILES), 2),
+            commits: (0, input_number_policy_1.parseIntegerInput)(getInput(input_keys_1.INPUT_KEYS.SIZE_S_THRESHOLD_COMMITS), 1),
         },
         xs: {
-            lines: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XS_THRESHOLD_LINES), 25),
-            files: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XS_THRESHOLD_FILES), 1),
-            commits: (0, input_number_policy_1.parseIntegerInput)(getInput(constants_1.INPUT_KEYS.SIZE_XS_THRESHOLD_COMMITS), 1),
+            lines: (0, input_number_policy_1.parseIntegerInput)(getInput(input_keys_1.INPUT_KEYS.SIZE_XS_THRESHOLD_LINES), 25),
+            files: (0, input_number_policy_1.parseIntegerInput)(getInput(input_keys_1.INPUT_KEYS.SIZE_XS_THRESHOLD_FILES), 1),
+            commits: (0, input_number_policy_1.parseIntegerInput)(getInput(input_keys_1.INPUT_KEYS.SIZE_XS_THRESHOLD_COMMITS), 1),
         },
     };
 }
@@ -51311,11 +51502,11 @@ function readGithubActionThresholdInputs(getInput) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.readGithubActionWorkflowInputs = readGithubActionWorkflowInputs;
-const constants_1 = __nccwpck_require__(15415);
+const input_keys_1 = __nccwpck_require__(88539);
 function readGithubActionWorkflowInputs(getInput) {
     return {
-        release: getInput(constants_1.INPUT_KEYS.RELEASE_WORKFLOW),
-        hotfix: getInput(constants_1.INPUT_KEYS.HOTFIX_WORKFLOW),
+        release: getInput(input_keys_1.INPUT_KEYS.RELEASE_WORKFLOW),
+        hotfix: getInput(input_keys_1.INPUT_KEYS.HOTFIX_WORKFLOW),
     };
 }
 
@@ -51359,36 +51550,37 @@ function requireNonEmptyContextValue(value, label) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildImageConfiguration = buildImageConfiguration;
-const constants_1 = __nccwpck_require__(15415);
+const default_image_config_1 = __nccwpck_require__(14387);
+const input_keys_1 = __nccwpck_require__(88539);
 const input_boolean_policy_1 = __nccwpck_require__(18330);
 const input_values_policy_1 = __nccwpck_require__(68841);
 const imageInputKeys = {
     issue: {
-        automatic: constants_1.INPUT_KEYS.IMAGES_ISSUE_AUTOMATIC,
-        feature: constants_1.INPUT_KEYS.IMAGES_ISSUE_FEATURE,
-        bugfix: constants_1.INPUT_KEYS.IMAGES_ISSUE_BUGFIX,
-        release: constants_1.INPUT_KEYS.IMAGES_ISSUE_RELEASE,
-        hotfix: constants_1.INPUT_KEYS.IMAGES_ISSUE_HOTFIX,
-        docs: constants_1.INPUT_KEYS.IMAGES_ISSUE_DOCS,
-        chore: constants_1.INPUT_KEYS.IMAGES_ISSUE_CHORE,
+        automatic: input_keys_1.INPUT_KEYS.IMAGES_ISSUE_AUTOMATIC,
+        feature: input_keys_1.INPUT_KEYS.IMAGES_ISSUE_FEATURE,
+        bugfix: input_keys_1.INPUT_KEYS.IMAGES_ISSUE_BUGFIX,
+        release: input_keys_1.INPUT_KEYS.IMAGES_ISSUE_RELEASE,
+        hotfix: input_keys_1.INPUT_KEYS.IMAGES_ISSUE_HOTFIX,
+        docs: input_keys_1.INPUT_KEYS.IMAGES_ISSUE_DOCS,
+        chore: input_keys_1.INPUT_KEYS.IMAGES_ISSUE_CHORE,
     },
     pullRequest: {
-        automatic: constants_1.INPUT_KEYS.IMAGES_PULL_REQUEST_AUTOMATIC,
-        feature: constants_1.INPUT_KEYS.IMAGES_PULL_REQUEST_FEATURE,
-        bugfix: constants_1.INPUT_KEYS.IMAGES_PULL_REQUEST_BUGFIX,
-        release: constants_1.INPUT_KEYS.IMAGES_PULL_REQUEST_RELEASE,
-        hotfix: constants_1.INPUT_KEYS.IMAGES_PULL_REQUEST_HOTFIX,
-        docs: constants_1.INPUT_KEYS.IMAGES_PULL_REQUEST_DOCS,
-        chore: constants_1.INPUT_KEYS.IMAGES_PULL_REQUEST_CHORE,
+        automatic: input_keys_1.INPUT_KEYS.IMAGES_PULL_REQUEST_AUTOMATIC,
+        feature: input_keys_1.INPUT_KEYS.IMAGES_PULL_REQUEST_FEATURE,
+        bugfix: input_keys_1.INPUT_KEYS.IMAGES_PULL_REQUEST_BUGFIX,
+        release: input_keys_1.INPUT_KEYS.IMAGES_PULL_REQUEST_RELEASE,
+        hotfix: input_keys_1.INPUT_KEYS.IMAGES_PULL_REQUEST_HOTFIX,
+        docs: input_keys_1.INPUT_KEYS.IMAGES_PULL_REQUEST_DOCS,
+        chore: input_keys_1.INPUT_KEYS.IMAGES_PULL_REQUEST_CHORE,
     },
     commit: {
-        automatic: constants_1.INPUT_KEYS.IMAGES_COMMIT_AUTOMATIC,
-        feature: constants_1.INPUT_KEYS.IMAGES_COMMIT_FEATURE,
-        bugfix: constants_1.INPUT_KEYS.IMAGES_COMMIT_BUGFIX,
-        release: constants_1.INPUT_KEYS.IMAGES_COMMIT_RELEASE,
-        hotfix: constants_1.INPUT_KEYS.IMAGES_COMMIT_HOTFIX,
-        docs: constants_1.INPUT_KEYS.IMAGES_COMMIT_DOCS,
-        chore: constants_1.INPUT_KEYS.IMAGES_COMMIT_CHORE,
+        automatic: input_keys_1.INPUT_KEYS.IMAGES_COMMIT_AUTOMATIC,
+        feature: input_keys_1.INPUT_KEYS.IMAGES_COMMIT_FEATURE,
+        bugfix: input_keys_1.INPUT_KEYS.IMAGES_COMMIT_BUGFIX,
+        release: input_keys_1.INPUT_KEYS.IMAGES_COMMIT_RELEASE,
+        hotfix: input_keys_1.INPUT_KEYS.IMAGES_COMMIT_HOTFIX,
+        docs: input_keys_1.INPUT_KEYS.IMAGES_COMMIT_DOCS,
+        chore: input_keys_1.INPUT_KEYS.IMAGES_COMMIT_CHORE,
     },
 };
 function buildImageConfiguration(read) {
@@ -51399,14 +51591,14 @@ function buildImageConfiguration(read) {
             const configured = (0, input_values_policy_1.parseDelimitedValues)(read(imageInputKeys[group][variant]));
             variants[variant] = configured.length > 0
                 ? configured
-                : [...constants_1.DEFAULT_IMAGE_CONFIG[group][variant]];
+                : [...default_image_config_1.DEFAULT_IMAGE_CONFIG[group][variant]];
         }
         groups[group] = variants;
     }
     return {
-        onIssue: (0, input_boolean_policy_1.isEnabledInput)(read(constants_1.INPUT_KEYS.IMAGES_ON_ISSUE)),
-        onPullRequest: (0, input_boolean_policy_1.isEnabledInput)(read(constants_1.INPUT_KEYS.IMAGES_ON_PULL_REQUEST)),
-        onCommit: (0, input_boolean_policy_1.isEnabledInput)(read(constants_1.INPUT_KEYS.IMAGES_ON_COMMIT)),
+        onIssue: (0, input_boolean_policy_1.isEnabledInput)(read(input_keys_1.INPUT_KEYS.IMAGES_ON_ISSUE)),
+        onPullRequest: (0, input_boolean_policy_1.isEnabledInput)(read(input_keys_1.INPUT_KEYS.IMAGES_ON_PULL_REQUEST)),
+        onCommit: (0, input_boolean_policy_1.isEnabledInput)(read(input_keys_1.INPUT_KEYS.IMAGES_ON_COMMIT)),
         ...groups,
     };
 }
@@ -51571,7 +51763,7 @@ exports.runMainRoute = runMainRoute;
 const core = __importStar(__nccwpck_require__(81078));
 const chalk_1 = __importDefault(__nccwpck_require__(8578));
 const boxen_1 = __importDefault(__nccwpck_require__(11652));
-const constants_1 = __nccwpck_require__(15415);
+const product_identity_1 = __nccwpck_require__(18739);
 const logger_1 = __nccwpck_require__(91151);
 const main_run_dispatcher_1 = __nccwpck_require__(28586);
 const workflow_context_1 = __nccwpck_require__(55224);
@@ -51626,7 +51818,7 @@ function logWelcomeMessage(execution) {
         margin: 1,
         borderStyle: 'round',
         borderColor: 'cyan',
-        title: constants_1.TITLE,
+        title: product_identity_1.TITLE,
         titleAlignment: 'center',
     }));
 }
@@ -51793,6 +51985,235 @@ function resolveWorkflowIdentifier(workflowRef) {
     const workflowIdentifier = workflowPath.slice(markerIndex + workflowMarker.length).trim();
     return workflowIdentifier || undefined;
 }
+
+
+/***/ }),
+
+/***/ 88539:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.INPUT_KEYS = void 0;
+/** Canonical action and CLI input vocabulary shared by input mappers. */
+exports.INPUT_KEYS = {
+    // Debug
+    DEBUG: 'debug',
+    // Welcome
+    WELCOME_TITLE: 'welcome-title',
+    WELCOME_MESSAGES: 'welcome-messages',
+    // Single action
+    SINGLE_ACTION: 'single-action',
+    SINGLE_ACTION_ISSUE: 'single-action-issue',
+    SINGLE_ACTION_VERSION: 'single-action-version',
+    SINGLE_ACTION_TITLE: 'single-action-title',
+    SINGLE_ACTION_CHANGELOG: 'single-action-changelog',
+    INACTIVITY_THRESHOLD_HOURS: 'inactivity-threshold-hours',
+    // Tokens
+    TOKEN: 'token',
+    QUEUE_GATE_ONLY: 'queue-gate-only',
+    // Agent selection
+    AGENT_PROVIDER: 'agent-provider',
+    AGENT_MODEL_PROVIDER: 'agent-model-provider',
+    AGENT_EFFORT: 'agent-effort',
+    AGENT_MODEL: 'agent-model',
+    AGENT_COMMAND: 'agent-command',
+    FINDINGS_PROVIDER: 'findings-provider',
+    FINDINGS_MODEL_PROVIDER: 'findings-model-provider',
+    FINDINGS_EFFORT: 'findings-effort',
+    FINDINGS_MODEL: 'findings-model',
+    FINDINGS_COMMAND: 'findings-command',
+    FIXER_PROVIDER: 'fixer-provider',
+    FIXER_MODEL_PROVIDER: 'fixer-model-provider',
+    FIXER_EFFORT: 'fixer-effort',
+    FIXER_MODEL: 'fixer-model',
+    FIXER_COMMAND: 'fixer-command',
+    PLANNER_PROVIDER: 'planner-provider',
+    PLANNER_MODEL_PROVIDER: 'planner-model-provider',
+    PLANNER_EFFORT: 'planner-effort',
+    PLANNER_MODEL: 'planner-model',
+    PLANNER_COMMAND: 'planner-command',
+    REVIEWER_PROVIDER: 'reviewer-provider',
+    REVIEWER_MODEL_PROVIDER: 'reviewer-model-provider',
+    REVIEWER_EFFORT: 'reviewer-effort',
+    REVIEWER_MODEL: 'reviewer-model',
+    REVIEWER_COMMAND: 'reviewer-command',
+    TESTER_PROVIDER: 'tester-provider',
+    TESTER_MODEL_PROVIDER: 'tester-model-provider',
+    TESTER_EFFORT: 'tester-effort',
+    TESTER_MODEL: 'tester-model',
+    TESTER_COMMAND: 'tester-command',
+    RELEASE_PROVIDER: 'release-provider',
+    RELEASE_MODEL_PROVIDER: 'release-model-provider',
+    RELEASE_EFFORT: 'release-effort',
+    RELEASE_MODEL: 'release-model',
+    RELEASE_COMMAND: 'release-command',
+    // AI configuration
+    AI_PULL_REQUEST_DESCRIPTION: 'ai-pull-request-description',
+    AI_PULL_REQUEST_DESCRIPTION_MODE: 'ai-pull-request-description-mode',
+    AI_MEMBERS_ONLY: 'ai-members-only',
+    AI_IGNORE_FILES: 'ai-ignore-files',
+    AI_INCLUDE_REASONING: 'ai-include-reasoning',
+    BUGBOT_SEVERITY: 'bugbot-severity',
+    BUGBOT_COMMENT_LIMIT: 'bugbot-comment-limit',
+    BUGBOT_FIX_VERIFY_COMMANDS: 'bugbot-fix-verify-commands',
+    // Projects
+    PROJECT_IDS: 'project-ids',
+    PROJECT_COLUMN_ISSUE_CREATED: 'project-column-issue-created',
+    PROJECT_COLUMN_PULL_REQUEST_CREATED: 'project-column-pull-request-created',
+    PROJECT_COLUMN_ISSUE_IN_PROGRESS: 'project-column-issue-in-progress',
+    PROJECT_COLUMN_PULL_REQUEST_IN_PROGRESS: 'project-column-pull-request-in-progress',
+    // Images
+    IMAGES_ON_ISSUE: 'images-on-issue',
+    IMAGES_ON_PULL_REQUEST: 'images-on-pull-request',
+    IMAGES_ON_COMMIT: 'images-on-commit',
+    IMAGES_ISSUE_AUTOMATIC: 'images-issue-automatic',
+    IMAGES_ISSUE_FEATURE: 'images-issue-feature',
+    IMAGES_ISSUE_BUGFIX: 'images-issue-bugfix',
+    IMAGES_ISSUE_DOCS: 'images-issue-docs',
+    IMAGES_ISSUE_CHORE: 'images-issue-chore',
+    IMAGES_ISSUE_RELEASE: 'images-issue-release',
+    IMAGES_ISSUE_HOTFIX: 'images-issue-hotfix',
+    IMAGES_PULL_REQUEST_AUTOMATIC: 'images-pull-request-automatic',
+    IMAGES_PULL_REQUEST_FEATURE: 'images-pull-request-feature',
+    IMAGES_PULL_REQUEST_BUGFIX: 'images-pull-request-bugfix',
+    IMAGES_PULL_REQUEST_RELEASE: 'images-pull-request-release',
+    IMAGES_PULL_REQUEST_HOTFIX: 'images-pull-request-hotfix',
+    IMAGES_PULL_REQUEST_DOCS: 'images-pull-request-docs',
+    IMAGES_PULL_REQUEST_CHORE: 'images-pull-request-chore',
+    IMAGES_COMMIT_AUTOMATIC: 'images-commit-automatic',
+    IMAGES_COMMIT_FEATURE: 'images-commit-feature',
+    IMAGES_COMMIT_BUGFIX: 'images-commit-bugfix',
+    IMAGES_COMMIT_RELEASE: 'images-commit-release',
+    IMAGES_COMMIT_HOTFIX: 'images-commit-hotfix',
+    IMAGES_COMMIT_DOCS: 'images-commit-docs',
+    IMAGES_COMMIT_CHORE: 'images-commit-chore',
+    // Workflows
+    RELEASE_WORKFLOW: 'release-workflow',
+    HOTFIX_WORKFLOW: 'hotfix-workflow',
+    // Emoji
+    EMOJI_LABELED_TITLE: 'emoji-labeled-title',
+    BRANCH_MANAGEMENT_EMOJI: 'branch-management-emoji',
+    // Labels
+    BRANCH_MANAGEMENT_LAUNCHER_LABEL: 'branch-management-launcher-label',
+    BUGFIX_LABEL: 'bugfix-label',
+    BUG_LABEL: 'bug-label',
+    HOTFIX_LABEL: 'hotfix-label',
+    ENHANCEMENT_LABEL: 'enhancement-label',
+    FEATURE_LABEL: 'feature-label',
+    RELEASE_LABEL: 'release-label',
+    QUESTION_LABEL: 'question-label',
+    HELP_LABEL: 'help-label',
+    DEPLOY_LABEL: 'deploy-label',
+    DEPLOYED_LABEL: 'deployed-label',
+    DOCS_LABEL: 'docs-label',
+    DOCUMENTATION_LABEL: 'documentation-label',
+    CHORE_LABEL: 'chore-label',
+    MAINTENANCE_LABEL: 'maintenance-label',
+    PRIORITY_HIGH_LABEL: 'priority-high-label',
+    PRIORITY_MEDIUM_LABEL: 'priority-medium-label',
+    PRIORITY_LOW_LABEL: 'priority-low-label',
+    PRIORITY_NONE_LABEL: 'priority-none-label',
+    SIZE_XXL_LABEL: 'size-xxl-label',
+    SIZE_XL_LABEL: 'size-xl-label',
+    SIZE_L_LABEL: 'size-l-label',
+    SIZE_M_LABEL: 'size-m-label',
+    SIZE_S_LABEL: 'size-s-label',
+    SIZE_XS_LABEL: 'size-xs-label',
+    // Lifecycle label inputs
+    STATE_AI_PROCESSING_LABEL: 'state-ai-processing-label',
+    STATE_PLANNED_LABEL: 'state-planned-label',
+    STATE_IN_PROGRESS_LABEL: 'state-in-progress-label',
+    STATE_REVIEWING_LABEL: 'state-reviewing-label',
+    STATE_CHANGES_REQUESTED_LABEL: 'state-changes-requested-label',
+    STATE_VERIFIED_LABEL: 'state-verified-label',
+    STATE_READY_LABEL: 'state-ready-label',
+    STATE_BLOCKED_LABEL: 'state-blocked-label',
+    STATE_AWAITING_MAINTAINER_LABEL: 'state-awaiting-maintainer-label',
+    STATE_AWAITING_ISSUE_AUTHOR_LABEL: 'state-awaiting-issue-author-label',
+    // Issue Types
+    ISSUE_TYPE_BUG: 'issue-type-bug',
+    ISSUE_TYPE_BUG_DESCRIPTION: 'issue-type-bug-description',
+    ISSUE_TYPE_BUG_COLOR: 'issue-type-bug-color',
+    ISSUE_TYPE_HOTFIX: 'issue-type-hotfix',
+    ISSUE_TYPE_HOTFIX_DESCRIPTION: 'issue-type-hotfix-description',
+    ISSUE_TYPE_HOTFIX_COLOR: 'issue-type-hotfix-color',
+    ISSUE_TYPE_FEATURE: 'issue-type-feature',
+    ISSUE_TYPE_FEATURE_DESCRIPTION: 'issue-type-feature-description',
+    ISSUE_TYPE_FEATURE_COLOR: 'issue-type-feature-color',
+    ISSUE_TYPE_DOCUMENTATION: 'issue-type-documentation',
+    ISSUE_TYPE_DOCUMENTATION_DESCRIPTION: 'issue-type-documentation-description',
+    ISSUE_TYPE_DOCUMENTATION_COLOR: 'issue-type-documentation-color',
+    ISSUE_TYPE_MAINTENANCE: 'issue-type-maintenance',
+    ISSUE_TYPE_MAINTENANCE_DESCRIPTION: 'issue-type-maintenance-description',
+    ISSUE_TYPE_MAINTENANCE_COLOR: 'issue-type-maintenance-color',
+    ISSUE_TYPE_RELEASE: 'issue-type-release',
+    ISSUE_TYPE_RELEASE_DESCRIPTION: 'issue-type-release-description',
+    ISSUE_TYPE_RELEASE_COLOR: 'issue-type-release-color',
+    ISSUE_TYPE_QUESTION: 'issue-type-question',
+    ISSUE_TYPE_QUESTION_DESCRIPTION: 'issue-type-question-description',
+    ISSUE_TYPE_QUESTION_COLOR: 'issue-type-question-color',
+    ISSUE_TYPE_HELP: 'issue-type-help',
+    ISSUE_TYPE_HELP_DESCRIPTION: 'issue-type-help-description',
+    ISSUE_TYPE_HELP_COLOR: 'issue-type-help-color',
+    ISSUE_TYPE_TASK: 'issue-type-task',
+    ISSUE_TYPE_TASK_DESCRIPTION: 'issue-type-task-description',
+    ISSUE_TYPE_TASK_COLOR: 'issue-type-task-color',
+    // Locale
+    ISSUES_LOCALE: 'issues-locale',
+    PULL_REQUESTS_LOCALE: 'pull-requests-locale',
+    // Size Thresholds
+    SIZE_XXL_THRESHOLD_LINES: 'size-xxl-threshold-lines',
+    SIZE_XXL_THRESHOLD_FILES: 'size-xxl-threshold-files',
+    SIZE_XXL_THRESHOLD_COMMITS: 'size-xxl-threshold-commits',
+    SIZE_XL_THRESHOLD_LINES: 'size-xl-threshold-lines',
+    SIZE_XL_THRESHOLD_FILES: 'size-xl-threshold-files',
+    SIZE_XL_THRESHOLD_COMMITS: 'size-xl-threshold-commits',
+    SIZE_L_THRESHOLD_LINES: 'size-l-threshold-lines',
+    SIZE_L_THRESHOLD_FILES: 'size-l-threshold-files',
+    SIZE_L_THRESHOLD_COMMITS: 'size-l-threshold-commits',
+    SIZE_M_THRESHOLD_LINES: 'size-m-threshold-lines',
+    SIZE_M_THRESHOLD_FILES: 'size-m-threshold-files',
+    SIZE_M_THRESHOLD_COMMITS: 'size-m-threshold-commits',
+    SIZE_S_THRESHOLD_LINES: 'size-s-threshold-lines',
+    SIZE_S_THRESHOLD_FILES: 'size-s-threshold-files',
+    SIZE_S_THRESHOLD_COMMITS: 'size-s-threshold-commits',
+    SIZE_XS_THRESHOLD_LINES: 'size-xs-threshold-lines',
+    SIZE_XS_THRESHOLD_FILES: 'size-xs-threshold-files',
+    SIZE_XS_THRESHOLD_COMMITS: 'size-xs-threshold-commits',
+    // Branches
+    MAIN_BRANCH: 'main-branch',
+    DEVELOPMENT_BRANCH: 'development-branch',
+    FEATURE_TREE: 'feature-tree',
+    BUGFIX_TREE: 'bugfix-tree',
+    HOTFIX_TREE: 'hotfix-tree',
+    RELEASE_TREE: 'release-tree',
+    DOCS_TREE: 'docs-tree',
+    CHORE_TREE: 'chore-tree',
+    // Commit
+    COMMIT_PREFIX_TRANSFORMS: 'commit-prefix-transforms',
+    // Issue
+    BRANCH_MANAGEMENT_ALWAYS: 'branch-management-always',
+    REOPEN_ISSUE_ON_PUSH: 'reopen-issue-on-push',
+    DESIRED_ASSIGNEES_COUNT: 'desired-assignees-count',
+    // Pull Request
+    PULL_REQUEST_DESIRED_ASSIGNEES_COUNT: 'desired-assignees-count',
+    PULL_REQUEST_DESIRED_REVIEWERS_COUNT: 'desired-reviewers-count',
+    PULL_REQUEST_MERGE_TIMEOUT: 'merge-timeout',
+};
+
+
+/***/ }),
+
+/***/ 18739:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TITLE = void 0;
+exports.TITLE = 'Copilot';
 
 
 /***/ }),
@@ -52463,6 +52884,23 @@ function findPreviousIssueBranch(branches, issueNumber, branchTypes) {
     }
     return undefined;
 }
+
+
+/***/ }),
+
+/***/ 51389:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BUGBOT_MIN_SEVERITY = exports.BUGBOT_MAX_COMMENTS = exports.BUGBOT_MARKER_PREFIX = void 0;
+/** Hidden marker prefix used to reconcile Bugbot findings across comments. */
+exports.BUGBOT_MARKER_PREFIX = 'copilot-bugbot';
+/** Maximum number of individual Bugbot comments published for one analysis. */
+exports.BUGBOT_MAX_COMMENTS = 20;
+/** Minimum severity published by default. */
+exports.BUGBOT_MIN_SEVERITY = 'low';
 
 
 /***/ }),
@@ -53313,7 +53751,7 @@ const MAX_DEBUG_LOG_LENGTH = 12000;
 /** Resolves the GitHub discussion that receives a result comment. */
 function resolveResultPublicationIssueNumber(input) {
     if (input.isSingleAction)
-        return input.singleActionIssue;
+        return input.singleActionIssue > 0 ? input.singleActionIssue : undefined;
     if (input.isIssue)
         return input.issueNumber;
     if (input.isPullRequest)
@@ -53507,7 +53945,7 @@ function calculateReviewersStillNeeded(desiredCount, currentCount, confirmedCoun
 
 /***/ }),
 
-/***/ 56637:
+/***/ 23381:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
@@ -53517,22 +53955,8 @@ exports.SETUP_FEATURE_DESCRIPTIONS = exports.SETUP_AGENT_TASKS = void 0;
 exports.createDefaultSetupStorageConfiguration = createDefaultSetupStorageConfiguration;
 exports.createDefaultSetupConfiguration = createDefaultSetupConfiguration;
 exports.mergeSetupConfiguration = mergeSetupConfiguration;
-exports.validateSetupConfiguration = validateSetupConfiguration;
-exports.buildSetupPlan = buildSetupPlan;
-exports.buildSetupCredentialRequirements = buildSetupCredentialRequirements;
-exports.buildSetupRepositoryVariables = buildSetupRepositoryVariables;
-exports.buildSetupActionInputs = buildSetupActionInputs;
-exports.resolveSetupResourceScope = resolveSetupResourceScope;
-exports.getSetupResourceStoragePolicy = getSetupResourceStoragePolicy;
-exports.getSetupStorageConfiguration = getSetupStorageConfiguration;
-exports.resolveSetupResourceTarget = resolveSetupResourceTarget;
-exports.setupResourceExists = setupResourceExists;
-exports.shouldUpsertSetupResource = shouldUpsertSetupResource;
-exports.validateSetupStorageAgainstRemote = validateSetupStorageAgainstRemote;
-exports.usesOrganizationStorage = usesOrganizationStorage;
 const agent_1 = __nccwpck_require__(89040);
-const agent_configuration_validation_policy_1 = __nccwpck_require__(60596);
-const pull_request_description_1 = __nccwpck_require__(45315);
+const issue_inactivity_1 = __nccwpck_require__(38572);
 exports.SETUP_AGENT_TASKS = [
     'planner',
     'findings',
@@ -53551,37 +53975,10 @@ exports.SETUP_FEATURE_DESCRIPTIONS = {
     hotfix: 'Hotfix workflow: emergency release from a production tag',
     agentProvisioning: 'Agent CLI provisioning check workflow',
     credentialHealth: 'Read-only remote credential health workflow for setup and doctor',
+    inactiveIssueClosure: 'Close issues after inactivity while waiting for an issuer or issue author',
     issueTemplates: 'Issue templates for feature, bug, documentation, and operations',
     pullRequestTemplate: 'Pull request template',
 };
-const WORKFLOW_FILES = {
-    issues: ['copilot_issue.yml'],
-    pullRequests: ['copilot_pull_request.yml'],
-    commits: ['copilot_commit.yml'],
-    issueComments: ['copilot_issue_comment.yml'],
-    pullRequestComments: ['copilot_pull_request_comment.yml'],
-    release: ['release_workflow.yml'],
-    hotfix: ['hotfix_workflow.yml'],
-    agentProvisioning: ['agent-cli-provisioning.yml'],
-    credentialHealth: ['copilot_credential_health.yml'],
-};
-const ISSUE_TEMPLATE_FILES = [
-    'config.yml',
-    'feature_request.yml',
-    'bug_report.yml',
-    'doc_update.yml',
-    'chore_task.yml',
-    'help_request.yml',
-    'hotfix.yml',
-    'release.yml',
-];
-const SECRET_BY_MODEL_PROVIDER = {
-    openai: 'OPENAI_API_KEY',
-    anthropic: 'ANTHROPIC_API_KEY',
-    google: 'GOOGLE_API_KEY',
-    openrouter: 'OPENROUTER_API_KEY',
-};
-const RESOURCE_NAME_PATTERN = /^[A-Z][A-Z0-9_]*$/;
 function defaultStoragePolicy() {
     return {
         defaultScope: 'repository',
@@ -53604,7 +54001,7 @@ function createDefaultSetupConfiguration() {
         effort: '',
     });
     const agents = Object.fromEntries(exports.SETUP_AGENT_TASKS.map(task => [task, defaultRole()]));
-    const features = Object.fromEntries(Object.keys(exports.SETUP_FEATURE_DESCRIPTIONS).map(feature => [feature, true]));
+    const features = Object.fromEntries(Object.keys(exports.SETUP_FEATURE_DESCRIPTIONS).map(feature => [feature, feature !== 'inactiveIssueClosure']));
     return {
         features,
         agents,
@@ -53622,6 +54019,7 @@ function createDefaultSetupConfiguration() {
             desiredAssigneesCount: 1,
             desiredReviewersCount: 1,
             mergeTimeout: 600,
+            inactivityThresholdHours: issue_inactivity_1.DEFAULT_INACTIVITY_THRESHOLD_HOURS,
             issueLocale: 'en-US',
             pullRequestLocale: 'en-US',
             commitPrefixTransforms: 'replace-slash',
@@ -53668,60 +54066,70 @@ function mergeSetupConfiguration(base, overrides = {}) {
         manageRepositorySecrets: overrides.manageRepositorySecrets ?? base.manageRepositorySecrets,
         actionInputs: { ...base.actionInputs, ...(overrides.actionInputs ?? {}) },
         storage: {
-            secrets: mergeStoragePolicy(base.storage?.secrets, overrides.storage?.secrets),
-            variables: mergeStoragePolicy(base.storage?.variables, overrides.storage?.variables),
+            secrets: {
+                ...base.storage.secrets,
+                ...(overrides.storage?.secrets ?? {}),
+                overrides: {
+                    ...base.storage.secrets.overrides,
+                    ...(overrides.storage?.secrets?.overrides ?? {}),
+                },
+            },
+            variables: {
+                ...base.storage.variables,
+                ...(overrides.storage?.variables ?? {}),
+                overrides: {
+                    ...base.storage.variables.overrides,
+                    ...(overrides.storage?.variables?.overrides ?? {}),
+                },
+            },
         },
     };
 }
-function validateSetupConfiguration(configuration) {
-    const errors = [];
-    const nonEmpty = [
-        ['main branch', configuration.repository.mainBranch],
-        ['development branch', configuration.repository.developmentBranch],
-        ['feature branch prefix', configuration.repository.featureTree],
-        ['bugfix branch prefix', configuration.repository.bugfixTree],
-        ['hotfix branch prefix', configuration.repository.hotfixTree],
-        ['release branch prefix', configuration.repository.releaseTree],
-        ['docs branch prefix', configuration.repository.docsTree],
-        ['chore branch prefix', configuration.repository.choreTree],
-    ];
-    for (const [name, value] of nonEmpty) {
-        if (!value.trim() || /\s/.test(value))
-            errors.push(`The ${name} must be non-empty and contain no whitespace.`);
-    }
-    if (configuration.repository.desiredAssigneesCount < 0 || configuration.repository.desiredAssigneesCount > 10) {
-        errors.push('Desired assignees must be between 0 and 10.');
-    }
-    if (configuration.repository.desiredReviewersCount < 0 || configuration.repository.desiredReviewersCount > 15) {
-        errors.push('Desired reviewers must be between 0 and 15.');
-    }
-    if (configuration.repository.mergeTimeout < 0)
-        errors.push('Merge timeout cannot be negative.');
-    if (configuration.ai.bugbotCommentLimit < 1 || configuration.ai.bugbotCommentLimit > 100) {
-        errors.push('Bugbot comment limit must be between 1 and 100.');
-    }
-    if (!['info', 'low', 'medium', 'high'].includes(configuration.ai.bugbotSeverity)) {
-        errors.push('Bugbot severity must be info, low, medium, or high.');
-    }
-    if (configuration.ai.pullRequestDescriptionMode !== undefined
-        && !['replace', 'append', 'preserve', 'disabled'].includes(configuration.ai.pullRequestDescriptionMode)) {
-        errors.push('Pull-request description mode must be replace, append, preserve, or disabled.');
-    }
-    if (!['auto', 'always', 'disabled'].includes(configuration.ai.provisioningMode)) {
-        errors.push('Agent provisioning must be auto, always, or disabled.');
-    }
-    errors.push(...validateStorageConfiguration(configuration.storage));
-    for (const task of exports.SETUP_AGENT_TASKS) {
-        const agent = configuration.agents[task];
-        if (!agent_configuration_validation_policy_1.SUPPORTED_AGENT_PROVIDERS.includes(agent.provider))
-            errors.push(`Unsupported provider for ${task}: ${agent.provider}.`);
-        if (!agent.modelProvider.trim() || !agent.model.trim())
-            errors.push(`Model provider and model are required for ${task}.`);
-        if (/\s/.test(agent.model) || /\s/.test(agent.modelProvider))
-            errors.push(`Model provider and model for ${task} cannot contain whitespace.`);
-    }
-    return errors;
-}
+
+
+/***/ }),
+
+/***/ 87770:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildSetupPlan = buildSetupPlan;
+exports.buildSetupCredentialRequirements = buildSetupCredentialRequirements;
+exports.buildSetupRepositoryVariables = buildSetupRepositoryVariables;
+exports.buildSetupActionInputs = buildSetupActionInputs;
+const pull_request_description_1 = __nccwpck_require__(45315);
+const setup_configuration_defaults_1 = __nccwpck_require__(23381);
+const setup_configuration_storage_policy_1 = __nccwpck_require__(2554);
+const WORKFLOW_FILES = {
+    issues: ['copilot_issue.yml'],
+    pullRequests: ['copilot_pull_request.yml'],
+    commits: ['copilot_commit.yml'],
+    issueComments: ['copilot_issue_comment.yml'],
+    pullRequestComments: ['copilot_pull_request_comment.yml'],
+    release: ['release_workflow.yml'],
+    hotfix: ['hotfix_workflow.yml'],
+    agentProvisioning: ['agent-cli-provisioning.yml'],
+    credentialHealth: ['copilot_credential_health.yml'],
+    inactiveIssueClosure: ['copilot_close_inactive_issues.yml'],
+};
+const ISSUE_TEMPLATE_FILES = [
+    'config.yml',
+    'feature_request.yml',
+    'bug_report.yml',
+    'doc_update.yml',
+    'chore_task.yml',
+    'help_request.yml',
+    'hotfix.yml',
+    'release.yml',
+];
+const SECRET_BY_MODEL_PROVIDER = {
+    openai: 'OPENAI_API_KEY',
+    anthropic: 'ANTHROPIC_API_KEY',
+    google: 'GOOGLE_API_KEY',
+    openrouter: 'OPENROUTER_API_KEY',
+};
 function buildSetupPlan(configuration) {
     const workflowFiles = Object.entries(WORKFLOW_FILES)
         .filter(([feature]) => configuration.features[feature] !== false)
@@ -53735,14 +54143,15 @@ function buildSetupPlan(configuration) {
         ...issueTemplateFiles.map(file => `ISSUE_TEMPLATE/${file}`),
         ...(configuration.features.pullRequestTemplate === false ? [] : ['pull_request_template.md']),
     ];
+    const credentialRequirements = buildSetupCredentialRequirements(configuration);
     return {
         configuration,
         workflowFiles,
         issueTemplateFiles,
         selectedFiles,
         variables: buildSetupRepositoryVariables(configuration),
-        requiredSecrets: buildRequiredSetupSecrets(configuration),
-        credentialRequirements: buildSetupCredentialRequirements(configuration),
+        requiredSecrets: credentialRequirements.map(requirement => requirement.name),
+        credentialRequirements,
         warnings: buildSetupWarnings(configuration),
     };
 }
@@ -53754,7 +54163,7 @@ function buildSetupCredentialRequirements(configuration) {
             requirements.set(name, { name, kind, description, provider, model });
     };
     add('PAT', 'workflowPat', 'A separate GitHub token owned by the bot account. It is used by workflows at runtime.');
-    for (const task of exports.SETUP_AGENT_TASKS) {
+    for (const task of setup_configuration_defaults_1.SETUP_AGENT_TASKS) {
         const agent = configuration.agents[task];
         if (agent.provider === 'cursor') {
             add('CURSOR_API_KEY', 'apiKey', 'Cursor API key used by the Cursor agent runtime.', 'cursor', agent.model);
@@ -53785,9 +54194,9 @@ function buildSetupRepositoryVariables(configuration) {
     add('AGENT_MODEL', base.model);
     add('AGENT_EFFORT', base.effort);
     add('AGENT_PROVISIONING', configuration.ai.provisioningMode);
-    add('AGENT_ALLOWED_MODEL_PROVIDERS', unique(exports.SETUP_AGENT_TASKS.map(task => configuration.agents[task].modelProvider)).join(','));
-    add('AGENT_ALLOWED_MODELS', unique(exports.SETUP_AGENT_TASKS.map(task => `${configuration.agents[task].modelProvider}/${configuration.agents[task].model}`)).join(','));
-    for (const task of exports.SETUP_AGENT_TASKS) {
+    add('AGENT_ALLOWED_MODEL_PROVIDERS', unique(setup_configuration_defaults_1.SETUP_AGENT_TASKS.map(task => configuration.agents[task].modelProvider)).join(','));
+    add('AGENT_ALLOWED_MODELS', unique(setup_configuration_defaults_1.SETUP_AGENT_TASKS.map(task => `${configuration.agents[task].modelProvider}/${configuration.agents[task].model}`)).join(','));
+    for (const task of setup_configuration_defaults_1.SETUP_AGENT_TASKS) {
         const prefix = task.toUpperCase();
         const agent = configuration.agents[task];
         add(`${prefix}_PROVIDER`, agent.provider);
@@ -53809,6 +54218,9 @@ function buildSetupRepositoryVariables(configuration) {
     add('DESIRED_ASSIGNEES_COUNT', repository.desiredAssigneesCount);
     add('DESIRED_REVIEWERS_COUNT', repository.desiredReviewersCount);
     add('MERGE_TIMEOUT', repository.mergeTimeout);
+    if (configuration.features.inactiveIssueClosure !== false) {
+        add('INACTIVITY_THRESHOLD_HOURS', repository.inactivityThresholdHours);
+    }
     add('ISSUES_LOCALE', repository.issueLocale);
     add('PULL_REQUESTS_LOCALE', repository.pullRequestLocale);
     add('COMMIT_PREFIX_TRANSFORMS', repository.commitPrefixTransforms);
@@ -53845,6 +54257,7 @@ function buildSetupActionInputs(configuration) {
         'desired-assignees-count': String(repository.desiredAssigneesCount),
         'desired-reviewers-count': String(repository.desiredReviewersCount),
         'merge-timeout': String(repository.mergeTimeout),
+        'inactivity-threshold-hours': String(repository.inactivityThresholdHours),
         'issues-locale': repository.issueLocale,
         'pull-requests-locale': repository.pullRequestLocale,
         'commit-prefix-transforms': repository.commitPrefixTransforms,
@@ -53874,7 +54287,7 @@ function buildAgentActionInputs(configuration) {
     add('agent-model-provider', base.modelProvider);
     add('agent-model', base.model);
     add('agent-effort', base.effort);
-    for (const task of exports.SETUP_AGENT_TASKS) {
+    for (const task of setup_configuration_defaults_1.SETUP_AGENT_TASKS) {
         const agent = configuration.agents[task];
         const prefix = `${task}-`;
         add(`${prefix}provider`, agent.provider);
@@ -53884,9 +54297,6 @@ function buildAgentActionInputs(configuration) {
     }
     return result;
 }
-function buildRequiredSetupSecrets(configuration) {
-    return buildSetupCredentialRequirements(configuration).map(requirement => requirement.name);
-}
 function buildSetupWarnings(configuration) {
     const warnings = [];
     if (configuration.features.release !== false && configuration.features.hotfix !== false) {
@@ -53895,17 +54305,72 @@ function buildSetupWarnings(configuration) {
     if (configuration.ai.provisioningMode === 'always') {
         warnings.push('Always-provision mode requires pinned CLI versions or a Cursor installer checksum in repository Variables.');
     }
+    if (configuration.features.inactiveIssueClosure !== false) {
+        warnings.push('Inactive issue closure is enabled; waiting issues are closed after the configured inactivity threshold and can be reopened with a new comment.');
+    }
     if (configuration.projects.ids.trim()) {
         warnings.push('Project IDs must be accessible to the PAT and use the expected project column names.');
     }
-    if (exports.SETUP_AGENT_TASKS.some(task => configuration.agents[task].provider === 'cursor')) {
+    if (setup_configuration_defaults_1.SETUP_AGENT_TASKS.some(task => configuration.agents[task].provider === 'cursor')) {
         warnings.push('Cursor is an experimental runtime in Copilot and requires a verified installer checksum plus CURSOR_API_KEY.');
     }
-    if (usesOrganizationStorage(configuration)) {
+    if ((0, setup_configuration_storage_policy_1.usesOrganizationStorage)(configuration)) {
         warnings.push('Organization-level Secrets and Variables require organization permissions; selected access is the safest default and repository values take precedence.');
     }
     return warnings;
 }
+function unique(values) {
+    return [...new Set(values.map(value => value.trim()).filter(Boolean))];
+}
+
+
+/***/ }),
+
+/***/ 56637:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+/** Public setup-policy boundary. Each concern is implemented in a focused policy module. */
+__exportStar(__nccwpck_require__(23381), exports);
+__exportStar(__nccwpck_require__(87770), exports);
+__exportStar(__nccwpck_require__(2554), exports);
+__exportStar(__nccwpck_require__(13339), exports);
+
+
+/***/ }),
+
+/***/ 2554:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.resolveSetupResourceScope = resolveSetupResourceScope;
+exports.getSetupResourceStoragePolicy = getSetupResourceStoragePolicy;
+exports.getSetupStorageConfiguration = getSetupStorageConfiguration;
+exports.resolveSetupResourceTarget = resolveSetupResourceTarget;
+exports.setupResourceExists = setupResourceExists;
+exports.shouldUpsertSetupResource = shouldUpsertSetupResource;
+exports.validateSetupStorageAgainstRemote = validateSetupStorageAgainstRemote;
+exports.usesOrganizationStorage = usesOrganizationStorage;
+exports.validateStorageConfiguration = validateStorageConfiguration;
+const setup_configuration_defaults_1 = __nccwpck_require__(23381);
 function resolveSetupResourceScope(policy, name) {
     return policy.overrides[name] ?? policy.defaultScope;
 }
@@ -53913,7 +54378,7 @@ function getSetupResourceStoragePolicy(configuration, kind) {
     return getSetupStorageConfiguration(configuration)[kind === 'secret' ? 'secrets' : 'variables'];
 }
 function getSetupStorageConfiguration(configuration) {
-    const fallback = createDefaultSetupStorageConfiguration();
+    const fallback = (0, setup_configuration_defaults_1.createDefaultSetupStorageConfiguration)();
     return {
         secrets: mergeStoragePolicy(fallback.secrets, configuration.storage?.secrets),
         variables: mergeStoragePolicy(fallback.variables, configuration.storage?.variables),
@@ -53990,17 +54455,7 @@ function usesOrganizationStorage(configuration) {
     const storage = getSetupStorageConfiguration(configuration);
     return [storage.secrets, storage.variables].some(policy => policy.defaultScope === 'organization' || Object.values(policy.overrides).includes('organization'));
 }
-function mergeStoragePolicy(base, override) {
-    const fallback = base ?? defaultStoragePolicy();
-    return {
-        ...fallback,
-        ...(override ?? {}),
-        overrides: { ...fallback.overrides, ...(override?.overrides ?? {}) },
-    };
-}
 function validateStorageConfiguration(storage) {
-    // Setup files created before scoped storage was introduced remain valid and
-    // receive the repository-level defaults through getSetupStorageConfiguration.
     if (!storage)
         return [];
     const errors = [];
@@ -54015,7 +54470,7 @@ function validateStorageConfiguration(storage) {
         if (typeof policy.preserveExisting !== 'boolean')
             errors.push(`${kind} preserveExisting must be a boolean.`);
         for (const [name, scope] of Object.entries(policy.overrides ?? {})) {
-            if (!RESOURCE_NAME_PATTERN.test(name))
+            if (!/^[A-Z][A-Z0-9_]*$/.test(name))
                 errors.push(`${kind} override name ${name} must be an uppercase GitHub Actions name.`);
             if (!['repository', 'organization'].includes(scope))
                 errors.push(`${kind} override ${name} must use repository or organization.`);
@@ -54023,8 +54478,82 @@ function validateStorageConfiguration(storage) {
     }
     return errors;
 }
-function unique(values) {
-    return [...new Set(values.map(value => value.trim()).filter(Boolean))];
+function mergeStoragePolicy(base, override) {
+    const fallback = base ?? (0, setup_configuration_defaults_1.createDefaultSetupStorageConfiguration)().secrets;
+    return {
+        ...fallback,
+        ...(override ?? {}),
+        overrides: { ...fallback.overrides, ...(override?.overrides ?? {}) },
+    };
+}
+
+
+/***/ }),
+
+/***/ 13339:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.validateSetupConfiguration = validateSetupConfiguration;
+const setup_configuration_defaults_1 = __nccwpck_require__(23381);
+const agent_configuration_validation_policy_1 = __nccwpck_require__(60596);
+const setup_configuration_storage_policy_1 = __nccwpck_require__(2554);
+const issue_inactivity_1 = __nccwpck_require__(38572);
+function validateSetupConfiguration(configuration) {
+    const errors = [];
+    const nonEmpty = [
+        ['main branch', configuration.repository.mainBranch],
+        ['development branch', configuration.repository.developmentBranch],
+        ['feature branch prefix', configuration.repository.featureTree],
+        ['bugfix branch prefix', configuration.repository.bugfixTree],
+        ['hotfix branch prefix', configuration.repository.hotfixTree],
+        ['release branch prefix', configuration.repository.releaseTree],
+        ['docs branch prefix', configuration.repository.docsTree],
+        ['chore branch prefix', configuration.repository.choreTree],
+    ];
+    for (const [name, value] of nonEmpty) {
+        if (!value.trim() || /\s/.test(value))
+            errors.push(`The ${name} must be non-empty and contain no whitespace.`);
+    }
+    if (configuration.repository.desiredAssigneesCount < 0 || configuration.repository.desiredAssigneesCount > 10) {
+        errors.push('Desired assignees must be between 0 and 10.');
+    }
+    if (configuration.repository.desiredReviewersCount < 0 || configuration.repository.desiredReviewersCount > 15) {
+        errors.push('Desired reviewers must be between 0 and 15.');
+    }
+    if (configuration.repository.mergeTimeout < 0)
+        errors.push('Merge timeout cannot be negative.');
+    if (!Number.isInteger(configuration.repository.inactivityThresholdHours)
+        || configuration.repository.inactivityThresholdHours < 1
+        || configuration.repository.inactivityThresholdHours > issue_inactivity_1.MAX_INACTIVITY_THRESHOLD_HOURS) {
+        errors.push(`Inactivity threshold must be between 1 and ${issue_inactivity_1.MAX_INACTIVITY_THRESHOLD_HOURS} hours.`);
+    }
+    if (configuration.ai.bugbotCommentLimit < 1 || configuration.ai.bugbotCommentLimit > 100) {
+        errors.push('Bugbot comment limit must be between 1 and 100.');
+    }
+    if (!['info', 'low', 'medium', 'high'].includes(configuration.ai.bugbotSeverity)) {
+        errors.push('Bugbot severity must be info, low, medium, or high.');
+    }
+    if (configuration.ai.pullRequestDescriptionMode !== undefined
+        && !['replace', 'append', 'preserve', 'disabled'].includes(configuration.ai.pullRequestDescriptionMode)) {
+        errors.push('Pull-request description mode must be replace, append, preserve, or disabled.');
+    }
+    if (!['auto', 'always', 'disabled'].includes(configuration.ai.provisioningMode)) {
+        errors.push('Agent provisioning must be auto, always, or disabled.');
+    }
+    errors.push(...(0, setup_configuration_storage_policy_1.validateStorageConfiguration)(configuration.storage));
+    for (const task of setup_configuration_defaults_1.SETUP_AGENT_TASKS) {
+        const agent = configuration.agents[task];
+        if (!agent_configuration_validation_policy_1.SUPPORTED_AGENT_PROVIDERS.includes(agent.provider))
+            errors.push(`Unsupported provider for ${task}: ${agent.provider}.`);
+        if (!agent.modelProvider.trim() || !agent.model.trim())
+            errors.push(`Model provider and model are required for ${task}.`);
+        if (/\s/.test(agent.model) || /\s/.test(agent.modelProvider))
+            errors.push(`Model provider and model for ${task} cannot contain whitespace.`);
+    }
+    return errors;
 }
 
 
@@ -54147,6 +54676,7 @@ exports.COPILOT_WORKFLOW_NAMES = [
     'Copilot - Commit',
     'Copilot - Pull Request',
     'Copilot - Pull Request Comment',
+    'Copilot - Close Inactive Issues',
     'Task - Hotfix',
     'Task - Release',
 ];
@@ -54405,6 +54935,164 @@ function logProgressAssessment(progress, summary, reasoning, remaining) {
 
 /***/ }),
 
+/***/ 84579:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CloseInactiveIssuesUseCase = void 0;
+const close_inactive_issues_workflow_1 = __nccwpck_require__(86288);
+/** Application boundary for the scheduled inactivity-maintenance action. */
+class CloseInactiveIssuesUseCase {
+    constructor(issueQueryPort, issueClosurePort, clock) {
+        this.issueQueryPort = issueQueryPort;
+        this.issueClosurePort = issueClosurePort;
+        this.clock = clock;
+        this.taskId = 'CloseInactiveIssuesUseCase';
+    }
+    async invoke(param) {
+        return (0, close_inactive_issues_workflow_1.runCloseInactiveIssuesWorkflow)(param, {
+            issueQueryPort: this.issueQueryPort,
+            issueClosurePort: this.issueClosurePort,
+            clock: this.clock,
+        });
+    }
+}
+exports.CloseInactiveIssuesUseCase = CloseInactiveIssuesUseCase;
+
+
+/***/ }),
+
+/***/ 86288:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.runCloseInactiveIssuesWorkflow = runCloseInactiveIssuesWorkflow;
+const result_1 = __nccwpck_require__(73817);
+const issue_inactivity_1 = __nccwpck_require__(38572);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+const logging_ports_1 = __nccwpck_require__(6152);
+const TASK_ID = 'CloseInactiveIssuesUseCase';
+const INACTIVITY_COMMENT = (thresholdHours) => `This issue was automatically closed due to inactivity while waiting for a response. No activity was detected for at least **${thresholdHours} hours**. Reopen it and add a comment if it still needs attention.`;
+/** Scans waiting issues and closes only candidates that remain inactive. */
+async function runCloseInactiveIssuesWorkflow(param, dependencies) {
+    const waitingLabels = unique([
+        param.labels.lifecycle.awaitingMaintainer,
+        param.labels.lifecycle.awaitingIssueAuthor,
+    ]);
+    const activityLabel = param.labels.lifecycle.aiProcessing;
+    const nowMilliseconds = dependencies.clock.nowMilliseconds();
+    const thresholdHours = param.inactivityThresholdHours;
+    try {
+        const candidates = await listCandidates(param, waitingLabels, dependencies.issueQueryPort);
+        let eligibleCount = 0;
+        let closedCount = 0;
+        let skippedCount = 0;
+        const errors = [];
+        for (const candidate of candidates) {
+            const initialDecision = (0, issue_inactivity_1.evaluateIssueInactivity)({
+                issue: candidate,
+                waitingLabels,
+                agentActivityLabel: activityLabel,
+                thresholdHours,
+                nowMilliseconds,
+            });
+            if (initialDecision.kind !== 'close') {
+                skippedCount++;
+                continue;
+            }
+            eligibleCount++;
+            try {
+                // Re-read both labels and updated_at immediately before the
+                // mutation so a comment or state transition during the scan
+                // invalidates the stale list snapshot.
+                const current = await dependencies.issueQueryPort.getOpenIssue(param.owner, param.repo, candidate.number, param.tokens.token);
+                if (!current || (0, issue_inactivity_1.evaluateIssueInactivity)({
+                    issue: current,
+                    waitingLabels,
+                    agentActivityLabel: activityLabel,
+                    thresholdHours,
+                    nowMilliseconds: dependencies.clock.nowMilliseconds(),
+                }).kind !== 'close') {
+                    skippedCount++;
+                    continue;
+                }
+                const closed = await dependencies.issueClosurePort.closeIssue(param.owner, param.repo, candidate.number, param.tokens.token);
+                if (!closed) {
+                    skippedCount++;
+                    continue;
+                }
+                closedCount++;
+                await dependencies.issueClosurePort.addComment(param.owner, param.repo, candidate.number, INACTIVITY_COMMENT(thresholdHours), param.tokens.token);
+                (0, logging_ports_1.logInfo)(`Issue #${candidate.number} closed after inactivity.`);
+            }
+            catch (error) {
+                const message = `Unable to close issue #${candidate.number} after inactivity.`;
+                (0, logging_ports_1.logError)(message);
+                errors.push(`${message} ${safeErrorMessage(error)}`);
+            }
+        }
+        (0, logging_ports_1.logDebugInfo)(`${TASK_ID}: scanned=${candidates.length}, eligible=${eligibleCount}, closed=${closedCount}, skipped=${skippedCount}.`);
+        return [new result_1.Result({
+                id: TASK_ID,
+                success: errors.length === 0,
+                executed: closedCount > 0 || eligibleCount > 0,
+                steps: buildSteps(candidates.length, closedCount, skippedCount),
+                payload: {
+                    scanned: candidates.length,
+                    eligible: eligibleCount,
+                    closed: closedCount,
+                    skipped: skippedCount,
+                },
+                errors,
+            })];
+    }
+    catch (error) {
+        const message = 'Unable to scan issues for inactivity closure.';
+        (0, logging_ports_1.logError)(message);
+        return [new result_1.Result({
+                id: TASK_ID,
+                success: false,
+                executed: true,
+                steps: [message],
+                errors: [`${message} ${safeErrorMessage(error)}`],
+            })];
+    }
+}
+async function listCandidates(param, waitingLabels, queryPort) {
+    const candidates = [];
+    for (const label of waitingLabels) {
+        candidates.push(...await queryPort.listOpenIssuesByLabel(param.owner, param.repo, label, param.tokens.token));
+    }
+    const uniqueCandidates = new Map();
+    for (const candidate of candidates)
+        uniqueCandidates.set(candidate.number, candidate);
+    return [...uniqueCandidates.values()];
+}
+function buildSteps(scanned, closed, skipped) {
+    const steps = [`Scanned ${scanned} open issue(s) waiting for a response.`];
+    if (closed > 0)
+        steps.push(`Closed ${closed} issue(s) after the inactivity threshold.`);
+    if (skipped > 0)
+        steps.push(`Skipped ${skipped} candidate(s) because they were no longer eligible.`);
+    if (closed === 0)
+        steps.push('No issue was closed for inactivity.');
+    return steps;
+}
+function unique(values) {
+    return [...new Set(values.map(value => value.trim()).filter(Boolean))];
+}
+function safeErrorMessage(error) {
+    const message = (0, github_comment_publication_policy_1.sanitizePublishedError)(error instanceof Error ? error.message : error);
+    return message || 'Unknown provider error.';
+}
+
+
+/***/ }),
+
 /***/ 76549:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -54414,19 +55102,19 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.validateReleaseInput = validateReleaseInput;
 exports.normalizeVersion = normalizeVersion;
 exports.versionForRelease = versionForRelease;
-const constants_1 = __nccwpck_require__(15415);
+const input_keys_1 = __nccwpck_require__(88539);
 const application_error_1 = __nccwpck_require__(75999);
 const SEMVER_PATTERN = /^\d+(\.\d+){0,2}$/;
 function validateReleaseInput(input) {
     if (!input.version.length)
-        return `${constants_1.INPUT_KEYS.SINGLE_ACTION_VERSION} is not set.`;
+        return `${input_keys_1.INPUT_KEYS.SINGLE_ACTION_VERSION} is not set.`;
     if (!input.title.length)
-        return `${constants_1.INPUT_KEYS.SINGLE_ACTION_TITLE} is not set.`;
+        return `${input_keys_1.INPUT_KEYS.SINGLE_ACTION_TITLE} is not set.`;
     if (!input.changelog.length)
-        return `${constants_1.INPUT_KEYS.SINGLE_ACTION_CHANGELOG} is not set.`;
+        return `${input_keys_1.INPUT_KEYS.SINGLE_ACTION_CHANGELOG} is not set.`;
     const normalized = normalizeVersion(input.version);
     return normalized === undefined
-        ? `${constants_1.INPUT_KEYS.SINGLE_ACTION_VERSION} must be a semantic version (e.g. 1.0.0). Got: ${input.version}`
+        ? `${input_keys_1.INPUT_KEYS.SINGLE_ACTION_VERSION} must be a semantic version (e.g. 1.0.0). Got: ${input.version}`
         : undefined;
 }
 function normalizeVersion(version) {
@@ -54554,7 +55242,7 @@ exports.CreateTagUseCase = CreateTagUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCreateTag = runCreateTag;
 const result_1 = __nccwpck_require__(73817);
-const constants_1 = __nccwpck_require__(15415);
+const input_keys_1 = __nccwpck_require__(88539);
 const logging_ports_1 = __nccwpck_require__(6152);
 async function runCreateTag(param, taskId, repositoryTagPort) {
     const validationFailure = validateTagInput(param, taskId);
@@ -54574,7 +55262,7 @@ async function runCreateTag(param, taskId, repositoryTagPort) {
 function validateTagInput(param, taskId) {
     if (param.singleAction.version.length === 0) {
         (0, logging_ports_1.logError)('Version is not set.');
-        return new result_1.Result({ id: taskId, success: false, executed: true, errors: [`${constants_1.INPUT_KEYS.SINGLE_ACTION_VERSION} is not set.`] });
+        return new result_1.Result({ id: taskId, success: false, executed: true, errors: [`${input_keys_1.INPUT_KEYS.SINGLE_ACTION_VERSION} is not set.`] });
     }
     if (param.currentConfiguration.releaseBranch === undefined) {
         (0, logging_ports_1.logError)('Working branch not found in configuration.');
@@ -54764,6 +55452,37 @@ async function findIssueBranch(param, repository) {
 
 /***/ }),
 
+/***/ 57389:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createInitialSetupRequest = createInitialSetupRequest;
+/** Converts the legacy execution aggregate into the setup use case's explicit request. */
+function createInitialSetupRequest(execution) {
+    return {
+        owner: execution.owner,
+        repo: execution.repo,
+        token: execution.tokens.token,
+        labels: execution.labels,
+        issueTypes: execution.issueTypes,
+        setupConfiguration: asObject(execution.inputs?.setupConfiguration),
+        setupCredentials: asObject(execution.inputs?.setupCredentials),
+        setupRemoteConfiguration: asObject(execution.inputs?.setupRemoteConfiguration),
+        workflowUpdates: asStringArray(execution.inputs?.setupWorkflowUpdates),
+    };
+}
+function asObject(value) {
+    return value && typeof value === 'object' ? value : undefined;
+}
+function asStringArray(value) {
+    return Array.isArray(value) ? value.filter((item) => typeof item === 'string') : [];
+}
+
+
+/***/ }),
+
 /***/ 84837:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -54772,6 +55491,7 @@ async function findIssueBranch(param, repository) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.InitialSetupUseCase = void 0;
 const initial_setup_workflow_1 = __nccwpck_require__(18079);
+const initial_setup_request_1 = __nccwpck_require__(57389);
 /** Application boundary for provisioning a repository for Copilot automation. */
 class InitialSetupUseCase {
     constructor(authenticatedUserPort, initialLabelProvisioningPort, issueTypeProvisioningPort, latestTagQueryPort, repositoryDefaultBranchPort, repositoryTagPort, setupWorkspacePort, setupRepositoryVariablesPort, setupRepositorySecretsPort, setupRemoteConfigurationReadPort) {
@@ -54788,7 +55508,7 @@ class InitialSetupUseCase {
         this.taskId = 'InitialSetupUseCase';
     }
     async invoke(param) {
-        return await (0, initial_setup_workflow_1.runInitialSetupWorkflow)(param, {
+        return await (0, initial_setup_workflow_1.runInitialSetupWorkflow)((0, initial_setup_request_1.createInitialSetupRequest)(param), {
             authenticatedUserPort: this.authenticatedUserPort,
             initialLabelProvisioningPort: this.initialLabelProvisioningPort,
             issueTypeProvisioningPort: this.issueTypeProvisioningPort,
@@ -54818,46 +55538,45 @@ const result_1 = __nccwpck_require__(73817);
 const version_policy_1 = __nccwpck_require__(8381);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
-const setup_configuration_policy_1 = __nccwpck_require__(56637);
+const setup_resource_provisioning_1 = __nccwpck_require__(94894);
 const TASK_ID = 'InitialSetupUseCase';
 /** Runs repository setup as an ordered application workflow with explicit port dependencies. */
-async function runInitialSetupWorkflow(param, dependencies) {
+async function runInitialSetupWorkflow(request, dependencies) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(TASK_ID)} Executing ${TASK_ID}.`);
     const steps = [];
     const errors = [];
     try {
-        const setupConfiguration = getSetupConfiguration(param);
-        if (!dependencies.setupWorkspacePort.hasValidToken(param.tokens.token)) {
+        const setupConfiguration = request.setupConfiguration;
+        if (!dependencies.setupWorkspacePort.hasValidToken(request.token)) {
             (0, logging_ports_1.logInfo)('  🛑 Setup requires the setup PAT provided for this command with a valid token.');
             errors.push('A valid setup PAT must be provided to run setup. It is separate from the workflow PAT Secret.');
             return [buildResult(errors, steps)];
         }
         (0, logging_ports_1.logInfo)('📋 Ensuring .github and copying setup files...');
-        const workflowUpdates = getWorkflowUpdates(param);
         const workspaceSelection = {
             features: setupConfiguration?.features,
-            ...(workflowUpdates.length > 0 ? {
+            ...(request.workflowUpdates.length > 0 ? {
                 updateExistingWorkflows: true,
-                approvedWorkflowFiles: workflowUpdates,
+                approvedWorkflowFiles: request.workflowUpdates,
             } : {}),
         };
         const filesResult = dependencies.setupWorkspacePort.prepare(workspaceSelection);
         steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
         (0, logging_ports_1.logInfo)('🔐 Checking GitHub access...');
-        const githubAccess = await verifyGitHubAccess(param, dependencies.authenticatedUserPort);
+        const githubAccess = await verifyGitHubAccess(request, dependencies.authenticatedUserPort);
         if (!githubAccess.success) {
             errors.push(...githubAccess.errors);
             return [buildResult(errors, steps)];
         }
         steps.push(`✅ GitHub access verified: ${githubAccess.user}`);
-        const remoteConfiguration = await resolveRemoteConfiguration(param, dependencies, setupConfiguration, errors);
-        const secrets = await ensureRepositorySecrets(param, dependencies, setupConfiguration, remoteConfiguration);
+        const remoteConfiguration = await (0, setup_resource_provisioning_1.resolveRemoteConfiguration)(request, dependencies, setupConfiguration, errors);
+        const secrets = await (0, setup_resource_provisioning_1.ensureRepositorySecrets)(request, dependencies, setupConfiguration, remoteConfiguration);
         if (secrets.step)
             steps.push(secrets.step);
         if (secrets.errors.length > 0)
             errors.push(...secrets.errors);
         (0, logging_ports_1.logInfo)('🏷️  Checking configured and progress labels...');
-        const labels = await ensureInitialLabels(param, dependencies.initialLabelProvisioningPort);
+        const labels = await ensureInitialLabels(request, dependencies.initialLabelProvisioningPort);
         if (!labels.completed) {
             errors.push(labels.error);
         }
@@ -54866,19 +55585,19 @@ async function runInitialSetupWorkflow(param, dependencies) {
             appendLabelSummary(steps, errors, labels.progress, 'Progress labels');
         }
         (0, logging_ports_1.logInfo)('📋 Checking issue types...');
-        const issueTypes = await ensureIssueTypes(param, dependencies.issueTypeProvisioningPort);
+        const issueTypes = await ensureIssueTypes(request, dependencies.issueTypeProvisioningPort);
         if (!issueTypes.success) {
             errors.push(...issueTypes.errors);
         }
         else {
             steps.push(`✅ Issue types checked: ${issueTypes.created} created, ${issueTypes.existing} already existed`);
         }
-        const variables = await ensureRepositoryVariables(param, dependencies, setupConfiguration, remoteConfiguration);
+        const variables = await (0, setup_resource_provisioning_1.ensureRepositoryVariables)(request, dependencies, setupConfiguration, remoteConfiguration);
         if (variables.step)
             steps.push(variables.step);
         if (variables.errors.length > 0)
             errors.push(...variables.errors);
-        const defaultVersion = await ensureDefaultVersion(param, dependencies, setupConfiguration);
+        const defaultVersion = await ensureDefaultVersion(request, dependencies, setupConfiguration);
         if (defaultVersion.step)
             steps.push(defaultVersion.step);
         if (defaultVersion.error)
@@ -54891,9 +55610,9 @@ async function runInitialSetupWorkflow(param, dependencies) {
         return [buildResult(errors, steps)];
     }
 }
-async function verifyGitHubAccess(param, repository) {
+async function verifyGitHubAccess(request, repository) {
     try {
-        const user = await repository.getUserFromToken(param.tokens.token);
+        const user = await repository.getUserFromToken(request.token);
         return { success: true, user, errors: [] };
     }
     catch (error) {
@@ -54901,9 +55620,9 @@ async function verifyGitHubAccess(param, repository) {
         return { success: false, errors: [`Could not verify GitHub access: ${error}`] };
     }
 }
-async function ensureInitialLabels(param, repository) {
+async function ensureInitialLabels(request, repository) {
     try {
-        const summary = await repository.ensureInitialLabels(param.owner, param.repo, param.labels, param.tokens.token);
+        const summary = await repository.ensureInitialLabels(request.owner, request.repo, request.labels, request.token);
         return { completed: true, ...summary };
     }
     catch (error) {
@@ -54912,9 +55631,9 @@ async function ensureInitialLabels(param, repository) {
         return { completed: false, error: message };
     }
 }
-async function ensureIssueTypes(param, repository) {
+async function ensureIssueTypes(request, repository) {
     try {
-        const result = await repository.ensureIssueTypes(param.owner, param.issueTypes, param.tokens.token);
+        const result = await repository.ensureIssueTypes(request.owner, request.issueTypes, request.token);
         return {
             success: result.errors.length === 0,
             created: result.created,
@@ -54927,7 +55646,7 @@ async function ensureIssueTypes(param, repository) {
         return { success: false, created: 0, existing: 0, errors: [`Error ensuring issue types: ${error}`] };
     }
 }
-async function ensureDefaultVersion(param, dependencies, setupConfiguration) {
+async function ensureDefaultVersion(request, dependencies, setupConfiguration) {
     if (setupConfiguration?.createInitialTag === false) {
         return { step: '⏭️  Initial version tag creation disabled by setup configuration.' };
     }
@@ -54938,160 +55657,22 @@ async function ensureDefaultVersion(param, dependencies, setupConfiguration) {
             return {};
         }
         (0, logging_ports_1.logInfo)(`🏷️  No version tags found. Creating default tag ${version_policy_1.DEFAULT_INITIAL_TAG}...`);
-        const defaultBranch = await dependencies.repositoryDefaultBranchPort.getDefaultBranch(param.owner, param.repo, param.tokens.token);
+        const defaultBranch = await dependencies.repositoryDefaultBranchPort.getDefaultBranch(request.owner, request.repo, request.token);
         if (!defaultBranch) {
             const message = 'Could not get default branch to create initial version tag.';
             (0, logging_ports_1.logError)(message);
             return { error: message };
         }
-        const sha = await dependencies.repositoryTagPort.createTag(param.owner, param.repo, defaultBranch, version_policy_1.DEFAULT_INITIAL_TAG, param.tokens.token);
+        const sha = await dependencies.repositoryTagPort.createTag(request.owner, request.repo, defaultBranch, version_policy_1.DEFAULT_INITIAL_TAG, request.token);
         return sha
             ? { step: `✅ Default version tag ${version_policy_1.DEFAULT_INITIAL_TAG} created on branch ${defaultBranch}. Run \`git fetch --tags\` to update local refs.` }
-            : { error: `Failed to create tag ${version_policy_1.DEFAULT_INITIAL_TAG} on ${param.owner}/${param.repo}` };
+            : { error: `Failed to create tag ${version_policy_1.DEFAULT_INITIAL_TAG} on ${request.owner}/${request.repo}` };
     }
     catch (error) {
         const message = `Error ensuring default version: ${error}`;
         (0, logging_ports_1.logError)(message);
         return { error: message };
     }
-}
-function getSetupConfiguration(param) {
-    const configuration = param.inputs?.setupConfiguration;
-    return configuration && typeof configuration === 'object'
-        ? configuration
-        : undefined;
-}
-function getWorkflowUpdates(param) {
-    const updates = param.inputs?.setupWorkflowUpdates;
-    return Array.isArray(updates) ? updates.filter((file) => typeof file === 'string') : [];
-}
-async function ensureRepositoryVariables(param, dependencies, setupConfiguration, remoteConfiguration) {
-    if (!setupConfiguration?.manageRepositoryVariables || !dependencies.setupRepositoryVariablesPort) {
-        return { errors: [] };
-    }
-    try {
-        const desired = (0, setup_configuration_policy_1.buildSetupRepositoryVariables)(setupConfiguration);
-        const groups = groupResources(desired, 'variable', setupConfiguration, remoteConfiguration);
-        const result = await upsertVariableGroups(param, dependencies.setupRepositoryVariablesPort, groups);
-        if (result.errors.length > 0)
-            return { errors: result.errors };
-        return {
-            step: `✅ GitHub Actions Variables: ${result.created} created, ${result.updated} updated; existing effective values preserved when no override was selected.`,
-            errors: [],
-        };
-    }
-    catch (error) {
-        const message = `Error configuring repository Variables: ${error}`;
-        (0, logging_ports_1.logError)(message);
-        return { errors: [message] };
-    }
-}
-async function ensureRepositorySecrets(param, dependencies, setupConfiguration, remoteConfiguration) {
-    if (!setupConfiguration?.manageRepositorySecrets || !dependencies.setupRepositorySecretsPort) {
-        return { errors: [] };
-    }
-    const credentials = getSetupCredentialCollection(param);
-    if (!credentials) {
-        return { step: '⚠️  Repository Secrets were not changed: run interactive setup to validate and provide credentials.', errors: [] };
-    }
-    const values = [
-        ...(credentials.workflowPat ? [credentials.workflowPat] : []),
-        ...credentials.apiKeys,
-    ];
-    if (values.length === 0)
-        return { step: '✅ Existing Repository Secrets kept unchanged.', errors: [] };
-    try {
-        const groups = groupResources(values, 'secret', setupConfiguration, remoteConfiguration);
-        const result = await upsertSecretGroups(param, dependencies.setupRepositorySecretsPort, groups);
-        if (result.errors.length > 0)
-            return { errors: result.errors };
-        return {
-            step: `✅ GitHub Actions Secrets: ${result.created} created, ${result.updated} updated; existing effective values kept when no replacement was selected.`,
-            errors: [],
-        };
-    }
-    catch (error) {
-        const message = `Error configuring repository Secrets: ${error}`;
-        (0, logging_ports_1.logError)(message);
-        return { errors: [message] };
-    }
-}
-async function resolveRemoteConfiguration(param, dependencies, setupConfiguration, errors) {
-    const provided = param.inputs?.setupRemoteConfiguration;
-    if (provided && typeof provided === 'object')
-        return provided;
-    if (!dependencies.setupRemoteConfigurationReadPort || !setupConfiguration)
-        return undefined;
-    try {
-        return await dependencies.setupRemoteConfigurationReadPort.inspect(param.owner, param.repo, param.tokens.token);
-    }
-    catch (error) {
-        const message = `Could not inspect existing GitHub Actions resource scopes: ${error instanceof Error ? error.message : String(error)}`;
-        (0, logging_ports_1.logError)(message);
-        if ((0, setup_configuration_policy_1.usesOrganizationStorage)(setupConfiguration))
-            errors.push(message);
-        return undefined;
-    }
-}
-function groupResources(resources, kind, configuration, remoteConfiguration) {
-    const groups = new Map();
-    for (const resource of resources) {
-        // Secret values reach this workflow only after the user chose keep/replace.
-        // Variables, however, are always generated from the selected setup contract,
-        // so preserveExisting must be applied here to avoid shadowing inherited values.
-        if (kind === 'variable' && !(0, setup_configuration_policy_1.shouldUpsertSetupResource)(configuration, kind, resource.name, remoteConfiguration))
-            continue;
-        const target = (0, setup_configuration_policy_1.resolveSetupResourceTarget)(configuration, kind, resource.name, remoteConfiguration);
-        const key = `${target.scope}:${target.organizationVisibility}:${target.repositoryId ?? ''}`;
-        const group = groups.get(key) ?? { target, resources: [] };
-        group.resources.push(resource);
-        groups.set(key, group);
-    }
-    return [...groups.values()];
-}
-async function upsertVariableGroups(param, port, groups) {
-    let created = 0;
-    let updated = 0;
-    const errors = [];
-    for (const group of groups) {
-        if (group.target.scope === 'organization' && !port.upsertScopedVariables) {
-            errors.push('Organization Variable provisioning is not available in this installation.');
-            continue;
-        }
-        const result = group.target.scope === 'organization'
-            ? await port.upsertScopedVariables(param.owner, param.repo, param.tokens.token, group.target, group.resources)
-            : await port.upsert(param.owner, param.repo, param.tokens.token, group.resources);
-        created += result.created;
-        updated += result.updated;
-        errors.push(...result.errors);
-    }
-    return { created, updated, errors };
-}
-async function upsertSecretGroups(param, port, groups) {
-    let created = 0;
-    let updated = 0;
-    let skipped = 0;
-    const errors = [];
-    for (const group of groups) {
-        if (group.target.scope === 'organization' && !port.upsertScopedSecrets) {
-            errors.push('Organization Secret provisioning is not available in this installation.');
-            continue;
-        }
-        const result = group.target.scope === 'organization'
-            ? await port.upsertScopedSecrets(param.owner, param.repo, param.tokens.token, group.target, group.resources)
-            : await port.upsertSecrets(param.owner, param.repo, param.tokens.token, group.resources);
-        created += result.created;
-        updated += result.updated;
-        skipped += result.skipped;
-        errors.push(...result.errors);
-    }
-    return { created, updated, skipped, errors };
-}
-function getSetupCredentialCollection(param) {
-    const credentials = param.inputs?.setupCredentials;
-    if (!credentials || typeof credentials !== 'object')
-        return undefined;
-    return credentials;
 }
 function appendLabelSummary(steps, errors, summary, labelType) {
     if (summary.errors.length > 0) {
@@ -55335,7 +55916,7 @@ exports.PublishGithubActionUseCase = PublishGithubActionUseCase;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runPublishGithubAction = runPublishGithubAction;
 const result_1 = __nccwpck_require__(73817);
-const constants_1 = __nccwpck_require__(15415);
+const input_keys_1 = __nccwpck_require__(88539);
 const logging_ports_1 = __nccwpck_require__(6152);
 async function runPublishGithubAction(param, taskId, repositoryTagPort, repositoryReleasePort) {
     const validationFailure = validateVersion(param, taskId);
@@ -55363,7 +55944,7 @@ function validateVersion(param, taskId) {
     if (param.singleAction.version.length > 0)
         return undefined;
     (0, logging_ports_1.logError)('Version is not set.');
-    return new result_1.Result({ id: taskId, success: false, executed: true, errors: [`${constants_1.INPUT_KEYS.SINGLE_ACTION_VERSION} is not set.`] });
+    return new result_1.Result({ id: taskId, success: false, executed: true, errors: [`${input_keys_1.INPUT_KEYS.SINGLE_ACTION_VERSION} is not set.`] });
 }
 function successResult(taskId, sourceTag, targetTag, releaseId) {
     (0, logging_ports_1.logInfo)(`Updated release \`${targetTag}\` from \`${sourceTag}\`: ${releaseId}`);
@@ -55538,6 +56119,144 @@ function failure(taskId, message) {
         executed: true,
         errors: [message],
     });
+}
+
+
+/***/ }),
+
+/***/ 94894:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ensureRepositoryVariables = ensureRepositoryVariables;
+exports.ensureRepositorySecrets = ensureRepositorySecrets;
+exports.resolveRemoteConfiguration = resolveRemoteConfiguration;
+exports.groupSetupResources = groupSetupResources;
+const setup_configuration_policy_1 = __nccwpck_require__(56637);
+const logging_ports_1 = __nccwpck_require__(6152);
+async function ensureRepositoryVariables(context, dependencies, setupConfiguration, remoteConfiguration) {
+    if (!setupConfiguration?.manageRepositoryVariables || !dependencies.setupRepositoryVariablesPort) {
+        return { errors: [] };
+    }
+    try {
+        const desired = (0, setup_configuration_policy_1.buildSetupRepositoryVariables)(setupConfiguration);
+        const groups = groupSetupResources(desired, 'variable', setupConfiguration, remoteConfiguration);
+        const result = await upsertVariableGroups(context, dependencies.setupRepositoryVariablesPort, groups);
+        if (result.errors.length > 0)
+            return { errors: result.errors };
+        return {
+            step: `✅ GitHub Actions Variables: ${result.created} created, ${result.updated} updated; existing effective values preserved when no override was selected.`,
+            errors: [],
+        };
+    }
+    catch (error) {
+        const message = `Error configuring repository Variables: ${error}`;
+        (0, logging_ports_1.logError)(message);
+        return { errors: [message] };
+    }
+}
+async function ensureRepositorySecrets(context, dependencies, setupConfiguration, remoteConfiguration) {
+    if (!setupConfiguration?.manageRepositorySecrets || !dependencies.setupRepositorySecretsPort) {
+        return { errors: [] };
+    }
+    const credentials = context.setupCredentials;
+    if (!credentials) {
+        return { step: '⚠️  Repository Secrets were not changed: run interactive setup to validate and provide credentials.', errors: [] };
+    }
+    const values = [
+        ...(credentials.workflowPat ? [credentials.workflowPat] : []),
+        ...credentials.apiKeys,
+    ];
+    if (values.length === 0)
+        return { step: '✅ Existing Repository Secrets kept unchanged.', errors: [] };
+    try {
+        const groups = groupSetupResources(values, 'secret', setupConfiguration, remoteConfiguration);
+        const result = await upsertSecretGroups(context, dependencies.setupRepositorySecretsPort, groups);
+        if (result.errors.length > 0)
+            return { errors: result.errors };
+        return {
+            step: `✅ GitHub Actions Secrets: ${result.created} created, ${result.updated} updated; existing effective values kept when no replacement was selected.`,
+            errors: [],
+        };
+    }
+    catch (error) {
+        const message = `Error configuring repository Secrets: ${error}`;
+        (0, logging_ports_1.logError)(message);
+        return { errors: [message] };
+    }
+}
+async function resolveRemoteConfiguration(context, dependencies, setupConfiguration, errors) {
+    if (context.setupRemoteConfiguration)
+        return context.setupRemoteConfiguration;
+    if (!dependencies.setupRemoteConfigurationReadPort || !setupConfiguration)
+        return undefined;
+    try {
+        return await dependencies.setupRemoteConfigurationReadPort.inspect(context.owner, context.repo, context.token);
+    }
+    catch (error) {
+        const message = `Could not inspect existing GitHub Actions resource scopes: ${error instanceof Error ? error.message : String(error)}`;
+        (0, logging_ports_1.logError)(message);
+        if ((0, setup_configuration_policy_1.usesOrganizationStorage)(setupConfiguration))
+            errors.push(message);
+        return undefined;
+    }
+}
+/** Groups resources by their resolved storage target so each provider call is scoped explicitly. */
+function groupSetupResources(resources, kind, configuration, remoteConfiguration) {
+    const groups = new Map();
+    for (const resource of resources) {
+        // Secret values reach this workflow only after the user chose keep/replace.
+        // Variables are generated from the selected setup contract, so preserving
+        // an inherited value must happen before the provider call is assembled.
+        if (kind === 'variable' && !(0, setup_configuration_policy_1.shouldUpsertSetupResource)(configuration, kind, resource.name, remoteConfiguration))
+            continue;
+        const target = (0, setup_configuration_policy_1.resolveSetupResourceTarget)(configuration, kind, resource.name, remoteConfiguration);
+        const key = `${target.scope}:${target.organizationVisibility}:${target.repositoryId ?? ''}`;
+        const group = groups.get(key) ?? { target, resources: [] };
+        group.resources.push(resource);
+        groups.set(key, group);
+    }
+    return [...groups.values()];
+}
+async function upsertVariableGroups(context, port, groups) {
+    let created = 0;
+    let updated = 0;
+    const errors = [];
+    for (const group of groups) {
+        if (group.target.scope === 'organization' && !port.upsertScopedVariables) {
+            errors.push('Organization Variable provisioning is not available in this installation.');
+            continue;
+        }
+        const result = group.target.scope === 'organization'
+            ? await port.upsertScopedVariables(context.owner, context.repo, context.token, group.target, group.resources)
+            : await port.upsert(context.owner, context.repo, context.token, group.resources);
+        created += result.created;
+        updated += result.updated;
+        errors.push(...result.errors);
+    }
+    return { created, updated, errors };
+}
+async function upsertSecretGroups(context, port, groups) {
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+    const errors = [];
+    for (const group of groups) {
+        if (group.target.scope === 'organization' && !port.upsertScopedSecrets) {
+            errors.push('Organization Secret provisioning is not available in this installation.');
+            continue;
+        }
+        const result = group.target.scope === 'organization'
+            ? await port.upsertScopedSecrets(context.owner, context.repo, context.token, group.target, group.resources)
+            : await port.upsertSecrets(context.owner, context.repo, context.token, group.resources);
+        created += result.created;
+        updated += result.updated;
+        skipped += result.skipped;
+        errors.push(...result.errors);
+    }
+    return { created, updated, skipped, errors };
 }
 
 
@@ -56257,7 +56976,7 @@ exports.ExecutionBranchVersionResolver = ExecutionBranchVersionResolver;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveEventIssueNumber = resolveEventIssueNumber;
 exports.resolveSingleActionIssueNumber = resolveSingleActionIssueNumber;
-const constants_1 = __nccwpck_require__(15415);
+const input_keys_1 = __nccwpck_require__(88539);
 const positive_integer_policy_1 = __nccwpck_require__(19879);
 const title_utils_1 = __nccwpck_require__(46267);
 function resolveEventIssueNumber(execution) {
@@ -56275,7 +56994,7 @@ function resolveEventIssueNumber(execution) {
     return positiveIssueNumberOrUndefined(execution.issueNumber);
 }
 async function resolveSingleActionIssueNumber(execution, issueRepository) {
-    const configuredIssue = execution.inputs?.[constants_1.INPUT_KEYS.SINGLE_ACTION_ISSUE];
+    const configuredIssue = execution.inputs?.[input_keys_1.INPUT_KEYS.SINGLE_ACTION_ISSUE];
     if (configuredIssue !== undefined && configuredIssue !== null && String(configuredIssue).trim() !== '') {
         const issueNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(configuredIssue);
         return issueNumber === undefined ? undefined : setIssueNumber(execution, issueNumber);
@@ -56851,7 +57570,7 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const single_action_workflow_1 = __nccwpck_require__(6130);
 class SingleActionUseCase {
-    constructor(deployedActionUseCase, publishGithubActionUseCase, createReleaseUseCase, createTagUseCase, thinkUseCase, initialSetupUseCase, checkProgressUseCase, detectPotentialProblemsUseCase, recommendStepsUseCase) {
+    constructor(deployedActionUseCase, publishGithubActionUseCase, createReleaseUseCase, createTagUseCase, thinkUseCase, initialSetupUseCase, checkProgressUseCase, detectPotentialProblemsUseCase, recommendStepsUseCase, closeInactiveIssuesUseCase) {
         this.deployedActionUseCase = deployedActionUseCase;
         this.publishGithubActionUseCase = publishGithubActionUseCase;
         this.createReleaseUseCase = createReleaseUseCase;
@@ -56861,6 +57580,7 @@ class SingleActionUseCase {
         this.checkProgressUseCase = checkProgressUseCase;
         this.detectPotentialProblemsUseCase = detectPotentialProblemsUseCase;
         this.recommendStepsUseCase = recommendStepsUseCase;
+        this.closeInactiveIssuesUseCase = closeInactiveIssuesUseCase;
         this.taskId = "SingleActionUseCase";
     }
     async invoke(param) {
@@ -56879,6 +57599,7 @@ class SingleActionUseCase {
             checkProgressUseCase: this.checkProgressUseCase,
             detectPotentialProblemsUseCase: this.detectPotentialProblemsUseCase,
             recommendStepsUseCase: this.recommendStepsUseCase,
+            closeInactiveIssuesUseCase: this.closeInactiveIssuesUseCase,
         });
     }
 }
@@ -56912,8 +57633,9 @@ async function runSingleActionWorkflow(param, taskId, ports) {
         { active: param.singleAction.isCheckProgressAction, useCase: ports.checkProgressUseCase },
         { active: param.singleAction.isDetectPotentialProblemsAction, useCase: ports.detectPotentialProblemsUseCase },
         { active: param.singleAction.isRecommendStepsAction, useCase: ports.recommendStepsUseCase },
-    ].find(({ active }) => active);
-    if (!action)
+        { active: param.singleAction.isCloseInactiveIssuesAction, useCase: ports.closeInactiveIssuesUseCase },
+    ].find(({ active, useCase }) => active && useCase !== undefined);
+    if (!action || !action.useCase)
         return [];
     try {
         return await action.useCase.invoke(param);
@@ -56946,10 +57668,10 @@ exports.applyDetectedFindings = applyDetectedFindings;
 const prepare_bugbot_findings_1 = __nccwpck_require__(85016);
 const mark_findings_resolved_use_case_1 = __nccwpck_require__(96963);
 const publish_findings_use_case_1 = __nccwpck_require__(88442);
-const constants_1 = __nccwpck_require__(15415);
+const bugbot_constants_1 = __nccwpck_require__(51389);
 const pull_request_review_errors_1 = __nccwpck_require__(46445);
 function prepareDetectedFindings(execution, response) {
-    return (0, prepare_bugbot_findings_1.prepareBugbotFindings)(response, execution.ai?.getAiIgnoreFiles?.() ?? [], execution.ai?.getBugbotMinSeverity?.(), execution.ai?.getBugbotCommentLimit?.() ?? constants_1.BUGBOT_MAX_COMMENTS);
+    return (0, prepare_bugbot_findings_1.prepareBugbotFindings)(response, execution.ai?.getAiIgnoreFiles?.() ?? [], execution.ai?.getBugbotMinSeverity?.(), execution.ai?.getBugbotCommentLimit?.() ?? bugbot_constants_1.BUGBOT_MAX_COMMENTS);
 }
 async function applyDetectedFindings(execution, context, prepared, publicationPorts, resolutionPorts) {
     try {
@@ -58285,12 +59007,12 @@ async function restoreStashedChanges(gitCommitPort) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.applyCommentLimit = applyCommentLimit;
-const constants_1 = __nccwpck_require__(15415);
+const bugbot_constants_1 = __nccwpck_require__(51389);
 /**
  * Applies the max-comments limit: returns the first N findings to publish individually,
  * and overflow count + titles for a single "revisar en local" summary comment.
  */
-function applyCommentLimit(findings, maxComments = constants_1.BUGBOT_MAX_COMMENTS) {
+function applyCommentLimit(findings, maxComments = bugbot_constants_1.BUGBOT_MAX_COMMENTS) {
     if (findings.length <= maxComments) {
         return { toPublish: findings, overflowCount: 0, overflowTitles: [] };
     }
@@ -58505,7 +59227,7 @@ exports.markerRegexForFinding = markerRegexForFinding;
 exports.replaceMarkerInBody = replaceMarkerInBody;
 exports.extractTitleFromBody = extractTitleFromBody;
 exports.buildCommentBody = buildCommentBody;
-const constants_1 = __nccwpck_require__(15415);
+const bugbot_constants_1 = __nccwpck_require__(51389);
 const application_error_1 = __nccwpck_require__(75999);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 /** Maximum lossless finding identity accepted by the marker contract. */
@@ -58544,13 +59266,13 @@ function buildMarker(findingId, resolved, fingerprint, resolution) {
     const safeResolution = resolved && resolution && ['fixed', 'obsolete', 'dismissed'].includes(resolution)
         ? ` finding_resolution:"${resolution}"`
         : '';
-    return `<!-- ${constants_1.BUGBOT_MARKER_PREFIX} finding_id:"${safeId}" resolved:${resolved}${safeFingerprint ? ` finding_fingerprint:"${safeFingerprint}"` : ''}${safeResolution} -->`;
+    return `<!-- ${bugbot_constants_1.BUGBOT_MARKER_PREFIX} finding_id:"${safeId}" resolved:${resolved}${safeFingerprint ? ` finding_fingerprint:"${safeFingerprint}"` : ''}${safeResolution} -->`;
 }
 function parseMarker(body) {
     if (!body)
         return [];
     const results = [];
-    const regex = new RegExp(`<!--\\s*${constants_1.BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"([^"]+)"\\s+resolved:(true|false)(?:\\s+finding_fingerprint:\\s*"(fp-[a-f0-9]{8})")?(?:\\s+finding_resolution:\\s*"(fixed|obsolete|dismissed)")?\\s*-->`, "g");
+    const regex = new RegExp(`<!--\\s*${bugbot_constants_1.BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"([^"]+)"\\s+resolved:(true|false)(?:\\s+finding_fingerprint:\\s*"(fp-[a-f0-9]{8})")?(?:\\s+finding_resolution:\\s*"(fixed|obsolete|dismissed)")?\\s*-->`, "g");
     let m;
     while ((m = regex.exec(body)) !== null) {
         results.push({
@@ -58571,7 +59293,7 @@ function markerRegexForFinding(findingId) {
     const idForRegex = SAFE_FINDING_ID_REGEX_CHARS.test(safeId)
         ? safeId
         : safeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return new RegExp(`<!--\\s*${constants_1.BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"${idForRegex}"\\s+resolved:(?:true|false)(?:\\s+finding_fingerprint:\\s*"fp-[a-f0-9]{8}")?(?:\\s+finding_resolution:\\s*"(?:fixed|obsolete|dismissed)")?\\s*-->`, "g");
+    return new RegExp(`<!--\\s*${bugbot_constants_1.BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"${idForRegex}"\\s+resolved:(?:true|false)(?:\\s+finding_fingerprint:\\s*"fp-[a-f0-9]{8}")?(?:\\s+finding_resolution:\\s*"(?:fixed|obsolete|dismissed)")?\\s*-->`, "g");
 }
 /**
  * Find the marker for this finding in body (using same pattern as parseMarker) and replace it.
@@ -63051,6 +63773,7 @@ exports.ACTIONS = {
     CHECK_PROGRESS: 'check_progress_action',
     DETECT_POTENTIAL_PROBLEMS: 'detect_potential_problems_action',
     RECOMMEND_STEPS: 'recommend_steps_action',
+    CLOSE_INACTIVE_ISSUES: 'close_inactive_issues_action',
 };
 
 
@@ -63335,6 +64058,7 @@ const label_branch_policy_1 = __nccwpck_require__(53318);
 const commit_1 = __nccwpck_require__(57525);
 const config_1 = __nccwpck_require__(90450);
 const github_user_policy_1 = __nccwpck_require__(84403);
+const issue_inactivity_1 = __nccwpck_require__(38572);
 class Execution {
     get eventName() {
         return this.inputs?.eventName ?? '';
@@ -63426,6 +64150,7 @@ class Execution {
         this.project = components.projects;
         this.workflows = components.workflows;
         this.tokenUser = components.tokenUser;
+        this.inactivityThresholdHours = components.inactivityThresholdHours ?? issue_inactivity_1.DEFAULT_INACTIVITY_THRESHOLD_HOURS;
         this.currentConfiguration = new config_1.Config({});
         this.inputs = components.inputs;
         this.welcome = components.welcome;
@@ -64310,6 +65035,9 @@ class SingleAction {
     get isRecommendStepsAction() {
         return this.currentSingleAction === action_types_1.ACTIONS.RECOMMEND_STEPS;
     }
+    get isCloseInactiveIssuesAction() {
+        return this.currentSingleAction === action_types_1.ACTIONS.CLOSE_INACTIVE_ISSUES;
+    }
     get enabledSingleAction() {
         return this.currentSingleAction.length > 0;
     }
@@ -64335,6 +65063,7 @@ class SingleAction {
             action_types_1.ACTIONS.CHECK_PROGRESS,
             action_types_1.ACTIONS.DETECT_POTENTIAL_PROBLEMS,
             action_types_1.ACTIONS.RECOMMEND_STEPS,
+            action_types_1.ACTIONS.CLOSE_INACTIVE_ISSUES,
         ];
         /**
          * Actions that throw an error if the last step failed
@@ -64344,6 +65073,7 @@ class SingleAction {
             action_types_1.ACTIONS.CREATE_RELEASE,
             action_types_1.ACTIONS.DEPLOYED,
             action_types_1.ACTIONS.CREATE_TAG,
+            action_types_1.ACTIONS.CLOSE_INACTIVE_ISSUES,
         ];
         /**
          * Actions that do not require an issue
@@ -64351,6 +65081,7 @@ class SingleAction {
         this.actionsWithoutIssue = [
             action_types_1.ACTIONS.THINK,
             action_types_1.ACTIONS.INITIAL_SETUP,
+            action_types_1.ACTIONS.CLOSE_INACTIVE_ISSUES,
         ];
         this.isIssue = false;
         this.isPullRequest = false;
@@ -65441,7 +66172,7 @@ function extractReasoningFromParts(parts) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AgentCapabilityAdapter = void 0;
-const constants_1 = __nccwpck_require__(15415);
+const agent_constants_1 = __nccwpck_require__(46927);
 const logger_1 = __nccwpck_require__(91151);
 const provider_cli_adapter_1 = __nccwpck_require__(18199);
 const agent_configuration_policy_1 = __nccwpck_require__(49616);
@@ -65455,7 +66186,7 @@ class AgentCapabilityAdapter {
             const output = await this.cliAdapter.execute({
                 configuration: taskConfiguration,
                 prompt: this.addEffortInstruction(request.prompt, taskConfiguration.effort),
-                timeoutMs: constants_1.AGENT_REQUEST_TIMEOUT_MS,
+                timeoutMs: agent_constants_1.AGENT_REQUEST_TIMEOUT_MS,
             });
             return request.mapCliOutput(output);
         }
@@ -65472,6 +66203,19 @@ class AgentCapabilityAdapter {
     }
 }
 exports.AgentCapabilityAdapter = AgentCapabilityAdapter;
+
+
+/***/ }),
+
+/***/ 46927:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AGENT_REQUEST_TIMEOUT_MS = void 0;
+/** Maximum time allowed for one external agent CLI request. */
+exports.AGENT_REQUEST_TIMEOUT_MS = 900000;
 
 
 /***/ }),
@@ -66493,6 +67237,67 @@ class IssueContentRepository {
     }
 }
 exports.IssueContentRepository = IssueContentRepository;
+
+
+/***/ }),
+
+/***/ 28868:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.IssueInactivityRepository = void 0;
+const github_pagination_policy_1 = __nccwpck_require__(44812);
+/** Reads the provider's issue activity timestamp and waiting-state labels. */
+class IssueInactivityRepository {
+    constructor(githubClient) {
+        this.githubClient = githubClient;
+        this.listOpenIssuesByLabel = async (owner, repository, label, token) => {
+            const client = this.githubClient.getClient(token);
+            const issues = [];
+            for await (const response of client.paginate.iterator(client.rest.issues.listForRepo, {
+                owner,
+                repo: repository,
+                state: 'open',
+                labels: label,
+                sort: 'updated',
+                direction: 'asc',
+                per_page: 100,
+            })) {
+                const page = (0, github_pagination_policy_1.requireArrayPage)(response.data, 'open issues');
+                issues.push(...page.map(toSnapshot));
+            }
+            return issues;
+        };
+        this.getOpenIssue = async (owner, repository, issueNumber, token) => {
+            const client = this.githubClient.getClient(token);
+            const response = await client.rest.issues.get({
+                owner,
+                repo: repository,
+                issue_number: issueNumber,
+            });
+            if (response.data.state !== 'open')
+                return undefined;
+            return toSnapshot(response.data);
+        };
+    }
+}
+exports.IssueInactivityRepository = IssueInactivityRepository;
+function toSnapshot(issue) {
+    if (!Number.isSafeInteger(issue.number) || issue.number < 1) {
+        throw new Error('GitHub issue response contained an invalid issue number.');
+    }
+    return {
+        number: issue.number,
+        updatedAt: issue.updated_at ?? undefined,
+        isPullRequest: issue.pull_request !== undefined,
+        labels: (issue.labels ?? []).flatMap(label => {
+            const name = typeof label === 'string' ? label : label.name;
+            return name?.trim() ? [name] : [];
+        }),
+    };
+}
 
 
 /***/ }),
@@ -69594,7 +70399,7 @@ function encryptSecret(value, base64PublicKey) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ActivePreviousWorkflowRunsRepository = void 0;
-const constants_1 = __nccwpck_require__(15415);
+const workflow_status_1 = __nccwpck_require__(1462);
 const workflow_runs_retry_1 = __nccwpck_require__(86434);
 const NO_OP_DELAY_PORT = { wait: async () => undefined };
 const SYSTEM_CLOCK = { nowMilliseconds: () => Date.now() };
@@ -69634,7 +70439,7 @@ class ActivePreviousWorkflowRunsRepository {
         return (0, workflow_runs_retry_1.withWorkflowRunsRetry)(async () => {
             let activeRunCount = 0;
             // Keep one complete sequential traversal: GitHub cannot safely express
-            // the seven shared workflow names, five active statuses, or the strict
+            // the eight shared workflow names, five active statuses, or the strict
             // lower-ID predicate in this endpoint. Do not add provider filters or
             // early-stop on page order; a matching run may occur on a later page.
             // The residual cost is deep-history pagination, with retries restarting
@@ -69668,7 +70473,7 @@ function isActivePreviousRun(run, query, workflowNames) {
     return typeof run.name === 'string'
         && workflowNames.includes(run.name)
         && run.id < query.currentRunId
-        && constants_1.WORKFLOW_ACTIVE_STATUSES.includes(run.status ?? 'unknown');
+        && workflow_status_1.WORKFLOW_ACTIVE_STATUSES.includes(run.status ?? 'unknown');
 }
 
 
@@ -69874,6 +70679,36 @@ function parseEpochSeconds(value) {
 function firstNumericValue(...values) {
     return values.find((value) => typeof value === 'number' && Number.isFinite(value));
 }
+
+
+/***/ }),
+
+/***/ 1462:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WORKFLOW_ACTIVE_STATUSES = exports.WORKFLOW_STATUS = void 0;
+exports.WORKFLOW_STATUS = {
+    IN_PROGRESS: 'in_progress',
+    QUEUED: 'queued',
+    REQUESTED: 'requested',
+    WAITING: 'waiting',
+    PENDING: 'pending',
+    COMPLETED: 'completed',
+    FAILED: 'failed',
+    CANCELLED: 'cancelled',
+    SKIPPED: 'skipped',
+    TIMED_OUT: 'timed_out',
+};
+exports.WORKFLOW_ACTIVE_STATUSES = [
+    exports.WORKFLOW_STATUS.IN_PROGRESS,
+    exports.WORKFLOW_STATUS.QUEUED,
+    exports.WORKFLOW_STATUS.REQUESTED,
+    exports.WORKFLOW_STATUS.WAITING,
+    exports.WORKFLOW_STATUS.PENDING,
+];
 
 
 /***/ }),
@@ -70218,6 +71053,64 @@ function githubUsersMatch(left, right) {
     const normalizedLeft = left.trim().toLocaleLowerCase('en-US');
     const normalizedRight = right.trim().toLocaleLowerCase('en-US');
     return normalizedLeft.length > 0 && normalizedLeft === normalizedRight;
+}
+
+
+/***/ }),
+
+/***/ 38572:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MAX_INACTIVITY_THRESHOLD_HOURS = exports.DEFAULT_INACTIVITY_THRESHOLD_HOURS = void 0;
+exports.evaluateIssueInactivity = evaluateIssueInactivity;
+/** Default inactivity window used by the scheduled issue-maintenance action. */
+exports.DEFAULT_INACTIVITY_THRESHOLD_HOURS = 168;
+/** Maximum supported window (one year) for a finite, operationally useful value. */
+exports.MAX_INACTIVITY_THRESHOLD_HOURS = 8760;
+/**
+ * Decides whether an issue can be closed without depending on GitHub or time
+ * APIs. GitHub's `updated_at` is treated as the last activity observed by the
+ * provider; this includes comments and issue metadata changes.
+ */
+function evaluateIssueInactivity(input) {
+    if (input.issue.isPullRequest)
+        return { kind: 'skip', reason: 'pull-request' };
+    if (!hasLabel(input.issue.labels, input.waitingLabels)) {
+        return { kind: 'skip', reason: 'not-waiting' };
+    }
+    if (hasLabel(input.issue.labels, [input.agentActivityLabel])) {
+        return { kind: 'skip', reason: 'agent-processing' };
+    }
+    if (!Number.isFinite(input.thresholdHours)
+        || input.thresholdHours <= 0
+        || input.thresholdHours > exports.MAX_INACTIVITY_THRESHOLD_HOURS) {
+        return { kind: 'skip', reason: 'invalid-threshold' };
+    }
+    const updatedAtMilliseconds = Date.parse(input.issue.updatedAt ?? '');
+    if (!Number.isFinite(updatedAtMilliseconds)) {
+        return { kind: 'skip', reason: 'missing-activity-timestamp' };
+    }
+    if (!Number.isFinite(input.nowMilliseconds) || updatedAtMilliseconds > input.nowMilliseconds) {
+        return { kind: 'skip', reason: 'future-activity' };
+    }
+    const inactiveForMilliseconds = input.nowMilliseconds - updatedAtMilliseconds;
+    const thresholdMilliseconds = input.thresholdHours * 60 * 60 * 1000;
+    return inactiveForMilliseconds >= thresholdMilliseconds
+        ? { kind: 'close', inactiveForMilliseconds }
+        : { kind: 'skip', reason: 'recent-activity' };
+}
+function hasLabel(labels, candidates) {
+    const normalizedLabels = new Set(labels.map(normalize));
+    return candidates.some(candidate => {
+        const normalizedCandidate = normalize(candidate);
+        return normalizedCandidate.length > 0 && normalizedLabels.has(normalizedCandidate);
+    });
+}
+function normalize(value) {
+    return value.trim().toLowerCase();
 }
 
 
@@ -70685,7 +71578,7 @@ exports.createRepositoryVariablesClient = createRepositoryVariablesClient;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.createIssueTitleClient = exports.createIssueMetadataClient = exports.createIssueLifecycleClient = exports.createIssueLabelsClient = exports.createIssueLabelProvisioningClient = exports.createIssueContentClient = exports.createIssueAssignmentClient = void 0;
+exports.createIssueTitleClient = exports.createIssueMetadataClient = exports.createIssueInactivityClient = exports.createIssueLifecycleClient = exports.createIssueLabelsClient = exports.createIssueLabelProvisioningClient = exports.createIssueContentClient = exports.createIssueAssignmentClient = void 0;
 const octokit_issue_adapters_1 = __nccwpck_require__(77179);
 const createIssueAssignmentClient = () => new octokit_issue_adapters_1.OctokitIssueAssignmentClientAdapter();
 exports.createIssueAssignmentClient = createIssueAssignmentClient;
@@ -70697,6 +71590,8 @@ const createIssueLabelsClient = () => new octokit_issue_adapters_1.OctokitIssueL
 exports.createIssueLabelsClient = createIssueLabelsClient;
 const createIssueLifecycleClient = () => new octokit_issue_adapters_1.OctokitIssueLifecycleClientAdapter();
 exports.createIssueLifecycleClient = createIssueLifecycleClient;
+const createIssueInactivityClient = () => new octokit_issue_adapters_1.OctokitIssueInactivityClientAdapter();
+exports.createIssueInactivityClient = createIssueInactivityClient;
 const createIssueMetadataClient = () => new octokit_issue_adapters_1.OctokitIssueMetadataClientAdapter();
 exports.createIssueMetadataClient = createIssueMetadataClient;
 const createIssueTitleClient = () => new octokit_issue_adapters_1.OctokitIssueTitleClientAdapter();
@@ -70828,6 +71723,25 @@ const github_issue_client_factory_1 = __nccwpck_require__(95883);
 const issue_content_repository_1 = __nccwpck_require__(2313);
 function createIssueContentCompositionRoot() {
     return new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
+}
+
+
+/***/ }),
+
+/***/ 74914:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createCloseInactiveIssuesUseCase = createCloseInactiveIssuesUseCase;
+const close_inactive_issues_use_case_1 = __nccwpck_require__(84579);
+const issue_inactivity_repository_1 = __nccwpck_require__(28868);
+const system_issue_inactivity_clock_adapter_1 = __nccwpck_require__(86457);
+const github_issue_client_factory_1 = __nccwpck_require__(95883);
+const issue_interaction_composition_root_1 = __nccwpck_require__(92503);
+function createCloseInactiveIssuesUseCase() {
+    return new close_inactive_issues_use_case_1.CloseInactiveIssuesUseCase(new issue_inactivity_repository_1.IssueInactivityRepository((0, github_issue_client_factory_1.createIssueInactivityClient)()), (0, issue_interaction_composition_root_1.createIssueClosureRepository)(), new system_issue_inactivity_clock_adapter_1.SystemIssueInactivityClockAdapter());
 }
 
 
@@ -71038,6 +71952,7 @@ const pull_request_use_case_composition_root_1 = __nccwpck_require__(70636);
 const organization_members_composition_root_1 = __nccwpck_require__(50603);
 const update_pull_request_description_use_case_1 = __nccwpck_require__(75089);
 const pull_request_lifecycle_repository_1 = __nccwpck_require__(24189);
+const issue_inactivity_composition_root_1 = __nccwpck_require__(74914);
 function createDetectPotentialProblemsUseCase() {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();
     return new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.context, bugbot.publication, bugbot.resolution);
@@ -71046,7 +71961,7 @@ function createSingleActionUseCaseCompositionRoot() {
     const repositoryTagPort = new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)());
     const repositoryReleasePort = new repository_release_publication_repository_1.RepositoryReleasePublicationRepository((0, github_release_client_factory_1.createReleaseClient)());
     const issueDescriptionQueryPort = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
-    return new single_action_use_case_1.SingleActionUseCase(new deployed_action_use_case_1.DeployedActionUseCase((0, issue_labels_composition_root_1.createIssueLabelRepository)(), (0, issue_interaction_composition_root_1.createIssueClosureRepository)(), new merge_repository_1.MergeRepository((0, github_branch_client_factory_1.createBranchMergeClient)())), new publish_github_action_use_case_1.PublishGithubActionUseCase(repositoryTagPort, repositoryReleasePort), new create_release_use_case_1.CreateReleaseUseCase(repositoryReleasePort), new create_tag_use_case_1.CreateTagUseCase(repositoryTagPort), new think_use_case_1.ThinkUseCase(issueDescriptionQueryPort, (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), createDetectPotentialProblemsUseCase(), new recommend_steps_use_case_1.RecommendStepsUseCase(issueDescriptionQueryPort, (0, agent_capability_composition_root_1.createFindingsQueryPort)()));
+    return new single_action_use_case_1.SingleActionUseCase(new deployed_action_use_case_1.DeployedActionUseCase((0, issue_labels_composition_root_1.createIssueLabelRepository)(), (0, issue_interaction_composition_root_1.createIssueClosureRepository)(), new merge_repository_1.MergeRepository((0, github_branch_client_factory_1.createBranchMergeClient)())), new publish_github_action_use_case_1.PublishGithubActionUseCase(repositoryTagPort, repositoryReleasePort), new create_release_use_case_1.CreateReleaseUseCase(repositoryReleasePort), new create_tag_use_case_1.CreateTagUseCase(repositoryTagPort), new think_use_case_1.ThinkUseCase(issueDescriptionQueryPort, (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), createDetectPotentialProblemsUseCase(), new recommend_steps_use_case_1.RecommendStepsUseCase(issueDescriptionQueryPort, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)());
 }
 function createIssueCommentUseCaseCompositionRoot() {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();
@@ -71508,7 +72423,7 @@ exports.OctokitOwnerTypeClientAdapter = OctokitOwnerTypeClientAdapter;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.OctokitIssueTitleClientAdapter = exports.OctokitIssueMetadataClientAdapter = exports.OctokitIssueLifecycleClientAdapter = exports.OctokitIssueLabelsClientAdapter = exports.OctokitIssueLabelProvisioningClientAdapter = exports.OctokitIssueContentClientAdapter = exports.OctokitIssueAssignmentClientAdapter = void 0;
+exports.OctokitIssueTitleClientAdapter = exports.OctokitIssueMetadataClientAdapter = exports.OctokitIssueInactivityClientAdapter = exports.OctokitIssueLifecycleClientAdapter = exports.OctokitIssueLabelsClientAdapter = exports.OctokitIssueLabelProvisioningClientAdapter = exports.OctokitIssueContentClientAdapter = exports.OctokitIssueAssignmentClientAdapter = void 0;
 const octokit_client_resolver_1 = __nccwpck_require__(54047);
 class OctokitIssueAssignmentClientAdapter {
     getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
@@ -71530,6 +72445,10 @@ class OctokitIssueLifecycleClientAdapter {
     getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
 }
 exports.OctokitIssueLifecycleClientAdapter = OctokitIssueLifecycleClientAdapter;
+class OctokitIssueInactivityClientAdapter {
+    getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
+}
+exports.OctokitIssueInactivityClientAdapter = OctokitIssueInactivityClientAdapter;
 class OctokitIssueMetadataClientAdapter {
     getClient(token) { return (0, octokit_client_resolver_1.getOctokitClient)(token); }
 }
@@ -71758,6 +72677,23 @@ class SetupWorkspaceAdapter {
     }
 }
 exports.SetupWorkspaceAdapter = SetupWorkspaceAdapter;
+
+
+/***/ }),
+
+/***/ 86457:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SystemIssueInactivityClockAdapter = void 0;
+class SystemIssueInactivityClockAdapter {
+    nowMilliseconds() {
+        return Date.now();
+    }
+}
+exports.SystemIssueInactivityClockAdapter = SystemIssueInactivityClockAdapter;
 
 
 /***/ }),
@@ -72722,429 +73658,6 @@ function stripTrailingCommentWatermarks(comment) {
 
 /***/ }),
 
-/***/ 15415:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PROMPTS = exports.BUGBOT_MIN_SEVERITY = exports.BUGBOT_MAX_COMMENTS = exports.BUGBOT_MARKER_PREFIX = exports.ACTIONS = exports.ERRORS = exports.INPUT_KEYS = exports.WORKFLOW_ACTIVE_STATUSES = exports.WORKFLOW_STATUS = exports.DEFAULT_IMAGE_CONFIG = exports.AGENT_REQUEST_TIMEOUT_MS = exports.TITLE = void 0;
-exports.TITLE = 'Copilot';
-/** Maximum time allowed for one external agent CLI request. */
-exports.AGENT_REQUEST_TIMEOUT_MS = 900000;
-exports.DEFAULT_IMAGE_CONFIG = {
-    issue: {
-        automatic: [
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMm5iZHJydTJ4NGticXdxd3ZxYnZqNXdvaDQwOHdtb3o5NTRhdnRhOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LSX49vHf7JHGyGjrC0/giphy.gif",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExYzRsNGFicndqMXgzMTVwdnhpeXNyZGsydXVxamV4eGxndWhna291OSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ktcUyw6mBlMVa/200.webp",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdjkyeWVubngzM28xODFrbXZ4Nng3Y2hubmM4cXJqNGpic3Bheml0NSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/M11UVCRrc0LUk/giphy.webp",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExenQwNDJmZnZraDBzNXBoNjUwZjEzMzFlanMxcHVodmF4b3l3bDl2biZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/zrdUjl6N99nLq/200.webp",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmozN3plMWNiYjZoemh6N2RmeTB1MG9ieHlqYTJsb3BrZmNoY3h0dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/stv1Dliu5TrMs/giphy.webp"
-        ],
-        feature: [
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMm5iZHJydTJ4NGticXdxd3ZxYnZqNXdvaDQwOHdtb3o5NTRhdnRhOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LSX49vHf7JHGyGjrC0/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExYmc4YWplZWs0Y2c3ZXNtbGpwZnQzdWpncmNjNXpodjg3MHdtbnJ5NiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/OMK7LRBedcnhm/200.webp",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHBrYXpmd2poeGU5cWswbjRqNmJlZ2U2dWc0ejVpY3RpcXVuYTY3dSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/llKJGxQ1ESmac/giphy.webp",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMnFleXV0MXZteGN6c2s2b3R3ZGc2cWY1aXB0Y3ZzNmpvZHhyNDVmNSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/10FwycrnAkpshW/giphy.webp",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExcHo0MjIzaGIycTRmeWFwZmp6bGExczJicXcyZTQxemsxaTY1b3V1NiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/QKkV58ufpV4ksJ1Okh/giphy.gif",
-        ],
-        bugfix: [
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExazc3OWszenA5c2FlemE3a25oNnlmZDBra3liMWRqMW82NzM2b2FveCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/xPGkOAdiIO3Is/giphy.webp",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmozN3plMWNiYjZoemh6N2RmeTB1MG9ieHlqYTJsb3BrZmNoY3h0dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/stv1Dliu5TrMs/giphy.webp",
-            "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExY3liaGF2NzI3bzM1YjRmdHFsaGdyenp4b3o3M3dqM3F0bGN5MHZtNSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/npUpB306c3EStRK6qP/200.webp",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExZWh6d3Nld3E0MTF1eTk2YXFibnI3MTBhbGtpamJiemRwejl3YmkzMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/gU25raLP4pUu4/giphy.webp",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExdmM1OWR0cnk5eXI0dXpoNWRzbmVseTVyd2l3MzdrOHZueHJ6bjhjMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/12yjKJaLB7DuG4/giphy.webp"
-        ],
-        hotfix: [
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmozN3plMWNiYjZoemh6N2RmeTB1MG9ieHlqYTJsb3BrZmNoY3h0dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/stv1Dliu5TrMs/giphy.webp",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExd2R0cjNxbXBjZjRjNmg4NmN3MGlhazVkNHJsaDkxMHZkY2hweGRtZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/pCU4bC7kC6sxy/200.webp",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExenkyZTc3aDlweWl0MnI0cXJsZGptY3g0bzE2NTY1aWMyaHd4Y201ZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/dbtDDSvWErdf2/giphy.webp",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExM25ndGd2d3Uya3g3dnlnenJ1bjh0Y2NtNHdwZHY3Mjh2NnBmZDJpbyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2xF8gHUf085aNyyAQR/200.webp",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExdjU3bHdsc3FtamlyazBlbWppNHc3MTV3MW4xdHd2cWo4b2tzbTkwcSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/1EghTrigJJhq8/200.webp",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExdmM1OWR0cnk5eXI0dXpoNWRzbmVseTVyd2l3MzdrOHZueHJ6bjhjMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/12yjKJaLB7DuG4/giphy.webp"
-        ],
-        release: [
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExY2NxcHEzam92enRtd29xc21pMHhmbHozMWljamF1cmt4cjhwZTI0ayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/PApUm1HPVYlDNLoMmr/giphy.webp",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNXU4dnhwOWVqZzc4NXVsdTY3c2I4Mm9lOHF1c253MDJya25zNXU0ZyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/dxn6fRlTIShoeBr69N/giphy.webp",
-            "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExbXN2bjJob3pxazE2NDJhbGE3ZWY5d2dzbDM4czgwZnA4ejlxY3ZqeCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/9D37RaHngWP7ZmmsEt/giphy.webp",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExZnI0YTM2N2hwamd2dXYwNmN2MjRpYXIyN203cnNpbW13YjNhZGRhdyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LYWPXVUNz30ze/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdW1jZ3F4ZGRwMWkyc3ZocHJ3aXhyb2FuZGppcnMyMWtsYXpjbDY2ZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tXLpxypfSXvUc/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHRianpoOW51MzZ4Yjk3MmNpbmdseTJlb3o3dWVpYzJpazc5ZHNoayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/b85mPT4Usz7fq/giphy.gif",
-        ],
-        docs: [
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExaGRpZHJqYzRvZ25xcjR3ZXcwbzVudXF2Z2hsaHoyc2g1ZjZuam81YiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/eDArHBLT4aATKEKtCd/giphy.gif",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExa2NubXR1b2M1dDQ2Z2UxYmk5bzltbHdudWI1emVzOGFlbDNsOGU1bSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/wpgYasZ0tBrP4lCgS3/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExMmEyNzc3M2V0anp4d2JtOTJuMTZ2dXNnMmEyN3A4MmE0ZGpiaDhnNCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orifaQEOagjYJ1EXe/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExZjUyenc2eG5pZ3NjYzcyZXg2dDFndm5qZHRqMHk5amNoYjhhNnNvZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/7E8lI6TkLrvvAcPXso/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExaWFxcXZ3MTMxM3Bjd2IwNG43ZDJjdndreXNmdTVvZ2g3Z2Q4NjczMCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3tJdi9wQQ10BD2H47g/giphy.gif",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNjFrejZmaHQ2Z2o1Y3B2MDl6cmU5bzNybG84eXFrYjBjZjV0dGFpeSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/fsXOS3oBboiYf6fSsY/giphy.gif",
-            "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHdhOHRianU1YmtrNHE0c2R2M2I2MTBzNnZhdnBrMW5ueG02eHF6OSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieOEBYMAwTClHqM/giphy.gif",
-        ],
-        chore: [
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExNjFtNXY0ZXdmdGxkdno2Nm5odGk3Nzd3aTRuYnJtbDA4MXIxdHFhdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/10zsjaH4g0GgmY/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExZG1sNXB6eTZvdDNtNzJwNXVxenNjendwaGgxb2xzNWI1dGNpdTVmZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/NHHYRm7mAUQ6Y/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHd4bDJrc216YWpicDQ5emczdWF3bTk0dXYzeGQ4ajg2a3IyYjV6diZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/FHEjBpiqMwSuA/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3d5b2U1Z3Jic3AxY2llYjQwNW5wODFpNWp5NHY0dGV5Z2cxdThkdCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/kLZNLNqUZ6bC0/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExbTNpZ2w0c3NrMmc0cmZobTd2eTM3YTRlM2lnbWpoZDUzNnRjdnNmZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/NV4cSrRYXXwfUcYnua/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmFzZHNuODg0dDRheGt0aGU2bjVvd2xiNDI1bWFmYTVsbHJ2eHI2dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/XaAbmtzzz35IgW3Ntn/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExYWM2OHkzYmNkajZxa204Njg0bmQzaWp1M3NobnJjbWxyYWJrbDNnciZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/OiwOPq0fFqqyainyMu/giphy.gif",
-        ],
-    },
-    pullRequest: {
-        automatic: [
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMm5iZHJydTJ4NGticXdxd3ZxYnZqNXdvaDQwOHdtb3o5NTRhdnRhOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LSX49vHf7JHGyGjrC0/giphy.gif",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExYzRsNGFicndqMXgzMTVwdnhpeXNyZGsydXVxamV4eGxndWhna291OSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ktcUyw6mBlMVa/200.webp",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdjkyeWVubngzM28xODFrbXZ4Nng3Y2hubmM4cXJqNGpic3Bheml0NSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/M11UVCRrc0LUk/giphy.webp",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExenQwNDJmZnZraDBzNXBoNjUwZjEzMzFlanMxcHVodmF4b3l3bDl2biZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/zrdUjl6N99nLq/200.webp",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmozN3plMWNiYjZoemh6N2RmeTB1MG9ieHlqYTJsb3BrZmNoY3h0dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/stv1Dliu5TrMs/giphy.webp",
-        ],
-        feature: [
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMm5iZHJydTJ4NGticXdxd3ZxYnZqNXdvaDQwOHdtb3o5NTRhdnRhOCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LSX49vHf7JHGyGjrC0/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExYmc4YWplZWs0Y2c3ZXNtbGpwZnQzdWpncmNjNXpodjg3MHdtbnJ5NiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/OMK7LRBedcnhm/200.webp",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHBrYXpmd2poeGU5cWswbjRqNmJlZ2U2dWc0ejVpY3RpcXVuYTY3dSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/llKJGxQ1ESmac/giphy.webp",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExMnFleXV0MXZteGN6c2s2b3R3ZGc2cWY1aXB0Y3ZzNmpvZHhyNDVmNSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/10FwycrnAkpshW/giphy.webp",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExcHo0MjIzaGIycTRmeWFwZmp6bGExczJicXcyZTQxemsxaTY1b3V1NiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/QKkV58ufpV4ksJ1Okh/giphy.gif",
-        ],
-        bugfix: [
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExazc3OWszenA5c2FlemE3a25oNnlmZDBra3liMWRqMW82NzM2b2FveCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/xPGkOAdiIO3Is/giphy.webp",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmozN3plMWNiYjZoemh6N2RmeTB1MG9ieHlqYTJsb3BrZmNoY3h0dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/stv1Dliu5TrMs/giphy.webp",
-            "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExY3liaGF2NzI3bzM1YjRmdHFsaGdyenp4b3o3M3dqM3F0bGN5MHZtNSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/npUpB306c3EStRK6qP/200.webp",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExZWh6d3Nld3E0MTF1eTk2YXFibnI3MTBhbGtpamJiemRwejl3YmkzMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/gU25raLP4pUu4/giphy.webp",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExdmM1OWR0cnk5eXI0dXpoNWRzbmVseTVyd2l3MzdrOHZueHJ6bjhjMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/12yjKJaLB7DuG4/giphy.webp",
-        ],
-        hotfix: [
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmozN3plMWNiYjZoemh6N2RmeTB1MG9ieHlqYTJsb3BrZmNoY3h0dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/stv1Dliu5TrMs/giphy.webp",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExd2R0cjNxbXBjZjRjNmg4NmN3MGlhazVkNHJsaDkxMHZkY2hweGRtZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/pCU4bC7kC6sxy/200.webp",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExenkyZTc3aDlweWl0MnI0cXJsZGptY3g0bzE2NTY1aWMyaHd4Y201ZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/dbtDDSvWErdf2/giphy.webp",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExM25ndGd2d3Uya3g3dnlnenJ1bjh0Y2NtNHdwZHY3Mjh2NnBmZDJpbyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2xF8gHUf085aNyyAQR/200.webp",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExdjU3bHdsc3FtamlyazBlbWppNHc3MTV3MW4xdHd2cWo4b2tzbTkwcSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/1EghTrigJJhq8/200.webp",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExdmM1OWR0cnk5eXI0dXpoNWRzbmVseTVyd2l3MzdrOHZueHJ6bjhjMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/12yjKJaLB7DuG4/giphy.webp",
-        ],
-        release: [
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExY2NxcHEzam92enRtd29xc21pMHhmbHozMWljamF1cmt4cjhwZTI0ayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/PApUm1HPVYlDNLoMmr/giphy.webp",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNXU4dnhwOWVqZzc4NXVsdTY3c2I4Mm9lOHF1c253MDJya25zNXU0ZyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/dxn6fRlTIShoeBr69N/giphy.webp",
-            "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExbXN2bjJob3pxazE2NDJhbGE3ZWY5d2dzbDM4czgwZnA4ejlxY3ZqeCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/9D37RaHngWP7ZmmsEt/giphy.webp",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExZnI0YTM2N2hwamd2dXYwNmN2MjRpYXIyN203cnNpbW13YjNhZGRhdyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/LYWPXVUNz30ze/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdW1jZ3F4ZGRwMWkyc3ZocHJ3aXhyb2FuZGppcnMyMWtsYXpjbDY2ZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tXLpxypfSXvUc/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHRianpoOW51MzZ4Yjk3MmNpbmdseTJlb3o3dWVpYzJpazc5ZHNoayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/b85mPT4Usz7fq/giphy.gif",
-        ],
-        docs: [
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExaGRpZHJqYzRvZ25xcjR3ZXcwbzVudXF2Z2hsaHoyc2g1ZjZuam81YiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/eDArHBLT4aATKEKtCd/giphy.gif",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExa2NubXR1b2M1dDQ2Z2UxYmk5bzltbHdudWI1emVzOGFlbDNsOGU1bSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/wpgYasZ0tBrP4lCgS3/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExMmEyNzc3M2V0anp4d2JtOTJuMTZ2dXNnMmEyN3A4MmE0ZGpiaDhnNCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orifaQEOagjYJ1EXe/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExZjUyenc2eG5pZ3NjYzcyZXg2dDFndm5qZHRqMHk5amNoYjhhNnNvZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/7E8lI6TkLrvvAcPXso/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExaWFxcXZ3MTMxM3Bjd2IwNG43ZDJjdndreXNmdTVvZ2g3Z2Q4NjczMCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3tJdi9wQQ10BD2H47g/giphy.gif",
-            "https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExNjFrejZmaHQ2Z2o1Y3B2MDl6cmU5bzNybG84eXFrYjBjZjV0dGFpeSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/fsXOS3oBboiYf6fSsY/giphy.gif",
-            "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHdhOHRianU1YmtrNHE0c2R2M2I2MTBzNnZhdnBrMW5ueG02eHF6OSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieOEBYMAwTClHqM/giphy.gif",
-        ],
-        chore: [
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExNjFtNXY0ZXdmdGxkdno2Nm5odGk3Nzd3aTRuYnJtbDA4MXIxdHFhdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/10zsjaH4g0GgmY/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExZG1sNXB6eTZvdDNtNzJwNXVxenNjendwaGgxb2xzNWI1dGNpdTVmZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/NHHYRm7mAUQ6Y/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHd4bDJrc216YWpicDQ5emczdWF3bTk0dXYzeGQ4ajg2a3IyYjV6diZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/FHEjBpiqMwSuA/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3d5b2U1Z3Jic3AxY2llYjQwNW5wODFpNWp5NHY0dGV5Z2cxdThkdCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/kLZNLNqUZ6bC0/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExbTNpZ2w0c3NrMmc0cmZobTd2eTM3YTRlM2lnbWpoZDUzNnRjdnNmZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/NV4cSrRYXXwfUcYnua/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmFzZHNuODg0dDRheGt0aGU2bjVvd2xiNDI1bWFmYTVsbHJ2eHI2dyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/XaAbmtzzz35IgW3Ntn/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExYWM2OHkzYmNkajZxa204Njg0bmQzaWp1M3NobnJjbWxyYWJrbDNnciZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/OiwOPq0fFqqyainyMu/giphy.gif",
-        ],
-    },
-    commit: {
-        automatic: [
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWp2OGJ5ZmczaGhiMmVxdjRxMWZnYnRrNW5uemlmd2Ewam1nNGd0aSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2XflxzEtr4EPIEzioLu/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaTkzeTFveHd6N3Fubm8yZDlpYTVuMnp0bm1rODQyZDdpbTF4YzAxaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/n2IPMYMthV0m4/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ3BmNXV1YzZod2NkYjZ3aTE1Z3BwMWJ0ZG9uMXN0bm5pbDQ4ajBvaCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3WxRbhsvQjYw8/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWs5YXEyajhoNWI1aHdxeHNwcmt2czY2NW1mNjZrbnViYm9reXJsZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/loLqo6AzjUcMdjS1Jj/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdHh5MndyMzBmY3c3bDRxeGhpanF2ZjIycGpmbzlkMDV5cDJkeXhjMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieQDBZVlki2mJLW/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGdkaHFsMTlzM2ZuY3R5ZXJpZmo3cHRqZWJieXVlOHQwc2F3eGVrdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tELuxgGsoL62ihEtQs/giphy.gif",
-        ],
-        feature: [
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWp2OGJ5ZmczaGhiMmVxdjRxMWZnYnRrNW5uemlmd2Ewam1nNGd0aSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2XflxzEtr4EPIEzioLu/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaTkzeTFveHd6N3Fubm8yZDlpYTVuMnp0bm1rODQyZDdpbTF4YzAxaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/n2IPMYMthV0m4/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ3BmNXV1YzZod2NkYjZ3aTE1Z3BwMWJ0ZG9uMXN0bm5pbDQ4ajBvaCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3WxRbhsvQjYw8/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWs5YXEyajhoNWI1aHdxeHNwcmt2czY2NW1mNjZrbnViYm9reXJsZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/loLqo6AzjUcMdjS1Jj/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdHh5MndyMzBmY3c3bDRxeGhpanF2ZjIycGpmbzlkMDV5cDJkeXhjMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieQDBZVlki2mJLW/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGdkaHFsMTlzM2ZuY3R5ZXJpZmo3cHRqZWJieXVlOHQwc2F3eGVrdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tELuxgGsoL62ihEtQs/giphy.gif",
-        ],
-        bugfix: [
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWp2OGJ5ZmczaGhiMmVxdjRxMWZnYnRrNW5uemlmd2Ewam1nNGd0aSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2XflxzEtr4EPIEzioLu/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaTkzeTFveHd6N3Fubm8yZDlpYTVuMnp0bm1rODQyZDdpbTF4YzAxaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/n2IPMYMthV0m4/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ3BmNXV1YzZod2NkYjZ3aTE1Z3BwMWJ0ZG9uMXN0bm5pbDQ4ajBvaCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3WxRbhsvQjYw8/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWs5YXEyajhoNWI1aHdxeHNwcmt2czY2NW1mNjZrbnViYm9reXJsZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/loLqo6AzjUcMdjS1Jj/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdHh5MndyMzBmY3c3bDRxeGhpanF2ZjIycGpmbzlkMDV5cDJkeXhjMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieQDBZVlki2mJLW/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGdkaHFsMTlzM2ZuY3R5ZXJpZmo3cHRqZWJieXVlOHQwc2F3eGVrdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tELuxgGsoL62ihEtQs/giphy.gif",
-        ],
-        hotfix: [
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWp2OGJ5ZmczaGhiMmVxdjRxMWZnYnRrNW5uemlmd2Ewam1nNGd0aSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2XflxzEtr4EPIEzioLu/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaTkzeTFveHd6N3Fubm8yZDlpYTVuMnp0bm1rODQyZDdpbTF4YzAxaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/n2IPMYMthV0m4/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ3BmNXV1YzZod2NkYjZ3aTE1Z3BwMWJ0ZG9uMXN0bm5pbDQ4ajBvaCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3WxRbhsvQjYw8/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWs5YXEyajhoNWI1aHdxeHNwcmt2czY2NW1mNjZrbnViYm9reXJsZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/loLqo6AzjUcMdjS1Jj/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdHh5MndyMzBmY3c3bDRxeGhpanF2ZjIycGpmbzlkMDV5cDJkeXhjMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieQDBZVlki2mJLW/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGdkaHFsMTlzM2ZuY3R5ZXJpZmo3cHRqZWJieXVlOHQwc2F3eGVrdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tELuxgGsoL62ihEtQs/giphy.gif",
-        ],
-        release: [
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWp2OGJ5ZmczaGhiMmVxdjRxMWZnYnRrNW5uemlmd2Ewam1nNGd0aSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2XflxzEtr4EPIEzioLu/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaTkzeTFveHd6N3Fubm8yZDlpYTVuMnp0bm1rODQyZDdpbTF4YzAxaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/n2IPMYMthV0m4/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ3BmNXV1YzZod2NkYjZ3aTE1Z3BwMWJ0ZG9uMXN0bm5pbDQ4ajBvaCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3WxRbhsvQjYw8/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWs5YXEyajhoNWI1aHdxeHNwcmt2czY2NW1mNjZrbnViYm9reXJsZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/loLqo6AzjUcMdjS1Jj/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdHh5MndyMzBmY3c3bDRxeGhpanF2ZjIycGpmbzlkMDV5cDJkeXhjMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieQDBZVlki2mJLW/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGdkaHFsMTlzM2ZuY3R5ZXJpZmo3cHRqZWJieXVlOHQwc2F3eGVrdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tELuxgGsoL62ihEtQs/giphy.gif",
-        ],
-        docs: [
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWp2OGJ5ZmczaGhiMmVxdjRxMWZnYnRrNW5uemlmd2Ewam1nNGd0aSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2XflxzEtr4EPIEzioLu/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaTkzeTFveHd6N3Fubm8yZDlpYTVuMnp0bm1rODQyZDdpbTF4YzAxaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/n2IPMYMthV0m4/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ3BmNXV1YzZod2NkYjZ3aTE1Z3BwMWJ0ZG9uMXN0bm5pbDQ4ajBvaCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3WxRbhsvQjYw8/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWs5YXEyajhoNWI1aHdxeHNwcmt2czY2NW1mNjZrbnViYm9reXJsZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/loLqo6AzjUcMdjS1Jj/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdHh5MndyMzBmY3c3bDRxeGhpanF2ZjIycGpmbzlkMDV5cDJkeXhjMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieQDBZVlki2mJLW/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGdkaHFsMTlzM2ZuY3R5ZXJpZmo3cHRqZWJieXVlOHQwc2F3eGVrdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tELuxgGsoL62ihEtQs/giphy.gif",
-        ],
-        chore: [
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExdWp2OGJ5ZmczaGhiMmVxdjRxMWZnYnRrNW5uemlmd2Ewam1nNGd0aSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/2XflxzEtr4EPIEzioLu/giphy.gif",
-            "https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExaTkzeTFveHd6N3Fubm8yZDlpYTVuMnp0bm1rODQyZDdpbTF4YzAxaiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/n2IPMYMthV0m4/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZ3BmNXV1YzZod2NkYjZ3aTE1Z3BwMWJ0ZG9uMXN0bm5pbDQ4ajBvaCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3WxRbhsvQjYw8/giphy.gif",
-            "https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWs5YXEyajhoNWI1aHdxeHNwcmt2czY2NW1mNjZrbnViYm9reXJsZiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/loLqo6AzjUcMdjS1Jj/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExdHh5MndyMzBmY3c3bDRxeGhpanF2ZjIycGpmbzlkMDV5cDJkeXhjMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3orieQDBZVlki2mJLW/giphy.gif",
-            "https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGdkaHFsMTlzM2ZuY3R5ZXJpZmo3cHRqZWJieXVlOHQwc2F3eGVrdSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/tELuxgGsoL62ihEtQs/giphy.gif",
-        ]
-    }
-};
-exports.WORKFLOW_STATUS = {
-    IN_PROGRESS: 'in_progress',
-    QUEUED: 'queued',
-    REQUESTED: 'requested',
-    WAITING: 'waiting',
-    PENDING: 'pending',
-    COMPLETED: 'completed',
-    FAILED: 'failed',
-    CANCELLED: 'cancelled',
-    SKIPPED: 'skipped',
-    TIMED_OUT: 'timed_out',
-};
-exports.WORKFLOW_ACTIVE_STATUSES = [
-    exports.WORKFLOW_STATUS.IN_PROGRESS,
-    exports.WORKFLOW_STATUS.QUEUED,
-    exports.WORKFLOW_STATUS.REQUESTED,
-    exports.WORKFLOW_STATUS.WAITING,
-    exports.WORKFLOW_STATUS.PENDING,
-];
-exports.INPUT_KEYS = {
-    // Debug
-    DEBUG: 'debug',
-    // Welcome
-    WELCOME_TITLE: 'welcome-title',
-    WELCOME_MESSAGES: 'welcome-messages',
-    // Single action
-    SINGLE_ACTION: 'single-action',
-    SINGLE_ACTION_ISSUE: 'single-action-issue',
-    SINGLE_ACTION_VERSION: 'single-action-version',
-    SINGLE_ACTION_TITLE: 'single-action-title',
-    SINGLE_ACTION_CHANGELOG: 'single-action-changelog',
-    // Tokens
-    TOKEN: 'token',
-    QUEUE_GATE_ONLY: 'queue-gate-only',
-    // Agent selection
-    AGENT_PROVIDER: 'agent-provider',
-    AGENT_MODEL_PROVIDER: 'agent-model-provider',
-    AGENT_EFFORT: 'agent-effort',
-    AGENT_MODEL: 'agent-model',
-    AGENT_COMMAND: 'agent-command',
-    FINDINGS_PROVIDER: 'findings-provider',
-    FINDINGS_MODEL_PROVIDER: 'findings-model-provider',
-    FINDINGS_EFFORT: 'findings-effort',
-    FINDINGS_MODEL: 'findings-model',
-    FINDINGS_COMMAND: 'findings-command',
-    FIXER_PROVIDER: 'fixer-provider',
-    FIXER_MODEL_PROVIDER: 'fixer-model-provider',
-    FIXER_EFFORT: 'fixer-effort',
-    FIXER_MODEL: 'fixer-model',
-    FIXER_COMMAND: 'fixer-command',
-    PLANNER_PROVIDER: 'planner-provider',
-    PLANNER_MODEL_PROVIDER: 'planner-model-provider',
-    PLANNER_EFFORT: 'planner-effort',
-    PLANNER_MODEL: 'planner-model',
-    PLANNER_COMMAND: 'planner-command',
-    REVIEWER_PROVIDER: 'reviewer-provider',
-    REVIEWER_MODEL_PROVIDER: 'reviewer-model-provider',
-    REVIEWER_EFFORT: 'reviewer-effort',
-    REVIEWER_MODEL: 'reviewer-model',
-    REVIEWER_COMMAND: 'reviewer-command',
-    TESTER_PROVIDER: 'tester-provider',
-    TESTER_MODEL_PROVIDER: 'tester-model-provider',
-    TESTER_EFFORT: 'tester-effort',
-    TESTER_MODEL: 'tester-model',
-    TESTER_COMMAND: 'tester-command',
-    RELEASE_PROVIDER: 'release-provider',
-    RELEASE_MODEL_PROVIDER: 'release-model-provider',
-    RELEASE_EFFORT: 'release-effort',
-    RELEASE_MODEL: 'release-model',
-    RELEASE_COMMAND: 'release-command',
-    // AI configuration
-    AI_PULL_REQUEST_DESCRIPTION: 'ai-pull-request-description',
-    AI_PULL_REQUEST_DESCRIPTION_MODE: 'ai-pull-request-description-mode',
-    AI_MEMBERS_ONLY: 'ai-members-only',
-    AI_IGNORE_FILES: 'ai-ignore-files',
-    AI_INCLUDE_REASONING: 'ai-include-reasoning',
-    BUGBOT_SEVERITY: 'bugbot-severity',
-    BUGBOT_COMMENT_LIMIT: 'bugbot-comment-limit',
-    BUGBOT_FIX_VERIFY_COMMANDS: 'bugbot-fix-verify-commands',
-    // Projects
-    PROJECT_IDS: 'project-ids',
-    PROJECT_COLUMN_ISSUE_CREATED: 'project-column-issue-created',
-    PROJECT_COLUMN_PULL_REQUEST_CREATED: 'project-column-pull-request-created',
-    PROJECT_COLUMN_ISSUE_IN_PROGRESS: 'project-column-issue-in-progress',
-    PROJECT_COLUMN_PULL_REQUEST_IN_PROGRESS: 'project-column-pull-request-in-progress',
-    // Images
-    IMAGES_ON_ISSUE: 'images-on-issue',
-    IMAGES_ON_PULL_REQUEST: 'images-on-pull-request',
-    IMAGES_ON_COMMIT: 'images-on-commit',
-    IMAGES_ISSUE_AUTOMATIC: 'images-issue-automatic',
-    IMAGES_ISSUE_FEATURE: 'images-issue-feature',
-    IMAGES_ISSUE_BUGFIX: 'images-issue-bugfix',
-    IMAGES_ISSUE_DOCS: 'images-issue-docs',
-    IMAGES_ISSUE_CHORE: 'images-issue-chore',
-    IMAGES_ISSUE_RELEASE: 'images-issue-release',
-    IMAGES_ISSUE_HOTFIX: 'images-issue-hotfix',
-    IMAGES_PULL_REQUEST_AUTOMATIC: 'images-pull-request-automatic',
-    IMAGES_PULL_REQUEST_FEATURE: 'images-pull-request-feature',
-    IMAGES_PULL_REQUEST_BUGFIX: 'images-pull-request-bugfix',
-    IMAGES_PULL_REQUEST_RELEASE: 'images-pull-request-release',
-    IMAGES_PULL_REQUEST_HOTFIX: 'images-pull-request-hotfix',
-    IMAGES_PULL_REQUEST_DOCS: 'images-pull-request-docs',
-    IMAGES_PULL_REQUEST_CHORE: 'images-pull-request-chore',
-    IMAGES_COMMIT_AUTOMATIC: 'images-commit-automatic',
-    IMAGES_COMMIT_FEATURE: 'images-commit-feature',
-    IMAGES_COMMIT_BUGFIX: 'images-commit-bugfix',
-    IMAGES_COMMIT_RELEASE: 'images-commit-release',
-    IMAGES_COMMIT_HOTFIX: 'images-commit-hotfix',
-    IMAGES_COMMIT_DOCS: 'images-commit-docs',
-    IMAGES_COMMIT_CHORE: 'images-commit-chore',
-    // Workflows
-    RELEASE_WORKFLOW: 'release-workflow',
-    HOTFIX_WORKFLOW: 'hotfix-workflow',
-    // Emoji
-    EMOJI_LABELED_TITLE: 'emoji-labeled-title',
-    BRANCH_MANAGEMENT_EMOJI: 'branch-management-emoji',
-    // Labels
-    BRANCH_MANAGEMENT_LAUNCHER_LABEL: 'branch-management-launcher-label',
-    BUGFIX_LABEL: 'bugfix-label',
-    BUG_LABEL: 'bug-label',
-    HOTFIX_LABEL: 'hotfix-label',
-    ENHANCEMENT_LABEL: 'enhancement-label',
-    FEATURE_LABEL: 'feature-label',
-    RELEASE_LABEL: 'release-label',
-    QUESTION_LABEL: 'question-label',
-    HELP_LABEL: 'help-label',
-    DEPLOY_LABEL: 'deploy-label',
-    DEPLOYED_LABEL: 'deployed-label',
-    DOCS_LABEL: 'docs-label',
-    DOCUMENTATION_LABEL: 'documentation-label',
-    CHORE_LABEL: 'chore-label',
-    MAINTENANCE_LABEL: 'maintenance-label',
-    PRIORITY_HIGH_LABEL: 'priority-high-label',
-    PRIORITY_MEDIUM_LABEL: 'priority-medium-label',
-    PRIORITY_LOW_LABEL: 'priority-low-label',
-    PRIORITY_NONE_LABEL: 'priority-none-label',
-    SIZE_XXL_LABEL: 'size-xxl-label',
-    SIZE_XL_LABEL: 'size-xl-label',
-    SIZE_L_LABEL: 'size-l-label',
-    SIZE_M_LABEL: 'size-m-label',
-    SIZE_S_LABEL: 'size-s-label',
-    SIZE_XS_LABEL: 'size-xs-label',
-    // Lifecycle label inputs
-    STATE_AI_PROCESSING_LABEL: 'state-ai-processing-label',
-    STATE_PLANNED_LABEL: 'state-planned-label',
-    STATE_IN_PROGRESS_LABEL: 'state-in-progress-label',
-    STATE_REVIEWING_LABEL: 'state-reviewing-label',
-    STATE_CHANGES_REQUESTED_LABEL: 'state-changes-requested-label',
-    STATE_VERIFIED_LABEL: 'state-verified-label',
-    STATE_READY_LABEL: 'state-ready-label',
-    STATE_BLOCKED_LABEL: 'state-blocked-label',
-    STATE_AWAITING_MAINTAINER_LABEL: 'state-awaiting-maintainer-label',
-    STATE_AWAITING_ISSUE_AUTHOR_LABEL: 'state-awaiting-issue-author-label',
-    // Issue Types
-    ISSUE_TYPE_BUG: 'issue-type-bug',
-    ISSUE_TYPE_BUG_DESCRIPTION: 'issue-type-bug-description',
-    ISSUE_TYPE_BUG_COLOR: 'issue-type-bug-color',
-    ISSUE_TYPE_HOTFIX: 'issue-type-hotfix',
-    ISSUE_TYPE_HOTFIX_DESCRIPTION: 'issue-type-hotfix-description',
-    ISSUE_TYPE_HOTFIX_COLOR: 'issue-type-hotfix-color',
-    ISSUE_TYPE_FEATURE: 'issue-type-feature',
-    ISSUE_TYPE_FEATURE_DESCRIPTION: 'issue-type-feature-description',
-    ISSUE_TYPE_FEATURE_COLOR: 'issue-type-feature-color',
-    ISSUE_TYPE_DOCUMENTATION: 'issue-type-documentation',
-    ISSUE_TYPE_DOCUMENTATION_DESCRIPTION: 'issue-type-documentation-description',
-    ISSUE_TYPE_DOCUMENTATION_COLOR: 'issue-type-documentation-color',
-    ISSUE_TYPE_MAINTENANCE: 'issue-type-maintenance',
-    ISSUE_TYPE_MAINTENANCE_DESCRIPTION: 'issue-type-maintenance-description',
-    ISSUE_TYPE_MAINTENANCE_COLOR: 'issue-type-maintenance-color',
-    ISSUE_TYPE_RELEASE: 'issue-type-release',
-    ISSUE_TYPE_RELEASE_DESCRIPTION: 'issue-type-release-description',
-    ISSUE_TYPE_RELEASE_COLOR: 'issue-type-release-color',
-    ISSUE_TYPE_QUESTION: 'issue-type-question',
-    ISSUE_TYPE_QUESTION_DESCRIPTION: 'issue-type-question-description',
-    ISSUE_TYPE_QUESTION_COLOR: 'issue-type-question-color',
-    ISSUE_TYPE_HELP: 'issue-type-help',
-    ISSUE_TYPE_HELP_DESCRIPTION: 'issue-type-help-description',
-    ISSUE_TYPE_HELP_COLOR: 'issue-type-help-color',
-    ISSUE_TYPE_TASK: 'issue-type-task',
-    ISSUE_TYPE_TASK_DESCRIPTION: 'issue-type-task-description',
-    ISSUE_TYPE_TASK_COLOR: 'issue-type-task-color',
-    // Locale
-    ISSUES_LOCALE: 'issues-locale',
-    PULL_REQUESTS_LOCALE: 'pull-requests-locale',
-    // Size Thresholds
-    SIZE_XXL_THRESHOLD_LINES: 'size-xxl-threshold-lines',
-    SIZE_XXL_THRESHOLD_FILES: 'size-xxl-threshold-files',
-    SIZE_XXL_THRESHOLD_COMMITS: 'size-xxl-threshold-commits',
-    SIZE_XL_THRESHOLD_LINES: 'size-xl-threshold-lines',
-    SIZE_XL_THRESHOLD_FILES: 'size-xl-threshold-files',
-    SIZE_XL_THRESHOLD_COMMITS: 'size-xl-threshold-commits',
-    SIZE_L_THRESHOLD_LINES: 'size-l-threshold-lines',
-    SIZE_L_THRESHOLD_FILES: 'size-l-threshold-files',
-    SIZE_L_THRESHOLD_COMMITS: 'size-l-threshold-commits',
-    SIZE_M_THRESHOLD_LINES: 'size-m-threshold-lines',
-    SIZE_M_THRESHOLD_FILES: 'size-m-threshold-files',
-    SIZE_M_THRESHOLD_COMMITS: 'size-m-threshold-commits',
-    SIZE_S_THRESHOLD_LINES: 'size-s-threshold-lines',
-    SIZE_S_THRESHOLD_FILES: 'size-s-threshold-files',
-    SIZE_S_THRESHOLD_COMMITS: 'size-s-threshold-commits',
-    SIZE_XS_THRESHOLD_LINES: 'size-xs-threshold-lines',
-    SIZE_XS_THRESHOLD_FILES: 'size-xs-threshold-files',
-    SIZE_XS_THRESHOLD_COMMITS: 'size-xs-threshold-commits',
-    // Branches
-    MAIN_BRANCH: 'main-branch',
-    DEVELOPMENT_BRANCH: 'development-branch',
-    FEATURE_TREE: 'feature-tree',
-    BUGFIX_TREE: 'bugfix-tree',
-    HOTFIX_TREE: 'hotfix-tree',
-    RELEASE_TREE: 'release-tree',
-    DOCS_TREE: 'docs-tree',
-    CHORE_TREE: 'chore-tree',
-    // Commit
-    COMMIT_PREFIX_TRANSFORMS: 'commit-prefix-transforms',
-    // Issue
-    BRANCH_MANAGEMENT_ALWAYS: 'branch-management-always',
-    REOPEN_ISSUE_ON_PUSH: 'reopen-issue-on-push',
-    DESIRED_ASSIGNEES_COUNT: 'desired-assignees-count',
-    // Pull Request
-    PULL_REQUEST_DESIRED_ASSIGNEES_COUNT: 'desired-assignees-count',
-    PULL_REQUEST_DESIRED_REVIEWERS_COUNT: 'desired-reviewers-count',
-    PULL_REQUEST_MERGE_TIMEOUT: 'merge-timeout',
-};
-exports.ERRORS = {
-    GIT_REPOSITORY_NOT_FOUND: '❌ Git repository not found'
-};
-var action_types_1 = __nccwpck_require__(19625);
-Object.defineProperty(exports, "ACTIONS", ({ enumerable: true, get: function () { return action_types_1.ACTIONS; } }));
-/** Hidden HTML comment prefix for bugbot findings (issue/PR comments). Format: <!-- copilot-bugbot finding_id:"id" resolved:true|false --> */
-exports.BUGBOT_MARKER_PREFIX = 'copilot-bugbot';
-/** Max number of individual bugbot comments to create per issue/PR. Excess findings get one summary comment suggesting to review locally. */
-exports.BUGBOT_MAX_COMMENTS = 20;
-/** Minimum severity to publish (findings below this are dropped). Order: high > medium > low > info. */
-exports.BUGBOT_MIN_SEVERITY = 'low';
-exports.PROMPTS = {};
-
-
-/***/ }),
-
 /***/ 92816:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -73595,6 +74108,7 @@ function copySetupFiles(cwd, setupDirOverride, features, options = {}) {
         'hotfix_workflow.yml': 'hotfix',
         'agent-cli-provisioning.yml': 'agentProvisioning',
         'copilot_credential_health.yml': 'credentialHealth',
+        'copilot_close_inactive_issues.yml': 'inactiveIssueClosure',
     };
     const approvedWorkflowFiles = new Set(options.approvedWorkflowFiles ?? []);
     const backupDirectory = options.updateExistingWorkflows ? path.join(cwd, '.copilot', 'setup-backups', new Date().toISOString().replace(/[:.]/g, '-')) : undefined;
@@ -73629,6 +74143,7 @@ function compareSetupWorkflows(cwd, features, setupDirOverride) {
         'hotfix_workflow.yml': 'hotfix',
         'agent-cli-provisioning.yml': 'agentProvisioning',
         'copilot_credential_health.yml': 'credentialHealth',
+        'copilot_close_inactive_issues.yml': 'inactiveIssueClosure',
     };
     const sourceDirectory = path.join(setupDir, 'workflows');
     if (!fs.existsSync(sourceDirectory))
