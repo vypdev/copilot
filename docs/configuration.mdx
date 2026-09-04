@@ -131,6 +131,29 @@ Copilot provides extensive configuration options to customize your workflow. Use
   </Tab>
 </Tabs>
 
+## GitHub Actions resource scope
+
+`copilot setup` treats Secrets and Variables as two independent resource classes. Each class can default to the repository or the organization, and individual names can override that default. Organization resources use GitHub's `selected`, `private`, or `all` visibility; `selected` is the recommended least-privilege choice.
+
+```yaml
+manageRepositorySecrets: true
+manageRepositoryVariables: true
+storage:
+  secrets:
+    defaultScope: organization
+    organizationVisibility: selected
+    preserveExisting: true
+  variables:
+    defaultScope: repository
+    preserveExisting: true
+    overrides:
+      OPENAI_API_KEY: organization
+```
+
+The wizard first inspects the repository and reports repository-scoped resources, organization resources available to that repository, repository visibility, and access errors. It then asks separately about Secret and Variable storage. Repository resources take precedence over organization resources. With `preserveExisting: true`, an effective organization resource is inherited instead of being shadowed by a new repository value; add a name under `storage.secrets.overrides` or `storage.variables.overrides` when a repository-specific value is intentional.
+
+Organization storage is available only for organization-owned repositories and requires organization Actions permissions on the setup PAT. If only one class should be global, set that class to `organization` and leave the other at `repository`. `--skip-secrets` and `--skip-variables` disable their respective setup operations without changing the other class.
+
 ## Complete input reference
 
 The tables above group the most commonly changed inputs. The following inputs are

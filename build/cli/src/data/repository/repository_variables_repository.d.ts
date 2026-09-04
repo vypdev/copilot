@@ -1,8 +1,8 @@
-import type { SetupRepositoryConfigurationReadPort, SetupRepositorySecretsPort, SetupRepositoryVariablesPort } from '../../application/ports/setup_wizard_ports';
-import type { SetupCredentialValue } from '../../domain/setup';
+import type { SetupRemoteConfigurationReadPort, SetupRepositoryConfigurationReadPort, SetupRepositorySecretsPort, SetupRepositoryVariablesPort } from '../../application/ports/setup_wizard_ports';
+import type { SetupCredentialValue, SetupRemoteConfiguration, SetupResourceTarget, SetupVariable } from '../../domain/setup';
 import type { GithubClientPort } from '../../infrastructure/github/ports/github_client_provider_port';
 import type { GithubRepositoryVariablesClient } from '../../infrastructure/github/ports/github_repository_variables_protocol';
-export declare class RepositoryVariablesRepository implements SetupRepositoryVariablesPort, SetupRepositorySecretsPort, SetupRepositoryConfigurationReadPort {
+export declare class RepositoryVariablesRepository implements SetupRepositoryVariablesPort, SetupRepositorySecretsPort, SetupRepositoryConfigurationReadPort, SetupRemoteConfigurationReadPort {
     private readonly githubClient;
     constructor(githubClient: GithubClientPort<GithubRepositoryVariablesClient>);
     list(owner: string, repository: string, token: string): Promise<readonly string[]>;
@@ -10,7 +10,14 @@ export declare class RepositoryVariablesRepository implements SetupRepositoryVar
         name: string;
         value?: string;
     }[]>;
+    inspect(owner: string, repository: string, token: string): Promise<SetupRemoteConfiguration>;
     upsertSecrets(owner: string, repository: string, token: string, credentials: readonly SetupCredentialValue[]): Promise<{
+        created: number;
+        updated: number;
+        skipped: number;
+        errors: string[];
+    }>;
+    upsertScopedSecrets(owner: string, repository: string, token: string, target: SetupResourceTarget, credentials: readonly SetupCredentialValue[]): Promise<{
         created: number;
         updated: number;
         skipped: number;
@@ -26,6 +33,13 @@ export declare class RepositoryVariablesRepository implements SetupRepositoryVar
         errors: string[];
     }>;
     private upsertVariables;
+    upsertScopedVariables(owner: string, repository: string, token: string, target: SetupResourceTarget, variables: readonly SetupVariable[]): Promise<{
+        created: number;
+        updated: number;
+        errors: string[];
+    }>;
+    private listOrganizationSecrets;
+    private listOrganizationVariables;
 }
 /** GitHub requires a sealed box: ephemeral public key + crypto_box ciphertext. */
 export declare function encryptSecret(value: string, base64PublicKey: string): string;

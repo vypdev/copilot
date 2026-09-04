@@ -2,11 +2,15 @@ import type {
     SetupConfiguration,
     SetupPlan,
     SetupCredentialCheck,
-    SetupCredentialRequirement,
     SetupCredentialDecision,
     SetupCredentialValue,
     SetupWorkflowComparison,
     DoctorCheck,
+    SetupCredentialRequirement,
+    SetupResourceTarget,
+    SetupRemoteConfiguration,
+    SetupStorageConfiguration,
+    SetupVariable,
 } from '../../domain/setup';
 
 export interface SetupPromptPort {
@@ -14,6 +18,20 @@ export interface SetupPromptPort {
     showPlan(plan: SetupPlan): void;
     confirm(plan: SetupPlan): Promise<boolean>;
     close(): void;
+}
+
+export interface SetupStoragePromptPort {
+    chooseStorage(
+        defaults: SetupStorageConfiguration,
+        remote: SetupRemoteConfiguration,
+        variables: readonly SetupVariable[],
+        requirements: readonly SetupCredentialRequirement[],
+        managed?: { secrets: boolean; variables: boolean },
+    ): Promise<SetupStorageConfiguration>;
+}
+
+export interface SetupRemoteConfigurationReadPort {
+    inspect(owner: string, repository: string, token: string): Promise<SetupRemoteConfiguration>;
 }
 
 export interface SetupCredentialPromptPort {
@@ -31,6 +49,13 @@ export interface SetupRepositorySecretsPort {
         owner: string,
         repository: string,
         token: string,
+        credentials: readonly SetupCredentialValue[],
+    ): Promise<{ created: number; updated: number; skipped: number; errors: string[] }>;
+    upsertScopedSecrets?(
+        owner: string,
+        repository: string,
+        token: string,
+        target: SetupResourceTarget,
         credentials: readonly SetupCredentialValue[],
     ): Promise<{ created: number; updated: number; skipped: number; errors: string[] }>;
 }
@@ -67,6 +92,13 @@ export interface SetupRepositoryVariablesPort {
         owner: string,
         repository: string,
         token: string,
+        variables: readonly { name: string; value: string }[],
+    ): Promise<{ created: number; updated: number; errors: string[] }>;
+    upsertScopedVariables?(
+        owner: string,
+        repository: string,
+        token: string,
+        target: SetupResourceTarget,
         variables: readonly { name: string; value: string }[],
     ): Promise<{ created: number; updated: number; errors: string[] }>;
 }

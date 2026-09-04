@@ -16,5 +16,6 @@ export function createSetupDoctorUseCase(output: DoctorOutputPort): SetupDoctorU
         new SetupWorkspaceAdapter(),
         output,
         new SetupRemoteCredentialHealthAdapter(new OctokitCredentialHealthClientAdapter()),
+        repositoryConfiguration,
     );
 }

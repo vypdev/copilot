@@ -1,5 +1,5 @@
 import { SetupCredentialsUseCase } from '../../application/usecases/setup/setup_credentials_use_case';
-import type { SetupCredentialPromptPort } from '../../application/ports/setup_wizard_ports';
+import type { SetupCredentialPromptPort, SetupRemoteConfigurationReadPort } from '../../application/ports/setup_wizard_ports';
 import { SetupCredentialValidationAdapter } from '../setup_credential_validation_adapter';
 import { RepositoryVariablesRepository } from '../../data/repository/repository_variables_repository';
 import { createRepositoryVariablesClient } from './github_identity_client_factory';
@@ -14,4 +14,8 @@ export function createSetupCredentialsUseCase(prompt: SetupCredentialPromptPort)
         repositoryConfiguration,
         new SetupRemoteCredentialHealthAdapter(new OctokitCredentialHealthClientAdapter(), { bootstrapWhenMissing: true }),
     );
+}
+
+export function createSetupRemoteConfigurationReadPort(): SetupRemoteConfigurationReadPort {
+    return new RepositoryVariablesRepository(createRepositoryVariablesClient());
 }

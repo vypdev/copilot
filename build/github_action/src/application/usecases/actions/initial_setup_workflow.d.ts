@@ -5,7 +5,7 @@ import type { AuthenticatedUserPort } from '../../ports/authenticated_user_ports
 import type { RepositoryTagPort, RepositoryDefaultBranchPort } from '../../ports/repository_release_ports';
 import type { InitialLabelProvisioningPort, IssueTypeProvisioningPort } from '../../ports/issue_management_ports';
 import type { SetupWorkspacePort } from '../../ports/setup_workspace_ports';
-import type { SetupRepositorySecretsPort, SetupRepositoryVariablesPort } from '../../ports/setup_wizard_ports';
+import type { SetupRemoteConfigurationReadPort, SetupRepositorySecretsPort, SetupRepositoryVariablesPort } from '../../ports/setup_wizard_ports';
 export interface InitialSetupWorkflowDependencies {
     authenticatedUserPort: AuthenticatedUserPort;
     initialLabelProvisioningPort: InitialLabelProvisioningPort;
@@ -16,6 +16,7 @@ export interface InitialSetupWorkflowDependencies {
     setupWorkspacePort: SetupWorkspacePort;
     setupRepositoryVariablesPort?: SetupRepositoryVariablesPort;
     setupRepositorySecretsPort?: SetupRepositorySecretsPort;
+    setupRemoteConfigurationReadPort?: SetupRemoteConfigurationReadPort;
 }
 /** Runs repository setup as an ordered application workflow with explicit port dependencies. */
 export declare function runInitialSetupWorkflow(param: Execution, dependencies: InitialSetupWorkflowDependencies): Promise<Result[]>;

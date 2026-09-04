@@ -1,5 +1,6 @@
 import type { SetupCredentialCheck, SetupCredentialCollection, SetupCredentialRequirement } from '../../../domain/setup';
 import type { SetupCredentialPromptPort, SetupCredentialValidationPort, SetupRepositorySecretsPort, SetupRemoteCredentialHealthPort } from '../../ports/setup_wizard_ports';
+import type { SetupRemoteConfiguration } from '../../../domain/setup';
 export interface SetupCredentialsRequest {
     owner: string;
     repository: string;
@@ -7,6 +8,7 @@ export interface SetupCredentialsRequest {
     requirements: readonly SetupCredentialRequirement[];
     manageSecrets: boolean;
     ref?: string;
+    remoteConfiguration?: SetupRemoteConfiguration;
 }
 export interface SetupCredentialsResult {
     collection: SetupCredentialCollection;

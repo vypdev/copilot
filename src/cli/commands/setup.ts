@@ -9,8 +9,9 @@ import { loadSetupConfigurationOverrides } from '../setup_config_file';
 import { SetupWizardUseCase } from '../../application/usecases/setup';
 import { SETUP_FEATURE_DESCRIPTIONS, buildSetupCredentialRequirements } from '../../application/policies/setup_configuration_policy';
 import type { SetupConfigurationOverrides } from '../../application/policies/setup_configuration_policy';
-import { createSetupCredentialsUseCase } from '../../infrastructure/composition/setup_credentials_composition_root';
+import { createSetupCredentialsUseCase, createSetupRemoteConfigurationReadPort } from '../../infrastructure/composition/setup_credentials_composition_root';
 import { SetupWorkspaceAdapter } from '../../infrastructure/setup_workspace_adapter';
+import type { SetupResourceScope } from '../../domain/setup';
 
 export function registerSetupCommand(program: Command): void {
   program
@@ -26,6 +27,12 @@ export function registerSetupCommand(program: Command): void {
     .option('--dry-run', 'Show the setup plan without changing files or GitHub', false)
     .option('--skip-variables', 'Do not create or update GitHub Repository Variables', false)
     .option('--skip-secrets', 'Do not validate or create/update GitHub Repository Secrets', false)
+    .option('--variables-scope <scope>', 'Default Variable scope (repository|organization)')
+    .option('--secrets-scope <scope>', 'Default Secret scope (repository|organization)')
+    .option('--variables-visibility <visibility>', 'Organization Variable visibility (selected|private|all)')
+    .option('--secrets-visibility <visibility>', 'Organization Secret visibility (selected|private|all)')
+    .option('--variable-scope <name=scope>', 'Per-variable scope override; repeat as needed', collectScope, {})
+    .option('--secret-scope <name=scope>', 'Per-secret scope override; repeat as needed', collectScope, {})
     .option('--update-workflows', 'Allow setup-managed workflows already in the repository to be updated', false)
     .option('--workflow-pat <token>', 'Workflow PAT for the bot account (prefer the hidden interactive prompt)')
     .option('--secret <name=value>', 'Secret value for non-interactive setup; repeat for each API key', collectSecret, {})
@@ -67,11 +74,16 @@ export function registerSetupCommand(program: Command): void {
           return;
         }
         logInfo(options.dryRun ? '🧭 Building a dry-run setup plan...' : '🧭 Building your setup plan...');
-        const wizard = new SetupWizardUseCase(prompt);
+        const remoteConfigurationReader = typeof createSetupRemoteConfigurationReadPort === 'function'
+          ? createSetupRemoteConfigurationReadPort()
+          : undefined;
+        const wizard = new SetupWizardUseCase(prompt, remoteConfigurationReader, prompt);
         const overrides = loadSetupOverrides(options);
         const configuration = await wizard.collect({
           overrides,
           skipRepositoryVariables: Boolean(options.skipVariables),
+          skipRepositorySecrets: Boolean(options.skipSecrets),
+          ...(token ? { remoteTarget: { owner: gitInfo.owner, repository: gitInfo.repo, token } } : {}),
         });
         if (!configuration) {
           logInfo('⏭️  Setup cancelled. No changes were applied.');
@@ -93,9 +105,18 @@ export function registerSetupCommand(program: Command): void {
           requirements: buildSetupCredentialRequirements(configuration),
           manageSecrets: !options.skipSecrets && configuration.manageRepositorySecrets,
           ref: configuration.repository.mainBranch,
+      remoteConfiguration: wizard.remoteConfiguration(),
         });
         logInfo('⚙️  Applying the approved setup plan...');
-        const params = buildSetupParams(options, gitInfo, token ?? '', configuration, credentials.collection, approvedWorkflowFiles);
+        const params = buildSetupParams(
+          options,
+          gitInfo,
+          token ?? '',
+          configuration,
+          credentials.collection,
+          approvedWorkflowFiles,
+          wizard.remoteConfiguration(),
+        );
         if (!params) return;
         await runLocalAction(params);
       } catch (error) {
@@ -120,6 +141,12 @@ function loadSetupOverrides(options: {
   config?: string;
   agent?: string;
   features?: string;
+  variablesScope?: string;
+  secretsScope?: string;
+  variablesVisibility?: string;
+  secretsVisibility?: string;
+  variableScope?: Record<string, SetupResourceScope>;
+  secretScope?: Record<string, SetupResourceScope>;
 }): SetupConfigurationOverrides {
   const fromFile = options.config ? loadSetupConfigurationOverrides(options.config) : {};
   const fromFlags: SetupConfigurationOverrides = {};
@@ -141,6 +168,22 @@ function loadSetupOverrides(options: {
       fromFlags.features = Object.fromEntries(Object.keys(SETUP_FEATURE_DESCRIPTIONS).map(feature => [feature, requested.includes(feature)]));
     }
   }
+  const storage: NonNullable<SetupConfigurationOverrides['storage']> = {};
+  if (options.variablesScope || options.variablesVisibility || Object.keys(options.variableScope ?? {}).length > 0) {
+    storage.variables = {
+      ...(options.variablesScope ? { defaultScope: parseScope(options.variablesScope, '--variables-scope') } : {}),
+      ...(options.variablesVisibility ? { organizationVisibility: parseVisibility(options.variablesVisibility, '--variables-visibility') } : {}),
+      ...(Object.keys(options.variableScope ?? {}).length > 0 ? { overrides: options.variableScope } : {}),
+    };
+  }
+  if (options.secretsScope || options.secretsVisibility || Object.keys(options.secretScope ?? {}).length > 0) {
+    storage.secrets = {
+      ...(options.secretsScope ? { defaultScope: parseScope(options.secretsScope, '--secrets-scope') } : {}),
+      ...(options.secretsVisibility ? { organizationVisibility: parseVisibility(options.secretsVisibility, '--secrets-visibility') } : {}),
+      ...(Object.keys(options.secretScope ?? {}).length > 0 ? { overrides: options.secretScope } : {}),
+    };
+  }
+  if (Object.keys(storage).length > 0) fromFlags.storage = storage;
   return mergeSetupOverrides(fromFile, fromFlags);
 }
 
@@ -156,5 +199,34 @@ function mergeSetupOverrides(
     repository: { ...fileOverrides.repository, ...flagOverrides.repository },
     ai: { ...fileOverrides.ai, ...flagOverrides.ai },
     projects: { ...fileOverrides.projects, ...flagOverrides.projects },
+    storage: {
+      ...fileOverrides.storage,
+      ...flagOverrides.storage,
+      secrets: { ...fileOverrides.storage?.secrets, ...flagOverrides.storage?.secrets, overrides: { ...fileOverrides.storage?.secrets?.overrides, ...flagOverrides.storage?.secrets?.overrides } },
+      variables: { ...fileOverrides.storage?.variables, ...flagOverrides.storage?.variables, overrides: { ...fileOverrides.storage?.variables?.overrides, ...flagOverrides.storage?.variables?.overrides } },
+    },
   };
+}
+
+function collectScope(value: string, previous: Record<string, SetupResourceScope>): Record<string, SetupResourceScope> {
+  const separator = value.indexOf('=');
+  if (separator <= 0) throw new Error('Scope overrides must use NAME=repository or NAME=organization syntax.');
+  const name = value.slice(0, separator).trim();
+  const scope = value.slice(separator + 1).trim().toLowerCase();
+  if (!/^[A-Z][A-Z0-9_]*$/.test(name) || !['repository', 'organization'].includes(scope)) {
+    throw new Error('Scope overrides must use an uppercase NAME and repository or organization scope.');
+  }
+  return { ...previous, [name]: scope as SetupResourceScope };
+}
+
+function parseScope(value: string, flag: string): 'repository' | 'organization' {
+  const normalized = value.trim().toLowerCase();
+  if (normalized !== 'repository' && normalized !== 'organization') throw new Error(`${flag} must be repository or organization.`);
+  return normalized;
+}
+
+function parseVisibility(value: string, flag: string): 'all' | 'private' | 'selected' {
+  const normalized = value.trim().toLowerCase();
+  if (!['all', 'private', 'selected'].includes(normalized)) throw new Error(`${flag} must be selected, private, or all.`);
+  return normalized as 'all' | 'private' | 'selected';
 }

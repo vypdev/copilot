@@ -1,6 +1,6 @@
 import { ACTIONS, INPUT_KEYS } from '../../utils/constants';
 import type { GitInfo } from '../../cli_context';
-import type { SetupConfiguration, SetupCredentialCollection } from '../../domain/setup';
+import type { SetupConfiguration, SetupCredentialCollection, SetupRemoteConfiguration } from '../../domain/setup';
 import { buildSetupActionInputs } from '../../application/policies/setup_configuration_policy';
 
 export interface SetupCommandOptions {
@@ -14,6 +14,7 @@ export function buildSetupParams(
   configuration?: SetupConfiguration,
   credentials?: SetupCredentialCollection,
   approvedWorkflowFiles: readonly string[] = [],
+  remoteConfiguration?: SetupRemoteConfiguration,
 ): Record<string, unknown> | undefined {
   if ('error' in gitInfo) return undefined;
   return {
@@ -31,6 +32,7 @@ export function buildSetupParams(
     ],
     ...(configuration ? { setupConfiguration: configuration } : {}),
     ...(credentials ? { setupCredentials: credentials } : {}),
+    ...(remoteConfiguration ? { setupRemoteConfiguration: remoteConfiguration } : {}),
     setupWorkflowUpdates: approvedWorkflowFiles,
   };
 }

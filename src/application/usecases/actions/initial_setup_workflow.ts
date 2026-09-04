@@ -12,10 +12,18 @@ import type { SetupWorkspacePort } from '../../ports/setup_workspace_ports';
 import { DEFAULT_INITIAL_TAG } from '../../../data/model/version_policy';
 import { logDebugInfo, logError, logInfo } from '../../ports/logging_ports';
 import { getTaskEmoji } from '../../../utils/task_emoji';
-import type { SetupConfiguration } from '../../../domain/setup';
-import type { SetupRepositorySecretsPort, SetupRepositoryVariablesPort } from '../../ports/setup_wizard_ports';
-import type { SetupCredentialCollection } from '../../../domain/setup';
-import { buildSetupRepositoryVariables } from '../../policies/setup_configuration_policy';
+import type { SetupConfiguration, SetupCredentialCollection, SetupRemoteConfiguration, SetupResourceTarget } from '../../../domain/setup';
+import type {
+    SetupRemoteConfigurationReadPort,
+    SetupRepositorySecretsPort,
+    SetupRepositoryVariablesPort,
+} from '../../ports/setup_wizard_ports';
+import {
+    buildSetupRepositoryVariables,
+    resolveSetupResourceTarget,
+    shouldUpsertSetupResource,
+    usesOrganizationStorage,
+} from '../../policies/setup_configuration_policy';
 
 export interface InitialSetupWorkflowDependencies {
     authenticatedUserPort: AuthenticatedUserPort;
@@ -27,6 +35,7 @@ export interface InitialSetupWorkflowDependencies {
     setupWorkspacePort: SetupWorkspacePort;
     setupRepositoryVariablesPort?: SetupRepositoryVariablesPort;
     setupRepositorySecretsPort?: SetupRepositorySecretsPort;
+    setupRemoteConfigurationReadPort?: SetupRemoteConfigurationReadPort;
 }
 
 type InitialLabelProvisioningOutcome =
@@ -70,7 +79,9 @@ export async function runInitialSetupWorkflow(
         }
         steps.push(`✅ GitHub access verified: ${githubAccess.user}`);
 
-        const secrets = await ensureRepositorySecrets(param, dependencies, setupConfiguration);
+        const remoteConfiguration = await resolveRemoteConfiguration(param, dependencies, setupConfiguration, errors);
+
+        const secrets = await ensureRepositorySecrets(param, dependencies, setupConfiguration, remoteConfiguration);
         if (secrets.step) steps.push(secrets.step);
         if (secrets.errors.length > 0) errors.push(...secrets.errors);
 
@@ -91,7 +102,7 @@ export async function runInitialSetupWorkflow(
             steps.push(`✅ Issue types checked: ${issueTypes.created} created, ${issueTypes.existing} already existed`);
         }
 
-        const variables = await ensureRepositoryVariables(param, dependencies, setupConfiguration);
+        const variables = await ensureRepositoryVariables(param, dependencies, setupConfiguration, remoteConfiguration);
         if (variables.step) steps.push(variables.step);
         if (variables.errors.length > 0) errors.push(...variables.errors);
 
@@ -220,20 +231,18 @@ async function ensureRepositoryVariables(
     param: Execution,
     dependencies: InitialSetupWorkflowDependencies,
     setupConfiguration?: SetupConfiguration,
+    remoteConfiguration?: SetupRemoteConfiguration,
 ): Promise<{ step?: string; errors: string[] }> {
     if (!setupConfiguration?.manageRepositoryVariables || !dependencies.setupRepositoryVariablesPort) {
         return { errors: [] };
     }
     try {
-        const result = await dependencies.setupRepositoryVariablesPort.upsert(
-            param.owner,
-            param.repo,
-            param.tokens.token,
-            buildSetupRepositoryVariables(setupConfiguration),
-        );
+        const desired = buildSetupRepositoryVariables(setupConfiguration);
+        const groups = groupResources(desired, 'variable', setupConfiguration, remoteConfiguration);
+        const result = await upsertVariableGroups(param, dependencies.setupRepositoryVariablesPort, groups);
         if (result.errors.length > 0) return { errors: result.errors };
         return {
-            step: `✅ Repository Variables: ${result.created} created, ${result.updated} updated`,
+            step: `✅ GitHub Actions Variables: ${result.created} created, ${result.updated} updated; existing effective values preserved when no override was selected.`,
             errors: [],
         };
     } catch (error) {
@@ -247,6 +256,7 @@ async function ensureRepositorySecrets(
     param: Execution,
     dependencies: InitialSetupWorkflowDependencies,
     setupConfiguration?: SetupConfiguration,
+    remoteConfiguration?: SetupRemoteConfiguration,
 ): Promise<{ step?: string; errors: string[] }> {
     if (!setupConfiguration?.manageRepositorySecrets || !dependencies.setupRepositorySecretsPort) {
         return { errors: [] };
@@ -261,15 +271,11 @@ async function ensureRepositorySecrets(
     ];
     if (values.length === 0) return { step: '✅ Existing Repository Secrets kept unchanged.', errors: [] };
     try {
-        const result = await dependencies.setupRepositorySecretsPort.upsertSecrets(
-            param.owner,
-            param.repo,
-            param.tokens.token,
-            values,
-        );
+        const groups = groupResources(values, 'secret', setupConfiguration, remoteConfiguration);
+        const result = await upsertSecretGroups(param, dependencies.setupRepositorySecretsPort, groups);
         if (result.errors.length > 0) return { errors: result.errors };
         return {
-            step: `✅ Repository Secrets: ${result.created} created, ${result.updated} updated; existing values kept when no replacement was selected.`,
+            step: `✅ GitHub Actions Secrets: ${result.created} created, ${result.updated} updated; existing effective values kept when no replacement was selected.`,
             errors: [],
         };
     } catch (error) {
@@ -277,6 +283,97 @@ async function ensureRepositorySecrets(
         logError(message);
         return { errors: [message] };
     }
+}
+
+async function resolveRemoteConfiguration(
+    param: Execution,
+    dependencies: InitialSetupWorkflowDependencies,
+    setupConfiguration: SetupConfiguration | undefined,
+    errors: string[],
+): Promise<SetupRemoteConfiguration | undefined> {
+    const provided = param.inputs?.setupRemoteConfiguration;
+    if (provided && typeof provided === 'object') return provided as SetupRemoteConfiguration;
+    if (!dependencies.setupRemoteConfigurationReadPort || !setupConfiguration) return undefined;
+    try {
+        return await dependencies.setupRemoteConfigurationReadPort.inspect(param.owner, param.repo, param.tokens.token);
+    } catch (error) {
+        const message = `Could not inspect existing GitHub Actions resource scopes: ${error instanceof Error ? error.message : String(error)}`;
+        logError(message);
+        if (usesOrganizationStorage(setupConfiguration)) errors.push(message);
+        return undefined;
+    }
+}
+
+type SetupResource = { name: string; value: string };
+type ResourceGroup = { target: SetupResourceTarget; resources: SetupResource[] };
+
+function groupResources(
+    resources: readonly SetupResource[],
+    kind: 'secret' | 'variable',
+    configuration: SetupConfiguration,
+    remoteConfiguration?: SetupRemoteConfiguration,
+): ResourceGroup[] {
+    const groups = new Map<string, ResourceGroup>();
+    for (const resource of resources) {
+        // Secret values reach this workflow only after the user chose keep/replace.
+        // Variables, however, are always generated from the selected setup contract,
+        // so preserveExisting must be applied here to avoid shadowing inherited values.
+        if (kind === 'variable' && !shouldUpsertSetupResource(configuration, kind, resource.name, remoteConfiguration)) continue;
+        const target = resolveSetupResourceTarget(configuration, kind, resource.name, remoteConfiguration);
+        const key = `${target.scope}:${target.organizationVisibility}:${target.repositoryId ?? ''}`;
+        const group = groups.get(key) ?? { target, resources: [] };
+        group.resources.push(resource);
+        groups.set(key, group);
+    }
+    return [...groups.values()];
+}
+
+async function upsertVariableGroups(
+    param: Execution,
+    port: SetupRepositoryVariablesPort,
+    groups: readonly ResourceGroup[],
+): Promise<{ created: number; updated: number; errors: string[] }> {
+    let created = 0;
+    let updated = 0;
+    const errors: string[] = [];
+    for (const group of groups) {
+        if (group.target.scope === 'organization' && !port.upsertScopedVariables) {
+            errors.push('Organization Variable provisioning is not available in this installation.');
+            continue;
+        }
+        const result = group.target.scope === 'organization'
+            ? await port.upsertScopedVariables!(param.owner, param.repo, param.tokens.token, group.target, group.resources)
+            : await port.upsert(param.owner, param.repo, param.tokens.token, group.resources);
+        created += result.created;
+        updated += result.updated;
+        errors.push(...result.errors);
+    }
+    return { created, updated, errors };
+}
+
+async function upsertSecretGroups(
+    param: Execution,
+    port: SetupRepositorySecretsPort,
+    groups: readonly ResourceGroup[],
+): Promise<{ created: number; updated: number; skipped: number; errors: string[] }> {
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+    const errors: string[] = [];
+    for (const group of groups) {
+        if (group.target.scope === 'organization' && !port.upsertScopedSecrets) {
+            errors.push('Organization Secret provisioning is not available in this installation.');
+            continue;
+        }
+        const result = group.target.scope === 'organization'
+            ? await port.upsertScopedSecrets!(param.owner, param.repo, param.tokens.token, group.target, group.resources)
+            : await port.upsertSecrets(param.owner, param.repo, param.tokens.token, group.resources);
+        created += result.created;
+        updated += result.updated;
+        skipped += result.skipped;
+        errors.push(...result.errors);
+    }
+    return { created, updated, skipped, errors };
 }
 
 function getSetupCredentialCollection(param: Execution): SetupCredentialCollection | undefined {

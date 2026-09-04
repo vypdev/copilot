@@ -16,6 +16,7 @@ const SETUP_OVERRIDE_KEYS = new Set([
     'manageRepositoryVariables',
     'manageRepositorySecrets',
     'actionInputs',
+    'storage',
 ]);
 const AGENT_OVERRIDE_KEYS = new Set(['provider', 'modelProvider', 'model', 'effort']);
 const REPOSITORY_STRING_KEYS = new Set([
@@ -43,6 +44,8 @@ const PROJECT_KEYS = new Set([
     'issueInProgressColumn',
     'pullRequestInProgressColumn',
 ]);
+const STORAGE_KEYS = new Set(['secrets', 'variables']);
+const STORAGE_POLICY_KEYS = new Set(['defaultScope', 'organizationVisibility', 'preserveExisting', 'overrides']);
 
 /** Loads a non-secret setup override file. JSON and YAML are supported. */
 export function loadSetupConfigurationOverrides(filePath: string): SetupConfigurationOverrides {
@@ -79,7 +82,42 @@ export function loadSetupConfigurationOverrides(filePath: string): SetupConfigur
     validateBooleanProperty(raw, 'manageRepositorySecrets');
     validateOptionalObject(raw.actionInputs, 'actionInputs');
     if (raw.actionInputs !== undefined) validateStringValues(raw.actionInputs as Record<string, unknown>, 'actionInputs');
+    validateStorage(raw.storage);
     return raw as SetupConfigurationOverrides;
+}
+
+function validateStorage(value: unknown): void {
+    if (value === undefined) return;
+    validateObject(value, 'storage');
+    const storage = value as Record<string, unknown>;
+    validateObjectKeys(storage, STORAGE_KEYS, 'storage');
+    for (const kind of STORAGE_KEYS) {
+        if (storage[kind] === undefined) continue;
+        validateObject(storage[kind], `storage.${kind}`);
+        const policy = storage[kind] as Record<string, unknown>;
+        validateObjectKeys(policy, STORAGE_POLICY_KEYS, `storage.${kind}`);
+        if (policy.defaultScope !== undefined && !['repository', 'organization'].includes(String(policy.defaultScope))) {
+            throw new Error(`storage.${kind}.defaultScope must be repository or organization.`);
+        }
+        if (policy.organizationVisibility !== undefined && !['all', 'private', 'selected'].includes(String(policy.organizationVisibility))) {
+            throw new Error(`storage.${kind}.organizationVisibility must be all, private, or selected.`);
+        }
+        if (policy.preserveExisting !== undefined && typeof policy.preserveExisting !== 'boolean') {
+            throw new Error(`storage.${kind}.preserveExisting must be a boolean.`);
+        }
+        if (policy.overrides !== undefined) {
+            validateObject(policy.overrides, `storage.${kind}.overrides`);
+            validateStringValues(policy.overrides as Record<string, unknown>, `storage.${kind}.overrides`);
+            for (const [name, scope] of Object.entries(policy.overrides as Record<string, unknown>)) {
+                if (!/^[A-Z][A-Z0-9_]*$/.test(name)) {
+                    throw new Error(`storage.${kind}.overrides names must be uppercase GitHub Actions names.`);
+                }
+                if (!['repository', 'organization'].includes(String(scope))) {
+                    throw new Error(`storage.${kind}.overrides.${name} must be repository or organization.`);
+                }
+            }
+        }
+    }
 }
 
 function validateSection(
@@ -123,17 +161,20 @@ function validateBooleanProperty(value: Record<string, unknown>, key: string): v
     if (value[key] !== undefined && typeof value[key] !== 'boolean') throw new Error(`${key} must be a boolean.`);
 }
 
-function containsCredentialMaterial(value: unknown): boolean {
+function containsCredentialMaterial(value: unknown, insideStorage = false): boolean {
     if (typeof value === 'string') {
         return /^(?:github_pat_|gh[pso]_|ghu_|ghs_|sk-|AIza|xox[baprs]-)/i.test(value.trim());
     }
     if (!value || typeof value !== 'object') return false;
-    if (Array.isArray(value)) return value.some(containsCredentialMaterial);
+    if (Array.isArray(value)) return value.some(item => containsCredentialMaterial(item, insideStorage));
     return Object.entries(value).some(([key, item]) => {
+        if (insideStorage) return false;
+        if (key === 'storage') return containsCredentialMaterial(item, true);
         // Boolean configuration switches such as `manageRepositorySecrets` and
         // `features.credentialHealth` are not credential material. Only reject
         // credential-shaped properties when they actually carry a value.
-        const looksLikeCredentialProperty = /(?:password|secret|token|api[_-]?key|credential)/i.test(key);
+        const looksLikeCredentialProperty = /(?:password|secret|token|api[_-]?key|credential)/i.test(key)
+            && !['storage', 'secrets', 'variables'].includes(key.toLowerCase());
         return (looksLikeCredentialProperty && item !== undefined && item !== null && typeof item !== 'boolean')
             || containsCredentialMaterial(item);
     });

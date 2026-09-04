@@ -63,6 +63,28 @@ describe('setup configuration file loader', () => {
         expect(loadSetupConfigurationOverrides(file)).toEqual({ createInitialTag: false });
     });
 
+    it('accepts independent organization storage policies without credential values', () => {
+        const file = join(directory, 'scoped-setup.yml');
+        writeFileSync(file, [
+            'storage:',
+            '  secrets:',
+            '    defaultScope: organization',
+            '    organizationVisibility: selected',
+            '    preserveExisting: true',
+            '  variables:',
+            '    defaultScope: repository',
+            '    overrides:',
+            '      OPENAI_API_KEY: organization',
+        ].join('\n'));
+
+        expect(loadSetupConfigurationOverrides(file)).toEqual({
+            storage: {
+                secrets: { defaultScope: 'organization', organizationVisibility: 'selected', preserveExisting: true },
+                variables: { defaultScope: 'repository', overrides: { OPENAI_API_KEY: 'organization' } },
+            },
+        });
+    });
+
     it.each([
         ['a secret-like value', '{"actionInputs":{"token":"secret"}}', /must not contain secrets/],
         ['an unknown field', '{"reposotory":{"mainBranch":"main"}}', /Unknown setup configuration field/],

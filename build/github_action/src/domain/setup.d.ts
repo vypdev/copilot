@@ -60,6 +60,27 @@ export interface SetupConfiguration {
     manageRepositorySecrets: boolean;
     /** Extra non-secret action inputs accepted by config files for advanced use cases. */
     actionInputs: Record<string, string>;
+    /** Independent storage policies for non-sensitive variables and secrets. */
+    storage: SetupStorageConfiguration;
+}
+export type SetupResourceScope = 'repository' | 'organization';
+export type SetupOrganizationVisibility = 'all' | 'private' | 'selected';
+export interface SetupResourceStoragePolicy {
+    defaultScope: SetupResourceScope;
+    organizationVisibility: SetupOrganizationVisibility;
+    /** Keep an already-effective resource instead of creating a shadowing override. */
+    preserveExisting: boolean;
+    /** Per-resource exceptions for mixed repository/organization configurations. */
+    overrides: Record<string, SetupResourceScope>;
+}
+export interface SetupResourceTarget {
+    scope: SetupResourceScope;
+    organizationVisibility: SetupOrganizationVisibility;
+    repositoryId?: number;
+}
+export interface SetupStorageConfiguration {
+    secrets: SetupResourceStoragePolicy;
+    variables: SetupResourceStoragePolicy;
 }
 export type SetupCredentialKind = 'workflowPat' | 'apiKey';
 export type SetupCredentialStatus = 'valid' | 'invalid' | 'missing' | 'unverifiable' | 'not_required';
@@ -76,6 +97,7 @@ export interface SetupCredentialCheck {
     status: SetupCredentialStatus;
     message: string;
     account?: string;
+    sourceScope?: SetupResourceScope;
 }
 export interface SetupCredentialValue {
     name: string;
@@ -85,6 +107,20 @@ export type SetupCredentialDecision = 'keep' | 'replace' | 'skip';
 export interface SetupCredentialCollection {
     workflowPat?: SetupCredentialValue;
     apiKeys: SetupCredentialValue[];
+}
+export type SetupOwnerType = 'User' | 'Organization' | 'Unknown';
+export type SetupRepositoryVisibility = 'public' | 'private' | 'internal' | 'unknown';
+export interface SetupRemoteConfiguration {
+    ownerType: SetupOwnerType;
+    repositoryId?: number;
+    repositoryVisibility: SetupRepositoryVisibility;
+    repositorySecrets: readonly string[];
+    organizationSecrets: readonly string[];
+    repositoryVariables: readonly SetupVariable[];
+    organizationVariables: readonly SetupVariable[];
+    organizationAccess: 'available' | 'unavailable' | 'not_applicable' | 'unknown';
+    organizationSecretsAccess: 'available' | 'unavailable' | 'not_applicable' | 'unknown';
+    organizationVariablesAccess: 'available' | 'unavailable' | 'not_applicable' | 'unknown';
 }
 export interface SetupWorkflowComparison {
     file: string;

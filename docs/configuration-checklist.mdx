@@ -12,11 +12,15 @@ description: Required checks before enabling Copilot automation.
 - [ ] `AGENT_ALLOWED_MODEL_PROVIDERS` contains the selected model provider.
 - [ ] `AGENT_ALLOWED_MODELS` contains the exact qualified model.
 - [ ] `agent-command` is empty unless an audited command override is required.
+- [ ] Secrets and Variables have been chosen independently as repository- or organization-scoped resources.
+- [ ] Organization-scoped resources use an intentional visibility (`selected`, `private`, or `all`) and the setup PAT has organization Actions permissions.
+- [ ] Existing organization resources are inherited deliberately; named repository overrides are listed when needed.
 
 ## Credentials
 
 - [ ] Credentials are configured as secrets or as a local self-hosted credential store.
 - [ ] No session file or token is copied into GitHub Secrets.
+- [ ] Secret values are never placed in `.copilot-setup.yml`, command configuration, or Variables.
 - [ ] Fork workflows cannot access write credentials.
 - [ ] `pull_request_target` does not execute attacker-controlled checkout content.
 

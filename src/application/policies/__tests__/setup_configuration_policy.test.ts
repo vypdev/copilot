@@ -5,6 +5,9 @@ import {
     buildSetupRepositoryVariables,
     createDefaultSetupConfiguration,
     mergeSetupConfiguration,
+    resolveSetupResourceTarget,
+    shouldUpsertSetupResource,
+    validateSetupStorageAgainstRemote,
     validateSetupConfiguration,
 } from '../setup_configuration_policy';
 import type { SetupConfigurationOverrides } from '../setup_configuration_policy';
@@ -116,5 +119,139 @@ describe('setup configuration policy', () => {
             { name: 'AI_PULL_REQUEST_DESCRIPTION_MODE', value: 'append' },
         ]));
         expect(buildSetupActionInputs(configuration)['ai-pull-request-description-mode']).toBe('append');
+    });
+
+    it('keeps independent repository/organization storage policies and mixed overrides', () => {
+        const configuration = mergeSetupConfiguration(createDefaultSetupConfiguration(), {
+            storage: {
+                secrets: { defaultScope: 'organization', organizationVisibility: 'private' },
+                variables: { overrides: { AGENT_PROVIDER: 'repository' } },
+            },
+        });
+        const remote = {
+            ownerType: 'Organization' as const,
+            repositoryId: 42,
+            repositoryVisibility: 'private' as const,
+            repositorySecrets: [],
+            organizationSecrets: ['PAT'],
+            repositoryVariables: [],
+            organizationVariables: [{ name: 'AGENT_PROVIDER', value: 'codex' }],
+            organizationAccess: 'available' as const,
+            organizationSecretsAccess: 'available' as const,
+            organizationVariablesAccess: 'available' as const,
+        };
+
+        expect(resolveSetupResourceTarget(configuration, 'secret', 'PAT', remote)).toEqual({
+            scope: 'organization', organizationVisibility: 'private', repositoryId: 42,
+        });
+        expect(resolveSetupResourceTarget(configuration, 'variable', 'AGENT_PROVIDER', remote).scope).toBe('repository');
+        expect(shouldUpsertSetupResource(configuration, 'secret', 'PAT', remote)).toBe(true);
+        expect(shouldUpsertSetupResource(configuration, 'variable', 'AGENT_PROVIDER', remote)).toBe(true);
+        expect(validateSetupStorageAgainstRemote(configuration, remote)).toEqual([]);
+    });
+
+    it('preserves an inherited organization resource unless an override is explicit', () => {
+        const configuration = createDefaultSetupConfiguration();
+        const remote = {
+            ownerType: 'Organization' as const,
+            repositoryId: 42,
+            repositoryVisibility: 'private' as const,
+            repositorySecrets: [],
+            organizationSecrets: [],
+            repositoryVariables: [],
+            organizationVariables: [{ name: 'AGENT_PROVIDER', value: 'codex' }],
+            organizationAccess: 'available' as const,
+            organizationSecretsAccess: 'available' as const,
+            organizationVariablesAccess: 'available' as const,
+        };
+
+        expect(shouldUpsertSetupResource(configuration, 'variable', 'AGENT_PROVIDER', remote)).toBe(false);
+        const override = mergeSetupConfiguration(configuration, { storage: { variables: { overrides: { AGENT_PROVIDER: 'repository' } } } });
+        expect(shouldUpsertSetupResource(override, 'variable', 'AGENT_PROVIDER', remote)).toBe(true);
+    });
+
+    it('keeps replacement credentials on the effective repository scope unless scope is explicitly overridden', () => {
+        const configuration = mergeSetupConfiguration(createDefaultSetupConfiguration(), {
+            storage: { secrets: { defaultScope: 'organization' } },
+        });
+        const remote = {
+            ownerType: 'Organization' as const,
+            repositoryId: 42,
+            repositoryVisibility: 'private' as const,
+            repositorySecrets: ['PAT'], organizationSecrets: [], repositoryVariables: [], organizationVariables: [],
+            organizationAccess: 'available' as const, organizationSecretsAccess: 'available' as const,
+            organizationVariablesAccess: 'available' as const,
+        };
+
+        expect(resolveSetupResourceTarget(configuration, 'secret', 'PAT', remote).scope).toBe('repository');
+        const explicit = mergeSetupConfiguration(configuration, { storage: { secrets: { overrides: { PAT: 'organization' } } } });
+        expect(resolveSetupResourceTarget(explicit, 'secret', 'PAT', remote).scope).toBe('organization');
+    });
+
+    it('rejects organization storage for personal repositories or unavailable organization permissions', () => {
+        const configuration = mergeSetupConfiguration(createDefaultSetupConfiguration(), {
+            storage: { variables: { defaultScope: 'organization' } },
+        });
+        const personalRemote = {
+            ownerType: 'User' as const,
+            repositoryId: 42,
+            repositoryVisibility: 'private' as const,
+            repositorySecrets: [], organizationSecrets: [], repositoryVariables: [], organizationVariables: [],
+            organizationAccess: 'not_applicable' as const,
+            organizationSecretsAccess: 'not_applicable' as const,
+            organizationVariablesAccess: 'not_applicable' as const,
+        };
+        expect(validateSetupStorageAgainstRemote(configuration, personalRemote)).toEqual([
+            'Organization-level variable storage is only available for organization-owned repositories.',
+        ]);
+
+        const unavailableRemote = { ...personalRemote, ownerType: 'Organization' as const, organizationVariablesAccess: 'unavailable' as const };
+        expect(validateSetupStorageAgainstRemote(configuration, unavailableRemote)).toEqual([
+            'The setup PAT cannot inspect organization variables for this repository. Organization variable permissions are required.',
+        ]);
+    });
+
+    it('validates storage policy values and selected access requirements', () => {
+        const invalid = createDefaultSetupConfiguration() as any;
+        invalid.storage.secrets.defaultScope = 'tenant';
+        invalid.storage.variables.organizationVisibility = 'team';
+        invalid.storage.variables.preserveExisting = 'yes';
+        invalid.storage.variables.overrides = { 'bad-name': 'tenant' };
+
+        expect(validateSetupConfiguration(invalid)).toEqual(expect.arrayContaining([
+            'secrets default scope must be repository or organization.',
+            'variables organization visibility must be all, private, or selected.',
+            'variables preserveExisting must be a boolean.',
+            'variables override name bad-name must be an uppercase GitHub Actions name.',
+            'variables override bad-name must use repository or organization.',
+        ]));
+
+        const selected = mergeSetupConfiguration(createDefaultSetupConfiguration(), {
+            storage: { variables: { defaultScope: 'organization', organizationVisibility: 'selected' } },
+        });
+        const remote = {
+            ownerType: 'Organization' as const, repositoryVisibility: 'private' as const,
+            repositorySecrets: [], organizationSecrets: [], repositoryVariables: [], organizationVariables: [],
+            organizationAccess: 'available' as const, organizationSecretsAccess: 'available' as const,
+            organizationVariablesAccess: 'available' as const,
+        };
+        expect(validateSetupStorageAgainstRemote(selected, remote)).toEqual([
+            'The repository ID is required for selected organization variable access.',
+        ]);
+    });
+
+    it('adds warnings for organization storage, projects, and always-provision mode', () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.features.release = false;
+        configuration.features.hotfix = false;
+        configuration.projects.ids = 'PVT_example';
+        configuration.ai.provisioningMode = 'always';
+        configuration.storage.variables.defaultScope = 'organization';
+
+        expect(buildSetupPlan(configuration).warnings).toEqual(expect.arrayContaining([
+            expect.stringContaining('Project IDs'),
+            expect.stringContaining('Always-provision'),
+            expect.stringContaining('Organization-level'),
+        ]));
     });
 });

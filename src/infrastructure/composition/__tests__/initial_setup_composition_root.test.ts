@@ -50,7 +50,7 @@ describe('initial setup composition root', () => {
     );
     expect(mockComposeInitialSetupUseCase).toHaveBeenCalledTimes(1);
     const dependencies = mockComposeInitialSetupUseCase.mock.calls[0];
-    expect(dependencies).toHaveLength(9);
+    expect(dependencies).toHaveLength(10);
     expect(dependencies[1]).toBe(mockLabelProvisioning);
   });
 });

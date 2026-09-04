@@ -7,7 +7,11 @@ import type { InitialLabelProvisioningPort, IssueTypeProvisioningPort } from '..
 import type { SetupWorkspacePort } from '../../ports/setup_workspace_ports';
 import { ParamUseCase } from '../base/param_usecase';
 import { runInitialSetupWorkflow } from './initial_setup_workflow';
-import type { SetupRepositorySecretsPort, SetupRepositoryVariablesPort } from '../../ports/setup_wizard_ports';
+import type {
+    SetupRemoteConfigurationReadPort,
+    SetupRepositorySecretsPort,
+    SetupRepositoryVariablesPort,
+} from '../../ports/setup_wizard_ports';
 
 /** Application boundary for provisioning a repository for Copilot automation. */
 export class InitialSetupUseCase implements ParamUseCase<Execution, Result[]> {
@@ -23,6 +27,7 @@ export class InitialSetupUseCase implements ParamUseCase<Execution, Result[]> {
         private readonly setupWorkspacePort: SetupWorkspacePort,
         private readonly setupRepositoryVariablesPort?: SetupRepositoryVariablesPort,
         private readonly setupRepositorySecretsPort?: SetupRepositorySecretsPort,
+        private readonly setupRemoteConfigurationReadPort?: SetupRemoteConfigurationReadPort,
     ) {}
 
     async invoke(param: Execution): Promise<Result[]> {
@@ -36,6 +41,7 @@ export class InitialSetupUseCase implements ParamUseCase<Execution, Result[]> {
             setupWorkspacePort: this.setupWorkspacePort,
             setupRepositoryVariablesPort: this.setupRepositoryVariablesPort,
             setupRepositorySecretsPort: this.setupRepositorySecretsPort,
+            setupRemoteConfigurationReadPort: this.setupRemoteConfigurationReadPort,
         });
     }
 }

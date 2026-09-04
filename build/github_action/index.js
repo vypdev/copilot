@@ -53514,6 +53514,7 @@ function calculateReviewersStillNeeded(desiredCount, currentCount, confirmedCoun
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SETUP_FEATURE_DESCRIPTIONS = exports.SETUP_AGENT_TASKS = void 0;
+exports.createDefaultSetupStorageConfiguration = createDefaultSetupStorageConfiguration;
 exports.createDefaultSetupConfiguration = createDefaultSetupConfiguration;
 exports.mergeSetupConfiguration = mergeSetupConfiguration;
 exports.validateSetupConfiguration = validateSetupConfiguration;
@@ -53521,6 +53522,14 @@ exports.buildSetupPlan = buildSetupPlan;
 exports.buildSetupCredentialRequirements = buildSetupCredentialRequirements;
 exports.buildSetupRepositoryVariables = buildSetupRepositoryVariables;
 exports.buildSetupActionInputs = buildSetupActionInputs;
+exports.resolveSetupResourceScope = resolveSetupResourceScope;
+exports.getSetupResourceStoragePolicy = getSetupResourceStoragePolicy;
+exports.getSetupStorageConfiguration = getSetupStorageConfiguration;
+exports.resolveSetupResourceTarget = resolveSetupResourceTarget;
+exports.setupResourceExists = setupResourceExists;
+exports.shouldUpsertSetupResource = shouldUpsertSetupResource;
+exports.validateSetupStorageAgainstRemote = validateSetupStorageAgainstRemote;
+exports.usesOrganizationStorage = usesOrganizationStorage;
 const agent_1 = __nccwpck_require__(89040);
 const agent_configuration_validation_policy_1 = __nccwpck_require__(60596);
 const pull_request_description_1 = __nccwpck_require__(45315);
@@ -53572,6 +53581,21 @@ const SECRET_BY_MODEL_PROVIDER = {
     google: 'GOOGLE_API_KEY',
     openrouter: 'OPENROUTER_API_KEY',
 };
+const RESOURCE_NAME_PATTERN = /^[A-Z][A-Z0-9_]*$/;
+function defaultStoragePolicy() {
+    return {
+        defaultScope: 'repository',
+        organizationVisibility: 'selected',
+        preserveExisting: true,
+        overrides: {},
+    };
+}
+function createDefaultSetupStorageConfiguration() {
+    return {
+        secrets: defaultStoragePolicy(),
+        variables: defaultStoragePolicy(),
+    };
+}
 function createDefaultSetupConfiguration() {
     const defaultRole = () => ({
         provider: agent_1.DEFAULT_AGENT_PROVIDER,
@@ -53624,6 +53648,7 @@ function createDefaultSetupConfiguration() {
         manageRepositoryVariables: true,
         manageRepositorySecrets: true,
         actionInputs: {},
+        storage: createDefaultSetupStorageConfiguration(),
     };
 }
 function mergeSetupConfiguration(base, overrides = {}) {
@@ -53642,6 +53667,10 @@ function mergeSetupConfiguration(base, overrides = {}) {
         manageRepositoryVariables: overrides.manageRepositoryVariables ?? base.manageRepositoryVariables,
         manageRepositorySecrets: overrides.manageRepositorySecrets ?? base.manageRepositorySecrets,
         actionInputs: { ...base.actionInputs, ...(overrides.actionInputs ?? {}) },
+        storage: {
+            secrets: mergeStoragePolicy(base.storage?.secrets, overrides.storage?.secrets),
+            variables: mergeStoragePolicy(base.storage?.variables, overrides.storage?.variables),
+        },
     };
 }
 function validateSetupConfiguration(configuration) {
@@ -53681,6 +53710,7 @@ function validateSetupConfiguration(configuration) {
     if (!['auto', 'always', 'disabled'].includes(configuration.ai.provisioningMode)) {
         errors.push('Agent provisioning must be auto, always, or disabled.');
     }
+    errors.push(...validateStorageConfiguration(configuration.storage));
     for (const task of exports.SETUP_AGENT_TASKS) {
         const agent = configuration.agents[task];
         if (!agent_configuration_validation_policy_1.SUPPORTED_AGENT_PROVIDERS.includes(agent.provider))
@@ -53860,7 +53890,7 @@ function buildRequiredSetupSecrets(configuration) {
 function buildSetupWarnings(configuration) {
     const warnings = [];
     if (configuration.features.release !== false && configuration.features.hotfix !== false) {
-        warnings.push('Release and hotfix workflows require the repository secret PAT and a writable token.');
+        warnings.push('Release and hotfix workflows require the workflow PAT Secret and a writable token.');
     }
     if (configuration.ai.provisioningMode === 'always') {
         warnings.push('Always-provision mode requires pinned CLI versions or a Cursor installer checksum in repository Variables.');
@@ -53871,7 +53901,127 @@ function buildSetupWarnings(configuration) {
     if (exports.SETUP_AGENT_TASKS.some(task => configuration.agents[task].provider === 'cursor')) {
         warnings.push('Cursor is an experimental runtime in Copilot and requires a verified installer checksum plus CURSOR_API_KEY.');
     }
+    if (usesOrganizationStorage(configuration)) {
+        warnings.push('Organization-level Secrets and Variables require organization permissions; selected access is the safest default and repository values take precedence.');
+    }
     return warnings;
+}
+function resolveSetupResourceScope(policy, name) {
+    return policy.overrides[name] ?? policy.defaultScope;
+}
+function getSetupResourceStoragePolicy(configuration, kind) {
+    return getSetupStorageConfiguration(configuration)[kind === 'secret' ? 'secrets' : 'variables'];
+}
+function getSetupStorageConfiguration(configuration) {
+    const fallback = createDefaultSetupStorageConfiguration();
+    return {
+        secrets: mergeStoragePolicy(fallback.secrets, configuration.storage?.secrets),
+        variables: mergeStoragePolicy(fallback.variables, configuration.storage?.variables),
+    };
+}
+function resolveSetupResourceTarget(configuration, kind, name, remote) {
+    const policy = getSetupResourceStoragePolicy(configuration, kind);
+    const explicitOverride = Object.prototype.hasOwnProperty.call(policy.overrides, name);
+    const existingScope = setupResourceExists(remote, kind, name).effective;
+    const scope = existingScope && policy.preserveExisting && !explicitOverride
+        ? existingScope
+        : resolveSetupResourceScope(policy, name);
+    return {
+        scope,
+        organizationVisibility: policy.organizationVisibility,
+        repositoryId: remote?.repositoryId,
+    };
+}
+function setupResourceExists(remote, kind, name) {
+    if (!remote)
+        return { repository: false, organization: false };
+    const repository = kind === 'secret'
+        ? remote.repositorySecrets.includes(name)
+        : remote.repositoryVariables.some(variable => variable.name === name);
+    const organizationAccess = kind === 'secret'
+        ? (remote.organizationSecretsAccess ?? remote.organizationAccess)
+        : (remote.organizationVariablesAccess ?? remote.organizationAccess);
+    const organization = organizationAccess === 'available' && (kind === 'secret'
+        ? remote.organizationSecrets.includes(name)
+        : remote.organizationVariables.some(variable => variable.name === name));
+    return {
+        repository,
+        organization,
+        effective: repository ? 'repository' : organization ? 'organization' : undefined,
+    };
+}
+function shouldUpsertSetupResource(configuration, kind, name, remote) {
+    const policy = getSetupResourceStoragePolicy(configuration, kind);
+    const state = setupResourceExists(remote, kind, name);
+    if (!state.effective)
+        return true;
+    const requested = resolveSetupResourceScope(policy, name);
+    const explicitOverride = Object.prototype.hasOwnProperty.call(policy.overrides, name);
+    return requested === state.effective || explicitOverride || !policy.preserveExisting;
+}
+function validateSetupStorageAgainstRemote(configuration, remote) {
+    const errors = [];
+    const policies = [
+        ['secret', getSetupResourceStoragePolicy(configuration, 'secret'), configuration.manageRepositorySecrets],
+        ['variable', getSetupResourceStoragePolicy(configuration, 'variable'), configuration.manageRepositoryVariables],
+    ];
+    for (const [kind, policy, managed] of policies) {
+        if (!managed)
+            continue;
+        const needsOrganization = policy.defaultScope === 'organization'
+            || Object.values(policy.overrides).includes('organization');
+        if (!needsOrganization)
+            continue;
+        if (remote.ownerType !== 'Organization') {
+            errors.push(`Organization-level ${kind} storage is only available for organization-owned repositories.`);
+            continue;
+        }
+        const access = kind === 'secret' ? remote.organizationSecretsAccess : remote.organizationVariablesAccess;
+        if (access !== 'available') {
+            errors.push(`The setup PAT cannot inspect organization ${kind}s for this repository. Organization ${kind} permissions are required.`);
+        }
+        if (policy.organizationVisibility === 'selected' && remote.repositoryId === undefined) {
+            errors.push(`The repository ID is required for selected organization ${kind} access.`);
+        }
+    }
+    return errors;
+}
+function usesOrganizationStorage(configuration) {
+    const storage = getSetupStorageConfiguration(configuration);
+    return [storage.secrets, storage.variables].some(policy => policy.defaultScope === 'organization' || Object.values(policy.overrides).includes('organization'));
+}
+function mergeStoragePolicy(base, override) {
+    const fallback = base ?? defaultStoragePolicy();
+    return {
+        ...fallback,
+        ...(override ?? {}),
+        overrides: { ...fallback.overrides, ...(override?.overrides ?? {}) },
+    };
+}
+function validateStorageConfiguration(storage) {
+    // Setup files created before scoped storage was introduced remain valid and
+    // receive the repository-level defaults through getSetupStorageConfiguration.
+    if (!storage)
+        return [];
+    const errors = [];
+    for (const [kind, policy] of Object.entries(storage)) {
+        if (!policy || !['repository', 'organization'].includes(policy.defaultScope)) {
+            errors.push(`${kind} default scope must be repository or organization.`);
+            continue;
+        }
+        if (!['all', 'private', 'selected'].includes(policy.organizationVisibility)) {
+            errors.push(`${kind} organization visibility must be all, private, or selected.`);
+        }
+        if (typeof policy.preserveExisting !== 'boolean')
+            errors.push(`${kind} preserveExisting must be a boolean.`);
+        for (const [name, scope] of Object.entries(policy.overrides ?? {})) {
+            if (!RESOURCE_NAME_PATTERN.test(name))
+                errors.push(`${kind} override name ${name} must be an uppercase GitHub Actions name.`);
+            if (!['repository', 'organization'].includes(scope))
+                errors.push(`${kind} override ${name} must use repository or organization.`);
+        }
+    }
+    return errors;
 }
 function unique(values) {
     return [...new Set(values.map(value => value.trim()).filter(Boolean))];
@@ -54624,7 +54774,7 @@ exports.InitialSetupUseCase = void 0;
 const initial_setup_workflow_1 = __nccwpck_require__(18079);
 /** Application boundary for provisioning a repository for Copilot automation. */
 class InitialSetupUseCase {
-    constructor(authenticatedUserPort, initialLabelProvisioningPort, issueTypeProvisioningPort, latestTagQueryPort, repositoryDefaultBranchPort, repositoryTagPort, setupWorkspacePort, setupRepositoryVariablesPort, setupRepositorySecretsPort) {
+    constructor(authenticatedUserPort, initialLabelProvisioningPort, issueTypeProvisioningPort, latestTagQueryPort, repositoryDefaultBranchPort, repositoryTagPort, setupWorkspacePort, setupRepositoryVariablesPort, setupRepositorySecretsPort, setupRemoteConfigurationReadPort) {
         this.authenticatedUserPort = authenticatedUserPort;
         this.initialLabelProvisioningPort = initialLabelProvisioningPort;
         this.issueTypeProvisioningPort = issueTypeProvisioningPort;
@@ -54634,6 +54784,7 @@ class InitialSetupUseCase {
         this.setupWorkspacePort = setupWorkspacePort;
         this.setupRepositoryVariablesPort = setupRepositoryVariablesPort;
         this.setupRepositorySecretsPort = setupRepositorySecretsPort;
+        this.setupRemoteConfigurationReadPort = setupRemoteConfigurationReadPort;
         this.taskId = 'InitialSetupUseCase';
     }
     async invoke(param) {
@@ -54647,6 +54798,7 @@ class InitialSetupUseCase {
             setupWorkspacePort: this.setupWorkspacePort,
             setupRepositoryVariablesPort: this.setupRepositoryVariablesPort,
             setupRepositorySecretsPort: this.setupRepositorySecretsPort,
+            setupRemoteConfigurationReadPort: this.setupRemoteConfigurationReadPort,
         });
     }
 }
@@ -54698,7 +54850,8 @@ async function runInitialSetupWorkflow(param, dependencies) {
             return [buildResult(errors, steps)];
         }
         steps.push(`✅ GitHub access verified: ${githubAccess.user}`);
-        const secrets = await ensureRepositorySecrets(param, dependencies, setupConfiguration);
+        const remoteConfiguration = await resolveRemoteConfiguration(param, dependencies, setupConfiguration, errors);
+        const secrets = await ensureRepositorySecrets(param, dependencies, setupConfiguration, remoteConfiguration);
         if (secrets.step)
             steps.push(secrets.step);
         if (secrets.errors.length > 0)
@@ -54720,7 +54873,7 @@ async function runInitialSetupWorkflow(param, dependencies) {
         else {
             steps.push(`✅ Issue types checked: ${issueTypes.created} created, ${issueTypes.existing} already existed`);
         }
-        const variables = await ensureRepositoryVariables(param, dependencies, setupConfiguration);
+        const variables = await ensureRepositoryVariables(param, dependencies, setupConfiguration, remoteConfiguration);
         if (variables.step)
             steps.push(variables.step);
         if (variables.errors.length > 0)
@@ -54812,16 +54965,18 @@ function getWorkflowUpdates(param) {
     const updates = param.inputs?.setupWorkflowUpdates;
     return Array.isArray(updates) ? updates.filter((file) => typeof file === 'string') : [];
 }
-async function ensureRepositoryVariables(param, dependencies, setupConfiguration) {
+async function ensureRepositoryVariables(param, dependencies, setupConfiguration, remoteConfiguration) {
     if (!setupConfiguration?.manageRepositoryVariables || !dependencies.setupRepositoryVariablesPort) {
         return { errors: [] };
     }
     try {
-        const result = await dependencies.setupRepositoryVariablesPort.upsert(param.owner, param.repo, param.tokens.token, (0, setup_configuration_policy_1.buildSetupRepositoryVariables)(setupConfiguration));
+        const desired = (0, setup_configuration_policy_1.buildSetupRepositoryVariables)(setupConfiguration);
+        const groups = groupResources(desired, 'variable', setupConfiguration, remoteConfiguration);
+        const result = await upsertVariableGroups(param, dependencies.setupRepositoryVariablesPort, groups);
         if (result.errors.length > 0)
             return { errors: result.errors };
         return {
-            step: `✅ Repository Variables: ${result.created} created, ${result.updated} updated`,
+            step: `✅ GitHub Actions Variables: ${result.created} created, ${result.updated} updated; existing effective values preserved when no override was selected.`,
             errors: [],
         };
     }
@@ -54831,7 +54986,7 @@ async function ensureRepositoryVariables(param, dependencies, setupConfiguration
         return { errors: [message] };
     }
 }
-async function ensureRepositorySecrets(param, dependencies, setupConfiguration) {
+async function ensureRepositorySecrets(param, dependencies, setupConfiguration, remoteConfiguration) {
     if (!setupConfiguration?.manageRepositorySecrets || !dependencies.setupRepositorySecretsPort) {
         return { errors: [] };
     }
@@ -54846,11 +55001,12 @@ async function ensureRepositorySecrets(param, dependencies, setupConfiguration) 
     if (values.length === 0)
         return { step: '✅ Existing Repository Secrets kept unchanged.', errors: [] };
     try {
-        const result = await dependencies.setupRepositorySecretsPort.upsertSecrets(param.owner, param.repo, param.tokens.token, values);
+        const groups = groupResources(values, 'secret', setupConfiguration, remoteConfiguration);
+        const result = await upsertSecretGroups(param, dependencies.setupRepositorySecretsPort, groups);
         if (result.errors.length > 0)
             return { errors: result.errors };
         return {
-            step: `✅ Repository Secrets: ${result.created} created, ${result.updated} updated; existing values kept when no replacement was selected.`,
+            step: `✅ GitHub Actions Secrets: ${result.created} created, ${result.updated} updated; existing effective values kept when no replacement was selected.`,
             errors: [],
         };
     }
@@ -54859,6 +55015,77 @@ async function ensureRepositorySecrets(param, dependencies, setupConfiguration) 
         (0, logging_ports_1.logError)(message);
         return { errors: [message] };
     }
+}
+async function resolveRemoteConfiguration(param, dependencies, setupConfiguration, errors) {
+    const provided = param.inputs?.setupRemoteConfiguration;
+    if (provided && typeof provided === 'object')
+        return provided;
+    if (!dependencies.setupRemoteConfigurationReadPort || !setupConfiguration)
+        return undefined;
+    try {
+        return await dependencies.setupRemoteConfigurationReadPort.inspect(param.owner, param.repo, param.tokens.token);
+    }
+    catch (error) {
+        const message = `Could not inspect existing GitHub Actions resource scopes: ${error instanceof Error ? error.message : String(error)}`;
+        (0, logging_ports_1.logError)(message);
+        if ((0, setup_configuration_policy_1.usesOrganizationStorage)(setupConfiguration))
+            errors.push(message);
+        return undefined;
+    }
+}
+function groupResources(resources, kind, configuration, remoteConfiguration) {
+    const groups = new Map();
+    for (const resource of resources) {
+        // Secret values reach this workflow only after the user chose keep/replace.
+        // Variables, however, are always generated from the selected setup contract,
+        // so preserveExisting must be applied here to avoid shadowing inherited values.
+        if (kind === 'variable' && !(0, setup_configuration_policy_1.shouldUpsertSetupResource)(configuration, kind, resource.name, remoteConfiguration))
+            continue;
+        const target = (0, setup_configuration_policy_1.resolveSetupResourceTarget)(configuration, kind, resource.name, remoteConfiguration);
+        const key = `${target.scope}:${target.organizationVisibility}:${target.repositoryId ?? ''}`;
+        const group = groups.get(key) ?? { target, resources: [] };
+        group.resources.push(resource);
+        groups.set(key, group);
+    }
+    return [...groups.values()];
+}
+async function upsertVariableGroups(param, port, groups) {
+    let created = 0;
+    let updated = 0;
+    const errors = [];
+    for (const group of groups) {
+        if (group.target.scope === 'organization' && !port.upsertScopedVariables) {
+            errors.push('Organization Variable provisioning is not available in this installation.');
+            continue;
+        }
+        const result = group.target.scope === 'organization'
+            ? await port.upsertScopedVariables(param.owner, param.repo, param.tokens.token, group.target, group.resources)
+            : await port.upsert(param.owner, param.repo, param.tokens.token, group.resources);
+        created += result.created;
+        updated += result.updated;
+        errors.push(...result.errors);
+    }
+    return { created, updated, errors };
+}
+async function upsertSecretGroups(param, port, groups) {
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+    const errors = [];
+    for (const group of groups) {
+        if (group.target.scope === 'organization' && !port.upsertScopedSecrets) {
+            errors.push('Organization Secret provisioning is not available in this installation.');
+            continue;
+        }
+        const result = group.target.scope === 'organization'
+            ? await port.upsertScopedSecrets(param.owner, param.repo, param.tokens.token, group.target, group.resources)
+            : await port.upsertSecrets(param.owner, param.repo, param.tokens.token, group.resources);
+        created += result.created;
+        updated += result.updated;
+        skipped += result.skipped;
+        errors.push(...result.errors);
+    }
+    return { created, updated, skipped, errors };
 }
 function getSetupCredentialCollection(param) {
     const credentials = param.inputs?.setupCredentials;
@@ -69107,13 +69334,44 @@ class RepositoryVariablesRepository {
         const client = this.githubClient.getClient(token);
         if (!client.rest.secrets)
             throw new Error('GitHub repository Secret API is unavailable.');
-        const response = await client.rest.secrets.listRepoSecrets({ owner, repo: repository, per_page: 100 });
-        return response.data.secrets.map(secret => secret.name);
+        const secrets = await listCollection(client, client.rest.secrets.listRepoSecrets, { owner, repo: repository, per_page: 100 }, 'secrets');
+        return secrets.map(secret => secret.name);
     }
     async listVariables(owner, repository, token) {
         const client = this.githubClient.getClient(token);
-        const response = await client.rest.actions.listRepoVariables({ owner, repo: repository, per_page: 100 });
-        return response.data.variables.map(variable => ({ name: variable.name, value: variable.value }));
+        const variables = await listCollection(client, client.rest.actions.listRepoVariables, { owner, repo: repository, per_page: 100 }, 'variables');
+        return variables.map(variable => ({ name: variable.name, ...(variable.value !== undefined ? { value: variable.value } : {}) }));
+    }
+    async inspect(owner, repository, token) {
+        const client = this.githubClient.getClient(token);
+        if (!client.rest.repos?.get)
+            throw new Error('GitHub repository metadata API is unavailable.');
+        const repositoryResponse = await client.rest.repos.get({ owner, repo: repository });
+        const metadata = repositoryResponse.data;
+        const ownerType = normalizeOwnerType(metadata.owner?.type);
+        const repositoryVisibility = normalizeRepositoryVisibility(metadata.visibility);
+        const repositorySecrets = client.rest.secrets
+            ? await this.list(owner, repository, token)
+            : [];
+        const repositoryVariables = (await this.listVariables(owner, repository, token))
+            .filter((variable) => variable.value !== undefined)
+            .map(variable => ({ name: variable.name, value: variable.value }));
+        const organizationSecretsResult = await this.listOrganizationSecrets(client, owner, repository, ownerType);
+        const organizationVariablesResult = await this.listOrganizationVariables(client, owner, repository, ownerType);
+        return {
+            ownerType,
+            repositoryId: metadata.id,
+            repositoryVisibility,
+            repositorySecrets,
+            organizationSecrets: organizationSecretsResult.resources.map(resource => resource.name),
+            repositoryVariables,
+            organizationVariables: organizationVariablesResult.resources
+                .filter((resource) => resource.value !== undefined)
+                .map(resource => ({ name: resource.name, value: resource.value })),
+            organizationAccess: combineOrganizationAccess(organizationSecretsResult.access, organizationVariablesResult.access),
+            organizationSecretsAccess: organizationSecretsResult.access,
+            organizationVariablesAccess: organizationVariablesResult.access,
+        };
     }
     async upsertSecrets(owner, repository, token, credentials) {
         const client = this.githubClient.getClient(token);
@@ -69145,14 +69403,59 @@ class RepositoryVariablesRepository {
         }
         return { created, updated, skipped, errors };
     }
+    async upsertScopedSecrets(owner, repository, token, target, credentials) {
+        if (target.scope === 'repository')
+            return this.upsertSecrets(owner, repository, token, credentials);
+        const client = this.githubClient.getClient(token);
+        const secrets = client.rest.secrets;
+        if (!secrets?.getOrgPublicKey || !secrets.createOrUpdateOrgSecret || !secrets.listOrgSecrets) {
+            throw new Error('GitHub organization Secret API is unavailable or the setup PAT lacks organization Secret permissions.');
+        }
+        if (target.organizationVisibility === 'selected' && target.repositoryId === undefined) {
+            throw new Error('The repository ID is required for selected organization Secret access.');
+        }
+        const existing = new Map((await listCollection(client, secrets.listOrgSecrets, { org: owner, per_page: 30 }, 'secrets'))
+            .map(secret => [secret.name, secret]));
+        const publicKey = await secrets.getOrgPublicKey({ org: owner });
+        let created = 0;
+        let updated = 0;
+        const errors = [];
+        for (const credential of credentials) {
+            try {
+                const current = existing.get(credential.name);
+                const visibility = current?.visibility ?? target.organizationVisibility;
+                await secrets.createOrUpdateOrgSecret({
+                    org: owner,
+                    secret_name: credential.name,
+                    encrypted_value: encryptSecret(credential.value, publicKey.data.key),
+                    key_id: publicKey.data.key_id,
+                    visibility,
+                    ...(visibility === 'selected' && target.repositoryId !== undefined && !current
+                        ? { selected_repository_ids: [target.repositoryId] }
+                        : {}),
+                });
+                if (visibility === 'selected' && target.repositoryId !== undefined && secrets.addSelectedRepoToOrgSecret) {
+                    await secrets.addSelectedRepoToOrgSecret({ org: owner, secret_name: credential.name, repository_id: target.repositoryId });
+                }
+                if (current)
+                    updated += 1;
+                else
+                    created += 1;
+            }
+            catch (error) {
+                errors.push(`Error configuring organization Secret ${credential.name}: ${error instanceof Error ? error.message : String(error)}`);
+            }
+        }
+        return { created, updated, skipped: 0, errors };
+    }
     /** Alias kept separate from Variables so callers cannot accidentally mix the two operations. */
     async upsert(owner, repository, token, variables) {
         return this.upsertVariables(owner, repository, token, variables);
     }
     async upsertVariables(owner, repository, token, variables) {
         const client = this.githubClient.getClient(token);
-        const existing = await client.rest.actions.listRepoVariables({ owner, repo: repository, per_page: 100 });
-        const existingValues = new Map(existing.data.variables.map(variable => [variable.name, variable.value]));
+        const existingVariables = await listCollection(client, client.rest.actions.listRepoVariables, { owner, repo: repository, per_page: 100 }, 'variables');
+        const existingValues = new Map(existingVariables.map(variable => [variable.name, variable.value]));
         let created = 0;
         let updated = 0;
         const errors = [];
@@ -69175,8 +69478,98 @@ class RepositoryVariablesRepository {
         }
         return { created, updated, errors };
     }
+    async upsertScopedVariables(owner, repository, token, target, variables) {
+        if (target.scope === 'repository')
+            return this.upsert(owner, repository, token, variables);
+        const client = this.githubClient.getClient(token);
+        const actions = client.rest.actions;
+        if (!actions.listOrgVariables || !actions.createOrUpdateOrgVariable) {
+            throw new Error('GitHub organization Variable API is unavailable or the setup PAT lacks organization Variable permissions.');
+        }
+        if (target.organizationVisibility === 'selected' && target.repositoryId === undefined) {
+            throw new Error('The repository ID is required for selected organization Variable access.');
+        }
+        const existing = new Map((await listCollection(client, actions.listOrgVariables, { org: owner, per_page: 30 }, 'variables'))
+            .map(variable => [variable.name, variable]));
+        let created = 0;
+        let updated = 0;
+        const errors = [];
+        for (const variable of variables) {
+            try {
+                const current = existing.get(variable.name);
+                const visibility = current?.visibility ?? target.organizationVisibility;
+                await actions.createOrUpdateOrgVariable({
+                    org: owner,
+                    name: variable.name,
+                    value: variable.value,
+                    visibility,
+                    ...(visibility === 'selected' && target.repositoryId !== undefined && !current
+                        ? { selected_repository_ids: [target.repositoryId] }
+                        : {}),
+                });
+                if (visibility === 'selected' && target.repositoryId !== undefined && actions.addSelectedRepoToOrgVariable) {
+                    await actions.addSelectedRepoToOrgVariable({ org: owner, name: variable.name, repository_id: target.repositoryId });
+                }
+                if (current)
+                    updated += 1;
+                else
+                    created += 1;
+            }
+            catch (error) {
+                errors.push(`Error configuring organization Variable ${variable.name}: ${error instanceof Error ? error.message : String(error)}`);
+            }
+        }
+        return { created, updated, errors };
+    }
+    async listOrganizationSecrets(client, owner, repository, ownerType) {
+        if (ownerType !== 'Organization')
+            return { resources: [], access: 'not_applicable' };
+        const list = client.rest.secrets?.listRepoOrganizationSecrets;
+        if (!list)
+            return { resources: [], access: 'unknown' };
+        try {
+            return { resources: await listCollection(client, list, { owner, repo: repository, per_page: 30 }, 'secrets'), access: 'available' };
+        }
+        catch {
+            return { resources: [], access: 'unavailable' };
+        }
+    }
+    async listOrganizationVariables(client, owner, repository, ownerType) {
+        if (ownerType !== 'Organization')
+            return { resources: [], access: 'not_applicable' };
+        const list = client.rest.actions.listRepoOrganizationVariables;
+        if (!list)
+            return { resources: [], access: 'unknown' };
+        try {
+            return { resources: await listCollection(client, list, { owner, repo: repository, per_page: 30 }, 'variables'), access: 'available' };
+        }
+        catch {
+            return { resources: [], access: 'unavailable' };
+        }
+    }
 }
 exports.RepositoryVariablesRepository = RepositoryVariablesRepository;
+async function listCollection(client, method, parameters, key) {
+    if (client.paginate)
+        return client.paginate(method, parameters);
+    const response = await method(parameters);
+    return Array.isArray(response.data) ? response.data : response.data[key] ?? [];
+}
+function normalizeOwnerType(value) {
+    return value === 'Organization' ? 'Organization' : value === 'User' ? 'User' : 'Unknown';
+}
+function normalizeRepositoryVisibility(value) {
+    return value === 'public' || value === 'private' || value === 'internal' ? value : 'unknown';
+}
+function combineOrganizationAccess(secrets, variables) {
+    if (secrets === 'not_applicable' && variables === 'not_applicable')
+        return 'not_applicable';
+    if (secrets === 'available' || variables === 'available')
+        return 'available';
+    if (secrets === 'unavailable' || variables === 'unavailable')
+        return 'unavailable';
+    return 'unknown';
+}
 /** GitHub requires a sealed box: ephemeral public key + crypto_box ciphertext. */
 function encryptSecret(value, base64PublicKey) {
     const publicKey = Buffer.from(base64PublicKey, 'base64');
@@ -70403,7 +70796,7 @@ const github_identity_client_factory_2 = __nccwpck_require__(93081);
 function createInitialSetupCompositionRoot() {
     const labelProvisioning = new issue_label_provisioning_repository_1.IssueLabelProvisioningRepository((0, github_issue_client_factory_1.createIssueLabelProvisioningClient)());
     const repositoryConfiguration = new repository_variables_repository_1.RepositoryVariablesRepository((0, github_identity_client_factory_2.createRepositoryVariablesClient)());
-    return (0, initial_setup_use_case_composition_1.composeInitialSetupUseCase)(new authenticated_user_repository_1.AuthenticatedUserRepository((0, github_identity_client_factory_1.createAuthenticatedUserClient)()), labelProvisioning, new issue_type_repository_1.IssueTypeRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new git_cli_repository_1.GitCliRepository(), new repository_default_branch_repository_1.RepositoryDefaultBranchRepository((0, github_release_client_factory_1.createReleaseClient)()), new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)()), new setup_workspace_adapter_1.SetupWorkspaceAdapter(), repositoryConfiguration, repositoryConfiguration);
+    return (0, initial_setup_use_case_composition_1.composeInitialSetupUseCase)(new authenticated_user_repository_1.AuthenticatedUserRepository((0, github_identity_client_factory_1.createAuthenticatedUserClient)()), labelProvisioning, new issue_type_repository_1.IssueTypeRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new git_cli_repository_1.GitCliRepository(), new repository_default_branch_repository_1.RepositoryDefaultBranchRepository((0, github_release_client_factory_1.createReleaseClient)()), new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)()), new setup_workspace_adapter_1.SetupWorkspaceAdapter(), repositoryConfiguration, repositoryConfiguration, repositoryConfiguration);
 }
 
 

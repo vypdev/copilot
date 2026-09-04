@@ -72,4 +72,30 @@ describe('SetupCredentialsUseCase', () => {
         })).rejects.toThrow('OPENAI_API_KEY is invalid and must be replaced');
         expect(prompt.requestApiKey).not.toHaveBeenCalled();
     });
+
+    it('detects an existing organization Secret and keeps it without requesting its value', async () => {
+        const prompt = {
+            requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(), requestWorkflowPat: jest.fn(), requestApiKey: jest.fn(),
+            chooseExistingCredential: jest.fn().mockResolvedValue('keep'), showCredentialChecks: jest.fn(),
+        };
+        const validation = { validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }), validateCredential: jest.fn() };
+        const secrets = { list: jest.fn(), upsertSecrets: jest.fn() };
+        const remoteHealth = { validateExisting: jest.fn().mockResolvedValue([{ name: 'PAT', status: 'valid', message: 'remote ok' }]) };
+        const remoteConfiguration = {
+            ownerType: 'Organization' as const, repositoryId: 42, repositoryVisibility: 'private' as const,
+            repositorySecrets: [], organizationSecrets: ['PAT'], repositoryVariables: [], organizationVariables: [],
+            organizationAccess: 'available' as const, organizationSecretsAccess: 'available' as const,
+            organizationVariablesAccess: 'available' as const,
+        };
+
+        const result = await new SetupCredentialsUseCase(prompt, validation, secrets, remoteHealth).collect({
+            owner: 'owner', repository: 'repo', setupToken: 'setup-token', ref: 'main',
+            requirements: [requirement('PAT', 'workflowPat')], manageSecrets: true, remoteConfiguration,
+        });
+
+        expect(result.collection).toEqual({ apiKeys: [] });
+        expect(prompt.requestWorkflowPat).not.toHaveBeenCalled();
+        expect(prompt.chooseExistingCredential).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ sourceScope: 'organization' }));
+        expect(secrets.list).not.toHaveBeenCalled();
+    });
 });

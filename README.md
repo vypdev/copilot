@@ -30,7 +30,7 @@ Full documentation: **[docs.page/vypdev/copilot](https://docs.page/vypdev/copilo
 
 ## Getting started
 
-1. **Create the workflow PAT** for the bot account and store it as a repo secret (e.g. `PAT`). `copilot setup` separately asks the operator for a setup PAT that is used only during local configuration. See [Authentication](https://docs.page/vypdev/copilot/authentication).
+1. **Create the workflow PAT** for the bot account and store it as a repository or organization Secret (e.g. `PAT`). `copilot setup` separately asks the operator for a setup PAT that is used only during local configuration, and lets you choose repository or organization scope independently for Secrets and Variables. See [Authentication](https://docs.page/vypdev/copilot/authentication).
 2. **Use the action** from the marketplace so versions are stable:
    ```yaml
    uses: vypdev/copilot@v3

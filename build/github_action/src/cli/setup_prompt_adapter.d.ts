@@ -1,17 +1,21 @@
-import type { SetupCredentialPromptPort, SetupPromptPort, SetupWorkflowUpdatePromptPort, DoctorOutputPort } from '../application/ports/setup_wizard_ports';
-import type { SetupConfiguration, SetupPlan, SetupCredentialCheck, SetupCredentialRequirement, SetupCredentialDecision, SetupCredentialValue, SetupWorkflowComparison } from '../domain/setup';
+import type { SetupCredentialPromptPort, SetupStoragePromptPort, SetupPromptPort, SetupWorkflowUpdatePromptPort, DoctorOutputPort } from '../application/ports/setup_wizard_ports';
+import type { SetupConfiguration, SetupPlan, SetupCredentialCheck, SetupCredentialRequirement, SetupCredentialDecision, SetupCredentialValue, SetupWorkflowComparison, SetupStorageConfiguration, SetupRemoteConfiguration, SetupVariable } from '../domain/setup';
 export interface SetupPromptAdapterOptions {
     interactive?: boolean;
     assumeYes?: boolean;
     credentialValues?: Record<string, string>;
 }
-export declare class SetupPromptAdapter implements SetupPromptPort, SetupCredentialPromptPort, SetupWorkflowUpdatePromptPort, DoctorOutputPort {
+export declare class SetupPromptAdapter implements SetupPromptPort, SetupCredentialPromptPort, SetupStoragePromptPort, SetupWorkflowUpdatePromptPort, DoctorOutputPort {
     private readonly interactive;
     private readonly assumeYes;
     private readonly readline;
     private readonly credentialValues;
     constructor(options?: SetupPromptAdapterOptions);
     collect(defaults: SetupConfiguration): Promise<SetupConfiguration>;
+    chooseStorage(defaults: SetupStorageConfiguration, remote: SetupRemoteConfiguration, variables: readonly SetupVariable[], requirements: readonly SetupCredentialRequirement[], managed?: {
+        secrets: boolean;
+        variables: boolean;
+    }): Promise<SetupStorageConfiguration>;
     showPlan(plan: SetupPlan): void;
     confirm(plan: SetupPlan): Promise<boolean>;
     requestSetupPat(): Promise<string | undefined>;
@@ -29,4 +33,5 @@ export declare class SetupPromptAdapter implements SetupPromptPort, SetupCredent
     private askNumber;
     private askBoolean;
     private askChoice;
+    private chooseStoragePolicy;
 }

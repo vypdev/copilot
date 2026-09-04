@@ -182,6 +182,45 @@ describe('InitialSetupUseCase', () => {
     expect(results[0].steps).toContain('⏭️  Initial version tag creation disabled by setup configuration.');
   });
 
+  it('provisions Variables at organization scope when the configuration selects it', async () => {
+    const setupConfiguration = createDefaultSetupConfiguration();
+    setupConfiguration.features.release = false;
+    setupConfiguration.createInitialTag = false;
+    setupConfiguration.manageRepositorySecrets = false;
+    setupConfiguration.storage.variables.defaultScope = 'organization';
+    const scopedUpsert = jest.fn().mockResolvedValue({ created: 1, updated: 0, errors: [] });
+    const remoteConfiguration = {
+      ownerType: 'Organization' as const,
+      repositoryId: 42,
+      repositoryVisibility: 'private' as const,
+      repositorySecrets: [], organizationSecrets: [], repositoryVariables: [], organizationVariables: [],
+      organizationAccess: 'available' as const, organizationSecretsAccess: 'available' as const,
+      organizationVariablesAccess: 'available' as const,
+    };
+    const scopedUseCase = new InitialSetupUseCase(
+      { getUserFromToken: mockGetUserFromToken, getTokenUserDetails: jest.fn() },
+      { ensureInitialLabels: mockEnsureInitialLabels },
+      { ensureIssueTypes: mockEnsureIssueTypes },
+      { getLatestTag: mockGetLatestTag },
+      { getDefaultBranch: mockGetDefaultBranch } as any,
+      { createTag: mockCreateTag } as any,
+      { prepare: mockSetupPrepare, hasValidToken: mockSetupHasValidToken },
+      { upsert: mockSetupVariablesUpsert, upsertScopedVariables: scopedUpsert },
+      undefined,
+      { inspect: jest.fn().mockResolvedValue(remoteConfiguration) },
+    );
+
+    const results = await scopedUseCase.invoke(baseParam({ inputs: { setupConfiguration } }));
+
+    expect(results[0].success).toBe(true);
+    expect(scopedUpsert).toHaveBeenCalledWith(
+      'owner', 'repo', 'token',
+      expect.objectContaining({ scope: 'organization', repositoryId: 42 }),
+      expect.arrayContaining([{ name: 'AGENT_PROVIDER', value: 'codex' }]),
+    );
+    expect(mockSetupVariablesUpsert).not.toHaveBeenCalled();
+  });
+
   it('does not create default tag when repository already has tags', async () => {
     mockGetLatestTag.mockResolvedValue('2.0.0');
     const param = baseParam();

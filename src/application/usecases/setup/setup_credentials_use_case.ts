@@ -11,6 +11,7 @@ import type {
     SetupRemoteCredentialHealthPort,
 } from '../../ports/setup_wizard_ports';
 import { ApplicationError } from '../../errors/application_error';
+import type { SetupRemoteConfiguration, SetupResourceScope } from '../../../domain/setup';
 
 export interface SetupCredentialsRequest {
     owner: string;
@@ -19,6 +20,7 @@ export interface SetupCredentialsRequest {
     requirements: readonly SetupCredentialRequirement[];
     manageSecrets: boolean;
     ref?: string;
+    remoteConfiguration?: SetupRemoteConfiguration;
 }
 
 export interface SetupCredentialsResult {
@@ -47,10 +49,15 @@ export class SetupCredentialsUseCase {
         }
         if (!this.secrets) throw new ApplicationError('Repository Secret provisioning is not available in this installation.', 'configuration');
 
-        const existingSecretNames = await this.secrets.list(request.owner, request.repository, request.setupToken);
+        const existingSecretNames = request.remoteConfiguration?.repositorySecrets
+            ? [...request.remoteConfiguration.repositorySecrets]
+            : await this.secrets.list(request.owner, request.repository, request.setupToken);
+        const existingOrganizationSecretNames = request.remoteConfiguration?.organizationSecrets ?? [];
         const requirements = request.requirements.filter(requirement => requirement.name !== 'SETUP_PAT');
         this.prompt.explainCredentialSeparation(requirements);
-        const existingRequirements = requirements.filter(requirement => existingSecretNames.includes(requirement.name));
+        const existingRequirements = requirements.filter(requirement =>
+            existingSecretNames.includes(requirement.name) || existingOrganizationSecretNames.includes(requirement.name),
+        );
         const remoteChecks = this.remoteHealth && existingRequirements.length > 0
             ? await this.remoteHealth.validateExisting(
                 request.owner,
@@ -65,15 +72,23 @@ export class SetupCredentialsUseCase {
         const values: SetupCredentialValue[] = [];
 
         for (const requirement of requirements) {
-            const existing = existingSecretNames.includes(requirement.name);
+            const repositoryExisting = existingSecretNames.includes(requirement.name);
+            const organizationExisting = existingOrganizationSecretNames.includes(requirement.name);
+            const existing = repositoryExisting || organizationExisting;
+            const sourceScope: SetupResourceScope | undefined = repositoryExisting
+                ? 'repository'
+                : organizationExisting
+                    ? 'organization'
+                    : undefined;
             if (existing) {
                 const remoteCheck: SetupCredentialCheck = remoteCheckByName.get(requirement.name) ?? {
                     name: requirement.name,
                     status: 'unverifiable',
                     message: 'The remote health workflow is not available yet; GitHub does not reveal Secret values.',
                 };
-                checks.push(remoteCheck);
-                const decision = await this.prompt.chooseExistingCredential(requirement, remoteCheck);
+                const scopedCheck = { ...remoteCheck, sourceScope };
+                checks.push(scopedCheck);
+                const decision = await this.prompt.chooseExistingCredential(requirement, scopedCheck);
                 if (remoteCheck.status === 'invalid' && decision !== 'replace') {
                     throw new ApplicationError(`${requirement.name} is invalid and must be replaced before setup can continue.`, 'authorization');
                 }

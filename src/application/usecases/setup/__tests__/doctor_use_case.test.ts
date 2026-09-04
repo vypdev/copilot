@@ -83,4 +83,69 @@ describe('SetupDoctorUseCase', () => {
             expect.objectContaining({ area: 'Variable AGENT_PROVIDER', status: 'fail' }),
         ]));
     });
+
+    it('uses organization resources as effective values and reports their scope', async () => {
+        const configuration = createDefaultSetupConfiguration();
+        const requiredSecrets = buildSetupCredentialRequirements(configuration).map(requirement => requirement.name);
+        const requiredVariables = buildSetupRepositoryVariables(configuration);
+        const { output, dependencies } = createDependencies({
+            variables: { listVariables: jest.fn() },
+            secrets: { list: jest.fn(), upsertSecrets: jest.fn() },
+        });
+        const remoteHealth = {
+            validateExisting: jest.fn().mockResolvedValue(requiredSecrets.map(name => ({ name, status: 'valid', message: 'remote ok' }))),
+        };
+        const remoteConfiguration = {
+            ownerType: 'Organization' as const,
+            repositoryId: 42,
+            repositoryVisibility: 'private' as const,
+            repositorySecrets: [],
+            organizationSecrets: requiredSecrets,
+            repositoryVariables: [],
+            organizationVariables: requiredVariables,
+            organizationAccess: 'available' as const,
+            organizationSecretsAccess: 'available' as const,
+            organizationVariablesAccess: 'available' as const,
+        };
+        const reader = { inspect: jest.fn().mockResolvedValue(remoteConfiguration) };
+
+        const healthy = await new SetupDoctorUseCase(
+            dependencies.validation,
+            dependencies.secrets,
+            dependencies.variables,
+            dependencies.workspace,
+            output,
+            remoteHealth,
+            reader,
+        ).execute({ owner: 'owner', repository: 'repo', setupToken: 'token', configuration });
+
+        expect(healthy).toBe(true);
+        expect(dependencies.variables.listVariables).not.toHaveBeenCalled();
+        expect(dependencies.secrets.list).not.toHaveBeenCalled();
+        expect(output.showDoctorChecks).toHaveBeenCalledWith(expect.arrayContaining([
+            expect.objectContaining({ area: 'Variable AGENT_PROVIDER', message: expect.stringContaining('organization scope') }),
+        ]));
+    });
+
+    it('fails organization-scoped doctor checks when remote scope inspection is unavailable', async () => {
+        const configuration = createDefaultSetupConfiguration();
+        configuration.storage.variables.defaultScope = 'organization';
+        const { output, dependencies } = createDependencies();
+        const reader = { inspect: jest.fn().mockRejectedValue(new Error('forbidden')) };
+
+        const healthy = await new SetupDoctorUseCase(
+            dependencies.validation,
+            dependencies.secrets,
+            dependencies.variables,
+            dependencies.workspace,
+            output,
+            undefined,
+            reader,
+        ).execute({ owner: 'owner', repository: 'repo', setupToken: 'token', configuration });
+
+        expect(healthy).toBe(false);
+        expect(output.showDoctorChecks).toHaveBeenCalledWith(expect.arrayContaining([
+            expect.objectContaining({ area: 'GitHub Actions scopes', status: 'fail' }),
+        ]));
+    });
 });

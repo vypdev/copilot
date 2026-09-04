@@ -2,6 +2,7 @@ import { createInterface, type Interface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
 import type {
     SetupCredentialPromptPort,
+    SetupStoragePromptPort,
     SetupPromptPort,
     SetupWorkflowUpdatePromptPort,
     DoctorOutputPort,
@@ -19,6 +20,10 @@ import type {
     SetupCredentialDecision,
     SetupCredentialValue,
     SetupWorkflowComparison,
+    SetupResourceStoragePolicy,
+    SetupStorageConfiguration,
+    SetupRemoteConfiguration,
+    SetupVariable,
 } from '../domain/setup';
 
 const AGENT_PROVIDERS = ['codex', 'opencode', 'cursor'] as const;
@@ -30,7 +35,7 @@ export interface SetupPromptAdapterOptions {
     credentialValues?: Record<string, string>;
 }
 
-export class SetupPromptAdapter implements SetupPromptPort, SetupCredentialPromptPort, SetupWorkflowUpdatePromptPort, DoctorOutputPort {
+export class SetupPromptAdapter implements SetupPromptPort, SetupCredentialPromptPort, SetupStoragePromptPort, SetupWorkflowUpdatePromptPort, DoctorOutputPort {
     private readonly interactive: boolean;
     private readonly assumeYes: boolean;
     private readonly readline: Interface | undefined;
@@ -130,6 +135,28 @@ export class SetupPromptAdapter implements SetupPromptPort, SetupCredentialPromp
         return defaults;
     }
 
+    async chooseStorage(
+        defaults: SetupStorageConfiguration,
+        remote: SetupRemoteConfiguration,
+        variables: readonly SetupVariable[],
+        requirements: readonly SetupCredentialRequirement[],
+        managed: { secrets: boolean; variables: boolean } = { secrets: true, variables: true },
+    ): Promise<SetupStorageConfiguration> {
+        if (!this.readline) return defaults;
+        console.log(color('\n5. Review GitHub Actions resource scopes\n', 36));
+        console.log(renderBox(renderRemoteConfiguration(remote, variables, requirements), 'Existing GitHub Actions resources', 33));
+
+        const secrets = managed.secrets
+            ? await this.chooseStoragePolicy('secrets', defaults.secrets, remote, requirements.map(requirement => requirement.name))
+            : defaults.secrets;
+        const configuredVariables = variables.map(variable => variable.name);
+        const variableNames = configuredVariables.length > 0 ? configuredVariables : [];
+        const variablesPolicy = managed.variables
+            ? await this.chooseStoragePolicy('variables', defaults.variables, remote, variableNames)
+            : defaults.variables;
+        return { secrets, variables: variablesPolicy };
+    }
+
     showPlan(plan: SetupPlan): void {
         const enabledFeatures = Object.entries(plan.configuration.features)
             .filter(([, enabled]) => enabled)
@@ -145,6 +172,8 @@ export class SetupPromptAdapter implements SetupPromptPort, SetupCredentialPromp
             `  Files selected: ${plan.selectedFiles.length}`,
             `  Variables to upsert: ${plan.configuration.manageRepositoryVariables ? plan.variables.length : 0}`,
             `  Secrets to validate/provision: ${plan.configuration.manageRepositorySecrets ? plan.credentialRequirements.length : 0}`,
+            `  Variable storage: ${plan.configuration.storage.variables.defaultScope} scope${plan.configuration.storage.variables.defaultScope === 'organization' ? ` (${plan.configuration.storage.variables.organizationVisibility})` : ''}`,
+            `  Secret storage: ${plan.configuration.storage.secrets.defaultScope} scope${plan.configuration.storage.secrets.defaultScope === 'organization' ? ` (${plan.configuration.storage.secrets.organizationVisibility})` : ''}`,
             `  Labels and issue types: always checked by Copilot setup`,
             `  Initial tag: ${plan.configuration.createInitialTag ? 'v1.0.0 when no version tag exists' : 'disabled'}`, '',
             color('Credential contract', 33), `  ${plan.requiredSecrets.join(', ')}`,
@@ -314,6 +343,51 @@ export class SetupPromptAdapter implements SetupPromptPort, SetupCredentialPromp
             console.log(color('Please select one of the listed options.', 33));
         }
     }
+
+    private async chooseStoragePolicy(
+        kind: 'secrets' | 'variables',
+        defaults: SetupResourceStoragePolicy,
+        remote: SetupRemoteConfiguration,
+        names: readonly string[],
+    ): Promise<SetupResourceStoragePolicy> {
+        const label = kind === 'secrets' ? 'Secrets' : 'Variables';
+        const defaultScope = await this.askChoice(
+            `Where should new GitHub Actions ${label} be stored?`,
+            ['repository', 'organization'],
+            defaults.defaultScope,
+        ) as SetupResourceStoragePolicy['defaultScope'];
+        const organizationVisibility = (defaultScope === 'organization' || Object.values(defaults.overrides).includes('organization'))
+            ? await this.askChoice(
+                `How should organization ${label} be shared?`,
+                ['selected', 'private', 'all'],
+                defaults.organizationVisibility,
+            ) as SetupResourceStoragePolicy['organizationVisibility']
+            : defaults.organizationVisibility;
+        const preserveExisting = await this.askBoolean(
+            `Preserve existing effective ${label} instead of creating a shadowing override?`,
+            defaults.preserveExisting,
+        );
+        const organizationNames = kind === 'secrets'
+            ? remote.organizationSecrets
+            : remote.organizationVariables.map(variable => variable.name);
+        const repositoryNames = kind === 'secrets'
+            ? remote.repositorySecrets
+            : remote.repositoryVariables.map(variable => variable.name);
+        const inherited = names.filter(name => organizationNames.includes(name) && !repositoryNames.includes(name));
+        let overrides = { ...defaults.overrides };
+        if (inherited.length > 0 && defaultScope === 'repository') {
+            const overrideInput = await this.askText(
+                `Organization ${label} available to this repository: ${inherited.join(', ')}. Repository override names (comma-separated, empty to inherit all)`,
+                '',
+            );
+            const requested = new Set(overrideInput.split(',').map(name => name.trim()).filter(Boolean));
+            overrides = {
+                ...overrides,
+                ...Object.fromEntries(inherited.filter(name => requested.has(name)).map(name => [name, 'repository'])),
+            } as Record<string, SetupResourceStoragePolicy['defaultScope']>;
+        }
+        return { defaultScope, organizationVisibility, preserveExisting, overrides };
+    }
 }
 
 function statusIcon(status: SetupCredentialCheck['status']): string {
@@ -347,6 +421,27 @@ function renderBox(content: string, title: string, borderCode = 36): string {
         ...lines.map(line => `${color('│', borderCode)}${line}${' '.repeat(Math.max(0, width - stripAnsi(line).length))}${color('│', borderCode)}`),
         bottom,
     ].join('\n');
+}
+
+function renderRemoteConfiguration(
+    remote: SetupRemoteConfiguration,
+    variables: readonly SetupVariable[],
+    requirements: readonly SetupCredentialRequirement[],
+): string {
+    const lines = [
+        `Target owner: ${remote.ownerType}; repository visibility: ${remote.repositoryVisibility}; repository ID: ${remote.repositoryId ?? 'unknown'}`,
+        `Repository Secrets: ${remote.repositorySecrets.length > 0 ? remote.repositorySecrets.join(', ') : '(none detected)'}`,
+        `Organization Secrets available here: ${remote.organizationSecrets.length > 0 ? remote.organizationSecrets.join(', ') : '(none detected)'}`,
+        `Repository Variables: ${remote.repositoryVariables.length > 0 ? remote.repositoryVariables.map(variable => variable.name).join(', ') : '(none detected)'}`,
+        `Organization Variables available here: ${remote.organizationVariables.length > 0 ? remote.organizationVariables.map(variable => variable.name).join(', ') : '(none detected)'}`,
+        `Required Secrets: ${requirements.map(requirement => requirement.name).join(', ')}`,
+        `Required Variables: ${variables.map(variable => variable.name).join(', ')}`,
+        remote.organizationAccess === 'available'
+            ? 'Organization resources can be inspected for this repository.'
+            : `Organization resource inspection: ${remote.organizationAccess}.`,
+        'Repository-level resources take precedence over organization-level resources. Secret values are never displayed.',
+    ];
+    return lines.join('\n');
 }
 
 function stripAnsi(value: string): string {

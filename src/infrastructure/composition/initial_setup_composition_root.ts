@@ -31,5 +31,6 @@ export function createInitialSetupCompositionRoot(): InitialSetupUseCase {
         new SetupWorkspaceAdapter(),
         repositoryConfiguration,
         repositoryConfiguration,
+        repositoryConfiguration,
     );
 }

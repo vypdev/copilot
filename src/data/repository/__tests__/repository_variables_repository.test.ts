@@ -60,4 +60,126 @@ describe('RepositoryVariablesRepository', () => {
         expect(payload).toMatchObject({ owner: 'owner', repo: 'repo', secret_name: 'PAT', key_id: 'key-id' });
         expect(payload.encrypted_value).not.toContain('workflow-token');
     });
+
+    it('inspects repository and organization resources without exposing secret values', async () => {
+        const client = {
+            rest: {
+                repos: { get: jest.fn().mockResolvedValue({ data: { id: 42, visibility: 'private', owner: { type: 'Organization' } } }) },
+                actions: {
+                    listRepoVariables: jest.fn().mockResolvedValue({ data: { variables: [{ name: 'REPO_VAR', value: 'repo' }] } }),
+                    createRepoVariable: jest.fn(), updateRepoVariable: jest.fn(),
+                    listRepoOrganizationVariables: jest.fn().mockResolvedValue({ data: { variables: [{ name: 'ORG_VAR', value: 'org' }] } }),
+                },
+                secrets: {
+                    listRepoSecrets: jest.fn().mockResolvedValue({ data: { secrets: [{ name: 'REPO_SECRET' }] } }),
+                    listRepoOrganizationSecrets: jest.fn().mockResolvedValue({ data: { secrets: [{ name: 'ORG_SECRET' }] } }),
+                    getRepoPublicKey: jest.fn(), createOrUpdateRepoSecret: jest.fn(),
+                },
+            },
+        };
+        const repository = new RepositoryVariablesRepository({ getClient: jest.fn(() => client) });
+
+        await expect(repository.inspect('owner', 'repo', 'token')).resolves.toEqual(expect.objectContaining({
+            ownerType: 'Organization', repositoryId: 42, repositoryVisibility: 'private',
+            repositorySecrets: ['REPO_SECRET'], organizationSecrets: ['ORG_SECRET'],
+            repositoryVariables: [{ name: 'REPO_VAR', value: 'repo' }],
+            organizationVariables: [{ name: 'ORG_VAR', value: 'org' }],
+            organizationSecretsAccess: 'available', organizationVariablesAccess: 'available',
+        }));
+    });
+
+    it('upserts selected organization secrets and variables with the repository access grant', async () => {
+        const createOrUpdateOrgSecret = jest.fn().mockResolvedValue(undefined);
+        const addSelectedRepoToOrgSecret = jest.fn().mockResolvedValue(undefined);
+        const createOrUpdateOrgVariable = jest.fn().mockResolvedValue(undefined);
+        const addSelectedRepoToOrgVariable = jest.fn().mockResolvedValue(undefined);
+        const client = {
+            rest: {
+                actions: {
+                    listRepoVariables: jest.fn().mockResolvedValue({ data: { variables: [] } }),
+                    createRepoVariable: jest.fn(), updateRepoVariable: jest.fn(),
+                    listOrgVariables: jest.fn().mockResolvedValue({ data: { variables: [] } }),
+                    createOrUpdateOrgVariable, addSelectedRepoToOrgVariable,
+                },
+                secrets: {
+                    listRepoSecrets: jest.fn().mockResolvedValue({ data: { secrets: [] } }),
+                    getRepoPublicKey: jest.fn(), createOrUpdateRepoSecret: jest.fn(),
+                    listOrgSecrets: jest.fn().mockResolvedValue({ data: { secrets: [] } }),
+                    getOrgPublicKey: jest.fn().mockResolvedValue({ data: { key_id: 'org-key', key: randomBytes(32).toString('base64') } }),
+                    createOrUpdateOrgSecret, addSelectedRepoToOrgSecret,
+                },
+            },
+        };
+        const repository = new RepositoryVariablesRepository({ getClient: jest.fn(() => client) });
+        const target = { scope: 'organization' as const, organizationVisibility: 'selected' as const, repositoryId: 42 };
+
+        await expect(repository.upsertScopedSecrets('owner', 'repo', 'token', target, [{ name: 'PAT', value: 'secret' }]))
+            .resolves.toMatchObject({ created: 1, errors: [] });
+        await expect(repository.upsertScopedVariables('owner', 'repo', 'token', target, [{ name: 'MODE', value: 'strict' }]))
+            .resolves.toEqual({ created: 1, updated: 0, errors: [] });
+        expect(createOrUpdateOrgSecret).toHaveBeenCalledWith(expect.objectContaining({ org: 'owner', visibility: 'selected', selected_repository_ids: [42] }));
+        expect(addSelectedRepoToOrgSecret).toHaveBeenCalledWith({ org: 'owner', secret_name: 'PAT', repository_id: 42 });
+        expect(createOrUpdateOrgVariable).toHaveBeenCalledWith(expect.objectContaining({ org: 'owner', visibility: 'selected', selected_repository_ids: [42] }));
+        expect(addSelectedRepoToOrgVariable).toHaveBeenCalledWith({ org: 'owner', name: 'MODE', repository_id: 42 });
+    });
+
+    it('reports unavailable organization inspection separately from personal repositories', async () => {
+        const personalClient = {
+            rest: {
+                repos: { get: jest.fn().mockResolvedValue({ data: { id: 1, visibility: 'public', owner: { type: 'User' } } }) },
+                actions: { listRepoVariables: jest.fn().mockResolvedValue({ data: { variables: [] } }), createRepoVariable: jest.fn(), updateRepoVariable: jest.fn() },
+                secrets: { listRepoSecrets: jest.fn().mockResolvedValue({ data: { secrets: [] } }), getRepoPublicKey: jest.fn(), createOrUpdateRepoSecret: jest.fn() },
+            },
+        };
+        const personal = new RepositoryVariablesRepository({ getClient: jest.fn(() => personalClient) });
+        await expect(personal.inspect('owner', 'repo', 'token')).resolves.toEqual(expect.objectContaining({
+            ownerType: 'User', organizationAccess: 'not_applicable',
+            organizationSecretsAccess: 'not_applicable', organizationVariablesAccess: 'not_applicable',
+        }));
+
+        const deniedClient = {
+            rest: {
+                repos: { get: jest.fn().mockResolvedValue({ data: { id: 1, visibility: 'internal', owner: { type: 'Organization' } } }) },
+                actions: {
+                    listRepoVariables: jest.fn().mockResolvedValue({ data: { variables: [] } }), createRepoVariable: jest.fn(), updateRepoVariable: jest.fn(),
+                    listRepoOrganizationVariables: jest.fn().mockRejectedValue(new Error('variables forbidden')),
+                },
+                secrets: {
+                    listRepoSecrets: jest.fn().mockResolvedValue({ data: { secrets: [] } }), getRepoPublicKey: jest.fn(), createOrUpdateRepoSecret: jest.fn(),
+                    listRepoOrganizationSecrets: jest.fn().mockRejectedValue(new Error('secrets forbidden')),
+                },
+            },
+        };
+        const denied = new RepositoryVariablesRepository({ getClient: jest.fn(() => deniedClient) });
+        await expect(denied.inspect('owner', 'repo', 'token')).resolves.toEqual(expect.objectContaining({
+            ownerType: 'Organization', organizationAccess: 'unavailable',
+            organizationSecretsAccess: 'unavailable', organizationVariablesAccess: 'unavailable',
+        }));
+    });
+
+    it('uses the paginated client path and preserves existing organization visibility', async () => {
+        const paginate = jest.fn().mockResolvedValue([{ name: 'EXISTING', visibility: 'selected' }]);
+        const createOrUpdateOrgSecret = jest.fn().mockResolvedValue(undefined);
+        const client = {
+            paginate,
+            rest: {
+                actions: {
+                    listRepoVariables: jest.fn(), createRepoVariable: jest.fn(), updateRepoVariable: jest.fn(),
+                    listOrgVariables: jest.fn().mockResolvedValue({ data: { variables: [{ name: 'EXISTING_VAR', visibility: 'selected' }] } }),
+                    createOrUpdateOrgVariable: jest.fn().mockResolvedValue(undefined),
+                },
+                secrets: {
+                    listRepoSecrets: jest.fn(), getRepoPublicKey: jest.fn(), createOrUpdateRepoSecret: jest.fn(),
+                    listOrgSecrets: jest.fn(), getOrgPublicKey: jest.fn().mockResolvedValue({ data: { key_id: 'key', key: randomBytes(32).toString('base64') } }),
+                    createOrUpdateOrgSecret,
+                },
+            },
+        };
+        const repository = new RepositoryVariablesRepository({ getClient: jest.fn(() => client) });
+        const target = { scope: 'organization' as const, organizationVisibility: 'all' as const, repositoryId: 9 };
+
+        await repository.upsertScopedSecrets('owner', 'repo', 'token', target, [{ name: 'EXISTING', value: 'new' }]);
+        expect(paginate).toHaveBeenCalled();
+        expect(createOrUpdateOrgSecret).toHaveBeenCalledWith(expect.objectContaining({ visibility: 'selected' }));
+    });
 });
