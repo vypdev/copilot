@@ -7,7 +7,7 @@ import { resolveMainRunRoute } from './main_run_route';
 import { createSetupExecutionUseCase } from '../infrastructure/composition/execution_setup_composition_root';
 import { createMainRunRouteCompositionRoot } from '../infrastructure/composition/main_run_route_composition_root';
 import { requireRepositoryCoordinates } from './repository_context';
-import { configureApplicationLogger } from '../application/ports/logging_ports';
+import { configureApplicationLogger, setGlobalLoggerDebug } from '../application/ports/logging_ports';
 import { createLoggerAdapter } from '../infrastructure/logging/logger_adapter';
 import type { SynchronizeLifecycleStateUseCase } from '../application/usecases/actions/synchronize_lifecycle_state_use_case';
 import type { SynchronizeAgentActivityUseCase } from '../application/usecases/actions/synchronize_agent_activity_use_case';
@@ -28,6 +28,7 @@ export async function mainRun(
     agentActivityUseCase?: SynchronizeAgentActivityUseCase,
 ): Promise<Result[]> {
     configureApplicationLogger(createLoggerAdapter());
+    setGlobalLoggerDebug(execution.debug, execution.inputs === undefined);
     const repository = requireRepositoryCoordinates({
         owner: execution.owner,
         repo: execution.repo,

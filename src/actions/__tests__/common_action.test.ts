@@ -29,6 +29,7 @@ jest.mock('../../utils/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
   logDebugInfo: jest.fn(),
+  setGlobalLoggerDebug: jest.fn(),
   clearAccumulatedLogs: jest.fn(),
 }));
 
@@ -211,18 +212,7 @@ describe('mainRun', () => {
       owner: 'org',
       repository: 'repo',
       currentRunId: 200,
-      workflowName: 'CI',
       workflowIdentifier: 'copilot_issue.yml',
-      workflowNames: [
-        'Copilot - Issue',
-        'Copilot - Issue Comment',
-        'Copilot - Commit',
-        'Copilot - Pull Request',
-        'Copilot - Pull Request Comment',
-        'Copilot - Close Inactive Issues',
-        'Task - Hotfix',
-        'Task - Release',
-      ],
     });
   });
 
@@ -246,6 +236,18 @@ describe('mainRun', () => {
 
     await expect(runMain(mockExecution({ welcome: undefined }))).rejects.toThrow(
       'GitHub workflow identity is unavailable; refusing to bypass sequential execution.',
+    );
+    expect(createWaitForPreviousWorkflowRunsUseCase).not.toHaveBeenCalled();
+    expect(mockSetupExecutionInvoke).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when a GitHub Actions run has no workflow identifier', async () => {
+    process.env.GITHUB_ACTIONS = 'true';
+    process.env.GITHUB_RUN_ID = '200';
+    delete process.env.GITHUB_WORKFLOW_REF;
+
+    await expect(runMain(mockExecution({ welcome: undefined }))).rejects.toThrow(
+      'GitHub workflow identifier is unavailable; refusing to bypass sequential execution.',
     );
     expect(createWaitForPreviousWorkflowRunsUseCase).not.toHaveBeenCalled();
     expect(mockSetupExecutionInvoke).not.toHaveBeenCalled();

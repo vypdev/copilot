@@ -1,7 +1,8 @@
 /**
- * Workflows that execute the Copilot action and therefore share its
- * repository mutation queue. Keep these names aligned with workflow `name`
- * values in `.github/workflows` and the setup templates.
+ * Workflows that execute the Copilot action. Keep these names aligned with
+ * workflow `name` values in `.github/workflows` and the setup templates.
+ * Queue admission is scoped to the current workflow file; this list is kept
+ * for workflow-contract validation.
  */
 export const COPILOT_WORKFLOW_NAMES = [
     'Copilot - Issue',

@@ -50477,6 +50477,7 @@ const agent_activity_policy_1 = __nccwpck_require__(15375);
 const main_run_lifecycle_1 = __nccwpck_require__(916);
 async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, lifecycleStateUseCase, agentActivityUseCase) {
     (0, logging_ports_1.configureApplicationLogger)((0, logger_adapter_1.createLoggerAdapter)());
+    (0, logging_ports_1.setGlobalLoggerDebug)(execution.debug, execution.inputs === undefined);
     const repository = (0, repository_context_1.requireRepositoryCoordinates)({
         owner: execution.owner,
         repo: execution.repo,
@@ -51768,7 +51769,6 @@ const logger_1 = __nccwpck_require__(91151);
 const main_run_dispatcher_1 = __nccwpck_require__(28586);
 const workflow_context_1 = __nccwpck_require__(55224);
 const workflow_queue_composition_root_1 = __nccwpck_require__(21598);
-const workflow_queue_policy_1 = __nccwpck_require__(43193);
 exports.WORKFLOW_QUEUE_FAILURE_MESSAGE = 'Workflow queue check failed; sequential execution was not bypassed.';
 /**
  * Keeps provider diagnostics out of the action's externally visible failure
@@ -51782,23 +51782,22 @@ class WorkflowQueueFailureError extends Error {
 }
 exports.WorkflowQueueFailureError = WorkflowQueueFailureError;
 function buildPreviousWorkflowRunsQuery(repository) {
+    const workflowIdentifier = (0, workflow_context_1.resolveWorkflowIdentifier)(process.env.GITHUB_WORKFLOW_REF);
     const query = {
         owner: repository.owner,
         repository: repository.repo,
         currentRunId: Number.parseInt(process.env.GITHUB_RUN_ID ?? '', 10),
-        workflowName: process.env.GITHUB_WORKFLOW ?? '',
-        workflowNames: workflow_queue_policy_1.COPILOT_WORKFLOW_NAMES,
+        ...(workflowIdentifier ? { workflowIdentifier } : {}),
     };
-    const workflowIdentifier = (0, workflow_context_1.resolveWorkflowIdentifier)(process.env.GITHUB_WORKFLOW_REF);
-    if (workflowIdentifier) {
-        query.workflowIdentifier = workflowIdentifier;
-    }
     return query;
 }
 async function waitForPreviousWorkflowRuns(token, repository) {
     const query = buildPreviousWorkflowRunsQuery(repository);
     if (process.env.GITHUB_ACTIONS === 'true' && !Number.isSafeInteger(query.currentRunId)) {
         throw new Error('GitHub workflow identity is unavailable; refusing to bypass sequential execution.');
+    }
+    if (process.env.GITHUB_ACTIONS === 'true' && !query.workflowIdentifier) {
+        throw new Error('GitHub workflow identifier is unavailable; refusing to bypass sequential execution.');
     }
     await (0, workflow_queue_composition_root_1.createWaitForPreviousWorkflowRunsUseCase)(token)
         .invoke(query)
@@ -54666,9 +54665,10 @@ exports.WORKFLOW_QUEUE_POLICY = exports.COPILOT_WORKFLOW_NAMES = void 0;
 exports.calculateWorkflowPollingDelay = calculateWorkflowPollingDelay;
 exports.calculateJitteredWorkflowDelay = calculateJitteredWorkflowDelay;
 /**
- * Workflows that execute the Copilot action and therefore share its
- * repository mutation queue. Keep these names aligned with workflow `name`
- * values in `.github/workflows` and the setup templates.
+ * Workflows that execute the Copilot action. Keep these names aligned with
+ * workflow `name` values in `.github/workflows` and the setup templates.
+ * Queue admission is scoped to the current workflow file; this list is kept
+ * for workflow-contract validation.
  */
 exports.COPILOT_WORKFLOW_NAMES = [
     'Copilot - Issue',
@@ -70417,36 +70417,28 @@ class ActivePreviousWorkflowRunsRepository {
         if (!Number.isSafeInteger(query.currentRunId)) {
             throw new Error('GitHub workflow identity is unavailable; refusing to bypass sequential execution.');
         }
-        const workflowNames = query.workflowNames?.filter(name => name.trim().length > 0) ?? [];
-        if (workflowNames.length === 0 && query.workflowName.trim().length === 0) {
-            throw new Error('GitHub workflow name is unavailable; refusing to bypass sequential execution.');
+        const workflowIdentifier = query.workflowIdentifier?.trim() ?? '';
+        if (workflowIdentifier.length === 0) {
+            throw new Error('GitHub workflow identifier is unavailable; refusing to bypass sequential execution.');
         }
         const actions = this.client.rest.actions;
-        const workflowIdentifier = workflowNames.length === 0 ? query.workflowIdentifier : undefined;
-        const workflowMethod = workflowIdentifier ? actions.listWorkflowRuns : undefined;
-        const method = workflowMethod ?? actions.listWorkflowRunsForRepo;
+        const method = actions.listWorkflowRuns;
         if (!method)
             throw new Error('GitHub workflow-scoped runs endpoint is unavailable.');
         const parameters = {
             owner: query.owner,
             repo: query.repository,
             per_page: 100,
-            ...(workflowMethod && workflowIdentifier
-                ? { workflow_id: workflowIdentifier }
-                : {}),
+            workflow_id: workflowIdentifier,
         };
-        const names = workflowNames.length > 0 ? workflowNames : [query.workflowName];
         return (0, workflow_runs_retry_1.withWorkflowRunsRetry)(async () => {
             let activeRunCount = 0;
-            // Keep one complete sequential traversal: GitHub cannot safely express
-            // the eight shared workflow names, five active statuses, or the strict
-            // lower-ID predicate in this endpoint. Do not add provider filters or
-            // early-stop on page order; a matching run may occur on a later page.
-            // The residual cost is deep-history pagination, with retries restarting
-            // from page one, in exchange for an exact fail-closed count.
+            // The workflow-scoped endpoint limits the traversal to this workflow.
+            // Keep pagination exhaustive because an active older run may occur on
+            // a later page, while filtering status and run identity locally.
             for await (const response of this.client.paginate.iterator(method, parameters)) {
                 activeRunCount += extractWorkflowRuns(response)
-                    .filter(run => isActivePreviousRun(run, query, names)).length;
+                    .filter(run => isActivePreviousRun(run, query)).length;
             }
             return activeRunCount;
         }, {
@@ -70469,10 +70461,8 @@ function extractWorkflowRuns(response) {
     }
     throw new Error('GitHub workflow runs response did not contain a workflow_runs array.');
 }
-function isActivePreviousRun(run, query, workflowNames) {
-    return typeof run.name === 'string'
-        && workflowNames.includes(run.name)
-        && run.id < query.currentRunId
+function isActivePreviousRun(run, query) {
+    return run.id < query.currentRunId
         && workflow_status_1.WORKFLOW_ACTIVE_STATUSES.includes(run.status ?? 'unknown');
 }
 
