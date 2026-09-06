@@ -40,7 +40,6 @@ const REPLAY_CASES: readonly ReplayCase[] = [
         action: 'requested',
         payload: {
             check_suite: {
-                workflow_name: 'CI Check',
                 head_sha: 'sha-1',
                 status: 'queued',
                 conclusion: null,
@@ -56,7 +55,6 @@ const REPLAY_CASES: readonly ReplayCase[] = [
         action: 'completed',
         payload: {
             workflow_run: {
-                name: 'CI Check',
                 head_sha: 'sha-1',
                 status: 'completed',
                 conclusion: 'failure',
@@ -72,7 +70,6 @@ const REPLAY_CASES: readonly ReplayCase[] = [
         action: 'completed',
         payload: {
             workflow_run: {
-                name: 'CI Check',
                 head_sha: 'sha-1',
                 status: 'completed',
                 conclusion: 'success',
@@ -114,7 +111,6 @@ describe('lifecycle event replay integration', () => {
             payload: {
                 action: 'completed',
                 check_suite: {
-                    workflow_name: 'CI Check',
                     head_sha: 'sha-1',
                     status: 'completed',
                     conclusion: 'failure',

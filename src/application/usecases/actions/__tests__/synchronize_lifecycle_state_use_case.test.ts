@@ -164,7 +164,6 @@ describe('SynchronizeLifecycleStateUseCase', () => {
                 eventName: 'check_suite',
                 action: 'completed',
                 check_suite: {
-                    workflow_name: 'CI Check',
                     head_sha: 'sha-1',
                     status: 'completed',
                     conclusion: 'failure',

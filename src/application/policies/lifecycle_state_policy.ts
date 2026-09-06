@@ -4,7 +4,6 @@ import type { ExecutionInputs } from '../../data/model/execution_inputs';
 
 export type LifecycleChecksEvidence = 'pending' | 'success' | 'failure';
 export type LifecycleReviewEvidence = 'approved' | 'changes-requested' | 'commented' | 'dismissed';
-export const LIFECYCLE_VALIDATION_WORKFLOWS = ['CI Check'] as const;
 
 export interface LifecycleExternalEvidence {
     readonly checks?: LifecycleChecksEvidence;
@@ -78,33 +77,22 @@ export function readLifecycleExternalEvidence(
         return undefined;
     }
     if (inputs.eventName === 'check_suite') {
-        if (!isCurrentValidationEvidence(
-            inputs.check_suite?.workflow_name,
-            inputs.check_suite?.head_sha,
-            currentPullRequestHeadSha,
-        )) return undefined;
+        if (!isCurrentValidationEvidence(inputs.check_suite?.head_sha, currentPullRequestHeadSha)) return undefined;
         return { checks: readChecksEvidence(inputs.check_suite?.status, inputs.check_suite?.conclusion) };
     }
     if (inputs.eventName === 'workflow_run') {
-        if (!isCurrentValidationEvidence(
-            inputs.workflow_run?.name,
-            inputs.workflow_run?.head_sha,
-            currentPullRequestHeadSha,
-        )) return undefined;
+        if (!isCurrentValidationEvidence(inputs.workflow_run?.head_sha, currentPullRequestHeadSha)) return undefined;
         return { checks: readChecksEvidence(inputs.workflow_run?.status, inputs.workflow_run?.conclusion) };
     }
     return undefined;
 }
 
 function isCurrentValidationEvidence(
-    workflowName: string | undefined,
     evidenceHeadSha: string | undefined,
     currentPullRequestHeadSha: string | undefined,
 ): boolean {
-    if (!workflowName || !evidenceHeadSha || !currentPullRequestHeadSha) return false;
-    const normalizedName = workflowName.trim().toLowerCase();
-    return LIFECYCLE_VALIDATION_WORKFLOWS.some(name => name.toLowerCase() === normalizedName)
-        && evidenceHeadSha.trim() === currentPullRequestHeadSha.trim();
+    if (!evidenceHeadSha || !currentPullRequestHeadSha) return false;
+    return evidenceHeadSha.trim() === currentPullRequestHeadSha.trim();
 }
 
 function readChecksEvidence(status: string | undefined, conclusion: string | null | undefined): LifecycleChecksEvidence {

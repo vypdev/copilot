@@ -17,9 +17,6 @@ on:
     types: [opened, reopened, edited, labeled, unlabeled, closed, assigned, unassigned, synchronize]
   pull_request_review:
     types: [submitted, edited, dismissed]
-  workflow_run:
-    workflows: [CI Check]
-    types: [completed]
 ```
 
 | Event type | When it runs | Typical use |
@@ -81,7 +78,7 @@ jobs:
 
 8. **Bugbot review:** On `opened`, `reopened`, `edited`, and `synchronize`, the reviewer role analyzes the PR head and publishes stable finding comments. Active findings move the PR to `state:changes-requested` and `state:awaiting-issue-author`; a clean review moves it to `state:ready` and `state:awaiting-maintainer`. During the run, `state:ai-processing` may coexist with those labels and is removed when the agent finishes. Configure `reviewer-provider`, `reviewer-model-provider`, `reviewer-model`, `reviewer-effort`, and `reviewer-command` only when the reviewer should differ from the base agent.
 
-9. **External lifecycle evidence:** `pull_request_review` and the configured `CI Check` workflow completion update only the managed lifecycle label. A failed check blocks the PR, an approved review plus a successful check marks it ready, and a requested change marks it as changes requested. These events do not invoke an agent pipeline.
+9. **External lifecycle evidence:** `pull_request_review` updates only the managed lifecycle label. A requested change marks the PR as changes requested, and an approved review can mark it ready. This event does not invoke an agent pipeline. If you add private workflows for external checks, wire and scope those triggers in your own repository.
 
 ## Next steps
 

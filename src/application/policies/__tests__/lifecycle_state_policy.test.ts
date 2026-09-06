@@ -69,22 +69,22 @@ describe('lifecycle state policy', () => {
         })).toEqual({ review: 'changes-requested' });
         expect(readLifecycleExternalEvidence({
             eventName: 'check_suite',
-            check_suite: { status: 'completed', conclusion: 'success', workflow_name: 'CI Check', head_sha: 'sha-1' },
+            check_suite: { status: 'completed', conclusion: 'success', head_sha: 'sha-1' },
         }, 'sha-1')).toEqual({ checks: 'success' });
         expect(readLifecycleExternalEvidence({
             eventName: 'workflow_run',
-            workflow_run: { name: 'CI Check', status: 'in_progress', conclusion: null, head_sha: 'sha-1' },
+            workflow_run: { status: 'in_progress', conclusion: null, head_sha: 'sha-1' },
         }, 'sha-1')).toEqual({ checks: 'pending' });
     });
 
-    it('ignores unrelated or stale validation evidence', () => {
+    it('ignores missing or stale validation evidence', () => {
         expect(readLifecycleExternalEvidence({
             eventName: 'workflow_run',
-            workflow_run: { name: 'Unrelated workflow', status: 'completed', conclusion: 'failure', head_sha: 'sha-1' },
+            workflow_run: { status: 'completed', conclusion: 'failure' },
         }, 'sha-1')).toBeUndefined();
         expect(readLifecycleExternalEvidence({
             eventName: 'workflow_run',
-            workflow_run: { name: 'CI Check', status: 'completed', conclusion: 'failure', head_sha: 'old-sha' },
+            workflow_run: { status: 'completed', conclusion: 'failure', head_sha: 'old-sha' },
         }, 'sha-1')).toBeUndefined();
     });
 

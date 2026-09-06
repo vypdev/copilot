@@ -49,13 +49,10 @@ export interface EventCheckSuitePayload {
     conclusion?: string | null;
     head_branch?: string;
     head_sha?: string;
-    /** Present in normalized/test payloads; GitHub check_suite itself may omit it. */
-    workflow_name?: string;
     pull_requests?: EventPullRequestReferencePayload[];
 }
 
 export interface EventWorkflowRunPayload {
-    name?: string;
     status?: string;
     conclusion?: string | null;
     head_branch?: string;

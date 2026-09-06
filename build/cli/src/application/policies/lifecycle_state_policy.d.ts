@@ -2,7 +2,6 @@ import type { CopilotLifecycleState } from '../../domain/copilot_lifecycle';
 import type { ExecutionInputs } from '../../data/model/execution_inputs';
 export type LifecycleChecksEvidence = 'pending' | 'success' | 'failure';
 export type LifecycleReviewEvidence = 'approved' | 'changes-requested' | 'commented' | 'dismissed';
-export declare const LIFECYCLE_VALIDATION_WORKFLOWS: readonly ["CI Check"];
 export interface LifecycleExternalEvidence {
     readonly checks?: LifecycleChecksEvidence;
     readonly review?: LifecycleReviewEvidence;

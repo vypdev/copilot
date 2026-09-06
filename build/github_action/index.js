@@ -53444,11 +53444,9 @@ function buildInitialLabelProvisioningPlan(labels, existingLabelNames) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.LIFECYCLE_VALIDATION_WORKFLOWS = void 0;
 exports.resolveLifecycleState = resolveLifecycleState;
 exports.readLifecycleExternalEvidence = readLifecycleExternalEvidence;
 const result_1 = __nccwpck_require__(73817);
-exports.LIFECYCLE_VALIDATION_WORKFLOWS = ['CI Check'];
 /** Resolves the next lifecycle state from application facts, never from labels or API responses. */
 function resolveLifecycleState(input) {
     if (!input.isIssue && !input.isPullRequest)
@@ -53506,23 +53504,21 @@ function readLifecycleExternalEvidence(inputs, currentPullRequestHeadSha) {
         return undefined;
     }
     if (inputs.eventName === 'check_suite') {
-        if (!isCurrentValidationEvidence(inputs.check_suite?.workflow_name, inputs.check_suite?.head_sha, currentPullRequestHeadSha))
+        if (!isCurrentValidationEvidence(inputs.check_suite?.head_sha, currentPullRequestHeadSha))
             return undefined;
         return { checks: readChecksEvidence(inputs.check_suite?.status, inputs.check_suite?.conclusion) };
     }
     if (inputs.eventName === 'workflow_run') {
-        if (!isCurrentValidationEvidence(inputs.workflow_run?.name, inputs.workflow_run?.head_sha, currentPullRequestHeadSha))
+        if (!isCurrentValidationEvidence(inputs.workflow_run?.head_sha, currentPullRequestHeadSha))
             return undefined;
         return { checks: readChecksEvidence(inputs.workflow_run?.status, inputs.workflow_run?.conclusion) };
     }
     return undefined;
 }
-function isCurrentValidationEvidence(workflowName, evidenceHeadSha, currentPullRequestHeadSha) {
-    if (!workflowName || !evidenceHeadSha || !currentPullRequestHeadSha)
+function isCurrentValidationEvidence(evidenceHeadSha, currentPullRequestHeadSha) {
+    if (!evidenceHeadSha || !currentPullRequestHeadSha)
         return false;
-    const normalizedName = workflowName.trim().toLowerCase();
-    return exports.LIFECYCLE_VALIDATION_WORKFLOWS.some(name => name.toLowerCase() === normalizedName)
-        && evidenceHeadSha.trim() === currentPullRequestHeadSha.trim();
+    return evidenceHeadSha.trim() === currentPullRequestHeadSha.trim();
 }
 function readChecksEvidence(status, conclusion) {
     if (status?.trim().toLowerCase() !== 'completed')
