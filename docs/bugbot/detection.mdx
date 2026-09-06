@@ -17,7 +17,9 @@ The pull-request workflow runs a full review on `opened` and `reopened`. On
 `synchronize`, it reviews only the exact `before..after` commit range for new
 problems instead of reprocessing the unchanged part of a large PR. Existing
 open findings are still checked against current code, so incremental analysis
-does not weaken resolution. A PR does not need to contain an issue number in
+does not weaken resolution. The recommended workflow fetches only those two
+commit objects after the normal shallow checkout; it does not download the
+repository's full history. A PR does not need to contain an issue number in
 its branch name. The reviewer role publishes one review summary and attaches
 its findings as line comments on the current diff.
 

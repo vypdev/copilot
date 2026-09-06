@@ -26,6 +26,13 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Fetch incremental review range
+        if: github.event.action == 'synchronize'
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.event.after }}
+        run: git fetch --no-tags --depth=1 origin "$BEFORE_SHA" "$AFTER_SHA"
+
       - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
