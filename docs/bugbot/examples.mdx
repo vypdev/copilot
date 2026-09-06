@@ -211,15 +211,15 @@ Same permission and workflow requirements as autofix: `contents: write` and an o
 
 ---
 
-## Example: overflow comment (detection)
+## Example: overflow summary (detection)
 
-When there are **more findings than** `bugbot-comment-limit`, the action posts one **overflow comment** on the issue. It looks conceptually like this (exact wording may vary):
+When there are **more findings than** `bugbot-comment-limit`, the action adds an overflow section to the PR review summary. For issue-only work, it posts one overflow issue comment. It looks conceptually like this (exact wording may vary):
 
 > **Additional potential problems (not posted individually)**  
 > 5 more findings were detected. Consider reviewing the branch locally or increasing `bugbot-comment-limit`.  
 > Titles: "Possible race in cache", "Unused variable in handler", …
 
-So you see at most **N** individual finding comments plus **one** overflow comment per run when applicable.
+On a PR, you see one review containing at most **N** inline finding comments and the overflow summary.
 
 ---
 

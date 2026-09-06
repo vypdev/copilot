@@ -44,6 +44,7 @@ export interface PullRequestReviewCommentCreatePort {
     repository: string,
     pullRequestNumber: number,
     commitId: string,
+    body: string,
     comments: PullRequestReviewCommentDraft[],
     token: string,
   ): Promise<void>;

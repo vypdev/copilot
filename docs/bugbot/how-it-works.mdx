@@ -13,7 +13,7 @@ This page describes the **internal flow** of Bugbot: how detection runs, how the
 
 | What you do | What runs inside the action | Result |
 |-------------|-----------------------------|--------|
-| **Push** to branch (or run `detect_potential_problems_action`) | Detection: load context → configured agent (findings + resolved ids) → filter → mark resolved → publish | New/updated comments on issue and PR; resolved threads on PR. |
+| **Push** to branch (or run `detect_potential_problems_action`) | Detection: load context → configured agent (findings + resolved ids) → filter → publish → mark resolved | New/updated issue comments for issue-only work, or one summarized review with inline findings for PR work; resolved threads on PR. |
 | **Comment** “fix it” / “fix all” (with permission) | Intent (analysis role) → Autofix (execution role) → verify commands → commit & push → mark findings resolved | Code change on branch; those findings marked resolved. |
 | **Comment** “add a test for X” (with permission) | Intent (analysis role) → Do user request (execution role) → verify commands → commit & push | Code change on branch. |
 | **Comment** “analyze this PR for vulnerabilities” | Review (analysis/detection role) | Read-only findings; no file changes. |
@@ -42,9 +42,9 @@ This page describes the **internal flow** of Bugbot: how detection runs, how the
 
 4. **Filter and limit:** The response is schema-validated and filtered: path safety (no `..`, no absolute paths), exclude paths in `ai-ignore-files`, apply **minimum severity** (`bugbot-severity`), deduplicate. Finding identity is provider-independent and is based on normalized path, title, and a line bucket; provider prose and suggestions are not identity, so a rephrased finding updates the existing comment instead of creating a duplicate. Then **comment limit** (`bugbot-comment-limit`) is applied: only the first N findings are kept for individual comments; the rest contribute to an **overflow** count and titles for one summary comment.
 
-5. **Mark resolved:** For each existing finding whose id is in `resolved_finding_ids`, the action **updates** the issue comment (and PR review comment if any) so the marker shows `resolved: true`, and **resolves the PR review thread** when applicable.
+5. **Publish:** For issue-only work, each new finding is added or updated as an issue comment. When a PR is available, Bugbot creates **one review** with a general summary and all new findings attached as inline comments; it does not duplicate them in the PR conversation. Existing inline findings are updated in place. Review comments use a known-valid changed line, with an explicit fallback note when the reported file is outside the diff. Overflow is reported in the same review summary.
 
-6. **Publish:** For each **new** finding in the limited list: **add or update** the issue comment (with marker); **create or update** the PR review comment **only if** the finding’s file is in the PR’s changed files (using the first diff line for that path when the finding has no line). If there was overflow, **one extra comment** on the issue summarizes the additional findings.
+6. **Mark resolved:** For each existing finding whose id is in `resolved_finding_ids`, the action **updates** the stored finding comment so the marker shows `resolved: true`, and **resolves the PR review thread** when applicable. Resolution runs only after publication succeeds.
 
 ---
 

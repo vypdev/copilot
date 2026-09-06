@@ -40,6 +40,7 @@ export interface EventPullRequestReferencePayload {
 }
 export interface EventReviewPayload {
     state?: string;
+    commit_id?: string;
     pull_request?: EventPullRequestReferencePayload;
 }
 export interface EventCheckSuitePayload {

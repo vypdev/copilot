@@ -2,7 +2,7 @@ import { PullRequestReviewOperationError } from "../../../../application/ports/p
 import { PullRequestReviewCommentCommandRepository } from "../pull_request_review_comment_command_repository";
 
 function createRepository(options: {
-  createReviewComment?: jest.Mock;
+  createReview?: jest.Mock;
   graphql?: jest.Mock;
   createClientError?: Error;
   graphqlClientError?: Error;
@@ -14,8 +14,7 @@ function createRepository(options: {
       return {
         rest: {
           pulls: {
-            createReviewComment:
-              options.createReviewComment ?? jest.fn(),
+            createReview: options.createReview ?? jest.fn(),
           },
         },
       };
@@ -60,6 +59,7 @@ describe("PullRequestReviewCommentCommandRepository", () => {
       "repo",
       7,
       "sha",
+      "",
       [],
       "token",
     );
@@ -67,9 +67,33 @@ describe("PullRequestReviewCommentCommandRepository", () => {
     expect(createClient.getClient).not.toHaveBeenCalled();
   });
 
-  it("publishes every inline comment while preserving request semantics", async () => {
-    const createReviewComment = jest.fn().mockResolvedValue({ data: { id: 1 } });
-    const { repository } = createRepository({ createReviewComment });
+  it("publishes a body-only review when no diff line can host a finding", async () => {
+    const createReview = jest.fn().mockResolvedValue({ data: { id: 1 } });
+    const { repository } = createRepository({ createReview });
+
+    await repository.createReviewWithComments(
+      "owner",
+      "repo",
+      7,
+      "sha",
+      "review-level finding",
+      [],
+      "token",
+    );
+
+    expect(createReview).toHaveBeenCalledWith({
+      owner: "owner",
+      repo: "repo",
+      pull_number: 7,
+      commit_id: "sha",
+      body: "review-level finding",
+      event: "COMMENT",
+    });
+  });
+
+  it("publishes one summarized review containing every inline comment", async () => {
+    const createReview = jest.fn().mockResolvedValue({ data: { id: 1 } });
+    const { repository } = createRepository({ createReview });
     const comments = Array.from({ length: 101 }, (_, index) => ({
       path: "src/example.ts",
       line: index + 1,
@@ -81,34 +105,41 @@ describe("PullRequestReviewCommentCommandRepository", () => {
       "repo",
       7,
       "sha",
+      "review summary",
       comments,
       "token",
     );
 
-    expect(createReviewComment).toHaveBeenCalledTimes(101);
-    expect(createReviewComment.mock.calls[0][0]).toEqual({
+    expect(createReview).toHaveBeenCalledTimes(1);
+    expect(createReview).toHaveBeenCalledWith({
       owner: "owner",
       repo: "repo",
       pull_number: 7,
       commit_id: "sha",
-      body: "comment 0",
-      path: "src/example.ts",
-      line: 1,
-      side: "RIGHT",
-    });
-    expect(createReviewComment.mock.calls[100][0]).toMatchObject({
-      line: 101,
-      body: "comment 100",
+      body: "review summary",
+      event: "COMMENT",
+      comments: expect.arrayContaining([
+        {
+          body: "comment 0",
+          path: "src/example.ts",
+          line: 1,
+          side: "RIGHT",
+        },
+        {
+          body: "comment 100",
+          path: "src/example.ts",
+          line: 101,
+          side: "RIGHT",
+        },
+      ]),
     });
   });
 
-  it("reports the exact partial failure count without leaking provider errors", async () => {
-    const createReviewComment = jest
+  it("reports an atomic review failure without leaking provider errors", async () => {
+    const createReview = jest
       .fn()
-      .mockResolvedValueOnce({ data: { id: 1 } })
-      .mockRejectedValueOnce(new Error("provider failed secret-token"))
-      .mockResolvedValueOnce({ data: { id: 3 } });
-    const { repository } = createRepository({ createReviewComment });
+      .mockRejectedValue(new Error("provider failed secret-token"));
+    const { repository } = createRepository({ createReview });
 
     await expect(
       repository.createReviewWithComments(
@@ -116,6 +147,7 @@ describe("PullRequestReviewCommentCommandRepository", () => {
         "repo",
         7,
         "sha",
+        "review summary",
         [
           { path: "src/a.ts", line: 1, body: "one" },
           { path: "src/a.ts", line: 2, body: "two" },
@@ -126,9 +158,9 @@ describe("PullRequestReviewCommentCommandRepository", () => {
     ).rejects.toMatchObject({
       name: "PullRequestReviewOperationError",
       operation: "publish-comments",
-      message: "Failed to publish 1 of 3 pull request review comments.",
+      message: "Failed to publish 3 of 3 pull request review comments.",
     });
-    expect(createReviewComment).toHaveBeenCalledTimes(3);
+    expect(createReview).toHaveBeenCalledTimes(1);
   });
 
   it("updates a review comment by opaque identity through the exact GraphQL mutation", async () => {
@@ -190,9 +222,9 @@ describe("PullRequestReviewCommentCommandRepository", () => {
   });
 
   it("skips comments already confirmed by provider state after a partial failure", async () => {
-    const createReviewComment = jest.fn().mockResolvedValue({ data: { id: 2 } });
+    const createReview = jest.fn().mockResolvedValue({ data: { id: 2 } });
     const { repository } = createRepository({
-      createReviewComment,
+      createReview,
       existingBodies: ["already-created"],
     });
 
@@ -201,6 +233,7 @@ describe("PullRequestReviewCommentCommandRepository", () => {
       "repo",
       7,
       "sha",
+      "review summary",
       [
         { path: "src/example.ts", line: 1, body: "already-created" },
         { path: "src/example.ts", line: 2, body: "pending" },
@@ -208,8 +241,15 @@ describe("PullRequestReviewCommentCommandRepository", () => {
       "token",
     );
 
-    expect(createReviewComment).toHaveBeenCalledTimes(1);
-    expect(createReviewComment.mock.calls[0][0].body).toBe("pending");
+    expect(createReview).toHaveBeenCalledTimes(1);
+    expect(createReview.mock.calls[0][0].comments).toEqual([
+      {
+        body: "pending",
+        path: "src/example.ts",
+        line: 2,
+        side: "RIGHT",
+      },
+    ]);
   });
 
   it("sanitizes provider failures without preserving their cause", async () => {

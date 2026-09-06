@@ -125,7 +125,7 @@ export class SynchronizeLifecycleStateUseCase {
 
     private async readExternalEvidence(execution: LifecycleSynchronizationExecution) {
         const eventName = execution.inputs?.eventName;
-        if (!['check_suite', 'workflow_run'].includes(eventName ?? '')) {
+        if (!['check_suite', 'workflow_run', 'pull_request_review'].includes(eventName ?? '')) {
             return readLifecycleExternalEvidence(execution.inputs);
         }
         const pullRequestHeadSha = execution.inputs?.pull_request?.head?.sha

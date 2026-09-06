@@ -28,13 +28,17 @@ describe('PullRequestChangesRepository', () => {
   it('uses every paginated file page for changed files and diff lines', async () => {
     const { provider, iterator } = createClient([
       [{ filename: 'first.ts', status: 'modified', additions: 1, deletions: 0, patch: '@@ -1,1 +8,2 @@' }],
-      [{ filename: 'second.ts', status: 'added', additions: 2, deletions: 0, patch: '@@ -0,0 +42,2 @@' }],
+      [
+        { filename: 'second.ts', status: 'added', additions: 1, deletions: 0, patch: '@@ -0 +42 @@\n+added' },
+        { filename: 'deletions.ts', status: 'modified', additions: 0, deletions: 2, patch: '@@ -3,2 +3,0 @@\n-old\n-lines' },
+      ],
     ]);
     const repository = new PullRequestChangesRepository(provider);
 
     await expect(repository.getChangedFiles('owner', 'repo', 7, 'token')).resolves.toEqual([
       { filename: 'first.ts', status: 'modified' },
       { filename: 'second.ts', status: 'added' },
+      { filename: 'deletions.ts', status: 'modified' },
     ]);
     await expect(repository.getFilesWithFirstDiffLine('owner', 'repo', 7, 'token')).resolves.toEqual([
       { path: 'first.ts', firstLine: 8 },

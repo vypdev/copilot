@@ -21,7 +21,7 @@ export interface PullRequestReviewCommentBodyQueryPort {
 export interface PullRequestReviewCommentQueryPort extends PullRequestReviewCommentListQueryPort, PullRequestReviewCommentBodyQueryPort {
 }
 export interface PullRequestReviewCommentCreatePort {
-    createReviewWithComments(owner: string, repository: string, pullRequestNumber: number, commitId: string, comments: PullRequestReviewCommentDraft[], token: string): Promise<void>;
+    createReviewWithComments(owner: string, repository: string, pullRequestNumber: number, commitId: string, body: string, comments: PullRequestReviewCommentDraft[], token: string): Promise<void>;
 }
 export interface PullRequestReviewCommentUpdatePort {
     updatePullRequestReviewComment(owner: string, repository: string, commentIdentity: string, body: string, token: string): Promise<void>;

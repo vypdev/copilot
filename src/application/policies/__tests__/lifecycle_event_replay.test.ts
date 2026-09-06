@@ -13,8 +13,8 @@ const baseDecision = {
 
 describe('lifecycle event replay', () => {
     it.each([
-        ['pull_request_review', { action: 'submitted', review: { state: 'approved' }, pull_request: { number: 8 } }, 'ready'],
-        ['pull_request_review', { action: 'submitted', review: { state: 'changes_requested' }, pull_request: { number: 8 } }, 'changes-requested'],
+        ['pull_request_review', { action: 'submitted', review: { state: 'approved', commit_id: 'sha-1' }, pull_request: { number: 8 } }, 'ready'],
+        ['pull_request_review', { action: 'submitted', review: { state: 'changes_requested', commit_id: 'sha-1' }, pull_request: { number: 8 } }, 'changes-requested'],
         ['check_suite', { action: 'completed', check_suite: { head_sha: 'sha-1', status: 'completed', conclusion: 'failure', pull_requests: [{ number: 8 }] } }, 'blocked'],
         ['check_suite', { action: 'completed', check_suite: { head_sha: 'sha-1', status: 'queued', conclusion: null, pull_requests: [{ number: 8 }] } }, 'reviewing'],
         ['workflow_run', { action: 'completed', workflow_run: { head_sha: 'sha-1', status: 'completed', conclusion: 'success', pull_requests: [{ number: 8 }] } }, 'reviewing'],

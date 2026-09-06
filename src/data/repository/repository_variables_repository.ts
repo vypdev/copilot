@@ -42,8 +42,8 @@ export class RepositoryVariablesRepository implements SetupRepositoryVariablesPo
         const repositoryVariables = (await this.listVariables(owner, repository, token))
             .filter((variable): variable is SetupVariable => variable.value !== undefined)
             .map(variable => ({ name: variable.name, value: variable.value }));
-        const organizationSecretsResult = await this.listOrganizationSecrets(client, owner, repository, ownerType);
-        const organizationVariablesResult = await this.listOrganizationVariables(client, owner, repository, ownerType);
+        const organizationSecretsResult = await this.listOrganizationSecrets(client, metadata.id, ownerType);
+        const organizationVariablesResult = await this.listOrganizationVariables(client, metadata.id, ownerType);
         return {
             ownerType,
             repositoryId: metadata.id,
@@ -228,15 +228,15 @@ export class RepositoryVariablesRepository implements SetupRepositoryVariablesPo
 
     private async listOrganizationSecrets(
         client: GithubRepositoryVariablesClient,
-        owner: string,
-        repository: string,
+        repositoryId: number | undefined,
         ownerType: SetupRemoteConfiguration['ownerType'],
     ): Promise<{ resources: GithubOrganizationResource[]; access: SetupRemoteConfiguration['organizationSecretsAccess'] }> {
         if (ownerType !== 'Organization') return { resources: [], access: 'not_applicable' };
+        if (repositoryId === undefined) return { resources: [], access: 'unknown' };
         const list = client.rest.secrets?.listRepoOrganizationSecrets;
         if (!list) return { resources: [], access: 'unknown' };
         try {
-            return { resources: await listCollection(client, list, { owner, repo: repository, per_page: 30 }, 'secrets'), access: 'available' };
+            return { resources: await listCollection(client, list, { repository_id: repositoryId, per_page: 30 }, 'secrets'), access: 'available' };
         } catch {
             return { resources: [], access: 'unavailable' };
         }
@@ -244,15 +244,15 @@ export class RepositoryVariablesRepository implements SetupRepositoryVariablesPo
 
     private async listOrganizationVariables(
         client: GithubRepositoryVariablesClient,
-        owner: string,
-        repository: string,
+        repositoryId: number | undefined,
         ownerType: SetupRemoteConfiguration['ownerType'],
     ): Promise<{ resources: GithubOrganizationResource[]; access: SetupRemoteConfiguration['organizationVariablesAccess'] }> {
         if (ownerType !== 'Organization') return { resources: [], access: 'not_applicable' };
+        if (repositoryId === undefined) return { resources: [], access: 'unknown' };
         const list = client.rest.actions.listRepoOrganizationVariables;
         if (!list) return { resources: [], access: 'unknown' };
         try {
-            return { resources: await listCollection(client, list, { owner, repo: repository, per_page: 30 }, 'variables'), access: 'available' };
+            return { resources: await listCollection(client, list, { repository_id: repositoryId, per_page: 30 }, 'variables'), access: 'available' };
         } catch {
             return { resources: [], access: 'unavailable' };
         }

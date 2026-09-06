@@ -8,7 +8,7 @@ export declare class PullRequestChangesRepository {
         filename: string;
         status: string;
     }[]>;
-    /** First line (right side) of the first hunk per file, for valid review comment placement. */
+    /** First commentable right-side line of the first hunk in a GitHub patch. */
     private static firstLineFromPatch;
     /**
      * Returns for each changed file the first line number that appears in the diff (right side).

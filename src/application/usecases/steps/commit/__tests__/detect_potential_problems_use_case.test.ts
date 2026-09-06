@@ -333,6 +333,9 @@ describe("DetectPotentialProblemsUseCase", () => {
     mockGetChangedFiles.mockResolvedValue([
       { filename: "src/bar.ts", status: "modified" },
     ]);
+    mockGetFilesWithFirstDiffLine.mockResolvedValue([
+      { path: "src/bar.ts", firstLine: 5 },
+    ]);
     mockListPullRequestReviewComments.mockResolvedValue([]);
 
     await useCase.invoke(baseParam());
@@ -343,6 +346,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       "repo",
       100,
       "abc123",
+      expect.stringContaining("## 🤖 Bugbot review"),
       expect.arrayContaining([
         expect.objectContaining({
           path: "src/bar.ts",
@@ -550,11 +554,11 @@ describe("DetectPotentialProblemsUseCase", () => {
 
   it("reports a sanitized failure when provider review-comment publication fails", async () => {
     const providerError = new Error("provider rejected secret-token");
-    const createReviewComment = jest.fn().mockRejectedValue(providerError);
+    const createReview = jest.fn().mockRejectedValue(providerError);
     const commandRepository = new PullRequestReviewCommentCommandRepository(
       {
         getClient: jest.fn(() => ({
-          rest: { pulls: { createReviewComment } },
+          rest: { pulls: { createReview } },
         })),
       } as never,
       { getClient: jest.fn() } as never,
@@ -625,7 +629,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       }),
     );
 
-    expect(createReviewComment).toHaveBeenCalledTimes(1);
+    expect(createReview).toHaveBeenCalledTimes(1);
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
     const errors = results[0].errors.map((error) => error.message).join("\n");
@@ -670,7 +674,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     expect(mockAddComment).toHaveBeenCalledTimes(1);
   });
 
-  it("when finding has no file/line, no PR review comment is created (only issue comment)", async () => {
+  it("when finding has no file/line, keeps it inside the PR review", async () => {
     mockAskAgent.mockResolvedValue({
       findings: [
         { id: "no-loc", title: "General issue", description: "No location." },
@@ -681,19 +685,27 @@ describe("DetectPotentialProblemsUseCase", () => {
     mockGetChangedFiles.mockResolvedValue([
       { filename: "lib/helper.ts", status: "modified" },
     ]);
+    mockGetFilesWithFirstDiffLine.mockResolvedValue([
+      { path: "lib/helper.ts", firstLine: 1 },
+    ]);
     mockListPullRequestReviewComments.mockResolvedValue([]);
 
     await useCase.invoke(baseParam());
 
-    expect(mockAddComment).toHaveBeenCalledWith(
+    expect(mockAddComment).not.toHaveBeenCalled();
+    expect(mockCreateReviewWithComments).toHaveBeenCalledWith(
       "owner",
       "repo",
-      42,
-      expect.any(String),
+      200,
+      "sha1",
+      expect.stringContaining("General issue"),
+      [expect.objectContaining({
+        path: "lib/helper.ts",
+        line: 1,
+        body: expect.stringContaining("Review-level finding"),
+      })],
       "token",
-      { commitSha: "sha1" },
     );
-    expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
   });
 
   it("when existing finding has prCommentId for same PR, updates review comment instead of creating", async () => {

@@ -65,8 +65,8 @@ describe('lifecycle state policy', () => {
     it('normalizes GitHub review and check payloads into stable evidence', () => {
         expect(readLifecycleExternalEvidence({
             eventName: 'pull_request_review',
-            review: { state: 'changes_requested' },
-        })).toEqual({ review: 'changes-requested' });
+            review: { state: 'changes_requested', commit_id: 'sha-1' },
+        }, 'sha-1')).toEqual({ review: 'changes-requested' });
         expect(readLifecycleExternalEvidence({
             eventName: 'check_suite',
             check_suite: { status: 'completed', conclusion: 'success', head_sha: 'sha-1' },
@@ -78,6 +78,14 @@ describe('lifecycle state policy', () => {
     });
 
     it('ignores missing or stale validation evidence', () => {
+        expect(readLifecycleExternalEvidence({
+            eventName: 'pull_request_review',
+            review: { state: 'approved', commit_id: 'old-sha' },
+        }, 'sha-1')).toBeUndefined();
+        expect(readLifecycleExternalEvidence({
+            eventName: 'pull_request_review',
+            review: { state: 'approved' },
+        }, 'sha-1')).toBeUndefined();
         expect(readLifecycleExternalEvidence({
             eventName: 'workflow_run',
             workflow_run: { status: 'completed', conclusion: 'failure' },

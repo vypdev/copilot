@@ -62,17 +62,19 @@ describe('RepositoryVariablesRepository', () => {
     });
 
     it('inspects repository and organization resources without exposing secret values', async () => {
+        const listRepoOrganizationVariables = jest.fn().mockResolvedValue({ data: { variables: [{ name: 'ORG_VAR', value: 'org' }] } });
+        const listRepoOrganizationSecrets = jest.fn().mockResolvedValue({ data: { secrets: [{ name: 'ORG_SECRET' }] } });
         const client = {
             rest: {
                 repos: { get: jest.fn().mockResolvedValue({ data: { id: 42, visibility: 'private', owner: { type: 'Organization' } } }) },
                 actions: {
                     listRepoVariables: jest.fn().mockResolvedValue({ data: { variables: [{ name: 'REPO_VAR', value: 'repo' }] } }),
                     createRepoVariable: jest.fn(), updateRepoVariable: jest.fn(),
-                    listRepoOrganizationVariables: jest.fn().mockResolvedValue({ data: { variables: [{ name: 'ORG_VAR', value: 'org' }] } }),
+                    listRepoOrganizationVariables,
                 },
                 secrets: {
                     listRepoSecrets: jest.fn().mockResolvedValue({ data: { secrets: [{ name: 'REPO_SECRET' }] } }),
-                    listRepoOrganizationSecrets: jest.fn().mockResolvedValue({ data: { secrets: [{ name: 'ORG_SECRET' }] } }),
+                    listRepoOrganizationSecrets,
                     getRepoPublicKey: jest.fn(), createOrUpdateRepoSecret: jest.fn(),
                 },
             },
@@ -86,6 +88,8 @@ describe('RepositoryVariablesRepository', () => {
             organizationVariables: [{ name: 'ORG_VAR', value: 'org' }],
             organizationSecretsAccess: 'available', organizationVariablesAccess: 'available',
         }));
+        expect(listRepoOrganizationSecrets).toHaveBeenCalledWith({ repository_id: 42, per_page: 30 });
+        expect(listRepoOrganizationVariables).toHaveBeenCalledWith({ repository_id: 42, per_page: 30 });
     });
 
     it('upserts selected organization secrets and variables with the repository access grant', async () => {

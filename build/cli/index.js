@@ -63100,15 +63100,15 @@ async function publishFindings(param) {
         })
         : undefined;
     for (const finding of findings) {
-        if (execution.issueNumber > 0) {
+        if (execution.issueNumber > 0 && !reviewPublisher) {
             await (0, publish_issue_finding_comment_1.publishIssueFindingComment)(ports.issueComments, execution, finding, (0, types_1.findExistingFindingInfo)(existingByFindingId, finding), commitSha);
         }
         if (reviewPublisher) {
             await reviewPublisher.publish(finding, (0, types_1.findExistingFindingInfo)(existingByFindingId, finding));
         }
     }
-    await reviewPublisher?.flush();
-    if (execution.issueNumber > 0) {
+    await reviewPublisher?.flush(overflowCount, overflowTitles);
+    if (execution.issueNumber > 0 && !reviewPublisher) {
         await (0, publish_overflow_comment_1.publishOverflowComment)(ports.issueComments, execution, overflowCount, overflowTitles, commitSha);
     }
 }
@@ -63178,18 +63178,13 @@ class PullRequestReviewCommentPublisher {
     constructor(options) {
         this.options = options;
         this.commentsToCreate = [];
+        this.findingsToCreate = [];
+        this.unanchoredBodies = [];
     }
     async publish(finding, existing) {
         const { prContext, openPrNumber, execution } = this.options;
-        const path = (0, path_validation_1.resolveFindingPathForPr)(finding.file, prContext.prFiles);
-        if (!path) {
-            if (finding.file != null && String(finding.file).trim() !== "") {
-                (0, logging_ports_1.logInfo)(`Bugbot finding "${finding.id}" file "${finding.file}" not in PR changed files (${prContext.prFiles.length} files); skipping PR review comment.`);
-            }
-            return;
-        }
-        const body = `${(0, marker_1.buildCommentBody)(finding, false)}\n\n${this.options.watermark}`;
-        const line = finding.line ?? prContext.pathToFirstDiffLine[path] ?? 1;
+        const findingBody = (0, marker_1.buildCommentBody)(finding, false);
+        const body = `${findingBody}\n\n${this.options.watermark}`;
         if (existing?.pullRequest != null &&
             existing.pullRequest.pullRequestNumber === openPrNumber) {
             if (existing.pullRequest.resolved) {
@@ -63198,16 +63193,67 @@ class PullRequestReviewCommentPublisher {
             await this.options.repository.updatePullRequestReviewComment(execution.owner, execution.repo, existing.pullRequest.commentIdentity, body, execution.tokens.token);
             return;
         }
-        this.commentsToCreate.push({ path, line, body });
+        const reportedPath = (0, path_validation_1.resolveFindingPathForPr)(finding.file, prContext.prFiles);
+        const anchor = resolveReviewAnchor(reportedPath, prContext.pathToFirstDiffLine);
+        this.findingsToCreate.push(finding);
+        if (!anchor) {
+            this.unanchoredBodies.push(findingBody);
+            (0, logging_ports_1.logInfo)(`Bugbot finding "${finding.id}" could not be attached to a changed line; including it in the review summary.`);
+            return;
+        }
+        const anchorNote = reportedPath === anchor.path
+            ? ""
+            : `> Review-level finding: the reported location is not part of this pull-request diff, so this comment is attached to the first available changed line.\n\n`;
+        this.commentsToCreate.push({
+            path: anchor.path,
+            line: anchor.line,
+            body: `${anchorNote}${body}`,
+        });
     }
-    async flush() {
-        if (this.commentsToCreate.length === 0)
+    async flush(overflowCount = 0, overflowTitles = []) {
+        if (this.findingsToCreate.length === 0 && overflowCount === 0)
             return;
         const { repository, execution, openPrNumber, prContext } = this.options;
-        await repository.createReviewWithComments(execution.owner, execution.repo, openPrNumber, prContext.prHeadSha, this.commentsToCreate, execution.tokens.token);
+        await repository.createReviewWithComments(execution.owner, execution.repo, openPrNumber, prContext.prHeadSha, buildReviewSummary(this.findingsToCreate, this.commentsToCreate.length, this.unanchoredBodies, overflowCount, overflowTitles, this.options.watermark), this.commentsToCreate, execution.tokens.token);
     }
 }
 exports.PullRequestReviewCommentPublisher = PullRequestReviewCommentPublisher;
+function resolveReviewAnchor(reportedPath, pathToFirstDiffLine) {
+    if (reportedPath && pathToFirstDiffLine[reportedPath] != null) {
+        return { path: reportedPath, line: pathToFirstDiffLine[reportedPath] };
+    }
+    const fallback = Object.entries(pathToFirstDiffLine)[0];
+    return fallback ? { path: fallback[0], line: fallback[1] } : undefined;
+}
+function buildReviewSummary(findings, inlineCount, unanchoredBodies, overflowCount, overflowTitles, watermark) {
+    const findingLines = findings.map((finding) => {
+        const severity = finding.severity?.trim() || "unspecified";
+        const location = finding.file
+            ? ` — \`${finding.file}${finding.line ? `:${finding.line}` : ""}\``
+            : "";
+        return `- **${severity}**: ${finding.title}${location}`;
+    });
+    const overflowLines = overflowTitles.slice(0, 15).map((title) => `- ${title}`);
+    if (overflowCount > overflowLines.length) {
+        overflowLines.push(`- …and ${overflowCount - overflowLines.length} more.`);
+    }
+    const sections = [
+        "## 🤖 Bugbot review",
+        `Bugbot found **${findings.length + overflowCount}** active potential problem(s) in this revision. `
+            + `${inlineCount} finding(s) are attached to changed lines in this review.`,
+    ];
+    if (findingLines.length > 0)
+        sections.push(`### Findings\n\n${findingLines.join("\n")}`);
+    if (unanchoredBodies.length > 0) {
+        sections.push(`### Review-level findings\n\n${unanchoredBodies.join("\n\n---\n\n")}`);
+    }
+    if (overflowCount > 0) {
+        sections.push(`### Additional findings omitted by the comment limit\n\n`
+            + `**${overflowCount}** additional finding(s) were detected.\n\n${overflowLines.join("\n")}`);
+    }
+    sections.push(watermark);
+    return sections.join("\n\n");
+}
 
 
 /***/ }),
@@ -74334,9 +74380,9 @@ class PullRequestChangesRepository {
             try {
                 return (await this.listAllFiles(owner, repository, pullNumber, token))
                     .filter((f) => f.status !== 'removed' && (f.patch ?? '').length > 0)
-                    .map((f) => {
+                    .flatMap((f) => {
                     const firstLine = PullRequestChangesRepository.firstLineFromPatch(f.patch ?? '');
-                    return { path: f.filename, firstLine: firstLine ?? 1 };
+                    return firstLine === undefined ? [] : [{ path: f.filename, firstLine }];
                 });
             }
             catch (error) {
@@ -74393,10 +74439,28 @@ class PullRequestChangesRepository {
         }
         return allFiles;
     }
-    /** First line (right side) of the first hunk per file, for valid review comment placement. */
+    /** First commentable right-side line of the first hunk in a GitHub patch. */
     static firstLineFromPatch(patch) {
-        const match = patch.match(/^@@ -\d+,\d+ \+(\d+),\d+ @@/m);
-        return match ? parseInt(match[1], 10) : undefined;
+        const lines = patch.split('\n');
+        for (let index = 0; index < lines.length; index += 1) {
+            const match = lines[index].match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/);
+            if (!match)
+                continue;
+            const start = parseInt(match[1], 10);
+            const rightCount = match[2] === undefined ? 1 : parseInt(match[2], 10);
+            let rightLine = start;
+            for (let bodyIndex = index + 1; bodyIndex < lines.length && !lines[bodyIndex].startsWith('@@ '); bodyIndex += 1) {
+                const line = lines[bodyIndex];
+                if (line.startsWith('+') && !line.startsWith('+++'))
+                    return rightLine;
+                if (line.startsWith(' '))
+                    return rightLine;
+                if (!line.startsWith('-') && !line.startsWith('\\'))
+                    rightLine += 1;
+            }
+            return rightCount > 0 ? start : undefined;
+        }
+        return undefined;
     }
 }
 exports.PullRequestChangesRepository = PullRequestChangesRepository;
@@ -74565,14 +74629,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentCommandRepository = void 0;
 const pull_request_review_errors_1 = __nccwpck_require__(46445);
 const github_pagination_policy_1 = __nccwpck_require__(44812);
-const MAX_CONCURRENT_COMMENTS = 10;
-function chunkComments(comments) {
-    const chunks = [];
-    for (let index = 0; index < comments.length; index += MAX_CONCURRENT_COMMENTS) {
-        chunks.push(comments.slice(index, index + MAX_CONCURRENT_COMMENTS));
-    }
-    return chunks;
-}
 class PullRequestReviewCommentCommandRepository {
     constructor(createClient, graphqlClient, queryClient) {
         this.createClient = createClient;
@@ -74593,38 +74649,36 @@ class PullRequestReviewCommentCommandRepository {
         }
         return bodies;
     }
-    async createReviewWithComments(owner, repository, pullRequestNumber, commitSha, comments, token) {
-        if (comments.length === 0)
+    async createReviewWithComments(owner, repository, pullRequestNumber, commitSha, body, comments, token) {
+        if (comments.length === 0 && body.trim().length === 0)
             return;
-        let failedComments = 0;
         try {
             const existingBodies = await this.listExistingBodies(owner, repository, pullRequestNumber, token);
             const pendingComments = comments.filter((comment) => !existingBodies.has(comment.body));
-            if (pendingComments.length === 0)
+            if (comments.length > 0 && pendingComments.length === 0)
                 return;
             const client = this.createClient.getClient(token);
-            for (const commentBatch of chunkComments(pendingComments)) {
-                const outcomes = await Promise.allSettled(commentBatch.map((comment) => Promise.resolve().then(() => client.rest.pulls.createReviewComment({
-                    owner,
-                    repo: repository,
-                    pull_number: pullRequestNumber,
-                    commit_id: commitSha,
-                    body: comment.body,
-                    path: comment.path,
-                    line: comment.line,
-                    side: "RIGHT",
-                }))));
-                failedComments += outcomes.filter((outcome) => outcome.status === "rejected").length;
-            }
-            if (failedComments > 0) {
-                throw new pull_request_review_errors_1.PullRequestReviewOperationError("publish-comments", {
-                    failedCount: failedComments,
-                    totalCount: pendingComments.length,
-                });
-            }
+            const reviewComments = pendingComments.map((comment) => ({
+                body: comment.body,
+                path: comment.path,
+                line: comment.line,
+                side: "RIGHT",
+            }));
+            await client.rest.pulls.createReview({
+                owner,
+                repo: repository,
+                pull_number: pullRequestNumber,
+                commit_id: commitSha,
+                body,
+                event: "COMMENT",
+                ...(reviewComments.length > 0 ? { comments: reviewComments } : {}),
+            });
         }
         catch (error) {
-            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "publish-comments");
+            const context = comments.length > 0
+                ? { failedCount: comments.length, totalCount: comments.length }
+                : undefined;
+            throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "publish-comments", context);
         }
     }
     async updatePullRequestReviewComment(_owner, _repository, commentIdentity, body, token) {
@@ -75322,8 +75376,8 @@ class RepositoryVariablesRepository {
         const repositoryVariables = (await this.listVariables(owner, repository, token))
             .filter((variable) => variable.value !== undefined)
             .map(variable => ({ name: variable.name, value: variable.value }));
-        const organizationSecretsResult = await this.listOrganizationSecrets(client, owner, repository, ownerType);
-        const organizationVariablesResult = await this.listOrganizationVariables(client, owner, repository, ownerType);
+        const organizationSecretsResult = await this.listOrganizationSecrets(client, metadata.id, ownerType);
+        const organizationVariablesResult = await this.listOrganizationVariables(client, metadata.id, ownerType);
         return {
             ownerType,
             repositoryId: metadata.id,
@@ -75487,27 +75541,31 @@ class RepositoryVariablesRepository {
         }
         return { created, updated, errors };
     }
-    async listOrganizationSecrets(client, owner, repository, ownerType) {
+    async listOrganizationSecrets(client, repositoryId, ownerType) {
         if (ownerType !== 'Organization')
             return { resources: [], access: 'not_applicable' };
+        if (repositoryId === undefined)
+            return { resources: [], access: 'unknown' };
         const list = client.rest.secrets?.listRepoOrganizationSecrets;
         if (!list)
             return { resources: [], access: 'unknown' };
         try {
-            return { resources: await listCollection(client, list, { owner, repo: repository, per_page: 30 }, 'secrets'), access: 'available' };
+            return { resources: await listCollection(client, list, { repository_id: repositoryId, per_page: 30 }, 'secrets'), access: 'available' };
         }
         catch {
             return { resources: [], access: 'unavailable' };
         }
     }
-    async listOrganizationVariables(client, owner, repository, ownerType) {
+    async listOrganizationVariables(client, repositoryId, ownerType) {
         if (ownerType !== 'Organization')
             return { resources: [], access: 'not_applicable' };
+        if (repositoryId === undefined)
+            return { resources: [], access: 'unknown' };
         const list = client.rest.actions.listRepoOrganizationVariables;
         if (!list)
             return { resources: [], access: 'unknown' };
         try {
-            return { resources: await listCollection(client, list, { owner, repo: repository, per_page: 30 }, 'variables'), access: 'available' };
+            return { resources: await listCollection(client, list, { repository_id: repositoryId, per_page: 30 }, 'variables'), access: 'available' };
         }
         catch {
             return { resources: [], access: 'unavailable' };

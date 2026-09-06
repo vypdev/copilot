@@ -69,6 +69,7 @@ export function readLifecycleExternalEvidence(
 ): LifecycleExternalEvidence | undefined {
     if (!inputs) return undefined;
     if (inputs.eventName === 'pull_request_review') {
+        if (!isCurrentValidationEvidence(inputs.review?.commit_id, currentPullRequestHeadSha)) return undefined;
         const reviewState = inputs.review?.state?.trim().toLowerCase();
         if (reviewState === 'approved') return { review: 'approved' };
         if (reviewState === 'changes_requested') return { review: 'changes-requested' };

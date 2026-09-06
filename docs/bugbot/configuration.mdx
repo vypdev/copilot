@@ -49,7 +49,7 @@ bugbot-severity: medium
 
 **Default:** `20`
 
-Maximum number of individual finding comments published per target. Additional findings are summarized in an overflow comment. The implementation bounds this value; use a modest limit to avoid noisy issue or review threads.
+Maximum number of individual finding comments published per target. Additional findings are summarized in the PR review body or, for issue-only analysis, in an overflow comment. The implementation bounds this value; use a modest limit to avoid noisy issue or review threads.
 
 ```yaml
 bugbot-comment-limit: 20

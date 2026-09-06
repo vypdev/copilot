@@ -16,8 +16,8 @@ Bugbot detection runs in two ways:
 The pull-request workflow runs a fresh review on `opened`, `reopened`,
 `edited`, and `synchronize`. It uses the PR head SHA and changed files
 directly, so a PR does not need to contain an issue number in its branch name.
-The reviewer role publishes findings as line comments when GitHub can attach
-the location to the current diff.
+The reviewer role publishes one review summary and attaches its findings as
+line comments on the current diff.
 
 ### 2. On every push (commit workflow)
 
@@ -45,13 +45,13 @@ You can run Bugbot detection **without pushing**:
 - **Single action:** In a workflow, set `single-action: detect_potential_problems_action` and `single-action-issue: <issue number>`. The workflow must run in a context where the **branch** to analyze is the current checkout (e.g. trigger on `workflow_dispatch` after checking out the branch you want to analyze).
 - **CLI:** From the repository root, run `copilot detect-potential-problems -i <issue>` (optionally `-b <branch>`). Provide `--token` or `PERSONAL_ACCESS_TOKEN` in the environment, plus the configured agent CLI credentials/model. See [Examples → CLI](/bugbot/examples#cli) and [Smoke tests](/security-operations/operations/smoke-tests).
 
-In both cases, the action uses the same detection flow: load context for that issue/branch, call the configured agent, filter and apply comment limit, then publish to the issue and to any open PR for that branch.
+In both cases, the action uses the same detection flow: load context for that issue/branch, call the configured agent, filter and apply the comment limit, then publish either to the issue or to an open PR for that branch.
 
 ---
 
 ## Where findings appear
 
-### On the issue
+### On the issue when no PR is available
 
 Each finding is posted as a **separate comment** on the issue. The comment includes:
 
@@ -64,14 +64,16 @@ The action embeds a **hidden marker** in each comment so it can later **update**
 
 ### On the pull request
 
-The **same findings** are also posted as **review comments** on any **open PR** that targets the same branch (or that is linked to the same issue and branch). Each review comment is attached to the **file and line** from the finding when that file is in the PR’s changed files; otherwise the finding is only on the issue.
+When an **open PR** targets the branch, Bugbot creates one submitted review. Its body summarizes the analysis and its findings descend from that review as inline comments. Findings are not mirrored as independent comments in the PR conversation.
+
+Each inline comment is attached to a line confirmed from the current diff. If the reported file is outside the diff, Bugbot attaches the finding to the first available changed line and labels that fallback explicitly. If no right-side diff line exists, the full finding remains in the review body.
 
 When the configured agent later reports a finding as **resolved** (e.g. after you or the bot fixed the code), the action:
 
-- **Updates** the corresponding issue comment so the marker shows `resolved: true`.
+- **Updates** every existing stored destination so the marker shows `resolved: true`.
 - **Marks the PR review thread as resolved** so the PR review reflects the current status.
 
-So you get a single source of truth on the issue, and a line-by-line view on the PR.
+This keeps issue-only analysis concise and makes the GitHub review the single source of truth whenever a PR exists.
 
 ---
 
@@ -96,10 +98,10 @@ To avoid flooding the issue and PR with too many comments, the action applies a 
 
 When there are more findings than the limit:
 
-- The action publishes the first N findings as usual (one comment per finding on the issue and, when applicable, on the PR).
-- It adds **one extra comment** on the issue that summarizes the overflow: it states how many additional findings were not posted individually and may list their titles, and suggests reviewing the branch locally or re-running with a higher limit.
+- The action publishes the first N findings as individual issue comments for issue-only work, or as inline comments in one PR review.
+- Overflow is added to the same PR review summary. When no PR exists, one extra issue comment summarizes it.
 
-So you always see at most N+1 new comments from a single detection run when there is overflow.
+So a PR analysis creates one review batch instead of N unrelated reviews and N duplicated conversation comments.
 
 ---
 
@@ -112,10 +114,10 @@ The configured agent is given the list of **previously reported findings** (from
 
 For each id in “resolved”:
 
-- The action **updates** the existing issue comment (and PR review comment, if any) so the hidden marker shows `resolved: true`. The comment body may be updated to reflect the resolved state.
+- The action **updates** every existing finding destination so the hidden marker shows `resolved: true`. The comment body may be updated to reflect the resolved state.
 - On the PR, it **resolves the review thread** when applicable.
 
-So the issue and PR stay in sync with the current code: fixed findings are marked resolved, and new ones are added up to the comment limit.
+Historical issue/PR destinations stay in sync, while new PR findings remain exclusively inside the review model.
 
 Active or reopened findings make the `Copilot / Review` Check Run fail, while
 the Job Summary still contains the complete bounded state counts. This gives

@@ -11,7 +11,9 @@ export interface PullRequestReviewCommentPublisherOptions {
 export declare class PullRequestReviewCommentPublisher {
     private readonly options;
     private readonly commentsToCreate;
+    private readonly findingsToCreate;
+    private readonly unanchoredBodies;
     constructor(options: PullRequestReviewCommentPublisherOptions);
     publish(finding: BugbotFinding, existing: ExistingFindingInfo | undefined): Promise<void>;
-    flush(): Promise<void>;
+    flush(overflowCount?: number, overflowTitles?: readonly string[]): Promise<void>;
 }

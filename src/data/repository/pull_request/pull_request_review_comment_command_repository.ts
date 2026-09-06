@@ -14,22 +14,6 @@ import type {
 } from "../../../infrastructure/github/ports/github_pull_request_review_protocol";
 import { requireArrayPage } from "../github/github_pagination_policy";
 
-const MAX_CONCURRENT_COMMENTS = 10;
-
-function chunkComments(
-  comments: PullRequestReviewCommentDraft[],
-): PullRequestReviewCommentDraft[][] {
-  const chunks: PullRequestReviewCommentDraft[][] = [];
-  for (
-    let index = 0;
-    index < comments.length;
-    index += MAX_CONCURRENT_COMMENTS
-  ) {
-    chunks.push(comments.slice(index, index + MAX_CONCURRENT_COMMENTS));
-  }
-  return chunks;
-}
-
 export class PullRequestReviewCommentCommandRepository implements PullRequestReviewCommentCommandPort {
   constructor(
     private readonly createClient: GithubClientPort<GithubPullRequestReviewCommentCreateClient>,
@@ -63,12 +47,12 @@ export class PullRequestReviewCommentCommandRepository implements PullRequestRev
     repository: string,
     pullRequestNumber: number,
     commitSha: string,
+    body: string,
     comments: PullRequestReviewCommentDraft[],
     token: string,
   ): Promise<void> {
-    if (comments.length === 0) return;
+    if (comments.length === 0 && body.trim().length === 0) return;
 
-    let failedComments = 0;
     try {
       const existingBodies = await this.listExistingBodies(
         owner,
@@ -79,38 +63,28 @@ export class PullRequestReviewCommentCommandRepository implements PullRequestRev
       const pendingComments = comments.filter(
         (comment) => !existingBodies.has(comment.body),
       );
-      if (pendingComments.length === 0) return;
+      if (comments.length > 0 && pendingComments.length === 0) return;
       const client = this.createClient.getClient(token);
-      for (const commentBatch of chunkComments(pendingComments)) {
-        const outcomes = await Promise.allSettled(
-          commentBatch.map((comment) =>
-            Promise.resolve().then(() =>
-              client.rest.pulls.createReviewComment({
-                owner,
-                repo: repository,
-                pull_number: pullRequestNumber,
-                commit_id: commitSha,
-                body: comment.body,
-                path: comment.path,
-                line: comment.line,
-                side: "RIGHT",
-              }),
-            ),
-          ),
-        );
-        failedComments += outcomes.filter(
-          (outcome) => outcome.status === "rejected",
-        ).length;
-      }
-
-      if (failedComments > 0) {
-        throw new PullRequestReviewOperationError("publish-comments", {
-          failedCount: failedComments,
-          totalCount: pendingComments.length,
-        });
-      }
+      const reviewComments = pendingComments.map((comment) => ({
+        body: comment.body,
+        path: comment.path,
+        line: comment.line,
+        side: "RIGHT",
+      }));
+      await client.rest.pulls.createReview({
+        owner,
+        repo: repository,
+        pull_number: pullRequestNumber,
+        commit_id: commitSha,
+        body,
+        event: "COMMENT",
+        ...(reviewComments.length > 0 ? { comments: reviewComments } : {}),
+      });
     } catch (error) {
-      throw toPullRequestReviewOperationError(error, "publish-comments");
+      const context = comments.length > 0
+        ? { failedCount: comments.length, totalCount: comments.length }
+        : undefined;
+      throw toPullRequestReviewOperationError(error, "publish-comments", context);
     }
   }
 

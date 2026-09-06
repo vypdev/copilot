@@ -63,7 +63,7 @@ export interface GithubPullRequestReviewCommentQueryClient {
 export interface GithubPullRequestReviewCommentCreateClient {
   rest: {
     pulls: {
-      createReviewComment(
+      createReview(
         parameters: Record<string, unknown>,
       ): Promise<{ data: unknown }>;
     };

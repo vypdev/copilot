@@ -41,10 +41,24 @@ export class PullRequestChangesRepository {
         }
     };
 
-    /** First line (right side) of the first hunk per file, for valid review comment placement. */
+    /** First commentable right-side line of the first hunk in a GitHub patch. */
     private static firstLineFromPatch(patch: string): number | undefined {
-        const match = patch.match(/^@@ -\d+,\d+ \+(\d+),\d+ @@/m);
-        return match ? parseInt(match[1], 10) : undefined;
+        const lines = patch.split('\n');
+        for (let index = 0; index < lines.length; index += 1) {
+            const match = lines[index].match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@/);
+            if (!match) continue;
+            const start = parseInt(match[1], 10);
+            const rightCount = match[2] === undefined ? 1 : parseInt(match[2], 10);
+            let rightLine = start;
+            for (let bodyIndex = index + 1; bodyIndex < lines.length && !lines[bodyIndex].startsWith('@@ '); bodyIndex += 1) {
+                const line = lines[bodyIndex];
+                if (line.startsWith('+') && !line.startsWith('+++')) return rightLine;
+                if (line.startsWith(' ')) return rightLine;
+                if (!line.startsWith('-') && !line.startsWith('\\')) rightLine += 1;
+            }
+            return rightCount > 0 ? start : undefined;
+        }
+        return undefined;
     }
 
     /**
@@ -60,9 +74,9 @@ export class PullRequestChangesRepository {
         try {
             return (await this.listAllFiles(owner, repository, pullNumber, token))
                 .filter((f) => f.status !== 'removed' && (f.patch ?? '').length > 0)
-                .map((f) => {
+                .flatMap((f) => {
                     const firstLine = PullRequestChangesRepository.firstLineFromPatch(f.patch ?? '');
-                    return { path: f.filename, firstLine: firstLine ?? 1 };
+                    return firstLine === undefined ? [] : [{ path: f.filename, firstLine }];
                 });
         } catch (error) {
             logError(`Error getting files with diff lines (owner=${owner}, repo=${repository}, pullNumber=${pullNumber}): ${error}.`);
