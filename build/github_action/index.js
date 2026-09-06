@@ -53444,9 +53444,11 @@ function buildInitialLabelProvisioningPlan(labels, existingLabelNames) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.LIFECYCLE_VALIDATION_WORKFLOWS = void 0;
 exports.resolveLifecycleState = resolveLifecycleState;
 exports.readLifecycleExternalEvidence = readLifecycleExternalEvidence;
 const result_1 = __nccwpck_require__(73817);
+exports.LIFECYCLE_VALIDATION_WORKFLOWS = ['CI Check'];
 /** Resolves the next lifecycle state from application facts, never from labels or API responses. */
 function resolveLifecycleState(input) {
     if (!input.isIssue && !input.isPullRequest)
@@ -53488,7 +53490,7 @@ function resolveLifecycleState(input) {
     return undefined;
 }
 /** Extracts only stable review/check facts from GitHub event payloads. */
-function readLifecycleExternalEvidence(inputs) {
+function readLifecycleExternalEvidence(inputs, currentPullRequestHeadSha) {
     if (!inputs)
         return undefined;
     if (inputs.eventName === 'pull_request_review') {
@@ -53504,12 +53506,23 @@ function readLifecycleExternalEvidence(inputs) {
         return undefined;
     }
     if (inputs.eventName === 'check_suite') {
+        if (!isCurrentValidationEvidence(inputs.check_suite?.workflow_name, inputs.check_suite?.head_sha, currentPullRequestHeadSha))
+            return undefined;
         return { checks: readChecksEvidence(inputs.check_suite?.status, inputs.check_suite?.conclusion) };
     }
     if (inputs.eventName === 'workflow_run') {
+        if (!isCurrentValidationEvidence(inputs.workflow_run?.name, inputs.workflow_run?.head_sha, currentPullRequestHeadSha))
+            return undefined;
         return { checks: readChecksEvidence(inputs.workflow_run?.status, inputs.workflow_run?.conclusion) };
     }
     return undefined;
+}
+function isCurrentValidationEvidence(workflowName, evidenceHeadSha, currentPullRequestHeadSha) {
+    if (!workflowName || !evidenceHeadSha || !currentPullRequestHeadSha)
+        return false;
+    const normalizedName = workflowName.trim().toLowerCase();
+    return exports.LIFECYCLE_VALIDATION_WORKFLOWS.some(name => name.toLowerCase() === normalizedName)
+        && evidenceHeadSha.trim() === currentPullRequestHeadSha.trim();
 }
 function readChecksEvidence(status, conclusion) {
     if (status?.trim().toLowerCase() !== 'completed')
@@ -53950,7 +53963,8 @@ function calculateReviewersStillNeeded(desiredCount, currentCount, confirmedCoun
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.SETUP_FEATURE_DESCRIPTIONS = exports.SETUP_AGENT_TASKS = void 0;
+exports.SETUP_FEATURE_DESCRIPTIONS = exports.SETUP_AGENT_TASK_FEATURES = exports.SETUP_AGENT_TASKS = void 0;
+exports.setupAgentTasksForFeatures = setupAgentTasksForFeatures;
 exports.createDefaultSetupStorageConfiguration = createDefaultSetupStorageConfiguration;
 exports.createDefaultSetupConfiguration = createDefaultSetupConfiguration;
 exports.mergeSetupConfiguration = mergeSetupConfiguration;
@@ -53964,6 +53978,18 @@ exports.SETUP_AGENT_TASKS = [
     'tester',
     'release',
 ];
+/** Features that can invoke each agent role at runtime. */
+exports.SETUP_AGENT_TASK_FEATURES = {
+    planner: ['issues', 'pullRequests', 'issueComments', 'pullRequestComments'],
+    findings: ['commits', 'issueComments', 'pullRequestComments'],
+    reviewer: ['pullRequests', 'pullRequestComments'],
+    fixer: ['issueComments', 'pullRequestComments'],
+    tester: ['issueComments', 'pullRequestComments'],
+    release: ['release', 'hotfix'],
+};
+function setupAgentTasksForFeatures(configuration) {
+    return exports.SETUP_AGENT_TASKS.filter(task => exports.SETUP_AGENT_TASK_FEATURES[task].some(feature => configuration.features[feature] !== false));
+}
 exports.SETUP_FEATURE_DESCRIPTIONS = {
     issues: 'Issue automation: branching, labels, projects, and issue lifecycle',
     pullRequests: 'Pull request automation: review, descriptions, and lifecycle',
@@ -54154,28 +54180,55 @@ function buildSetupPlan(configuration) {
         warnings: buildSetupWarnings(configuration),
     };
 }
-/** Builds the non-sensitive credential contract implied by the selected agents. */
+/** Builds the non-sensitive credential contract implied by the enabled workflows. */
 function buildSetupCredentialRequirements(configuration) {
     const requirements = new Map();
-    const add = (name, kind, description, provider, model) => {
-        if (!requirements.has(name))
-            requirements.set(name, { name, kind, description, provider, model });
+    const add = (name, kind, description, provider, model, alternativeGroup, validation = 'metadata') => {
+        const existing = requirements.get(name);
+        if (!existing) {
+            requirements.set(name, {
+                name,
+                kind,
+                description,
+                provider,
+                model,
+                ...(alternativeGroup ? { alternativeGroups: [alternativeGroup] } : {}),
+                ...(validation === 'unverifiable' ? { validation } : {}),
+            });
+            return;
+        }
+        const alternativeGroups = new Set([
+            ...(existing.alternativeGroups ?? []),
+            ...(alternativeGroup ? [alternativeGroup] : []),
+        ]);
+        requirements.set(name, {
+            ...existing,
+            alternativeGroups: alternativeGroups.size > 0 ? [...alternativeGroups] : undefined,
+            validation: existing.validation === 'unverifiable' || validation === 'unverifiable'
+                ? 'unverifiable'
+                : existing.validation,
+        });
     };
     add('PAT', 'workflowPat', 'A separate GitHub token owned by the bot account. It is used by workflows at runtime.');
-    for (const task of setup_configuration_defaults_1.SETUP_AGENT_TASKS) {
+    for (const task of (0, setup_configuration_defaults_1.setupAgentTasksForFeatures)(configuration)) {
         const agent = configuration.agents[task];
+        const modelProvider = agent.modelProvider.trim().toLowerCase();
+        const alternativeGroup = `agent:${agent.provider}:${modelProvider || 'default'}`;
+        const providerCredential = modelProvider && !['local', 'ollama', 'lmstudio'].includes(modelProvider)
+            ? SECRET_BY_MODEL_PROVIDER[modelProvider] ?? `${modelProvider.replace(/-/g, '_').toUpperCase()}_API_KEY`
+            : undefined;
         if (agent.provider === 'cursor') {
             add('CURSOR_API_KEY', 'apiKey', 'Cursor API key used by the Cursor agent runtime.', 'cursor', agent.model);
             continue;
         }
-        if (agent.provider === 'opencode')
-            add('OPENCODE_API_KEY', 'apiKey', 'OpenCode API key used by the OpenCode agent runtime.', 'opencode', agent.model);
-        if (agent.provider === 'codex')
-            add('CODEX_ACCESS_TOKEN', 'apiKey', 'Codex access token used by the Codex agent runtime.', 'codex', agent.model);
-        const modelProvider = agent.modelProvider.trim().toLowerCase();
-        if (modelProvider && !['local', 'ollama', 'lmstudio'].includes(modelProvider)) {
-            const name = SECRET_BY_MODEL_PROVIDER[modelProvider] ?? `${modelProvider.replace(/-/g, '_').toUpperCase()}_API_KEY`;
-            add(name, 'apiKey', `${modelProvider} API key for ${agent.model}.`, modelProvider, agent.model);
+        if (agent.provider === 'opencode' && !['local', 'ollama', 'lmstudio'].includes(modelProvider)) {
+            add('OPENCODE_API_KEY', 'apiKey', 'OpenCode API key used by the OpenCode agent runtime.', 'opencode', agent.model, alternativeGroup);
+        }
+        if (agent.provider === 'codex') {
+            add('CODEX_ACCESS_TOKEN', 'apiKey', 'Codex access token used by the Codex agent runtime.', 'codex', agent.model, alternativeGroup);
+        }
+        if (providerCredential) {
+            add(providerCredential, 'apiKey', `${modelProvider} API key for ${agent.model}.`, modelProvider, agent.model, alternativeGroup, SECRET_BY_MODEL_PROVIDER[modelProvider] ? 'metadata' : 'unverifiable');
         }
     }
     return [...requirements.values()];
@@ -54310,7 +54363,7 @@ function buildSetupWarnings(configuration) {
     if (configuration.projects.ids.trim()) {
         warnings.push('Project IDs must be accessible to the PAT and use the expected project column names.');
     }
-    if (setup_configuration_defaults_1.SETUP_AGENT_TASKS.some(task => configuration.agents[task].provider === 'cursor')) {
+    if ((0, setup_configuration_defaults_1.setupAgentTasksForFeatures)(configuration).some(task => configuration.agents[task].provider === 'cursor')) {
         warnings.push('Cursor is an experimental runtime in Copilot and requires a verified installer checksum plus CURSOR_API_KEY.');
     }
     if ((0, setup_configuration_storage_policy_1.usesOrganizationStorage)(configuration)) {
@@ -56394,11 +56447,13 @@ const PULL_REQUEST_LIFECYCLE_EVENTS = [
  * labels remain untouched, and repeated events are idempotent.
  */
 class SynchronizeLifecycleStateUseCase {
-    constructor(issueLabelsPort) {
+    constructor(issueLabelsPort, pullRequestHeadShaPort) {
         this.issueLabelsPort = issueLabelsPort;
+        this.pullRequestHeadShaPort = pullRequestHeadShaPort;
         this.taskId = 'SynchronizeCopilotLifecycleStateUseCase';
     }
     async invoke(param) {
+        const externalEvidence = await this.readExternalEvidence(param.execution);
         const state = (0, lifecycle_state_policy_1.resolveLifecycleState)({
             eventName: param.execution.eventName,
             action: param.execution.inputs?.action ?? '',
@@ -56408,7 +56463,7 @@ class SynchronizeLifecycleStateUseCase {
             issueDescriptionEdited: param.execution.issue.descriptionEdited,
             pullRequestMerged: param.execution.pullRequest.isMerged,
             pullRequestClosed: param.execution.pullRequest.isClosed,
-            externalEvidence: (0, lifecycle_state_policy_1.readLifecycleExternalEvidence)(param.execution.inputs),
+            externalEvidence,
             results: param.results,
         });
         const waitingDecision = (0, lifecycle_waiting_state_policy_1.resolveLifecycleWaitingState)({
@@ -56442,6 +56497,26 @@ class SynchronizeLifecycleStateUseCase {
             const message = `Unable to synchronize Copilot lifecycle state: ${error instanceof Error ? error.message : String(error)}`;
             (0, logging_ports_1.logError)(message);
             return [new result_1.Result({ id: this.taskId, success: false, executed: true, errors: [message] })];
+        }
+    }
+    async readExternalEvidence(execution) {
+        const eventName = execution.inputs?.eventName;
+        if (!['check_suite', 'workflow_run'].includes(eventName ?? '')) {
+            return (0, lifecycle_state_policy_1.readLifecycleExternalEvidence)(execution.inputs);
+        }
+        const pullRequestHeadSha = execution.inputs?.pull_request?.head?.sha
+            ?? await this.readCurrentPullRequestHeadSha(execution);
+        return (0, lifecycle_state_policy_1.readLifecycleExternalEvidence)(execution.inputs, pullRequestHeadSha);
+    }
+    async readCurrentPullRequestHeadSha(execution) {
+        if (!this.pullRequestHeadShaPort || execution.pullRequest.number <= 0)
+            return undefined;
+        try {
+            return await this.pullRequestHeadShaPort.getPullRequestHeadSha(execution.owner, execution.repo, execution.pullRequest.number, execution.tokens.token);
+        }
+        catch {
+            (0, logging_ports_1.logDebugInfo)('Lifecycle external evidence skipped because the current pull-request head could not be read.');
+            return undefined;
         }
     }
 }
@@ -56596,7 +56671,7 @@ async function runExplicitCommentCommand(param, options, command, actorAuthoriza
     if (command.name === 'dismiss')
         return runDismissCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'description')
-        return runDescriptionCommand(param, options);
+        return runDescriptionCommand(param, options, actorAuthorizationPort);
     if (['analyze', 'review', 'findings', 'recheck'].includes(command.name))
         return runReviewCommand(param, options, command);
     if (command.name === 'fix' || command.name === 'implement')
@@ -56612,13 +56687,22 @@ function runHelpCommand(param, options) {
             steps: [(0, copilot_interaction_policy_1.buildCopilotHelpMessage)(param.tokenUser)],
         })];
 }
-async function runDescriptionCommand(param, options) {
+async function runDescriptionCommand(param, options, actorAuthorizationPort) {
     if (!options.updatePullRequestDescriptionUseCase) {
         return [new result_1.Result({
                 id: `${options.taskId}.Description`,
                 success: false,
                 executed: false,
                 errors: ['Explicit pull-request description command is not available in this composition.'],
+            })];
+    }
+    const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token);
+    if (!allowed) {
+        return [new result_1.Result({
+                id: `${options.taskId}.Description`,
+                success: true,
+                executed: false,
+                steps: ['Explicit pull-request description command skipped because the actor is not authorized to modify it.'],
             })];
     }
     return options.updatePullRequestDescriptionUseCase.invokeExplicit(param);
@@ -67652,7 +67736,7 @@ class IssueTitleRepository {
         this.updateTitlePullRequestFormat = async (owner, repository, pullRequestTitle, issueTitle, issueNumber, pullRequestNumber, branchManagementAlways, branchManagementEmoji, labels, token) => {
             return (0, issue_title_update_1.withTitleUpdateLogging)(() => {
                 const emoji = (0, issue_emoji_policy_1.resolvePullRequestTitleEmoji)(labels, branchManagementAlways, branchManagementEmoji);
-                const formattedTitle = `[#${issueNumber}] ${emoji} - ${(0, issue_title_policy_1.sanitizePullRequestTitle)(issueTitle)}`;
+                const formattedTitle = `[#${issueNumber}] ${emoji} - ${(0, issue_title_policy_1.sanitizePullRequestTitle)((0, issue_title_policy_1.normalizePullRequestSourceTitle)(issueTitle, issueNumber))}`;
                 return (0, issue_title_update_1.updateIssueTitle)(this.issueTitleClient, owner, repository, pullRequestTitle, formattedTitle, pullRequestNumber, token);
             });
         };
@@ -68053,6 +68137,7 @@ function firstMatchingEmoji(rules, labels) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.sanitizePullRequestTitle = exports.sanitizeIssueTitle = void 0;
+exports.normalizePullRequestSourceTitle = normalizePullRequestSourceTitle;
 const sanitize = (title, removeVersions, allowedCharacters) => {
     let sanitized = title;
     if (removeVersions) {
@@ -68073,6 +68158,25 @@ const sanitizeIssueTitle = (title) => sanitize(title, true, /[^a-zA-Z0-9 .]/g);
 exports.sanitizeIssueTitle = sanitizeIssueTitle;
 const sanitizePullRequestTitle = (title) => sanitize(title, false, /[^a-zA-Z0-9 ]/g);
 exports.sanitizePullRequestTitle = sanitizePullRequestTitle;
+/** Removes Copilot's generated PR prefix before formatting the title again. */
+function normalizePullRequestSourceTitle(title, issueNumber) {
+    const escapedIssueNumber = String(issueNumber).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const generatedPrefix = new RegExp(`^\\s*\\[#${escapedIssueNumber}\\]\\s*[^\\p{L}\\p{N}]*-\\s*`, 'iu');
+    let normalized = title.trim();
+    let removedGeneratedPrefix = false;
+    let previous;
+    do {
+        previous = normalized;
+        const withoutPrefix = normalized.replace(generatedPrefix, '');
+        removedGeneratedPrefix = removedGeneratedPrefix || withoutPrefix !== normalized;
+        normalized = withoutPrefix.trim();
+    } while (normalized !== previous);
+    if (removedGeneratedPrefix) {
+        const generatedIssueNumberPrefix = new RegExp(`^(?:${escapedIssueNumber}\\s+)+`, 'u');
+        normalized = normalized.replace(generatedIssueNumberPrefix, '').trim();
+    }
+    return normalized;
+}
 
 
 /***/ }),
@@ -69367,6 +69471,17 @@ class PullRequestLifecycleRepository {
                 headBranch: data.head?.ref ?? '',
                 baseBranch: data.base?.ref ?? '',
             };
+        };
+        this.getPullRequestHeadSha = async (owner, repository, pullRequestNumber, token) => {
+            const octokit = this.githubClient.getClient(token);
+            if (!octokit.rest.pulls.get)
+                return undefined;
+            const { data } = await octokit.rest.pulls.get({
+                owner,
+                repo: repository,
+                pull_number: pullRequestNumber,
+            });
+            return data.head?.sha ?? undefined;
         };
     }
     async listOpenPullRequests(octokit, owner, repository, filters = {}) {
@@ -71882,8 +71997,10 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.createSynchronizeLifecycleStateUseCase = createSynchronizeLifecycleStateUseCase;
 const synchronize_lifecycle_state_use_case_1 = __nccwpck_require__(18032);
 const issue_labels_composition_root_1 = __nccwpck_require__(34780);
+const github_pull_request_client_factory_1 = __nccwpck_require__(9068);
+const pull_request_lifecycle_repository_1 = __nccwpck_require__(24189);
 function createSynchronizeLifecycleStateUseCase() {
-    return new synchronize_lifecycle_state_use_case_1.SynchronizeLifecycleStateUseCase((0, issue_labels_composition_root_1.createIssueLabelRepository)());
+    return new synchronize_lifecycle_state_use_case_1.SynchronizeLifecycleStateUseCase((0, issue_labels_composition_root_1.createIssueLabelRepository)(), new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()));
 }
 
 

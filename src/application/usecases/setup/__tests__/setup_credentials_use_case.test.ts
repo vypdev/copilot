@@ -98,4 +98,58 @@ describe('SetupCredentialsUseCase', () => {
         expect(prompt.chooseExistingCredential).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ sourceScope: 'organization' }));
         expect(secrets.list).not.toHaveBeenCalled();
     });
+
+    it('accepts one usable credential from an alternative group', async () => {
+        const prompt = {
+            requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(),
+            requestWorkflowPat: jest.fn().mockResolvedValue({ name: 'PAT', value: 'workflow-token' }),
+            requestApiKey: jest.fn((candidate: { name: string }) => Promise.resolve(
+                candidate.name === 'OPENAI_API_KEY' ? { name: candidate.name, value: 'api-key' } : undefined,
+            )),
+            chooseExistingCredential: jest.fn(), showCredentialChecks: jest.fn(),
+        };
+        const validation = {
+            validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }),
+            validateCredential: jest.fn().mockResolvedValue({ name: 'OPENAI_API_KEY', status: 'valid', message: 'ok' }),
+        };
+        const secrets = { list: jest.fn().mockResolvedValue([]), upsertSecrets: jest.fn() };
+        const alternativeGroup = 'agent:codex:openai';
+
+        const result = await new SetupCredentialsUseCase(prompt, validation, secrets).collect({
+            owner: 'owner', repository: 'repo', setupToken: 'setup-token',
+            requirements: [
+                { ...requirement('PAT', 'workflowPat'), alternativeGroups: undefined },
+                { ...requirement('CODEX_ACCESS_TOKEN'), alternativeGroups: [alternativeGroup] },
+                { ...requirement('OPENAI_API_KEY'), alternativeGroups: [alternativeGroup] },
+            ],
+            manageSecrets: true,
+        });
+
+        expect(result.collection.apiKeys).toEqual([{ name: 'OPENAI_API_KEY', value: 'api-key' }]);
+        expect(validation.validateCredential).toHaveBeenCalledTimes(1);
+    });
+
+    it('allows a supplied custom provider credential when metadata validation is unavailable', async () => {
+        const prompt = {
+            requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(),
+            requestWorkflowPat: jest.fn().mockResolvedValue({ name: 'PAT', value: 'workflow-token' }),
+            requestApiKey: jest.fn().mockResolvedValue({ name: 'ACME_API_KEY', value: 'api-key' }),
+            chooseExistingCredential: jest.fn(), showCredentialChecks: jest.fn(),
+        };
+        const validation = {
+            validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }),
+            validateCredential: jest.fn().mockResolvedValue({ name: 'ACME_API_KEY', status: 'unverifiable', message: 'no endpoint' }),
+        };
+        const secrets = { list: jest.fn().mockResolvedValue([]), upsertSecrets: jest.fn() };
+
+        const result = await new SetupCredentialsUseCase(prompt, validation, secrets).collect({
+            owner: 'owner', repository: 'repo', setupToken: 'setup-token',
+            requirements: [requirement('PAT', 'workflowPat'), {
+                ...requirement('ACME_API_KEY'), provider: 'acme', validation: 'unverifiable',
+            }],
+            manageSecrets: true,
+        });
+
+        expect(result.collection.apiKeys).toEqual([{ name: 'ACME_API_KEY', value: 'api-key' }]);
+    });
 });

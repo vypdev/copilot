@@ -348,6 +348,7 @@ describe("runCommentAutomation", () => {
     const description = { invokeExplicit: jest.fn().mockResolvedValue([successfulResult('description')]) };
     const language = { invoke: jest.fn() };
     const intent = { invoke: jest.fn() };
+    const authorization = { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) };
     const results = await runCommentAutomation(
       { owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' } } as Execution,
       {
@@ -361,7 +362,7 @@ describe("runCommentAutomation", () => {
         gitCommitPort: {} as never,
         updatePullRequestDescriptionUseCase: description,
       },
-      {} as never,
+      authorization,
       {} as never,
       {} as never,
     );
@@ -370,6 +371,36 @@ describe("runCommentAutomation", () => {
     expect(description.invokeExplicit).toHaveBeenCalledTimes(1);
     expect(language.invoke).not.toHaveBeenCalled();
     expect(intent.invoke).not.toHaveBeenCalled();
+  });
+
+  it('skips explicit PR description commands when the actor is not authorized', async () => {
+    const description = { invokeExplicit: jest.fn() };
+    const authorization = { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(false) };
+
+    const results = await runCommentAutomation(
+      { owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' } } as Execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: {} as never,
+        intentUseCase: {} as never,
+        thinkUseCase: {} as never,
+        autofixUseCase: {} as never,
+        doUserRequestUseCase: {} as never,
+        userComment: '/copilot description',
+        gitCommitPort: {} as never,
+        updatePullRequestDescriptionUseCase: description,
+      },
+      authorization,
+      {} as never,
+      {} as never,
+    );
+
+    expect(description.invokeExplicit).not.toHaveBeenCalled();
+    expect(results[0]).toMatchObject({
+      id: 'CommentAutomation.Description',
+      success: true,
+      executed: false,
+    });
   });
 
   it('reports when an explicit PR description command is unavailable', async () => {

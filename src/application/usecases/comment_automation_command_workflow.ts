@@ -16,7 +16,7 @@ export async function runExplicitCommentCommand(
     if (command.name === 'help') return runHelpCommand(param, options);
     if (command.name === 'status') return [buildCopilotStatusResult(param, options.taskId)];
     if (command.name === 'dismiss') return runDismissCommand(param, options, command, actorAuthorizationPort);
-    if (command.name === 'description') return runDescriptionCommand(param, options);
+    if (command.name === 'description') return runDescriptionCommand(param, options, actorAuthorizationPort);
     if (['analyze', 'review', 'findings', 'recheck'].includes(command.name)) return runReviewCommand(param, options, command);
     if (command.name === 'fix' || command.name === 'implement') return undefined;
     return runThinkCommand(param, options, command);
@@ -38,6 +38,7 @@ function runHelpCommand(
 async function runDescriptionCommand(
     param: Execution,
     options: CommentAutomationOptions,
+    actorAuthorizationPort: ActorAuthorizationPort,
 ): Promise<Result[]> {
     if (!options.updatePullRequestDescriptionUseCase) {
         return [new Result({
@@ -45,6 +46,20 @@ async function runDescriptionCommand(
             success: false,
             executed: false,
             errors: ['Explicit pull-request description command is not available in this composition.'],
+        })];
+    }
+    const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(
+        param.owner,
+        param.repo,
+        param.actor,
+        param.tokens.token,
+    );
+    if (!allowed) {
+        return [new Result({
+            id: `${options.taskId}.Description`,
+            success: true,
+            executed: false,
+            steps: ['Explicit pull-request description command skipped because the actor is not authorized to modify it.'],
         })];
     }
     return options.updatePullRequestDescriptionUseCase.invokeExplicit(param);

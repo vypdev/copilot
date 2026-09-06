@@ -8,6 +8,9 @@ export interface IssueLabelsPort {
     getLabels(owner: string, repository: string, issueNumber: number, token: string): Promise<string[]>;
     setLabels(owner: string, repository: string, issueNumber: number, labels: string[], token: string): Promise<void>;
 }
+export interface PullRequestHeadShaPort {
+    getPullRequestHeadSha(owner: string, repository: string, pullRequestNumber: number, token: string): Promise<string | undefined>;
+}
 export interface IssueProgressPort {
     setProgressLabel(owner: string, repository: string, issueNumber: number, progress: number, token: string): Promise<void>;
 }

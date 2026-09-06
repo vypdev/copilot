@@ -23,6 +23,22 @@ export const SETUP_AGENT_TASKS: readonly AgentTask[] = [
     'release',
 ];
 
+/** Features that can invoke each agent role at runtime. */
+export const SETUP_AGENT_TASK_FEATURES: Readonly<Record<AgentTask, readonly string[]>> = {
+    planner: ['issues', 'pullRequests', 'issueComments', 'pullRequestComments'],
+    findings: ['commits', 'issueComments', 'pullRequestComments'],
+    reviewer: ['pullRequests', 'pullRequestComments'],
+    fixer: ['issueComments', 'pullRequestComments'],
+    tester: ['issueComments', 'pullRequestComments'],
+    release: ['release', 'hotfix'],
+};
+
+export function setupAgentTasksForFeatures(configuration: Pick<SetupConfiguration, 'features'>): AgentTask[] {
+    return SETUP_AGENT_TASKS.filter(task =>
+        SETUP_AGENT_TASK_FEATURES[task].some(feature => configuration.features[feature] !== false),
+    );
+}
+
 export const SETUP_FEATURE_DESCRIPTIONS: Readonly<Record<string, string>> = {
     issues: 'Issue automation: branching, labels, projects, and issue lifecycle',
     pullRequests: 'Pull request automation: review, descriptions, and lifecycle',

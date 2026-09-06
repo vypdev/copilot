@@ -57220,7 +57220,8 @@ function calculateReviewersStillNeeded(desiredCount, currentCount, confirmedCoun
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.SETUP_FEATURE_DESCRIPTIONS = exports.SETUP_AGENT_TASKS = void 0;
+exports.SETUP_FEATURE_DESCRIPTIONS = exports.SETUP_AGENT_TASK_FEATURES = exports.SETUP_AGENT_TASKS = void 0;
+exports.setupAgentTasksForFeatures = setupAgentTasksForFeatures;
 exports.createDefaultSetupStorageConfiguration = createDefaultSetupStorageConfiguration;
 exports.createDefaultSetupConfiguration = createDefaultSetupConfiguration;
 exports.mergeSetupConfiguration = mergeSetupConfiguration;
@@ -57234,6 +57235,18 @@ exports.SETUP_AGENT_TASKS = [
     'tester',
     'release',
 ];
+/** Features that can invoke each agent role at runtime. */
+exports.SETUP_AGENT_TASK_FEATURES = {
+    planner: ['issues', 'pullRequests', 'issueComments', 'pullRequestComments'],
+    findings: ['commits', 'issueComments', 'pullRequestComments'],
+    reviewer: ['pullRequests', 'pullRequestComments'],
+    fixer: ['issueComments', 'pullRequestComments'],
+    tester: ['issueComments', 'pullRequestComments'],
+    release: ['release', 'hotfix'],
+};
+function setupAgentTasksForFeatures(configuration) {
+    return exports.SETUP_AGENT_TASKS.filter(task => exports.SETUP_AGENT_TASK_FEATURES[task].some(feature => configuration.features[feature] !== false));
+}
 exports.SETUP_FEATURE_DESCRIPTIONS = {
     issues: 'Issue automation: branching, labels, projects, and issue lifecycle',
     pullRequests: 'Pull request automation: review, descriptions, and lifecycle',
@@ -57424,28 +57437,55 @@ function buildSetupPlan(configuration) {
         warnings: buildSetupWarnings(configuration),
     };
 }
-/** Builds the non-sensitive credential contract implied by the selected agents. */
+/** Builds the non-sensitive credential contract implied by the enabled workflows. */
 function buildSetupCredentialRequirements(configuration) {
     const requirements = new Map();
-    const add = (name, kind, description, provider, model) => {
-        if (!requirements.has(name))
-            requirements.set(name, { name, kind, description, provider, model });
+    const add = (name, kind, description, provider, model, alternativeGroup, validation = 'metadata') => {
+        const existing = requirements.get(name);
+        if (!existing) {
+            requirements.set(name, {
+                name,
+                kind,
+                description,
+                provider,
+                model,
+                ...(alternativeGroup ? { alternativeGroups: [alternativeGroup] } : {}),
+                ...(validation === 'unverifiable' ? { validation } : {}),
+            });
+            return;
+        }
+        const alternativeGroups = new Set([
+            ...(existing.alternativeGroups ?? []),
+            ...(alternativeGroup ? [alternativeGroup] : []),
+        ]);
+        requirements.set(name, {
+            ...existing,
+            alternativeGroups: alternativeGroups.size > 0 ? [...alternativeGroups] : undefined,
+            validation: existing.validation === 'unverifiable' || validation === 'unverifiable'
+                ? 'unverifiable'
+                : existing.validation,
+        });
     };
     add('PAT', 'workflowPat', 'A separate GitHub token owned by the bot account. It is used by workflows at runtime.');
-    for (const task of setup_configuration_defaults_1.SETUP_AGENT_TASKS) {
+    for (const task of (0, setup_configuration_defaults_1.setupAgentTasksForFeatures)(configuration)) {
         const agent = configuration.agents[task];
+        const modelProvider = agent.modelProvider.trim().toLowerCase();
+        const alternativeGroup = `agent:${agent.provider}:${modelProvider || 'default'}`;
+        const providerCredential = modelProvider && !['local', 'ollama', 'lmstudio'].includes(modelProvider)
+            ? SECRET_BY_MODEL_PROVIDER[modelProvider] ?? `${modelProvider.replace(/-/g, '_').toUpperCase()}_API_KEY`
+            : undefined;
         if (agent.provider === 'cursor') {
             add('CURSOR_API_KEY', 'apiKey', 'Cursor API key used by the Cursor agent runtime.', 'cursor', agent.model);
             continue;
         }
-        if (agent.provider === 'opencode')
-            add('OPENCODE_API_KEY', 'apiKey', 'OpenCode API key used by the OpenCode agent runtime.', 'opencode', agent.model);
-        if (agent.provider === 'codex')
-            add('CODEX_ACCESS_TOKEN', 'apiKey', 'Codex access token used by the Codex agent runtime.', 'codex', agent.model);
-        const modelProvider = agent.modelProvider.trim().toLowerCase();
-        if (modelProvider && !['local', 'ollama', 'lmstudio'].includes(modelProvider)) {
-            const name = SECRET_BY_MODEL_PROVIDER[modelProvider] ?? `${modelProvider.replace(/-/g, '_').toUpperCase()}_API_KEY`;
-            add(name, 'apiKey', `${modelProvider} API key for ${agent.model}.`, modelProvider, agent.model);
+        if (agent.provider === 'opencode' && !['local', 'ollama', 'lmstudio'].includes(modelProvider)) {
+            add('OPENCODE_API_KEY', 'apiKey', 'OpenCode API key used by the OpenCode agent runtime.', 'opencode', agent.model, alternativeGroup);
+        }
+        if (agent.provider === 'codex') {
+            add('CODEX_ACCESS_TOKEN', 'apiKey', 'Codex access token used by the Codex agent runtime.', 'codex', agent.model, alternativeGroup);
+        }
+        if (providerCredential) {
+            add(providerCredential, 'apiKey', `${modelProvider} API key for ${agent.model}.`, modelProvider, agent.model, alternativeGroup, SECRET_BY_MODEL_PROVIDER[modelProvider] ? 'metadata' : 'unverifiable');
         }
     }
     return [...requirements.values()];
@@ -57580,7 +57620,7 @@ function buildSetupWarnings(configuration) {
     if (configuration.projects.ids.trim()) {
         warnings.push('Project IDs must be accessible to the PAT and use the expected project column names.');
     }
-    if (setup_configuration_defaults_1.SETUP_AGENT_TASKS.some(task => configuration.agents[task].provider === 'cursor')) {
+    if ((0, setup_configuration_defaults_1.setupAgentTasksForFeatures)(configuration).some(task => configuration.agents[task].provider === 'cursor')) {
         warnings.push('Cursor is an experimental runtime in Copilot and requires a verified installer checksum plus CURSOR_API_KEY.');
     }
     if ((0, setup_configuration_storage_policy_1.usesOrganizationStorage)(configuration)) {
@@ -59759,7 +59799,7 @@ async function runExplicitCommentCommand(param, options, command, actorAuthoriza
     if (command.name === 'dismiss')
         return runDismissCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'description')
-        return runDescriptionCommand(param, options);
+        return runDescriptionCommand(param, options, actorAuthorizationPort);
     if (['analyze', 'review', 'findings', 'recheck'].includes(command.name))
         return runReviewCommand(param, options, command);
     if (command.name === 'fix' || command.name === 'implement')
@@ -59775,13 +59815,22 @@ function runHelpCommand(param, options) {
             steps: [(0, copilot_interaction_policy_1.buildCopilotHelpMessage)(param.tokenUser)],
         })];
 }
-async function runDescriptionCommand(param, options) {
+async function runDescriptionCommand(param, options, actorAuthorizationPort) {
     if (!options.updatePullRequestDescriptionUseCase) {
         return [new result_1.Result({
                 id: `${options.taskId}.Description`,
                 success: false,
                 executed: false,
                 errors: ['Explicit pull-request description command is not available in this composition.'],
+            })];
+    }
+    const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token);
+    if (!allowed) {
+        return [new result_1.Result({
+                id: `${options.taskId}.Description`,
+                success: true,
+                executed: false,
+                steps: ['Explicit pull-request description command skipped because the actor is not authorized to modify it.'],
             })];
     }
     return options.updatePullRequestDescriptionUseCase.invokeExplicit(param);
@@ -60785,7 +60834,30 @@ class SetupDoctorUseCase {
             ? await this.remoteHealth.validateExisting(request.owner, request.repository, request.setupToken, request.configuration.repository.mainBranch, requirements.filter(requirement => remoteSecrets.has(requirement.name)))
             : undefined;
         const remoteHealthByName = new Map((remoteHealth ?? []).map(check => [check.name, check]));
+        const reportedGroups = new Set();
         for (const requirement of requirements) {
+            const alternativeGroup = requirement.alternativeGroups?.[0];
+            if (alternativeGroup) {
+                if (reportedGroups.has(alternativeGroup))
+                    continue;
+                reportedGroups.add(alternativeGroup);
+                const groupRequirements = requirements.filter(candidate => candidate.alternativeGroups?.includes(alternativeGroup));
+                const available = groupRequirements.filter(candidate => remoteSecrets.has(candidate.name));
+                const healthy = available.some(candidate => remoteHealthByName.get(candidate.name)?.status === 'valid');
+                const invalid = available.length > 0 && available.every(candidate => remoteHealthByName.get(candidate.name)?.status === 'invalid');
+                checks.push({
+                    area: `Secrets ${groupRequirements.map(candidate => candidate.name).join(' or ')}`,
+                    status: available.length === 0 ? 'fail' : healthy ? 'pass' : invalid ? 'fail' : 'warn',
+                    message: available.length === 0
+                        ? 'At least one alternative credential is missing.'
+                        : healthy
+                            ? 'At least one alternative credential is valid.'
+                            : invalid
+                                ? 'All available alternative credentials are invalid.'
+                                : 'At least one alternative credential is present, but its remote health is unavailable.',
+                });
+                continue;
+            }
             if (!remoteSecrets.has(requirement.name)) {
                 checks.push({ area: `Secret ${requirement.name}`, status: 'fail', message: 'Secret is missing.' });
             }
@@ -60862,7 +60934,10 @@ class SetupCredentialsUseCase {
         const remoteCheckByName = new Map((remoteChecks ?? []).map(check => [check.name, check]));
         const checks = [setupCheck];
         const values = [];
+        const satisfiedGroups = new Set();
         for (const requirement of requirements) {
+            if (isRequirementSatisfied(requirement, satisfiedGroups))
+                continue;
             const repositoryExisting = existingSecretNames.includes(requirement.name);
             const organizationExisting = existingOrganizationSecretNames.includes(requirement.name);
             const existing = repositoryExisting || organizationExisting;
@@ -60880,11 +60955,13 @@ class SetupCredentialsUseCase {
                 const scopedCheck = { ...remoteCheck, sourceScope };
                 checks.push(scopedCheck);
                 const decision = await this.prompt.chooseExistingCredential(requirement, scopedCheck);
-                if (remoteCheck.status === 'invalid' && decision !== 'replace') {
+                if (remoteCheck.status === 'invalid' && decision !== 'replace' && !hasAlternative(requirement)) {
                     throw new application_error_1.ApplicationError(`${requirement.name} is invalid and must be replaced before setup can continue.`, 'authorization');
                 }
-                if (decision === 'keep')
+                if (decision === 'keep' && remoteCheck.status !== 'invalid') {
+                    markRequirementSatisfied(requirement, satisfiedGroups);
                     continue;
+                }
                 if (decision === 'skip')
                     continue;
             }
@@ -60894,16 +60971,29 @@ class SetupCredentialsUseCase {
             if (!value) {
                 if (!existing)
                     checks.push({ name: requirement.name, status: 'missing', message: 'No value was provided.' });
+                if (hasAlternative(requirement))
+                    continue;
                 throw new application_error_1.ApplicationError(`${requirement.name} is required by the selected workflows.`, 'configuration');
             }
             const check = requirement.kind === 'workflowPat'
                 ? await this.validation.validateSetupPat(request.owner, request.repository, value.value)
                 : await this.validation.validateCredential(requirement, value.value);
             checks.push({ ...check, name: requirement.name });
-            if (check.status !== 'valid') {
+            if (!isAcceptedCredentialCheck(requirement, check)) {
+                if (hasAlternative(requirement))
+                    continue;
                 throw new application_error_1.ApplicationError(`${requirement.name} validation failed: ${check.message}`, 'authorization');
             }
             values.push(value);
+            markRequirementSatisfied(requirement, satisfiedGroups);
+        }
+        const unsatisfiedGroup = requirements.find(requirement => hasAlternative(requirement) && !isRequirementSatisfied(requirement, satisfiedGroups));
+        if (unsatisfiedGroup) {
+            const groupNames = requirements
+                .filter(requirement => intersectsGroups(requirement, unsatisfiedGroup))
+                .map(requirement => requirement.name)
+                .join(' or ');
+            throw new application_error_1.ApplicationError(`At least one of ${groupNames} is required by the selected workflows.`, 'configuration');
         }
         this.prompt.showCredentialChecks(checks);
         return {
@@ -60917,6 +61007,30 @@ class SetupCredentialsUseCase {
     }
 }
 exports.SetupCredentialsUseCase = SetupCredentialsUseCase;
+function hasAlternative(requirement) {
+    return (requirement.alternativeGroups?.length ?? 0) > 0;
+}
+function isRequirementSatisfied(requirement, satisfiedGroups) {
+    return hasAlternative(requirement)
+        ? requirement.alternativeGroups.some(group => satisfiedGroups.has(group))
+        : satisfiedGroups.has(requirement.name);
+}
+function markRequirementSatisfied(requirement, satisfiedGroups) {
+    if (hasAlternative(requirement)) {
+        for (const group of requirement.alternativeGroups)
+            satisfiedGroups.add(group);
+        return;
+    }
+    satisfiedGroups.add(requirement.name);
+}
+function intersectsGroups(left, right) {
+    const rightGroups = new Set(right.alternativeGroups ?? []);
+    return (left.alternativeGroups ?? []).some(group => rightGroups.has(group));
+}
+function isAcceptedCredentialCheck(requirement, check) {
+    return check.status === 'valid'
+        || (check.status === 'unverifiable' && requirement.validation === 'unverifiable');
+}
 
 
 /***/ }),
@@ -72668,7 +72782,7 @@ class IssueTitleRepository {
         this.updateTitlePullRequestFormat = async (owner, repository, pullRequestTitle, issueTitle, issueNumber, pullRequestNumber, branchManagementAlways, branchManagementEmoji, labels, token) => {
             return (0, issue_title_update_1.withTitleUpdateLogging)(() => {
                 const emoji = (0, issue_emoji_policy_1.resolvePullRequestTitleEmoji)(labels, branchManagementAlways, branchManagementEmoji);
-                const formattedTitle = `[#${issueNumber}] ${emoji} - ${(0, issue_title_policy_1.sanitizePullRequestTitle)(issueTitle)}`;
+                const formattedTitle = `[#${issueNumber}] ${emoji} - ${(0, issue_title_policy_1.sanitizePullRequestTitle)((0, issue_title_policy_1.normalizePullRequestSourceTitle)(issueTitle, issueNumber))}`;
                 return (0, issue_title_update_1.updateIssueTitle)(this.issueTitleClient, owner, repository, pullRequestTitle, formattedTitle, pullRequestNumber, token);
             });
         };
@@ -73069,6 +73183,7 @@ function firstMatchingEmoji(rules, labels) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.sanitizePullRequestTitle = exports.sanitizeIssueTitle = void 0;
+exports.normalizePullRequestSourceTitle = normalizePullRequestSourceTitle;
 const sanitize = (title, removeVersions, allowedCharacters) => {
     let sanitized = title;
     if (removeVersions) {
@@ -73089,6 +73204,25 @@ const sanitizeIssueTitle = (title) => sanitize(title, true, /[^a-zA-Z0-9 .]/g);
 exports.sanitizeIssueTitle = sanitizeIssueTitle;
 const sanitizePullRequestTitle = (title) => sanitize(title, false, /[^a-zA-Z0-9 ]/g);
 exports.sanitizePullRequestTitle = sanitizePullRequestTitle;
+/** Removes Copilot's generated PR prefix before formatting the title again. */
+function normalizePullRequestSourceTitle(title, issueNumber) {
+    const escapedIssueNumber = String(issueNumber).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const generatedPrefix = new RegExp(`^\\s*\\[#${escapedIssueNumber}\\]\\s*[^\\p{L}\\p{N}]*-\\s*`, 'iu');
+    let normalized = title.trim();
+    let removedGeneratedPrefix = false;
+    let previous;
+    do {
+        previous = normalized;
+        const withoutPrefix = normalized.replace(generatedPrefix, '');
+        removedGeneratedPrefix = removedGeneratedPrefix || withoutPrefix !== normalized;
+        normalized = withoutPrefix.trim();
+    } while (normalized !== previous);
+    if (removedGeneratedPrefix) {
+        const generatedIssueNumberPrefix = new RegExp(`^(?:${escapedIssueNumber}\\s+)+`, 'u');
+        normalized = normalized.replace(generatedIssueNumberPrefix, '').trim();
+    }
+    return normalized;
+}
 
 
 /***/ }),
@@ -74383,6 +74517,17 @@ class PullRequestLifecycleRepository {
                 headBranch: data.head?.ref ?? '',
                 baseBranch: data.base?.ref ?? '',
             };
+        };
+        this.getPullRequestHeadSha = async (owner, repository, pullRequestNumber, token) => {
+            const octokit = this.githubClient.getClient(token);
+            if (!octokit.rest.pulls.get)
+                return undefined;
+            const { data } = await octokit.rest.pulls.get({
+                owner,
+                repo: repository,
+                pull_number: pullRequestNumber,
+            });
+            return data.head?.sha ?? undefined;
         };
     }
     async listOpenPullRequests(octokit, owner, repository, filters = {}) {

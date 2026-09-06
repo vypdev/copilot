@@ -40,6 +40,7 @@ export interface GithubPullRequestLifecycleClient {
                     body?: string | null;
                     head?: {
                         ref?: string | null;
+                        sha?: string | null;
                     };
                     base?: {
                         ref?: string | null;

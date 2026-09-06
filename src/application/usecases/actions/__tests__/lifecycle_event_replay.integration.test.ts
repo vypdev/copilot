@@ -40,6 +40,8 @@ const REPLAY_CASES: readonly ReplayCase[] = [
         action: 'requested',
         payload: {
             check_suite: {
+                workflow_name: 'CI Check',
+                head_sha: 'sha-1',
                 status: 'queued',
                 conclusion: null,
                 pull_requests: [{ number: 42 }],
@@ -54,6 +56,8 @@ const REPLAY_CASES: readonly ReplayCase[] = [
         action: 'completed',
         payload: {
             workflow_run: {
+                name: 'CI Check',
+                head_sha: 'sha-1',
                 status: 'completed',
                 conclusion: 'failure',
                 pull_requests: [{ number: 42 }],
@@ -68,6 +72,8 @@ const REPLAY_CASES: readonly ReplayCase[] = [
         action: 'completed',
         payload: {
             workflow_run: {
+                name: 'CI Check',
+                head_sha: 'sha-1',
                 status: 'completed',
                 conclusion: 'success',
                 pull_requests: [{ number: 42 }],
@@ -87,7 +93,7 @@ describe('lifecycle event replay integration', () => {
         const useCase = new SynchronizeLifecycleStateUseCase({
             getLabels: async () => [...execution.labels.currentPullRequestLabels],
             setLabels,
-        });
+        }, { getPullRequestHeadSha: jest.fn().mockResolvedValue('sha-1') });
 
         const results = await useCase.invoke({ execution, results: [] });
 
@@ -108,6 +114,8 @@ describe('lifecycle event replay integration', () => {
             payload: {
                 action: 'completed',
                 check_suite: {
+                    workflow_name: 'CI Check',
+                    head_sha: 'sha-1',
                     status: 'completed',
                     conclusion: 'failure',
                     pull_requests: [{ number: 41 }, { number: 42 }],

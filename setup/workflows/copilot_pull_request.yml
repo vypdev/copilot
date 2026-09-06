@@ -5,9 +5,8 @@ on:
     types: [opened, reopened, edited, labeled, unlabeled, closed, assigned, unassigned, synchronize]
   pull_request_review:
     types: [submitted, edited, dismissed]
-  check_suite:
-    types: [completed, rerequested]
   workflow_run:
+    workflows: [CI Check]
     types: [completed]
 
 jobs:

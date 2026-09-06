@@ -5,7 +5,10 @@ import type {
     SetupPlan,
     SetupVariable,
 } from '../../domain/setup';
-import { SETUP_AGENT_TASKS } from './setup_configuration_defaults';
+import {
+    SETUP_AGENT_TASKS,
+    setupAgentTasksForFeatures,
+} from './setup_configuration_defaults';
 import { usesOrganizationStorage } from './setup_configuration_storage_policy';
 
 const WORKFLOW_FILES: Readonly<Record<string, string[]>> = {
@@ -65,25 +68,73 @@ export function buildSetupPlan(configuration: SetupConfiguration): SetupPlan {
     };
 }
 
-/** Builds the non-sensitive credential contract implied by the selected agents. */
+/** Builds the non-sensitive credential contract implied by the enabled workflows. */
 export function buildSetupCredentialRequirements(configuration: SetupConfiguration): SetupCredentialRequirement[] {
     const requirements = new Map<string, SetupCredentialRequirement>();
-    const add = (name: string, kind: SetupCredentialRequirement['kind'], description: string, provider?: string, model?: string) => {
-        if (!requirements.has(name)) requirements.set(name, { name, kind, description, provider, model });
+    const add = (
+        name: string,
+        kind: SetupCredentialRequirement['kind'],
+        description: string,
+        provider?: string,
+        model?: string,
+        alternativeGroup?: string,
+        validation: SetupCredentialRequirement['validation'] = 'metadata',
+    ) => {
+        const existing = requirements.get(name);
+        if (!existing) {
+            requirements.set(name, {
+                name,
+                kind,
+                description,
+                provider,
+                model,
+                ...(alternativeGroup ? { alternativeGroups: [alternativeGroup] } : {}),
+                ...(validation === 'unverifiable' ? { validation } : {}),
+            });
+            return;
+        }
+        const alternativeGroups = new Set([
+            ...(existing.alternativeGroups ?? []),
+            ...(alternativeGroup ? [alternativeGroup] : []),
+        ]);
+        requirements.set(name, {
+            ...existing,
+            alternativeGroups: alternativeGroups.size > 0 ? [...alternativeGroups] : undefined,
+            validation: existing.validation === 'unverifiable' || validation === 'unverifiable'
+                ? 'unverifiable'
+                : existing.validation,
+        });
     };
     add('PAT', 'workflowPat', 'A separate GitHub token owned by the bot account. It is used by workflows at runtime.');
-    for (const task of SETUP_AGENT_TASKS) {
+    for (const task of setupAgentTasksForFeatures(configuration)) {
         const agent = configuration.agents[task];
+        const modelProvider = agent.modelProvider.trim().toLowerCase();
+        const alternativeGroup = `agent:${agent.provider}:${modelProvider || 'default'}`;
+        const providerCredential = modelProvider && !['local', 'ollama', 'lmstudio'].includes(modelProvider)
+            ? SECRET_BY_MODEL_PROVIDER[modelProvider] ?? `${modelProvider.replace(/-/g, '_').toUpperCase()}_API_KEY`
+            : undefined;
+
         if (agent.provider === 'cursor') {
             add('CURSOR_API_KEY', 'apiKey', 'Cursor API key used by the Cursor agent runtime.', 'cursor', agent.model);
             continue;
         }
-        if (agent.provider === 'opencode') add('OPENCODE_API_KEY', 'apiKey', 'OpenCode API key used by the OpenCode agent runtime.', 'opencode', agent.model);
-        if (agent.provider === 'codex') add('CODEX_ACCESS_TOKEN', 'apiKey', 'Codex access token used by the Codex agent runtime.', 'codex', agent.model);
-        const modelProvider = agent.modelProvider.trim().toLowerCase();
-        if (modelProvider && !['local', 'ollama', 'lmstudio'].includes(modelProvider)) {
-            const name = SECRET_BY_MODEL_PROVIDER[modelProvider] ?? `${modelProvider.replace(/-/g, '_').toUpperCase()}_API_KEY`;
-            add(name, 'apiKey', `${modelProvider} API key for ${agent.model}.`, modelProvider, agent.model);
+
+        if (agent.provider === 'opencode' && !['local', 'ollama', 'lmstudio'].includes(modelProvider)) {
+            add('OPENCODE_API_KEY', 'apiKey', 'OpenCode API key used by the OpenCode agent runtime.', 'opencode', agent.model, alternativeGroup);
+        }
+        if (agent.provider === 'codex') {
+            add('CODEX_ACCESS_TOKEN', 'apiKey', 'Codex access token used by the Codex agent runtime.', 'codex', agent.model, alternativeGroup);
+        }
+        if (providerCredential) {
+            add(
+                providerCredential,
+                'apiKey',
+                `${modelProvider} API key for ${agent.model}.`,
+                modelProvider,
+                agent.model,
+                alternativeGroup,
+                SECRET_BY_MODEL_PROVIDER[modelProvider] ? 'metadata' : 'unverifiable',
+            );
         }
     }
     return [...requirements.values()];
@@ -220,7 +271,7 @@ function buildSetupWarnings(configuration: SetupConfiguration): string[] {
     if (configuration.projects.ids.trim()) {
         warnings.push('Project IDs must be accessible to the PAT and use the expected project column names.');
     }
-    if (SETUP_AGENT_TASKS.some(task => configuration.agents[task].provider === 'cursor')) {
+    if (setupAgentTasksForFeatures(configuration).some(task => configuration.agents[task].provider === 'cursor')) {
         warnings.push('Cursor is an experimental runtime in Copilot and requires a verified installer checksum plus CURSOR_API_KEY.');
     }
     if (usesOrganizationStorage(configuration)) {

@@ -154,13 +154,22 @@ describe('SynchronizeLifecycleStateUseCase', () => {
 
     it('synchronizes check-suite evidence for a PR without invoking the agent route', async () => {
         const setLabels = jest.fn().mockResolvedValue(undefined);
-        const useCase = new SynchronizeLifecycleStateUseCase({ setLabels, getLabels: jest.fn() });
+        const useCase = new SynchronizeLifecycleStateUseCase(
+            { setLabels, getLabels: jest.fn() },
+            { getPullRequestHeadSha: jest.fn().mockResolvedValue('sha-1') },
+        );
         const param = execution({
             eventName: 'check_suite',
             inputs: {
                 eventName: 'check_suite',
                 action: 'completed',
-                check_suite: { status: 'completed', conclusion: 'failure', pull_requests: [{ number: 11 }] },
+                check_suite: {
+                    workflow_name: 'CI Check',
+                    head_sha: 'sha-1',
+                    status: 'completed',
+                    conclusion: 'failure',
+                    pull_requests: [{ number: 11 }],
+                },
             },
             issue: { number: -1, opened: false, descriptionEdited: false },
             pullRequest: { number: 11, isMerged: false, isClosed: false },

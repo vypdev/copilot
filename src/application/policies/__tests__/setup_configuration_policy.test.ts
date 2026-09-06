@@ -111,6 +111,43 @@ describe('setup configuration policy', () => {
         expect(buildSetupCredentialRequirements(cursor).map(requirement => requirement.name)).toEqual(['PAT', 'CURSOR_API_KEY']);
     });
 
+    it('does not request credentials for agent roles whose workflows are disabled', () => {
+        const configuration = mergeSetupConfiguration(createDefaultSetupConfiguration(), {
+            features: {
+                issues: false,
+                pullRequests: false,
+                commits: false,
+                issueComments: false,
+                pullRequestComments: false,
+                release: false,
+                hotfix: false,
+            },
+        });
+
+        expect(buildSetupCredentialRequirements(configuration).map(requirement => requirement.name)).toEqual(['PAT']);
+    });
+
+    it('models runtime and model-provider credentials as alternatives', () => {
+        const requirements = buildSetupCredentialRequirements(createDefaultSetupConfiguration());
+        const runtime = requirements.find(requirement => requirement.name === 'CODEX_ACCESS_TOKEN');
+        const modelProvider = requirements.find(requirement => requirement.name === 'OPENAI_API_KEY');
+
+        expect(runtime?.alternativeGroups).toEqual(expect.arrayContaining(['agent:codex:openai']));
+        expect(modelProvider?.alternativeGroups).toEqual(expect.arrayContaining(['agent:codex:openai']));
+    });
+
+    it('marks custom provider credentials as intentionally unverifiable', () => {
+        const configuration = mergeSetupConfiguration(createDefaultSetupConfiguration(), {
+            agents: {
+                findings: { provider: 'opencode', modelProvider: 'my-company', model: 'internal-model' },
+            },
+        });
+
+        expect(buildSetupCredentialRequirements(configuration).find(requirement => requirement.name === 'MY_COMPANY_API_KEY')).toMatchObject({
+            validation: 'unverifiable',
+        });
+    });
+
     it('rejects invalid operational and agent values', () => {
         const configuration = createDefaultSetupConfiguration();
         configuration.repository.desiredReviewersCount = 16;

@@ -93,6 +93,14 @@ describe("PullRequestLifecycleRepository", () => {
         expect(mockGet).toHaveBeenCalledWith({ owner: 'owner', repo: 'repo', pull_number: 12 });
     });
 
+    it('reads the current pull-request head SHA for lifecycle reconciliation', async () => {
+        mockGet.mockResolvedValue({ data: { head: { sha: 'sha-current' } } });
+        const repository = new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter());
+
+        await expect(repository.getPullRequestHeadSha('owner', 'repo', 12, 'token')).resolves.toBe('sha-current');
+        expect(mockGet).toHaveBeenCalledWith({ owner: 'owner', repo: 'repo', pull_number: 12 });
+    });
+
     it("returns false for non-success responses and network failures when checking linkage", async () => {
         const fetchMock = jest.spyOn(global, "fetch")
             .mockResolvedValueOnce(new Response("not linked", { status: 404 }))

@@ -92,6 +92,10 @@ export interface SetupCredentialRequirement {
     description: string;
     provider?: string;
     model?: string;
+    /** Credential groups are satisfied when any member is available. */
+    alternativeGroups?: readonly string[];
+    /** Custom providers cannot always be checked through a public endpoint. */
+    validation?: 'metadata' | 'unverifiable';
 }
 export interface SetupCredentialCheck {
     name: string;

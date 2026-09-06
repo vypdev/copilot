@@ -123,7 +123,29 @@ export class SetupDoctorUseCase {
             ? await this.remoteHealth.validateExisting(request.owner, request.repository, request.setupToken, request.configuration.repository.mainBranch, requirements.filter(requirement => remoteSecrets.has(requirement.name)))
             : undefined;
         const remoteHealthByName = new Map((remoteHealth ?? []).map(check => [check.name, check]));
+        const reportedGroups = new Set<string>();
         for (const requirement of requirements) {
+            const alternativeGroup = requirement.alternativeGroups?.[0];
+            if (alternativeGroup) {
+                if (reportedGroups.has(alternativeGroup)) continue;
+                reportedGroups.add(alternativeGroup);
+                const groupRequirements = requirements.filter(candidate => candidate.alternativeGroups?.includes(alternativeGroup));
+                const available = groupRequirements.filter(candidate => remoteSecrets.has(candidate.name));
+                const healthy = available.some(candidate => remoteHealthByName.get(candidate.name)?.status === 'valid');
+                const invalid = available.length > 0 && available.every(candidate => remoteHealthByName.get(candidate.name)?.status === 'invalid');
+                checks.push({
+                    area: `Secrets ${groupRequirements.map(candidate => candidate.name).join(' or ')}`,
+                    status: available.length === 0 ? 'fail' : healthy ? 'pass' : invalid ? 'fail' : 'warn',
+                    message: available.length === 0
+                        ? 'At least one alternative credential is missing.'
+                        : healthy
+                            ? 'At least one alternative credential is valid.'
+                            : invalid
+                                ? 'All available alternative credentials are invalid.'
+                                : 'At least one alternative credential is present, but its remote health is unavailable.',
+                });
+                continue;
+            }
             if (!remoteSecrets.has(requirement.name)) {
                 checks.push({ area: `Secret ${requirement.name}`, status: 'fail', message: 'Secret is missing.' });
             } else {

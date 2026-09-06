@@ -70,8 +70,10 @@ export class SetupCredentialsUseCase {
         const remoteCheckByName = new Map((remoteChecks ?? []).map(check => [check.name, check]));
         const checks: SetupCredentialCheck[] = [setupCheck];
         const values: SetupCredentialValue[] = [];
+        const satisfiedGroups = new Set<string>();
 
         for (const requirement of requirements) {
+            if (isRequirementSatisfied(requirement, satisfiedGroups)) continue;
             const repositoryExisting = existingSecretNames.includes(requirement.name);
             const organizationExisting = existingOrganizationSecretNames.includes(requirement.name);
             const existing = repositoryExisting || organizationExisting;
@@ -89,10 +91,13 @@ export class SetupCredentialsUseCase {
                 const scopedCheck = { ...remoteCheck, sourceScope };
                 checks.push(scopedCheck);
                 const decision = await this.prompt.chooseExistingCredential(requirement, scopedCheck);
-                if (remoteCheck.status === 'invalid' && decision !== 'replace') {
+                if (remoteCheck.status === 'invalid' && decision !== 'replace' && !hasAlternative(requirement)) {
                     throw new ApplicationError(`${requirement.name} is invalid and must be replaced before setup can continue.`, 'authorization');
                 }
-                if (decision === 'keep') continue;
+                if (decision === 'keep' && remoteCheck.status !== 'invalid') {
+                    markRequirementSatisfied(requirement, satisfiedGroups);
+                    continue;
+                }
                 if (decision === 'skip') continue;
             }
 
@@ -101,16 +106,30 @@ export class SetupCredentialsUseCase {
                 : await this.prompt.requestApiKey(requirement, existing ? checks[checks.length - 1] : undefined);
             if (!value) {
                 if (!existing) checks.push({ name: requirement.name, status: 'missing', message: 'No value was provided.' });
+                if (hasAlternative(requirement)) continue;
                 throw new ApplicationError(`${requirement.name} is required by the selected workflows.`, 'configuration');
             }
             const check = requirement.kind === 'workflowPat'
                 ? await this.validation.validateSetupPat(request.owner, request.repository, value.value)
                 : await this.validation.validateCredential(requirement, value.value);
             checks.push({ ...check, name: requirement.name });
-            if (check.status !== 'valid') {
+            if (!isAcceptedCredentialCheck(requirement, check)) {
+                if (hasAlternative(requirement)) continue;
                 throw new ApplicationError(`${requirement.name} validation failed: ${check.message}`, 'authorization');
             }
             values.push(value);
+            markRequirementSatisfied(requirement, satisfiedGroups);
+        }
+
+        const unsatisfiedGroup = requirements.find(requirement =>
+            hasAlternative(requirement) && !isRequirementSatisfied(requirement, satisfiedGroups),
+        );
+        if (unsatisfiedGroup) {
+            const groupNames = requirements
+                .filter(requirement => intersectsGroups(requirement, unsatisfiedGroup))
+                .map(requirement => requirement.name)
+                .join(' or ');
+            throw new ApplicationError(`At least one of ${groupNames} is required by the selected workflows.`, 'configuration');
         }
         this.prompt.showCredentialChecks(checks);
         return {
@@ -122,4 +141,35 @@ export class SetupCredentialsUseCase {
             existingSecretNames,
         };
     }
+}
+
+function hasAlternative(requirement: SetupCredentialRequirement): boolean {
+    return (requirement.alternativeGroups?.length ?? 0) > 0;
+}
+
+function isRequirementSatisfied(requirement: SetupCredentialRequirement, satisfiedGroups: ReadonlySet<string>): boolean {
+    return hasAlternative(requirement)
+        ? requirement.alternativeGroups!.some(group => satisfiedGroups.has(group))
+        : satisfiedGroups.has(requirement.name);
+}
+
+function markRequirementSatisfied(requirement: SetupCredentialRequirement, satisfiedGroups: Set<string>): void {
+    if (hasAlternative(requirement)) {
+        for (const group of requirement.alternativeGroups!) satisfiedGroups.add(group);
+        return;
+    }
+    satisfiedGroups.add(requirement.name);
+}
+
+function intersectsGroups(left: SetupCredentialRequirement, right: SetupCredentialRequirement): boolean {
+    const rightGroups = new Set(right.alternativeGroups ?? []);
+    return (left.alternativeGroups ?? []).some(group => rightGroups.has(group));
+}
+
+function isAcceptedCredentialCheck(
+    requirement: SetupCredentialRequirement,
+    check: SetupCredentialCheck,
+): boolean {
+    return check.status === 'valid'
+        || (check.status === 'unverifiable' && requirement.validation === 'unverifiable');
 }

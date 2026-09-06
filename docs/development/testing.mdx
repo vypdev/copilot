@@ -34,10 +34,10 @@ of project composition, agent provisioning, setup, publication, and persistence 
 discarded runs.
 
 The lifecycle replay integration suite feeds normalized, serialized-shaped
-`pull_request_review`, `check_suite`, and `workflow_run` payloads through the
-real lifecycle synchronization use case. It verifies deterministic labels for
-approved reviews, requested changes, pending checks, failed checks, successful
-checks, and ambiguous multi-PR events without invoking an agent route.
+`pull_request_review` and `workflow_run` payloads through the real lifecycle
+synchronization use case. It verifies deterministic labels for approved
+reviews, requested changes, current validation failures/successes, stale
+evidence, and ambiguous multi-PR events without invoking an agent route.
 
 Configuration migration tests cover legacy payloads, transient `results`,
 malformed durable values, and future-schema preservation. Architecture tests

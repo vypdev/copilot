@@ -1,7 +1,8 @@
 import type { PullRequestDescriptionDetails } from '../../../application/ports/pull_request_description_ports';
+import type { PullRequestHeadShaPort } from '../../../application/ports/issue_management_ports';
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type { GithubPullRequestLifecycleClient } from "../../../infrastructure/github/ports/github_pull_request_provider_ports";
-export declare class PullRequestLifecycleRepository {
+export declare class PullRequestLifecycleRepository implements PullRequestHeadShaPort {
     private readonly githubClient;
     constructor(githubClient: GithubClientPort<GithubPullRequestLifecycleClient>);
     /**
@@ -23,4 +24,5 @@ export declare class PullRequestLifecycleRepository {
     updateBaseBranch: (owner: string, repository: string, pullRequestNumber: number, branch: string, token: string) => Promise<void>;
     updateDescription: (owner: string, repository: string, pullRequestNumber: number, description: string, token: string) => Promise<void>;
     getDetails: (owner: string, repository: string, pullRequestNumber: number, token: string) => Promise<PullRequestDescriptionDetails>;
+    getPullRequestHeadSha: (owner: string, repository: string, pullRequestNumber: number, token: string) => Promise<string | undefined>;
 }

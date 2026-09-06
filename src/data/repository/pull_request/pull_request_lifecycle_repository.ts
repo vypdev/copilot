@@ -1,12 +1,13 @@
 import { logDebugInfo, logError } from "../../../utils/logger";
 import type { PullRequestDescriptionDetails } from '../../../application/ports/pull_request_description_ports';
+import type { PullRequestHeadShaPort } from '../../../application/ports/issue_management_ports';
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type {
     GithubPullRequestLifecycleClient,
     GithubPullRequestSummary,
 } from "../../../infrastructure/github/ports/github_pull_request_provider_ports";
 
-export class PullRequestLifecycleRepository {
+export class PullRequestLifecycleRepository implements PullRequestHeadShaPort {
     constructor(private readonly githubClient: GithubClientPort<GithubPullRequestLifecycleClient>) {}
     /**
      * Returns the list of open pull request numbers whose head branch equals the given branch.
@@ -166,6 +167,22 @@ export class PullRequestLifecycleRepository {
             headBranch: data.head?.ref ?? '',
             baseBranch: data.base?.ref ?? '',
         };
+    };
+
+    getPullRequestHeadSha = async (
+        owner: string,
+        repository: string,
+        pullRequestNumber: number,
+        token: string,
+    ): Promise<string | undefined> => {
+        const octokit = this.githubClient.getClient(token);
+        if (!octokit.rest.pulls.get) return undefined;
+        const { data } = await octokit.rest.pulls.get({
+            owner,
+            repo: repository,
+            pull_number: pullRequestNumber,
+        });
+        return data.head?.sha ?? undefined;
     };
 
 }

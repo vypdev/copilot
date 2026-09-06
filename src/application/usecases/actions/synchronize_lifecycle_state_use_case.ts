@@ -4,7 +4,7 @@ import type { CopilotLifecycleLabels } from '../../../domain/copilot_lifecycle';
 import { lifecycleLabelNames, lifecycleStateLabel, waitingLabelNames, waitingStateLabel } from '../../../domain/copilot_lifecycle';
 import { readLifecycleExternalEvidence, resolveLifecycleState } from '../../policies/lifecycle_state_policy';
 import { resolveLifecycleWaitingState, type LifecycleWaitingStateDecision } from '../../policies/lifecycle_waiting_state_policy';
-import type { IssueLabelsPort } from '../../ports/issue_management_ports';
+import type { IssueLabelsPort, PullRequestHeadShaPort } from '../../ports/issue_management_ports';
 import { logDebugInfo, logError } from '../../ports/logging_ports';
 
 export interface SynchronizeLifecycleStateParam {
@@ -54,9 +54,13 @@ const PULL_REQUEST_LIFECYCLE_EVENTS = [
 export class SynchronizeLifecycleStateUseCase {
     readonly taskId = 'SynchronizeCopilotLifecycleStateUseCase';
 
-    constructor(private readonly issueLabelsPort: IssueLabelsPort) {}
+    constructor(
+        private readonly issueLabelsPort: IssueLabelsPort,
+        private readonly pullRequestHeadShaPort?: PullRequestHeadShaPort,
+    ) {}
 
     async invoke(param: SynchronizeLifecycleStateParam): Promise<Result[]> {
+        const externalEvidence = await this.readExternalEvidence(param.execution);
         const state = resolveLifecycleState({
             eventName: param.execution.eventName,
             action: param.execution.inputs?.action ?? '',
@@ -66,7 +70,7 @@ export class SynchronizeLifecycleStateUseCase {
             issueDescriptionEdited: param.execution.issue.descriptionEdited,
             pullRequestMerged: param.execution.pullRequest.isMerged,
             pullRequestClosed: param.execution.pullRequest.isClosed,
-            externalEvidence: readLifecycleExternalEvidence(param.execution.inputs),
+            externalEvidence,
             results: param.results,
         });
         const waitingDecision = resolveLifecycleWaitingState({
@@ -116,6 +120,31 @@ export class SynchronizeLifecycleStateUseCase {
             const message = `Unable to synchronize Copilot lifecycle state: ${error instanceof Error ? error.message : String(error)}`;
             logError(message);
             return [new Result({ id: this.taskId, success: false, executed: true, errors: [message] })];
+        }
+    }
+
+    private async readExternalEvidence(execution: LifecycleSynchronizationExecution) {
+        const eventName = execution.inputs?.eventName;
+        if (!['check_suite', 'workflow_run'].includes(eventName ?? '')) {
+            return readLifecycleExternalEvidence(execution.inputs);
+        }
+        const pullRequestHeadSha = execution.inputs?.pull_request?.head?.sha
+            ?? await this.readCurrentPullRequestHeadSha(execution);
+        return readLifecycleExternalEvidence(execution.inputs, pullRequestHeadSha);
+    }
+
+    private async readCurrentPullRequestHeadSha(execution: LifecycleSynchronizationExecution): Promise<string | undefined> {
+        if (!this.pullRequestHeadShaPort || execution.pullRequest.number <= 0) return undefined;
+        try {
+            return await this.pullRequestHeadShaPort.getPullRequestHeadSha(
+                execution.owner,
+                execution.repo,
+                execution.pullRequest.number,
+                execution.tokens.token,
+            );
+        } catch {
+            logDebugInfo('Lifecycle external evidence skipped because the current pull-request head could not be read.');
+            return undefined;
         }
     }
 }

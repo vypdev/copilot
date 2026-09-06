@@ -69,6 +69,16 @@ describe('IssueTitleRepository', () => {
         });
     });
 
+    it('keeps repeated title updates idempotent after a generated prefix', async () => {
+        const labels = createLabels();
+        labels.currentIssueLabels = [labels.bug];
+
+        await expect(repository.updateTitlePullRequestFormat(
+            'owner', 'repo', '[#347] 🤖 - 347  347 Develop', '[#347] 🤖 - 347  347 Develop',
+            347, 99, false, '', labels, 'token',
+        )).resolves.toBe('[#347] 🐛 - Develop');
+    });
+
     it('cleans a pull request title without updating when no characters change', async () => {
         await expect(repository.cleanTitle(
             'owner', 'repo', 'Already clean', 99, 'token',

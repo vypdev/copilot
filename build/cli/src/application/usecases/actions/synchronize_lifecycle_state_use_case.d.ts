@@ -1,7 +1,7 @@
 import { Result } from '../../../data/model/result';
 import type { ExecutionInputs } from '../../../data/model/execution_inputs';
 import type { CopilotLifecycleLabels } from '../../../domain/copilot_lifecycle';
-import type { IssueLabelsPort } from '../../ports/issue_management_ports';
+import type { IssueLabelsPort, PullRequestHeadShaPort } from '../../ports/issue_management_ports';
 export interface SynchronizeLifecycleStateParam {
     execution: LifecycleSynchronizationExecution;
     results: readonly Result[];
@@ -40,7 +40,10 @@ export interface LifecycleSynchronizationExecution {
  */
 export declare class SynchronizeLifecycleStateUseCase {
     private readonly issueLabelsPort;
+    private readonly pullRequestHeadShaPort?;
     readonly taskId = "SynchronizeCopilotLifecycleStateUseCase";
-    constructor(issueLabelsPort: IssueLabelsPort);
+    constructor(issueLabelsPort: IssueLabelsPort, pullRequestHeadShaPort?: PullRequestHeadShaPort | undefined);
     invoke(param: SynchronizeLifecycleStateParam): Promise<Result[]>;
+    private readExternalEvidence;
+    private readCurrentPullRequestHeadSha;
 }
