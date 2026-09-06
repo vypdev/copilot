@@ -296,12 +296,13 @@ function assertQueueWorkflow(file, workflow) {
 
 function assertIncrementalRangeFetch(relativeFile, manifestFile, job) {
   const contract = manifestFile === 'copilot_commit.yml'
-    ? {
+      ? {
         name: 'Fetch push review range',
-        condition: `github.event.before != '${ZERO_OBJECT_ID}' && github.event.after != '${ZERO_OBJECT_ID}'`,
+        condition: `github.event.after != '${ZERO_OBJECT_ID}'`,
+        afterDepth: 2,
       }
     : manifestFile === 'copilot_pull_request.yml'
-      ? { name: 'Fetch incremental review range', condition: "github.event.action == 'synchronize'" }
+      ? { name: 'Fetch incremental review range', condition: "github.event.action == 'synchronize'", afterDepth: 1 }
       : undefined;
   if (!contract) return;
   const step = (job.steps ?? []).find(candidate => candidate?.name === contract.name);
@@ -310,8 +311,9 @@ function assertIncrementalRangeFetch(relativeFile, manifestFile, job) {
     || step.if !== contract.condition
     || step.env?.BEFORE_SHA !== '${{ github.event.before }}'
     || step.env?.AFTER_SHA !== '${{ github.event.after }}'
-    || !fetchScript.includes('git fetch --no-tags --depth=1 origin "$AFTER_SHA"')
-    || !fetchScript.includes('if ! git fetch --no-tags --depth=1 origin "$BEFORE_SHA"; then')) {
+    || (manifestFile === 'copilot_commit.yml' && step.env?.BRANCH_CREATED !== '${{ github.event.created }}')
+    || !fetchScript.includes(`git fetch --no-tags --depth=${contract.afterDepth} origin "$AFTER_SHA"`)
+    || !fetchScript.includes(`${manifestFile === 'copilot_commit.yml' ? 'if [ "$BRANCH_CREATED" != "true" ] && ' : 'if '}! git fetch --no-tags --depth=1 origin "$BEFORE_SHA"; then`)) {
     throw new Error(`${relativeFile} must fetch the exact GitHub before/after review range before invoking Copilot.`);
   }
 }

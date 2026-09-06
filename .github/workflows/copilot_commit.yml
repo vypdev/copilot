@@ -20,13 +20,14 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Fetch push review range
-        if: github.event.before != '0000000000000000000000000000000000000000' && github.event.after != '0000000000000000000000000000000000000000'
+        if: github.event.after != '0000000000000000000000000000000000000000'
         env:
           BEFORE_SHA: ${{ github.event.before }}
           AFTER_SHA: ${{ github.event.after }}
+          BRANCH_CREATED: ${{ github.event.created }}
         run: |
-          git fetch --no-tags --depth=1 origin "$AFTER_SHA"
-          if ! git fetch --no-tags --depth=1 origin "$BEFORE_SHA"; then
+          git fetch --no-tags --depth=2 origin "$AFTER_SHA"
+          if [ "$BRANCH_CREATED" != "true" ] && ! git fetch --no-tags --depth=1 origin "$BEFORE_SHA"; then
             echo "::notice::The previous push commit is unavailable; Bugbot will use its documented fallback scope."
           fi
 

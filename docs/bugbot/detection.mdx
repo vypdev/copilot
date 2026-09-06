@@ -27,7 +27,7 @@ its findings as line comments on the current diff.
 
 ### 2. On every push (commit workflow)
 
-When you push to a branch that is **linked to an issue** (e.g. a feature or bugfix branch created by Copilot), the **Commit** workflow runs. If an agent CLI is configured, the action runs **DetectPotentialProblemsUseCase**: it fetches and reviews the exact event `before..after` range, loads existing finding context, and then publishes new findings and updates or marks as resolved any previous findings that no longer apply. New-branch pushes, whose `before` value is GitHub's all-zero sentinel, and force-pushes whose previous object is no longer reachable fall back to the current branch/base or commit-parent history available in the local checkout without aborting the workflow.
+When you push to a branch that is **linked to an issue** (e.g. a feature or bugfix branch created by Copilot), the **Commit** workflow runs. If an agent CLI is configured, the action runs **DetectPotentialProblemsUseCase**: it fetches and reviews the exact event `before..after` range, loads existing finding context, and then publishes new findings and updates or marks as resolved any previous findings that no longer apply. The bounded fetch includes `after` and its parent. New-branch pushes, whose `before` value is GitHub's all-zero sentinel, and force-pushes whose previous object is no longer reachable can therefore fall back to the current commit parent without aborting the workflow or downloading full history.
 
 **Requirements:**
 

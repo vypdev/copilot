@@ -110,6 +110,17 @@ describe('workflow contract validator', () => {
     expect(() => validateWorkflow(file, workflow)).toThrow('must fetch the exact GitHub before/after review range');
   });
 
+  it.each(['.github/workflows', 'setup/workflows'])('requires push fallback history to include the current commit parent in %s', (directory) => {
+    const file = path.join(process.cwd(), directory, 'copilot_commit.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const step = workflow.jobs['copilot-commits'].steps.find(
+      (candidate: { name?: string }) => candidate.name === 'Fetch push review range',
+    );
+    step.run = step.run.replace('--depth=2 origin "$AFTER_SHA"', '--depth=1 origin "$AFTER_SHA"');
+
+    expect(() => validateWorkflow(file, workflow)).toThrow('must fetch the exact GitHub before/after review range');
+  });
+
   it.each(['.github/workflows', 'setup/workflows'])('requires a non-fatal before fetch for force-pushed PRs in %s', (directory) => {
     const file = path.join(process.cwd(), directory, 'copilot_pull_request.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
