@@ -70187,15 +70187,18 @@ class PullRequest {
         return ['opened', 'reopened'].includes(this.inputs?.action ?? '');
     }
     get isOpened() {
-        return this.inputs?.pull_request?.state === 'open'
-            && this.action !== 'closed';
+        return this.inputs?.eventName === 'pull_request'
+            && this.inputs?.pull_request?.state === 'open'
+            && this.opened;
     }
     get isClosed() {
-        return this.inputs?.pull_request?.state === 'closed'
-            || this.action === 'closed';
+        return this.inputs?.eventName === 'pull_request'
+            && (this.inputs?.pull_request?.state === 'closed'
+                || this.action === 'closed');
     }
     get isSynchronize() {
-        return this.action === 'synchronize';
+        return this.inputs?.eventName === 'pull_request'
+            && this.action === 'synchronize';
     }
     get isPullRequest() {
         return [

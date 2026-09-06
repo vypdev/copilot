@@ -59,17 +59,20 @@ export class PullRequest {
     }
 
     get isOpened(): boolean {
-        return this.inputs?.pull_request?.state === 'open'
-            && this.action !== 'closed';
+        return this.inputs?.eventName === 'pull_request'
+            && this.inputs?.pull_request?.state === 'open'
+            && this.opened;
     }
 
     get isClosed(): boolean {
-        return this.inputs?.pull_request?.state === 'closed'
-            || this.action === 'closed';
+        return this.inputs?.eventName === 'pull_request'
+            && (this.inputs?.pull_request?.state === 'closed'
+                || this.action === 'closed');
     }
 
     get isSynchronize(): boolean {
-        return this.action === 'synchronize';
+        return this.inputs?.eventName === 'pull_request'
+            && this.action === 'synchronize';
     }
 
     get isPullRequest(): boolean {
