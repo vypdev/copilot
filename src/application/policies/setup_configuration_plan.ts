@@ -190,6 +190,14 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
     add('BUGBOT_SEVERITY', configuration.ai.bugbotSeverity);
     add('BUGBOT_COMMENT_LIMIT', configuration.ai.bugbotCommentLimit);
     add('BUGBOT_AUTOFIX_VERIFY_COMMANDS', configuration.ai.bugbotFixVerifyCommands);
+    add('BUGBOT_DRY_RUN', configuration.ai.bugbotDryRun);
+    add('BUGBOT_EFFORT', configuration.ai.bugbotEffort);
+    add('BUGBOT_REVIEW_DRAFTS', configuration.ai.bugbotReviewDrafts);
+    add('BUGBOT_TRACE_RULES', configuration.ai.bugbotTraceRules);
+    add('BUGBOT_SUGGESTED_CHANGES', configuration.ai.bugbotSuggestedChanges);
+    add('BUGBOT_TELEMETRY', configuration.ai.bugbotTelemetry);
+    add('BUGBOT_FAIL_ON_UNRESOLVED', configuration.ai.bugbotFailOnUnresolved ?? false);
+    add('BUGBOT_ORGANIZATION_RULES', configuration.ai.bugbotOrganizationRules);
     add('PROJECT_IDS', configuration.projects.ids);
     add('PROJECT_COLUMN_ISSUE_CREATED', configuration.projects.issueCreatedColumn);
     add('PROJECT_COLUMN_PULL_REQUEST_CREATED', configuration.projects.pullRequestCreatedColumn);
@@ -228,6 +236,14 @@ export function buildSetupActionInputs(configuration: SetupConfiguration): Recor
         'bugbot-severity': ai.bugbotSeverity,
         'bugbot-comment-limit': String(ai.bugbotCommentLimit),
         'bugbot-fix-verify-commands': ai.bugbotFixVerifyCommands,
+        'bugbot-dry-run': String(ai.bugbotDryRun),
+        'bugbot-effort': ai.bugbotEffort,
+        'bugbot-review-drafts': String(ai.bugbotReviewDrafts),
+        'bugbot-trace-rules': String(ai.bugbotTraceRules),
+        'bugbot-suggested-changes': String(ai.bugbotSuggestedChanges),
+        'bugbot-telemetry': String(ai.bugbotTelemetry),
+        'bugbot-fail-on-unresolved': String(ai.bugbotFailOnUnresolved ?? false),
+        'bugbot-organization-rules': ai.bugbotOrganizationRules,
         'project-ids': projects.ids,
         'project-column-issue-created': projects.issueCreatedColumn,
         'project-column-pull-request-created': projects.pullRequestCreatedColumn,

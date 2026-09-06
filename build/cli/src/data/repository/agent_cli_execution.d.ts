@@ -4,5 +4,6 @@ export interface PreparedAgentCliRequest extends AgentCliRequest {
     args: string[];
     promptMode: 'stdin' | 'argv';
     maxOutputBytes: number;
+    maxPromptBytes: number;
 }
 export declare function runAgentCli(request: PreparedAgentCliRequest): Promise<string>;

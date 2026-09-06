@@ -20,10 +20,10 @@ env:
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-For this configuration, Bugbot executes:
+For this configuration, Bugbot executes a generated argv equivalent to:
 
 ```text
-codex exec --ephemeral --skip-git-repo-check --model gpt-5.6-luna --config 'model_provider="openai"' --sandbox read-only --ignore-user-config -
+codex exec --ephemeral --skip-git-repo-check --model gpt-5.6-luna --config 'model_provider="openai"' --config 'approval_policy="never"' --config 'sandbox_workspace_write.network_access=false' --sandbox read-only --ignore-user-config -
 ```
 
 `agent-provider` selects the CLI runtime. `agent-model-provider` and `agent-model` select the qualified model. Allowlists are checked before execution and failures are terminal. For Codex, the Action enforces `read-only` for reviewer/findings tasks and `workspace-write` for fixer tasks, ignores user/repository configuration, and rejects dangerous bypass flags. The child environment contains only safe runtime variables and the credential selected for that provider. See [Agent CLI configuration](/agents/cli-configuration).
@@ -67,6 +67,36 @@ bugbot-fix-verify-commands: "pnpm run build, pnpm test, pnpm run lint"
 
 Commands are parsed without invoking a shell and unsafe shell operators are rejected. Keep commands deterministic and use `pnpm` for JavaScript/TypeScript projects.
 
+## Review execution policy
+
+| Input | Default | Effect |
+| --- | --- | --- |
+| `bugbot-effort` | `default` (`smart` in setup templates) | `low`, `default`, `high`, or deterministic `smart` depth based on changed lines, files, and sensitive paths. |
+| `bugbot-dry-run` | `false` | Runs context, analysis, validation and reconciliation but performs no SCM mutation, result comment, Check Run, or configuration persistence. |
+| `bugbot-review-drafts` | `false` | Opts draft pull requests into review. |
+| `bugbot-trace-rules` | `false` | Lists each applied rule source and whether it was included, truncated, or omitted; never lists rule contents. |
+| `bugbot-suggested-changes` | `true` | Allows suggestions only when the exact RIGHT-side changed-line anchor is proved. |
+| `bugbot-telemetry` | `true` | Emits content-free timing, count, outcome and estimated-token telemetry. |
+| `bugbot-fail-on-unresolved` | `false` | Makes the Action and its native Check fail when the latest review has open or reopened findings. The default reports findings neutrally. |
+| `bugbot-organization-rules` | empty | Semicolon- or newline-separated organization rules applied before repository rules. Commas remain part of rule prose. |
+
+The same values are managed as Repository Variables by `copilot setup`. One review can override the safe subset without changing repository configuration:
+
+```text
+/copilot review effort=high dry-run=true verbose=true suggestions=false
+```
+
+## Hierarchical review rules
+
+Bugbot loads rules in deterministic precedence order:
+
+1. `BUGBOT_ORGANIZATION_RULES` / `bugbot-organization-rules`;
+2. `.copilot/BUGBOT.md` and `BUGBOT.md` at the repository root;
+3. `.copilot/BUGBOT.md` from parent directories of changed files, shallow to deep;
+4. `.copilot/BUGBOT.learned.md`.
+
+Every file and the combined rule set are bounded. Symlinked rule files and paths outside the repository are rejected. Rule text is placed in explicit untrusted-data boundaries and cannot weaken sandbox, credential, permission, schema, or publication policy. With `bugbot-trace-rules`, the review summary reports included/truncated sources and the number omitted by empty, duplicate, or budget policy without exposing rule contents. Authorized maintainers can add a deduplicated, auditable learned rule with `/copilot remember <rule>`; it is written atomically inside the repository and then follows the normal verified commit/push path.
+
 ## ai-ignore-files
 
 **Default:** empty
@@ -97,6 +127,14 @@ Do not expose provider credentials to fork code, untrusted pull requests, or `pu
 | `bugbot-severity` | `low` | Minimum published severity |
 | `bugbot-comment-limit` | `20` | Individual comment limit |
 | `bugbot-fix-verify-commands` | empty | Pre-commit verification |
+| `bugbot-effort` | `smart` recommended | Adaptive review depth |
+| `bugbot-dry-run` | `false` | Analysis-only execution |
+| `bugbot-review-drafts` | `false` | Draft PR policy |
+| `bugbot-trace-rules` | `false` | Rule-source trace |
+| `bugbot-suggested-changes` | `true` | Safe line-local suggestions |
+| `bugbot-telemetry` | `true` | Content-free observability |
+| `bugbot-fail-on-unresolved` | `false` | Optional blocking review policy |
+| `bugbot-organization-rules` | empty | Organization-level rules |
 | `ai-ignore-files` | empty | Analysis/reporting exclusions |
 
 ## Related pages

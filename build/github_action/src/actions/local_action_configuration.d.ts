@@ -125,6 +125,16 @@ export declare function buildLocalActionConfiguration(additionalParams: ActionIn
     bugbotCommentLimit: number;
     bugbotFixVerifyCommandsInput: string;
     bugbotFixVerifyCommands: string[];
+    bugbotReviewConfiguration: {
+        publicationMode: "publish" | "dry-run";
+        effort: import("../domain/bugbot/review_configuration").BugbotReviewEffort;
+        reviewDrafts: boolean;
+        traceRules: boolean;
+        suggestedChanges: boolean;
+        telemetry: boolean;
+        failOnUnresolved: boolean;
+        organizationRules: string[];
+    };
     actionInputs: Record<string, string>;
     debug: boolean;
     welcomeTitle: string;

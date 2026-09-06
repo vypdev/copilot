@@ -5,6 +5,7 @@ export interface CopilotEvidenceContext {
     readonly headSha?: string;
     readonly summary: string;
     readonly results: readonly Result[];
+    readonly failOnUnresolvedFindings?: boolean;
 }
 /** Creates a stable native Check Run projection without performing GitHub I/O. */
 export declare function buildCopilotEvidence(context: CopilotEvidenceContext): CopilotEvidence | undefined;

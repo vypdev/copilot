@@ -100,6 +100,7 @@ export function createPullRequestUseCaseCompositionRoot(): PullRequestUseCase {
       bugbot.context,
       bugbot.publication,
       bugbot.resolution,
+      bugbot.telemetry,
     ),
   );
 }

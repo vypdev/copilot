@@ -5,6 +5,7 @@ import type { BugbotContextPorts } from '../../../ports/bugbot_context_ports';
 import type { BugbotFindingPublicationPorts } from '../../../ports/bugbot_finding_publication_ports';
 import type { BugbotFindingResolutionPorts } from '../../../ports/bugbot_finding_resolution_ports';
 import { ParamUseCase } from '../../../usecases/base/param_usecase';
+import type { BugbotTelemetryPort } from '../../../ports/bugbot_telemetry_ports';
 export type { BugbotFinding } from './bugbot/types';
 /** Application boundary for detecting, publishing and resolving Bugbot findings. */
 export declare class DetectPotentialProblemsUseCase implements ParamUseCase<Execution, Result[]> {
@@ -12,7 +13,8 @@ export declare class DetectPotentialProblemsUseCase implements ParamUseCase<Exec
     private readonly contextPorts;
     private readonly publicationPorts;
     private readonly resolutionPorts;
+    private readonly telemetryPort?;
     taskId: string;
-    constructor(aiRepository: FindingsQueryPort, contextPorts: BugbotContextPorts, publicationPorts: BugbotFindingPublicationPorts, resolutionPorts: BugbotFindingResolutionPorts);
+    constructor(aiRepository: FindingsQueryPort, contextPorts: BugbotContextPorts, publicationPorts: BugbotFindingPublicationPorts, resolutionPorts: BugbotFindingResolutionPorts, telemetryPort?: BugbotTelemetryPort | undefined);
     invoke(param: Execution): Promise<Result[]>;
 }

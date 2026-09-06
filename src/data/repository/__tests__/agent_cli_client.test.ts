@@ -106,5 +106,7 @@ describe('AgentCliClient', () => {
     it('rejects invalid resource limits before spawning a process', async () => {
         await expect(new AgentCliClient().execute({ command: 'agent', prompt: 'prompt', timeoutMs: 0 })).rejects.toMatchObject({ category: 'configuration' });
         await expect(new AgentCliClient().execute({ command: 'agent', prompt: 'prompt', timeoutMs: 1000, maxOutputBytes: 0 })).rejects.toMatchObject({ category: 'configuration' });
+        await expect(new AgentCliClient().execute({ command: 'agent', prompt: 'prompt', timeoutMs: 1000, maxPromptBytes: 0 })).rejects.toMatchObject({ category: 'configuration' });
+        await expect(new AgentCliClient().execute({ command: 'agent', prompt: 'too-large', timeoutMs: 1000, maxPromptBytes: 2 })).rejects.toMatchObject({ category: 'configuration' });
     });
 });

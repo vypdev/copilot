@@ -10,6 +10,7 @@ import { getBugbotPrompt } from "../../../../../prompts";
 import { PROJECT_CONTEXT_INSTRUCTION } from "../../../../../utils/project_context_instruction";
 import type { Execution } from "../../../../../data/model/execution";
 import type { BugbotContext } from "./types";
+import { resolveBugbotReviewEffort } from '../../../../../domain/bugbot/review_configuration';
 
 const MAX_IGNORE_BLOCK_LENGTH = 2000;
 const GIT_OBJECT_ID = /^[0-9a-f]{7,64}$/i;
@@ -30,6 +31,14 @@ export function buildBugbotPrompt(param: Execution, context: BugbotContext): str
                   return `\n**Files to ignore:** Do not report findings in files or paths matching these patterns: ${truncated}.`;
               })()
             : "";
+    const changes = context.prContext?.changes ?? [];
+    const configuredEffort = param.ai?.getBugbotReviewConfiguration?.().effort ?? 'default';
+    const resolvedEffort = resolveBugbotReviewEffort(configuredEffort, {
+        files: changes.length,
+        additions: changes.reduce((sum, change) => sum + change.additions, 0),
+        deletions: changes.reduce((sum, change) => sum + change.deletions, 0),
+        touchesSensitivePath: changes.some((change) => /(^|\/)(auth|security|permissions?|credentials?|secrets?|payments?|migrations?)(\/|\.|$)/i.test(change.filename)),
+    });
 
     return getBugbotPrompt({
         projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
@@ -48,6 +57,8 @@ export function buildBugbotPrompt(param: Execution, context: BugbotContext): str
         previousBlock,
         diffBlock: context.reviewDiffBlock,
         reviewConversationBlock: context.reviewConversationBlock,
+        rulesBlock: context.reviewRulesBlock,
+        effortBlock: `**Review effort:** ${resolvedEffort}. ${resolvedEffort === 'high' ? 'Perform deeper cross-file and adversarial analysis.' : resolvedEffort === 'low' ? 'Prioritize high-signal changed-code defects and avoid speculative breadth.' : 'Balance depth, latency, and false-positive control.'}`,
     });
 }
 

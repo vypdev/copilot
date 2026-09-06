@@ -137,6 +137,18 @@ function assertNoConcurrency(relativeFile, workflow) {
   }
 }
 
+function assertDirectEventTriggers(file, workflow) {
+  const relativeFile = relativeWorkflow(file);
+  const triggers = workflow.on ?? {};
+  if (triggers && typeof triggers === 'object' && Object.prototype.hasOwnProperty.call(triggers, 'workflow_run')) {
+    throw new Error(`${relativeFile} must use direct event triggers and must not define workflow_run.`);
+  }
+  if (!relativeFile.endsWith('/copilot_pull_request.yml')) return;
+  if (!triggers.pull_request || !triggers.pull_request_review) {
+    throw new Error(`${relativeFile} must define direct pull_request and pull_request_review triggers.`);
+  }
+}
+
 function assertQueueGateJob(file, workflow, expectedUses) {
   const relativeFile = relativeWorkflow(file);
   const queueGate = workflow.jobs?.['queue-gate'];
@@ -326,6 +338,7 @@ function assertSequentialMutationWorkflow(file, workflow) {
 
 function validateWorkflow(file, workflow) {
   if (!workflow || typeof workflow !== 'object') throw new Error('workflow document is empty.');
+  assertDirectEventTriggers(file, workflow);
   assertRunner(file, workflow);
   assertSequentialMutationWorkflow(file, workflow);
   assertAgentInputs(file, workflow);
@@ -364,6 +377,7 @@ module.exports = {
   BOT_GATED_WORKFLOW_FILES,
   BOT_GATE_EXPRESSION,
   assertAgentInputs,
+  assertDirectEventTriggers,
   assertMutationWorkflow,
   assertNoConcurrency,
   assertQueueBudget,

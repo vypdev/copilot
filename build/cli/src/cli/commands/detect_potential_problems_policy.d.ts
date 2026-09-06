@@ -4,6 +4,11 @@ export interface DetectProblemsOptions {
     branch?: string;
     debug?: boolean;
     token?: string;
+    dryRun?: boolean;
+    output?: string;
+    effort?: string;
+    traceRules?: boolean;
+    suggestions?: boolean;
 }
 export declare function buildDetectPotentialProblemsParams(options: DetectProblemsOptions, gitInfo: GitInfo, currentBranch: string): Record<string, unknown> | undefined;
 export declare function resolveDetectIssueNumber(value: unknown): number | undefined;

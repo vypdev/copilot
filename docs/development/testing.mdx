@@ -21,11 +21,13 @@ git diff --check
 
 Tests MUST isolate environment variables such as `AGENT_PROVIDER`, `AGENT_MODEL_PROVIDER`, `AGENT_MODEL`, and `AGENT_COMMAND`. Real provider smoke tests are separate from deterministic unit tests and MUST NOT run without authorization and cost controls. Coverage thresholds are enforced by Jest and must not be reduced to accommodate a new code path; add focused tests instead.
 
-`eval:bugbot` runs the offline Bugbot quality harness. Corpus cases score precision, recall, exact-location accuracy, and severity accuracy independently, so prompt or model changes cannot hide false positives behind a single pass/fail number. Extend the corpus when a production review exposes a new failure mode.
+`eval:bugbot` runs the offline Bugbot quality harness. Corpus cases score precision, recall, F1, exact-location, severity, category, line distance, false positives/negatives, and confidence calibration independently, so prompt or model changes cannot hide false positives behind a single pass/fail number. `copilot bugbot-benchmark` can generate predictions with the real configured agent for a cost-controlled manual or scheduled gate; `copilot bugbot-eval` scores them. Ground truth is not passed to the agent. Extend the corpus when a production review exposes a new failure mode.
+
+`copilot bugbot-analytics` aggregates content-free telemetry exported by the Action. Do not add prompt, diff, source, comment, response, credential, or rule content to the telemetry schema.
 
 Workflow queue tests inject a clock, random source, and scheduler/delay port. They
-cover one repository traversal with mixed statuses and later-page matches, strict
-lower-ID/name filtering, malformed responses, fail-closed provider errors, 429 and
+cover workflow-scoped active-status traversals and later-page matches, strict
+lower-ID/workflow-file filtering, malformed responses, fail-closed provider errors, 429 and
 rate-limited 403 headers, bounded fallback backoff/jitter, and the absolute deadline.
 The workflow contract test keeps the eight workflow names synchronized with the
 validator and verifies the `90m queue / 120m job` budget, required runners, action

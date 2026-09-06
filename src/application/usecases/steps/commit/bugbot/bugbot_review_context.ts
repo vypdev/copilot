@@ -2,6 +2,7 @@ import { githubUsersMatch } from '../../../../../domain/github_user_policy';
 import type { PullRequestReviewComment } from '../../../../ports/pull_request_review_comment_ports';
 import type { BugbotComment } from './bugbot_finding_context';
 import type { BugbotPrContext } from './types';
+import { renderUntrustedField } from '../../../../../domain/security/untrusted_content';
 
 const MAX_REVIEW_DIFF_LENGTH = 64_000;
 const MAX_PATCH_LENGTH = 12_000;
@@ -22,7 +23,7 @@ export function buildReviewDiffBlock(context: BugbotPrContext | null): string {
       ? `${change.patch.slice(0, MAX_PATCH_LENGTH)}\n[patch truncated]`
       : change.patch;
     if (patch.length < change.patch.length) truncated += 1;
-    const section = `### ${change.filename}\nStatus: ${change.status}; +${change.additions}/-${change.deletions}\n\n\`\`\`diff\n${patch || '[patch unavailable from GitHub]'}\n\`\`\``;
+    const section = `### ${change.filename}\nStatus: ${change.status}; +${change.additions}/-${change.deletions}\n\n${renderUntrustedField(patch || '[patch unavailable from GitHub]', `github.diff.${sections.length}`, MAX_PATCH_LENGTH + 200)}`;
     if (used + section.length > MAX_REVIEW_DIFF_LENGTH) {
       omitted += 1;
       continue;
@@ -76,7 +77,7 @@ function appendConversationEntry(
 ): void {
   const normalized = body?.normalize('NFKC').replace(/\r\n?/g, '\n').trim();
   if (!normalized) return;
-  entries.push(`- ${author?.trim() || 'unknown'} (${kind}):\n${normalized.slice(0, MAX_CONVERSATION_ITEM_LENGTH)}`);
+  entries.push(`- ${author?.trim() || 'unknown'} (${kind}):\n${renderUntrustedField(normalized, `github.review.${entries.length + 1}`, MAX_CONVERSATION_ITEM_LENGTH)}`);
 }
 
 function isBot(author: string | undefined, botLogin: string | undefined): boolean {

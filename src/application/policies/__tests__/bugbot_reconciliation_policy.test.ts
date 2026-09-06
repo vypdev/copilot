@@ -23,4 +23,13 @@ describe('bugbot reconciliation policy', () => {
 
         expect(resolved).toEqual(new Set());
     });
+
+    it('does not resolve a finding that moved when its semantic fingerprint remains active', () => {
+        const resolved = reconcileResolvedFindingIds(
+            new Set(['old-id']),
+            { 'old-id': { issue: { commentId: 1, resolved: false, semanticFingerprint: 'sf-12345678' } } },
+            [{ id: 'new-id', title: 'Moved finding', description: 'Still present', semanticFingerprint: 'sf-12345678' }],
+        );
+        expect(resolved).toEqual(new Set());
+    });
 });

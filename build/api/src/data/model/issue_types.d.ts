@@ -1,0 +1,30 @@
+export declare class IssueTypes {
+    task: string;
+    taskDescription: string;
+    taskColor: string;
+    bug: string;
+    bugDescription: string;
+    bugColor: string;
+    feature: string;
+    featureDescription: string;
+    featureColor: string;
+    documentation: string;
+    documentationDescription: string;
+    documentationColor: string;
+    maintenance: string;
+    maintenanceDescription: string;
+    maintenanceColor: string;
+    hotfix: string;
+    hotfixDescription: string;
+    hotfixColor: string;
+    release: string;
+    releaseDescription: string;
+    releaseColor: string;
+    question: string;
+    questionDescription: string;
+    questionColor: string;
+    help: string;
+    helpDescription: string;
+    helpColor: string;
+    constructor(task: string, taskDescription: string, taskColor: string, bug: string, bugDescription: string, bugColor: string, feature: string, featureDescription: string, featureColor: string, documentation: string, documentationDescription: string, documentationColor: string, maintenance: string, maintenanceDescription: string, maintenanceColor: string, hotfix: string, hotfixDescription: string, hotfixColor: string, release: string, releaseDescription: string, releaseColor: string, question: string, questionDescription: string, questionColor: string, help: string, helpDescription: string, helpColor: string);
+}

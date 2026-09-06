@@ -1,10 +1,11 @@
 import path from 'node:path';
 import { readFileSync } from 'node:fs';
 import * as yaml from 'js-yaml';
-import { COPILOT_WORKFLOW_NAMES, WORKFLOW_QUEUE_POLICY } from '../../application/policies/workflow_queue_policy';
+import { WORKFLOW_QUEUE_POLICY } from '../../application/policies/workflow_queue_policy';
 
 interface ContractModule {
   assertQueueWorkflow(file: string, workflow: Record<string, unknown>): void;
+  assertDirectEventTriggers(file: string, workflow: Record<string, unknown>): void;
   assertRunner(file: string, workflow: Record<string, unknown>): void;
   MIN_QUEUE_JOB_TIMEOUT_MINUTES: number;
   QUEUE_GATE_TIMEOUT_MINUTES: number;
@@ -19,6 +20,7 @@ interface ContractModule {
 
 const {
   assertQueueWorkflow,
+  assertDirectEventTriggers,
   assertRunner,
   MIN_QUEUE_JOB_TIMEOUT_MINUTES,
   QUEUE_GATE_TIMEOUT_MINUTES,
@@ -68,9 +70,9 @@ const validWorkflow = {
 };
 
 describe('workflow contract validator', () => {
-  it('keeps the manifest, workflow names, and queue budget synchronized', () => {
-    expect(QUEUE_WORKFLOW_MANIFEST.map(entry => entry.workflowName)).toEqual(expect.arrayContaining(COPILOT_WORKFLOW_NAMES));
-    expect(COPILOT_WORKFLOW_NAMES).toEqual(expect.arrayContaining(QUEUE_WORKFLOW_MANIFEST.map(entry => entry.workflowName)));
+  it('keeps the repository validation manifest unique and the queue budget synchronized', () => {
+    const workflowNames = QUEUE_WORKFLOW_MANIFEST.map(entry => entry.workflowName);
+    expect(new Set(workflowNames).size).toBe(workflowNames.length);
     expect(WORKFLOW_QUEUE_POLICY.maximumQueueWaitMilliseconds).toBe(90 * 60 * 1000);
     expect(MIN_QUEUE_JOB_TIMEOUT_MINUTES).toBeGreaterThanOrEqual(QUEUE_WAIT_MINUTES);
   });
@@ -98,6 +100,19 @@ describe('workflow contract validator', () => {
     const workflow = JSON.parse(JSON.stringify(validWorkflow));
     delete workflow.jobs['copilot-issues'].if;
     expect(() => assertQueueWorkflow(queueFile, workflow)).toThrow('COPILOT_BOT_LOGIN actor gate');
+  });
+
+  it('rejects workflow_run and requires direct PR/review events in both distributed variants', () => {
+    for (const directory of ['.github/workflows', 'setup/workflows']) {
+      const file = path.join(process.cwd(), directory, 'copilot_pull_request.yml');
+      const workflow = yaml.load(readFileSync(file, 'utf8')) as Record<string, any>;
+      expect(() => assertDirectEventTriggers(file, workflow)).not.toThrow();
+      workflow.on.workflow_run = { types: ['completed'] };
+      expect(() => assertDirectEventTriggers(file, workflow)).toThrow('must not define workflow_run');
+      delete workflow.on.workflow_run;
+      delete workflow.on.pull_request_review;
+      expect(() => assertDirectEventTriggers(file, workflow)).toThrow('direct pull_request and pull_request_review');
+    }
   });
 
   it.each(['.github/workflows', 'setup/workflows'])('requires the exact push review range fetch in %s', (directory) => {

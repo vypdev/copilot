@@ -25,7 +25,9 @@ describe('setup configuration policy', () => {
             { name: 'AGENT_ALLOWED_MODELS', value: 'openai/gpt-5.6-luna' },
             { name: 'MAIN_BRANCH', value: 'master' },
             { name: 'AI_IGNORE_FILES', value: 'build/*' },
+            { name: 'BUGBOT_FAIL_ON_UNRESOLVED', value: 'false' },
         ]));
+        expect(buildSetupActionInputs(configuration)['bugbot-fail-on-unresolved']).toBe('false');
         expect(plan.requiredSecrets).toEqual(expect.arrayContaining(['PAT', 'CODEX_ACCESS_TOKEN', 'OPENAI_API_KEY']));
         expect(plan.warnings.length).toBeGreaterThan(0);
     });

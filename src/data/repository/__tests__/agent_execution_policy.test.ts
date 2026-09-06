@@ -2,25 +2,55 @@ import { enforceAgentExecutionPolicy } from '../agent_execution_policy';
 
 describe('enforceAgentExecutionPolicy', () => {
     it('forces non-mutating Codex capabilities into a read-only sandbox', () => {
-        expect(enforceAgentExecutionPolicy('codex', 'reviewer', ['exec', '--model', 'gpt-5', '-'])).toEqual([
-            'exec', '--model', 'gpt-5', '--sandbox', 'read-only', '--ignore-user-config', '-',
-        ]);
+        const args = enforceAgentExecutionPolicy('codex', 'reviewer', ['exec', '--model', 'gpt-5', '-']);
+        expect(args).toEqual(expect.arrayContaining([
+            '--sandbox', 'read-only', '--strict-config', '--ignore-user-config', '--ignore-rules', '--ephemeral',
+            'approval_policy=never', 'sandbox_workspace_write.network_access=false',
+            'sandbox_workspace_write.exclude_slash_tmp=true', 'allow_login_shell=false', 'web_search=disabled',
+            'tools.web_search=false', 'project_doc_max_bytes=0', 'shell_environment_policy.ignore_default_excludes=false',
+        ]));
+        expect(args.at(-1)).toBe('-');
     });
 
     it('allows only workspace writes for the fixer capability', () => {
-        expect(enforceAgentExecutionPolicy('codex', 'fixer', ['exec', '--model', 'gpt-5', '-'])).toEqual([
-            'exec', '--model', 'gpt-5', '--sandbox', 'workspace-write', '--ignore-user-config', '-',
-        ]);
+        expect(enforceAgentExecutionPolicy('codex', 'fixer', ['exec', '--model', 'gpt-5', '-']))
+            .toEqual(expect.arrayContaining(['--sandbox', 'workspace-write', 'sandbox_workspace_write.network_access=false']));
     });
 
     it('rejects mismatched and bypassed sandbox policies', () => {
         expect(() => enforceAgentExecutionPolicy('codex', 'reviewer', ['exec', '--sandbox', 'workspace-write', '-']))
             .toThrow('requires the read-only sandbox');
         expect(() => enforceAgentExecutionPolicy('codex', 'fixer', ['exec', '--dangerously-bypass-approvals-and-sandbox', '-']))
-            .toThrow('bypass flags are not allowed');
+            .toThrow('runtime flags are not allowed');
+        expect(() => enforceAgentExecutionPolicy('codex', 'fixer', ['exec', '--config', 'sandbox_workspace_write.network_access=true', '-']))
+            .toThrow('network_access must be false');
+        expect(() => enforceAgentExecutionPolicy('codex', 'reviewer', ['exec', '--config=approval_policy=on-request', '-']))
+            .toThrow('approval_policy must be never');
+        expect(() => enforceAgentExecutionPolicy('codex', 'reviewer', ['exec', '--config=sandbox_mode=workspace-write', '-']))
+            .toThrow('sandbox_mode must be read-only');
+        expect(() => enforceAgentExecutionPolicy('codex', 'reviewer', ['exec', '--search', '-']))
+            .toThrow('runtime flags are not allowed');
+        expect(() => enforceAgentExecutionPolicy('codex', 'reviewer', ['exec', '--config', 'hooks.Stop=[]', '-']))
+            .toThrow('hooks.Stop is not allowed');
+        expect(() => enforceAgentExecutionPolicy('codex', 'reviewer', ['exec', '-cweb_search=live', '-']))
+            .toThrow('web_search must be disabled');
     });
 
-    it('does not invent unsupported controls for other providers', () => {
-        expect(enforceAgentExecutionPolicy('cursor', 'reviewer', ['-p'])).toEqual(['-p']);
+    it('uses read-only mode and sandboxing for Cursor analysis but permits sandboxed fixer writes', () => {
+        expect(enforceAgentExecutionPolicy('cursor', 'reviewer', ['-p']))
+            .toEqual(expect.arrayContaining(['--sandbox', 'enabled', '--mode', 'ask']));
+        expect(enforceAgentExecutionPolicy('cursor', 'fixer', ['-p']))
+            .toEqual(expect.arrayContaining(['--sandbox', 'enabled']));
+        expect(() => enforceAgentExecutionPolicy('cursor', 'reviewer', ['-p', '--yolo']))
+            .toThrow('is not allowed');
+    });
+
+    it('disables OpenCode plugins and selects its read-only agent for analysis', () => {
+        expect(enforceAgentExecutionPolicy('opencode', 'findings', ['run', '--model', 'openai/model']))
+            .toEqual(expect.arrayContaining(['--pure', '--agent', 'plan']));
+        expect(enforceAgentExecutionPolicy('opencode', 'fixer', ['run']))
+            .toEqual(expect.arrayContaining(['--pure']));
+        expect(() => enforceAgentExecutionPolicy('opencode', 'findings', ['run', '--share']))
+            .toThrow('is not allowed');
     });
 });

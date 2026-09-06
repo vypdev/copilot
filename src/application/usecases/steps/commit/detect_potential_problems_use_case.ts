@@ -6,6 +6,7 @@ import type { BugbotFindingPublicationPorts } from '../../../ports/bugbot_findin
 import type { BugbotFindingResolutionPorts } from '../../../ports/bugbot_finding_resolution_ports';
 import { ParamUseCase } from '../../../usecases/base/param_usecase';
 import { runDetectPotentialProblemsWorkflow } from './detect_potential_problems_workflow';
+import type { BugbotTelemetryPort } from '../../../ports/bugbot_telemetry_ports';
 
 export type { BugbotFinding } from './bugbot/types';
 
@@ -18,6 +19,7 @@ export class DetectPotentialProblemsUseCase implements ParamUseCase<Execution, R
         private readonly contextPorts: BugbotContextPorts,
         private readonly publicationPorts: BugbotFindingPublicationPorts,
         private readonly resolutionPorts: BugbotFindingResolutionPorts,
+        private readonly telemetryPort?: BugbotTelemetryPort,
     ) {}
 
     async invoke(param: Execution): Promise<Result[]> {
@@ -26,6 +28,7 @@ export class DetectPotentialProblemsUseCase implements ParamUseCase<Execution, R
             contextPorts: this.contextPorts,
             publicationPorts: this.publicationPorts,
             resolutionPorts: this.resolutionPorts,
+            telemetryPort: this.telemetryPort,
         });
     }
 }

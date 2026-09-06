@@ -130,6 +130,14 @@ export class SetupPromptAdapter implements SetupPromptPort, SetupCredentialPromp
         ai.bugbotSeverity = await this.askChoice('Minimum Bugbot severity to publish', ['info', 'low', 'medium', 'high'], ai.bugbotSeverity) as SetupConfiguration['ai']['bugbotSeverity'];
         ai.bugbotCommentLimit = await this.askNumber('Maximum Bugbot comments per run', ai.bugbotCommentLimit);
         ai.bugbotFixVerifyCommands = await this.askText('Bugbot autofix verification commands (comma-separated, empty is allowed)', ai.bugbotFixVerifyCommands);
+        ai.bugbotDryRun = await this.askBoolean('Run Bugbot in analysis-only dry-run mode?', ai.bugbotDryRun);
+        ai.bugbotEffort = await this.askChoice('Bugbot review effort', ['smart', 'low', 'default', 'high'], ai.bugbotEffort) as SetupConfiguration['ai']['bugbotEffort'];
+        ai.bugbotReviewDrafts = await this.askBoolean('Review draft pull requests?', ai.bugbotReviewDrafts);
+        ai.bugbotTraceRules = await this.askBoolean('Include applied rule sources in review summaries?', ai.bugbotTraceRules);
+        ai.bugbotSuggestedChanges = await this.askBoolean('Publish safe inline suggested changes?', ai.bugbotSuggestedChanges);
+        ai.bugbotTelemetry = await this.askBoolean('Emit content-free Bugbot telemetry?', ai.bugbotTelemetry);
+        ai.bugbotFailOnUnresolved = await this.askBoolean('Fail the workflow check while Bugbot findings remain unresolved?', ai.bugbotFailOnUnresolved ?? false);
+        ai.bugbotOrganizationRules = await this.askText('Organization Bugbot rules (newline-separated, empty is allowed)', ai.bugbotOrganizationRules);
         ai.provisioningMode = await this.askChoice('Agent CLI provisioning mode', ['auto', 'always', 'disabled'], ai.provisioningMode) as SetupConfiguration['ai']['provisioningMode'];
         defaults.projects.ids = await this.askText('GitHub Project IDs (comma-separated, empty to skip Projects integration)', defaults.projects.ids);
         if (defaults.projects.ids.trim()) {

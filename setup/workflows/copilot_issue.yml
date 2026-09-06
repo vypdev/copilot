@@ -43,6 +43,14 @@ jobs:
           bugbot-severity: ${{ vars.BUGBOT_SEVERITY || 'low' }}
           bugbot-comment-limit: ${{ vars.BUGBOT_COMMENT_LIMIT || '20' }}
           bugbot-fix-verify-commands: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS }}
+          bugbot-dry-run: ${{ vars.BUGBOT_DRY_RUN || 'false' }}
+          bugbot-effort: ${{ vars.BUGBOT_EFFORT || 'smart' }}
+          bugbot-review-drafts: ${{ vars.BUGBOT_REVIEW_DRAFTS || 'false' }}
+          bugbot-trace-rules: ${{ vars.BUGBOT_TRACE_RULES || 'false' }}
+          bugbot-suggested-changes: ${{ vars.BUGBOT_SUGGESTED_CHANGES || 'true' }}
+          bugbot-telemetry: ${{ vars.BUGBOT_TELEMETRY || 'true' }}
+          bugbot-fail-on-unresolved: ${{ vars.BUGBOT_FAIL_ON_UNRESOLVED || 'false' }}
+          bugbot-organization-rules: ${{ vars.BUGBOT_ORGANIZATION_RULES }}
           project-ids: ${{ vars.PROJECT_IDS }}
           project-column-issue-created: ${{ vars.PROJECT_COLUMN_ISSUE_CREATED || 'Todo' }}
           project-column-pull-request-created: ${{ vars.PROJECT_COLUMN_PULL_REQUEST_CREATED || 'In Progress' }}

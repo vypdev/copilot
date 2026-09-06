@@ -6,6 +6,7 @@ import { BugbotAutofixUseCase } from "../../../application/usecases/steps/commit
 import { DetectBugbotFixIntentUseCase } from "../../../application/usecases/steps/commit/bugbot/detect_bugbot_fix_intent_use_case";
 import { DoUserRequestUseCase } from "../../../application/usecases/steps/commit/user_request_use_case";
 import { ThinkUseCase } from "../../../application/usecases/steps/common/think_use_case";
+import { RememberBugbotRuleUseCase } from "../../../application/usecases/steps/commit/bugbot/remember_bugbot_rule_use_case";
 import { CheckIssueCommentLanguageUseCase } from "../../../application/usecases/steps/issue_comment/check_issue_comment_language_use_case";
 import { GitCommitAdapter } from "../../git_commit_adapter";
 import type { ProjectBoardCommandPort } from "../../../application/ports/project_board_command_ports";
@@ -23,6 +24,7 @@ const mockResolution = { kind: "resolution" };
 const mockFindings = {};
 const mockLanguage = {};
 const mockFixer = {};
+const mockRules = {};
 const mockIssueInvoke = jest.fn();
 const mockPullRequestInvoke = jest.fn();
 
@@ -32,6 +34,7 @@ jest.mock("../bugbot_composition_root", () => ({
     pullRequest: mockPullRequest,
     context: mockContext,
     resolution: mockResolution,
+    rules: mockRules,
     write: {},
   })),
 }));
@@ -66,6 +69,9 @@ jest.mock(
 );
 jest.mock("../../../application/usecases/steps/commit/user_request_use_case");
 jest.mock("../../../application/usecases/steps/common/think_use_case");
+jest.mock(
+  "../../../application/usecases/steps/commit/bugbot/remember_bugbot_rule_use_case",
+);
 jest.mock(
   "../../../application/usecases/steps/issue_comment/check_issue_comment_language_use_case",
 );
@@ -105,6 +111,7 @@ describe("main run route composition root", () => {
       gitCommit,
     );
     expect(DoUserRequestUseCase).toHaveBeenCalledWith(mockFixer);
+    expect(RememberBugbotRuleUseCase).toHaveBeenCalledWith(mockRules);
     expect(IssueCommentUseCase).toHaveBeenCalledWith(
       expect.anything(),
       expect.anything(),
@@ -115,6 +122,7 @@ describe("main run route composition root", () => {
       expect.anything(),
       expect.anything(),
       gitCommit,
+      expect.anything(),
       expect.anything(),
       expect.anything(),
       expect.anything(),
@@ -132,6 +140,7 @@ describe("main run route composition root", () => {
       expect.anything(),
       expect.anything(),
       mockIssue,
+      expect.anything(),
       expect.anything(),
       expect.anything(),
       expect.anything(),

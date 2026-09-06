@@ -8,4 +8,8 @@ Bugbot accepts only structured findings that pass local schema, confidence, path
 
 Each line comment is anchored to a location proved addressable by the canonical GitHub diff. When only the file can be proved, Bugbot uses a file-level review comment. When the reported file is outside the pull-request diff, it uses the first changed file and explains the fallback. The PR head SHA is revalidated immediately before publication.
 
+When the agent supplies an exact replacement, Bugbot renders a native GitHub suggested change only for a newly proved RIGHT-side line or range. It never guesses an anchor and never adds a suggestion while merely refreshing an older comment whose current anchor cannot be re-proved.
+
+Finding markers carry both a location fingerprint and a location-independent semantic fingerprint based on category plus an exact code snippet, symbol, or title fallback. An explicit provider id is reused only when its local identity is compatible; matching then falls back to location and, only when unambiguous, semantics. This keeps one thread across nearby line movement, rebases, and file renames without allowing a similar but unrelated finding to hijack or silently resolve it. Markers are loaded only when both the authenticated bot identity and comment author are known and match. Manual thread resolution becomes a durable dismissal and is not undone by a model response.
+
 Publication MUST complete before a finding is marked resolved. Invalid responses, unsafe paths, malformed identifiers, or publication failures are terminal for that finding and MUST NOT produce a false resolved state.

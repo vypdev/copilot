@@ -10,6 +10,8 @@ export interface BugbotFinding {
     description: string;
     /** Computed locally; never accepted from the agent as an authority. */
     fingerprint?: string;
+    /** Location-independent reconciliation identity computed locally. */
+    semanticFingerprint?: string;
     file?: string;
     line?: number;
     endLine?: number;
@@ -18,11 +20,18 @@ export interface BugbotFinding {
     category?: string;
     evidence?: string;
     suggestion?: string;
+    /** Optional enclosing symbol used only to improve local identity. */
+    symbol?: string;
+    /** Short code anchor used only to improve local identity. */
+    codeSnippet?: string;
+    /** Exact replacement text for a GitHub suggested change, when safe and local. */
+    suggestedCode?: string;
 }
 export interface ExistingIssueFindingInfo {
     commentId: number;
     resolved: boolean;
     fingerprint?: string;
+    semanticFingerprint?: string;
     resolution?: BugbotFindingResolution;
 }
 export interface ExistingPullRequestFindingInfo {
@@ -32,6 +41,7 @@ export interface ExistingPullRequestFindingInfo {
     /** Fresh GitHub thread state when the provider supplied it. */
     threadResolved?: boolean;
     fingerprint?: string;
+    semanticFingerprint?: string;
     resolution?: BugbotFindingResolution;
 }
 export type BugbotFindingResolution = 'fixed' | 'obsolete' | 'dismissed';
@@ -75,7 +85,7 @@ export interface UnresolvedFindingSummary {
     file?: string;
     line?: number;
 }
-export declare function findExistingFindingInfo(existingByFindingId: ExistingByFindingId, finding: Pick<BugbotFinding, 'id' | 'fingerprint'>): ExistingFindingInfo | undefined;
+export declare function findExistingFindingInfo(existingByFindingId: ExistingByFindingId, finding: Pick<BugbotFinding, 'id' | 'fingerprint' | 'semanticFingerprint'>): ExistingFindingInfo | undefined;
 /** Full context for detection, mutation, publishing, and autofix intent. */
 export interface BugbotContext {
     existingByFindingId: ExistingByFindingId;
@@ -94,4 +104,9 @@ export interface BugbotContext {
     prContext: BugbotPrContext | null;
     /** Bounded bodies used by intent prompts and autofix. */
     unresolvedFindingsWithBody: UnresolvedFindingWithBody[];
+    /** Ordered, bounded rule content supplied to the reviewer. */
+    reviewRulesBlock?: string;
+    /** Auditable rule identities in effective precedence order. */
+    reviewRuleSources?: string[];
+    omittedReviewRules?: number;
 }

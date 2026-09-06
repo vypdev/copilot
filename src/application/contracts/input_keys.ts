@@ -68,6 +68,14 @@ export const INPUT_KEYS = {
     BUGBOT_SEVERITY: 'bugbot-severity',
     BUGBOT_COMMENT_LIMIT: 'bugbot-comment-limit',
     BUGBOT_FIX_VERIFY_COMMANDS: 'bugbot-fix-verify-commands',
+    BUGBOT_DRY_RUN: 'bugbot-dry-run',
+    BUGBOT_EFFORT: 'bugbot-effort',
+    BUGBOT_REVIEW_DRAFTS: 'bugbot-review-drafts',
+    BUGBOT_TRACE_RULES: 'bugbot-trace-rules',
+    BUGBOT_SUGGESTED_CHANGES: 'bugbot-suggested-changes',
+    BUGBOT_TELEMETRY: 'bugbot-telemetry',
+    BUGBOT_FAIL_ON_UNRESOLVED: 'bugbot-fail-on-unresolved',
+    BUGBOT_ORGANIZATION_RULES: 'bugbot-organization-rules',
 
     // Projects
     PROJECT_IDS: 'project-ids',

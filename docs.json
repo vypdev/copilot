@@ -513,6 +513,11 @@
           "icon": "gear"
         },
         {
+          "title": "Quality and observability",
+          "href": "/bugbot/quality-observability",
+          "icon": "vial"
+        },
+        {
           "title": "Verification commands",
           "href": "/bugbot/verification-commands",
           "icon": "circle-check"

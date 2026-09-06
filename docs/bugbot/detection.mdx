@@ -46,10 +46,12 @@ is matched case-insensitively and the request is routed to the same review
 flow. On an issue comment, Copilot resolves the branch from the open PR linked
 to the issue. These commands do not invoke autofix and do not modify files.
 
+Explicit reviews accept bounded per-run options, for example `/copilot review effort=high dry-run=true verbose=true suggestions=false`. Unknown keys and values are rejected rather than silently inferred.
+
 You can run Bugbot detection **without pushing**:
 
 - **Single action:** In a workflow, set `single-action: detect_potential_problems_action` and `single-action-issue: <issue number>`. The workflow must run in a context where the **branch** to analyze is the current checkout (e.g. trigger on `workflow_dispatch` after checking out the branch you want to analyze).
-- **CLI:** From the repository root, run `copilot detect-potential-problems -i <issue>` (optionally `-b <branch>`). Provide `--token` or `PERSONAL_ACCESS_TOKEN` in the environment, plus the configured agent CLI credentials/model. See [Examples → CLI](/bugbot/examples#cli) and [Smoke tests](/security-operations/operations/smoke-tests).
+- **CLI:** From the repository root, run `copilot detect-potential-problems -i <issue>` (optionally `-b <branch>`). Add `--dry-run --output json` for a machine-readable, mutation-free result, and choose `--effort`, `--trace-rules`, or `--no-suggestions` when needed. Provide `--token` or `PERSONAL_ACCESS_TOKEN` in the environment, plus the configured agent CLI credentials/model. See [Examples → CLI](/bugbot/examples#cli) and [Smoke tests](/security-operations/operations/smoke-tests).
 
 In both cases, the action uses the same detection flow: load context for that issue/branch, call the configured agent, filter and apply the comment limit, then publish either to the issue or to an open PR for that branch.
 
@@ -137,10 +139,11 @@ because the reviewer found a problem.
 The shipped PR workflow grants `checks: write` only to its short-lived `github.token` and exposes it to the Action as `COPILOT_EVIDENCE_TOKEN`. That token is used only for Check Run publication and is excluded from every agent child environment. The separate PAT remains responsible for configured repository and project operations.
 
 Finding matching is intentionally stable across agent providers and wording
-changes. The local identity uses the normalized file path, title, and a nearby
-line bucket; descriptions and suggestions are treated as mutable explanation,
-not identity. A finding that is reported again with improved wording therefore
-updates its existing publication. Resolution is only accepted for findings
+changes. The primary local identity uses normalized path, title, and a nearby
+line bucket. A second semantic identity uses category plus exact code snippet,
+symbol, or title fallback, so nearby movement and file renames keep the same
+thread. Descriptions and suggestions are mutable explanation, not identity.
+Resolution is only accepted for findings
 present in the loaded, bounded history, so an agent cannot resolve an arbitrary
 identifier invented in its response.
 
@@ -149,5 +152,6 @@ identifier invented in its response.
 ## Next steps
 
 - **[Autofix](/bugbot/autofix)** — How to ask the bot to fix one or more findings from a comment.
-- **[Configuration](/bugbot/configuration)** — `bugbot-severity`, `bugbot-comment-limit`, `ai-ignore-files`.
+- **[Configuration](/bugbot/configuration)** — severity, effort, rules, dry-run, suggestions, telemetry, and limits.
+- **[Quality and observability](/bugbot/quality-observability)** — benchmark, analytics, and API.
 - **[Examples](/bugbot/examples)** — Push workflow, single action, and CLI examples.

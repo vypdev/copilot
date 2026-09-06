@@ -1,0 +1,66 @@
+import type { Execution } from '../../../../../data/model/execution';
+import type { FindingsQueryPort } from '../../../../ports/agent_findings_ports';
+import { reconcileResolvedFindingIds } from '../../../../policies/bugbot_reconciliation_policy';
+import { BUGBOT_MAX_COMMENTS } from '../../../../policies/bugbot_constants';
+import { logInfo } from '../../../../ports/logging_ports';
+import { applyCommentLimit } from './limit_comments';
+import { findExistingFindingInfo, type BugbotContext } from './types';
+import { buildBugbotPrompt } from './build_bugbot_prompt';
+import { prepareDetectedFindings } from './apply_detected_findings';
+import type { PreparedBugbotFindings } from './prepare_bugbot_findings';
+import { queryBugbotFindings } from './query_bugbot_findings';
+import type { BugbotReviewTelemetry } from './bugbot_review_telemetry';
+
+export interface AnalyzeBugbotRevisionDependencies {
+    readonly agent: FindingsQueryPort;
+    readonly telemetry: BugbotReviewTelemetry;
+}
+
+/** Pure analysis phase: query, validate, normalize, deduplicate and reconcile; never mutates the SCM. */
+export async function analyzeBugbotRevision(
+    execution: Execution,
+    context: BugbotContext,
+    dependencies: AnalyzeBugbotRevisionDependencies,
+): Promise<PreparedBugbotFindings | undefined> {
+    const prompt = buildBugbotPrompt(execution, context);
+    dependencies.telemetry.observeContext(context, prompt);
+    logInfo('Detecting potential problems via configured agent using canonical change context...');
+    const startedAt = Date.now();
+    const agentResponse = await dependencies.telemetry.measure(
+        'analysis',
+        () => queryBugbotFindings(dependencies.agent, execution, prompt),
+    );
+    dependencies.telemetry.observeResponse(agentResponse);
+    logInfo(`Bugbot reviewer completed in ${Date.now() - startedAt}ms.`);
+    const raw = await dependencies.telemetry.measure('normalization', () => prepareDetectedFindings(execution, agentResponse));
+    if (!raw) return undefined;
+    const prepared = suppressDismissedFindings(execution, context, raw);
+    return {
+        ...prepared,
+        resolvedFindingIds: suppressDismissedResolutionClaims(context, reconcileResolvedFindingIds(
+            prepared.resolvedFindingIds,
+            context.existingByFindingId,
+            prepared.activeFindings ?? prepared.toPublish,
+        )),
+    };
+}
+
+function suppressDismissedResolutionClaims(context: BugbotContext, resolvedFindingIds: ReadonlySet<string>): Set<string> {
+    return new Set([...resolvedFindingIds].filter((findingId) => {
+        const existing = context.existingByFindingId[findingId];
+        return existing?.issue?.resolution !== 'dismissed' && existing?.pullRequest?.resolution !== 'dismissed';
+    }));
+}
+
+function suppressDismissedFindings(
+    execution: Execution,
+    context: BugbotContext,
+    prepared: PreparedBugbotFindings,
+): PreparedBugbotFindings {
+    const activeFindings = (prepared.activeFindings ?? prepared.toPublish).filter((finding) => {
+        const existing = findExistingFindingInfo(context.existingByFindingId, finding);
+        return existing?.issue?.resolution !== 'dismissed' && existing?.pullRequest?.resolution !== 'dismissed';
+    });
+    const limited = applyCommentLimit(activeFindings, execution.ai?.getBugbotCommentLimit?.() ?? BUGBOT_MAX_COMMENTS);
+    return { ...prepared, ...limited, activeFindings };
+}

@@ -33,6 +33,7 @@ export interface EventPullRequestPayload {
         ref?: string;
     };
     merged?: boolean;
+    draft?: boolean;
     state?: string;
 }
 export interface EventPullRequestReferencePayload {

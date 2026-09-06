@@ -11,6 +11,7 @@ export interface AgentCliRequest {
     signal?: AbortSignal;
     cwd?: string;
     maxOutputBytes?: number;
+    maxPromptBytes?: number;
 }
 export declare class AgentCliError extends Error {
     readonly category: 'configuration' | 'timeout' | 'cancelled' | 'process' | 'output';

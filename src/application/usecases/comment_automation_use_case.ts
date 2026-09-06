@@ -25,7 +25,7 @@ export async function runCommentAutomation(
       return [invalidCommentCommandResult(options.taskId, command.reason)];
     }
     if (command.kind === 'command') {
-      const explicitResults = await runExplicitCommentCommand(param, options, command.command, actorAuthorizationPort);
+      const explicitResults = await runExplicitCommentCommand(param, options, command.command, actorAuthorizationPort, authenticatedUserPort);
       if (explicitResults) return explicitResults;
     }
     languageResults = await options.languageUseCase.invoke(param);

@@ -100,6 +100,7 @@ export async function buildGithubActionExecution(
             aiInputs.bugbotFixVerifyCommands,
             aiInputs.requestedAgentTasks,
             aiInputs.pullRequestDescriptionMode,
+            aiInputs.bugbotReviewConfiguration,
         ),
         labels: buildLabels(labelInputs),
         issueTypes: buildIssueTypes(issueTypeInputs),

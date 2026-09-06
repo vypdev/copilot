@@ -13,11 +13,12 @@ export declare const MAX_FINDING_ID_LENGTH = 200;
  */
 export declare function sanitizeFindingIdForMarker(findingId: string): string;
 export declare function normalizeFindingIdForMarker(findingId: string): string | null;
-export declare function buildMarker(findingId: string, resolved: boolean, fingerprint?: string, resolution?: BugbotFindingResolution): string;
+export declare function buildMarker(findingId: string, resolved: boolean, fingerprint?: string, resolution?: BugbotFindingResolution, semanticFingerprint?: string): string;
 export declare function parseMarker(body: string | null): Array<{
     findingId: string;
     resolved: boolean;
     fingerprint?: string;
+    semanticFingerprint?: string;
     resolution?: BugbotFindingResolution;
 }>;
 /**
@@ -37,4 +38,6 @@ export declare function replaceMarkerInBody(body: string, findingId: string, new
 /** Extract title from comment body (first ## line) for context when sending to the agent. */
 export declare function extractTitleFromBody(body: string | null): string;
 /** Builds the visible comment body (title, severity, location, description, suggestion) plus the hidden marker for this finding. */
-export declare function buildCommentBody(finding: BugbotFinding, resolved: boolean, resolution?: BugbotFindingResolution): string;
+export declare function buildCommentBody(finding: BugbotFinding, resolved: boolean, resolution?: BugbotFindingResolution, options?: {
+    includeSuggestedChange?: boolean;
+}): string;

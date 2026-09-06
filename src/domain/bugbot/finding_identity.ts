@@ -14,6 +14,9 @@ export interface FindingIdentityInput {
     readonly title?: unknown;
     readonly description?: unknown;
     readonly suggestion?: unknown;
+    readonly category?: unknown;
+    readonly symbol?: unknown;
+    readonly codeSnippet?: unknown;
 }
 
 export function buildFindingFingerprint(finding: FindingIdentityInput): string {
@@ -23,6 +26,19 @@ export function buildFindingFingerprint(finding: FindingIdentityInput): string {
         normalizeLine(finding.line),
     ].join('|');
     return `fp-${fnv1a(canonical)}`;
+}
+
+/**
+ * Location-independent identity used after renames, rebases, and nearby code
+ * movement. It deliberately prefers a symbol or normalized code anchor over
+ * model prose; the location fingerprint remains the stronger first match.
+ */
+export function buildSemanticFindingFingerprint(finding: FindingIdentityInput): string {
+    const anchor = normalizeCode(finding.codeSnippet)
+        || normalizeText(finding.symbol)
+        || normalizeText(finding.title);
+    const canonical = [normalizeText(finding.category), anchor].join('|');
+    return `sf-${fnv1a(canonical)}`;
 }
 
 function normalizePath(value: unknown): string {
@@ -41,6 +57,16 @@ function normalizeLine(value: unknown): string {
     if (typeof value !== 'number' || !Number.isSafeInteger(value) || value <= 0) return '';
     // A small line bucket keeps identity stable when a nearby edit shifts code.
     return String(Math.floor(value / 5));
+}
+
+function normalizeCode(value: unknown): string {
+    if (typeof value !== 'string') return '';
+    return value.normalize('NFKC')
+        .replace(/\/\/.*$/gm, '')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 1_000);
 }
 
 function fnv1a(value: string): string {

@@ -10,5 +10,7 @@ export type BugbotParams = {
     previousBlock: string;
     diffBlock?: string;
     reviewConversationBlock?: string;
+    rulesBlock?: string;
+    effortBlock?: string;
 };
 export declare function getBugbotPrompt(params: BugbotParams): string;

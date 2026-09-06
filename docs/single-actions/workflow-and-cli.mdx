@@ -239,6 +239,15 @@ projects:
 ai:
   bugbotSeverity: medium
   bugbotCommentLimit: 10
+  bugbotEffort: smart
+  bugbotDryRun: false
+  bugbotReviewDrafts: false
+  bugbotTraceRules: false
+  bugbotSuggestedChanges: true
+  bugbotTelemetry: true
+  bugbotOrganizationRules: |-
+    Require authorization checks on tenant-scoped operations
+    Treat payment idempotency regressions as high severity
   ignoreFiles: node_modules/*,build/*,dist/*
   pullRequestDescriptionMode: append
 createInitialTag: true
@@ -282,6 +291,11 @@ Checks the progress of an issue from the selected branch and updates the progres
 | `-b, --branch <name>` | No | Resolved from the issue | Branch to analyze. |
 | `-t, --token <token>` | No | `PERSONAL_ACCESS_TOKEN` | PAT override. |
 | `-d, --debug` | No | `false` | Enables debug logging. |
+| `--dry-run` | No | `false` | Analyze and reconcile in memory without SCM mutations. |
+| `--output <text\|json>` | No | `text` | Human-readable or machine-readable result. |
+| `--effort <low\|default\|high\|smart>` | No | `smart` | Review depth policy. |
+| `--trace-rules` | No | `false` | Include ordered rule sources. |
+| `--no-suggestions` | No | suggestions enabled | Disable native suggested changes. |
 
 ```bash
 copilot check-progress -i 123
@@ -304,7 +318,12 @@ The selected agent runtime, model, credentials, and Bugbot policy must be config
 ```bash
 copilot detect-potential-problems -i 456
 copilot detect-potential-problems -i 456 -b feature/456-fix-bug --debug
+copilot detect-potential-problems -i 456 --dry-run --output json --effort high
 ```
+
+### Bugbot quality and analytics
+
+`copilot bugbot-benchmark` runs the real configured findings agent sequentially against a versioned synthetic corpus and writes predictions. `copilot bugbot-eval` scores prediction files without calling a provider. `copilot bugbot-analytics` aggregates content-free Action telemetry from JSON, JSONL, or logs. See [Quality and observability](/bugbot/quality-observability).
 
 ### `copilot recommend-steps`
 
@@ -378,6 +397,9 @@ copilot do --output json -p "Explain the current release flow"
 | `copilot setup` | PAT | — | Provision repository labels, types, templates, and workflows. |
 | `copilot check-progress` | PAT | `-i, --issue` | Update progress from issue and branch changes. |
 | `copilot detect-potential-problems` | PAT and agent | `-i, --issue` | Publish Bugbot findings. |
+| `copilot bugbot-benchmark` | Agent | `--corpus`, `--predictions` | Generate real-agent corpus predictions. |
+| `copilot bugbot-eval` | None | `--corpus`, `--predictions` | Score quality metrics and gates. |
+| `copilot bugbot-analytics` | None | `--input` | Aggregate content-free telemetry. |
 | `copilot recommend-steps` | PAT and agent | `-i, --issue` | Comment implementation recommendations. |
 | `copilot think` | PAT and agent | `-q, --question` | Return analysis and change proposals. |
 | `copilot do` | Agent only | `-p, --prompt` | Analyze or modify the local workspace. |

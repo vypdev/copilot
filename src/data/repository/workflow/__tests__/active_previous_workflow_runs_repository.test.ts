@@ -64,13 +64,16 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
     const repository = new ActivePreviousWorkflowRunsRepository(client);
 
     await expect(repository.countActivePreviousRuns(query)).resolves.toBe(3);
-    expect(iterator).toHaveBeenCalledTimes(1);
-    expect(iterator).toHaveBeenCalledWith(listWorkflowRuns, {
-      owner: 'org',
-      repo: 'repo',
-      per_page: 100,
-      workflow_id: 'copilot_issue.yml',
-    });
+    expect(iterator).toHaveBeenCalledTimes(WORKFLOW_ACTIVE_STATUSES.length);
+    for (const status of WORKFLOW_ACTIVE_STATUSES) {
+      expect(iterator).toHaveBeenCalledWith(listWorkflowRuns, {
+        owner: 'org',
+        repo: 'repo',
+        per_page: 100,
+        workflow_id: 'copilot_issue.yml',
+        status,
+      });
+    }
   });
 
   it('detects an older active run on a later page', async () => {
@@ -87,7 +90,7 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
     const repository = new ActivePreviousWorkflowRunsRepository(client);
 
     await expect(repository.countActivePreviousRuns(query)).resolves.toBe(1);
-    expect(iterator).toHaveBeenCalledTimes(1);
+    expect(iterator).toHaveBeenCalledTimes(WORKFLOW_ACTIVE_STATUSES.length);
   });
 
   it('counts all active statuses across every page of the current workflow', async () => {
@@ -103,7 +106,7 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
     const repository = new ActivePreviousWorkflowRunsRepository(client);
 
     await expect(repository.countActivePreviousRuns(query)).resolves.toBe(WORKFLOW_ACTIVE_STATUSES.length);
-    expect(iterator).toHaveBeenCalledTimes(1);
+    expect(iterator).toHaveBeenCalledTimes(WORKFLOW_ACTIVE_STATUSES.length);
   });
 
   it('excludes cancelled and skipped terminal runs', async () => {
@@ -139,6 +142,7 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
       repo: 'repo',
       per_page: 100,
       workflow_id: 'copilot_issue.yml',
+      status: WORKFLOW_STATUS.IN_PROGRESS,
     });
   });
 
@@ -168,6 +172,7 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
       repo: 'repo',
       per_page: 100,
       workflow_id: 'copilot_issue.yml',
+      status: WORKFLOW_STATUS.IN_PROGRESS,
     });
   });
 
@@ -185,11 +190,18 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
 
   it('retries the complete paginated traversal after a transient later-page failure', async () => {
     const retryDelayPort = { wait: jest.fn().mockResolvedValue(undefined) };
-    let traversals = 0;
-    iterator.mockImplementation(async function* () {
-      traversals += 1;
+    let inProgressTraversals = 0;
+    iterator.mockImplementation(async function* (
+      _method: unknown,
+      parameters: { status: string },
+    ) {
+      if (parameters.status !== WORKFLOW_STATUS.IN_PROGRESS) {
+        yield { data: { workflow_runs: [] } } as GithubWorkflowRunsResponse;
+        return;
+      }
+      inProgressTraversals += 1;
       yield { data: { workflow_runs: [] } } as GithubWorkflowRunsResponse;
-      if (traversals === 1) throw { status: 500 };
+      if (inProgressTraversals === 1) throw { status: 500 };
       yield {
         data: { workflow_runs: [workflowRun({ id: 150, name: 'Copilot - Issue', status: WORKFLOW_STATUS.QUEUED })] },
       } as GithubWorkflowRunsResponse;
@@ -204,7 +216,8 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
     });
 
     await expect(repository.countActivePreviousRuns(query)).resolves.toBe(1);
-    expect(traversals).toBe(2);
+    expect(inProgressTraversals).toBe(2);
+    expect(iterator).toHaveBeenCalledTimes(WORKFLOW_ACTIVE_STATUSES.length + 1);
     expect(retryDelayPort.wait).toHaveBeenCalledWith(10);
   });
 });

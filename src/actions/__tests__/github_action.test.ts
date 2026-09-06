@@ -24,6 +24,7 @@ jest.mock('@actions/github', () => ({
 jest.mock('@actions/core', () => ({
   getInput: jest.fn(),
   setFailed: jest.fn(),
+  setOutput: jest.fn(),
 }));
 
 jest.mock('../../utils/logger', () => ({

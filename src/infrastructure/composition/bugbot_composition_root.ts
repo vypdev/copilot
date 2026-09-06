@@ -17,6 +17,10 @@ import { PullRequestLifecycleRepository } from "../../data/repository/pull_reque
 import { PullRequestReviewCommentCommandRepository } from "../../data/repository/pull_request/pull_request_review_comment_command_repository";
 import { PullRequestReviewCommentQueryRepository } from "../../data/repository/pull_request/pull_request_review_comment_query_repository";
 import { PullRequestReviewThreadRepository } from "../../data/repository/pull_request/pull_request_review_thread_repository";
+import { WorkspaceBugbotRulesRepository } from '../filesystem/workspace_bugbot_rules_repository';
+import { LoggerBugbotTelemetryAdapter } from '../logging/logger_bugbot_telemetry_adapter';
+import type { BugbotTelemetryPort } from '../../application/ports/bugbot_telemetry_ports';
+import type { BugbotLearnedRuleCommandPort, BugbotRuleFileQueryPort } from '../../application/ports/bugbot_rule_ports';
 
 export type BugbotCompositionRoot = {
   issue: BugbotIssueRepository;
@@ -24,6 +28,8 @@ export type BugbotCompositionRoot = {
   context: BugbotContextPorts;
   resolution: BugbotFindingResolutionPorts;
   publication: BugbotFindingPublicationPorts;
+  telemetry: BugbotTelemetryPort;
+  rules: BugbotRuleFileQueryPort & BugbotLearnedRuleCommandPort;
 
 };
 
@@ -51,12 +57,15 @@ export function createBugbotCompositionRoot(): BugbotCompositionRoot {
     reviewCommand,
     threadCommand,
   );
+  const rules = new WorkspaceBugbotRulesRepository();
   return {
     issue,
     pullRequest,
-    context: { issue, pullRequest },
+    context: { issue, pullRequest, rules },
     resolution: { issueComments: issue, pullRequestComments: pullRequest },
     publication: { issueComments: issue, pullRequestComments: pullRequest },
+    telemetry: new LoggerBugbotTelemetryAdapter(),
+    rules,
 
   };
 }

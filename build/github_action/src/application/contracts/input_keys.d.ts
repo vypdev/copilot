@@ -54,6 +54,14 @@ export declare const INPUT_KEYS: {
     readonly BUGBOT_SEVERITY: "bugbot-severity";
     readonly BUGBOT_COMMENT_LIMIT: "bugbot-comment-limit";
     readonly BUGBOT_FIX_VERIFY_COMMANDS: "bugbot-fix-verify-commands";
+    readonly BUGBOT_DRY_RUN: "bugbot-dry-run";
+    readonly BUGBOT_EFFORT: "bugbot-effort";
+    readonly BUGBOT_REVIEW_DRAFTS: "bugbot-review-drafts";
+    readonly BUGBOT_TRACE_RULES: "bugbot-trace-rules";
+    readonly BUGBOT_SUGGESTED_CHANGES: "bugbot-suggested-changes";
+    readonly BUGBOT_TELEMETRY: "bugbot-telemetry";
+    readonly BUGBOT_FAIL_ON_UNRESOLVED: "bugbot-fail-on-unresolved";
+    readonly BUGBOT_ORGANIZATION_RULES: "bugbot-organization-rules";
     readonly PROJECT_IDS: "project-ids";
     readonly PROJECT_COLUMN_ISSUE_CREATED: "project-column-issue-created";
     readonly PROJECT_COLUMN_PULL_REQUEST_CREATED: "project-column-pull-request-created";

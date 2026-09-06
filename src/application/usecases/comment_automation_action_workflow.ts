@@ -52,6 +52,15 @@ async function runAutofixAction(
   ports: CommentAutomationActionPorts,
 ): Promise<Result[]> {
   if (!intentPayload) return [];
+  if (param.ai?.getBugbotReviewConfiguration?.().publicationMode === 'dry-run') {
+    return [new Result({
+      id: `${options.taskId}.Autofix`,
+      success: true,
+      executed: false,
+      steps: ['Bugbot autofix skipped because analysis-only dry-run mode is enabled.'],
+      payload: { dryRun: true },
+    })];
+  }
   logInfo("Running bugbot autofix.");
   const autofixResults = await options.autofixUseCase.invoke({
     execution: param,
@@ -79,6 +88,11 @@ async function runAutofixAction(
         errors: resolutionErrors,
       }),
     );
+    return autofixResults;
+  }
+  if (autofixResults.at(-1)?.success && options.reviewPotentialProblemsUseCase) {
+    logInfo('Running an independent post-autofix review because bot-authored push workflows are intentionally discarded.');
+    autofixResults.push(...await options.reviewPotentialProblemsUseCase.invoke(param));
   }
   return autofixResults;
 }

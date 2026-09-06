@@ -7,6 +7,7 @@ export interface ActionSummaryContext {
     readonly pullRequestNumber: number;
     readonly lifecycleState?: string;
     readonly pullRequestDescriptionMode?: string;
+    readonly failOnUnresolvedFindings?: boolean;
     readonly results: readonly Result[];
 }
 /** Builds a bounded, publication-safe GitHub Actions Job Summary. */

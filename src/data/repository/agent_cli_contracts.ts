@@ -12,6 +12,7 @@ export interface AgentCliRequest {
     signal?: AbortSignal;
     cwd?: string;
     maxOutputBytes?: number;
+    maxPromptBytes?: number;
 }
 
 export class AgentCliError extends Error {

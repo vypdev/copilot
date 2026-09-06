@@ -13,6 +13,7 @@ import { buildAgentTasksFromValues } from './agent_input_builder';
 import { buildImageConfiguration } from './image_configuration_builder';
 import { normalizePullRequestDescriptionMode } from '../domain/pull_request_description';
 import { DEFAULT_INACTIVITY_THRESHOLD_HOURS, MAX_INACTIVITY_THRESHOLD_HOURS } from '../domain/issue_inactivity';
+import { normalizeBugbotReviewEffort, parseBugbotOrganizationRules } from '../domain/bugbot/review_configuration';
 
 export type LocalActionInputs = ReturnType<typeof getActionInputsWithDefaults>;
 
@@ -73,6 +74,16 @@ export function readLocalAgentConfiguration(
             .split(',')
             .map((command) => command.trim())
             .filter(Boolean),
+        bugbotReviewConfiguration: {
+            publicationMode: isEnabledInput(input(additionalParams, actionInputs, INPUT_KEYS.BUGBOT_DRY_RUN)) ? 'dry-run' as const : 'publish' as const,
+            effort: normalizeBugbotReviewEffort(input(additionalParams, actionInputs, INPUT_KEYS.BUGBOT_EFFORT)),
+            reviewDrafts: isEnabledInput(input(additionalParams, actionInputs, INPUT_KEYS.BUGBOT_REVIEW_DRAFTS)),
+            traceRules: isEnabledInput(input(additionalParams, actionInputs, INPUT_KEYS.BUGBOT_TRACE_RULES)),
+            suggestedChanges: String(input(additionalParams, actionInputs, INPUT_KEYS.BUGBOT_SUGGESTED_CHANGES) ?? 'true').toLowerCase() !== 'false',
+            telemetry: String(input(additionalParams, actionInputs, INPUT_KEYS.BUGBOT_TELEMETRY) ?? 'true').toLowerCase() !== 'false',
+            failOnUnresolved: isEnabledInput(input(additionalParams, actionInputs, INPUT_KEYS.BUGBOT_FAIL_ON_UNRESOLVED)),
+            organizationRules: parseBugbotOrganizationRules(input(additionalParams, actionInputs, INPUT_KEYS.BUGBOT_ORGANIZATION_RULES)),
+        },
     };
 }
 

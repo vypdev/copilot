@@ -9,6 +9,7 @@ import {
   type ExistingByFindingId,
 } from "./types";
 import { githubUsersMatch } from '../../../../../domain/github_user_policy';
+import { renderUntrustedField } from '../../../../../domain/security/untrusted_content';
 
 export interface BugbotComment {
   id: number;
@@ -60,6 +61,7 @@ function parseIssueFindingMarkers(issueComments: BugbotComment[], trustedAuthorL
           commentId: comment.id,
           resolved: marker.resolved,
           ...(marker.fingerprint ? { fingerprint: marker.fingerprint } : {}),
+          ...(marker.semanticFingerprint ? { semanticFingerprint: marker.semanticFingerprint } : {}),
           ...(marker.resolution ? { resolution: marker.resolution } : {}),
         },
       };
@@ -112,6 +114,7 @@ function parsePullRequestComments(
           resolved: marker.resolved || manuallyResolved,
           ...(typeof threadResolved === 'boolean' ? { threadResolved } : {}),
           ...(marker.fingerprint ? { fingerprint: marker.fingerprint } : {}),
+          ...(marker.semanticFingerprint ? { semanticFingerprint: marker.semanticFingerprint } : {}),
           ...(marker.resolution
             ? { resolution: marker.resolution }
             : manuallyResolved
@@ -125,7 +128,7 @@ function parsePullRequestComments(
 }
 
 function isTrustedAuthor(authorLogin: string | undefined, trustedAuthorLogin: string | undefined): boolean {
-  if (!trustedAuthorLogin?.trim()) return true;
+  if (!trustedAuthorLogin?.trim() || !authorLogin?.trim()) return false;
   return githubUsersMatch(authorLogin ?? '', trustedAuthorLogin);
 }
 
@@ -150,6 +153,7 @@ export const MAX_PREVIOUS_FINDINGS_BLOCK_LENGTH = 48_000;
 
 export function limitPreviousBugbotFindings(
   previousFindings: readonly PreviousBugbotFinding[],
+  maximumLength: number = MAX_PREVIOUS_FINDINGS_BLOCK_LENGTH,
 ): PreviousBugbotFinding[] {
   const selected: PreviousBugbotFinding[] = [];
   let totalLength = 0;
@@ -157,7 +161,7 @@ export function limitPreviousBugbotFindings(
   for (const finding of previousFindings) {
     if (selected.length >= MAX_PREVIOUS_FINDINGS) break;
     const itemLength = formatPreviousFinding(finding).length;
-    if (selected.length > 0 && totalLength + itemLength > MAX_PREVIOUS_FINDINGS_BLOCK_LENGTH) break;
+    if (totalLength + itemLength > maximumLength) break;
     selected.push(finding);
     totalLength += itemLength;
   }
@@ -198,24 +202,33 @@ export function buildPreviousFindingsBlock(
   previousFindings: PreviousBugbotFinding[],
 ): string {
   if (previousFindings.length === 0) return "";
-  const boundedFindings = limitPreviousBugbotFindings(previousFindings);
-  const items = boundedFindings.map(formatPreviousFinding).join("\n");
-  const omittedCount = previousFindings.length - boundedFindings.length;
-  const omissionNote = omittedCount > 0
-    ? `\n\n**${omittedCount} older finding(s) were omitted from this prompt because of the context budget. Do not resolve an omitted finding in this response.**`
-    : "";
-  return `
+  const prefix = `
 **Previously reported issues (not yet marked resolved).** For each one we show the exact comment we posted (title, description, location, suggestion, and a hidden marker with the finding id at the end).
 
-${items}${omissionNote}
+`;
+  const suffix = `
 **Your task 2:** For each finding above, analyze the current code and decide:
 - If the problem **still exists** (same code or same issue present): do **not** include its id in \`resolved_finding_ids\`.
 - If the problem **no longer applies** (e.g. that code was removed or refactored away): include its id in \`resolved_finding_ids\`.
 - If the problem **has been fixed** (code was changed and the issue is resolved): include its id in \`resolved_finding_ids\`.
 
 Return in \`resolved_finding_ids\` only the ids from the list above that are now fixed or no longer apply. Use the exact id shown in each "Finding id" line.`;
+  // Reserve room for the dynamic omission notice so the complete prompt block,
+  // not merely the finding bodies, is bounded by the public context contract.
+  const omissionNoticeBudget = 256;
+  const findingsBudget = Math.max(
+    0,
+    MAX_PREVIOUS_FINDINGS_BLOCK_LENGTH - prefix.length - suffix.length - omissionNoticeBudget,
+  );
+  const boundedFindings = limitPreviousBugbotFindings(previousFindings, findingsBudget);
+  const items = boundedFindings.map(formatPreviousFinding).join("\n");
+  const omittedCount = previousFindings.length - boundedFindings.length;
+  const omissionNote = omittedCount > 0
+    ? `\n\n**${omittedCount} older finding(s) were omitted from this prompt because of the context budget. Do not resolve an omitted finding in this response.**`
+    : "";
+  return `${prefix}${items}${omissionNote}${suffix}`;
 }
 
 function formatPreviousFinding(finding: PreviousBugbotFinding): string {
-  return `---\n**Finding id (use this exact id in resolved_finding_ids if resolved/no longer applies):** \`${finding.id.replace(/`/g, "\\`")}\`\n\n**Full comment as posted (including metadata at the end):**\n${finding.fullBody}\n`;
+  return `---\n**Finding id (use this exact id in resolved_finding_ids if resolved/no longer applies):** \`${finding.id.replace(/`/g, "\\`")}\`\n\n**Full comment as posted (including metadata at the end):**\n${renderUntrustedField(finding.fullBody, `github.previous-finding.${finding.id}`, MAX_FINDING_BODY_LENGTH)}\n`;
 }

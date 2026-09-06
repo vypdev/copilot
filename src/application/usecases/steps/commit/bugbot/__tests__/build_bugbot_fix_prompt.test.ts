@@ -56,6 +56,9 @@ describe("buildBugbotFixPrompt", () => {
         expect(prompt).toContain("pnpm run build");
         expect(prompt).toContain("pnpm test");
         expect(prompt).toContain("Fix only the problems described");
+        expect(prompt).toContain('SECURITY POLICY:');
+        expect(prompt).toContain('[BEGIN_UNTRUSTED_DATA origin=github.autofix-request');
+        expect(prompt).toContain('[BEGIN_UNTRUSTED_DATA origin=bugbot.autofix.finding.find-1');
     });
 
     it("includes PR number when openPrNumbers is non-empty", () => {

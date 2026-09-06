@@ -7,6 +7,8 @@ export interface PullRequestReviewCommentPublisherOptions {
     openPrNumber: number;
     prContext: BugbotPrContext;
     watermark: string;
+    ruleSources?: readonly string[];
+    omittedRuleCount?: number;
 }
 export declare class PullRequestReviewCommentPublisher {
     private readonly options;

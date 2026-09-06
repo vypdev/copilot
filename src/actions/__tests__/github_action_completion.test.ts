@@ -1,6 +1,9 @@
 import type { Execution } from '../../data/model/execution';
 import { Result } from '../../data/model/result';
 import { finishGithubAction } from '../github_action_completion';
+import * as core from '@actions/core';
+
+jest.mock('@actions/core', () => ({ setOutput: jest.fn(), setFailed: jest.fn() }));
 
 const mockPublishInvoke = jest.fn();
 const mockStoreInvoke = jest.fn();
@@ -158,5 +161,25 @@ describe('finishGithubAction', () => {
             'test-repo',
             'github-actions-token',
         );
+    });
+
+    it('fails the action for unresolved findings only when the generic policy is enabled', async () => {
+        const findingResult = new Result({
+            id: 'DetectPotentialProblemsUseCase',
+            success: true,
+            executed: true,
+            payload: { findingStates: { open: 2, reopened: 1, fixed: 0, obsolete: 0, dismissed: 0 } },
+        });
+        const nonBlocking = Object.assign(execution(), {
+            ai: { getBugbotReviewConfiguration: () => ({ failOnUnresolved: false }) },
+        });
+        await finishGithubAction(nonBlocking, [findingResult], {} as never, {} as never);
+        expect(core.setFailed).not.toHaveBeenCalled();
+
+        const blocking = Object.assign(execution(), {
+            ai: { getBugbotReviewConfiguration: () => ({ failOnUnresolved: true }) },
+        });
+        await finishGithubAction(blocking, [findingResult], {} as never, {} as never);
+        expect(core.setFailed).toHaveBeenCalledWith('Bugbot found 3 unresolved actionable finding(s).');
     });
 });

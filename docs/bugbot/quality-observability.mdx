@@ -1,0 +1,48 @@
+---
+title: Quality and observability
+description: Measure Bugbot accuracy, latency, outcomes, feedback, and regressions without storing source or prompt content.
+---
+
+# Bugbot quality and observability
+
+Bugbot separates deterministic evaluator checks from optional, cost-bearing model benchmarks. The versioned corpus at `quality/bugbot/corpus.v1.json` contains 30 positive and negative synthetic cases across TypeScript/TSX, Python, Go, SQL, Java, Rust, YAML workflows, shell, Terraform, C#, Kotlin, and Markdown. Ground truth is never included in the model prompt.
+
+## Quality gates
+
+```bash
+pnpm run eval:bugbot
+
+# Run the configured real findings agent. This consumes provider capacity.
+copilot bugbot-benchmark \
+  --corpus quality/bugbot/corpus.v1.json \
+  --predictions /tmp/bugbot-predictions.json
+
+copilot bugbot-eval \
+  --corpus quality/bugbot/corpus.v1.json \
+  --predictions /tmp/bugbot-predictions.json
+```
+
+The evaluator reports precision, recall, F1, exact-location accuracy, severity accuracy, category accuracy, false positives, false negatives, mean line distance, and confidence Brier score. Its default gate requires at least 0.90 precision, 0.85 recall, 0.87 F1, 0.80 exact-location/severity/category accuracy, and at most 0.16 Brier error. Missing or malformed corpus cases fail the gate. The checked-in reference predictions validate the scorer and schema; they are not presented as a real-model score.
+
+## Runtime telemetry
+
+When `bugbot-telemetry` is enabled, each review records only identifiers and aggregates: outcome, stage timings, changed file/line counts, rule count, finding counts and states, provider/model names, character counts, and rough token estimates. Prompt text, diffs, source, comments, responses, credentials, and rule contents are never stored in telemetry.
+
+The Action exports all review snapshots as the `bugbot-telemetry` JSON output and includes the current outcome/effort/latency in the Job Summary. Logs also contain one `[bugbot.telemetry]` JSON record per review.
+
+The native `Copilot / Review` Check is neutral when a successful review reports actionable findings. Repositories that intentionally use Bugbot as a merge gate can set `BUGBOT_FAIL_ON_UNRESOLVED=true` (or `bugbot-fail-on-unresolved: true`); only then do open or reopened findings fail both the Check and Action invocation. Analysis failures remain failures in either mode.
+
+Aggregate an Action log, JSON array, or JSONL export with:
+
+```bash
+copilot bugbot-analytics --input bugbot-telemetry.json
+copilot bugbot-analytics --input action.log --output json
+```
+
+The report separates non-failure rate from completed-review rate, and includes outcome distribution, p50/p95/max latency, per-stage p95, findings per run, resolution events, finding-state observations, and estimated tokens. State observations are snapshots, not unique user-feedback events. Use those trends with benchmark results; latency alone is not a quality measure.
+
+## Programmatic API
+
+The npm package exports `@vypdev/copilot/bugbot`. `BugbotReviewService` accepts a findings-agent port and one `BugbotScmGateway` containing context, publication, resolution, and optional telemetry ports. Consumers can provide GitHub, GitLab, or internal SCM adapters without changing the review application layer. Its `review(execution, options)` method supports the same scoped dry-run, effort, trace, and suggestion options.
+
+The API also exports the benchmark evaluator, telemetry parser/aggregator, identity helpers, and review-configuration normalizers. The bundled GitHub adapter remains one concrete integration; no workflow name or project-specific CI check is part of the generic review service.

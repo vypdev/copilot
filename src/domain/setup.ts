@@ -1,5 +1,6 @@
 import type { AgentProvider, AgentTask } from './agent';
 import type { PullRequestDescriptionMode } from './pull_request_description';
+import type { BugbotReviewEffort } from './bugbot/review_configuration';
 
 export type SetupFeature =
     | 'issues'
@@ -58,6 +59,15 @@ export interface SetupAiConfiguration {
     bugbotSeverity: 'info' | 'low' | 'medium' | 'high';
     bugbotCommentLimit: number;
     bugbotFixVerifyCommands: string;
+    bugbotDryRun: boolean;
+    bugbotEffort: BugbotReviewEffort;
+    bugbotReviewDrafts: boolean;
+    bugbotTraceRules: boolean;
+    bugbotSuggestedChanges: boolean;
+    bugbotTelemetry: boolean;
+    bugbotFailOnUnresolved?: boolean;
+    /** Newline-separated organization-level rules supplied by repository variables. */
+    bugbotOrganizationRules: string;
     provisioningMode: 'auto' | 'always' | 'disabled';
 }
 

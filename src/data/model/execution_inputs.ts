@@ -32,6 +32,7 @@ export interface EventPullRequestPayload {
     head?: { ref?: string; sha?: string };
     base?: { ref?: string };
     merged?: boolean;
+    draft?: boolean;
     state?: string;
 }
 

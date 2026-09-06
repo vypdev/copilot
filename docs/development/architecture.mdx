@@ -72,8 +72,9 @@ deterministic in tests; concrete system clock/random and timer adapters are wire
 `workflow_queue_composition_root.ts`.
 
 `ActivePreviousWorkflowRunsRepository` uses GitHub's workflow-scoped runs endpoint
-for the current workflow file, paginates only that workflow's history, and filters
-active statuses and lower run IDs locally.
+for the current workflow file. Each poll queries the five active statuses directly,
+paginates those live subsets, and filters lower run IDs locally; completed history is
+never traversed.
 Provider errors remain at the repository boundary: rate-limited 429/403 responses,
 transient HTTP/network failures, server wait headers, and malformed pages are
 classified there and never become a synthetic zero count. Retry logging exposes only
@@ -83,9 +84,9 @@ sanitized reason, attempt, delay, and reset metadata. Queue-bearing jobs use a
 The workflow identifier comes from `GITHUB_WORKFLOW_REF`. A missing identifier or
 unavailable workflow-scoped endpoint fails closed instead of falling back to a
 repository-wide traversal. Exact counting still requires exhaustive pagination of
-the current workflow because the lower run-ID and active-status predicates are
-filtered locally. `per_page: 100` keeps the request count bounded by that workflow's
-history rather than the entire repository.
+each active-status subset because an older run can appear on a later page.
+`per_page: 100` keeps request count proportional to the live queue rather than the
+workflow's completed history or the entire repository.
 
 GitHub Action runs also perform an admission preflight before constructing the full
 execution. The preflight uses the semantic authenticated-user port and a pure

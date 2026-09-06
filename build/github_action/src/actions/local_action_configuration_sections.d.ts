@@ -29,6 +29,16 @@ export declare function readLocalAgentConfiguration(additionalParams: ActionInpu
     bugbotCommentLimit: number;
     bugbotFixVerifyCommandsInput: string;
     bugbotFixVerifyCommands: string[];
+    bugbotReviewConfiguration: {
+        publicationMode: "publish" | "dry-run";
+        effort: import("../domain/bugbot/review_configuration").BugbotReviewEffort;
+        reviewDrafts: boolean;
+        traceRules: boolean;
+        suggestedChanges: boolean;
+        telemetry: boolean;
+        failOnUnresolved: boolean;
+        organizationRules: string[];
+    };
 };
 export declare function readLocalProjectConfiguration(additionalParams: ActionInputValues, actionInputs: LocalActionInputs, projectRepository: ProjectDetailQueryPort, token: string | undefined): Promise<{
     projectIdsInput: string;

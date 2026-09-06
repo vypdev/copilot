@@ -45,6 +45,7 @@ function baseParam(overrides: Partial<Execution> = {}): Execution {
         repo: "r",
         issueNumber: 42,
         tokens: { token: "t" },
+        tokenUser: "vypbot",
         commit: { branch: "feature/42-foo" },
         currentConfiguration: {},
         branches: { development: "develop" },
@@ -90,10 +91,12 @@ describe("loadBugbotContext", () => {
         mockListIssueComments.mockResolvedValue([
             {
                 id: 100,
+                user: { login: "vypbot" },
                 body: "## Finding A\n\n<!-- copilot-bugbot finding_id:\"id-a\" resolved:false -->",
             },
             {
                 id: 101,
+                user: { login: "vypbot" },
                 body: "## Finding B\n\n<!-- copilot-bugbot finding_id:\"id-b\" resolved:true -->",
             },
         ]);
@@ -129,14 +132,38 @@ describe("loadBugbotContext", () => {
         });
     });
 
+    it("ignores historical markers when either authenticated or comment author identity is unavailable", async () => {
+        mockListIssueComments.mockResolvedValue([
+            {
+                id: 100,
+                user: { login: 'vypbot' },
+                body: '<!-- copilot-bugbot finding_id:"missing-token-user" resolved:false -->',
+            },
+            {
+                id: 101,
+                body: '<!-- copilot-bugbot finding_id:"missing-author" resolved:false -->',
+            },
+        ]);
+
+        const missingTokenUser = await loadBugbotContext(baseParam({ tokenUser: '' }));
+        const missingCommentAuthor = await loadBugbotContext(baseParam());
+
+        expect(missingTokenUser.existingByFindingId).toEqual({});
+        expect(missingCommentAuthor.existingByFindingId).toEqual({
+            'missing-token-user': { issue: { commentId: 100, resolved: false } },
+        });
+    });
+
     it("updates existingByFindingId when same findingId appears in a later comment", async () => {
         mockListIssueComments.mockResolvedValue([
             {
                 id: 100,
+                user: { login: "vypbot" },
                 body: "## First\n\n<!-- copilot-bugbot finding_id:\"id-a\" resolved:false -->",
             },
             {
                 id: 101,
+                user: { login: "vypbot" },
                 body: "## Second (same finding)\n\n<!-- copilot-bugbot finding_id:\"id-a\" resolved:true -->",
             },
         ]);
@@ -152,10 +179,12 @@ describe("loadBugbotContext", () => {
         mockListIssueComments.mockResolvedValue([
             {
                 id: 100,
+                user: { login: "vypbot" },
                 body: "## Open\n\n<!-- copilot-bugbot finding_id:\"open-1\" resolved:false -->",
             },
             {
                 id: 101,
+                user: { login: "vypbot" },
                 body: "## Closed\n\n<!-- copilot-bugbot finding_id:\"closed-1\" resolved:true -->",
             },
         ]);
@@ -237,6 +266,7 @@ describe("loadBugbotContext", () => {
             {
                 id: 200,
                 identity: "PRRC_pr_f1",
+                authorLogin: "vypbot",
                 body: "## PR finding\n\n<!-- copilot-bugbot finding_id:\"pr-f1\" resolved:false -->",
             },
         ]);
@@ -279,6 +309,7 @@ describe("loadBugbotContext", () => {
         mockListIssueComments.mockResolvedValue([
             {
                 id: 100,
+                user: { login: "vypbot" },
                 body: longBody,
             },
         ]);
@@ -294,12 +325,13 @@ describe("loadBugbotContext", () => {
     it("keeps full mutation bodies and independent destination state after a partial resolution", async () => {
         const longBody =
             "## Finding\n\n" + "x".repeat(15000) + "\n\n<!-- copilot-bugbot finding_id:\"partial-1\" resolved:false -->";
-        mockListIssueComments.mockResolvedValue([{ id: 100, body: longBody }]);
+        mockListIssueComments.mockResolvedValue([{ id: 100, user: { login: "vypbot" }, body: longBody }]);
         mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([50]);
         mockListPullRequestReviewComments.mockResolvedValue([
             {
                 id: 200,
                 identity: "PRRC_partial_1",
+                authorLogin: "vypbot",
                 body: "## Finding\n\n<!-- copilot-bugbot finding_id:\"partial-1\" resolved:true -->",
             },
         ]);
@@ -325,6 +357,7 @@ describe("loadBugbotContext", () => {
         mockListIssueComments.mockResolvedValue(
             Array.from({ length: 120 }, (_, index) => ({
                 id: index + 1,
+                user: { login: "vypbot" },
                 body: `## Finding ${index}\n\n${'x'.repeat(700)}\n\n<!-- copilot-bugbot finding_id:"finding-${index}" resolved:false -->`,
             })),
         );

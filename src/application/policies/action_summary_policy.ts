@@ -9,17 +9,21 @@ export interface ActionSummaryContext {
     readonly pullRequestNumber: number;
     readonly lifecycleState?: string;
     readonly pullRequestDescriptionMode?: string;
+    readonly failOnUnresolvedFindings?: boolean;
     readonly results: readonly Result[];
 }
 
 /** Builds a bounded, publication-safe GitHub Actions Job Summary. */
 export function buildActionSummary(context: ActionSummaryContext): string {
     const failures = context.results.filter(result => !result.success && result.executed);
-    const findingStates = context.results
-        .map(result => getFindingStateCounts(result.payload))
-        .find(Boolean);
+    const findingStates = aggregateFindingStateCounts(context.results);
+    const bugbotTelemetry = context.results.map(result => getBugbotTelemetry(result.payload)).find(Boolean);
     const hasActionableFindings = (findingStates?.open ?? 0) + (findingStates?.reopened ?? 0) > 0;
-    const status = failures.length === 0 && !hasActionableFindings ? '✅ Success' : '❌ Failure';
+    const status = failures.length > 0 || (hasActionableFindings && context.failOnUnresolvedFindings)
+        ? '❌ Failure'
+        : hasActionableFindings
+            ? '⚠️ Findings'
+            : '✅ Success';
     const target = context.pullRequestNumber > 0
         ? `PR #${context.pullRequestNumber}`
         : context.issueNumber > 0
@@ -34,6 +38,7 @@ export function buildActionSummary(context: ActionSummaryContext): string {
         `| PR description policy | ${escapeTable(context.pullRequestDescriptionMode ?? '—')} |`,
         `| Results | ${context.results.length} |`,
         `| Finding states | ${formatFindingStates(findingStates)} |`,
+        `| Bugbot review | ${formatBugbotTelemetry(bugbotTelemetry)} |`,
     ];
 
     return [
@@ -52,6 +57,22 @@ export function buildActionSummary(context: ActionSummaryContext): string {
     ].join('\n');
 }
 
+function getBugbotTelemetry(value: unknown): { outcome: string; elapsedMs: number; configuredEffort: string } | undefined {
+    const telemetry = getResultPayload(getResultPayload(value)?.bugbotTelemetry);
+    if (!telemetry || typeof telemetry.outcome !== 'string' || typeof telemetry.elapsedMs !== 'number') return undefined;
+    return {
+        outcome: telemetry.outcome,
+        elapsedMs: telemetry.elapsedMs,
+        configuredEffort: typeof telemetry.configuredEffort === 'string' ? telemetry.configuredEffort : 'default',
+    };
+}
+
+function formatBugbotTelemetry(telemetry: ReturnType<typeof getBugbotTelemetry>): string {
+    return telemetry
+        ? `${escapeTable(telemetry.outcome)}, effort=${escapeTable(telemetry.configuredEffort)}, ${Math.max(0, Math.round(telemetry.elapsedMs))}ms`
+        : '—';
+}
+
 function getFindingStateCounts(value: unknown): { open: number; reopened: number; fixed: number; obsolete: number; dismissed: number } | undefined {
     const payload = getResultPayload(value);
     const stateCounts = getResultPayload(payload?.findingStates) as Partial<Record<'open' | 'reopened' | 'fixed' | 'obsolete' | 'dismissed', unknown>> | undefined;
@@ -59,6 +80,18 @@ function getFindingStateCounts(value: unknown): { open: number; reopened: number
     const states = ['open', 'reopened', 'fixed', 'obsolete', 'dismissed'] as const;
     if (!states.every(state => typeof stateCounts[state] === 'number')) return undefined;
     return Object.fromEntries(states.map(state => [state, stateCounts[state]])) as { open: number; reopened: number; fixed: number; obsolete: number; dismissed: number };
+}
+
+function aggregateFindingStateCounts(results: readonly Result[]): ReturnType<typeof getFindingStateCounts> {
+    const counts = results.map(result => getFindingStateCounts(result.payload)).filter((value): value is NonNullable<ReturnType<typeof getFindingStateCounts>> => value !== undefined);
+    if (counts.length === 0) return undefined;
+    return counts.reduce((total, current) => ({
+        open: total.open + current.open,
+        reopened: total.reopened + current.reopened,
+        fixed: total.fixed + current.fixed,
+        obsolete: total.obsolete + current.obsolete,
+        dismissed: total.dismissed + current.dismissed,
+    }), { open: 0, reopened: 0, fixed: 0, obsolete: 0, dismissed: 0 });
 }
 
 function formatFindingStates(counts: ReturnType<typeof getFindingStateCounts>): string {

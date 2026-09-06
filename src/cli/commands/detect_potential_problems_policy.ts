@@ -8,6 +8,11 @@ export interface DetectProblemsOptions {
   branch?: string;
   debug?: boolean;
   token?: string;
+  dryRun?: boolean;
+  output?: string;
+  effort?: string;
+  traceRules?: boolean;
+  suggestions?: boolean;
 }
 
 export function buildDetectPotentialProblemsParams(
@@ -24,6 +29,10 @@ export function buildDetectPotentialProblemsParams(
     [INPUT_KEYS.SINGLE_ACTION]: ACTIONS.DETECT_POTENTIAL_PROBLEMS,
     [INPUT_KEYS.SINGLE_ACTION_ISSUE]: issueNumber,
     [INPUT_KEYS.TOKEN]: options.token || process.env.PERSONAL_ACCESS_TOKEN,
+    [INPUT_KEYS.BUGBOT_DRY_RUN]: options.dryRun?.toString() ?? 'false',
+    [INPUT_KEYS.BUGBOT_EFFORT]: cleanCliArgument(options.effort) || 'smart',
+    [INPUT_KEYS.BUGBOT_TRACE_RULES]: options.traceRules?.toString() ?? 'false',
+    [INPUT_KEYS.BUGBOT_SUGGESTED_CHANGES]: options.suggestions?.toString() ?? 'true',
     repo: { owner: gitInfo.owner, repo: gitInfo.repo },
     issue: { number: issueNumber },
     commits: { ref: `refs/heads/${branch}` },

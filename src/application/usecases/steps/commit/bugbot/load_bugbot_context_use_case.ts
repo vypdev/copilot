@@ -15,6 +15,7 @@ import {
 } from "./bugbot_finding_context";
 import { logDebugInfo } from "../../../../ports/logging_ports";
 import { buildReviewConversationBlock, buildReviewDiffBlock } from './bugbot_review_context';
+import { buildBugbotReviewRuleSet } from './bugbot_review_rules';
 
 export interface LoadBugbotContextOptions {
     /** When set (e.g. for issue_comment when commit.branch is empty), use this branch to find open PRs. */
@@ -35,6 +36,9 @@ function emptyBugbotContext(): BugbotContext {
         reviewConversationBlock: "",
         prContext: null,
         unresolvedFindingsWithBody: [],
+        reviewRulesBlock: '',
+        reviewRuleSources: [],
+        omittedReviewRules: 0,
     };
 }
 
@@ -166,6 +170,13 @@ export async function loadBugbotContext(
         id: finding.id,
         fullBody: finding.fullBody,
     }));
+    const repositoryRules = await ports.rules?.loadRules(
+        prContext?.prFiles.map((file) => file.filename) ?? [],
+    ) ?? [];
+    const ruleSet = buildBugbotReviewRuleSet(
+        param.ai?.getBugbotReviewConfiguration?.().organizationRules ?? [],
+        repositoryRules,
+    );
 
     logDebugInfo(
         `LoadBugbotContext: issue #${issueNumber}, branch ${headBranch}, open PRs=${openPrNumbers.length}, existing findings=${Object.keys(parsedComments.existingByFindingId).length}, unresolved with body=${unresolvedFindingsWithBody.length}, diff files=${prContext?.changes?.length ?? prContext?.prFiles.length ?? 0}, diff prompt chars=${reviewDiffBlock.length}, conversation chars=${reviewConversationBlock.length}.`
@@ -179,5 +190,8 @@ export async function loadBugbotContext(
         reviewConversationBlock,
         prContext,
         unresolvedFindingsWithBody,
+        reviewRulesBlock: ruleSet.promptBlock,
+        reviewRuleSources: [...ruleSet.sources],
+        omittedReviewRules: ruleSet.omitted,
     };
 }

@@ -60,6 +60,9 @@ jobs:
       - name: Run tests with coverage
         run: pnpm run test:coverage
 
+      - name: Validate Bugbot quality benchmark
+        run: pnpm run eval:bugbot
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v6
         # Coverage reporting is advisory; Codecov v6 requires gpg even when

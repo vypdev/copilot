@@ -70,6 +70,21 @@ export declare const BUGBOT_RESPONSE_SCHEMA: {
                         readonly maxLength: 8000;
                         readonly description: "Suggested fix when applicable";
                     };
+                    readonly symbol: {
+                        readonly type: "string";
+                        readonly maxLength: 500;
+                        readonly description: "Nearest stable class, function, method, or configuration key when applicable";
+                    };
+                    readonly codeSnippet: {
+                        readonly type: "string";
+                        readonly maxLength: 2000;
+                        readonly description: "Minimal exact code fragment that anchors the root cause across line movement";
+                    };
+                    readonly suggestedCode: {
+                        readonly type: "string";
+                        readonly maxLength: 4000;
+                        readonly description: "Optional exact replacement for the reported changed-line range; omit for non-local or uncertain fixes";
+                    };
                 };
                 readonly required: readonly ["id", "title", "description"];
                 readonly additionalProperties: false;

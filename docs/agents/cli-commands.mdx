@@ -24,10 +24,12 @@ Comments beginning with `/copilot` use a deterministic command boundary. Text el
 | `/copilot test-plan` | Propose a focused test strategy. | No |
 | `/copilot status` | Summarize the current lifecycle and next step. | No |
 | `/copilot description` | Generate or refresh the PR description using the configured policy, on explicit request. | Yes, PR body only |
-| `/copilot review` | Review the current issue or PR context. | No |
+| `/copilot review [effort=smart|low|default|high] [dry-run=true] [verbose=true] [suggestions=false]` | Review with optional per-run settings. | No |
 | `/copilot findings` | Summarize known Bugbot findings. | No |
 | `/copilot recheck` | Request a fresh analysis of the current context. | No |
 | `/copilot fix FINDING-ID` | Request an explicit Bugbot fix. Use `all` to target all open findings. | Yes, authorized users only |
 | `/copilot dismiss FINDING-ID` | Dismiss a known finding without changing files. | Changes finding state, authorized users only |
+| `/copilot remember RULE` | Add a deduplicated rule to the repository's versioned learned-rule file. | Yes, authorized users only |
+| `/copilot implement REQUEST` | Apply an explicit repository change. | Yes, authorized users only |
 
 The parser accepts only a command at the beginning of the comment, limits the input size and argument count, and rejects unknown commands. File-changing operations still require the existing organization-member or repository-owner authorization policy. Agent output is treated as untrusted text and is sanitized before it is published as Markdown.

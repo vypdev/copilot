@@ -37,6 +37,14 @@ Copilot provides extensive configuration options to customize your workflow. Use
     - `bugbot-severity`: Minimum severity for Bugbot findings to report: `info`, `low`, `medium`, or `high` (default: `low`). Findings below this threshold are not posted on the issue or PR.
     - `bugbot-comment-limit`: Maximum number of findings to publish as individual issue comments or inline PR review comments (default: `20`). Extra findings are summarized in the PR review body or in one issue-only overflow comment. Clamped between 1 and 200.
     - `bugbot-fix-verify-commands`: Comma-separated commands to run after Bugbot autofix (e.g. `pnpm run build, pnpm test, pnpm run lint`). When a user asks to fix findings from an issue or PR comment, the configured agent applies fixes and these commands run before the action commits and pushes; if any fails, no commit is made. Default: empty (only the selected agent runtime is used). See [Features → Bugbot autofix](/features#workflow-triggered-behavior).
+    - `bugbot-effort`: Review depth (`low`, `default`, `high`, or adaptive `smart`). Setup templates recommend `smart`.
+    - `bugbot-dry-run`: Complete analysis with no publication, resolution, Check Run, configuration persistence, commit, or push.
+    - `bugbot-review-drafts`: Include draft pull requests (default `false`).
+    - `bugbot-trace-rules`: Include rule source and included/truncated/omitted status in summaries without exposing rule contents (default `false`).
+    - `bugbot-suggested-changes`: Enable exact RIGHT-side line suggestions (default `true`).
+    - `bugbot-telemetry`: Emit content-free review telemetry (default `true`).
+    - `bugbot-fail-on-unresolved`: Fail the Action and its native Check when the latest review has open or reopened findings. Disabled by default, so findings are reported neutrally.
+    - `bugbot-organization-rules`: Semicolon/newline-separated organization review rules.
     - `ai-members-only`: Restrict AI features to only organization/project members (default: "false"); when true, AI PR description is skipped if the PR author is not a member.
     - `ai-include-reasoning`: Include reasoning or chain-of-thought in AI responses when supported by the model (default: "true").
   </Tab>

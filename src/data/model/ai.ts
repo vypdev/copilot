@@ -5,6 +5,11 @@ import {
     normalizePullRequestDescriptionMode,
     type PullRequestDescriptionMode,
 } from '../../domain/pull_request_description';
+import {
+    DEFAULT_BUGBOT_REVIEW_CONFIGURATION,
+    normalizeBugbotReviewConfiguration,
+    type BugbotReviewConfiguration,
+} from '../../domain/bugbot/review_configuration';
 
 export class Ai {
     private aiPullRequestDescription: boolean;
@@ -16,6 +21,7 @@ export class Ai {
     private bugbotFixVerifyCommands: string[];
     private agentTasks: AgentTaskConfiguration;
     private pullRequestDescriptionMode: PullRequestDescriptionMode;
+    private bugbotReviewConfiguration: BugbotReviewConfiguration;
 
     constructor(
         _configurationSource: string,
@@ -32,6 +38,7 @@ export class Ai {
             fixer: { provider: 'codex', modelProvider: 'openai', model, command: defaultAgentCommand({ provider: 'codex', modelProvider: 'openai', model }) },
         },
         pullRequestDescriptionMode: PullRequestDescriptionMode = DEFAULT_PULL_REQUEST_DESCRIPTION_MODE,
+        bugbotReviewConfiguration: Partial<BugbotReviewConfiguration> = DEFAULT_BUGBOT_REVIEW_CONFIGURATION,
     ) {
         this.aiPullRequestDescription = aiPullRequestDescription;
         this.aiMembersOnly = aiMembersOnly;
@@ -42,6 +49,7 @@ export class Ai {
         this.bugbotFixVerifyCommands = bugbotFixVerifyCommands;
         this.agentTasks = agentTasks;
         this.pullRequestDescriptionMode = normalizePullRequestDescriptionMode(pullRequestDescriptionMode);
+        this.bugbotReviewConfiguration = normalizeBugbotReviewConfiguration(bugbotReviewConfiguration);
     }
 
     getAiPullRequestDescription(): boolean {
@@ -74,6 +82,24 @@ export class Ai {
 
     getBugbotFixVerifyCommands(): string[] {
         return this.bugbotFixVerifyCommands;
+    }
+
+    getBugbotReviewConfiguration(): BugbotReviewConfiguration {
+        return this.bugbotReviewConfiguration;
+    }
+
+    /** Applies command-scoped review options and restores the shared configuration afterwards. */
+    async withBugbotReviewConfiguration<T>(
+        overrides: Partial<BugbotReviewConfiguration>,
+        operation: () => Promise<T>,
+    ): Promise<T> {
+        const previous = this.bugbotReviewConfiguration;
+        this.bugbotReviewConfiguration = normalizeBugbotReviewConfiguration({ ...previous, ...overrides });
+        try {
+            return await operation();
+        } finally {
+            this.bugbotReviewConfiguration = previous;
+        }
     }
 
     getAgentConfiguration(task: AgentTask): AgentConfiguration {
