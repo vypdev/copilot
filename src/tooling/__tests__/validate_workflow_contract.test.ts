@@ -100,6 +100,16 @@ describe('workflow contract validator', () => {
     expect(() => assertQueueWorkflow(queueFile, workflow)).toThrow('COPILOT_BOT_LOGIN actor gate');
   });
 
+  it.each(['.github/workflows', 'setup/workflows'])('requires the exact push review range fetch in %s', (directory) => {
+    const file = path.join(process.cwd(), directory, 'copilot_commit.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    workflow.jobs['copilot-commits'].steps = workflow.jobs['copilot-commits'].steps.filter(
+      (step: { name?: string }) => step.name !== 'Fetch push review range',
+    );
+
+    expect(() => validateWorkflow(file, workflow)).toThrow('must fetch the exact GitHub before/after review range');
+  });
+
   it('validates the exact gate-first DAG for active and setup release/hotfix workflows', () => {
     for (const directory of ['.github/workflows', 'setup/workflows']) {
       for (const fileName of ['release_workflow.yml', 'hotfix_workflow.yml']) {

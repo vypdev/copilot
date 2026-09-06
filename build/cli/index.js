@@ -61925,31 +61925,38 @@ function buildBugbotPrompt(param, context) {
         headBranch,
         baseBranch,
         issueNumber: String(param.issueNumber),
-        changeScopeInstruction: buildChangeScopeInstruction(param, headBranch, baseBranch),
+        changeScopeInstruction: buildChangeScopeInstruction(param, headBranch, baseBranch, (context.reviewDiffBlock ?? '').trim().length > 0),
         ignoreBlock,
         previousBlock,
         diffBlock: context.reviewDiffBlock,
         reviewConversationBlock: context.reviewConversationBlock,
     });
 }
-function buildChangeScopeInstruction(param, headBranch, baseBranch) {
+function buildChangeScopeInstruction(param, headBranch, baseBranch, hasCanonicalPullRequestDiff) {
     const before = normalizedObjectId(param.inputs?.before);
     const after = normalizedObjectId(param.inputs?.after);
+    const eventName = param.eventName || param.inputs?.eventName;
     const isIncrementalPullRequestUpdate = param.inputs?.eventName === 'pull_request'
         && param.pullRequest.action === 'synchronize'
         && before !== undefined
         && after !== undefined
         && before !== after;
-    if (!isIncrementalPullRequestUpdate) {
+    if (isIncrementalPullRequestUpdate) {
+        return `This is an incremental pull-request update. For task 1, analyze the exact local commit range \`${before}..${after}\` and the surrounding current code needed to understand those changes. The canonical full PR diff is supplied only as an authoritative manifest and location reference; do not re-review its unchanged remainder. Task 2 is not limited to this range: inspect the current code relevant to every previously reported finding before deciding whether it is resolved.`;
+    }
+    if (eventName === 'push' && before !== undefined && after !== undefined && before !== after) {
+        return `This is a push update without requiring a pull request. For task 1, analyze the exact local commit range \`${before}..${after}\` and surrounding current code. Task 2 is not limited to this range: inspect the current code relevant to every previously reported finding before deciding whether it is resolved.`;
+    }
+    if (hasCanonicalPullRequestDiff) {
         return `Review the canonical pull-request diff for "${headBranch}" compared to "${baseBranch}" and inspect the read-only workspace for any surrounding code required to prove a finding.`;
     }
-    return `This is an incremental pull-request update. For task 1, analyze the exact local commit range \`${before}..${after}\` and the surrounding current code needed to understand those changes. The canonical full PR diff is supplied only as an authoritative manifest and location reference; do not re-review its unchanged remainder. Task 2 is not limited to this range: inspect the current code relevant to every previously reported finding before deciding whether it is resolved.`;
+    return `No canonical pull-request diff is available. Determine the current change scope from the read-only local Git checkout: compare "${headBranch}" with "${baseBranch}" when both refs are available, otherwise inspect the current commit against its parent. Review only those changes and the surrounding code needed to prove a finding.`;
 }
 function normalizedObjectId(value) {
     if (typeof value !== 'string')
         return undefined;
     const normalized = value.trim();
-    return GIT_OBJECT_ID.test(normalized) ? normalized : undefined;
+    return GIT_OBJECT_ID.test(normalized) && !/^0+$/.test(normalized) ? normalized : undefined;
 }
 
 

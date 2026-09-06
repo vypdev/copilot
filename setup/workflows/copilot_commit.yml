@@ -17,6 +17,13 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v5
 
+      - name: Fetch push review range
+        if: github.event.before != '0000000000000000000000000000000000000000' && github.event.after != '0000000000000000000000000000000000000000'
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.event.after }}
+        run: git fetch --no-tags --depth=1 origin "$BEFORE_SHA" "$AFTER_SHA"
+
       - uses: vypdev/copilot@v3
         with:
           ai-ignore-files: ${{ vars.AI_IGNORE_FILES || 'build/*' }}

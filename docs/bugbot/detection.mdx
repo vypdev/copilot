@@ -25,7 +25,7 @@ its findings as line comments on the current diff.
 
 ### 2. On every push (commit workflow)
 
-When you push to a branch that is **linked to an issue** (e.g. a feature or bugfix branch created by Copilot), the **Commit** workflow runs. If an agent CLI is configured, the action runs **DetectPotentialProblemsUseCase**: it loads existing finding context, asks the configured agent to analyze the branch vs the base, and then publishes new findings and updates or marks as resolved any previous findings that no longer apply.
+When you push to a branch that is **linked to an issue** (e.g. a feature or bugfix branch created by Copilot), the **Commit** workflow runs. If an agent CLI is configured, the action runs **DetectPotentialProblemsUseCase**: it fetches and reviews the exact event `before..after` range, loads existing finding context, and then publishes new findings and updates or marks as resolved any previous findings that no longer apply. New-branch pushes, whose `before` value is GitHub's all-zero sentinel, fall back to the current branch/base or commit-parent history available in the local checkout.
 
 **Requirements:**
 
