@@ -1,4 +1,4 @@
-import { DEFAULT_IMAGE_CONFIG } from '../utils/constants';
+import { DEFAULT_IMAGE_CONFIG } from './default_image_config';
 export type ImageConfigurationReader = (key: string) => unknown;
 type ImageGroup = keyof typeof DEFAULT_IMAGE_CONFIG;
 type ImageVariant = keyof (typeof DEFAULT_IMAGE_CONFIG)[ImageGroup];

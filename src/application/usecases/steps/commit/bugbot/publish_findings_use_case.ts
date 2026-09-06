@@ -44,7 +44,7 @@ export async function publishFindings(param: PublishFindingsParam): Promise<void
             : undefined;
 
     for (const finding of findings) {
-        if (execution.issueNumber > 0) {
+        if (execution.issueNumber > 0 && !reviewPublisher) {
             await publishIssueFindingComment(
                 ports.issueComments,
                 execution,
@@ -58,8 +58,8 @@ export async function publishFindings(param: PublishFindingsParam): Promise<void
         }
     }
 
-    await reviewPublisher?.flush();
-    if (execution.issueNumber > 0) {
+    await reviewPublisher?.flush(overflowCount, overflowTitles);
+    if (execution.issueNumber > 0 && !reviewPublisher) {
         await publishOverflowComment(
             ports.issueComments,
             execution,

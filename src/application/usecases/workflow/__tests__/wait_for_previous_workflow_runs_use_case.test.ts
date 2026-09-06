@@ -13,7 +13,7 @@ const query: PreviousWorkflowRunsQuery = {
   owner: 'org',
   repository: 'repo',
   currentRunId: 200,
-  workflowName: 'Copilot - Issue',
+  workflowIdentifier: 'copilot_issue.yml',
 };
 
 function observer(): jest.Mocked<WorkflowPollingObserverPort> {

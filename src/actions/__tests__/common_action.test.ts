@@ -17,6 +17,7 @@ import { createMainRunRouteCompositionRoot } from '../../infrastructure/composit
 import type { ProjectBoardCommandPort } from '../../application/ports/project_board_command_ports';
 import type { LatestTagQueryPort } from '../../application/ports/branch_tag_ports';
 import type { Execution } from '../../data/model/execution';
+import type { SynchronizeAgentActivityUseCase } from '../../application/usecases/actions/synchronize_agent_activity_use_case';
 import { Result } from '../../data/model/result';
 import { logInfo } from '../../utils/logger';
 
@@ -28,6 +29,7 @@ jest.mock('../../utils/logger', () => ({
   logInfo: jest.fn(),
   logError: jest.fn(),
   logDebugInfo: jest.fn(),
+  setGlobalLoggerDebug: jest.fn(),
   clearAccumulatedLogs: jest.fn(),
 }));
 
@@ -39,6 +41,8 @@ const mockPullRequestInvoke = jest.fn();
 const mockCommitInvoke = jest.fn();
 const mockSetupExecutionInvoke = jest.fn();
 const mockWaitForPreviousWorkflowRunsInvoke = jest.fn();
+const mockAgentActivityStart = jest.fn();
+const mockAgentActivityFinish = jest.fn();
 
 jest.mock('../../infrastructure/composition/main_run_route_composition_root', () => ({
   createMainRunRouteCompositionRoot: jest.fn().mockImplementation(() => ({
@@ -132,6 +136,17 @@ const runMain = (execution: Execution) => productionMainRun(
   latestTagQueryPort,
 );
 
+const runMainWithActivity = (execution: Execution) => productionMainRun(
+  execution,
+  projectBoardCommandPort,
+  latestTagQueryPort,
+  undefined,
+  {
+    start: mockAgentActivityStart,
+    finish: mockAgentActivityFinish,
+  } as unknown as SynchronizeAgentActivityUseCase,
+);
+
 const originalRunId = process.env.GITHUB_RUN_ID;
 const originalWorkflow = process.env.GITHUB_WORKFLOW;
 const originalWorkflowRef = process.env.GITHUB_WORKFLOW_REF;
@@ -156,6 +171,8 @@ describe('mainRun', () => {
     mockPullRequestInvoke.mockResolvedValue([]);
     mockCommitInvoke.mockResolvedValue([]);
     mockSetupExecutionInvoke.mockResolvedValue(undefined);
+    mockAgentActivityStart.mockResolvedValue(undefined);
+    mockAgentActivityFinish.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -195,17 +212,7 @@ describe('mainRun', () => {
       owner: 'org',
       repository: 'repo',
       currentRunId: 200,
-      workflowName: 'CI',
       workflowIdentifier: 'copilot_issue.yml',
-      workflowNames: [
-        'Copilot - Issue',
-        'Copilot - Issue Comment',
-        'Copilot - Commit',
-        'Copilot - Pull Request',
-        'Copilot - Pull Request Comment',
-        'Task - Hotfix',
-        'Task - Release',
-      ],
     });
   });
 
@@ -229,6 +236,18 @@ describe('mainRun', () => {
 
     await expect(runMain(mockExecution({ welcome: undefined }))).rejects.toThrow(
       'GitHub workflow identity is unavailable; refusing to bypass sequential execution.',
+    );
+    expect(createWaitForPreviousWorkflowRunsUseCase).not.toHaveBeenCalled();
+    expect(mockSetupExecutionInvoke).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when a GitHub Actions run has no workflow identifier', async () => {
+    process.env.GITHUB_ACTIONS = 'true';
+    process.env.GITHUB_RUN_ID = '200';
+    delete process.env.GITHUB_WORKFLOW_REF;
+
+    await expect(runMain(mockExecution({ welcome: undefined }))).rejects.toThrow(
+      'GitHub workflow identifier is unavailable; refusing to bypass sequential execution.',
     );
     expect(createWaitForPreviousWorkflowRunsUseCase).not.toHaveBeenCalled();
     expect(mockSetupExecutionInvoke).not.toHaveBeenCalled();
@@ -389,6 +408,26 @@ describe('mainRun', () => {
 
     expect(mockCommitInvoke).toHaveBeenCalledWith(execution);
     expect(results).toEqual(expected);
+  });
+
+  it('tracks agent activity around an agent-backed route', async () => {
+    const order: string[] = [];
+    mockAgentActivityStart.mockImplementation(async () => { order.push('activity-start'); });
+    mockCommitInvoke.mockImplementation(async () => { order.push('route'); return []; });
+    mockAgentActivityFinish.mockImplementation(async () => { order.push('activity-finish'); });
+    const execution = mockExecution({
+      eventName: 'push',
+      isPush: true,
+      commit: { commits: [{ id: 'commit-1' }] },
+      ai: {
+        getAgentConfiguration: jest.fn(() => ({ model: 'model', command: 'agent' })),
+        getAiPullRequestDescription: jest.fn(() => false),
+      },
+    });
+
+    await runMainWithActivity(execution);
+
+    expect(order).toEqual(['activity-start', 'route', 'activity-finish']);
   });
 
   it('calls core.setFailed when action not handled', async () => {

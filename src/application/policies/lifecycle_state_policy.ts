@@ -1,5 +1,14 @@
 import type { CopilotLifecycleState } from '../../domain/copilot_lifecycle';
 import { getResultPayload } from '../../data/model/result';
+import type { ExecutionInputs } from '../../data/model/execution_inputs';
+
+export type LifecycleChecksEvidence = 'pending' | 'success' | 'failure';
+export type LifecycleReviewEvidence = 'approved' | 'changes-requested' | 'commented' | 'dismissed';
+
+export interface LifecycleExternalEvidence {
+    readonly checks?: LifecycleChecksEvidence;
+    readonly review?: LifecycleReviewEvidence;
+}
 
 export interface LifecycleStatePolicyResult {
     readonly id: string;
@@ -19,6 +28,7 @@ export interface LifecycleStateDecisionInput {
     readonly issueDescriptionEdited: boolean;
     readonly pullRequestMerged: boolean;
     readonly pullRequestClosed: boolean;
+    readonly externalEvidence?: LifecycleExternalEvidence;
     readonly results: readonly LifecycleStatePolicyResult[];
 }
 
@@ -31,11 +41,17 @@ export function resolveLifecycleState(
 
     if (input.isPullRequest) {
         if (input.pullRequestClosed && input.pullRequestMerged) return 'verified';
+        if (input.externalEvidence?.checks === 'failure') return 'blocked';
+        if (input.externalEvidence?.review === 'changes-requested') return 'changes-requested';
         const findingState = input.results
             .map(result => getResultPayload(result.payload)?.findingStates)
             .find(isFindingStateCounts);
         if (findingState && (findingState.open > 0 || findingState.reopened > 0)) return 'changes-requested';
         if (findingState && findingState.open === 0 && findingState.reopened === 0) return 'ready';
+        if (input.externalEvidence?.checks === 'pending') return 'reviewing';
+        if (input.externalEvidence?.review === 'approved') return 'ready';
+        if (input.externalEvidence?.checks === 'success') return 'reviewing';
+        if (input.externalEvidence?.review !== undefined) return 'reviewing';
         if (['opened', 'reopened', 'synchronize'].includes(input.action)) return 'reviewing';
         return undefined;
     }
@@ -43,8 +59,46 @@ export function resolveLifecycleState(
     if (hasResult(input.results, 'PrepareBranchesUseCase')) return 'in-progress';
     if (hasSuccessfulResult(input.results, 'RecommendStepsUseCase')) return 'planned';
     if (hasExplicitPlanningCommand(input.results)) return 'planned';
-    if (input.issueOpened || input.issueDescriptionEdited) return 'analyzing';
     return undefined;
+}
+
+/** Extracts only stable review/check facts from GitHub event payloads. */
+export function readLifecycleExternalEvidence(
+    inputs: ExecutionInputs | undefined,
+    currentPullRequestHeadSha?: string,
+): LifecycleExternalEvidence | undefined {
+    if (!inputs) return undefined;
+    if (inputs.eventName === 'pull_request_review') {
+        if (!isCurrentValidationEvidence(inputs.review?.commit_id, currentPullRequestHeadSha)) return undefined;
+        const reviewState = inputs.review?.state?.trim().toLowerCase();
+        if (reviewState === 'approved') return { review: 'approved' };
+        if (reviewState === 'changes_requested') return { review: 'changes-requested' };
+        if (reviewState === 'dismissed') return { review: 'dismissed' };
+        if (reviewState === 'commented') return { review: 'commented' };
+        return undefined;
+    }
+    if (inputs.eventName === 'check_suite') {
+        if (!isCurrentValidationEvidence(inputs.check_suite?.head_sha, currentPullRequestHeadSha)) return undefined;
+        return { checks: readChecksEvidence(inputs.check_suite?.status, inputs.check_suite?.conclusion) };
+    }
+    if (inputs.eventName === 'workflow_run') {
+        if (!isCurrentValidationEvidence(inputs.workflow_run?.head_sha, currentPullRequestHeadSha)) return undefined;
+        return { checks: readChecksEvidence(inputs.workflow_run?.status, inputs.workflow_run?.conclusion) };
+    }
+    return undefined;
+}
+
+function isCurrentValidationEvidence(
+    evidenceHeadSha: string | undefined,
+    currentPullRequestHeadSha: string | undefined,
+): boolean {
+    if (!evidenceHeadSha || !currentPullRequestHeadSha) return false;
+    return evidenceHeadSha.trim() === currentPullRequestHeadSha.trim();
+}
+
+function readChecksEvidence(status: string | undefined, conclusion: string | null | undefined): LifecycleChecksEvidence {
+    if (status?.trim().toLowerCase() !== 'completed') return 'pending';
+    return conclusion?.trim().toLowerCase() === 'success' ? 'success' : 'failure';
 }
 
 function isFindingStateCounts(value: unknown): value is { open: number; reopened: number } {

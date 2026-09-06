@@ -33,7 +33,7 @@ jest.mock('../../data/repository/project/project_board_query_repository', () => 
 }));
 
 import { runLocalAction } from '../local_action';
-import { INPUT_KEYS } from '../../utils/constants';
+import { INPUT_KEYS } from '../../application/contracts/input_keys';
 
 /** Minimal defaults so local_action can run (avoids .split on undefined). */
 function minimalActionInputs(): Record<string, string> {

@@ -1,6 +1,7 @@
 import { InitialSetupUseCase } from '../initial_setup_use_case';
 import { Result } from '../../../../data/model/result';
 import type { Execution } from '../../../../data/model/execution';
+import { createDefaultSetupConfiguration } from '../../../policies/setup_configuration_policy';
 
 jest.mock('../../../../utils/logger', () => ({
   logDebugInfo: jest.fn(),
@@ -43,6 +44,7 @@ const mockEnsureInitialLabels = jest.fn();
 const mockEnsureIssueTypes = jest.fn();
 const mockSetupPrepare = jest.fn();
 const mockSetupHasValidToken = jest.fn();
+const mockSetupVariablesUpsert = jest.fn();
 
 function baseParam(overrides: Record<string, unknown> = {}): Execution {
   return {
@@ -85,6 +87,7 @@ describe('InitialSetupUseCase', () => {
       { getDefaultBranch: mockGetDefaultBranch } as any,
       { createTag: mockCreateTag } as any,
       { prepare: mockSetupPrepare, hasValidToken: mockSetupHasValidToken },
+      { upsert: mockSetupVariablesUpsert },
     );
     mockSetupPrepare.mockReturnValue({ copied: 2, skipped: 0 });
     mockSetupHasValidToken.mockReturnValue(true);
@@ -102,6 +105,8 @@ describe('InitialSetupUseCase', () => {
     mockGetDefaultBranch.mockResolvedValue('main');
     mockCreateTag.mockReset();
     mockCreateTag.mockResolvedValue('abc123');
+    mockSetupVariablesUpsert.mockReset();
+    mockSetupVariablesUpsert.mockResolvedValue({ created: 1, updated: 2, errors: [] });
   });
 
   it('prepares the setup workspace and validates its token through the port', async () => {
@@ -119,7 +124,7 @@ describe('InitialSetupUseCase', () => {
       expect(results).toHaveLength(1);
       expect(results[0].success).toBe(false);
       expect(results[0].errors.map((error) => error.message)).toContain(
-        'PERSONAL_ACCESS_TOKEN must be set (environment or .env) with a valid token to run setup.'
+        'A valid setup PAT must be provided to run setup. It is separate from the workflow PAT Secret.'
       );
       expect(results[0].steps).not.toContainEqual(
         expect.stringMatching(/GitHub access verified/)
@@ -158,6 +163,62 @@ describe('InitialSetupUseCase', () => {
     expect(results[0].steps?.some((s) => s.includes('Default version tag v1.0.0 created'))).toBe(true);
     expect(mockGetDefaultBranch).toHaveBeenCalledWith('owner', 'repo', 'token');
     expect(mockCreateTag).toHaveBeenCalledWith('owner', 'repo', 'main', 'v1.0.0', 'token');
+  });
+
+  it('applies the selected setup files and repository Variables from the wizard configuration', async () => {
+    const setupConfiguration = createDefaultSetupConfiguration();
+    setupConfiguration.features.release = false;
+    setupConfiguration.createInitialTag = false;
+    const results = await useCase.invoke(baseParam({ inputs: { setupConfiguration } }));
+
+    expect(results[0].success).toBe(true);
+    expect(mockSetupPrepare).toHaveBeenCalledWith({ features: setupConfiguration.features });
+    expect(mockSetupVariablesUpsert).toHaveBeenCalledWith(
+      'owner',
+      'repo',
+      'token',
+      expect.arrayContaining([{ name: 'AGENT_PROVIDER', value: 'codex' }]),
+    );
+    expect(results[0].steps).toContain('⏭️  Initial version tag creation disabled by setup configuration.');
+  });
+
+  it('provisions Variables at organization scope when the configuration selects it', async () => {
+    const setupConfiguration = createDefaultSetupConfiguration();
+    setupConfiguration.features.release = false;
+    setupConfiguration.createInitialTag = false;
+    setupConfiguration.manageRepositorySecrets = false;
+    setupConfiguration.storage.variables.defaultScope = 'organization';
+    const scopedUpsert = jest.fn().mockResolvedValue({ created: 1, updated: 0, errors: [] });
+    const remoteConfiguration = {
+      ownerType: 'Organization' as const,
+      repositoryId: 42,
+      repositoryVisibility: 'private' as const,
+      repositorySecrets: [], organizationSecrets: [], repositoryVariables: [], organizationVariables: [],
+      organizationAccess: 'available' as const, organizationSecretsAccess: 'available' as const,
+      organizationVariablesAccess: 'available' as const,
+    };
+    const scopedUseCase = new InitialSetupUseCase(
+      { getUserFromToken: mockGetUserFromToken, getTokenUserDetails: jest.fn() },
+      { ensureInitialLabels: mockEnsureInitialLabels },
+      { ensureIssueTypes: mockEnsureIssueTypes },
+      { getLatestTag: mockGetLatestTag },
+      { getDefaultBranch: mockGetDefaultBranch } as any,
+      { createTag: mockCreateTag } as any,
+      { prepare: mockSetupPrepare, hasValidToken: mockSetupHasValidToken },
+      { upsert: mockSetupVariablesUpsert, upsertScopedVariables: scopedUpsert },
+      undefined,
+      { inspect: jest.fn().mockResolvedValue(remoteConfiguration) },
+    );
+
+    const results = await scopedUseCase.invoke(baseParam({ inputs: { setupConfiguration } }));
+
+    expect(results[0].success).toBe(true);
+    expect(scopedUpsert).toHaveBeenCalledWith(
+      'owner', 'repo', 'token',
+      expect.objectContaining({ scope: 'organization', repositoryId: 42 }),
+      expect.arrayContaining([{ name: 'AGENT_PROVIDER', value: 'codex' }]),
+    );
+    expect(mockSetupVariablesUpsert).not.toHaveBeenCalled();
   });
 
   it('does not create default tag when repository already has tags', async () => {

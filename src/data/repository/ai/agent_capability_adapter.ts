@@ -1,4 +1,4 @@
-import { AGENT_REQUEST_TIMEOUT_MS } from '../../../utils/constants';
+import { AGENT_REQUEST_TIMEOUT_MS } from './agent_constants';
 import { logError } from '../../../utils/logger';
 import { ProviderCliAdapter } from '../provider_cli_adapter';
 
@@ -31,6 +31,7 @@ export abstract class AgentCapabilityAdapter {
                 configuration: taskConfiguration,
                 prompt: this.addEffortInstruction(request.prompt, taskConfiguration.effort),
                 timeoutMs: AGENT_REQUEST_TIMEOUT_MS,
+                capability: request.capability,
             });
             return request.mapCliOutput(output);
         } catch (error: unknown) {

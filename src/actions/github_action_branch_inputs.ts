@@ -1,4 +1,4 @@
-import { INPUT_KEYS } from '../utils/constants';
+import { INPUT_KEYS } from '../application/contracts/input_keys';
 import type { BranchValues } from './branches_builder';
 
 export function readGithubActionBranchInputs(getInput: (key: string) => string): BranchValues {

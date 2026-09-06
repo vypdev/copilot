@@ -26,4 +26,14 @@ export class UpdatePullRequestDescriptionUseCase implements ParamUseCase<Executi
             aiRepository: this.aiRepository,
         });
     }
+
+    /** Explicit comment commands may update a preserved PR body on demand. */
+    async invokeExplicit(param: Execution): Promise<Result[]> {
+        return await runUpdatePullRequestDescriptionWorkflow(param, this.taskId, {
+            pullRequestDescriptionCommandPort: this.pullRequestDescriptionCommandPort,
+            issueDescriptionQueryPort: this.issueDescriptionQueryPort,
+            organizationMembersPort: this.organizationMembersPort,
+            aiRepository: this.aiRepository,
+        }, true);
+    }
 }

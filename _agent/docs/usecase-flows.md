@@ -124,7 +124,9 @@ Invoked when:
 | `detect_potential_problems_action` | DetectPotentialProblemsUseCase |
 | `recommend_steps_action` | RecommendStepsUseCase |
 
-(Action names in constants: check_progress_action, detect_potential_problems_action, recommend_steps_action.)
+(Action names are defined in `src/data/model/action_types.ts`; examples include
+`check_progress_action`, `detect_potential_problems_action`, and
+`recommend_steps_action`.)
 
 ---
 

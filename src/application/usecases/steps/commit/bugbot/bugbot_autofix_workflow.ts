@@ -50,6 +50,7 @@ export async function runBugbotAutofixWorkflow(
             preflight.context,
             preflight.idsToFix,
             preflight.workspacePathsBefore,
+            preflight.branchCheckedOut,
             response?.text,
             dependencies.gitCommitPort,
         );

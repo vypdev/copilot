@@ -94,7 +94,7 @@ export declare function buildLocalActionConfiguration(additionalParams: ActionIn
     sizeSLabel: string;
     sizeXsLabel: string;
     lifecycle: {
-        analyzing: string;
+        aiProcessing: string;
         planned: string;
         inProgress: string;
         reviewing: string;
@@ -102,6 +102,8 @@ export declare function buildLocalActionConfiguration(additionalParams: ActionIn
         verified: string;
         ready: string;
         blocked: string;
+        awaitingMaintainer: string;
+        awaitingIssueAuthor: string;
     };
     projectIdsInput: string;
     projectIds: string[];
@@ -113,6 +115,7 @@ export declare function buildLocalActionConfiguration(additionalParams: ActionIn
     agentTasks: import("../domain/agent").AgentTaskConfiguration;
     agentModel: string;
     aiPullRequestDescription: boolean;
+    aiPullRequestDescriptionMode: "replace" | "append" | "preserve" | "disabled";
     aiMembersOnly: boolean;
     aiIncludeReasoning: boolean;
     aiIgnoreFilesInput: string;
@@ -131,6 +134,7 @@ export declare function buildLocalActionConfiguration(additionalParams: ActionIn
     singleActionVersion: string;
     singleActionTitle: string;
     singleActionChangelog: string;
+    inactivityThresholdHours: number;
     token: string;
 }>;
 export type LocalActionConfiguration = Awaited<ReturnType<typeof buildLocalActionConfiguration>>;

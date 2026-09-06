@@ -1,4 +1,4 @@
-import type { AgentConfiguration, AgentProvider } from '../model/agent';
+import type { AgentCapability, AgentConfiguration, AgentProvider } from '../model/agent';
 import type { AgentCliPort } from '../../infrastructure/agents/ports/agent_provider_ports';
 
 export interface ProviderCliRequest {
@@ -7,6 +7,7 @@ export interface ProviderCliRequest {
     timeoutMs: number;
     cwd?: string;
     signal?: AbortSignal;
+    capability: AgentCapability;
 }
 
 abstract class SpecificCliAdapter {
@@ -25,6 +26,7 @@ abstract class SpecificCliAdapter {
             command,
             prompt: request.prompt,
             provider: this.expectedProvider,
+            capability: request.capability,
             ...(request.configuration.modelProvider ? { modelProvider: request.configuration.modelProvider } : {}),
             promptMode: this.expectedProvider === 'codex' ? 'stdin' : 'argv',
             timeoutMs: request.timeoutMs,

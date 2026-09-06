@@ -13,6 +13,7 @@ export class SingleAction {
         ACTIONS.CHECK_PROGRESS,
         ACTIONS.DETECT_POTENTIAL_PROBLEMS,
         ACTIONS.RECOMMEND_STEPS,
+        ACTIONS.CLOSE_INACTIVE_ISSUES,
     ];
     /**
      * Actions that throw an error if the last step failed
@@ -22,6 +23,7 @@ export class SingleAction {
        ACTIONS.CREATE_RELEASE,
        ACTIONS.DEPLOYED,
        ACTIONS.CREATE_TAG,
+       ACTIONS.CLOSE_INACTIVE_ISSUES,
     ];
 
     /**
@@ -30,6 +32,7 @@ export class SingleAction {
     actionsWithoutIssue: string[] = [
         ACTIONS.THINK,
         ACTIONS.INITIAL_SETUP,
+        ACTIONS.CLOSE_INACTIVE_ISSUES,
     ];
 
     isIssue: boolean = false;
@@ -78,6 +81,10 @@ export class SingleAction {
 
     get isRecommendStepsAction(): boolean {
         return this.currentSingleAction === ACTIONS.RECOMMEND_STEPS;
+    }
+
+    get isCloseInactiveIssuesAction(): boolean {
+        return this.currentSingleAction === ACTIONS.CLOSE_INACTIVE_ISSUES;
     }
 
     get enabledSingleAction(): boolean {

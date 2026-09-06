@@ -4,6 +4,7 @@ import type { GithubActorAuthorizationClient } from "../../../infrastructure/git
 export declare class ActorAuthorizationRepository implements ActorAuthorizationPort {
     private readonly githubClient;
     constructor(githubClient: GithubClientPort<GithubActorAuthorizationClient>);
-    isActorAllowedToModifyFiles: (owner: string, actor: string, token: string) => Promise<boolean>;
+    isActorAllowedToModifyFiles: (owner: string, repo: string, actor: string, token: string) => Promise<boolean>;
     private checkOrganizationMembership;
+    private checkUserRepositoryPermission;
 }

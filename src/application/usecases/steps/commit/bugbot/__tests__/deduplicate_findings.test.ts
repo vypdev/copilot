@@ -27,15 +27,23 @@ describe('deduplicateFindings', () => {
         expect(deduplicateFindings(list)).toEqual(list);
     });
 
-    it('deduplicates by file:line (keeps first)', () => {
+    it('keeps distinct problems reported on the same line', () => {
         const list = [
             finding({ id: 'first', title: 'First', file: 'src/foo.ts', line: 10 }),
             finding({ id: 'second', title: 'Second', file: 'src/foo.ts', line: 10 }),
         ];
         const result = deduplicateFindings(list);
-        expect(result).toHaveLength(1);
+        expect(result).toHaveLength(2);
         expect(result[0].id).toBe('first');
         expect(result[0].title).toBe('First');
+    });
+
+    it('deduplicates the same normalized problem on the same line', () => {
+        const list = [
+            finding({ id: 'first', title: 'Same   Problem', file: 'src/foo.ts', line: 10 }),
+            finding({ id: 'second', title: 'same problem', file: 'src/foo.ts', line: 10 }),
+        ];
+        expect(deduplicateFindings(list).map((item) => item.id)).toEqual(['first']);
     });
 
     it('deduplicates by normalized title when file/line missing (keeps first)', () => {
@@ -58,14 +66,14 @@ describe('deduplicateFindings', () => {
         expect(result[0].id).toBe('a');
     });
 
-    it('uses first 80 chars of title for title-based key', () => {
+    it('uses a bounded normalized title for title-based keys', () => {
         const longTitle = 'A'.repeat(100);
         const list = [
             finding({ id: '1', title: longTitle }),
             finding({ id: '2', title: longTitle + ' different tail' }),
         ];
         const result = deduplicateFindings(list);
-        expect(result).toHaveLength(1);
+        expect(result).toHaveLength(2);
     });
 
     it('trims file and uses line 0 when line undefined', () => {

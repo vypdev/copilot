@@ -29,7 +29,7 @@ alwaysApply: true
 | Steps (commit) | `src/usecase/steps/commit/` | notify commit, check size |
 | Steps (issue comment) | `src/usecase/steps/issue_comment/` | check_issue_comment_language (translation) |
 | Steps (PR review comment) | `src/usecase/steps/pull_request_review_comment/` | check_pull_request_comment_language (translation) |
-| Bugbot autofix & user request | `src/usecase/steps/commit/bugbot/` + `user_request_use_case.ts` | detect_bugbot_fix_intent_use_case (plan agent: is_fix_request, is_do_request, target_finding_ids), BugbotAutofixUseCase + runBugbotAutofixCommitAndPush (fix findings), DoUserRequestUseCase + runUserRequestCommitAndPush (generic “do this”). Permission: ProjectRepository.isActorAllowedToModifyFiles (org member or repo owner). |
+| Bugbot autofix & user request | `src/usecase/steps/commit/bugbot/` + `user_request_use_case.ts` | detect_bugbot_fix_intent_use_case (plan agent: is_fix_request, is_do_request, is_review_request, target_finding_ids), BugbotAutofixUseCase + runBugbotAutofixCommitAndPush (fix findings), DoUserRequestUseCase + runUserRequestCommitAndPush (generic “do this”). Permission: ProjectRepository.isActorAllowedToModifyFiles (org member, or repo owner/write collaborator for personal repos); natural-language mutation requires the bot mention. |
 | Manager (content) | `src/manager/` | description handlers, configuration_handler, markdown_content_hotfix_handler (PR description, hotfix changelog content) |
 | Models | `src/data/model/` | Execution, Issue, PullRequest, SingleAction, etc. |
 | Repos | `src/data/repository/` | branch_repository, issue_repository, workflow_repository, ai_repository (OpenCode), file_repository, project_repository |

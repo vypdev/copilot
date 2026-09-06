@@ -57,6 +57,7 @@ async function writeActionSummary(execution: Execution, summaryPort?: ActionSumm
                 : execution.labels?.currentIssueLabels ?? [],
             execution.labels?.lifecycle,
         ),
+        pullRequestDescriptionMode: execution.ai?.getPullRequestDescriptionMode?.(),
         results: execution.currentConfiguration.results,
     });
     if (!summaryPort) return summaryText;
@@ -85,7 +86,8 @@ async function publishCopilotEvidence(
     });
     if (!evidence) return;
     try {
-        await evidencePort.publish(evidence, execution.owner, execution.repo, execution.tokens.token);
+        const evidenceToken = process.env.COPILOT_EVIDENCE_TOKEN?.trim() || execution.tokens.token;
+        await evidencePort.publish(evidence, execution.owner, execution.repo, evidenceToken);
         logInfo(`Published ${evidence.name} Check Run for ${evidence.headSha}.`);
     } catch (error) {
         logInfo(`Could not publish optional GitHub Check Run: ${error instanceof Error ? error.message : String(error)}`);

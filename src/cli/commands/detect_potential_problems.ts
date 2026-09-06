@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { runLocalAction } from '../../actions/local_action';
-import { TITLE } from '../../utils/constants';
+import { TITLE } from '../../application/contracts/product_identity';
 import { logError } from '../../utils/logger';
 import { getGitInfo, getCurrentBranch } from '../../cli_context';
 import { cleanCliArgument } from '../command_input_policy';

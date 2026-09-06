@@ -59,6 +59,7 @@ const validWorkflow = {
   name: 'Copilot - Issue',
   jobs: {
     'copilot-issues': {
+      if: "${{ vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}",
       'runs-on': ['self-hosted', 'codex'],
       'timeout-minutes': MIN_QUEUE_JOB_TIMEOUT_MINUTES,
       steps: [{ uses: './', with: {} }],
@@ -91,6 +92,44 @@ describe('workflow contract validator', () => {
         expect(() => validateWorkflow(file, workflow)).not.toThrow();
       }
     }
+  });
+
+  it('rejects an event workflow that removes the generic bot actor gate', () => {
+    const workflow = JSON.parse(JSON.stringify(validWorkflow));
+    delete workflow.jobs['copilot-issues'].if;
+    expect(() => assertQueueWorkflow(queueFile, workflow)).toThrow('COPILOT_BOT_LOGIN actor gate');
+  });
+
+  it.each(['.github/workflows', 'setup/workflows'])('requires the exact push review range fetch in %s', (directory) => {
+    const file = path.join(process.cwd(), directory, 'copilot_commit.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    workflow.jobs['copilot-commits'].steps = workflow.jobs['copilot-commits'].steps.filter(
+      (step: { name?: string }) => step.name !== 'Fetch push review range',
+    );
+
+    expect(() => validateWorkflow(file, workflow)).toThrow('must fetch the exact GitHub before/after review range');
+  });
+
+  it.each(['.github/workflows', 'setup/workflows'])('requires push fallback history to include the current commit parent in %s', (directory) => {
+    const file = path.join(process.cwd(), directory, 'copilot_commit.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const step = workflow.jobs['copilot-commits'].steps.find(
+      (candidate: { name?: string }) => candidate.name === 'Fetch push review range',
+    );
+    step.run = step.run.replace('--depth=2 origin "$AFTER_SHA"', '--depth=1 origin "$AFTER_SHA"');
+
+    expect(() => validateWorkflow(file, workflow)).toThrow('must fetch the exact GitHub before/after review range');
+  });
+
+  it.each(['.github/workflows', 'setup/workflows'])('requires a non-fatal before fetch for force-pushed PRs in %s', (directory) => {
+    const file = path.join(process.cwd(), directory, 'copilot_pull_request.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const step = workflow.jobs['copilot-pull-requests'].steps.find(
+      (candidate: { name?: string }) => candidate.name === 'Fetch incremental review range',
+    );
+    step.run = 'git fetch --no-tags --depth=1 origin "$BEFORE_SHA" "$AFTER_SHA"';
+
+    expect(() => validateWorkflow(file, workflow)).toThrow('must fetch the exact GitHub before/after review range');
   });
 
   it('validates the exact gate-first DAG for active and setup release/hotfix workflows', () => {

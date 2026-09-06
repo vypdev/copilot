@@ -10,6 +10,12 @@ import { logDebugInfo, logError, logInfo } from '../../../ports/logging_ports';
 import { PROJECT_CONTEXT_INSTRUCTION } from '../../../../utils/project_context_instruction';
 import { getTaskEmoji } from '../../../../utils/task_emoji';
 import { sanitizeAgentMarkdown } from '../../../../application/policies/github_comment_publication_policy';
+import {
+    mergeManagedPullRequestDescription,
+    shouldAutomaticallyUpdatePullRequestDescription,
+    type PullRequestDescriptionMode,
+} from '../../../../domain/pull_request_description';
+import { ApplicationError } from '../../../errors/application_error';
 
 export interface UpdatePullRequestDescriptionWorkflowDependencies {
     pullRequestDescriptionCommandPort: PullRequestDescriptionCommandPort;
@@ -23,11 +29,14 @@ export async function runUpdatePullRequestDescriptionWorkflow(
     param: Execution,
     taskId: string,
     dependencies: UpdatePullRequestDescriptionWorkflowDependencies,
+    force = false,
 ): Promise<Result[]> {
     logInfo(`${getTaskEmoji(taskId)} Executing ${taskId} (AI PR description).`);
 
     try {
-        const branches = getPullRequestBranches(param);
+        const pullRequestNumber = getPullRequestNumber(param);
+        const details = await loadPullRequestDetails(param, dependencies, pullRequestNumber, force);
+        const branches = getPullRequestBranches(param, details);
         if (!branches) {
             return [
                 new Result({
@@ -39,6 +48,11 @@ export async function runUpdatePullRequestDescriptionWorkflow(
                     ],
                 }),
             ];
+        }
+
+        const mode = getPullRequestDescriptionMode(param);
+        if (mode === 'disabled' || (!force && !shouldAutomaticallyUpdatePullRequestDescription(mode))) {
+            return skipped(taskId, `Automatic PR description updates are disabled by the "${mode}" mode.`);
         }
 
         logDebugInfo(
@@ -87,7 +101,10 @@ export async function runUpdatePullRequestDescriptionWorkflow(
             agentId: AGENT_PLAN,
             prompt,
         });
-        const pullRequestBody = sanitizeAgentMarkdown(extractDescription(response));
+        const generatedDescription = sanitizeAgentMarkdown(extractDescription(response));
+        const pullRequestBody = mode === 'replace'
+            ? generatedDescription
+            : mergeManagedPullRequestDescription(details?.body ?? param.pullRequest.body, generatedDescription);
         logDebugInfo(`UpdatePullRequestDescription: agent response received. Description length=${pullRequestBody.length}.`);
         if (!pullRequestBody.trim()) {
             return newResult(taskId, false, true, ['Configured agent did not return a PR description.']);
@@ -96,28 +113,62 @@ export async function runUpdatePullRequestDescriptionWorkflow(
         await dependencies.pullRequestDescriptionCommandPort.updateDescription(
             param.owner,
             param.repo,
-            param.pullRequest.number,
+            pullRequestNumber,
             pullRequestBody,
             param.tokens.token,
         );
         return [new Result({ id: taskId, success: true, executed: true, steps: [] })];
-    } catch (error) {
+    } catch (cause) {
+        const error = new ApplicationError('Unable to update pull request description.', 'workflow', { cause });
         logError(error);
         return [
             new Result({
                 id: taskId,
                 success: false,
                 executed: true,
-                steps: [`Error updating pull request description: ${error}`],
+                steps: [error.message],
+                errors: [error],
             }),
         ];
     }
 }
 
-function getPullRequestBranches(param: Execution): { headBranch: string; baseBranch: string } | undefined {
-    const headBranch = param.pullRequest.head;
-    const baseBranch = param.pullRequest.base;
+function getPullRequestBranches(
+    param: Execution,
+    details?: { headBranch: string; baseBranch: string },
+): { headBranch: string; baseBranch: string } | undefined {
+    const headBranch = param.pullRequest.head || details?.headBranch;
+    const baseBranch = param.pullRequest.base || details?.baseBranch;
     return headBranch && baseBranch ? { headBranch, baseBranch } : undefined;
+}
+
+function getPullRequestNumber(param: Execution): number {
+    return param.pullRequest.number > 0 ? param.pullRequest.number : param.issue.number;
+}
+
+async function loadPullRequestDetails(
+    param: Execution,
+    dependencies: UpdatePullRequestDescriptionWorkflowDependencies,
+    pullRequestNumber: number,
+    force: boolean,
+): Promise<{ body: string; headBranch: string; baseBranch: string } | undefined> {
+    if (pullRequestNumber <= 0 || !dependencies.pullRequestDescriptionCommandPort.getDetails) return undefined;
+    const needsRemoteDetails = param.eventName === 'issue_comment'
+        || force
+        || !param.pullRequest.head
+        || !param.pullRequest.base;
+    if (!needsRemoteDetails) return undefined;
+    return dependencies.pullRequestDescriptionCommandPort.getDetails(
+        param.owner,
+        param.repo,
+        pullRequestNumber,
+        param.tokens.token,
+    );
+}
+
+function getPullRequestDescriptionMode(param: Execution): PullRequestDescriptionMode {
+    return param.ai.getPullRequestDescriptionMode?.()
+        ?? (param.ai.getAiPullRequestDescription() ? 'replace' : 'disabled');
 }
 
 function extractDescription(response: string | Record<string, unknown> | undefined): string {

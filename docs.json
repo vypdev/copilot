@@ -79,6 +79,16 @@
           "icon": "list-check"
         },
         {
+          "title": "Authentication",
+          "href": "/authentication",
+          "icon": "key"
+        },
+        {
+          "title": "Configuration",
+          "href": "/configuration",
+          "icon": "gear"
+        },
+        {
           "title": "Features & Capabilities",
           "href": "/features",
           "icon": "list"
@@ -184,6 +194,11 @@
           "title": "Secret exposure rules",
           "href": "/security-operations/security/secret-exposure",
           "icon": "lock"
+        },
+        {
+          "title": "Prompt injection",
+          "href": "/security-operations/security/prompt-injection",
+          "icon": "triangle-exclamation"
         },
         {
           "title": "Authentication compliance",
@@ -327,6 +342,11 @@
           "title": "Examples",
           "href": "/issues/examples",
           "icon": "file-code"
+        },
+        {
+          "title": "Comment commands",
+          "href": "/issues/comment-commands",
+          "icon": "comment"
         }
       ]
     },
@@ -435,6 +455,11 @@
           "title": "Permissions and safety",
           "href": "/single-actions/permissions",
           "icon": "shield"
+        },
+        {
+          "title": "Deploy label and merge",
+          "href": "/single-actions/deploy-label-and-merge",
+          "icon": "git-merge"
         },
         {
           "title": "Examples",

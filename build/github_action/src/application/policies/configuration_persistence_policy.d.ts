@@ -1,4 +1,9 @@
-import type { Execution } from '../../data/model/execution';
+export interface ConfigurationPersistenceContext {
+    readonly isSingleAction: boolean;
+    readonly singleAction: {
+        readonly isRecommendStepsAction: boolean;
+    };
+}
 /**
  * Decides whether the completion phase has persistent execution state to save.
  *
@@ -8,4 +13,4 @@ import type { Execution } from '../../data/model/execution';
  * Recommendation actions are the exception because they persist their
  * fingerprint and latest recommendation in the hidden issue configuration.
  */
-export declare function shouldPersistConfiguration(execution: Pick<Execution, 'isSingleAction' | 'singleAction'>): boolean;
+export declare function shouldPersistConfiguration(execution: ConfigurationPersistenceContext): boolean;

@@ -1,4 +1,3 @@
-import type { Execution } from '../../../data/model/execution';
 import { Result } from '../../../data/model/result';
 import type { LatestTagQueryPort } from '../../ports/branch_tag_ports';
 import type { AuthenticatedUserPort } from '../../ports/authenticated_user_ports';
@@ -12,8 +11,16 @@ import type { SetupWorkspacePort } from '../../ports/setup_workspace_ports';
 import { DEFAULT_INITIAL_TAG } from '../../../data/model/version_policy';
 import { logDebugInfo, logError, logInfo } from '../../ports/logging_ports';
 import { getTaskEmoji } from '../../../utils/task_emoji';
+import type { SetupConfiguration } from '../../../domain/setup';
+import type { SetupResourceProvisioningDependencies } from './setup_resource_provisioning';
+import type { InitialSetupRequest } from './initial_setup_request';
+import {
+    ensureRepositorySecrets,
+    ensureRepositoryVariables,
+    resolveRemoteConfiguration,
+} from './setup_resource_provisioning';
 
-export interface InitialSetupWorkflowDependencies {
+export interface InitialSetupWorkflowDependencies extends SetupResourceProvisioningDependencies {
     authenticatedUserPort: AuthenticatedUserPort;
     initialLabelProvisioningPort: InitialLabelProvisioningPort;
     issueTypeProvisioningPort: IssueTypeProvisioningPort;
@@ -31,7 +38,7 @@ const TASK_ID = 'InitialSetupUseCase';
 
 /** Runs repository setup as an ordered application workflow with explicit port dependencies. */
 export async function runInitialSetupWorkflow(
-    param: Execution,
+    request: InitialSetupRequest,
     dependencies: InitialSetupWorkflowDependencies,
 ): Promise<Result[]> {
     logInfo(`${getTaskEmoji(TASK_ID)} Executing ${TASK_ID}.`);
@@ -39,25 +46,38 @@ export async function runInitialSetupWorkflow(
     const errors: string[] = [];
 
     try {
-        logInfo('📋 Ensuring .github and copying setup files...');
-        const filesResult = dependencies.setupWorkspacePort.prepare();
-        steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
-        if (!dependencies.setupWorkspacePort.hasValidToken()) {
-            logInfo('  🛑 Setup requires PERSONAL_ACCESS_TOKEN (environment or .env) with a valid token.');
-            errors.push('PERSONAL_ACCESS_TOKEN must be set (environment or .env) with a valid token to run setup.');
+        const setupConfiguration = request.setupConfiguration;
+        if (!dependencies.setupWorkspacePort.hasValidToken(request.token)) {
+            logInfo('  🛑 Setup requires the setup PAT provided for this command with a valid token.');
+            errors.push('A valid setup PAT must be provided to run setup. It is separate from the workflow PAT Secret.');
             return [buildResult(errors, steps)];
         }
-
+        logInfo('📋 Ensuring .github and copying setup files...');
+        const workspaceSelection = {
+            features: setupConfiguration?.features,
+            ...(request.workflowUpdates.length > 0 ? {
+                updateExistingWorkflows: true,
+                approvedWorkflowFiles: request.workflowUpdates,
+            } : {}),
+        };
+        const filesResult = dependencies.setupWorkspacePort.prepare(workspaceSelection);
+        steps.push(`✅ Setup files: ${filesResult.copied} copied, ${filesResult.skipped} already existed`);
         logInfo('🔐 Checking GitHub access...');
-        const githubAccess = await verifyGitHubAccess(param, dependencies.authenticatedUserPort);
+        const githubAccess = await verifyGitHubAccess(request, dependencies.authenticatedUserPort);
         if (!githubAccess.success) {
             errors.push(...githubAccess.errors);
             return [buildResult(errors, steps)];
         }
         steps.push(`✅ GitHub access verified: ${githubAccess.user}`);
 
+        const remoteConfiguration = await resolveRemoteConfiguration(request, dependencies, setupConfiguration, errors);
+
+        const secrets = await ensureRepositorySecrets(request, dependencies, setupConfiguration, remoteConfiguration);
+        if (secrets.step) steps.push(secrets.step);
+        if (secrets.errors.length > 0) errors.push(...secrets.errors);
+
         logInfo('🏷️  Checking configured and progress labels...');
-        const labels = await ensureInitialLabels(param, dependencies.initialLabelProvisioningPort);
+        const labels = await ensureInitialLabels(request, dependencies.initialLabelProvisioningPort);
         if (!labels.completed) {
             errors.push(labels.error);
         } else {
@@ -66,14 +86,18 @@ export async function runInitialSetupWorkflow(
         }
 
         logInfo('📋 Checking issue types...');
-        const issueTypes = await ensureIssueTypes(param, dependencies.issueTypeProvisioningPort);
+        const issueTypes = await ensureIssueTypes(request, dependencies.issueTypeProvisioningPort);
         if (!issueTypes.success) {
             errors.push(...issueTypes.errors);
         } else {
             steps.push(`✅ Issue types checked: ${issueTypes.created} created, ${issueTypes.existing} already existed`);
         }
 
-        const defaultVersion = await ensureDefaultVersion(param, dependencies);
+        const variables = await ensureRepositoryVariables(request, dependencies, setupConfiguration, remoteConfiguration);
+        if (variables.step) steps.push(variables.step);
+        if (variables.errors.length > 0) errors.push(...variables.errors);
+
+        const defaultVersion = await ensureDefaultVersion(request, dependencies, setupConfiguration);
         if (defaultVersion.step) steps.push(defaultVersion.step);
         if (defaultVersion.error) errors.push(defaultVersion.error);
         return [buildResult(errors, steps)];
@@ -85,11 +109,11 @@ export async function runInitialSetupWorkflow(
 }
 
 async function verifyGitHubAccess(
-    param: Execution,
+    request: InitialSetupRequest,
     repository: AuthenticatedUserPort,
 ): Promise<{ success: boolean; user?: string; errors: string[] }> {
     try {
-        const user = await repository.getUserFromToken(param.tokens.token);
+        const user = await repository.getUserFromToken(request.token);
         return { success: true, user, errors: [] };
     } catch (error) {
         logError(`Error verifying GitHub access: ${error}`);
@@ -98,15 +122,15 @@ async function verifyGitHubAccess(
 }
 
 async function ensureInitialLabels(
-    param: Execution,
+    request: InitialSetupRequest,
     repository: InitialLabelProvisioningPort,
 ): Promise<InitialLabelProvisioningOutcome> {
     try {
         const summary = await repository.ensureInitialLabels(
-            param.owner,
-            param.repo,
-            param.labels,
-            param.tokens.token,
+            request.owner,
+            request.repo,
+            request.labels,
+            request.token,
         );
         return { completed: true, ...summary };
     } catch (error) {
@@ -117,14 +141,14 @@ async function ensureInitialLabels(
 }
 
 async function ensureIssueTypes(
-    param: Execution,
+    request: InitialSetupRequest,
     repository: IssueTypeProvisioningPort,
 ): Promise<{ success: boolean; created: number; existing: number; errors: string[] }> {
     try {
         const result = await repository.ensureIssueTypes(
-            param.owner,
-            param.issueTypes,
-            param.tokens.token,
+            request.owner,
+            request.issueTypes,
+            request.token,
         );
         return {
             success: result.errors.length === 0,
@@ -139,9 +163,13 @@ async function ensureIssueTypes(
 }
 
 async function ensureDefaultVersion(
-    param: Execution,
+    request: InitialSetupRequest,
     dependencies: InitialSetupWorkflowDependencies,
+    setupConfiguration?: SetupConfiguration,
 ): Promise<{ step?: string; error?: string }> {
+    if (setupConfiguration?.createInitialTag === false) {
+        return { step: '⏭️  Initial version tag creation disabled by setup configuration.' };
+    }
     try {
         const existingTag = await dependencies.latestTagQueryPort.getLatestTag();
         if (existingTag !== undefined) {
@@ -151,9 +179,9 @@ async function ensureDefaultVersion(
 
         logInfo(`🏷️  No version tags found. Creating default tag ${DEFAULT_INITIAL_TAG}...`);
         const defaultBranch = await dependencies.repositoryDefaultBranchPort.getDefaultBranch(
-            param.owner,
-            param.repo,
-            param.tokens.token,
+            request.owner,
+            request.repo,
+            request.token,
         );
         if (!defaultBranch) {
             const message = 'Could not get default branch to create initial version tag.';
@@ -162,15 +190,15 @@ async function ensureDefaultVersion(
         }
 
         const sha = await dependencies.repositoryTagPort.createTag(
-            param.owner,
-            param.repo,
+            request.owner,
+            request.repo,
             defaultBranch,
             DEFAULT_INITIAL_TAG,
-            param.tokens.token,
+            request.token,
         );
         return sha
             ? { step: `✅ Default version tag ${DEFAULT_INITIAL_TAG} created on branch ${defaultBranch}. Run \`git fetch --tags\` to update local refs.` }
-            : { error: `Failed to create tag ${DEFAULT_INITIAL_TAG} on ${param.owner}/${param.repo}` };
+            : { error: `Failed to create tag ${DEFAULT_INITIAL_TAG} on ${request.owner}/${request.repo}` };
     } catch (error) {
         const message = `Error ensuring default version: ${error}`;
         logError(message);

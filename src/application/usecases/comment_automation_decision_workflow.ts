@@ -6,6 +6,8 @@ import { getBugbotFixIntentPayload } from "./steps/commit/bugbot/bugbot_fix_inte
 import { resolveCommentAutomationRoute, type CommentAutomationRoute } from "./comment_automation_route_policy";
 import type { BugbotFixIntentPayload } from "./steps/commit/bugbot/bugbot_fix_intent_payload";
 import type { CommentAutomationOptions } from "./comment_automation_contracts";
+import { containsBotMention } from './steps/common/think_input_policy';
+import { parseCopilotCommand } from '../../domain/copilot_command';
 
 export interface CommentAutomationDecision {
   intentResults: Result[];
@@ -21,13 +23,19 @@ export async function resolveCommentAutomationDecision(
   logInfo("Running bugbot fix intent detection (before Think).");
   const intentResults = await options.intentUseCase.invoke(param);
   const intentPayload = getBugbotFixIntentPayload(intentResults);
+  const parsedCommand = parseCopilotCommand(options.userComment);
+  const explicitMutationCommand = parsedCommand.kind === 'command'
+    && (parsedCommand.command.name === 'fix' || parsedCommand.command.name === 'implement');
   const route = resolveCommentAutomationRoute(
     intentPayload,
     await actorAuthorizationPort.isActorAllowedToModifyFiles(
       param.owner,
+      param.repo,
       param.actor,
       param.tokens.token,
     ),
+    containsBotMention(options.userComment, param.tokenUser ?? ''),
+    explicitMutationCommand,
   );
 
   logIntent(intentPayload);

@@ -3,7 +3,7 @@ import type { GithubClientPort } from '../../../infrastructure/github/ports/gith
 import type { GithubIssueTitleClient } from '../../../infrastructure/github/ports/github_issue_provider_ports';
 import { Labels } from '../../model/labels';
 import { resolveIssueTitleEmoji, resolvePullRequestTitleEmoji } from '../issue_emoji_policy';
-import { sanitizeIssueTitle, sanitizePullRequestTitle } from '../issue_title_policy';
+import { normalizePullRequestSourceTitle, sanitizeIssueTitle, sanitizePullRequestTitle } from '../issue_title_policy';
 import { updateIssueTitle, withTitleUpdateLogging } from './issue_title_update';
 
 export class IssueTitleRepository implements IssueTitlePort {
@@ -35,7 +35,7 @@ export class IssueTitleRepository implements IssueTitlePort {
     ): Promise<string | undefined> => {
         return withTitleUpdateLogging(() => {
             const emoji = resolvePullRequestTitleEmoji(labels, branchManagementAlways, branchManagementEmoji);
-            const formattedTitle = `[#${issueNumber}] ${emoji} - ${sanitizePullRequestTitle(issueTitle)}`;
+            const formattedTitle = `[#${issueNumber}] ${emoji} - ${sanitizePullRequestTitle(normalizePullRequestSourceTitle(issueTitle, issueNumber))}`;
             return updateIssueTitle(this.issueTitleClient, owner, repository, pullRequestTitle, formattedTitle, pullRequestNumber, token);
         });
     };

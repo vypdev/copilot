@@ -129,21 +129,56 @@ describe("publishFindings", () => {
             findings: [finding({ file: "src/foo.ts", line: 10 })],
         });
 
-        expect(mockAddComment).toHaveBeenCalledTimes(1);
+        expect(mockAddComment).not.toHaveBeenCalled();
         expect(mockCreateReviewWithComments).toHaveBeenCalledTimes(1);
         expect(mockCreateReviewWithComments).toHaveBeenCalledWith(
             "o",
             "r",
             50,
             "sha1",
+            expect.stringContaining("## 🤖 Bugbot review"),
             expect.arrayContaining([
-                expect.objectContaining({ path: "src/foo.ts", line: 10, body: expect.any(String) }),
+                expect.objectContaining({ path: "src/foo.ts", line: 5, body: expect.any(String) }),
             ]),
             "t"
         );
     });
 
-    it("does not create PR review comment when finding.file is not in prFiles", async () => {
+    it("publishes an exact multi-line diff range when both endpoints are addressable", async () => {
+        await publishFindings({
+            execution: baseExecution,
+            context: baseContext({
+                openPrNumbers: [50],
+                prContext: {
+                    prHeadSha: "sha1",
+                    prFiles: [{ filename: "src/foo.ts", status: "modified" }],
+                    pathToFirstDiffLine: { "src/foo.ts": 10 },
+                    pathToDiffLocations: {
+                        "src/foo.ts": [10, 11, 12].map((line) => ({ line, side: "RIGHT" as const })),
+                    },
+                },
+            }),
+            findings: [finding({ file: "src/foo.ts", line: 10, endLine: 12 })],
+        });
+
+        expect(mockCreateReviewWithComments).toHaveBeenCalledWith(
+            "o",
+            "r",
+            50,
+            "sha1",
+            expect.any(String),
+            [expect.objectContaining({
+                path: "src/foo.ts",
+                line: 12,
+                side: "RIGHT",
+                startLine: 10,
+                startSide: "RIGHT",
+            })],
+            "t",
+        );
+    });
+
+    it("keeps a finding inside the review when its reported file is not in the PR", async () => {
         await publishFindings({
             execution: baseExecution,
             context: baseContext({
@@ -151,14 +186,26 @@ describe("publishFindings", () => {
                 prContext: {
                     prHeadSha: "sha1",
                     prFiles: [{ filename: "src/bar.ts", status: "modified" }],
-                    pathToFirstDiffLine: {},
+                    pathToFirstDiffLine: { "src/bar.ts": 3 },
                 },
             }),
             findings: [finding({ file: "src/foo.ts" })],
         });
 
-        expect(mockAddComment).toHaveBeenCalledTimes(1);
-        expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+        expect(mockAddComment).not.toHaveBeenCalled();
+        expect(mockCreateReviewWithComments).toHaveBeenCalledWith(
+            "o",
+            "r",
+            50,
+            "sha1",
+            expect.stringContaining("src/foo.ts"),
+            [expect.objectContaining({
+                path: "src/bar.ts",
+                line: 3,
+                body: expect.stringContaining("Review-level finding"),
+            })],
+            "t",
+        );
     });
 
     it("uses pathToFirstDiffLine when finding has no line", async () => {
@@ -180,6 +227,7 @@ describe("publishFindings", () => {
             "r",
             50,
             "sha1",
+            expect.stringContaining("## 🤖 Bugbot review"),
             expect.arrayContaining([
                 expect.objectContaining({ path: "src/a.ts", line: 20 }),
             ]),
@@ -330,7 +378,7 @@ describe("publishFindings", () => {
         );
     });
 
-    it("uses line 1 when finding has no line and pathToFirstDiffLine has no entry for path", async () => {
+    it("keeps a finding in the review summary when the PR has no commentable diff line", async () => {
         await publishFindings({
             execution: baseExecution,
             context: baseContext({
@@ -349,9 +397,8 @@ describe("publishFindings", () => {
             "r",
             50,
             "sha1",
-            expect.arrayContaining([
-                expect.objectContaining({ path: "src/b.ts", line: 1 }),
-            ]),
+            expect.stringContaining("### Review-level findings"),
+            [],
             "t"
         );
     });
@@ -373,7 +420,7 @@ describe("publishFindings", () => {
                 prContext: {
                     prHeadSha: "sha1",
                     prFiles: [{ filename: "src/foo.ts", status: "modified" }],
-                    pathToFirstDiffLine: {},
+                    pathToFirstDiffLine: { "src/foo.ts": 1 },
                 },
             }),
             findings: [finding({ file: "src/foo.ts" })],
@@ -385,6 +432,7 @@ describe("publishFindings", () => {
             "r",
             50,
             "sha1",
+            expect.stringContaining("## 🤖 Bugbot review"),
             expect.arrayContaining([
                 expect.objectContaining({ path: "src/foo.ts", body: expect.any(String) }),
             ]),
@@ -426,7 +474,7 @@ describe("publishFindings", () => {
         expect(overflowCall[5]).toEqual({ commitSha: "overflow-sha" });
     });
 
-    it("does not log when finding.file is not in prFiles but file is null or empty", async () => {
+    it("publishes findings without a reported file in the same summarized review", async () => {
         const { logInfo } = await import("../../../../../../utils/logger");
         (logInfo as jest.Mock).mockClear();
         await publishFindings({
@@ -436,7 +484,7 @@ describe("publishFindings", () => {
                 prContext: {
                     prHeadSha: "sha1",
                     prFiles: [{ filename: "src/only.ts", status: "modified" }],
-                    pathToFirstDiffLine: {},
+                    pathToFirstDiffLine: { "src/only.ts": 4 },
                 },
             }),
             findings: [
@@ -446,10 +494,13 @@ describe("publishFindings", () => {
             ],
         });
 
-        expect(mockAddComment).toHaveBeenCalledTimes(3);
-        expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
-        expect(logInfo).not.toHaveBeenCalledWith(
-            expect.stringContaining("not in PR changed files")
+        expect(mockAddComment).not.toHaveBeenCalled();
+        expect(mockCreateReviewWithComments).toHaveBeenCalledTimes(1);
+        expect(mockCreateReviewWithComments.mock.calls[0][5]).toHaveLength(3);
+        expect(mockCreateReviewWithComments.mock.calls[0][5]).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({ path: "src/only.ts", line: 4 }),
+            ]),
         );
     });
 });

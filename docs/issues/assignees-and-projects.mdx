@@ -21,7 +21,7 @@ When the action runs on an issue (e.g. opened or labeled), it can assign **up to
 Set the number of assignees in the workflow:
 
 ```yaml
-- uses: vypdev/copilot@v2
+- uses: vypdev/copilot@v3
   with:
     token: ${{ secrets.PAT }}
     project-ids: ${{ vars.PROJECT_IDS }}
@@ -44,7 +44,7 @@ Linking issues to **GitHub Project** boards requires a **Personal Access Token (
 You can link each issue to **multiple** boards by listing several IDs:
 
 ```yaml
-- uses: vypdev/copilot@v2
+- uses: vypdev/copilot@v3
   with:
     token: ${{ secrets.PAT }}
     project-ids: '1,2,3'

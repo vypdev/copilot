@@ -1,9 +1,8 @@
 # Dependency Rules and Architectural Invariants
 
-This document defines the target dependency direction, the rules enforced by
-tests today, and the explicitly known transitional boundaries. A target rule
-must not be described as already enforced when the current source still has a
-known exception.
+This document defines the dependency direction and the rules enforced by the
+current source and architecture tests. A target rule must not be described as
+already enforced when the current source still has a known exception.
 
 ## Target direction
 
@@ -80,8 +79,10 @@ keeps logging behavior replaceable and prevents application code from knowing
 about the process/GitHub logger.
 
 Application may use only the following side-effect-free shared utilities:
-`comment_watermark`, `constants`, `content_utils`, `list_utils`,
-`project_context_instruction`, `task_emoji`, and `title_utils`. New reusable
+`comment_watermark`, `content_utils`, `list_utils`,
+`project_context_instruction`, `secret_redaction`, `task_emoji`, and
+`title_utils`. Action input keys and product constants belong to their owning
+application/data contracts rather than a generic utility module. New reusable
 application behavior belongs in an application policy or port rather than in
 the generic utility directory.
 
@@ -267,10 +268,11 @@ Primary tests:
 
 ## Known review targets
 
-- classify the non-pure files under `src/data/model/` instead of declaring the
-  entire directory a domain layer;
-- strengthen architecture tests where a documented rule is not yet executable;
-- audit release/tag adapter contracts before changing their structure.
+- keep `Execution` as a compatibility aggregate while preventing new use cases
+  from taking it when a narrower context contract is sufficient;
+- keep provider-specific release/tag contracts behind application ports;
+- extend the executable boundary tests when a new layer or composition root is
+  introduced.
 
 ## Acceptance standard
 

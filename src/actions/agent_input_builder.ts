@@ -1,4 +1,4 @@
-import { INPUT_KEYS } from '../utils/constants';
+import { INPUT_KEYS } from '../application/contracts/input_keys';
 import { buildAgentTasks } from './agent_configuration_builder';
 import { DEFAULT_AGENT_MODEL, DEFAULT_AGENT_PROVIDER, DEFAULT_MODEL_PROVIDER } from '../domain/agent';
 

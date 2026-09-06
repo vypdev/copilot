@@ -1,5 +1,8 @@
 import { logDebugInfo } from '../../../utils/logger';
-import type { PullRequestReviewThreadCommandPort } from '../../../application/ports/pull_request_review_comment_ports';
+import type {
+    PullRequestReviewThreadCommandPort,
+    PullRequestReviewThreadStateQueryPort,
+} from '../../../application/ports/pull_request_review_comment_ports';
 import {
     PullRequestReviewOperationError,
     toPullRequestReviewOperationError,
@@ -9,10 +12,66 @@ import type { GithubGraphqlTransportClient } from '../../../infrastructure/githu
 import { findPullRequestReviewThread } from './pull_request_review_thread_locator';
 
 /** GitHub GraphQL adapter for locating and resolving a pull-request review thread. */
-export class PullRequestReviewThreadRepository implements PullRequestReviewThreadCommandPort {
+export class PullRequestReviewThreadRepository implements PullRequestReviewThreadCommandPort, PullRequestReviewThreadStateQueryPort {
     constructor(
         private readonly githubClient: GithubClientPort<GithubGraphqlTransportClient>,
     ) {}
+
+    listPullRequestReviewThreadStates = async (
+        owner: string,
+        repository: string,
+        pullNumber: number,
+        token: string,
+    ): Promise<Record<string, boolean>> => {
+        try {
+            const client = this.githubClient.getClient(token);
+            const states: Record<string, boolean> = {};
+            let cursor: string | null = null;
+            do {
+                const result: {
+                    repository?: {
+                        pullRequest?: {
+                            reviewThreads?: {
+                                nodes?: Array<{
+                                    isResolved?: boolean;
+                                    comments?: { nodes?: Array<{ id?: string | null } | null> | null } | null;
+                                } | null> | null;
+                                pageInfo?: { hasNextPage?: boolean; endCursor?: string | null } | null;
+                            } | null;
+                        } | null;
+                    } | null;
+                } = await client.graphql(
+                    `query ($owner: String!, $repository: String!, $pullNumber: Int!, $cursor: String) {
+                        repository(owner: $owner, name: $repository) {
+                            pullRequest(number: $pullNumber) {
+                                reviewThreads(first: 100, after: $cursor) {
+                                    nodes {
+                                        isResolved
+                                        comments(first: 100) { nodes { id } }
+                                    }
+                                    pageInfo { hasNextPage endCursor }
+                                }
+                            }
+                        }
+                    }`,
+                    { owner, repository, pullNumber, cursor },
+                );
+                const threads = result.repository?.pullRequest?.reviewThreads;
+                for (const thread of threads?.nodes ?? []) {
+                    if (!thread) continue;
+                    for (const comment of thread.comments?.nodes ?? []) {
+                        if (comment?.id) states[comment.id] = thread.isResolved === true;
+                    }
+                }
+                cursor = threads?.pageInfo?.hasNextPage
+                    ? threads.pageInfo.endCursor ?? null
+                    : null;
+            } while (cursor !== null);
+            return states;
+        } catch (error) {
+            throw toPullRequestReviewOperationError(error, 'list-comments');
+        }
+    };
 
     resolvePullRequestReviewThread = async (
         owner: string,

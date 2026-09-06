@@ -1,7 +1,7 @@
 import { SingleActionUseCase } from '../single_action_use_case';
 import type { Execution } from '../../../data/model/execution';
 import { Result } from '../../../data/model/result';
-import { ACTIONS } from '../../../utils/constants';
+import { ACTIONS } from '../../../data/model/action_types';
 
 jest.mock('../../../utils/logger', () => ({
   logInfo: jest.fn(),
@@ -62,6 +62,7 @@ function minimalExecution(singleAction: {
   isCheckProgressAction?: boolean;
   isDetectPotentialProblemsAction?: boolean;
   isRecommendStepsAction?: boolean;
+  isCloseInactiveIssuesAction?: boolean;
 }): Execution {
   return {
     singleAction: {
@@ -93,6 +94,9 @@ function minimalExecution(singleAction: {
       },
       get isRecommendStepsAction() {
         return singleAction.isRecommendStepsAction ?? this.currentSingleAction === ACTIONS.RECOMMEND_STEPS;
+      },
+      get isCloseInactiveIssuesAction() {
+        return singleAction.isCloseInactiveIssuesAction ?? this.currentSingleAction === ACTIONS.CLOSE_INACTIVE_ISSUES;
       },
     } as Execution['singleAction'],
   } as Execution;
@@ -134,6 +138,30 @@ describe('SingleActionUseCase', () => {
 
     expect(mockThinkInvoke).toHaveBeenCalledWith(param);
     expect(results).toEqual([r]);
+  });
+
+  it('dispatches to CloseInactiveIssuesUseCase when action is close_inactive_issues_action', async () => {
+    const closeInactiveInvoke = jest.fn().mockResolvedValue([]);
+    const useCase = new SingleActionUseCase(
+      { invoke: jest.fn().mockResolvedValue([]) } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      { invoke: closeInactiveInvoke } as any,
+    );
+    const param = minimalExecution({
+      validSingleAction: true,
+      currentSingleAction: ACTIONS.CLOSE_INACTIVE_ISSUES,
+    });
+
+    await useCase.invoke(param);
+
+    expect(closeInactiveInvoke).toHaveBeenCalledWith(param);
   });
 
   it('dispatches to CheckProgressUseCase when action is check_progress', async () => {

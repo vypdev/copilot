@@ -54,7 +54,45 @@ describe('PullRequest', () => {
   it('isSynchronize when action is synchronize', () => {
     const inputs = { action: 'synchronize', pull_request: pr, eventName: 'pull_request' };
     const p = new PullRequest(1, 2, 30, inputs);
+    expect(p.isOpened).toBe(false);
     expect(p.isSynchronize).toBe(true);
+  });
+
+  it('does not treat activity on an open pull request as a newly opened pull request', () => {
+    const p = new PullRequest(1, 2, 30, {
+      action: 'labeled',
+      pull_request: pr,
+      eventName: 'pull_request',
+    });
+
+    expect(p.isOpened).toBe(false);
+    expect(p.isSynchronize).toBe(false);
+    expect(p.isClosed).toBe(false);
+  });
+
+  it('resolves pull request identity from review and check-suite payloads', () => {
+    const review = new PullRequest(1, 2, 30, {
+      eventName: 'pull_request_review',
+      action: 'submitted',
+      pull_request: { ...pr, number: 43, state: 'open' },
+      review: { pull_request: { number: 43 } },
+    });
+    const checkSuite = new PullRequest(1, 2, 30, {
+      eventName: 'check_suite',
+      check_suite: {
+        head_branch: 'feature/43-checks',
+        pull_requests: [{ number: 43 }],
+      },
+    });
+
+    expect(review.number).toBe(43);
+    expect(review.isPullRequest).toBe(true);
+    expect(review.isOpened).toBe(false);
+    expect(review.isClosed).toBe(false);
+    expect(review.isSynchronize).toBe(false);
+    expect(checkSuite.number).toBe(43);
+    expect(checkSuite.head).toBe('feature/43-checks');
+    expect(checkSuite.isPullRequest).toBe(true);
   });
 
   it('isPullRequestReviewComment when eventName is pull_request_review_comment', () => {

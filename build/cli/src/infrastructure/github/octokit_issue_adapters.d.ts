@@ -1,5 +1,5 @@
 import type { GithubClientPort } from "./ports/github_client_provider_port";
-import type { GithubIssueAssignmentClient, GithubIssueContentClient, GithubIssueLabelsClient, GithubIssueLifecycleClient, GithubIssueMetadataClient, GithubIssueTitleClient } from "./ports/github_issue_provider_ports";
+import type { GithubIssueAssignmentClient, GithubIssueContentClient, GithubIssueInactivityClient, GithubIssueLabelsClient, GithubIssueLifecycleClient, GithubIssueMetadataClient, GithubIssueTitleClient } from "./ports/github_issue_provider_ports";
 import type { GithubIssueLabelProvisioningClient } from "./ports/github_issue_label_provisioning_protocol";
 export declare class OctokitIssueAssignmentClientAdapter implements GithubClientPort<GithubIssueAssignmentClient> {
     getClient(token: string): GithubIssueAssignmentClient;
@@ -15,6 +15,9 @@ export declare class OctokitIssueLabelsClientAdapter implements GithubClientPort
 }
 export declare class OctokitIssueLifecycleClientAdapter implements GithubClientPort<GithubIssueLifecycleClient> {
     getClient(token: string): GithubIssueLifecycleClient;
+}
+export declare class OctokitIssueInactivityClientAdapter implements GithubClientPort<GithubIssueInactivityClient> {
+    getClient(token: string): GithubIssueInactivityClient;
 }
 export declare class OctokitIssueMetadataClientAdapter implements GithubClientPort<GithubIssueMetadataClient> {
     getClient(token: string): GithubIssueMetadataClient;

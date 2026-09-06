@@ -18,6 +18,8 @@ const UNTRUSTED_TEMPLATE_KEYS = new Set([
     'findingsBlock',
     'parentBlock',
     'previousBlock',
+    'diffBlock',
+    'reviewConversationBlock',
     'previousRecommendation',
     'ignoreBlock',
     'verifyBlock',

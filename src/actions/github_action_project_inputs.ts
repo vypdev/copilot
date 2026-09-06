@@ -1,4 +1,4 @@
-import { INPUT_KEYS } from '../utils/constants';
+import { INPUT_KEYS } from '../application/contracts/input_keys';
 import type { ProjectConfigurationValues } from './configuration_builders';
 import type { ProjectDetail } from '../data/model/project_detail';
 

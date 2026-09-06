@@ -12,6 +12,7 @@ import {
     type WorkflowPollingPolicy,
 } from '../../policies/workflow_queue_policy';
 import type { ParamUseCase } from '../base/param_usecase';
+import { ApplicationError } from '../../errors/application_error';
 
 const SYSTEM_CLOCK: WorkflowQueueClockPort = { nowMilliseconds: () => Date.now() };
 const SYSTEM_RANDOM: WorkflowPollingRandomPort = { next: () => Math.random() };
@@ -34,13 +35,13 @@ export class WaitForPreviousWorkflowRunsUseCase implements ParamUseCase<Previous
 
         while (true) {
             if (this.clock.nowMilliseconds() >= deadlineAtMilliseconds) {
-                throw new Error('Timeout waiting for previous runs to finish.');
+                throw queueTimeoutError();
             }
             const activeRunCount = await this.queryPort.countActivePreviousRuns(query, {
                 deadlineAtMilliseconds,
             });
             if (this.clock.nowMilliseconds() >= deadlineAtMilliseconds) {
-                throw new Error('Timeout waiting for previous runs to finish.');
+                throw queueTimeoutError();
             }
             if (activeRunCount === 0) {
                 this.observerPort.noActivePreviousRuns();
@@ -53,11 +54,15 @@ export class WaitForPreviousWorkflowRunsUseCase implements ParamUseCase<Previous
                 this.policy,
             );
             if (this.clock.nowMilliseconds() + delayMilliseconds >= deadlineAtMilliseconds) {
-                throw new Error('Timeout waiting for previous runs to finish.');
+                throw queueTimeoutError();
             }
             this.observerPort.waitingForPreviousRuns(activeRunCount, delayMilliseconds);
             await this.delayPort.wait(delayMilliseconds);
             pollIndex += 1;
         }
     }
+}
+
+function queueTimeoutError(): ApplicationError {
+    return new ApplicationError('Timeout waiting for previous runs to finish.', 'workflow', { retryable: true });
 }

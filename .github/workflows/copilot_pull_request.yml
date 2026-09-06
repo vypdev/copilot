@@ -2,18 +2,31 @@ name: Copilot - Pull Request
 
 on:
   pull_request:
-    types: [opened, reopened, edited, labeled, unlabeled, closed, assigned, unassigned, synchronize]
+    types: [opened, reopened, edited, closed, synchronize]
 
 jobs:
   copilot-pull-requests:
+    if: ${{ vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}
     name: Copilot - Pull Request
     runs-on: [self-hosted, codex]
     timeout-minutes: 120
     permissions:
       contents: read
+      checks: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v5
+
+      - name: Fetch incremental review range
+        if: github.event.action == 'synchronize'
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.event.after }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$AFTER_SHA"
+          if ! git fetch --no-tags --depth=1 origin "$BEFORE_SHA"; then
+            echo "::notice::The previous PR commit is unavailable; Bugbot will use the canonical pull-request diff."
+          fi
 
       - uses: ./
         with:
@@ -60,3 +73,4 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           CURSOR_API_KEY: ${{ (vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor' || vars.RELEASE_PROVIDER == 'cursor') && secrets.CURSOR_API_KEY || '' }}
           CODEX_ACCESS_TOKEN: ${{ secrets.CODEX_ACCESS_TOKEN }}
+          COPILOT_EVIDENCE_TOKEN: ${{ github.token }}

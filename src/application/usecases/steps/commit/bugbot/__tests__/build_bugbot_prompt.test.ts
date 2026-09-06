@@ -86,6 +86,66 @@ describe("buildBugbotPrompt", () => {
         expect(prompt).not.toContain('refs/pull/42/merge');
     });
 
+    it('scopes synchronized pull request analysis to the newly pushed commit range', () => {
+        const before = 'a'.repeat(40);
+        const after = 'b'.repeat(40);
+        const prompt = buildBugbotPrompt(mockExecution({
+            inputs: { eventName: 'pull_request', action: 'synchronize', before, after },
+            pullRequest: { action: 'synchronize', head: 'feature/42-real-head' },
+        } as unknown as Partial<Execution>), mockContext());
+
+        expect(prompt).toContain(`exact local commit range \`${before}..${after}\``);
+        expect(prompt).toContain('use the canonical full PR diff instead of failing');
+        expect(prompt).toContain('do not re-review its unchanged remainder');
+        expect(prompt).toContain('Task 2 is not limited to this range');
+    });
+
+    it('falls back to a full branch review when synchronize SHAs are unavailable or unsafe', () => {
+        const prompt = buildBugbotPrompt(mockExecution({
+            inputs: { eventName: 'pull_request', action: 'synchronize', before: '$(unsafe)', after: 'b'.repeat(40) },
+            pullRequest: { action: 'synchronize', head: 'feature/42-real-head' },
+        } as unknown as Partial<Execution>), mockContext());
+
+        expect(prompt).toContain('No canonical pull-request diff is available');
+        expect(prompt).not.toContain('$(unsafe)');
+    });
+
+    it('scopes push analysis to the exact fetched before/after range', () => {
+        const before = 'a'.repeat(40);
+        const after = 'b'.repeat(40);
+        const prompt = buildBugbotPrompt(mockExecution({
+            eventName: 'push',
+            inputs: { eventName: 'push', before, after },
+        } as unknown as Partial<Execution>), mockContext());
+
+        expect(prompt).toContain('push update without requiring a pull request');
+        expect(prompt).toContain(`exact local commit range \`${before}..${after}\``);
+        expect(prompt).toContain('for example after a force-push');
+        expect(prompt).toContain('current commit against its parent');
+        expect(prompt).not.toContain('canonical pull-request diff');
+    });
+
+    it('falls back to local branch history for a new branch push with an all-zero before SHA', () => {
+        const prompt = buildBugbotPrompt(mockExecution({
+            eventName: 'push',
+            inputs: { eventName: 'push', before: '0'.repeat(40), after: 'b'.repeat(40) },
+        } as unknown as Partial<Execution>), mockContext());
+
+        expect(prompt).toContain('No canonical pull-request diff is available');
+        expect(prompt).toContain('current commit against its parent');
+        expect(prompt).not.toContain('0'.repeat(40));
+    });
+
+    it('uses the canonical GitHub diff for a full pull-request review', () => {
+        const prompt = buildBugbotPrompt(mockExecution({
+            eventName: 'pull_request',
+            inputs: { eventName: 'pull_request', action: 'opened' },
+            pullRequest: { action: 'opened', head: 'feature/42-real-head' },
+        } as unknown as Partial<Execution>), mockContext({ reviewDiffBlock: 'canonical diff' }));
+
+        expect(prompt).toContain('Review the canonical pull-request diff for "feature/42-real-head" compared to "develop"');
+    });
+
     it("uses develop when parentBranch and branches.development are missing", () => {
         const prompt = buildBugbotPrompt(
             mockExecution({

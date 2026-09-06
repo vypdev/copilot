@@ -1,7 +1,7 @@
 import type { Execution } from '../../../data/model/execution';
 import { Result } from '../../../data/model/result';
 import type { RepositoryReleasePublicationPort, RepositoryTagPort } from '../../ports/repository_release_ports';
-import { INPUT_KEYS } from '../../../utils/constants';
+import { INPUT_KEYS } from '../../contracts/input_keys';
 import { logError, logInfo } from '../../ports/logging_ports';
 
 export async function runPublishGithubAction(

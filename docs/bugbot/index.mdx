@@ -25,7 +25,7 @@ See [Agent CLI configuration](/agents/cli-configuration) and [Configuration](/bu
 | What you do | What happens |
 | --- | --- |
 | **Push** to a branch linked to an issue | Bugbot analyzes the diff and posts findings on the issue and any open PR. |
-| **Open, edit, reopen, or synchronize a PR** | Bugbot reviews the current PR diff and publishes stable review comments, even when the PR has no linked issue. |
+| **Open, reopen, or synchronize a PR** | Bugbot reviews the full PR when it opens/reopens and only the new commit range on synchronization, while rechecking every open finding against current code. |
 | **Comment** `/copilot review`, `/copilot findings`, or `/copilot recheck` | Bugbot performs a read-only review and publishes the current finding state without changing files. |
 | **Comment** “fix it” / “fix all” (with permission) | The selected agent applies the requested fixes; verification commands run before any commit or push. |
 | **Comment** “add a test for X” (with permission) | The selected agent applies the request; verification commands run before any commit or push. |

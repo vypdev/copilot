@@ -5,7 +5,10 @@ export type BugbotParams = {
     headBranch: string;
     baseBranch: string;
     issueNumber: string;
+    changeScopeInstruction: string;
     ignoreBlock: string;
     previousBlock: string;
+    diffBlock?: string;
+    reviewConversationBlock?: string;
 };
 export declare function getBugbotPrompt(params: BugbotParams): string;

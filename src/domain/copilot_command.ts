@@ -1,15 +1,21 @@
 /** Explicit commands are the safe, deterministic entry point for mutations. */
 export const COPILOT_COMMAND_NAMES = [
+    'help',
+    'analyze',
     'plan',
     'clarify',
     'estimate',
     'test-plan',
     'status',
+    'description',
+    'explain',
+    'diagnose',
     'review',
     'findings',
     'fix',
     'dismiss',
     'recheck',
+    'implement',
 ] as const;
 
 export type CopilotCommandName = typeof COPILOT_COMMAND_NAMES[number];
@@ -50,8 +56,8 @@ export function parseCopilotCommand(raw: unknown): CopilotCommandParseResult {
     if (tokens.length > MAX_ARGUMENTS) {
         return { kind: 'invalid', reason: `Copilot commands accept at most ${MAX_ARGUMENTS} arguments.` };
     }
-    if ((name === 'fix' || name === 'dismiss') && tokens.length === 0) {
-        return { kind: 'invalid', reason: `/${name} requires at least one finding id.` };
+    if ((name === 'fix' || name === 'dismiss' || name === 'implement') && tokens.length === 0) {
+        return { kind: 'invalid', reason: `/${name} requires at least one argument.` };
     }
     return {
         kind: 'command',

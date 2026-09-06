@@ -47,7 +47,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - uses: vypdev/copilot@v2
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
           project-ids: ${{ vars.PROJECT_IDS }}
@@ -62,6 +62,8 @@ Add other inputs as needed: `branch-management-launcher-label`, `desired-assigne
 
 1. **Admission on every trigger** (with valid `token`): The action first compares the **event actor** with the **token owner**. If they are the same, the normal pipeline completes successfully before queueing or loading issue context (see [Troubleshooting → Action skips issue/PR/push pipelines](/security-operations/operations/troubleshooting#action-skips-issueprpush-pipelines)); use a **bot account** for the PAT if you want full behavior when you act as a user. Valid explicit single actions still run.
 
+   Set the optional Repository Variable `COPILOT_BOT_LOGIN` to the PAT bot's login to apply the same generic check at job admission. Event workflows triggered by that actor then consume no runner at all. If the variable is absent, the in-Action authenticated check remains fail-safe. Manual single-action workflows are intentionally separate and are not gated this way.
+
 2. **Project linking:** If `project-ids` is set and the token has access, the issue is linked to those projects and moved to the configured column (e.g. "Todo" or "In Progress").
 
 3. **Assignees:** If `desired-assignees-count` is set, the action assigns up to that many members (issue creator first if they belong to the org/repo, then additional members). See [Assignees and projects](/issues/assignees-and-projects).
@@ -69,6 +71,34 @@ Add other inputs as needed: `branch-management-launcher-label`, `desired-assigne
 4. **Branch creation:** When the issue has a **branch type** label (feature, bugfix, docs, chore, hotfix, release) and either the **launcher label** (e.g. `branched`) is present or `branch-management-always: true`, the action creates the branch (with hotfix/release restrictions for non-members). See [Branch management](/issues/branch-management).
 
 5. **Deploy trigger:** When the `deploy` label is added to an issue that has a release or hotfix type, the action **dispatches** the workflow named in `release-workflow` or `hotfix-workflow` (e.g. `release_workflow.yml`, `hotfix_workflow.yml`). Filenames must match exactly.
+
+## Scheduled inactivity cleanup
+
+To close issues that remain waiting for a maintainer or issue author, add
+`setup/workflows/copilot_close_inactive_issues.yml` to the destination repository
+or enable the `inactiveIssueClosure` feature in `copilot setup`. The template runs
+every six hours and can also be started manually:
+
+```yaml
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+    inputs:
+      inactivity_threshold_hours:
+        description: Hours without activity before closing a waiting issue
+        required: false
+        default: '168'
+        type: string
+```
+
+The workflow invokes `single-action: close_inactive_issues_action` and needs the
+write-capable `PAT` Secret. The default threshold is 168 hours (7 days); set
+`INACTIVITY_THRESHOLD_HOURS` as a Repository Variable or pass
+`inactivity-threshold-hours` to override it. The action uses the existing
+`state:awaiting-maintainer`, `state:awaiting-issue-author`, and
+`state:ai-processing` labels, which can be customized through the normal label
+inputs.
 
 ## Next steps
 

@@ -5,7 +5,7 @@ description: Run one-off actions on demand: check progress, detect problems, thi
 
 # Single Actions
 
-When you set the **`single-action`** input (and any required targets such as `single-action-issue` or `single-action-version`), Copilot runs **only** that action and skips the normal issue, pull request, and push pipelines. Use this for on-demand runs: progress check without pushing, Bugbot detection, recommend steps, think, create release or tag, mark deployed, or initial setup.
+When you set the **`single-action`** input (and any required targets such as `single-action-issue` or `single-action-version`), Copilot runs **only** that action and skips the normal issue, pull request, and push pipelines. Use this for on-demand runs: progress check without pushing, Bugbot detection, recommend steps, think, create release or tag, mark deployed, initial setup, or scheduled inactivity cleanup.
 
 <CardGroup cols={2}>
   <Card title="Available actions" icon="list" href="/single-actions/available-actions">
@@ -33,9 +33,10 @@ When you set the **`single-action`** input (and any required targets such as `si
 | **Think** | Deep code analysis or questions; no issue required. Use from workflow or CLI with `-q "<question>"`. |
 | **Release / Tag** | Create a GitHub release or tag with `single-action-version` (and for release: title, changelog). |
 | **Deployed / Setup** | Mark an issue as deployed, or run initial setup (labels, issue types). |
+| **Inactive issue cleanup** | Close stale issues waiting for a maintainer or issue author; no issue number required. |
 
 <Info>
-**Actions that fail the job** if the last step fails: `publish_github_action`, `create_release`, `deployed_action`, `create_tag`. The workflow will be marked as failed so you can act on it.
+**Actions that fail the job** if the last step fails: `publish_github_action`, `create_release`, `deployed_action`, `create_tag`, `close_inactive_issues_action`. The workflow will be marked as failed so you can act on it.
 </Info>
 
 ## Next steps

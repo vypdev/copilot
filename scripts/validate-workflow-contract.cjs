@@ -31,6 +31,7 @@ const QUEUE_WORKFLOW_MANIFEST = Object.freeze([
   ['copilot_issue_comment.yml', 'Copilot - Issue Comment', 'copilot-issues'],
   ['copilot_pull_request.yml', 'Copilot - Pull Request', 'copilot-pull-requests'],
   ['copilot_pull_request_comment.yml', 'Copilot - Pull Request Comment', 'copilot-pull-requests'],
+  ['copilot_close_inactive_issues.yml', 'Copilot - Close Inactive Issues', 'copilot-inactive-issues'],
   ['hotfix_workflow.yml', 'Task - Hotfix', 'tag'],
   ['release_workflow.yml', 'Task - Release', 'tag'],
 ].map(([file, workflowName, jobId]) => ({ file, workflowName, jobId })));
@@ -39,6 +40,16 @@ const MUTATION_WORKFLOW_MANIFEST = Object.freeze([
   { file: 'release_workflow.yml', workflowName: 'Task - Release' },
   { file: 'hotfix_workflow.yml', workflowName: 'Task - Hotfix' },
 ]);
+
+const BOT_GATED_WORKFLOW_FILES = new Set([
+  'copilot_commit.yml',
+  'copilot_issue.yml',
+  'copilot_issue_comment.yml',
+  'copilot_pull_request.yml',
+  'copilot_pull_request_comment.yml',
+]);
+const BOT_GATE_EXPRESSION = "${{ vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}";
+const ZERO_OBJECT_ID = '0000000000000000000000000000000000000000';
 
 const requiredAgentInputs = [
   'agent-provider', 'agent-model-provider', 'agent-model', 'agent-effort', 'agent-command',
@@ -265,6 +276,9 @@ function assertQueueWorkflow(file, workflow) {
   }
   const queueJob = workflow.jobs?.[manifest.jobId];
   if (!queueJob) throw new Error(`${relativeFile} must define queue job ${manifest.jobId}.`);
+  if (BOT_GATED_WORKFLOW_FILES.has(manifest.file) && queueJob.if !== BOT_GATE_EXPRESSION) {
+    throw new Error(`${relativeFile} queue job ${manifest.jobId} must use the generic COPILOT_BOT_LOGIN actor gate.`);
+  }
   if (typeof queueJob['timeout-minutes'] !== 'number'
     || queueJob['timeout-minutes'] < MIN_QUEUE_JOB_TIMEOUT_MINUTES) {
     throw new Error(`${relativeFile} queue job ${manifest.jobId} must have timeout-minutes >= ${MIN_QUEUE_JOB_TIMEOUT_MINUTES}.`);
@@ -272,10 +286,35 @@ function assertQueueWorkflow(file, workflow) {
   if (!(queueJob.steps ?? []).some(isCopilotAction)) {
     throw new Error(`${relativeFile} queue job ${manifest.jobId} must invoke the Copilot action.`);
   }
+  assertIncrementalRangeFetch(relativeFile, manifest.file, queueJob);
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
     if (jobId !== manifest.jobId && (job.steps ?? []).some(isCopilotAction)) {
       throw new Error(`${relativeFile} unmanifested job ${jobId} invokes the Copilot action.`);
     }
+  }
+}
+
+function assertIncrementalRangeFetch(relativeFile, manifestFile, job) {
+  const contract = manifestFile === 'copilot_commit.yml'
+      ? {
+        name: 'Fetch push review range',
+        condition: `github.event.after != '${ZERO_OBJECT_ID}'`,
+        afterDepth: 2,
+      }
+    : manifestFile === 'copilot_pull_request.yml'
+      ? { name: 'Fetch incremental review range', condition: "github.event.action == 'synchronize'", afterDepth: 1 }
+      : undefined;
+  if (!contract) return;
+  const step = (job.steps ?? []).find(candidate => candidate?.name === contract.name);
+  const fetchScript = typeof step?.run === 'string' ? step.run.trim() : '';
+  if (!step
+    || step.if !== contract.condition
+    || step.env?.BEFORE_SHA !== '${{ github.event.before }}'
+    || step.env?.AFTER_SHA !== '${{ github.event.after }}'
+    || (manifestFile === 'copilot_commit.yml' && step.env?.BRANCH_CREATED !== '${{ github.event.created }}')
+    || !fetchScript.includes(`git fetch --no-tags --depth=${contract.afterDepth} origin "$AFTER_SHA"`)
+    || !fetchScript.includes(`${manifestFile === 'copilot_commit.yml' ? 'if [ "$BRANCH_CREATED" != "true" ] && ' : 'if '}! git fetch --no-tags --depth=1 origin "$BEFORE_SHA"; then`)) {
+    throw new Error(`${relativeFile} must fetch the exact GitHub before/after review range before invoking Copilot.`);
   }
 }
 
@@ -322,6 +361,8 @@ module.exports = {
   TAG_TIMEOUT_MINUTES,
   QUEUE_WORKFLOW_MANIFEST,
   MUTATION_WORKFLOW_MANIFEST,
+  BOT_GATED_WORKFLOW_FILES,
+  BOT_GATE_EXPRESSION,
   assertAgentInputs,
   assertMutationWorkflow,
   assertNoConcurrency,
@@ -330,6 +371,7 @@ module.exports = {
   assertTagPermissions,
   assertQueueGateJob,
   assertQueueWorkflow,
+  assertIncrementalRangeFetch,
   assertRunner,
   assertSequentialMutationWorkflow,
   assertTransitiveQueueGateAncestry,

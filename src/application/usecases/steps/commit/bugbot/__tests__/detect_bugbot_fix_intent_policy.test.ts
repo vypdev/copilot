@@ -77,6 +77,7 @@ describe("detect bugbot fix intent policy", () => {
             ).toEqual({
                 isFixRequest: true,
                 isDoRequest: false,
+                isReviewRequest: false,
                 targetFindingIds: ["finding-1"],
             });
         });
@@ -94,6 +95,7 @@ describe("detect bugbot fix intent policy", () => {
             ).toEqual({
                 isFixRequest: false,
                 isDoRequest: true,
+                isReviewRequest: false,
                 targetFindingIds: [],
             });
         });
@@ -108,12 +110,13 @@ describe("detect bugbot fix intent policy", () => {
         it("defaults malformed fields to safe values", () => {
             expect(
                 parseBugbotFixIntentResponse(
-                    { is_fix_request: "true", is_do_request: 1, target_finding_ids: "finding-1" },
+                    { is_fix_request: "true", is_do_request: 1, is_review_request: false, target_finding_ids: "finding-1" },
                     unresolvedIds,
                 ),
             ).toEqual({
                 isFixRequest: false,
                 isDoRequest: false,
+                isReviewRequest: false,
                 targetFindingIds: [],
             });
         });

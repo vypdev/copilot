@@ -1,4 +1,4 @@
-import { ACTIONS } from '../../../utils/constants';
+import { ACTIONS } from '../action_types';
 import { shouldSkipInitialLabelsFetch } from '../initial_labels_policy';
 
 describe('initial labels policy', () => {

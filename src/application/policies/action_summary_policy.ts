@@ -8,6 +8,7 @@ export interface ActionSummaryContext {
     readonly issueNumber: number;
     readonly pullRequestNumber: number;
     readonly lifecycleState?: string;
+    readonly pullRequestDescriptionMode?: string;
     readonly results: readonly Result[];
 }
 
@@ -30,6 +31,7 @@ export function buildActionSummary(context: ActionSummaryContext): string {
         `| Event | \`${escapeTable(context.eventName)}\` |`,
         `| Target | ${escapeTable(target)} |`,
         `| Lifecycle | ${lifecycle} |`,
+        `| PR description policy | ${escapeTable(context.pullRequestDescriptionMode ?? '—')} |`,
         `| Results | ${context.results.length} |`,
         `| Finding states | ${formatFindingStates(findingStates)} |`,
     ];

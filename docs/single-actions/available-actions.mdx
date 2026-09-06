@@ -14,7 +14,7 @@ These actions need **`single-action-issue`** set to the issue number. The workfl
 | Action | Required inputs | Description | When to use |
 |--------|-----------------|-------------|-------------|
 | **`check_progress_action`** | `single-action-issue` | Runs **progress check** on demand. The configured agent compares the issue description with the branch diff and updates the **progress** label (0–100%) on the issue and on any open PR for that branch. | Progress is normally updated on every **push** (commit workflow). Use this to re-run without pushing, or when you don’t use the push workflow. |
-| **`detect_potential_problems_action`** | `single-action-issue` | **Bugbot:** the configured agent analyzes the branch vs base, reports **findings** as comments on the issue and as **review comments** on open PRs; updates issue comments and marks PR threads as resolved when findings are fixed. | Same as push-time Bugbot but on demand. See [Bugbot](/bugbot). |
+| **`detect_potential_problems_action`** | `single-action-issue` | **Bugbot:** the configured agent analyzes the branch vs base and reports findings on the issue when no PR exists, or in one summarized review on an open PR; updates stored findings and resolves PR threads when findings are fixed. | Same as push-time Bugbot but on demand. See [Bugbot](/bugbot). |
 | **`recommend_steps_action`** | `single-action-issue` | Uses the configured agent's analysis role to recommend **implementation steps** from the issue description; **posts a comment** on the issue with the steps. | When you want a one-off suggestion for how to implement the issue. |
 | **`deployed_action`** | `single-action-issue` | Marks the issue as **deployed**; updates labels (e.g. `deployed`) and **project state** (e.g. column). | After a release or hotfix has been deployed; often called from your release/hotfix workflow. |
 
@@ -26,7 +26,8 @@ These actions need **`single-action-issue`** set to the issue number. The workfl
 | **`initial_setup`** | — | Performs **initial setup**: creates labels, issue types (if supported), verifies access. If the repo has no version tags, creates default tag **`v1.0.0`** so release/hotfix issues get a base version. No issue required. | First-time repo setup; run once or when you add new labels/types. Run on new repos before creating release/hotfix issues to avoid "Unknown Version" loops. |
 | **`create_release`** | `single-action-version`, `single-action-title`, `single-action-changelog` | Creates a **GitHub release** with the given version, title, and changelog (markdown body). | From a workflow after tests pass; use version and changelog from your build or inputs. |
 | **`create_tag`** | `single-action-version` | Creates a **Git tag** with prefix `v` (e.g. `v1.2.3`) for the given version from the release branch. | When you only need a tag (e.g. for versioning) without a full release. The tag is created from the `releaseBranch` stored in issue configuration. |
-| **`publish_github_action`** | `single-action-version` | **Publishes or updates** the GitHub Action: creates/updates the major version tag (e.g. `v2` from `v2.0.4`) and the corresponding GitHub Release. Requires that `create_tag` has been run first to create the source tag `v{version}`. | In a CI job that builds and publishes the action, after `create_tag` and `create_release` have run. |
+| **`publish_github_action`** | `single-action-version` | **Publishes or updates** the GitHub Action: creates/updates the major version tag (for example, `v3` from a `v3.x.y` release) and the corresponding GitHub Release. Requires that `create_tag` has been run first to create the source tag `v{version}`. | In a CI job that builds and publishes the action, after `create_tag` and `create_release` have run. |
+| **`close_inactive_issues_action`** | — (`inactivity-threshold-hours` optional) | Scans open issues waiting for a maintainer or issue author and closes those whose `updated_at` exceeds the configured inactivity window. Revalidates each candidate before closing and posts an explanation. | From the scheduled `copilot_close_inactive_issues.yml` workflow; no issue number is required. |
 
 ## Actions that fail the job on failure
 
@@ -36,6 +37,7 @@ These single actions **throw an error** if their last step fails, so the **workf
 - **`create_release`**
 - **`deployed_action`**
 - **`create_tag`**
+- **`close_inactive_issues_action`**
 
 Use them when you want the workflow to **fail** if the action does not succeed (e.g. release creation or tag creation fails).
 
@@ -56,6 +58,7 @@ The **`copilot do`** CLI command (for example, `copilot do -p "..."`) uses the c
 | `create_release` | — | ✅ | ✅ | ✅ |
 | `create_tag` | — | ✅ | — | — |
 | `publish_github_action` | — | ✅ | — | — |
+| `close_inactive_issues_action` | — | — | — | — |
 
 ## Next steps
 

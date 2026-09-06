@@ -3,6 +3,8 @@ export interface BugbotFixIntent {
     isFixRequest: boolean;
     isDoRequest: boolean;
     targetFindingIds: string[];
+    isReviewRequest?: boolean;
+    requestText?: string;
 }
 export interface BugbotCommentSources {
     issue: {

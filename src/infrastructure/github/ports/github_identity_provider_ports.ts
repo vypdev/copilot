@@ -24,6 +24,13 @@ export interface GithubActorAuthorizationClient {
         orgs: {
             checkMembershipForUser(parameters: { org: string; username: string }): Promise<unknown>;
         };
+        repos: {
+            getCollaboratorPermissionLevel(parameters: {
+                owner: string;
+                repo: string;
+                username: string;
+            }): Promise<{ data: { permission?: string } }>;
+        };
     };
 }
 

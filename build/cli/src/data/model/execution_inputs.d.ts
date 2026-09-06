@@ -35,6 +35,28 @@ export interface EventPullRequestPayload {
     merged?: boolean;
     state?: string;
 }
+export interface EventPullRequestReferencePayload {
+    number?: number;
+}
+export interface EventReviewPayload {
+    state?: string;
+    commit_id?: string;
+    pull_request?: EventPullRequestReferencePayload;
+}
+export interface EventCheckSuitePayload {
+    status?: string;
+    conclusion?: string | null;
+    head_branch?: string;
+    head_sha?: string;
+    pull_requests?: EventPullRequestReferencePayload[];
+}
+export interface EventWorkflowRunPayload {
+    status?: string;
+    conclusion?: string | null;
+    head_branch?: string;
+    head_sha?: string;
+    pull_requests?: EventPullRequestReferencePayload[];
+}
 export interface EventCommitPayload {
     id?: string;
     message?: string;
@@ -47,6 +69,8 @@ export interface ExecutionInputs {
     eventName?: string;
     actor?: string;
     action?: string;
+    before?: string;
+    after?: string;
     ref?: string;
     repo?: {
         owner?: string;
@@ -55,6 +79,9 @@ export interface ExecutionInputs {
     issue?: EventIssuePayload;
     label?: EventLabelPayload;
     pull_request?: EventPullRequestPayload;
+    review?: EventReviewPayload;
+    check_suite?: EventCheckSuitePayload;
+    workflow_run?: EventWorkflowRunPayload;
     comment?: EventCommentPayload;
     pull_request_review_comment?: EventCommentPayload;
     changes?: Record<string, unknown>;

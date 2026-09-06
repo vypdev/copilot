@@ -5,7 +5,7 @@ description: How to ask the bot to fix one or more Bugbot findings from an issue
 
 # Autofix
 
-**Bugbot autofix** lets you ask the bot to **fix** one or more of the findings it previously reported. You write a **comment** on the issue or on the pull request (or reply in a review thread); the configured agent determines **which** findings you mean and applies the fixes. The action then runs your **verify commands** (e.g. build, test, lint) and, if they pass, **commits and pushes** and marks those findings as resolved.
+**Bugbot autofix** lets you ask the bot to **fix** one or more previously reported findings. The configured agent determines which findings you mean and applies the fixes. The action checks out the target branch before agent execution, runs your verify commands, and commits and pushes only safe workspace paths. Findings stay open until a fresh review verifies the pushed revision.
 
 This page explains how to trigger autofix, who can do it, and what the action does under the hood.
 
@@ -35,6 +35,10 @@ Add a **comment** on the issue that references the findings you want fixed. The 
 
 You don’t have to use exact wording; the configured analysis role interprets intent. Be clear when you want only **some** findings (e.g. “fix the first two” or “fix the one about the login handler”).
 
+For a natural-language comment, mention the configured bot user (for example,
+`@vypbot fix the authentication finding`). Explicit `/copilot fix <finding-id>`
+and `/copilot fix all` commands do not require a mention.
+
 **Important:** On **issue comments**, the action needs an **open pull request** that references the issue so it can determine which **branch** to checkout and push to. If there is no such PR, autofix is skipped (the action cannot push without a branch). See [Troubleshooting → Bugbot autofix](/security-operations/operations/troubleshooting#bugbot-autofix).
 
 ### From the pull request
@@ -58,7 +62,7 @@ want an authorized file-changing operation.
 Only **certain users** can trigger file-modifying actions (autofix and [do user request](/bugbot/do-user-request)):
 
 - **Organization repositories:** The comment author must be a **member of the organization** (checked via GitHub’s `orgs.checkMembershipForUser`). If the author is not a member, the action does **not** run autofix; it can still run **Think** and reply with an answer.
-- **User (personal) repositories:** Only the **repository owner** can trigger autofix. Other users get a Think response only.
+- **User (personal) repositories:** The **repository owner** or a collaborator with `push`, `maintain`, or `admin` permission can trigger autofix. Other users get a Think response only.
 
 This avoids random contributors or external users pushing commits via comments. There is no separate “Bugbot role”; the same rule applies to both autofix and do-user-request.
 
@@ -99,9 +103,9 @@ So verify commands act as a gate: only passing runs produce a commit. If you lea
 1. The configured execution role applies the code changes in its workspace.
 2. The action runs the **verify commands** in the runner; if any fails, it stops.
 3. The action runs **git add**, **commit** (message: `fix(#N): bugbot autofix - resolve <finding ids>`), and **push** to the branch.
-4. The action **marks** the fixed findings as **resolved**: it updates the corresponding issue and PR comments (hidden marker set to `resolved: true`) and, on the PR, **resolves the review threads** for those comments.
+4. The action leaves the findings open. The push starts a fresh review; only that independent analysis may update the markers and resolve the PR threads.
 
-So the next time detection runs (e.g. on the next push), the configured agent will see those findings as resolved and not suggest them again.
+This prevents a successful edit or test command from being mistaken for proof that the original defect no longer exists.
 
 ---
 

@@ -2,7 +2,7 @@
  * JSON schemas for findings-agent responses. Used with the findings query so the agent returns
  * structured JSON we can parse.
  */
-/** Detection (on push): the configured agent computes the diff and returns findings + resolved_finding_ids. */
+/** Detection returns findings and explicit lifecycle changes for prior finding IDs. */
 export declare const BUGBOT_RESPONSE_SCHEMA: {
     readonly type: "object";
     readonly properties: {
@@ -39,10 +39,31 @@ export declare const BUGBOT_RESPONSE_SCHEMA: {
                         readonly minimum: 1;
                         readonly description: "Line number when applicable";
                     };
+                    readonly endLine: {
+                        readonly type: "integer";
+                        readonly minimum: 1;
+                        readonly description: "Inclusive final line when the problem spans multiple diff lines";
+                    };
                     readonly severity: {
                         readonly type: "string";
                         readonly enum: readonly ["high", "medium", "low", "info"];
                         readonly description: "Severity. Findings below the configured minimum are not published.";
+                    };
+                    readonly confidence: {
+                        readonly type: "number";
+                        readonly minimum: 0;
+                        readonly maximum: 1;
+                        readonly description: "Confidence that the finding is a real, actionable defect";
+                    };
+                    readonly category: {
+                        readonly type: "string";
+                        readonly enum: readonly ["correctness", "security", "performance", "reliability", "maintainability"];
+                        readonly description: "Primary defect category";
+                    };
+                    readonly evidence: {
+                        readonly type: "string";
+                        readonly maxLength: 8000;
+                        readonly description: "Concrete execution path, invariant, or code evidence proving impact";
                     };
                     readonly suggestion: {
                         readonly type: "string";
@@ -76,9 +97,9 @@ export declare const BUGBOT_RESPONSE_SCHEMA: {
     readonly additionalProperties: false;
 };
 /**
- * Findings-agent response schema for bugbot fix intent.
+ * Findings-agent response schema for comment intent.
  * Given the user comment and the list of unresolved findings, the agent decides whether
- * the user is asking to fix one or more of them and which finding ids to target.
+ * the user is asking to fix findings, apply a general change, or run a read-only review.
  */
 export declare const BUGBOT_FIX_INTENT_RESPONSE_SCHEMA: {
     readonly type: "object";
@@ -98,7 +119,11 @@ export declare const BUGBOT_FIX_INTENT_RESPONSE_SCHEMA: {
             readonly type: "boolean";
             readonly description: "True if the user is asking to perform some change or task in the repository (e.g. \"add a test for X\", \"refactor this\", \"implement feature Y\"). False for pure questions or when the only intent is to fix the reported findings (use is_fix_request for that).";
         };
+        readonly is_review_request: {
+            readonly type: "boolean";
+            readonly description: "True if the user is asking for a read-only analysis or review of the current issue, branch, or pull request (e.g. \"analyze the changes for security issues\", \"review this PR for bugs\"). False for pure questions or file-changing requests.";
+        };
     };
-    readonly required: readonly ["is_fix_request", "target_finding_ids", "is_do_request"];
+    readonly required: readonly ["is_fix_request", "target_finding_ids", "is_do_request", "is_review_request"];
     readonly additionalProperties: false;
 };

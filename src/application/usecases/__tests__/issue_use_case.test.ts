@@ -170,6 +170,39 @@ describe("IssueUseCase", () => {
     expect(mockRecommendStepsInvoke).not.toHaveBeenCalled();
   });
 
+  it("posts a static welcome for a newly opened issue when no AI recommendation applies", async () => {
+    const param = minimalExecution({
+      tokenUser: "vypbot",
+      eventName: "issues",
+      inputs: { eventName: "issues", action: "opened" },
+      issue: { opened: true },
+      labels: { isRelease: true, isQuestion: false, isHelp: false },
+    });
+
+    const results = await createUseCase().invoke(param);
+
+    expect(mockRecommendStepsInvoke).not.toHaveBeenCalled();
+    expect(results.some((result) => result.id === "CopilotWelcomeUseCase")).toBe(true);
+    expect(results.find((result) => result.id === "CopilotWelcomeUseCase")?.steps[0]).toContain(
+      "<!-- copilot:welcome -->",
+    );
+  });
+
+  it("posts a static welcome when the initial help agent cannot answer", async () => {
+    const param = minimalExecution({
+      tokenUser: "vypbot",
+      eventName: "issues",
+      inputs: { eventName: "issues", action: "opened" },
+      issue: { opened: true },
+      labels: { isRelease: false, isQuestion: true, isHelp: false },
+    });
+
+    const results = await createUseCase().invoke(param);
+
+    expect(mockAnswerIssueHelpInvoke).toHaveBeenCalledWith(param);
+    expect(results.some((result) => result.id === "CopilotWelcomeUseCase")).toBe(true);
+  });
+
   it("answers help for a newly opened question or help issue", async () => {
     mockAnswerIssueHelpInvoke.mockResolvedValue([
       new Result({ id: "help", success: true, executed: true, steps: [] }),

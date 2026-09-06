@@ -7,4 +7,5 @@ export declare function hasKnownModelProvider(modelProvider: string | undefined)
 export declare function allowedCredentialVariables(provider: AgentProvider | undefined, modelProvider?: string): readonly string[];
 export declare function credentialVariables(configuration: AgentConfiguration): readonly string[];
 export declare function removeAgentCredentials(environment: NodeJS.ProcessEnv): NodeJS.ProcessEnv;
+export declare function selectSafeAgentRuntimeEnvironment(environment: NodeJS.ProcessEnv): NodeJS.ProcessEnv;
 export declare function containsCredentialMaterial(value: unknown, propertyName?: string): boolean;

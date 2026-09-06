@@ -63,7 +63,7 @@ async function ensureConfiguredIssueTypeSafely(
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     logError(`Error ensuring issue type "${configured.name}": ${error}`);
-    return { kind: 'error', message: `Error creando tipo de Issue "${configured.name}": ${message}` };
+    return { kind: 'error', message: `Error creating Issue type "${configured.name}": ${message}` };
   }
 }
 

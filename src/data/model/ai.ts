@@ -1,5 +1,10 @@
 import { AgentConfiguration, AgentTask, AgentTaskConfiguration } from './agent';
 import { defaultAgentCommand } from '../../domain/agent_command';
+import {
+    DEFAULT_PULL_REQUEST_DESCRIPTION_MODE,
+    normalizePullRequestDescriptionMode,
+    type PullRequestDescriptionMode,
+} from '../../domain/pull_request_description';
 
 export class Ai {
     private aiPullRequestDescription: boolean;
@@ -10,6 +15,7 @@ export class Ai {
     private bugbotCommentLimit: number;
     private bugbotFixVerifyCommands: string[];
     private agentTasks: AgentTaskConfiguration;
+    private pullRequestDescriptionMode: PullRequestDescriptionMode;
 
     constructor(
         _configurationSource: string,
@@ -24,7 +30,8 @@ export class Ai {
         agentTasks: AgentTaskConfiguration = {
             findings: { provider: 'codex', modelProvider: 'openai', model, command: defaultAgentCommand({ provider: 'codex', modelProvider: 'openai', model }) },
             fixer: { provider: 'codex', modelProvider: 'openai', model, command: defaultAgentCommand({ provider: 'codex', modelProvider: 'openai', model }) },
-        }
+        },
+        pullRequestDescriptionMode: PullRequestDescriptionMode = DEFAULT_PULL_REQUEST_DESCRIPTION_MODE,
     ) {
         this.aiPullRequestDescription = aiPullRequestDescription;
         this.aiMembersOnly = aiMembersOnly;
@@ -34,10 +41,15 @@ export class Ai {
         this.bugbotCommentLimit = bugbotCommentLimit;
         this.bugbotFixVerifyCommands = bugbotFixVerifyCommands;
         this.agentTasks = agentTasks;
+        this.pullRequestDescriptionMode = normalizePullRequestDescriptionMode(pullRequestDescriptionMode);
     }
 
     getAiPullRequestDescription(): boolean {
         return this.aiPullRequestDescription;
+    }
+
+    getPullRequestDescriptionMode(): PullRequestDescriptionMode {
+        return this.pullRequestDescriptionMode;
     }
 
     getAiMembersOnly(): boolean {

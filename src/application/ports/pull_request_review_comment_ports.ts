@@ -6,12 +6,17 @@ export type PullRequestReviewComment = {
   body: string | null;
   path?: string;
   line?: number;
+  authorLogin?: string;
 };
 
 export type PullRequestReviewCommentDraft = {
   path: string;
-  line: number;
   body: string;
+  line?: number;
+  side?: "LEFT" | "RIGHT";
+  startLine?: number;
+  startSide?: "LEFT" | "RIGHT";
+  subjectType?: "line" | "file";
 };
 
 export interface PullRequestReviewCommentListQueryPort {
@@ -44,6 +49,7 @@ export interface PullRequestReviewCommentCreatePort {
     repository: string,
     pullRequestNumber: number,
     commitId: string,
+    body: string,
     comments: PullRequestReviewCommentDraft[],
     token: string,
   ): Promise<void>;
@@ -80,4 +86,14 @@ export interface PullRequestReviewThreadCommandPort {
     commentIdentity: string,
     token: string,
   ): Promise<void>;
+}
+
+export interface PullRequestReviewThreadStateQueryPort {
+  /** Maps review-comment node identities to their parent thread resolution state. */
+  listPullRequestReviewThreadStates(
+    owner: string,
+    repository: string,
+    pullRequestNumber: number,
+    token: string,
+  ): Promise<Record<string, boolean>>;
 }

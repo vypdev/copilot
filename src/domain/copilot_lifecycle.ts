@@ -1,10 +1,10 @@
 /**
- * The Copilot lifecycle is deliberately independent from GitHub's API model.
- * Labels are the persistence representation; this policy is the state machine
- * used by application workflows and can therefore be tested without I/O.
+ * Copilot labels are split into independent dimensions. A durable lifecycle
+ * phase can coexist with temporary agent activity and a human waiting state.
+ * This policy is independent from GitHub's API model and remains unit-testable
+ * without I/O.
  */
 export type CopilotLifecycleState =
-    | 'analyzing'
     | 'planned'
     | 'in-progress'
     | 'reviewing'
@@ -13,8 +13,12 @@ export type CopilotLifecycleState =
     | 'ready'
     | 'blocked';
 
+export type CopilotAgentActivity = 'ai-processing';
+
+export type CopilotWaitingState = 'awaiting-maintainer' | 'awaiting-issue-author';
+
 export interface CopilotLifecycleLabels {
-    analyzing: string;
+    aiProcessing: string;
     planned: string;
     inProgress: string;
     reviewing: string;
@@ -22,28 +26,38 @@ export interface CopilotLifecycleLabels {
     verified: string;
     ready: string;
     blocked: string;
+    awaitingMaintainer: string;
+    awaitingIssueAuthor: string;
 }
 
 export const DEFAULT_COPILOT_LIFECYCLE_LABELS: Readonly<CopilotLifecycleLabels> = {
-    analyzing: 'copilot:state:analyzing',
-    planned: 'copilot:state:planned',
-    inProgress: 'copilot:state:in-progress',
-    reviewing: 'copilot:state:reviewing',
-    changesRequested: 'copilot:state:changes-requested',
-    verified: 'copilot:state:verified',
-    ready: 'copilot:state:ready',
-    blocked: 'copilot:state:blocked',
+    aiProcessing: 'state:ai-processing',
+    planned: 'state:planned',
+    inProgress: 'state:in-progress',
+    reviewing: 'state:reviewing',
+    changesRequested: 'state:changes-requested',
+    verified: 'state:verified',
+    ready: 'state:ready',
+    blocked: 'state:blocked',
+    awaitingMaintainer: 'state:awaiting-maintainer',
+    awaitingIssueAuthor: 'state:awaiting-issue-author',
 };
 
+export type LifecycleLabelCategory = 'lifecycle' | 'activity' | 'waiting';
+
 export interface LifecycleLabelDefinition {
-    readonly state: CopilotLifecycleState;
+    readonly category: LifecycleLabelCategory;
+    readonly state?: CopilotLifecycleState;
     readonly name: string;
     readonly color: string;
     readonly description: string;
 }
 
-const LIFECYCLE_METADATA: ReadonlyArray<readonly [CopilotLifecycleState, keyof CopilotLifecycleLabels, string, string]> = [
-    ['analyzing', 'analyzing', 'FBCA04', 'Copilot is analyzing the issue or change.'],
+type StableMetadata = readonly [CopilotLifecycleState, keyof CopilotLifecycleLabels, string, string];
+type ActivityMetadata = readonly [CopilotAgentActivity, keyof CopilotLifecycleLabels, string, string];
+type WaitingMetadata = readonly [CopilotWaitingState, keyof CopilotLifecycleLabels, string, string];
+
+const STABLE_LIFECYCLE_METADATA: ReadonlyArray<StableMetadata> = [
     ['planned', 'planned', '1D76DB', 'Copilot has produced an implementation plan.'],
     ['in-progress', 'inProgress', '0E8A16', 'Implementation work is in progress.'],
     ['reviewing', 'reviewing', '5319E7', 'A pull request is being reviewed.'],
@@ -53,10 +67,18 @@ const LIFECYCLE_METADATA: ReadonlyArray<readonly [CopilotLifecycleState, keyof C
     ['blocked', 'blocked', 'B60205', 'The workflow is blocked and needs human input.'],
 ];
 
-export function lifecycleLabelDefinitions(
-    labels: CopilotLifecycleLabels = DEFAULT_COPILOT_LIFECYCLE_LABELS,
-): LifecycleLabelDefinition[] {
-    return LIFECYCLE_METADATA.map(([state, key, color, description]) => ({
+const ACTIVITY_METADATA: ReadonlyArray<ActivityMetadata> = [
+    ['ai-processing', 'aiProcessing', 'FBCA04', 'A Copilot agent is analyzing or working on the issue or change.'],
+];
+
+const WAITING_METADATA: ReadonlyArray<WaitingMetadata> = [
+    ['awaiting-maintainer', 'awaitingMaintainer', '5319E7', 'The next action requires a maintainer response or approval.'],
+    ['awaiting-issue-author', 'awaitingIssueAuthor', 'D93F0B', 'The next action requires more information or changes from the issue author.'],
+];
+
+function stableDefinitions(labels: CopilotLifecycleLabels): LifecycleLabelDefinition[] {
+    return STABLE_LIFECYCLE_METADATA.map(([state, key, color, description]) => ({
+        category: 'lifecycle',
         state,
         name: labels[key],
         color,
@@ -64,10 +86,74 @@ export function lifecycleLabelDefinitions(
     }));
 }
 
+function activityDefinitions(labels: CopilotLifecycleLabels): LifecycleLabelDefinition[] {
+    return ACTIVITY_METADATA.map(([, key, color, description]) => ({
+        category: 'activity',
+        name: labels[key],
+        color,
+        description,
+    }));
+}
+
+function waitingDefinitions(labels: CopilotLifecycleLabels): LifecycleLabelDefinition[] {
+    return WAITING_METADATA.map(([, key, color, description]) => ({
+        category: 'waiting',
+        name: labels[key],
+        color,
+        description,
+    }));
+}
+
+export function lifecycleLabelDefinitions(
+    labels: CopilotLifecycleLabels = DEFAULT_COPILOT_LIFECYCLE_LABELS,
+): LifecycleLabelDefinition[] {
+    return stableDefinitions(labels);
+}
+
+export function activityLabelDefinitions(
+    labels: CopilotLifecycleLabels = DEFAULT_COPILOT_LIFECYCLE_LABELS,
+): LifecycleLabelDefinition[] {
+    return activityDefinitions(labels);
+}
+
+export function waitingLabelDefinitions(
+    labels: CopilotLifecycleLabels = DEFAULT_COPILOT_LIFECYCLE_LABELS,
+): LifecycleLabelDefinition[] {
+    return waitingDefinitions(labels);
+}
+
+export function managedLifecycleLabelDefinitions(
+    labels: CopilotLifecycleLabels = DEFAULT_COPILOT_LIFECYCLE_LABELS,
+): LifecycleLabelDefinition[] {
+    return [
+        ...stableDefinitions(labels),
+        ...activityDefinitions(labels),
+        ...waitingDefinitions(labels),
+    ];
+}
+
 export function lifecycleLabelNames(
     labels: CopilotLifecycleLabels = DEFAULT_COPILOT_LIFECYCLE_LABELS,
 ): string[] {
     return lifecycleLabelDefinitions(labels).map(definition => definition.name);
+}
+
+export function activityLabelNames(
+    labels: CopilotLifecycleLabels = DEFAULT_COPILOT_LIFECYCLE_LABELS,
+): string[] {
+    return activityLabelDefinitions(labels).map(definition => definition.name);
+}
+
+export function waitingLabelNames(
+    labels: CopilotLifecycleLabels = DEFAULT_COPILOT_LIFECYCLE_LABELS,
+): string[] {
+    return waitingLabelDefinitions(labels).map(definition => definition.name);
+}
+
+export function managedLifecycleLabelNames(
+    labels: CopilotLifecycleLabels = DEFAULT_COPILOT_LIFECYCLE_LABELS,
+): string[] {
+    return managedLifecycleLabelDefinitions(labels).map(definition => definition.name);
 }
 
 export function lifecycleStateLabel(
@@ -79,6 +165,21 @@ export function lifecycleStateLabel(
     return definition.name;
 }
 
+export function activityLabel(
+    labels: CopilotLifecycleLabels = DEFAULT_COPILOT_LIFECYCLE_LABELS,
+): string {
+    return labels.aiProcessing;
+}
+
+export function waitingStateLabel(
+    state: CopilotWaitingState,
+    labels: CopilotLifecycleLabels = DEFAULT_COPILOT_LIFECYCLE_LABELS,
+): string {
+    const metadata = WAITING_METADATA.find(([metadataState]) => metadataState === state);
+    if (!metadata) throw new Error(`Unknown Copilot waiting state: ${state}`);
+    return labels[metadata[1]];
+}
+
 export function lifecycleStateFromLabels(
     currentLabels: readonly string[],
     labels: CopilotLifecycleLabels = DEFAULT_COPILOT_LIFECYCLE_LABELS,
@@ -86,4 +187,3 @@ export function lifecycleStateFromLabels(
     const normalized = new Set(currentLabels.map(label => label.trim().toLowerCase()));
     return lifecycleLabelDefinitions(labels).find(definition => normalized.has(definition.name.trim().toLowerCase()))?.state;
 }
-

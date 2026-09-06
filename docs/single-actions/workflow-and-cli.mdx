@@ -7,7 +7,24 @@ description: Run single actions from GitHub Actions workflows and from the Copil
 
 You can run single actions in two ways: from a **GitHub Actions workflow** (for example, a scheduled job or manual trigger) or from the **`copilot` CLI** locally.
 
-## From a GitHub Actions workflow
+## Recommended: initialize with the CLI
+
+For a new repository, install the published package globally with `pnpm` and let
+`copilot setup` initialize the repository. This is the supported onboarding path:
+
+```bash
+pnpm add --global @vypdev/copilot
+copilot --version
+cd /path/to/your/repository
+copilot setup
+```
+
+The wizard copies the selected workflows and templates, creates the required
+labels and issue types, and configures the Variables and Secrets required by the
+selected features. Use `copilot setup --dry-run` to review the plan first. See
+[How to use](/how-to-use) for the setup PAT, workflow PAT, and scope details.
+
+## Manual: run the Action from a GitHub Actions workflow
 
 Add a job that sets `single-action` and any required inputs (`single-action-issue`, `single-action-version`, etc.):
 
@@ -28,16 +45,19 @@ Use `workflow_dispatch` to run on demand, or trigger the workflow from another e
 
 ## Install or update the CLI
 
-The published package is `@vypdev/copilot` and exposes one global executable: **`copilot`**. Install it from npm, then run commands from the target repository.
+The published package is `@vypdev/copilot` and exposes one global executable:
+**`copilot`**. Install it with pnpm, then run repository-dependent commands from
+the target repository.
 
 ### Install the published package
 
 ```bash
-npm install --global @vypdev/copilot
+pnpm add --global @vypdev/copilot
 copilot --version
 ```
 
-The package requires Node.js 24 or newer. The npm scope does not change the executable name: the command remains `copilot`.
+The package requires Node.js 24 or newer. The npm scope does not change the
+executable name: the command remains `copilot`.
 
 ### Install from a checkout
 
@@ -57,7 +77,7 @@ corepack pnpm run build
 corepack pnpm install . --global --force
 ```
 
-### Update an npm installation
+### Update the global pnpm installation
 
 Update to the latest published version with:
 
@@ -66,14 +86,20 @@ copilot upgrade
 copilot --version
 ```
 
-Run `copilot upgrade` from any directory. It updates the published npm installation and does not require a target repository or GitHub token. If the installed version does not include this command, run `npm install --global @vypdev/copilot@latest` once and then use `copilot upgrade`.
+Run `copilot upgrade` from any directory. It updates the published pnpm
+installation and does not require a target repository or GitHub token. If the
+installed version does not include this command, run
+`pnpm add --global @vypdev/copilot@latest` once. You can also update it directly
+with `pnpm update --global @vypdev/copilot`.
+
+Normal Copilot CLI commands also perform a lightweight update check against npm. It is informational only: the result is cached locally for 24 hours, the network request has a short timeout, and failures are ignored so the command continues normally. When a newer release is found, the CLI prints `A new version (x.y.z) is available. Run "copilot upgrade".` The check is skipped for `copilot upgrade`, `--version`, and help. Set `COPILOT_DISABLE_UPDATE_CHECK=1` to opt out.
 
 Verify the installed package and executable:
 
 ```bash
 command -v copilot
 copilot --version
-npm list --global --depth 0 @vypdev/copilot
+pnpm list --global --depth 0 @vypdev/copilot
 ```
 
 ### Reinstall or update from a checkout
@@ -95,27 +121,22 @@ copilot --version
 corepack pnpm list --global --depth 0 @vypdev/copilot
 ```
 
-If the command is not found after installation, configure the npm or pnpm global bin directory in your shell's `PATH` and open a new shell.
+If the command is not found after installation, configure pnpm's global bin
+directory in your shell's `PATH` and open a new shell.
 
-For an npm installation, `npm prefix --global` shows the npm global prefix; on macOS and Linux, the executable directory is normally its `bin` subdirectory. For a checkout installation, use the equivalent global bin directory reported by pnpm.
+Run `pnpm bin --global` or consult `pnpm setup` to locate the global executable
+directory when configuring `PATH`.
 
 ## Local CLI prerequisites
 
-Run every command from the **root of the target repository**, not necessarily from the Copilot checkout. The target repository must:
+Run repository-dependent commands from the **root of the target repository**, not necessarily from the Copilot checkout. `copilot upgrade`, `copilot --version`, and help can run from any directory. The target repository must:
 
 - be a Git worktree;
 - have an `origin` remote pointing to a GitHub repository;
-- have `PERSONAL_ACCESS_TOKEN` available through the environment or a `.env` file in its root for commands that access GitHub;
+- have `PERSONAL_ACCESS_TOKEN` available through the environment, or pass `--token` to commands that support it;
 - have the selected agent runtime and credentials configured for AI commands.
 
-For local use, prefer a `.env` file or an environment variable instead of putting a token in shell history:
-
-```bash
-cd /path/to/target-repository
-printf 'PERSONAL_ACCESS_TOKEN=your_fine_grained_token_here\n' > .env
-```
-
-Keep `.env` ignored and never commit it. The commands that access GitHub accept `-t, --token` as an explicit alternative; `copilot do` does not use that option and reads the configured agent environment instead. See [Authentication](/authentication) and [Agent CLI configuration](/agents/cli-configuration).
+For local use, prefer the hidden prompt or an environment variable instead of putting a token in shell history. `copilot setup` and `copilot doctor` prompt for the setup PAT; other commands accept `-t, --token` or `PERSONAL_ACCESS_TOKEN`. `copilot do` does not use a GitHub PAT option and reads the configured agent environment instead. See [Authentication](/authentication) and [Agent CLI configuration](/agents/cli-configuration).
 
 ## Command reference
 
@@ -123,18 +144,133 @@ All commands support `-h, --help`. The `-d, --debug` option enables additional d
 
 ### `copilot setup`
 
-Initializes the current GitHub repository by copying workflows and templates, verifying access, and creating the configured labels and issue types. If the repository has no version tags, setup also creates the default `v1.0.0` tag.
+Initializes the current GitHub repository through an interactive English-language wizard. It can select the workflows and templates to install, route each Copilot task to Codex, OpenCode, or Cursor, configure repository behavior and AI policy, inspect and provision GitHub Actions Variables and Secrets at repository or organization scope, verify access, and create the configured labels and issue types. If the repository has no version tags, setup asks whether it should create `v1.0.0`.
 
 | Option | Required | Description |
 | --- | --- | --- |
-| `-t, --token <token>` | No | PAT override. Otherwise uses `PERSONAL_ACCESS_TOKEN` from the environment or `.env`. |
+| `-t, --token <token>` | No | Setup PAT override. Otherwise uses the hidden prompt interactively or `PERSONAL_ACCESS_TOKEN` from the environment. |
 | `-d, --debug` | No | Enables debug logging. |
+| `--agent <provider>` | No | Preselect one runtime for every task: `codex`, `opencode`, or `cursor`. |
+| `--features <features>` | No | Preselect a comma-separated feature list, or `all`. Feature names are listed below. |
+| `--config <path>` | No | Load non-secret YAML/JSON setup overrides. Interactive answers can still refine them. |
+| `--non-interactive` | No | Use defaults, flags, and config-file values without prompts. |
+| `--yes` | No | Skip the final confirmation prompt. |
+| `--dry-run` | No | Print the complete plan without changing files or GitHub. A token is not required. |
+| `--skip-variables` | No | Copy files and provision metadata without changing Repository Variables. |
+| `--skip-secrets` | No | Do not validate or create/update repository Secrets. |
+| `--variables-scope <scope>` | No | Default scope for Variables: `repository` or `organization`. |
+| `--secrets-scope <scope>` | No | Default scope for Secrets: `repository` or `organization`. |
+| `--variables-visibility <visibility>` | No | Organization Variable visibility: `selected`, `private`, or `all`. |
+| `--secrets-visibility <visibility>` | No | Organization Secret visibility: `selected`, `private`, or `all`. |
+| `--variable-scope <name=scope>` | No | Repeat to mix repository and organization scopes per Variable. |
+| `--secret-scope <name=scope>` | No | Repeat to mix repository and organization scopes per Secret. |
+| `--update-workflows` | No | Approve updates to changed setup workflows already present in the repository. |
+| `--workflow-pat <token>` | No | Workflow PAT for non-interactive setup; prefer the hidden prompt. |
+| `--secret <name=value>` | No | Repeat for provider credentials in non-interactive setup; values can appear in shell history. |
 
 ```bash
 copilot setup
 ```
 
-Run it from the target repository root. Existing setup files are not overwritten.
+Run it from the target repository root. Existing setup files are not overwritten unless you approve the update prompt or pass `--update-workflows`. The interactive flow installs the selected workflows/templates, asks for agent routing and operational settings, inspects the repository's effective Actions resources, and asks separately where Secrets and Variables should live. Organization scope requires an organization-owned repository and the corresponding organization permissions on the setup PAT. Existing repository resources take precedence over organization resources; setup preserves an inherited organization resource unless you explicitly request a repository override.
+
+The wizard covers these features: `issues`, `pullRequests`, `commits`, `issueComments`, `pullRequestComments`, `release`, `hotfix`, `agentProvisioning`, `credentialHealth`, `inactiveIssueClosure`, `issueTemplates`, and `pullRequestTemplate`. The agent tasks are `planner`, `findings`, `reviewer`, `fixer`, `tester`, and `release`; each can use any of the three supported runtimes independently. Model provider, model, effort, branch strategy, locales, AI ignore patterns, project columns, Bugbot policy, provisioning mode, and initial-tag creation are also configurable. Cursor is available as an experimental runtime and is called out in the review plan with its extra credential/checksum requirements.
+
+For automation, use the same defaults without prompts:
+
+```bash
+copilot setup --non-interactive --yes
+copilot setup --dry-run
+copilot setup --non-interactive --features issues,pullRequests,commits,issueComments,pullRequestComments --agent codex
+```
+
+For unattended credential provisioning, keep the setup PAT in a protected CI secret and pass credential values explicitly (never commit them):
+
+```bash
+copilot setup --non-interactive --yes --update-workflows \
+  --token "$SETUP_PAT" \
+  --workflow-pat "$WORKFLOW_PAT" \
+  --secret "OPENAI_API_KEY=$OPENAI_API_KEY" \
+  --secrets-scope organization \
+  --secrets-visibility selected \
+  --variables-scope repository \
+  --variable-scope AGENT_PROVIDER=repository
+```
+
+The explicit `--workflow-pat` and `--secret` options are provided for automation and can appear in process listings or shell history. The interactive hidden prompt is safer for a human operator.
+
+### `copilot doctor`
+
+Checks the setup PAT, selected workflow templates, Repository Variables, Secret presence, and remote credential health. It never creates, updates, deletes, or overwrites configuration. The health workflow may create a normal `workflow_dispatch` run, but it does not change repository configuration or expose Secret values.
+
+```bash
+copilot doctor
+copilot doctor --token "$SETUP_PAT"
+copilot doctor --config .copilot-setup.yml --non-interactive
+```
+
+Existing GitHub Secret values cannot be read through the GitHub API. `copilot doctor` therefore dispatches `.github/workflows/copilot_credential_health.yml` when it is installed on the repository default branch. Each requested credential runs in its own job, so one invalid key does not make unrelated valid keys appear invalid. A present Secret without that workflow is reported as present but unverifiable; custom provider credentials are also reported as unverifiable until a provider-specific health check is available.
+
+An override file can contain only non-secret values:
+
+```yaml
+features:
+  inactiveIssueClosure: true
+  release: false
+  hotfix: false
+agents:
+  planner:
+    provider: codex
+    modelProvider: openai
+    model: gpt-5.6-luna
+  reviewer:
+    provider: opencode
+    modelProvider: anthropic
+    model: claude-3-7-sonnet
+    effort: high
+repository:
+  mainBranch: main
+  developmentBranch: develop
+  inactivityThresholdHours: 168
+projects:
+  ids: PVT_kwDOExample
+  issueCreatedColumn: Todo
+  issueInProgressColumn: In Progress
+ai:
+  bugbotSeverity: medium
+  bugbotCommentLimit: 10
+  ignoreFiles: node_modules/*,build/*,dist/*
+  pullRequestDescriptionMode: append
+createInitialTag: true
+manageRepositoryVariables: true
+
+# Secrets and Variables are configured independently. Organization resources
+# require an organization-owned repository and organization Actions permissions.
+storage:
+  secrets:
+    defaultScope: organization
+    organizationVisibility: selected
+    preserveExisting: true
+  variables:
+    defaultScope: repository
+    preserveExisting: true
+    overrides:
+      OPENAI_API_KEY: organization
+```
+
+Run it with `copilot setup --config .copilot-setup.yml`. The wizard rejects values that look like tokens, API keys, passwords, or other credential material. Secret values are accepted only through the hidden prompt or explicit CLI inputs and are written directly to GitHub Secrets after validation; they are never written to repository files or Variables. The required secret names are shown in the final plan; normally they include `PAT` plus the credentials needed by the selected runtime/model providers. When a repository already inherits an organization resource, `preserveExisting: true` avoids creating a repository shadow; use `storage.*.overrides` when one named resource needs a different scope.
+
+### `copilot reconcile`
+
+Checks whether the setup-managed workflow files in the current repository match the installed Copilot contract. It is read-only by default and does not call GitHub or change remote configuration. Use `--apply` to update only the detected setup-managed workflow files; those updates go through the same local backup/reconciliation path as setup.
+
+```bash
+copilot reconcile
+copilot reconcile --json
+copilot reconcile --apply
+```
+
+The first version deliberately scopes reconciliation to workflow templates. Branches, labels, Repository Variables, and Secrets remain under `copilot setup`/`copilot doctor` until their remote diff and approval contracts are added.
 
 ### `copilot check-progress`
 
@@ -154,7 +290,7 @@ copilot check-progress -i 123 -b feature/123-add-login
 
 ### `copilot detect-potential-problems`
 
-Runs Bugbot against an issue and branch. Findings are published as issue comments and, when applicable, pull-request review comments.
+Runs Bugbot against an issue and branch. Findings are published as issue comments when no PR exists, or as one summarized pull-request review when a PR is available.
 
 | Option | Required | Default | Description |
 | --- | --- | --- | --- |

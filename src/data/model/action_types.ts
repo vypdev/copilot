@@ -9,4 +9,5 @@ export const ACTIONS = {
     CHECK_PROGRESS: 'check_progress_action',
     DETECT_POTENTIAL_PROBLEMS: 'detect_potential_problems_action',
     RECOMMEND_STEPS: 'recommend_steps_action',
+    CLOSE_INACTIVE_ISSUES: 'close_inactive_issues_action',
 } as const;

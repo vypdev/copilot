@@ -11,7 +11,8 @@ export declare class SingleActionUseCase implements ParamUseCase<Execution, Resu
     private readonly checkProgressUseCase;
     private readonly detectPotentialProblemsUseCase;
     private readonly recommendStepsUseCase;
+    private readonly closeInactiveIssuesUseCase?;
     taskId: string;
-    constructor(deployedActionUseCase: ParamUseCase<Execution, Result[]>, publishGithubActionUseCase: ParamUseCase<Execution, Result[]>, createReleaseUseCase: ParamUseCase<Execution, Result[]>, createTagUseCase: ParamUseCase<Execution, Result[]>, thinkUseCase: ParamUseCase<Execution, Result[]>, initialSetupUseCase: ParamUseCase<Execution, Result[]>, checkProgressUseCase: ParamUseCase<Execution, Result[]>, detectPotentialProblemsUseCase: ParamUseCase<Execution, Result[]>, recommendStepsUseCase: ParamUseCase<Execution, Result[]>);
+    constructor(deployedActionUseCase: ParamUseCase<Execution, Result[]>, publishGithubActionUseCase: ParamUseCase<Execution, Result[]>, createReleaseUseCase: ParamUseCase<Execution, Result[]>, createTagUseCase: ParamUseCase<Execution, Result[]>, thinkUseCase: ParamUseCase<Execution, Result[]>, initialSetupUseCase: ParamUseCase<Execution, Result[]>, checkProgressUseCase: ParamUseCase<Execution, Result[]>, detectPotentialProblemsUseCase: ParamUseCase<Execution, Result[]>, recommendStepsUseCase: ParamUseCase<Execution, Result[]>, closeInactiveIssuesUseCase?: ParamUseCase<Execution, Result[]> | undefined);
     invoke(param: Execution): Promise<Result[]>;
 }

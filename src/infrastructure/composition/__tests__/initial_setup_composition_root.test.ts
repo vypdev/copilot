@@ -39,7 +39,7 @@ describe('initial setup composition root', () => {
     mockIssueLabelProvisioningRepository.mockClear();
   });
 
-  it('injects one initial-label provisioning capability', () => {
+    it('injects one initial-label provisioning capability and repository-variable provisioning', () => {
     const composed = createInitialSetupCompositionRoot();
 
     expect(composed).toEqual({ taskId: 'composed' });
@@ -50,7 +50,7 @@ describe('initial setup composition root', () => {
     );
     expect(mockComposeInitialSetupUseCase).toHaveBeenCalledTimes(1);
     const dependencies = mockComposeInitialSetupUseCase.mock.calls[0];
-    expect(dependencies).toHaveLength(7);
+    expect(dependencies).toHaveLength(10);
     expect(dependencies[1]).toBe(mockLabelProvisioning);
   });
 });

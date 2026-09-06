@@ -25,12 +25,8 @@ describe("commitAutofixAndResolveFindings", () => {
     logInfo.mockReset();
   });
 
-  it("returns resolution errors and does not report findings as resolved", async () => {
-    const resolutionError = new Error(
-      "Unable to mark a pull request finding as resolved.",
-    );
+  it("keeps committed findings open until a fresh review verifies them", async () => {
     runBugbotAutofixCommitAndPush.mockResolvedValue({ success: true, committed: true });
-    markFindingsResolved.mockResolvedValue([resolutionError]);
 
     const errors = await commitAutofixAndResolveFindings(
       { owner: "o", repo: "r" } as Execution,
@@ -42,13 +38,11 @@ describe("commitAutofixAndResolveFindings", () => {
       [{ success: true, payload: {} } as Result],
       {} as never,
       {} as never,
-      {} as never,
     );
 
-    expect(errors).toEqual([resolutionError]);
-    expect(logInfo).not.toHaveBeenCalledWith(
-      "Marked 1 finding(s) as resolved.",
-    );
+    expect(errors).toEqual([]);
+    expect(markFindingsResolved).not.toHaveBeenCalled();
+    expect(logInfo).toHaveBeenCalledWith(expect.stringContaining("remain open until a fresh review"));
   });
 
   it("does not resolve findings when no commit was created", async () => {
@@ -62,7 +56,6 @@ describe("commitAutofixAndResolveFindings", () => {
           context: {},
         } as never,
         [{ success: true, payload: {} } as Result],
-        {} as never,
         {} as never,
         {} as never,
       ),
@@ -84,7 +77,6 @@ describe("commitAutofixAndResolveFindings", () => {
       [{ success: true, payload: {} } as Result],
       {} as never,
       {} as never,
-      {} as never,
     );
 
     expect(errors).toHaveLength(1);
@@ -102,14 +94,13 @@ describe("commitAutofixAndResolveFindings", () => {
         [{ success: true, payload: {} } as Result],
         {} as never,
         {} as never,
-        {} as never,
       ),
     ).resolves.toEqual([]);
 
     expect(markFindingsResolved).not.toHaveBeenCalled();
   });
 
-  it("reports a fully resolved committed autofix", async () => {
+  it("does not optimistically resolve a successful committed autofix", async () => {
     runBugbotAutofixCommitAndPush.mockResolvedValue({ success: true, committed: true });
     markFindingsResolved.mockResolvedValue([]);
 
@@ -123,11 +114,10 @@ describe("commitAutofixAndResolveFindings", () => {
         [{ success: true, payload: {} } as Result],
         {} as never,
         {} as never,
-        {} as never,
       ),
     ).resolves.toEqual([]);
 
-    expect(markFindingsResolved).toHaveBeenCalledTimes(1);
-    expect(logInfo).toHaveBeenCalledWith("Marked 1 finding(s) as resolved.");
+    expect(markFindingsResolved).not.toHaveBeenCalled();
+    expect(logInfo).toHaveBeenCalledWith(expect.stringContaining("remain open until a fresh review"));
   });
 });

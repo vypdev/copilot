@@ -9,7 +9,8 @@ import * as executionBuilder from '../github_action_execution';
 import * as agentRuntime from '../github_action_runtime';
 import * as actionCompletion from '../github_action_completion';
 import { runGitHubAction } from '../github_action';
-import { ACTIONS, INPUT_KEYS } from '../../utils/constants';
+import { ACTIONS } from '../../data/model/action_types';
+import { INPUT_KEYS } from '../../application/contracts/input_keys';
 
 jest.mock('@actions/github', () => ({
   context: {

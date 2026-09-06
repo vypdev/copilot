@@ -4,6 +4,8 @@ description: How Bugbot validates, deduplicates, limits, and publishes findings.
 ---
 # Finding publication
 
-Bugbot accepts only structured findings that pass schema, path, severity, duplicate, and comment-limit policies. Findings are published to the linked issue and, when applicable, to pull-request review comments.
+Bugbot accepts only structured findings that pass local schema, confidence, path, severity, duplicate, and comment-limit policies. For issue-only work, findings are published as issue comments. When a pull request is available, Bugbot publishes one GitHub review containing a review-level summary and all new findings as child line/range or file-level comments; it does not mirror those findings as independent pull-request conversation comments.
+
+Each line comment is anchored to a location proved addressable by the canonical GitHub diff. When only the file can be proved, Bugbot uses a file-level review comment. When the reported file is outside the pull-request diff, it uses the first changed file and explains the fallback. The PR head SHA is revalidated immediately before publication.
 
 Publication MUST complete before a finding is marked resolved. Invalid responses, unsafe paths, malformed identifiers, or publication failures are terminal for that finding and MUST NOT produce a false resolved state.

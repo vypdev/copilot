@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { buildAgentCliEnvironment } from './agent_authentication';
 import { AgentCliError, type AgentCliRequest } from './agent_cli_contracts';
+import { enforceAgentExecutionPolicy } from './agent_execution_policy';
 
 const MAX_STDERR_BYTES = 8 * 1024;
 
@@ -13,11 +14,13 @@ export interface PreparedAgentCliRequest extends AgentCliRequest {
 
 export function runAgentCli(request: PreparedAgentCliRequest): Promise<string> {
     return new Promise((resolve, reject) => {
-        const child = spawn(request.executable, request.promptMode === 'argv' ? [...request.args, request.prompt] : request.args, {
+        const controlledArgs = enforceAgentExecutionPolicy(request.provider, request.capability, request.args);
+        const child = spawn(request.executable, request.promptMode === 'argv' ? [...controlledArgs, request.prompt] : controlledArgs, {
             cwd: request.cwd,
             env: buildAgentCliEnvironment(request.provider, request.environment, request.modelProvider),
             stdio: ['pipe', 'pipe', 'pipe'],
             shell: false,
+            detached: process.platform !== 'win32',
         });
         const lifecycle = createProcessLifecycle(child, request, resolve, reject);
         child.stdout.on('data', lifecycle.appendStdout);
@@ -98,8 +101,21 @@ function createProcessLifecycle(
 
 function terminate(child: ReturnType<typeof spawn>): void {
     if (child.exitCode !== null) return;
-    child.kill('SIGTERM');
-    setImmediate(() => {
-        if (child.exitCode === null) child.kill('SIGKILL');
-    });
+    signalProcessTree(child, 'SIGTERM');
+    const forceTimer = setTimeout(() => {
+        if (child.exitCode === null) signalProcessTree(child, 'SIGKILL');
+    }, 5_000);
+    forceTimer.unref();
+}
+
+function signalProcessTree(child: ReturnType<typeof spawn>, signal: NodeJS.Signals): void {
+    try {
+        if (process.platform !== 'win32' && child.pid) {
+            process.kill(-child.pid, signal);
+        } else {
+            child.kill(signal);
+        }
+    } catch {
+        // The process may have exited between the lifecycle check and signal.
+    }
 }

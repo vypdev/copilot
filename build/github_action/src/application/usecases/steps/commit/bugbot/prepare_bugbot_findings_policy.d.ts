@@ -15,6 +15,7 @@ export type PreparedBugbotFindings = ApplyLimitResult & {
 /** Hard cap for model-controlled arrays before any filtering or publication. */
 export declare const MAX_AGENT_FINDINGS = 500;
 export declare const MAX_AGENT_RESOLVED_FINDING_IDS = 500;
+export declare const MIN_AGENT_FINDING_CONFIDENCE = 0.7;
 export declare function normalizeBugbotResponse(response: unknown): {
     findings: BugbotFinding[];
     resolvedFindingIds: Set<string>;

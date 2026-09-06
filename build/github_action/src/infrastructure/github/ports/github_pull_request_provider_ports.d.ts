@@ -35,6 +35,18 @@ export interface GithubPullRequestLifecycleClient {
                 data: GithubPullRequestSummary[];
             }>;
             update(parameters: Record<string, unknown>): Promise<unknown>;
+            get?(parameters: Record<string, unknown>): Promise<{
+                data: {
+                    body?: string | null;
+                    head?: {
+                        ref?: string | null;
+                        sha?: string | null;
+                    };
+                    base?: {
+                        ref?: string | null;
+                    };
+                };
+            }>;
         };
     };
 }

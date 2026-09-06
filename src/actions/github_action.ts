@@ -12,12 +12,13 @@ import { buildGithubActionExecution, readGithubActionSingleAction } from './gith
 import { buildGithubActionEventInputs } from './github_event_inputs';
 import { mainRun } from './common_action';
 import { waitForPreviousWorkflowRuns, WorkflowQueueFailureError, WORKFLOW_QUEUE_FAILURE_MESSAGE } from './main_run_lifecycle';
-import { INPUT_KEYS } from '../utils/constants';
+import { INPUT_KEYS } from '../application/contracts/input_keys';
 import { logDebugInfo, logError, logInfo } from '../utils/logger';
 import { createGithubExecutionAdmissionUseCase } from '../infrastructure/composition/github_execution_admission_composition_root';
 import { createSynchronizeLifecycleStateUseCase } from '../infrastructure/composition/lifecycle_state_composition_root';
 import { createCopilotEvidenceCompositionRoot } from '../infrastructure/composition/copilot_evidence_composition_root';
 import { createGithubActionSummaryCompositionRoot } from '../infrastructure/composition/github_action_summary_composition_root';
+import { createSynchronizeAgentActivityUseCase } from '../infrastructure/composition/agent_activity_composition_root';
 
 export async function runGitHubAction(): Promise<void> {
     if (isEnabledInput(getGithubActionInput(INPUT_KEYS.QUEUE_GATE_ONLY))) {
@@ -71,6 +72,7 @@ export async function runGitHubAction(): Promise<void> {
         projectBoard.command,
         new GitCliRepository(),
         createSynchronizeLifecycleStateUseCase(),
+        createSynchronizeAgentActivityUseCase(),
     );
     const issueContentPort = createIssueContentCompositionRoot();
     await finishGithubAction(

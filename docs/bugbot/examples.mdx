@@ -31,7 +31,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - uses: vypdev/copilot@v2
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
           project-ids: ${{ vars.PROJECT_IDS }}
@@ -69,7 +69,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - uses: vypdev/copilot@v2
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
           agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
@@ -104,10 +104,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - uses: vypdev/copilot@v2
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
-    agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
+          agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
           agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
           agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
           ai-ignore-files: build/*
@@ -145,7 +145,7 @@ jobs:
         with:
           ref: ${{ github.event.inputs.branch || format('feature/issue-{0}', github.event.inputs.issue_number) }}
 
-      - uses: vypdev/copilot@v2
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
           single-action: detect_potential_problems_action
@@ -161,7 +161,7 @@ After the run, findings appear on the issue and on any open PR for that branch.
 
 ## CLI: detect potential problems
 
-From the **repository root** (with a `.env` that has `PERSONAL_ACCESS_TOKEN` and, if needed, agent CLI environment variables), you can run Bugbot detection locally:
+From the **repository root** (with `PERSONAL_ACCESS_TOKEN` in the environment and, if needed, agent CLI environment variables), you can run Bugbot detection locally:
 
 ```bash
 # Require issue number; optional branch (default: current branch)
@@ -170,7 +170,7 @@ copilot detect-potential-problems -i 123
 # Specify branch explicitly
 copilot detect-potential-problems -i 123 -b feature/issue-123
 
-# With token and debug (if not in .env)
+# With an explicit token and debug
 copilot detect-potential-problems -i 123 -t $PAT -d
 ```
 
@@ -191,7 +191,7 @@ These are examples of comments that typically trigger **Bugbot autofix** (fix on
 | `please fix the null reference and the off-by-one` | Fix findings that match those descriptions. |
 | `fix finding xyz-123` | Fix the finding with id `xyz-123` if it exists and is unresolved. |
 
-Post these on the **issue** or on the **PR** (or reply in the **review thread** of a finding). The action will run only if you have permission (org member or repo owner) and, for issue comments, there is an open PR for the issue.
+Post these on the **issue** or on the **PR** (or reply in the **review thread** of a finding). The action will run only if you have permission (organization member, or repository owner / `push`/`maintain`/`admin` collaborator in a personal repository) and, for issue comments, there is an open PR for the issue.
 
 ---
 
@@ -207,19 +207,19 @@ These are examples of comments that typically trigger **do user request** (gener
 | `implement the missing validation in the form` | Add validation logic. |
 | `add error handling for the API call` | Wrap or extend the API call with error handling. |
 
-Same permission and workflow requirements as autofix: `contents: write` and org member or repo owner.
+Same permission and workflow requirements as autofix: `contents: write` and an organization member, or repository owner / `push`/`maintain`/`admin` collaborator in a personal repository. Natural-language requests should mention `@vypbot`; use `/copilot implement <request>` when you want an explicit command.
 
 ---
 
-## Example: overflow comment (detection)
+## Example: overflow summary (detection)
 
-When there are **more findings than** `bugbot-comment-limit`, the action posts one **overflow comment** on the issue. It looks conceptually like this (exact wording may vary):
+When there are **more findings than** `bugbot-comment-limit`, the action adds an overflow section to the PR review summary. For issue-only work, it posts one overflow issue comment. It looks conceptually like this (exact wording may vary):
 
 > **Additional potential problems (not posted individually)**  
 > 5 more findings were detected. Consider reviewing the branch locally or increasing `bugbot-comment-limit`.  
 > Titles: "Possible race in cache", "Unused variable in handler", …
 
-So you see at most **N** individual finding comments plus **one** overflow comment per run when applicable.
+On a PR, you see one review containing at most **N** inline finding comments and the overflow summary.
 
 ---
 

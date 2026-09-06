@@ -80,6 +80,7 @@ describe("BugbotPullRequestRepository capabilities", () => {
       "repo",
       9,
       "sha",
+      "review summary",
       [{ path: "src/file.ts", line: 1, body: "finding" }],
       "token",
     );
@@ -143,6 +144,7 @@ describe("BugbotPullRequestRepository capabilities", () => {
       "repo",
       9,
       "sha",
+      "review summary",
       [{ path: "src/file.ts", line: 1, body: "finding" }],
       "token",
     );

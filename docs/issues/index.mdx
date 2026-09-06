@@ -21,13 +21,16 @@ Copilot automates **issue tracking** so that labels, branch creation, project li
     Launcher label, naming conventions, and hotfix/release rules.
   </Card>
   <Card title="Notifications and auto-close" icon="bell" href="/issues/notifications-and-auto-close">
-    Commit notifications on the issue, reopen on push, and auto-close when merged.
+    Commit notifications on the issue, reopen on push, and auto-close when merged or inactive.
   </Card>
   <Card title="Configuration" icon="gear" href="/issues/configuration">
     All issue-related inputs: labels, branches, size, images, workflow.
   </Card>
   <Card title="Examples" icon="file-code" href="/issues/examples">
     Full workflow YAML and label examples.
+  </Card>
+  <Card title="Comment commands" icon="comment" href="/issues/comment-commands">
+    Ask @vypbot for help, analysis, diagnosis, plans, or authorized implementation from an issue or PR.
   </Card>
 </CardGroup>
 
@@ -39,28 +42,40 @@ Copilot automates **issue tracking** so that labels, branch creation, project li
 | Add **`deploy`** to a release/hotfix issue | Trigger the release or hotfix workflow (e.g. deploy). |
 | Push commits to the issue’s branch | Post commit notifications on the issue; optionally reopen the issue if it was closed. |
 | Merge the branch (e.g. into develop) | Automatically close the issue when the branch is merged. |
+| Leave an issue waiting for 7 days (with cleanup enabled) | Automatically close it with an explanation; reopen it with a new comment if needed. |
 
 **Bugbot** (potential problems) runs on **push** (or single action) and posts findings on the issue and on open PRs; you can ask the bot to fix findings from a comment. See [Bugbot](/bugbot) for full details.
 
 ## Lifecycle state labels
 
-During setup, Copilot creates the following state labels once. They are managed as a single mutually-exclusive state label; all business labels such as `feature`, `bugfix`, `priority`, and `branched` are preserved.
+During setup, Copilot creates the lifecycle labels once. The durable lifecycle phase is mutually exclusive, while the activity and waiting dimensions are independent. This means labels such as `state:in-progress` and `state:ai-processing` can exist together. Normal business labels such as `feature`, `bugfix`, `priority`, and `branched` are preserved.
 
-| State | Meaning |
+### Durable lifecycle phase
+
+| Label | Meaning |
 | --- | --- |
-| `copilot:state:analyzing` | The issue or change is being analyzed. |
-| `copilot:state:planned` | A recommendation or implementation plan is available. |
-| `copilot:state:in-progress` | Branch-based implementation has started. |
-| `copilot:state:reviewing` | A pull request is being reviewed. |
-| `copilot:state:changes-requested` | The review has active findings. |
-| `copilot:state:ready` | The latest review has no active findings. |
-| `copilot:state:verified` | The pull request was merged successfully. |
-| `copilot:state:blocked` | A workflow failed or needs human input. |
+| `state:planned` | A recommendation or implementation plan is available. |
+| `state:in-progress` | Branch-based implementation has started. |
+| `state:reviewing` | A pull request is being reviewed. |
+| `state:changes-requested` | The review has active findings. |
+| `state:ready` | The latest review has no active findings. |
+| `state:verified` | The pull request was merged successfully. |
+| `state:blocked` | A workflow failed or needs human input. |
 
-The names are configurable through the action inputs, but the labels are provisioned by `copilot setup` in the destination repository. They are not created dynamically during normal issue or PR runs.
+### Temporary activity and human waiting
+
+| Label | Meaning |
+| --- | --- |
+| `state:ai-processing` | A Copilot agent is currently analyzing or working. It is removed when that run finishes. |
+| `state:awaiting-maintainer` | The next action requires a maintainer response, approval, or merge. |
+| `state:awaiting-issue-author` | The next action requires more information or changes from the issue author. |
+
+At most one durable phase and one waiting label are synchronized at a time. The temporary `state:ai-processing` label can coexist with either dimension and is best-effort: a label API failure does not hide the actual agent result. The label names are configurable through the action inputs, and all ten defaults are provisioned by `copilot setup` in the destination repository.
+
+Existing legacy labels such as `copilot:state:ready` are intentionally not migrated or removed automatically. They can be deleted manually after adopting the `state:*` labels.
 
 ## Daily agent workflow
 
-Use explicit commands when you want a reproducible action from a comment: `/copilot plan`, `/copilot test-plan`, `/copilot review`, `/copilot findings`, or `/copilot recheck`. For a reported finding, use `/copilot fix FINDING-ID` or `/copilot dismiss FINDING-ID`. A repeated review reconciles the existing finding marker and updates the same publication instead of creating a second copy.
+Use [comment commands](/issues/comment-commands) when you want a reproducible action from an issue or PR. `/copilot help` shows the complete catalog. For a read-only analysis, use `/copilot analyze` (or `/copilot review`, `/copilot findings`, or `/copilot recheck`). For a reported finding, use `/copilot fix FINDING-ID` or `/copilot dismiss FINDING-ID`; for a general change, use `/copilot implement <request>`. You can also mention `@vypbot` and describe the request in natural language. A repeated review reconciles the existing finding marker and updates the same publication instead of creating a second copy.
 
 For **step-by-step flows** per issue type (branch naming, source branch, deploy), see the issue type pages: [Feature](/issues/type/feature), [Bugfix](/issues/type/bugfix), [Docs](/issues/type/docs), [Chore](/issues/type/chore), [Hotfix](/issues/type/hotfix), [Release](/issues/type/release).

@@ -83,20 +83,12 @@ A RepoWise hotspot is not a refactoring instruction. Use Graphify and source
 search to identify the real callers and ownership first, define a semantic
 boundary only when one exists, and add contract tests for intentional changes.
 
-## Last recorded checkpoint
+## Current graph state
 
-At the last published Phase D checkpoint
-`af32863317977e42ec59b712fc1f371b5f231cad`, refreshed with the command above:
-
-```text
-3271 nodes
-8424 edges
-217 communities
-```
-
-These numbers are historical navigation evidence, not a live quality score.
-Regenerate the reports locally and use `git rev-parse HEAD` for the current
-revision before making architecture decisions.
+Graphify output is local, generated, and intentionally not a versioned source
+of truth. Regenerate it with `graphify update .` and use `git rev-parse HEAD`
+for the revision being audited before making architecture decisions. Do not
+copy node or edge counts from an older checkpoint into current documentation.
 
 The generated graph is currently marked `directed: false`. It cannot prove the
 absence of directed dependency cycles. Use source imports and executable

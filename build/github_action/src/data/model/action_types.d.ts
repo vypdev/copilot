@@ -9,4 +9,5 @@ export declare const ACTIONS: {
     readonly CHECK_PROGRESS: "check_progress_action";
     readonly DETECT_POTENTIAL_PROBLEMS: "detect_potential_problems_action";
     readonly RECOMMEND_STEPS: "recommend_steps_action";
+    readonly CLOSE_INACTIVE_ISSUES: "close_inactive_issues_action";
 };

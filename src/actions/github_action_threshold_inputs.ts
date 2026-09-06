@@ -1,4 +1,4 @@
-import { INPUT_KEYS } from '../utils/constants';
+import { INPUT_KEYS } from '../application/contracts/input_keys';
 import { parseIntegerInput } from './input_number_policy';
 import type { SizeThresholdSet } from './size_threshold_builder';
 

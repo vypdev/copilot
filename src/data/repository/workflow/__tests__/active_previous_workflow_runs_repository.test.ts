@@ -1,18 +1,16 @@
-import { WORKFLOW_STATUS } from '../../../../utils/constants';
+import { WORKFLOW_STATUS } from '../workflow_status';
 import type {
   GithubWorkflowRun,
   GithubWorkflowRunsClient,
   GithubWorkflowRunsResponse,
 } from '../../../../infrastructure/github/ports/github_workflow_provider_ports';
 import { ActivePreviousWorkflowRunsRepository } from '../active_previous_workflow_runs_repository';
-import { COPILOT_WORKFLOW_NAMES } from '../../../../application/policies/workflow_queue_policy';
-import { WORKFLOW_ACTIVE_STATUSES } from '../../../../utils/constants';
+import { WORKFLOW_ACTIVE_STATUSES } from '../workflow_status';
 
-const listWorkflowRunsForRepo = jest.fn();
 const listWorkflowRuns = jest.fn();
 const iterator = jest.fn();
 const client = {
-  rest: { actions: { listWorkflowRunsForRepo, listWorkflowRuns } },
+  rest: { actions: { listWorkflowRuns } },
   paginate: { iterator },
 } as unknown as GithubWorkflowRunsClient;
 
@@ -24,8 +22,7 @@ const query = {
   owner: 'org',
   repository: 'repo',
   currentRunId: 200,
-  workflowName: 'Copilot - Issue',
-  workflowNames: ['Copilot - Issue', 'Task - Release'],
+  workflowIdentifier: 'copilot_issue.yml',
 };
 
 describe('ActivePreviousWorkflowRunsRepository', () => {
@@ -40,16 +37,25 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
     expect(iterator).not.toHaveBeenCalled();
   });
 
-  it('uses one repository traversal and locally filters mixed statuses and workflow names', async () => {
+  it('fails closed without a workflow identifier', async () => {
+    const repository = new ActivePreviousWorkflowRunsRepository(client);
+
+    await expect(repository.countActivePreviousRuns({ ...query, workflowIdentifier: undefined })).rejects.toThrow(
+      'GitHub workflow identifier is unavailable; refusing to bypass sequential execution.',
+    );
+    expect(iterator).not.toHaveBeenCalled();
+  });
+
+  it('uses the workflow-scoped endpoint and locally filters active previous runs', async () => {
     iterator.mockImplementation(async function* () {
       yield {
         data: {
           workflow_runs: [
             workflowRun({ id: 199, name: 'Copilot - Issue', status: WORKFLOW_STATUS.IN_PROGRESS }),
-            workflowRun({ id: 198, name: 'Task - Release', status: WORKFLOW_STATUS.QUEUED }),
+            workflowRun({ id: 198, name: 'Copilot - Issue', status: WORKFLOW_STATUS.QUEUED }),
             workflowRun({ id: 200, name: 'Copilot - Issue', status: WORKFLOW_STATUS.IN_PROGRESS }),
             workflowRun({ id: 201, name: 'Copilot - Issue', status: WORKFLOW_STATUS.IN_PROGRESS }),
-            workflowRun({ id: 197, name: 'Unrelated workflow', status: WORKFLOW_STATUS.IN_PROGRESS }),
+            workflowRun({ id: 197, name: 'Copilot - Issue', status: WORKFLOW_STATUS.IN_PROGRESS }),
             workflowRun({ id: 196, name: 'Copilot - Issue', status: WORKFLOW_STATUS.COMPLETED }),
           ],
         },
@@ -57,22 +63,23 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
     });
     const repository = new ActivePreviousWorkflowRunsRepository(client);
 
-    await expect(repository.countActivePreviousRuns(query)).resolves.toBe(2);
+    await expect(repository.countActivePreviousRuns(query)).resolves.toBe(3);
     expect(iterator).toHaveBeenCalledTimes(1);
-    expect(iterator).toHaveBeenCalledWith(listWorkflowRunsForRepo, {
+    expect(iterator).toHaveBeenCalledWith(listWorkflowRuns, {
       owner: 'org',
       repo: 'repo',
       per_page: 100,
+      workflow_id: 'copilot_issue.yml',
     });
   });
 
-  it('detects an older active matching run on a later page', async () => {
+  it('detects an older active run on a later page', async () => {
     iterator.mockImplementation(async function* () {
       yield { data: { workflow_runs: [] } } as GithubWorkflowRunsResponse;
       yield {
         data: {
           workflow_runs: [
-            workflowRun({ id: 150, name: 'Task - Release', status: WORKFLOW_STATUS.WAITING }),
+            workflowRun({ id: 150, name: 'Copilot - Issue', status: WORKFLOW_STATUS.WAITING }),
           ],
         },
       } as GithubWorkflowRunsResponse;
@@ -83,54 +90,42 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
     expect(iterator).toHaveBeenCalledTimes(1);
   });
 
-  it('counts all seven shared workflow names and five active statuses across every page', async () => {
-    const runs = COPILOT_WORKFLOW_NAMES.flatMap((name, nameIndex) => WORKFLOW_ACTIVE_STATUSES.map((status, statusIndex) => workflowRun({
-      id: 1 + nameIndex * WORKFLOW_ACTIVE_STATUSES.length + statusIndex,
-      name,
+  it('counts all active statuses across every page of the current workflow', async () => {
+    const runs = WORKFLOW_ACTIVE_STATUSES.map((status, index) => workflowRun({
+      id: 1 + index,
+      name: 'Copilot - Issue',
       status,
-    })));
+    }));
     iterator.mockImplementation(async function* () {
-      yield { data: { workflow_runs: runs.slice(0, 17) } } as GithubWorkflowRunsResponse;
-      yield { data: { workflow_runs: runs.slice(17) } } as GithubWorkflowRunsResponse;
+      yield { data: { workflow_runs: runs.slice(0, 2) } } as GithubWorkflowRunsResponse;
+      yield { data: { workflow_runs: runs.slice(2) } } as GithubWorkflowRunsResponse;
     });
     const repository = new ActivePreviousWorkflowRunsRepository(client);
 
-    await expect(repository.countActivePreviousRuns({
-      ...query,
-      workflowNames: [...COPILOT_WORKFLOW_NAMES],
-    })).resolves.toBe(COPILOT_WORKFLOW_NAMES.length * WORKFLOW_ACTIVE_STATUSES.length);
+    await expect(repository.countActivePreviousRuns(query)).resolves.toBe(WORKFLOW_ACTIVE_STATUSES.length);
     expect(iterator).toHaveBeenCalledTimes(1);
   });
 
-  it('counts multiple earlier queue runs while excluding cancelled and skipped terminals', async () => {
+  it('excludes cancelled and skipped terminal runs', async () => {
     iterator.mockImplementation(async function* () {
       yield {
         data: {
           workflow_runs: [
             workflowRun({ id: 199, name: 'Copilot - Issue', status: WORKFLOW_STATUS.IN_PROGRESS }),
-            workflowRun({ id: 198, name: 'Task - Release', status: WORKFLOW_STATUS.QUEUED }),
-            workflowRun({ id: 197, name: 'Copilot - Commit', status: WORKFLOW_STATUS.CANCELLED }),
-            workflowRun({ id: 196, name: 'Copilot - Pull Request', status: WORKFLOW_STATUS.SKIPPED }),
-            workflowRun({ id: 200, name: 'Copilot - Issue Comment', status: WORKFLOW_STATUS.IN_PROGRESS }),
+            workflowRun({ id: 198, name: 'Copilot - Issue', status: WORKFLOW_STATUS.QUEUED }),
+            workflowRun({ id: 197, name: 'Copilot - Issue', status: WORKFLOW_STATUS.CANCELLED }),
+            workflowRun({ id: 196, name: 'Copilot - Issue', status: WORKFLOW_STATUS.SKIPPED }),
+            workflowRun({ id: 200, name: 'Copilot - Issue', status: WORKFLOW_STATUS.IN_PROGRESS }),
           ],
         },
       } as GithubWorkflowRunsResponse;
     });
     const repository = new ActivePreviousWorkflowRunsRepository(client);
 
-    await expect(repository.countActivePreviousRuns({
-      ...query,
-      workflowNames: [
-        'Copilot - Issue',
-        'Copilot - Issue Comment',
-        'Task - Release',
-        'Copilot - Commit',
-        'Copilot - Pull Request',
-      ],
-    })).resolves.toBe(2);
+    await expect(repository.countActivePreviousRuns(query)).resolves.toBe(2);
   });
 
-  it('supports both Octokit page shapes and the compatibility workflow endpoint', async () => {
+  it('supports both Octokit page shapes from the workflow endpoint', async () => {
     iterator.mockImplementation(async function* () {
       yield {
         data: [workflowRun({ id: 199, name: 'Copilot - Issue', status: WORKFLOW_STATUS.PENDING })],
@@ -138,11 +133,7 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
     });
     const repository = new ActivePreviousWorkflowRunsRepository(client);
 
-    await expect(repository.countActivePreviousRuns({
-      ...query,
-      workflowNames: undefined,
-      workflowIdentifier: 'copilot_issue.yml',
-    })).resolves.toBe(1);
+    await expect(repository.countActivePreviousRuns(query)).resolves.toBe(1);
     expect(iterator).toHaveBeenCalledWith(listWorkflowRuns, {
       owner: 'org',
       repo: 'repo',
@@ -151,30 +142,17 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
     });
   });
 
-  it('falls back to repository traversal when the workflow endpoint is unavailable', async () => {
-    iterator.mockImplementation(async function* () {
-      yield {
-        data: {
-          workflow_runs: [workflowRun({ id: 199, name: 'Copilot - Issue', status: WORKFLOW_STATUS.PENDING })],
-        },
-      } as GithubWorkflowRunsResponse;
-    });
-    const fallbackClient = {
-      rest: { actions: { listWorkflowRunsForRepo } },
+  it('fails closed when the workflow-scoped endpoint is unavailable', async () => {
+    const unsupportedClient = {
+      rest: { actions: {} },
       paginate: { iterator },
     } as unknown as GithubWorkflowRunsClient;
-    const repository = new ActivePreviousWorkflowRunsRepository(fallbackClient);
+    const repository = new ActivePreviousWorkflowRunsRepository(unsupportedClient);
 
-    await expect(repository.countActivePreviousRuns({
-      ...query,
-      workflowNames: undefined,
-      workflowIdentifier: 'copilot_issue.yml',
-    })).resolves.toBe(1);
-    expect(iterator).toHaveBeenCalledWith(listWorkflowRunsForRepo, {
-      owner: 'org',
-      repo: 'repo',
-      per_page: 100,
-    });
+    await expect(repository.countActivePreviousRuns(query)).rejects.toThrow(
+      'GitHub workflow-scoped runs endpoint is unavailable',
+    );
+    expect(iterator).not.toHaveBeenCalled();
   });
 
   it('does not switch endpoints after a scoped provider failure', async () => {
@@ -184,18 +162,13 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
     });
     const repository = new ActivePreviousWorkflowRunsRepository(client);
 
-    await expect(repository.countActivePreviousRuns({
-      ...query,
-      workflowNames: undefined,
-      workflowIdentifier: 'copilot_issue.yml',
-    })).rejects.toMatchObject({ status: 404 });
+    await expect(repository.countActivePreviousRuns(query)).rejects.toMatchObject({ status: 404 });
     expect(iterator).toHaveBeenCalledWith(listWorkflowRuns, {
       owner: 'org',
       repo: 'repo',
       per_page: 100,
       workflow_id: 'copilot_issue.yml',
     });
-    expect(iterator).not.toHaveBeenCalledWith(listWorkflowRunsForRepo, expect.anything());
   });
 
   it('rejects malformed provider pages instead of treating them as empty', async () => {
@@ -218,7 +191,7 @@ describe('ActivePreviousWorkflowRunsRepository', () => {
       yield { data: { workflow_runs: [] } } as GithubWorkflowRunsResponse;
       if (traversals === 1) throw { status: 500 };
       yield {
-        data: { workflow_runs: [workflowRun({ id: 150, name: 'Task - Release', status: WORKFLOW_STATUS.QUEUED })] },
+        data: { workflow_runs: [workflowRun({ id: 150, name: 'Copilot - Issue', status: WORKFLOW_STATUS.QUEUED })] },
       } as GithubWorkflowRunsResponse;
     });
     const repository = new ActivePreviousWorkflowRunsRepository(client, retryDelayPort, {

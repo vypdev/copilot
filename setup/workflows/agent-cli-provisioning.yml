@@ -19,36 +19,34 @@ jobs:
         shell: bash
         env:
           AGENT_PROVIDER: ${{ vars.AGENT_PROVIDER || 'codex' }}
+          FINDINGS_PROVIDER: ${{ vars.FINDINGS_PROVIDER }}
+          FIXER_PROVIDER: ${{ vars.FIXER_PROVIDER }}
+          PLANNER_PROVIDER: ${{ vars.PLANNER_PROVIDER }}
+          REVIEWER_PROVIDER: ${{ vars.REVIEWER_PROVIDER }}
+          TESTER_PROVIDER: ${{ vars.TESTER_PROVIDER }}
+          RELEASE_PROVIDER: ${{ vars.RELEASE_PROVIDER }}
           AGENT_COMMAND: ${{ vars.AGENT_COMMAND }}
         run: |
           set -euo pipefail
 
-          if [[ -n "${AGENT_COMMAND// }" ]]; then
-            read -r executable _ <<< "$AGENT_COMMAND"
-            command -v "$executable"
-            echo "Configured agent command: $executable"
-          else
-            case "$AGENT_PROVIDER" in
-              opencode)
-                command -v opencode
-                opencode --version >/dev/null
-                opencode run --help >/dev/null
-                ;;
-              codex)
-                command -v codex
-                codex --version >/dev/null
-                codex exec --help >/dev/null
-                ;;
-              cursor)
-                command -v agent
-                agent --version >/dev/null
-                agent --help >/dev/null
-                ;;
-              *)
-                echo "Unsupported AGENT_PROVIDER: $AGENT_PROVIDER" >&2
-                exit 1
-                ;;
+          providers=("$AGENT_PROVIDER" "$FINDINGS_PROVIDER" "$FIXER_PROVIDER" "$PLANNER_PROVIDER" "$REVIEWER_PROVIDER" "$TESTER_PROVIDER" "$RELEASE_PROVIDER")
+          checked=""
+          for provider in "${providers[@]}"; do
+            [[ -z "${provider// }" ]] && continue
+            [[ " $checked " == *" $provider "* ]] && continue
+            checked="$checked $provider"
+            if [[ -n "${AGENT_COMMAND// }" && "$provider" == "$AGENT_PROVIDER" ]]; then
+              read -r executable _ <<< "$AGENT_COMMAND"
+              command -v "$executable"
+              echo "Configured agent command: $executable"
+              continue
+            fi
+            case "$provider" in
+              opencode) command -v opencode; opencode --version >/dev/null; opencode run --help >/dev/null ;;
+              codex) command -v codex; codex --version >/dev/null; codex exec --help >/dev/null ;;
+              cursor) command -v agent; agent --version >/dev/null; agent --help >/dev/null ;;
+              *) echo "Unsupported agent provider: $provider" >&2; exit 1 ;;
             esac
-          fi
+          done
 
-          echo "Agent CLI contract passed for $AGENT_PROVIDER."
+          echo "Agent CLI contract passed for: $checked."

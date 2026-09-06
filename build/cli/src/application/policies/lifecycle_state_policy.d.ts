@@ -1,4 +1,11 @@
 import type { CopilotLifecycleState } from '../../domain/copilot_lifecycle';
+import type { ExecutionInputs } from '../../data/model/execution_inputs';
+export type LifecycleChecksEvidence = 'pending' | 'success' | 'failure';
+export type LifecycleReviewEvidence = 'approved' | 'changes-requested' | 'commented' | 'dismissed';
+export interface LifecycleExternalEvidence {
+    readonly checks?: LifecycleChecksEvidence;
+    readonly review?: LifecycleReviewEvidence;
+}
 export interface LifecycleStatePolicyResult {
     readonly id: string;
     readonly success: boolean;
@@ -16,7 +23,10 @@ export interface LifecycleStateDecisionInput {
     readonly issueDescriptionEdited: boolean;
     readonly pullRequestMerged: boolean;
     readonly pullRequestClosed: boolean;
+    readonly externalEvidence?: LifecycleExternalEvidence;
     readonly results: readonly LifecycleStatePolicyResult[];
 }
 /** Resolves the next lifecycle state from application facts, never from labels or API responses. */
 export declare function resolveLifecycleState(input: LifecycleStateDecisionInput): CopilotLifecycleState | undefined;
+/** Extracts only stable review/check facts from GitHub event payloads. */
+export declare function readLifecycleExternalEvidence(inputs: ExecutionInputs | undefined, currentPullRequestHeadSha?: string): LifecycleExternalEvidence | undefined;

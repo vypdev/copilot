@@ -1,4 +1,5 @@
-import { ACTIONS, INPUT_KEYS } from '../../../utils/constants';
+import { ACTIONS } from '../../../data/model/action_types';
+import { INPUT_KEYS } from '../../../application/contracts/input_keys';
 import { buildDetectPotentialProblemsParams, resolveDetectIssueNumber } from '../detect_potential_problems_policy';
 
 const gitInfo = { owner: 'owner', repo: 'repo' } as const;

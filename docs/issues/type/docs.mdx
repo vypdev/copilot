@@ -15,9 +15,9 @@ jobs:
     name: Git Board - Issue
     runs-on: ubuntu-latest
     steps:
-      - uses: vypdev/copilot@v2
+      - uses: vypdev/copilot@v3
         with:
-          docs-label: docs // [!code highlight]
+          docs-label: docs # [!code highlight]
 ```
 
 ## Naming
@@ -30,9 +30,9 @@ jobs:
     name: Git Board - Issue
     runs-on: ubuntu-latest
     steps:
-      - uses: vypdev/copilot@v2
+      - uses: vypdev/copilot@v3
         with:
-          docs-tree: docs // [!code highlight]
+          docs-tree: docs # [!code highlight]
 ```
 
 Documentation branches follow this naming convention:
@@ -56,9 +56,9 @@ jobs:
     name: Git Board - Issue
     runs-on: ubuntu-latest
     steps:
-      - uses: vypdev/copilot@v2
+      - uses: vypdev/copilot@v3
         with:
-          development-branch: develop // [!code highlight]
+          development-branch: develop # [!code highlight]
 ```
 
 ## Images
@@ -73,9 +73,9 @@ jobs:
     name: Git Board - Issue
     runs-on: ubuntu-latest
     steps:
-      - uses: vypdev/copilot@v2
+      - uses: vypdev/copilot@v3
         with:
-          images-issue-docs: url1, url2, url3 // [!code highlight]
+          images-issue-docs: url1, url2, url3 # [!code highlight]
 ```
 
 <Image zoom src="https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExeHNrY2JseXlwNmY3bTI2aDd3eXp4N2pjMHJtNDBiYWg3OHE3Zmd5aCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ROlbnsc7aCIL6Icq6h/giphy.gif" />
@@ -96,7 +96,7 @@ You can find this template in `.github/ISSUE_TEMPLATE/doc_update.yml`. Below is 
 name: 📝 Documentation Update
 description: Propose changes or improvements to the documentation
 title: "<YOUR TITLE HERE>"
-labels: ["documentation", "docs"] // [!code highlight]
+labels: ["documentation", "docs"] # [!code highlight]
 body:
   - type: checkboxes
     attributes:

@@ -11,4 +11,4 @@ export interface UpdatePullRequestDescriptionWorkflowDependencies {
     aiRepository: FindingsQueryPort;
 }
 /** Generates and publishes a PR description while keeping provider details behind ports. */
-export declare function runUpdatePullRequestDescriptionWorkflow(param: Execution, taskId: string, dependencies: UpdatePullRequestDescriptionWorkflowDependencies): Promise<Result[]>;
+export declare function runUpdatePullRequestDescriptionWorkflow(param: Execution, taskId: string, dependencies: UpdatePullRequestDescriptionWorkflowDependencies, force?: boolean): Promise<Result[]>;

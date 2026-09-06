@@ -65,10 +65,16 @@ function pullRequestFinding(
   commentIdentity: string,
   resolved: boolean,
   pullRequestNumber = 5,
+  threadResolved?: boolean,
 ): ExistingByFindingId {
   return {
     f1: {
-      pullRequest: { commentIdentity, pullRequestNumber, resolved },
+      pullRequest: {
+        commentIdentity,
+        pullRequestNumber,
+        resolved,
+        ...(threadResolved === undefined ? {} : { threadResolved }),
+      },
     },
   };
 }
@@ -115,13 +121,30 @@ describe("markFindingsResolved", () => {
     const errors = await markFindingsResolved({
       execution: baseExecution(),
       context: baseContext({
-        existingByFindingId: pullRequestFinding(identity, true),
+        existingByFindingId: pullRequestFinding(identity, true, 5, false),
       }),
       resolvedFindingIds: new Set(),
     });
 
     expect(errors).toEqual([]);
     expect(mockResolveThread).toHaveBeenCalledWith("o", "r", 5, identity, "t");
+    expect(mockUpdatePrReviewComment).not.toHaveBeenCalled();
+  });
+
+  it("does not touch a marked PR thread that GitHub already reports as resolved", async () => {
+    const identity = "PRRC_resolved";
+
+    const errors = await markFindingsResolved({
+      execution: baseExecution(),
+      context: baseContext({
+        existingByFindingId: pullRequestFinding(identity, true, 5, true),
+      }),
+      resolvedFindingIds: new Set(),
+    });
+
+    expect(errors).toEqual([]);
+    expect(mockListPrReviewComments).not.toHaveBeenCalled();
+    expect(mockResolveThread).not.toHaveBeenCalled();
     expect(mockUpdatePrReviewComment).not.toHaveBeenCalled();
   });
 
@@ -157,7 +180,7 @@ describe("markFindingsResolved", () => {
     expect(updatedBody).not.toContain("Made with ❤️ by");
   });
 
-  it("retries only the pending issue destination after PR resolution succeeded", async () => {
+  it("retries only the pending issue destination after PR and thread resolution succeeded", async () => {
     const identity = "PRRC_partial";
     mockListPrReviewComments.mockResolvedValue([
       prComment(identity, resolvedBody),
@@ -169,6 +192,7 @@ describe("markFindingsResolved", () => {
           commentIdentity: identity,
           pullRequestNumber: 5,
           resolved: true,
+          threadResolved: true,
         },
       },
     };
@@ -183,7 +207,7 @@ describe("markFindingsResolved", () => {
     });
 
     expect(errors).toEqual([]);
-    expect(mockResolveThread).toHaveBeenCalledTimes(1);
+    expect(mockResolveThread).not.toHaveBeenCalled();
     expect(mockUpdatePrReviewComment).not.toHaveBeenCalled();
     expect(mockUpdateComment).toHaveBeenCalledTimes(1);
   });

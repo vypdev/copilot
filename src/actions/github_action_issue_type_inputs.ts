@@ -1,4 +1,4 @@
-import { INPUT_KEYS } from '../utils/constants';
+import { INPUT_KEYS } from '../application/contracts/input_keys';
 import type { IssueTypeConfigurationValues } from './configuration_builders';
 
 function readIssueType(getInput: (key: string) => string, name: string, description: string, color: string) {

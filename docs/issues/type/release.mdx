@@ -50,10 +50,10 @@ This workflow ensures that releases are properly planned, tested, and deployed w
       name: Git Board - Issue
       runs-on: ubuntu-latest
       steps:
-        - uses: vypdev/copilot@v2
+        - uses: vypdev/copilot@v3
           with:
-            deploy-label: deploy // [!code highlight]
-            release-workflow: release_workflow.yml // [!code highlight]
+            deploy-label: deploy # [!code highlight]
+            release-workflow: release_workflow.yml # [!code highlight]
   ```
 </Card>
 
@@ -104,7 +104,7 @@ This workflow ensures that releases are properly planned, tested, and deployed w
         // deploy logic here
 
         - name: Git Board - Deploy success notification
-          uses: vypdev/copilot@v2
+          uses: vypdev/copilot@v3
           if: ${{ success() }}
           with:
             single-action: 'deployed_action'
@@ -134,9 +134,9 @@ jobs:
     name: Git Board - Issue
     runs-on: ubuntu-latest
     steps:
-      - uses: vypdev/copilot@v2
+      - uses: vypdev/copilot@v3
         with:
-          release-label: release // [!code highlight]
+          release-label: release # [!code highlight]
 ```
 
 ## Naming
@@ -149,9 +149,9 @@ jobs:
     name: Git Board - Issue
     runs-on: ubuntu-latest
     steps:
-      - uses: vypdev/copilot@v2
+      - uses: vypdev/copilot@v3
         with:
-          release-tree: release // [!code highlight]
+          release-tree: release # [!code highlight]
 ```
 
 Release branches follow this naming convention:
@@ -175,9 +175,9 @@ jobs:
     name: Git Board - Issue
     runs-on: ubuntu-latest
     steps:
-      - uses: vypdev/copilot@v2
+      - uses: vypdev/copilot@v3
         with:
-          development-branch: development // [!code highlight]
+          development-branch: development # [!code highlight]
 ```
 
 ## Images
@@ -192,9 +192,9 @@ jobs:
     name: Git Board - Issue
     runs-on: ubuntu-latest
     steps:
-      - uses: vypdev/copilot@v2
+      - uses: vypdev/copilot@v3
         with:
-          images-issue-release: url1, url2, url3 // [!code highlight]
+          images-issue-release: url1, url2, url3 # [!code highlight]
 ```
 
 <Image zoom src="https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExeHNrY2JseXlwNmY3bTI2aDd3eXp4N2pjMHJtNDBiYWg3OHE3Zmd5aCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ROlbnsc7aCIL6Icq6h/giphy.gif" />

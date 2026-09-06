@@ -9,7 +9,7 @@ import {
     hasKnownModelProvider,
     hasValue,
     isLocalModelProvider,
-    removeAgentCredentials,
+    selectSafeAgentRuntimeEnvironment,
 } from './agent_credential_policy';
 
 export type AgentCredentialStatus = 'available' | 'missing' | 'not_required';
@@ -65,14 +65,14 @@ function isCodexChatGptAuth(auth: unknown): boolean {
         && typeof candidate.tokens?.refresh_token === 'string';
 }
 
-/** Keeps only credentials relevant to the selected provider/model process. */
+/** Keeps only explicitly allowed runtime values and credentials for the selected process. */
 export function buildAgentCliEnvironment(
     provider: AgentProvider | undefined,
     environment: NodeJS.ProcessEnv = process.env,
     modelProvider?: string,
 ): NodeJS.ProcessEnv {
     const hasLocalCodexSession = provider === 'codex' && hasCodexChatGptSession(environment);
-    const isolatedEnvironment = removeAgentCredentials(environment);
+    const isolatedEnvironment = selectSafeAgentRuntimeEnvironment(environment);
     if (hasLocalCodexSession) return isolatedEnvironment;
 
     for (const variable of allowedCredentialVariables(provider, modelProvider)) {

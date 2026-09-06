@@ -136,6 +136,10 @@ jobs:
         if: ${{ success() }}
         with:
           debug: ${{ vars.DEBUG }}
+          main-branch: ${{ vars.MAIN_BRANCH || 'master' }}
+          development-branch: ${{ vars.DEVELOPMENT_BRANCH || 'develop' }}
+          release-tree: ${{ vars.RELEASE_TREE || 'release' }}
+          hotfix-tree: ${{ vars.HOTFIX_TREE || 'hotfix' }}
           single-action: 'create_tag'
           single-action-issue: '${{ github.event.inputs.issue }}'
           single-action-version: '${{ github.event.inputs.version }}'
@@ -161,6 +165,10 @@ jobs:
         if: ${{ success() }}
         with:
           debug: ${{ vars.DEBUG }}
+          main-branch: ${{ vars.MAIN_BRANCH || 'master' }}
+          development-branch: ${{ vars.DEVELOPMENT_BRANCH || 'develop' }}
+          release-tree: ${{ vars.RELEASE_TREE || 'release' }}
+          hotfix-tree: ${{ vars.HOTFIX_TREE || 'hotfix' }}
           single-action: 'create_release'
           single-action-issue: '${{ github.event.inputs.issue }}'
           single-action-version: '${{ github.event.inputs.version }}'
@@ -192,6 +200,10 @@ jobs:
         if: ${{ success() }}
         with:
           debug: ${{ vars.DEBUG }}
+          main-branch: ${{ vars.MAIN_BRANCH || 'master' }}
+          development-branch: ${{ vars.DEVELOPMENT_BRANCH || 'develop' }}
+          release-tree: ${{ vars.RELEASE_TREE || 'release' }}
+          hotfix-tree: ${{ vars.HOTFIX_TREE || 'hotfix' }}
           single-action: 'deployed_action'
           single-action-issue: '${{ github.event.inputs.issue }}'
           agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}

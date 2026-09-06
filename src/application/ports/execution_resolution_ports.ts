@@ -11,7 +11,7 @@ export interface ExecutionIssueResolutionContext {
     repo: string;
     tokens: { token: string };
     issue: { number: number };
-    pullRequest: { head: string };
+    pullRequest: { head: string; number?: number };
     commit: { branch: string };
     isSingleAction: boolean;
     isIssue: boolean;

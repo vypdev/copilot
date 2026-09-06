@@ -1,14 +1,14 @@
 import type { BugbotPullRequestWritePort } from "../../../application/ports/bugbot_pull_request_write_ports";
 import type { BugbotPullRequestResolutionPort } from "../../../application/ports/bugbot_pull_request_resolution_ports";
 import type { BugbotPullRequestReadPort } from "../../../application/ports/bugbot_pull_request_read_ports";
-import type { PullRequestReviewComment, PullRequestReviewCommentCommandPort, PullRequestReviewCommentQueryPort, PullRequestReviewThreadCommandPort } from "../../../application/ports/pull_request_review_comment_ports";
+import type { PullRequestReviewComment, PullRequestReviewCommentCommandPort, PullRequestReviewCommentQueryPort, PullRequestReviewThreadCommandPort, PullRequestReviewThreadStateQueryPort } from "../../../application/ports/pull_request_review_comment_ports";
 export declare class BugbotPullRequestRepository implements BugbotPullRequestReadPort, BugbotPullRequestWritePort, BugbotPullRequestResolutionPort {
     private readonly lifecycle;
     private readonly changes;
     private readonly reviewQuery;
     private readonly reviewCommand;
     private readonly threadCommand;
-    constructor(lifecycle: Pick<BugbotPullRequestReadPort, "getHeadBranchForIssue" | "getOpenPullRequestNumbersByHeadBranch">, changes: Pick<BugbotPullRequestReadPort, "getPullRequestHeadSha" | "getChangedFiles" | "getFilesWithFirstDiffLine">, reviewQuery: PullRequestReviewCommentQueryPort, reviewCommand: PullRequestReviewCommentCommandPort, threadCommand: PullRequestReviewThreadCommandPort);
+    constructor(lifecycle: Pick<BugbotPullRequestReadPort, "getHeadBranchForIssue" | "getOpenPullRequestNumbersByHeadBranch">, changes: Pick<BugbotPullRequestReadPort, "getPullRequestHeadSha" | "getChangedFiles" | "getFilesWithFirstDiffLine"> & Partial<Pick<Required<BugbotPullRequestReadPort>, "getFilesWithDiffLocations" | "getReviewDiffSnapshot">>, reviewQuery: PullRequestReviewCommentQueryPort, reviewCommand: PullRequestReviewCommentCommandPort, threadCommand: PullRequestReviewThreadCommandPort & Partial<PullRequestReviewThreadStateQueryPort>);
     getHeadBranchForIssue: (...args: Parameters<BugbotPullRequestReadPort["getHeadBranchForIssue"]>) => Promise<string | undefined>;
     getOpenPullRequestNumbersByHeadBranch: (...args: Parameters<BugbotPullRequestReadPort["getOpenPullRequestNumbersByHeadBranch"]>) => Promise<number[]>;
     getPullRequestReviewCommentBody: (...args: Parameters<BugbotPullRequestReadPort["getPullRequestReviewCommentBody"]>) => Promise<string | null>;
@@ -22,6 +22,12 @@ export declare class BugbotPullRequestRepository implements BugbotPullRequestRea
         path: string;
         firstLine: number;
     }[]>;
+    getFilesWithDiffLocations: (...args: Parameters<Required<BugbotPullRequestReadPort>["getFilesWithDiffLocations"]>) => Promise<{
+        path: string;
+        locations: import("../../../application/ports/bugbot_pull_request_read_ports").PullRequestDiffLocation[];
+    }[]>;
+    getReviewDiffSnapshot: (...args: Parameters<Required<BugbotPullRequestReadPort>["getReviewDiffSnapshot"]>) => Promise<import("../../../application/ports/bugbot_pull_request_read_ports").PullRequestReviewDiffSnapshot>;
+    listPullRequestReviewThreadStates: (...args: Parameters<Required<BugbotPullRequestReadPort>["listPullRequestReviewThreadStates"]>) => Promise<{}>;
     createReviewWithComments: (...args: Parameters<BugbotPullRequestWritePort["createReviewWithComments"]>) => Promise<void>;
     updatePullRequestReviewComment: (...args: Parameters<BugbotPullRequestWritePort["updatePullRequestReviewComment"]>) => Promise<void>;
     resolvePullRequestReviewThread: (...args: Parameters<BugbotPullRequestResolutionPort["resolvePullRequestReviewThread"]>) => Promise<void>;

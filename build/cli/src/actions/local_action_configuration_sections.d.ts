@@ -12,12 +12,14 @@ export declare function readLocalCoreConfiguration(additionalParams: ActionInput
     singleActionVersion: string;
     singleActionTitle: string;
     singleActionChangelog: string;
+    inactivityThresholdHours: number;
     token: string;
 };
 export declare function readLocalAgentConfiguration(additionalParams: ActionInputValues, actionInputs: LocalActionInputs): {
     agentTasks: import("../domain/agent").AgentTaskConfiguration;
     agentModel: string;
     aiPullRequestDescription: boolean;
+    aiPullRequestDescriptionMode: "replace" | "append" | "preserve" | "disabled";
     aiMembersOnly: boolean;
     aiIncludeReasoning: boolean;
     aiIgnoreFilesInput: string;
@@ -65,7 +67,7 @@ export declare function readLocalLabelsAndIssueTypes(additionalParams: ActionInp
         sizeSLabel: string;
         sizeXsLabel: string;
         lifecycle: {
-            analyzing: string;
+            aiProcessing: string;
             planned: string;
             inProgress: string;
             reviewing: string;
@@ -73,6 +75,8 @@ export declare function readLocalLabelsAndIssueTypes(additionalParams: ActionInp
             verified: string;
             ready: string;
             blocked: string;
+            awaitingMaintainer: string;
+            awaitingIssueAuthor: string;
         };
     };
     issueTypes: {

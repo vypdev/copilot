@@ -32,7 +32,9 @@ async function repairExistingPullRequestFinding(
     destination: ExistingPullRequestFindingInfo | undefined,
     errors: Error[],
 ): Promise<void> {
-    if (destination?.resolved) await tryResolvePullRequestFinding(ports, execution, findingId, destination, errors);
+    if (destination?.resolved && destination.threadResolved === false) {
+        await tryResolvePullRequestFinding(ports, execution, findingId, destination, errors);
+    }
 }
 
 async function resolvePullRequestIfNeeded(

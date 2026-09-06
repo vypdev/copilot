@@ -5,6 +5,7 @@ import { type CommitAndPushWorkflowResult } from './commit_and_push_workflow';
 export type BugbotAutofixCommitResult = CommitAndPushWorkflowResult;
 export declare function runBugbotAutofixCommitAndPush(execution: Execution, options: {
     branchOverride?: string;
+    branchAlreadyCheckedOut?: boolean;
     targetFindingIds?: string[];
     workspacePaths?: string[];
 } | undefined, authenticatedUserPort: AuthenticatedUserPort, gitCommitPort: GitCommitPort): Promise<BugbotAutofixCommitResult>;

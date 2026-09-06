@@ -39,6 +39,7 @@ export interface GithubReviewComment {
   body?: string | null;
   path?: string;
   line?: number | null;
+  user?: { login?: string | null } | null;
 }
 
 export interface GithubPullRequestReviewCommentQueryClient {
@@ -63,7 +64,7 @@ export interface GithubPullRequestReviewCommentQueryClient {
 export interface GithubPullRequestReviewCommentCreateClient {
   rest: {
     pulls: {
-      createReviewComment(
+      createReview(
         parameters: Record<string, unknown>,
       ): Promise<{ data: unknown }>;
     };

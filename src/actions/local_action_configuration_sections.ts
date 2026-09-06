@@ -1,5 +1,6 @@
 import { Locale } from '../data/model/locale';
-import { BUGBOT_MAX_COMMENTS, BUGBOT_MIN_SEVERITY, INPUT_KEYS } from '../utils/constants';
+import { BUGBOT_MAX_COMMENTS, BUGBOT_MIN_SEVERITY } from '../application/policies/bugbot_constants';
+import { INPUT_KEYS } from '../application/contracts/input_keys';
 import type { ProjectDetailQueryPort } from '../application/ports/project_detail_ports';
 import type { ActionInputValues } from './action_input_source';
 import { getActionInputsWithDefaults } from '../utils/yml_utils';
@@ -10,6 +11,8 @@ import { parseBoundedPositiveIntegerInput, parseIntegerInput, parseNonNegativeIn
 import { parseDelimitedValues } from './input_values_policy';
 import { buildAgentTasksFromValues } from './agent_input_builder';
 import { buildImageConfiguration } from './image_configuration_builder';
+import { normalizePullRequestDescriptionMode } from '../domain/pull_request_description';
+import { DEFAULT_INACTIVITY_THRESHOLD_HOURS, MAX_INACTIVITY_THRESHOLD_HOURS } from '../domain/issue_inactivity';
 
 export type LocalActionInputs = ReturnType<typeof getActionInputsWithDefaults>;
 
@@ -31,6 +34,11 @@ export function readLocalCoreConfiguration(
         singleActionVersion: input<string>(additionalParams, actionInputs, INPUT_KEYS.SINGLE_ACTION_VERSION),
         singleActionTitle: input<string>(additionalParams, actionInputs, INPUT_KEYS.SINGLE_ACTION_TITLE),
         singleActionChangelog: input<string>(additionalParams, actionInputs, INPUT_KEYS.SINGLE_ACTION_CHANGELOG),
+        inactivityThresholdHours: parseBoundedPositiveIntegerInput(
+            input(additionalParams, actionInputs, INPUT_KEYS.INACTIVITY_THRESHOLD_HOURS),
+            DEFAULT_INACTIVITY_THRESHOLD_HOURS,
+            MAX_INACTIVITY_THRESHOLD_HOURS,
+        ),
         token: input<string>(additionalParams, actionInputs, INPUT_KEYS.TOKEN),
     };
 }
@@ -41,10 +49,14 @@ export function readLocalAgentConfiguration(
 ) {
     const agentTasks = buildAgentTasksFromValues({ ...actionInputs, ...additionalParams });
     const bugbotFixVerifyCommandsInput = input(additionalParams, actionInputs, INPUT_KEYS.BUGBOT_FIX_VERIFY_COMMANDS) ?? '';
+    const pullRequestDescription = isEnabledInput(input(additionalParams, actionInputs, INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION));
     return {
         agentTasks,
         agentModel: agentTasks.findings.model,
-        aiPullRequestDescription: isEnabledInput(input(additionalParams, actionInputs, INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION)),
+        aiPullRequestDescription: pullRequestDescription,
+        aiPullRequestDescriptionMode: pullRequestDescription
+            ? normalizePullRequestDescriptionMode(input(additionalParams, actionInputs, INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION_MODE))
+            : 'disabled',
         aiMembersOnly: isEnabledInput(input(additionalParams, actionInputs, INPUT_KEYS.AI_MEMBERS_ONLY)),
         aiIncludeReasoning: isEnabledInput(input(additionalParams, actionInputs, INPUT_KEYS.AI_INCLUDE_REASONING)),
         aiIgnoreFilesInput: input(additionalParams, actionInputs, INPUT_KEYS.AI_IGNORE_FILES),
@@ -145,14 +157,16 @@ export function readLocalLabelsAndIssueTypes(
             sizeSLabel: label(INPUT_KEYS.SIZE_S_LABEL),
             sizeXsLabel: label(INPUT_KEYS.SIZE_XS_LABEL),
             lifecycle: {
-                analyzing: label(INPUT_KEYS.COPILOT_STATE_ANALYZING_LABEL),
-                planned: label(INPUT_KEYS.COPILOT_STATE_PLANNED_LABEL),
-                inProgress: label(INPUT_KEYS.COPILOT_STATE_IN_PROGRESS_LABEL),
-                reviewing: label(INPUT_KEYS.COPILOT_STATE_REVIEWING_LABEL),
-                changesRequested: label(INPUT_KEYS.COPILOT_STATE_CHANGES_REQUESTED_LABEL),
-                verified: label(INPUT_KEYS.COPILOT_STATE_VERIFIED_LABEL),
-                ready: label(INPUT_KEYS.COPILOT_STATE_READY_LABEL),
-                blocked: label(INPUT_KEYS.COPILOT_STATE_BLOCKED_LABEL),
+                aiProcessing: label(INPUT_KEYS.STATE_AI_PROCESSING_LABEL),
+                planned: label(INPUT_KEYS.STATE_PLANNED_LABEL),
+                inProgress: label(INPUT_KEYS.STATE_IN_PROGRESS_LABEL),
+                reviewing: label(INPUT_KEYS.STATE_REVIEWING_LABEL),
+                changesRequested: label(INPUT_KEYS.STATE_CHANGES_REQUESTED_LABEL),
+                verified: label(INPUT_KEYS.STATE_VERIFIED_LABEL),
+                ready: label(INPUT_KEYS.STATE_READY_LABEL),
+                blocked: label(INPUT_KEYS.STATE_BLOCKED_LABEL),
+                awaitingMaintainer: label(INPUT_KEYS.STATE_AWAITING_MAINTAINER_LABEL),
+                awaitingIssueAuthor: label(INPUT_KEYS.STATE_AWAITING_ISSUE_AUTHOR_LABEL),
             },
         },
         issueTypes: {

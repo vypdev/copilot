@@ -1,7 +1,7 @@
 import type { Execution } from '../../../data/model/execution';
 import { Result } from '../../../data/model/result';
 import type { RepositoryTagPort } from '../../ports/repository_release_ports';
-import { INPUT_KEYS } from '../../../utils/constants';
+import { INPUT_KEYS } from '../../contracts/input_keys';
 import { logError, logWarn } from '../../ports/logging_ports';
 
 export async function runCreateTag(

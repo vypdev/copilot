@@ -25,7 +25,7 @@ export interface DetectBugbotFixIntentWorkflowPorts {
   contextPorts: BugbotContextPorts;
 }
 
-/** Detects whether a comment targets Bugbot findings and returns the validated intent payload. */
+/** Detects whether a comment requests a finding fix, repository change, or read-only review. */
 export async function runDetectBugbotFixIntentWorkflow(
   param: Execution,
   ports: DetectBugbotFixIntentWorkflowPorts,
@@ -45,7 +45,8 @@ export async function runDetectBugbotFixIntentWorkflow(
 
   const explicitCommand = parseCopilotCommand(commentBody);
   const isExplicitFix = explicitCommand.kind === 'command' && explicitCommand.command.name === 'fix';
-  if (!isExplicitFix && !isAgentConfigurationReady(param.ai?.getAgentConfiguration("findings"))) {
+  const isExplicitImplement = explicitCommand.kind === 'command' && explicitCommand.command.name === 'implement';
+  if (!isExplicitFix && !isExplicitImplement && !isAgentConfigurationReady(param.ai?.getAgentConfiguration("findings"))) {
     logInfo("Agent not configured; skipping bugbot fix intent detection.");
     return results;
   }
@@ -64,15 +65,34 @@ export async function runDetectBugbotFixIntentWorkflow(
     : undefined;
   const context = await loadBugbotContext(param, contextOptions, ports.contextPorts);
   const unresolvedWithBody = context.unresolvedFindingsWithBody ?? [];
-  if (unresolvedWithBody.length === 0) {
-    logInfo("No unresolved bugbot findings for this issue/PR; skipping bugbot fix intent detection.");
-    return results;
-  }
 
   const unresolvedIds = new Set(unresolvedWithBody.map((finding) => finding.id));
   const unresolvedFindings = buildUnresolvedFindingSummaries(unresolvedWithBody);
   const parentCommentBody = await resolveParentCommentBody(param, ports.pullRequestQueryPort);
+  if (isExplicitImplement) {
+    const requestText = explicitCommand.command.arguments.join(' ').trim();
+    results.push(new Result({
+      id: TASK_ID,
+      success: true,
+      executed: true,
+      steps: ['Explicit implement command selected the authorized repository-change route.'],
+      payload: {
+        isFixRequest: false,
+        isDoRequest: true,
+        isReviewRequest: false,
+        targetFindingIds: [],
+        requestText,
+        context,
+        branchOverride,
+      } as BugbotFixIntent & { context?: typeof context; branchOverride?: string },
+    }));
+    return results;
+  }
   if (explicitCommand.kind === 'command' && explicitCommand.command.name === 'fix') {
+    if (unresolvedIds.size === 0) {
+      logInfo("No unresolved bugbot findings for explicit fix command; skipping autofix.");
+      return results;
+    }
     const requestedIds = explicitCommand.command.arguments.includes('all')
       ? [...unresolvedIds]
       : explicitCommand.command.arguments.filter(id => unresolvedIds.has(id));
@@ -117,7 +137,12 @@ export async function runDetectBugbotFixIntentWorkflow(
         success: true,
         executed: true,
         steps: ["Bugbot fix intent: no response; skipping autofix."],
-        payload: { isFixRequest: false, isDoRequest: false, targetFindingIds: [] as string[] },
+        payload: {
+          isFixRequest: false,
+          isDoRequest: false,
+          isReviewRequest: false,
+          targetFindingIds: [] as string[],
+        },
       }),
     );
     return results;

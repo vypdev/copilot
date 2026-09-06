@@ -22,7 +22,7 @@ No pre-computed file list or patches are sent from the action; the agent has acc
 
 The AI is instructed to use your repository's **pull request template** as the structure for the description. You should define:
 
-- **`.github/pull_request_template.md`** — This file is read by the OpenCode agent and used as the **skeleton** to fill. The agent keeps the same headings, bullet lists, checkboxes (`- [ ]`, `- [x]`), and separators, and fills each section with content derived from the diff and the issue.
+- **`.github/pull_request_template.md`** — This file is read by the configured `planner` agent runtime and used as the **skeleton** to fill. The agent keeps the same headings, bullet lists, checkboxes (`- [ ]`, `- [x]`), and separators, and fills each section with content derived from the diff and the issue.
 
 If you don't have a template, the agent will still produce a structured description, but defining a template ensures consistent, professional PR descriptions that match your team's expectations (e.g. Summary, Related Issues, Scope of Changes, Technical Details, How to Test, Breaking Changes, Deployment Notes, etc.).
 
@@ -38,16 +38,32 @@ If you don't have a template, the agent will still produce a structured descript
   - The action runs on the same `pull_request` events as the rest of the PR pipeline (e.g. opened, edited).
 </Info>
 
+## Description policies
+
+Use `ai-pull-request-description-mode` when a team needs a different ownership model for the PR body:
+
+| Mode | Automatic runs | `/copilot description` | Behavior |
+| --- | --- | --- | --- |
+| `replace` | Yes | Yes | Preserves the existing legacy behavior: the generated text owns the complete body. |
+| `append` | Yes | Yes | Keeps human-authored text and replaces only the bounded Copilot-managed section. |
+| `preserve` | No | Yes | Does not touch the body automatically; a maintainer can request an update explicitly from a PR comment. |
+| `disabled` | No | No | Description automation is fully disabled. |
+
+The mode can be set directly on the Action input or through the `AI_PULL_REQUEST_DESCRIPTION_MODE` Repository Variable written by `copilot setup`. The legacy boolean remains supported: setting `ai-pull-request-description: false` resolves to `disabled`.
+
+For an explicit update, comment `/copilot description` on the PR or its issue conversation. The command fetches the current PR body and branch metadata, so it also works from an `issue_comment` workflow.
+
 ## Enable in your workflow
 
 Set `ai-pull-request-description: true` and configure the selected agent in your workflow:
 
 ```yaml
-- uses: vypdev/copilot@master
+- uses: vypdev/copilot@v3
   with:
     token: ${{ secrets.PAT }}
     project-ids: '2,3'
     ai-pull-request-description: true
+    ai-pull-request-description-mode: append
     agent-provider: codex
     agent-model-provider: openai
     agent-model: gpt-5.6-luna

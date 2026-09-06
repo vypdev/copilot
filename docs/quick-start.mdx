@@ -4,11 +4,29 @@ description: Minimal verified setup for the Copilot Action.
 ---
 # Quick start
 
-## Prerequisites
+## Recommended setup
 
-You MUST have a GitHub repository, a fine-grained token stored as a repository secret, and a workflow that checks out the repository before invoking Copilot. Agent features additionally require either a verified CLI already installed on the runner or a pinned provisioning input. Codex may use the runner's preinitialized session instead of an exported credential.
+The supported onboarding path is the global CLI package followed by
+`copilot setup`. It initializes the repository and lets you select the workflows,
+templates, labels, issue types, Variables, Secrets, and agent settings together.
 
-## Minimal workflow
+```bash
+pnpm add --global @vypdev/copilot
+copilot --version
+cd /path/to/your/repository
+copilot setup
+```
+
+Use `copilot setup --dry-run` to review the plan without changing files or GitHub.
+The setup PAT used by the operator is separate from the workflow `PAT` Secret.
+After setup, review and commit the generated `.github/` files, then customize the
+selected workflows as needed. See [How to use](/how-to-use) for the full flow.
+
+## Manual workflow integration (advanced)
+
+If the setup wizard cannot be used, the Action can be wired directly into a
+workflow. This only configures execution; it does not initialize repository
+metadata or install the complete Copilot workflow set.
 
 ```yaml
 name: Copilot
@@ -22,7 +40,7 @@ jobs:
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - uses: vypdev/copilot@master
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.COPILOT_TOKEN }}
           agent-provider: codex
@@ -33,7 +51,10 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
-Pin a released Action ref in production. The example uses `master` only to show the current contract.
+Configure labels, issue types, Variables, Secrets, templates, permissions, and
+additional workflows manually when following this path. The example uses the
+stable `v3` major ref; for strict reproducibility, replace it with an immutable
+release tag after selecting the version you have validated.
 
 ## Verify before enabling writes
 

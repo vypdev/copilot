@@ -1,5 +1,5 @@
 import { Locale } from '../data/model/locale';
-import { INPUT_KEYS } from '../utils/constants';
+import { INPUT_KEYS } from '../application/contracts/input_keys';
 
 export interface GithubActionLocaleInputs {
     readonly issue: string;

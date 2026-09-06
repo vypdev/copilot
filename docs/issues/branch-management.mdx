@@ -21,7 +21,7 @@ For **feature**, **bugfix**, **docs**, and **chore** issues, the action does **n
 Workflow:
 
 ```yaml
-- uses: vypdev/copilot@v2
+- uses: vypdev/copilot@v3
   with:
     token: ${{ secrets.PAT }}
     branch-management-launcher-label: branched
@@ -32,7 +32,7 @@ Flow: Open issue with label `feature` â†’ no branch yet. Add label `branched` â†
 ### Example: create branch without launcher
 
 ```yaml
-- uses: vypdev/copilot@v2
+- uses: vypdev/copilot@v3
   with:
     token: ${{ secrets.PAT }}
     branch-management-always: true
@@ -67,7 +67,7 @@ Use **`commit-prefix-transforms`** (e.g. `replace-slash`) so commit message pref
 ### Example: custom naming
 
 ```yaml
-- uses: vypdev/copilot@v2
+- uses: vypdev/copilot@v3
   with:
     token: ${{ secrets.PAT }}
     main-branch: main

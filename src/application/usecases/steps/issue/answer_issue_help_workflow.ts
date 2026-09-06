@@ -12,6 +12,7 @@ import { PROJECT_CONTEXT_INSTRUCTION } from '../../../../utils/project_context_i
 import { getTaskEmoji } from '../../../../utils/task_emoji';
 import { extractStructuredAnswer } from '../common/agent_answer_policy';
 import { sanitizeAgentMarkdown } from '../../../../application/policies/github_comment_publication_policy';
+import { buildCopilotWelcomeMessage } from '../../../../application/policies/copilot_interaction_policy';
 
 export interface AnswerIssueHelpWorkflowDependencies {
     issueNotificationPort: IssueNotificationPort;
@@ -55,15 +56,24 @@ export async function runAnswerIssueHelpWorkflow(
             return [noAnswerResult()];
         }
 
+        const publishedAnswer = isNewIssue(param)
+            ? `${buildCopilotWelcomeMessage(param.tokenUser)}\n\n${answer}`
+            : answer;
+
         await dependencies.issueNotificationPort.addComment(
             param.owner,
             param.repo,
             issueNumber,
-            answer,
+            publishedAnswer,
             param.tokens.token,
         );
         logInfo(`Initial help reply posted to issue #${issueNumber}.`);
-        return [new Result({ id: TASK_ID, success: true, executed: true })];
+        return [new Result({
+            id: TASK_ID,
+            success: true,
+            executed: true,
+            payload: { welcomePublished: isNewIssue(param) },
+        })];
     } catch (error) {
         logError(`Error in ${TASK_ID}: ${error}`);
         return [new Result({
@@ -73,6 +83,10 @@ export async function runAnswerIssueHelpWorkflow(
             errors: [`Error in ${TASK_ID}: ${error}`],
         })];
     }
+}
+
+function isNewIssue(param: Execution): boolean {
+    return param.eventName === 'issues' && param.inputs?.action === 'opened';
 }
 
 interface HelpRequest {

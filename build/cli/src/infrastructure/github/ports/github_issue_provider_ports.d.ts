@@ -10,6 +10,34 @@ export interface GithubIssueLifecycleClient {
         };
     };
 }
+export interface GithubIssueInactivityClient {
+    paginate: {
+        iterator(method: (parameters: Record<string, unknown>) => Promise<{
+            data: GithubIssueActivity[];
+        }>, parameters: Record<string, unknown>): AsyncIterable<{
+            data: GithubIssueActivity[];
+        }>;
+    };
+    rest: {
+        issues: {
+            listForRepo(parameters: Record<string, unknown>): Promise<{
+                data: GithubIssueActivity[];
+            }>;
+            get(parameters: Record<string, unknown>): Promise<{
+                data: GithubIssueActivity;
+            }>;
+        };
+    };
+}
+export interface GithubIssueActivity {
+    number: number;
+    updated_at?: string | null;
+    state?: 'open' | 'closed' | string;
+    pull_request?: unknown;
+    labels?: Array<{
+        name?: string;
+    } | string>;
+}
 export interface GithubIssueContentClient {
     paginate: {
         iterator(method: (parameters: Record<string, unknown>) => Promise<{

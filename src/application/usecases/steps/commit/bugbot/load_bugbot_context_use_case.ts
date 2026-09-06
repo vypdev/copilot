@@ -14,6 +14,7 @@ import {
     parseBugbotFindingComments,
 } from "./bugbot_finding_context";
 import { logDebugInfo } from "../../../../ports/logging_ports";
+import { buildReviewConversationBlock, buildReviewDiffBlock } from './bugbot_review_context';
 
 export interface LoadBugbotContextOptions {
     /** When set (e.g. for issue_comment when commit.branch is empty), use this branch to find open PRs. */
@@ -30,6 +31,8 @@ function emptyBugbotContext(): BugbotContext {
         issueComments: [],
         openPrNumbers: [],
         previousFindingsBlock: "",
+        reviewDiffBlock: "",
+        reviewConversationBlock: "",
         prContext: null,
         unresolvedFindingsWithBody: [],
     };
@@ -43,13 +46,31 @@ async function loadOpenPullRequestComments(
     token: string
 ): Promise<ReadonlyMap<number, PullRequestReviewComment[]>> {
     const commentsByPullRequest = new Map<number, PullRequestReviewComment[]>();
-    for (const prNumber of openPrNumbers) {
+    await Promise.all(openPrNumbers.map(async (prNumber) => {
         commentsByPullRequest.set(
             prNumber,
             await repository.listPullRequestReviewComments(owner, repo, prNumber, token)
         );
-    }
+    }));
     return commentsByPullRequest;
+}
+
+async function loadOpenPullRequestThreadStates(
+    repository: BugbotPullRequestReadPort,
+    owner: string,
+    repo: string,
+    openPrNumbers: number[],
+    token: string,
+): Promise<ReadonlyMap<number, Readonly<Record<string, boolean>>>> {
+    const statesByPullRequest = new Map<number, Readonly<Record<string, boolean>>>();
+    if (!repository.listPullRequestReviewThreadStates) return statesByPullRequest;
+    await Promise.all(openPrNumbers.map(async (prNumber) => {
+        statesByPullRequest.set(
+            prNumber,
+            await repository.listPullRequestReviewThreadStates!(owner, repo, prNumber, token),
+        );
+    }));
+    return statesByPullRequest;
 }
 
 async function loadPullRequestContext(
@@ -63,14 +84,33 @@ async function loadPullRequestContext(
     const prHeadSha = await repository.getPullRequestHeadSha(owner, repo, openPrNumber, token);
     if (!prHeadSha) return null;
 
-    const [prFiles, filesWithLines] = await Promise.all([
-        repository.getChangedFiles(owner, repo, openPrNumber, token),
-        repository.getFilesWithFirstDiffLine(owner, repo, openPrNumber, token),
-    ]);
+    const snapshot = repository.getReviewDiffSnapshot
+        ? await repository.getReviewDiffSnapshot(owner, repo, openPrNumber, token)
+        : undefined;
+    const [prFiles, filesWithLines, filesWithLocations] = snapshot
+        ? [
+            snapshot.changes.map(({ filename, status }) => ({ filename, status })),
+            snapshot.filesWithFirstDiffLine,
+            snapshot.filesWithDiffLocations,
+        ]
+        : await Promise.all([
+            repository.getChangedFiles(owner, repo, openPrNumber, token),
+            repository.getFilesWithFirstDiffLine(owner, repo, openPrNumber, token),
+            repository.getFilesWithDiffLocations?.(owner, repo, openPrNumber, token) ?? Promise.resolve([]),
+        ]);
     const pathToFirstDiffLine = Object.fromEntries(
         filesWithLines.map(({ path, firstLine }) => [path, firstLine])
     );
-    return { prHeadSha, prFiles, pathToFirstDiffLine };
+    const pathToDiffLocations = Object.fromEntries(
+        filesWithLocations.map(({ path, locations }) => [path, locations])
+    );
+    return {
+        prHeadSha,
+        prFiles,
+        pathToFirstDiffLine,
+        pathToDiffLocations,
+        ...(snapshot ? { changes: snapshot.changes } : {}),
+    };
 }
 
 export async function loadBugbotContext(
@@ -95,17 +135,20 @@ export async function loadBugbotContext(
         return emptyBugbotContext();
     }
 
-    const issueComments = issueNumber > 0
-        ? await ports.issue.listIssueComments(owner, repo, issueNumber, token)
-        : [];
-    const pullRequestComments = await loadOpenPullRequestComments(
-        ports.pullRequest,
-        owner,
-        repo,
-        openPrNumbers,
-        token
+    const [issueComments, pullRequestComments, reviewThreadStates, prContext] = await Promise.all([
+        issueNumber > 0
+            ? ports.issue.listIssueComments(owner, repo, issueNumber, token)
+            : Promise.resolve([]),
+        loadOpenPullRequestComments(ports.pullRequest, owner, repo, openPrNumbers, token),
+        loadOpenPullRequestThreadStates(ports.pullRequest, owner, repo, openPrNumbers, token),
+        loadPullRequestContext(ports.pullRequest, owner, repo, openPrNumbers[0], token),
+    ]);
+    const parsedComments = parseBugbotFindingComments(
+        issueComments,
+        pullRequestComments,
+        param.tokenUser,
+        reviewThreadStates,
     );
-    const parsedComments = parseBugbotFindingComments(issueComments, pullRequestComments);
     const previousFindings = collectPreviousBugbotFindings(
         parsedComments.issueComments,
         parsedComments.existingByFindingId,
@@ -113,12 +156,11 @@ export async function loadBugbotContext(
     );
     const boundedPreviousFindings = limitPreviousBugbotFindings(previousFindings);
     const previousFindingsBlock = buildPreviousFindingsBlock(previousFindings);
-    const prContext = await loadPullRequestContext(
-        ports.pullRequest,
-        owner,
-        repo,
-        openPrNumbers[0],
-        token
+    const reviewDiffBlock = buildReviewDiffBlock(prContext);
+    const reviewConversationBlock = buildReviewConversationBlock(
+        issueComments,
+        pullRequestComments,
+        param.tokenUser,
     );
     const unresolvedFindingsWithBody = boundedPreviousFindings.map((finding) => ({
         id: finding.id,
@@ -126,13 +168,15 @@ export async function loadBugbotContext(
     }));
 
     logDebugInfo(
-        `LoadBugbotContext: issue #${issueNumber}, branch ${headBranch}, open PRs=${openPrNumbers.length}, existing findings=${Object.keys(parsedComments.existingByFindingId).length}, unresolved with body=${unresolvedFindingsWithBody.length}.`
+        `LoadBugbotContext: issue #${issueNumber}, branch ${headBranch}, open PRs=${openPrNumbers.length}, existing findings=${Object.keys(parsedComments.existingByFindingId).length}, unresolved with body=${unresolvedFindingsWithBody.length}, diff files=${prContext?.changes?.length ?? prContext?.prFiles.length ?? 0}, diff prompt chars=${reviewDiffBlock.length}, conversation chars=${reviewConversationBlock.length}.`
     );
     return {
         existingByFindingId: parsedComments.existingByFindingId,
         issueComments: parsedComments.issueComments,
         openPrNumbers,
         previousFindingsBlock,
+        reviewDiffBlock,
+        reviewConversationBlock,
         prContext,
         unresolvedFindingsWithBody,
     };

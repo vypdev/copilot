@@ -96,7 +96,6 @@ describe('application architecture boundaries', () => {
     it('allows only side-effect-free shared utilities in application production code', () => {
         const allowedUtilities = new Set([
             'comment_watermark',
-            'constants',
             'content_utils',
             'list_utils',
             'project_context_instruction',
@@ -132,6 +131,30 @@ describe('application architecture boundaries', () => {
     it('keeps configuration queries independent from the complete Execution model', () => {
         const portSource = readFileSync(join(__dirname, '../ports/execution_configuration_ports.ts'), 'utf8');
         expect(portSource).not.toContain("data/model/execution");
+    });
+
+    it('keeps extracted application policies independent from the complete Execution aggregate', () => {
+        const policyFiles = [
+            'agent_activity_policy.ts',
+            'configuration_persistence_policy.ts',
+            'deploy_workflow_policy.ts',
+            'status_command_policy.ts',
+        ];
+        const violations = policyFiles
+            .map(file => ({ file, source: readFileSync(join(applicationRoot, 'policies', file), 'utf8') }))
+            .filter(({ source }) => /data\/model\/execution(?:['"]|\b)/.test(source))
+            .map(({ file }) => file);
+
+        expect(violations).toEqual([]);
+    });
+
+    it('keeps lifecycle reconciliation dependent on a narrow context contract', () => {
+        const source = readFileSync(
+            join(applicationRoot, 'usecases/actions/synchronize_lifecycle_state_use_case.ts'),
+            'utf8',
+        );
+        expect(source).not.toContain("data/model/execution'");
+        expect(source).toContain('LifecycleSynchronizationExecution');
     });
 });
 

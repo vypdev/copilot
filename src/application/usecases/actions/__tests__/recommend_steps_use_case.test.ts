@@ -87,6 +87,23 @@ describe('RecommendStepsUseCase', () => {
     expect(getResultPayload(results[0].payload)?.recommendedSteps).toContain('1. Reproduce');
   });
 
+  it('includes the bot welcome in the first recommendation for a newly opened issue', async () => {
+    mockGetDescription.mockResolvedValue('Implement login feature.');
+    mockAskAgent.mockResolvedValue('1. Add auth module');
+    const param = baseParam({
+      tokenUser: 'vypbot',
+      eventName: 'issues',
+      issue: { opened: true },
+      inputs: { eventName: 'issues', action: 'opened' },
+    });
+
+    const results = await useCase.invoke(param);
+
+    expect(results[0].steps[0]).toContain('<!-- copilot:welcome -->');
+    expect(results[0].steps[0]).toContain('Hi! I’m **@vypbot**');
+    expect(results[0].steps).toContain('## Recommended implementation steps');
+  });
+
   it('removes Copilot metadata from the prompt and fingerprint input', async () => {
     mockGetDescription.mockResolvedValue('Implement login feature.\n\n<!-- copilot-configuration-start\n{"recommendationState":{"ignored":"metadata"}}\ncopilot-configuration-end -->');
     mockAskAgent.mockResolvedValue('1. Add auth module');

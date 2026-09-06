@@ -17,6 +17,7 @@ export interface ExecutionIssueResolutionContext {
     };
     pullRequest: {
         head: string;
+        number?: number;
     };
     commit: {
         branch: string;

@@ -14,6 +14,7 @@ import { renderLocalActionResults } from './local_action_output';
 import { buildLocalActionConfiguration } from './local_action_configuration';
 import { buildLocalActionExecution } from './local_action_execution';
 import { requireRepositoryCoordinates } from './repository_context';
+import { createSynchronizeAgentActivityUseCase } from '../infrastructure/composition/agent_activity_composition_root';
 
 export async function runLocalAction(
     additionalParams: Record<string, unknown>
@@ -25,7 +26,13 @@ export async function runLocalAction(
     const configuration = await buildLocalActionConfiguration(normalizedParams, composition.projectBoard.query);
     const execution = buildLocalActionExecution(configuration, normalizedParams);
 
-    const results = await mainRun(execution, composition.projectBoard.command, composition.latestTagQuery);
+    const results = await mainRun(
+        execution,
+        composition.projectBoard.command,
+        composition.latestTagQuery,
+        undefined,
+        createSynchronizeAgentActivityUseCase(),
+    );
 
     renderLocalActionResults(results);
 }

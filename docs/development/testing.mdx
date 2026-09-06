@@ -10,20 +10,24 @@ Use Corepack and the pinned pnpm toolchain:
 corepack pnpm@10.12.4 run typecheck
 corepack pnpm@10.12.4 run lint
 corepack pnpm@10.12.4 run test:coverage
+corepack pnpm@10.12.4 run eval:bugbot
 corepack pnpm@10.12.4 run build
 corepack pnpm@10.12.4 run validate:agent-docs
 corepack pnpm@10.12.4 run validate:docs-page
+corepack pnpm@10.12.4 run validate:documentation
 corepack pnpm@10.12.4 run validate:workflows
 git diff --check
 ```
 
 Tests MUST isolate environment variables such as `AGENT_PROVIDER`, `AGENT_MODEL_PROVIDER`, `AGENT_MODEL`, and `AGENT_COMMAND`. Real provider smoke tests are separate from deterministic unit tests and MUST NOT run without authorization and cost controls. Coverage thresholds are enforced by Jest and must not be reduced to accommodate a new code path; add focused tests instead.
 
+`eval:bugbot` runs the offline Bugbot quality harness. Corpus cases score precision, recall, exact-location accuracy, and severity accuracy independently, so prompt or model changes cannot hide false positives behind a single pass/fail number. Extend the corpus when a production review exposes a new failure mode.
+
 Workflow queue tests inject a clock, random source, and scheduler/delay port. They
 cover one repository traversal with mixed statuses and later-page matches, strict
 lower-ID/name filtering, malformed responses, fail-closed provider errors, 429 and
 rate-limited 403 headers, bounded fallback backoff/jitter, and the absolute deadline.
-The workflow contract test keeps the seven workflow names synchronized with the
+The workflow contract test keeps the eight workflow names synchronized with the
 validator and verifies the `90m queue / 120m job` budget, required runners, action
 inputs, missing/short timeouts, and forbidden mutation-workflow concurrency.
 
@@ -31,6 +35,17 @@ GitHub lifecycle tests cover admission before queue polling, PAT-owner normal-ru
 discard, valid single-action preservation, identity lookup failure, and the absence
 of project composition, agent provisioning, setup, publication, and persistence on
 discarded runs.
+
+The lifecycle replay integration suite feeds normalized, serialized-shaped
+`pull_request_review` payloads through the real lifecycle synchronization use
+case. It verifies deterministic labels for approved reviews, requested changes,
+and ambiguous multi-PR events without invoking an agent route. External check
+workflows are intentionally outside the workflows shipped by Copilot.
+
+Configuration migration tests cover legacy payloads, transient `results`,
+malformed durable values, and future-schema preservation. Architecture tests
+also guard the narrow context contracts used by extracted policies and lifecycle
+reconciliation.
 
 Architecture tests additionally verify that production imports remain acyclic,
 application code does not depend on concrete adapters, and pure model/policy
@@ -51,6 +66,10 @@ neutralization, schema rejection, local finding fingerprints, stale finding
 resolution, provider credential isolation, and the language capability's
 separate application port. A passing model smoke test does not replace these
 deterministic tests.
+
+Setup tests also cover the setup/workflow PAT separation, provider validation,
+per-credential remote health results, invalid-secret replacement, workflow update
+approval and backups, `.env` exclusion, and the read-only doctor path.
 
 The reproducible `metrics:architecture` collector is the full evidence
 workflow; it requires a clean working tree and writes reports outside the

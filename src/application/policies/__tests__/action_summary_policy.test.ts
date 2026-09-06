@@ -41,6 +41,7 @@ describe('action summary policy', () => {
             eventName: 'pull_request',
             issueNumber: -1,
             pullRequestNumber: 12,
+            pullRequestDescriptionMode: 'append',
             results: [new Result({
                 id: 'Review',
                 success: true,
@@ -51,5 +52,6 @@ describe('action summary policy', () => {
 
         expect(summary).toContain('❌ Failure');
         expect(summary).toContain('open=1');
+        expect(summary).toContain('append');
     });
 });

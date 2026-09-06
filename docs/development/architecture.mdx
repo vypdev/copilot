@@ -17,31 +17,75 @@ The repository separates semantic application ports from provider-specific adapt
 
 The application layer MUST NOT import GitHub SDKs, concrete CLIs, process libraries, or provider-specific protocols. Provider adapters MUST NOT define business policy. Configuration validation belongs at the boundary before execution. Prompt construction, untrusted-content handling, and GitHub publication sanitization are separate policies so no agent capability can bypass the security boundary.
 
+The scheduled inactivity cleanup follows the same split: the pure
+`issue_inactivity` policy decides eligibility, application ports expose issue
+snapshots and closure commands, the repository maps GitHub's `updated_at` and
+labels, and the composition root wires the adapters. The use case revalidates
+each issue immediately before mutation so the periodic scan remains best-effort
+and fail-closed for changed candidates.
+
+Setup follows the same boundary: credential collection, workflow comparison,
+approval, and doctor decisions live in application use cases and semantic ports.
+GitHub Secret encryption, workflow dispatch, provider metadata requests, and the
+temporary health-workflow bootstrap are infrastructure adapters. Secret values
+never enter setup override files, Variables, logs, or the generated workflow
+templates.
+
+The setup policy is intentionally split by responsibility:
+
+- `setup_configuration_defaults.ts` owns defaults and override merging.
+- `setup_configuration_validation.ts` owns structural and semantic validation.
+- `setup_configuration_storage_policy.ts` owns repository/organization scope
+  resolution and effective-resource preservation.
+- `setup_configuration_plan.ts` owns the reviewable provisioning plan.
+- `setup_resource_provisioning.ts` owns grouping and port calls for Variables
+  and Secrets.
+
+The legacy `Execution` aggregate is adapted once at
+`initial_setup_request.ts`; the setup workflow consumes only the repository,
+credential, label, issue-type, and setup-configuration facts it needs.
+Action input keys are defined in `src/application/contracts/input_keys.ts`,
+provider-independent action types remain in `src/data/model/action_types.ts`,
+and unrelated constants have explicit owners instead of a global constants
+module.
+
+Runtime aggregates are kept at the composition boundary. Extracted policies and
+reconciliation use cases receive narrow context contracts containing only the
+facts they need; they do not depend on the complete `Execution` aggregate.
+This keeps pure decisions independently testable and makes new event sources
+less likely to couple unrelated capabilities. Application failures use the
+typed `ApplicationError` contract with a category, retry hint, and diagnostic
+cause; the cause is never published as user-facing workflow output.
+
+Configuration embedded in issue or pull-request content is versioned. Readers
+migrate legacy payloads, remove transient execution data, retain unknown keys,
+and preserve future schema versions so an older workflow cannot silently
+downgrade configuration written by a newer one.
+
 ## Workflow queue boundary
 
-The repository-wide mutation queue is an application use case backed by semantic
-ports. `workflow_queue_policy.ts` owns the seven shared workflow names, the 90-minute
-queue budget, adaptive polling schedule, jitter bounds, and retry budgets. The use
-case receives a clock and random-value port so deadline and delay behavior remain
+The workflow-local queue is an application use case backed by semantic ports. Each
+workflow has its own queue; `workflow_queue_policy.ts` owns the 90-minute queue
+budget, adaptive polling schedule, jitter bounds, and retry budgets. The use case
+receives a clock and random-value port so deadline and delay behavior remain
 deterministic in tests; concrete system clock/random and timer adapters are wired in
 `workflow_queue_composition_root.ts`.
 
-`ActivePreviousWorkflowRunsRepository` performs one paginated repository traversal
-per poll and filters workflow names, active statuses, and lower run IDs locally.
+`ActivePreviousWorkflowRunsRepository` uses GitHub's workflow-scoped runs endpoint
+for the current workflow file, paginates only that workflow's history, and filters
+active statuses and lower run IDs locally.
 Provider errors remain at the repository boundary: rate-limited 429/403 responses,
 transient HTTP/network failures, server wait headers, and malformed pages are
 classified there and never become a synthetic zero count. Retry logging exposes only
 sanitized reason, attempt, delay, and reset metadata. Queue-bearing jobs use a
 120-minute workflow timeout, leaving 30 minutes of headroom beyond the queue budget.
 
-When a query has a workflow identifier but no workflow-name list, the repository uses
-the optional workflow-scoped provider endpoint when available. Repository-only clients
-fall back to `listWorkflowRunsForRepo` without sending `workflow_id`; an error from an
-invoked provider endpoint is not converted into a capability fallback. Exact counting
-still requires exhaustive pagination: the current provider contract cannot express the
-seven workflow names, five active statuses, and strict lower-ID predicate as one safe
-server-side request. `per_page: 100` and one traversal minimize fan-out, but deep-history
-API pressure remains a bounded-retry residual risk rather than a correctness shortcut.
+The workflow identifier comes from `GITHUB_WORKFLOW_REF`. A missing identifier or
+unavailable workflow-scoped endpoint fails closed instead of falling back to a
+repository-wide traversal. Exact counting still requires exhaustive pagination of
+the current workflow because the lower run-ID and active-status predicates are
+filtered locally. `per_page: 100` keeps the request count bounded by that workflow's
+history rather than the entire repository.
 
 GitHub Action runs also perform an admission preflight before constructing the full
 execution. The preflight uses the semantic authenticated-user port and a pure

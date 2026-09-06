@@ -3,6 +3,7 @@ import { Result } from '../../../data/model/result';
 import type { RecommendationState } from '../../../data/model/recommendation_state';
 import { createRecommendationFingerprint, isNoNewRecommendation, limitStoredRecommendation } from '../../../application/policies/recommendation_policy';
 import { logDebugInfo, logError, logInfo } from '../../ports/logging_ports';
+import { buildCopilotWelcomeMessage } from '../../../application/policies/copilot_interaction_policy';
 
 export function buildRecommendationResult(
     param: Execution,
@@ -27,14 +28,21 @@ export function buildRecommendationResult(
         recommendationFingerprint,
         recommendation: limitStoredRecommendation(steps),
     };
+    const stepsWithWelcome = isNewIssue(param)
+        ? [buildCopilotWelcomeMessage(param.tokenUser), '## Recommended implementation steps', steps]
+        : ['## Recommended implementation steps', steps];
     return [new Result({
         id: taskId,
         success: true,
         executed: true,
         stepFormat: 'markdown',
-        steps: ['## Recommended implementation steps', steps],
+        steps: stepsWithWelcome,
         payload: { issueNumber, recommendedSteps: steps, recommendationState },
     })];
+}
+
+function isNewIssue(param: Execution): boolean {
+    return param.eventName === 'issues' && param.inputs?.action === 'opened';
 }
 
 function skipUnchangedRecommendation(param: Execution, previous: RecommendationState, fingerprint: string, reason: string): Result[] {

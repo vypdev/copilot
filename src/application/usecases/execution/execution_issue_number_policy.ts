@@ -1,4 +1,4 @@
-import { INPUT_KEYS } from '../../../utils/constants';
+import { INPUT_KEYS } from '../../contracts/input_keys';
 import { parsePositiveSafeInteger } from '../../../domain/positive_integer_policy';
 import { extractIssueNumberFromBranch, extractIssueNumberFromPush } from '../../../utils/title_utils';
 import type { ExecutionIssueResolutionContext } from '../../ports/execution_resolution_ports';
@@ -8,7 +8,13 @@ type IssueRepository = Pick<ExecutionIssueSetupPort, 'isPullRequest' | 'isIssue'
 
 export function resolveEventIssueNumber(execution: ExecutionIssueResolutionContext): number | undefined {
     if (execution.isIssue) return positiveIssueNumberOrUndefined(execution.issue.number);
-    if (execution.isPullRequest) return positiveIssueNumberOrUndefined(extractIssueNumberFromBranch(execution.pullRequest.head));
+    if (execution.isPullRequest) {
+        if (['check_suite', 'workflow_run'].includes(String(execution.inputs?.eventName ?? ''))) {
+            return positiveIssueNumberOrUndefined(execution.pullRequest.number);
+        }
+        return positiveIssueNumberOrUndefined(extractIssueNumberFromBranch(execution.pullRequest.head))
+            ?? positiveIssueNumberOrUndefined(execution.pullRequest.number);
+    }
     if (execution.isPush) return positiveIssueNumberOrUndefined(extractIssueNumberFromPush(execution.commit.branch));
     return positiveIssueNumberOrUndefined(execution.issueNumber);
 }

@@ -2,21 +2,65 @@ name: Copilot - Pull Request
 
 on:
   pull_request:
-    types: [opened, reopened, edited, labeled, unlabeled, closed, assigned, unassigned, synchronize]
+    types: [opened, reopened, edited, closed, synchronize]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
 
 jobs:
   copilot-pull-requests:
+    if: ${{ vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}
     name: Copilot - Pull Request
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    permissions:
+      contents: read
+      checks: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v5
 
+      - name: Fetch incremental review range
+        if: github.event.action == 'synchronize'
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.event.after }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$AFTER_SHA"
+          if ! git fetch --no-tags --depth=1 origin "$BEFORE_SHA"; then
+            echo "::notice::The previous PR commit is unavailable; Bugbot will use the canonical pull-request diff."
+          fi
+
       - uses: vypdev/copilot@v3
         with:
-          ai-ignore-files: build/*
+          ai-ignore-files: ${{ vars.AI_IGNORE_FILES || 'build/*' }}
           debug: ${{ vars.DEBUG }}
+          main-branch: ${{ vars.MAIN_BRANCH || 'master' }}
+          development-branch: ${{ vars.DEVELOPMENT_BRANCH || 'develop' }}
+          feature-tree: ${{ vars.FEATURE_TREE || 'feature' }}
+          bugfix-tree: ${{ vars.BUGFIX_TREE || 'bugfix' }}
+          hotfix-tree: ${{ vars.HOTFIX_TREE || 'hotfix' }}
+          release-tree: ${{ vars.RELEASE_TREE || 'release' }}
+          docs-tree: ${{ vars.DOCS_TREE || 'docs' }}
+          chore-tree: ${{ vars.CHORE_TREE || 'chore' }}
+          branch-management-always: ${{ vars.BRANCH_MANAGEMENT_ALWAYS || 'false' }}
+          reopen-issue-on-push: ${{ vars.REOPEN_ISSUE_ON_PUSH || 'true' }}
+          desired-assignees-count: ${{ vars.DESIRED_ASSIGNEES_COUNT || '1' }}
+          desired-reviewers-count: ${{ vars.DESIRED_REVIEWERS_COUNT || '1' }}
+          merge-timeout: ${{ vars.MERGE_TIMEOUT || '600' }}
+          issues-locale: ${{ vars.ISSUES_LOCALE || 'en-US' }}
+          pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || 'en-US' }}
+          commit-prefix-transforms: ${{ vars.COMMIT_PREFIX_TRANSFORMS || 'replace-slash' }}
+          ai-pull-request-description: ${{ vars.AI_PULL_REQUEST_DESCRIPTION || 'true' }}
+          ai-pull-request-description-mode: ${{ vars.AI_PULL_REQUEST_DESCRIPTION_MODE || 'replace' }}
+          ai-members-only: ${{ vars.AI_MEMBERS_ONLY || 'false' }}
+          ai-include-reasoning: ${{ vars.AI_INCLUDE_REASONING || 'true' }}
+          bugbot-severity: ${{ vars.BUGBOT_SEVERITY || 'low' }}
+          bugbot-comment-limit: ${{ vars.BUGBOT_COMMENT_LIMIT || '20' }}
+          bugbot-fix-verify-commands: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS }}
+          project-column-issue-created: ${{ vars.PROJECT_COLUMN_ISSUE_CREATED || 'Todo' }}
+          project-column-pull-request-created: ${{ vars.PROJECT_COLUMN_PULL_REQUEST_CREATED || 'In Progress' }}
+          project-column-issue-in-progress: ${{ vars.PROJECT_COLUMN_ISSUE_IN_PROGRESS || 'In Progress' }}
+          project-column-pull-request-in-progress: ${{ vars.PROJECT_COLUMN_PULL_REQUEST_IN_PROGRESS || 'In Progress' }}
           agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
           agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
           agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
@@ -58,3 +102,4 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           CURSOR_API_KEY: ${{ (vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor' || vars.RELEASE_PROVIDER == 'cursor') && secrets.CURSOR_API_KEY || '' }}
           CODEX_ACCESS_TOKEN: ${{ secrets.CODEX_ACCESS_TOKEN }}
+          COPILOT_EVIDENCE_TOKEN: ${{ github.token }}

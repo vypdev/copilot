@@ -81,6 +81,9 @@ jobs:
       - name: Validate documentation assets
         run: pnpm run validate:docs-page
 
+      - name: Validate documentation contract
+        run: pnpm run validate:documentation
+
       - name: Validate workflow contract
         run: pnpm run validate:workflows
 

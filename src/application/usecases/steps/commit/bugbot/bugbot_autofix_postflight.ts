@@ -1,5 +1,6 @@
 import type { Execution } from '../../../../../data/model/execution';
 import { Result } from '../../../../../data/model/result';
+import { ApplicationError } from '../../../../errors/application_error';
 import type { GitCommitPort } from '../../../../../application/ports/git_ports';
 import type { BugbotContext } from './types';
 import { isSensitiveWorkspacePath, listWorkspacePaths, selectWorkspacePathsToCommit } from './workspace_changes';
@@ -10,6 +11,7 @@ export async function finalizeBugbotAutofix(
     context: BugbotContext,
     idsToFix: string[],
     workspacePathsBefore: string[],
+    branchCheckedOut: boolean,
     responseText: string | undefined,
     gitCommitPort: GitCommitPort,
 ): Promise<Result[]> {
@@ -34,7 +36,7 @@ export async function finalizeBugbotAutofix(
         success: true,
         executed: true,
         steps: [`Bugbot autofix completed. The configured agent applied changes for findings: ${idsToFix.join(', ')}. Run verify commands and commit/push.`],
-        payload: { targetFindingIds: idsToFix, context, workspacePaths },
+        payload: { targetFindingIds: idsToFix, context, workspacePaths, branchCheckedOut },
     })];
 }
 
@@ -42,7 +44,11 @@ async function inspectWorkspace(gitCommitPort: GitCommitPort, phase: string): Pr
     try {
         return await listWorkspacePaths(gitCommitPort);
     } catch (error) {
-        throw new Error(`Unable to inspect workspace ${phase} autofix: ${error instanceof Error ? error.message : String(error)}`);
+        throw new ApplicationError(
+            `Unable to inspect workspace ${phase} autofix: ${error instanceof Error ? error.message : String(error)}`,
+            'provider',
+            { cause: error, retryable: true },
+        );
     }
 }
 

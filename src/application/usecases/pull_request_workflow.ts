@@ -3,6 +3,7 @@ import { Result } from "../../data/model/result";
 import { logDebugInfo, logError } from "../ports/logging_ports";
 import type { ParamUseCase } from "./base/param_usecase";
 import type { PullRequestWorkflowSteps } from "./pull_request_workflow_steps";
+import { ApplicationError } from '../errors/application_error';
 
 export interface PullRequestWorkflowPorts {
   updatePullRequestDescriptionUseCase: ParamUseCase<Execution, Result[]>;
@@ -29,7 +30,7 @@ export async function runPullRequestWorkflow(
         ports.workflowSteps.checkPriorityPullRequestSize,
       ];
       const results = await runSteps(param, steps);
-      if (param.ai.getAiPullRequestDescription()) {
+      if (shouldUpdatePullRequestDescriptionAutomatically(param)) {
         results.push(...(await ports.updatePullRequestDescriptionUseCase.invoke(param)));
       }
       results.push(...(await runPullRequestReview(param, ports)));
@@ -37,18 +38,22 @@ export async function runPullRequestWorkflow(
     }
 
     if (param.pullRequest.isSynchronize) {
-      const results = param.ai.getAiPullRequestDescription()
+      const results = shouldUpdatePullRequestDescriptionAutomatically(param)
         ? await ports.updatePullRequestDescriptionUseCase.invoke(param)
         : [];
       results.push(...(await runPullRequestReview(param, ports)));
       return results;
     }
 
+    if (param.pullRequest.action === 'edited') {
+      return ports.workflowSteps.updateTitle.invoke(param);
+    }
+
     if (param.pullRequest.isClosed && param.pullRequest.isMerged) {
       return ports.workflowSteps.closeIssueAfterMerging.invoke(param);
     }
-  } catch {
-    const semanticError = new Error("Unable to process the pull request.");
+  } catch (cause) {
+    const semanticError = new ApplicationError("Unable to process the pull request.", 'workflow', { cause });
     logError(semanticError);
     return [
       new Result({
@@ -63,6 +68,13 @@ export async function runPullRequestWorkflow(
   return [];
 }
 
+function shouldUpdatePullRequestDescriptionAutomatically(param: Execution): boolean {
+  const mode = param.ai.getPullRequestDescriptionMode?.();
+  return mode === undefined
+    ? param.ai.getAiPullRequestDescription()
+    : mode === 'replace' || mode === 'append';
+}
+
 async function runPullRequestReview(
   param: Execution,
   ports: PullRequestWorkflowPorts,
@@ -72,7 +84,7 @@ async function runPullRequestReview(
 }
 
 function shouldReviewPullRequest(param: Execution): boolean {
-  return ['opened', 'reopened', 'synchronize', 'edited'].includes(param.pullRequest.action);
+  return ['opened', 'reopened', 'synchronize'].includes(param.pullRequest.action);
 }
 
 async function runSteps(

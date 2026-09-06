@@ -3,14 +3,13 @@ import chalk from 'chalk';
 import boxen from 'boxen';
 import type { Execution } from '../data/model/execution';
 import type { Result } from '../data/model/result';
-import { TITLE } from '../utils/constants';
+import { TITLE } from '../application/contracts/product_identity';
 import { logError, logInfo } from '../utils/logger';
 import { dispatchMainRunRoute } from './main_run_dispatcher';
 import type { ExecutableMainRunRoute, MainRunRouteHandlers } from './main_run_route_handlers';
 import type { RepositoryCoordinates } from './repository_context';
 import { resolveWorkflowIdentifier } from './workflow_context';
 import { createWaitForPreviousWorkflowRunsUseCase } from '../infrastructure/composition/workflow_queue_composition_root';
-import { COPILOT_WORKFLOW_NAMES } from '../application/policies/workflow_queue_policy';
 import type { PreviousWorkflowRunsQuery } from '../application/ports/workflow_run_ports';
 
 export const WORKFLOW_QUEUE_FAILURE_MESSAGE =
@@ -30,18 +29,13 @@ export class WorkflowQueueFailureError extends Error {
 export function buildPreviousWorkflowRunsQuery(
     repository: RepositoryCoordinates,
 ): PreviousWorkflowRunsQuery {
+    const workflowIdentifier = resolveWorkflowIdentifier(process.env.GITHUB_WORKFLOW_REF);
     const query: PreviousWorkflowRunsQuery = {
         owner: repository.owner,
         repository: repository.repo,
         currentRunId: Number.parseInt(process.env.GITHUB_RUN_ID ?? '', 10),
-        workflowName: process.env.GITHUB_WORKFLOW ?? '',
-        workflowNames: COPILOT_WORKFLOW_NAMES,
+        ...(workflowIdentifier ? { workflowIdentifier } : {}),
     };
-    const workflowIdentifier = resolveWorkflowIdentifier(process.env.GITHUB_WORKFLOW_REF);
-    if (workflowIdentifier) {
-        query.workflowIdentifier = workflowIdentifier;
-    }
-
     return query;
 }
 
@@ -52,6 +46,9 @@ export async function waitForPreviousWorkflowRuns(
     const query = buildPreviousWorkflowRunsQuery(repository);
     if (process.env.GITHUB_ACTIONS === 'true' && !Number.isSafeInteger(query.currentRunId)) {
         throw new Error('GitHub workflow identity is unavailable; refusing to bypass sequential execution.');
+    }
+    if (process.env.GITHUB_ACTIONS === 'true' && !query.workflowIdentifier) {
+        throw new Error('GitHub workflow identifier is unavailable; refusing to bypass sequential execution.');
     }
     await createWaitForPreviousWorkflowRunsUseCase(token)
         .invoke(query)

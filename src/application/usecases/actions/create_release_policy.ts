@@ -1,4 +1,5 @@
-import { INPUT_KEYS } from '../../../utils/constants';
+import { INPUT_KEYS } from '../../contracts/input_keys';
+import { ApplicationError } from '../../errors/application_error';
 
 const SEMVER_PATTERN = /^\d+(\.\d+){0,2}$/;
 
@@ -25,6 +26,6 @@ export function normalizeVersion(version: string): string | undefined {
 
 export function versionForRelease(version: string): string {
     const normalized = normalizeVersion(version);
-    if (normalized === undefined) throw new Error('Cannot build a release version from invalid input.');
+    if (normalized === undefined) throw new ApplicationError('Cannot build a release version from invalid input.', 'validation');
     return `v${normalized}`;
 }

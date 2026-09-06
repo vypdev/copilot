@@ -2,7 +2,7 @@ export interface GithubWorkflowRunsParameters {
     owner: string;
     repo: string;
     per_page?: number;
-    workflow_id?: string;
+    workflow_id: string;
     status?: string;
 }
 export interface GithubWorkflowRunsResponse {
@@ -13,8 +13,7 @@ export interface GithubWorkflowRunsResponse {
 export interface GithubWorkflowRunsClient {
     rest: {
         actions: {
-            listWorkflowRunsForRepo(parameters: GithubWorkflowRunsParameters): Promise<GithubWorkflowRunsResponse>;
-            listWorkflowRuns?(parameters: GithubWorkflowRunsParameters): Promise<GithubWorkflowRunsResponse>;
+            listWorkflowRuns(parameters: GithubWorkflowRunsParameters): Promise<GithubWorkflowRunsResponse>;
         };
     };
     paginate: {

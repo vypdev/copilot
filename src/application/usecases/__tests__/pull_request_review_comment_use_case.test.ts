@@ -152,15 +152,6 @@ describe("PullRequestReviewCommentUseCase", () => {
       { isActorAllowedToModifyFiles: mockIsActorAllowedToModifyFiles },
       { getUserFromToken: jest.fn(), getTokenUserDetails: jest.fn() },
       {
-        issueComments: { updateComment: jest.fn() },
-        pullRequestComments: {
-          updatePullRequestReviewComment: jest.fn(),
-          listPullRequestReviewComments: jest.fn(),
-          resolvePullRequestReviewThread: jest.fn(),
-          unresolvePullRequestReviewThread: jest.fn(),
-        },
-      },
-      {
         execute: jest.fn(),
         configureAuthor: jest.fn(),
         stageAll: jest.fn(),
@@ -313,7 +304,7 @@ describe("PullRequestReviewCommentUseCase", () => {
       }),
     );
     expect(mockRunBugbotAutofixCommitAndPush).toHaveBeenCalledTimes(1);
-    expect(mockMarkFindingsResolved).toHaveBeenCalledTimes(1);
+    expect(mockMarkFindingsResolved).not.toHaveBeenCalled();
     expect(mockThinkInvoke).not.toHaveBeenCalled();
     expect(results.some((r) => r.id === "BugbotAutofixUseCase")).toBe(true);
   });

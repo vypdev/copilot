@@ -1,10 +1,10 @@
-import { resolveLifecycleState } from '../lifecycle_state_policy';
+import { readLifecycleExternalEvidence, resolveLifecycleState } from '../lifecycle_state_policy';
 
 const result = (id: string, success = true) => ({ id, success, executed: true, steps: [], errors: [] });
 
 describe('lifecycle state policy', () => {
-    it('moves an issue to analyzing, planned, and in-progress based on route facts', () => {
-        expect(resolveLifecycleState({ eventName: 'issues', action: 'opened', isIssue: true, isPullRequest: false, issueOpened: true, issueDescriptionEdited: false, pullRequestMerged: false, pullRequestClosed: false, results: [] })).toBe('analyzing');
+    it('moves an issue to planned and in-progress while agent activity remains separate', () => {
+        expect(resolveLifecycleState({ eventName: 'issues', action: 'opened', isIssue: true, isPullRequest: false, issueOpened: true, issueDescriptionEdited: false, pullRequestMerged: false, pullRequestClosed: false, results: [] })).toBeUndefined();
         expect(resolveLifecycleState({ eventName: 'issues', action: 'edited', isIssue: true, isPullRequest: false, issueOpened: false, issueDescriptionEdited: true, pullRequestMerged: false, pullRequestClosed: false, results: [result('RecommendStepsUseCase')] })).toBe('planned');
         expect(resolveLifecycleState({ eventName: 'issues', action: 'labeled', isIssue: true, isPullRequest: false, issueOpened: false, issueDescriptionEdited: false, pullRequestMerged: false, pullRequestClosed: false, results: [result('PrepareBranchesUseCase')] })).toBe('in-progress');
     });
@@ -42,6 +42,58 @@ describe('lifecycle state policy', () => {
             pullRequestClosed: false,
             results: [{ ...result('DetectPotentialProblemsUseCase'), payload: { findingStates: { open: 0, reopened: 0 } } }],
         })).toBe('ready');
+    });
+
+    it('uses external review and check evidence without changing the legacy fallback', () => {
+        const base = {
+            eventName: 'pull_request_review',
+            action: 'submitted',
+            isIssue: false,
+            isPullRequest: true,
+            issueOpened: false,
+            issueDescriptionEdited: false,
+            pullRequestMerged: false,
+            pullRequestClosed: false,
+            results: [],
+        };
+        expect(resolveLifecycleState({ ...base, externalEvidence: { review: 'changes-requested' } })).toBe('changes-requested');
+        expect(resolveLifecycleState({ ...base, externalEvidence: { review: 'approved', checks: 'pending' } })).toBe('reviewing');
+        expect(resolveLifecycleState({ ...base, externalEvidence: { review: 'approved', checks: 'success' } })).toBe('ready');
+        expect(resolveLifecycleState({ ...base, externalEvidence: { checks: 'failure' } })).toBe('blocked');
+    });
+
+    it('normalizes GitHub review and check payloads into stable evidence', () => {
+        expect(readLifecycleExternalEvidence({
+            eventName: 'pull_request_review',
+            review: { state: 'changes_requested', commit_id: 'sha-1' },
+        }, 'sha-1')).toEqual({ review: 'changes-requested' });
+        expect(readLifecycleExternalEvidence({
+            eventName: 'check_suite',
+            check_suite: { status: 'completed', conclusion: 'success', head_sha: 'sha-1' },
+        }, 'sha-1')).toEqual({ checks: 'success' });
+        expect(readLifecycleExternalEvidence({
+            eventName: 'workflow_run',
+            workflow_run: { status: 'in_progress', conclusion: null, head_sha: 'sha-1' },
+        }, 'sha-1')).toEqual({ checks: 'pending' });
+    });
+
+    it('ignores missing or stale validation evidence', () => {
+        expect(readLifecycleExternalEvidence({
+            eventName: 'pull_request_review',
+            review: { state: 'approved', commit_id: 'old-sha' },
+        }, 'sha-1')).toBeUndefined();
+        expect(readLifecycleExternalEvidence({
+            eventName: 'pull_request_review',
+            review: { state: 'approved' },
+        }, 'sha-1')).toBeUndefined();
+        expect(readLifecycleExternalEvidence({
+            eventName: 'workflow_run',
+            workflow_run: { status: 'completed', conclusion: 'failure' },
+        }, 'sha-1')).toBeUndefined();
+        expect(readLifecycleExternalEvidence({
+            eventName: 'workflow_run',
+            workflow_run: { status: 'completed', conclusion: 'failure', head_sha: 'old-sha' },
+        }, 'sha-1')).toBeUndefined();
     });
 
     it('moves an explicit planning command on an issue to planned', () => {

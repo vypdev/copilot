@@ -1,6 +1,7 @@
 /**
  * Bugbot types: data structures used across detection, publishing, and autofix.
- * The configured agent computes the diff and returns findings; we never pass a pre-computed diff to it.
+ * GitHub supplies the canonical PR diff and the configured agent can inspect
+ * the read-only workspace for context before returning findings.
  */
 /** Single finding from the configured findings agent. */
 export interface BugbotFinding {
@@ -11,7 +12,11 @@ export interface BugbotFinding {
     fingerprint?: string;
     file?: string;
     line?: number;
+    endLine?: number;
     severity?: string;
+    confidence?: number;
+    category?: string;
+    evidence?: string;
     suggestion?: string;
 }
 export interface ExistingIssueFindingInfo {
@@ -24,6 +29,8 @@ export interface ExistingPullRequestFindingInfo {
     commentIdentity: string;
     pullRequestNumber: number;
     resolved: boolean;
+    /** Fresh GitHub thread state when the provider supplied it. */
+    threadResolved?: boolean;
     fingerprint?: string;
     resolution?: BugbotFindingResolution;
 }
@@ -43,6 +50,17 @@ export interface BugbotPrContext {
         status: string;
     }>;
     pathToFirstDiffLine: Record<string, number>;
+    pathToDiffLocations?: Record<string, Array<{
+        line: number;
+        side: 'LEFT' | 'RIGHT';
+    }>>;
+    changes?: Array<{
+        filename: string;
+        status: string;
+        additions: number;
+        deletions: number;
+        patch: string;
+    }>;
 }
 /** Unresolved finding with a prompt-bounded comment body. */
 export interface UnresolvedFindingWithBody {
@@ -69,6 +87,10 @@ export interface BugbotContext {
     openPrNumbers: number[];
     /** Bounded text sent to the configured findings agent. */
     previousFindingsBlock: string;
+    /** Canonical, bounded PR diff supplied by the GitHub API. */
+    reviewDiffBlock?: string;
+    /** Bounded human review discussion that may affect finding validity. */
+    reviewConversationBlock?: string;
     prContext: BugbotPrContext | null;
     /** Bounded bodies used by intent prompts and autofix. */
     unresolvedFindingsWithBody: UnresolvedFindingWithBody[];

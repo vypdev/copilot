@@ -22,7 +22,6 @@ import { CheckPullRequestCommentLanguageUseCase } from "../../application/usecas
 import { CommentLanguageTranslationWorkflow } from "../../application/usecases/steps/common/comment_language_translation_workflow";
 import { BranchCompareRepository } from "../../data/repository/branch_compare_repository";
 import { MergeRepository } from "../../data/repository/merge_repository";
-import { PullRequestLifecycleRepository } from "../../data/repository/pull_request/pull_request_lifecycle_repository";
 import { RepositoryReleasePublicationRepository } from "../../data/repository/release/repository_release_publication_repository";
 import { RepositoryTagRepository } from "../../data/repository/release/repository_tag_repository";
 import { GitCommitAdapter } from "../git_commit_adapter";
@@ -50,6 +49,10 @@ import {
 import { createIssueLabelRepository } from "./issue_labels_composition_root";
 import { createIssueUseCaseCompositionRoot } from "./issue_use_case_composition_root";
 import { createPullRequestUseCaseCompositionRoot } from "./pull_request_use_case_composition_root";
+import { createOrganizationMembersCompositionRoot } from "./organization_members_composition_root";
+import { UpdatePullRequestDescriptionUseCase } from "../../application/usecases/steps/pull_request/update_pull_request_description_use_case";
+import { PullRequestLifecycleRepository } from "../../data/repository/pull_request/pull_request_lifecycle_repository";
+import { createCloseInactiveIssuesUseCase } from "./issue_inactivity_composition_root";
 
 function createDetectPotentialProblemsUseCase(): DetectPotentialProblemsUseCase {
   const bugbot = createBugbotCompositionRoot();
@@ -88,6 +91,7 @@ export function createSingleActionUseCaseCompositionRoot(): SingleActionUseCase 
       issueDescriptionQueryPort,
       createFindingsQueryPort(),
     ),
+    createCloseInactiveIssuesUseCase(),
   );
 }
 
@@ -97,6 +101,12 @@ export function createIssueCommentUseCaseCompositionRoot(): IssueCommentUseCase 
   const language = createLanguageQueryPort();
   const fixer = createFixerQueryPort();
   const gitCommit = new GitCommitAdapter();
+  const pullRequestDescription = new UpdatePullRequestDescriptionUseCase(
+    new PullRequestLifecycleRepository(createPullRequestLifecycleClient()),
+    createIssueContentCompositionRoot(),
+    createOrganizationMembersCompositionRoot(),
+    createFindingsQueryPort(),
+  );
 
   return new IssueCommentUseCase(
     new CheckIssueCommentLanguageUseCase(
@@ -117,10 +127,10 @@ export function createIssueCommentUseCaseCompositionRoot(): IssueCommentUseCase 
     bugbot.issue,
     createActorAuthorizationRepository(),
     createAuthenticatedUserCompositionRoot(),
-    bugbot.resolution,
     gitCommit,
     new DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }),
     new DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution),
+    pullRequestDescription,
   );
 }
 
@@ -130,6 +140,12 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(): PullRequ
   const language = createLanguageQueryPort();
   const fixer = createFixerQueryPort();
   const gitCommit = new GitCommitAdapter();
+  const pullRequestDescription = new UpdatePullRequestDescriptionUseCase(
+    new PullRequestLifecycleRepository(createPullRequestLifecycleClient()),
+    createIssueContentCompositionRoot(),
+    createOrganizationMembersCompositionRoot(),
+    createFindingsQueryPort(),
+  );
 
   return new PullRequestReviewCommentUseCase(
     new CheckPullRequestCommentLanguageUseCase(
@@ -150,10 +166,10 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(): PullRequ
     bugbot.issue,
     createActorAuthorizationRepository(),
     createAuthenticatedUserCompositionRoot(),
-    bugbot.resolution,
     gitCommit,
     new DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }),
     new DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution),
+    pullRequestDescription,
   );
 }
 
@@ -176,20 +192,32 @@ export function createCommitUseCaseCompositionRoot(
 export function createMainRunRouteCompositionRoot(
   projectBoardCommandPort: ProjectBoardCommandPort,
 ): MainRunRouteHandlers {
+  // Composition is scoped to one main run. Each route is built only when it is
+  // actually selected, while repeated calls in the same run reuse its graph.
+  const singleAction = lazy(() => createSingleActionUseCaseCompositionRoot());
+  const issueComment = lazy(() => createIssueCommentUseCaseCompositionRoot());
+  const issue = lazy(() => createIssueUseCaseCompositionRoot());
+  const pullRequestReviewComment = lazy(() => createPullRequestReviewCommentUseCaseCompositionRoot());
+  const pullRequest = lazy(() => createPullRequestUseCaseCompositionRoot());
+  const push = lazy(() => createCommitUseCaseCompositionRoot(projectBoardCommandPort));
+
   return {
     "single-action": async (execution) =>
-      createSingleActionUseCaseCompositionRoot().invoke(execution),
+      singleAction().invoke(execution),
     "issue-comment": async (execution) =>
-      createIssueCommentUseCaseCompositionRoot().invoke(execution),
+      issueComment().invoke(execution),
     issue: async (execution) =>
-      createIssueUseCaseCompositionRoot().invoke(execution),
+      issue().invoke(execution),
     "pull-request-review-comment": async (execution) =>
-      createPullRequestReviewCommentUseCaseCompositionRoot().invoke(execution),
+      pullRequestReviewComment().invoke(execution),
     "pull-request": async (execution) =>
-      createPullRequestUseCaseCompositionRoot().invoke(execution),
+      pullRequest().invoke(execution),
     push: async (execution) =>
-      createCommitUseCaseCompositionRoot(projectBoardCommandPort).invoke(
-        execution,
-      ),
+      push().invoke(execution),
   };
+}
+
+function lazy<T>(factory: () => T): () => T {
+  let value: T | undefined;
+  return () => value ?? (value = factory());
 }

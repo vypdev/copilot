@@ -9,6 +9,7 @@ describe('getBugbotPrompt', () => {
             headBranch: 'feature/42',
             baseBranch: 'develop',
             issueNumber: '42',
+            changeScopeInstruction: 'Inspect only abc1234..def5678.',
             ignoreBlock: '\n**Files to ignore:** *.test.ts',
             previousBlock: '(No previous findings.)',
         });
@@ -18,6 +19,7 @@ describe('getBugbotPrompt', () => {
         expect(prompt).toContain('feature/42');
         expect(prompt).toContain('develop');
         expect(prompt).toContain('42');
+        expect(prompt).toContain('Inspect only abc1234..def5678.');
         expect(prompt).toContain('*.test.ts');
         expect(prompt).toContain('(No previous findings.)');
         expect(prompt).toContain('findings');

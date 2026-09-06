@@ -33,6 +33,13 @@ function signalProcessGroup(signal) {
 function beginTermination(signal, timeoutExpired = false) {
   if (timeoutExpired) timedOut = true;
   if (signal && !forwardedSignal) forwardedSignal = signal;
+  // A timed-out command must not outlive the synchronous caller. The caller
+  // returns as soon as the direct child closes, so a delayed SIGKILL would
+  // leave grandchildren running after runProcess() has already returned.
+  if (timeoutExpired) {
+    signalProcessGroup("SIGKILL");
+    return;
+  }
   signalProcessGroup(signal || "SIGTERM");
   if (!killTimer) {
     killTimer = setTimeout(() => signalProcessGroup("SIGKILL"), 5_000);

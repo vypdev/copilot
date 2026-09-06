@@ -8,6 +8,6 @@ export declare class PullRequestReviewCommentCommandRepository implements PullRe
     private readonly queryClient?;
     constructor(createClient: GithubClientPort<GithubPullRequestReviewCommentCreateClient>, graphqlClient: GithubClientPort<GithubGraphqlTransportClient>, queryClient?: GithubClientPort<GithubPullRequestReviewCommentQueryClient> | undefined);
     private listExistingBodies;
-    createReviewWithComments(owner: string, repository: string, pullRequestNumber: number, commitSha: string, comments: PullRequestReviewCommentDraft[], token: string): Promise<void>;
+    createReviewWithComments(owner: string, repository: string, pullRequestNumber: number, commitSha: string, body: string, comments: PullRequestReviewCommentDraft[], token: string): Promise<void>;
     updatePullRequestReviewComment(_owner: string, _repository: string, commentIdentity: string, body: string, token: string): Promise<void>;
 }

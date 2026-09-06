@@ -14,18 +14,18 @@ Use the `pull_request` trigger with the types you need. Common setup:
 ```yaml
 on:
   pull_request:
-    types: [opened, reopened, edited, labeled, unlabeled, closed, assigned, unassigned, synchronize]
+    types: [opened, reopened, edited, closed, synchronize]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
 ```
 
 | Event type | When it runs | Typical use |
 |------------|--------------|-------------|
 | `opened` | A new PR is created | Link to issue, link to projects, assign reviewers, apply size/priority, generate AI description (if enabled). |
 | `reopened` | A closed PR is reopened | Re-apply linking and labels. |
-| `edited` | PR title or body is edited | Update linking/labels; regenerate or update AI description if configured. |
-| `labeled` / `unlabeled` | Labels change | Sync project/state if needed. |
-| `synchronize` | New commits are pushed to the PR branch | Re-run size/priority (and progress if push workflow runs); AI description can be updated. |
+| `edited` | PR title or body is edited | Normalize the title only; no agent is invoked. |
+| `synchronize` | New commits are pushed to the PR branch | Update the AI description when enabled and review the new commit range while reconciling open findings. |
 | `closed` | PR is closed or merged | Update project state. |
-| `assigned` / `unassigned` | Assignees or reviewers change | Sync if your flow depends on it. |
 
 For **first-time setup**, at least **`opened`** and **`synchronize`** are useful so that new PRs get full treatment and updates when the branch changes.
 
@@ -38,7 +38,7 @@ name: Copilot - Pull Request
 
 on:
   pull_request:
-    types: [opened, reopened, edited, labeled, unlabeled, closed, assigned, unassigned, synchronize]
+    types: [opened, reopened, edited, closed, synchronize]
 
 jobs:
   copilot-pull-requests:
@@ -48,7 +48,14 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - uses: vypdev/copilot@v2
+      - name: Fetch incremental review range
+        if: github.event.action == 'synchronize'
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.event.after }}
+        run: git fetch --no-tags --depth=1 origin "$BEFORE_SHA" "$AFTER_SHA"
+
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
           project-ids: ${{ vars.PROJECT_IDS }}
@@ -56,11 +63,14 @@ jobs:
 
 - **`token`** is required (use a fine-grained PAT with repo and project permissions; see [Authentication](/authentication)).
 - **`project-ids`** is optional but needed if you want PRs linked to GitHub Project boards and moved to columns (e.g. "In Progress").
+- The conditional fetch downloads only the two commit objects needed by the incremental reviewer. Keep it when `synchronize` is enabled; a full-history checkout is not required.
 
 
 ## What runs when
 
 1. **Admission on every trigger** (with valid `token`): The action first compares the **event actor** with the **token owner**. If they are the same, the normal pipeline completes successfully before queueing or loading PR context (see [Troubleshooting](/security-operations/operations/troubleshooting)); use a **bot account** for the PAT if you want full behavior when you open your own PRs. Valid explicit single actions still run.
+
+   Set the optional Repository Variable `COPILOT_BOT_LOGIN` to the PAT bot's login to skip bot-authored event jobs before a runner starts. The expression is generic and optional; the authenticated in-Action admission remains the fallback. This workflow is event-driven and does not require or install a `workflow_run` trigger. Consumers may add private, explicitly scoped workflow chaining in their own repositories.
 
 2. **PR–issue linking:** The action infers the **issue number** from the PR branch name (e.g. `feature/123-add-login` → issue `123`) and **links the PR to that issue** (and posts a comment on the PR when configured).
 
@@ -74,7 +84,9 @@ jobs:
 
 7. **Comments and images:** The action can post a comment on the PR with optional images per branch type (feature, bugfix, etc.). See [Capabilities](/pull-requests/capabilities).
 
-8. **Bugbot review:** On `opened`, `reopened`, `edited`, and `synchronize`, the reviewer role analyzes the PR head and publishes stable finding comments. Active findings move the PR to `copilot:state:changes-requested`; a clean review moves it to `copilot:state:ready`. Configure `reviewer-provider`, `reviewer-model-provider`, `reviewer-model`, `reviewer-effort`, and `reviewer-command` only when the reviewer should differ from the base agent.
+8. **Bugbot review:** On `opened` and `reopened`, the reviewer role analyzes the full PR. On `synchronize`, it analyzes the exact new commit range and reconciles every open finding against current code. Metadata-only edits do not invoke the agent. Active findings move the PR to `state:changes-requested` and `state:awaiting-issue-author`; a clean review moves it to `state:ready` and `state:awaiting-maintainer`. During the run, `state:ai-processing` may coexist with those labels and is removed when the agent finishes. Configure `reviewer-provider`, `reviewer-model-provider`, `reviewer-model`, `reviewer-effort`, and `reviewer-command` only when the reviewer should differ from the base agent.
+
+9. **External lifecycle evidence:** `pull_request_review` updates only the managed lifecycle label. A requested change marks the PR as changes requested, and an approved review can mark it ready. This event does not invoke an agent pipeline. If you add private workflows for external checks, wire and scope those triggers in your own repository.
 
 ## Next steps
 

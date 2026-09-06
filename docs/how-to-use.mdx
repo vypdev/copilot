@@ -3,12 +3,14 @@ title: How To Use
 description: Quick setup with copilot setup, then customize labels, templates, and workflows.
 ---
 
-## Quick installation (CLI)
+## Recommended installation and initialization
 
-The recommended installation is the public npm package. The package is scoped as `@vypdev/copilot`, but it exposes the global `copilot` executable:
+The recommended path is to install the published package globally with `pnpm` and
+then initialize the target repository with `copilot setup`. The package is scoped
+as `@vypdev/copilot`, but it exposes the global `copilot` executable:
 
 ```bash
-npm install --global @vypdev/copilot
+pnpm add --global @vypdev/copilot
 copilot --version
 ```
 
@@ -18,7 +20,9 @@ Use Node.js 24 or newer. You can check the active version before installing:
 node --version
 ```
 
-Run the command from the root of the repository where you want Copilot to operate, not from the package installation directory.
+Run repository-dependent commands from the root of the repository where you want
+Copilot to operate, not from the package installation directory. Version and help
+commands can be run from any directory.
 
 For local development or when testing an unreleased checkout, install from the repository instead:
 
@@ -30,13 +34,15 @@ corepack pnpm install . --global
 
 If the checkout does not include the compiled `build/` folder (e.g. it is gitignored), run `corepack pnpm install` and `corepack pnpm run build` before `corepack pnpm install . --global`.
 
-Once installed, the `copilot` command is available globally. **All Copilot CLI commands** (including `copilot setup`, `copilot check-progress -i 123`, etc.) must be run **from inside the repository** where you want Copilot to run. Commands that access GitHub require **`PERSONAL_ACCESS_TOKEN`** in the environment or in a **`.env`** file at the repository root; `copilot setup` can copy static setup files before a token is available. See [CLI commands](/single-actions/workflow-and-cli).
+Once installed, the `copilot` command is available globally. Repository-dependent commands such as `copilot setup`, `copilot doctor`, `copilot check-progress`, `copilot think`, and `copilot do` must be run **from the root of the target repository**. The `copilot upgrade`, `copilot --version`, and help flows can run from any directory. Commands that access GitHub accept `--token` or `PERSONAL_ACCESS_TOKEN` from the environment. `copilot setup` and `copilot doctor` securely prompt for the setup PAT when run interactively; no `.env` file is read or created. `copilot setup --dry-run` is the only setup mode that can run without a token. See [CLI commands](/single-actions/workflow-and-cli).
 
-If you previously installed Copilot from a local checkout, installing the npm package switches the same `copilot` command to the published package. Check which executable and package are active:
+If you previously installed Copilot from a local checkout, installing the published
+package with pnpm switches the same `copilot` command to the published package.
+Check which executable and package are active:
 
 ```bash
 command -v copilot
-npm list --global --depth 0 @vypdev/copilot
+pnpm list --global --depth 0 @vypdev/copilot
 copilot --version
 ```
 
@@ -52,14 +58,21 @@ corepack pnpm remove --global copilot
 
 ### Update or reinstall the global CLI
 
-For a published release, update the global npm package:
+For a published release, update the global pnpm package:
 
 ```bash
 copilot upgrade
 copilot --version
 ```
 
-`copilot upgrade` can be run from any directory; it updates the published npm installation and does not require a GitHub repository or `PERSONAL_ACCESS_TOKEN`. If you are using a version older than `3.3.0`, update it once with `npm install --global @vypdev/copilot@latest`, then use `copilot upgrade` for future updates.
+`copilot upgrade` can be run from any directory; it updates the published pnpm
+installation and does not require a GitHub repository or `PERSONAL_ACCESS_TOKEN`.
+If the installed version does not include the `upgrade` command, bootstrap it once
+with `pnpm add --global @vypdev/copilot@latest`, then use `copilot upgrade` for
+future updates. Running `pnpm update --global @vypdev/copilot` directly is also
+supported.
+
+Before running a normal CLI command, Copilot performs a lightweight, informational check for a newer published version. The check uses a local 24-hour cache, has a short timeout, never blocks or changes the command result, and stays silent when npm is unavailable. If an update is found, Copilot prints `A new version (x.y.z) is available. Run "copilot upgrade".` The `upgrade`, `--version`, and help flows do not trigger this check. To disable it, set `COPILOT_DISABLE_UPDATE_CHECK=1`.
 
 For an unreleased checkout, update the checkout and reinstall the local package globally:
 
@@ -69,18 +82,12 @@ git pull --ff-only origin master
 corepack pnpm install . --global --force
 ```
 
-After an npm installation, confirm the executable and installed package:
+After installation, confirm the executable and installed package:
 
 ```bash
 command -v copilot
 copilot --help
 copilot --version
-npm list --global --depth 0 @vypdev/copilot
-```
-
-If you installed from a checkout with pnpm, use this package listing instead:
-
-```bash
 corepack pnpm list --global --depth 0 @vypdev/copilot
 ```
 
@@ -88,12 +95,11 @@ The complete command reference, including every supported option, is in [Workflo
 
 ---
 
-## Tutorial: Get Copilot running in three steps
+## Tutorial: Initialize a repository
 
 <Steps>
   <Step title="1. Create a PAT">
-    The action needs a **Personal Access Token** to manage issues, branches, projects, and workflows. You must create it manually; `copilot setup` does not create it.
-    Follow the [Authentication](/authentication) guide to create a **fine-grained PAT** with the right permissions (Actions, Administration, Contents, Issues, Metadata, Pull requests, etc.) and store it as a secret (e.g. `PAT`) in your repository or organization.
+    Create the **workflow PAT** for the dedicated bot account. Follow the [Authentication](/authentication) guide to create a **fine-grained PAT** with the runtime permissions required by your workflows and store it as the `PAT` Secret in your repository or organization. During `copilot setup`, the operator will provide a separate **setup PAT** in a hidden prompt; that token is used locally to configure the repository and is never stored as `PAT`.
   </Step>
 
   <Step title="2. Run copilot setup in your repository root">
@@ -104,25 +110,27 @@ The complete command reference, including every supported option, is in [Workflo
     copilot setup
     ```
 
-    **About the token the first time:**  
-    The first time you run `copilot setup`, there will usually be **no `.env` file** in that repo with the PAT. The command will copy setup files (workflows, templates, etc.) but may fail or skip the step that needs GitHub access (labels, issue types). In that case:
+    Before applying the plan, the wizard securely asks for the setup PAT. For automation, pass it explicitly or through the environment:
 
-    - Create a **`.env`** file in the **repository root** with your token:
-      ```bash
-      PERSONAL_ACCESS_TOKEN=your_fine_grained_token_here
-      ```
-    - Run **`copilot setup` again**. This time it will have access to the repository and will create labels and issue types.
+    ```bash
+    PERSONAL_ACCESS_TOKEN=your_setup_pat copilot setup --non-interactive --yes --skip-secrets
+    # or: copilot setup --token your_setup_pat
+    ```
 
-    Alternatively, you can create the `.env` file with `PERSONAL_ACCESS_TOKEN` and its value **before** the first run and execute `copilot setup` once; it will then complete all steps (copy files + create labels and issue types) in a single pass.
+    The wizard shows a reviewable plan and asks for confirmation. Use `copilot setup --dry-run` to inspect it without a token or changes.
 
     `copilot setup` will:
     - Create `.github/`, `.github/workflows/`, and `.github/ISSUE_TEMPLATE/` if they do not exist.
-    - Copy all files from the Copilot `setup/` folder into your repo (workflows, issue templates, pull request template). Existing files are **not** overwritten.
-    - Verify GitHub access using `PERSONAL_ACCESS_TOKEN` from `.env`, the environment, or the `--token` option.
-    - Create all required **labels** in the repository (type, action, priority, size, progress 0%–100%).
+    - Copy only the selected files from the Copilot `setup/` folder into your repo (workflows, issue templates, pull request template). Existing files are **not** overwritten unless you approve an update.
+    - Detect existing setup workflows and ask before updating them. Use `--update-workflows` to approve updates non-interactively; existing workflow files are backed up under `.copilot/setup-backups/` before replacement.
+    - Verify GitHub access using the setup PAT. This operator token is used only for the setup operation and is never stored as a workflow Secret.
+    - Ask for the separate workflow PAT owned by the bot account. It is validated and stored remotely as the `PAT` Secret; it is not the setup PAT.
+    - Ask for each selected provider API key, validate it with a metadata-only provider request, and store it as a GitHub Secret. Existing Secrets are never overwritten unless you explicitly replace them. If a remote credential health workflow is already available, existing values are validated remotely before you choose to keep them.
+    - Create or update non-sensitive Repository Variables for the selected runtimes, model policy, branches, Projects, AI behavior (including `AI_IGNORE_FILES`), and Bugbot settings. Use `--skip-variables` to leave them unchanged.
+    - Create all required **labels** in the repository (type, action, priority, size, progress 0%–100%, and the lifecycle/activity/waiting labels).
     - Create all required **issue types** in the organization (Task, Bug, Feature, Release, Hotfix, etc.), if your plan supports it.
 
-    After this step you have a working baseline: labels, templates, and workflow files are in place.
+    After this step you have a working baseline: labels, selected templates/workflows, agent routing, operational Variables, and validated credentials are in place.
   </Step>
 
   <Step title="3. Adapt files to your repository">
@@ -141,15 +149,48 @@ The complete command reference, including every supported option, is in [Workflo
     - **Branch name prefixes**: The action uses inputs like `feature-tree`, `bugfix-tree`, `release-tree`, `hotfix-tree` (defaults: `feature`, `bugfix`, `release`, `hotfix`) to create branch names. If you change them, branch names will follow the new prefixes; keep templates and docs in sync.
     - **Project columns**: Default column names are "Todo" and "In Progress". If you rename columns in GitHub Projects, set the corresponding action inputs (`project-column-issue-created`, `project-column-issue-in-progress`, etc.) so the action moves issues/PRs to the correct columns.
 
-    **Bugbot autofix (issue/PR comments):** Workflows that run on `issue_comment` or `pull_request_review_comment` (so users can ask the bot to fix reported findings) must grant **`contents: write`** so the action can commit and push. On **issue_comment**, the action resolves the branch from an open PR that references the issue and checks out that branch before applying fixes and pushing. See [OpenCode → How Bugbot works](/agents/opencode#how-bugbot-works-potential-problems) and [Troubleshooting → Bugbot autofix](/security-operations/operations/troubleshooting#bugbot-autofix).
+    **Bugbot autofix (issue/PR comments):** Workflows that run on `issue_comment` or `pull_request_review_comment` (so users can ask the bot to fix reported findings) must grant **`contents: write`** so the action can commit and push. On **issue_comment**, the action resolves the branch from an open PR that references the issue and checks out that branch before applying fixes and pushing. See [Bugbot autofix](/bugbot/autofix) and [Troubleshooting → Bugbot autofix](/security-operations/operations/troubleshooting#bugbot-autofix).
   </Step>
 </Steps>
 
 ---
 
+## Manual workflow integration (advanced)
+
+The Action can also be wired manually from a GitHub Actions workflow. This is a
+lower-level integration path for repositories that cannot run the setup wizard;
+it is not equivalent to the recommended `copilot setup` flow.
+
+1. Copy only the workflow files you need from the installed package's `setup/workflows/`
+   directory into `.github/workflows/`.
+2. Ensure every Copilot step uses a stable Action reference such as
+   `vypdev/copilot@v3` and passes a write-capable `token` where required.
+3. Configure the labels, issue types, Variables, Secrets, templates, permissions,
+   and workflow dependencies yourself.
+
+For example:
+
+```yaml
+- uses: vypdev/copilot@v3
+  with:
+    token: ${{ secrets.PAT }}
+```
+
+Manual workflow installation only adds execution wiring. It does not initialize
+the repository metadata or install the complete set of Copilot workflows. Prefer
+`copilot setup` unless this manual control is intentional. See [Workflow setup](/issues/workflow-setup)
+for the action-level contract.
+
+---
+
 ## What lives in `setup/` (and what gets created)
 
-The workflow and template files under `setup/` are copied into your repo by `copySetupFiles` (run during `copilot setup`). The `setup/.env` file is a local, developer-friendly credential-key template and is intentionally not copied. Below is a desglose of labels (with defaults), issue types, and the contents of `setup/` so you know what you can customize and what must stay consistent.
+The workflow and template files under `setup/` are copied into your repo by
+`copilot setup`. Manual copying is supported as an advanced integration path, but
+it does not perform the rest of initialization. Credentials are never shipped in
+the package or written to local configuration files. Below is a breakdown of
+labels (with defaults), issue types, and the contents of `setup/` so you know what
+you can customize and what must stay consistent.
 
 ### Coherence when customizing
 
@@ -209,6 +250,25 @@ The setup creates the following labels. Names come from the action input default
 
 The setup creates **21 progress labels**: `0%`, `5%`, `10%`, … `100%`. Colors go from red (0%) to yellow (50%) to green (100%). These are used by the Check Progress action and commit steps to update issue progress.
 
+### Lifecycle, activity, and waiting labels
+
+The setup creates three related label dimensions. The durable lifecycle phase is exclusive; the temporary activity label and the waiting label are independent, so a target can have (for example) `state:in-progress` and `state:ai-processing` at the same time.
+
+| Input key | Default label name | Purpose |
+|-----------|--------------------|--------|
+| `state-planned-label` | `state:planned` | An implementation plan is available |
+| `state-in-progress-label` | `state:in-progress` | Implementation has started |
+| `state-reviewing-label` | `state:reviewing` | A pull request is under review |
+| `state-changes-requested-label` | `state:changes-requested` | The review has active findings |
+| `state-verified-label` | `state:verified` | The pull request was merged successfully |
+| `state-ready-label` | `state:ready` | The latest review is ready for human action |
+| `state-blocked-label` | `state:blocked` | The workflow needs human intervention |
+| `state-ai-processing-label` | `state:ai-processing` | Temporary marker while a Copilot agent is working; removed at run end |
+| `state-awaiting-maintainer-label` | `state:awaiting-maintainer` | Waiting for maintainer response, approval, or merge |
+| `state-awaiting-issue-author-label` | `state:awaiting-issue-author` | Waiting for information or changes from the issue author |
+
+Existing `copilot:state:*` labels are not migrated automatically and can be removed manually.
+
 ---
 
 ## Issue types created by `copilot setup` (defaults)
@@ -261,8 +321,32 @@ All `.yml` / `.yaml` files here are copied to `.github/workflows/`. Default file
 | `copilot_pull_request_comment.yml` | Runs on PR review comment: e.g. translation checks. |
 | `release_workflow.yml` | **Manual** (`workflow_dispatch`): release flow (version, changelog, tag, release, deployed). Filename must match the action input `release-workflow` (default: `release_workflow.yml`) so the Issue workflow can dispatch it when the **deploy** label is added. |
 | `hotfix_workflow.yml` | **Manual** (`workflow_dispatch`): hotfix flow. Filename must match the action input `hotfix-workflow` (default: `hotfix_workflow.yml`). |
+| `agent-cli-provisioning.yml` | **Manual** (`workflow_dispatch`): verifies that the selected agent runtimes are available, pinned, and usable on the runner. |
+| `copilot_credential_health.yml` | **Manual** (`workflow_dispatch`): validates selected remote credentials without exposing their values; used by `copilot doctor`. |
+| `copilot_close_inactive_issues.yml` | **Scheduled every 6 hours** (also `workflow_dispatch`): closes open issues waiting for a maintainer or issue author after the configured inactivity threshold. Opt-in. |
 
 Each Copilot workflow step passes at least `token` and the configured agent CLI inputs via `vars.*`. The **release** and **hotfix** workflows are **dispatched by the action** when an issue has the deploy label and the corresponding release/hotfix context (branch, version, etc.); they are not triggered by issue events directly.
+
+The `agent-cli-provisioning.yml` workflow checks the selected runtime binaries and
+their pinned provisioning inputs. The `copilot_credential_health.yml` workflow is
+read-only with respect to repository configuration: it executes provider-specific
+health checks and reports only whether each requested credential is usable. GitHub
+does not expose Secret values through its API, so `copilot doctor` dispatches this
+workflow when it is available on the repository's default branch.
+
+When Repository Variables are enabled, setup creates the common `AGENT_*` contract,
+the provider/model/effort variables for each configured `FINDINGS_*`, `FIXER_*`,
+`PLANNER_*`, `REVIEWER_*`, `TESTER_*`, and `RELEASE_*` role, the repository and
+project variables, and the AI/Bugbot variables. The workflow templates read
+`*_COMMAND` pass-through variables too, but custom commands are executable
+configuration and must be reviewed and added deliberately; setup does not invent
+them from a model selection.
+
+When enabled, inactivity cleanup also creates `INACTIVITY_THRESHOLD_HOURS` (168
+by default). The scheduled workflow closes only issues marked
+`state:awaiting-maintainer` or `state:awaiting-issue-author`; it rechecks the
+issue immediately before mutating it and skips candidates that became active or
+entered `state:ai-processing`.
 
 ### `setup/ISSUE_TEMPLATE/`
 
@@ -285,17 +369,14 @@ The **labels** in each template must match the label names configured in the act
 
 Copied to `.github/pull_request_template.md`. Used as the default body for new PRs. The AI PR description feature can fill this structure; you can edit the sections (Summary, Related Issues, Scope, Technical Details, How to Test, etc.) to fit your repo. No Copilot logic depends on specific headings; only the deploy/release/hotfix flows depend on **workflow filenames** and **label names**.
 
-### `setup/.env`
-
-The setup package keeps a developer-friendly `setup/.env` template containing only `PERSONAL_ACCESS_TOKEN=` and no value. For local CLI usage, create an ignored `.env` file in the root of the target repository and set the token there. This file is not used by the GitHub Action; workflow credentials come from GitHub Secrets.
-
 ---
 
 ## Optional: Configure projects, AI, and workflows
 
-After the tutorial and file adaption, you can:
+After the tutorial and file customization, you can:
 
-- Set **repository or organization variables** for the agent CLI contract (`AGENT_PROVIDER`, `AGENT_MODEL_PROVIDER`, `AGENT_MODEL`, `AGENT_EFFORT`, `AGENT_ALLOWED_MODEL_PROVIDERS`, and `AGENT_ALLOWED_MODELS`) and, when needed, independent `FINDINGS_*` and `FIXER_*` overrides. The supplied Copilot workflow templates forward these values to the action. Keep `CURSOR_API_KEY` available only when the common, findings, or fixer provider is Cursor.
+- Set **repository or organization variables** for the agent CLI contract (`AGENT_PROVIDER`, `AGENT_MODEL_PROVIDER`, `AGENT_MODEL`, `AGENT_EFFORT`, `AGENT_ALLOWED_MODEL_PROVIDERS`, and `AGENT_ALLOWED_MODELS`) and, when needed, independent task overrides for `FINDINGS_*`, `REVIEWER_*`, `PLANNER_*`, `FIXER_*`, `TESTER_*`, and `RELEASE_*`. The supplied Copilot workflow templates forward these values to the action. Keep `CURSOR_API_KEY` available only when one of the configured task providers is Cursor.
+- Enable the `inactiveIssueClosure` setup feature when you want the scheduled cleanup, and adjust `INACTIVITY_THRESHOLD_HOURS` (1–8760 hours) to match your retention policy. This feature is disabled by default because it closes GitHub issues.
 - Adjust **project column names** and **branch names** via action inputs so the action moves issues/PRs to the right columns and uses your branch naming.
 - Customize **issue templates** (copy, add fields, change labels) while keeping label and workflow names consistent as above.
 - Add or modify **release/hotfix** workflow steps (e.g. build, deploy) while keeping the workflow **filenames** and the action inputs `release-workflow` and `hotfix-workflow` in sync.

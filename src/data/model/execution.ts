@@ -22,6 +22,7 @@ import { Workflows } from "./workflows";
 import { githubUsersMatch } from '../../domain/github_user_policy';
 import type { ExecutionInputs } from './execution_inputs';
 import type { ExecutionComponents } from './execution_components';
+import { DEFAULT_INACTIVITY_THRESHOLD_HOURS } from '../../domain/issue_inactivity';
 
 
 export class Execution {
@@ -55,6 +56,7 @@ export class Execution {
     previousConfiguration: Config | undefined;
     currentConfiguration: Config;
     tokenUser: string | undefined;
+    inactivityThresholdHours: number;
     inputs: ExecutionInputs | undefined;
 
     get eventName(): string {
@@ -183,6 +185,7 @@ export class Execution {
         this.project = components.projects;
         this.workflows = components.workflows;
         this.tokenUser = components.tokenUser;
+        this.inactivityThresholdHours = components.inactivityThresholdHours ?? DEFAULT_INACTIVITY_THRESHOLD_HOURS;
         this.currentConfiguration = new Config({});
         this.inputs = components.inputs;
         this.welcome = components.welcome;

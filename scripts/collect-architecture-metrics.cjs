@@ -310,7 +310,8 @@ function parseLcovInventory(content, repositoryRoot) {
 
 function commandTimeout(command) {
   const executable = path.basename(command[0]);
-  if (executable === "pnpm" && command.includes("jest")) return 600_000;
+  if ((executable === "pnpm" && command.includes("jest"))
+    || (executable === "jest" && command.includes("--coverage"))) return 600_000;
   if (executable.includes("repowise") && command[1] === "init") return 900_000;
   if (executable.includes("repowise")) return 300_000;
   if (executable.includes("graphify")) return 600_000;

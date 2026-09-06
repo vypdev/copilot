@@ -39,5 +39,6 @@ export interface ExecutionComponents {
     projects: Projects;
     tokenUser?: string;
     welcome?: Welcome;
+    inactivityThresholdHours?: number;
     inputs?: ExecutionInputs;
 }

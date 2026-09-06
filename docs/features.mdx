@@ -40,7 +40,7 @@ When the workflow runs on `issues` (opened, edited, labeled, unlabeled, etc.):
 | **Size labels** | Assigns size labels (XS–XXL) and checks size thresholds (lines, files, commits) for prioritization. |
 | **Comments & images** | Posts comments with optional images (per branch type: feature, bugfix, docs, chore, hotfix, release). |
 | **Smart workflow guidance** | Comments can include Git-Flow reminders and next steps. |
-| **Lifecycle state** | Maintains one setup-provisioned `copilot:state:*` label so the issue visibly moves from analysis to planning and implementation. |
+| **Lifecycle labels** | Maintains an exclusive durable `state:*` phase, an optional `state:ai-processing` activity marker, and an optional human-waiting label. Activity can coexist with the durable phase and is removed when the agent run finishes. |
 
 ### 2. Pull request events (`on: pull_request`)
 
@@ -54,7 +54,7 @@ When the workflow runs on `pull_request` (opened, edited, etc.):
 | **Priority & size** | Applies priority and size checks (labels and thresholds). |
 | **AI PR description** | If `ai-pull-request-description` is true and the selected agent CLI is configured, generates or updates the PR description by filling the repo's `.github/pull_request_template.md` from the issue and the branch diff (configured agent CLI). See [Pull Requests → AI-generated PR description](/pull-requests/ai-description). |
 | **Comments & images** | Posts comments with optional images per branch type. |
-| **Bugbot review** | Reviews the PR on open, edit, reopen, and synchronize events; publishes stable line findings, reconciles resolved/reopened status, and exposes a Check Run. |
+| **Bugbot review** | Reviews the full PR on open/reopen and the new commit range on synchronize; publishes stable line findings, reconciles resolved/reopened status, and exposes a Check Run. |
 
 ### 3. Push events (`on: push`)
 
@@ -66,11 +66,22 @@ When the workflow runs on `push` (e.g. to any branch):
 | **Commit prefix check** | Warns if commit messages do not follow the prefix derived from the branch name (using `commit-prefix-transforms`). |
 | **Reopen issue** | If `reopen-issue-on-push` is true, reopens the issue when new commits are pushed to its branch. |
 | **Size & progress** | Computes size (XS–XXL) and progress (0–100%) from the branch diff; updates the **issue** and any **open PRs** for that branch with the same labels. Uses the configured agent runtime. No separate workflow is needed. |
-| **Bugbot (potential problems)** | the configured agent analyzes the branch vs base and reports findings as **comments on the issue** and **review comments on open PRs**; updates issue comments when findings are resolved and **marks PR review threads as resolved** when applicable. Configurable via `bugbot-severity` and `ai-ignore-files`. See [Bugbot](/bugbot), [Issues](/issues#bugbot-potential-problems), and [Pull Requests](/pull-requests#bugbot-potential-problems). |
+| **Bugbot (potential problems)** | the configured agent analyzes the branch vs base and reports findings as **issue comments** when there is no PR, or as one summarized review with inline findings when a PR is available; it updates stored findings and **marks PR review threads as resolved** when applicable. Configurable via `bugbot-severity` and `ai-ignore-files`. See [Bugbot](/bugbot), [Issues](/issues#bugbot-potential-problems), and [Pull Requests](/pull-requests#bugbot-potential-problems). |
 | **Comments & images** | Posts commit summary comments with optional images. |
 | **Finding reconciliation** | Carries stable finding fingerprints across pushes and marks findings fixed, obsolete, dismissed, or reopened without creating duplicate comments. |
 
 ---
+
+### 4. Scheduled inactivity cleanup (`on: schedule`)
+
+The optional `copilot_close_inactive_issues.yml` workflow runs every six hours
+and invokes `close_inactive_issues_action`. It closes only open issues with
+`state:awaiting-maintainer` or `state:awaiting-issue-author` whose GitHub
+`updated_at` is older than `inactivity-threshold-hours` (168 hours by default).
+Pull requests, issues marked `state:ai-processing`, and candidates that become
+active while the scan is running are skipped. Setup keeps this feature disabled
+by default because it changes issue state; enable `inactiveIssueClosure` after
+reviewing the threshold and the workflow PAT permissions.
 
 ## Single actions
 
@@ -79,16 +90,17 @@ When you set `single-action` (and, when required, `single-action-issue`, `single
 | Single action value | Inputs required | Description |
 |--------------------|----------------|-------------|
 | **`check_progress_action`** | `single-action-issue` | Runs progress check on demand (e.g. without pushing). Progress is normally updated automatically on every push; use this to re-run the check or when no push workflow is configured. |
-| **`detect_potential_problems_action`** | `single-action-issue` | Bugbot: the configured agent analyzes the branch vs base; reports findings as comments on the issue and as PR review comments; updates issue comments and marks PR review threads as resolved when findings are fixed. |
+| **`detect_potential_problems_action`** | `single-action-issue` | Bugbot: the configured agent analyzes the branch vs base; reports findings on the issue when no PR exists, or in one summarized PR review when one is available; updates stored findings and resolves PR threads when findings are fixed. |
 | **`recommend_steps_action`** | `single-action-issue` | Uses the configured agent to recommend implementation steps from the issue description; posts a comment on the issue. |
 | **`think_action`** | — | Uses the configured agent for deep code analysis and change proposals (reasoning over the codebase). No issue required. |
 | **`initial_setup`** | — | Performs initial setup: creates labels, issue types, verifies access. If the repo has no version tags, creates default tag `v1.0.0` so release/hotfix issues get a base version. No issue required. |
 | **`create_release`** | `single-action-version`, `single-action-title`, `single-action-changelog` | Creates a GitHub release with the given version, title, and changelog. |
 | **`create_tag`** | `single-action-version` | Creates a Git tag with prefix `v` (e.g. `v1.2.0`) for the given version from the release branch. |
-| **`publish_github_action`** | `single-action-version` | Publishes or updates the GitHub Action: creates/updates the major version tag (e.g. `v2` from `v2.0.4`). Requires `create_tag` to have been run first. |
+| **`publish_github_action`** | `single-action-version` | Publishes or updates the GitHub Action: creates/updates the major version tag (for example, `v3` from a `v3.x.y` release). Requires `create_tag` to have been run first. |
 | **`deployed_action`** | `single-action-issue` | Marks the issue as deployed; updates labels and project state (e.g. "deployed"). |
+| **`close_inactive_issues_action`** | `inactivity-threshold-hours` (optional) | Scans waiting issues and closes those inactive for the configured threshold; no issue number is required. |
 
-Single actions that **throw an error** if the last step fails: `publish_github_action`, `create_release`, `deployed_action`, `create_tag`. This lets the workflow fail the job when the action does not succeed.
+Single actions that **throw an error** if the last step fails: `publish_github_action`, `create_release`, `deployed_action`, `create_tag`, `close_inactive_issues_action`. This lets the workflow fail the job when the action does not succeed.
 
 ---
 
@@ -109,10 +121,10 @@ Codex is the default runtime for the repository's AI feature paths. OpenCode rem
 | Feature | Where it runs | Description |
 |--------|----------------|-------------|
 | **Check progress** | Push (commit) pipeline; optional single action `check_progress_action` / CLI `check-progress` | On every push, the configured agent compares issue vs branch diff and updates the progress label on the issue and on any open PRs for that branch. |
-| **Bugbot (potential problems)** | Push (commit) pipeline; optional single action `detect_potential_problems_action` / CLI `detect-potential-problems` | Analyzes branch vs base and posts findings as **comments on the issue** and **review comments on open PRs**; updates issue comments and marks PR review threads as resolved when findings are fixed. Configurable: `bugbot-severity`, `ai-ignore-files`. |
-| **Do user request** | Issue comment; PR review comment | When you comment asking to perform a change in the repo (e.g. "add a test for X", "refactor this", "implement feature Y"), the configured agent applies the changes in the workspace, runs verify commands, and the action commits and pushes with a generic message. Same permission as Bugbot autofix: **only org members or the repo owner**. Uses the same `bugbot-fix-verify-commands` and agent CLI setup. |
+| **Bugbot (potential problems)** | Push (commit) pipeline; optional single action `detect_potential_problems_action` / CLI `detect-potential-problems` | Analyzes branch vs base and posts findings as **issue comments** when no PR exists, or as one summarized review with inline comments when a PR is available; updates stored findings and resolves PR threads when findings are fixed. Configurable: `bugbot-severity`, `ai-ignore-files`. |
+| **Do user request** | Issue comment; PR review comment | When you comment asking to perform a change in the repo (or use `/copilot implement <request>`), the configured agent applies the changes in the workspace, runs verify commands, and the action commits and pushes with a generic message. Organization repositories require an org member; personal repositories require the owner or a `push`/`maintain`/`admin` collaborator. Uses the same `bugbot-fix-verify-commands` and agent CLI setup. |
 | **Think / reasoning** | Issue/PR comment pipeline; single action `think_action` | Deep code analysis and change proposals (configured agent CLI). On comments: answers when mentioned (or on any comment for question/help issues). Runs when the comment was not a fix/do request or when the user is not allowed to trigger file-modifying actions. |
-| **Explicit Copilot commands** | Issue and PR comments | `/copilot plan`, `/copilot clarify`, `/copilot estimate`, `/copilot test-plan`, `/copilot status`, `/copilot review`, `/copilot findings`, `/copilot recheck`, `/copilot fix`, and `/copilot dismiss` provide a bounded, predictable interface. |
+| **Explicit Copilot commands** | Issue and PR comments | `/copilot help`, `/copilot plan`, `/copilot clarify`, `/copilot estimate`, `/copilot test-plan`, `/copilot explain`, `/copilot diagnose`, `/copilot analyze`, `/copilot status`, `/copilot review`, `/copilot findings`, `/copilot recheck`, `/copilot fix`, `/copilot dismiss`, and `/copilot implement` provide a bounded, predictable interface. |
 | **Comment translation** | Issue comment; PR review comment | Translates comments to the configured locale (`issues-locale`, `pull-requests-locale`) when they are written in another language. |
 | **AI PR description** | Pull request pipeline | Fills the repo's `.github/pull_request_template.md` from issue and branch diff (configured agent CLI). |
 | **Copilot** | CLI `copilot do` | Code analysis and file edits via the configured agent runtime. |
@@ -124,10 +136,10 @@ Codex is the default runtime for the repository's AI feature paths. OpenCode rem
 ## Workflow concurrency and sequential execution
 
 <Info>
-  **Sequential runs:** An admissible mutation run **waits** for any earlier active Copilot/Task mutation run to finish. Runs execute one after another instead of in parallel or being cancelled — something GitHub does not offer natively. Runs triggered by the PAT owner that would only re-trigger the normal pipeline complete before entering this queue.
+  **Sequential runs:** An admissible mutation run **waits** for any earlier active run of the same Copilot workflow to finish. Runs execute one after another instead of in parallel or being cancelled — something GitHub does not offer natively. Runs triggered by the PAT owner that would only re-trigger the normal pipeline complete before entering this queue.
 </Info>
 
-GitHub's native [concurrency](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#concurrency) can cancel in-progress runs when a new one starts (`cancel-in-progress: true`) and can retain only one pending run. Copilot adds an application-level queue: every started Copilot/Task mutation run waits for earlier active runs, including runs from the other Copilot event workflows, so intermediate issue changes are not discarded by a native concurrency group.
+GitHub's native [concurrency](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#concurrency) can cancel in-progress runs when a new one starts (`cancel-in-progress: true`) and can retain only one pending run. Copilot adds an application-level queue per workflow: every started run waits for earlier active runs of that same workflow, so intermediate issue changes are not discarded by a native concurrency group.
 
 Release and hotfix workflows use a separate first `queue-gate` job. That job invokes
 the Action with the internal `queue-gate-only` mode and only the ephemeral
@@ -146,19 +158,19 @@ an execution or publish results.
 ### How it works
 
 1. For a GitHub Action run with a PAT, the action first compares the event actor with the authenticated PAT user. A normal run from the same account completes successfully before project composition, agent provisioning, setup, or queue polling. A valid explicit single action continues through the normal lifecycle.
-2. An admitted run resolves the current workflow file from `GITHUB_WORKFLOW_REF` and performs one paginated repository workflow-runs traversal per poll with `per_page: 100`, then locally filters the active statuses (`in_progress`, `queued`, `requested`, `waiting`, and `pending`), the seven known Copilot/Task mutation workflow names, and runs with a **lower run ID** (i.e. started earlier). For compatibility queries that provide a workflow identifier without names, it uses the workflow-scoped endpoint when the provider exposes it; otherwise it uses the repository endpoint without `workflow_id`.
+2. An admitted run resolves the current workflow file from `GITHUB_WORKFLOW_REF` and performs one paginated workflow-scoped traversal per poll with `per_page: 100`, then locally filters active statuses (`in_progress`, `queued`, `requested`, `waiting`, and `pending`) and runs with a **lower run ID** (i.e. started earlier). Unrelated workflows are never included.
 3. Provider failures fail closed. Transient 408/5xx/network errors use bounded exponential retry; HTTP 429 and rate-limited 403 responses honor `Retry-After` or `x-ratelimit-reset`, then use a slower bounded fallback. Diagnostics contain only the retry reason, attempt, delay, and safe reset timestamp metadata.
 4. If any such run exists, the action polls immediately and then uses adaptive 5s, 10s, 20s, 40s, and 60s maximum delays with bounded ±20% jitter. The absolute queue wait is limited to 90 minutes.
 5. When no earlier active run in the mutation queue remains, the action continues. A provider failure or queue deadline never becomes an empty result, so setup and mutation work cannot proceed with an unknown queue state.
 
-The queue deliberately traverses every provider page because exact counting must detect
-matching runs on later pages. GitHub's current adapter contract cannot safely combine
-all seven workflow names, all five active statuses, and the strict lower-ID predicate
-in one server-side filter. A full traversal with `per_page: 100` and one sequential
-request path reduces fan-out while preserving correctness; deep-history pagination
-therefore remains an explicit API-pressure risk, not an early-stop optimization.
+The queue deliberately traverses every page of the current workflow because exact
+counting must detect a matching run on a later page. The workflow-scoped endpoint
+keeps this bounded to one workflow's history, and `per_page: 100` minimizes the
+remaining API calls while preserving correctness.
 
-So you get a **repository-wide mutation queue**: multiple triggers for the same workflow (e.g. many issue edits) and related Copilot workflows run sequentially. This conservative scope prevents two workflows from changing shared branches, issue metadata, or release state at the same time. Read-only CI may keep its own native concurrency policy.
+So you get a **workflow-local mutation queue**: multiple triggers for the same
+workflow (e.g. many issue edits) run sequentially without blocking unrelated
+Copilot workflows. Read-only CI may keep its own native concurrency policy.
 
 ### Example
 
@@ -174,7 +186,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: vypdev/copilot@master
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
           project-ids: '2,3'

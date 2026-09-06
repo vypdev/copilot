@@ -3,6 +3,9 @@ import { type ExistingByFindingId } from "./types";
 export interface BugbotComment {
     id: number;
     body: string | null;
+    user?: {
+        login?: string;
+    };
 }
 export interface ParsedBugbotFindingComments {
     /** Full bodies for issue-comment read-modify-write operations. */
@@ -11,7 +14,7 @@ export interface ParsedBugbotFindingComments {
     /** Prompt-bounded PR bodies keyed by canonical finding ID. */
     prFindingIdToBody: Record<string, string>;
 }
-export declare function parseBugbotFindingComments(issueComments: BugbotComment[], pullRequestCommentsByNumber: ReadonlyMap<number, PullRequestReviewComment[]>): ParsedBugbotFindingComments;
+export declare function parseBugbotFindingComments(issueComments: BugbotComment[], pullRequestCommentsByNumber: ReadonlyMap<number, PullRequestReviewComment[]>, trustedAuthorLogin?: string, reviewThreadStatesByPullRequest?: ReadonlyMap<number, Readonly<Record<string, boolean>>>): ParsedBugbotFindingComments;
 export interface PreviousBugbotFinding {
     id: string;
     fullBody: string;
