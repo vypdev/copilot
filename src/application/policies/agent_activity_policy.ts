@@ -56,7 +56,7 @@ export function shouldTrackAgentActivity(
                     || isAgentReady(execution, 'findings')
                     || isAgentReady(execution, 'fixer'));
         case 'pull-request':
-            return ['opened', 'reopened', 'edited', 'synchronize'].includes(execution.pullRequest.action)
+            return ['opened', 'reopened', 'synchronize'].includes(execution.pullRequest.action)
                 && (isAgentReady(execution, 'reviewer')
                     || (execution.ai.getAiPullRequestDescription() && isAgentReady(execution, 'planner')));
         case 'push':

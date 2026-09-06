@@ -52372,7 +52372,7 @@ function shouldTrackAgentActivity(execution, route) {
                     || isAgentReady(execution, 'findings')
                     || isAgentReady(execution, 'fixer'));
         case 'pull-request':
-            return ['opened', 'reopened', 'edited', 'synchronize'].includes(execution.pullRequest.action)
+            return ['opened', 'reopened', 'synchronize'].includes(execution.pullRequest.action)
                 && (isAgentReady(execution, 'reviewer')
                     || (execution.ai.getAiPullRequestDescription() && isAgentReady(execution, 'planner')));
         case 'push':
@@ -57592,6 +57592,9 @@ async function runPullRequestWorkflow(param, taskId, ports) {
             results.push(...(await runPullRequestReview(param, ports)));
             return results;
         }
+        if (param.pullRequest.action === 'edited') {
+            return ports.workflowSteps.updateTitle.invoke(param);
+        }
         if (param.pullRequest.isClosed && param.pullRequest.isMerged) {
             return ports.workflowSteps.closeIssueAfterMerging.invoke(param);
         }
@@ -57623,7 +57626,7 @@ async function runPullRequestReview(param, ports) {
     return ports.reviewPotentialProblemsUseCase.invoke(param);
 }
 function shouldReviewPullRequest(param) {
-    return ['opened', 'reopened', 'synchronize', 'edited'].includes(param.pullRequest.action);
+    return ['opened', 'reopened', 'synchronize'].includes(param.pullRequest.action);
 }
 async function runSteps(param, steps) {
     const results = [];
@@ -58335,6 +58338,7 @@ exports.buildBugbotPrompt = buildBugbotPrompt;
 const prompts_1 = __nccwpck_require__(69518);
 const project_context_instruction_1 = __nccwpck_require__(63907);
 const MAX_IGNORE_BLOCK_LENGTH = 2000;
+const GIT_OBJECT_ID = /^[0-9a-f]{7,64}$/i;
 function buildBugbotPrompt(param, context) {
     const headBranch = param.pullRequest?.head?.trim() || param.commit?.branch || 'unknown';
     const baseBranch = param.currentConfiguration.parentBranch ?? param.branches.development ?? 'develop';
@@ -58356,9 +58360,29 @@ function buildBugbotPrompt(param, context) {
         headBranch,
         baseBranch,
         issueNumber: String(param.issueNumber),
+        changeScopeInstruction: buildChangeScopeInstruction(param, headBranch, baseBranch),
         ignoreBlock,
         previousBlock,
     });
+}
+function buildChangeScopeInstruction(param, headBranch, baseBranch) {
+    const before = normalizedObjectId(param.inputs?.before);
+    const after = normalizedObjectId(param.inputs?.after);
+    const isIncrementalPullRequestUpdate = param.inputs?.eventName === 'pull_request'
+        && param.pullRequest.action === 'synchronize'
+        && before !== undefined
+        && after !== undefined
+        && before !== after;
+    if (!isIncrementalPullRequestUpdate) {
+        return `Determine what has changed in the branch "${headBranch}" compared to "${baseBranch}" (you must compute or obtain the diff yourself using the repository context above).`;
+    }
+    return `This is an incremental pull-request update. For task 1, analyze the exact commit range \`${before}..${after}\` and the surrounding current code needed to understand those changes. Do not re-review the unchanged remainder of the full \`${baseBranch}...${headBranch}\` diff. You must compute or obtain the incremental diff yourself. Task 2 is not limited to this range: inspect the current code relevant to every previously reported finding before deciding whether it is resolved.`;
+}
+function normalizedObjectId(value) {
+    if (typeof value !== 'string')
+        return undefined;
+    const normalized = value.trim();
+    return GIT_OBJECT_ID.test(normalized) ? normalized : undefined;
 }
 
 
@@ -73288,7 +73312,7 @@ const TEMPLATE = `You are analyzing the latest code changes for potential bugs a
 - Issue number: {{issueNumber}}
 {{ignoreBlock}}
 
-**Your task 1 (new/current problems):** Determine what has changed in the branch "{{headBranch}}" compared to "{{baseBranch}}" (you must compute or obtain the diff yourself using the repository context above). Then identify potential bugs, logic errors, security issues, and code quality problems. Be strict and descriptive. One finding per distinct problem. Return them in the \`findings\` array (each with id, title, description; optionally file, line, severity, suggestion). Only include findings in files that are not in the ignore list above.
+**Your task 1 (new/current problems):** {{changeScopeInstruction}} Then identify potential bugs, logic errors, security issues, and code quality problems. Be strict and descriptive. One finding per distinct problem. Return them in the \`findings\` array (each with id, title, description; optionally file, line, severity, suggestion). Only include findings in files that are not in the ignore list above.
 {{previousBlock}}
 
 **Output:** Return a JSON object with: "findings" (array of new/current problems from task 1), and if we gave you previously reported issues above, "resolved_finding_ids" (array of those ids that are now fixed or no longer apply, as per task 2). Optionally return "resolved_finding_reasons" as an object mapping those exact ids to "fixed" or "obsolete". Never resolve an id that was not included in the previous-findings list.`;

@@ -13,11 +13,13 @@ Bugbot detection runs in two ways:
 
 ### 1. On pull-request review events
 
-The pull-request workflow runs a fresh review on `opened`, `reopened`,
-`edited`, and `synchronize`. It uses the PR head SHA and changed files
-directly, so a PR does not need to contain an issue number in its branch name.
-The reviewer role publishes one review summary and attaches its findings as
-line comments on the current diff.
+The pull-request workflow runs a full review on `opened` and `reopened`. On
+`synchronize`, it reviews only the exact `before..after` commit range for new
+problems instead of reprocessing the unchanged part of a large PR. Existing
+open findings are still checked against current code, so incremental analysis
+does not weaken resolution. A PR does not need to contain an issue number in
+its branch name. The reviewer role publishes one review summary and attaches
+its findings as line comments on the current diff.
 
 ### 2. On every push (commit workflow)
 

@@ -68,7 +68,7 @@ Use this for team branding or to show different visuals per type of PR. See [Con
 
 ## Bugbot on PRs
 
-**Bugbot** (potential problems) reviews the PR on `opened`, `reopened`, `edited`, and `synchronize`, and also reviews changes from the **push** workflow or the single action `detect_potential_problems_action`. It posts **review comments** on the PR at the relevant file and line for each finding. When a finding is resolved, the action **marks that review thread as resolved** and preserves whether it was fixed, obsolete, or dismissed. You can **ask the bot to fix findings** by replying in the thread or commenting on the PR. See [Bugbot](/bugbot).
+**Bugbot** (potential problems) reviews the full PR on `opened` and `reopened`. On `synchronize`, it reviews the newly pushed commit range and checks every open finding against current code. It also reviews changes from the **push** workflow or the single action `detect_potential_problems_action`. It posts **review comments** on the PR at the relevant file and line for each finding. When a finding is resolved, the action **marks that review thread as resolved** and preserves whether it was fixed, obsolete, or dismissed. You can **ask the bot to fix findings** by replying in the thread or commenting on the PR. See [Bugbot](/bugbot).
 
 ## Review state and evidence
 

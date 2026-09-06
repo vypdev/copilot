@@ -45,6 +45,10 @@ export async function runPullRequestWorkflow(
       return results;
     }
 
+    if (param.pullRequest.action === 'edited') {
+      return ports.workflowSteps.updateTitle.invoke(param);
+    }
+
     if (param.pullRequest.isClosed && param.pullRequest.isMerged) {
       return ports.workflowSteps.closeIssueAfterMerging.invoke(param);
     }
@@ -80,7 +84,7 @@ async function runPullRequestReview(
 }
 
 function shouldReviewPullRequest(param: Execution): boolean {
-  return ['opened', 'reopened', 'synchronize', 'edited'].includes(param.pullRequest.action);
+  return ['opened', 'reopened', 'synchronize'].includes(param.pullRequest.action);
 }
 
 async function runSteps(

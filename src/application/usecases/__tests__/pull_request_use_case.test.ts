@@ -100,10 +100,35 @@ describe("PullRequestUseCase", () => {
       pullRequest: { isOpened: true, isSynchronize: false, isClosed: false, isMerged: false, action: "opened" },
     }));
     await useCase.invoke(minimalExecution({
-      pullRequest: { isOpened: true, isSynchronize: false, isClosed: false, isMerged: false, action: "labeled" },
+      pullRequest: { isOpened: false, isSynchronize: false, isClosed: false, isMerged: false, action: "labeled" },
     }));
 
     expect(mockReviewPotentialProblemsInvoke).toHaveBeenCalledTimes(1);
+  });
+
+  it("when PR metadata is edited, normalizes only the title", async () => {
+    const useCase = new PullRequestUseCase(
+      { taskId: "UpdatePullRequestDescriptionUseCase", invoke: mockUpdateDescriptionInvoke },
+      workflowSteps,
+      { taskId: "DetectPotentialProblemsUseCase", invoke: mockReviewPotentialProblemsInvoke },
+    );
+    const param = minimalExecution({
+      pullRequest: {
+        isOpened: false,
+        isSynchronize: false,
+        isClosed: false,
+        isMerged: false,
+        action: "edited",
+      },
+      ai: { getAiPullRequestDescription: () => true },
+    });
+
+    await useCase.invoke(param);
+
+    expect(mockUpdateTitleInvoke).toHaveBeenCalledWith(param);
+    expect(mockUpdateDescriptionInvoke).not.toHaveBeenCalled();
+    expect(mockReviewPotentialProblemsInvoke).not.toHaveBeenCalled();
+    expect(mockAssignMemberInvoke).not.toHaveBeenCalled();
   });
 
   it("when PR is opened and ai getAiPullRequestDescription, calls UpdatePullRequestDescriptionUseCase", async () => {

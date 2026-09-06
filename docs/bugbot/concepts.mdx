@@ -19,7 +19,7 @@ Severity and publication policy must be explicit. A missing credential, invalid 
 
 ## Pull-request review and evidence
 
-For `opened`, `reopened`, `edited`, and `synchronize` events, Bugbot analyzes the current PR head and changed files. A PR without an issue number can still receive a review. New findings are grouped under one review summary and published as stable inline comments anchored to valid changed lines. Issue comments are used only when there is no PR target. Findings are reconciled using a local fingerprint, so wording changes do not create duplicate findings.
+For `opened` and `reopened`, Bugbot analyzes the full PR. For `synchronize`, task 1 is bounded to the new `before..after` commit range while task 2 still checks every open finding against current code. A PR without an issue number can still receive a review. New findings are grouped under one review summary and published as stable inline comments anchored to valid changed lines. Issue comments are used only when there is no PR target. Findings are reconciled using a local fingerprint, so wording changes do not create duplicate findings.
 
 The action publishes a bounded Job Summary for every run. When the supplied token can write Checks, it also publishes one stable Check Run: `Copilot / Plan` for issue and planning work, `Copilot / Review` for pull requests, and `Copilot / Verification` for push verification. A review with active or reopened findings is reported as `failure`; a clean review is `success`. If Check Runs are unavailable, the action logs the optional failure and keeps the Job Summary as the evidence source.
 

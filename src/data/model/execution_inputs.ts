@@ -74,6 +74,8 @@ export interface ExecutionInputs {
     eventName?: string;
     actor?: string;
     action?: string;
+    before?: string;
+    after?: string;
     ref?: string;
     repo?: { owner?: string; repo?: string };
     issue?: EventIssuePayload;

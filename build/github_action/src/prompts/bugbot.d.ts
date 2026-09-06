@@ -5,6 +5,7 @@ export type BugbotParams = {
     headBranch: string;
     baseBranch: string;
     issueNumber: string;
+    changeScopeInstruction: string;
     ignoreBlock: string;
     previousBlock: string;
 };

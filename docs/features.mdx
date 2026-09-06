@@ -54,7 +54,7 @@ When the workflow runs on `pull_request` (opened, edited, etc.):
 | **Priority & size** | Applies priority and size checks (labels and thresholds). |
 | **AI PR description** | If `ai-pull-request-description` is true and the selected agent CLI is configured, generates or updates the PR description by filling the repo's `.github/pull_request_template.md` from the issue and the branch diff (configured agent CLI). See [Pull Requests → AI-generated PR description](/pull-requests/ai-description). |
 | **Comments & images** | Posts comments with optional images per branch type. |
-| **Bugbot review** | Reviews the PR on open, edit, reopen, and synchronize events; publishes stable line findings, reconciles resolved/reopened status, and exposes a Check Run. |
+| **Bugbot review** | Reviews the full PR on open/reopen and the new commit range on synchronize; publishes stable line findings, reconciles resolved/reopened status, and exposes a Check Run. |
 
 ### 3. Push events (`on: push`)
 

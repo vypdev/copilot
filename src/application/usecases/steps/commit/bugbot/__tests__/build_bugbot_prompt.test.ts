@@ -86,6 +86,29 @@ describe("buildBugbotPrompt", () => {
         expect(prompt).not.toContain('refs/pull/42/merge');
     });
 
+    it('scopes synchronized pull request analysis to the newly pushed commit range', () => {
+        const before = 'a'.repeat(40);
+        const after = 'b'.repeat(40);
+        const prompt = buildBugbotPrompt(mockExecution({
+            inputs: { eventName: 'pull_request', action: 'synchronize', before, after },
+            pullRequest: { action: 'synchronize', head: 'feature/42-real-head' },
+        } as unknown as Partial<Execution>), mockContext());
+
+        expect(prompt).toContain(`exact commit range \`${before}..${after}\``);
+        expect(prompt).toContain('Do not re-review the unchanged remainder');
+        expect(prompt).toContain('Task 2 is not limited to this range');
+    });
+
+    it('falls back to a full branch review when synchronize SHAs are unavailable or unsafe', () => {
+        const prompt = buildBugbotPrompt(mockExecution({
+            inputs: { eventName: 'pull_request', action: 'synchronize', before: '$(unsafe)', after: 'b'.repeat(40) },
+            pullRequest: { action: 'synchronize', head: 'feature/42-real-head' },
+        } as unknown as Partial<Execution>), mockContext());
+
+        expect(prompt).toContain('Determine what has changed in the branch "feature/42-real-head" compared to "develop"');
+        expect(prompt).not.toContain('$(unsafe)');
+    });
+
     it("uses develop when parentBranch and branches.development are missing", () => {
         const prompt = buildBugbotPrompt(
             mockExecution({

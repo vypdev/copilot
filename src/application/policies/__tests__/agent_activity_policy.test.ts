@@ -49,7 +49,7 @@ describe('agent activity policy', () => {
         }), 'pull-request-review-comment')).toBe(true);
     });
 
-    it('tracks pull request description work when the planner is available', () => {
+    it('does not track metadata-only pull request edits as agent activity', () => {
         const unavailable = { model: '', command: '' };
         const available = { model: 'model', command: 'agent' };
         expect(shouldTrackAgentActivity(execution({
@@ -61,7 +61,7 @@ describe('agent activity policy', () => {
                 getAgentConfiguration: jest.fn((task: string) => task === 'planner' ? available : unavailable),
                 getAiPullRequestDescription: jest.fn(() => true),
             },
-        }), 'pull-request')).toBe(true);
+        }), 'pull-request')).toBe(false);
     });
 
     it('tracks push analysis only when commits and findings configuration exist', () => {

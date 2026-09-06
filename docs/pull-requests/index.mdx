@@ -29,10 +29,12 @@ When your workflow runs on **`pull_request`** events (e.g. opened, edited, label
 
 | What happens | What Copilot does |
 |--------------|-------------------|
-| A **PR is opened or updated** | Links the PR to the issue (from branch name); adds the PR to configured projects and moves it to the right column; assigns reviewers; computes size and priority from diff and updates labels; optionally generates or updates the PR description with AI. |
+| A **PR is opened or reopened** | Links the PR to its issue and projects, assigns reviewers, applies size/priority policy, optionally generates its description, and runs a full Bugbot review. |
+| New commits **synchronize** the PR | Optionally refreshes the AI description and reviews only the new commit range while reconciling every open finding. |
+| PR metadata is **edited** | Normalizes the title without invoking an agent or replaying creation-time mutations. |
 | **Push** to the PR branch | Commit workflow runs; Bugbot can post findings as review comments and update/sync with the issue. You can ask the bot to fix findings from a comment. See [Bugbot](/bugbot). |
 
-**Bugbot** (potential problems) runs on PR review events, on **push** to an issue-linked branch, or on demand. When a PR is available, each analysis publishes one review summary with its new findings attached as inline comments; it does not duplicate those findings as independent PR conversation comments. For full details, see [Bugbot](/bugbot).
+**Bugbot** (potential problems) runs on PR code-change events, on **push** to an issue-linked branch, or on demand. When a PR is available, each analysis publishes one review summary with its new findings attached as inline comments; it does not duplicate those findings as independent PR conversation comments. For full details, see [Bugbot](/bugbot).
 
 ## Next steps
 

@@ -36,8 +36,8 @@ This page describes the **internal flow** of Bugbot: how detection runs, how the
    unbounded comment history from exhausting the prompt or causing unsafe
    guesses about resolution.
 
-3. **Build prompt:** The action builds a prompt for the configured agent's analysis role with: repo context, head and base branch, issue number, optional ignore patterns (`ai-ignore-files`), and the list of **previously reported findings**. The agent is asked to:
-   - **Task 1:** Compute the diff (or use the repo context to determine changes) and return **new/current findings** (id, title, description, optional file, line, severity, suggestion).
+3. **Build prompt:** The action builds a prompt for the configured agent's analysis role with: repo context, head and base branch, issue number, optional ignore patterns (`ai-ignore-files`), and the list of **previously reported findings**. On a PR `synchronize` event with valid Git object ids, the prompt uses the exact `before..after` range; initial, reopened, push, and on-demand reviews use the full branch/base scope. The agent is asked to:
+   - **Task 1:** Compute the selected full or incremental diff and return **new/current findings** (id, title, description, optional file, line, severity, suggestion). Incremental reviews may inspect surrounding current code but do not re-review the unchanged remainder of the PR.
    - **Task 2:** Return **resolved_finding_ids**: which of the previous findings are now fixed or no longer apply.
 
 4. **Filter and limit:** The response is schema-validated and filtered: path safety (no `..`, no absolute paths), exclude paths in `ai-ignore-files`, apply **minimum severity** (`bugbot-severity`), deduplicate. Finding identity is provider-independent and is based on normalized path, title, and a line bucket; provider prose and suggestions are not identity, so a rephrased finding updates the existing comment instead of creating a duplicate. Then **comment limit** (`bugbot-comment-limit`) is applied: only the first N findings are kept for individual comments; the rest contribute to an **overflow** count and titles for one summary comment.

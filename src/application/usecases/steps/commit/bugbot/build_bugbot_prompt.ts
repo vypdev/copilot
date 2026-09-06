@@ -11,6 +11,7 @@ import type { Execution } from "../../../../../data/model/execution";
 import type { BugbotContext } from "./types";
 
 const MAX_IGNORE_BLOCK_LENGTH = 2000;
+const GIT_OBJECT_ID = /^[0-9a-f]{7,64}$/i;
 
 export function buildBugbotPrompt(param: Execution, context: BugbotContext): string {
     const headBranch = param.pullRequest?.head?.trim() || param.commit?.branch || 'unknown';
@@ -36,7 +37,34 @@ export function buildBugbotPrompt(param: Execution, context: BugbotContext): str
         headBranch,
         baseBranch,
         issueNumber: String(param.issueNumber),
+        changeScopeInstruction: buildChangeScopeInstruction(param, headBranch, baseBranch),
         ignoreBlock,
         previousBlock,
     });
+}
+
+function buildChangeScopeInstruction(
+    param: Execution,
+    headBranch: string,
+    baseBranch: string,
+): string {
+    const before = normalizedObjectId(param.inputs?.before);
+    const after = normalizedObjectId(param.inputs?.after);
+    const isIncrementalPullRequestUpdate = param.inputs?.eventName === 'pull_request'
+        && param.pullRequest.action === 'synchronize'
+        && before !== undefined
+        && after !== undefined
+        && before !== after;
+
+    if (!isIncrementalPullRequestUpdate) {
+        return `Determine what has changed in the branch "${headBranch}" compared to "${baseBranch}" (you must compute or obtain the diff yourself using the repository context above).`;
+    }
+
+    return `This is an incremental pull-request update. For task 1, analyze the exact commit range \`${before}..${after}\` and the surrounding current code needed to understand those changes. Do not re-review the unchanged remainder of the full \`${baseBranch}...${headBranch}\` diff. You must compute or obtain the incremental diff yourself. Task 2 is not limited to this range: inspect the current code relevant to every previously reported finding before deciding whether it is resolved.`;
+}
+
+function normalizedObjectId(value: unknown): string | undefined {
+    if (typeof value !== 'string') return undefined;
+    const normalized = value.trim();
+    return GIT_OBJECT_ID.test(normalized) ? normalized : undefined;
 }
