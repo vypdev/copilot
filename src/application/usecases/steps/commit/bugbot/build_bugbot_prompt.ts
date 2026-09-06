@@ -67,11 +67,11 @@ function buildChangeScopeInstruction(
         && before !== after;
 
     if (isIncrementalPullRequestUpdate) {
-        return `This is an incremental pull-request update. For task 1, analyze the exact local commit range \`${before}..${after}\` and the surrounding current code needed to understand those changes. The canonical full PR diff is supplied only as an authoritative manifest and location reference; do not re-review its unchanged remainder. Task 2 is not limited to this range: inspect the current code relevant to every previously reported finding before deciding whether it is resolved.`;
+        return `This is an incremental pull-request update. For task 1, analyze the exact local commit range \`${before}..${after}\` and the surrounding current code needed to understand those changes. If either object is unavailable after the bounded fetch, use the canonical full PR diff instead of failing. Otherwise, the canonical full PR diff is supplied only as an authoritative manifest and location reference; do not re-review its unchanged remainder. Task 2 is not limited to this range: inspect the current code relevant to every previously reported finding before deciding whether it is resolved.`;
     }
 
     if (eventName === 'push' && before !== undefined && after !== undefined && before !== after) {
-        return `This is a push update without requiring a pull request. For task 1, analyze the exact local commit range \`${before}..${after}\` and surrounding current code. Task 2 is not limited to this range: inspect the current code relevant to every previously reported finding before deciding whether it is resolved.`;
+        return `This is a push update without requiring a pull request. For task 1, analyze the exact local commit range \`${before}..${after}\` and surrounding current code. If either object is unavailable after the bounded fetch (for example after a force-push), fall back to the current commit against its parent and the available branch/base history instead of failing. Task 2 is not limited to this range: inspect the current code relevant to every previously reported finding before deciding whether it is resolved.`;
     }
 
     if (hasCanonicalPullRequestDiff) {

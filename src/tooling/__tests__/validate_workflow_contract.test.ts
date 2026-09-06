@@ -110,6 +110,17 @@ describe('workflow contract validator', () => {
     expect(() => validateWorkflow(file, workflow)).toThrow('must fetch the exact GitHub before/after review range');
   });
 
+  it.each(['.github/workflows', 'setup/workflows'])('requires a non-fatal before fetch for force-pushed PRs in %s', (directory) => {
+    const file = path.join(process.cwd(), directory, 'copilot_pull_request.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const step = workflow.jobs['copilot-pull-requests'].steps.find(
+      (candidate: { name?: string }) => candidate.name === 'Fetch incremental review range',
+    );
+    step.run = 'git fetch --no-tags --depth=1 origin "$BEFORE_SHA" "$AFTER_SHA"';
+
+    expect(() => validateWorkflow(file, workflow)).toThrow('must fetch the exact GitHub before/after review range');
+  });
+
   it('validates the exact gate-first DAG for active and setup release/hotfix workflows', () => {
     for (const directory of ['.github/workflows', 'setup/workflows']) {
       for (const fileName of ['release_workflow.yml', 'hotfix_workflow.yml']) {

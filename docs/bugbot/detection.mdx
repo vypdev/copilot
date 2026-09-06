@@ -19,13 +19,15 @@ problems instead of reprocessing the unchanged part of a large PR. Existing
 open findings are still checked against current code, so incremental analysis
 does not weaken resolution. The recommended workflow fetches only those two
 commit objects after the normal shallow checkout; it does not download the
-repository's full history. A PR does not need to contain an issue number in
+repository's full history. The current `after` object is required, while an
+unreachable `before` object after a force-push falls back to the canonical PR
+diff instead of aborting the workflow. A PR does not need to contain an issue number in
 its branch name. The reviewer role publishes one review summary and attaches
 its findings as line comments on the current diff.
 
 ### 2. On every push (commit workflow)
 
-When you push to a branch that is **linked to an issue** (e.g. a feature or bugfix branch created by Copilot), the **Commit** workflow runs. If an agent CLI is configured, the action runs **DetectPotentialProblemsUseCase**: it fetches and reviews the exact event `before..after` range, loads existing finding context, and then publishes new findings and updates or marks as resolved any previous findings that no longer apply. New-branch pushes, whose `before` value is GitHub's all-zero sentinel, fall back to the current branch/base or commit-parent history available in the local checkout.
+When you push to a branch that is **linked to an issue** (e.g. a feature or bugfix branch created by Copilot), the **Commit** workflow runs. If an agent CLI is configured, the action runs **DetectPotentialProblemsUseCase**: it fetches and reviews the exact event `before..after` range, loads existing finding context, and then publishes new findings and updates or marks as resolved any previous findings that no longer apply. New-branch pushes, whose `before` value is GitHub's all-zero sentinel, and force-pushes whose previous object is no longer reachable fall back to the current branch/base or commit-parent history available in the local checkout without aborting the workflow.
 
 **Requirements:**
 

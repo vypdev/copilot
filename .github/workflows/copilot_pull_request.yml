@@ -22,7 +22,11 @@ jobs:
         env:
           BEFORE_SHA: ${{ github.event.before }}
           AFTER_SHA: ${{ github.event.after }}
-        run: git fetch --no-tags --depth=1 origin "$BEFORE_SHA" "$AFTER_SHA"
+        run: |
+          git fetch --no-tags --depth=1 origin "$AFTER_SHA"
+          if ! git fetch --no-tags --depth=1 origin "$BEFORE_SHA"; then
+            echo "::notice::The previous PR commit is unavailable; Bugbot will use the canonical pull-request diff."
+          fi
 
       - uses: ./
         with:

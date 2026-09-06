@@ -95,6 +95,7 @@ describe("buildBugbotPrompt", () => {
         } as unknown as Partial<Execution>), mockContext());
 
         expect(prompt).toContain(`exact local commit range \`${before}..${after}\``);
+        expect(prompt).toContain('use the canonical full PR diff instead of failing');
         expect(prompt).toContain('do not re-review its unchanged remainder');
         expect(prompt).toContain('Task 2 is not limited to this range');
     });
@@ -119,6 +120,8 @@ describe("buildBugbotPrompt", () => {
 
         expect(prompt).toContain('push update without requiring a pull request');
         expect(prompt).toContain(`exact local commit range \`${before}..${after}\``);
+        expect(prompt).toContain('for example after a force-push');
+        expect(prompt).toContain('current commit against its parent');
         expect(prompt).not.toContain('canonical pull-request diff');
     });
 

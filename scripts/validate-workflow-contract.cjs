@@ -305,11 +305,13 @@ function assertIncrementalRangeFetch(relativeFile, manifestFile, job) {
       : undefined;
   if (!contract) return;
   const step = (job.steps ?? []).find(candidate => candidate?.name === contract.name);
+  const fetchScript = typeof step?.run === 'string' ? step.run.trim() : '';
   if (!step
     || step.if !== contract.condition
     || step.env?.BEFORE_SHA !== '${{ github.event.before }}'
     || step.env?.AFTER_SHA !== '${{ github.event.after }}'
-    || step.run !== 'git fetch --no-tags --depth=1 origin "$BEFORE_SHA" "$AFTER_SHA"') {
+    || !fetchScript.includes('git fetch --no-tags --depth=1 origin "$AFTER_SHA"')
+    || !fetchScript.includes('if ! git fetch --no-tags --depth=1 origin "$BEFORE_SHA"; then')) {
     throw new Error(`${relativeFile} must fetch the exact GitHub before/after review range before invoking Copilot.`);
   }
 }
