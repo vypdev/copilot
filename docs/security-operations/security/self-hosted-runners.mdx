@@ -15,3 +15,7 @@ A self-hosted runner that can access agent credentials MUST be dedicated or isol
 - keep local session files outside repository workspaces.
 
 A shared persistent runner is not equivalent to an ephemeral trusted runner.
+
+The Action passes agent children an allowlisted runtime environment plus only the credential selected for that provider; unrelated GitHub, cloud, database, and PAT variables are not inherited. Codex review capabilities are forced to `--sandbox read-only --ignore-user-config`; fixer capabilities use `workspace-write`. Dangerous bypass flags are rejected. Other supported CLIs must be isolated by the runner/container because their sandbox guarantees are provider-specific.
+
+Timeout and cancellation terminate the complete POSIX process group, with a bounded graceful period before a forced kill, so abandoned CLI descendants do not occupy the runner indefinitely.

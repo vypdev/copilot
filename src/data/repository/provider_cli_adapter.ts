@@ -1,4 +1,4 @@
-import type { AgentConfiguration } from '../model/agent';
+import type { AgentCapability, AgentConfiguration } from '../model/agent';
 import type { AgentCliPort } from '../../infrastructure/agents/ports/agent_provider_ports';
 import { CodexCliAdapter, CursorCliAdapter, OpenCodeCliAdapter, type ProviderCliRequest } from './provider_specific_cli_adapters';
 
@@ -8,6 +8,7 @@ export interface ProviderCliExecution {
     timeoutMs: number;
     cwd?: string;
     signal?: AbortSignal;
+    capability: AgentCapability;
 }
 
 /** Provider-neutral CLI adapter that delegates provider-specific execution to focused adapters. */

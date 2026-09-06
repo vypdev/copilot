@@ -8,10 +8,12 @@ import {
   isExistingFindingFullyResolved,
   type ExistingByFindingId,
 } from "./types";
+import { githubUsersMatch } from '../../../../../domain/github_user_policy';
 
 export interface BugbotComment {
   id: number;
   body: string | null;
+  user?: { login?: string };
 }
 
 export interface ParsedBugbotFindingComments {
@@ -28,9 +30,15 @@ export function parseBugbotFindingComments(
     number,
     PullRequestReviewComment[]
   >,
+  trustedAuthorLogin?: string,
+  reviewThreadStatesByPullRequest: ReadonlyMap<number, Readonly<Record<string, boolean>>> = new Map(),
 ): ParsedBugbotFindingComments {
-  const existingByFindingId = parseIssueFindingMarkers(issueComments);
-  const pullRequestFindings = parsePullRequestFindingMarkers(pullRequestCommentsByNumber);
+  const existingByFindingId = parseIssueFindingMarkers(issueComments, trustedAuthorLogin);
+  const pullRequestFindings = parsePullRequestFindingMarkers(
+    pullRequestCommentsByNumber,
+    trustedAuthorLogin,
+    reviewThreadStatesByPullRequest,
+  );
   mergeFindingContexts(existingByFindingId, pullRequestFindings.existingByFindingId);
   return {
     issueComments,
@@ -39,9 +47,10 @@ export function parseBugbotFindingComments(
   };
 }
 
-function parseIssueFindingMarkers(issueComments: BugbotComment[]): ExistingByFindingId {
+function parseIssueFindingMarkers(issueComments: BugbotComment[], trustedAuthorLogin?: string): ExistingByFindingId {
   const findings: ExistingByFindingId = {};
   for (const comment of issueComments) {
+    if (!isTrustedAuthor(comment.user?.login, trustedAuthorLogin)) continue;
     for (const marker of parseMarker(comment.body)) {
       const findingId = normalizeFindingIdForMarker(marker.findingId);
       if (findingId == null) continue;
@@ -61,11 +70,20 @@ function parseIssueFindingMarkers(issueComments: BugbotComment[]): ExistingByFin
 
 function parsePullRequestFindingMarkers(
   pullRequestCommentsByNumber: ReadonlyMap<number, PullRequestReviewComment[]>,
+  trustedAuthorLogin?: string,
+  reviewThreadStatesByPullRequest: ReadonlyMap<number, Readonly<Record<string, boolean>>> = new Map(),
 ): { existingByFindingId: ExistingByFindingId; prFindingIdToBody: Record<string, string> } {
   const existingByFindingId: ExistingByFindingId = {};
   const prFindingIdToBody: Record<string, string> = {};
   for (const [pullRequestNumber, comments] of pullRequestCommentsByNumber) {
-    parsePullRequestComments(comments, pullRequestNumber, existingByFindingId, prFindingIdToBody);
+    parsePullRequestComments(
+      comments,
+      pullRequestNumber,
+      existingByFindingId,
+      prFindingIdToBody,
+      trustedAuthorLogin,
+      reviewThreadStatesByPullRequest.get(pullRequestNumber),
+    );
   }
   return { existingByFindingId, prFindingIdToBody };
 }
@@ -75,25 +93,40 @@ function parsePullRequestComments(
   pullRequestNumber: number,
   existingByFindingId: ExistingByFindingId,
   prFindingIdToBody: Record<string, string>,
+  trustedAuthorLogin?: string,
+  reviewThreadStates: Readonly<Record<string, boolean>> = {},
 ): void {
   for (const comment of comments) {
+    if (!isTrustedAuthor(comment.authorLogin, trustedAuthorLogin)) continue;
     const body = comment.body ?? "";
     for (const marker of parseMarker(body)) {
       const findingId = normalizeFindingIdForMarker(marker.findingId);
       if (findingId == null) continue;
+      const threadResolved = reviewThreadStates[comment.identity];
+      const manuallyResolved = threadResolved === true && !marker.resolved;
       existingByFindingId[findingId] = {
         ...(existingByFindingId[findingId] ?? {}),
         pullRequest: {
           commentIdentity: comment.identity,
           pullRequestNumber,
-          resolved: marker.resolved,
+          resolved: marker.resolved || manuallyResolved,
+          ...(typeof threadResolved === 'boolean' ? { threadResolved } : {}),
           ...(marker.fingerprint ? { fingerprint: marker.fingerprint } : {}),
-          ...(marker.resolution ? { resolution: marker.resolution } : {}),
+          ...(marker.resolution
+            ? { resolution: marker.resolution }
+            : manuallyResolved
+              ? { resolution: 'dismissed' as const }
+              : {}),
         },
       };
       prFindingIdToBody[findingId] = truncateFindingBody(body, MAX_FINDING_BODY_LENGTH);
     }
   }
+}
+
+function isTrustedAuthor(authorLogin: string | undefined, trustedAuthorLogin: string | undefined): boolean {
+  if (!trustedAuthorLogin?.trim()) return true;
+  return githubUsersMatch(authorLogin ?? '', trustedAuthorLogin);
 }
 
 function mergeFindingContexts(target: ExistingByFindingId, source: ExistingByFindingId): void {

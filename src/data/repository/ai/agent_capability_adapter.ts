@@ -31,6 +31,7 @@ export abstract class AgentCapabilityAdapter {
                 configuration: taskConfiguration,
                 prompt: this.addEffortInstruction(request.prompt, taskConfiguration.effort),
                 timeoutMs: AGENT_REQUEST_TIMEOUT_MS,
+                capability: request.capability,
             });
             return request.mapCliOutput(output);
         } catch (error: unknown) {

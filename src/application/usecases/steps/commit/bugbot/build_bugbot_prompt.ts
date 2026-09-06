@@ -1,8 +1,9 @@
 /**
  * Builds the prompt for the configured findings agent when detecting potential problems on push.
- * We pass: repo context, head/base branch names (the agent computes the diff itself), issue number,
+ * We pass: repo context, the canonical GitHub PR diff, head/base branch names, issue number,
  * optional ignore patterns, and the block of previously reported findings (task 2).
- * We do not pass a pre-computed diff or file list.
+ * The agent may inspect the read-only workspace for surrounding context and
+ * incremental commit ranges that are narrower than the canonical full PR diff.
  */
 
 import { getBugbotPrompt } from "../../../../../prompts";
@@ -40,6 +41,8 @@ export function buildBugbotPrompt(param: Execution, context: BugbotContext): str
         changeScopeInstruction: buildChangeScopeInstruction(param, headBranch, baseBranch),
         ignoreBlock,
         previousBlock,
+        diffBlock: context.reviewDiffBlock,
+        reviewConversationBlock: context.reviewConversationBlock,
     });
 }
 
@@ -57,10 +60,10 @@ function buildChangeScopeInstruction(
         && before !== after;
 
     if (!isIncrementalPullRequestUpdate) {
-        return `Determine what has changed in the branch "${headBranch}" compared to "${baseBranch}" (you must compute or obtain the diff yourself using the repository context above).`;
+        return `Review the canonical pull-request diff for "${headBranch}" compared to "${baseBranch}" and inspect the read-only workspace for any surrounding code required to prove a finding.`;
     }
 
-    return `This is an incremental pull-request update. For task 1, analyze the exact commit range \`${before}..${after}\` and the surrounding current code needed to understand those changes. Do not re-review the unchanged remainder of the full \`${baseBranch}...${headBranch}\` diff. You must compute or obtain the incremental diff yourself. Task 2 is not limited to this range: inspect the current code relevant to every previously reported finding before deciding whether it is resolved.`;
+    return `This is an incremental pull-request update. For task 1, analyze the exact local commit range \`${before}..${after}\` and the surrounding current code needed to understand those changes. The canonical full PR diff is supplied only as an authoritative manifest and location reference; do not re-review its unchanged remainder. Task 2 is not limited to this range: inspect the current code relevant to every previously reported finding before deciding whether it is resolved.`;
 }
 
 function normalizedObjectId(value: unknown): string | undefined {

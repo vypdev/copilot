@@ -70,6 +70,8 @@ jobs:
 
 1. **Admission on every trigger** (with valid `token`): The action first compares the **event actor** with the **token owner**. If they are the same, the normal pipeline completes successfully before queueing or loading PR context (see [Troubleshooting](/security-operations/operations/troubleshooting)); use a **bot account** for the PAT if you want full behavior when you open your own PRs. Valid explicit single actions still run.
 
+   Set the optional Repository Variable `COPILOT_BOT_LOGIN` to the PAT bot's login to skip bot-authored event jobs before a runner starts. The expression is generic and optional; the authenticated in-Action admission remains the fallback. This workflow is event-driven and does not require or install a `workflow_run` trigger. Consumers may add private, explicitly scoped workflow chaining in their own repositories.
+
 2. **PR–issue linking:** The action infers the **issue number** from the PR branch name (e.g. `feature/123-add-login` → issue `123`) and **links the PR to that issue** (and posts a comment on the PR when configured).
 
 3. **Project linking:** If `project-ids` is set, the PR is added to those projects and moved to the configured column (e.g. "In Progress"). See [Capabilities](/pull-requests/capabilities).

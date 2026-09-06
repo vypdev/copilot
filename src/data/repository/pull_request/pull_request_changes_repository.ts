@@ -3,6 +3,11 @@ import { toPullRequestReviewOperationError } from "../../../application/ports/pu
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type { GithubPullRequestChangesClient, GithubPullRequestFile } from "../../../infrastructure/github/ports/github_pull_request_provider_ports";
 import { requireArrayPage } from "../github/github_pagination_policy";
+import type {
+    PullRequestDiffLocation,
+    PullRequestReviewChange,
+    PullRequestReviewDiffSnapshot,
+} from '../../../application/ports/bugbot_pull_request_read_ports';
 
 export class PullRequestChangesRepository {
     constructor(private readonly githubClient: GithubClientPort<GithubPullRequestChangesClient>) {}
@@ -61,6 +66,38 @@ export class PullRequestChangesRepository {
         return undefined;
     }
 
+    /** Every line GitHub can address in the split diff, on both sides. */
+    private static locationsFromPatch(patch: string): PullRequestDiffLocation[] {
+        const locations: PullRequestDiffLocation[] = [];
+        let oldLine = 0;
+        let newLine = 0;
+        let insideHunk = false;
+        for (const patchLine of patch.split('\n')) {
+            const header = patchLine.match(/^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
+            if (header) {
+                oldLine = Number.parseInt(header[1], 10);
+                newLine = Number.parseInt(header[2], 10);
+                insideHunk = true;
+                continue;
+            }
+            if (!insideHunk || patchLine.startsWith('\\')) continue;
+            if (patchLine.startsWith('-')) {
+                locations.push({ line: oldLine, side: 'LEFT' });
+                oldLine += 1;
+                continue;
+            }
+            if (patchLine.startsWith('+')) {
+                locations.push({ line: newLine, side: 'RIGHT' });
+                newLine += 1;
+                continue;
+            }
+            locations.push({ line: newLine, side: 'RIGHT' });
+            oldLine += 1;
+            newLine += 1;
+        }
+        return locations;
+    }
+
     /**
      * Returns for each changed file the first line number that appears in the diff (right side).
      * Used so review comments use a line that GitHub can resolve (avoids "line could not be resolved").
@@ -81,6 +118,55 @@ export class PullRequestChangesRepository {
         } catch (error) {
             logError(`Error getting files with diff lines (owner=${owner}, repo=${repository}, pullNumber=${pullNumber}): ${error}.`);
             throw toPullRequestReviewOperationError(error, "list-files");
+        }
+    };
+
+    getFilesWithDiffLocations = async (
+        owner: string,
+        repository: string,
+        pullNumber: number,
+        token: string,
+    ): Promise<Array<{ path: string; locations: PullRequestDiffLocation[] }>> => {
+        try {
+            return (await this.listAllFiles(owner, repository, pullNumber, token))
+                .flatMap((file) => {
+                    const locations = PullRequestChangesRepository.locationsFromPatch(file.patch ?? '');
+                    return locations.length === 0 ? [] : [{ path: file.filename, locations }];
+                });
+        } catch (error) {
+            logError(`Error getting files with diff locations (owner=${owner}, repo=${repository}, pullNumber=${pullNumber}): ${error}.`);
+            throw toPullRequestReviewOperationError(error, 'list-files');
+        }
+    };
+
+    getReviewDiffSnapshot = async (
+        owner: string,
+        repository: string,
+        pullNumber: number,
+        token: string,
+    ): Promise<PullRequestReviewDiffSnapshot> => {
+        try {
+            const files = await this.listAllFiles(owner, repository, pullNumber, token);
+            const changes: PullRequestReviewChange[] = files.map(({ filename, status, additions, deletions, patch }) => ({
+                filename,
+                status,
+                additions,
+                deletions,
+                patch: patch || '',
+            }));
+            const filesWithFirstDiffLine = files.flatMap((file) => {
+                if (file.status === 'removed' || !file.patch) return [];
+                const firstLine = PullRequestChangesRepository.firstLineFromPatch(file.patch);
+                return firstLine === undefined ? [] : [{ path: file.filename, firstLine }];
+            });
+            const filesWithDiffLocations = files.flatMap((file) => {
+                const locations = PullRequestChangesRepository.locationsFromPatch(file.patch ?? '');
+                return locations.length === 0 ? [] : [{ path: file.filename, locations }];
+            });
+            return { changes, filesWithFirstDiffLine, filesWithDiffLocations };
+        } catch (error) {
+            logError(`Error getting pull request review diff snapshot: ${error}.`);
+            throw toPullRequestReviewOperationError(error, 'list-files');
         }
     };
 

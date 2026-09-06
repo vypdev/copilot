@@ -5,7 +5,7 @@
 
 import { MAX_FINDING_ID_LENGTH } from './marker';
 
-/** Detection (on push): the configured agent computes the diff and returns findings + resolved_finding_ids. */
+/** Detection returns findings and explicit lifecycle changes for prior finding IDs. */
 export const BUGBOT_RESPONSE_SCHEMA = {
     type: 'object',
     properties: {
@@ -24,7 +24,11 @@ export const BUGBOT_RESPONSE_SCHEMA = {
                     description: { type: 'string', minLength: 1, maxLength: 8000, description: 'Clear explanation of the issue' },
                     file: { type: 'string', maxLength: 500, description: 'Repository-relative path when applicable' },
                     line: { type: 'integer', minimum: 1, description: 'Line number when applicable' },
+                    endLine: { type: 'integer', minimum: 1, description: 'Inclusive final line when the problem spans multiple diff lines' },
                     severity: { type: 'string', enum: ['high', 'medium', 'low', 'info'], description: 'Severity. Findings below the configured minimum are not published.' },
+                    confidence: { type: 'number', minimum: 0, maximum: 1, description: 'Confidence that the finding is a real, actionable defect' },
+                    category: { type: 'string', enum: ['correctness', 'security', 'performance', 'reliability', 'maintainability'], description: 'Primary defect category' },
+                    evidence: { type: 'string', maxLength: 8000, description: 'Concrete execution path, invariant, or code evidence proving impact' },
                     suggestion: { type: 'string', maxLength: 8000, description: 'Suggested fix when applicable' },
                 },
                 required: ['id', 'title', 'description'],

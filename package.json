@@ -40,6 +40,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "eval:bugbot": "jest src/tooling/__tests__/bugbot_quality_eval.test.ts --runInBand",
     "typecheck": "tsc --noEmit",
     "metrics:architecture": "node scripts/collect-architecture-metrics.cjs",
     "lint": "eslint src",

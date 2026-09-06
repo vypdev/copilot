@@ -41,6 +41,15 @@ const MUTATION_WORKFLOW_MANIFEST = Object.freeze([
   { file: 'hotfix_workflow.yml', workflowName: 'Task - Hotfix' },
 ]);
 
+const BOT_GATED_WORKFLOW_FILES = new Set([
+  'copilot_commit.yml',
+  'copilot_issue.yml',
+  'copilot_issue_comment.yml',
+  'copilot_pull_request.yml',
+  'copilot_pull_request_comment.yml',
+]);
+const BOT_GATE_EXPRESSION = "${{ vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}";
+
 const requiredAgentInputs = [
   'agent-provider', 'agent-model-provider', 'agent-model', 'agent-effort', 'agent-command',
   'findings-provider', 'findings-model-provider', 'findings-model', 'findings-effort', 'findings-command',
@@ -266,6 +275,9 @@ function assertQueueWorkflow(file, workflow) {
   }
   const queueJob = workflow.jobs?.[manifest.jobId];
   if (!queueJob) throw new Error(`${relativeFile} must define queue job ${manifest.jobId}.`);
+  if (BOT_GATED_WORKFLOW_FILES.has(manifest.file) && queueJob.if !== BOT_GATE_EXPRESSION) {
+    throw new Error(`${relativeFile} queue job ${manifest.jobId} must use the generic COPILOT_BOT_LOGIN actor gate.`);
+  }
   if (typeof queueJob['timeout-minutes'] !== 'number'
     || queueJob['timeout-minutes'] < MIN_QUEUE_JOB_TIMEOUT_MINUTES) {
     throw new Error(`${relativeFile} queue job ${manifest.jobId} must have timeout-minutes >= ${MIN_QUEUE_JOB_TIMEOUT_MINUTES}.`);
@@ -323,6 +335,8 @@ module.exports = {
   TAG_TIMEOUT_MINUTES,
   QUEUE_WORKFLOW_MANIFEST,
   MUTATION_WORKFLOW_MANIFEST,
+  BOT_GATED_WORKFLOW_FILES,
+  BOT_GATE_EXPRESSION,
   assertAgentInputs,
   assertMutationWorkflow,
   assertNoConcurrency,

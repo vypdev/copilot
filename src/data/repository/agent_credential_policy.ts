@@ -122,6 +122,42 @@ export function removeAgentCredentials(environment: NodeJS.ProcessEnv): NodeJS.P
     return isolatedEnvironment;
 }
 
+/**
+ * Runtime variables that an agent CLI may need to start. Everything else is
+ * denied by default: GitHub Action inputs, repository tokens, cloud
+ * credentials and application secrets must never be inherited implicitly.
+ */
+const SAFE_AGENT_RUNTIME_VARIABLES = [
+    'PATH',
+    'HOME',
+    'USER',
+    'LOGNAME',
+    'SHELL',
+    'TMPDIR',
+    'TMP',
+    'TEMP',
+    'LANG',
+    'LANGUAGE',
+    'LC_ALL',
+    'TERM',
+    'COLORTERM',
+    'NO_COLOR',
+    'FORCE_COLOR',
+    'CI',
+    'CODEX_HOME',
+    'XDG_CONFIG_HOME',
+    'XDG_DATA_HOME',
+    'XDG_CACHE_HOME',
+    'OPENCODE_DATA_DIR',
+    'OPENCODE_AUTH_FILE',
+] as const;
+
+export function selectSafeAgentRuntimeEnvironment(environment: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+    return Object.fromEntries(SAFE_AGENT_RUNTIME_VARIABLES.flatMap((variable) => (
+        environment[variable] === undefined ? [] : [[variable, environment[variable]]]
+    )));
+}
+
 export function containsCredentialMaterial(value: unknown, propertyName = ''): boolean {
     if (typeof value === 'string') {
         return Boolean(propertyName.match(/(?:api[_-]?key|access|refresh|token|secret)/i) && value.trim());

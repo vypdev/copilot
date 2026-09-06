@@ -19,6 +19,7 @@ export async function runPublishResume(
     logReport: ApplicationLogReportReaderPort,
 ): Promise<void> {
     try {
+        if (isPullRequestReviewProjection(param)) return;
         const sections = renderResultSections(param.currentConfiguration.results);
         const debugLogSection = buildDebugLogSection(param.debug, logReport.getAccumulatedLogsAsText());
         if (!hasPublishableContent(sections, debugLogSection)) return;
@@ -50,6 +51,15 @@ export async function runPublishResume(
             errors: [error],
         }));
     }
+}
+
+/** Bugbot already publishes one native review summary with child comments. */
+function isPullRequestReviewProjection(param: Execution): boolean {
+    return param.isPullRequest
+        && !param.isSingleAction
+        && param.currentConfiguration.results.some(
+            (result) => result.id === 'DetectPotentialProblemsUseCase' && result.executed,
+        );
 }
 
 function buildResumeComment(

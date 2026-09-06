@@ -6,6 +6,7 @@ on:
 
 jobs:
   copilot-issues:
+    if: ${{ vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}
     name: Copilot - Issue
     runs-on: [self-hosted, codex]
     timeout-minutes: 120

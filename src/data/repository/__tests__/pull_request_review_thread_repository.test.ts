@@ -24,6 +24,30 @@ describe("PullRequestReviewThreadRepository", () => {
     mockGraphql.mockReset();
   });
 
+  it("loads all review thread states in one paginated query per page", async () => {
+    mockGraphql
+      .mockResolvedValueOnce({
+        repository: { pullRequest: { reviewThreads: {
+          nodes: [{ isResolved: false, comments: { nodes: [{ id: "PRRC_1" }] } }],
+          pageInfo: { hasNextPage: true, endCursor: "next" },
+        } } },
+      })
+      .mockResolvedValueOnce({
+        repository: { pullRequest: { reviewThreads: {
+          nodes: [{ isResolved: true, comments: { nodes: [{ id: "PRRC_2" }, null] } }],
+          pageInfo: { hasNextPage: false, endCursor: null },
+        } } },
+      });
+
+    await expect(repository.listPullRequestReviewThreadStates(
+      "owner", "repo", 7, "token",
+    )).resolves.toEqual({ PRRC_1: false, PRRC_2: true });
+
+    expect(mockGraphql).toHaveBeenCalledTimes(2);
+    expect(mockGraphql.mock.calls[0][1]).toEqual(expect.objectContaining({ cursor: null }));
+    expect(mockGraphql.mock.calls[1][1]).toEqual(expect.objectContaining({ cursor: "next" }));
+  });
+
   it("resolves the thread containing the requested comment", async () => {
     mockGraphql
       .mockResolvedValueOnce({

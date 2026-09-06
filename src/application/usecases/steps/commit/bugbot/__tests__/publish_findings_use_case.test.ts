@@ -144,6 +144,40 @@ describe("publishFindings", () => {
         );
     });
 
+    it("publishes an exact multi-line diff range when both endpoints are addressable", async () => {
+        await publishFindings({
+            execution: baseExecution,
+            context: baseContext({
+                openPrNumbers: [50],
+                prContext: {
+                    prHeadSha: "sha1",
+                    prFiles: [{ filename: "src/foo.ts", status: "modified" }],
+                    pathToFirstDiffLine: { "src/foo.ts": 10 },
+                    pathToDiffLocations: {
+                        "src/foo.ts": [10, 11, 12].map((line) => ({ line, side: "RIGHT" as const })),
+                    },
+                },
+            }),
+            findings: [finding({ file: "src/foo.ts", line: 10, endLine: 12 })],
+        });
+
+        expect(mockCreateReviewWithComments).toHaveBeenCalledWith(
+            "o",
+            "r",
+            50,
+            "sha1",
+            expect.any(String),
+            [expect.objectContaining({
+                path: "src/foo.ts",
+                line: 12,
+                side: "RIGHT",
+                startLine: 10,
+                startSide: "RIGHT",
+            })],
+            "t",
+        );
+    });
+
     it("keeps a finding inside the review when its reported file is not in the PR", async () => {
         await publishFindings({
             execution: baseExecution,

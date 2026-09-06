@@ -11,14 +11,14 @@ export type BugbotAutofixCommitResult = CommitAndPushWorkflowResult;
 
 export async function runBugbotAutofixCommitAndPush(
     execution: Execution,
-    options: { branchOverride?: string; targetFindingIds?: string[]; workspacePaths?: string[] } | undefined,
+    options: { branchOverride?: string; branchAlreadyCheckedOut?: boolean; targetFindingIds?: string[]; workspacePaths?: string[] } | undefined,
     authenticatedUserPort: AuthenticatedUserPort,
     gitCommitPort: GitCommitPort,
 ): Promise<BugbotAutofixCommitResult> {
     const branch = options?.branchOverride ?? execution.commit.branch;
     return runCommitAndPushWorkflow(execution, {
         branch,
-        branchOverride: Boolean(options?.branchOverride),
+        branchOverride: Boolean(options?.branchOverride) && !options?.branchAlreadyCheckedOut,
         workspacePaths: options?.workspacePaths,
         commitMessage: buildBugbotCommitMessage(execution.issueNumber, options?.targetFindingIds ?? []),
         noChangesMessage: 'No changes to commit after autofix.',

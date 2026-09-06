@@ -62,6 +62,8 @@ Add other inputs as needed: `branch-management-launcher-label`, `desired-assigne
 
 1. **Admission on every trigger** (with valid `token`): The action first compares the **event actor** with the **token owner**. If they are the same, the normal pipeline completes successfully before queueing or loading issue context (see [Troubleshooting → Action skips issue/PR/push pipelines](/security-operations/operations/troubleshooting#action-skips-issueprpush-pipelines)); use a **bot account** for the PAT if you want full behavior when you act as a user. Valid explicit single actions still run.
 
+   Set the optional Repository Variable `COPILOT_BOT_LOGIN` to the PAT bot's login to apply the same generic check at job admission. Event workflows triggered by that actor then consume no runner at all. If the variable is absent, the in-Action authenticated check remains fail-safe. Manual single-action workflows are intentionally separate and are not gated this way.
+
 2. **Project linking:** If `project-ids` is set and the token has access, the issue is linked to those projects and moved to the configured column (e.g. "Todo" or "In Progress").
 
 3. **Assignees:** If `desired-assignees-count` is set, the action assigns up to that many members (issue creator first if they belong to the org/repo, then additional members). See [Assignees and projects](/issues/assignees-and-projects).

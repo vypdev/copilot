@@ -7,10 +7,54 @@ describe('prepareBugbotFindings', () => {
             { id: 'ignored', title: 'Ignored', description: 'Generated file.', file: 'generated.ts', severity: 'high' },
             { id: 'low', title: 'Low', description: 'Low severity.', file: 'src/a.ts', severity: 'low' },
             { id: 'same', title: 'Same', description: 'High severity.', file: 'src/a.ts', line: 2, severity: 'high' },
-            { id: 'same-duplicate', title: 'Duplicate', description: 'High severity.', file: 'src/a.ts', line: 2, severity: 'high' },
+            { id: 'same-duplicate', title: 'Same', description: 'High severity.', file: 'src/a.ts', line: 2, severity: 'high' },
         ] }, ['generated.ts'], 'medium', 10);
 
         expect(result?.toPublish.map((finding) => finding.id)).toEqual(['same']);
+    });
+
+    it('publishes higher severity findings first while preserving stable order within a severity', () => {
+        const result = prepareBugbotFindings({ findings: [
+            { id: 'low', title: 'Low', description: 'Low', severity: 'low' },
+            { id: 'high-a', title: 'High A', description: 'High', severity: 'high' },
+            { id: 'medium', title: 'Medium', description: 'Medium', severity: 'medium' },
+            { id: 'high-b', title: 'High B', description: 'High', severity: 'high' },
+        ] }, [], 'low', 3);
+
+        expect(result?.toPublish.map((finding) => finding.id)).toEqual(['high-a', 'high-b', 'medium']);
+        expect(result?.overflowTitles).toEqual(['Low']);
+    });
+
+    it('normalizes rich evidence fields and filters low-confidence findings', () => {
+        const result = prepareBugbotFindings({ findings: [
+            {
+                id: 'certain',
+                title: 'Certain defect',
+                description: 'Fails for null input.',
+                file: 'src/a.ts',
+                line: 4,
+                endLine: 7,
+                severity: 'HIGH',
+                confidence: 0.91,
+                category: 'CORRECTNESS',
+                evidence: 'The null branch reaches an unconditional dereference.',
+            },
+            {
+                id: 'speculative',
+                title: 'Speculative defect',
+                description: 'Might fail.',
+                confidence: 0.4,
+            },
+        ] }, [], 'low', 10);
+
+        expect(result?.toPublish).toEqual([expect.objectContaining({
+            id: 'certain',
+            endLine: 7,
+            severity: 'high',
+            confidence: 0.91,
+            category: 'correctness',
+            evidence: expect.stringContaining('unconditional dereference'),
+        })]);
     });
 
     it('normalizes resolved ids and applies the publication limit', () => {

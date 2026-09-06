@@ -8,5 +8,7 @@ export type BugbotParams = {
     changeScopeInstruction: string;
     ignoreBlock: string;
     previousBlock: string;
+    diffBlock?: string;
+    reviewConversationBlock?: string;
 };
 export declare function getBugbotPrompt(params: BugbotParams): string;

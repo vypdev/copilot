@@ -8,5 +8,6 @@ export type BugbotAutofixPreflight = {
     workspacePathsBefore: string[];
     idsToFix: string[];
     prompt: string;
+    branchCheckedOut: boolean;
 };
 export declare function prepareBugbotAutofix(execution: Execution, targetFindingIds: string[], userComment: string, providedContext: BugbotContext | undefined, branchOverride: string | undefined, contextPorts: BugbotContextPorts, gitCommitPort: GitCommitPort): Promise<BugbotAutofixPreflight | Result[]>;

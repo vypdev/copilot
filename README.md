@@ -83,7 +83,7 @@ for action-level examples.
 - **Projects** — Link issues and PRs to boards and move them to the right columns.
 - **Single actions** — On-demand: check progress, think, create release/tag, mark deployed, etc.
 - **Evidence and safety** — Every run writes a bounded Job Summary; PR reviews expose a `Copilot / Review` Check Run, active findings fail that check, and all agent/comment content remains bounded and treated as untrusted data.
-- **Concurrency** — Uses a repository-wide application queue across the eight Copilot/Task mutation workflows. Polling is adaptive and rate-limit-aware, with a 90-minute queue deadline and no cancellation or overwrite of intermediate runs. See [Features → Workflow concurrency](https://docs.page/vypdev/copilot/features#workflow-concurrency-and-sequential-execution).
+- **Concurrency** — Each workflow waits only for older active runs of that same workflow. Polling is adaptive and rate-limit-aware, with a 90-minute queue deadline and no cancellation or overwrite of intermediate runs. Event templates can also skip bot-authored jobs before runner allocation through the optional, generic `COPILOT_BOT_LOGIN` Repository Variable. See [Features → Workflow concurrency](https://docs.page/vypdev/copilot/features#workflow-concurrency-and-sequential-execution).
 
 AI features use the configured agent runtime and qualified model; see the [Agents](https://docs.page/vypdev/copilot/agents) and [Security & Operations](https://docs.page/vypdev/copilot/security-operations) documentation. You can run progress and Bugbot locally through the [Single actions → Workflow & CLI](https://docs.page/vypdev/copilot/single-actions/workflow-and-cli) path.
 

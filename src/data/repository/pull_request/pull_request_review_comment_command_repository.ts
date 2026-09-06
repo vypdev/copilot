@@ -68,8 +68,18 @@ export class PullRequestReviewCommentCommandRepository implements PullRequestRev
       const reviewComments = pendingComments.map((comment) => ({
         body: comment.body,
         path: comment.path,
-        line: comment.line,
-        side: "RIGHT",
+        ...(comment.subjectType === 'file'
+          ? { subject_type: 'file' }
+          : {
+              line: comment.line,
+              side: comment.side ?? 'RIGHT',
+              ...(comment.startLine !== undefined
+                ? {
+                    start_line: comment.startLine,
+                    start_side: comment.startSide ?? comment.side ?? 'RIGHT',
+                  }
+                : {}),
+            }),
       }));
       await client.rest.pulls.createReview({
         owner,

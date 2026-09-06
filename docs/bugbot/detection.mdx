@@ -61,8 +61,8 @@ Each finding is posted as a **separate comment** on the issue. The comment inclu
 
 - A **title** (e.g. “Possible null reference in login handler”).
 - **Severity** (info, low, medium, high).
-- Optional **file and line** (when the finding is tied to a specific location).
-- A **description** (and optionally a suggestion).
+- Optional **file and exact line/range** (when the finding is tied to a specific location).
+- A **description**, category, confidence, concrete evidence, and optional suggestion.
 
 The action embeds a **hidden marker** in each comment so it can later **update** the same comment (e.g. when the finding is fixed and the configured agent reports it as resolved) or match it when you ask to “fix it” from a PR review thread.
 
@@ -70,7 +70,9 @@ The action embeds a **hidden marker** in each comment so it can later **update**
 
 When an **open PR** targets the branch, Bugbot creates one submitted review. Its body summarizes the analysis and its findings descend from that review as inline comments. Findings are not mirrored as independent comments in the PR conversation.
 
-Each inline comment is attached to a line confirmed from the current diff. If the reported file is outside the diff, Bugbot attaches the finding to the first available changed line and labels that fallback explicitly. If no right-side diff line exists, the full finding remains in the review body.
+Each child comment is attached to an exact line/range confirmed from the current diff. A finding tied to a changed file but not an addressable line becomes a GitHub file-level review comment. A finding with no valid changed file is attached to the first changed file with an explicit fallback note. Only a PR with no changed file at all keeps the complete finding in the review body.
+
+The action checks the PR head before invoking the reviewer and immediately before mutation. If a newer revision arrives while analysis is running, the old run is recorded as superseded and publishes nothing.
 
 When the configured agent later reports a finding as **resolved** (e.g. after you or the bot fixed the code), the action:
 
@@ -98,7 +100,7 @@ Findings in files or paths matching **`ai-ignore-files`** are excluded from both
 
 ## Comment limit and overflow
 
-To avoid flooding the issue and PR with too many comments, the action applies a **comment limit** via **`bugbot-comment-limit`** (default: `20`). Only the first N findings (after filtering) are published as **individual** comments; the rest are **not** posted one-by-one.
+To avoid flooding the issue and PR with too many comments, the action ranks findings by severity and confidence and applies **`bugbot-comment-limit`** (default: `20`). Only the first N findings are published individually; the rest are not posted one-by-one.
 
 When there are more findings than the limit:
 
@@ -123,10 +125,14 @@ For each id in “resolved”:
 
 Historical issue/PR destinations stay in sync, while new PR findings remain exclusively inside the review model.
 
+Resolving a review thread manually records a durable dismissal. A later model run cannot silently reopen it; use an explicit future command if the decision should be reversed.
+
 Active or reopened findings make the `Copilot / Review` Check Run fail, while
 the Job Summary still contains the complete bounded state counts. This gives
 branch protection a clear signal without failing the JavaScript process solely
 because the reviewer found a problem.
+
+The shipped PR workflow grants `checks: write` only to its short-lived `github.token` and exposes it to the Action as `COPILOT_EVIDENCE_TOKEN`. That token is used only for Check Run publication and is excluded from every agent child environment. The separate PAT remains responsible for configured repository and project operations.
 
 Finding matching is intentionally stable across agent providers and wording
 changes. The local identity uses the normalized file path, title, and a nearby

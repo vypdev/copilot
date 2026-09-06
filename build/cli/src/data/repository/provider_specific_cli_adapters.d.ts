@@ -1,4 +1,4 @@
-import type { AgentConfiguration, AgentProvider } from '../model/agent';
+import type { AgentCapability, AgentConfiguration, AgentProvider } from '../model/agent';
 import type { AgentCliPort } from '../../infrastructure/agents/ports/agent_provider_ports';
 export interface ProviderCliRequest {
     configuration: AgentConfiguration;
@@ -6,6 +6,7 @@ export interface ProviderCliRequest {
     timeoutMs: number;
     cwd?: string;
     signal?: AbortSignal;
+    capability: AgentCapability;
 }
 declare abstract class SpecificCliAdapter {
     private readonly expectedProvider;

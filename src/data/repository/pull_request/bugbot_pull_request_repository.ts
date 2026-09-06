@@ -6,6 +6,7 @@ import type {
   PullRequestReviewCommentCommandPort,
   PullRequestReviewCommentQueryPort,
   PullRequestReviewThreadCommandPort,
+  PullRequestReviewThreadStateQueryPort,
 } from "../../../application/ports/pull_request_review_comment_ports";
 export class BugbotPullRequestRepository
   implements
@@ -15,10 +16,10 @@ export class BugbotPullRequestRepository
 {
   constructor(
     private readonly lifecycle: Pick<BugbotPullRequestReadPort, "getHeadBranchForIssue" | "getOpenPullRequestNumbersByHeadBranch">,
-    private readonly changes: Pick<BugbotPullRequestReadPort, "getPullRequestHeadSha" | "getChangedFiles" | "getFilesWithFirstDiffLine">,
+    private readonly changes: Pick<BugbotPullRequestReadPort, "getPullRequestHeadSha" | "getChangedFiles" | "getFilesWithFirstDiffLine"> & Partial<Pick<Required<BugbotPullRequestReadPort>, "getFilesWithDiffLocations" | "getReviewDiffSnapshot">>,
     private readonly reviewQuery: PullRequestReviewCommentQueryPort,
     private readonly reviewCommand: PullRequestReviewCommentCommandPort,
-    private readonly threadCommand: PullRequestReviewThreadCommandPort,
+    private readonly threadCommand: PullRequestReviewThreadCommandPort & Partial<PullRequestReviewThreadStateQueryPort>,
   ) {}
 
   getHeadBranchForIssue = (
@@ -49,6 +50,23 @@ export class BugbotPullRequestRepository
   getFilesWithFirstDiffLine = (
     ...args: Parameters<BugbotPullRequestReadPort["getFilesWithFirstDiffLine"]>
   ) => this.changes.getFilesWithFirstDiffLine(...args);
+  getFilesWithDiffLocations = (
+    ...args: Parameters<Required<BugbotPullRequestReadPort>["getFilesWithDiffLocations"]>
+  ) => this.changes.getFilesWithDiffLocations?.(...args) ?? Promise.resolve([]);
+  getReviewDiffSnapshot = (
+    ...args: Parameters<Required<BugbotPullRequestReadPort>["getReviewDiffSnapshot"]>
+  ) => this.changes.getReviewDiffSnapshot?.(...args) ?? Promise.all([
+    this.changes.getChangedFiles(...args),
+    this.changes.getFilesWithFirstDiffLine(...args),
+    this.changes.getFilesWithDiffLocations?.(...args) ?? Promise.resolve([]),
+  ]).then(([files, filesWithFirstDiffLine, filesWithDiffLocations]) => ({
+    changes: files.map(({ filename, status }) => ({ filename, status, additions: 0, deletions: 0, patch: '' })),
+    filesWithFirstDiffLine,
+    filesWithDiffLocations,
+  }));
+  listPullRequestReviewThreadStates = (
+    ...args: Parameters<Required<BugbotPullRequestReadPort>["listPullRequestReviewThreadStates"]>
+  ) => this.threadCommand.listPullRequestReviewThreadStates?.(...args) ?? Promise.resolve({});
   createReviewWithComments = (
     ...args: Parameters<BugbotPullRequestWritePort["createReviewWithComments"]>
   ) => this.reviewCommand.createReviewWithComments(...args);

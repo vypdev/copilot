@@ -58,7 +58,7 @@ export class PullRequestReviewCommentPublisher {
     }
 
     const reportedPath = resolveFindingPathForPr(finding.file, prContext.prFiles);
-    const anchor = resolveReviewAnchor(reportedPath, prContext.pathToFirstDiffLine);
+    const anchor = resolveReviewAnchor(finding.line, finding.endLine, reportedPath, prContext);
     this.findingsToCreate.push(finding);
     if (!anchor) {
       this.unanchoredBodies.push(findingBody);
@@ -70,10 +70,17 @@ export class PullRequestReviewCommentPublisher {
 
     const anchorNote = reportedPath === anchor.path
       ? ""
-      : `> Review-level finding: the reported location is not part of this pull-request diff, so this comment is attached to the first available changed line.\n\n`;
+      : `> Review-level finding: the reported location is not part of this pull-request diff, so this comment is attached to the first changed file.\n\n`;
     this.commentsToCreate.push({
       path: anchor.path,
-      line: anchor.line,
+      ...(anchor.subjectType === 'line' ? {
+        line: anchor.endLine ?? anchor.line,
+        side: anchor.side,
+        ...(anchor.endLine && anchor.endLine > anchor.line
+          ? { startLine: anchor.line, startSide: anchor.side }
+          : {}),
+      } : {}),
+      ...(anchor.subjectType === 'file' ? { subjectType: 'file' as const } : {}),
       body: `${anchorNote}${body}`,
     });
   }
@@ -104,14 +111,40 @@ export class PullRequestReviewCommentPublisher {
 }
 
 function resolveReviewAnchor(
+  reportedLine: number | undefined,
+  reportedEndLine: number | undefined,
   reportedPath: string | undefined,
-  pathToFirstDiffLine: Readonly<Record<string, number>>,
-): { path: string; line: number } | undefined {
-  if (reportedPath && pathToFirstDiffLine[reportedPath] != null) {
-    return { path: reportedPath, line: pathToFirstDiffLine[reportedPath] };
+  context: BugbotPrContext,
+): { path: string; subjectType: 'line'; line: number; endLine?: number; side: 'LEFT' | 'RIGHT' } | { path: string; subjectType: 'file' } | undefined {
+  if (context.pathToDiffLocations === undefined) {
+    if (reportedPath && context.pathToFirstDiffLine[reportedPath] != null) {
+      return { path: reportedPath, subjectType: 'line', line: context.pathToFirstDiffLine[reportedPath], side: 'RIGHT' };
+    }
+    const legacyFallback = Object.entries(context.pathToFirstDiffLine)[0];
+    return legacyFallback
+      ? { path: legacyFallback[0], subjectType: 'line', line: legacyFallback[1], side: 'RIGHT' }
+      : undefined;
   }
-  const fallback = Object.entries(pathToFirstDiffLine)[0];
-  return fallback ? { path: fallback[0], line: fallback[1] } : undefined;
+  if (reportedPath) {
+    const locations = context.pathToDiffLocations?.[reportedPath] ?? [];
+    const exact = reportedLine == null ? undefined : locations.find((location) => location.line === reportedLine);
+    if (exact) {
+      const end = reportedEndLine == null
+        ? undefined
+        : locations.find((location) => location.line === reportedEndLine && location.side === exact.side);
+      return {
+        path: reportedPath,
+        subjectType: 'line',
+        ...exact,
+        ...(end && end.line > exact.line ? { endLine: end.line } : {}),
+      };
+    }
+    if (context.prFiles.some((file) => file.filename === reportedPath)) {
+      return { path: reportedPath, subjectType: 'file' };
+    }
+  }
+  const fallback = context.prFiles.find((file) => file.status !== 'removed') ?? context.prFiles[0];
+  return fallback ? { path: fallback.filename, subjectType: 'file' } : undefined;
 }
 
 function buildReviewSummary(
@@ -136,7 +169,7 @@ function buildReviewSummary(
   const sections = [
     "## 🤖 Bugbot review",
     `Bugbot found **${findings.length + overflowCount}** active potential problem(s) in this revision. `
-      + `${inlineCount} finding(s) are attached to changed lines in this review.`,
+      + `${inlineCount} finding(s) are attached to changed code in this review.`,
   ];
   if (findingLines.length > 0) sections.push(`### Findings\n\n${findingLines.join("\n")}`);
   if (unanchoredBodies.length > 0) {

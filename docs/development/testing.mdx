@@ -10,6 +10,7 @@ Use Corepack and the pinned pnpm toolchain:
 corepack pnpm@10.12.4 run typecheck
 corepack pnpm@10.12.4 run lint
 corepack pnpm@10.12.4 run test:coverage
+corepack pnpm@10.12.4 run eval:bugbot
 corepack pnpm@10.12.4 run build
 corepack pnpm@10.12.4 run validate:agent-docs
 corepack pnpm@10.12.4 run validate:docs-page
@@ -19,6 +20,8 @@ git diff --check
 ```
 
 Tests MUST isolate environment variables such as `AGENT_PROVIDER`, `AGENT_MODEL_PROVIDER`, `AGENT_MODEL`, and `AGENT_COMMAND`. Real provider smoke tests are separate from deterministic unit tests and MUST NOT run without authorization and cost controls. Coverage thresholds are enforced by Jest and must not be reduced to accommodate a new code path; add focused tests instead.
+
+`eval:bugbot` runs the offline Bugbot quality harness. Corpus cases score precision, recall, exact-location accuracy, and severity accuracy independently, so prompt or model changes cannot hide false positives behind a single pass/fail number. Extend the corpus when a production review exposes a new failure mode.
 
 Workflow queue tests inject a clock, random source, and scheduler/delay port. They
 cover one repository traversal with mixed statuses and later-page matches, strict

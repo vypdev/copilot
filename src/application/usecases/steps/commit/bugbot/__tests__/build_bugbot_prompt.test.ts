@@ -94,8 +94,8 @@ describe("buildBugbotPrompt", () => {
             pullRequest: { action: 'synchronize', head: 'feature/42-real-head' },
         } as unknown as Partial<Execution>), mockContext());
 
-        expect(prompt).toContain(`exact commit range \`${before}..${after}\``);
-        expect(prompt).toContain('Do not re-review the unchanged remainder');
+        expect(prompt).toContain(`exact local commit range \`${before}..${after}\``);
+        expect(prompt).toContain('do not re-review its unchanged remainder');
         expect(prompt).toContain('Task 2 is not limited to this range');
     });
 
@@ -105,7 +105,7 @@ describe("buildBugbotPrompt", () => {
             pullRequest: { action: 'synchronize', head: 'feature/42-real-head' },
         } as unknown as Partial<Execution>), mockContext());
 
-        expect(prompt).toContain('Determine what has changed in the branch "feature/42-real-head" compared to "develop"');
+        expect(prompt).toContain('Review the canonical pull-request diff for "feature/42-real-head" compared to "develop"');
         expect(prompt).not.toContain('$(unsafe)');
     });
 

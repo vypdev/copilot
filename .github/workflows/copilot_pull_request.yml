@@ -6,11 +6,13 @@ on:
 
 jobs:
   copilot-pull-requests:
+    if: ${{ vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}
     name: Copilot - Pull Request
     runs-on: [self-hosted, codex]
     timeout-minutes: 120
     permissions:
       contents: read
+      checks: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v5
@@ -67,3 +69,4 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           CURSOR_API_KEY: ${{ (vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor' || vars.RELEASE_PROVIDER == 'cursor') && secrets.CURSOR_API_KEY || '' }}
           CODEX_ACCESS_TOKEN: ${{ secrets.CODEX_ACCESS_TOKEN }}
+          COPILOT_EVIDENCE_TOKEN: ${{ github.token }}

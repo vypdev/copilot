@@ -22,6 +22,7 @@ function toReviewComment(
     body: comment.body ?? null,
     path: comment.path,
     line: comment.line ?? undefined,
+    authorLogin: comment.user?.login ?? undefined,
   };
 }
 

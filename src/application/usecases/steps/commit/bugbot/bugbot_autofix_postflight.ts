@@ -11,6 +11,7 @@ export async function finalizeBugbotAutofix(
     context: BugbotContext,
     idsToFix: string[],
     workspacePathsBefore: string[],
+    branchCheckedOut: boolean,
     responseText: string | undefined,
     gitCommitPort: GitCommitPort,
 ): Promise<Result[]> {
@@ -35,7 +36,7 @@ export async function finalizeBugbotAutofix(
         success: true,
         executed: true,
         steps: [`Bugbot autofix completed. The configured agent applied changes for findings: ${idsToFix.join(', ')}. Run verify commands and commit/push.`],
-        payload: { targetFindingIds: idsToFix, context, workspacePaths },
+        payload: { targetFindingIds: idsToFix, context, workspacePaths, branchCheckedOut },
     })];
 }
 

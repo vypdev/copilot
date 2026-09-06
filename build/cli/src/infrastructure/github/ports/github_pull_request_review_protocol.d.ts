@@ -38,6 +38,9 @@ export interface GithubReviewComment {
     body?: string | null;
     path?: string;
     line?: number | null;
+    user?: {
+        login?: string | null;
+    } | null;
 }
 export interface GithubPullRequestReviewCommentQueryClient {
     paginate: {

@@ -6,6 +6,7 @@ on:
 
 jobs:
   copilot-pull-requests:
+    if: ${{ vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}
     name: Copilot - Pull Request Comment
     runs-on: ubuntu-latest
     timeout-minutes: 120

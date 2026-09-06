@@ -59,6 +59,7 @@ const validWorkflow = {
   name: 'Copilot - Issue',
   jobs: {
     'copilot-issues': {
+      if: "${{ vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}",
       'runs-on': ['self-hosted', 'codex'],
       'timeout-minutes': MIN_QUEUE_JOB_TIMEOUT_MINUTES,
       steps: [{ uses: './', with: {} }],
@@ -91,6 +92,12 @@ describe('workflow contract validator', () => {
         expect(() => validateWorkflow(file, workflow)).not.toThrow();
       }
     }
+  });
+
+  it('rejects an event workflow that removes the generic bot actor gate', () => {
+    const workflow = JSON.parse(JSON.stringify(validWorkflow));
+    delete workflow.jobs['copilot-issues'].if;
+    expect(() => assertQueueWorkflow(queueFile, workflow)).toThrow('COPILOT_BOT_LOGIN actor gate');
   });
 
   it('validates the exact gate-first DAG for active and setup release/hotfix workflows', () => {

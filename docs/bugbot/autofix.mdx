@@ -5,7 +5,7 @@ description: How to ask the bot to fix one or more Bugbot findings from an issue
 
 # Autofix
 
-**Bugbot autofix** lets you ask the bot to **fix** one or more of the findings it previously reported. You write a **comment** on the issue or on the pull request (or reply in a review thread); the configured agent determines **which** findings you mean and applies the fixes. The action then runs your **verify commands** (e.g. build, test, lint) and, if they pass, **commits and pushes** and marks those findings as resolved.
+**Bugbot autofix** lets you ask the bot to **fix** one or more previously reported findings. The configured agent determines which findings you mean and applies the fixes. The action checks out the target branch before agent execution, runs your verify commands, and commits and pushes only safe workspace paths. Findings stay open until a fresh review verifies the pushed revision.
 
 This page explains how to trigger autofix, who can do it, and what the action does under the hood.
 
@@ -103,9 +103,9 @@ So verify commands act as a gate: only passing runs produce a commit. If you lea
 1. The configured execution role applies the code changes in its workspace.
 2. The action runs the **verify commands** in the runner; if any fails, it stops.
 3. The action runs **git add**, **commit** (message: `fix(#N): bugbot autofix - resolve <finding ids>`), and **push** to the branch.
-4. The action **marks** the fixed findings as **resolved**: it updates the corresponding issue and PR comments (hidden marker set to `resolved: true`) and, on the PR, **resolves the review threads** for those comments.
+4. The action leaves the findings open. The push starts a fresh review; only that independent analysis may update the markers and resolve the PR threads.
 
-So the next time detection runs (e.g. on the next push), the configured agent will see those findings as resolved and not suggest them again.
+This prevents a successful edit or test command from being mistaken for proof that the original defect no longer exists.
 
 ---
 

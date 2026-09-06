@@ -114,7 +114,7 @@ describe("Bugbot port boundaries", () => {
     expect(markResolvedSource).not.toContain("BugbotIssueCommentWritePort");
     expect(markResolvedSource).toContain("BugbotFindingResolutionPorts");
     expect(workflowSource).not.toContain("BugbotWritePorts");
-    expect(workflowSource).toContain("BugbotFindingResolutionPorts");
+    expect(workflowSource).not.toContain("BugbotFindingResolutionPorts");
   });
 
   it("allows publication to reopen an existing resolved thread without granting resolution writes", () => {

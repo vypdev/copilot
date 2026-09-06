@@ -15,13 +15,13 @@ Bugbot has two main modes: **detection** (on push or single action) and **fix/do
 
 **Steps:**
 
-1. **Guard:** OpenCode must be configured; `issueNumber !== -1`.
-2. **Load context:** `loadBugbotContext(param)` → issue comments + PR review comments parsed for markers; builds `existingByFindingId`, `issueComments`, `openPrNumbers`, `previousFindingsBlock`, `prContext`, `unresolvedFindingsWithBody`. Branch is `param.commit.branch` (or `options.branchOverride` when provided). PR context includes `prHeadSha`, `prFiles`, `pathToFirstDiffLine` for the first open PR.
-3. **Build prompt:** `buildBugbotPrompt(param, context)` – repo context, head/base branch, issue number, optional `ai-ignore-files`, and `previousFindingsBlock` (task 2: which previous findings are now resolved). OpenCode is asked to compute the diff itself and return `findings` + `resolved_finding_ids`.
-4. **Call OpenCode:** `askAgent(OPENCODE_AGENT_PLAN, prompt, BUGBOT_RESPONSE_SCHEMA)`.
-5. **Process response:** Filter findings: safe path (`isSafeFindingFilePath`), not in `ai-ignore-files` (`fileMatchesIgnorePatterns`), `meetsMinSeverity` (min from `bugbot-severity`), `deduplicateFindings`. Apply `applyCommentLimit(findings, bugbot-comment-limit)` → `toPublish`, `overflowCount`, `overflowTitles`.
+1. **Guard:** The selected findings/reviewer runtime must be configured and a publication target must exist.
+2. **Load context:** `loadBugbotContext(param)` loads authenticated issue/PR markers, batched review-thread state, bounded human discussion, the PR head, and one canonical GitHub diff snapshot. A manually resolved thread is projected as a durable dismissal.
+3. **Build prompt:** `buildBugbotPrompt(param, context)` supplies hierarchical project rules, canonical diff evidence, human discussion, ignore policy, and unresolved prior findings. The reviewer must return actionable findings with evidence, confidence, category, severity, and exact location/range.
+4. **Call configured runtime:** `queryBugbotFindings(...)` requests structured output using `BUGBOT_RESPONSE_SCHEMA`.
+5. **Process response:** Validate again locally; filter unsafe/ignored/low-confidence/low-severity findings; preserve distinct same-line root causes; rank by severity and confidence; then apply the comment limit.
 6. **Mark resolved:** `markFindingsResolved(execution, context, resolvedFindingIds, normalizedResolvedIds)` receives only `BugbotFindingResolutionPorts`. For an issue finding it verifies the comment and marker before updating `resolved:true`. For a PR finding it resolves the GraphQL thread first and only then updates the marker, so a provider failure never records a false success; an already-resolved thread is idempotent, and a legacy `resolved:true` marker is still retried to repair an open thread. Missing comments/markers and provider failures become sanitized semantic errors. The adapter matches the numeric REST comment identity through GraphQL `fullDatabaseId`, handles nullable pages, and rejects repeated cursors.
-7. **Publish:** `publishFindings(execution, context, toPublish, overflowCount?, overflowTitles?)` – for each finding: add or update **issue comment** (always); add or update **PR review comment** only when `finding.file` is in `prContext.prFiles` (using `pathToFirstDiffLine` when finding has no line). Each comment body is built with `buildCommentBody(finding, resolved)` and includes the **marker** `<!-- copilot-bugbot finding_id:"id" resolved:false -->`. Overflow: one extra issue comment summarizing excess findings.
+7. **Publish:** The PR head is checked before and after analysis. A superseded run makes no mutations. PR findings are one native review with one general summary and child exact-line/range or file-level comments; no duplicate general result comment is posted. Issue comments are used only when no PR exists.
 
 **Key paths (detection):**
 
@@ -76,7 +76,7 @@ Bugbot has two main modes: **detection** (on push or single action) and **fix/do
    - `BugbotAutofixUseCase.invoke({ execution, targetFindingIds, userComment, context, branchOverride })`
    - Load context if not provided; filter targets to valid unresolved ids; `buildBugbotFixPrompt(...)` with repo, findings block (truncated fullBody per finding), user comment, verify commands; `copilotMessage(ai, prompt)` (build agent).
    - If success: `runBugbotAutofixCommitAndPush(execution, { branchOverride, targetFindingIds })` – optional checkout if branchOverride, run verify commands (from `getBugbotFixVerifyCommands`, max 20), git add/commit/push (message `fix(#N): bugbot autofix - resolve ...`).
-   - If committed and context: run the post-autofix resolution workflow with the narrow resolution capability. Resolution errors append a failed result and suppress unconditional success reporting.
+   - If committed: leave findings open until the push triggers a fresh reviewer pass. A successful edit/verification is not itself proof that the original defect is resolved.
 
 4. **Branch B – Do user request** (when `!runAutofix && canRunDoUserRequest(payload)` and `allowedToModifyFiles`):
    - `DoUserRequestUseCase.invoke({ execution, userComment, branchOverride })`
@@ -115,7 +115,7 @@ Bugbot has two main modes: **detection** (on push or single action) and **fix/do
 - `BUGBOT_MAX_COMMENTS`: 20 (default limit)
 - `MAX_FINDING_BODY_LENGTH`: 12000 (truncation when loading context and in build_bugbot_fix_prompt)
 - `MAX_VERIFY_COMMANDS`: 20 (in bugbot_autofix_commit)
-- Types: `BugbotContext`, `BugbotFinding` (id, title, description, file?, line?, severity?, suggestion?), `UnresolvedFindingSummary`, `BugbotFixIntentPayload`.
+- Types: `BugbotContext`, `BugbotFinding` (id, title, description, file?, line?, endLine?, severity?, confidence?, category?, evidence?, suggestion?), `UnresolvedFindingSummary`, `BugbotFixIntentPayload`.
 
 ---
 
@@ -125,3 +125,5 @@ Bugbot has two main modes: **detection** (on push or single action) and **fix/do
 - **Finding body in prompts:** `truncateFindingBody(body, MAX_FINDING_BODY_LENGTH)` with suffix `[... truncated for length ...]` (used in load_bugbot_context and build_bugbot_fix_prompt).
 - **Verify commands:** Parsed with shell-quote; no shell operators (;, |, etc.); max 20 run.
 - **Path:** `isSafeFindingFilePath` (no null byte, no `..`, no absolute); PR review comment only if file in `prFiles`.
+- **Agent environment:** provider credentials are selected explicitly; unrelated process environment secrets are not inherited. Codex review roles are forced read-only with user/repository config ignored, while fixer runs use workspace-write. Dangerous sandbox bypass flags are rejected.
+- **Cancellation:** timeout/abort terminates the full POSIX process group and escalates to a forced kill after a bounded grace period.

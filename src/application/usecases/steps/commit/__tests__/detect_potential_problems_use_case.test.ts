@@ -34,6 +34,7 @@ const mockListPullRequestReviewComments = jest.fn();
 const mockGetPullRequestHeadSha = jest.fn();
 const mockGetChangedFiles = jest.fn();
 const mockGetFilesWithFirstDiffLine = jest.fn();
+const mockGetFilesWithDiffLocations = jest.fn();
 const mockCreateReviewWithComments = jest.fn();
 const mockUpdatePullRequestReviewComment = jest.fn();
 const mockResolvePullRequestReviewThread = jest.fn();
@@ -82,6 +83,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       getPullRequestHeadSha: mockGetPullRequestHeadSha,
       getChangedFiles: mockGetChangedFiles,
       getFilesWithFirstDiffLine: mockGetFilesWithFirstDiffLine,
+      getFilesWithDiffLocations: mockGetFilesWithDiffLocations,
       createReviewWithComments: mockCreateReviewWithComments,
       updatePullRequestReviewComment: mockUpdatePullRequestReviewComment,
       resolvePullRequestReviewThread: mockResolvePullRequestReviewThread,
@@ -115,6 +117,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     mockGetPullRequestHeadSha.mockReset();
     mockGetChangedFiles.mockReset();
     mockGetFilesWithFirstDiffLine.mockReset();
+    mockGetFilesWithDiffLocations.mockReset();
     mockCreateReviewWithComments.mockReset();
     mockUpdatePullRequestReviewComment.mockReset();
     mockResolvePullRequestReviewThread.mockReset();
@@ -122,8 +125,11 @@ describe("DetectPotentialProblemsUseCase", () => {
     mockAskAgent.mockReset();
 
     mockListIssueComments.mockResolvedValue([]);
+    mockListPullRequestReviewComments.mockResolvedValue([]);
     mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([]);
+    mockGetChangedFiles.mockResolvedValue([]);
     mockGetFilesWithFirstDiffLine.mockResolvedValue([]);
+    mockGetFilesWithDiffLocations.mockResolvedValue([]);
   });
 
   it("returns empty results when the findings CLI is not configured", async () => {
@@ -243,14 +249,14 @@ describe("DetectPotentialProblemsUseCase", () => {
     expect(mockAddComment).not.toHaveBeenCalled();
   });
 
-  it("returns success with no-new-findings when response has no findings array", async () => {
+  it("fails closed when the structured response has no findings array", async () => {
     mockAskAgent.mockResolvedValue({ other: "data" });
 
     const results = await useCase.invoke(baseParam());
 
     expect(results).toHaveLength(1);
-    expect(results[0].success).toBe(true);
-    expect(results[0].steps?.[0]).toContain("no new findings, no resolved");
+    expect(results[0].success).toBe(false);
+    expect(results[0].errors?.[0].message).toContain("no potential-problem analysis");
     expect(mockAddComment).not.toHaveBeenCalled();
   });
 
@@ -336,6 +342,9 @@ describe("DetectPotentialProblemsUseCase", () => {
     mockGetFilesWithFirstDiffLine.mockResolvedValue([
       { path: "src/bar.ts", firstLine: 5 },
     ]);
+    mockGetFilesWithDiffLocations.mockResolvedValue([
+      { path: "src/bar.ts", locations: [{ line: 5, side: "RIGHT" }] },
+    ]);
     mockListPullRequestReviewComments.mockResolvedValue([]);
 
     await useCase.invoke(baseParam());
@@ -356,6 +365,57 @@ describe("DetectPotentialProblemsUseCase", () => {
       ]),
       "token",
     );
+  });
+
+  it("skips agent execution when the event revision is already superseded", async () => {
+    const eventSha = "a".repeat(40);
+    const currentSha = "b".repeat(40);
+    mockGetPullRequestHeadSha.mockResolvedValue(currentSha);
+    mockGetChangedFiles.mockResolvedValue([]);
+    mockGetFilesWithFirstDiffLine.mockResolvedValue([]);
+
+    const results = await useCase.invoke(baseParam({
+      issueNumber: -1,
+      isPullRequest: true,
+      inputs: {
+        eventName: "pull_request",
+        pull_request: { head: { sha: eventSha } },
+      },
+      pullRequest: { number: 100, head: "feature/head", action: "synchronize" },
+    }));
+
+    expect(results[0].success).toBe(true);
+    expect(results[0].payload).toEqual(expect.objectContaining({ superseded: true }));
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
+  });
+
+  it("discards analysis when the PR head changes while the agent is running", async () => {
+    const analyzedSha = "a".repeat(40);
+    const newerSha = "b".repeat(40);
+    mockGetPullRequestHeadSha
+      .mockResolvedValueOnce(analyzedSha)
+      .mockResolvedValueOnce(newerSha);
+    mockGetChangedFiles.mockResolvedValue([{ filename: "src/a.ts", status: "modified" }]);
+    mockGetFilesWithFirstDiffLine.mockResolvedValue([{ path: "src/a.ts", firstLine: 1 }]);
+    mockAskAgent.mockResolvedValue({ findings: [{
+      id: "stale",
+      title: "Stale finding",
+      description: "Must never be published.",
+      file: "src/a.ts",
+      line: 1,
+    }] });
+
+    const results = await useCase.invoke(baseParam({
+      issueNumber: -1,
+      isPullRequest: true,
+      inputs: { eventName: "pull_request", pull_request: {} },
+      pullRequest: { number: 100, head: "feature/head", action: "synchronize" },
+    }));
+
+    expect(results[0].payload).toEqual(expect.objectContaining({ superseded: true }));
+    expect(mockAskAgent).toHaveBeenCalledTimes(1);
+    expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
   });
 
   it("when finding already has issue comment, updates instead of adding", async () => {
@@ -688,6 +748,9 @@ describe("DetectPotentialProblemsUseCase", () => {
     mockGetFilesWithFirstDiffLine.mockResolvedValue([
       { path: "lib/helper.ts", firstLine: 1 },
     ]);
+    mockGetFilesWithDiffLocations.mockResolvedValue([
+      { path: "lib/helper.ts", locations: [{ line: 1, side: "RIGHT" }] },
+    ]);
     mockListPullRequestReviewComments.mockResolvedValue([]);
 
     await useCase.invoke(baseParam());
@@ -701,7 +764,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       expect.stringContaining("General issue"),
       [expect.objectContaining({
         path: "lib/helper.ts",
-        line: 1,
+        subjectType: "file",
         body: expect.stringContaining("Review-level finding"),
       })],
       "token",
@@ -775,14 +838,14 @@ describe("DetectPotentialProblemsUseCase", () => {
     expect(prompt).toContain("ex-id");
   });
 
-  it("treats non-array findings as empty and returns success with no new findings", async () => {
+  it("fails closed when findings is not an array", async () => {
     mockAskAgent.mockResolvedValue({ findings: "not-array" });
 
     const results = await useCase.invoke(baseParam());
 
     expect(results).toHaveLength(1);
-    expect(results[0].success).toBe(true);
-    expect(results[0].steps?.[0]).toContain("no new findings, no resolved");
+    expect(results[0].success).toBe(false);
+    expect(results[0].errors?.[0].message).toContain("no potential-problem analysis");
     expect(mockAddComment).not.toHaveBeenCalled();
   });
 
@@ -1043,7 +1106,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       expect(findingComments.length).toBe(20);
     });
 
-    it("deduplicates findings by file:line before publishing", async () => {
+    it("preserves distinct findings reported on the same line", async () => {
       mockAskAgent.mockResolvedValue({
         findings: [
           {
@@ -1066,9 +1129,10 @@ describe("DetectPotentialProblemsUseCase", () => {
 
       await useCase.invoke(baseParam());
 
-      expect(mockAddComment).toHaveBeenCalledTimes(1);
-      expect(mockAddComment.mock.calls[0][3]).toContain("First");
-      expect(mockAddComment.mock.calls[0][3]).not.toContain("Second");
+      expect(mockAddComment).toHaveBeenCalledTimes(2);
+      const bodies = mockAddComment.mock.calls.map((call) => call[3] as string);
+      expect(bodies.some((body) => body.includes("First"))).toBe(true);
+      expect(bodies.some((body) => body.includes("Second"))).toBe(true);
     });
   });
 });

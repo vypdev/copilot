@@ -114,7 +114,6 @@ describe("main run route composition root", () => {
       mockIssue,
       expect.anything(),
       expect.anything(),
-      mockResolution,
       gitCommit,
       expect.anything(),
       expect.anything(),
@@ -122,7 +121,7 @@ describe("main run route composition root", () => {
     );
   });
 
-  it("injects the narrow Bugbot resolution view into review comments", () => {
+  it("keeps Bugbot resolution out of the review-comment autofix composition", () => {
     const useCase = createPullRequestReviewCommentUseCaseCompositionRoot();
 
     expect(useCase).toBeInstanceOf(PullRequestReviewCommentUseCase);
@@ -135,7 +134,6 @@ describe("main run route composition root", () => {
       mockIssue,
       expect.anything(),
       expect.anything(),
-      mockResolution,
       expect.anything(),
       expect.anything(),
       expect.anything(),

@@ -137,13 +137,20 @@ export function buildCommentBody(
   const safeSeverity = sanitizeAgentMarkdown(finding.severity, 32);
   const safeFile = sanitizeAgentMarkdown(finding.file, 500).replace(/`/g, "\\`");
   const safeSuggestion = sanitizeAgentMarkdown(finding.suggestion, 8_000);
+  const safeEvidence = sanitizeAgentMarkdown(finding.evidence, 8_000);
+  const safeCategory = sanitizeAgentMarkdown(finding.category, 32);
   const severity = safeSeverity
     ? `**Severity:** ${safeSeverity}\n\n`
     : "";
   const fileLine =
     safeFile
-      ? `**Location:** \`${safeFile}${finding.line != null ? `:${finding.line}` : ""}\`\n\n`
+      ? `**Location:** \`${safeFile}${finding.line != null ? `:${finding.line}${finding.endLine != null && finding.endLine > finding.line ? `-${finding.endLine}` : ''}` : ""}\`\n\n`
       : "";
+  const metadata = [
+    safeCategory ? `**Category:** ${safeCategory}` : '',
+    finding.confidence !== undefined ? `**Confidence:** ${Math.round(finding.confidence * 100)}%` : '',
+  ].filter(Boolean).join(' · ');
+  const evidence = safeEvidence ? `**Evidence:**\n${safeEvidence}\n\n` : '';
   const suggestion = safeSuggestion
     ? `**Suggested fix:**\n${safeSuggestion}\n\n`
     : "";
@@ -153,6 +160,7 @@ export function buildCommentBody(
   const marker = buildMarker(finding.id, resolved, finding.fingerprint, resolution);
   return `## ${safeTitle}
 
-${severity}${fileLine}${safeDescription}
+${severity}${metadata ? `${metadata}\n\n` : ''}${fileLine}${safeDescription}
+${evidence}
 ${suggestion}${resolvedNote}${marker}`;
 }

@@ -80,7 +80,6 @@ describe("runCommentAutomation", () => {
         isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true),
       },
       {} as never,
-      {} as never,
     );
 
     expect(results).toContain(intentResult);
@@ -134,7 +133,6 @@ describe("runCommentAutomation", () => {
       },
       authorization,
       {} as never,
-      {} as never,
     );
 
     expect(results[0]).toBe(languageResult);
@@ -169,7 +167,6 @@ describe("runCommentAutomation", () => {
       },
       { isActorAllowedToModifyFiles: jest.fn() },
       {} as never,
-      {} as never,
     );
 
     expect(results.map(result => result.id)).toEqual(['CommentAutomation.ExplicitCommand', 'think']);
@@ -203,7 +200,6 @@ describe("runCommentAutomation", () => {
       },
       {} as never,
       {} as never,
-      {} as never,
     );
 
     expect(results[0]).toMatchObject({
@@ -235,7 +231,6 @@ describe("runCommentAutomation", () => {
       },
       {} as never,
       {} as never,
-      {} as never,
     );
 
     expect(results.map(result => result.id)).toEqual(['CommentAutomation.ExplicitCommand', 'review']);
@@ -256,7 +251,6 @@ describe("runCommentAutomation", () => {
         userComment: '/copilot analyze',
         gitCommitPort: {} as never,
       },
-      {} as never,
       {} as never,
       {} as never,
     );
@@ -301,7 +295,6 @@ describe("runCommentAutomation", () => {
       },
       { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(false) } as never,
       {} as never,
-      {} as never,
     );
 
     expect(results.map(result => result.id)).toEqual(['intent', 'review']);
@@ -335,7 +328,6 @@ describe("runCommentAutomation", () => {
       },
       { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) } as never,
       {} as never,
-      {} as never,
     );
 
     expect(doUserRequest.invoke).toHaveBeenCalledWith(expect.objectContaining({
@@ -364,7 +356,6 @@ describe("runCommentAutomation", () => {
       },
       authorization,
       {} as never,
-      {} as never,
     );
 
     expect(results).toEqual([expect.objectContaining({ id: 'description' })]);
@@ -392,7 +383,6 @@ describe("runCommentAutomation", () => {
       },
       authorization,
       {} as never,
-      {} as never,
     );
 
     expect(description.invokeExplicit).not.toHaveBeenCalled();
@@ -416,7 +406,6 @@ describe("runCommentAutomation", () => {
         userComment: '/copilot description',
         gitCommitPort: {} as never,
       },
-      {} as never,
       {} as never,
       {} as never,
     );
@@ -444,7 +433,6 @@ describe("runCommentAutomation", () => {
       },
       {} as never,
       {} as never,
-      {} as never,
     );
 
     expect(results[0]).toMatchObject({ success: false, executed: false });
@@ -469,7 +457,6 @@ describe("runCommentAutomation", () => {
       },
       authorization,
       {} as never,
-      {} as never,
     );
 
     expect(results).toEqual([expect.objectContaining({ id: 'dismiss' })]);
@@ -493,7 +480,6 @@ describe("runCommentAutomation", () => {
         gitCommitPort: {} as never,
       },
       authorization as never,
-      {} as never,
       {} as never,
     );
 

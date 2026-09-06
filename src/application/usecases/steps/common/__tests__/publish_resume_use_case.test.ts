@@ -184,6 +184,24 @@ describe('PublishResultUseCase', () => {
     expect(mockAddComment).toHaveBeenCalledWith('o', 'r', 99, expect.stringContaining('1. Step 1'), 't');
   });
 
+  it('does not duplicate a Bugbot native review with an independent PR comment', async () => {
+    const param = baseParam({
+      isPullRequest: true,
+      currentConfiguration: {
+        results: [new Result({
+          id: 'DetectPotentialProblemsUseCase',
+          success: true,
+          executed: true,
+          steps: ['Potential problems detection completed.'],
+        })],
+      },
+    });
+
+    await useCase.invoke(param);
+
+    expect(mockAddComment).not.toHaveBeenCalled();
+  });
+
   it('includes debug log section in comment body when debug is true and logs are present', async () => {
     mockAddComment.mockResolvedValue(undefined);
     mockGetAccumulatedLogsAsText.mockReturnValue('[INFO] line1\n[WARN] line2');

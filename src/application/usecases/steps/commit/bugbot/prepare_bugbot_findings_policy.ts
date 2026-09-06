@@ -3,7 +3,7 @@ import { fileMatchesIgnorePatterns } from './file_ignore';
 import { applyCommentLimit, type ApplyLimitResult } from './limit_comments';
 import { normalizeFindingIdForMarker } from './marker';
 import { isSafeFindingFilePath } from './path_validation';
-import { meetsMinSeverity, normalizeMinSeverity } from './severity';
+import { meetsMinSeverity, normalizeMinSeverity, severityLevel } from './severity';
 import type { BugbotFinding } from './types';
 import type { BugbotFindingResolution } from './types';
 import { buildFindingFingerprint } from '../../../../../domain/bugbot/finding_identity';
@@ -24,6 +24,7 @@ export type PreparedBugbotFindings = ApplyLimitResult & {
 /** Hard cap for model-controlled arrays before any filtering or publication. */
 export const MAX_AGENT_FINDINGS = 500;
 export const MAX_AGENT_RESOLVED_FINDING_IDS = 500;
+export const MIN_AGENT_FINDING_CONFIDENCE = 0.70;
 
 export function normalizeBugbotResponse(response: unknown): {
     findings: BugbotFinding[];
@@ -32,6 +33,7 @@ export function normalizeBugbotResponse(response: unknown): {
 } | undefined {
     if (response == null || typeof response !== 'object') return undefined;
     const payload = response as Record<string, unknown>;
+    if (!Array.isArray(payload.findings)) return undefined;
     return {
         findings: normalizeFindings(payload.findings),
         resolvedFindingIds: normalizeResolvedFindingIds(payload.resolved_finding_ids),
@@ -49,7 +51,13 @@ export function prepareFindings(
     const filteredFindings = deduplicateFindings(findings
         .filter(finding => finding.file == null || String(finding.file).trim() === '' || isSafeFindingFilePath(finding.file))
         .filter(finding => !fileMatchesIgnorePatterns(finding.file, ignorePatterns))
-        .filter(finding => meetsMinSeverity(finding.severity, minSeverity)));
+        .filter(finding => finding.confidence === undefined || finding.confidence >= MIN_AGENT_FINDING_CONFIDENCE)
+        .filter(finding => meetsMinSeverity(finding.severity, minSeverity)))
+        .map((finding, index) => ({ finding, index }))
+        .sort((left, right) => severityLevel(right.finding.severity) - severityLevel(left.finding.severity)
+            || (right.finding.confidence ?? 0) - (left.finding.confidence ?? 0)
+            || left.index - right.index)
+        .map(({ finding }) => finding);
     return { ...applyCommentLimit(filteredFindings, maxComments), activeFindings: filteredFindings };
 }
 
@@ -64,7 +72,24 @@ function normalizeFindings(findings: unknown): BugbotFinding[] {
         const line = typeof value.line === 'number' && Number.isSafeInteger(value.line) && value.line > 0
             ? value.line
             : undefined;
-        const severity = boundedText(value.severity, 32) || undefined;
+        const endLineCandidate = typeof value.endLine === 'number' && Number.isSafeInteger(value.endLine) && value.endLine > 0
+            ? value.endLine
+            : undefined;
+        const endLine = line !== undefined && endLineCandidate !== undefined && endLineCandidate >= line
+            ? endLineCandidate
+            : undefined;
+        const severityCandidate = boundedText(value.severity, 32).toLowerCase();
+        const severity = ['high', 'medium', 'low', 'info'].includes(severityCandidate)
+            ? severityCandidate
+            : undefined;
+        const confidence = typeof value.confidence === 'number' && Number.isFinite(value.confidence)
+            ? Math.max(0, Math.min(1, value.confidence))
+            : undefined;
+        const categoryCandidate = boundedText(value.category, 32).toLowerCase();
+        const category = ['correctness', 'security', 'performance', 'reliability', 'maintainability'].includes(categoryCandidate)
+            ? categoryCandidate
+            : undefined;
+        const evidence = boundedText(value.evidence, 8_000) || undefined;
         const suggestion = boundedText(value.suggestion, 8_000) || undefined;
         return normalizedId == null
             ? []
@@ -74,7 +99,11 @@ function normalizeFindings(findings: unknown): BugbotFinding[] {
                 description,
                 ...(file ? { file } : {}),
                 ...(line ? { line } : {}),
+                ...(endLine ? { endLine } : {}),
                 ...(severity ? { severity } : {}),
+                ...(confidence !== undefined ? { confidence } : {}),
+                ...(category ? { category } : {}),
+                ...(evidence ? { evidence } : {}),
                 ...(suggestion ? { suggestion } : {}),
                 fingerprint: buildFindingFingerprint({ file, line, title, description, suggestion }),
             }];

@@ -25,6 +25,31 @@ function createClient(pages: Array<Array<{ filename: string; status: string; add
 }
 
 describe('PullRequestChangesRepository', () => {
+  it('builds all review diff projections from a single paginated traversal', async () => {
+    const { provider, iterator } = createClient([[
+      {
+        filename: 'src/a.ts',
+        status: 'modified',
+        additions: 2,
+        deletions: 1,
+        patch: '@@ -4,2 +4,3 @@\n-old\n context\n+new\n+extra',
+      },
+    ]]);
+    const repository = new PullRequestChangesRepository(provider);
+
+    const snapshot = await repository.getReviewDiffSnapshot('owner', 'repo', 7, 'token');
+
+    expect(iterator).toHaveBeenCalledTimes(1);
+    expect(snapshot.changes[0]).toEqual(expect.objectContaining({ filename: 'src/a.ts', additions: 2 }));
+    expect(snapshot.filesWithFirstDiffLine).toEqual([{ path: 'src/a.ts', firstLine: 4 }]);
+    expect(snapshot.filesWithDiffLocations[0].locations).toEqual(expect.arrayContaining([
+      { line: 4, side: 'LEFT' },
+      { line: 4, side: 'RIGHT' },
+      { line: 5, side: 'RIGHT' },
+      { line: 6, side: 'RIGHT' },
+    ]));
+  });
+
   it('uses every paginated file page for changed files and diff lines', async () => {
     const { provider, iterator } = createClient([
       [{ filename: 'first.ts', status: 'modified', additions: 1, deletions: 0, patch: '@@ -1,1 +8,2 @@' }],

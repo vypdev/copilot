@@ -2,7 +2,7 @@
  * JSON schemas for findings-agent responses. Used with the findings query so the agent returns
  * structured JSON we can parse.
  */
-/** Detection (on push): the configured agent computes the diff and returns findings + resolved_finding_ids. */
+/** Detection returns findings and explicit lifecycle changes for prior finding IDs. */
 export declare const BUGBOT_RESPONSE_SCHEMA: {
     readonly type: "object";
     readonly properties: {
@@ -39,10 +39,31 @@ export declare const BUGBOT_RESPONSE_SCHEMA: {
                         readonly minimum: 1;
                         readonly description: "Line number when applicable";
                     };
+                    readonly endLine: {
+                        readonly type: "integer";
+                        readonly minimum: 1;
+                        readonly description: "Inclusive final line when the problem spans multiple diff lines";
+                    };
                     readonly severity: {
                         readonly type: "string";
                         readonly enum: readonly ["high", "medium", "low", "info"];
                         readonly description: "Severity. Findings below the configured minimum are not published.";
+                    };
+                    readonly confidence: {
+                        readonly type: "number";
+                        readonly minimum: 0;
+                        readonly maximum: 1;
+                        readonly description: "Confidence that the finding is a real, actionable defect";
+                    };
+                    readonly category: {
+                        readonly type: "string";
+                        readonly enum: readonly ["correctness", "security", "performance", "reliability", "maintainability"];
+                        readonly description: "Primary defect category";
+                    };
+                    readonly evidence: {
+                        readonly type: "string";
+                        readonly maxLength: 8000;
+                        readonly description: "Concrete execution path, invariant, or code evidence proving impact";
                     };
                     readonly suggestion: {
                         readonly type: "string";

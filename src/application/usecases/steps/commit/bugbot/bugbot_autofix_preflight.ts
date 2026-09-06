@@ -9,12 +9,14 @@ import { buildBugbotFixPrompt } from './build_bugbot_fix_prompt';
 import { loadBugbotContext } from './load_bugbot_context_use_case';
 import { listWorkspacePaths } from './workspace_changes';
 import { logDebugInfo, logError } from '../../../../ports/logging_ports';
+import { checkoutBranch } from './git_branch_checkout';
 
 export type BugbotAutofixPreflight = {
     context: BugbotContext;
     workspacePathsBefore: string[];
     idsToFix: string[];
     prompt: string;
+    branchCheckedOut: boolean;
 };
 
 export async function prepareBugbotAutofix(
@@ -26,12 +28,16 @@ export async function prepareBugbotAutofix(
     contextPorts: BugbotContextPorts,
     gitCommitPort: GitCommitPort,
 ): Promise<BugbotAutofixPreflight | Result[]> {
-    const context = providedContext ?? await loadBugbotContext(execution, branchOverride ? { branchOverride } : undefined, contextPorts);
     const workspacePathsBefore = await inspectWorkspace(gitCommitPort, 'before');
     if (workspacePathsBefore.length > 0) {
         logError(`Bugbot autofix refused because workspace is not clean: ${workspacePathsBefore.join(', ')}`);
         return [failure('Bugbot autofix refused: workspace is not clean before agent execution.')];
     }
+    const branchCheckedOut = Boolean(branchOverride);
+    if (branchOverride && !(await checkoutBranch(branchOverride, gitCommitPort))) {
+        return [failure(`Bugbot autofix refused: failed to checkout target branch ${branchOverride}.`)];
+    }
+    const context = providedContext ?? await loadBugbotContext(execution, branchOverride ? { branchOverride } : undefined, contextPorts);
     const idsToFix = selectUnresolvedFindingIds(context, targetFindingIds);
     if (idsToFix.length === 0) {
         logDebugInfo('No valid unresolved target findings; skipping autofix.');
@@ -40,7 +46,7 @@ export async function prepareBugbotAutofix(
     const verifyCommands = execution.ai?.getBugbotFixVerifyCommands?.() ?? [];
     const prompt = buildBugbotFixPrompt(execution, context, idsToFix, userComment, verifyCommands);
     logDebugInfo(`BugbotAutofix: prompt length=${prompt.length}, target finding ids=${idsToFix.length}, verifyCommands=${verifyCommands.length}.`);
-    return { context, workspacePathsBefore, idsToFix, prompt };
+    return { context, workspacePathsBefore, idsToFix, prompt, branchCheckedOut };
 }
 
 function selectUnresolvedFindingIds(context: BugbotContext, targetFindingIds: string[]): string[] {

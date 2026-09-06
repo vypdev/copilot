@@ -23,10 +23,10 @@ env:
 For this configuration, Bugbot executes:
 
 ```text
-codex exec --ephemeral --skip-git-repo-check --model gpt-5.6-luna --config 'model_provider="openai"' -
+codex exec --ephemeral --skip-git-repo-check --model gpt-5.6-luna --config 'model_provider="openai"' --sandbox read-only --ignore-user-config -
 ```
 
-`agent-provider` selects the CLI runtime. `agent-model-provider` and `agent-model` select the qualified model. Allowlists are checked before execution and failures are terminal. See [Agent CLI configuration](/agents/cli-configuration).
+`agent-provider` selects the CLI runtime. `agent-model-provider` and `agent-model` select the qualified model. Allowlists are checked before execution and failures are terminal. For Codex, the Action enforces `read-only` for reviewer/findings tasks and `workspace-write` for fixer tasks, ignores user/repository configuration, and rejects dangerous bypass flags. The child environment contains only safe runtime variables and the credential selected for that provider. See [Agent CLI configuration](/agents/cli-configuration).
 
 ## bugbot-severity
 

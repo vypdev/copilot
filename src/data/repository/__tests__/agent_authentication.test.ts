@@ -120,6 +120,21 @@ describe('checkAgentAuthentication', () => {
         expect(isolated).toEqual({ PATH: '/usr/bin' });
     });
 
+    it('does not inherit GitHub inputs, generic tokens or cloud credentials', () => {
+        const isolated = buildAgentCliEnvironment('codex', {
+            PATH: '/usr/bin',
+            INPUT_TOKEN: 'github-action-token',
+            GITHUB_TOKEN: 'github-token',
+            COPILOT_EVIDENCE_TOKEN: 'checks-token',
+            PAT: 'personal-access-token',
+            DATABASE_URL: 'postgres://secret',
+            AWS_SESSION_TOKEN: 'aws-token',
+            OPENAI_API_KEY: 'selected-provider-key',
+        }, 'openai');
+
+        expect(isolated).toEqual({ PATH: '/usr/bin', OPENAI_API_KEY: 'selected-provider-key' });
+    });
+
     it('passes only the selected runtime credentials to each CLI', () => {
         const environment = {
             OPENAI_API_KEY: 'openai-key',

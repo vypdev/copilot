@@ -25,10 +25,11 @@ This page describes the **internal flow** of Bugbot: how detection runs, how the
 
 1. **Guards:** The configured agent runtime must be available; the branch must be linked to an issue (`issueNumber !== -1`). Otherwise detection is skipped.
 
-2. **Load context:** The action fetches **issue comments** and **PR review comments** for the issue and any open PRs. It parses each comment for a **hidden marker** (`<!-- copilot-bugbot finding_id:"..." resolved:true|false -->`) and builds:
+2. **Load context:** The action fetches **issue comments**, **PR review comments**, and review-thread state for the issue and any open PRs. Markers are trusted only when their author matches the authenticated workflow identity. A manually resolved thread is persisted as dismissed and is not reopened by a later model response. The action builds:
    - A map of **existing findings** (id → issue comment id, PR comment id, resolved).
    - A **previous findings block** (id, title, description) to send to the configured agent so it can report which are now **resolved**.
-   - For the first open PR: **changed files** and **path → first diff line** (so review comments can be attached to a valid line).
+   - For the target PR: one canonical GitHub diff snapshot containing the changed-file manifest, bounded patches, and every addressable left/right diff location. All projections come from one paginated file traversal.
+   - A bounded block of human review discussion. It is treated as untrusted context and every claim must be verified against code.
 
    Historical context is deliberately bounded: at most **100 previous findings**
    and **48,000 characters** are sent to the agent. Findings beyond that limit
@@ -36,13 +37,13 @@ This page describes the **internal flow** of Bugbot: how detection runs, how the
    unbounded comment history from exhausting the prompt or causing unsafe
    guesses about resolution.
 
-3. **Build prompt:** The action builds a prompt for the configured agent's analysis role with: repo context, head and base branch, issue number, optional ignore patterns (`ai-ignore-files`), and the list of **previously reported findings**. On a PR `synchronize` event with valid Git object ids, the prompt uses the exact `before..after` range; initial, reopened, push, and on-demand reviews use the full branch/base scope. The agent is asked to:
-   - **Task 1:** Compute the selected full or incremental diff and return **new/current findings** (id, title, description, optional file, line, severity, suggestion). Incremental reviews may inspect surrounding current code but do not re-review the unchanged remainder of the PR.
+3. **Build prompt:** The action builds a prompt for the configured agent's analysis role with repository context, hierarchical repository rules, the canonical diff, human discussion, optional ignore patterns (`ai-ignore-files`), and **previously reported findings**. On a PR `synchronize` event with valid Git object ids, task 1 uses the exact `before..after` range; initial, reopened, push, and on-demand reviews use the full branch/base scope. The agent is asked to:
+   - **Task 1:** Return only actionable, changed-code defects with a causal explanation, evidence, category, severity, confidence, exact file/line or range, and a practical fix. Findings below 0.70 confidence, style comments, and speculative concerns are excluded.
    - **Task 2:** Return **resolved_finding_ids**: which of the previous findings are now fixed or no longer apply.
 
-4. **Filter and limit:** The response is schema-validated and filtered: path safety (no `..`, no absolute paths), exclude paths in `ai-ignore-files`, apply **minimum severity** (`bugbot-severity`), deduplicate. Finding identity is provider-independent and is based on normalized path, title, and a line bucket; provider prose and suggestions are not identity, so a rephrased finding updates the existing comment instead of creating a duplicate. Then **comment limit** (`bugbot-comment-limit`) is applied: only the first N findings are kept for individual comments; the rest contribute to an **overflow** count and titles for one summary comment.
+4. **Filter and limit:** The response is validated again locally even when the CLI claims schema support. Unsafe paths, malformed identities, unsupported enum values, low-confidence items, ignored files, and findings below `bugbot-severity` are rejected. Distinct root causes on the same line are retained; semantic duplicates are removed. Findings are ranked by severity and confidence before `bugbot-comment-limit` is applied.
 
-5. **Publish:** For issue-only work, each new finding is added or updated as an issue comment. When a PR is available, Bugbot creates **one review** with a general summary and all new findings attached as inline comments; it does not duplicate them in the PR conversation. Existing inline findings are updated in place. Review comments use a known-valid changed line, with an explicit fallback note when the reported file is outside the diff. Overflow is reported in the same review summary.
+5. **Publish:** The PR head SHA is checked before analysis and again immediately before publication. Superseded runs exit successfully without publishing or resolving anything. For issue-only work, each finding is added or updated as an issue comment. For a PR, Bugbot creates **one review** with one summary and child line/range or file-level comments; it does not add a duplicate generic PR conversation comment. Existing findings are updated in place and overflow remains in the review summary.
 
 6. **Mark resolved:** For each existing finding whose id is in `resolved_finding_ids`, the action **updates** the stored finding comment so the marker shows `resolved: true`, and **resolves the PR review thread** when applicable. Resolution runs only after publication succeeds.
 
@@ -70,7 +71,7 @@ When you post a comment on an **issue** or **pull request** (or reply in a PR re
    - Call the configured execution role (`copilotMessage`); it applies the fixes in its workspace.
    - Run **verify commands** (from `bugbot-fix-verify-commands`) in the runner; if any fails, stop and do not commit.
    - If all pass: **git add**, **commit** (`fix(#N): bugbot autofix - resolve ...`), **push**.
-   - **Mark** those findings as **resolved** (update issue/PR comment markers and resolve PR threads).
+   - Leave those findings open until the push triggers a fresh, read-only review that verifies the new revision. Autofix success alone is never accepted as proof that a defect is fixed.
 
 5. **Do user request (when it’s a do-request and not a fix request, and permission is granted):**
    - Build a **prompt** with repo context and your **sanitized** comment.
@@ -87,7 +88,7 @@ When you post a comment on an **issue** or **pull request** (or reply in a PR re
 
 | Agent | Used for | Edits files? |
 |-------|----------|---------------|
-| **Analysis** | **Detection** (findings + resolved ids); **intent** (is_fix_request, target_finding_ids, is_do_request); **Think** (answers). | No. |
+| **Analysis** | **Detection** (findings + resolved ids); **intent** (is_fix_request, target_finding_ids, is_do_request); **Think** (answers). | No. Codex is forced to `read-only` and ignores repository/user configuration. |
 | **Execution** | **Autofix** (apply fixes for target findings); **do-user-request** (apply general change). | Yes; the action then runs verify commands and commits/pushes from the runner. |
 
 The analysis role reasons over the repo context and your comment; the execution role performs the actual file edits in the configured agent workspace. The **runner** (GitHub Actions) only runs verify commands and git add/commit/push; it does not run the model.
