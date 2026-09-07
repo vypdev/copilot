@@ -34,7 +34,7 @@ jobs:
             echo "::notice::The previous push commit is unavailable; Bugbot will use its documented fallback scope."
           fi
 
-      - uses: vypdev/copilot@a39616557f384bcc633b94e43d9551b2b5205328 # v3
+      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
         with:
           ai-ignore-files: ${{ vars.AI_IGNORE_FILES || 'build/*' }}
           debug: ${{ vars.DEBUG }}

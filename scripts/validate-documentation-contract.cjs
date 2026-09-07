@@ -8,7 +8,7 @@ const root = path.resolve(__dirname, '..');
 const docsRoot = path.join(root, 'docs');
 const navigation = JSON.parse(fs.readFileSync(path.join(root, 'docs.json'), 'utf8'));
 const action = yaml.load(fs.readFileSync(path.join(root, 'action.yml'), 'utf8'));
-const COPILOT_ACTION_SHA = 'a39616557f384bcc633b94e43d9551b2b5205328';
+const COPILOT_ACTION_SHA = 'ae6bdef3be7d896bb2e390d169f103d384ae83a3';
 const IMMUTABLE_ACTION_REFERENCE = /^[^/\s]+\/[^@\s]+@[0-9a-f]{40}$/i;
 
 const errors = [];

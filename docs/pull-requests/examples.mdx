@@ -40,7 +40,7 @@ jobs:
             echo "The previous head is no longer available; the action will review the current head safely."
           fi
 
-      - uses: vypdev/copilot@a39616557f384bcc633b94e43d9551b2b5205328 # v3
+      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
         with:
           token: ${{ secrets.PAT }}
           project-ids: ${{ vars.PROJECT_IDS }}
@@ -80,7 +80,7 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - uses: vypdev/copilot@a39616557f384bcc633b94e43d9551b2b5205328 # v3
+      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
         with:
           token: ${{ secrets.PAT }}
           ai-pull-request-description: true
@@ -96,7 +96,7 @@ A linked issue with a non-empty description enriches the generated result, but i
 Link PRs to a board and assign two reviewers:
 
 ```yaml
-- uses: vypdev/copilot@a39616557f384bcc633b94e43d9551b2b5205328 # v3
+- uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
   with:
     token: ${{ secrets.PAT }}
     project-ids: "2,3"
@@ -111,7 +111,7 @@ Ensure the project has a column named **"In Review"** (or use your actual column
 Enable images in PR comments and set URLs for feature PRs:
 
 ```yaml
-- uses: vypdev/copilot@a39616557f384bcc633b94e43d9551b2b5205328 # v3
+- uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
   with:
     token: ${{ secrets.PAT }}
     images-on-pull-request: true

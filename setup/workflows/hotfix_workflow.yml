@@ -33,7 +33,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Admit workflow to mutation queue
-        uses: vypdev/copilot@a39616557f384bcc633b94e43d9551b2b5205328 # v3
+        uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
         with:
           queue-gate-only: 'true'
           token: ${{ github.token }}
@@ -117,7 +117,7 @@ jobs:
           persist-credentials: false
         
       - name: Copilot - Create Tag
-        uses: vypdev/copilot@a39616557f384bcc633b94e43d9551b2b5205328 # v3
+        uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
         if: ${{ success() }}
         with:
           debug: ${{ vars.DEBUG }}
@@ -146,7 +146,7 @@ jobs:
           token: ${{ secrets.PAT }}
   
       - name: Copilot - Create Release
-        uses: vypdev/copilot@a39616557f384bcc633b94e43d9551b2b5205328 # v3
+        uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
         if: ${{ success() }}
         with:
           debug: ${{ vars.DEBUG }}
@@ -181,7 +181,7 @@ jobs:
       #   uses: whatever/action@v2 
 
       - name: Copilot - Deploy success notification
-        uses: vypdev/copilot@a39616557f384bcc633b94e43d9551b2b5205328 # v3
+        uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
         if: ${{ success() }}
         with:
           debug: ${{ vars.DEBUG }}

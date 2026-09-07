@@ -144,7 +144,7 @@ the Action with the internal `queue-gate-only` mode and only the ephemeral
 `${{ github.token }}` read permissions; it admits the run and exits before project
 composition, agent provisioning, setup, or mutation work. The version-preparation and
 publication jobs depend on that gate transitively, so a failed or skipped admission
-cannot start a write-capable descendant. The setup templates use `vypdev/copilot@a39616557f384bcc633b94e43d9551b2b5205328 # v3`
+cannot start a write-capable descendant. The setup templates use `vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3`
 for this gate and therefore require a published v3 bundle that supports
 `queue-gate-only`.
 
@@ -186,7 +186,7 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - uses: vypdev/copilot@a39616557f384bcc633b94e43d9551b2b5205328 # v3
+      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
         with:
           token: ${{ secrets.PAT }}
           project-ids: '2,3'

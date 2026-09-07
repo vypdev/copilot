@@ -35,7 +35,7 @@ jobs:
 
       # Never execute the Action implementation from the pull request checkout.
       # This immutable release ref keeps untrusted PR content as data only.
-      - uses: vypdev/copilot@a39616557f384bcc633b94e43d9551b2b5205328 # v3
+      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
         with:
           ai-ignore-files: build/*
           bugbot-severity: ${{ vars.BUGBOT_SEVERITY || 'low' }}

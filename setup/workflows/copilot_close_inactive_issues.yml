@@ -27,7 +27,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: vypdev/copilot@a39616557f384bcc633b94e43d9551b2b5205328 # v3
+      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
         with:
           single-action: close_inactive_issues_action
           inactivity-threshold-hours: ${{ inputs.inactivity_threshold_hours || vars.INACTIVITY_THRESHOLD_HOURS || '168' }}

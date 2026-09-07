@@ -8,6 +8,7 @@ interface ContractModule {
   assertDirectEventTriggers(file: string, workflow: Record<string, unknown>): void;
   assertRunner(file: string, workflow: Record<string, unknown>): void;
   assertImmutableActions(file: string, workflow: Record<string, unknown>): void;
+  assertPinnedCopilotActionInputs(file: string, workflow: Record<string, unknown>): void;
   assertNoJobLevelSecrets(file: string, workflow: Record<string, unknown>): void;
   assertAgentWorkflowPermissions(file: string, workflow: Record<string, unknown>): void;
   MIN_QUEUE_JOB_TIMEOUT_MINUTES: number;
@@ -26,6 +27,7 @@ const {
   assertDirectEventTriggers,
   assertRunner,
   assertImmutableActions,
+  assertPinnedCopilotActionInputs,
   assertNoJobLevelSecrets,
   assertAgentWorkflowPermissions,
   MIN_QUEUE_JOB_TIMEOUT_MINUTES,
@@ -268,7 +270,7 @@ describe('workflow contract validator', () => {
           permissions: { actions: 'read', contents: 'read' },
           steps: [
             { uses: 'actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09', with: { 'persist-credentials': false } },
-            { uses: 'vypdev/copilot@a39616557f384bcc633b94e43d9551b2b5205328', with: { 'queue-gate-only': 'true', token: '${{ github.token }}' } },
+            { uses: 'vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3', with: { 'queue-gate-only': 'true', token: '${{ github.token }}' } },
           ],
         },
         'prepare-version-files': {
@@ -334,6 +336,19 @@ describe('workflow contract validator', () => {
     expect(() => assertImmutableActions(file, {
       jobs: { test: { steps: [{ uses: 'actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09' }] } },
     })).toThrow('persist-credentials: false');
+  });
+
+  it('rejects inputs missing from the action manifest at the pinned revision', () => {
+    const file = path.join(process.cwd(), 'setup', 'workflows', 'copilot_pull_request.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const action = workflow.jobs['copilot-pull-requests'].steps.find(
+      (step: { uses?: string }) => step.uses?.startsWith('vypdev/copilot@'),
+    );
+    action.with['future-unsupported-input'] = 'true';
+
+    expect(() => assertPinnedCopilotActionInputs(file, workflow)).toThrow(
+      'passes inputs unsupported by vypdev/copilot@',
+    );
   });
 
   it('rejects local action execution from the pull request workflow', () => {

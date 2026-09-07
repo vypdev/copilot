@@ -164,14 +164,14 @@ it is not equivalent to the recommended `copilot setup` flow.
 1. Copy only the workflow files you need from the installed package's `setup/workflows/`
    directory into `.github/workflows/`.
 2. Ensure every Copilot step uses a stable Action reference such as
-   `vypdev/copilot@a39616557f384bcc633b94e43d9551b2b5205328 # v3` and passes a write-capable `token` where required.
+   `vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3` and passes a write-capable `token` where required.
 3. Configure the labels, issue types, Variables, Secrets, templates, permissions,
    and workflow dependencies yourself.
 
 For example:
 
 ```yaml
-- uses: vypdev/copilot@a39616557f384bcc633b94e43d9551b2b5205328 # v3
+- uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
   with:
     token: ${{ secrets.PAT }}
 ```

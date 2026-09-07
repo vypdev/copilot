@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const { readFileSync, readdirSync } = require('node:fs');
+const { execFileSync } = require('node:child_process');
 const path = require('node:path');
 const yaml = require('js-yaml');
 
@@ -56,6 +57,8 @@ const FORK_GATED_WORKFLOW_FILES = new Set([
 ]);
 const ZERO_OBJECT_ID = '0000000000000000000000000000000000000000';
 const IMMUTABLE_ACTION_REFERENCE = /^[^/\s]+\/[^@\s]+@[0-9a-f]{40}$/i;
+const PINNED_COPILOT_ACTION_REFERENCE = /^vypdev\/copilot@([0-9a-f]{40})$/i;
+const pinnedCopilotManifests = new Map();
 
 const BASE_AGENT_INPUTS = ['agent-provider', 'agent-model-provider', 'agent-model', 'agent-effort', 'agent-command'];
 const AGENT_ROLE_INPUTS = Object.freeze(Object.fromEntries(
@@ -114,6 +117,45 @@ function assertImmutableActions(file, workflow) {
       throw new Error(`${relativeFile} job ${jobId} must not execute pull-request-controlled local action code.`);
     }
   }
+}
+
+function assertPinnedCopilotActionInputs(file, workflow) {
+  const relativeFile = relativeWorkflow(file);
+  for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
+    for (const [stepIndex, step] of (job.steps ?? []).entries()) {
+      const match = typeof step?.uses === 'string'
+        ? step.uses.match(PINNED_COPILOT_ACTION_REFERENCE)
+        : undefined;
+      if (!match) continue;
+      const manifest = loadPinnedCopilotManifest(match[1]);
+      const supportedInputs = new Set(Object.keys(manifest.inputs ?? {}));
+      const unsupported = Object.keys(step.with ?? {}).filter(input => !supportedInputs.has(input));
+      if (unsupported.length > 0) {
+        throw new Error(`${relativeFile} job ${jobId} step ${stepIndex + 1} passes inputs unsupported by ${step.uses}: ${unsupported.join(', ')}.`);
+      }
+    }
+  }
+}
+
+function loadPinnedCopilotManifest(sha) {
+  const cached = pinnedCopilotManifests.get(sha);
+  if (cached) return cached;
+  let source;
+  try {
+    source = execFileSync('git', ['show', `${sha}:action.yml`], {
+      cwd: repositoryRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+  } catch {
+    throw new Error(`cannot read action.yml from pinned Copilot revision ${sha}; fetch the full repository history.`);
+  }
+  const manifest = yaml.load(source);
+  if (!manifest || typeof manifest !== 'object') {
+    throw new Error(`pinned Copilot revision ${sha} has an invalid action.yml.`);
+  }
+  pinnedCopilotManifests.set(sha, manifest);
+  return manifest;
 }
 
 function runnerLabels(value) {
@@ -333,7 +375,7 @@ function assertMutationWorkflow(file, workflow) {
     throw new Error(`${relativeFile} must define the exact gate-first job graph.`);
   }
   assertNoConcurrency(relativeFile, workflow);
-  assertQueueGateJob(file, workflow, setup ? 'vypdev/copilot@a39616557f384bcc633b94e43d9551b2b5205328' : './');
+  assertQueueGateJob(file, workflow, setup ? 'vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3' : './');
   assertExactTimeout(relativeFile, 'queue-gate', workflow.jobs['queue-gate'], QUEUE_GATE_TIMEOUT_MINUTES);
   assertExactTimeout(relativeFile, 'prepare-version-files', workflow.jobs['prepare-version-files'], PREPARE_VERSION_TIMEOUT_MINUTES);
   assertExactNeeds(relativeFile, 'queue-gate', workflow.jobs['queue-gate'], []);
@@ -427,6 +469,7 @@ function validateWorkflow(file, workflow) {
   assertAgentWorkflowPermissions(file, workflow);
   assertQueueWorkflow(file, workflow);
   assertImmutableActions(file, workflow);
+  assertPinnedCopilotActionInputs(file, workflow);
 }
 
 function main() {
@@ -462,6 +505,7 @@ module.exports = {
   BOT_GATE_EXPRESSION,
   FORK_SAFE_BOT_GATE_EXPRESSION,
   assertImmutableActions,
+  assertPinnedCopilotActionInputs,
   assertAgentInputs,
   assertNoJobLevelSecrets,
   assertAgentWorkflowPermissions,
