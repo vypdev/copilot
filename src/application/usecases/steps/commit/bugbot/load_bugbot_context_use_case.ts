@@ -15,6 +15,7 @@ import {
 } from "./bugbot_finding_context";
 import { logDebugInfo } from "../../../../ports/logging_ports";
 import { buildReviewConversationBlock, buildReviewDiffBlock } from './bugbot_review_context';
+import { fileMatchesIgnorePatterns } from './file_ignore';
 import { buildBugbotReviewRuleSet } from './bugbot_review_rules';
 
 export interface LoadBugbotContextOptions {
@@ -160,7 +161,8 @@ export async function loadBugbotContext(
     );
     const boundedPreviousFindings = limitPreviousBugbotFindings(previousFindings);
     const previousFindingsBlock = buildPreviousFindingsBlock(previousFindings);
-    const reviewDiffBlock = buildReviewDiffBlock(prContext);
+    const ignorePatterns = param.ai?.getAiIgnoreFiles?.() ?? [];
+    const reviewDiffBlock = buildReviewDiffBlock(prContext, ignorePatterns);
     const reviewConversationBlock = buildReviewConversationBlock(
         issueComments,
         pullRequestComments,
@@ -171,7 +173,9 @@ export async function loadBugbotContext(
         fullBody: finding.fullBody,
     }));
     const repositoryRules = await ports.rules?.loadRules(
-        prContext?.prFiles.map((file) => file.filename) ?? [],
+        prContext?.prFiles
+            .map((file) => file.filename)
+            .filter((file) => !fileMatchesIgnorePatterns(file, ignorePatterns)) ?? [],
     ) ?? [];
     const ruleSet = buildBugbotReviewRuleSet(
         param.ai?.getBugbotReviewConfiguration?.().organizationRules ?? [],

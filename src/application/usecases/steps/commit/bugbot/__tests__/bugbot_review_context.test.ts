@@ -20,6 +20,38 @@ describe('Bugbot review context', () => {
     expect(block).toContain('+new');
   });
 
+  it('excludes ignored files before they consume the canonical diff budget', () => {
+    const block = buildReviewDiffBlock({
+      prHeadSha: 'sha',
+      prFiles: [
+        { filename: 'build/generated.js', status: 'modified' },
+        { filename: 'src/review-me.ts', status: 'modified' },
+      ],
+      pathToFirstDiffLine: {},
+      changes: [
+        {
+          filename: 'build/generated.js',
+          status: 'modified',
+          additions: 1,
+          deletions: 0,
+          patch: `+${'generated'.repeat(2_000)}`,
+        },
+        {
+          filename: 'src/review-me.ts',
+          status: 'modified',
+          additions: 1,
+          deletions: 0,
+          patch: '+const reviewed = true;',
+        },
+      ],
+    }, ['build/*']);
+
+    expect(block).not.toContain('build/generated.js');
+    expect(block).not.toContain('generatedgenerated');
+    expect(block).toContain('src/review-me.ts');
+    expect(block).toContain('1 file(s) excluded by configured ignore patterns');
+  });
+
   it('includes human discussion while excluding authenticated bot comments', () => {
     const block = buildReviewConversationBlock(
       [

@@ -58675,12 +58675,13 @@ exports.buildReviewDiffBlock = buildReviewDiffBlock;
 exports.buildReviewConversationBlock = buildReviewConversationBlock;
 const github_user_policy_1 = __nccwpck_require__(84403);
 const untrusted_content_1 = __nccwpck_require__(67057);
+const file_ignore_1 = __nccwpck_require__(10304);
 const MAX_REVIEW_DIFF_LENGTH = 64000;
 const MAX_PATCH_LENGTH = 12000;
 const MAX_CONVERSATION_LENGTH = 24000;
 const MAX_CONVERSATION_ITEMS = 50;
 const MAX_CONVERSATION_ITEM_LENGTH = 2000;
-function buildReviewDiffBlock(context) {
+function buildReviewDiffBlock(context, ignorePatterns = []) {
     if (!context?.changes?.length)
         return '';
     const header = '**Canonical pull-request diff from GitHub.** Treat this file manifest and patch content as authoritative for the current PR head. A missing or truncated patch is not evidence that a file is unchanged.';
@@ -58688,7 +58689,12 @@ function buildReviewDiffBlock(context) {
     let used = header.length;
     let omitted = 0;
     let truncated = 0;
+    let ignored = 0;
     for (const change of context.changes) {
+        if ((0, file_ignore_1.fileMatchesIgnorePatterns)(change.filename, ignorePatterns)) {
+            ignored += 1;
+            continue;
+        }
         const patch = change.patch.length > MAX_PATCH_LENGTH
             ? `${change.patch.slice(0, MAX_PATCH_LENGTH)}\n[patch truncated]`
             : change.patch;
@@ -58702,8 +58708,16 @@ function buildReviewDiffBlock(context) {
         sections.push(section);
         used += section.length;
     }
-    if (truncated > 0 || omitted > 0) {
-        sections.push(`Coverage note: ${truncated} patch(es) truncated and ${omitted} file patch(es) omitted by the prompt budget. Inspect those files locally before making or resolving a finding.`);
+    if (ignored > 0 || truncated > 0 || omitted > 0) {
+        const notes = [
+            ...(ignored > 0 ? [`${ignored} file(s) excluded by configured ignore patterns`] : []),
+            ...(truncated > 0 ? [`${truncated} patch(es) truncated`] : []),
+            ...(omitted > 0 ? [`${omitted} file patch(es) omitted by the prompt budget`] : []),
+        ];
+        const inspect = truncated > 0 || omitted > 0
+            ? ' Inspect truncated or budget-omitted files locally before making or resolving a finding.'
+            : '';
+        sections.push(`Coverage note: ${notes.join('; ')}.${inspect}`);
     }
     return sections.join('\n\n');
 }
@@ -59107,6 +59121,7 @@ exports.buildBugbotPrompt = buildBugbotPrompt;
 const prompts_1 = __nccwpck_require__(69518);
 const project_context_instruction_1 = __nccwpck_require__(63907);
 const review_configuration_1 = __nccwpck_require__(3994);
+const file_ignore_1 = __nccwpck_require__(10304);
 const MAX_IGNORE_BLOCK_LENGTH = 2000;
 const GIT_OBJECT_ID = /^[0-9a-f]{7,64}$/i;
 function buildBugbotPrompt(param, context) {
@@ -59123,7 +59138,8 @@ function buildBugbotPrompt(param, context) {
             return `\n**Files to ignore:** Do not report findings in files or paths matching these patterns: ${truncated}.`;
         })()
         : "";
-    const changes = context.prContext?.changes ?? [];
+    const changes = (context.prContext?.changes ?? [])
+        .filter((change) => !(0, file_ignore_1.fileMatchesIgnorePatterns)(change.filename, ignorePatterns));
     const configuredEffort = param.ai?.getBugbotReviewConfiguration?.().effort ?? 'default';
     const resolvedEffort = (0, review_configuration_1.resolveBugbotReviewEffort)(configuredEffort, {
         files: changes.length,
@@ -59934,6 +59950,7 @@ exports.loadBugbotContext = loadBugbotContext;
 const bugbot_finding_context_1 = __nccwpck_require__(62946);
 const logging_ports_1 = __nccwpck_require__(6152);
 const bugbot_review_context_1 = __nccwpck_require__(50536);
+const file_ignore_1 = __nccwpck_require__(10304);
 const bugbot_review_rules_1 = __nccwpck_require__(25011);
 function emptyBugbotContext() {
     return {
@@ -60023,13 +60040,16 @@ async function loadBugbotContext(param, options, ports) {
     const previousFindings = (0, bugbot_finding_context_1.collectPreviousBugbotFindings)(parsedComments.issueComments, parsedComments.existingByFindingId, parsedComments.prFindingIdToBody);
     const boundedPreviousFindings = (0, bugbot_finding_context_1.limitPreviousBugbotFindings)(previousFindings);
     const previousFindingsBlock = (0, bugbot_finding_context_1.buildPreviousFindingsBlock)(previousFindings);
-    const reviewDiffBlock = (0, bugbot_review_context_1.buildReviewDiffBlock)(prContext);
+    const ignorePatterns = param.ai?.getAiIgnoreFiles?.() ?? [];
+    const reviewDiffBlock = (0, bugbot_review_context_1.buildReviewDiffBlock)(prContext, ignorePatterns);
     const reviewConversationBlock = (0, bugbot_review_context_1.buildReviewConversationBlock)(issueComments, pullRequestComments, param.tokenUser);
     const unresolvedFindingsWithBody = boundedPreviousFindings.map((finding) => ({
         id: finding.id,
         fullBody: finding.fullBody,
     }));
-    const repositoryRules = await ports.rules?.loadRules(prContext?.prFiles.map((file) => file.filename) ?? []) ?? [];
+    const repositoryRules = await ports.rules?.loadRules(prContext?.prFiles
+        .map((file) => file.filename)
+        .filter((file) => !(0, file_ignore_1.fileMatchesIgnorePatterns)(file, ignorePatterns)) ?? []) ?? [];
     const ruleSet = (0, bugbot_review_rules_1.buildBugbotReviewRuleSet)(param.ai?.getBugbotReviewConfiguration?.().organizationRules ?? [], repositoryRules);
     (0, logging_ports_1.logDebugInfo)(`LoadBugbotContext: issue #${issueNumber}, branch ${headBranch}, open PRs=${openPrNumbers.length}, existing findings=${Object.keys(parsedComments.existingByFindingId).length}, unresolved with body=${unresolvedFindingsWithBody.length}, diff files=${prContext?.changes?.length ?? prContext?.prFiles.length ?? 0}, diff prompt chars=${reviewDiffBlock.length}, conversation chars=${reviewConversationBlock.length}.`);
     return {
@@ -76001,6 +76021,14 @@ const UNTRUSTED_TEMPLATE_KEYS = new Set([
     'ignoreBlock',
     'verifyBlock',
 ]);
+// These values are bounded by their domain builders before reaching the
+// template. Keep the outer trust-boundary marker without collapsing the
+// larger Bugbot context back to the generic 12K field limit.
+const UNTRUSTED_TEMPLATE_LIMITS = new Map([
+    ['diffBlock', 70000],
+    ['reviewConversationBlock', 26000],
+    ['previousBlock', 50000],
+]);
 function fillTemplate(template, params) {
     const rendered = template.replace(/\{\{(\w+)\}\}/g, (_, key) => {
         const value = params[key];
@@ -76008,7 +76036,7 @@ function fillTemplate(template, params) {
             return `{{${key}}}`;
         if (!UNTRUSTED_TEMPLATE_KEYS.has(key))
             return value;
-        return (0, untrusted_content_1.renderUntrustedField)(value, `prompt.${key}`);
+        return (0, untrusted_content_1.renderUntrustedField)(value, `prompt.${key}`, UNTRUSTED_TEMPLATE_LIMITS.get(key));
     });
     const containsUntrustedData = Object.keys(params).some((key) => UNTRUSTED_TEMPLATE_KEYS.has(key));
     return containsUntrustedData ? `${untrusted_content_1.UNTRUSTED_CONTENT_POLICY}\n\n${rendered}` : rendered;

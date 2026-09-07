@@ -24,7 +24,7 @@ function patternToRegexString(p: string): string | null {
 /**
  * Returns compiled RegExp array for the given patterns (limited count, cached).
  */
-function getCachedRegexes(ignorePatterns: string[]): RegExp[] {
+function getCachedRegexes(ignorePatterns: readonly string[]): RegExp[] {
     const trimmed = ignorePatterns.map((p) => p.trim()).filter(Boolean);
     const limited = trimmed.slice(0, MAX_IGNORE_PATTERNS);
     const key = JSON.stringify(limited);
@@ -50,7 +50,7 @@ function getCachedRegexes(ignorePatterns: string[]): RegExp[] {
  * Used to exclude findings in test files, build output, etc.
  * Pattern length and count are capped; consecutive * are collapsed; compiled regexes are cached.
  */
-export function fileMatchesIgnorePatterns(filePath: string | undefined, ignorePatterns: string[]): boolean {
+export function fileMatchesIgnorePatterns(filePath: string | undefined, ignorePatterns: readonly string[]): boolean {
     if (!filePath || ignorePatterns.length === 0) return false;
     const normalized = filePath.trim();
     if (!normalized) return false;

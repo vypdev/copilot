@@ -11,6 +11,7 @@ import { PROJECT_CONTEXT_INSTRUCTION } from "../../../../../utils/project_contex
 import type { Execution } from "../../../../../data/model/execution";
 import type { BugbotContext } from "./types";
 import { resolveBugbotReviewEffort } from '../../../../../domain/bugbot/review_configuration';
+import { fileMatchesIgnorePatterns } from './file_ignore';
 
 const MAX_IGNORE_BLOCK_LENGTH = 2000;
 const GIT_OBJECT_ID = /^[0-9a-f]{7,64}$/i;
@@ -31,7 +32,8 @@ export function buildBugbotPrompt(param: Execution, context: BugbotContext): str
                   return `\n**Files to ignore:** Do not report findings in files or paths matching these patterns: ${truncated}.`;
               })()
             : "";
-    const changes = context.prContext?.changes ?? [];
+    const changes = (context.prContext?.changes ?? [])
+        .filter((change) => !fileMatchesIgnorePatterns(change.filename, ignorePatterns));
     const configuredEffort = param.ai?.getBugbotReviewConfiguration?.().effort ?? 'default';
     const resolvedEffort = resolveBugbotReviewEffort(configuredEffort, {
         files: changes.length,

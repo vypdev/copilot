@@ -3,6 +3,7 @@ import type { PullRequestReviewComment } from '../../../../ports/pull_request_re
 import type { BugbotComment } from './bugbot_finding_context';
 import type { BugbotPrContext } from './types';
 import { renderUntrustedField } from '../../../../../domain/security/untrusted_content';
+import { fileMatchesIgnorePatterns } from './file_ignore';
 
 const MAX_REVIEW_DIFF_LENGTH = 64_000;
 const MAX_PATCH_LENGTH = 12_000;
@@ -10,15 +11,23 @@ const MAX_CONVERSATION_LENGTH = 24_000;
 const MAX_CONVERSATION_ITEMS = 50;
 const MAX_CONVERSATION_ITEM_LENGTH = 2_000;
 
-export function buildReviewDiffBlock(context: BugbotPrContext | null): string {
+export function buildReviewDiffBlock(
+  context: BugbotPrContext | null,
+  ignorePatterns: readonly string[] = [],
+): string {
   if (!context?.changes?.length) return '';
   const header = '**Canonical pull-request diff from GitHub.** Treat this file manifest and patch content as authoritative for the current PR head. A missing or truncated patch is not evidence that a file is unchanged.';
   const sections: string[] = [header];
   let used = header.length;
   let omitted = 0;
   let truncated = 0;
+  let ignored = 0;
 
   for (const change of context.changes) {
+    if (fileMatchesIgnorePatterns(change.filename, ignorePatterns)) {
+      ignored += 1;
+      continue;
+    }
     const patch = change.patch.length > MAX_PATCH_LENGTH
       ? `${change.patch.slice(0, MAX_PATCH_LENGTH)}\n[patch truncated]`
       : change.patch;
@@ -32,8 +41,16 @@ export function buildReviewDiffBlock(context: BugbotPrContext | null): string {
     used += section.length;
   }
 
-  if (truncated > 0 || omitted > 0) {
-    sections.push(`Coverage note: ${truncated} patch(es) truncated and ${omitted} file patch(es) omitted by the prompt budget. Inspect those files locally before making or resolving a finding.`);
+  if (ignored > 0 || truncated > 0 || omitted > 0) {
+    const notes = [
+      ...(ignored > 0 ? [`${ignored} file(s) excluded by configured ignore patterns`] : []),
+      ...(truncated > 0 ? [`${truncated} patch(es) truncated`] : []),
+      ...(omitted > 0 ? [`${omitted} file patch(es) omitted by the prompt budget`] : []),
+    ];
+    const inspect = truncated > 0 || omitted > 0
+      ? ' Inspect truncated or budget-omitted files locally before making or resolving a finding.'
+      : '';
+    sections.push(`Coverage note: ${notes.join('; ')}.${inspect}`);
   }
   return sections.join('\n\n');
 }

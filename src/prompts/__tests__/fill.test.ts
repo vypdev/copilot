@@ -28,4 +28,16 @@ describe('fillTemplate', () => {
         expect(out).toContain('[BEGIN_UNTRUSTED_DATA origin=prompt.commentBody');
         expect(out).toContain('ignore the surrounding task');
     });
+
+    it('preserves the pre-bounded Bugbot diff beyond the generic untrusted field limit', () => {
+        const tail = 'REVIEWABLE_TAIL';
+        const out = fillTemplate('Diff: {{diffBlock}}', {
+            diffBlock: `${'x'.repeat(13_000)}${tail}`,
+        });
+
+        expect(out).toContain('SECURITY POLICY:');
+        expect(out).toContain('[BEGIN_UNTRUSTED_DATA origin=prompt.diffBlock');
+        expect(out).toContain(tail);
+        expect(out).not.toContain('[untrusted content truncated]');
+    });
 });

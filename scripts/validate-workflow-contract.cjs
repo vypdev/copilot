@@ -171,13 +171,17 @@ function assertNoJobLevelSecrets(file, workflow) {
 function assertAgentWorkflowPermissions(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   if (!WORKFLOW_AGENT_ROLES[path.basename(file)]) return;
+  const expectedPermissions = path.basename(file) === 'copilot_pull_request.yml'
+    ? { checks: 'write', contents: 'read' }
+    : { contents: 'read' };
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
     const permissions = job.permissions ?? {};
-    const permissionKeys = Object.keys(permissions);
-    if (permissionKeys.length !== 1
-      || permissionKeys[0] !== 'contents'
-      || permissions.contents !== 'read') {
-      throw new Error(`${relativeFile} job ${jobId} must grant GITHUB_TOKEN only contents: read; mutations use the explicit PAT.`);
+    const permissionKeys = Object.keys(permissions).sort();
+    const expectedKeys = Object.keys(expectedPermissions).sort();
+    if (permissionKeys.length !== expectedKeys.length
+      || permissionKeys.some((key, index) => key !== expectedKeys[index])
+      || expectedKeys.some(key => permissions[key] !== expectedPermissions[key])) {
+      throw new Error(`${relativeFile} job ${jobId} must grant GITHUB_TOKEN exactly ${expectedKeys.map(key => `${key}: ${expectedPermissions[key]}`).join(', ')}; mutations use the explicit PAT.`);
     }
   }
 }

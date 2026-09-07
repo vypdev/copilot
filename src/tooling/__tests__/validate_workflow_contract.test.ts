@@ -371,7 +371,7 @@ describe('workflow contract validator', () => {
     })).not.toThrow();
   });
 
-  it('requires a read-only implicit GITHUB_TOKEN for every agent workflow', () => {
+  it('limits the implicit GITHUB_TOKEN to read-only contents plus PR review evidence', () => {
     for (const directory of ['.github/workflows', 'setup/workflows']) {
       for (const fileName of [
         'copilot_commit.yml',
@@ -385,7 +385,7 @@ describe('workflow contract validator', () => {
         expect(() => assertAgentWorkflowPermissions(file, workflow)).not.toThrow();
         const job = Object.values(workflow.jobs)[0];
         job.permissions = { contents: 'write' };
-        expect(() => assertAgentWorkflowPermissions(file, workflow)).toThrow('only contents: read');
+        expect(() => assertAgentWorkflowPermissions(file, workflow)).toThrow('must grant GITHUB_TOKEN exactly');
       }
     }
   });
