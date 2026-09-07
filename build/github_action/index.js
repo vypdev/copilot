@@ -50484,9 +50484,10 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, l
     });
     (0, logger_1.logInfo)('GitHub Action: starting main run.');
     (0, logger_1.logDebugInfo)(`Event: ${execution.eventName}, actor: ${execution.actor}, repo: ${repository.owner}/${repository.repo}, debug: ${execution.debug}`);
-    if (process.env.GITHUB_ACTIONS === 'true') {
+    if (process.env.GITHUB_ACTIONS === 'true' && !execution.singleAction.isPublishIssueCommentAction) {
         // Every GitHub workflow invocation queues before setup or route work so
-        // executions of the same workflow file cannot overlap mutations.
+        // executions of the same workflow file cannot overlap mutations. A
+        // failure notification must remain runnable when that queue gate fails.
         await (0, main_run_lifecycle_1.waitForPreviousWorkflowRuns)(execution.tokens.token, repository);
     }
     await (0, execution_setup_composition_root_1.createSetupExecutionUseCase)(latestTagQueryPort).invoke(execution);
@@ -51091,8 +51092,11 @@ async function finishGithubAction(execution, results, issueNotificationPort, con
     execution.currentConfiguration.results = results;
     core.setOutput('bugbot-telemetry', JSON.stringify(extractBugbotTelemetry(results)));
     const dryRun = results.some((result) => (0, result_1.getResultPayload)(result.payload)?.dryRun === true);
-    if (!dryRun) {
+    if (!dryRun && !execution.singleAction.isPublishIssueCommentAction) {
         await new publish_resume_use_case_1.PublishResultUseCase(issueNotificationPort, (0, logger_adapter_1.createLogReportAdapter)()).invoke(execution);
+    }
+    else if (execution.singleAction.isPublishIssueCommentAction) {
+        (0, logger_1.logInfo)('Result publication skipped: the issue-comment single action publishes its own content.');
     }
     else {
         (0, logger_1.logInfo)('Bugbot dry-run: result publication and repository configuration persistence are disabled.');
@@ -51282,7 +51286,7 @@ function disableAgentTasks(tasks) {
         }]));
 }
 function readGithubActionSingleAction(getInput) {
-    return new single_action_1.SingleAction(getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_ISSUE), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_VERSION), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_TITLE), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_CHANGELOG));
+    return new single_action_1.SingleAction(getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_ISSUE), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_VERSION), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_TITLE), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_CHANGELOG), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_MESSAGE), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_COMMENT_ID), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_COMMENT_MODE));
 }
 function getCommitPrefixBuilder(getInput) {
     return getInput(input_keys_1.INPUT_KEYS.COMMIT_PREFIX_TRANSFORMS) || 'replace-slash';
@@ -52092,6 +52096,9 @@ exports.INPUT_KEYS = {
     SINGLE_ACTION_VERSION: 'single-action-version',
     SINGLE_ACTION_TITLE: 'single-action-title',
     SINGLE_ACTION_CHANGELOG: 'single-action-changelog',
+    SINGLE_ACTION_MESSAGE: 'single-action-message',
+    SINGLE_ACTION_COMMENT_ID: 'single-action-comment-id',
+    SINGLE_ACTION_COMMENT_MODE: 'single-action-comment-mode',
     INACTIVITY_THRESHOLD_HOURS: 'inactivity-threshold-hours',
     // Tokens
     TOKEN: 'token',
@@ -53686,6 +53693,46 @@ function buildInitialLabelProvisioningPlan(labels, existingLabelNames) {
         ]),
         progress: planGroup(progressLabelDefinitions()),
     };
+}
+
+
+/***/ }),
+
+/***/ 61899:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.resolveIssueCommentPublicationRequest = resolveIssueCommentPublicationRequest;
+const comment_content_policy_1 = __nccwpck_require__(77454);
+const input_keys_1 = __nccwpck_require__(88539);
+function resolveIssueCommentPublicationRequest(input) {
+    if (!(0, comment_content_policy_1.hasVisibleCommentContent)(input.message)) {
+        return new Error(`${input_keys_1.INPUT_KEYS.SINGLE_ACTION_MESSAGE} must contain a visible message.`);
+    }
+    if (input.commentIdInput.length > 0 && input.commentId <= 0) {
+        return new Error(`${input_keys_1.INPUT_KEYS.SINGLE_ACTION_COMMENT_ID} must be a positive integer.`);
+    }
+    const mode = resolveMode(input.commentMode, input.commentId);
+    if (!mode) {
+        return new Error(`${input_keys_1.INPUT_KEYS.SINGLE_ACTION_COMMENT_MODE} must be create, replace, or append.`);
+    }
+    if (mode === 'create') {
+        if (input.commentId > 0) {
+            return new Error(`${input_keys_1.INPUT_KEYS.SINGLE_ACTION_COMMENT_ID} cannot be set when comment mode is create.`);
+        }
+        return { mode, message: input.message };
+    }
+    if (input.commentId <= 0) {
+        return new Error(`${input_keys_1.INPUT_KEYS.SINGLE_ACTION_COMMENT_ID} must be a positive integer when comment mode is ${mode}.`);
+    }
+    return { mode, message: input.message, commentId: input.commentId };
+}
+function resolveMode(mode, commentId) {
+    if (mode.length === 0)
+        return commentId > 0 ? 'replace' : 'create';
+    return mode === 'create' || mode === 'replace' || mode === 'append' ? mode : undefined;
 }
 
 
@@ -56283,6 +56330,85 @@ function failureResult(taskId, sourceTag, targetTag) {
 
 /***/ }),
 
+/***/ 61313:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PublishIssueCommentUseCase = void 0;
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const publish_issue_comment_workflow_1 = __nccwpck_require__(30626);
+/** Application boundary for creating or updating a specific issue comment. */
+class PublishIssueCommentUseCase {
+    constructor(issueCommentPort) {
+        this.issueCommentPort = issueCommentPort;
+        this.taskId = 'PublishIssueCommentUseCase';
+    }
+    async invoke(param) {
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        return (0, publish_issue_comment_workflow_1.runPublishIssueComment)(param, this.taskId, this.issueCommentPort);
+    }
+}
+exports.PublishIssueCommentUseCase = PublishIssueCommentUseCase;
+
+
+/***/ }),
+
+/***/ 30626:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.runPublishIssueComment = runPublishIssueComment;
+const result_1 = __nccwpck_require__(73817);
+const comment_watermark_1 = __nccwpck_require__(23623);
+const issue_comment_publication_policy_1 = __nccwpck_require__(61899);
+const logging_ports_1 = __nccwpck_require__(6152);
+async function runPublishIssueComment(param, taskId, issueCommentPort) {
+    const request = (0, issue_comment_publication_policy_1.resolveIssueCommentPublicationRequest)(param.singleAction);
+    if (request instanceof Error) {
+        return [new result_1.Result({ id: taskId, success: false, executed: true, errors: [request] })];
+    }
+    try {
+        if (request.mode === 'create') {
+            await issueCommentPort.addComment(param.owner, param.repo, param.singleAction.issue, request.message, param.tokens.token);
+        }
+        else {
+            const comments = await issueCommentPort.listIssueComments(param.owner, param.repo, param.singleAction.issue, param.tokens.token);
+            const target = comments.find(({ id }) => id === request.commentId);
+            if (!target) {
+                return [new result_1.Result({
+                        id: taskId,
+                        success: false,
+                        executed: true,
+                        errors: [`Comment ${request.commentId} does not belong to issue ${param.singleAction.issue}.`],
+                    })];
+            }
+            const message = request.mode === 'append'
+                ? appendCommentContent(target.body, request.message)
+                : request.message;
+            await issueCommentPort.updateComment(param.owner, param.repo, param.singleAction.issue, request.commentId, message, param.tokens.token);
+        }
+        // This single action publishes its own comment. An empty step list keeps
+        // the common completion phase from emitting a second issue comment.
+        return [new result_1.Result({ id: taskId, success: true, executed: true })];
+    }
+    catch (error) {
+        (0, logging_ports_1.logError)(`Error executing ${taskId}: ${error}`);
+        return [new result_1.Result({ id: taskId, success: false, executed: true, errors: [error] })];
+    }
+}
+function appendCommentContent(previous, addition) {
+    const existing = (0, comment_watermark_1.stripTrailingCommentWatermarks)(previous ?? '');
+    return existing.length > 0 ? `${existing}\n\n${addition}` : addition;
+}
+
+
+/***/ }),
+
 /***/ 65928:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -58044,7 +58170,7 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const single_action_workflow_1 = __nccwpck_require__(6130);
 class SingleActionUseCase {
-    constructor(deployedActionUseCase, publishGithubActionUseCase, createReleaseUseCase, createTagUseCase, thinkUseCase, initialSetupUseCase, checkProgressUseCase, detectPotentialProblemsUseCase, recommendStepsUseCase, closeInactiveIssuesUseCase, actorAuthorizationPort) {
+    constructor(deployedActionUseCase, publishGithubActionUseCase, createReleaseUseCase, createTagUseCase, thinkUseCase, initialSetupUseCase, checkProgressUseCase, detectPotentialProblemsUseCase, recommendStepsUseCase, closeInactiveIssuesUseCase, actorAuthorizationPort, publishIssueCommentUseCase) {
         this.deployedActionUseCase = deployedActionUseCase;
         this.publishGithubActionUseCase = publishGithubActionUseCase;
         this.createReleaseUseCase = createReleaseUseCase;
@@ -58056,6 +58182,7 @@ class SingleActionUseCase {
         this.recommendStepsUseCase = recommendStepsUseCase;
         this.closeInactiveIssuesUseCase = closeInactiveIssuesUseCase;
         this.actorAuthorizationPort = actorAuthorizationPort;
+        this.publishIssueCommentUseCase = publishIssueCommentUseCase;
         this.taskId = "SingleActionUseCase";
     }
     async invoke(param) {
@@ -58082,6 +58209,7 @@ class SingleActionUseCase {
             detectPotentialProblemsUseCase: this.detectPotentialProblemsUseCase,
             recommendStepsUseCase: this.recommendStepsUseCase,
             closeInactiveIssuesUseCase: this.closeInactiveIssuesUseCase,
+            publishIssueCommentUseCase: this.publishIssueCommentUseCase,
         });
     }
 }
@@ -58122,6 +58250,7 @@ async function runSingleActionWorkflow(param, taskId, ports) {
         { active: param.singleAction.isDetectPotentialProblemsAction, useCase: ports.detectPotentialProblemsUseCase },
         { active: param.singleAction.isRecommendStepsAction, useCase: ports.recommendStepsUseCase },
         { active: param.singleAction.isCloseInactiveIssuesAction, useCase: ports.closeInactiveIssuesUseCase },
+        { active: param.singleAction.isPublishIssueCommentAction, useCase: ports.publishIssueCommentUseCase },
     ].find(({ active, useCase }) => active && useCase !== undefined);
     if (!action || !action.useCase)
         return [];
@@ -65154,6 +65283,7 @@ exports.ACTIONS = {
     DETECT_POTENTIAL_PROBLEMS: 'detect_potential_problems_action',
     RECOMMEND_STEPS: 'recommend_steps_action',
     CLOSE_INACTIVE_ISSUES: 'close_inactive_issues_action',
+    PUBLISH_ISSUE_COMMENT: 'publish_issue_comment',
 };
 
 
@@ -66437,6 +66567,9 @@ class SingleAction {
     get isCloseInactiveIssuesAction() {
         return this.currentSingleAction === action_types_1.ACTIONS.CLOSE_INACTIVE_ISSUES;
     }
+    get isPublishIssueCommentAction() {
+        return this.currentSingleAction === action_types_1.ACTIONS.PUBLISH_ISSUE_COMMENT;
+    }
     get enabledSingleAction() {
         return this.currentSingleAction.length > 0;
     }
@@ -66451,7 +66584,7 @@ class SingleAction {
     get throwError() {
         return this.actionsThrowError.indexOf(this.currentSingleAction) > -1;
     }
-    constructor(currentSingleAction, issue, version, title, changelog) {
+    constructor(currentSingleAction, issue, version, title, changelog, message = '', commentId = '', commentMode = '') {
         this.actions = [
             action_types_1.ACTIONS.DEPLOYED,
             action_types_1.ACTIONS.PUBLISH_GITHUB_ACTION,
@@ -66463,6 +66596,7 @@ class SingleAction {
             action_types_1.ACTIONS.DETECT_POTENTIAL_PROBLEMS,
             action_types_1.ACTIONS.RECOMMEND_STEPS,
             action_types_1.ACTIONS.CLOSE_INACTIVE_ISSUES,
+            action_types_1.ACTIONS.PUBLISH_ISSUE_COMMENT,
         ];
         /**
          * Actions that throw an error if the last step failed
@@ -66473,6 +66607,7 @@ class SingleAction {
             action_types_1.ACTIONS.DEPLOYED,
             action_types_1.ACTIONS.CREATE_TAG,
             action_types_1.ACTIONS.CLOSE_INACTIVE_ISSUES,
+            action_types_1.ACTIONS.PUBLISH_ISSUE_COMMENT,
         ];
         /**
          * Actions that do not require an issue
@@ -66492,9 +66627,17 @@ class SingleAction {
         this.version = '';
         this.title = '';
         this.changelog = '';
+        this.message = '';
+        this.commentId = -1;
+        this.commentIdInput = '';
+        this.commentMode = '';
         this.version = version;
         this.title = title;
         this.changelog = changelog;
+        this.message = message;
+        this.commentIdInput = commentId.trim();
+        this.commentId = (0, positive_integer_policy_1.parsePositiveSafeInteger)(this.commentIdInput) ?? -1;
+        this.commentMode = commentMode.trim().toLowerCase();
         this.currentSingleAction = currentSingleAction;
         if (!this.isSingleActionWithoutIssue) {
             this.issue = (0, positive_integer_policy_1.parsePositiveSafeInteger)(issue) ?? -1;
@@ -74268,6 +74411,7 @@ const create_release_use_case_1 = __nccwpck_require__(25258);
 const create_tag_use_case_1 = __nccwpck_require__(22120);
 const deployed_action_use_case_1 = __nccwpck_require__(93185);
 const publish_github_action_use_case_1 = __nccwpck_require__(68891);
+const publish_issue_comment_use_case_1 = __nccwpck_require__(61313);
 const recommend_steps_use_case_1 = __nccwpck_require__(73746);
 const check_changes_issue_size_use_case_1 = __nccwpck_require__(28356);
 const bugbot_autofix_use_case_1 = __nccwpck_require__(45446);
@@ -74312,7 +74456,7 @@ function createSingleActionUseCaseCompositionRoot() {
     const repositoryTagPort = new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)());
     const repositoryReleasePort = new repository_release_publication_repository_1.RepositoryReleasePublicationRepository((0, github_release_client_factory_1.createReleaseClient)());
     const issueDescriptionQueryPort = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
-    return new single_action_use_case_1.SingleActionUseCase(new deployed_action_use_case_1.DeployedActionUseCase((0, issue_labels_composition_root_1.createIssueLabelRepository)(), (0, issue_interaction_composition_root_1.createIssueClosureRepository)(), new merge_repository_1.MergeRepository((0, github_branch_client_factory_1.createBranchMergeClient)())), new publish_github_action_use_case_1.PublishGithubActionUseCase(repositoryTagPort, repositoryReleasePort), new create_release_use_case_1.CreateReleaseUseCase(repositoryReleasePort), new create_tag_use_case_1.CreateTagUseCase(repositoryTagPort), new think_use_case_1.ThinkUseCase(issueDescriptionQueryPort, (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), createDetectPotentialProblemsUseCase(), new recommend_steps_use_case_1.RecommendStepsUseCase(issueDescriptionQueryPort, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
+    return new single_action_use_case_1.SingleActionUseCase(new deployed_action_use_case_1.DeployedActionUseCase((0, issue_labels_composition_root_1.createIssueLabelRepository)(), (0, issue_interaction_composition_root_1.createIssueClosureRepository)(), new merge_repository_1.MergeRepository((0, github_branch_client_factory_1.createBranchMergeClient)())), new publish_github_action_use_case_1.PublishGithubActionUseCase(repositoryTagPort, repositoryReleasePort), new create_release_use_case_1.CreateReleaseUseCase(repositoryReleasePort), new create_tag_use_case_1.CreateTagUseCase(repositoryTagPort), new think_use_case_1.ThinkUseCase(issueDescriptionQueryPort, (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), createDetectPotentialProblemsUseCase(), new recommend_steps_use_case_1.RecommendStepsUseCase(issueDescriptionQueryPort, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase(issueDescriptionQueryPort));
 }
 function createIssueCommentUseCaseCompositionRoot() {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();

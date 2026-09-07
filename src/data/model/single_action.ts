@@ -14,6 +14,7 @@ export class SingleAction {
         ACTIONS.DETECT_POTENTIAL_PROBLEMS,
         ACTIONS.RECOMMEND_STEPS,
         ACTIONS.CLOSE_INACTIVE_ISSUES,
+        ACTIONS.PUBLISH_ISSUE_COMMENT,
     ];
     /**
      * Actions that throw an error if the last step failed
@@ -24,6 +25,7 @@ export class SingleAction {
        ACTIONS.DEPLOYED,
        ACTIONS.CREATE_TAG,
        ACTIONS.CLOSE_INACTIVE_ISSUES,
+       ACTIONS.PUBLISH_ISSUE_COMMENT,
     ];
 
     /**
@@ -46,6 +48,10 @@ export class SingleAction {
     version: string = '';
     title: string = '';
     changelog: string = '';
+    message: string = '';
+    commentId: number = -1;
+    commentIdInput: string = '';
+    commentMode: string = '';
 
     get isDeployedAction(): boolean {
         return this.currentSingleAction === ACTIONS.DEPLOYED;
@@ -87,6 +93,10 @@ export class SingleAction {
         return this.currentSingleAction === ACTIONS.CLOSE_INACTIVE_ISSUES;
     }
 
+    get isPublishIssueCommentAction(): boolean {
+        return this.currentSingleAction === ACTIONS.PUBLISH_ISSUE_COMMENT;
+    }
+
     get enabledSingleAction(): boolean {
         return this.currentSingleAction.length > 0;
     }
@@ -111,10 +121,17 @@ export class SingleAction {
         version: string,
         title: string,
         changelog: string,
+        message: string = '',
+        commentId: string = '',
+        commentMode: string = '',
     ) {
         this.version = version;
         this.title = title;
         this.changelog = changelog;
+        this.message = message;
+        this.commentIdInput = commentId.trim();
+        this.commentId = parsePositiveSafeInteger(this.commentIdInput) ?? -1;
+        this.commentMode = commentMode.trim().toLowerCase();
         this.currentSingleAction = currentSingleAction;
         if (!this.isSingleActionWithoutIssue) {
             this.issue = parsePositiveSafeInteger(issue) ?? -1;

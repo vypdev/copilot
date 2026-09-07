@@ -20,6 +20,15 @@ inputs:
   single-action-changelog:
     description: "Changelog target for executing single action."
     default: ""
+  single-action-message:
+    description: "Markdown message for the publish_issue_comment single action."
+    default: ""
+  single-action-comment-id:
+    description: "Optional issue comment ID to replace or append to."
+    default: ""
+  single-action-comment-mode:
+    description: "Comment publication mode: create, replace, or append. Defaults to create without an ID and replace with an ID."
+    default: ""
   inactivity-threshold-hours:
     description: "Hours without issue activity before the scheduled inactivity action closes a waiting issue."
     default: "168"

@@ -21,6 +21,7 @@ export class SingleActionUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly recommendStepsUseCase: ParamUseCase<Execution, Result[]>,
     private readonly closeInactiveIssuesUseCase?: ParamUseCase<Execution, Result[]>,
     private readonly actorAuthorizationPort?: ActorAuthorizationPort,
+    private readonly publishIssueCommentUseCase?: ParamUseCase<Execution, Result[]>,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
@@ -52,6 +53,7 @@ export class SingleActionUseCase implements ParamUseCase<Execution, Result[]> {
       detectPotentialProblemsUseCase: this.detectPotentialProblemsUseCase,
       recommendStepsUseCase: this.recommendStepsUseCase,
       closeInactiveIssuesUseCase: this.closeInactiveIssuesUseCase,
+      publishIssueCommentUseCase: this.publishIssueCommentUseCase,
     });
   }
 }

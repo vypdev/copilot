@@ -62,7 +62,7 @@ copy selected files from `setup/workflows/` into `.github/workflows/` and add
 steps such as:
 
 ```yaml
-- uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+- uses: vypdev/copilot@v3
   with:
     token: ${{ secrets.PAT }}
 ```

@@ -33,7 +33,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
           project-ids: ${{ vars.PROJECT_IDS }}
@@ -73,7 +73,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
           agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
@@ -110,7 +110,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
           agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
@@ -152,7 +152,7 @@ jobs:
           persist-credentials: false
           ref: ${{ github.event.inputs.branch || format('feature/issue-{0}', github.event.inputs.issue_number) }}
 
-      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
           single-action: detect_potential_problems_action

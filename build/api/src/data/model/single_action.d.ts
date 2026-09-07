@@ -19,6 +19,10 @@ export declare class SingleAction {
     version: string;
     title: string;
     changelog: string;
+    message: string;
+    commentId: number;
+    commentIdInput: string;
+    commentMode: string;
     get isDeployedAction(): boolean;
     get isPublishGithubAction(): boolean;
     get isCreateReleaseAction(): boolean;
@@ -29,9 +33,10 @@ export declare class SingleAction {
     get isDetectPotentialProblemsAction(): boolean;
     get isRecommendStepsAction(): boolean;
     get isCloseInactiveIssuesAction(): boolean;
+    get isPublishIssueCommentAction(): boolean;
     get enabledSingleAction(): boolean;
     get validSingleAction(): boolean;
     get isSingleActionWithoutIssue(): boolean;
     get throwError(): boolean;
-    constructor(currentSingleAction: string, issue: string, version: string, title: string, changelog: string);
+    constructor(currentSingleAction: string, issue: string, version: string, title: string, changelog: string, message?: string, commentId?: string, commentMode?: string);
 }

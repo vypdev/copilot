@@ -88,6 +88,26 @@ describe('runLocalAction', () => {
     expect(execution.debug).toBe(true);
   });
 
+  it('maps local issue-comment publication inputs into the single-action model', async () => {
+    await runLocalAction({
+      [INPUT_KEYS.TOKEN]: 'local-token',
+      [INPUT_KEYS.SINGLE_ACTION]: 'publish_issue_comment',
+      [INPUT_KEYS.SINGLE_ACTION_ISSUE]: '42',
+      [INPUT_KEYS.SINGLE_ACTION_MESSAGE]: 'Deployment failed.',
+      [INPUT_KEYS.SINGLE_ACTION_COMMENT_ID]: '101',
+      [INPUT_KEYS.SINGLE_ACTION_COMMENT_MODE]: 'append',
+      repo: { owner: 'o', repo: 'r' },
+      eventName: 'workflow_dispatch',
+    });
+
+    expect(mockMainRun.mock.calls[0][0].singleAction).toMatchObject({
+      issue: 42,
+      message: 'Deployment failed.',
+      commentId: 101,
+      commentMode: 'append',
+    });
+  });
+
   it('logs steps and reminders via boxen after mainRun', async () => {
     const boxen = require('boxen');
     mockMainRun.mockResolvedValue([

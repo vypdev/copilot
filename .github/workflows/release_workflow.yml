@@ -48,7 +48,7 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Set up Node.js 24
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -118,7 +118,7 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Set up pnpm
         # Avoid the standalone @pnpm/exe binary, which has no working Intel
@@ -271,3 +271,29 @@ jobs:
           fixer-effort: ${{ vars.FIXER_EFFORT }}
           fixer-command: ${{ vars.FIXER_COMMAND }}
           token: ${{ secrets.PAT }}
+
+  report-failure:
+    name: Report deployment failure
+    runs-on: [self-hosted, codex]
+    timeout-minutes: 5
+    needs: [ queue-gate, prepare-version-files, prepare-compiled-files, tag ]
+    if: ${{ failure() && github.event.inputs.issue != '-1' }}
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Report failure on launcher issue
+        uses: ./
+        with:
+          single-action: publish_issue_comment
+          single-action-issue: '${{ github.event.inputs.issue }}'
+          single-action-message: |
+            ## ❌ Release deployment failed
+
+            The release workflow did not complete successfully.
+
+            [Review the workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          token: ${{ github.token }}

@@ -8,6 +8,7 @@ import { CreateReleaseUseCase } from "../../application/usecases/actions/create_
 import { CreateTagUseCase } from "../../application/usecases/actions/create_tag_use_case";
 import { DeployedActionUseCase } from "../../application/usecases/actions/deployed_action_use_case";
 import { PublishGithubActionUseCase } from "../../application/usecases/actions/publish_github_action_use_case";
+import { PublishIssueCommentUseCase } from "../../application/usecases/actions/publish_issue_comment_use_case";
 import { RecommendStepsUseCase } from "../../application/usecases/actions/recommend_steps_use_case";
 import { CheckChangesIssueSizeUseCase } from "../../application/usecases/steps/commit/check_changes_issue_size_use_case";
 import { BugbotAutofixUseCase } from "../../application/usecases/steps/commit/bugbot/bugbot_autofix_use_case";
@@ -95,6 +96,7 @@ export function createSingleActionUseCaseCompositionRoot(): SingleActionUseCase 
     ),
     createCloseInactiveIssuesUseCase(),
     createActorAuthorizationRepository(),
+    new PublishIssueCommentUseCase(issueDescriptionQueryPort),
   );
 }
 

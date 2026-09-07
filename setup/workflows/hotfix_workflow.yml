@@ -33,7 +33,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Admit workflow to mutation queue
-        uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+        uses: vypdev/copilot@v3
         with:
           queue-gate-only: 'true'
           token: ${{ github.token }}
@@ -48,7 +48,7 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Set up Node.js 24
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
@@ -117,7 +117,7 @@ jobs:
           persist-credentials: false
         
       - name: Copilot - Create Tag
-        uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+        uses: vypdev/copilot@v3
         if: ${{ success() }}
         with:
           debug: ${{ vars.DEBUG }}
@@ -146,7 +146,7 @@ jobs:
           token: ${{ secrets.PAT }}
   
       - name: Copilot - Create Release
-        uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+        uses: vypdev/copilot@v3
         if: ${{ success() }}
         with:
           debug: ${{ vars.DEBUG }}
@@ -181,7 +181,7 @@ jobs:
       #   uses: whatever/action@v2 
 
       - name: Copilot - Deploy success notification
-        uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+        uses: vypdev/copilot@v3
         if: ${{ success() }}
         with:
           debug: ${{ vars.DEBUG }}
@@ -207,3 +207,26 @@ jobs:
           fixer-effort: ${{ vars.FIXER_EFFORT }}
           fixer-command: ${{ vars.FIXER_COMMAND }}
           token: ${{ secrets.PAT }}
+
+  report-failure:
+    name: Report deployment failure
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [ queue-gate, prepare-version-files, tag ]
+    if: ${{ failure() && github.event.inputs.issue != '-1' }}
+    permissions:
+      issues: write
+    steps:
+      - name: Report failure on launcher issue
+        # This tag is published after the release changes reach master.
+        uses: vypdev/copilot@v3
+        with:
+          single-action: publish_issue_comment
+          single-action-issue: '${{ github.event.inputs.issue }}'
+          single-action-message: |
+            ## ❌ Hotfix deployment failed
+
+            The hotfix workflow did not complete successfully.
+
+            [Review the workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+          token: ${{ github.token }}

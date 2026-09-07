@@ -20,7 +20,7 @@ jobs:
         with:
           persist-credentials: false
           ref: feature/123-add-login   # optional: branch to analyze
-      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
           single-action: check_progress_action
@@ -42,7 +42,7 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
           single-action: detect_potential_problems_action
@@ -59,7 +59,7 @@ See [Bugbot](/bugbot) for full documentation.
 Get implementation steps for issue `789` and post them as a comment:
 
 ```yaml
-- uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+- uses: vypdev/copilot@v3
   with:
     token: ${{ secrets.PAT }}
     single-action: recommend_steps_action
@@ -89,7 +89,7 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
           single-action: think_action
@@ -103,7 +103,7 @@ For a **question** from the CLI, use the **CLI** (see below); the workflow `thin
 Create a GitHub release with version, title, and changelog:
 
 ```yaml
-- uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+- uses: vypdev/copilot@v3
   with:
     token: ${{ secrets.PAT }}
     single-action: create_release
@@ -123,7 +123,7 @@ Changelog can be read from a file or generated in a previous step and passed as 
 Create a Git tag with prefix `v` (e.g. `v1.2.0`) from the release branch:
 
 ```yaml
-- uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+- uses: vypdev/copilot@v3
   with:
     token: ${{ secrets.PAT }}
     single-action: create_tag
@@ -138,19 +138,46 @@ Create a Git tag with prefix `v` (e.g. `v1.2.0`) from the release branch:
 Mark issue `100` as deployed (e.g. from your release workflow):
 
 ```yaml
-- uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+- uses: vypdev/copilot@v3
   with:
     token: ${{ secrets.PAT }}
     single-action: deployed_action
     single-action-issue: "100"
 ```
 
+## Workflow: publish or update an issue comment
+
+Create a new failure notification:
+
+```yaml
+- uses: ./
+  with:
+    token: ${{ github.token }}
+    single-action: publish_issue_comment
+    single-action-issue: "100"
+    single-action-message: |
+      ## Deployment failed
+
+      [Review the workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+```
+
+To append to a comment created earlier, also pass its ID and mode:
+
+```yaml
+    single-action-comment-id: "123456789"
+    single-action-comment-mode: append
+```
+
+Copilot's own workflows use the local `uses: ./` form so pull requests exercise
+the implementation under review. Distributed workflows use `vypdev/copilot@v3`,
+which resolves to the latest published compatible v3 release.
+
 ## Workflow: initial setup
 
 Run initial setup (labels, issue types, verify access). If the repo has no version tags, Copilot creates default tag **`v1.0.0`** so release/hotfix issues get a base version and do not get stuck in an "Unknown Version" loop:
 
 ```yaml
-- uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+- uses: vypdev/copilot@v3
   with:
     token: ${{ secrets.PAT }}
     single-action: initial_setup

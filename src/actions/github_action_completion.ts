@@ -30,8 +30,10 @@ export async function finishGithubAction(
     execution.currentConfiguration.results = results;
     core.setOutput('bugbot-telemetry', JSON.stringify(extractBugbotTelemetry(results)));
     const dryRun = results.some((result) => getResultPayload(result.payload)?.dryRun === true);
-    if (!dryRun) {
+    if (!dryRun && !execution.singleAction.isPublishIssueCommentAction) {
         await new PublishResultUseCase(issueNotificationPort, createLogReportAdapter()).invoke(execution);
+    } else if (execution.singleAction.isPublishIssueCommentAction) {
+        logInfo('Result publication skipped: the issue-comment single action publishes its own content.');
     } else {
         logInfo('Bugbot dry-run: result publication and repository configuration persistence are disabled.');
     }

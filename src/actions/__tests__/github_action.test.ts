@@ -166,6 +166,30 @@ describe('runGitHubAction', () => {
     expect(mockMainRun.mock.calls[0][0].tokenUser).toBe('token-user');
   });
 
+  it('maps issue-comment publication inputs into the single-action model', async () => {
+    (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
+      const values: Record<string, string> = {
+        [INPUT_KEYS.SINGLE_ACTION]: ACTIONS.PUBLISH_ISSUE_COMMENT,
+        [INPUT_KEYS.SINGLE_ACTION_ISSUE]: '42',
+        [INPUT_KEYS.SINGLE_ACTION_MESSAGE]: 'Deployment failed.',
+        [INPUT_KEYS.SINGLE_ACTION_COMMENT_ID]: '101',
+        [INPUT_KEYS.SINGLE_ACTION_COMMENT_MODE]: 'append',
+      };
+      if (opts?.required && key === INPUT_KEYS.TOKEN) return 'fake-token';
+      return values[key] ?? '';
+    });
+
+    await runGitHubAction();
+
+    expect(mockMainRun.mock.calls[0][0].singleAction).toMatchObject({
+      currentSingleAction: ACTIONS.PUBLISH_ISSUE_COMMENT,
+      issue: 42,
+      message: 'Deployment failed.',
+      commentId: 101,
+      commentMode: 'append',
+    });
+  });
+
   it('does not prepare an agent runtime for an unauthorized members-only event', async () => {
     github.context.eventName = 'issues';
     github.context.payload = { action: 'opened', issue: { number: 42 } };

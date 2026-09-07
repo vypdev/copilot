@@ -63,6 +63,7 @@ function minimalExecution(singleAction: {
   isDetectPotentialProblemsAction?: boolean;
   isRecommendStepsAction?: boolean;
   isCloseInactiveIssuesAction?: boolean;
+  isPublishIssueCommentAction?: boolean;
 }): Execution {
   return {
     singleAction: {
@@ -97,6 +98,9 @@ function minimalExecution(singleAction: {
       },
       get isCloseInactiveIssuesAction() {
         return singleAction.isCloseInactiveIssuesAction ?? this.currentSingleAction === ACTIONS.CLOSE_INACTIVE_ISSUES;
+      },
+      get isPublishIssueCommentAction() {
+        return singleAction.isPublishIssueCommentAction ?? this.currentSingleAction === ACTIONS.PUBLISH_ISSUE_COMMENT;
       },
     } as Execution['singleAction'],
   } as Execution;
@@ -162,6 +166,32 @@ describe('SingleActionUseCase', () => {
     await useCase.invoke(param);
 
     expect(closeInactiveInvoke).toHaveBeenCalledWith(param);
+  });
+
+  it('dispatches to PublishIssueCommentUseCase when action is publish_issue_comment', async () => {
+    const publishIssueCommentInvoke = jest.fn().mockResolvedValue([]);
+    const useCase = new SingleActionUseCase(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      undefined,
+      undefined,
+      { invoke: publishIssueCommentInvoke } as any,
+    );
+    const param = minimalExecution({
+      validSingleAction: true,
+      currentSingleAction: ACTIONS.PUBLISH_ISSUE_COMMENT,
+    });
+
+    await useCase.invoke(param);
+
+    expect(publishIssueCommentInvoke).toHaveBeenCalledWith(param);
   });
 
   it('dispatches to CheckProgressUseCase when action is check_progress', async () => {

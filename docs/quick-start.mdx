@@ -42,7 +42,7 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.COPILOT_TOKEN }}
           agent-provider: codex
@@ -55,9 +55,9 @@ jobs:
 ```
 
 Configure labels, issue types, Variables, Secrets, templates, permissions, and
-additional workflows manually when following this path. The example pins the
-action to an immutable commit and retains the readable major version in its
-comment. Update that pin deliberately after validating a new release.
+additional workflows manually when following this path. The example points the
+Action at the `v3` major-version tag, which Copilot moves to the latest published
+compatible release.
 
 ## Verify before enabling writes
 

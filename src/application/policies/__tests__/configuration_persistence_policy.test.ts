@@ -26,6 +26,7 @@ describe('shouldPersistConfiguration', () => {
         ACTIONS.CHECK_PROGRESS,
         ACTIONS.DETECT_POTENTIAL_PROBLEMS,
         ACTIONS.INITIAL_SETUP,
+        ACTIONS.PUBLISH_ISSUE_COMMENT,
     ])('does not persist configuration for the %s single action', (actionName) => {
         expect(shouldPersistConfiguration({
             isSingleAction: true,

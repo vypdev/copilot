@@ -127,6 +127,9 @@ Copilot provides extensive configuration options to customize your workflow. Use
     - `single-action-version`: Version for `create_release` or `create_tag`
     - `single-action-title`: Title for `create_release`
     - `single-action-changelog`: Changelog body for `create_release`
+    - `single-action-message`: Markdown body for `publish_issue_comment`
+    - `single-action-comment-id`: Optional existing comment ID for `publish_issue_comment`
+    - `single-action-comment-mode`: `create`, `replace`, or `append`; defaults to `create` without an ID and `replace` with an ID
     - `inactivity-threshold-hours`: Inactivity window for `close_inactive_issues_action` (default: `168` hours; valid range: `1`–`8760`)
 
     ## Image Configuration
@@ -181,6 +184,9 @@ may be forwarded through Repository Variables instead.
 | `single-action-version` | empty | Version used by release and tag single actions. |
 | `single-action-title` | empty | Title used by `create_release`. |
 | `single-action-changelog` | empty | Markdown body used by `create_release`. |
+| `single-action-message` | empty | Markdown body published by `publish_issue_comment`. |
+| `single-action-comment-id` | empty | Existing issue comment ID to replace or append to. |
+| `single-action-comment-mode` | empty | `create`, `replace`, or `append`; inferred from whether a comment ID is present when omitted. |
 | `inactivity-threshold-hours` | `168` | Hours without activity before the scheduled action closes an eligible waiting issue. |
 | `queue-gate-only` | `false` | Internal control-plane mode used by the release and hotfix setup workflows to admit a run before mutation work. Do not use it as a replacement for a normal action invocation. |
 

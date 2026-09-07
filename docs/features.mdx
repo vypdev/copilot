@@ -85,7 +85,7 @@ reviewing the threshold and the workflow PAT permissions.
 
 ## Single actions
 
-When you set `single-action` (and, when required, `single-action-issue`, `single-action-version`, `single-action-title`, `single-action-changelog`), the action runs **only** that action and skips the normal issue/PR/push pipelines.
+When you set `single-action` (and the inputs required by that action), Copilot runs **only** that action and skips the normal issue/PR/push pipelines.
 
 | Single action value | Inputs required | Description |
 |--------------------|----------------|-------------|
@@ -99,8 +99,9 @@ When you set `single-action` (and, when required, `single-action-issue`, `single
 | **`publish_github_action`** | `single-action-version` | Publishes or updates the GitHub Action: creates/updates the major version tag (for example, `v3` from a `v3.x.y` release). Requires `create_tag` to have been run first. |
 | **`deployed_action`** | `single-action-issue` | Marks the issue as deployed; updates labels and project state (e.g. "deployed"). |
 | **`close_inactive_issues_action`** | `inactivity-threshold-hours` (optional) | Scans waiting issues and closes those inactive for the configured threshold; no issue number is required. |
+| **`publish_issue_comment`** | `single-action-issue`, `single-action-message`; optionally `single-action-comment-id` and `single-action-comment-mode` | Creates a Markdown comment, or replaces/appends to a specific comment on the issue. |
 
-Single actions that **throw an error** if the last step fails: `publish_github_action`, `create_release`, `deployed_action`, `create_tag`, `close_inactive_issues_action`. This lets the workflow fail the job when the action does not succeed.
+Single actions that **throw an error** if the last step fails: `publish_github_action`, `create_release`, `deployed_action`, `create_tag`, `close_inactive_issues_action`, `publish_issue_comment`. This lets the workflow fail the job when the action does not succeed.
 
 ---
 
@@ -144,7 +145,7 @@ the Action with the internal `queue-gate-only` mode and only the ephemeral
 `${{ github.token }}` read permissions; it admits the run and exits before project
 composition, agent provisioning, setup, or mutation work. The version-preparation and
 publication jobs depend on that gate transitively, so a failed or skipped admission
-cannot start a write-capable descendant. The setup templates use `vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3`
+cannot start a write-capable descendant. The setup templates use `vypdev/copilot@v3`
 for this gate and therefore require a published v3 bundle that supports
 `queue-gate-only`.
 
@@ -186,7 +187,7 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           persist-credentials: false
-      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
           project-ids: '2,3'

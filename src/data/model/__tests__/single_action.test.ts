@@ -55,6 +55,25 @@ describe('SingleAction', () => {
         expect(s.validSingleAction).toBe(true);
         expect(s.isSingleActionWithoutIssue).toBe(true);
     });
+
+    it('isPublishIssueCommentAction', () => {
+      const s = new SingleAction(
+        ACTIONS.PUBLISH_ISSUE_COMMENT,
+        '42',
+        '',
+        '',
+        '',
+        'Deployment failed.',
+        '101',
+        'APPEND',
+      );
+      expect(s.isPublishIssueCommentAction).toBe(true);
+      expect(s.validSingleAction).toBe(true);
+      expect(s.message).toBe('Deployment failed.');
+      expect(s.commentId).toBe(101);
+      expect(s.commentIdInput).toBe('101');
+      expect(s.commentMode).toBe('append');
+    });
   });
 
   describe('enabledSingleAction and validSingleAction', () => {
@@ -84,6 +103,11 @@ describe('SingleAction', () => {
   describe('throwError', () => {
     it('returns true for actions in actionsThrowError', () => {
       const s = new SingleAction(ACTIONS.CREATE_RELEASE, '1', '', '', '');
+      expect(s.throwError).toBe(true);
+    });
+
+    it('returns true for publish_issue_comment', () => {
+      const s = new SingleAction(ACTIONS.PUBLISH_ISSUE_COMMENT, '1', '', '', '');
       expect(s.throwError).toBe(true);
     });
 
