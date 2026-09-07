@@ -8,6 +8,7 @@ interface ContractModule {
   assertDirectEventTriggers(file: string, workflow: Record<string, unknown>): void;
   assertRunner(file: string, workflow: Record<string, unknown>): void;
   assertImmutableActions(file: string, workflow: Record<string, unknown>): void;
+  assertPinnedCopilotHistoryCheckout(file: string, workflow: Record<string, unknown>): void;
   assertPinnedCopilotActionInputs(file: string, workflow: Record<string, unknown>): void;
   assertNoJobLevelSecrets(file: string, workflow: Record<string, unknown>): void;
   assertAgentWorkflowPermissions(file: string, workflow: Record<string, unknown>): void;
@@ -27,6 +28,7 @@ const {
   assertDirectEventTriggers,
   assertRunner,
   assertImmutableActions,
+  assertPinnedCopilotHistoryCheckout,
   assertPinnedCopilotActionInputs,
   assertNoJobLevelSecrets,
   assertAgentWorkflowPermissions,
@@ -348,6 +350,19 @@ describe('workflow contract validator', () => {
 
     expect(() => assertPinnedCopilotActionInputs(file, workflow)).toThrow(
       'passes inputs unsupported by vypdev/copilot@',
+    );
+  });
+
+  it('requires CI to fetch the history needed to validate pinned in-repository action manifests', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'ci_check.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const checkout = workflow.jobs['ci-check'].steps.find(
+      (step: { uses?: string }) => step.uses?.startsWith('actions/checkout@'),
+    );
+    checkout.with['fetch-depth'] = 1;
+
+    expect(() => assertPinnedCopilotHistoryCheckout(file, workflow)).toThrow(
+      'fetch-depth: 0 so pinned in-repository action manifests can be validated',
     );
   });
 

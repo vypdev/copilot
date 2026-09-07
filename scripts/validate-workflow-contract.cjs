@@ -137,6 +137,17 @@ function assertPinnedCopilotActionInputs(file, workflow) {
   }
 }
 
+function assertPinnedCopilotHistoryCheckout(file, workflow) {
+  const relativeFile = relativeWorkflow(file);
+  if (relativeFile !== '.github/workflows/ci_check.yml') return;
+  for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
+    const checkout = (job.steps ?? []).find(step => /^actions\/checkout@/.test(step?.uses ?? ''));
+    if (checkout?.with?.['fetch-depth'] !== 0) {
+      throw new Error(`${relativeFile} job ${jobId} checkout must set fetch-depth: 0 so pinned in-repository action manifests can be validated.`);
+    }
+  }
+}
+
 function loadPinnedCopilotManifest(sha) {
   const cached = pinnedCopilotManifests.get(sha);
   if (cached) return cached;
@@ -469,6 +480,7 @@ function validateWorkflow(file, workflow) {
   assertAgentWorkflowPermissions(file, workflow);
   assertQueueWorkflow(file, workflow);
   assertImmutableActions(file, workflow);
+  assertPinnedCopilotHistoryCheckout(file, workflow);
   assertPinnedCopilotActionInputs(file, workflow);
 }
 
@@ -505,6 +517,7 @@ module.exports = {
   BOT_GATE_EXPRESSION,
   FORK_SAFE_BOT_GATE_EXPRESSION,
   assertImmutableActions,
+  assertPinnedCopilotHistoryCheckout,
   assertPinnedCopilotActionInputs,
   assertAgentInputs,
   assertNoJobLevelSecrets,
