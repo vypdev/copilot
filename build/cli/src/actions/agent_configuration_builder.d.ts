@@ -8,7 +8,6 @@ export interface AgentTasksConfigurationValues extends AgentTaskConfigurationVal
     planner?: Partial<AgentTaskConfigurationValues>;
     reviewer?: Partial<AgentTaskConfigurationValues>;
     tester?: Partial<AgentTaskConfigurationValues>;
-    release?: Partial<AgentTaskConfigurationValues>;
 }
 /** Builds the validated findings/fixer pair used by both action lifecycles. */
 export declare function buildAgentTasks(values: AgentTasksConfigurationValues, environment?: AgentConfigurationEnvironment): AgentTaskConfiguration;

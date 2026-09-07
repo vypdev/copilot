@@ -18,27 +18,30 @@ export function registerCheckProgressCommand(program: Command): void {
       const gitInfo = getGitInfo();
       if ('error' in gitInfo) {
         logError(gitInfo.error);
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
       const issue = cleanCliArgument(options.issue);
       if (!issue) {
         console.log('❌ Please provide an issue number using -i or --issue');
+        process.exitCode = 1;
         return;
       }
       if (parseIssueNumber(issue) === undefined) {
         console.log(`❌ Invalid issue number: ${issue}. Must be a positive number.`);
+        process.exitCode = 1;
         return;
       }
       const params = buildCheckProgressParams(options, gitInfo);
       if (!params) return;
       try {
         await runLocalAction(params);
-        process.exit(0);
+        process.exitCode = 0;
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
         console.error('❌ Error checking progress:', error.message);
         if (options.debug) console.error(err);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }

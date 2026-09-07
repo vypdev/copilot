@@ -19,6 +19,7 @@ const FORBIDDEN_CODEX_FLAGS = new Set([
     '--enable',
     '--output-last-message',
     '-o',
+    '--output-schema',
 ]);
 const CONTROLLED_CODEX_CONFIG = new Map([
     ['approval_policy', 'never'],
@@ -42,7 +43,7 @@ const CONTROLLED_CODEX_CONFIG = new Map([
 
 const FORBIDDEN_CODEX_CONFIG_PREFIXES = ['hooks', 'mcp_servers.', 'apps.', 'plugins.'];
 const FORBIDDEN_CURSOR_FLAGS = [
-    '--api-key', '--header', '-H', '--endpoint', '-e', '--force', '-f', '--yolo', '--auto-review',
+    '--api-key', '--header', '-H', '--endpoint', '-e', '--yolo', '--auto-review',
     '--approve-mcps', '--trust', '--workspace', '--add-dir', '--plugin-dir', '--worktree', '-w',
     '--resume', '--continue', '--sandbox=disabled',
 ];
@@ -59,6 +60,7 @@ export function enforceAgentExecutionPolicy(
     provider: AgentProvider | undefined,
     capability: AgentCapability | undefined,
     args: readonly string[],
+    managedOutputSchemaPath?: string,
 ): string[] {
     if (capability === undefined) return [...args];
     if (provider === 'cursor') return enforceCursorPolicy(capability, args);
@@ -108,6 +110,7 @@ export function enforceAgentExecutionPolicy(
     for (const [key, value] of CONTROLLED_CODEX_CONFIG) {
         if (!configuredValues.has(key)) additions.push('--config', `${key}=${value}`);
     }
+    if (managedOutputSchemaPath) additions.push('--output-schema', managedOutputSchemaPath);
     controlled.splice(stdinIndex, 0, ...additions);
     return controlled;
 }
@@ -115,17 +118,25 @@ export function enforceAgentExecutionPolicy(
 function enforceCursorPolicy(capability: AgentCapability, args: readonly string[]): string[] {
     rejectFlags('Cursor', args, FORBIDDEN_CURSOR_FLAGS);
     const controlled = [...args];
+    const mutating = MUTATING_CAPABILITIES.has(capability);
+    if (!mutating && controlled.some((argument) => matchesFlag(argument, '--force') || matchesFlag(argument, '-f'))) {
+        throw new AgentCliError(`Cursor ${capability} capability cannot force tool approval.`, 'configuration');
+    }
     const sandbox = flagValue(controlled, ['--sandbox']);
     if (sandbox && sandbox !== 'enabled') {
         throw new AgentCliError('Cursor agent automation requires its sandbox to be enabled.', 'configuration');
     }
     if (!sandbox) controlled.push('--sandbox', 'enabled');
-    if (!MUTATING_CAPABILITIES.has(capability)) {
+    if (!mutating) {
         const mode = flagValue(controlled, ['--mode']);
         if (mode && !['ask', 'plan'].includes(mode)) {
             throw new AgentCliError(`Cursor ${capability} capability requires ask or plan mode.`, 'configuration');
         }
         if (!mode && !controlled.includes('--plan')) controlled.push('--mode', 'ask');
+    } else if (!controlled.some((argument) => matchesFlag(argument, '--force') || matchesFlag(argument, '-f'))) {
+        // Headless Cursor otherwise pauses for tool approval and eventually times out.
+        // The isolated runtime config supplies explicit denials and the sandbox.
+        controlled.push('--force');
     }
     return controlled;
 }
@@ -134,13 +145,14 @@ function enforceOpenCodePolicy(capability: AgentCapability, args: readonly strin
     rejectFlags('OpenCode', args, FORBIDDEN_OPENCODE_FLAGS);
     const controlled = [...args];
     if (!controlled.includes('--pure')) controlled.push('--pure');
-    if (!MUTATING_CAPABILITIES.has(capability)) {
-        const agent = flagValue(controlled, ['--agent']);
-        if (agent && agent !== 'plan') {
-            throw new AgentCliError(`OpenCode ${capability} capability requires the read-only plan agent.`, 'configuration');
-        }
-        if (!agent) controlled.push('--agent', 'plan');
+    const expectedAgent = MUTATING_CAPABILITIES.has(capability)
+        ? 'copilot-controlled-fixer'
+        : 'copilot-controlled-readonly';
+    const agent = flagValue(controlled, ['--agent']);
+    if (agent && agent !== expectedAgent) {
+        throw new AgentCliError(`OpenCode ${capability} capability requires the ${expectedAgent} agent.`, 'configuration');
     }
+    if (!agent) controlled.push('--agent', expectedAgent);
     return controlled;
 }
 

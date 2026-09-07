@@ -213,4 +213,37 @@ describe('SingleActionUseCase', () => {
     expect(results[0].success).toBe(false);
     expect(results[0].steps?.[0]).toContain(ACTIONS.THINK);
   });
+
+  it('skips an agent-backed single action for an unauthorized members-only actor', async () => {
+    const authorization = { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(false) };
+    const useCase = new SingleActionUseCase(
+      { invoke: jest.fn().mockResolvedValue([]) } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      { invoke: mockThinkInvoke } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      undefined,
+      authorization,
+    );
+    const param = minimalExecution({
+      validSingleAction: true,
+      currentSingleAction: ACTIONS.THINK,
+    });
+    Object.assign(param, {
+      owner: 'org',
+      repo: 'repo',
+      actor: 'external-user',
+      tokens: { token: 'token' },
+      ai: { getAiMembersOnly: () => true },
+    });
+
+    const results = await useCase.invoke(param);
+
+    expect(results).toEqual([]);
+    expect(mockThinkInvoke).not.toHaveBeenCalled();
+  });
 });

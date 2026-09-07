@@ -94,6 +94,7 @@ export function createSingleActionUseCaseCompositionRoot(): SingleActionUseCase 
       createFindingsQueryPort(),
     ),
     createCloseInactiveIssuesUseCase(),
+    createActorAuthorizationRepository(),
   );
 }
 
@@ -125,7 +126,7 @@ export function createIssueCommentUseCaseCompositionRoot(): IssueCommentUseCase 
       findings,
     ),
     new BugbotAutofixUseCase(fixer, bugbot.context, gitCommit),
-    new DoUserRequestUseCase(fixer),
+    new DoUserRequestUseCase(fixer, gitCommit),
     bugbot.issue,
     createActorAuthorizationRepository(),
     createAuthenticatedUserCompositionRoot(),
@@ -165,7 +166,7 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(): PullRequ
       findings,
     ),
     new BugbotAutofixUseCase(fixer, bugbot.context, gitCommit),
-    new DoUserRequestUseCase(fixer),
+    new DoUserRequestUseCase(fixer, gitCommit),
     bugbot.issue,
     createActorAuthorizationRepository(),
     createAuthenticatedUserCompositionRoot(),
@@ -190,6 +191,7 @@ export function createCommitUseCaseCompositionRoot(
     ),
     createDetectPotentialProblemsUseCase(),
     createCheckProgressCompositionRoot(),
+    createActorAuthorizationRepository(),
   );
 }
 

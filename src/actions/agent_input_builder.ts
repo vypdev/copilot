@@ -6,7 +6,8 @@ export type AgentInputReader = (key: string) => string | undefined;
 
 export function buildAgentTasksFromInputs(read: AgentInputReader) {
     const provider = read(INPUT_KEYS.AGENT_PROVIDER)?.trim() || DEFAULT_AGENT_PROVIDER;
-    const modelProvider = read(INPUT_KEYS.AGENT_MODEL_PROVIDER)?.trim() || DEFAULT_MODEL_PROVIDER;
+    const modelProvider = read(INPUT_KEYS.AGENT_MODEL_PROVIDER)?.trim()
+        || (provider === 'cursor' ? 'cursor' : DEFAULT_MODEL_PROVIDER);
     const model = read(INPUT_KEYS.AGENT_MODEL)?.trim() || DEFAULT_AGENT_MODEL;
     const effort = read(INPUT_KEYS.AGENT_EFFORT) ?? '';
     const command = read(INPUT_KEYS.AGENT_COMMAND) ?? '';
@@ -40,7 +41,6 @@ export function buildAgentTasksFromInputs(read: AgentInputReader) {
         planner: role('planner'),
         reviewer: role('reviewer'),
         tester: role('tester'),
-        release: role('release'),
     });
 }
 

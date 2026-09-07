@@ -22,9 +22,9 @@ describe('agent authentication preflight', () => {
         expect(result.shouldFail).toBe(true);
     });
 
-    it('does not fail a Codex preflight when the runner owns the authentication state', () => {
+    it('fails closed when a Codex runner has no detectable authentication state', () => {
         const result = runAgentAuthenticationPreflight({ provider: 'codex', model: 'gpt-5', command: 'codex exec --model gpt-5 --config model_provider=openai -' }, {});
-        expect(result.check.status).toBe('not_required');
-        expect(result.shouldFail).toBe(false);
+        expect(result.check.status).toBe('missing');
+        expect(result.shouldFail).toBe(true);
     });
 });

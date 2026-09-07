@@ -182,4 +182,17 @@ describe('finishGithubAction', () => {
         await finishGithubAction(blocking, [findingResult], {} as never, {} as never);
         expect(core.setFailed).toHaveBeenCalledWith('Bugbot found 3 unresolved actionable finding(s).');
     });
+
+    it('fails every workflow that reports an application error', async () => {
+        const failed = new Result({
+            id: 'AgentBackedFeature',
+            success: false,
+            executed: true,
+            errors: ['Agent execution failed.'],
+        });
+
+        await finishGithubAction(execution(), [failed], {} as never, {} as never);
+
+        expect(core.setFailed).toHaveBeenCalledWith('Agent execution failed.');
+    });
 });

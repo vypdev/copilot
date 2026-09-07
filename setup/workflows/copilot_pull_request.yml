@@ -8,16 +8,18 @@ on:
 
 jobs:
   copilot-pull-requests:
-    if: ${{ vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}
+    if: ${{ (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && github.event.pull_request.head.repo.full_name == github.repository }}
     name: Copilot - Pull Request
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:
       contents: read
-      checks: write
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+          fetch-depth: 0
 
       - name: Fetch incremental review range
         if: github.event.action == 'synchronize'
@@ -25,12 +27,12 @@ jobs:
           BEFORE_SHA: ${{ github.event.before }}
           AFTER_SHA: ${{ github.event.after }}
         run: |
-          git fetch --no-tags --depth=1 origin "$AFTER_SHA"
-          if ! git fetch --no-tags --depth=1 origin "$BEFORE_SHA"; then
+          git cat-file -e "${AFTER_SHA}^{commit}"
+          if ! git cat-file -e "${BEFORE_SHA}^{commit}"; then
             echo "::notice::The previous PR commit is unavailable; Bugbot will use the canonical pull-request diff."
           fi
 
-      - uses: vypdev/copilot@v3
+      - uses: vypdev/copilot@a39616557f384bcc633b94e43d9551b2b5205328 # v3
         with:
           ai-ignore-files: ${{ vars.AI_IGNORE_FILES || 'build/*' }}
           debug: ${{ vars.DEBUG }}
@@ -51,9 +53,9 @@ jobs:
           pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || 'en-US' }}
           commit-prefix-transforms: ${{ vars.COMMIT_PREFIX_TRANSFORMS || 'replace-slash' }}
           ai-pull-request-description: ${{ vars.AI_PULL_REQUEST_DESCRIPTION || 'true' }}
-          ai-pull-request-description-mode: ${{ vars.AI_PULL_REQUEST_DESCRIPTION_MODE || 'replace' }}
+          ai-pull-request-description-mode: ${{ vars.AI_PULL_REQUEST_DESCRIPTION_MODE || 'append' }}
           ai-members-only: ${{ vars.AI_MEMBERS_ONLY || 'false' }}
-          ai-include-reasoning: ${{ vars.AI_INCLUDE_REASONING || 'true' }}
+          ai-include-reasoning: ${{ vars.AI_INCLUDE_REASONING || 'false' }}
           bugbot-severity: ${{ vars.BUGBOT_SEVERITY || 'low' }}
           bugbot-comment-limit: ${{ vars.BUGBOT_COMMENT_LIMIT || '20' }}
           bugbot-fix-verify-commands: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS }}
@@ -84,6 +86,11 @@ jobs:
           fixer-model: ${{ vars.FIXER_MODEL }}
           fixer-effort: ${{ vars.FIXER_EFFORT }}
           fixer-command: ${{ vars.FIXER_COMMAND }}
+          planner-provider: ${{ vars.PLANNER_PROVIDER }}
+          planner-model-provider: ${{ vars.PLANNER_MODEL_PROVIDER }}
+          planner-model: ${{ vars.PLANNER_MODEL }}
+          planner-effort: ${{ vars.PLANNER_EFFORT }}
+          planner-command: ${{ vars.PLANNER_COMMAND }}
           reviewer-provider: ${{ vars.REVIEWER_PROVIDER }}
           reviewer-model-provider: ${{ vars.REVIEWER_MODEL_PROVIDER }}
           reviewer-model: ${{ vars.REVIEWER_MODEL }}
@@ -108,6 +115,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          CURSOR_API_KEY: ${{ (vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor' || vars.RELEASE_PROVIDER == 'cursor') && secrets.CURSOR_API_KEY || '' }}
+          CURSOR_API_KEY: ${{ (vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor') && secrets.CURSOR_API_KEY || '' }}
+          CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
           CODEX_ACCESS_TOKEN: ${{ secrets.CODEX_ACCESS_TOKEN }}
           COPILOT_EVIDENCE_TOKEN: ${{ github.token }}

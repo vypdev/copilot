@@ -95,8 +95,9 @@ bugbot-fix-verify-commands: "pnpm run build, pnpm test, pnpm run lint"
 
 - If **all** commands succeed, the action runs `git add`, **commit**, and **push** with a message like `fix(#123): bugbot autofix - resolve finding-1, finding-2`.
 - If **any** command fails, the action **does not commit**. No push happens, and the findings are not marked as resolved.
+- Each command is spawned without a shell, with a temporary `HOME` and an allowlisted environment that excludes GitHub tokens, agent/provider credentials, cloud secrets, and local agent auth-store paths.
 
-So verify commands act as a gate: only passing runs produce a commit. If you leave `bugbot-fix-verify-commands` empty, only the configured agent’s run is used (the action may still commit if there are file changes). See [Configuration](/bugbot/configuration#bugbot-fix-verify-commands).
+So verify commands act as a gate: only passing runs produce a commit. They still execute repository code as the runner OS user, so configure only commands trusted for that repository and isolate self-hosted runners from sensitive host data. If you leave `bugbot-fix-verify-commands` empty, only the configured agent’s run is used (the action may still commit if there are file changes). See [Configuration](/bugbot/configuration#bugbot-fix-verify-commands).
 
 ---
 

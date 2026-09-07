@@ -12,7 +12,7 @@ The Action executes external provider-specific CLIs. It does not embed agent SDK
 | Runtime | Binary | Invocation | Credential reference |
 | --- | --- | --- | --- |
 | OpenCode | `opencode` | `opencode run --model provider/model [--variant effort]` | Provider credential, for example `OPENAI_API_KEY` |
-| Codex | `codex` | `codex exec --ephemeral --skip-git-repo-check --model model --config 'model_provider="provider"' -` | `CODEX_ACCESS_TOKEN`, `OPENAI_API_KEY`, or controlled local session |
+| Codex | `codex` | `codex exec --ephemeral --skip-git-repo-check --model model --config 'model_provider="provider"' -` | `CODEX_API_KEY`, `CODEX_ACCESS_TOKEN`, `OPENAI_API_KEY`, or controlled local session |
 | Cursor | `agent` | `agent -p --output-format text --model model <prompt>` | `CURSOR_API_KEY` |
 
 ## Version variables
@@ -41,7 +41,7 @@ Cursor uses the official installer and verifies its SHA-256 against `CURSOR_INST
 
 Do not use `npx`, Yarn, Bun, floating `@latest`, unverified shell downloads, or secrets in command-line arguments.
 
-## Workflow environment
+## Copilot action step environment
 
 ```yaml
 env:
@@ -50,11 +50,12 @@ env:
   CURSOR_INSTALLER_SHA256: ${{ vars.CURSOR_INSTALLER_SHA256 }}
   OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
   CODEX_ACCESS_TOKEN: ${{ secrets.CODEX_ACCESS_TOKEN }}
   CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
 ```
 
-The Action does not require every secret. Only the credential for the selected runtime/model provider should be supplied. Never expose a local OpenCode or Codex OAuth file to a GitHub-hosted runner.
+Map these values only on the Copilot action step, never at workflow or job scope. The Action does not require every secret. Only the credential for the selected runtime/model provider should be supplied, and Codex needs none of these environment values when a controlled runner already passes `codex login status`. Never expose a local OpenCode or Codex OAuth file to a GitHub-hosted runner.
 
 ## Recommended model policy
 

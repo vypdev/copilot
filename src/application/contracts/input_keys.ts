@@ -53,11 +53,6 @@ export const INPUT_KEYS = {
     TESTER_EFFORT: 'tester-effort',
     TESTER_MODEL: 'tester-model',
     TESTER_COMMAND: 'tester-command',
-    RELEASE_PROVIDER: 'release-provider',
-    RELEASE_MODEL_PROVIDER: 'release-model-provider',
-    RELEASE_EFFORT: 'release-effort',
-    RELEASE_MODEL: 'release-model',
-    RELEASE_COMMAND: 'release-command',
 
     // AI configuration
     AI_PULL_REQUEST_DESCRIPTION: 'ai-pull-request-description',

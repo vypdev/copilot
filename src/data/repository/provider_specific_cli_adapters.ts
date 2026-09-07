@@ -8,6 +8,7 @@ export interface ProviderCliRequest {
     cwd?: string;
     signal?: AbortSignal;
     capability: AgentCapability;
+    outputSchema?: Record<string, unknown>;
 }
 
 abstract class SpecificCliAdapter {
@@ -32,6 +33,7 @@ abstract class SpecificCliAdapter {
             timeoutMs: request.timeoutMs,
             cwd: request.cwd,
             signal: request.signal,
+            ...(request.outputSchema ? { outputSchema: request.outputSchema } : {}),
         });
     }
 }

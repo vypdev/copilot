@@ -101,3 +101,15 @@ export function parseJsonFromAgentText(text: string): Record<string, unknown> {
         `Agent response is not valid JSON: no JSON object found. Response length: ${trimmed.length} chars.`
     );
 }
+
+/** Structured contracts accept only a single object, optionally in one JSON fence. */
+export function parseStrictJsonFromAgentText(text: string): Record<string, unknown> {
+    const trimmed = text.trim();
+    if (!trimmed) throw new Error('Agent response text is empty');
+    const direct = parseObject(trimmed);
+    if (direct) return direct;
+    const fencedMatch = trimmed.match(/^```(?:json)?\s*\n([\s\S]*?)\n```$/iu);
+    const fenced = fencedMatch ? parseObject(fencedMatch[1].trim()) : null;
+    if (fenced) return fenced;
+    throw new Error('Agent response is not a single valid JSON object.');
+}

@@ -12,6 +12,8 @@ export interface AgentCliRequest {
     cwd?: string;
     maxOutputBytes?: number;
     maxPromptBytes?: number;
+    /** Native final-response schema, used only by providers that support it. */
+    outputSchema?: Record<string, unknown>;
 }
 export declare class AgentCliError extends Error {
     readonly category: 'configuration' | 'timeout' | 'cancelled' | 'process' | 'output';

@@ -7,6 +7,7 @@ export interface ProviderCliRequest {
     cwd?: string;
     signal?: AbortSignal;
     capability: AgentCapability;
+    outputSchema?: Record<string, unknown>;
 }
 declare abstract class SpecificCliAdapter {
     private readonly expectedProvider;

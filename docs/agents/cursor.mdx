@@ -1,0 +1,68 @@
+---
+title: Cursor runtime
+description: Configure and validate Cursor as a hardened agent runtime.
+---
+
+# Cursor runtime
+
+Copilot supports Cursor at the command, provisioning, authentication, sandbox, timeout, cancellation, output-limit, and terminal-failure boundaries. Production readiness is deployment-specific: run a real authenticated smoke test for the selected account, model, and runner image before enabling it in a protected workflow.
+
+## Runtime contract
+
+Copilot invokes Cursor non-interactively:
+
+```text
+agent -p --output-format text --model <model> <prompt>
+```
+
+The Action can provision the official Cursor installer when all required inputs are present:
+
+```text
+CURSOR_INSTALLER_SHA256
+CURSOR_API_KEY
+```
+
+The installer checksum is verified before execution. Unofficial npm packages, shell fallbacks, and unverified downloads are not supported.
+
+## Configuration
+
+```yaml
+with:
+  agent-provider: cursor
+  agent-model-provider: cursor
+  agent-model: <approved-model>
+  agent-effort: <optional-preference>
+env:
+  CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+```
+
+The runtime provider (`cursor`) is separate from the model provider and model. Cursor's common command surface exposes model selection but no portable effort flag; Copilot keeps the common effort value in execution context instead of inventing an unsupported CLI option. Do not assume that a CLI installation proves that a selected model is available or authorized.
+
+## Controlled execution environment
+
+Copilot creates a private temporary home and a default-deny Cursor configuration for every invocation. Analysis roles require sandbox mode and an approval boundary. The fixer role may use Cursor's non-interactive write mode only after Copilot's authorization and workspace-mutation preflight succeed. Repository-provided configuration cannot silently enable network access or prohibited shell tools.
+
+Only the Cursor credential and a small allowlist of process variables reach the child process. GitHub tokens, unrelated provider credentials, cloud secrets, and arbitrary job environment values are removed.
+
+## Operator validation
+
+Safe binary checks do not consume model usage:
+
+```bash
+agent --version
+agent --help
+node scripts/verify-agent-clis.cjs
+```
+
+An authenticated smoke test is separate. Run it only with explicit authorization and a bounded cost, using a read-only prompt that neither inspects nor modifies sensitive files. Confirm that the installer, model entitlement, billing policy, and sandbox behavior remain compatible with the target runner image.
+
+## Security boundary
+
+Never put `CURSOR_API_KEY` in action inputs, command arguments, prompts, repository files, or logs. Map it only to the Copilot action step in a protected workflow. Do not expose it to fork-controlled code.
+
+## Related pages
+
+- [Runtime selection](/agents/runtime-selection)
+- [Agent CLI configuration](/agents/cli-configuration)
+- [Agent CLI provisioning](/security-operations/operations/cli-provisioning)
+- [Agent CLI runners](/security-operations/operations/cli-runners)

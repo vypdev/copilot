@@ -45,10 +45,7 @@ export async function finishGithubAction(
     const summary = await writeActionSummary(execution, summaryPort);
     if (!dryRun) await publishCopilotEvidence(execution, results, summary, evidencePort);
     failActionForUnresolvedFindingsIfConfigured(execution, results, dryRun);
-
-    if (execution.isSingleAction && execution.singleAction.throwError) {
-        setFirstErrorIfExists(results);
-    }
+    setFirstErrorIfExists(results);
 }
 
 function extractBugbotTelemetry(results: readonly Result[]): unknown[] {

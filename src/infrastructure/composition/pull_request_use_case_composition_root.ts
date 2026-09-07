@@ -34,6 +34,7 @@ import { createProjectBoardCompositionRoot } from "./project_board_composition_r
 import { TimerDelayAdapter } from "../time/timer_delay_adapter";
 import { DetectPotentialProblemsUseCase } from "../../application/usecases/steps/commit/detect_potential_problems_use_case";
 import { createBugbotCompositionRoot } from "./bugbot_composition_root";
+import { createActorAuthorizationRepository } from './actor_authorization_composition_root';
 
 export function createPullRequestUseCaseCompositionRoot(): PullRequestUseCase {
   const issueLifecycle = new IssueLifecycleRepository(
@@ -102,5 +103,6 @@ export function createPullRequestUseCaseCompositionRoot(): PullRequestUseCase {
       bugbot.resolution,
       bugbot.telemetry,
     ),
+    createActorAuthorizationRepository(),
   );
 }

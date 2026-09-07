@@ -4,10 +4,13 @@ export declare const TRANSLATION_RESPONSE_SCHEMA: {
     readonly properties: {
         readonly translatedText: {
             readonly type: "string";
+            readonly minLength: 1;
+            readonly maxLength: 12000;
             readonly description: "The text translated to the requested locale. Required. Must not be empty.";
         };
         readonly reason: {
             readonly type: "string";
+            readonly maxLength: 2000;
             readonly description: "Optional: reason why translation could not be produced or was partial (e.g. ambiguous input).";
         };
     };
@@ -19,6 +22,8 @@ export declare const THINK_RESPONSE_SCHEMA: {
     readonly properties: {
         readonly answer: {
             readonly type: "string";
+            readonly minLength: 1;
+            readonly maxLength: 12000;
             readonly description: "The concise answer to the user question. Required.";
         };
     };

@@ -2,3 +2,5 @@
 export declare function extractFirstJsonObject(text: string): string | null;
 /** Parse an agent response that may be raw JSON, fenced JSON, or prose followed by an object. */
 export declare function parseJsonFromAgentText(text: string): Record<string, unknown>;
+/** Structured contracts accept only a single object, optionally in one JSON fence. */
+export declare function parseStrictJsonFromAgentText(text: string): Record<string, unknown>;

@@ -1,10 +1,9 @@
 import type { Execution } from '../../../../../data/model/execution';
 import { Result } from '../../../../../data/model/result';
-import { ApplicationError } from '../../../../errors/application_error';
 import type { GitCommitPort } from '../../../../../application/ports/git_ports';
 import type { BugbotContext } from './types';
-import { isSensitiveWorkspacePath, listWorkspacePaths, selectWorkspacePathsToCommit } from './workspace_changes';
 import { logDebugInfo, logError } from '../../../../ports/logging_ports';
+import { finalizeWorkspaceMutation } from '../workspace_mutation_guard';
 
 export async function finalizeBugbotAutofix(
     execution: Execution,
@@ -19,16 +18,17 @@ export async function finalizeBugbotAutofix(
         logError('Bugbot autofix: no response from configured build agent.');
         return [failure('Configured build agent returned no response.')];
     }
-    const workspacePathsAfter = await inspectWorkspace(gitCommitPort, 'after');
-    const unsafePaths = workspacePathsAfter.filter(isSensitiveWorkspacePath);
-    if (unsafePaths.length > 0) {
-        logError(`Bugbot autofix refused sensitive workspace paths: ${unsafePaths.join(', ')}`);
-        return [failure(`Bugbot autofix refused because sensitive files were modified: ${unsafePaths.join(', ')}`)];
-    }
-    const workspacePaths = selectWorkspacePathsToCommit(workspacePathsBefore, workspacePathsAfter);
-    if (workspacePaths.length === 0) {
-        logError('Bugbot autofix produced no safe workspace paths to commit.');
-        return [failure('Bugbot autofix produced no safe workspace paths to commit.')];
+    let workspacePaths: string[];
+    try {
+        ({ workspacePaths } = await finalizeWorkspaceMutation(
+            gitCommitPort,
+            workspacePathsBefore,
+            'Bugbot autofix',
+        ));
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logError(message);
+        return [failure(message)];
     }
     logDebugInfo(`BugbotAutofix: response length=${responseText.length}; safe paths=${workspacePaths.length}.`);
     return [new Result({
@@ -38,18 +38,6 @@ export async function finalizeBugbotAutofix(
         steps: [`Bugbot autofix completed. The configured agent applied changes for findings: ${idsToFix.join(', ')}. Run verify commands and commit/push.`],
         payload: { targetFindingIds: idsToFix, context, workspacePaths, branchCheckedOut },
     })];
-}
-
-async function inspectWorkspace(gitCommitPort: GitCommitPort, phase: string): Promise<string[]> {
-    try {
-        return await listWorkspacePaths(gitCommitPort);
-    } catch (error) {
-        throw new ApplicationError(
-            `Unable to inspect workspace ${phase} autofix: ${error instanceof Error ? error.message : String(error)}`,
-            'provider',
-            { cause: error, retryable: true },
-        );
-    }
 }
 
 function failure(message: string): Result {

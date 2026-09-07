@@ -11,4 +11,6 @@ export declare function runBugbotAutofixCommitAndPush(execution: Execution, opti
 } | undefined, authenticatedUserPort: AuthenticatedUserPort, gitCommitPort: GitCommitPort): Promise<BugbotAutofixCommitResult>;
 export declare function runUserRequestCommitAndPush(execution: Execution, options: {
     branchOverride?: string;
+    branchAlreadyCheckedOut?: boolean;
+    workspacePaths?: string[];
 } | undefined, authenticatedUserPort: AuthenticatedUserPort, gitCommitPort: GitCommitPort): Promise<BugbotAutofixCommitResult>;

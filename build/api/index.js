@@ -171,7 +171,7 @@ const secret_redaction_1 = __nccwpck_require__(254);
 function sanitizeAgentMarkdown(raw, maxLength = 12000) {
     if (typeof raw !== 'string')
         return '';
-    const bounded = (0, untrusted_content_1.createUntrustedContent)(raw, 'agent.comment.output', maxLength).text;
+    const bounded = (0, untrusted_content_1.createUntrustedContent)((0, secret_redaction_1.redactKnownEnvironmentSecrets)((0, secret_redaction_1.redactSecretLikeValues)(raw)), 'agent.comment.output', maxLength).text;
     return neutralizeGithubControls(bounded);
 }
 /**
@@ -183,9 +183,8 @@ function sanitizePublishedError(raw) {
     if (typeof raw !== 'string')
         return '';
     const withoutStack = raw.split(/\n\s+at\s+/u, 1)[0];
-    const redacted = (0, secret_redaction_1.redactSecretLikeValues)(withoutStack)
+    return sanitizeAgentMarkdown(withoutStack, 2000)
         .replace(/\[REDACTED\]/gu, '[redacted]');
-    return sanitizeAgentMarkdown(redacted, 2000);
 }
 function escapeHtml(raw) {
     return String(raw ?? '')
@@ -2148,6 +2147,7 @@ exports.BUGBOT_RESPONSE_SCHEMA = {
     properties: {
         findings: {
             type: 'array',
+            maxItems: 200,
             items: {
                 type: 'object',
                 properties: {
@@ -2177,6 +2177,7 @@ exports.BUGBOT_RESPONSE_SCHEMA = {
         },
         resolved_finding_ids: {
             type: 'array',
+            maxItems: 500,
             items: {
                 type: 'string',
                 minLength: 1,
@@ -2210,7 +2211,8 @@ exports.BUGBOT_FIX_INTENT_RESPONSE_SCHEMA = {
         },
         target_finding_ids: {
             type: 'array',
-            items: { type: 'string' },
+            maxItems: 500,
+            items: { type: 'string', minLength: 1, maxLength: marker_1.MAX_FINDING_ID_LENGTH },
             description: 'When is_fix_request is true: the exact finding ids from the list we provided that the user wants fixed. Use the exact id strings. For "fix all" or "fix everything" include all listed ids. When is_fix_request is false, return an empty array.',
         },
         is_do_request: {
@@ -3315,7 +3317,7 @@ exports.PULL_REQUEST_DESCRIPTION_MODES = [
     'preserve',
     'disabled',
 ];
-exports.DEFAULT_PULL_REQUEST_DESCRIPTION_MODE = 'replace';
+exports.DEFAULT_PULL_REQUEST_DESCRIPTION_MODE = 'append';
 exports.MANAGED_PULL_REQUEST_DESCRIPTION_START = '<!-- copilot:managed-pr-description -->';
 exports.MANAGED_PULL_REQUEST_DESCRIPTION_END = '<!-- /copilot:managed-pr-description -->';
 /** Normalizes public configuration while keeping invalid values safe and backwards compatible. */
@@ -4452,12 +4454,23 @@ exports.PROJECT_CONTEXT_INSTRUCTION = `**Important – use full project context:
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.redactSecretLikeValues = redactSecretLikeValues;
+exports.redactKnownEnvironmentSecrets = redactKnownEnvironmentSecrets;
 /** Redacts common credential formats from text before it reaches logs or GitHub. */
 function redactSecretLikeValues(value) {
     return value
         .replace(/\bBearer\s+[^\s,;]+/giu, 'Bearer [REDACTED]')
         .replace(/\b(token|api[_-]?key|secret|password|client[_-]?secret)\s*[:=]\s*["']?[^\s,"']+/giu, '$1=[REDACTED]')
         .replace(/\b(?:gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+|sk-[A-Za-z0-9_-]+)\b/gu, '[REDACTED]');
+}
+/** Redacts exact credential values known to the current process, including non-standard token formats. */
+function redactKnownEnvironmentSecrets(value, environment = process.env) {
+    let redacted = value;
+    for (const [name, secret] of Object.entries(environment)) {
+        if (!secret || secret.length < 8 || !/(?:TOKEN|SECRET|PASSWORD|API[_-]?KEY|PRIVATE[_-]?KEY)$/iu.test(name))
+            continue;
+        redacted = redacted.split(secret).join('[REDACTED]');
+    }
+    return redacted;
 }
 
 

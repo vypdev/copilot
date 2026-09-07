@@ -14,6 +14,8 @@ import { ParamUseCase } from "../../base/param_usecase";
 import { Result } from "../../../../data/model/result";
 import { PROJECT_CONTEXT_INSTRUCTION } from "../../../../utils/project_context_instruction";
 import { sanitizeUserCommentForPrompt } from "./bugbot/sanitize_user_comment_for_prompt";
+import type { GitCommitPort } from '../../../ports/git_ports';
+import { finalizeWorkspaceMutation, prepareWorkspaceMutation } from './workspace_mutation_guard';
 
 const TASK_ID = "DoUserRequestUseCase";
 
@@ -26,7 +28,10 @@ export interface DoUserRequestParam {
 export class DoUserRequestUseCase implements ParamUseCase<DoUserRequestParam, Result[]> {
     taskId: string = TASK_ID;
 
-    constructor(private readonly aiRepository: FixerQueryPort) {}
+    constructor(
+        private readonly aiRepository: FixerQueryPort,
+        private readonly gitCommitPort: GitCommitPort,
+    ) {}
 
     async invoke(param: DoUserRequestParam): Promise<Result[]> {
         logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`);
@@ -43,6 +48,18 @@ export class DoUserRequestUseCase implements ParamUseCase<DoUserRequestParam, Re
         if (!commentTrimmed) {
             logInfo("No user comment; skipping user request.");
             return results;
+        }
+
+        const targetBranch = param.branchOverride ?? execution.commit.branch;
+        let mutation;
+        try {
+            mutation = await prepareWorkspaceMutation(this.gitCommitPort, {
+                operation: 'User-request implementation',
+                branch: targetBranch,
+                token: execution.tokens.token,
+            });
+        } catch (error) {
+            return [failure(error instanceof Error ? error.message : String(error))];
         }
 
         const baseBranch =
@@ -79,15 +96,38 @@ export class DoUserRequestUseCase implements ParamUseCase<DoUserRequestParam, Re
             return results;
         }
 
-        results.push(
-            new Result({
-                id: this.taskId,
-                success: true,
-                executed: true,
-                steps: [],
-                payload: { branchOverride: param.branchOverride },
-            })
-        );
+        let workspacePaths: string[];
+        try {
+            ({ workspacePaths } = await finalizeWorkspaceMutation(
+                this.gitCommitPort,
+                mutation.workspacePathsBefore,
+                'User-request implementation',
+            ));
+        } catch (error) {
+            return [failure(error instanceof Error ? error.message : String(error))];
+        }
+
+        results.push(new Result({
+            id: this.taskId,
+            success: true,
+            executed: true,
+            steps: [],
+            payload: {
+                branchOverride: param.branchOverride,
+                branchCheckedOut: mutation.branchCheckedOut,
+                workspacePaths,
+            },
+        }));
         return results;
     }
+}
+
+function failure(message: string): Result {
+    logError(message);
+    return new Result({
+        id: TASK_ID,
+        success: false,
+        executed: true,
+        errors: [message],
+    });
 }

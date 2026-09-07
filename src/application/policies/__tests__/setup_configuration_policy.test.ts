@@ -28,7 +28,7 @@ describe('setup configuration policy', () => {
             { name: 'BUGBOT_FAIL_ON_UNRESOLVED', value: 'false' },
         ]));
         expect(buildSetupActionInputs(configuration)['bugbot-fail-on-unresolved']).toBe('false');
-        expect(plan.requiredSecrets).toEqual(expect.arrayContaining(['PAT', 'CODEX_ACCESS_TOKEN', 'OPENAI_API_KEY']));
+        expect(plan.requiredSecrets).toEqual(['PAT']);
         expect(plan.warnings.length).toBeGreaterThan(0);
     });
 
@@ -88,7 +88,7 @@ describe('setup configuration policy', () => {
         expect(buildSetupActionInputs(configuration)).toMatchObject({
             'planner-provider': 'cursor',
             'reviewer-model': 'claude-3-7-sonnet',
-            'ai-pull-request-description-mode': 'replace',
+            'ai-pull-request-description-mode': 'append',
         });
         expect(buildSetupPlan(configuration).warnings).toEqual(expect.arrayContaining([
             expect.stringContaining('Cursor is an experimental runtime'),
@@ -97,7 +97,7 @@ describe('setup configuration policy', () => {
 
     it('derives runtime credentials without asking Cursor for an unused model-provider key', () => {
         const opencode = mergeSetupConfiguration(createDefaultSetupConfiguration(), {
-            agents: Object.fromEntries(['planner', 'findings', 'reviewer', 'fixer', 'tester', 'release'].map(task => [task, {
+            agents: Object.fromEntries(['planner', 'findings', 'reviewer', 'fixer', 'tester'].map(task => [task, {
                 provider: 'opencode', modelProvider: 'openai', model: 'gpt-5.6-luna',
         }])) as SetupConfigurationOverrides['agents'],
         });
@@ -106,8 +106,8 @@ describe('setup configuration policy', () => {
         ]);
 
         const cursor = mergeSetupConfiguration(createDefaultSetupConfiguration(), {
-            agents: Object.fromEntries(['planner', 'findings', 'reviewer', 'fixer', 'tester', 'release'].map(task => [task, {
-                provider: 'cursor', modelProvider: 'openai', model: 'composer-1',
+            agents: Object.fromEntries(['planner', 'findings', 'reviewer', 'fixer', 'tester'].map(task => [task, {
+                provider: 'cursor', modelProvider: 'cursor', model: 'composer-1',
         }])) as SetupConfigurationOverrides['agents'],
         });
         expect(buildSetupCredentialRequirements(cursor).map(requirement => requirement.name)).toEqual(['PAT', 'CURSOR_API_KEY']);
@@ -132,10 +132,33 @@ describe('setup configuration policy', () => {
     it('models runtime and model-provider credentials as alternatives', () => {
         const requirements = buildSetupCredentialRequirements(createDefaultSetupConfiguration());
         const runtime = requirements.find(requirement => requirement.name === 'CODEX_ACCESS_TOKEN');
+        const apiKey = requirements.find(requirement => requirement.name === 'CODEX_API_KEY');
         const modelProvider = requirements.find(requirement => requirement.name === 'OPENAI_API_KEY');
 
         expect(runtime?.alternativeGroups).toEqual(expect.arrayContaining(['agent:codex:openai']));
         expect(modelProvider?.alternativeGroups).toEqual(expect.arrayContaining(['agent:codex:openai']));
+        expect(runtime?.runnerAuthenticationGroups).toEqual(expect.arrayContaining(['agent:codex:openai']));
+        expect(apiKey?.runnerAuthenticationGroups).toEqual(expect.arrayContaining(['agent:codex:openai']));
+        expect(modelProvider?.runnerAuthenticationGroups).toEqual(expect.arrayContaining(['agent:codex:openai']));
+    });
+
+    it('does not let Codex runner authentication satisfy an OpenCode credential group', () => {
+        const configuration = mergeSetupConfiguration(createDefaultSetupConfiguration(), {
+            agents: {
+                reviewer: { provider: 'opencode', modelProvider: 'openai', model: 'gpt-5.6-luna' },
+            },
+        });
+        const plan = buildSetupPlan(configuration);
+        const openAi = plan.credentialRequirements.find(requirement => requirement.name === 'OPENAI_API_KEY');
+
+        expect(openAi?.alternativeGroups).toEqual(expect.arrayContaining([
+            'agent:codex:openai',
+            'agent:opencode:openai',
+        ]));
+        expect(openAi?.runnerAuthenticationGroups).toEqual(['agent:codex:openai']);
+        expect(plan.requiredSecrets).toEqual(expect.arrayContaining(['OPENCODE_API_KEY', 'OPENAI_API_KEY']));
+        expect(plan.requiredSecrets).not.toContain('CODEX_API_KEY');
+        expect(plan.requiredSecrets).not.toContain('CODEX_ACCESS_TOKEN');
     });
 
     it('marks custom provider credentials as intentionally unverifiable', () => {

@@ -9,6 +9,7 @@ export interface ProviderCliExecution {
     cwd?: string;
     signal?: AbortSignal;
     capability: AgentCapability;
+    outputSchema?: Record<string, unknown>;
 }
 
 /** Provider-neutral CLI adapter that delegates provider-specific execution to focused adapters. */

@@ -41,11 +41,6 @@ export declare const INPUT_KEYS: {
     readonly TESTER_EFFORT: "tester-effort";
     readonly TESTER_MODEL: "tester-model";
     readonly TESTER_COMMAND: "tester-command";
-    readonly RELEASE_PROVIDER: "release-provider";
-    readonly RELEASE_MODEL_PROVIDER: "release-model-provider";
-    readonly RELEASE_EFFORT: "release-effort";
-    readonly RELEASE_MODEL: "release-model";
-    readonly RELEASE_COMMAND: "release-command";
     readonly AI_PULL_REQUEST_DESCRIPTION: "ai-pull-request-description";
     readonly AI_PULL_REQUEST_DESCRIPTION_MODE: "ai-pull-request-description-mode";
     readonly AI_MEMBERS_ONLY: "ai-members-only";

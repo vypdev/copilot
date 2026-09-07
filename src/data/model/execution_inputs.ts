@@ -16,6 +16,7 @@ export interface EventIssuePayload {
     html_url?: string;
     body?: string | null;
     user?: EventUserPayload;
+    pull_request?: Record<string, unknown>;
 }
 
 export interface EventLabelPayload {

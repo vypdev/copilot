@@ -1,5 +1,6 @@
 import type { AgentCapability, AgentConfiguration } from '../model/agent';
 import { validateAgentCommand } from '../../application/policies/agent_command_policy';
+import { assertProviderModelCompatibility } from '../../application/policies/agent_configuration_validation_policy';
 
 const SUPPORTED_PROVIDERS = new Set(['opencode', 'codex', 'cursor']);
 const MODEL_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/;
@@ -11,6 +12,7 @@ export function isValidAgentConfiguration(configuration: AgentConfiguration): bo
     if (!hasOptionalValue(configuration.modelProvider, MODEL_PROVIDER_PATTERN)) return false;
     if (!hasOptionalValue(configuration.effort, MODEL_PATTERN)) return false;
     try {
+        assertProviderModelCompatibility(configuration.provider, configuration.modelProvider?.trim().toLowerCase() || 'openai');
         validateAgentCommand(configuration);
         return true;
     } catch {

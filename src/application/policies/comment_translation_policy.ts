@@ -9,6 +9,7 @@ export const TRANSLATED_COMMENT_MARKER = '<!-- copilot:translated-comment:v2 -->
 
 const LEGACY_TRANSLATED_COMMENT_MARKER = '<!-- content_translated';
 const MAX_TRANSLATED_COMMENT_LENGTH = DEFAULT_UNTRUSTED_CONTENT_LIMIT;
+const MAX_ESCAPED_ORIGINAL_LENGTH = 40_000;
 
 export type TranslationPublication = {
     readonly translatedText: string;
@@ -40,7 +41,11 @@ export function composeTranslatedComment(
     if (!boundedTranslated.trim()) return undefined;
 
     const safeTranslated = sanitizeAgentMarkdown(boundedTranslated, MAX_TRANSLATED_COMMENT_LENGTH);
-    const safeOriginal = escapeHtml(originalComment);
+    const safeOriginal = createUntrustedContent(
+        escapeHtml(originalComment),
+        'github.comment.original.escaped',
+        MAX_ESCAPED_ORIGINAL_LENGTH,
+    ).text;
     return {
         translatedText: safeTranslated,
         commentBody: [

@@ -36,7 +36,7 @@ and the runtime command is equivalent to:
 opencode run --model openai/gpt-5.6-luna
 ```
 
-The default runtime is Codex. It can use a preinitialized local ChatGPT session on a controlled runner; `OPENAI_API_KEY` is only an optional API-mode fallback. The runtime provider and model provider do not have to be the same. OpenCode can be the runtime while OpenAI is the model provider.
+The default runtime is Codex. It can use a preinitialized local ChatGPT session on a controlled runner; `CODEX_API_KEY` is the official API-mode variable and `OPENAI_API_KEY`/`CODEX_ACCESS_TOKEN` remain optional compatibility alternatives. The runtime provider and model provider do not have to be the same. OpenCode can be the runtime while OpenAI is the model provider.
 
 ## Recommended GitHub Actions configuration
 
@@ -52,11 +52,14 @@ jobs:
       AGENT_MODEL: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
       AGENT_ALLOWED_MODEL_PROVIDERS: ${{ vars.AGENT_ALLOWED_MODEL_PROVIDERS || 'openai' }}
       AGENT_ALLOWED_MODELS: ${{ vars.AGENT_ALLOWED_MODELS || 'openai/gpt-5.6-luna' }}
-      # Required only when Codex is not preauthenticated on the runner.
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: vypdev/copilot@v3
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: vypdev/copilot@a39616557f384bcc633b94e43d9551b2b5205328 # v3
+        env:
+          # Omit when Codex is already authenticated on the controlled runner.
+          CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           agent-provider: ${{ env.AGENT_PROVIDER }}
@@ -105,7 +108,7 @@ Credentials are independent from allowlists:
 | Runtime/provider | Supported reference |
 | --- | --- |
 | OpenCode with OpenAI | `OPENAI_API_KEY` or a controlled local OpenCode login |
-| Codex | `CODEX_ACCESS_TOKEN`, `OPENAI_API_KEY`, or a local ChatGPT Codex session on a controlled self-hosted runner |
+| Codex | `CODEX_API_KEY`, `CODEX_ACCESS_TOKEN`, `OPENAI_API_KEY`, or a local ChatGPT Codex session on a controlled self-hosted runner |
 | Cursor | `CURSOR_API_KEY` |
 
 Never place tokens in `with`, command arguments, prompts, repository files, or logs. See [Agent CLI runners](/security-operations/operations/cli-runners), [Agent CLI provisioning](/security-operations/operations/cli-provisioning), and [Codex authentication and compliance](/security-operations/security/authentication-compliance) for operational details.

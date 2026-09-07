@@ -50,7 +50,7 @@ describe("runCommentAutomation", () => {
         actor: "actor",
         tokenUser: "vypbot",
         tokens: { token: "t" },
-      } as Execution,
+      } as unknown as Execution,
       {
         taskId: "CommentAutomation",
         languageUseCase: {
@@ -102,6 +102,7 @@ describe("runCommentAutomation", () => {
         owner: "o",
         repo: "r",
         actor: "actor",
+        tokenUser: "vypbot",
         tokens: { token: "t" },
       } as Execution,
       {
@@ -128,7 +129,7 @@ describe("runCommentAutomation", () => {
           taskId: "do-user-request",
           invoke: jest.fn(),
         },
-        userComment: "fix it",
+        userComment: "@vypbot fix it",
         gitCommitPort: {} as never,
       },
       authorization,
@@ -485,5 +486,79 @@ describe("runCommentAutomation", () => {
 
     expect(dismiss.invoke).not.toHaveBeenCalled();
     expect(results[0]).toMatchObject({ success: true, executed: false });
+  });
+
+  it('commits an explicitly remembered rule using only its exact guarded path', async () => {
+    const remember = { invoke: jest.fn().mockResolvedValue([successfulResult('remember')]) };
+    const statusOutputs = ['', '?? .copilot/BUGBOT.learned.md\n', '?? .copilot/BUGBOT.learned.md\n'];
+    const gitCommitPort = {
+      execute: jest.fn((_program: string, args: string[], options?: { stdout?: (data: Buffer) => void }) => {
+        if (args[0] === 'status') options?.stdout?.(Buffer.from(statusOutputs.shift() ?? ''));
+        return Promise.resolve();
+      }),
+      configureAuthor: jest.fn().mockResolvedValue(undefined),
+      stagePaths: jest.fn().mockResolvedValue(undefined),
+      stageAll: jest.fn().mockResolvedValue(undefined),
+      commit: jest.fn().mockResolvedValue(undefined),
+      push: jest.fn().mockResolvedValue(undefined),
+    };
+    const results = await runCommentAutomation(
+      {
+        owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' },
+        commit: { branch: 'feature/1-safe' }, issueNumber: 1,
+        ai: { getBugbotFixVerifyCommands: () => [] },
+      } as unknown as Execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: {} as never,
+        intentUseCase: {} as never,
+        thinkUseCase: {} as never,
+        autofixUseCase: {} as never,
+        doUserRequestUseCase: {} as never,
+        rememberBugbotRuleUseCase: remember as never,
+        userComment: '/copilot remember Prefer exact path validation',
+        gitCommitPort: gitCommitPort as never,
+      },
+      { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) } as never,
+      { getTokenUserDetails: jest.fn().mockResolvedValue({ name: 'Bot', email: 'bot@example.com' }) } as never,
+    );
+
+    expect(remember.invoke).toHaveBeenCalledTimes(1);
+    expect(gitCommitPort.stagePaths).toHaveBeenCalledWith(['.copilot/BUGBOT.learned.md']);
+    expect(gitCommitPort.stageAll).not.toHaveBeenCalled();
+    expect(results.at(-1)).toMatchObject({ id: 'DoUserRequestCommitAndPush', success: true });
+  });
+
+  it('refuses to remember a rule when the workspace is already dirty', async () => {
+    const remember = { invoke: jest.fn() };
+    const gitCommitPort = {
+      execute: jest.fn((_program: string, args: string[], options?: { stdout?: (data: Buffer) => void }) => {
+        if (args[0] === 'status') options?.stdout?.(Buffer.from(' M src/unrelated.ts\n'));
+        return Promise.resolve();
+      }),
+    };
+    const results = await runCommentAutomation(
+      { owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' } } as Execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: {} as never,
+        intentUseCase: {} as never,
+        thinkUseCase: {} as never,
+        autofixUseCase: {} as never,
+        doUserRequestUseCase: {} as never,
+        rememberBugbotRuleUseCase: remember as never,
+        userComment: '/copilot remember Do not hide failures',
+        gitCommitPort: gitCommitPort as never,
+      },
+      { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) } as never,
+      {} as never,
+    );
+
+    expect(remember.invoke).not.toHaveBeenCalled();
+    expect(results[0]).toMatchObject({
+      id: 'CommentAutomation.Remember',
+      success: false,
+      errors: [expect.objectContaining({ message: expect.stringContaining('workspace is not clean') })],
+    });
   });
 });

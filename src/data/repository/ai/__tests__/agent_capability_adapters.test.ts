@@ -66,17 +66,18 @@ describe('agent capability adapters', () => {
 
         expect(mockExecute).toHaveBeenCalledWith(expect.objectContaining({
             prompt: expect.stringContaining('single JSON object'),
+            outputSchema: { type: 'object' },
         }));
     });
 
-    it('contains provider execution failures instead of leaking them to the workflow', async () => {
+    it('preserves typed provider execution failures for the workflow failure policy', async () => {
         mockExecute.mockRejectedValue(new Error('CLI unavailable'));
 
         await expect(new FindingsAgentAdapter(infrastructure).query({
             configuration,
             agentId: 'codex',
             prompt: 'inspect the change',
-        })).resolves.toBeUndefined();
+        })).rejects.toThrow('CLI unavailable');
     });
 
     it('returns an explicit CLI session for a successful fixer response', async () => {

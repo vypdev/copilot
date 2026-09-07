@@ -51,7 +51,7 @@ export function registerSetupCommand(program: Command): void {
         logInfo('🔍 Checking we are inside a git repository...');
         if (!isInsideGitRepo(cwd)) {
           logError('❌ Not a git repository. Run "copilot setup" from the root of a git repo.');
-          process.exit(1);
+          process.exitCode = 1;
           return;
         }
         logInfo('✅ Git repository detected.');
@@ -59,7 +59,7 @@ export function registerSetupCommand(program: Command): void {
         const gitInfo = getGitInfo();
         if ('error' in gitInfo) {
           logError(gitInfo.error);
-          process.exit(1);
+          process.exitCode = 1;
           return;
         }
         logInfo(`📦 Repository: ${gitInfo.owner}/${gitInfo.repo}`);
@@ -70,7 +70,7 @@ export function registerSetupCommand(program: Command): void {
           logInfo('   You can:');
           logInfo('   • Pass it on the command line: copilot setup --token <your_github_token>');
           logInfo('   • Add it to your environment: export PERSONAL_ACCESS_TOKEN=your_github_token');
-          process.exit(1);
+          process.exitCode = 1;
           return;
         }
         logInfo(options.dryRun ? '🧭 Building a dry-run setup plan...' : '🧭 Building your setup plan...');
@@ -155,7 +155,7 @@ function loadSetupOverrides(options: {
       throw new Error('--agent must be one of: codex, opencode, cursor.');
     }
     fromFlags.agents = Object.fromEntries(
-      ['planner', 'findings', 'reviewer', 'fixer', 'tester', 'release'].map(task => [task, { provider: options.agent }]),
+      ['planner', 'findings', 'reviewer', 'fixer', 'tester'].map(task => [task, { provider: options.agent }]),
     ) as SetupConfigurationOverrides['agents'];
   }
   if (options.features) {

@@ -1,6 +1,7 @@
 import type { Execution } from "../../data/model/execution";
 import { Result } from "../../data/model/result";
 import { ParamUseCase } from "./base/param_usecase";
+import type { ActorAuthorizationPort } from "../ports/actor_authorization_ports";
 export declare class SingleActionUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly deployedActionUseCase;
     private readonly publishGithubActionUseCase;
@@ -12,7 +13,8 @@ export declare class SingleActionUseCase implements ParamUseCase<Execution, Resu
     private readonly detectPotentialProblemsUseCase;
     private readonly recommendStepsUseCase;
     private readonly closeInactiveIssuesUseCase?;
+    private readonly actorAuthorizationPort?;
     taskId: string;
-    constructor(deployedActionUseCase: ParamUseCase<Execution, Result[]>, publishGithubActionUseCase: ParamUseCase<Execution, Result[]>, createReleaseUseCase: ParamUseCase<Execution, Result[]>, createTagUseCase: ParamUseCase<Execution, Result[]>, thinkUseCase: ParamUseCase<Execution, Result[]>, initialSetupUseCase: ParamUseCase<Execution, Result[]>, checkProgressUseCase: ParamUseCase<Execution, Result[]>, detectPotentialProblemsUseCase: ParamUseCase<Execution, Result[]>, recommendStepsUseCase: ParamUseCase<Execution, Result[]>, closeInactiveIssuesUseCase?: ParamUseCase<Execution, Result[]> | undefined);
+    constructor(deployedActionUseCase: ParamUseCase<Execution, Result[]>, publishGithubActionUseCase: ParamUseCase<Execution, Result[]>, createReleaseUseCase: ParamUseCase<Execution, Result[]>, createTagUseCase: ParamUseCase<Execution, Result[]>, thinkUseCase: ParamUseCase<Execution, Result[]>, initialSetupUseCase: ParamUseCase<Execution, Result[]>, checkProgressUseCase: ParamUseCase<Execution, Result[]>, detectPotentialProblemsUseCase: ParamUseCase<Execution, Result[]>, recommendStepsUseCase: ParamUseCase<Execution, Result[]>, closeInactiveIssuesUseCase?: ParamUseCase<Execution, Result[]> | undefined, actorAuthorizationPort?: ActorAuthorizationPort | undefined);
     invoke(param: Execution): Promise<Result[]>;
 }

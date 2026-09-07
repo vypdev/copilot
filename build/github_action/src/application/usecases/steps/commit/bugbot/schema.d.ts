@@ -8,6 +8,7 @@ export declare const BUGBOT_RESPONSE_SCHEMA: {
     readonly properties: {
         readonly findings: {
             readonly type: "array";
+            readonly maxItems: 200;
             readonly items: {
                 readonly type: "object";
                 readonly properties: {
@@ -92,6 +93,7 @@ export declare const BUGBOT_RESPONSE_SCHEMA: {
         };
         readonly resolved_finding_ids: {
             readonly type: "array";
+            readonly maxItems: 500;
             readonly items: {
                 readonly type: "string";
                 readonly minLength: 1;
@@ -125,8 +127,11 @@ export declare const BUGBOT_FIX_INTENT_RESPONSE_SCHEMA: {
         };
         readonly target_finding_ids: {
             readonly type: "array";
+            readonly maxItems: 500;
             readonly items: {
                 readonly type: "string";
+                readonly minLength: 1;
+                readonly maxLength: 200;
             };
             readonly description: "When is_fix_request is true: the exact finding ids from the list we provided that the user wants fixed. Use the exact id strings. For \"fix all\" or \"fix everything\" include all listed ids. When is_fix_request is false, return an empty array.";
         };

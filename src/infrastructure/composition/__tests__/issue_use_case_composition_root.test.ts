@@ -96,7 +96,10 @@ describe("issue use case composition root", () => {
     const workflowSteps = dependencies[2];
 
     expect(result).toBe(composedIssueUseCase);
-    expect(dependencies).toHaveLength(3);
+    expect(dependencies).toHaveLength(4);
+    expect(dependencies[3]).toEqual(expect.objectContaining({
+      isActorAllowedToModifyFiles: expect.any(Function),
+    }));
     expect(workflowSteps).toEqual(expect.objectContaining({
       checkPermissions: expect.objectContaining({ invoke: expect.any(Function) }),
       prepareBranches: expect.objectContaining({ invoke: expect.any(Function) }),

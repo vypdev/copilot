@@ -24,7 +24,8 @@ export async function runDoCommand(options: DoCommandOptions): Promise<void> {
     const gitInfo = getGitInfo();
     if ('error' in gitInfo) {
         logError(gitInfo.error);
-        process.exit(1);
+        process.exitCode = 1;
+        return;
     }
 
     const prompt = resolveDoPrompt(options.prompt);
@@ -68,7 +69,7 @@ export async function runDoCommand(options: DoCommandOptions): Promise<void> {
         });
         if (!result) {
             console.error('❌ Request failed while executing the configured agent CLI.');
-            process.exit(1);
+            process.exitCode = 1;
             return;
         }
 
@@ -77,6 +78,6 @@ export async function runDoCommand(options: DoCommandOptions): Promise<void> {
         const err = error instanceof Error ? error : new Error(String(error));
         console.error('❌ Error executing do:', err.message || error);
         if (options.debug) console.error(error);
-        process.exit(1);
+        process.exitCode = 1;
     }
 }

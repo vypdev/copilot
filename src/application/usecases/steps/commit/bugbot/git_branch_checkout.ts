@@ -14,11 +14,15 @@ async function hasUncommittedChanges(gitCommitPort: GitCommitPort): Promise<bool
 }
 
 /** Infrastructure boundary for checking out a branch without losing workspace changes. */
-export async function checkoutBranch(branch: string, gitCommitPort: GitCommitPort): Promise<boolean> {
+export async function checkoutBranch(
+    branch: string,
+    gitCommitPort: GitCommitPort,
+    token?: string,
+): Promise<boolean> {
     let didStash = false;
     try {
         didStash = await stashWorkspaceChanges(gitCommitPort);
-        await gitCommitPort.execute("git", ["fetch", "origin", branch]);
+        await gitCommitPort.fetch(branch, token);
         await gitCommitPort.execute("git", ["checkout", branch]);
         logInfo(`Checked out branch ${branch}.`);
         return didStash ? restoreStashedChanges(gitCommitPort) : true;

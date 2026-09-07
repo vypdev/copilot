@@ -8,11 +8,30 @@ export function resolveAgentProvider(value: string): AgentProvider {
     throw new ApplicationError(`Unsupported agent provider "${value}". Supported providers: ${SUPPORTED_AGENT_PROVIDERS.join(', ')}.`, 'validation');
 }
 
-export function resolveModelProvider(value: string | undefined, environment: Record<string, string | undefined>): string {
-    const provider = value?.trim().toLowerCase() || 'openai';
+export function resolveModelProvider(
+    value: string | undefined,
+    environment: Record<string, string | undefined>,
+    agentProvider?: AgentProvider,
+): string {
+    const provider = value?.trim().toLowerCase() || (agentProvider === 'cursor' ? 'cursor' : 'openai');
     assertIdentifier(provider, 'Agent model provider must be a valid provider identifier.');
     assertAllowlisted('AGENT_ALLOWED_MODEL_PROVIDERS', provider, environment);
     return provider;
+}
+
+export function assertProviderModelCompatibility(agentProvider: AgentProvider, modelProvider: string): void {
+    if (agentProvider === 'codex' && modelProvider !== 'openai') {
+        throw new ApplicationError(
+            `Codex automation supports the "openai" model provider only; received "${modelProvider}".`,
+            'configuration',
+        );
+    }
+    if (agentProvider === 'cursor' && modelProvider !== 'cursor') {
+        throw new ApplicationError(
+            `Cursor automation requires model provider "cursor"; received "${modelProvider}".`,
+            'configuration',
+        );
+    }
 }
 
 export function resolveModel(value: string): string {

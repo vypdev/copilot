@@ -104,6 +104,8 @@ export interface SetupCredentialRequirement {
     model?: string;
     /** Credential groups are satisfied when any member is available. */
     alternativeGroups?: readonly string[];
+    /** Groups that may instead be satisfied by authentication already present on the target runner. */
+    runnerAuthenticationGroups?: readonly string[];
     /** Custom providers cannot always be checked through a public endpoint. */
     validation?: 'metadata' | 'unverifiable';
 }

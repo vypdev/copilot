@@ -129,6 +129,85 @@ describe('SetupCredentialsUseCase', () => {
         expect(validation.validateCredential).toHaveBeenCalledTimes(1);
     });
 
+    it('allows a Codex credential group to rely on the target runner login', async () => {
+        const prompt = {
+            requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(),
+            requestWorkflowPat: jest.fn().mockResolvedValue({ name: 'PAT', value: 'workflow-token' }),
+            requestApiKey: jest.fn().mockResolvedValue(undefined),
+            chooseExistingCredential: jest.fn(), showCredentialChecks: jest.fn(),
+        };
+        const validation = {
+            validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }),
+            validateCredential: jest.fn(),
+        };
+        const secrets = { list: jest.fn().mockResolvedValue([]), upsertSecrets: jest.fn() };
+        const alternativeGroup = 'agent:codex:openai';
+
+        const result = await new SetupCredentialsUseCase(prompt, validation, secrets).collect({
+            owner: 'owner', repository: 'repo', setupToken: 'setup-token',
+            requirements: [
+                { ...requirement('PAT', 'workflowPat'), alternativeGroups: undefined },
+                {
+                    ...requirement('CODEX_ACCESS_TOKEN'),
+                    alternativeGroups: [alternativeGroup],
+                    runnerAuthenticationGroups: [alternativeGroup],
+                },
+                {
+                    ...requirement('OPENAI_API_KEY'),
+                    alternativeGroups: [alternativeGroup],
+                    runnerAuthenticationGroups: [alternativeGroup],
+                },
+            ],
+            manageSecrets: true,
+        });
+
+        expect(result.collection.apiKeys).toEqual([]);
+        expect(result.checks).toEqual(expect.arrayContaining([
+            expect.objectContaining({ name: 'CODEX_ACCESS_TOKEN', status: 'not_required' }),
+            expect.objectContaining({ name: 'OPENAI_API_KEY', status: 'not_required' }),
+        ]));
+        expect(validation.validateCredential).not.toHaveBeenCalled();
+    });
+
+    it('still requires a separate unsatisfied OpenCode group when Codex can use runner login', async () => {
+        const prompt = {
+            requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(),
+            requestWorkflowPat: jest.fn().mockResolvedValue({ name: 'PAT', value: 'workflow-token' }),
+            requestApiKey: jest.fn().mockResolvedValue(undefined),
+            chooseExistingCredential: jest.fn(), showCredentialChecks: jest.fn(),
+        };
+        const validation = {
+            validateSetupPat: jest.fn().mockResolvedValue({ name: 'SETUP_PAT', status: 'valid', message: 'ok' }),
+            validateCredential: jest.fn(),
+        };
+        const secrets = { list: jest.fn().mockResolvedValue([]), upsertSecrets: jest.fn() };
+        const codexGroup = 'agent:codex:openai';
+        const openCodeGroup = 'agent:opencode:openai';
+
+        await expect(new SetupCredentialsUseCase(prompt, validation, secrets).collect({
+            owner: 'owner', repository: 'repo', setupToken: 'setup-token',
+            requirements: [
+                { ...requirement('PAT', 'workflowPat'), alternativeGroups: undefined },
+                {
+                    ...requirement('CODEX_API_KEY'),
+                    alternativeGroups: [codexGroup],
+                    runnerAuthenticationGroups: [codexGroup],
+                },
+                {
+                    ...requirement('OPENAI_API_KEY'),
+                    alternativeGroups: [codexGroup, openCodeGroup],
+                    runnerAuthenticationGroups: [codexGroup],
+                },
+                {
+                    ...requirement('OPENCODE_API_KEY'),
+                    alternativeGroups: [openCodeGroup],
+                },
+            ],
+            manageSecrets: true,
+        })).rejects.toThrow('At least one of OPENAI_API_KEY or OPENCODE_API_KEY is required');
+        expect(validation.validateCredential).not.toHaveBeenCalled();
+    });
+
     it('allows a supplied custom provider credential when metadata validation is unavailable', async () => {
         const prompt = {
             requestSetupPat: jest.fn(), explainCredentialSeparation: jest.fn(),

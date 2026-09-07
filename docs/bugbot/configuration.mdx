@@ -17,16 +17,17 @@ with:
 env:
   AGENT_ALLOWED_MODEL_PROVIDERS: openai
   AGENT_ALLOWED_MODELS: openai/gpt-5.6-luna
-  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+  # Omit when Codex is already authenticated on the controlled runner.
+  CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
 ```
 
-For this configuration, Bugbot executes a generated argv equivalent to:
+For this configuration, Bugbot starts from this provider command:
 
 ```text
-codex exec --ephemeral --skip-git-repo-check --model gpt-5.6-luna --config 'model_provider="openai"' --config 'approval_policy="never"' --config 'sandbox_workspace_write.network_access=false' --sandbox read-only --ignore-user-config -
+codex exec --ephemeral --skip-git-repo-check --model gpt-5.6-luna --config 'model_provider="openai"' -
 ```
 
-`agent-provider` selects the CLI runtime. `agent-model-provider` and `agent-model` select the qualified model. Allowlists are checked before execution and failures are terminal. For Codex, the Action enforces `read-only` for reviewer/findings tasks and `workspace-write` for fixer tasks, ignores user/repository configuration, and rejects dangerous bypass flags. The child environment contains only safe runtime variables and the credential selected for that provider. See [Agent CLI configuration](/agents/cli-configuration).
+`agent-provider` selects the CLI runtime. `agent-model-provider` and `agent-model` select the qualified model. Allowlists are checked before execution and failures are terminal. Immediately before spawn, the Action adds its controlled approval, sandbox, no-network, ephemeral, config/rules isolation, plugin/tool, and environment restrictions. For Codex, it enforces `read-only` for reviewer/findings tasks and `workspace-write` for fixer tasks and rejects dangerous bypass flags. The child environment contains only safe runtime variables and the credential selected for that provider. See [Agent CLI configuration](/agents/cli-configuration).
 
 ## bugbot-severity
 

@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AgentCliClient } from '../agent_cli_client';
@@ -101,6 +101,32 @@ describe('AgentCliClient', () => {
         const pending = new AgentCliClient().execute({ command: `${process.execPath} -e ${JSON.stringify('setTimeout(() => {}, 5000)')}`, prompt: 'prompt', timeoutMs: 5000, signal: controller.signal });
         controller.abort();
         await expect(pending).rejects.toMatchObject({ category: 'cancelled' });
+    });
+
+    it('does not return from cancellation until the provider process has closed', async () => {
+        const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-close-test-'));
+        const marker = join(directory, 'closed');
+        const script = [
+            "const fs = require('node:fs')",
+            `process.on('SIGTERM', () => setTimeout(() => { fs.writeFileSync(${JSON.stringify(marker)}, 'closed'); process.exit(0); }, 50))`,
+            'setInterval(() => {}, 1000)',
+        ].join(';');
+        const controller = new AbortController();
+        try {
+            const pending = new AgentCliClient().execute({
+                command: `${process.execPath} -e ${JSON.stringify(script)}`,
+                prompt: 'prompt',
+                timeoutMs: 5000,
+                signal: controller.signal,
+            });
+            await new Promise(resolve => setTimeout(resolve, 100));
+            controller.abort();
+
+            await expect(pending).rejects.toMatchObject({ category: 'cancelled' });
+            expect(existsSync(marker)).toBe(true);
+        } finally {
+            rmSync(directory, { recursive: true, force: true });
+        }
     });
 
     it('rejects invalid resource limits before spawning a process', async () => {

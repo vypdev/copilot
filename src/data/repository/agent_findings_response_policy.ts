@@ -1,5 +1,6 @@
-import { parseJsonFromAgentText } from './agent_json_parser';
+import { parseStrictJsonFromAgentText } from './agent_json_parser';
 import { extractReasoningFromParts, extractTextFromParts } from './agent_response_parser';
+import { assertAgentResponseSchema } from './agent_json_schema_validator';
 
 export interface FindingsResponseOptions {
     expectJson?: boolean;
@@ -15,7 +16,8 @@ export function interpretFindingsResponse(
     if (!text) throw new Error('Empty response text');
     if (!options.expectJson || !options.schema) return text;
 
-    const parsed = parseJsonFromAgentText(text);
+    const parsed = parseStrictJsonFromAgentText(text);
+    assertAgentResponseSchema(parsed, options.schema);
     if (options.includeReasoning && typeof parts !== 'string') {
         const reasoning = extractReasoningFromParts(parts);
         if (reasoning) return { ...parsed, reasoning };

@@ -8,6 +8,9 @@ import { buildCopilotStatusResult } from '../policies/status_command_policy';
 import { buildCopilotHelpMessage } from '../policies/copilot_interaction_policy';
 import { parseBugbotReviewCommandOptions } from '../../domain/bugbot/review_command';
 import { commitUserRequestIfSuccessful } from './steps/commit/bugbot/commit_user_request_workflow';
+import { finalizeWorkspaceMutation, prepareWorkspaceMutation } from './steps/commit/workspace_mutation_guard';
+
+const LEARNED_BUGBOT_RULE_PATH = '.copilot/BUGBOT.learned.md';
 
 /** Executes deterministic /copilot commands without routing them through intent detection. */
 export async function runExplicitCommentCommand(
@@ -43,10 +46,44 @@ async function runRememberCommand(
             steps: ['Learned rule skipped because the actor is not authorized or rule storage is unavailable.'],
         })];
     }
+    let mutation;
+    try {
+        mutation = await prepareWorkspaceMutation(options.gitCommitPort, {
+            operation: 'Remember Bugbot rule',
+        });
+    } catch (error) {
+        return [rememberFailure(error)];
+    }
     const results = await options.rememberBugbotRuleUseCase.invoke({ execution: param, rule: command.arguments.join(' ') });
     if (!results.some((result) => result.executed)) return results;
+    try {
+        const { workspacePaths } = await finalizeWorkspaceMutation(
+            options.gitCommitPort,
+            mutation.workspacePathsBefore,
+            'Remember Bugbot rule',
+        );
+        if (workspacePaths.length !== 1 || workspacePaths[0] !== LEARNED_BUGBOT_RULE_PATH) {
+            return [...results, rememberFailure(
+                `Remember Bugbot rule refused unexpected workspace paths: ${workspacePaths.join(', ')}`,
+            )];
+        }
+        const last = results.at(-1);
+        if (last) last.payload = { workspacePaths };
+    } catch (error) {
+        return [...results, rememberFailure(error)];
+    }
     const commitResults = await commitUserRequestIfSuccessful(param, undefined, results, authenticatedUserPort, options.gitCommitPort);
     return [...results, ...commitResults];
+}
+
+function rememberFailure(error: unknown): Result {
+    const message = error instanceof Error ? error.message : String(error);
+    return new Result({
+        id: 'CommentAutomation.Remember',
+        success: false,
+        executed: true,
+        errors: [message],
+    });
 }
 
 function runHelpCommand(

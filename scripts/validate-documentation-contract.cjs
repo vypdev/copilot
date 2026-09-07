@@ -8,7 +8,8 @@ const root = path.resolve(__dirname, '..');
 const docsRoot = path.join(root, 'docs');
 const navigation = JSON.parse(fs.readFileSync(path.join(root, 'docs.json'), 'utf8'));
 const action = yaml.load(fs.readFileSync(path.join(root, 'action.yml'), 'utf8'));
-const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+const COPILOT_ACTION_SHA = 'a39616557f384bcc633b94e43d9551b2b5205328';
+const IMMUTABLE_ACTION_REFERENCE = /^[^/\s]+\/[^@\s]+@[0-9a-f]{40}$/i;
 
 const errors = [];
 const docsFiles = fs.readdirSync(docsRoot, { recursive: true })
@@ -56,7 +57,19 @@ for (const [index, source] of docsContent.entries()) {
 
   for (const match of source.matchAll(/^```(?:yaml|yml)\s*\n([\s\S]*?)^```\s*$/gm)) {
     try {
-      yaml.load(match[1]);
+      const snippet = yaml.load(match[1]);
+      visitYaml(snippet, value => {
+        if (!value || typeof value !== 'object' || typeof value.uses !== 'string') return;
+        if (!value.uses.startsWith('./') && !value.uses.startsWith('docker://')
+          && !IMMUTABLE_ACTION_REFERENCE.test(value.uses)) {
+          const line = source.slice(0, match.index).split('\n').length;
+          errors.push(`${file}:${line}: action ${value.uses} must use an immutable 40-character commit SHA`);
+        }
+        if (/^actions\/checkout@/.test(value.uses) && value.with?.['persist-credentials'] !== false) {
+          const line = source.slice(0, match.index).split('\n').length;
+          errors.push(`${file}:${line}: checkout examples must set persist-credentials: false`);
+        }
+      });
     } catch (error) {
       const line = source.slice(0, match.index).split('\n').length;
       errors.push(`${file}:${line}: invalid YAML documentation snippet: ${error.message}`);
@@ -64,10 +77,16 @@ for (const [index, source] of docsContent.entries()) {
   }
 }
 
-const expectedActionMajor = `v${String(packageJson.version).split('.')[0]}`;
+function visitYaml(value, visitor) {
+  visitor(value);
+  if (Array.isArray(value)) return value.forEach(item => visitYaml(item, visitor));
+  if (!value || typeof value !== 'object') return;
+  Object.values(value).forEach(item => visitYaml(item, visitor));
+}
+
 for (const match of allDocumentation.matchAll(/uses:\s*vypdev\/copilot@([^\s"'`]+)/g)) {
-  if (match[1] !== expectedActionMajor) {
-    errors.push(`documentation uses vypdev/copilot@${match[1]}; expected the published major ref ${expectedActionMajor}`);
+  if (match[1] !== COPILOT_ACTION_SHA) {
+    errors.push(`documentation uses vypdev/copilot@${match[1]}; expected immutable ref ${COPILOT_ACTION_SHA}`);
   }
 }
 

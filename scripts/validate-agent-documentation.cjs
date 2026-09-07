@@ -17,10 +17,11 @@ const auditableFiles = [
 ];
 const auditableContent = auditableFiles.map(file => fs.readFileSync(file, 'utf8')).join('\\n');
 
+const agentFields = ['provider', 'model-provider', 'model', 'effort', 'command'];
 const requiredInputs = [
-  'agent-provider', 'agent-model-provider', 'agent-model', 'agent-effort', 'agent-command',
-  'findings-provider', 'findings-model-provider', 'findings-model', 'findings-effort', 'findings-command',
-  'fixer-provider', 'fixer-model-provider', 'fixer-model', 'fixer-effort', 'fixer-command',
+  ...agentFields.map(field => `agent-${field}`),
+  ...['planner', 'findings', 'reviewer', 'fixer', 'tester']
+    .flatMap(role => agentFields.map(field => `${role}-${field}`)),
 ];
 const missingInputs = requiredInputs.filter(input => !action.inputs?.[input]);
 if (missingInputs.length) throw new Error(`Missing agent inputs in action.yml: ${missingInputs.join(', ')}`);
@@ -59,7 +60,7 @@ const requiredPages = [
   'overview.mdx', 'quick-start.mdx', 'configuration-checklist.mdx',
   'agents/execution-contract.mdx', 'agents/runtime-selection.mdx', 'agents/model-selection.mdx',
   'agents/model-allowlists.mdx', 'agents/cli-commands.mdx', 'agents/failure-policy.mdx',
-  'agents/codex-openai.mdx', 'agents/cursor-wip.mdx',
+  'agents/codex-openai.mdx', 'agents/cursor.mdx',
   'security-operations/security/credentials.mdx', 'security-operations/security/trust-boundaries.mdx',
   'security-operations/security/forks-and-pull-request-target.mdx', 'security-operations/security/self-hosted-runners.mdx',
   'security-operations/security/secret-exposure.mdx', 'security-operations/operations/provisioning.mdx',
@@ -69,6 +70,7 @@ const requiredPages = [
   'development/architecture.mdx', 'development/local-development.mdx',
   'development/testing.mdx', 'development/build-artifacts.mdx',
   'development/release-process.mdx', 'development/documentation-completeness-plan.mdx',
+  'development/agent-functionality-audit.mdx',
 ];
 for (const file of requiredPages) {
   const absolute = path.join(docsRoot, file);

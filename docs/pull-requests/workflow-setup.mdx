@@ -46,16 +46,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+          fetch-depth: 0
 
       - name: Fetch incremental review range
         if: github.event.action == 'synchronize'
         env:
           BEFORE_SHA: ${{ github.event.before }}
           AFTER_SHA: ${{ github.event.after }}
-        run: git fetch --no-tags --depth=1 origin "$BEFORE_SHA" "$AFTER_SHA"
+        run: |
+          git cat-file -e "${AFTER_SHA}^{commit}"
+          if ! git cat-file -e "${BEFORE_SHA}^{commit}"; then
+            echo "The previous head is no longer available; the action will review the current head safely."
+          fi
 
-      - uses: vypdev/copilot@v3
+      - uses: vypdev/copilot@a39616557f384bcc633b94e43d9551b2b5205328 # v3
         with:
           token: ${{ secrets.PAT }}
           project-ids: ${{ vars.PROJECT_IDS }}

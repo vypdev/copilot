@@ -4,11 +4,13 @@ import { logError } from "../ports/logging_ports";
 import type { ParamUseCase } from "./base/param_usecase";
 import type { IssueWorkflowSteps } from "./issue_workflow_steps";
 import { buildCopilotWelcomeResult, COPILOT_WELCOME_MARKER } from '../policies/copilot_interaction_policy';
+import type { ActorAuthorizationPort } from '../ports/actor_authorization_ports';
 
 export interface IssueWorkflowPorts {
   recommendStepsUseCase: ParamUseCase<Execution, Result[]>;
   answerIssueHelpUseCase: ParamUseCase<Execution, Result[]>;
   workflowSteps: IssueWorkflowSteps;
+  actorAuthorizationPort?: ActorAuthorizationPort;
 }
 
 /** Coordinates issue lifecycle steps in their required sequential order. */
@@ -61,7 +63,14 @@ export async function runIssueWorkflow(
     results.push(...(await step.invoke(param)));
   }
 
-  const recommendation = resolveIssueRecommendation(param, ports);
+  const membersOnly = param.ai?.getAiMembersOnly?.() === true;
+  const agentAllowed = !membersOnly || Boolean(ports.actorAuthorizationPort && await ports.actorAuthorizationPort.isActorAllowedToModifyFiles(
+      param.owner,
+      param.repo,
+      param.actor,
+      param.tokens.token,
+    ));
+  const recommendation = agentAllowed ? resolveIssueRecommendation(param, ports) : undefined;
   if (recommendation) {
     const recommendationResults = await recommendation.invoke(param);
     results.push(...recommendationResults);

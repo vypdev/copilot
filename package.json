@@ -42,7 +42,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "ncc build src/actions/github_action.ts -o build/github_action && ncc build src/cli.ts -o build/cli && ncc build src/api.ts -o build/api && node scripts/prepare-generated-bundles.cjs && chmod +x build/cli/index.js",
+    "build": "node scripts/clean-generated-bundles.cjs && ncc build src/actions/github_action.ts -o build/github_action && ncc build src/cli.ts -o build/cli && ncc build src/api.ts -o build/api && node scripts/prepare-generated-bundles.cjs && chmod +x build/cli/index.js",
     "validate:build": "node scripts/validate-build.cjs",
     "validate:npm-package": "node scripts/validate-npm-package.cjs",
     "smoke:npm-package": "node scripts/smoke-test-npm-package.cjs",

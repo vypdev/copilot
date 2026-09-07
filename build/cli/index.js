@@ -54482,7 +54482,8 @@ const agent_configuration_builder_1 = __nccwpck_require__(81248);
 const agent_1 = __nccwpck_require__(89040);
 function buildAgentTasksFromInputs(read) {
     const provider = read(input_keys_1.INPUT_KEYS.AGENT_PROVIDER)?.trim() || agent_1.DEFAULT_AGENT_PROVIDER;
-    const modelProvider = read(input_keys_1.INPUT_KEYS.AGENT_MODEL_PROVIDER)?.trim() || agent_1.DEFAULT_MODEL_PROVIDER;
+    const modelProvider = read(input_keys_1.INPUT_KEYS.AGENT_MODEL_PROVIDER)?.trim()
+        || (provider === 'cursor' ? 'cursor' : agent_1.DEFAULT_MODEL_PROVIDER);
     const model = read(input_keys_1.INPUT_KEYS.AGENT_MODEL)?.trim() || agent_1.DEFAULT_AGENT_MODEL;
     const effort = read(input_keys_1.INPUT_KEYS.AGENT_EFFORT) ?? '';
     const command = read(input_keys_1.INPUT_KEYS.AGENT_COMMAND) ?? '';
@@ -54516,7 +54517,6 @@ function buildAgentTasksFromInputs(read) {
         planner: role('planner'),
         reviewer: role('reviewer'),
         tester: role('tester'),
-        release: role('release'),
     });
 }
 function buildAgentTasksFromValues(values) {
@@ -55826,11 +55826,6 @@ exports.INPUT_KEYS = {
     TESTER_EFFORT: 'tester-effort',
     TESTER_MODEL: 'tester-model',
     TESTER_COMMAND: 'tester-command',
-    RELEASE_PROVIDER: 'release-provider',
-    RELEASE_MODEL_PROVIDER: 'release-model-provider',
-    RELEASE_EFFORT: 'release-effort',
-    RELEASE_MODEL: 'release-model',
-    RELEASE_COMMAND: 'release-command',
     // AI configuration
     AI_PULL_REQUEST_DESCRIPTION: 'ai-pull-request-description',
     AI_PULL_REQUEST_DESCRIPTION_MODE: 'ai-pull-request-description-mode',
@@ -56324,7 +56319,8 @@ const agent_command_policy_1 = __nccwpck_require__(37011);
 const agent_configuration_validation_policy_1 = __nccwpck_require__(60596);
 function buildAgentConfiguration(values, environment) {
     const provider = (0, agent_configuration_validation_policy_1.resolveAgentProvider)(values.provider.trim().toLowerCase());
-    const modelProvider = (0, agent_configuration_validation_policy_1.resolveModelProvider)(values.modelProvider, environment);
+    const modelProvider = (0, agent_configuration_validation_policy_1.resolveModelProvider)(values.modelProvider, environment, provider);
+    (0, agent_configuration_validation_policy_1.assertProviderModelCompatibility)(provider, modelProvider);
     const model = (0, agent_configuration_validation_policy_1.resolveModel)(values.model);
     (0, agent_configuration_validation_policy_1.assertModelAllowlisted)(modelProvider, model, environment);
     const effort = (0, agent_configuration_validation_policy_1.resolveEffort)(values.effort);
@@ -56341,17 +56337,21 @@ function buildAgentConfiguration(values, environment) {
     return configuration;
 }
 function mergeAgentTaskValues(values, overrides) {
-    return {
+    const merged = {
         ...values,
         ...Object.fromEntries(Object.entries(overrides ?? {}).filter(([, value]) => typeof value === 'string' && value.trim().length > 0)),
     };
+    if (overrides?.provider?.trim() && !overrides.modelProvider?.trim()) {
+        delete merged.modelProvider;
+    }
+    return merged;
 }
 function buildAgentTaskConfiguration(values, environment) {
     const configuration = {
         findings: buildAgentConfiguration(mergeAgentTaskValues(values, values.findings), environment),
         fixer: buildAgentConfiguration(mergeAgentTaskValues(values, values.fixer), environment),
     };
-    for (const task of ['planner', 'reviewer', 'tester', 'release']) {
+    for (const task of ['planner', 'reviewer', 'tester']) {
         if (hasTaskOverride(values[task])) {
             configuration[task] = buildAgentConfiguration(mergeAgentTaskValues(values, values[task]), environment);
         }
@@ -56374,6 +56374,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SUPPORTED_AGENT_PROVIDERS = void 0;
 exports.resolveAgentProvider = resolveAgentProvider;
 exports.resolveModelProvider = resolveModelProvider;
+exports.assertProviderModelCompatibility = assertProviderModelCompatibility;
 exports.resolveModel = resolveModel;
 exports.resolveEffort = resolveEffort;
 exports.assertModelAllowlisted = assertModelAllowlisted;
@@ -56384,11 +56385,19 @@ function resolveAgentProvider(value) {
         return value;
     throw new application_error_1.ApplicationError(`Unsupported agent provider "${value}". Supported providers: ${exports.SUPPORTED_AGENT_PROVIDERS.join(', ')}.`, 'validation');
 }
-function resolveModelProvider(value, environment) {
-    const provider = value?.trim().toLowerCase() || 'openai';
+function resolveModelProvider(value, environment, agentProvider) {
+    const provider = value?.trim().toLowerCase() || (agentProvider === 'cursor' ? 'cursor' : 'openai');
     assertIdentifier(provider, 'Agent model provider must be a valid provider identifier.');
     assertAllowlisted('AGENT_ALLOWED_MODEL_PROVIDERS', provider, environment);
     return provider;
+}
+function assertProviderModelCompatibility(agentProvider, modelProvider) {
+    if (agentProvider === 'codex' && modelProvider !== 'openai') {
+        throw new application_error_1.ApplicationError(`Codex automation supports the "openai" model provider only; received "${modelProvider}".`, 'configuration');
+    }
+    if (agentProvider === 'cursor' && modelProvider !== 'cursor') {
+        throw new application_error_1.ApplicationError(`Cursor automation requires model provider "cursor"; received "${modelProvider}".`, 'configuration');
+    }
 }
 function resolveModel(value) {
     const model = value.trim();
@@ -56443,10 +56452,13 @@ exports.TRANSLATION_RESPONSE_SCHEMA = {
     properties: {
         translatedText: {
             type: 'string',
+            minLength: 1,
+            maxLength: 12000,
             description: 'The text translated to the requested locale. Required. Must not be empty.',
         },
         reason: {
             type: 'string',
+            maxLength: 2000,
             description: 'Optional: reason why translation could not be produced or was partial (e.g. ambiguous input).',
         },
     },
@@ -56458,6 +56470,8 @@ exports.THINK_RESPONSE_SCHEMA = {
     properties: {
         answer: {
             type: 'string',
+            minLength: 1,
+            maxLength: 12000,
             description: 'The concise answer to the user question. Required.',
         },
     },
@@ -56705,6 +56719,7 @@ const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 exports.TRANSLATED_COMMENT_MARKER = '<!-- copilot:translated-comment:v2 -->';
 const LEGACY_TRANSLATED_COMMENT_MARKER = '<!-- content_translated';
 const MAX_TRANSLATED_COMMENT_LENGTH = untrusted_content_1.DEFAULT_UNTRUSTED_CONTENT_LIMIT;
+const MAX_ESCAPED_ORIGINAL_LENGTH = 40000;
 function hasTranslatedCommentMarker(body) {
     return typeof body === 'string'
         && (body.includes(exports.TRANSLATED_COMMENT_MARKER) || body.includes(LEGACY_TRANSLATED_COMMENT_MARKER));
@@ -56723,7 +56738,7 @@ function composeTranslatedComment(translatedValue, originalComment) {
     if (!boundedTranslated.trim())
         return undefined;
     const safeTranslated = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(boundedTranslated, MAX_TRANSLATED_COMMENT_LENGTH);
-    const safeOriginal = (0, github_comment_publication_policy_1.escapeHtml)(originalComment);
+    const safeOriginal = (0, untrusted_content_1.createUntrustedContent)((0, github_comment_publication_policy_1.escapeHtml)(originalComment), 'github.comment.original.escaped', MAX_ESCAPED_ORIGINAL_LENGTH).text;
     return {
         translatedText: safeTranslated,
         commentBody: [
@@ -56923,7 +56938,7 @@ const secret_redaction_1 = __nccwpck_require__(254);
 function sanitizeAgentMarkdown(raw, maxLength = 12000) {
     if (typeof raw !== 'string')
         return '';
-    const bounded = (0, untrusted_content_1.createUntrustedContent)(raw, 'agent.comment.output', maxLength).text;
+    const bounded = (0, untrusted_content_1.createUntrustedContent)((0, secret_redaction_1.redactKnownEnvironmentSecrets)((0, secret_redaction_1.redactSecretLikeValues)(raw)), 'agent.comment.output', maxLength).text;
     return neutralizeGithubControls(bounded);
 }
 /**
@@ -56935,9 +56950,8 @@ function sanitizePublishedError(raw) {
     if (typeof raw !== 'string')
         return '';
     const withoutStack = raw.split(/\n\s+at\s+/u, 1)[0];
-    const redacted = (0, secret_redaction_1.redactSecretLikeValues)(withoutStack)
+    return sanitizeAgentMarkdown(withoutStack, 2000)
         .replace(/\[REDACTED\]/gu, '[redacted]');
-    return sanitizeAgentMarkdown(redacted, 2000);
 }
 function escapeHtml(raw) {
     return String(raw ?? '')
@@ -57259,7 +57273,6 @@ exports.SETUP_AGENT_TASKS = [
     'reviewer',
     'fixer',
     'tester',
-    'release',
 ];
 /** Features that can invoke each agent role at runtime. */
 exports.SETUP_AGENT_TASK_FEATURES = {
@@ -57268,7 +57281,6 @@ exports.SETUP_AGENT_TASK_FEATURES = {
     reviewer: ['pullRequests', 'pullRequestComments'],
     fixer: ['issueComments', 'pullRequestComments'],
     tester: ['issueComments', 'pullRequestComments'],
-    release: ['release', 'hotfix'],
 };
 function setupAgentTasksForFeatures(configuration) {
     return exports.SETUP_AGENT_TASKS.filter(task => exports.SETUP_AGENT_TASK_FEATURES[task].some(feature => configuration.features[feature] !== false));
@@ -57334,10 +57346,10 @@ function createDefaultSetupConfiguration() {
         },
         ai: {
             pullRequestDescription: true,
-            pullRequestDescriptionMode: 'replace',
+            pullRequestDescriptionMode: 'append',
             ignoreFiles: 'build/*',
             membersOnly: false,
-            includeReasoning: true,
+            includeReasoning: false,
             bugbotSeverity: 'low',
             bugbotCommentLimit: 20,
             bugbotFixVerifyCommands: '',
@@ -57466,7 +57478,10 @@ function buildSetupPlan(configuration) {
         issueTemplateFiles,
         selectedFiles,
         variables: buildSetupRepositoryVariables(configuration),
-        requiredSecrets: credentialRequirements.map(requirement => requirement.name),
+        requiredSecrets: credentialRequirements
+            .filter(requirement => !requirement.alternativeGroups?.length
+            || requirement.alternativeGroups.some(group => !requirement.runnerAuthenticationGroups?.includes(group)))
+            .map(requirement => requirement.name),
         credentialRequirements,
         warnings: buildSetupWarnings(configuration),
     };
@@ -57474,7 +57489,7 @@ function buildSetupPlan(configuration) {
 /** Builds the non-sensitive credential contract implied by the enabled workflows. */
 function buildSetupCredentialRequirements(configuration) {
     const requirements = new Map();
-    const add = (name, kind, description, provider, model, alternativeGroup, validation = 'metadata') => {
+    const add = (name, kind, description, provider, model, alternativeGroup, validation = 'metadata', runnerAuthenticationGroup) => {
         const existing = requirements.get(name);
         if (!existing) {
             requirements.set(name, {
@@ -57484,6 +57499,7 @@ function buildSetupCredentialRequirements(configuration) {
                 provider,
                 model,
                 ...(alternativeGroup ? { alternativeGroups: [alternativeGroup] } : {}),
+                ...(runnerAuthenticationGroup ? { runnerAuthenticationGroups: [runnerAuthenticationGroup] } : {}),
                 ...(validation === 'unverifiable' ? { validation } : {}),
             });
             return;
@@ -57492,9 +57508,14 @@ function buildSetupCredentialRequirements(configuration) {
             ...(existing.alternativeGroups ?? []),
             ...(alternativeGroup ? [alternativeGroup] : []),
         ]);
+        const runnerAuthenticationGroups = new Set([
+            ...(existing.runnerAuthenticationGroups ?? []),
+            ...(runnerAuthenticationGroup ? [runnerAuthenticationGroup] : []),
+        ]);
         requirements.set(name, {
             ...existing,
             alternativeGroups: alternativeGroups.size > 0 ? [...alternativeGroups] : undefined,
+            runnerAuthenticationGroups: runnerAuthenticationGroups.size > 0 ? [...runnerAuthenticationGroups] : undefined,
             validation: existing.validation === 'unverifiable' || validation === 'unverifiable'
                 ? 'unverifiable'
                 : existing.validation,
@@ -57516,10 +57537,11 @@ function buildSetupCredentialRequirements(configuration) {
             add('OPENCODE_API_KEY', 'apiKey', 'OpenCode API key used by the OpenCode agent runtime.', 'opencode', agent.model, alternativeGroup);
         }
         if (agent.provider === 'codex') {
-            add('CODEX_ACCESS_TOKEN', 'apiKey', 'Codex access token used by the Codex agent runtime.', 'codex', agent.model, alternativeGroup);
+            add('CODEX_API_KEY', 'apiKey', 'Optional Codex API-key fallback when the target runner has no authenticated Codex session.', 'codex', agent.model, alternativeGroup, 'metadata', alternativeGroup);
+            add('CODEX_ACCESS_TOKEN', 'apiKey', 'Optional Codex access-token fallback when the target runner has no authenticated Codex session.', 'codex', agent.model, alternativeGroup, 'metadata', alternativeGroup);
         }
         if (providerCredential) {
-            add(providerCredential, 'apiKey', `${modelProvider} API key for ${agent.model}.`, modelProvider, agent.model, alternativeGroup, SECRET_BY_MODEL_PROVIDER[modelProvider] ? 'metadata' : 'unverifiable');
+            add(providerCredential, 'apiKey', `${modelProvider} API key for ${agent.model}.`, modelProvider, agent.model, alternativeGroup, SECRET_BY_MODEL_PROVIDER[modelProvider] ? 'metadata' : 'unverifiable', agent.provider === 'codex' ? alternativeGroup : undefined);
         }
     }
     return [...requirements.values()];
@@ -59119,7 +59141,7 @@ async function analyzeProgress(param, taskId, dependencies) {
             expectJson: true,
             schema: progress_response_1.PROGRESS_RESPONSE_SCHEMA,
             schemaName: 'progress_response',
-            includeReasoning: true,
+            includeReasoning: param.ai?.getAiIncludeReasoning() === true,
         },
     }));
     return {
@@ -59179,9 +59201,9 @@ exports.parseProgressResponse = parseProgressResponse;
 exports.PROGRESS_RESPONSE_SCHEMA = {
     type: 'object',
     properties: {
-        progress: { type: 'number', description: 'Completion percentage 0-100' },
-        summary: { type: 'string', description: 'Short explanation of the assessment' },
-        remaining: { type: 'string', description: 'When progress < 100: what is left to do to reach 100%. Omit or empty when progress is 100.' },
+        progress: { type: 'number', minimum: 0, maximum: 100, description: 'Completion percentage 0-100' },
+        summary: { type: 'string', minLength: 1, maxLength: 8000, description: 'Short explanation of the assessment' },
+        remaining: { type: 'string', maxLength: 8000, description: 'When progress < 100: what is left to do to reach 100%. Omit or empty when progress is 100.' },
     },
     required: ['progress', 'summary'],
     additionalProperties: false,
@@ -59846,6 +59868,8 @@ const status_command_policy_1 = __nccwpck_require__(3449);
 const copilot_interaction_policy_1 = __nccwpck_require__(90108);
 const review_command_1 = __nccwpck_require__(1811);
 const commit_user_request_workflow_1 = __nccwpck_require__(43393);
+const workspace_mutation_guard_1 = __nccwpck_require__(24243);
+const LEARNED_BUGBOT_RULE_PATH = '.copilot/BUGBOT.learned.md';
 /** Executes deterministic /copilot commands without routing them through intent detection. */
 async function runExplicitCommentCommand(param, options, command, actorAuthorizationPort, authenticatedUserPort) {
     if (command.name === 'help')
@@ -59874,11 +59898,41 @@ async function runRememberCommand(param, options, command, actorAuthorizationPor
                 steps: ['Learned rule skipped because the actor is not authorized or rule storage is unavailable.'],
             })];
     }
+    let mutation;
+    try {
+        mutation = await (0, workspace_mutation_guard_1.prepareWorkspaceMutation)(options.gitCommitPort, {
+            operation: 'Remember Bugbot rule',
+        });
+    }
+    catch (error) {
+        return [rememberFailure(error)];
+    }
     const results = await options.rememberBugbotRuleUseCase.invoke({ execution: param, rule: command.arguments.join(' ') });
     if (!results.some((result) => result.executed))
         return results;
+    try {
+        const { workspacePaths } = await (0, workspace_mutation_guard_1.finalizeWorkspaceMutation)(options.gitCommitPort, mutation.workspacePathsBefore, 'Remember Bugbot rule');
+        if (workspacePaths.length !== 1 || workspacePaths[0] !== LEARNED_BUGBOT_RULE_PATH) {
+            return [...results, rememberFailure(`Remember Bugbot rule refused unexpected workspace paths: ${workspacePaths.join(', ')}`)];
+        }
+        const last = results.at(-1);
+        if (last)
+            last.payload = { workspacePaths };
+    }
+    catch (error) {
+        return [...results, rememberFailure(error)];
+    }
     const commitResults = await (0, commit_user_request_workflow_1.commitUserRequestIfSuccessful)(param, undefined, results, authenticatedUserPort, options.gitCommitPort);
     return [...results, ...commitResults];
+}
+function rememberFailure(error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return new result_1.Result({
+        id: 'CommentAutomation.Remember',
+        success: false,
+        executed: true,
+        errors: [message],
+    });
 }
 function runHelpCommand(param, options) {
     return [new result_1.Result({
@@ -60098,6 +60152,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCommentAutomation = runCommentAutomation;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
+const think_input_policy_1 = __nccwpck_require__(59687);
 const copilot_command_1 = __nccwpck_require__(11771);
 const comment_automation_command_workflow_1 = __nccwpck_require__(63134);
 const comment_automation_natural_language_workflow_1 = __nccwpck_require__(10554);
@@ -60110,12 +60165,27 @@ async function runCommentAutomation(param, options, actorAuthorizationPort, auth
         if (command.kind === 'invalid') {
             return [(0, comment_automation_command_workflow_1.invalidCommentCommandResult)(options.taskId, command.reason)];
         }
+        const isPublicMetadataCommand = command.kind === 'command'
+            && (command.command.name === 'help' || command.command.name === 'status');
+        if (!isPublicMetadataCommand && param.ai?.getAiMembersOnly?.() && !await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token)) {
+            (0, logging_ports_1.logInfo)('Skipping agent automation because ai-members-only is enabled and the actor is not authorized.');
+            return [new result_1.Result({ id: options.taskId, success: true, executed: false })];
+        }
         if (command.kind === 'command') {
             const explicitResults = await (0, comment_automation_command_workflow_1.runExplicitCommentCommand)(param, options, command.command, actorAuthorizationPort, authenticatedUserPort);
             if (explicitResults)
                 return explicitResults;
+            // Explicit fix/implement commands are already mention-gated by their
+            // deterministic prefix and still flow through structured intent parsing.
+            return (0, comment_automation_natural_language_workflow_1.runNaturalLanguageCommentAutomation)(param, options, actorAuthorizationPort, [], {
+                authenticatedUserPort,
+            });
         }
         languageResults = await options.languageUseCase.invoke(param);
+        if (!(0, think_input_policy_1.containsBotMention)(options.userComment, param.tokenUser ?? '')) {
+            (0, logging_ports_1.logInfo)('Skipping natural-language intent detection because the bot was not mentioned.');
+            return languageResults;
+        }
         return await (0, comment_automation_natural_language_workflow_1.runNaturalLanguageCommentAutomation)(param, options, actorAuthorizationPort, languageResults, {
             authenticatedUserPort,
         });
@@ -60147,11 +60217,12 @@ const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 class CommitUseCase {
-    constructor(notifyNewCommitUseCase, checkChangesIssueSizeUseCase, detectPotentialProblemsUseCase, checkProgressUseCase) {
+    constructor(notifyNewCommitUseCase, checkChangesIssueSizeUseCase, detectPotentialProblemsUseCase, checkProgressUseCase, actorAuthorizationPort) {
         this.notifyNewCommitUseCase = notifyNewCommitUseCase;
         this.checkChangesIssueSizeUseCase = checkChangesIssueSizeUseCase;
         this.detectPotentialProblemsUseCase = detectPotentialProblemsUseCase;
         this.checkProgressUseCase = checkProgressUseCase;
+        this.actorAuthorizationPort = actorAuthorizationPort;
         this.taskId = 'CommitUseCase';
     }
     async invoke(param) {
@@ -60167,8 +60238,15 @@ class CommitUseCase {
             (0, logging_ports_1.logDebugInfo)(`Issue number: ${param.issueNumber}`);
             results.push(...(await this.notifyNewCommitUseCase.invoke(param)));
             results.push(...(await this.checkChangesIssueSizeUseCase.invoke(param)));
-            results.push(...(await this.checkProgressUseCase.invoke(param)));
-            results.push(...(await this.detectPotentialProblemsUseCase.invoke(param)));
+            const agentAllowed = !param.ai?.getAiMembersOnly?.()
+                || Boolean(this.actorAuthorizationPort && await this.actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token));
+            if (agentAllowed) {
+                results.push(...(await this.checkProgressUseCase.invoke(param)));
+                results.push(...(await this.detectPotentialProblemsUseCase.invoke(param)));
+            }
+            else {
+                (0, logging_ports_1.logInfo)('Skipping push agent analysis because ai-members-only is enabled and the actor is not authorized.');
+            }
         }
         catch (error) {
             (0, logging_ports_1.logError)(error);
@@ -60548,10 +60626,11 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const issue_workflow_1 = __nccwpck_require__(661);
 class IssueUseCase {
-    constructor(recommendStepsUseCase, answerIssueHelpUseCase, workflowSteps) {
+    constructor(recommendStepsUseCase, answerIssueHelpUseCase, workflowSteps, actorAuthorizationPort) {
         this.recommendStepsUseCase = recommendStepsUseCase;
         this.answerIssueHelpUseCase = answerIssueHelpUseCase;
         this.workflowSteps = workflowSteps;
+        this.actorAuthorizationPort = actorAuthorizationPort;
         this.taskId = "IssueUseCase";
     }
     async invoke(param) {
@@ -60560,6 +60639,7 @@ class IssueUseCase {
             recommendStepsUseCase: this.recommendStepsUseCase,
             answerIssueHelpUseCase: this.answerIssueHelpUseCase,
             workflowSteps: this.workflowSteps,
+            actorAuthorizationPort: this.actorAuthorizationPort,
         });
     }
 }
@@ -60620,7 +60700,9 @@ async function runIssueWorkflow(param, taskId, ports) {
     for (const step of regularSteps) {
         results.push(...(await step.invoke(param)));
     }
-    const recommendation = resolveIssueRecommendation(param, ports);
+    const membersOnly = param.ai?.getAiMembersOnly?.() === true;
+    const agentAllowed = !membersOnly || Boolean(ports.actorAuthorizationPort && await ports.actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token));
+    const recommendation = agentAllowed ? resolveIssueRecommendation(param, ports) : undefined;
     if (recommendation) {
         const recommendationResults = await recommendation.invoke(param);
         results.push(...recommendationResults);
@@ -60711,10 +60793,11 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const pull_request_workflow_1 = __nccwpck_require__(95238);
 class PullRequestUseCase {
-    constructor(updatePullRequestDescriptionUseCase, workflowSteps, reviewPotentialProblemsUseCase) {
+    constructor(updatePullRequestDescriptionUseCase, workflowSteps, reviewPotentialProblemsUseCase, actorAuthorizationPort) {
         this.updatePullRequestDescriptionUseCase = updatePullRequestDescriptionUseCase;
         this.workflowSteps = workflowSteps;
         this.reviewPotentialProblemsUseCase = reviewPotentialProblemsUseCase;
+        this.actorAuthorizationPort = actorAuthorizationPort;
         this.taskId = "PullRequestUseCase";
     }
     async invoke(param) {
@@ -60723,6 +60806,7 @@ class PullRequestUseCase {
             updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase,
             reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
             workflowSteps: this.workflowSteps,
+            actorAuthorizationPort: this.actorAuthorizationPort,
         });
     }
 }
@@ -60745,6 +60829,7 @@ const application_error_1 = __nccwpck_require__(75999);
 async function runPullRequestWorkflow(param, taskId, ports) {
     try {
         logPullRequestState(param);
+        const agentAllowed = await canUseAgent(param, ports.actorAuthorizationPort);
         if (param.pullRequest.isOpened) {
             const steps = [
                 ports.workflowSteps.updateTitle,
@@ -60756,17 +60841,19 @@ async function runPullRequestWorkflow(param, taskId, ports) {
                 ports.workflowSteps.checkPriorityPullRequestSize,
             ];
             const results = await runSteps(param, steps);
-            if (shouldUpdatePullRequestDescriptionAutomatically(param)) {
+            if (agentAllowed && shouldUpdatePullRequestDescriptionAutomatically(param)) {
                 results.push(...(await ports.updatePullRequestDescriptionUseCase.invoke(param)));
             }
-            results.push(...(await runPullRequestReview(param, ports)));
+            if (agentAllowed)
+                results.push(...(await runPullRequestReview(param, ports)));
             return results;
         }
         if (param.pullRequest.isSynchronize) {
-            const results = shouldUpdatePullRequestDescriptionAutomatically(param)
+            const results = agentAllowed && shouldUpdatePullRequestDescriptionAutomatically(param)
                 ? await ports.updatePullRequestDescriptionUseCase.invoke(param)
                 : [];
-            results.push(...(await runPullRequestReview(param, ports)));
+            if (agentAllowed)
+                results.push(...(await runPullRequestReview(param, ports)));
             return results;
         }
         if (param.pullRequest.action === 'edited') {
@@ -60790,6 +60877,13 @@ async function runPullRequestWorkflow(param, taskId, ports) {
         ];
     }
     return [];
+}
+async function canUseAgent(param, authorization) {
+    if (!param.ai?.getAiMembersOnly?.())
+        return true;
+    if (!authorization)
+        return false;
+    return authorization.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token);
 }
 function shouldUpdatePullRequestDescriptionAutomatically(param) {
     const mode = param.ai.getPullRequestDescriptionMode?.();
@@ -60928,13 +61022,18 @@ class SetupDoctorUseCase {
                 reportedGroups.add(alternativeGroup);
                 const groupRequirements = requirements.filter(candidate => candidate.alternativeGroups?.includes(alternativeGroup));
                 const available = groupRequirements.filter(candidate => remoteSecrets.has(candidate.name));
+                const runnerAuthenticationAllowed = groupRequirements.some(candidate => candidate.runnerAuthenticationGroups?.includes(alternativeGroup));
                 const healthy = available.some(candidate => remoteHealthByName.get(candidate.name)?.status === 'valid');
                 const invalid = available.length > 0 && available.every(candidate => remoteHealthByName.get(candidate.name)?.status === 'invalid');
                 checks.push({
                     area: `Secrets ${groupRequirements.map(candidate => candidate.name).join(' or ')}`,
-                    status: available.length === 0 ? 'fail' : healthy ? 'pass' : invalid ? 'fail' : 'warn',
+                    status: available.length === 0
+                        ? runnerAuthenticationAllowed ? 'warn' : 'fail'
+                        : healthy ? 'pass' : invalid ? 'fail' : 'warn',
                     message: available.length === 0
-                        ? 'At least one alternative credential is missing.'
+                        ? runnerAuthenticationAllowed
+                            ? 'No fallback Secret is configured; the target runner must pass the Codex login preflight.'
+                            : 'At least one alternative credential is missing.'
                         : healthy
                             ? 'At least one alternative credential is valid.'
                             : invalid
@@ -61055,7 +61154,13 @@ class SetupCredentialsUseCase {
                 : await this.prompt.requestApiKey(requirement, existing ? checks[checks.length - 1] : undefined);
             if (!value) {
                 if (!existing)
-                    checks.push({ name: requirement.name, status: 'missing', message: 'No value was provided.' });
+                    checks.push(runnerAuthenticationCanSatisfyRequirement(requirement)
+                        ? {
+                            name: requirement.name,
+                            status: 'not_required',
+                            message: 'No fallback credential was provided; the target runner must pass the Codex login preflight.',
+                        }
+                        : { name: requirement.name, status: 'missing', message: 'No value was provided.' });
                 if (hasAlternative(requirement))
                     continue;
                 throw new application_error_1.ApplicationError(`${requirement.name} is required by the selected workflows.`, 'configuration');
@@ -61072,10 +61177,11 @@ class SetupCredentialsUseCase {
             values.push(value);
             markRequirementSatisfied(requirement, satisfiedGroups);
         }
-        const unsatisfiedGroup = requirements.find(requirement => hasAlternative(requirement) && !isRequirementSatisfied(requirement, satisfiedGroups));
+        const unsatisfiedGroup = [...new Set(requirements.flatMap(requirement => requirement.alternativeGroups ?? []))]
+            .find(group => !satisfiedGroups.has(group) && !runnerAuthenticationCanSatisfyGroup(requirements, group));
         if (unsatisfiedGroup) {
             const groupNames = requirements
-                .filter(requirement => intersectsGroups(requirement, unsatisfiedGroup))
+                .filter(requirement => requirement.alternativeGroups?.includes(unsatisfiedGroup))
                 .map(requirement => requirement.name)
                 .join(' or ');
             throw new application_error_1.ApplicationError(`At least one of ${groupNames} is required by the selected workflows.`, 'configuration');
@@ -61095,9 +61201,16 @@ exports.SetupCredentialsUseCase = SetupCredentialsUseCase;
 function hasAlternative(requirement) {
     return (requirement.alternativeGroups?.length ?? 0) > 0;
 }
+function runnerAuthenticationCanSatisfyRequirement(requirement) {
+    return Boolean(requirement.alternativeGroups?.length)
+        && requirement.alternativeGroups.every(group => requirement.runnerAuthenticationGroups?.includes(group));
+}
+function runnerAuthenticationCanSatisfyGroup(requirements, group) {
+    return requirements.some(requirement => requirement.runnerAuthenticationGroups?.includes(group));
+}
 function isRequirementSatisfied(requirement, satisfiedGroups) {
     return hasAlternative(requirement)
-        ? requirement.alternativeGroups.some(group => satisfiedGroups.has(group))
+        ? requirement.alternativeGroups.every(group => satisfiedGroups.has(group))
         : satisfiedGroups.has(requirement.name);
 }
 function markRequirementSatisfied(requirement, satisfiedGroups) {
@@ -61107,10 +61220,6 @@ function markRequirementSatisfied(requirement, satisfiedGroups) {
         return;
     }
     satisfiedGroups.add(requirement.name);
-}
-function intersectsGroups(left, right) {
-    const rightGroups = new Set(right.alternativeGroups ?? []);
-    return (left.alternativeGroups ?? []).some(group => rightGroups.has(group));
 }
 function isAcceptedCredentialCheck(requirement, check) {
     return check.status === 'valid'
@@ -61197,7 +61306,7 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const single_action_workflow_1 = __nccwpck_require__(6130);
 class SingleActionUseCase {
-    constructor(deployedActionUseCase, publishGithubActionUseCase, createReleaseUseCase, createTagUseCase, thinkUseCase, initialSetupUseCase, checkProgressUseCase, detectPotentialProblemsUseCase, recommendStepsUseCase, closeInactiveIssuesUseCase) {
+    constructor(deployedActionUseCase, publishGithubActionUseCase, createReleaseUseCase, createTagUseCase, thinkUseCase, initialSetupUseCase, checkProgressUseCase, detectPotentialProblemsUseCase, recommendStepsUseCase, closeInactiveIssuesUseCase, actorAuthorizationPort) {
         this.deployedActionUseCase = deployedActionUseCase;
         this.publishGithubActionUseCase = publishGithubActionUseCase;
         this.createReleaseUseCase = createReleaseUseCase;
@@ -61208,6 +61317,7 @@ class SingleActionUseCase {
         this.detectPotentialProblemsUseCase = detectPotentialProblemsUseCase;
         this.recommendStepsUseCase = recommendStepsUseCase;
         this.closeInactiveIssuesUseCase = closeInactiveIssuesUseCase;
+        this.actorAuthorizationPort = actorAuthorizationPort;
         this.taskId = "SingleActionUseCase";
     }
     async invoke(param) {
@@ -61215,6 +61325,13 @@ class SingleActionUseCase {
         if (!param.singleAction.validSingleAction) {
             (0, logging_ports_1.logWarn)(`Single action invoked but not a valid single action: ${param.singleAction.currentSingleAction}. Skipping.`);
             return [];
+        }
+        if (isAgentBackedSingleAction(param) && param.ai?.getAiMembersOnly?.()) {
+            const allowed = Boolean(this.actorAuthorizationPort && await this.actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token));
+            if (!allowed) {
+                (0, logging_ports_1.logInfo)('Skipping agent-backed single action because ai-members-only is enabled and the actor is not authorized.');
+                return [];
+            }
         }
         return (0, single_action_workflow_1.runSingleActionWorkflow)(param, this.taskId, {
             deployedActionUseCase: this.deployedActionUseCase,
@@ -61231,6 +61348,12 @@ class SingleActionUseCase {
     }
 }
 exports.SingleActionUseCase = SingleActionUseCase;
+function isAgentBackedSingleAction(param) {
+    return param.singleAction.isThinkAction
+        || param.singleAction.isCheckProgressAction
+        || param.singleAction.isDetectPotentialProblemsAction
+        || param.singleAction.isRecommendStepsAction;
+}
 
 
 /***/ }),
@@ -61406,7 +61529,8 @@ async function runUserRequestCommitAndPush(execution, options, authenticatedUser
     const branch = options?.branchOverride ?? execution.commit.branch;
     return (0, commit_and_push_workflow_1.runCommitAndPushWorkflow)(execution, {
         branch,
-        branchOverride: Boolean(options?.branchOverride),
+        branchOverride: Boolean(options?.branchOverride) && !options?.branchAlreadyCheckedOut,
+        workspacePaths: options?.workspacePaths,
         commitMessage: (0, commit_message_policy_1.buildUserRequestCommitMessage)(execution.issueNumber),
         noChangesMessage: 'No changes to commit after user request.',
     }, authenticatedUserPort, gitCommitPort);
@@ -61423,24 +61547,21 @@ async function runUserRequestCommitAndPush(execution, options, authenticatedUser
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.finalizeBugbotAutofix = finalizeBugbotAutofix;
 const result_1 = __nccwpck_require__(73817);
-const application_error_1 = __nccwpck_require__(75999);
-const workspace_changes_1 = __nccwpck_require__(93370);
 const logging_ports_1 = __nccwpck_require__(6152);
+const workspace_mutation_guard_1 = __nccwpck_require__(24243);
 async function finalizeBugbotAutofix(execution, context, idsToFix, workspacePathsBefore, branchCheckedOut, responseText, gitCommitPort) {
     if (!responseText) {
         (0, logging_ports_1.logError)('Bugbot autofix: no response from configured build agent.');
         return [failure('Configured build agent returned no response.')];
     }
-    const workspacePathsAfter = await inspectWorkspace(gitCommitPort, 'after');
-    const unsafePaths = workspacePathsAfter.filter(workspace_changes_1.isSensitiveWorkspacePath);
-    if (unsafePaths.length > 0) {
-        (0, logging_ports_1.logError)(`Bugbot autofix refused sensitive workspace paths: ${unsafePaths.join(', ')}`);
-        return [failure(`Bugbot autofix refused because sensitive files were modified: ${unsafePaths.join(', ')}`)];
+    let workspacePaths;
+    try {
+        ({ workspacePaths } = await (0, workspace_mutation_guard_1.finalizeWorkspaceMutation)(gitCommitPort, workspacePathsBefore, 'Bugbot autofix'));
     }
-    const workspacePaths = (0, workspace_changes_1.selectWorkspacePathsToCommit)(workspacePathsBefore, workspacePathsAfter);
-    if (workspacePaths.length === 0) {
-        (0, logging_ports_1.logError)('Bugbot autofix produced no safe workspace paths to commit.');
-        return [failure('Bugbot autofix produced no safe workspace paths to commit.')];
+    catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        (0, logging_ports_1.logError)(message);
+        return [failure(message)];
     }
     (0, logging_ports_1.logDebugInfo)(`BugbotAutofix: response length=${responseText.length}; safe paths=${workspacePaths.length}.`);
     return [new result_1.Result({
@@ -61450,14 +61571,6 @@ async function finalizeBugbotAutofix(execution, context, idsToFix, workspacePath
             steps: [`Bugbot autofix completed. The configured agent applied changes for findings: ${idsToFix.join(', ')}. Run verify commands and commit/push.`],
             payload: { targetFindingIds: idsToFix, context, workspacePaths, branchCheckedOut },
         })];
-}
-async function inspectWorkspace(gitCommitPort, phase) {
-    try {
-        return await (0, workspace_changes_1.listWorkspacePaths)(gitCommitPort);
-    }
-    catch (error) {
-        throw new application_error_1.ApplicationError(`Unable to inspect workspace ${phase} autofix: ${error instanceof Error ? error.message : String(error)}`, 'provider', { cause: error, retryable: true });
-    }
 }
 function failure(message) {
     return new result_1.Result({ id: 'BugbotAutofixUseCase', success: false, executed: true, errors: [message] });
@@ -61474,22 +61587,24 @@ function failure(message) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.prepareBugbotAutofix = prepareBugbotAutofix;
 const result_1 = __nccwpck_require__(73817);
-const application_error_1 = __nccwpck_require__(75999);
 const types_1 = __nccwpck_require__(32632);
 const build_bugbot_fix_prompt_1 = __nccwpck_require__(89819);
 const load_bugbot_context_use_case_1 = __nccwpck_require__(4050);
-const workspace_changes_1 = __nccwpck_require__(93370);
 const logging_ports_1 = __nccwpck_require__(6152);
-const git_branch_checkout_1 = __nccwpck_require__(76333);
+const workspace_mutation_guard_1 = __nccwpck_require__(24243);
 async function prepareBugbotAutofix(execution, targetFindingIds, userComment, providedContext, branchOverride, contextPorts, gitCommitPort) {
-    const workspacePathsBefore = await inspectWorkspace(gitCommitPort, 'before');
-    if (workspacePathsBefore.length > 0) {
-        (0, logging_ports_1.logError)(`Bugbot autofix refused because workspace is not clean: ${workspacePathsBefore.join(', ')}`);
-        return [failure('Bugbot autofix refused: workspace is not clean before agent execution.')];
+    let mutation;
+    try {
+        mutation = await (0, workspace_mutation_guard_1.prepareWorkspaceMutation)(gitCommitPort, {
+            operation: 'Bugbot autofix',
+            branch: branchOverride,
+            token: execution.tokens.token,
+        });
     }
-    const branchCheckedOut = Boolean(branchOverride);
-    if (branchOverride && !(await (0, git_branch_checkout_1.checkoutBranch)(branchOverride, gitCommitPort))) {
-        return [failure(`Bugbot autofix refused: failed to checkout target branch ${branchOverride}.`)];
+    catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        (0, logging_ports_1.logError)(message);
+        return [failure(message)];
     }
     const context = providedContext ?? await (0, load_bugbot_context_use_case_1.loadBugbotContext)(execution, branchOverride ? { branchOverride } : undefined, contextPorts);
     const idsToFix = selectUnresolvedFindingIds(context, targetFindingIds);
@@ -61500,21 +61615,19 @@ async function prepareBugbotAutofix(execution, targetFindingIds, userComment, pr
     const verifyCommands = execution.ai?.getBugbotFixVerifyCommands?.() ?? [];
     const prompt = (0, build_bugbot_fix_prompt_1.buildBugbotFixPrompt)(execution, context, idsToFix, userComment, verifyCommands);
     (0, logging_ports_1.logDebugInfo)(`BugbotAutofix: prompt length=${prompt.length}, target finding ids=${idsToFix.length}, verifyCommands=${verifyCommands.length}.`);
-    return { context, workspacePathsBefore, idsToFix, prompt, branchCheckedOut };
+    return {
+        context,
+        workspacePathsBefore: mutation.workspacePathsBefore,
+        idsToFix,
+        prompt,
+        branchCheckedOut: mutation.branchCheckedOut,
+    };
 }
 function selectUnresolvedFindingIds(context, targetFindingIds) {
     const validIds = new Set(Object.entries(context.existingByFindingId)
         .filter(([, info]) => !(0, types_1.isExistingFindingFullyResolved)(info))
         .map(([id]) => id));
     return targetFindingIds.filter(id => validIds.has(id));
-}
-async function inspectWorkspace(gitCommitPort, phase) {
-    try {
-        return await (0, workspace_changes_1.listWorkspacePaths)(gitCommitPort);
-    }
-    catch (error) {
-        throw new application_error_1.ApplicationError(`Unable to inspect workspace ${phase} autofix: ${error instanceof Error ? error.message : String(error)}`, 'provider', { cause: error, retryable: true });
-    }
 }
 function failure(message) {
     return new result_1.Result({ id: 'BugbotAutofixUseCase', success: false, executed: true, errors: [message] });
@@ -62342,7 +62455,7 @@ async function runCommitAndPushPreflight(execution, options, gitCommitPort) {
     if (!options.branch?.trim()) {
         return { status: "failure", error: "No branch to commit to." };
     }
-    if (options.branchOverride && !(await (0, git_branch_checkout_1.checkoutBranch)(options.branch, gitCommitPort))) {
+    if (options.branchOverride && !(await (0, git_branch_checkout_1.checkoutBranch)(options.branch, gitCommitPort, execution.tokens.token))) {
         return { status: "failure", error: `Failed to checkout branch ${options.branch}.` };
     }
     const verification = await runVerification(execution, gitCommitPort);
@@ -62365,7 +62478,7 @@ async function runVerification(execution, gitCommitPort) {
     if (verifyCommands.length === 0)
         return undefined;
     (0, logging_ports_1.logInfo)(`Running ${verifyCommands.length} verify command(s)...`);
-    const verify = await (0, verify_command_runner_1.runVerifyCommands)(verifyCommands, (program, args) => gitCommitPort.execute(program, args));
+    const verify = await (0, verify_command_runner_1.runVerifyCommands)(verifyCommands, (program, args) => gitCommitPort.execute(program, args, { untrusted: true }));
     return verify.success
         ? undefined
         : verify.error ?? `Verify command failed: ${verify.failedCommand ?? "unknown"}.`;
@@ -62403,7 +62516,7 @@ async function runCommitAndPushWorkflow(execution, options, authenticatedUserPor
             await gitCommitPort.stageAll();
         }
         await gitCommitPort.commit(options.commitMessage);
-        await gitCommitPort.push(options.branch);
+        await gitCommitPort.push(options.branch, execution.tokens.token);
         (0, logging_ports_1.logInfo)(`Pushed commit to origin/${options.branch}.`);
         return { success: true, committed: true };
     }
@@ -62531,7 +62644,12 @@ async function commitUserRequestIfSuccessful(param, branchOverride, results, aut
         return [];
     }
     (0, logging_ports_1.logInfo)('Do user request succeeded; running commit and push.');
-    const commitResult = await (0, bugbot_autofix_commit_1.runUserRequestCommitAndPush)(param, { branchOverride }, authenticatedUserPort, gitCommitPort);
+    const payload = results.at(-1)?.payload;
+    const commitResult = await (0, bugbot_autofix_commit_1.runUserRequestCommitAndPush)(param, {
+        branchOverride,
+        branchAlreadyCheckedOut: payload?.branchCheckedOut,
+        workspacePaths: payload?.workspacePaths,
+    }, authenticatedUserPort, gitCommitPort);
     if (!commitResult.success) {
         const message = (0, github_comment_publication_policy_1.sanitizePublishedError)(commitResult.error) || 'Commit or push failed after user request.';
         return [new result_1.Result({
@@ -62996,11 +63114,11 @@ async function hasUncommittedChanges(gitCommitPort) {
     return output.trim().length > 0;
 }
 /** Infrastructure boundary for checking out a branch without losing workspace changes. */
-async function checkoutBranch(branch, gitCommitPort) {
+async function checkoutBranch(branch, gitCommitPort, token) {
     let didStash = false;
     try {
         didStash = await stashWorkspaceChanges(gitCommitPort);
-        await gitCommitPort.execute("git", ["fetch", "origin", branch]);
+        await gitCommitPort.fetch(branch, token);
         await gitCommitPort.execute("git", ["checkout", branch]);
         (0, logging_ports_1.logInfo)(`Checked out branch ${branch}.`);
         return didStash ? restoreStashedChanges(gitCommitPort) : true;
@@ -64117,6 +64235,7 @@ exports.BUGBOT_RESPONSE_SCHEMA = {
     properties: {
         findings: {
             type: 'array',
+            maxItems: 200,
             items: {
                 type: 'object',
                 properties: {
@@ -64146,6 +64265,7 @@ exports.BUGBOT_RESPONSE_SCHEMA = {
         },
         resolved_finding_ids: {
             type: 'array',
+            maxItems: 500,
             items: {
                 type: 'string',
                 minLength: 1,
@@ -64179,7 +64299,8 @@ exports.BUGBOT_FIX_INTENT_RESPONSE_SCHEMA = {
         },
         target_finding_ids: {
             type: 'array',
-            items: { type: 'string' },
+            maxItems: 500,
+            items: { type: 'string', minLength: 1, maxLength: marker_1.MAX_FINDING_ID_LENGTH },
             description: 'When is_fix_request is true: the exact finding ids from the list we provided that the user wants fixed. Use the exact id strings. For "fix all" or "fix everything" include all listed ids. When is_fix_request is false, return an empty array.',
         },
         is_do_request: {
@@ -65044,10 +65165,12 @@ const task_emoji_1 = __nccwpck_require__(46103);
 const result_1 = __nccwpck_require__(73817);
 const project_context_instruction_1 = __nccwpck_require__(63907);
 const sanitize_user_comment_for_prompt_1 = __nccwpck_require__(59828);
+const workspace_mutation_guard_1 = __nccwpck_require__(24243);
 const TASK_ID = "DoUserRequestUseCase";
 class DoUserRequestUseCase {
-    constructor(aiRepository) {
+    constructor(aiRepository, gitCommitPort) {
         this.aiRepository = aiRepository;
+        this.gitCommitPort = gitCommitPort;
         this.taskId = TASK_ID;
     }
     async invoke(param) {
@@ -65062,6 +65185,18 @@ class DoUserRequestUseCase {
         if (!commentTrimmed) {
             (0, logging_ports_1.logInfo)("No user comment; skipping user request.");
             return results;
+        }
+        const targetBranch = param.branchOverride ?? execution.commit.branch;
+        let mutation;
+        try {
+            mutation = await (0, workspace_mutation_guard_1.prepareWorkspaceMutation)(this.gitCommitPort, {
+                operation: 'User-request implementation',
+                branch: targetBranch,
+                token: execution.tokens.token,
+            });
+        }
+        catch (error) {
+            return [failure(error instanceof Error ? error.message : String(error))];
         }
         const baseBranch = execution.currentConfiguration.parentBranch ?? execution.branches.development ?? "develop";
         const prompt = (0, prompts_1.getUserRequestPrompt)({
@@ -65090,17 +65225,100 @@ class DoUserRequestUseCase {
             }));
             return results;
         }
+        let workspacePaths;
+        try {
+            ({ workspacePaths } = await (0, workspace_mutation_guard_1.finalizeWorkspaceMutation)(this.gitCommitPort, mutation.workspacePathsBefore, 'User-request implementation'));
+        }
+        catch (error) {
+            return [failure(error instanceof Error ? error.message : String(error))];
+        }
         results.push(new result_1.Result({
             id: this.taskId,
             success: true,
             executed: true,
             steps: [],
-            payload: { branchOverride: param.branchOverride },
+            payload: {
+                branchOverride: param.branchOverride,
+                branchCheckedOut: mutation.branchCheckedOut,
+                workspacePaths,
+            },
         }));
         return results;
     }
 }
 exports.DoUserRequestUseCase = DoUserRequestUseCase;
+function failure(message) {
+    (0, logging_ports_1.logError)(message);
+    return new result_1.Result({
+        id: TASK_ID,
+        success: false,
+        executed: true,
+        errors: [message],
+    });
+}
+
+
+/***/ }),
+
+/***/ 24243:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MAX_AUTOMATED_CHANGED_PATHS = void 0;
+exports.prepareWorkspaceMutation = prepareWorkspaceMutation;
+exports.finalizeWorkspaceMutation = finalizeWorkspaceMutation;
+const application_error_1 = __nccwpck_require__(75999);
+const git_branch_checkout_1 = __nccwpck_require__(76333);
+const workspace_changes_1 = __nccwpck_require__(93370);
+exports.MAX_AUTOMATED_CHANGED_PATHS = 100;
+/** Establishes a clean and deterministic repository boundary before an agent may mutate files. */
+async function prepareWorkspaceMutation(gitCommitPort, options) {
+    const workspacePathsBefore = await inspectWorkspace(gitCommitPort, `before ${options.operation}`);
+    if (workspacePathsBefore.length > 0) {
+        throw new application_error_1.ApplicationError(`${options.operation} refused: workspace is not clean before agent execution.`, 'validation');
+    }
+    let branchCheckedOut = false;
+    if (options.branch?.trim()) {
+        branchCheckedOut = await (0, git_branch_checkout_1.checkoutBranch)(options.branch, gitCommitPort, options.token);
+        if (!branchCheckedOut) {
+            throw new application_error_1.ApplicationError(`${options.operation} refused: failed to checkout target branch ${options.branch}.`, 'provider');
+        }
+        const afterCheckout = await inspectWorkspace(gitCommitPort, `after ${options.operation} branch checkout`);
+        if (afterCheckout.length > 0) {
+            throw new application_error_1.ApplicationError(`${options.operation} refused: branch checkout produced a dirty workspace.`, 'validation');
+        }
+    }
+    return { workspacePathsBefore, branchCheckedOut };
+}
+/** Restricts an automated mutation to new, non-sensitive and bounded repository paths. */
+async function finalizeWorkspaceMutation(gitCommitPort, before, operation) {
+    const workspacePathsAfter = await inspectWorkspace(gitCommitPort, `after ${operation}`);
+    const unsafePaths = workspacePathsAfter.filter(workspace_changes_1.isSensitiveWorkspacePath);
+    if (unsafePaths.length > 0) {
+        throw new application_error_1.ApplicationError(`${operation} refused because sensitive files were modified: ${unsafePaths.join(', ')}`, 'validation');
+    }
+    const workspacePaths = (0, workspace_changes_1.selectWorkspacePathsToCommit)([...before], workspacePathsAfter);
+    if (workspacePaths.length === 0) {
+        throw new application_error_1.ApplicationError(`${operation} produced no safe workspace paths to commit.`, 'validation');
+    }
+    if (workspacePaths.length > exports.MAX_AUTOMATED_CHANGED_PATHS) {
+        throw new application_error_1.ApplicationError(`${operation} refused because it changed ${workspacePaths.length} paths; maximum is ${exports.MAX_AUTOMATED_CHANGED_PATHS}.`, 'validation');
+    }
+    return { workspacePaths };
+}
+async function inspectWorkspace(gitCommitPort, phase) {
+    try {
+        return await (0, workspace_changes_1.listWorkspacePaths)(gitCommitPort);
+    }
+    catch (error) {
+        throw new application_error_1.ApplicationError(`Unable to inspect workspace ${phase}.`, 'provider', {
+            cause: error,
+            retryable: true,
+        });
+    }
+}
 
 
 /***/ }),
@@ -67858,13 +68076,13 @@ async function runUpdatePullRequestDescriptionWorkflow(param, taskId, dependenci
             prompt,
         });
         const generatedDescription = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(extractDescription(response));
+        if (!generatedDescription.trim()) {
+            return newResult(taskId, false, true, ['Configured agent did not return a PR description.']);
+        }
         const pullRequestBody = mode === 'replace'
             ? generatedDescription
             : (0, pull_request_description_1.mergeManagedPullRequestDescription)(details?.body ?? param.pullRequest.body, generatedDescription);
         (0, logging_ports_1.logDebugInfo)(`UpdatePullRequestDescription: agent response received. Description length=${pullRequestBody.length}.`);
-        if (!pullRequestBody.trim()) {
-            return newResult(taskId, false, true, ['Configured agent did not return a PR description.']);
-        }
         await dependencies.pullRequestDescriptionCommandPort.updateDescription(param.owner, param.repo, pullRequestNumber, pullRequestBody, param.tokens.token);
         return [new result_1.Result({ id: taskId, success: true, executed: true, steps: [] })];
     }
@@ -68372,15 +68590,18 @@ function registerCheckProgressCommand(program) {
         const gitInfo = (0, cli_context_1.getGitInfo)();
         if ('error' in gitInfo) {
             (0, logger_1.logError)(gitInfo.error);
-            process.exit(1);
+            process.exitCode = 1;
+            return;
         }
         const issue = (0, command_input_policy_1.cleanCliArgument)(options.issue);
         if (!issue) {
             console.log('❌ Please provide an issue number using -i or --issue');
+            process.exitCode = 1;
             return;
         }
         if ((0, issue_command_policy_1.parseIssueNumber)(issue) === undefined) {
             console.log(`❌ Invalid issue number: ${issue}. Must be a positive number.`);
+            process.exitCode = 1;
             return;
         }
         const params = (0, issue_command_policy_1.buildCheckProgressParams)(options, gitInfo);
@@ -68388,14 +68609,14 @@ function registerCheckProgressCommand(program) {
             return;
         try {
             await (0, local_action_1.runLocalAction)(params);
-            process.exit(0);
+            process.exitCode = 0;
         }
         catch (err) {
             const error = err instanceof Error ? err : new Error(String(err));
             console.error('❌ Error checking progress:', error.message);
             if (options.debug)
                 console.error(err);
-            process.exit(1);
+            process.exitCode = 1;
         }
     });
 }
@@ -68433,7 +68654,8 @@ function registerDetectPotentialProblemsCommand(program) {
         const gitInfo = (0, cli_context_1.getGitInfo)();
         if ('error' in gitInfo) {
             (0, logger_1.logError)(gitInfo.error);
-            process.exit(1);
+            process.exitCode = 1;
+            return;
         }
         const issue = (0, command_input_policy_1.cleanCliArgument)(options.issue);
         if ((0, detect_potential_problems_policy_1.resolveDetectIssueNumber)(issue) === undefined) {
@@ -68479,7 +68701,7 @@ function registerDetectPotentialProblemsCommand(program) {
             console.error('❌ Error running detect-potential-problems:', error.message);
             if (options.debug)
                 console.error(err);
-            process.exit(1);
+            process.exitCode = 1;
         }
     });
 }
@@ -68637,7 +68859,8 @@ async function runDoCommand(options) {
     const gitInfo = (0, cli_context_1.getGitInfo)();
     if ('error' in gitInfo) {
         (0, logger_1.logError)(gitInfo.error);
-        process.exit(1);
+        process.exitCode = 1;
+        return;
     }
     const prompt = (0, do_policy_1.resolveDoPrompt)(options.prompt);
     if (!prompt) {
@@ -68674,7 +68897,7 @@ async function runDoCommand(options) {
         });
         if (!result) {
             console.error('❌ Request failed while executing the configured agent CLI.');
-            process.exit(1);
+            process.exitCode = 1;
             return;
         }
         console.log((0, do_policy_1.formatDoResponse)(result.text, result.sessionId, outputFormat));
@@ -68684,7 +68907,7 @@ async function runDoCommand(options) {
         console.error('❌ Error executing do:', err.message || error);
         if (options.debug)
             console.error(error);
-        process.exit(1);
+        process.exitCode = 1;
     }
 }
 
@@ -68897,17 +69120,27 @@ function registerRecommendStepsCommand(program) {
         const gitInfo = (0, cli_context_1.getGitInfo)();
         if ('error' in gitInfo) {
             (0, logger_1.logError)(gitInfo.error);
-            process.exit(1);
+            process.exitCode = 1;
+            return;
         }
         const issue = (0, command_input_policy_1.cleanCliArgument)(options.issue);
         if ((0, issue_command_policy_1.parseIssueNumber)(issue) === undefined) {
             console.log('❌ Provide a valid issue number with -i or --issue');
+            process.exitCode = 1;
             return;
         }
         const params = (0, issue_command_policy_1.buildRecommendStepsParams)(options, gitInfo);
         if (!params)
             return;
-        await (0, local_action_1.runLocalAction)(params);
+        try {
+            await (0, local_action_1.runLocalAction)(params);
+        }
+        catch (error) {
+            console.error('❌ Error recommending steps:', error instanceof Error ? error.message : String(error));
+            if (options.debug)
+                console.error(error);
+            process.exitCode = 1;
+        }
     });
 }
 
@@ -69083,7 +69316,7 @@ function registerSetupCommand(program) {
             (0, logger_1.logInfo)('🔍 Checking we are inside a git repository...');
             if (!(0, cli_context_1.isInsideGitRepo)(cwd)) {
                 (0, logger_1.logError)('❌ Not a git repository. Run "copilot setup" from the root of a git repo.');
-                process.exit(1);
+                process.exitCode = 1;
                 return;
             }
             (0, logger_1.logInfo)('✅ Git repository detected.');
@@ -69091,7 +69324,7 @@ function registerSetupCommand(program) {
             const gitInfo = (0, cli_context_1.getGitInfo)();
             if ('error' in gitInfo) {
                 (0, logger_1.logError)(gitInfo.error);
-                process.exit(1);
+                process.exitCode = 1;
                 return;
             }
             (0, logger_1.logInfo)(`📦 Repository: ${gitInfo.owner}/${gitInfo.repo}`);
@@ -69103,7 +69336,7 @@ function registerSetupCommand(program) {
                 (0, logger_1.logInfo)('   You can:');
                 (0, logger_1.logInfo)('   • Pass it on the command line: copilot setup --token <your_github_token>');
                 (0, logger_1.logInfo)('   • Add it to your environment: export PERSONAL_ACCESS_TOKEN=your_github_token');
-                process.exit(1);
+                process.exitCode = 1;
                 return;
             }
             (0, logger_1.logInfo)(options.dryRun ? '🧭 Building a dry-run setup plan...' : '🧭 Building your setup plan...');
@@ -69172,7 +69405,7 @@ function loadSetupOverrides(options) {
         if (!['codex', 'opencode', 'cursor'].includes(options.agent)) {
             throw new Error('--agent must be one of: codex, opencode, cursor.');
         }
-        fromFlags.agents = Object.fromEntries(['planner', 'findings', 'reviewer', 'fixer', 'tester', 'release'].map(task => [task, { provider: options.agent }]));
+        fromFlags.agents = Object.fromEntries(['planner', 'findings', 'reviewer', 'fixer', 'tester'].map(task => [task, { provider: options.agent }]));
     }
     if (options.features) {
         if (options.features.trim().toLowerCase() === 'all') {
@@ -69330,7 +69563,7 @@ async function runThinkCommand(options) {
     const gitInfo = (0, cli_context_1.getGitInfo)();
     if ("error" in gitInfo) {
         (0, logger_1.logError)(gitInfo.error);
-        process.exit(1);
+        process.exitCode = 1;
         return;
     }
     const question = (0, command_input_policy_1.joinCliArguments)(options.question);
@@ -69715,7 +69948,7 @@ class SetupPromptAdapter {
         ai.pullRequestDescriptionMode = await this.askChoice('Pull-request description mode', ['replace', 'append', 'preserve', 'disabled'], ai.pullRequestDescriptionMode ?? 'replace');
         ai.ignoreFiles = await this.askText('AI ignore file patterns (comma-separated)', ai.ignoreFiles);
         ai.membersOnly = await this.askBoolean('Restrict AI processing to repository members?', ai.membersOnly);
-        ai.includeReasoning = await this.askBoolean('Include agent reasoning where supported?', ai.includeReasoning);
+        ai.includeReasoning = await this.askBoolean('Include concise provider explanation metadata when available?', ai.includeReasoning);
         ai.bugbotSeverity = await this.askChoice('Minimum Bugbot severity to publish', ['info', 'low', 'medium', 'high'], ai.bugbotSeverity);
         ai.bugbotCommentLimit = await this.askNumber('Maximum Bugbot comments per run', ai.bugbotCommentLimit);
         ai.bugbotFixVerifyCommands = await this.askText('Bugbot autofix verification commands (comma-separated, empty is allowed)', ai.bugbotFixVerifyCommands);
@@ -69769,12 +70002,12 @@ class SetupPromptAdapter {
             (0, setup_prompt_rendering_1.color)('Repository changes', 36),
             `  Files selected: ${plan.selectedFiles.length}`,
             `  Variables to upsert: ${plan.configuration.manageRepositoryVariables ? plan.variables.length : 0}`,
-            `  Secrets to validate/provision: ${plan.configuration.manageRepositorySecrets ? plan.credentialRequirements.length : 0}`,
+            `  Secret options to validate/provision: ${plan.configuration.manageRepositorySecrets ? plan.credentialRequirements.length : 0}`,
             `  Variable storage: ${plan.configuration.storage.variables.defaultScope} scope${plan.configuration.storage.variables.defaultScope === 'organization' ? ` (${plan.configuration.storage.variables.organizationVisibility})` : ''}`,
             `  Secret storage: ${plan.configuration.storage.secrets.defaultScope} scope${plan.configuration.storage.secrets.defaultScope === 'organization' ? ` (${plan.configuration.storage.secrets.organizationVisibility})` : ''}`,
             `  Labels and issue types: always checked by Copilot setup`,
             `  Initial tag: ${plan.configuration.createInitialTag ? 'v1.0.0 when no version tag exists' : 'disabled'}`, '',
-            (0, setup_prompt_rendering_1.color)('Credential contract', 33), `  ${plan.requiredSecrets.join(', ')}`,
+            (0, setup_prompt_rendering_1.color)('Strictly required Secrets', 33), `  ${plan.requiredSecrets.join(', ') || '(none)'}`,
             ...(plan.warnings.length > 0 ? ['', (0, setup_prompt_rendering_1.color)('Important notes', 33), ...plan.warnings.map(warning => `  ⚠ ${warning}`)] : []),
         ].join('\n');
         console.log((0, setup_prompt_rendering_1.renderBox)(content, 'Setup Plan', 32));
@@ -69794,7 +70027,7 @@ class SetupPromptAdapter {
         if (!this.readline)
             return;
         console.log((0, setup_prompt_rendering_1.renderBox)('The workflow PAT is not the setup PAT. The workflow PAT belongs to the bot account, is stored remotely as the PAT Secret, and is used by GitHub Actions to work on issues and pull requests. Existing Secrets are never readable through GitHub; Copilot can only validate them through the repository health workflow.', 'Workflow credentials', 33));
-        console.log(`Required credentials: ${requirements.map(requirement => requirement.name).join(', ')}`);
+        console.log(`Credential options: ${requirements.map(requirement => requirement.name).join(', ')}`);
     }
     async requestWorkflowPat(requirement, current) {
         return this.requestSecretForRequirement(requirement, current, 'workflow PAT owned by the bot account');
@@ -71708,7 +71941,24 @@ exports.checkAgentAuthentication = checkAgentAuthentication;
 const node_fs_1 = __nccwpck_require__(87561);
 const node_os_1 = __nccwpck_require__(70612);
 const node_path_1 = __nccwpck_require__(49411);
+const node_child_process_1 = __nccwpck_require__(17718);
 const agent_credential_policy_1 = __nccwpck_require__(36529);
+const agent_command_parser_1 = __nccwpck_require__(15044);
+const DEFAULT_AUTHENTICATION_SYSTEM = {
+    hasOperationalCodexLogin(executable, environment) {
+        try {
+            (0, node_child_process_1.execFileSync)(executable, ['login', 'status'], {
+                env: environment,
+                stdio: 'ignore',
+                timeout: 15000,
+            });
+            return true;
+        }
+        catch {
+            return false;
+        }
+    },
+};
 function hasCodexChatGptSession(environment) {
     const codexHome = environment.CODEX_HOME?.trim()
         || (environment === process.env || environment.HOME ? (0, node_path_1.join)(environment.HOME || (0, node_os_1.homedir)(), '.codex') : undefined);
@@ -71761,7 +72011,7 @@ function buildAgentCliEnvironment(provider, environment = process.env, modelProv
     }
     return isolatedEnvironment;
 }
-function checkAgentAuthentication(configuration, environment = process.env) {
+function checkAgentAuthentication(configuration, environment = process.env, system = DEFAULT_AUTHENTICATION_SYSTEM) {
     const variables = (0, agent_credential_policy_1.credentialVariables)(configuration);
     const hasCodexSession = configuration.provider === 'codex' && hasCodexChatGptSession(environment);
     const hasOpenCodeSession = configuration.provider === 'opencode' && hasOpenCodeLocalSession(environment);
@@ -71773,19 +72023,20 @@ function checkAgentAuthentication(configuration, environment = process.env) {
         return availableStatus(variables, 'Local OpenCode authentication available from its controlled auth store.');
     if (hasConfiguredCredential)
         return availableStatus(variables, `Local credentials available for ${configuration.provider}.`);
+    if (configuration.provider === 'codex') {
+        const executable = configuration.command?.trim()
+            ? (0, agent_command_parser_1.parseAgentCommand)(configuration.command).executable
+            : 'codex';
+        if (system.hasOperationalCodexLogin(executable, buildAgentCliEnvironment('codex', environment, configuration.modelProvider))) {
+            return availableStatus(variables, 'Preinitialized Codex CLI login is operational on the runner.');
+        }
+    }
     return resolveMissingAuthentication(configuration, variables, modelProvider);
 }
 function availableStatus(variables, message) {
     return { status: 'available', variables, message };
 }
 function resolveMissingAuthentication(configuration, variables, modelProvider) {
-    if (configuration.provider === 'codex') {
-        return {
-            status: 'not_required',
-            variables,
-            message: 'No exported Codex credential found; authentication will be resolved by the preinitialized Codex CLI on the runner.',
-        };
-    }
     if (configuration.provider === 'opencode' && modelProvider && !(0, agent_credential_policy_1.hasKnownModelProvider)(modelProvider)) {
         return {
             status: 'not_required',
@@ -71918,21 +72169,52 @@ exports.AgentCliError = AgentCliError;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runAgentCli = runAgentCli;
 const node_child_process_1 = __nccwpck_require__(17718);
-const agent_authentication_1 = __nccwpck_require__(51371);
 const agent_cli_contracts_1 = __nccwpck_require__(48254);
 const agent_execution_policy_1 = __nccwpck_require__(28442);
+const agent_runtime_environment_1 = __nccwpck_require__(92477);
+const agent_output_schema_1 = __nccwpck_require__(29208);
 const MAX_STDERR_BYTES = 8 * 1024;
 function runAgentCli(request) {
     return new Promise((resolve, reject) => {
-        const controlledArgs = (0, agent_execution_policy_1.enforceAgentExecutionPolicy)(request.provider, request.capability, request.args);
-        const child = (0, node_child_process_1.spawn)(request.executable, request.promptMode === 'argv' ? [...controlledArgs, request.prompt] : controlledArgs, {
-            cwd: request.cwd,
-            env: (0, agent_authentication_1.buildAgentCliEnvironment)(request.provider, request.environment, request.modelProvider),
-            stdio: ['pipe', 'pipe', 'pipe'],
-            shell: false,
-            detached: process.platform !== 'win32',
-        });
-        const lifecycle = createProcessLifecycle(child, request, resolve, reject);
+        const outputSchema = (0, agent_output_schema_1.prepareAgentOutputSchema)(request.provider, request.outputSchema);
+        let controlledArgs;
+        let runtime;
+        try {
+            controlledArgs = (0, agent_execution_policy_1.enforceAgentExecutionPolicy)(request.provider, request.capability, request.args, outputSchema.path);
+            runtime = (0, agent_runtime_environment_1.prepareAgentRuntimeEnvironment)(request.provider, request.capability, request.environment, request.modelProvider);
+        }
+        catch (error) {
+            outputSchema.cleanup();
+            reject(error);
+            return;
+        }
+        let cleaned = false;
+        const cleanup = () => {
+            if (cleaned)
+                return;
+            cleaned = true;
+            runtime.cleanup();
+            outputSchema.cleanup();
+        };
+        const child = (() => {
+            try {
+                return (0, node_child_process_1.spawn)(request.executable, request.promptMode === 'argv' ? [...controlledArgs, request.prompt] : controlledArgs, {
+                    cwd: request.cwd,
+                    env: runtime.environment,
+                    stdio: ['pipe', 'pipe', 'pipe'],
+                    shell: false,
+                    detached: process.platform !== 'win32',
+                });
+            }
+            catch (error) {
+                cleanup();
+                reject(new agent_cli_contracts_1.AgentCliError(`Unable to start agent CLI: ${error instanceof Error ? error.message : String(error)}`, 'process'));
+                return undefined;
+            }
+        })();
+        if (!child)
+            return;
+        const lifecycle = createProcessLifecycle(child, request, (value) => { cleanup(); resolve(value); }, (error) => { cleanup(); reject(error); });
         child.stdout.on('data', lifecycle.appendStdout);
         child.stderr.on('data', lifecycle.appendStderr);
         child.stdin.once('error', lifecycle.onStdinError);
@@ -71949,15 +72231,16 @@ function createProcessLifecycle(child, request, resolve, reject) {
     let stderrBytes = 0;
     let outputBytes = 0;
     let settled = false;
-    const timer = setTimeout(() => {
-        terminate(child);
-        finishReject(new agent_cli_contracts_1.AgentCliError(`Agent CLI timed out after ${request.timeoutMs}ms.`, 'timeout'));
-    }, request.timeoutMs);
+    let terminationError;
+    const timers = {};
     const finishResolve = (value) => {
         if (settled)
             return;
         settled = true;
-        clearTimeout(timer);
+        if (timers.timeout)
+            clearTimeout(timers.timeout);
+        if (timers.force)
+            clearTimeout(timers.force);
         request.signal?.removeEventListener('abort', abort);
         resolve(value);
     };
@@ -71965,33 +72248,51 @@ function createProcessLifecycle(child, request, resolve, reject) {
         if (settled)
             return;
         settled = true;
-        clearTimeout(timer);
+        if (timers.timeout)
+            clearTimeout(timers.timeout);
+        if (timers.force)
+            clearTimeout(timers.force);
         request.signal?.removeEventListener('abort', abort);
         reject(error);
     };
+    const beginTermination = (error) => {
+        if (settled || terminationError)
+            return;
+        terminationError = error;
+        if (timers.timeout)
+            clearTimeout(timers.timeout);
+        signalProcessTree(child, 'SIGTERM');
+        timers.force = setTimeout(() => {
+            if (child.exitCode === null)
+                signalProcessTree(child, 'SIGKILL');
+        }, 5000);
+        timers.force.unref();
+    };
     const abort = () => {
-        terminate(child);
-        finishReject(new agent_cli_contracts_1.AgentCliError('Agent CLI execution was cancelled.', 'cancelled'));
+        beginTermination(new agent_cli_contracts_1.AgentCliError('Agent CLI execution was cancelled.', 'cancelled'));
     };
     const appendStdout = (chunk) => {
-        if (settled)
+        if (settled || terminationError)
             return;
         outputBytes += chunk.byteLength;
         if (outputBytes > request.maxOutputBytes) {
-            terminate(child);
-            finishReject(new agent_cli_contracts_1.AgentCliError(`Agent CLI output exceeded the ${request.maxOutputBytes}-byte limit.`, 'output'));
+            beginTermination(new agent_cli_contracts_1.AgentCliError(`Agent CLI output exceeded the ${request.maxOutputBytes}-byte limit.`, 'output'));
             return;
         }
         stdout += chunk.toString();
     };
     const appendStderr = (chunk) => {
-        if (settled)
+        if (settled || terminationError)
             return;
         stderrBytes = Math.min(stderrBytes + chunk.byteLength, MAX_STDERR_BYTES);
     };
-    const onStdinError = () => finishReject(new agent_cli_contracts_1.AgentCliError('Unable to send the prompt to the agent CLI.', 'process'));
+    const onStdinError = () => beginTermination(new agent_cli_contracts_1.AgentCliError('Unable to send the prompt to the agent CLI.', 'process'));
     const onError = (error) => finishReject(new agent_cli_contracts_1.AgentCliError(`Unable to start agent CLI: ${error.message}`, 'process'));
     const onClose = (code) => {
+        if (terminationError) {
+            finishReject(terminationError);
+            return;
+        }
         if (code !== 0) {
             const diagnostic = stderrBytes > 0 ? ' Diagnostic output was suppressed for safety.' : '';
             finishReject(new agent_cli_contracts_1.AgentCliError(`Agent CLI exited with code ${code}.${diagnostic}`, 'process', code === 75));
@@ -72004,17 +72305,10 @@ function createProcessLifecycle(child, request, resolve, reject) {
         }
         finishResolve(output);
     };
+    timers.timeout = setTimeout(() => {
+        beginTermination(new agent_cli_contracts_1.AgentCliError(`Agent CLI timed out after ${request.timeoutMs}ms.`, 'timeout'));
+    }, request.timeoutMs);
     return { appendStdout, appendStderr, onStdinError, onError, onClose, abort };
-}
-function terminate(child) {
-    if (child.exitCode !== null)
-        return;
-    signalProcessTree(child, 'SIGTERM');
-    const forceTimer = setTimeout(() => {
-        if (child.exitCode === null)
-            signalProcessTree(child, 'SIGKILL');
-    }, 5000);
-    forceTimer.unref();
 }
 function signalProcessTree(child, signal) {
     try {
@@ -72042,6 +72336,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.isValidAgentConfiguration = isValidAgentConfiguration;
 exports.getValidatedAgentConfiguration = getValidatedAgentConfiguration;
 const agent_command_policy_1 = __nccwpck_require__(37011);
+const agent_configuration_validation_policy_1 = __nccwpck_require__(60596);
 const SUPPORTED_PROVIDERS = new Set(['opencode', 'codex', 'cursor']);
 const MODEL_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/;
 const MODEL_PROVIDER_PATTERN = /^[a-z0-9][a-z0-9_-]*$/;
@@ -72055,6 +72350,7 @@ function isValidAgentConfiguration(configuration) {
     if (!hasOptionalValue(configuration.effort, MODEL_PATTERN))
         return false;
     try {
+        (0, agent_configuration_validation_policy_1.assertProviderModelCompatibility)(configuration.provider, configuration.modelProvider?.trim().toLowerCase() || 'openai');
         (0, agent_command_policy_1.validateAgentCommand)(configuration);
         return true;
     }
@@ -72133,7 +72429,7 @@ const MODEL_PROVIDER_CREDENTIALS = {
 const CLI_CREDENTIALS = {
     opencode: ['OPENCODE_API_KEY'],
     cursor: ['CURSOR_API_KEY'],
-    codex: ['CODEX_ACCESS_TOKEN', 'OPENAI_API_KEY'],
+    codex: ['CODEX_API_KEY', 'CODEX_ACCESS_TOKEN', 'OPENAI_API_KEY'],
 };
 const KNOWN_AGENT_CREDENTIALS = [...new Set([
         ...exports.COMMON_OPENCODE_CREDENTIALS,
@@ -72275,6 +72571,7 @@ const FORBIDDEN_CODEX_FLAGS = new Set([
     '--enable',
     '--output-last-message',
     '-o',
+    '--output-schema',
 ]);
 const CONTROLLED_CODEX_CONFIG = new Map([
     ['approval_policy', 'never'],
@@ -72297,7 +72594,7 @@ const CONTROLLED_CODEX_CONFIG = new Map([
 ]);
 const FORBIDDEN_CODEX_CONFIG_PREFIXES = ['hooks', 'mcp_servers.', 'apps.', 'plugins.'];
 const FORBIDDEN_CURSOR_FLAGS = [
-    '--api-key', '--header', '-H', '--endpoint', '-e', '--force', '-f', '--yolo', '--auto-review',
+    '--api-key', '--header', '-H', '--endpoint', '-e', '--yolo', '--auto-review',
     '--approve-mcps', '--trust', '--workspace', '--add-dir', '--plugin-dir', '--worktree', '-w',
     '--resume', '--continue', '--sandbox=disabled',
 ];
@@ -72309,7 +72606,7 @@ const FORBIDDEN_OPENCODE_FLAGS = [
  * Applies a capability boundary after parsing the command and immediately
  * before spawn, so custom commands cannot bypass the runtime policy.
  */
-function enforceAgentExecutionPolicy(provider, capability, args) {
+function enforceAgentExecutionPolicy(provider, capability, args, managedOutputSchemaPath) {
     if (capability === undefined)
         return [...args];
     if (provider === 'cursor')
@@ -72358,25 +72655,36 @@ function enforceAgentExecutionPolicy(provider, capability, args) {
         if (!configuredValues.has(key))
             additions.push('--config', `${key}=${value}`);
     }
+    if (managedOutputSchemaPath)
+        additions.push('--output-schema', managedOutputSchemaPath);
     controlled.splice(stdinIndex, 0, ...additions);
     return controlled;
 }
 function enforceCursorPolicy(capability, args) {
     rejectFlags('Cursor', args, FORBIDDEN_CURSOR_FLAGS);
     const controlled = [...args];
+    const mutating = MUTATING_CAPABILITIES.has(capability);
+    if (!mutating && controlled.some((argument) => matchesFlag(argument, '--force') || matchesFlag(argument, '-f'))) {
+        throw new agent_cli_contracts_1.AgentCliError(`Cursor ${capability} capability cannot force tool approval.`, 'configuration');
+    }
     const sandbox = flagValue(controlled, ['--sandbox']);
     if (sandbox && sandbox !== 'enabled') {
         throw new agent_cli_contracts_1.AgentCliError('Cursor agent automation requires its sandbox to be enabled.', 'configuration');
     }
     if (!sandbox)
         controlled.push('--sandbox', 'enabled');
-    if (!MUTATING_CAPABILITIES.has(capability)) {
+    if (!mutating) {
         const mode = flagValue(controlled, ['--mode']);
         if (mode && !['ask', 'plan'].includes(mode)) {
             throw new agent_cli_contracts_1.AgentCliError(`Cursor ${capability} capability requires ask or plan mode.`, 'configuration');
         }
         if (!mode && !controlled.includes('--plan'))
             controlled.push('--mode', 'ask');
+    }
+    else if (!controlled.some((argument) => matchesFlag(argument, '--force') || matchesFlag(argument, '-f'))) {
+        // Headless Cursor otherwise pauses for tool approval and eventually times out.
+        // The isolated runtime config supplies explicit denials and the sandbox.
+        controlled.push('--force');
     }
     return controlled;
 }
@@ -72385,14 +72693,15 @@ function enforceOpenCodePolicy(capability, args) {
     const controlled = [...args];
     if (!controlled.includes('--pure'))
         controlled.push('--pure');
-    if (!MUTATING_CAPABILITIES.has(capability)) {
-        const agent = flagValue(controlled, ['--agent']);
-        if (agent && agent !== 'plan') {
-            throw new agent_cli_contracts_1.AgentCliError(`OpenCode ${capability} capability requires the read-only plan agent.`, 'configuration');
-        }
-        if (!agent)
-            controlled.push('--agent', 'plan');
+    const expectedAgent = MUTATING_CAPABILITIES.has(capability)
+        ? 'copilot-controlled-fixer'
+        : 'copilot-controlled-readonly';
+    const agent = flagValue(controlled, ['--agent']);
+    if (agent && agent !== expectedAgent) {
+        throw new agent_cli_contracts_1.AgentCliError(`OpenCode ${capability} capability requires the ${expectedAgent} agent.`, 'configuration');
     }
+    if (!agent)
+        controlled.push('--agent', expectedAgent);
     return controlled;
 }
 function rejectFlags(provider, args, forbidden) {
@@ -72457,13 +72766,15 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.interpretFindingsResponse = interpretFindingsResponse;
 const agent_json_parser_1 = __nccwpck_require__(19951);
 const agent_response_parser_1 = __nccwpck_require__(94745);
+const agent_json_schema_validator_1 = __nccwpck_require__(52663);
 function interpretFindingsResponse(parts, options) {
     const text = typeof parts === 'string' ? parts : (0, agent_response_parser_1.extractTextFromParts)(parts);
     if (!text)
         throw new Error('Empty response text');
     if (!options.expectJson || !options.schema)
         return text;
-    const parsed = (0, agent_json_parser_1.parseJsonFromAgentText)(text);
+    const parsed = (0, agent_json_parser_1.parseStrictJsonFromAgentText)(text);
+    (0, agent_json_schema_validator_1.assertAgentResponseSchema)(parsed, options.schema);
     if (options.includeReasoning && typeof parts !== 'string') {
         const reasoning = (0, agent_response_parser_1.extractReasoningFromParts)(parts);
         if (reasoning)
@@ -72483,6 +72794,7 @@ function interpretFindingsResponse(parts, options) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.extractFirstJsonObject = extractFirstJsonObject;
 exports.parseJsonFromAgentText = parseJsonFromAgentText;
+exports.parseStrictJsonFromAgentText = parseStrictJsonFromAgentText;
 const logger_1 = __nccwpck_require__(91151);
 /** Extract the first complete JSON object from prose, respecting quoted strings and escapes. */
 function extractFirstJsonObject(text) {
@@ -72571,6 +72883,160 @@ function parseJsonFromAgentText(text) {
     (0, logger_1.logDebugInfo)(`Agent response (expectJson): no JSON object found. Response length=${trimmed.length}.`);
     throw new Error(`Agent response is not valid JSON: no JSON object found. Response length: ${trimmed.length} chars.`);
 }
+/** Structured contracts accept only a single object, optionally in one JSON fence. */
+function parseStrictJsonFromAgentText(text) {
+    const trimmed = text.trim();
+    if (!trimmed)
+        throw new Error('Agent response text is empty');
+    const direct = parseObject(trimmed);
+    if (direct)
+        return direct;
+    const fencedMatch = trimmed.match(/^```(?:json)?\s*\n([\s\S]*?)\n```$/iu);
+    const fenced = fencedMatch ? parseObject(fencedMatch[1].trim()) : null;
+    if (fenced)
+        return fenced;
+    throw new Error('Agent response is not a single valid JSON object.');
+}
+
+
+/***/ }),
+
+/***/ 52663:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.assertAgentResponseSchema = assertAgentResponseSchema;
+/** Validates the JSON Schema subset used by all public agent response contracts. */
+function assertAgentResponseSchema(value, schema, path = '$') {
+    assertType(value, schema.type, path);
+    if (Array.isArray(schema.enum) && !schema.enum.some(candidate => Object.is(candidate, value))) {
+        throw new Error(`Agent response schema violation at ${path}: value is outside the allowed enum.`);
+    }
+    if (typeof value === 'string')
+        validateString(value, schema, path);
+    if (typeof value === 'number')
+        validateNumber(value, schema, path);
+    if (Array.isArray(value))
+        validateArray(value, schema, path);
+    if (isObject(value))
+        validateObject(value, schema, path);
+}
+function assertType(value, expected, path) {
+    if (typeof expected !== 'string')
+        return;
+    const valid = expected === 'object' ? isObject(value)
+        : expected === 'array' ? Array.isArray(value)
+            : expected === 'integer' ? typeof value === 'number' && Number.isInteger(value)
+                : typeof value === expected;
+    if (!valid)
+        throw new Error(`Agent response schema violation at ${path}: expected ${expected}.`);
+}
+function validateString(value, schema, path) {
+    if (typeof schema.minLength === 'number' && value.length < schema.minLength) {
+        throw new Error(`Agent response schema violation at ${path}: string is too short.`);
+    }
+    if (typeof schema.maxLength === 'number' && value.length > schema.maxLength) {
+        throw new Error(`Agent response schema violation at ${path}: string is too long.`);
+    }
+}
+function validateNumber(value, schema, path) {
+    if (!Number.isFinite(value))
+        throw new Error(`Agent response schema violation at ${path}: number is not finite.`);
+    if (typeof schema.minimum === 'number' && value < schema.minimum) {
+        throw new Error(`Agent response schema violation at ${path}: number is below minimum.`);
+    }
+    if (typeof schema.maximum === 'number' && value > schema.maximum) {
+        throw new Error(`Agent response schema violation at ${path}: number is above maximum.`);
+    }
+}
+function validateArray(value, schema, path) {
+    if (typeof schema.minItems === 'number' && value.length < schema.minItems) {
+        throw new Error(`Agent response schema violation at ${path}: array has too few items.`);
+    }
+    if (typeof schema.maxItems === 'number' && value.length > schema.maxItems) {
+        throw new Error(`Agent response schema violation at ${path}: array has too many items.`);
+    }
+    if (isObject(schema.items)) {
+        value.forEach((item, index) => assertAgentResponseSchema(item, schema.items, `${path}[${index}]`));
+    }
+}
+function validateObject(value, schema, path) {
+    const properties = isObject(schema.properties) ? schema.properties : {};
+    const required = Array.isArray(schema.required) ? schema.required.filter((item) => typeof item === 'string') : [];
+    for (const property of required) {
+        if (!Object.prototype.hasOwnProperty.call(value, property)) {
+            throw new Error(`Agent response schema violation at ${path}: missing required property ${property}.`);
+        }
+    }
+    for (const [property, nested] of Object.entries(value)) {
+        if (properties[property]) {
+            assertAgentResponseSchema(nested, properties[property], `${path}.${property}`);
+            continue;
+        }
+        if (schema.additionalProperties === false) {
+            throw new Error(`Agent response schema violation at ${path}: unexpected property ${property}.`);
+        }
+        if (isObject(schema.additionalProperties)) {
+            assertAgentResponseSchema(nested, schema.additionalProperties, `${path}.${property}`);
+        }
+    }
+}
+function isObject(value) {
+    return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+
+/***/ }),
+
+/***/ 29208:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.prepareAgentOutputSchema = prepareAgentOutputSchema;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_os_1 = __nccwpck_require__(70612);
+const node_path_1 = __nccwpck_require__(49411);
+/** Writes a short-lived, owner-readable schema only for Codex native structured outputs. */
+function prepareAgentOutputSchema(provider, schema) {
+    if (provider !== 'codex' || !schema || !supportsCodexNativeSchema(schema)) {
+        return { cleanup: () => undefined };
+    }
+    const directory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-agent-schema-'));
+    const path = (0, node_path_1.join)(directory, 'response.schema.json');
+    try {
+        (0, node_fs_1.writeFileSync)(path, JSON.stringify(schema), { encoding: 'utf8', mode: 0o600 });
+        return {
+            path,
+            cleanup: () => (0, node_fs_1.rmSync)(directory, { recursive: true, force: true }),
+        };
+    }
+    catch (error) {
+        (0, node_fs_1.rmSync)(directory, { recursive: true, force: true });
+        throw error;
+    }
+}
+/** Codex strict schemas require every declared object property to be required. */
+function supportsCodexNativeSchema(schema) {
+    if (schema.type === 'object') {
+        if (!isRecord(schema.properties) || schema.additionalProperties !== false)
+            return false;
+        const properties = schema.properties;
+        const required = new Set(Array.isArray(schema.required) ? schema.required : []);
+        if (Object.keys(properties).some(property => !required.has(property)))
+            return false;
+        return Object.values(properties).every(value => !isRecord(value) || supportsCodexNativeSchema(value));
+    }
+    if (schema.type === 'array' && isRecord(schema.items))
+        return supportsCodexNativeSchema(schema.items);
+    return true;
+}
+function isRecord(value) {
+    return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
 
 
 /***/ }),
@@ -72628,6 +73094,112 @@ function extractReasoningFromParts(parts) {
 
 /***/ }),
 
+/***/ 92477:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.prepareAgentRuntimeEnvironment = prepareAgentRuntimeEnvironment;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_os_1 = __nccwpck_require__(70612);
+const node_path_1 = __nccwpck_require__(49411);
+const agent_authentication_1 = __nccwpck_require__(51371);
+const NOOP = () => undefined;
+const READ_ONLY_OPENCODE_AGENT = 'copilot-controlled-readonly';
+const FIXER_OPENCODE_AGENT = 'copilot-controlled-fixer';
+/** Builds a per-invocation provider boundary without mutating runner configuration. */
+function prepareAgentRuntimeEnvironment(provider, capability, source = process.env, modelProvider) {
+    const environment = (0, agent_authentication_1.buildAgentCliEnvironment)(provider, source, modelProvider);
+    if (!provider || !capability)
+        return { environment, cleanup: NOOP };
+    if (provider === 'opencode')
+        return { environment: hardenOpenCode(environment, capability), cleanup: NOOP };
+    if (provider === 'cursor')
+        return hardenCursor(environment, capability);
+    return { environment, cleanup: NOOP };
+}
+function hardenOpenCode(environment, capability) {
+    const fixer = capability === 'fixer';
+    const permission = {
+        '*': 'deny',
+        read: 'allow',
+        glob: 'allow',
+        grep: 'allow',
+        lsp: 'allow',
+        edit: fixer ? 'allow' : 'deny',
+        bash: 'deny',
+        task: 'deny',
+        skill: 'deny',
+        webfetch: 'deny',
+        websearch: 'deny',
+        external_directory: 'deny',
+    };
+    const agentName = fixer ? FIXER_OPENCODE_AGENT : READ_ONLY_OPENCODE_AGENT;
+    const config = {
+        permission,
+        tools: { bash: false, webfetch: false, websearch: false, write: fixer, edit: fixer },
+        agent: {
+            [agentName]: {
+                description: 'Controlled non-interactive repository automation agent.',
+                mode: 'primary',
+                permission,
+            },
+        },
+    };
+    return {
+        ...environment,
+        OPENCODE_CONFIG_CONTENT: JSON.stringify(config),
+        OPENCODE_PERMISSION: JSON.stringify(permission),
+        OPENCODE_DISABLE_AUTOUPDATE: 'true',
+        OPENCODE_DISABLE_LSP_DOWNLOAD: 'true',
+        OPENCODE_DISABLE_CLAUDE_CODE: 'true',
+        OPENCODE_DISABLE_CLAUDE_CODE_PROMPT: 'true',
+        OPENCODE_DISABLE_CLAUDE_CODE_SKILLS: 'true',
+        OPENCODE_ENABLE_EXA: 'false',
+        OPENCODE_ENABLE_PARALLEL: 'false',
+    };
+}
+function hardenCursor(environment, capability) {
+    const runtimeHome = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-cursor-runtime-'));
+    const cursorDirectory = (0, node_path_1.join)(runtimeHome, '.cursor');
+    (0, node_fs_1.mkdirSync)(cursorDirectory, { recursive: true });
+    const fixer = capability === 'fixer';
+    (0, node_fs_1.writeFileSync)((0, node_path_1.join)(cursorDirectory, 'cli-config.json'), JSON.stringify({
+        version: 1,
+        editor: { vimMode: false },
+        approvalMode: 'allowlist',
+        permissions: {
+            allow: [],
+            deny: [
+                'Shell(git)', 'Shell(gh)', 'Shell(ssh)', 'Shell(scp)', 'Shell(curl)',
+                'Shell(wget)', 'Shell(nc)', 'Shell(rm)', 'Read(.env*)', 'Read(**/.env*)',
+            ],
+        },
+        sandbox: { mode: 'enabled' },
+    }));
+    (0, node_fs_1.writeFileSync)((0, node_path_1.join)(cursorDirectory, 'sandbox.json'), JSON.stringify({
+        type: fixer ? 'workspace_readwrite' : 'workspace_readonly',
+        additionalReadwritePaths: [],
+        additionalReadonlyPaths: [],
+        disableTmpWrite: true,
+        enableSharedBuildCache: false,
+        networkPolicyStrict: true,
+        networkPolicy: { default: 'deny', allow: [], deny: [] },
+    }));
+    return {
+        environment: {
+            ...environment,
+            HOME: runtimeHome,
+            CURSOR_CONFIG_DIR: cursorDirectory,
+        },
+        cleanup: () => (0, node_fs_1.rmSync)(runtimeHome, { recursive: true, force: true }),
+    };
+}
+
+
+/***/ }),
+
 /***/ 32152:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -72636,7 +73208,6 @@ function extractReasoningFromParts(parts) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AgentCapabilityAdapter = void 0;
 const agent_constants_1 = __nccwpck_require__(46927);
-const logger_1 = __nccwpck_require__(91151);
 const provider_cli_adapter_1 = __nccwpck_require__(18199);
 const agent_configuration_policy_1 = __nccwpck_require__(49616);
 class AgentCapabilityAdapter {
@@ -72645,19 +73216,14 @@ class AgentCapabilityAdapter {
     }
     async execute(request) {
         const taskConfiguration = (0, agent_configuration_policy_1.getValidatedAgentConfiguration)(request.configuration, request.capability);
-        try {
-            const output = await this.cliAdapter.execute({
-                configuration: taskConfiguration,
-                prompt: this.addEffortInstruction(request.prompt, taskConfiguration.effort),
-                timeoutMs: agent_constants_1.AGENT_REQUEST_TIMEOUT_MS,
-                capability: request.capability,
-            });
-            return request.mapCliOutput(output);
-        }
-        catch (error) {
-            (0, logger_1.logError)(`Error querying ${taskConfiguration.provider} CLI ${request.capability}: ${error instanceof Error ? error.message : String(error)}`);
-            return undefined;
-        }
+        const output = await this.cliAdapter.execute({
+            configuration: taskConfiguration,
+            prompt: this.addEffortInstruction(request.prompt, taskConfiguration.effort),
+            timeoutMs: agent_constants_1.AGENT_REQUEST_TIMEOUT_MS,
+            capability: request.capability,
+            ...(request.outputSchema ? { outputSchema: request.outputSchema } : {}),
+        });
+        return request.mapCliOutput(output);
     }
     addEffortInstruction(prompt, effort) {
         const normalizedEffort = effort?.trim();
@@ -72708,6 +73274,7 @@ class FindingsAgentAdapter extends agent_capability_adapter_1.AgentCapabilityAda
             configuration: request.configuration,
             prompt: promptText,
             capability: 'findings',
+            ...(options.expectJson && options.schema ? { outputSchema: options.schema } : {}),
             mapCliOutput: (output) => {
                 if (options.expectJson && options.schema)
                     return (0, agent_findings_response_policy_1.interpretFindingsResponse)(output, options);
@@ -72774,6 +73341,7 @@ class LanguageAgentAdapter extends agent_capability_adapter_1.AgentCapabilityAda
             configuration: request.configuration,
             prompt: promptText,
             capability: 'language',
+            ...(options.expectJson && options.schema ? { outputSchema: options.schema } : {}),
             mapCliOutput: (output) => {
                 if (options.expectJson && options.schema)
                     return (0, agent_findings_response_policy_1.interpretFindingsResponse)(output, options);
@@ -73245,18 +73813,20 @@ exports.GitCliRepository = void 0;
 const exec = __importStar(__nccwpck_require__(1757));
 const logger_1 = __nccwpck_require__(91151);
 const version_policy_1 = __nccwpck_require__(8381);
+const git_authentication_environment_1 = __nccwpck_require__(16535);
 /**
  * Repository for Git operations executed via CLI (exec).
  * Isolated to allow unit tests with mocked @actions/exec.
  */
 class GitCliRepository {
-    constructor() {
+    constructor(token) {
+        this.token = token;
         this.fetchRemoteBranches = async () => {
             try {
                 (0, logger_1.logDebugInfo)('Fetching tags and forcing fetch...');
-                await exec.exec('git', ['fetch', '--tags', '--force']);
+                await this.git(['fetch', '--tags', '--force']);
                 (0, logger_1.logDebugInfo)('Fetching all remote branches with verbose output...');
-                await exec.exec('git', ['fetch', '--all', '-v']);
+                await this.git(['fetch', '--all', '-v']);
                 (0, logger_1.logDebugInfo)('Successfully fetched all remote branches.');
             }
             catch (error) {
@@ -73267,7 +73837,7 @@ class GitCliRepository {
         this.getLatestTag = async () => {
             try {
                 (0, logger_1.logDebugInfo)('Fetching the latest tag...');
-                await exec.exec('git', ['fetch', '--tags']);
+                await this.git(['fetch', '--tags']);
                 const tags = [];
                 await exec.exec('git', ['tag', '--sort=-creatordate'], {
                     listeners: {
@@ -73329,6 +73899,12 @@ class GitCliRepository {
             }
             return undefined;
         };
+    }
+    async git(args) {
+        const environment = (0, git_authentication_environment_1.buildGitAuthenticationEnvironment)(this.token);
+        return environment
+            ? exec.exec('git', args, { env: environment })
+            : exec.exec('git', args);
     }
 }
 exports.GitCliRepository = GitCliRepository;
@@ -75552,6 +76128,7 @@ class SpecificCliAdapter {
             timeoutMs: request.timeoutMs,
             cwd: request.cwd,
             signal: request.signal,
+            ...(request.outputSchema ? { outputSchema: request.outputSchema } : {}),
         });
     }
 }
@@ -77982,7 +78559,7 @@ exports.PULL_REQUEST_DESCRIPTION_MODES = [
     'preserve',
     'disabled',
 ];
-exports.DEFAULT_PULL_REQUEST_DESCRIPTION_MODE = 'replace';
+exports.DEFAULT_PULL_REQUEST_DESCRIPTION_MODE = 'append';
 exports.MANAGED_PULL_REQUEST_DESCRIPTION_START = '<!-- copilot:managed-pr-description -->';
 exports.MANAGED_PULL_REQUEST_DESCRIPTION_END = '<!-- /copilot:managed-pr-description -->';
 /** Normalizes public configuration while keeping invalid values safe and backwards compatible. */
@@ -78872,6 +79449,7 @@ const agent_capability_composition_root_1 = __nccwpck_require__(85079);
 const issue_use_case_composition_1 = __nccwpck_require__(21239);
 const organization_members_composition_root_1 = __nccwpck_require__(50603);
 const project_board_composition_root_1 = __nccwpck_require__(37194);
+const actor_authorization_composition_root_1 = __nccwpck_require__(233);
 function createIssueUseCaseCompositionRoot() {
     const issueMetadata = new issue_metadata_repository_1.IssueMetadataRepository((0, github_issue_client_factory_1.createIssueMetadataClient)(), (0, github_project_client_factory_1.createGraphqlTransportClient)());
     const issueContent = new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
@@ -78903,7 +79481,7 @@ function createIssueUseCaseCompositionRoot() {
         deployAdded: new label_deploy_added_use_case_1.DeployAddedUseCase(new workflow_dispatch_repository_1.WorkflowDispatchRepository((0, github_workflow_client_factory_1.createWorkflowDispatchClient)()), moveIssueToInProgress),
         deployedAdded: new label_deployed_added_use_case_1.DeployedAddedUseCase(),
     };
-    return (0, issue_use_case_composition_1.composeIssueUseCase)(new recommend_steps_use_case_1.RecommendStepsUseCase(issueContent, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), new answer_issue_help_use_case_1.AnswerIssueHelpUseCase(issueNotification, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps);
+    return (0, issue_use_case_composition_1.composeIssueUseCase)(new recommend_steps_use_case_1.RecommendStepsUseCase(issueContent, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), new answer_issue_help_use_case_1.AnswerIssueHelpUseCase(issueNotification, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
 }
 
 
@@ -78997,7 +79575,7 @@ function createSingleActionUseCaseCompositionRoot() {
     const repositoryTagPort = new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)());
     const repositoryReleasePort = new repository_release_publication_repository_1.RepositoryReleasePublicationRepository((0, github_release_client_factory_1.createReleaseClient)());
     const issueDescriptionQueryPort = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
-    return new single_action_use_case_1.SingleActionUseCase(new deployed_action_use_case_1.DeployedActionUseCase((0, issue_labels_composition_root_1.createIssueLabelRepository)(), (0, issue_interaction_composition_root_1.createIssueClosureRepository)(), new merge_repository_1.MergeRepository((0, github_branch_client_factory_1.createBranchMergeClient)())), new publish_github_action_use_case_1.PublishGithubActionUseCase(repositoryTagPort, repositoryReleasePort), new create_release_use_case_1.CreateReleaseUseCase(repositoryReleasePort), new create_tag_use_case_1.CreateTagUseCase(repositoryTagPort), new think_use_case_1.ThinkUseCase(issueDescriptionQueryPort, (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), createDetectPotentialProblemsUseCase(), new recommend_steps_use_case_1.RecommendStepsUseCase(issueDescriptionQueryPort, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)());
+    return new single_action_use_case_1.SingleActionUseCase(new deployed_action_use_case_1.DeployedActionUseCase((0, issue_labels_composition_root_1.createIssueLabelRepository)(), (0, issue_interaction_composition_root_1.createIssueClosureRepository)(), new merge_repository_1.MergeRepository((0, github_branch_client_factory_1.createBranchMergeClient)())), new publish_github_action_use_case_1.PublishGithubActionUseCase(repositoryTagPort, repositoryReleasePort), new create_release_use_case_1.CreateReleaseUseCase(repositoryReleasePort), new create_tag_use_case_1.CreateTagUseCase(repositoryTagPort), new think_use_case_1.ThinkUseCase(issueDescriptionQueryPort, (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), createDetectPotentialProblemsUseCase(), new recommend_steps_use_case_1.RecommendStepsUseCase(issueDescriptionQueryPort, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
 }
 function createIssueCommentUseCaseCompositionRoot() {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();
@@ -79006,7 +79584,7 @@ function createIssueCommentUseCaseCompositionRoot() {
     const fixer = (0, agent_capability_composition_root_1.createFixerQueryPort)();
     const gitCommit = new git_commit_adapter_1.GitCommitAdapter();
     const pullRequestDescription = new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), (0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
-    return new issue_comment_use_case_1.IssueCommentUseCase(new check_issue_comment_language_use_case_1.CheckIssueCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), gitCommit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution, bugbot.telemetry), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules));
+    return new issue_comment_use_case_1.IssueCommentUseCase(new check_issue_comment_language_use_case_1.CheckIssueCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer, gitCommit), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), gitCommit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution, bugbot.telemetry), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules));
 }
 function createPullRequestReviewCommentUseCaseCompositionRoot() {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();
@@ -79015,10 +79593,10 @@ function createPullRequestReviewCommentUseCaseCompositionRoot() {
     const fixer = (0, agent_capability_composition_root_1.createFixerQueryPort)();
     const gitCommit = new git_commit_adapter_1.GitCommitAdapter();
     const pullRequestDescription = new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), (0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
-    return new pull_request_review_comment_use_case_1.PullRequestReviewCommentUseCase(new check_pull_request_comment_language_use_case_1.CheckPullRequestCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), gitCommit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution, bugbot.telemetry), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules));
+    return new pull_request_review_comment_use_case_1.PullRequestReviewCommentUseCase(new check_pull_request_comment_language_use_case_1.CheckPullRequestCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer, gitCommit), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), gitCommit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution, bugbot.telemetry), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules));
 }
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort) {
-    return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, issue_interaction_composition_root_1.createIssueNotificationRepository)()), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase(projectBoardCommandPort, (0, issue_labels_composition_root_1.createIssueLabelRepository)(), new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)())), createDetectPotentialProblemsUseCase(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)());
+    return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, issue_interaction_composition_root_1.createIssueNotificationRepository)()), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase(projectBoardCommandPort, (0, issue_labels_composition_root_1.createIssueLabelRepository)(), new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)())), createDetectPotentialProblemsUseCase(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
 }
 function createMainRunRouteCompositionRoot(projectBoardCommandPort) {
     // Composition is scoped to one main run. Each route is built only when it is
@@ -79151,6 +79729,7 @@ const project_board_composition_root_1 = __nccwpck_require__(37194);
 const timer_delay_adapter_1 = __nccwpck_require__(71942);
 const detect_potential_problems_use_case_1 = __nccwpck_require__(6287);
 const bugbot_composition_root_1 = __nccwpck_require__(67395);
+const actor_authorization_composition_root_1 = __nccwpck_require__(233);
 function createPullRequestUseCaseCompositionRoot() {
     const issueLifecycle = new issue_lifecycle_repository_1.IssueLifecycleRepository((0, github_issue_client_factory_1.createIssueLifecycleClient)());
     const issueContent = new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
@@ -79175,7 +79754,7 @@ function createPullRequestUseCaseCompositionRoot() {
         checkPriorityPullRequestSize: new check_priority_pull_request_size_use_case_1.CheckPriorityPullRequestSizeUseCase(projectBoard.command),
         closeIssueAfterMerging: new close_issue_after_merging_use_case_1.CloseIssueAfterMergingUseCase(issueClosure),
     };
-    return (0, pull_request_use_case_composition_1.composePullRequestUseCase)(new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase(pullRequestLifecycle, issueContent, organizationMembers, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps, new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.context, bugbot.publication, bugbot.resolution, bugbot.telemetry));
+    return (0, pull_request_use_case_composition_1.composePullRequestUseCase)(new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase(pullRequestLifecycle, issueContent, organizationMembers, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps, new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.context, bugbot.publication, bugbot.resolution, bugbot.telemetry), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
 }
 
 
@@ -79399,6 +79978,32 @@ function isWithin(root, target) {
 
 /***/ }),
 
+/***/ 16535:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildGitAuthenticationEnvironment = buildGitAuthenticationEnvironment;
+/**
+ * Builds one-process GitHub HTTPS authentication without modifying git config,
+ * the remote URL, or the environment inherited by an agent subprocess.
+ */
+function buildGitAuthenticationEnvironment(token, environment = process.env) {
+    if (!token?.trim())
+        return undefined;
+    const authorization = Buffer.from(`x-access-token:${token}`).toString('base64');
+    return {
+        ...Object.fromEntries(Object.entries(environment).filter((entry) => entry[1] !== undefined)),
+        GIT_CONFIG_COUNT: '1',
+        GIT_CONFIG_KEY_0: 'http.extraheader',
+        GIT_CONFIG_VALUE_0: `AUTHORIZATION: basic ${authorization}`,
+    };
+}
+
+
+/***/ }),
+
 /***/ 18606:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -79440,18 +80045,39 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GitCommitAdapter = void 0;
 const exec = __importStar(__nccwpck_require__(1757));
+const git_authentication_environment_1 = __nccwpck_require__(16535);
+const untrusted_command_environment_1 = __nccwpck_require__(2304);
 class GitCommitAdapter {
     constructor(executeCommand = (program, args, options) => options
-        ? exec.exec(program, args, { listeners: { stdout: options.stdout } })
+        ? exec.exec(program, args, {
+            ...(options.stdout ? { listeners: { stdout: options.stdout } } : {}),
+            ...(options.env ? { env: options.env } : {}),
+        })
         : exec.exec(program, args)) {
         this.executeCommand = executeCommand;
     }
     async execute(program, args, options) {
-        return options ? this.executeCommand(program, args, options) : this.executeCommand(program, args);
+        if (!options?.untrusted)
+            return options ? this.executeCommand(program, args, options) : this.executeCommand(program, args);
+        if (options.env)
+            throw new Error('Untrusted command execution does not accept a caller-supplied environment.');
+        const runtime = (0, untrusted_command_environment_1.prepareUntrustedCommandEnvironment)();
+        try {
+            return await this.executeCommand(program, args, {
+                ...(options.stdout ? { stdout: options.stdout } : {}),
+                env: runtime.environment,
+            });
+        }
+        finally {
+            runtime.cleanup();
+        }
     }
     async configureAuthor(name, email) {
         await this.execute('git', ['config', 'user.name', name]);
         await this.execute('git', ['config', 'user.email', email]);
+    }
+    async fetch(branch, token) {
+        await this.executeAuthenticated(['fetch', 'origin', branch], token);
     }
     async stageAll() {
         await this.execute('git', ['add', '-A']);
@@ -79463,8 +80089,21 @@ class GitCommitAdapter {
     async commit(message) {
         await this.execute('git', ['commit', '-m', message]);
     }
-    async push(branch) {
-        await this.execute('git', ['push', 'origin', branch]);
+    async push(branch, token) {
+        await this.executeAuthenticated(['push', 'origin', branch], token);
+    }
+    async executeAuthenticated(args, token) {
+        if (!token?.trim()) {
+            await this.execute('git', args);
+            return;
+        }
+        const environment = (0, git_authentication_environment_1.buildGitAuthenticationEnvironment)(token);
+        await this.execute('git', args, {
+            // Supply authentication only to this trusted git subprocess. The
+            // agent process never receives this value and nothing is persisted
+            // in the repository's git configuration or remote URL.
+            ...(environment ? { env: environment } : {}),
+        });
     }
 }
 exports.GitCommitAdapter = GitCommitAdapter;
@@ -79923,6 +80562,7 @@ exports.SetupCredentialValidationAdapter = SetupCredentialValidationAdapter;
 function endpointFor(requirement) {
     switch (requirement.name) {
         case 'OPENAI_API_KEY':
+        case 'CODEX_API_KEY':
         case 'CODEX_ACCESS_TOKEN':
             return { url: new URL('https://api.openai.com/v1/models'), auth: 'bearer' };
         case 'ANTHROPIC_API_KEY':
@@ -80027,6 +80667,7 @@ const INPUT_BY_SECRET = {
     OPENROUTER_API_KEY: 'check_openrouter',
     CURSOR_API_KEY: 'check_cursor',
     OPENCODE_API_KEY: 'check_opencode',
+    CODEX_API_KEY: 'check_codex_api_key',
     CODEX_ACCESS_TOKEN: 'check_codex',
 };
 const JOB_BY_SECRET = {
@@ -80037,6 +80678,7 @@ const JOB_BY_SECRET = {
     OPENROUTER_API_KEY: 'Verify OPENROUTER_API_KEY',
     CURSOR_API_KEY: 'Verify CURSOR_API_KEY',
     OPENCODE_API_KEY: 'Verify OPENCODE_API_KEY',
+    CODEX_API_KEY: 'Verify CODEX_API_KEY',
     CODEX_ACCESS_TOKEN: 'Verify CODEX_ACCESS_TOKEN',
 };
 /** Dispatches the repository-owned health workflow; it cannot read or mutate Secret values. */
@@ -80303,6 +80945,61 @@ class TimerWorkflowPollingDelayAdapter {
     }
 }
 exports.TimerWorkflowPollingDelayAdapter = TimerWorkflowPollingDelayAdapter;
+
+
+/***/ }),
+
+/***/ 2304:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.prepareUntrustedCommandEnvironment = prepareUntrustedCommandEnvironment;
+const node_fs_1 = __nccwpck_require__(87561);
+const node_os_1 = __nccwpck_require__(70612);
+const node_path_1 = __nccwpck_require__(49411);
+const ALLOWED_VARIABLES = [
+    'PATH',
+    'LANG',
+    'LANGUAGE',
+    'LC_ALL',
+    'TERM',
+    'COLORTERM',
+    'NO_COLOR',
+    'FORCE_COLOR',
+    'CI',
+    'GITHUB_ACTIONS',
+    'GITHUB_WORKSPACE',
+    'RUNNER_OS',
+    'RUNNER_ARCH',
+    'RUNNER_TEMP',
+    'RUNNER_TOOL_CACHE',
+    'TMPDIR',
+    'TMP',
+    'TEMP',
+    'SystemRoot',
+    'ComSpec',
+    'PATHEXT',
+];
+/**
+ * Repository verification commands are untrusted process boundaries. They get
+ * a fresh home and only non-secret process metadata, never agent/GitHub/cloud
+ * credentials or paths to local agent authentication stores.
+ */
+function prepareUntrustedCommandEnvironment(source = process.env) {
+    const runtimeHome = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-verify-runtime-'));
+    const environment = { HOME: runtimeHome };
+    for (const variable of ALLOWED_VARIABLES) {
+        const value = source[variable];
+        if (value !== undefined)
+            environment[variable] = value;
+    }
+    return {
+        environment,
+        cleanup: () => (0, node_fs_1.rmSync)(runtimeHome, { recursive: true, force: true }),
+    };
+}
 
 
 /***/ }),
@@ -81905,12 +82602,23 @@ exports.PROJECT_CONTEXT_INSTRUCTION = `**Important – use full project context:
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.redactSecretLikeValues = redactSecretLikeValues;
+exports.redactKnownEnvironmentSecrets = redactKnownEnvironmentSecrets;
 /** Redacts common credential formats from text before it reaches logs or GitHub. */
 function redactSecretLikeValues(value) {
     return value
         .replace(/\bBearer\s+[^\s,;]+/giu, 'Bearer [REDACTED]')
         .replace(/\b(token|api[_-]?key|secret|password|client[_-]?secret)\s*[:=]\s*["']?[^\s,"']+/giu, '$1=[REDACTED]')
         .replace(/\b(?:gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+|sk-[A-Za-z0-9_-]+)\b/gu, '[REDACTED]');
+}
+/** Redacts exact credential values known to the current process, including non-standard token formats. */
+function redactKnownEnvironmentSecrets(value, environment = process.env) {
+    let redacted = value;
+    for (const [name, secret] of Object.entries(environment)) {
+        if (!secret || secret.length < 8 || !/(?:TOKEN|SECRET|PASSWORD|API[_-]?KEY|PRIVATE[_-]?KEY)$/iu.test(name))
+            continue;
+        redacted = redacted.split(secret).join('[REDACTED]');
+    }
+    return redacted;
 }
 
 
@@ -88472,7 +89180,10 @@ const cli_program_1 = __nccwpck_require__(40149);
 const program = (0, cli_program_1.createCliProgram)();
 exports.program = program;
 if (typeof process.env.JEST_WORKER_ID === 'undefined') {
-    program.parse(process.argv);
+    void program.parseAsync(process.argv).catch((error) => {
+        console.error(error instanceof Error ? error.message : String(error));
+        process.exitCode = 1;
+    });
 }
 
 })();

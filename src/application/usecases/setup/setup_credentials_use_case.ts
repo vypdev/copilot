@@ -105,7 +105,13 @@ export class SetupCredentialsUseCase {
                 ? await this.prompt.requestWorkflowPat(requirement, existing ? checks[checks.length - 1] : undefined)
                 : await this.prompt.requestApiKey(requirement, existing ? checks[checks.length - 1] : undefined);
             if (!value) {
-                if (!existing) checks.push({ name: requirement.name, status: 'missing', message: 'No value was provided.' });
+                if (!existing) checks.push(runnerAuthenticationCanSatisfyRequirement(requirement)
+                    ? {
+                        name: requirement.name,
+                        status: 'not_required',
+                        message: 'No fallback credential was provided; the target runner must pass the Codex login preflight.',
+                    }
+                    : { name: requirement.name, status: 'missing', message: 'No value was provided.' });
                 if (hasAlternative(requirement)) continue;
                 throw new ApplicationError(`${requirement.name} is required by the selected workflows.`, 'configuration');
             }
@@ -121,12 +127,11 @@ export class SetupCredentialsUseCase {
             markRequirementSatisfied(requirement, satisfiedGroups);
         }
 
-        const unsatisfiedGroup = requirements.find(requirement =>
-            hasAlternative(requirement) && !isRequirementSatisfied(requirement, satisfiedGroups),
-        );
+        const unsatisfiedGroup = [...new Set(requirements.flatMap(requirement => requirement.alternativeGroups ?? []))]
+            .find(group => !satisfiedGroups.has(group) && !runnerAuthenticationCanSatisfyGroup(requirements, group));
         if (unsatisfiedGroup) {
             const groupNames = requirements
-                .filter(requirement => intersectsGroups(requirement, unsatisfiedGroup))
+                .filter(requirement => requirement.alternativeGroups?.includes(unsatisfiedGroup))
                 .map(requirement => requirement.name)
                 .join(' or ');
             throw new ApplicationError(`At least one of ${groupNames} is required by the selected workflows.`, 'configuration');
@@ -147,9 +152,21 @@ function hasAlternative(requirement: SetupCredentialRequirement): boolean {
     return (requirement.alternativeGroups?.length ?? 0) > 0;
 }
 
+function runnerAuthenticationCanSatisfyRequirement(requirement: SetupCredentialRequirement): boolean {
+    return Boolean(requirement.alternativeGroups?.length)
+        && requirement.alternativeGroups!.every(group => requirement.runnerAuthenticationGroups?.includes(group));
+}
+
+function runnerAuthenticationCanSatisfyGroup(
+    requirements: readonly SetupCredentialRequirement[],
+    group: string,
+): boolean {
+    return requirements.some(requirement => requirement.runnerAuthenticationGroups?.includes(group));
+}
+
 function isRequirementSatisfied(requirement: SetupCredentialRequirement, satisfiedGroups: ReadonlySet<string>): boolean {
     return hasAlternative(requirement)
-        ? requirement.alternativeGroups!.some(group => satisfiedGroups.has(group))
+        ? requirement.alternativeGroups!.every(group => satisfiedGroups.has(group))
         : satisfiedGroups.has(requirement.name);
 }
 
@@ -159,11 +176,6 @@ function markRequirementSatisfied(requirement: SetupCredentialRequirement, satis
         return;
     }
     satisfiedGroups.add(requirement.name);
-}
-
-function intersectsGroups(left: SetupCredentialRequirement, right: SetupCredentialRequirement): boolean {
-    const rightGroups = new Set(right.alternativeGroups ?? []);
-    return (left.alternativeGroups ?? []).some(group => rightGroups.has(group));
 }
 
 function isAcceptedCredentialCheck(

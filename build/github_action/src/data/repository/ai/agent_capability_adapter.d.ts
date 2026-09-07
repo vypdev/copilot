@@ -13,6 +13,7 @@ export declare abstract class AgentCapabilityAdapter {
         prompt: string;
         capability: AgentCapability;
         mapCliOutput: (output: string) => T;
+        outputSchema?: Record<string, unknown>;
     }): Promise<T | undefined>;
     private addEffortInstruction;
 }

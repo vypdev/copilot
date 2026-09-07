@@ -5,10 +5,13 @@ export const TRANSLATION_RESPONSE_SCHEMA = {
     properties: {
         translatedText: {
             type: 'string',
+            minLength: 1,
+            maxLength: 12_000,
             description: 'The text translated to the requested locale. Required. Must not be empty.',
         },
         reason: {
             type: 'string',
+            maxLength: 2_000,
             description:
                 'Optional: reason why translation could not be produced or was partial (e.g. ambiguous input).',
         },
@@ -22,6 +25,8 @@ export const THINK_RESPONSE_SCHEMA = {
     properties: {
         answer: {
             type: 'string',
+            minLength: 1,
+            maxLength: 12_000,
             description: 'The concise answer to the user question. Required.',
         },
     },

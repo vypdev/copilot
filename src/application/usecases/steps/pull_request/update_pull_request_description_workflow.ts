@@ -102,14 +102,13 @@ export async function runUpdatePullRequestDescriptionWorkflow(
             prompt,
         });
         const generatedDescription = sanitizeAgentMarkdown(extractDescription(response));
+        if (!generatedDescription.trim()) {
+            return newResult(taskId, false, true, ['Configured agent did not return a PR description.']);
+        }
         const pullRequestBody = mode === 'replace'
             ? generatedDescription
             : mergeManagedPullRequestDescription(details?.body ?? param.pullRequest.body, generatedDescription);
         logDebugInfo(`UpdatePullRequestDescription: agent response received. Description length=${pullRequestBody.length}.`);
-        if (!pullRequestBody.trim()) {
-            return newResult(taskId, false, true, ['Configured agent did not return a PR description.']);
-        }
-
         await dependencies.pullRequestDescriptionCommandPort.updateDescription(
             param.owner,
             param.repo,

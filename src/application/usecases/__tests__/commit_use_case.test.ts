@@ -118,4 +118,29 @@ describe('CommitUseCase', () => {
     expect(results[0].executed).toBe(true);
     expect(results[0].steps).toContain('Error processing the commits.');
   });
+
+  it('keeps non-agent push automation but skips every agent step for an unauthorized members-only actor', async () => {
+    const authorization = { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(false) };
+    const useCase = new CommitUseCase(
+      { invoke: mockNotifyInvoke } as any,
+      { invoke: mockCheckChangesInvoke } as any,
+      { invoke: mockDetectProblemsInvoke } as any,
+      { invoke: mockCheckProgressInvoke } as any,
+      authorization,
+    );
+    const param = minimalExecution({
+      owner: 'org',
+      repo: 'repo',
+      actor: 'external-user',
+      tokens: { token: 'token' },
+      ai: { getAiMembersOnly: () => true },
+    });
+
+    await useCase.invoke(param);
+
+    expect(mockNotifyInvoke).toHaveBeenCalledWith(param);
+    expect(mockCheckChangesInvoke).toHaveBeenCalledWith(param);
+    expect(mockCheckProgressInvoke).not.toHaveBeenCalled();
+    expect(mockDetectProblemsInvoke).not.toHaveBeenCalled();
+  });
 });

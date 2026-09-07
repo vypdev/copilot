@@ -108,15 +108,13 @@ Single actions that **throw an error** if the last step fails: `publish_github_a
 
 All AI features use the configured agent CLI and explicit model contract. The runtime is selected with `agent-provider`; the model provider and model are selected with `agent-model-provider` and `agent-model`. See [Agent CLI configuration](/agents/cli-configuration).
 
-<Warning>
-Codex is the default runtime for the repository's AI feature paths. OpenCode remains a supported and validated alternative. Cursor is WIP and must not be described as production-validated; see [Cursor runtime (WIP)](/agents/cursor-wip).
-</Warning>
+Codex is the default runtime for the repository's AI feature paths. OpenCode and Cursor are supported alternatives with deterministic adapter, policy, and failure-path coverage. Each deployment must still run an explicitly authorized authenticated smoke test for the chosen runtime, model, account, and runner image.
 
 | Runtime | Status | Documentation |
 | --- | --- | --- |
 | Codex with OpenAI | Default CLI path; verify authentication and model entitlement before production use | [Codex and OpenAI](/agents/codex-openai) |
 | OpenCode | Supported validated alternative | [OpenCode runtime](/agents/opencode) |
-| Cursor | WIP; authenticated smoke test pending | [Cursor runtime (WIP)](/agents/cursor-wip) |
+| Cursor | Supported; per-environment authenticated smoke test required | [Cursor runtime](/agents/cursor) |
 
 | Feature | Where it runs | Description |
 |--------|----------------|-------------|
@@ -146,7 +144,7 @@ the Action with the internal `queue-gate-only` mode and only the ephemeral
 `${{ github.token }}` read permissions; it admits the run and exits before project
 composition, agent provisioning, setup, or mutation work. The version-preparation and
 publication jobs depend on that gate transitively, so a failed or skipped admission
-cannot start a write-capable descendant. The setup templates use `vypdev/copilot@v3`
+cannot start a write-capable descendant. The setup templates use `vypdev/copilot@a39616557f384bcc633b94e43d9551b2b5205328 # v3`
 for this gate and therefore require a published v3 bundle that supports
 `queue-gate-only`.
 
@@ -185,8 +183,10 @@ jobs:
   copilot-issues:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: vypdev/copilot@v3
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: vypdev/copilot@a39616557f384bcc633b94e43d9551b2b5205328 # v3
         with:
           token: ${{ secrets.PAT }}
           project-ids: '2,3'

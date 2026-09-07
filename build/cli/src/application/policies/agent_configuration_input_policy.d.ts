@@ -15,5 +15,4 @@ export declare function buildAgentTaskConfiguration(values: AgentTaskConfigurati
     planner?: Partial<AgentTaskConfigurationValues>;
     reviewer?: Partial<AgentTaskConfigurationValues>;
     tester?: Partial<AgentTaskConfigurationValues>;
-    release?: Partial<AgentTaskConfigurationValues>;
 }, environment: AgentConfigurationEnvironment): AgentTaskConfiguration;

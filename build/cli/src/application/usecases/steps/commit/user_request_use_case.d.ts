@@ -7,6 +7,7 @@ import type { Execution } from "../../../../data/model/execution";
 import type { FixerQueryPort } from "../../../ports/agent_fixer_ports";
 import { ParamUseCase } from "../../base/param_usecase";
 import { Result } from "../../../../data/model/result";
+import type { GitCommitPort } from '../../../ports/git_ports';
 export interface DoUserRequestParam {
     execution: Execution;
     userComment: string;
@@ -14,7 +15,8 @@ export interface DoUserRequestParam {
 }
 export declare class DoUserRequestUseCase implements ParamUseCase<DoUserRequestParam, Result[]> {
     private readonly aiRepository;
+    private readonly gitCommitPort;
     taskId: string;
-    constructor(aiRepository: FixerQueryPort);
+    constructor(aiRepository: FixerQueryPort, gitCommitPort: GitCommitPort);
     invoke(param: DoUserRequestParam): Promise<Result[]>;
 }

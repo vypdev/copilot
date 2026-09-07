@@ -23,7 +23,8 @@ export function registerDetectPotentialProblemsCommand(program: Command): void {
       const gitInfo = getGitInfo();
       if ('error' in gitInfo) {
         logError(gitInfo.error);
-        process.exit(1);
+        process.exitCode = 1;
+        return;
       }
       const issue = cleanCliArgument(options.issue);
       if (resolveDetectIssueNumber(issue) === undefined) {
@@ -66,7 +67,7 @@ export function registerDetectPotentialProblemsCommand(program: Command): void {
         const error = err instanceof Error ? err : new Error(String(err));
         console.error('❌ Error running detect-potential-problems:', error.message);
         if (options.debug) console.error(err);
-        process.exit(1);
+        process.exitCode = 1;
       }
     });
 }

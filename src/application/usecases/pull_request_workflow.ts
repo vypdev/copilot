@@ -4,11 +4,13 @@ import { logDebugInfo, logError } from "../ports/logging_ports";
 import type { ParamUseCase } from "./base/param_usecase";
 import type { PullRequestWorkflowSteps } from "./pull_request_workflow_steps";
 import { ApplicationError } from '../errors/application_error';
+import type { ActorAuthorizationPort } from '../ports/actor_authorization_ports';
 
 export interface PullRequestWorkflowPorts {
   updatePullRequestDescriptionUseCase: ParamUseCase<Execution, Result[]>;
   reviewPotentialProblemsUseCase?: ParamUseCase<Execution, Result[]>;
   workflowSteps: PullRequestWorkflowSteps;
+  actorAuthorizationPort?: ActorAuthorizationPort;
 }
 
 /** Coordinates pull-request lifecycle actions while preserving their sequential order. */
@@ -19,6 +21,7 @@ export async function runPullRequestWorkflow(
 ): Promise<Result[]> {
   try {
     logPullRequestState(param);
+    const agentAllowed = await canUseAgent(param, ports.actorAuthorizationPort);
     if (param.pullRequest.isOpened) {
       const steps: Array<ParamUseCase<Execution, Result[]>> = [
         ports.workflowSteps.updateTitle,
@@ -30,18 +33,18 @@ export async function runPullRequestWorkflow(
         ports.workflowSteps.checkPriorityPullRequestSize,
       ];
       const results = await runSteps(param, steps);
-      if (shouldUpdatePullRequestDescriptionAutomatically(param)) {
+      if (agentAllowed && shouldUpdatePullRequestDescriptionAutomatically(param)) {
         results.push(...(await ports.updatePullRequestDescriptionUseCase.invoke(param)));
       }
-      results.push(...(await runPullRequestReview(param, ports)));
+      if (agentAllowed) results.push(...(await runPullRequestReview(param, ports)));
       return results;
     }
 
     if (param.pullRequest.isSynchronize) {
-      const results = shouldUpdatePullRequestDescriptionAutomatically(param)
+      const results = agentAllowed && shouldUpdatePullRequestDescriptionAutomatically(param)
         ? await ports.updatePullRequestDescriptionUseCase.invoke(param)
         : [];
-      results.push(...(await runPullRequestReview(param, ports)));
+      if (agentAllowed) results.push(...(await runPullRequestReview(param, ports)));
       return results;
     }
 
@@ -66,6 +69,20 @@ export async function runPullRequestWorkflow(
     ];
   }
   return [];
+}
+
+async function canUseAgent(
+  param: Execution,
+  authorization: ActorAuthorizationPort | undefined,
+): Promise<boolean> {
+  if (!param.ai?.getAiMembersOnly?.()) return true;
+  if (!authorization) return false;
+  return authorization.isActorAllowedToModifyFiles(
+    param.owner,
+    param.repo,
+    param.actor,
+    param.tokens.token,
+  );
 }
 
 function shouldUpdatePullRequestDescriptionAutomatically(param: Execution): boolean {

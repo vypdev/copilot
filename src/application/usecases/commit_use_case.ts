@@ -4,6 +4,7 @@ import { logDebugInfo, logError, logInfo } from "../ports/logging_ports";
 import { getTaskEmoji } from "../../utils/task_emoji";
 import { ParamUseCase } from "./base/param_usecase";
 import { CheckProgressUseCase } from "./actions/check_progress_use_case";
+import type { ActorAuthorizationPort } from "../ports/actor_authorization_ports";
 
 export class CommitUseCase implements ParamUseCase<Execution, Result[]> {
     taskId: string = 'CommitUseCase';
@@ -13,6 +14,7 @@ export class CommitUseCase implements ParamUseCase<Execution, Result[]> {
         private readonly checkChangesIssueSizeUseCase: ParamUseCase<Execution, Result[]>,
         private readonly detectPotentialProblemsUseCase: ParamUseCase<Execution, Result[]>,
         private readonly checkProgressUseCase: CheckProgressUseCase,
+        private readonly actorAuthorizationPort?: ActorAuthorizationPort,
     ) {}
 
     async invoke(param: Execution): Promise<Result[]> {
@@ -31,8 +33,19 @@ export class CommitUseCase implements ParamUseCase<Execution, Result[]> {
 
             results.push(...(await this.notifyNewCommitUseCase.invoke(param)));
             results.push(...(await this.checkChangesIssueSizeUseCase.invoke(param)));
-            results.push(...(await this.checkProgressUseCase.invoke(param)));
-            results.push(...(await this.detectPotentialProblemsUseCase.invoke(param)));
+            const agentAllowed = !param.ai?.getAiMembersOnly?.()
+                || Boolean(this.actorAuthorizationPort && await this.actorAuthorizationPort.isActorAllowedToModifyFiles(
+                    param.owner,
+                    param.repo,
+                    param.actor,
+                    param.tokens.token,
+                ));
+            if (agentAllowed) {
+                results.push(...(await this.checkProgressUseCase.invoke(param)));
+                results.push(...(await this.detectPotentialProblemsUseCase.invoke(param)));
+            } else {
+                logInfo('Skipping push agent analysis because ai-members-only is enabled and the actor is not authorized.');
+            }
         } catch (error) {
             logError(error);
             results.push(

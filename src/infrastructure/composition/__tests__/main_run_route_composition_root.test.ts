@@ -110,7 +110,7 @@ describe("main run route composition root", () => {
       mockContext,
       gitCommit,
     );
-    expect(DoUserRequestUseCase).toHaveBeenCalledWith(mockFixer);
+    expect(DoUserRequestUseCase).toHaveBeenCalledWith(mockFixer, gitCommit);
     expect(RememberBugbotRuleUseCase).toHaveBeenCalledWith(mockRules);
     expect(IssueCommentUseCase).toHaveBeenCalledWith(
       expect.anything(),

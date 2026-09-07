@@ -5,8 +5,8 @@ import {
 } from '../pull_request_description';
 
 describe('pull request description policy', () => {
-    it('defaults invalid modes to replace', () => {
-        expect(normalizePullRequestDescriptionMode('unknown')).toBe('replace');
+    it('defaults invalid modes to append', () => {
+        expect(normalizePullRequestDescriptionMode('unknown')).toBe('append');
         expect(normalizePullRequestDescriptionMode(' APPEND ')).toBe('append');
     });
 

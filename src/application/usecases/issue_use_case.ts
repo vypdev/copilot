@@ -5,6 +5,7 @@ import { getTaskEmoji } from "../../utils/task_emoji";
 import { ParamUseCase } from "./base/param_usecase";
 import type { IssueWorkflowSteps } from "./issue_workflow_steps";
 import { runIssueWorkflow } from "./issue_workflow";
+import type { ActorAuthorizationPort } from '../ports/actor_authorization_ports';
 
 export class IssueUseCase implements ParamUseCase<Execution, Result[]> {
   taskId: string = "IssueUseCase";
@@ -13,6 +14,7 @@ export class IssueUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly recommendStepsUseCase: ParamUseCase<Execution, Result[]>,
     private readonly answerIssueHelpUseCase: ParamUseCase<Execution, Result[]>,
     private readonly workflowSteps: IssueWorkflowSteps,
+    private readonly actorAuthorizationPort?: ActorAuthorizationPort,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
@@ -21,6 +23,7 @@ export class IssueUseCase implements ParamUseCase<Execution, Result[]> {
       recommendStepsUseCase: this.recommendStepsUseCase,
       answerIssueHelpUseCase: this.answerIssueHelpUseCase,
       workflowSteps: this.workflowSteps,
+      actorAuthorizationPort: this.actorAuthorizationPort,
     });
   }
 }

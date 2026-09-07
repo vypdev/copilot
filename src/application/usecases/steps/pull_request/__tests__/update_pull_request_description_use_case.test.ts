@@ -98,7 +98,8 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
     expect(prompt).toContain('develop');
     expect(prompt).toContain('Issue description');
     expect(prompt).toContain('Closes #42');
-    expect(mockUpdateDescription).toHaveBeenCalledWith('o', 'r', 10, '## Summary\nPR does X.', 't');
+    expect(mockUpdateDescription).toHaveBeenCalledWith('o', 'r', 10, expect.stringContaining('## Summary\nPR does X.'), 't');
+    expect(mockUpdateDescription.mock.calls[0][3]).toContain('copilot:managed-pr-description');
     expect(results.some((r) => r.success === true)).toBe(true);
   });
 
