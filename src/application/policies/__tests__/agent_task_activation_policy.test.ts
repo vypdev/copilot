@@ -64,4 +64,26 @@ describe('activeAgentTasks', () => {
         const single = new SingleAction(ACTIONS.DETECT_POTENTIAL_PROBLEMS, '42', '', '', '');
         expect(activeAgentTasks(event('workflow_dispatch'), single)).toEqual(['findings', 'reviewer']);
     });
+
+    it('maps every agent-backed single action and explicit planning command', () => {
+        expect(activeAgentTasks(event('workflow_dispatch'), new SingleAction(ACTIONS.THINK, '', '', '', '')))
+            .toEqual(['planner']);
+        expect(activeAgentTasks(event('workflow_dispatch'), new SingleAction(ACTIONS.RECOMMEND_STEPS, '', '', '', '')))
+            .toEqual(['planner']);
+        expect(activeAgentTasks(event('workflow_dispatch'), new SingleAction(ACTIONS.CHECK_PROGRESS, '', '', '', '')))
+            .toEqual(['findings']);
+        expect(activeAgentTasks(event('workflow_dispatch'), new SingleAction('unsupported', '', '', '', '')))
+            .toEqual([]);
+        expect(activeAgentTasks(event('issue_comment', '/copilot diagnose failure'), noSingleAction(), 'vypbot'))
+            .toEqual(['planner']);
+        expect(activeAgentTasks(event('pull_request_review_comment', '/copilot description'), noSingleAction(), 'vypbot'))
+            .toEqual(['planner']);
+    });
+
+    it('handles malformed event payloads without provisioning extra agents', () => {
+        expect(activeAgentTasks(event('issues', '', { action: 42 }), noSingleAction())).toEqual([]);
+        expect(activeAgentTasks(event('issue_comment', '', { comment: null }), noSingleAction(), 'vypbot'))
+            .toEqual(['findings']);
+        expect(activeAgentTasks(event('unknown'), noSingleAction())).toEqual([]);
+    });
 });

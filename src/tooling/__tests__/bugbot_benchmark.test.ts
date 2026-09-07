@@ -42,4 +42,52 @@ describe('versioned Bugbot benchmark', () => {
       await rm(directory, { recursive: true, force: true });
     }
   });
+
+  it('rejects malformed corpora, duplicate cases, and unsafe numeric findings', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'bugbot-benchmark-'));
+    const path = join(directory, 'input.json');
+    const validCase = {
+      id: 'case-1',
+      language: 'typescript',
+      category: 'correctness',
+      description: 'Detect the defect',
+      file: 'src/example.ts',
+      startLine: 1,
+      diff: '+ defect',
+      expected: [],
+    };
+    try {
+      await writeFile(path, JSON.stringify({ schemaVersion: 2, cases: [] }));
+      await expect(loadBugbotBenchmark(path)).rejects.toThrow('Invalid Bugbot benchmark corpus');
+
+      await writeFile(path, JSON.stringify({ schemaVersion: 1, cases: [] }));
+      await expect(loadBugbotBenchmark(path)).rejects.toThrow('between 1 and 200 cases');
+
+      await writeFile(path, JSON.stringify({ schemaVersion: 1, cases: [validCase, validCase] }));
+      await expect(loadBugbotBenchmark(path)).rejects.toThrow('ids must be unique');
+
+      await writeFile(path, JSON.stringify({ schemaVersion: 1, cases: [{ ...validCase, startLine: 0 }] }));
+      await expect(loadBugbotBenchmark(path)).rejects.toThrow('Invalid Bugbot benchmark case');
+
+      await writeFile(path, JSON.stringify({ schemaVersion: 1, predictions: [] }));
+      await expect(loadBugbotPredictions(path)).rejects.toThrow('Invalid Bugbot benchmark predictions');
+
+      await writeFile(path, JSON.stringify({ schemaVersion: 1, predictions: { case: 'invalid' } }));
+      await expect(loadBugbotPredictions(path)).rejects.toThrow('predictions for case');
+
+      await writeFile(path, JSON.stringify({
+        schemaVersion: 1,
+        predictions: { case: [{ title: 'Finding', line: 0 }] },
+      }));
+      await expect(loadBugbotPredictions(path)).rejects.toThrow('Invalid line');
+
+      await writeFile(path, JSON.stringify({
+        schemaVersion: 1,
+        predictions: { case: [{ title: 'Finding', confidence: Number.NaN }] },
+      }));
+      await expect(loadBugbotPredictions(path)).rejects.toThrow('Invalid confidence');
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
 });

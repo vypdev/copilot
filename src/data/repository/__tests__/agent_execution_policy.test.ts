@@ -75,4 +75,39 @@ describe('enforceAgentExecutionPolicy', () => {
         expect(() => enforceAgentExecutionPolicy('opencode', 'fixer', ['run', '--agent', 'build']))
             .toThrow('requires the copilot-controlled-fixer agent');
     });
+
+    it('preserves already compliant runtime controls without duplicating them', () => {
+        expect(enforceAgentExecutionPolicy(undefined, 'reviewer', ['custom'])).toEqual(['custom']);
+        expect(enforceAgentExecutionPolicy('codex', undefined, ['exec', '-'])).toEqual(['exec', '-']);
+
+        const codex = enforceAgentExecutionPolicy('codex', 'reviewer', [
+            'exec',
+            '-sread-only',
+            '-anever',
+            '--strict-config',
+            '--ignore-user-config',
+            '--ignore-rules',
+            '--ephemeral',
+            '--config',
+            'approval_policy="never"',
+            '-',
+        ]);
+        expect(codex.filter((value) => value === '--strict-config')).toHaveLength(1);
+        expect(codex.at(-1)).toBe('-');
+
+        expect(enforceAgentExecutionPolicy('cursor', 'reviewer', ['-p', '--sandbox=enabled', '--plan']))
+            .toEqual(['-p', '--sandbox=enabled', '--plan']);
+        expect(enforceAgentExecutionPolicy('cursor', 'fixer', ['-p', '-f']))
+            .toEqual(expect.arrayContaining(['-f', '--sandbox', 'enabled']));
+        expect(enforceAgentExecutionPolicy('opencode', 'findings', [
+            'run', '--pure', '--agent=copilot-controlled-readonly',
+        ])).toEqual(['run', '--pure', '--agent=copilot-controlled-readonly']);
+    });
+
+    it('rejects invalid Cursor sandbox and read-only mode overrides', () => {
+        expect(() => enforceAgentExecutionPolicy('cursor', 'reviewer', ['-p', '--sandbox=unrestricted']))
+            .toThrow('sandbox to be enabled');
+        expect(() => enforceAgentExecutionPolicy('cursor', 'reviewer', ['-p', '--mode=agent']))
+            .toThrow('requires ask or plan mode');
+    });
 });

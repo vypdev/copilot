@@ -2,6 +2,7 @@ const {
   existsSync,
   readFileSync,
   readdirSync,
+  rmSync,
   rmdirSync,
   statSync,
   unlinkSync,
@@ -17,6 +18,22 @@ for (const bundlePath of bundlePaths) {
   const source = readFileSync(bundlePath, 'utf8');
   const normalized = source.replace(/[\t ]+$/gmu, '');
   if (normalized !== source) writeFileSync(bundlePath, normalized);
+}
+
+// The action and CLI packages publish only their bundled entry points. ncc also
+// emits declaration trees for them, but those trees are neither part of the npm
+// package nor stable across cold and warm compiler runs. Keeping them in git
+// makes an otherwise identical build fail validation on a clean CI runner.
+for (const bundle of ['github_action', 'cli']) {
+  const bundleRoot = join(repositoryRoot, 'build', bundle);
+  for (const entry of readdirSync(bundleRoot, { withFileTypes: true })) {
+    if (entry.name === 'index.js') continue;
+    const generatedPath = join(bundleRoot, entry.name);
+    if (!isInside(bundleRoot, generatedPath)) {
+      throw new Error(`Refusing to remove unexpected generated path: ${generatedPath}`);
+    }
+    rmSync(generatedPath, { recursive: true, force: true });
+  }
 }
 
 const apiDeclarationRoot = join(repositoryRoot, 'build', 'api', 'src');

@@ -1,3 +1,0 @@
-import type { PullRequestReviewCommentListQueryPort, PullRequestReviewCommentUpdatePort, PullRequestReviewThreadCommandPort } from "./pull_request_review_comment_ports";
-export interface BugbotPullRequestResolutionPort extends PullRequestReviewCommentListQueryPort, PullRequestReviewCommentUpdatePort, PullRequestReviewThreadCommandPort {
-}
