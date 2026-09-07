@@ -8,23 +8,22 @@ import type { BugbotContextPorts } from '../../../ports/bugbot_context_ports';
 import type { BugbotFindingPublicationPorts } from '../../../ports/bugbot_finding_publication_ports';
 import type { BugbotFindingResolutionPorts } from '../../../ports/bugbot_finding_resolution_ports';
 import { PullRequestReviewOperationError } from '../../../ports/pull_request_review_errors';
-import { buildBugbotPrompt } from './bugbot/build_bugbot_prompt';
 import { loadBugbotContext, type LoadBugbotContextOptions } from './bugbot/load_bugbot_context_use_case';
-import { applyDetectedFindings, prepareDetectedFindings } from './bugbot/apply_detected_findings';
+import { applyDetectedFindings } from './bugbot/apply_detected_findings';
 import type { PreparedBugbotFindings } from './bugbot/prepare_bugbot_findings';
-import { queryBugbotFindings } from './bugbot/query_bugbot_findings';
-import { reconcileResolvedFindingIds } from '../../../policies/bugbot_reconciliation_policy';
 import { projectBugbotFindingStatuses } from '../../../policies/bugbot_finding_status_policy';
 import type { BugbotContext } from './bugbot/types';
-import { findExistingFindingInfo } from './bugbot/types';
-import { applyCommentLimit } from './bugbot/limit_comments';
-import { BUGBOT_MAX_COMMENTS } from '../../../policies/bugbot_constants';
+import type { BugbotReviewOutcome, BugbotTelemetryPort } from '../../../ports/bugbot_telemetry_ports';
+import { BugbotReviewTelemetry } from './bugbot/bugbot_review_telemetry';
+import { analyzeBugbotRevision } from './bugbot/analyze_bugbot_revision_use_case';
+import { expectedBugbotHeadSha, hasNewerBugbotRevision, isLoadedBugbotRevisionSuperseded } from './bugbot/bugbot_review_freshness';
 
 export interface DetectPotentialProblemsWorkflowDependencies {
     aiRepository: FindingsQueryPort;
     contextPorts: BugbotContextPorts;
     publicationPorts: BugbotFindingPublicationPorts;
     resolutionPorts: BugbotFindingResolutionPorts;
+    telemetryPort?: BugbotTelemetryPort;
 }
 
 const TASK_ID = 'DetectPotentialProblemsUseCase';
@@ -35,112 +34,127 @@ export async function runDetectPotentialProblemsWorkflow(
     dependencies: DetectPotentialProblemsWorkflowDependencies,
 ): Promise<Result[]> {
     const workflowStartedAt = Date.now();
+    const telemetry = new BugbotReviewTelemetry(param);
+    const publishTelemetry = async (outcome: BugbotReviewOutcome, category?: string) => {
+        const snapshot = telemetry.snapshot(outcome, category);
+        if (param.ai?.getBugbotReviewConfiguration?.().telemetry !== false) {
+            try {
+                await dependencies.telemetryPort?.publish(snapshot);
+            } catch (error) {
+                logInfo(`Bugbot telemetry publication failed without affecting the review: ${error instanceof Error ? error.name : 'unknown'}.`);
+            }
+        }
+        return snapshot;
+    };
+    const complete = async (result: Result, outcome: BugbotReviewOutcome): Promise<Result[]> => {
+        const snapshot = await publishTelemetry(outcome);
+        const payload = result.payload && typeof result.payload === 'object' && !Array.isArray(result.payload)
+            ? result.payload as Record<string, unknown>
+            : {};
+        result.payload = { ...payload, bugbotTelemetry: snapshot };
+        return [result];
+    };
     logInfo(`${getTaskEmoji(TASK_ID)} Executing ${TASK_ID}.`);
     try {
-        if (shouldSkipDetection(param)) return [];
+        if (shouldSkipDetection(param)) {
+            await publishTelemetry('skipped', 'admission');
+            return [];
+        }
+        if (param.isPullRequest && param.inputs?.pull_request?.draft === true
+            && !param.ai?.getBugbotReviewConfiguration?.().reviewDrafts) {
+            return await complete(skippedDraftResult(), 'skipped');
+        }
 
         const contextOptions = await resolveContextOptions(param, dependencies.contextPorts);
         if (contextOptions === null) {
             logDebugInfo('No branch or pull request target available for potential-problems detection.');
+            await publishTelemetry('skipped', 'missing_context');
             return [];
         }
-        const context = await loadBugbotContext(param, contextOptions, dependencies.contextPorts);
-        const eventHeadSha = expectedEventHeadSha(param);
-        if (isSuperseded(context, eventHeadSha)) {
-            return [supersededResult(context.prContext?.prHeadSha, eventHeadSha)];
+        const context = await telemetry.measure('context', () => loadBugbotContext(param, contextOptions, dependencies.contextPorts));
+        const eventHeadSha = expectedBugbotHeadSha(param);
+        if (isLoadedBugbotRevisionSuperseded(context, eventHeadSha)) {
+            return await complete(supersededResult(context.prContext?.prHeadSha, eventHeadSha), 'superseded');
         }
-        const prompt = buildBugbotPrompt(param, context);
-        logInfo('Detecting potential problems via configured agent using canonical change context...');
-        const analysisStartedAt = Date.now();
-        const agentResponse = await queryBugbotFindings(dependencies.aiRepository, param, prompt);
-        logInfo(`Bugbot reviewer completed in ${Date.now() - analysisStartedAt}ms.`);
-        const rawPreparedResponse = prepareDetectedFindings(param, agentResponse);
-        if (rawPreparedResponse === undefined) {
-            return [noAnalysisResult()];
+        const prepared = await analyzeBugbotRevision(param, context, { agent: dependencies.aiRepository, telemetry });
+        if (prepared === undefined) {
+            return await complete(noAnalysisResult(), 'failed');
         }
-        const preparedResponse = suppressDismissedFindings(param, context, rawPreparedResponse);
-        const prepared: PreparedBugbotFindings = {
-            ...preparedResponse,
-            resolvedFindingIds: suppressDismissedResolutionClaims(context, reconcileResolvedFindingIds(
-                preparedResponse.resolvedFindingIds,
-                context.existingByFindingId,
-                preparedResponse.activeFindings ?? preparedResponse.toPublish,
-            )),
-        };
-        if (await hasNewerPullRequestHead(param, context, dependencies.contextPorts)) {
-            return [supersededResult(context.prContext?.prHeadSha)];
+        telemetry.observePrepared(prepared);
+        if (await telemetry.measure('freshness', () => hasNewerBugbotRevision(param, context, dependencies.contextPorts))) {
+            return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
+        }
+        if (param.ai?.getBugbotReviewConfiguration?.().publicationMode === 'dry-run') {
+            return await complete(dryRunResult(prepared, context), 'dry-run');
         }
         if (prepared.toPublish.length === 0 && prepared.resolvedFindingIds.size === 0) {
-            return [noFindingsResult(projectBugbotFindingStatuses(
+            return await complete(noFindingsResult(projectBugbotFindingStatuses(
                 context.existingByFindingId,
                 prepared.activeFindings ?? prepared.toPublish,
-            ).counts)];
+            ).counts), 'no-findings');
         }
 
-        const resolutionErrors = await applyDetectedFindings(
+        const resolutionErrors = await telemetry.measure('publication', () => applyDetectedFindings(
             param,
             context,
             prepared,
             dependencies.publicationPorts,
             dependencies.resolutionPorts,
-        );
+        ));
         logInfo(`Bugbot workflow completed in ${Date.now() - workflowStartedAt}ms.`);
-        return [detectionResult(prepared, context, resolutionErrors)];
+        return await complete(
+            detectionResult(prepared, context, resolutionErrors),
+            resolutionErrors.length === 0 ? 'completed' : 'failed',
+        );
     } catch (error) {
         const normalizedError = error instanceof PullRequestReviewOperationError
             ? error
             : new Error('Unable to detect potential problems.');
         const resultError = new Error(`Error in ${TASK_ID}: ${normalizedError.message}`);
         logError(resultError.message);
-        return [new Result({
+        const result = new Result({
             id: TASK_ID,
             success: false,
             executed: true,
             errors: [resultError],
-        })];
+        });
+        const snapshot = await publishTelemetry('failed', error instanceof Error ? error.name : 'unknown');
+        result.payload = { bugbotTelemetry: snapshot };
+        return [result];
     }
 }
 
-function suppressDismissedResolutionClaims(
-    context: BugbotContext,
-    resolvedFindingIds: ReadonlySet<string>,
-): Set<string> {
-    return new Set([...resolvedFindingIds].filter((findingId) => {
-        const existing = context.existingByFindingId[findingId];
-        return existing?.issue?.resolution !== 'dismissed'
-            && existing?.pullRequest?.resolution !== 'dismissed';
-    }));
+function skippedDraftResult(): Result {
+    return new Result({
+        id: TASK_ID,
+        success: true,
+        executed: false,
+        steps: ['Draft pull request review skipped by configuration.'],
+        payload: { skipped: 'draft' },
+    });
 }
 
-function expectedEventHeadSha(param: Execution): string | undefined {
-    const candidate = param.inputs?.pull_request?.head?.sha
-        ?? param.inputs?.workflow_run?.head_sha
-        ?? param.inputs?.check_suite?.head_sha;
-    return typeof candidate === 'string' && /^[0-9a-f]{7,64}$/i.test(candidate.trim())
-        ? candidate.trim().toLowerCase()
-        : undefined;
-}
-
-function isSuperseded(context: BugbotContext, expectedHeadSha: string | undefined): boolean {
-    return expectedHeadSha !== undefined
-        && context.prContext !== null
-        && context.prContext.prHeadSha.toLowerCase() !== expectedHeadSha;
-}
-
-async function hasNewerPullRequestHead(
-    param: Execution,
-    context: BugbotContext,
-    ports: BugbotContextPorts,
-): Promise<boolean> {
-    if (!context.prContext || context.openPrNumbers.length === 0) return false;
-    const currentHead = await ports.pullRequest.getPullRequestHeadSha(
-        param.owner,
-        param.repo,
-        context.openPrNumbers[0],
-        param.tokens.token,
+function dryRunResult(prepared: PreparedBugbotFindings, context: BugbotContext): Result {
+    const statuses = projectBugbotFindingStatuses(
+        context.existingByFindingId,
+        prepared.activeFindings ?? prepared.toPublish,
+        prepared.resolvedFindingIds,
+        prepared.resolvedFindingResolutions,
     );
-    return currentHead !== undefined
-        && currentHead.toLowerCase() !== context.prContext.prHeadSha.toLowerCase();
+    return new Result({
+        id: TASK_ID,
+        success: true,
+        executed: true,
+        steps: [`Bugbot dry-run completed with ${prepared.activeFindings?.length ?? 0} accepted finding(s); no SCM mutations performed.`],
+        payload: {
+            dryRun: true,
+            findings: prepared.activeFindings ?? prepared.toPublish,
+            overflowCount: prepared.overflowCount,
+            resolvedFindingIds: [...prepared.resolvedFindingIds],
+            findingStates: statuses.counts,
+            ruleSources: context.reviewRuleSources ?? [],
+        },
+    });
 }
 
 function supersededResult(loadedHeadSha?: string, expectedHeadSha?: string): Result {
@@ -157,23 +171,6 @@ function supersededResult(loadedHeadSha?: string, expectedHeadSha?: string): Res
             ...(expectedHeadSha ? { expectedHeadSha } : {}),
         },
     });
-}
-
-function suppressDismissedFindings(
-    param: Execution,
-    context: BugbotContext,
-    prepared: PreparedBugbotFindings,
-): PreparedBugbotFindings {
-    const activeFindings = (prepared.activeFindings ?? prepared.toPublish).filter((finding) => {
-        const existing = findExistingFindingInfo(context.existingByFindingId, finding);
-        return existing?.issue?.resolution !== 'dismissed'
-            && existing?.pullRequest?.resolution !== 'dismissed';
-    });
-    const limited = applyCommentLimit(
-        [...activeFindings],
-        param.ai?.getBugbotCommentLimit?.() ?? BUGBOT_MAX_COMMENTS,
-    );
-    return { ...prepared, ...limited, activeFindings };
 }
 
 async function resolveContextOptions(

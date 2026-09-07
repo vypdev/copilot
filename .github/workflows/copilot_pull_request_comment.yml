@@ -6,15 +6,17 @@ on:
 
 jobs:
   copilot-pull-requests:
-    if: ${{ vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}
+    if: ${{ (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && github.event.pull_request.head.repo.full_name == github.repository }}
     name: Copilot - Pull Request Comment
     runs-on: [self-hosted, codex]
     timeout-minutes: 120
     permissions:
-      contents: write
+      contents: read
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
 
       - uses: ./
         with:
@@ -40,9 +42,27 @@ jobs:
           reviewer-model: ${{ vars.REVIEWER_MODEL }}
           reviewer-effort: ${{ vars.REVIEWER_EFFORT }}
           reviewer-command: ${{ vars.REVIEWER_COMMAND }}
+          planner-provider: ${{ vars.PLANNER_PROVIDER }}
+          planner-model-provider: ${{ vars.PLANNER_MODEL_PROVIDER }}
+          planner-model: ${{ vars.PLANNER_MODEL }}
+          planner-effort: ${{ vars.PLANNER_EFFORT }}
+          planner-command: ${{ vars.PLANNER_COMMAND }}
+          tester-provider: ${{ vars.TESTER_PROVIDER }}
+          tester-model-provider: ${{ vars.TESTER_MODEL_PROVIDER }}
+          tester-model: ${{ vars.TESTER_MODEL }}
+          tester-effort: ${{ vars.TESTER_EFFORT }}
+          tester-command: ${{ vars.TESTER_COMMAND }}
           project-ids: ${{ vars.PROJECT_IDS }}
           token: ${{ secrets.PAT }}
           bugbot-fix-verify-commands: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS }}
+          bugbot-dry-run: ${{ vars.BUGBOT_DRY_RUN || 'false' }}
+          bugbot-effort: ${{ vars.BUGBOT_EFFORT || 'smart' }}
+          bugbot-review-drafts: ${{ vars.BUGBOT_REVIEW_DRAFTS || 'false' }}
+          bugbot-trace-rules: ${{ vars.BUGBOT_TRACE_RULES || 'false' }}
+          bugbot-suggested-changes: ${{ vars.BUGBOT_SUGGESTED_CHANGES || 'true' }}
+          bugbot-telemetry: ${{ vars.BUGBOT_TELEMETRY || 'true' }}
+          bugbot-fail-on-unresolved: ${{ vars.BUGBOT_FAIL_ON_UNRESOLVED || 'false' }}
+          bugbot-organization-rules: ${{ vars.BUGBOT_ORGANIZATION_RULES }}
         env:
           AGENT_PROVIDER: ${{ vars.AGENT_PROVIDER || 'codex' }}
           AGENT_MODEL_PROVIDER: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
@@ -60,5 +80,6 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          CURSOR_API_KEY: ${{ (vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor' || vars.RELEASE_PROVIDER == 'cursor') && secrets.CURSOR_API_KEY || '' }}
+          CURSOR_API_KEY: ${{ (vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor') && secrets.CURSOR_API_KEY || '' }}
+          CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
           CODEX_ACCESS_TOKEN: ${{ secrets.CODEX_ACCESS_TOKEN }}

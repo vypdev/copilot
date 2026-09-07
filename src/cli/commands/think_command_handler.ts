@@ -21,7 +21,7 @@ export async function runThinkCommand(options: ThinkCommandOptions): Promise<voi
   const gitInfo = getGitInfo();
   if ("error" in gitInfo) {
     logError(gitInfo.error);
-    process.exit(1);
+    process.exitCode = 1;
     return;
   }
 

@@ -10,11 +10,11 @@ Copilot uses two deliberately separate credentials:
 
 The setup PAT and workflow PAT may have different owners and permissions. Do not paste the workflow PAT into the setup prompt unless you intentionally want the same token to perform both roles.
 
-<Info>GitHub does not reveal Secret values through its API. Copilot validates new credentials with provider metadata requests and validates existing remote Secrets through the read-only `copilot_credential_health.yml` workflow when it is installed on the repository's default branch. The health workflow reports each requested credential independently.</Info>
+<Info>GitHub does not reveal Secret values through its API. Copilot validates new credentials with provider metadata requests and validates existing remote Secrets through the read-only `copilot_credential_health.yml` workflow when it is installed on the repository's default branch. The health workflow reports each requested credential independently. A preauthenticated Codex session is runner state, not a Secret: it is accepted only when the runtime preflight can execute `codex login status` successfully.</Info>
 
 <Warning>**When the event actor is the same as the token user**: The action detects this before entering the workflow queue. It completes successfully without waiting or running the normal issue/PR/push pipeline. A valid explicit single action still runs. This avoids the bot reacting to its own actions. Use a dedicated bot account (different from the actor) if you want full pipeline behavior on every event.</Warning>
 
-For comment-driven assistance, read-only commands are available to anyone who can comment. File-modifying commands are restricted to organization members in organization repositories. In personal repositories, the repository owner or a collaborator with `push`, `maintain`, or `admin` permission may request changes. The workflow PAT still needs the relevant `contents: write` permission, and issue comments need an open PR to provide a branch for the change.
+For comment-driven assistance, read-only commands are available to anyone who can comment unless `ai-members-only` is enabled; with that policy, every AI invocation requires an authorized member while non-AI status/help metadata remains available. File-modifying commands are always restricted to organization members in organization repositories. In personal repositories, the repository owner or a collaborator with `push`, `maintain`, or `admin` permission may request changes. The workflow PAT still needs the relevant `contents: write` permission, and issue comments need an open PR to provide a branch for the change.
 
 <Steps>
   <Step title="Who is the bot?">
@@ -43,31 +43,26 @@ For comment-driven assistance, read-only commands are available to anyone who ca
     - If your bot account does not belong to an organization (individual developer), you should keep your own account selected when creating the token (this is usually the default value, so you likely won’t need to change it).
     - If your account belongs to an organization, make sure to select the organization that this token will operate under. 
 
-    In the **Repository access** section, you need to select the scope for which you want this token to operate. We recommend choosing **All repositories** to quickly configure Copilot on any repository the bot account has access to.
+    In the **Repository access** section, select only the repositories that will run Copilot. Avoid **All repositories** unless a separately reviewed organization policy genuinely requires it.
 
     Set these permissions for the repository:
 
     - **Actions**: Read and write
-    - **Administration**: Read and write
-    - **Commit statuses**: Read and write
+    - **Checks**: Read and write (Bugbot Check Runs)
     - **Contents**: Read and write
     - **Issues**: Read and write
     - **Metadata**: Read-only
     - **Pull requests**: Read and write
-    - **Secrets**: Read-only
-    - **Variables**: Read and write
-    - **Webhooks**: Read and write
-    - **Workflows**: Read and write
+
+    Do not grant Administration, Secrets, Variables, Webhooks, or Workflows permissions to the runtime PAT unless an independently reviewed extension actually uses them. Workflow installation and Secret/Variable administration belong to the separate setup PAT.
 
     **If your bot belongs to an organization** set these permissions for the organization:
 
-    - **Custom repository roles**: Read-only
-    - **Issue Types**: Read and write
+    - **Issue Types**: Read and write only when issue-type automation is enabled
     - **Members**: Read-only
-    - **Projects**: Admin
-    - **Secrets**: Read-only unless the workflow itself must administer Secrets
-    - **Self-hosted runners**: Read and write
-    - **Variables**: Read and write
+    - **Projects**: Read and write only for the selected organization projects
+
+    The runtime PAT does not need organization Secrets, Variables, Custom repository roles, or Self-hosted runners administration.
 
     Finally press the **Generate new token** button.
 
@@ -90,7 +85,7 @@ For comment-driven assistance, read-only commands are available to anyone who ca
     - In the left sidebar, click on **Secrets and variables**, then **Actions**.
     - Click **New organization secret**.
     - Define a name for the secret and paste the previously created PAT in the **Secret** field.
-    - Select the **Repository access** level where you want this secret to be available. We recommend selecting **All repositories**.
+    - Select only the repositories that run Copilot. Avoid **All repositories** unless a separately reviewed organization policy requires it.
     - Finally, click **Add secret**.
   </Step>
   <Step title="Consume the token">
@@ -108,7 +103,7 @@ For comment-driven assistance, read-only commands are available to anyone who ca
         name: Git Board - Issue
         runs-on: ubuntu-latest
         steps:
-          - uses: vypdev/copilot@v3
+          - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
             with:
               project-ids: 1,2
               token: ${{ secrets.PAT }}

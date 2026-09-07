@@ -1,10 +1,16 @@
 import { Result } from '../../data/model/result';
 import type { Execution } from '../../data/model/execution';
 import type { ActorAuthorizationPort } from '../ports/actor_authorization_ports';
+import type { AuthenticatedUserPort } from '../ports/authenticated_user_ports';
 import type { CommentAutomationOptions } from './comment_automation_contracts';
 import type { ParsedCopilotCommand } from '../../domain/copilot_command';
 import { buildCopilotStatusResult } from '../policies/status_command_policy';
 import { buildCopilotHelpMessage } from '../policies/copilot_interaction_policy';
+import { parseBugbotReviewCommandOptions } from '../../domain/bugbot/review_command';
+import { commitUserRequestIfSuccessful } from './steps/commit/bugbot/commit_user_request_workflow';
+import { finalizeWorkspaceMutation, prepareWorkspaceMutation } from './steps/commit/workspace_mutation_guard';
+
+const LEARNED_BUGBOT_RULE_PATH = '.copilot/BUGBOT.learned.md';
 
 /** Executes deterministic /copilot commands without routing them through intent detection. */
 export async function runExplicitCommentCommand(
@@ -12,14 +18,72 @@ export async function runExplicitCommentCommand(
     options: CommentAutomationOptions,
     command: ParsedCopilotCommand,
     actorAuthorizationPort: ActorAuthorizationPort,
+    authenticatedUserPort: AuthenticatedUserPort,
 ): Promise<Result[] | undefined> {
     if (command.name === 'help') return runHelpCommand(param, options);
     if (command.name === 'status') return [buildCopilotStatusResult(param, options.taskId)];
     if (command.name === 'dismiss') return runDismissCommand(param, options, command, actorAuthorizationPort);
+    if (command.name === 'remember') return runRememberCommand(param, options, command, actorAuthorizationPort, authenticatedUserPort);
     if (command.name === 'description') return runDescriptionCommand(param, options, actorAuthorizationPort);
     if (['analyze', 'review', 'findings', 'recheck'].includes(command.name)) return runReviewCommand(param, options, command);
     if (command.name === 'fix' || command.name === 'implement') return undefined;
     return runThinkCommand(param, options, command);
+}
+
+async function runRememberCommand(
+    param: Execution,
+    options: CommentAutomationOptions,
+    command: ParsedCopilotCommand,
+    actorAuthorizationPort: ActorAuthorizationPort,
+    authenticatedUserPort: AuthenticatedUserPort,
+): Promise<Result[]> {
+    const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token);
+    if (!allowed || !options.rememberBugbotRuleUseCase) {
+        return [new Result({
+            id: `${options.taskId}.Remember`,
+            success: true,
+            executed: false,
+            steps: ['Learned rule skipped because the actor is not authorized or rule storage is unavailable.'],
+        })];
+    }
+    let mutation;
+    try {
+        mutation = await prepareWorkspaceMutation(options.gitCommitPort, {
+            operation: 'Remember Bugbot rule',
+        });
+    } catch (error) {
+        return [rememberFailure(error)];
+    }
+    const results = await options.rememberBugbotRuleUseCase.invoke({ execution: param, rule: command.arguments.join(' ') });
+    if (!results.some((result) => result.executed)) return results;
+    try {
+        const { workspacePaths } = await finalizeWorkspaceMutation(
+            options.gitCommitPort,
+            mutation.workspacePathsBefore,
+            'Remember Bugbot rule',
+        );
+        if (workspacePaths.length !== 1 || workspacePaths[0] !== LEARNED_BUGBOT_RULE_PATH) {
+            return [...results, rememberFailure(
+                `Remember Bugbot rule refused unexpected workspace paths: ${workspacePaths.join(', ')}`,
+            )];
+        }
+        const last = results.at(-1);
+        if (last) last.payload = { workspacePaths };
+    } catch (error) {
+        return [...results, rememberFailure(error)];
+    }
+    const commitResults = await commitUserRequestIfSuccessful(param, undefined, results, authenticatedUserPort, options.gitCommitPort);
+    return [...results, ...commitResults];
+}
+
+function rememberFailure(error: unknown): Result {
+    const message = error instanceof Error ? error.message : String(error);
+    return new Result({
+        id: 'CommentAutomation.Remember',
+        success: false,
+        executed: true,
+        errors: [message],
+    });
 }
 
 function runHelpCommand(
@@ -96,12 +160,14 @@ async function runReviewCommand(
     options: CommentAutomationOptions,
     command: ParsedCopilotCommand,
 ): Promise<Result[]> {
+    const parsedOptions = parseBugbotReviewCommandOptions(command.arguments);
+    if (!parsedOptions.valid) return [invalidCommentCommandResult(options.taskId, parsedOptions.reason)];
     const results = [new Result({
         id: `${options.taskId}.ExplicitCommand`,
         success: true,
         executed: true,
         steps: [`Executing explicit /copilot ${command.name} command.`],
-        payload: { explicitCommand: command.name },
+        payload: { explicitCommand: command.name, reviewOptions: parsedOptions.overrides },
     })];
     if (!options.reviewPotentialProblemsUseCase) {
         results.push(new Result({
@@ -112,7 +178,11 @@ async function runReviewCommand(
         }));
         return results;
     }
-    results.push(...(await options.reviewPotentialProblemsUseCase.invoke(param)));
+    const invokeReview = () => options.reviewPotentialProblemsUseCase!.invoke(param);
+    const reviewResults = typeof param.ai?.withBugbotReviewConfiguration === 'function'
+        ? await param.ai.withBugbotReviewConfiguration(parsedOptions.overrides, invokeReview)
+        : await invokeReview();
+    results.push(...reviewResults);
     return results;
 }
 

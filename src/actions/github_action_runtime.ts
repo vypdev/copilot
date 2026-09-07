@@ -1,11 +1,15 @@
-import type { AgentTaskConfiguration } from '../data/model/agent';
+import type { AgentTask, AgentTaskConfiguration } from '../data/model/agent';
 import { AgentCliProvisioner } from '../data/repository/agent_cli_provisioner';
 import { runAgentAuthenticationPreflight } from '../data/repository/agent_authentication_preflight';
 import { logInfo, logDebugInfo } from '../utils/logger';
 
 /** Validates and, when requested by the runtime, provisions the selected agent CLIs. */
-export function prepareGithubAgentRuntime(agentTasks: AgentTaskConfiguration): void {
-    for (const [task, configuration] of configuredAgentTasks(agentTasks)) {
+export function prepareGithubAgentRuntime(
+    agentTasks: AgentTaskConfiguration,
+    activeTasks?: readonly AgentTask[],
+): void {
+    const configurations = selectedAgentTasks(agentTasks, activeTasks);
+    for (const [task, configuration] of configurations) {
         const preflight = runAgentAuthenticationPreflight(configuration);
         if (preflight.check.status === 'missing' && preflight.shouldFail) {
             throw new Error(`${task} agent authentication failed: ${preflight.check.message}`);
@@ -17,15 +21,15 @@ export function prepareGithubAgentRuntime(agentTasks: AgentTaskConfiguration): v
 
     if (process.env.GITHUB_ACTIONS === 'true') {
         const provisioner = new AgentCliProvisioner();
-        for (const configuration of uniqueAgentConfigurations(agentTasks)) {
+        for (const configuration of uniqueAgentConfigurations(configurations)) {
             provisioner.provision(configuration);
         }
     }
 
-    logDebugInfo(
-        `Using ${agentTasks.findings.provider} CLI for findings (${agentTasks.findings.modelProvider ?? 'default'}/${agentTasks.findings.model}) ` +
-        `and ${agentTasks.fixer.provider} CLI for fixer (${agentTasks.fixer.modelProvider ?? 'default'}/${agentTasks.fixer.model}).`,
-    );
+    logDebugInfo(configurations.length === 0
+        ? 'No agent CLI is required for this event.'
+        : `Active agent roles: ${configurations.map(([task, configuration]) =>
+            `${task}=${configuration.provider}/${configuration.modelProvider ?? 'default'}/${configuration.model}`).join(', ')}.`);
 }
 
 function configuredAgentTasks(
@@ -35,9 +39,19 @@ function configuredAgentTasks(
         .filter(([, configuration]) => configuration != null);
 }
 
-function uniqueAgentConfigurations(agentTasks: AgentTaskConfiguration) {
+function selectedAgentTasks(
+    agentTasks: AgentTaskConfiguration,
+    activeTasks: readonly AgentTask[] | undefined,
+) {
+    if (!activeTasks) return configuredAgentTasks(agentTasks);
+    return activeTasks.map((task) => [task, agentTasks[task] ?? agentTasks.findings] as const);
+}
+
+function uniqueAgentConfigurations(
+    configurations: ReadonlyArray<readonly [string, NonNullable<AgentTaskConfiguration[keyof AgentTaskConfiguration]>]>,
+) {
     const unique = new Map<string, NonNullable<AgentTaskConfiguration[keyof AgentTaskConfiguration]>>();
-    for (const [, configuration] of configuredAgentTasks(agentTasks)) {
+    for (const [, configuration] of configurations) {
         unique.set(JSON.stringify(configuration), configuration);
     }
     return [...unique.values()];

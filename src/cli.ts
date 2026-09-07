@@ -5,7 +5,10 @@ import { createCliProgram } from './cli/cli_program';
 const program = createCliProgram();
 
 if (typeof process.env.JEST_WORKER_ID === 'undefined') {
-  program.parse(process.argv);
+  void program.parseAsync(process.argv).catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  });
 }
 
 export { program };

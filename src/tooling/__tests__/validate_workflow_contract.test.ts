@@ -1,11 +1,17 @@
 import path from 'node:path';
 import { readFileSync } from 'node:fs';
 import * as yaml from 'js-yaml';
-import { COPILOT_WORKFLOW_NAMES, WORKFLOW_QUEUE_POLICY } from '../../application/policies/workflow_queue_policy';
+import { WORKFLOW_QUEUE_POLICY } from '../../application/policies/workflow_queue_policy';
 
 interface ContractModule {
   assertQueueWorkflow(file: string, workflow: Record<string, unknown>): void;
+  assertDirectEventTriggers(file: string, workflow: Record<string, unknown>): void;
   assertRunner(file: string, workflow: Record<string, unknown>): void;
+  assertImmutableActions(file: string, workflow: Record<string, unknown>): void;
+  assertPinnedCopilotHistoryCheckout(file: string, workflow: Record<string, unknown>): void;
+  assertPinnedCopilotActionInputs(file: string, workflow: Record<string, unknown>): void;
+  assertNoJobLevelSecrets(file: string, workflow: Record<string, unknown>): void;
+  assertAgentWorkflowPermissions(file: string, workflow: Record<string, unknown>): void;
   MIN_QUEUE_JOB_TIMEOUT_MINUTES: number;
   QUEUE_GATE_TIMEOUT_MINUTES: number;
   PREPARE_VERSION_TIMEOUT_MINUTES: number;
@@ -19,7 +25,13 @@ interface ContractModule {
 
 const {
   assertQueueWorkflow,
+  assertDirectEventTriggers,
   assertRunner,
+  assertImmutableActions,
+  assertPinnedCopilotHistoryCheckout,
+  assertPinnedCopilotActionInputs,
+  assertNoJobLevelSecrets,
+  assertAgentWorkflowPermissions,
   MIN_QUEUE_JOB_TIMEOUT_MINUTES,
   QUEUE_GATE_TIMEOUT_MINUTES,
   PREPARE_VERSION_TIMEOUT_MINUTES,
@@ -68,9 +80,9 @@ const validWorkflow = {
 };
 
 describe('workflow contract validator', () => {
-  it('keeps the manifest, workflow names, and queue budget synchronized', () => {
-    expect(QUEUE_WORKFLOW_MANIFEST.map(entry => entry.workflowName)).toEqual(expect.arrayContaining(COPILOT_WORKFLOW_NAMES));
-    expect(COPILOT_WORKFLOW_NAMES).toEqual(expect.arrayContaining(QUEUE_WORKFLOW_MANIFEST.map(entry => entry.workflowName)));
+  it('keeps the repository validation manifest unique and the queue budget synchronized', () => {
+    const workflowNames = QUEUE_WORKFLOW_MANIFEST.map(entry => entry.workflowName);
+    expect(new Set(workflowNames).size).toBe(workflowNames.length);
     expect(WORKFLOW_QUEUE_POLICY.maximumQueueWaitMilliseconds).toBe(90 * 60 * 1000);
     expect(MIN_QUEUE_JOB_TIMEOUT_MINUTES).toBeGreaterThanOrEqual(QUEUE_WAIT_MINUTES);
   });
@@ -97,7 +109,33 @@ describe('workflow contract validator', () => {
   it('rejects an event workflow that removes the generic bot actor gate', () => {
     const workflow = JSON.parse(JSON.stringify(validWorkflow));
     delete workflow.jobs['copilot-issues'].if;
-    expect(() => assertQueueWorkflow(queueFile, workflow)).toThrow('COPILOT_BOT_LOGIN actor gate');
+    expect(() => assertQueueWorkflow(queueFile, workflow)).toThrow('required bot actor gate');
+  });
+
+  it.each(['copilot_pull_request.yml', 'copilot_pull_request_comment.yml'])(
+    'requires same-repository PR gating for %s',
+    (fileName) => {
+      for (const directory of ['.github/workflows', 'setup/workflows']) {
+        const file = path.join(process.cwd(), directory, fileName);
+        const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+        const job = workflow.jobs['copilot-pull-requests'];
+        job.if = "${{ vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}";
+        expect(() => validateWorkflow(file, workflow)).toThrow('same-repository PR gate');
+      }
+    },
+  );
+
+  it('rejects workflow_run and requires direct PR/review events in both distributed variants', () => {
+    for (const directory of ['.github/workflows', 'setup/workflows']) {
+      const file = path.join(process.cwd(), directory, 'copilot_pull_request.yml');
+      const workflow = yaml.load(readFileSync(file, 'utf8')) as Record<string, any>;
+      expect(() => assertDirectEventTriggers(file, workflow)).not.toThrow();
+      workflow.on.workflow_run = { types: ['completed'] };
+      expect(() => assertDirectEventTriggers(file, workflow)).toThrow('must not define workflow_run');
+      delete workflow.on.workflow_run;
+      delete workflow.on.pull_request_review;
+      expect(() => assertDirectEventTriggers(file, workflow)).toThrow('direct pull_request and pull_request_review');
+    }
   });
 
   it.each(['.github/workflows', 'setup/workflows'])('requires the exact push review range fetch in %s', (directory) => {
@@ -107,18 +145,18 @@ describe('workflow contract validator', () => {
       (step: { name?: string }) => step.name !== 'Fetch push review range',
     );
 
-    expect(() => validateWorkflow(file, workflow)).toThrow('must fetch the exact GitHub before/after review range');
+    expect(() => validateWorkflow(file, workflow)).toThrow('must materialize and verify the exact GitHub before/after review range');
   });
 
-  it.each(['.github/workflows', 'setup/workflows'])('requires push fallback history to include the current commit parent in %s', (directory) => {
+  it.each(['.github/workflows', 'setup/workflows'])('requires a full checkout for push review ranges in %s', (directory) => {
     const file = path.join(process.cwd(), directory, 'copilot_commit.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
     const step = workflow.jobs['copilot-commits'].steps.find(
-      (candidate: { name?: string }) => candidate.name === 'Fetch push review range',
+      (candidate: { uses?: string }) => candidate.uses?.startsWith('actions/checkout@'),
     );
-    step.run = step.run.replace('--depth=2 origin "$AFTER_SHA"', '--depth=1 origin "$AFTER_SHA"');
+    step.with['fetch-depth'] = 1;
 
-    expect(() => validateWorkflow(file, workflow)).toThrow('must fetch the exact GitHub before/after review range');
+    expect(() => validateWorkflow(file, workflow)).toThrow('must materialize and verify the exact GitHub before/after review range');
   });
 
   it.each(['.github/workflows', 'setup/workflows'])('requires a non-fatal before fetch for force-pushed PRs in %s', (directory) => {
@@ -127,9 +165,9 @@ describe('workflow contract validator', () => {
     const step = workflow.jobs['copilot-pull-requests'].steps.find(
       (candidate: { name?: string }) => candidate.name === 'Fetch incremental review range',
     );
-    step.run = 'git fetch --no-tags --depth=1 origin "$BEFORE_SHA" "$AFTER_SHA"';
+    step.run = 'git cat-file -e "${BEFORE_SHA}^{commit}"';
 
-    expect(() => validateWorkflow(file, workflow)).toThrow('must fetch the exact GitHub before/after review range');
+    expect(() => validateWorkflow(file, workflow)).toThrow('must materialize and verify the exact GitHub before/after review range');
   });
 
   it('validates the exact gate-first DAG for active and setup release/hotfix workflows', () => {
@@ -233,8 +271,8 @@ describe('workflow contract validator', () => {
           'timeout-minutes': 120,
           permissions: { actions: 'read', contents: 'read' },
           steps: [
-            { uses: 'actions/checkout@v5', with: { 'persist-credentials': false } },
-            { uses: 'vypdev/copilot@v3', with: { 'queue-gate-only': 'true', token: '${{ github.token }}' } },
+            { uses: 'actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09', with: { 'persist-credentials': false } },
+            { uses: 'vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3', with: { 'queue-gate-only': 'true', token: '${{ github.token }}' } },
           ],
         },
         'prepare-version-files': {
@@ -290,5 +328,95 @@ describe('workflow contract validator', () => {
     expect(() => assertRunner(queueFile, {
       jobs: { 'copilot-issues': { 'runs-on': 'ubuntu-latest' } },
     })).toThrow('runs-on self-hosted, codex');
+  });
+
+  it('rejects mutable action references and persisted checkout credentials', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'ci_check.yml');
+    expect(() => assertImmutableActions(file, {
+      jobs: { test: { steps: [{ uses: 'actions/checkout@v5', with: { 'persist-credentials': false } }] } },
+    })).toThrow('immutable 40-character commit SHA');
+    expect(() => assertImmutableActions(file, {
+      jobs: { test: { steps: [{ uses: 'actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09' }] } },
+    })).toThrow('persist-credentials: false');
+  });
+
+  it('rejects inputs missing from the action manifest at the pinned revision', () => {
+    const file = path.join(process.cwd(), 'setup', 'workflows', 'copilot_pull_request.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const action = workflow.jobs['copilot-pull-requests'].steps.find(
+      (step: { uses?: string }) => step.uses?.startsWith('vypdev/copilot@'),
+    );
+    action.with['future-unsupported-input'] = 'true';
+
+    expect(() => assertPinnedCopilotActionInputs(file, workflow)).toThrow(
+      'passes inputs unsupported by vypdev/copilot@',
+    );
+  });
+
+  it('requires CI to fetch the history needed to validate pinned in-repository action manifests', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'ci_check.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const checkout = workflow.jobs['ci-check'].steps.find(
+      (step: { uses?: string }) => step.uses?.startsWith('actions/checkout@'),
+    );
+    checkout.with['fetch-depth'] = 1;
+
+    expect(() => assertPinnedCopilotHistoryCheckout(file, workflow)).toThrow(
+      'fetch-depth: 0 so pinned in-repository action manifests can be validated',
+    );
+  });
+
+  it('rejects local action execution from the pull request workflow', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'copilot_pull_request.yml');
+    expect(() => assertImmutableActions(file, {
+      jobs: { review: { steps: [{ uses: './' }] } },
+    })).toThrow('pull-request-controlled local action code');
+  });
+
+  it('requires every specialized role reachable from a workflow', () => {
+    const file = path.join(process.cwd(), '.github', 'workflows', 'copilot_pull_request.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const action = workflow.jobs['copilot-pull-requests'].steps.find((step: { uses?: string }) => step.uses?.includes('copilot@'));
+    delete action.with['planner-provider'];
+
+    expect(() => validateWorkflow(file, workflow)).toThrow('missing agent inputs: planner-provider');
+  });
+
+  it('rejects Secrets exposed to every step in a job', () => {
+    expect(() => assertNoJobLevelSecrets(queueFile, {
+      jobs: {
+        review: {
+          env: { CODEX_API_KEY: '${{ secrets.CODEX_API_KEY }}' },
+          steps: [],
+        },
+      },
+    })).toThrow('must scope Secrets to the exact step');
+    expect(() => assertNoJobLevelSecrets(queueFile, {
+      jobs: {
+        review: {
+          env: { AGENT_PROVIDER: '${{ vars.AGENT_PROVIDER }}' },
+          steps: [{ env: { CODEX_API_KEY: '${{ secrets.CODEX_API_KEY }}' } }],
+        },
+      },
+    })).not.toThrow();
+  });
+
+  it('limits the implicit GITHUB_TOKEN to read-only contents plus PR review evidence', () => {
+    for (const directory of ['.github/workflows', 'setup/workflows']) {
+      for (const fileName of [
+        'copilot_commit.yml',
+        'copilot_issue.yml',
+        'copilot_issue_comment.yml',
+        'copilot_pull_request.yml',
+        'copilot_pull_request_comment.yml',
+      ]) {
+        const file = path.join(process.cwd(), directory, fileName);
+        const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+        expect(() => assertAgentWorkflowPermissions(file, workflow)).not.toThrow();
+        const job = Object.values(workflow.jobs)[0];
+        job.permissions = { contents: 'write' };
+        expect(() => assertAgentWorkflowPermissions(file, workflow)).toThrow('must grant GITHUB_TOKEN exactly');
+      }
+    }
   });
 });

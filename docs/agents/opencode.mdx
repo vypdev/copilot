@@ -31,7 +31,7 @@ The runtime (`opencode`), model provider (`openai`), model (`gpt-5.6-luna`), cre
 
 ## Credentials
 
-For CI, provide the selected model provider's credential through a GitHub Secret mapped into the job environment. For OpenAI, use `OPENAI_API_KEY`.
+For CI, provide the selected model provider's credential through a GitHub Secret mapped only onto the Copilot action step. For OpenAI, use `OPENAI_API_KEY`.
 
 Do not put API keys in action inputs, command arguments, prompts, repository files, or logs. A local OAuth login may work on a controlled self-hosted runner, but local authentication files must not be copied into GitHub-hosted CI.
 
@@ -69,8 +69,8 @@ See [Agent CLI provisioning](/security-operations/operations/cli-provisioning) a
 Only run a real provider request when the user has authorized the provider, credential, and cost. A harmless test for the recommended configuration is:
 
 ```bash
-printf '%s\n' 'Reply with exactly READY. Do not inspect or modify files.' \
-  | timeout 120s opencode run --model openai/gpt-5.6-luna -
+timeout 120s opencode run --model openai/gpt-5.6-luna \
+  'Reply with exactly READY. Do not inspect or modify files.'
 ```
 
 The expected evidence is `READY` and exit code `0`. A successful binary/help check alone is not evidence that the selected provider is authenticated.

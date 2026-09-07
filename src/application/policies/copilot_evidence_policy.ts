@@ -6,6 +6,7 @@ export interface CopilotEvidenceContext {
     readonly headSha?: string;
     readonly summary: string;
     readonly results: readonly Result[];
+    readonly failOnUnresolvedFindings?: boolean;
 }
 
 /** Creates a stable native Check Run projection without performing GitHub I/O. */
@@ -13,16 +14,14 @@ export function buildCopilotEvidence(context: CopilotEvidenceContext): CopilotEv
     const headSha = context.headSha?.trim();
     if (!headSha) return undefined;
     const failures = context.results.filter(result => !result.success && result.executed).length;
-    const activeFindings = context.results
-        .map(result => getFindingStateCounts(result.payload))
-        .find(Boolean);
+    const activeFindings = aggregateFindingStateCounts(context.results);
     const hasActionableFindings = (activeFindings?.open ?? 0) + (activeFindings?.reopened ?? 0) > 0;
-    const conclusion = failures > 0 || hasActionableFindings
+    const conclusion = failures > 0 || (hasActionableFindings && context.failOnUnresolvedFindings)
         ? 'failure'
-        : context.results.length === 0
+        : context.results.length === 0 || hasActionableFindings
             ? 'neutral'
             : 'success';
-    const name = context.eventName === 'pull_request'
+    const name = context.eventName.startsWith('pull_request')
         ? 'Copilot / Review'
         : ['issues', 'issue_comment', 'pull_request_review_comment'].includes(context.eventName)
             ? 'Copilot / Plan'
@@ -31,11 +30,24 @@ export function buildCopilotEvidence(context: CopilotEvidenceContext): CopilotEv
         name,
         headSha,
         conclusion,
-        title: conclusion === 'failure'
-            ? hasActionableFindings && failures === 0 ? 'Copilot found actionable findings' : 'Copilot found actionable failures'
-            : 'Copilot completed successfully',
+        title: hasActionableFindings && failures === 0
+            ? 'Copilot found actionable findings'
+            : conclusion === 'failure'
+                ? 'Copilot found actionable failures'
+                : conclusion === 'neutral'
+                    ? 'Copilot review produced no actionable result'
+                    : 'Copilot completed successfully',
         summary: context.summary.slice(0, 20_000),
     };
+}
+
+function aggregateFindingStateCounts(results: readonly Result[]): { open: number; reopened: number } | undefined {
+    const counts = results.map(result => getFindingStateCounts(result.payload)).filter((value): value is { open: number; reopened: number } => value !== undefined);
+    if (counts.length === 0) return undefined;
+    return counts.reduce((total, current) => ({
+        open: total.open + current.open,
+        reopened: total.reopened + current.reopened,
+    }), { open: 0, reopened: 0 });
 }
 
 function getFindingStateCounts(value: unknown): { open: number; reopened: number } | undefined {

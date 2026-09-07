@@ -1,0 +1,305 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "id": "ts-null-dereference",
+      "language": "typescript",
+      "category": "correctness",
+      "description": "A changed optional lookup is dereferenced without a guard.",
+      "file": "src/users.ts",
+      "startLine": 41,
+      "diff": "+const user = users.find(item => item.id === id);\n+return user.name;",
+      "expected": [{ "id": "unchecked-user", "title": "Optional lookup result is dereferenced", "file": "src/users.ts", "line": 42, "severity": "medium", "category": "correctness", "symbol": "getUserName", "codeSnippet": "return user.name" }]
+    },
+    {
+      "id": "py-command-injection",
+      "language": "python",
+      "category": "security",
+      "description": "Untrusted input is interpolated into a shell command.",
+      "file": "app/image.py",
+      "startLine": 18,
+      "diff": "+os.system(f\"convert {request.args['file']} out.png\")",
+      "expected": [{ "id": "shell-injection", "title": "Request input reaches a shell", "file": "app/image.py", "line": 18, "severity": "high", "category": "security", "symbol": "convert_image", "codeSnippet": "os.system(f\"convert {request.args['file']} out.png\")" }]
+    },
+    {
+      "id": "go-leaked-goroutine",
+      "language": "go",
+      "category": "reliability",
+      "description": "A producer can block forever after the consumer returns.",
+      "file": "internal/fetch.go",
+      "startLine": 64,
+      "diff": "+go func() { results <- fetch(ctx) }()\n+return <-timeout",
+      "expected": [{ "id": "goroutine-leak", "title": "Producer blocks after timeout", "file": "internal/fetch.go", "line": 64, "severity": "medium", "category": "reliability", "symbol": "FetchWithTimeout", "codeSnippet": "results <- fetch(ctx)" }]
+    },
+    {
+      "id": "sql-unbounded-query",
+      "language": "sql",
+      "category": "performance",
+      "description": "A pagination limit was removed from a hot query.",
+      "file": "queries/events.sql",
+      "startLine": 8,
+      "diff": "-SELECT * FROM events LIMIT 100\n+SELECT * FROM events",
+      "expected": [{ "id": "unbounded-events", "title": "Hot query became unbounded", "file": "queries/events.sql", "line": 9, "severity": "medium", "category": "performance", "symbol": "recent_events", "codeSnippet": "SELECT * FROM events" }]
+    },
+    {
+      "id": "java-close-resource",
+      "language": "java",
+      "category": "reliability",
+      "description": "A stream is created and returned from early paths without closing.",
+      "file": "src/StorageReader.java",
+      "startLine": 31,
+      "diff": "+InputStream stream = storage.open(key);\n+return parse(stream);",
+      "expected": [{ "id": "stream-leak", "title": "Opened stream is not closed", "file": "src/StorageReader.java", "line": 31, "severity": "medium", "category": "reliability", "symbol": "read", "codeSnippet": "InputStream stream = storage.open(key)" }]
+    },
+    {
+      "id": "rust-safe-change",
+      "language": "rust",
+      "category": "negative",
+      "description": "A checked conversion is introduced; no finding should be emitted.",
+      "file": "src/count.rs",
+      "startLine": 12,
+      "diff": "+let count = usize::try_from(raw_count)?;",
+      "expected": []
+    },
+    {
+      "id": "docs-only",
+      "language": "markdown",
+      "category": "negative",
+      "description": "Documentation wording only; no actionable code finding.",
+      "file": "README.md",
+      "startLine": 20,
+      "diff": "+The command returns a JSON response.",
+      "expected": []
+    },
+    {
+      "id": "ts-authorization-bypass",
+      "language": "typescript",
+      "category": "security",
+      "description": "An authorization guard is removed before a destructive operation.",
+      "file": "src/admin/delete_user.ts",
+      "startLine": 70,
+      "diff": "-if (!actor.isAdmin) throw new ForbiddenError();\n+await users.delete(request.params.id);",
+      "expected": [{ "id": "missing-authz", "title": "User deletion no longer checks authorization", "file": "src/admin/delete_user.ts", "line": 71, "severity": "high", "category": "security", "symbol": "deleteUser", "codeSnippet": "await users.delete(request.params.id)" }]
+    },
+    {
+      "id": "ts-safe-optional-chain",
+      "language": "typescript",
+      "category": "negative",
+      "description": "An optional access now has a fallback and should not be reported.",
+      "file": "src/profile.ts",
+      "startLine": 24,
+      "diff": "+return account.profile?.displayName ?? 'Anonymous';",
+      "expected": []
+    },
+    {
+      "id": "py-mutable-default",
+      "language": "python",
+      "category": "correctness",
+      "description": "A mutable default leaks accumulated values across requests.",
+      "file": "app/filters.py",
+      "startLine": 11,
+      "diff": "+def collect_filters(value, selected=[]):\n+    selected.append(value)\n+    return selected",
+      "expected": [{ "id": "shared-default", "title": "Mutable default is shared across calls", "file": "app/filters.py", "line": 11, "severity": "medium", "category": "correctness", "symbol": "collect_filters", "codeSnippet": "def collect_filters(value, selected=[])" }]
+    },
+    {
+      "id": "py-parameterized-query",
+      "language": "python",
+      "category": "negative",
+      "description": "User input is passed as a database parameter instead of interpolated SQL.",
+      "file": "app/users.py",
+      "startLine": 36,
+      "diff": "+cursor.execute('SELECT * FROM users WHERE email = %s', (email,))",
+      "expected": []
+    },
+    {
+      "id": "go-ignored-write-error",
+      "language": "go",
+      "category": "reliability",
+      "description": "A response write error is discarded after streaming can fail.",
+      "file": "internal/export.go",
+      "startLine": 52,
+      "diff": "+_, _ = w.Write(payload)\n+metrics.Exports.Inc()",
+      "expected": [{ "id": "discarded-write-error", "title": "Response write failure is ignored", "file": "internal/export.go", "line": 52, "severity": "medium", "category": "reliability", "symbol": "Export", "codeSnippet": "_, _ = w.Write(payload)" }]
+    },
+    {
+      "id": "go-cancellable-send",
+      "language": "go",
+      "category": "negative",
+      "description": "A channel send is guarded by context cancellation.",
+      "file": "internal/worker.go",
+      "startLine": 83,
+      "diff": "+select {\n+case results <- result:\n+case <-ctx.Done():\n+    return ctx.Err()\n+}",
+      "expected": []
+    },
+    {
+      "id": "sql-string-concatenation",
+      "language": "sql",
+      "category": "security",
+      "description": "A query is built by concatenating an untrusted tenant identifier.",
+      "file": "queries/tenant.js",
+      "startLine": 15,
+      "diff": "+db.query('SELECT * FROM tenants WHERE id = ' + request.params.id);",
+      "expected": [{ "id": "tenant-sql-injection", "title": "Tenant id is concatenated into SQL", "file": "queries/tenant.js", "line": 15, "severity": "high", "category": "security", "symbol": "loadTenant", "codeSnippet": "db.query('SELECT * FROM tenants WHERE id = ' + request.params.id)" }]
+    },
+    {
+      "id": "sql-bounded-query",
+      "language": "sql",
+      "category": "negative",
+      "description": "A deterministic order and explicit page bound are added.",
+      "file": "queries/audit.sql",
+      "startLine": 4,
+      "diff": "+SELECT * FROM audit_events ORDER BY created_at DESC LIMIT 100;",
+      "expected": []
+    },
+    {
+      "id": "java-try-with-resources",
+      "language": "java",
+      "category": "negative",
+      "description": "The newly opened stream is deterministically closed.",
+      "file": "src/StorageReader.java",
+      "startLine": 45,
+      "diff": "+try (InputStream stream = storage.open(key)) {\n+    return parse(stream);\n+}",
+      "expected": []
+    },
+    {
+      "id": "rust-unchecked-input",
+      "language": "rust",
+      "category": "reliability",
+      "description": "Malformed request input now panics the service process.",
+      "file": "src/http/limit.rs",
+      "startLine": 27,
+      "diff": "+let limit: usize = request.query(\"limit\").parse().unwrap();",
+      "expected": [{ "id": "request-unwrap", "title": "Malformed limit can panic the service", "file": "src/http/limit.rs", "line": 27, "severity": "medium", "category": "reliability", "symbol": "parse_limit", "codeSnippet": "request.query(\"limit\").parse().unwrap()" }]
+    },
+    {
+      "id": "rust-result-propagation",
+      "language": "rust",
+      "category": "negative",
+      "description": "Parsing failure is propagated to the caller.",
+      "file": "src/http/limit.rs",
+      "startLine": 39,
+      "diff": "+let limit = raw_limit.parse::<usize>()?;",
+      "expected": []
+    },
+    {
+      "id": "actions-untrusted-checkout",
+      "language": "yaml",
+      "category": "security",
+      "description": "A privileged pull_request_target job checks out and executes untrusted pull request code.",
+      "file": ".github/workflows/review.yml",
+      "startLine": 1,
+      "diff": "+on: pull_request_target\n+permissions: write-all\n+steps:\n+  - uses: actions/checkout@v4\n+    with:\n+      ref: ${{ github.event.pull_request.head.sha }}\n+  - run: npm test",
+      "expected": [{ "id": "pwn-request-target", "title": "Privileged workflow executes untrusted PR code", "file": ".github/workflows/review.yml", "line": 7, "severity": "high", "category": "security", "symbol": "review", "codeSnippet": "run: npm test" }]
+    },
+    {
+      "id": "actions-readonly-metadata",
+      "language": "yaml",
+      "category": "negative",
+      "description": "A pull request workflow reads metadata with explicit read-only permissions and does not execute PR code.",
+      "file": ".github/workflows/metadata.yml",
+      "startLine": 1,
+      "diff": "+on: pull_request\n+permissions:\n+  contents: read\n+steps:\n+  - run: echo '${{ github.event.pull_request.number }}'",
+      "expected": []
+    },
+    {
+      "id": "shell-unquoted-path",
+      "language": "shell",
+      "category": "security",
+      "description": "An attacker-controlled path is expanded unquoted into a command.",
+      "file": "scripts/archive.sh",
+      "startLine": 14,
+      "diff": "+tar -czf backup.tgz $UPLOAD_PATH",
+      "expected": [{ "id": "unsafe-path-expansion", "title": "Upload path is subject to word splitting and option injection", "file": "scripts/archive.sh", "line": 14, "severity": "high", "category": "security", "symbol": "archive_upload", "codeSnippet": "tar -czf backup.tgz $UPLOAD_PATH" }]
+    },
+    {
+      "id": "shell-quoted-path",
+      "language": "shell",
+      "category": "negative",
+      "description": "A path is quoted and separated from command options.",
+      "file": "scripts/archive.sh",
+      "startLine": 20,
+      "diff": "+tar -czf backup.tgz -- \"$UPLOAD_PATH\"",
+      "expected": []
+    },
+    {
+      "id": "terraform-public-database",
+      "language": "terraform",
+      "category": "security",
+      "description": "A database security group is opened to the entire internet.",
+      "file": "infra/database.tf",
+      "startLine": 90,
+      "diff": "+ingress {\n+  from_port   = 5432\n+  to_port     = 5432\n+  protocol    = \"tcp\"\n+  cidr_blocks = [\"0.0.0.0/0\"]\n+}",
+      "expected": [{ "id": "public-postgres", "title": "PostgreSQL is exposed to the internet", "file": "infra/database.tf", "line": 94, "severity": "high", "category": "security", "symbol": "aws_security_group.database", "codeSnippet": "cidr_blocks = [\"0.0.0.0/0\"]" }]
+    },
+    {
+      "id": "terraform-private-database",
+      "language": "terraform",
+      "category": "negative",
+      "description": "Database ingress is restricted to the application security group.",
+      "file": "infra/database.tf",
+      "startLine": 108,
+      "diff": "+ingress {\n+  from_port       = 5432\n+  to_port         = 5432\n+  protocol        = \"tcp\"\n+  security_groups = [aws_security_group.application.id]\n+}",
+      "expected": []
+    },
+    {
+      "id": "react-stale-effect",
+      "language": "tsx",
+      "category": "correctness",
+      "description": "An effect reads a changing identifier but never reruns for it.",
+      "file": "src/UserPanel.tsx",
+      "startLine": 32,
+      "diff": "+useEffect(() => {\n+  loadUser(userId).then(setUser);\n+}, []);",
+      "expected": [{ "id": "stale-user-effect", "title": "Effect keeps loading the initial user", "file": "src/UserPanel.tsx", "line": 34, "severity": "medium", "category": "correctness", "symbol": "UserPanel", "codeSnippet": "}, [])" }]
+    },
+    {
+      "id": "react-complete-dependencies",
+      "language": "tsx",
+      "category": "negative",
+      "description": "An effect reruns when the identifier it reads changes.",
+      "file": "src/UserPanel.tsx",
+      "startLine": 41,
+      "diff": "+useEffect(() => {\n+  loadUser(userId).then(setUser);\n+}, [userId]);",
+      "expected": []
+    },
+    {
+      "id": "csharp-path-traversal",
+      "language": "csharp",
+      "category": "security",
+      "description": "A request filename is combined with the upload root without containment validation.",
+      "file": "Controllers/DownloadController.cs",
+      "startLine": 58,
+      "diff": "+var path = Path.Combine(uploadRoot, request.FileName);\n+return PhysicalFile(path, \"application/octet-stream\");",
+      "expected": [{ "id": "download-traversal", "title": "Request filename can escape the upload root", "file": "Controllers/DownloadController.cs", "line": 58, "severity": "high", "category": "security", "symbol": "Download", "codeSnippet": "Path.Combine(uploadRoot, request.FileName)" }]
+    },
+    {
+      "id": "csharp-contained-path",
+      "language": "csharp",
+      "category": "negative",
+      "description": "The canonicalized download path is rejected unless it remains under the upload root.",
+      "file": "Controllers/DownloadController.cs",
+      "startLine": 72,
+      "diff": "+var path = Path.GetFullPath(Path.Combine(uploadRoot, request.FileName));\n+if (!path.StartsWith(Path.GetFullPath(uploadRoot) + Path.DirectorySeparatorChar, StringComparison.Ordinal))\n+    return BadRequest();",
+      "expected": []
+    },
+    {
+      "id": "kotlin-blocking-coroutine",
+      "language": "kotlin",
+      "category": "performance",
+      "description": "Blocking I/O is introduced directly on a request coroutine dispatcher.",
+      "file": "src/ReportController.kt",
+      "startLine": 48,
+      "diff": "+suspend fun report(): Report {\n+    val bytes = Files.readAllBytes(reportPath)\n+    return parse(bytes)\n+}",
+      "expected": [{ "id": "blocking-request-thread", "title": "Blocking file read runs on the request dispatcher", "file": "src/ReportController.kt", "line": 49, "severity": "medium", "category": "performance", "symbol": "report", "codeSnippet": "Files.readAllBytes(reportPath)" }]
+    },
+    {
+      "id": "kotlin-io-dispatcher",
+      "language": "kotlin",
+      "category": "negative",
+      "description": "Blocking file I/O is explicitly moved to the IO dispatcher.",
+      "file": "src/ReportController.kt",
+      "startLine": 57,
+      "diff": "+val bytes = withContext(Dispatchers.IO) { Files.readAllBytes(reportPath) }",
+      "expected": []
+    }
+  ]
+}

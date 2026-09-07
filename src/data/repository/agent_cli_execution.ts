@@ -1,7 +1,8 @@
 import { spawn } from 'node:child_process';
-import { buildAgentCliEnvironment } from './agent_authentication';
 import { AgentCliError, type AgentCliRequest } from './agent_cli_contracts';
 import { enforceAgentExecutionPolicy } from './agent_execution_policy';
+import { prepareAgentRuntimeEnvironment } from './agent_runtime_environment';
+import { prepareAgentOutputSchema } from './agent_output_schema';
 
 const MAX_STDERR_BYTES = 8 * 1024;
 
@@ -10,19 +11,61 @@ export interface PreparedAgentCliRequest extends AgentCliRequest {
     args: string[];
     promptMode: 'stdin' | 'argv';
     maxOutputBytes: number;
+    maxPromptBytes: number;
 }
 
 export function runAgentCli(request: PreparedAgentCliRequest): Promise<string> {
     return new Promise((resolve, reject) => {
-        const controlledArgs = enforceAgentExecutionPolicy(request.provider, request.capability, request.args);
-        const child = spawn(request.executable, request.promptMode === 'argv' ? [...controlledArgs, request.prompt] : controlledArgs, {
-            cwd: request.cwd,
-            env: buildAgentCliEnvironment(request.provider, request.environment, request.modelProvider),
-            stdio: ['pipe', 'pipe', 'pipe'],
-            shell: false,
-            detached: process.platform !== 'win32',
-        });
-        const lifecycle = createProcessLifecycle(child, request, resolve, reject);
+        const outputSchema = prepareAgentOutputSchema(request.provider, request.outputSchema);
+        let controlledArgs: string[];
+        let runtime: ReturnType<typeof prepareAgentRuntimeEnvironment>;
+        try {
+            controlledArgs = enforceAgentExecutionPolicy(
+                request.provider,
+                request.capability,
+                request.args,
+                outputSchema.path,
+            );
+            runtime = prepareAgentRuntimeEnvironment(
+                request.provider,
+                request.capability,
+                request.environment,
+                request.modelProvider,
+            );
+        } catch (error) {
+            outputSchema.cleanup();
+            reject(error);
+            return;
+        }
+        let cleaned = false;
+        const cleanup = () => {
+            if (cleaned) return;
+            cleaned = true;
+            runtime.cleanup();
+            outputSchema.cleanup();
+        };
+        const child = (() => {
+            try {
+                return spawn(request.executable, request.promptMode === 'argv' ? [...controlledArgs, request.prompt] : controlledArgs, {
+                    cwd: request.cwd,
+                    env: runtime.environment,
+                    stdio: ['pipe', 'pipe', 'pipe'],
+                    shell: false,
+                    detached: process.platform !== 'win32',
+                });
+            } catch (error: unknown) {
+                cleanup();
+                reject(new AgentCliError(`Unable to start agent CLI: ${error instanceof Error ? error.message : String(error)}`, 'process'));
+                return undefined;
+            }
+        })();
+        if (!child) return;
+        const lifecycle = createProcessLifecycle(
+            child,
+            request,
+            (value) => { cleanup(); resolve(value); },
+            (error) => { cleanup(); reject(error); },
+        );
         child.stdout.on('data', lifecycle.appendStdout);
         child.stderr.on('data', lifecycle.appendStderr);
         child.stdin.once('error', lifecycle.onStdinError);
@@ -44,46 +87,58 @@ function createProcessLifecycle(
     let stderrBytes = 0;
     let outputBytes = 0;
     let settled = false;
-    const timer = setTimeout(() => {
-        terminate(child);
-        finishReject(new AgentCliError(`Agent CLI timed out after ${request.timeoutMs}ms.`, 'timeout'));
-    }, request.timeoutMs);
+    let terminationError: Error | undefined;
+    const timers: { timeout?: NodeJS.Timeout; force?: NodeJS.Timeout } = {};
 
     const finishResolve = (value: string) => {
         if (settled) return;
         settled = true;
-        clearTimeout(timer);
+        if (timers.timeout) clearTimeout(timers.timeout);
+        if (timers.force) clearTimeout(timers.force);
         request.signal?.removeEventListener('abort', abort);
         resolve(value);
     };
     const finishReject = (error: Error) => {
         if (settled) return;
         settled = true;
-        clearTimeout(timer);
+        if (timers.timeout) clearTimeout(timers.timeout);
+        if (timers.force) clearTimeout(timers.force);
         request.signal?.removeEventListener('abort', abort);
         reject(error);
     };
+    const beginTermination = (error: Error) => {
+        if (settled || terminationError) return;
+        terminationError = error;
+        if (timers.timeout) clearTimeout(timers.timeout);
+        signalProcessTree(child, 'SIGTERM');
+        timers.force = setTimeout(() => {
+            if (child.exitCode === null) signalProcessTree(child, 'SIGKILL');
+        }, 5_000);
+        timers.force.unref();
+    };
     const abort = () => {
-        terminate(child);
-        finishReject(new AgentCliError('Agent CLI execution was cancelled.', 'cancelled'));
+        beginTermination(new AgentCliError('Agent CLI execution was cancelled.', 'cancelled'));
     };
     const appendStdout = (chunk: Buffer) => {
-        if (settled) return;
+        if (settled || terminationError) return;
         outputBytes += chunk.byteLength;
         if (outputBytes > request.maxOutputBytes) {
-            terminate(child);
-            finishReject(new AgentCliError(`Agent CLI output exceeded the ${request.maxOutputBytes}-byte limit.`, 'output'));
+            beginTermination(new AgentCliError(`Agent CLI output exceeded the ${request.maxOutputBytes}-byte limit.`, 'output'));
             return;
         }
         stdout += chunk.toString();
     };
     const appendStderr = (chunk: Buffer) => {
-        if (settled) return;
+        if (settled || terminationError) return;
         stderrBytes = Math.min(stderrBytes + chunk.byteLength, MAX_STDERR_BYTES);
     };
-    const onStdinError = () => finishReject(new AgentCliError('Unable to send the prompt to the agent CLI.', 'process'));
+    const onStdinError = () => beginTermination(new AgentCliError('Unable to send the prompt to the agent CLI.', 'process'));
     const onError = (error: Error) => finishReject(new AgentCliError(`Unable to start agent CLI: ${error.message}`, 'process'));
     const onClose = (code: number | null) => {
+        if (terminationError) {
+            finishReject(terminationError);
+            return;
+        }
         if (code !== 0) {
             const diagnostic = stderrBytes > 0 ? ' Diagnostic output was suppressed for safety.' : '';
             finishReject(new AgentCliError(`Agent CLI exited with code ${code}.${diagnostic}`, 'process', code === 75));
@@ -96,16 +151,10 @@ function createProcessLifecycle(
         }
         finishResolve(output);
     };
+    timers.timeout = setTimeout(() => {
+        beginTermination(new AgentCliError(`Agent CLI timed out after ${request.timeoutMs}ms.`, 'timeout'));
+    }, request.timeoutMs);
     return { appendStdout, appendStderr, onStdinError, onError, onClose, abort };
-}
-
-function terminate(child: ReturnType<typeof spawn>): void {
-    if (child.exitCode !== null) return;
-    signalProcessTree(child, 'SIGTERM');
-    const forceTimer = setTimeout(() => {
-        if (child.exitCode === null) signalProcessTree(child, 'SIGKILL');
-    }, 5_000);
-    forceTimer.unref();
 }
 
 function signalProcessTree(child: ReturnType<typeof spawn>, signal: NodeJS.Signals): void {

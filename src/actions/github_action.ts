@@ -19,6 +19,9 @@ import { createSynchronizeLifecycleStateUseCase } from '../infrastructure/compos
 import { createCopilotEvidenceCompositionRoot } from '../infrastructure/composition/copilot_evidence_composition_root';
 import { createGithubActionSummaryCompositionRoot } from '../infrastructure/composition/github_action_summary_composition_root';
 import { createSynchronizeAgentActivityUseCase } from '../infrastructure/composition/agent_activity_composition_root';
+import { readGithubActionAiInputs } from './github_action_ai_inputs';
+import { activeAgentTasks } from '../application/policies/agent_task_activation_policy';
+import { createActorAuthorizationRepository } from '../infrastructure/composition/actor_authorization_composition_root';
 
 export async function runGitHubAction(): Promise<void> {
     if (isEnabledInput(getGithubActionInput(INPUT_KEYS.QUEUE_GATE_ONLY))) {
@@ -51,6 +54,25 @@ export async function runGitHubAction(): Promise<void> {
         return;
     }
 
+    const aiInputs = readGithubActionAiInputs(getGithubActionInput);
+    const requestedActiveAgentTasks = activeAgentTasks(
+        eventInputs,
+        singleAction,
+        admission.tokenUser,
+        aiInputs.pullRequestDescriptionMode !== 'disabled',
+    );
+    const agentRuntimeAuthorized = !aiInputs.membersOnly
+        || requestedActiveAgentTasks.length === 0
+        || await createActorAuthorizationRepository().isActorAllowedToModifyFiles(
+            eventInputs.repo.owner,
+            eventInputs.repo.repo,
+            eventInputs.actor,
+            token,
+        );
+    if (!agentRuntimeAuthorized) {
+        logInfo('Skipping agent runtime preparation because ai-members-only is enabled and the actor is not authorized.');
+    }
+
     const projectBoard = createProjectBoardCompositionRoot();
 
     const execution = await buildGithubActionExecution({
@@ -61,6 +83,9 @@ export async function runGitHubAction(): Promise<void> {
         token,
         tokenUser: admission.tokenUser,
         singleAction,
+        aiInputs,
+        activeAgentTasks: agentRuntimeAuthorized ? requestedActiveAgentTasks : [],
+        agentRuntimeAuthorized,
     });
     logDebugInfo(
         `Execution built. Event will be resolved in mainRun. Single action: ${execution.singleAction.currentSingleAction ?? 'none'}, ` +
@@ -70,7 +95,7 @@ export async function runGitHubAction(): Promise<void> {
     const results = await mainRun(
         execution,
         projectBoard.command,
-        new GitCliRepository(),
+        new GitCliRepository(token),
         createSynchronizeLifecycleStateUseCase(),
         createSynchronizeAgentActivityUseCase(),
     );
@@ -101,13 +126,26 @@ async function runQueueGateOnly(): Promise<void> {
     }
 }
 
+/**
+ * Runs the action entrypoint without forcing a successful process exit.
+ *
+ * `@actions/core.setFailed` deliberately communicates failure through
+ * `process.exitCode`. Calling `process.exit(0)` after a resolved workflow would
+ * overwrite that signal (for example when Bugbot is configured to fail on
+ * unresolved findings), so this boundary must let Node exit naturally.
+ */
+export async function runGitHubActionEntry(
+    run: () => Promise<void> = runGitHubAction,
+): Promise<void> {
+    try {
+        await run();
+    } catch (error: unknown) {
+        logError(error);
+        core.setFailed(error instanceof Error ? error.message : String(error));
+    }
+}
+
 // Only auto-run when executed as the action entry (not when imported by tests)
 if (typeof process.env.JEST_WORKER_ID === 'undefined') {
-    runGitHubAction()
-        .then(() => process.exit(0))
-        .catch((error: unknown) => {
-            logError(error);
-            core.setFailed(error instanceof Error ? error.message : String(error));
-            process.exit(1);
-        });
+    void runGitHubActionEntry();
 }

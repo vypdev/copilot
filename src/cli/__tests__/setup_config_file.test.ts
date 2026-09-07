@@ -28,6 +28,8 @@ describe('setup configuration file loader', () => {
             'repository:',
             '  mainBranch: feature/token-refresh',
             '  desiredReviewersCount: 2',
+            'ai:',
+            '  bugbotFailOnUnresolved: true',
             'actionInputs:',
             '  debug: "true"',
         ].join('\n'));
@@ -42,6 +44,7 @@ describe('setup configuration file loader', () => {
                 },
             },
             repository: { mainBranch: 'feature/token-refresh', desiredReviewersCount: 2 },
+            ai: { bugbotFailOnUnresolved: true },
             actionInputs: { debug: 'true' },
         });
     });

@@ -15,10 +15,12 @@ import { buildLocalActionConfiguration } from './local_action_configuration';
 import { buildLocalActionExecution } from './local_action_execution';
 import { requireRepositoryCoordinates } from './repository_context';
 import { createSynchronizeAgentActivityUseCase } from '../infrastructure/composition/agent_activity_composition_root';
+import type { Result } from '../data/model/result';
 
 export async function runLocalAction(
-    additionalParams: Record<string, unknown>
-): Promise<void> {
+    additionalParams: Record<string, unknown>,
+    options: { render?: boolean } = {},
+): Promise<Result[]> {
     const repository = requireRepositoryCoordinates(additionalParams?.repo);
     const normalizedParams = { ...(additionalParams ?? {}), repo: repository };
     const composition = createLocalActionCompositionRoot();
@@ -34,5 +36,6 @@ export async function runLocalAction(
         createSynchronizeAgentActivityUseCase(),
     );
 
-    renderLocalActionResults(results);
+    if (options.render !== false) renderLocalActionResults(results);
+    return results;
 }

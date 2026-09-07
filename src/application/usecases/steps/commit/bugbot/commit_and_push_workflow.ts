@@ -42,7 +42,7 @@ export async function runCommitAndPushWorkflow(
             await gitCommitPort.stageAll();
         }
         await gitCommitPort.commit(options.commitMessage);
-        await gitCommitPort.push(options.branch);
+        await gitCommitPort.push(options.branch, execution.tokens.token);
         logInfo(`Pushed commit to origin/${options.branch}.`);
         return { success: true, committed: true };
     } catch (error) {

@@ -2,6 +2,7 @@ import type { Execution } from '../../data/model/execution';
 import { Result } from '../../data/model/result';
 import { logError, logInfo } from '../ports/logging_ports';
 import type { AuthenticatedUserPort } from '../ports/authenticated_user_ports';
+import { containsBotMention } from './steps/common/think_input_policy';
 import type { ActorAuthorizationPort } from '../ports/actor_authorization_ports';
 import type { CommentAutomationOptions } from './comment_automation_contracts';
 import { parseCopilotCommand } from '../../domain/copilot_command';
@@ -24,11 +25,31 @@ export async function runCommentAutomation(
     if (command.kind === 'invalid') {
       return [invalidCommentCommandResult(options.taskId, command.reason)];
     }
+    const isPublicMetadataCommand = command.kind === 'command'
+      && (command.command.name === 'help' || command.command.name === 'status');
+    if (!isPublicMetadataCommand && param.ai?.getAiMembersOnly?.() && !await actorAuthorizationPort.isActorAllowedToModifyFiles(
+      param.owner,
+      param.repo,
+      param.actor,
+      param.tokens.token,
+    )) {
+      logInfo('Skipping agent automation because ai-members-only is enabled and the actor is not authorized.');
+      return [new Result({ id: options.taskId, success: true, executed: false })];
+    }
     if (command.kind === 'command') {
-      const explicitResults = await runExplicitCommentCommand(param, options, command.command, actorAuthorizationPort);
+      const explicitResults = await runExplicitCommentCommand(param, options, command.command, actorAuthorizationPort, authenticatedUserPort);
       if (explicitResults) return explicitResults;
+      // Explicit fix/implement commands are already mention-gated by their
+      // deterministic prefix and still flow through structured intent parsing.
+      return runNaturalLanguageCommentAutomation(param, options, actorAuthorizationPort, [], {
+        authenticatedUserPort,
+      });
     }
     languageResults = await options.languageUseCase.invoke(param);
+    if (!containsBotMention(options.userComment, param.tokenUser ?? '')) {
+      logInfo('Skipping natural-language intent detection because the bot was not mentioned.');
+      return languageResults;
+    }
     return await runNaturalLanguageCommentAutomation(param, options, actorAuthorizationPort, languageResults, {
       authenticatedUserPort,
     });

@@ -6,7 +6,8 @@ import { isSafeFindingFilePath } from './path_validation';
 import { meetsMinSeverity, normalizeMinSeverity, severityLevel } from './severity';
 import type { BugbotFinding } from './types';
 import type { BugbotFindingResolution } from './types';
-import { buildFindingFingerprint } from '../../../../../domain/bugbot/finding_identity';
+import { buildFindingFingerprint, buildSemanticFindingFingerprint } from '../../../../../domain/bugbot/finding_identity';
+import { redactSensitiveText } from '../../../../../domain/security/sensitive_text';
 
 export type BugbotResponse = {
     findings?: BugbotFinding[];
@@ -91,6 +92,9 @@ function normalizeFindings(findings: unknown): BugbotFinding[] {
             : undefined;
         const evidence = boundedText(value.evidence, 8_000) || undefined;
         const suggestion = boundedText(value.suggestion, 8_000) || undefined;
+        const symbol = boundedText(value.symbol, 500) || undefined;
+        const codeSnippet = boundedText(value.codeSnippet, 2_000) || undefined;
+        const suggestedCode = normalizeSuggestedCode(value.suggestedCode);
         return normalizedId == null
             ? []
             : [{
@@ -105,9 +109,18 @@ function normalizeFindings(findings: unknown): BugbotFinding[] {
                 ...(category ? { category } : {}),
                 ...(evidence ? { evidence } : {}),
                 ...(suggestion ? { suggestion } : {}),
+                ...(symbol ? { symbol } : {}),
+                ...(codeSnippet ? { codeSnippet } : {}),
+                ...(suggestedCode ? { suggestedCode } : {}),
                 fingerprint: buildFindingFingerprint({ file, line, title, description, suggestion }),
+                semanticFingerprint: buildSemanticFindingFingerprint({ category, symbol, codeSnippet, title }),
             }];
     });
+}
+
+function normalizeSuggestedCode(value: unknown): string | undefined {
+    const normalized = boundedText(value, 4_000);
+    return normalized && !normalized.includes('```') ? normalized : undefined;
 }
 
 function normalizeResolvedFindingIds(findingIds: unknown): Set<string> {
@@ -130,7 +143,7 @@ function normalizeResolvedFindingReasons(value: unknown): Map<string, BugbotFind
 
 function boundedText(value: unknown, maxLength: number): string {
     if (typeof value !== 'string') return '';
-    return value.normalize('NFKC').replace(/\r\n?/g, '\n').trim().slice(0, maxLength);
+    return redactSensitiveText(value.normalize('NFKC').replace(/\r\n?/g, '\n').trim()).slice(0, maxLength);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

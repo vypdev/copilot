@@ -86,6 +86,7 @@ interface CredentialEndpoint {
 function endpointFor(requirement: SetupCredentialRequirement): CredentialEndpoint | undefined {
     switch (requirement.name) {
         case 'OPENAI_API_KEY':
+        case 'CODEX_API_KEY':
         case 'CODEX_ACCESS_TOKEN':
             return { url: new URL('https://api.openai.com/v1/models'), auth: 'bearer' };
         case 'ANTHROPIC_API_KEY':

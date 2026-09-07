@@ -261,7 +261,7 @@ describe("BugbotAutofixUseCase", () => {
 
         expect(results).toHaveLength(1);
         expect(results[0].success).toBe(false);
-        expect(results[0].errors?.[0].message).toContain("Unable to inspect workspace before autofix: status unavailable");
+        expect(results[0].errors?.[0].message).toContain("Unable to inspect workspace before Bugbot autofix.");
         expect(mockCopilotMessage).not.toHaveBeenCalled();
     });
 
@@ -313,7 +313,7 @@ describe("BugbotAutofixUseCase", () => {
 
         expect(results).toHaveLength(1);
         expect(results[0].success).toBe(false);
-        expect(results[0].errors?.[0].message).toContain("Unable to inspect workspace after autofix: status unavailable");
+        expect(results[0].errors?.[0].message).toContain("Unable to inspect workspace after Bugbot autofix.");
     });
 
     it("refuses to report success when the agent changes no workspace paths", async () => {

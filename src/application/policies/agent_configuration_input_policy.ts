@@ -4,6 +4,7 @@ import { validateAgentCommand } from './agent_command_policy';
 import type { AgentConfigurationEnvironment } from '../ports/agent_configuration_ports';
 import {
     assertModelAllowlisted,
+    assertProviderModelCompatibility,
     resolveAgentProvider,
     resolveEffort,
     resolveModel,
@@ -23,7 +24,8 @@ export function buildAgentConfiguration(
     environment: AgentConfigurationEnvironment,
 ): AgentConfiguration {
     const provider = resolveAgentProvider(values.provider.trim().toLowerCase());
-    const modelProvider = resolveModelProvider(values.modelProvider, environment);
+    const modelProvider = resolveModelProvider(values.modelProvider, environment, provider);
+    assertProviderModelCompatibility(provider, modelProvider);
     const model = resolveModel(values.model);
     assertModelAllowlisted(modelProvider, model, environment);
     const effort = resolveEffort(values.effort);
@@ -43,10 +45,14 @@ export function mergeAgentTaskValues(
     values: AgentTaskConfigurationValues,
     overrides?: Partial<AgentTaskConfigurationValues>,
 ): AgentTaskConfigurationValues {
-    return {
+    const merged = {
         ...values,
         ...Object.fromEntries(Object.entries(overrides ?? {}).filter(([, value]) => typeof value === 'string' && value.trim().length > 0)),
     };
+    if (overrides?.provider?.trim() && !overrides.modelProvider?.trim()) {
+        delete merged.modelProvider;
+    }
+    return merged;
 }
 
 export function buildAgentTaskConfiguration(
@@ -56,7 +62,6 @@ export function buildAgentTaskConfiguration(
         planner?: Partial<AgentTaskConfigurationValues>;
         reviewer?: Partial<AgentTaskConfigurationValues>;
         tester?: Partial<AgentTaskConfigurationValues>;
-        release?: Partial<AgentTaskConfigurationValues>;
     },
     environment: AgentConfigurationEnvironment,
 ): AgentTaskConfiguration {
@@ -64,7 +69,7 @@ export function buildAgentTaskConfiguration(
         findings: buildAgentConfiguration(mergeAgentTaskValues(values, values.findings), environment),
         fixer: buildAgentConfiguration(mergeAgentTaskValues(values, values.fixer), environment),
     };
-    for (const task of ['planner', 'reviewer', 'tester', 'release'] as const) {
+    for (const task of ['planner', 'reviewer', 'tester'] as const) {
         if (hasTaskOverride(values[task])) {
             configuration[task] = buildAgentConfiguration(mergeAgentTaskValues(values, values[task]), environment);
         }

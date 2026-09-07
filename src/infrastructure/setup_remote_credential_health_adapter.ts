@@ -17,6 +17,7 @@ const INPUT_BY_SECRET: Readonly<Record<string, string>> = {
     OPENROUTER_API_KEY: 'check_openrouter',
     CURSOR_API_KEY: 'check_cursor',
     OPENCODE_API_KEY: 'check_opencode',
+    CODEX_API_KEY: 'check_codex_api_key',
     CODEX_ACCESS_TOKEN: 'check_codex',
 };
 const JOB_BY_SECRET: Readonly<Record<string, string>> = {
@@ -27,6 +28,7 @@ const JOB_BY_SECRET: Readonly<Record<string, string>> = {
     OPENROUTER_API_KEY: 'Verify OPENROUTER_API_KEY',
     CURSOR_API_KEY: 'Verify CURSOR_API_KEY',
     OPENCODE_API_KEY: 'Verify OPENCODE_API_KEY',
+    CODEX_API_KEY: 'Verify CODEX_API_KEY',
     CODEX_ACCESS_TOKEN: 'Verify CODEX_ACCESS_TOKEN',
 };
 

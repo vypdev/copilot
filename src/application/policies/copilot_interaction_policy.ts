@@ -30,7 +30,7 @@ I’m **@${bot}**, the repository assistant. Use these commands on an issue or p
 - \`/copilot explain <path or symbol>\` — explain code or behavior.
 - \`/copilot diagnose\` — investigate a reported problem and suggest likely causes.
 - \`/copilot analyze\` — review the current issue, branch, or pull request for potential problems.
-- \`/copilot review\` — run the Bugbot review.
+- \`/copilot review [effort=smart|low|default|high] [dry-run=true] [verbose=true]\` — run Bugbot with optional per-run settings.
 - \`/copilot findings\` — show potential findings from the current code.
 - \`/copilot recheck\` — re-run the review and reconcile findings.
 - \`/copilot description\` — refresh the pull-request description.
@@ -41,6 +41,7 @@ I’m **@${bot}**, the repository assistant. Use these commands on an issue or p
 - \`/copilot fix <finding-id>\` — fix one reported finding.
 - \`/copilot fix all\` — fix all unresolved findings.
 - \`/copilot dismiss <finding-id>\` — dismiss a finding.
+- \`/copilot remember <rule>\` — add an authorized, versioned repository review rule.
 - \`/copilot implement <request>\` — apply an explicitly requested repository change.
 
 You can also ask a question in natural language by mentioning **@${bot}**. File-changing commands are restricted to authorized maintainers, run the configured checks, and report the resulting changes.`;

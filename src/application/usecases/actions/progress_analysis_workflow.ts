@@ -112,7 +112,7 @@ export async function analyzeProgress(
                 expectJson: true,
                 schema: PROGRESS_RESPONSE_SCHEMA as unknown as Record<string, unknown>,
                 schemaName: 'progress_response',
-                includeReasoning: true,
+                includeReasoning: param.ai?.getAiIncludeReasoning() === true,
             },
         }),
     );

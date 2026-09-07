@@ -145,8 +145,8 @@
           "icon": "robot"
         },
         {
-          "title": "Cursor (WIP)",
-          "href": "/agents/cursor-wip",
+          "title": "Cursor",
+          "href": "/agents/cursor",
           "icon": "wand-magic-sparkles"
         },
         {
@@ -271,6 +271,11 @@
           "title": "Testing",
           "href": "/development/testing",
           "icon": "vial"
+        },
+        {
+          "title": "Agent functionality audit",
+          "href": "/development/agent-functionality-audit",
+          "icon": "clipboard"
         },
         {
           "title": "Build artifacts",
@@ -511,6 +516,11 @@
           "title": "Configuration",
           "href": "/bugbot/configuration",
           "icon": "gear"
+        },
+        {
+          "title": "Quality and observability",
+          "href": "/bugbot/quality-observability",
+          "icon": "vial"
         },
         {
           "title": "Verification commands",

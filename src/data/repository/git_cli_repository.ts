@@ -1,6 +1,7 @@
 import * as exec from '@actions/exec';
 import { logDebugInfo, logError } from '../../utils/logger';
 import { getLatestVersion } from '../model/version_policy';
+import { buildGitAuthenticationEnvironment } from '../../infrastructure/git_authentication_environment';
 
 /**
  * Repository for Git operations executed via CLI (exec).
@@ -8,13 +9,15 @@ import { getLatestVersion } from '../model/version_policy';
  */
 export class GitCliRepository {
 
+    constructor(private readonly token?: string) {}
+
     fetchRemoteBranches = async (): Promise<void> => {
         try {
             logDebugInfo('Fetching tags and forcing fetch...');
-            await exec.exec('git', ['fetch', '--tags', '--force']);
+            await this.git(['fetch', '--tags', '--force']);
 
             logDebugInfo('Fetching all remote branches with verbose output...');
-            await exec.exec('git', ['fetch', '--all', '-v']);
+            await this.git(['fetch', '--all', '-v']);
 
             logDebugInfo('Successfully fetched all remote branches.');
         } catch (error) {
@@ -26,7 +29,7 @@ export class GitCliRepository {
     getLatestTag = async (): Promise<string | undefined> => {
         try {
             logDebugInfo('Fetching the latest tag...');
-            await exec.exec('git', ['fetch', '--tags']);
+            await this.git(['fetch', '--tags']);
 
             const tags: string[] = [];
             await exec.exec('git', ['tag', '--sort=-creatordate'], {
@@ -90,4 +93,11 @@ export class GitCliRepository {
         }
         return undefined;
     };
+
+    private async git(args: string[]): Promise<number> {
+        const environment = buildGitAuthenticationEnvironment(this.token);
+        return environment
+            ? exec.exec('git', args, { env: environment })
+            : exec.exec('git', args);
+    }
 }

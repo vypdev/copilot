@@ -31,4 +31,12 @@ describe('comment translation policy', () => {
         expect(hasTranslatedCommentMarker('text\n<!-- content_translated\nlegacy\n-->')).toBe(true);
         expect(hasTranslatedCommentMarker('plain comment')).toBe(false);
     });
+
+    it('keeps the translated publication below the GitHub comment-size boundary', () => {
+        const result = composeTranslatedComment('x'.repeat(12_000), '&'.repeat(65_000));
+
+        expect(result).toBeDefined();
+        expect(result!.commentBody.length).toBeLessThan(65_536);
+        expect(result!.commentBody).toContain('[untrusted content truncated]');
+    });
 });

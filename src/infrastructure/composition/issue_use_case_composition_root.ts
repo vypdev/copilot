@@ -43,6 +43,7 @@ import { createFindingsQueryPort } from "./agent_capability_composition_root";
 import { composeIssueUseCase } from "./issue_use_case_composition";
 import { createOrganizationMembersCompositionRoot } from "./organization_members_composition_root";
 import { createProjectBoardCompositionRoot } from "./project_board_composition_root";
+import { createActorAuthorizationRepository } from './actor_authorization_composition_root';
 
 export function createIssueUseCaseCompositionRoot(): IssueUseCase {
   const issueMetadata = new IssueMetadataRepository(
@@ -119,5 +120,6 @@ export function createIssueUseCaseCompositionRoot(): IssueUseCase {
     new RecommendStepsUseCase(issueContent, createFindingsQueryPort()),
     new AnswerIssueHelpUseCase(issueNotification, createFindingsQueryPort()),
     workflowSteps,
+    createActorAuthorizationRepository(),
   );
 }

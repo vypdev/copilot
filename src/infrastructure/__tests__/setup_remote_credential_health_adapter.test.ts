@@ -38,6 +38,26 @@ describe('SetupRemoteCredentialHealthAdapter', () => {
         }));
     });
 
+    it('maps the official Codex API-key fallback to its dedicated health job', async () => {
+        const github = client({
+            listJobsForWorkflowRun: jest.fn().mockResolvedValue({ data: { jobs: [
+                { name: 'Verify CODEX_API_KEY', status: 'completed', conclusion: 'success' },
+            ] } }),
+        });
+        const requirement = { name: 'CODEX_API_KEY', kind: 'apiKey' as const, description: 'Codex API key' };
+        const checks = await new SetupRemoteCredentialHealthAdapter(
+            { getClient: jest.fn(() => github) },
+            { waitMs: 0, pollMs: 0 },
+        ).validateExisting('owner', 'repo', 'token', 'main', [requirement]);
+
+        expect(checks).toEqual([
+            { name: 'CODEX_API_KEY', status: 'valid', message: 'Remote credential health check passed.' },
+        ]);
+        expect(github.rest.actions.createWorkflowDispatch).toHaveBeenCalledWith(expect.objectContaining({
+            inputs: { check_codex_api_key: 'true' },
+        }));
+    });
+
     it('returns undefined when the health workflow has not been installed', async () => {
         const error = Object.assign(new Error('not found'), { status: 404 });
         const github = client({ getWorkflow: jest.fn().mockRejectedValue(error) });

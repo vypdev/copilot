@@ -13,6 +13,7 @@ import { CheckChangesIssueSizeUseCase } from "../../application/usecases/steps/c
 import { BugbotAutofixUseCase } from "../../application/usecases/steps/commit/bugbot/bugbot_autofix_use_case";
 import { DetectBugbotFixIntentUseCase } from "../../application/usecases/steps/commit/bugbot/detect_bugbot_fix_intent_use_case";
 import { DismissBugbotFindingsUseCase } from "../../application/usecases/steps/commit/bugbot/dismiss_bugbot_findings_use_case";
+import { RememberBugbotRuleUseCase } from "../../application/usecases/steps/commit/bugbot/remember_bugbot_rule_use_case";
 import { DetectPotentialProblemsUseCase } from "../../application/usecases/steps/commit/detect_potential_problems_use_case";
 import { NotifyNewCommitOnIssueUseCase } from "../../application/usecases/steps/commit/notify_new_commit_on_issue_use_case";
 import { DoUserRequestUseCase } from "../../application/usecases/steps/commit/user_request_use_case";
@@ -61,6 +62,7 @@ function createDetectPotentialProblemsUseCase(): DetectPotentialProblemsUseCase 
     bugbot.context,
     bugbot.publication,
     bugbot.resolution,
+    bugbot.telemetry,
   );
 }
 
@@ -92,6 +94,7 @@ export function createSingleActionUseCaseCompositionRoot(): SingleActionUseCase 
       createFindingsQueryPort(),
     ),
     createCloseInactiveIssuesUseCase(),
+    createActorAuthorizationRepository(),
   );
 }
 
@@ -123,14 +126,15 @@ export function createIssueCommentUseCaseCompositionRoot(): IssueCommentUseCase 
       findings,
     ),
     new BugbotAutofixUseCase(fixer, bugbot.context, gitCommit),
-    new DoUserRequestUseCase(fixer),
+    new DoUserRequestUseCase(fixer, gitCommit),
     bugbot.issue,
     createActorAuthorizationRepository(),
     createAuthenticatedUserCompositionRoot(),
     gitCommit,
     new DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }),
-    new DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution),
+    new DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution, bugbot.telemetry),
     pullRequestDescription,
+    new RememberBugbotRuleUseCase(bugbot.rules),
   );
 }
 
@@ -162,14 +166,15 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(): PullRequ
       findings,
     ),
     new BugbotAutofixUseCase(fixer, bugbot.context, gitCommit),
-    new DoUserRequestUseCase(fixer),
+    new DoUserRequestUseCase(fixer, gitCommit),
     bugbot.issue,
     createActorAuthorizationRepository(),
     createAuthenticatedUserCompositionRoot(),
     gitCommit,
     new DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }),
-    new DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution),
+    new DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution, bugbot.telemetry),
     pullRequestDescription,
+    new RememberBugbotRuleUseCase(bugbot.rules),
   );
 }
 
@@ -186,6 +191,7 @@ export function createCommitUseCaseCompositionRoot(
     ),
     createDetectPotentialProblemsUseCase(),
     createCheckProgressCompositionRoot(),
+    createActorAuthorizationRepository(),
   );
 }
 

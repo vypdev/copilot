@@ -12,6 +12,13 @@
     "url": "https://github.com/vypdev/copilot/issues"
   },
   "main": "build/github_action/index.js",
+  "exports": {
+    ".": "./build/github_action/index.js",
+    "./bugbot": {
+      "types": "./build/api/src/api.d.ts",
+      "default": "./build/api/index.js"
+    }
+  },
   "bin": {
     "copilot": "./build/cli/index.js"
   },
@@ -19,6 +26,8 @@
     "action.yml",
     "build/cli/index.js",
     "build/github_action/index.js",
+    "build/api/index.js",
+    "build/api/src/",
     "setup/ISSUE_TEMPLATE/",
     "setup/workflows/",
     "setup/pull_request_template.md",
@@ -33,14 +42,14 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "ncc build src/actions/github_action.ts -o build/github_action && ncc build src/cli.ts -o build/cli && chmod +x build/cli/index.js",
+    "build": "node scripts/clean-generated-bundles.cjs && ncc build src/actions/github_action.ts -o build/github_action && ncc build src/cli.ts -o build/cli && ncc build src/api.ts -o build/api && node scripts/prepare-generated-bundles.cjs && chmod +x build/cli/index.js",
     "validate:build": "node scripts/validate-build.cjs",
     "validate:npm-package": "node scripts/validate-npm-package.cjs",
     "smoke:npm-package": "node scripts/smoke-test-npm-package.cjs",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "eval:bugbot": "jest src/tooling/__tests__/bugbot_quality_eval.test.ts --runInBand",
+    "eval:bugbot": "jest src/tooling/__tests__/bugbot_quality_eval.test.ts src/tooling/__tests__/bugbot_benchmark.test.ts --runInBand",
     "typecheck": "tsc --noEmit",
     "metrics:architecture": "node scripts/collect-architecture-metrics.cjs",
     "lint": "eslint src",

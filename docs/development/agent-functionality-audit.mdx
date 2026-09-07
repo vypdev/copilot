@@ -1,0 +1,60 @@
+---
+title: Agent functionality audit
+description: Maintained audit matrix and acceptance plan for every agent-backed feature and runtime.
+---
+
+# Agent functionality audit
+
+This page is the maintained acceptance contract for Copilot's agent surface. An agent feature is complete only when its trigger, role, authorization, output handling, side effects, workflow wiring, documentation, and deterministic tests agree.
+
+## Feature matrix
+
+| Capability | Trigger | Role | Agent output | Authorized side effect |
+| --- | --- | --- | --- | --- |
+| Initial help and assistance | Opened question/help issue | `planner` | Schema-validated answer | Sanitized issue comment |
+| Recommendations | Issue lifecycle, single action, or CLI | `planner` | Markdown recommendation | Managed issue comment/state |
+| Progress analysis | Push, single action, or CLI | `findings` | Schema-validated progress | Issue/PR progress state |
+| PR description | PR lifecycle or `/copilot description` | `planner` | Sanitized Markdown | Managed append block by default; explicit replace mode only |
+| Think, explain, diagnose, analyze, and conversational commands | Authorized issue/PR comment or CLI | `planner`, `findings`, or `reviewer` by command | Schema-validated answer | Sanitized comment |
+| Test plan | `/copilot test-plan` | `tester` | Schema-validated answer | Sanitized comment |
+| Translation | Issue or PR comment | `findings` | Schema-validated language decision and translation | Idempotent comment update |
+| Bugbot detection | Push, PR, `/copilot review`, `/copilot recheck`, single action, or CLI | `findings` or `reviewer` | Bounded findings schema | Review/comments plus persisted finding lifecycle |
+| Bugbot autofix | Explicit `/copilot fix` or authorized intent | `fixer` | Workspace edits | Exact-path commit and token-scoped push after verification |
+| General implementation | Explicit `/copilot implement`, authorized intent, or CLI | `fixer` | Workspace edits | Exact-path commit and token-scoped push after verification |
+
+Metadata commands are parsed before any model call. `ai-members-only` gates every model-backed event and comment route; normal non-AI lifecycle automation remains available. File mutation requires an authorized actor, a clean workspace, the expected branch, a bounded exact-path change set, sensitive-path rejection, isolated verification commands, and a second postflight check before commit.
+
+## Runtime matrix
+
+| Runtime | Authentication | Analysis boundary | Fixer boundary | Structured output |
+| --- | --- | --- | --- | --- |
+| Codex | `CODEX_API_KEY`, `CODEX_ACCESS_TOKEN`, `OPENAI_API_KEY`, or an operational preinitialized `codex login status` | Ephemeral, read-only, no approval, no network, user config/rules ignored | Ephemeral workspace-write after application authorization | Native managed schema when compatible, plus mandatory local validation |
+| OpenCode | Selected provider credential, controlled auth store, or no credential for an approved local provider | Pure inline agent with default-deny permissions | Only edit permission is added after application authorization | Mandatory local validation |
+| Cursor | `CURSOR_API_KEY` | Private temporary home, sandbox and approval boundary, denied shell/network tools | Controlled non-interactive write mode after application authorization | Mandatory local validation |
+
+Only active roles are provisioned and authenticated. Runtime, model provider, model, effort, and command are validated as one tuple; no provider or model fallback occurs.
+
+## Security and reliability acceptance
+
+- External workflow actions use immutable commit SHAs, checkout persistence is disabled, the implicit `GITHUB_TOKEN` is read-only, and mutation workflows have bounded timeouts and concurrency.
+- PR and review-comment workflows run only for branches in the same repository. Fork events are skipped because the runtime PAT/provider Secrets are not a safe or reliable fork boundary; review forks in a separate credential-free workflow if that capability is required.
+- Agent credentials exist only on the Copilot action step. Release/tag jobs and repository verification commands do not inherit them.
+- Git fetch and push authentication is subprocess-scoped and is never persisted in remotes or Git configuration.
+- Child agent environments use an allowlist. Unrelated credentials and GitHub tokens are removed and secret-shaped output is redacted.
+- Structured responses must be a single JSON object, satisfy their declared bounds, and contain no unrequested properties. Published Markdown is sanitized and GitHub control syntax is neutralized.
+- Agent, schema, authentication, timeout, cancellation, output-limit, verification, commit, and push failures are terminal; the Action reports failure without terminating the Jest process or bypassing cleanup.
+- Bugbot has a versioned offline corpus and gates precision, recall, F1, location, severity, category, line distance, false positives/negatives, and confidence calibration.
+
+## Delivery plan and gates
+
+The implementation plan is ordered so that later stages rely on enforced earlier boundaries:
+
+1. Keep trigger-to-role reachability synchronized across `action.yml`, active workflows, setup templates, input parsing, setup, and doctor.
+2. Enforce authorization and the read-only/write boundary before any model invocation or workspace mutation.
+3. Keep Codex, OpenCode, and Cursor commands, authentication, provisioning, environment isolation, and failure semantics provider-specific and fail-closed.
+4. Maintain schemas, output limits, redaction, publication sanitization, exact-path Git mutation, and untrusted verification isolation.
+5. Extend deterministic tests and the Bugbot corpus for every production regression; never replace these gates with a successful model demo.
+6. Run typecheck, lint, unit/integration coverage, Bugbot eval, workflow/documentation validators, build/package validation, CLI verification, and Graphify refresh before release.
+7. Separately run an explicitly authorized, cost-bounded authenticated smoke test on every production runner/runtime/model combination. Record the runtime version, account class, model entitlement, runner image, and result without recording credentials or prompts containing repository secrets.
+
+A clean deterministic gate proves repository behavior; it cannot prove external account entitlement, provider availability, future billing policy, or a runner image that was not tested. Those are operational release gates, not hidden application fallbacks.

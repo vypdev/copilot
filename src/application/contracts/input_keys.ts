@@ -53,11 +53,6 @@ export const INPUT_KEYS = {
     TESTER_EFFORT: 'tester-effort',
     TESTER_MODEL: 'tester-model',
     TESTER_COMMAND: 'tester-command',
-    RELEASE_PROVIDER: 'release-provider',
-    RELEASE_MODEL_PROVIDER: 'release-model-provider',
-    RELEASE_EFFORT: 'release-effort',
-    RELEASE_MODEL: 'release-model',
-    RELEASE_COMMAND: 'release-command',
 
     // AI configuration
     AI_PULL_REQUEST_DESCRIPTION: 'ai-pull-request-description',
@@ -68,6 +63,14 @@ export const INPUT_KEYS = {
     BUGBOT_SEVERITY: 'bugbot-severity',
     BUGBOT_COMMENT_LIMIT: 'bugbot-comment-limit',
     BUGBOT_FIX_VERIFY_COMMANDS: 'bugbot-fix-verify-commands',
+    BUGBOT_DRY_RUN: 'bugbot-dry-run',
+    BUGBOT_EFFORT: 'bugbot-effort',
+    BUGBOT_REVIEW_DRAFTS: 'bugbot-review-drafts',
+    BUGBOT_TRACE_RULES: 'bugbot-trace-rules',
+    BUGBOT_SUGGESTED_CHANGES: 'bugbot-suggested-changes',
+    BUGBOT_TELEMETRY: 'bugbot-telemetry',
+    BUGBOT_FAIL_ON_UNRESOLVED: 'bugbot-fail-on-unresolved',
+    BUGBOT_ORGANIZATION_RULES: 'bugbot-organization-rules',
 
     // Projects
     PROJECT_IDS: 'project-ids',

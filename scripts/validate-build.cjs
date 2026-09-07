@@ -1,6 +1,6 @@
 const { spawnSync } = require('node:child_process');
 
-const buildPaths = ['build/cli', 'build/github_action'];
+const buildPaths = ['build/cli', 'build/github_action', 'build/api'];
 
 function runGit(args) {
   const result = spawnSync('git', args, { encoding: 'utf8' });

@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { AgentCliClient } from '../agent_cli_client';
@@ -103,8 +103,46 @@ describe('AgentCliClient', () => {
         await expect(pending).rejects.toMatchObject({ category: 'cancelled' });
     });
 
+    it('does not return from cancellation until the provider process has closed', async () => {
+        const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-close-test-'));
+        const ready = join(directory, 'ready');
+        const marker = join(directory, 'closed');
+        const script = [
+            "const fs = require('node:fs')",
+            `process.on('SIGTERM', () => setTimeout(() => { fs.writeFileSync(${JSON.stringify(marker)}, 'closed'); process.exit(0); }, 50))`,
+            `fs.writeFileSync(${JSON.stringify(ready)}, 'ready')`,
+            'setInterval(() => {}, 1000)',
+        ].join(';');
+        const controller = new AbortController();
+        try {
+            const pending = new AgentCliClient().execute({
+                command: `${process.execPath} -e ${JSON.stringify(script)}`,
+                prompt: 'prompt',
+                timeoutMs: 5000,
+                signal: controller.signal,
+            });
+            await waitForFile(ready);
+            controller.abort();
+
+            await expect(pending).rejects.toMatchObject({ category: 'cancelled' });
+            expect(existsSync(marker)).toBe(true);
+        } finally {
+            rmSync(directory, { recursive: true, force: true });
+        }
+    });
+
     it('rejects invalid resource limits before spawning a process', async () => {
         await expect(new AgentCliClient().execute({ command: 'agent', prompt: 'prompt', timeoutMs: 0 })).rejects.toMatchObject({ category: 'configuration' });
         await expect(new AgentCliClient().execute({ command: 'agent', prompt: 'prompt', timeoutMs: 1000, maxOutputBytes: 0 })).rejects.toMatchObject({ category: 'configuration' });
+        await expect(new AgentCliClient().execute({ command: 'agent', prompt: 'prompt', timeoutMs: 1000, maxPromptBytes: 0 })).rejects.toMatchObject({ category: 'configuration' });
+        await expect(new AgentCliClient().execute({ command: 'agent', prompt: 'too-large', timeoutMs: 1000, maxPromptBytes: 2 })).rejects.toMatchObject({ category: 'configuration' });
     });
 });
+
+async function waitForFile(path: string, timeoutMs = 2_000): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+    while (!existsSync(path)) {
+        if (Date.now() >= deadline) throw new Error(`Timed out waiting for ${path}.`);
+        await new Promise(resolve => setTimeout(resolve, 10));
+    }
+}

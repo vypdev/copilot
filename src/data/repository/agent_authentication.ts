@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import type { AgentConfiguration, AgentProvider } from '../model/agent';
 import {
     allowedCredentialVariables,
@@ -11,6 +12,7 @@ import {
     isLocalModelProvider,
     selectSafeAgentRuntimeEnvironment,
 } from './agent_credential_policy';
+import { parseAgentCommand } from '../../application/policies/agent_command_parser';
 
 export type AgentCredentialStatus = 'available' | 'missing' | 'not_required';
 
@@ -19,6 +21,25 @@ export interface AgentAuthenticationCheck {
     variables: readonly string[];
     message: string;
 }
+
+export interface AgentAuthenticationSystem {
+    hasOperationalCodexLogin(executable: string, environment: NodeJS.ProcessEnv): boolean;
+}
+
+const DEFAULT_AUTHENTICATION_SYSTEM: AgentAuthenticationSystem = {
+    hasOperationalCodexLogin(executable, environment) {
+        try {
+            execFileSync(executable, ['login', 'status'], {
+                env: environment,
+                stdio: 'ignore',
+                timeout: 15_000,
+            });
+            return true;
+        } catch {
+            return false;
+        }
+    },
+};
 
 function hasCodexChatGptSession(environment: NodeJS.ProcessEnv): boolean {
     const codexHome = environment.CODEX_HOME?.trim()
@@ -84,6 +105,7 @@ export function buildAgentCliEnvironment(
 export function checkAgentAuthentication(
     configuration: AgentConfiguration,
     environment: NodeJS.ProcessEnv = process.env,
+    system: AgentAuthenticationSystem = DEFAULT_AUTHENTICATION_SYSTEM,
 ): AgentAuthenticationCheck {
     const variables = credentialVariables(configuration);
     const hasCodexSession = configuration.provider === 'codex' && hasCodexChatGptSession(environment);
@@ -93,6 +115,14 @@ export function checkAgentAuthentication(
     if (hasCodexSession) return availableStatus(variables, 'Local ChatGPT Codex session available from CODEX_HOME/auth.json.');
     if (hasOpenCodeSession) return availableStatus(variables, 'Local OpenCode authentication available from its controlled auth store.');
     if (hasConfiguredCredential) return availableStatus(variables, `Local credentials available for ${configuration.provider}.`);
+    if (configuration.provider === 'codex') {
+        const executable = configuration.command?.trim()
+            ? parseAgentCommand(configuration.command).executable
+            : 'codex';
+        if (system.hasOperationalCodexLogin(executable, buildAgentCliEnvironment('codex', environment, configuration.modelProvider))) {
+            return availableStatus(variables, 'Preinitialized Codex CLI login is operational on the runner.');
+        }
+    }
     return resolveMissingAuthentication(configuration, variables, modelProvider);
 }
 
@@ -105,13 +135,6 @@ function resolveMissingAuthentication(
     variables: readonly string[],
     modelProvider: string | undefined,
 ): AgentAuthenticationCheck {
-    if (configuration.provider === 'codex') {
-        return {
-            status: 'not_required',
-            variables,
-            message: 'No exported Codex credential found; authentication will be resolved by the preinitialized Codex CLI on the runner.',
-        };
-    }
     if (configuration.provider === 'opencode' && modelProvider && !hasKnownModelProvider(modelProvider)) {
         return {
             status: 'not_required',

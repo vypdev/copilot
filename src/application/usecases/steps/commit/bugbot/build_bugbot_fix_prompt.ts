@@ -3,6 +3,7 @@ import type { BugbotContext } from "./types";
 import { getBugbotFixPrompt } from "../../../../../prompts";
 import { PROJECT_CONTEXT_INSTRUCTION } from "../../../../../utils/project_context_instruction";
 import { sanitizeUserCommentForPrompt } from "./sanitize_user_comment_for_prompt";
+import { renderUntrustedField } from '../../../../../domain/security/untrusted_content';
 
 /** Maximum characters for a single finding's full comment body to avoid prompt bloat and token limits. */
 export const MAX_FINDING_BODY_LENGTH = 12000;
@@ -49,7 +50,7 @@ export function buildBugbotFixPrompt(
                 fullBody,
                 MAX_FINDING_BODY_LENGTH,
             );
-            return `---\n**Finding id:** \`${safeId(id)}\`\n\n**Full comment (title, description, location, suggestion):**\n${boundedBody}\n`;
+            return `---\n**Finding id:** \`${safeId(id)}\`\n\n**Full comment (title, description, location, suggestion):**\n${renderUntrustedField(boundedBody, `bugbot.autofix.finding.${id}`, MAX_FINDING_BODY_LENGTH)}\n`;
         })
         .filter(Boolean)
         .join("\n");
@@ -70,7 +71,11 @@ export function buildBugbotFixPrompt(
         issueNumber: String(issueNumber),
         prNumberLine,
         findingsBlock,
-        userComment: sanitizeUserCommentForPrompt(userComment),
+        userComment: renderUntrustedField(
+            sanitizeUserCommentForPrompt(userComment),
+            'github.autofix-request',
+            4_500,
+        ),
         verifyBlock,
     });
 }

@@ -47,6 +47,7 @@ function baseParam(overrides: Record<string, unknown> = {}): Execution {
     owner: "owner",
     repo: "repo",
     issueNumber: 42,
+    tokenUser: "bot",
     tokens: { token: "token" },
     commit: { branch: "feature/42-add-feature" },
     currentConfiguration: { parentBranch: "develop" },
@@ -502,6 +503,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       {
         id: 777,
         identity: "PRRC_777",
+        authorLogin: "bot",
         body: `## PR finding\n\n<!-- copilot-bugbot finding_id:"pr-finding" resolved:false -->`,
         path: "src/a.ts",
         line: 1,
@@ -543,6 +545,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       {
         id: 777,
         identity: "PRRC_777",
+        authorLogin: "bot",
         body: `## PR finding\n\n<!-- copilot-bugbot finding_id:"pr-finding" resolved:false -->`,
         path: "src/a.ts",
         line: 1,
@@ -576,7 +579,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       {
         id: 666,
         body: `## Unfixed\n\n<!-- copilot-bugbot finding_id:"unfixed-id" resolved:false -->`,
-        user: {},
+        user: { login: "bot" },
       },
     ]);
     mockAskAgent.mockResolvedValue({
@@ -709,7 +712,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       {
         id: 1,
         body: '<!-- copilot-bugbot finding_id:"old-1" resolved:false -->',
-        user: {},
+        user: { login: "bot" },
       },
     ]);
 
@@ -785,6 +788,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       {
         id: 555,
         identity: "PRRC_555",
+        authorLogin: "bot",
         body: `## Same\n\n<!-- copilot-bugbot finding_id:"same-pr-finding" resolved:false -->`,
         path: "x.ts",
         line: 1,
@@ -826,7 +830,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       {
         id: 111,
         body: `## Extracted Title Here\n\nSome body.\n\n<!-- copilot-bugbot finding_id:"ex-id" resolved:false -->`,
-        user: {},
+        user: { login: "bot" },
       },
     ]);
     mockAskAgent.mockResolvedValue({ findings: [], resolved_finding_ids: [] });
@@ -854,7 +858,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       {
         id: 222,
         body: `## Already resolved\n\n<!-- copilot-bugbot finding_id:"done-id" resolved:true -->`,
-        user: {},
+        user: { login: "bot" },
       },
     ]);
     mockAskAgent.mockResolvedValue({
@@ -907,6 +911,8 @@ describe("DetectPotentialProblemsUseCase", () => {
         .mockResolvedValueOnce([
           {
             id: 444,
+            identity: "PRRC_444",
+            authorLogin: "bot",
             body: `## PR spacey\n\n<!--  copilot-bugbot   finding_id: "pr-spacey-id"   resolved:false   -->`,
             path: "src/b.ts",
             line: 1,
@@ -915,6 +921,8 @@ describe("DetectPotentialProblemsUseCase", () => {
         .mockResolvedValueOnce([
           {
             id: 444,
+            identity: "PRRC_444",
+            authorLogin: "bot",
             body: `## PR spacey\n\n<!--  copilot-bugbot   finding_id: "pr-spacey-id"   resolved:false   -->`,
             path: "src/b.ts",
             line: 1,
@@ -938,7 +946,7 @@ describe("DetectPotentialProblemsUseCase", () => {
         {
           id: 555,
           body: `## Regex id\n\n<!-- copilot-bugbot finding_id:"${findingId}" resolved:false -->`,
-          user: {},
+          user: { login: "bot" },
         },
       ]);
       mockAskAgent.mockResolvedValue({

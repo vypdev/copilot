@@ -1,4 +1,4 @@
-import { buildFindingFingerprint } from '../finding_identity';
+import { buildFindingFingerprint, buildSemanticFindingFingerprint } from '../finding_identity';
 
 describe('finding identity', () => {
     it('is deterministic and independent of the model-provided id', () => {
@@ -17,6 +17,18 @@ describe('finding identity', () => {
 
         expect(first).toMatch(/^fp-[a-f0-9]{8}$/);
         expect(second).toBe(first);
+    });
+
+    it('keeps semantic identity across file renames and line movement', () => {
+        const before = buildSemanticFindingFingerprint({
+            file: 'src/old/auth.ts', line: 20, category: 'security', symbol: 'authorize', codeSnippet: 'return token.admin', title: 'Unchecked token',
+        });
+        const after = buildSemanticFindingFingerprint({
+            file: 'src/new/permissions.ts', line: 200, category: 'security', symbol: 'authorize', codeSnippet: '  return   token.admin  ', title: 'Token is not checked',
+        });
+
+        expect(before).toMatch(/^sf-[a-f0-9]{8}$/);
+        expect(after).toBe(before);
     });
 
     it('changes when the semantic finding changes', () => {

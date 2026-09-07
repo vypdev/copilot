@@ -47,10 +47,12 @@ only for a structured language decision or translation. The workflow:
 
 Findings are accepted only when their required fields match the bounded
 contract. Finding identifiers are not trusted as stable identity: Copilot
-computes a local fingerprint from the normalized path, finding text, and line
-bucket. Resolution is accepted only when the finding is absent from the
-current active set by both identifier and fingerprint. A stale or injected
-model claim therefore cannot resolve a still-live finding.
+computes a location fingerprint plus a semantic fingerprint from normalized
+code/symbol anchors. Resolution is accepted only after reconciliation against
+the current active set. A stale or injected model claim therefore cannot
+resolve a still-live finding, while a renamed or nearby-moved finding can keep
+its review thread. Historical markers are ignored unless their author matches
+the authenticated bot identity; ambiguous semantic matches are rejected.
 
 ### Autofix and command execution
 
@@ -60,6 +62,21 @@ change the configured provider, model, credentials, or command. Commands are
 parsed and executed without a shell, and provider/model/effort selections are
 validated before execution. Verification commands are separately allowlisted
 and bounded. A model response cannot introduce a new executable command.
+
+Codex runs with strict config, no user config, no project exec rules, ephemeral
+history, no web search, no subagents, no extra writable roots, no login shell,
+and no sandbox network access. Repository `AGENTS.md` instructions are excluded
+from automated agent context; explicit `BUGBOT.md` rules are instead loaded as
+bounded untrusted review data. Cursor analysis is forced into a read-only mode
+with its sandbox enabled. OpenCode analysis uses its read-only plan agent and
+pure mode, which disables external plugins. Runtime flags that can add
+directories, remote endpoints, profiles, sessions, plugins, attachments, or
+approval bypasses are rejected before process creation.
+
+Hierarchical rule files are resolved canonically inside the workspace.
+Symbolic-link files are ignored, and learned-rule writes reject any parent or
+destination that resolves outside the workspace before using an exclusive
+temporary file and atomic rename.
 
 ### Publication
 

@@ -26,10 +26,17 @@ if (packageJson.bin?.copilot !== './build/cli/index.js') {
   error('the copilot bin must point to ./build/cli/index.js.');
 }
 
+if (packageJson.exports?.['./bugbot']?.default !== './build/api/index.js'
+  || packageJson.exports?.['./bugbot']?.types !== './build/api/src/api.d.ts') {
+  error('the @vypdev/copilot/bugbot export must expose its runtime and TypeScript declarations.');
+}
+
 const requiredPackageFiles = [
   'action.yml',
   'build/cli/index.js',
   'build/github_action/index.js',
+  'build/api/index.js',
+  'build/api/src/',
   'setup/ISSUE_TEMPLATE/',
   'setup/workflows/',
   'setup/pull_request_template.md',
@@ -46,6 +53,8 @@ const requiredRepositoryFiles = [
   'action.yml',
   'build/cli/index.js',
   'build/github_action/index.js',
+  'build/api/index.js',
+  'build/api/src/api.d.ts',
   'setup/workflows/copilot_issue.yml',
   'setup/ISSUE_TEMPLATE/config.yml',
   'setup/pull_request_template.md',
@@ -84,7 +93,7 @@ try {
   const metadata = JSON.parse(output);
   const packageFiles = new Set((metadata[0]?.files ?? []).map((file) => file.path));
 
-  for (const requiredFile of ['action.yml', 'build/cli/index.js', 'build/github_action/index.js', 'setup/workflows/copilot_issue.yml', 'scripts/install-git-hooks.cjs']) {
+  for (const requiredFile of ['action.yml', 'build/cli/index.js', 'build/github_action/index.js', 'build/api/index.js', 'build/api/src/api.d.ts', 'setup/workflows/copilot_issue.yml', 'scripts/install-git-hooks.cjs']) {
     if (!packageFiles.has(requiredFile)) {
       error(`npm package is missing ${requiredFile}.`);
     }

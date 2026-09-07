@@ -17,7 +17,7 @@ The agent inputs are the public configuration contract for agent execution. Prov
 | `agent-effort` | No | empty | Reasoning effort or provider-specific model variant | No |
 | `agent-command` | No | Provider-specific command | Optional literal CLI override | No |
 
-Each task also supports independent overrides: `findings-provider`, `findings-model-provider`, `findings-model`, `findings-effort`, `findings-command` and the corresponding `fixer-*` inputs. The lifecycle roles `planner-*`, `reviewer-*`, `tester-*`, and `release-*` are optional overrides for planning/conversation, PR review, test planning, and release planning. Empty role overrides inherit the common selection. The built-in mapping is `findings` for push Bugbot, `reviewer` for PR Bugbot, `planner` for plans and answers, and `fixer` for authorized file changes.
+Each task also supports independent overrides: `findings-provider`, `findings-model-provider`, `findings-model`, `findings-effort`, `findings-command` and the corresponding `fixer-*` inputs. The lifecycle roles `planner-*`, `reviewer-*`, and `tester-*` are optional overrides for planning/conversation, PR review, and test planning. Empty role overrides inherit the common selection. The built-in mapping is `findings` for push Bugbot, `reviewer` for PR Bugbot, `planner` for plans and answers, `tester` for `/copilot test-plan`, and `fixer` for authorized file changes.
 
 The qualified model is always constructed as:
 
@@ -45,7 +45,7 @@ Allowlists authorize a selection. They do not select the runtime, model, or cred
 | Runtime/provider | Credential reference |
 | --- | --- |
 | OpenCode using OpenAI | `OPENAI_API_KEY` or a controlled local provider login |
-| Codex | `CODEX_ACCESS_TOKEN`, `OPENAI_API_KEY`, or a controlled local Codex session |
+| Codex | `CODEX_API_KEY`, `CODEX_ACCESS_TOKEN`, `OPENAI_API_KEY`, or a controlled local Codex session |
 | Cursor | `CURSOR_API_KEY` |
 
 Values MUST be supplied through the runner's secret/environment mechanism. They MUST NOT be placed in `with`, command arguments, prompts, repository files, or logs.

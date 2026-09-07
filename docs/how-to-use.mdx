@@ -125,7 +125,7 @@ The complete command reference, including every supported option, is in [Workflo
     - Detect existing setup workflows and ask before updating them. Use `--update-workflows` to approve updates non-interactively; existing workflow files are backed up under `.copilot/setup-backups/` before replacement.
     - Verify GitHub access using the setup PAT. This operator token is used only for the setup operation and is never stored as a workflow Secret.
     - Ask for the separate workflow PAT owned by the bot account. It is validated and stored remotely as the `PAT` Secret; it is not the setup PAT.
-    - Ask for each selected provider API key, validate it with a metadata-only provider request, and store it as a GitHub Secret. Existing Secrets are never overwritten unless you explicitly replace them. If a remote credential health workflow is already available, existing values are validated remotely before you choose to keep them.
+    - Offer the credential fallbacks needed by the selected providers, validate supplied values with metadata-only requests, and store them as GitHub Secrets. Existing Secrets are never overwritten unless you explicitly replace them. Codex credentials are optional when the target runner already passes `codex login status`; setup and doctor report that state as an operational warning rather than a missing-secret failure. If a remote credential health workflow is already available, existing values are validated remotely before you choose to keep them.
     - Create or update non-sensitive Repository Variables for the selected runtimes, model policy, branches, Projects, AI behavior (including `AI_IGNORE_FILES`), and Bugbot settings. Use `--skip-variables` to leave them unchanged.
     - Create all required **labels** in the repository (type, action, priority, size, progress 0%–100%, and the lifecycle/activity/waiting labels).
     - Create all required **issue types** in the organization (Task, Bug, Feature, Release, Hotfix, etc.), if your plan supports it.
@@ -142,7 +142,7 @@ The complete command reference, including every supported option, is in [Workflo
     - **Deploy label**: The label that triggers the deploy flow is configured by the `deploy-label` input (default: `deploy`). The issue templates and your usage must use this same label when you want to run the release or hotfix workflow.
     - **Branch names in workflows**: The Commit workflow (push) often excludes the main and development branches from running (e.g. `!master`, `!develop`). If you change the default branch names (e.g. `main-branch: 'main'`, `development-branch: 'develop'`), update the `push.branches` filter in `.github/workflows/copilot_commit.yml` so it excludes those same names; otherwise the action may run on every push to main/develop or never run on feature branches.
 
-    **Runner selection:** The setup templates and documentation use `runs-on: ubuntu-latest` as the neutral default. You can change it to any runner labels that fit your infrastructure. This repository's active dogfooding workflows use `runs-on: [self-hosted, codex]` because its Codex runner is pre-initialized; that is an internal optimization, not a requirement for consumers.
+    **Runner selection:** The setup templates and documentation use `runs-on: ubuntu-latest` as the neutral default. Change every agent workflow, including `agent-cli-provisioning.yml`, to the same runner labels used by your infrastructure. This repository's active dogfooding workflows use `runs-on: [self-hosted, codex]` because its Codex runner is pre-initialized; that is an internal optimization, not a requirement for consumers.
 
     **Optional but keep coherence:**
     - **Labels**: If you change any label input (e.g. `feature-label`, `bugfix-label`, `deploy-label`), use the **same** label names in your issue templates (`labels:` in each `.yml`) and when labeling issues manually. Otherwise the action will not recognize the type or flow.
@@ -164,14 +164,14 @@ it is not equivalent to the recommended `copilot setup` flow.
 1. Copy only the workflow files you need from the installed package's `setup/workflows/`
    directory into `.github/workflows/`.
 2. Ensure every Copilot step uses a stable Action reference such as
-   `vypdev/copilot@v3` and passes a write-capable `token` where required.
+   `vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3` and passes a write-capable `token` where required.
 3. Configure the labels, issue types, Variables, Secrets, templates, permissions,
    and workflow dependencies yourself.
 
 For example:
 
 ```yaml
-- uses: vypdev/copilot@v3
+- uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
   with:
     token: ${{ secrets.PAT }}
 ```
@@ -321,14 +321,15 @@ All `.yml` / `.yaml` files here are copied to `.github/workflows/`. Default file
 | `copilot_pull_request_comment.yml` | Runs on PR review comment: e.g. translation checks. |
 | `release_workflow.yml` | **Manual** (`workflow_dispatch`): release flow (version, changelog, tag, release, deployed). Filename must match the action input `release-workflow` (default: `release_workflow.yml`) so the Issue workflow can dispatch it when the **deploy** label is added. |
 | `hotfix_workflow.yml` | **Manual** (`workflow_dispatch`): hotfix flow. Filename must match the action input `hotfix-workflow` (default: `hotfix_workflow.yml`). |
-| `agent-cli-provisioning.yml` | **Manual** (`workflow_dispatch`): verifies that the selected agent runtimes are available, pinned, and usable on the runner. |
+| `agent-cli-provisioning.yml` | **Manual** (`workflow_dispatch`): verifies that the selected agent runtime binaries and their non-interactive command surfaces are available on the target runner. |
 | `copilot_credential_health.yml` | **Manual** (`workflow_dispatch`): validates selected remote credentials without exposing their values; used by `copilot doctor`. |
 | `copilot_close_inactive_issues.yml` | **Scheduled every 6 hours** (also `workflow_dispatch`): closes open issues waiting for a maintainer or issue author after the configured inactivity threshold. Opt-in. |
 
 Each Copilot workflow step passes at least `token` and the configured agent CLI inputs via `vars.*`. The **release** and **hotfix** workflows are **dispatched by the action** when an issue has the deploy label and the corresponding release/hotfix context (branch, version, etc.); they are not triggered by issue events directly.
 
-The `agent-cli-provisioning.yml` workflow checks the selected runtime binaries and
-their pinned provisioning inputs. The `copilot_credential_health.yml` workflow is
+The `agent-cli-provisioning.yml` workflow checks the selected runtime binaries,
+versions, and non-interactive help commands without making a paid model request. Runtime
+installation itself validates the pinned provisioning inputs. The `copilot_credential_health.yml` workflow is
 read-only with respect to repository configuration: it executes provider-specific
 health checks and reports only whether each requested credential is usable. GitHub
 does not expose Secret values through its API, so `copilot doctor` dispatches this
@@ -336,7 +337,7 @@ workflow when it is available on the repository's default branch.
 
 When Repository Variables are enabled, setup creates the common `AGENT_*` contract,
 the provider/model/effort variables for each configured `FINDINGS_*`, `FIXER_*`,
-`PLANNER_*`, `REVIEWER_*`, `TESTER_*`, and `RELEASE_*` role, the repository and
+`PLANNER_*`, `REVIEWER_*`, and `TESTER_*` role, the repository and
 project variables, and the AI/Bugbot variables. The workflow templates read
 `*_COMMAND` pass-through variables too, but custom commands are executable
 configuration and must be reviewed and added deliberately; setup does not invent
@@ -375,7 +376,7 @@ Copied to `.github/pull_request_template.md`. Used as the default body for new P
 
 After the tutorial and file customization, you can:
 
-- Set **repository or organization variables** for the agent CLI contract (`AGENT_PROVIDER`, `AGENT_MODEL_PROVIDER`, `AGENT_MODEL`, `AGENT_EFFORT`, `AGENT_ALLOWED_MODEL_PROVIDERS`, and `AGENT_ALLOWED_MODELS`) and, when needed, independent task overrides for `FINDINGS_*`, `REVIEWER_*`, `PLANNER_*`, `FIXER_*`, `TESTER_*`, and `RELEASE_*`. The supplied Copilot workflow templates forward these values to the action. Keep `CURSOR_API_KEY` available only when one of the configured task providers is Cursor.
+- Set **repository or organization variables** for the agent CLI contract (`AGENT_PROVIDER`, `AGENT_MODEL_PROVIDER`, `AGENT_MODEL`, `AGENT_EFFORT`, `AGENT_ALLOWED_MODEL_PROVIDERS`, and `AGENT_ALLOWED_MODELS`) and, when needed, independent task overrides for `FINDINGS_*`, `REVIEWER_*`, `PLANNER_*`, `FIXER_*`, and `TESTER_*`. The supplied Copilot workflow templates forward these values to the action. Keep `CURSOR_API_KEY` available only when one of the configured task providers is Cursor.
 - Enable the `inactiveIssueClosure` setup feature when you want the scheduled cleanup, and adjust `INACTIVITY_THRESHOLD_HOURS` (1–8760 hours) to match your retention policy. This feature is disabled by default because it closes GitHub issues.
 - Adjust **project column names** and **branch names** via action inputs so the action moves issues/PRs to the right columns and uses your branch naming.
 - Customize **issue templates** (copy, add fields, change labels) while keeping label and workflow names consistent as above.

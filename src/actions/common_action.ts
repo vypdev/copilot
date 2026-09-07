@@ -37,8 +37,9 @@ export async function mainRun(
     logInfo('GitHub Action: starting main run.');
     logDebugInfo(`Event: ${execution.eventName}, actor: ${execution.actor}, repo: ${repository.owner}/${repository.repo}, debug: ${execution.debug}`);
 
-    if (!execution.welcome) {
-        // Queue before setup or route work so executions cannot overlap mutations.
+    if (process.env.GITHUB_ACTIONS === 'true') {
+        // Every GitHub workflow invocation queues before setup or route work so
+        // executions of the same workflow file cannot overlap mutations.
         await waitForPreviousWorkflowRuns(execution.tokens.token, repository);
     }
 

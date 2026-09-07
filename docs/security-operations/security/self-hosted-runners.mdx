@@ -16,6 +16,8 @@ A self-hosted runner that can access agent credentials MUST be dedicated or isol
 
 A shared persistent runner is not equivalent to an ephemeral trusted runner.
 
-The Action passes agent children an allowlisted runtime environment plus only the credential selected for that provider; unrelated GitHub, cloud, database, and PAT variables are not inherited. Codex review capabilities are forced to `--sandbox read-only --ignore-user-config`; fixer capabilities use `workspace-write`. Dangerous bypass flags are rejected. Other supported CLIs must be isolated by the runner/container because their sandbox guarantees are provider-specific.
+The Action passes agent children an allowlisted runtime environment plus only the credential selected for that provider; unrelated GitHub, cloud, database, and PAT variables are not inherited. Codex review capabilities are forced to `--sandbox read-only --ignore-user-config --ignore-rules`; fixer capabilities use `workspace-write`, with network and extra writable roots disabled. Cursor receives a per-invocation configuration/home with sandboxing and default-deny network policy. OpenCode receives a pure, inline default-deny permission profile with shell, task, skill, web, and external-directory tools disabled. Dangerous bypass flags are rejected for every runtime. These controls complement rather than replace runner/container isolation.
+
+Configured verification commands also receive a temporary `HOME` and credential-free allowlisted environment. They are repository processes, not model tools, so the runner must still prevent them from reading unrelated host paths through OS-level isolation.
 
 Timeout and cancellation terminate the complete POSIX process group, with a bounded graceful period before a forced kill, so abandoned CLI descendants do not occupy the runner indefinitely.

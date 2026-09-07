@@ -142,6 +142,82 @@ describe("publishFindings", () => {
             ]),
             "t"
         );
+        expect(mockCreateReviewWithComments.mock.calls[0][4]).toContain('/copilot fix all');
+    });
+
+    it('traces included, truncated, and omitted rule sources in the review summary without rule contents', async () => {
+        const execution = {
+            ...baseExecution,
+            ai: { getBugbotReviewConfiguration: () => ({ traceRules: true }) },
+        } as typeof baseExecution;
+        await publishFindings({
+            execution,
+            context: baseContext({
+                openPrNumbers: [50],
+                reviewRuleSources: [
+                    'organization:1',
+                    'path:src/.copilot/BUGBOT.md (truncated)',
+                ],
+                omittedReviewRules: 2,
+                prContext: {
+                    prHeadSha: 'sha1',
+                    prFiles: [{ filename: 'src/foo.ts', status: 'modified' }],
+                    pathToFirstDiffLine: { 'src/foo.ts': 5 },
+                },
+            }),
+            findings: [finding({ file: 'src/foo.ts' })],
+        });
+
+        const summary = mockCreateReviewWithComments.mock.calls[0][4] as string;
+        expect(summary).toContain('### Review configuration');
+        expect(summary).toContain('| `organization:1` | included |');
+        expect(summary).toContain('| `path:src/.copilot/BUGBOT.md` | truncated |');
+        expect(summary).toContain('2 omitted by duplicate, empty, or combined-budget policy');
+        expect(summary).not.toContain('team rule content');
+    });
+
+    it('renders a suggested change only on an exact RIGHT-side line anchor', async () => {
+        const execution = {
+            ...baseExecution,
+            ai: { getBugbotReviewConfiguration: () => ({ suggestedChanges: true }) },
+        } as typeof baseExecution;
+        await publishFindings({
+            execution,
+            context: baseContext({
+                openPrNumbers: [50],
+                prContext: {
+                    prHeadSha: 'sha1',
+                    prFiles: [{ filename: 'src/foo.ts', status: 'modified' }],
+                    pathToFirstDiffLine: { 'src/foo.ts': 10 },
+                    pathToDiffLocations: { 'src/foo.ts': [{ line: 10, side: 'RIGHT' }] },
+                },
+            }),
+            findings: [finding({ file: 'src/foo.ts', line: 10, suggestedCode: 'return safeValue;' })],
+        });
+
+        expect(mockCreateReviewWithComments.mock.calls[0][5][0].body).toContain('```suggestion\nreturn safeValue;');
+    });
+
+    it('does not render a suggested change on a LEFT-side line anchor', async () => {
+        const execution = {
+            ...baseExecution,
+            ai: { getBugbotReviewConfiguration: () => ({ suggestedChanges: true }) },
+        } as typeof baseExecution;
+        await publishFindings({
+            execution,
+            context: baseContext({
+                openPrNumbers: [50],
+                prContext: {
+                    prHeadSha: 'sha1',
+                    prFiles: [{ filename: 'src/foo.ts', status: 'modified' }],
+                    pathToFirstDiffLine: {},
+                    pathToDiffLocations: { 'src/foo.ts': [{ line: 10, side: 'LEFT' }] },
+                },
+            }),
+            findings: [finding({ file: 'src/foo.ts', line: 10, suggestedCode: 'return unsafe;' })],
+        });
+
+        expect(mockCreateReviewWithComments.mock.calls[0][5][0].body).not.toContain('```suggestion');
     });
 
     it("publishes an exact multi-line diff range when both endpoints are addressable", async () => {

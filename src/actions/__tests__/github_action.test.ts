@@ -4,11 +4,12 @@
  */
 
 import * as core from '@actions/core';
+import * as github from '@actions/github';
 import * as projectBoardCompositionRoot from '../../infrastructure/composition/project_board_composition_root';
 import * as executionBuilder from '../github_action_execution';
 import * as agentRuntime from '../github_action_runtime';
 import * as actionCompletion from '../github_action_completion';
-import { runGitHubAction } from '../github_action';
+import { runGitHubAction, runGitHubActionEntry } from '../github_action';
 import { ACTIONS } from '../../data/model/action_types';
 import { INPUT_KEYS } from '../../application/contracts/input_keys';
 
@@ -24,6 +25,7 @@ jest.mock('@actions/github', () => ({
 jest.mock('@actions/core', () => ({
   getInput: jest.fn(),
   setFailed: jest.fn(),
+  setOutput: jest.fn(),
 }));
 
 jest.mock('../../utils/logger', () => ({
@@ -42,6 +44,13 @@ const mockExecutionAdmissionInvoke = jest.fn();
 jest.mock('../../infrastructure/composition/github_execution_admission_composition_root', () => ({
   createGithubExecutionAdmissionUseCase: jest.fn().mockImplementation(() => ({
     invoke: mockExecutionAdmissionInvoke,
+  })),
+}));
+
+const mockIsActorAllowedToModifyFiles = jest.fn();
+jest.mock('../../infrastructure/composition/actor_authorization_composition_root', () => ({
+  createActorAuthorizationRepository: jest.fn().mockImplementation(() => ({
+    isActorAllowedToModifyFiles: mockIsActorAllowedToModifyFiles,
   })),
 }));
 
@@ -95,6 +104,9 @@ describe('runGitHubAction', () => {
     mockStoreInvoke.mockResolvedValue([]);
     mockWaitForPreviousWorkflowRuns.mockResolvedValue(undefined);
     mockExecutionAdmissionInvoke.mockResolvedValue({ decision: 'execute', tokenUser: 'token-user' });
+    mockIsActorAllowedToModifyFiles.mockResolvedValue(true);
+    github.context.eventName = 'workflow_dispatch';
+    github.context.payload = {};
   });
 
   it('builds Execution and calls mainRun', async () => {
@@ -152,6 +164,32 @@ describe('runGitHubAction', () => {
     });
     expect(mockMainRun).toHaveBeenCalledTimes(1);
     expect(mockMainRun.mock.calls[0][0].tokenUser).toBe('token-user');
+  });
+
+  it('does not prepare an agent runtime for an unauthorized members-only event', async () => {
+    github.context.eventName = 'issues';
+    github.context.payload = { action: 'opened', issue: { number: 42 } };
+    (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
+      if (key === INPUT_KEYS.AI_MEMBERS_ONLY) return 'true';
+      if (opts?.required && key === INPUT_KEYS.TOKEN) return 'fake-token';
+      return '';
+    });
+    mockIsActorAllowedToModifyFiles.mockResolvedValue(false);
+
+    await runGitHubAction();
+
+    expect(mockIsActorAllowedToModifyFiles).toHaveBeenCalledWith(
+      'test-owner',
+      'test-repo',
+      'test-actor',
+      'fake-token',
+    );
+    expect(agentProvisioningSpy).not.toHaveBeenCalled();
+    expect(mockMainRun).toHaveBeenCalledTimes(1);
+    expect(mockMainRun.mock.calls[0][0].ai.getAgentConfiguration('planner')).toEqual(expect.objectContaining({
+      model: '',
+      command: '',
+    }));
   });
 
   it('fails closed when PAT identity cannot be resolved', async () => {
@@ -260,5 +298,33 @@ describe('runGitHubAction', () => {
 
     expect(logError).toHaveBeenCalledWith(expect.stringContaining('INPUT_VARS_JSON'));
     process.env.INPUT_VARS_JSON = orig;
+  });
+});
+
+describe('runGitHubActionEntry', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('lets Node preserve an existing failure exit code after a resolved run', async () => {
+    const previousExitCode = process.exitCode;
+    process.exitCode = 1;
+    const run = jest.fn().mockResolvedValue(undefined);
+
+    try {
+      await runGitHubActionEntry(run);
+
+      expect(run).toHaveBeenCalledTimes(1);
+      expect(process.exitCode).toBe(1);
+      expect(core.setFailed).not.toHaveBeenCalled();
+    } finally {
+      process.exitCode = previousExitCode;
+    }
+  });
+
+  it('converts an unhandled rejection into an action failure without forcing process exit', async () => {
+    await runGitHubActionEntry(jest.fn().mockRejectedValue(new Error('entry failed')));
+
+    expect(core.setFailed).toHaveBeenCalledWith('entry failed');
   });
 });

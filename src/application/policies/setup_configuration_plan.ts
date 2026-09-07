@@ -62,7 +62,10 @@ export function buildSetupPlan(configuration: SetupConfiguration): SetupPlan {
         issueTemplateFiles,
         selectedFiles,
         variables: buildSetupRepositoryVariables(configuration),
-        requiredSecrets: credentialRequirements.map(requirement => requirement.name),
+        requiredSecrets: credentialRequirements
+            .filter(requirement => !requirement.alternativeGroups?.length
+                || requirement.alternativeGroups.some(group => !requirement.runnerAuthenticationGroups?.includes(group)))
+            .map(requirement => requirement.name),
         credentialRequirements,
         warnings: buildSetupWarnings(configuration),
     };
@@ -79,6 +82,7 @@ export function buildSetupCredentialRequirements(configuration: SetupConfigurati
         model?: string,
         alternativeGroup?: string,
         validation: SetupCredentialRequirement['validation'] = 'metadata',
+        runnerAuthenticationGroup?: string,
     ) => {
         const existing = requirements.get(name);
         if (!existing) {
@@ -89,6 +93,7 @@ export function buildSetupCredentialRequirements(configuration: SetupConfigurati
                 provider,
                 model,
                 ...(alternativeGroup ? { alternativeGroups: [alternativeGroup] } : {}),
+                ...(runnerAuthenticationGroup ? { runnerAuthenticationGroups: [runnerAuthenticationGroup] } : {}),
                 ...(validation === 'unverifiable' ? { validation } : {}),
             });
             return;
@@ -97,9 +102,14 @@ export function buildSetupCredentialRequirements(configuration: SetupConfigurati
             ...(existing.alternativeGroups ?? []),
             ...(alternativeGroup ? [alternativeGroup] : []),
         ]);
+        const runnerAuthenticationGroups = new Set([
+            ...(existing.runnerAuthenticationGroups ?? []),
+            ...(runnerAuthenticationGroup ? [runnerAuthenticationGroup] : []),
+        ]);
         requirements.set(name, {
             ...existing,
             alternativeGroups: alternativeGroups.size > 0 ? [...alternativeGroups] : undefined,
+            runnerAuthenticationGroups: runnerAuthenticationGroups.size > 0 ? [...runnerAuthenticationGroups] : undefined,
             validation: existing.validation === 'unverifiable' || validation === 'unverifiable'
                 ? 'unverifiable'
                 : existing.validation,
@@ -123,7 +133,26 @@ export function buildSetupCredentialRequirements(configuration: SetupConfigurati
             add('OPENCODE_API_KEY', 'apiKey', 'OpenCode API key used by the OpenCode agent runtime.', 'opencode', agent.model, alternativeGroup);
         }
         if (agent.provider === 'codex') {
-            add('CODEX_ACCESS_TOKEN', 'apiKey', 'Codex access token used by the Codex agent runtime.', 'codex', agent.model, alternativeGroup);
+            add(
+                'CODEX_API_KEY',
+                'apiKey',
+                'Optional Codex API-key fallback when the target runner has no authenticated Codex session.',
+                'codex',
+                agent.model,
+                alternativeGroup,
+                'metadata',
+                alternativeGroup,
+            );
+            add(
+                'CODEX_ACCESS_TOKEN',
+                'apiKey',
+                'Optional Codex access-token fallback when the target runner has no authenticated Codex session.',
+                'codex',
+                agent.model,
+                alternativeGroup,
+                'metadata',
+                alternativeGroup,
+            );
         }
         if (providerCredential) {
             add(
@@ -134,6 +163,7 @@ export function buildSetupCredentialRequirements(configuration: SetupConfigurati
                 agent.model,
                 alternativeGroup,
                 SECRET_BY_MODEL_PROVIDER[modelProvider] ? 'metadata' : 'unverifiable',
+                agent.provider === 'codex' ? alternativeGroup : undefined,
             );
         }
     }
@@ -190,6 +220,14 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
     add('BUGBOT_SEVERITY', configuration.ai.bugbotSeverity);
     add('BUGBOT_COMMENT_LIMIT', configuration.ai.bugbotCommentLimit);
     add('BUGBOT_AUTOFIX_VERIFY_COMMANDS', configuration.ai.bugbotFixVerifyCommands);
+    add('BUGBOT_DRY_RUN', configuration.ai.bugbotDryRun);
+    add('BUGBOT_EFFORT', configuration.ai.bugbotEffort);
+    add('BUGBOT_REVIEW_DRAFTS', configuration.ai.bugbotReviewDrafts);
+    add('BUGBOT_TRACE_RULES', configuration.ai.bugbotTraceRules);
+    add('BUGBOT_SUGGESTED_CHANGES', configuration.ai.bugbotSuggestedChanges);
+    add('BUGBOT_TELEMETRY', configuration.ai.bugbotTelemetry);
+    add('BUGBOT_FAIL_ON_UNRESOLVED', configuration.ai.bugbotFailOnUnresolved ?? false);
+    add('BUGBOT_ORGANIZATION_RULES', configuration.ai.bugbotOrganizationRules);
     add('PROJECT_IDS', configuration.projects.ids);
     add('PROJECT_COLUMN_ISSUE_CREATED', configuration.projects.issueCreatedColumn);
     add('PROJECT_COLUMN_PULL_REQUEST_CREATED', configuration.projects.pullRequestCreatedColumn);
@@ -228,6 +266,14 @@ export function buildSetupActionInputs(configuration: SetupConfiguration): Recor
         'bugbot-severity': ai.bugbotSeverity,
         'bugbot-comment-limit': String(ai.bugbotCommentLimit),
         'bugbot-fix-verify-commands': ai.bugbotFixVerifyCommands,
+        'bugbot-dry-run': String(ai.bugbotDryRun),
+        'bugbot-effort': ai.bugbotEffort,
+        'bugbot-review-drafts': String(ai.bugbotReviewDrafts),
+        'bugbot-trace-rules': String(ai.bugbotTraceRules),
+        'bugbot-suggested-changes': String(ai.bugbotSuggestedChanges),
+        'bugbot-telemetry': String(ai.bugbotTelemetry),
+        'bugbot-fail-on-unresolved': String(ai.bugbotFailOnUnresolved ?? false),
+        'bugbot-organization-rules': ai.bugbotOrganizationRules,
         'project-ids': projects.ids,
         'project-column-issue-created': projects.issueCreatedColumn,
         'project-column-pull-request-created': projects.pullRequestCreatedColumn,

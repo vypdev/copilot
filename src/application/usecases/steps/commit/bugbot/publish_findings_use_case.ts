@@ -40,6 +40,8 @@ export async function publishFindings(param: PublishFindingsParam): Promise<void
                   openPrNumber: openPrNumbers[0],
                   prContext,
                   watermark,
+                  ruleSources: context.reviewRuleSources,
+                  omittedRuleCount: context.omittedReviewRules,
               })
             : undefined;
 

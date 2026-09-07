@@ -37,6 +37,12 @@ export function validateSetupConfiguration(configuration: SetupConfiguration): s
     if (!['info', 'low', 'medium', 'high'].includes(configuration.ai.bugbotSeverity)) {
         errors.push('Bugbot severity must be info, low, medium, or high.');
     }
+    if (!['low', 'default', 'high', 'smart'].includes(configuration.ai.bugbotEffort)) {
+        errors.push('Bugbot review effort must be low, default, high, or smart.');
+    }
+    if (configuration.ai.bugbotOrganizationRules.length > 30_000) {
+        errors.push('Bugbot organization rules must be at most 30000 characters.');
+    }
     if (configuration.ai.pullRequestDescriptionMode !== undefined
         && !['replace', 'append', 'preserve', 'disabled'].includes(configuration.ai.pullRequestDescriptionMode)) {
         errors.push('Pull-request description mode must be replace, append, preserve, or disabled.');

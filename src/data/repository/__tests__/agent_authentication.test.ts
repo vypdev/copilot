@@ -36,7 +36,13 @@ describe('checkAgentAuthentication', () => {
         expect(result.variables).toEqual(['CURSOR_API_KEY']);
     });
 
-    it('supports Codex access token or OpenAI API key', () => {
+    it('supports Codex API key, access token or OpenAI API key', () => {
+        expect(
+            checkAgentAuthentication(
+                { provider: 'codex', model: 'gpt-5-codex', command: 'codex' },
+                { CODEX_API_KEY: 'key' }
+            ).status
+        ).toBe('available');
         expect(
             checkAgentAuthentication(
                 { provider: 'codex', model: 'gpt-5-codex', command: 'codex' },
@@ -185,7 +191,7 @@ describe('checkAgentAuthentication', () => {
         }
     });
 
-    it('allows Codex to defer authentication to a preinitialized runner CLI', () => {
+    it('accepts a preinitialized runner only after an operational Codex login check', () => {
         const directory = mkdtempSync(join(tmpdir(), 'copilot-codex-auth-test-'));
         try {
             writeFileSync(join(directory, 'auth.json'), JSON.stringify({
@@ -195,11 +201,23 @@ describe('checkAgentAuthentication', () => {
             }));
             expect(checkAgentAuthentication(
                 { provider: 'codex', model: 'model', command: 'codex exec' },
-                { CODEX_HOME: directory }
-            ).status).toBe('not_required');
+                { CODEX_HOME: directory },
+                { hasOperationalCodexLogin: () => true },
+            )).toMatchObject({
+                status: 'available',
+                message: 'Preinitialized Codex CLI login is operational on the runner.',
+            });
         } finally {
             rmSync(directory, { recursive: true, force: true });
         }
+    });
+
+    it('fails closed when Codex has neither credentials nor an operational runner login', () => {
+        expect(checkAgentAuthentication(
+            { provider: 'codex', model: 'model', command: 'codex exec' },
+            {},
+            { hasOperationalCodexLogin: () => false },
+        ).status).toBe('missing');
     });
 
     it('reports the accepted variables when credentials are missing', () => {

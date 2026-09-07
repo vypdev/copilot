@@ -24,9 +24,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
 
-      - uses: vypdev/copilot@v3
+      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
         with:
           token: ${{ secrets.PAT }}
           project-ids: ${{ vars.PROJECT_IDS }}
@@ -57,7 +59,7 @@ jobs:
 Create branches as soon as the issue has a type label (no launcher label):
 
 ```yaml
-- uses: vypdev/copilot@v3
+- uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
   with:
     token: ${{ secrets.PAT }}
     project-ids: ${{ vars.PROJECT_IDS }}
@@ -101,7 +103,7 @@ Your `.github/workflows/` must contain files with these exact names (or pass the
 
 ```yaml
 # In copilot_issue.yml (or wherever you call Copilot for issues)
-- uses: vypdev/copilot@v3
+- uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
   with:
     token: ${{ secrets.PAT }}
     release-workflow: release_workflow.yml

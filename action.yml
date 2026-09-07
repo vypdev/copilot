@@ -519,28 +519,12 @@ inputs:
   tester-command:
     description: "Optional CLI command override for test tasks."
     default: ""
-  release-provider:
-    description: "Optional provider override for release planning tasks."
-    default: ""
-  release-model-provider:
-    description: "Optional model-provider override for release planning tasks."
-    default: ""
-  release-effort:
-    description: "Optional reasoning effort or model variant override for release tasks."
-    default: ""
-  release-model:
-    description: "Optional model override for release planning tasks."
-    default: ""
-  release-command:
-    description: "Optional CLI command override for release planning tasks."
-    default: ""
-
   ai-pull-request-description:
     description: "Enable AI-powered automatic updates for pull request descriptions."
     default: "true"
   ai-pull-request-description-mode:
     description: "PR description policy: replace (legacy full ownership), append (preserve human text), preserve (only explicit /copilot description), or disabled."
-    default: "replace"
+    default: "append"
   ai-ignore-files:
     description: "Comma-separated list of files to ignore for AI operations."
     default: ""
@@ -548,8 +532,8 @@ inputs:
     description: "Restrict AI features to only organization/project members."
     default: "false"
   ai-include-reasoning:
-    description: "Include reasoning or chain-of-thought in AI responses when supported by the model."
-    default: "true"
+    description: "Include concise provider-supplied explanation metadata when available; never requests hidden chain-of-thought."
+    default: "false"
   bugbot-severity:
     description: "Minimum severity for potential-problem detections to be published (info, low, medium, high). Findings below this are not posted as comments."
     default: "low"
@@ -559,6 +543,33 @@ inputs:
   bugbot-fix-verify-commands:
     description: "Comma-separated commands to run after bugbot autofix (e.g. pnpm run build, pnpm test, pnpm run lint). The selected agent runtime runs these in its workspace; the runner can re-run them before commit. If empty, no additional verification commands are requested."
     default: ""
+  bugbot-dry-run:
+    description: "Analyze and return findings without publishing comments, resolving threads, updating checks, or performing autofix."
+    default: "false"
+  bugbot-effort:
+    description: "Review effort policy: low, default, high, or smart (selected from diff complexity)."
+    default: "default"
+  bugbot-review-drafts:
+    description: "Review draft pull requests when true."
+    default: "false"
+  bugbot-trace-rules:
+    description: "Include the ordered rule sources used by the review in its summary."
+    default: "false"
+  bugbot-suggested-changes:
+    description: "Allow safe line-local suggestions to be rendered as GitHub suggested changes."
+    default: "true"
+  bugbot-telemetry:
+    description: "Emit redacted structured review telemetry and include it in the action result."
+    default: "true"
+  bugbot-fail-on-unresolved:
+    description: "Fail this action invocation when the latest Bugbot result still contains open or reopened findings. Disabled by default."
+    default: "false"
+  bugbot-organization-rules:
+    description: "Semicolon- or newline-separated organization rules applied before repository and path-scoped rules."
+    default: ""
+outputs:
+  bugbot-telemetry:
+    description: "JSON array of content-free Bugbot telemetry snapshots for this action run."
 runs:
   using: "node24"
   main: "build/github_action/index.js"

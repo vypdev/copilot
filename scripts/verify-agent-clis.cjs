@@ -7,7 +7,7 @@ const { join } = require('node:path');
 
 const checksByProvider = {
   opencode: { name: 'opencode', command: 'opencode', args: ['run', '--help'], credential: ['OPENCODE_API_KEY'], localSession: true },
-  codex: { name: 'codex', command: 'codex', args: ['exec', '--help'], credential: ['CODEX_ACCESS_TOKEN', 'OPENAI_API_KEY'], localSession: true },
+  codex: { name: 'codex', command: 'codex', args: ['exec', '--help'], credential: ['CODEX_API_KEY', 'CODEX_ACCESS_TOKEN', 'OPENAI_API_KEY'], localSession: true },
   cursor: { name: 'cursor', command: 'agent', args: ['--help'], credential: ['CURSOR_API_KEY'] },
 };
 
@@ -43,7 +43,15 @@ function hasLocalOpenCodeSession() {
 }
 
 function hasLocalSession(check) {
-  if (check.name === 'codex') return hasLocalCodexSession();
+  if (check.name === 'codex') {
+    if (hasLocalCodexSession()) return true;
+    try {
+      execFileSync(check.command, ['login', 'status'], { stdio: ['ignore', 'ignore', 'ignore'], timeout: 15000 });
+      return true;
+    } catch {
+      return false;
+    }
+  }
   if (check.name === 'opencode') return hasLocalOpenCodeSession();
   return false;
 }
@@ -103,9 +111,7 @@ for (const check of checks) {
       ? 'local-session-present'
         : credentialNamesForCheck.some((name) => Boolean(process.env[name]))
         ? 'credential-reference-present'
-        : check.name === 'codex'
-          ? 'credential-preflight-deferred-to-cli'
-          : 'credential-reference-missing';
+        : 'credential-reference-missing';
     console.log(`${check.name}: available (${output}); version: ${version || 'unknown'}; headless-help: pass; ${credentialState}`);
     if (credentialState === 'credential-reference-missing' && authIsRequired()) failed = true;
   } catch (error) {

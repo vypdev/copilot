@@ -17,7 +17,10 @@ jobs:
       contents: read
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+          fetch-depth: 0
 
       - name: Fetch push review range
         if: github.event.after != '0000000000000000000000000000000000000000'
@@ -26,14 +29,25 @@ jobs:
           AFTER_SHA: ${{ github.event.after }}
           BRANCH_CREATED: ${{ github.event.created }}
         run: |
-          git fetch --no-tags --depth=2 origin "$AFTER_SHA"
-          if [ "$BRANCH_CREATED" != "true" ] && ! git fetch --no-tags --depth=1 origin "$BEFORE_SHA"; then
+          git cat-file -e "${AFTER_SHA}^{commit}"
+          if [ "$BRANCH_CREATED" != "true" ] && ! git cat-file -e "${BEFORE_SHA}^{commit}"; then
             echo "::notice::The previous push commit is unavailable; Bugbot will use its documented fallback scope."
           fi
 
       - uses: ./
         with:
           debug: ${{ vars.DEBUG }}
+          bugbot-severity: ${{ vars.BUGBOT_SEVERITY || 'low' }}
+          bugbot-comment-limit: ${{ vars.BUGBOT_COMMENT_LIMIT || '20' }}
+          bugbot-fix-verify-commands: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS }}
+          bugbot-dry-run: ${{ vars.BUGBOT_DRY_RUN || 'false' }}
+          bugbot-effort: ${{ vars.BUGBOT_EFFORT || 'smart' }}
+          bugbot-review-drafts: ${{ vars.BUGBOT_REVIEW_DRAFTS || 'false' }}
+          bugbot-trace-rules: ${{ vars.BUGBOT_TRACE_RULES || 'false' }}
+          bugbot-suggested-changes: ${{ vars.BUGBOT_SUGGESTED_CHANGES || 'true' }}
+          bugbot-telemetry: ${{ vars.BUGBOT_TELEMETRY || 'true' }}
+          bugbot-fail-on-unresolved: ${{ vars.BUGBOT_FAIL_ON_UNRESOLVED || 'false' }}
+          bugbot-organization-rules: ${{ vars.BUGBOT_ORGANIZATION_RULES }}
           project-ids: ${{ vars.PROJECT_IDS }}
           agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
           agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
@@ -68,5 +82,6 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          CURSOR_API_KEY: ${{ (vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor' || vars.RELEASE_PROVIDER == 'cursor') && secrets.CURSOR_API_KEY || '' }}
+          CURSOR_API_KEY: ${{ (vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor') && secrets.CURSOR_API_KEY || '' }}
+          CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
           CODEX_ACCESS_TOKEN: ${{ secrets.CODEX_ACCESS_TOKEN }}

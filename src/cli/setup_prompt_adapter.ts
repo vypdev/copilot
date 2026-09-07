@@ -126,10 +126,18 @@ export class SetupPromptAdapter implements SetupPromptPort, SetupCredentialPromp
         ) as SetupConfiguration['ai']['pullRequestDescriptionMode'];
         ai.ignoreFiles = await this.askText('AI ignore file patterns (comma-separated)', ai.ignoreFiles);
         ai.membersOnly = await this.askBoolean('Restrict AI processing to repository members?', ai.membersOnly);
-        ai.includeReasoning = await this.askBoolean('Include agent reasoning where supported?', ai.includeReasoning);
+        ai.includeReasoning = await this.askBoolean('Include concise provider explanation metadata when available?', ai.includeReasoning);
         ai.bugbotSeverity = await this.askChoice('Minimum Bugbot severity to publish', ['info', 'low', 'medium', 'high'], ai.bugbotSeverity) as SetupConfiguration['ai']['bugbotSeverity'];
         ai.bugbotCommentLimit = await this.askNumber('Maximum Bugbot comments per run', ai.bugbotCommentLimit);
         ai.bugbotFixVerifyCommands = await this.askText('Bugbot autofix verification commands (comma-separated, empty is allowed)', ai.bugbotFixVerifyCommands);
+        ai.bugbotDryRun = await this.askBoolean('Run Bugbot in analysis-only dry-run mode?', ai.bugbotDryRun);
+        ai.bugbotEffort = await this.askChoice('Bugbot review effort', ['smart', 'low', 'default', 'high'], ai.bugbotEffort) as SetupConfiguration['ai']['bugbotEffort'];
+        ai.bugbotReviewDrafts = await this.askBoolean('Review draft pull requests?', ai.bugbotReviewDrafts);
+        ai.bugbotTraceRules = await this.askBoolean('Include applied rule sources in review summaries?', ai.bugbotTraceRules);
+        ai.bugbotSuggestedChanges = await this.askBoolean('Publish safe inline suggested changes?', ai.bugbotSuggestedChanges);
+        ai.bugbotTelemetry = await this.askBoolean('Emit content-free Bugbot telemetry?', ai.bugbotTelemetry);
+        ai.bugbotFailOnUnresolved = await this.askBoolean('Fail the workflow check while Bugbot findings remain unresolved?', ai.bugbotFailOnUnresolved ?? false);
+        ai.bugbotOrganizationRules = await this.askText('Organization Bugbot rules (newline-separated, empty is allowed)', ai.bugbotOrganizationRules);
         ai.provisioningMode = await this.askChoice('Agent CLI provisioning mode', ['auto', 'always', 'disabled'], ai.provisioningMode) as SetupConfiguration['ai']['provisioningMode'];
         defaults.projects.ids = await this.askText('GitHub Project IDs (comma-separated, empty to skip Projects integration)', defaults.projects.ids);
         if (defaults.projects.ids.trim()) {
@@ -180,12 +188,12 @@ export class SetupPromptAdapter implements SetupPromptPort, SetupCredentialPromp
             color('Repository changes', 36),
             `  Files selected: ${plan.selectedFiles.length}`,
             `  Variables to upsert: ${plan.configuration.manageRepositoryVariables ? plan.variables.length : 0}`,
-            `  Secrets to validate/provision: ${plan.configuration.manageRepositorySecrets ? plan.credentialRequirements.length : 0}`,
+            `  Secret options to validate/provision: ${plan.configuration.manageRepositorySecrets ? plan.credentialRequirements.length : 0}`,
             `  Variable storage: ${plan.configuration.storage.variables.defaultScope} scope${plan.configuration.storage.variables.defaultScope === 'organization' ? ` (${plan.configuration.storage.variables.organizationVisibility})` : ''}`,
             `  Secret storage: ${plan.configuration.storage.secrets.defaultScope} scope${plan.configuration.storage.secrets.defaultScope === 'organization' ? ` (${plan.configuration.storage.secrets.organizationVisibility})` : ''}`,
             `  Labels and issue types: always checked by Copilot setup`,
             `  Initial tag: ${plan.configuration.createInitialTag ? 'v1.0.0 when no version tag exists' : 'disabled'}`, '',
-            color('Credential contract', 33), `  ${plan.requiredSecrets.join(', ')}`,
+            color('Strictly required Secrets', 33), `  ${plan.requiredSecrets.join(', ') || '(none)'}`,
             ...(plan.warnings.length > 0 ? ['', color('Important notes', 33), ...plan.warnings.map(warning => `  ⚠ ${warning}`)] : []),
         ].join('\n');
         console.log(renderBox(content, 'Setup Plan', 32));
@@ -213,7 +221,7 @@ export class SetupPromptAdapter implements SetupPromptPort, SetupCredentialPromp
             'Workflow credentials',
             33,
         ));
-        console.log(`Required credentials: ${requirements.map(requirement => requirement.name).join(', ')}`);
+        console.log(`Credential options: ${requirements.map(requirement => requirement.name).join(', ')}`);
     }
 
     async requestWorkflowPat(requirement: SetupCredentialRequirement, current?: SetupCredentialCheck): Promise<SetupCredentialValue | undefined> {

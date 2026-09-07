@@ -55,22 +55,24 @@ export function buildMarker(
   resolved: boolean,
   fingerprint?: string,
   resolution?: BugbotFindingResolution,
+  semanticFingerprint?: string,
 ): string {
     const safeId = requireFindingIdForMarker(findingId);
     const safeFingerprint = fingerprint?.match(/^fp-[a-f0-9]{8}$/)?.[0];
+    const safeSemanticFingerprint = semanticFingerprint?.match(/^sf-[a-f0-9]{8}$/)?.[0];
     const safeResolution = resolved && resolution && ['fixed', 'obsolete', 'dismissed'].includes(resolution)
       ? ` finding_resolution:"${resolution}"`
       : '';
-    return `<!-- ${BUGBOT_MARKER_PREFIX} finding_id:"${safeId}" resolved:${resolved}${safeFingerprint ? ` finding_fingerprint:"${safeFingerprint}"` : ''}${safeResolution} -->`;
+    return `<!-- ${BUGBOT_MARKER_PREFIX} finding_id:"${safeId}" resolved:${resolved}${safeFingerprint ? ` finding_fingerprint:"${safeFingerprint}"` : ''}${safeSemanticFingerprint ? ` finding_semantic:"${safeSemanticFingerprint}"` : ''}${safeResolution} -->`;
 }
 
 export function parseMarker(
   body: string | null,
-): Array<{ findingId: string; resolved: boolean; fingerprint?: string; resolution?: BugbotFindingResolution }> {
+): Array<{ findingId: string; resolved: boolean; fingerprint?: string; semanticFingerprint?: string; resolution?: BugbotFindingResolution }> {
   if (!body) return [];
-  const results: Array<{ findingId: string; resolved: boolean; fingerprint?: string; resolution?: BugbotFindingResolution }> = [];
+  const results: Array<{ findingId: string; resolved: boolean; fingerprint?: string; semanticFingerprint?: string; resolution?: BugbotFindingResolution }> = [];
   const regex = new RegExp(
-    `<!--\\s*${BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"([^"]+)"\\s+resolved:(true|false)(?:\\s+finding_fingerprint:\\s*"(fp-[a-f0-9]{8})")?(?:\\s+finding_resolution:\\s*"(fixed|obsolete|dismissed)")?\\s*-->`,
+    `<!--\\s*${BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"([^"]+)"\\s+resolved:(true|false)(?:\\s+finding_fingerprint:\\s*"(fp-[a-f0-9]{8})")?(?:\\s+finding_semantic:\\s*"(sf-[a-f0-9]{8})")?(?:\\s+finding_resolution:\\s*"(fixed|obsolete|dismissed)")?\\s*-->`,
     "g",
   );
   let m: RegExpExecArray | null;
@@ -79,7 +81,8 @@ export function parseMarker(
       findingId: m[1],
       resolved: m[2] === "true",
       ...(m[3] ? { fingerprint: m[3] } : {}),
-      ...(m[4] ? { resolution: m[4] as BugbotFindingResolution } : {}),
+      ...(m[4] ? { semanticFingerprint: m[4] } : {}),
+      ...(m[5] ? { resolution: m[5] as BugbotFindingResolution } : {}),
     });
   }
   return results;
@@ -95,7 +98,7 @@ export function markerRegexForFinding(findingId: string): RegExp {
     ? safeId
     : safeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(
-    `<!--\\s*${BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"${idForRegex}"\\s+resolved:(?:true|false)(?:\\s+finding_fingerprint:\\s*"fp-[a-f0-9]{8}")?(?:\\s+finding_resolution:\\s*"(?:fixed|obsolete|dismissed)")?\\s*-->`,
+    `<!--\\s*${BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"${idForRegex}"\\s+resolved:(?:true|false)(?:\\s+finding_fingerprint:\\s*"fp-[a-f0-9]{8}")?(?:\\s+finding_semantic:\\s*"sf-[a-f0-9]{8}")?(?:\\s+finding_resolution:\\s*"(?:fixed|obsolete|dismissed)")?\\s*-->`,
     "g",
   );
 }
@@ -131,6 +134,7 @@ export function buildCommentBody(
   finding: BugbotFinding,
   resolved: boolean,
   resolution?: BugbotFindingResolution,
+  options: { includeSuggestedChange?: boolean } = {},
 ): string {
   const safeTitle = sanitizeAgentMarkdown(finding.title, 500) || "Potential problem";
   const safeDescription = sanitizeAgentMarkdown(finding.description, 8_000) || "No description provided.";
@@ -154,13 +158,16 @@ export function buildCommentBody(
   const suggestion = safeSuggestion
     ? `**Suggested fix:**\n${safeSuggestion}\n\n`
     : "";
+  const suggestedChange = options.includeSuggestedChange && finding.suggestedCode
+    ? `**Apply this change:**\n\n\`\`\`suggestion\n${finding.suggestedCode}\n\`\`\`\n\n`
+    : '';
   const resolvedNote = resolved
     ? "\n\n---\n**Resolved** (no longer reported in latest analysis).\n"
     : "";
-  const marker = buildMarker(finding.id, resolved, finding.fingerprint, resolution);
+  const marker = buildMarker(finding.id, resolved, finding.fingerprint, resolution, finding.semanticFingerprint);
   return `## ${safeTitle}
 
 ${severity}${metadata ? `${metadata}\n\n` : ''}${fileLine}${safeDescription}
 ${evidence}
-${suggestion}${resolvedNote}${marker}`;
+${suggestion}${suggestedChange}${resolvedNote}${marker}`;
 }

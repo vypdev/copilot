@@ -8,8 +8,8 @@ description: Select exactly one external CLI runtime for a run.
 
 | Value | Executable | Input mode |
 | --- | --- | --- |
-| `opencode` | `opencode` | Prompt through stdin, explicit `--model` |
+| `opencode` | `opencode` | One positional prompt, explicit `--model` |
 | `codex` | `codex` | Ephemeral stdin execution |
 | `cursor` | `agent` | Non-interactive prompt mode |
 
-Only the selected runtime is provisioned and executed. The runtime is not the model provider. For example, `opencode` can execute an `openai/...` model.
+Only runtimes selected by active roles are provisioned, authenticated, and executed. A workflow may therefore use more than one runtime when its active roles have independent overrides. The runtime is not the model provider. For example, `opencode` can execute an `openai/...` model.

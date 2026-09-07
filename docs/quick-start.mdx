@@ -39,8 +39,10 @@ jobs:
       issues: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: vypdev/copilot@v3
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
         with:
           token: ${{ secrets.COPILOT_TOKEN }}
           agent-provider: codex
@@ -48,13 +50,14 @@ jobs:
           agent-model: gpt-5.6-luna
           agent-effort: medium
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          # Omit when Codex is already authenticated on the controlled runner.
+          CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
 ```
 
 Configure labels, issue types, Variables, Secrets, templates, permissions, and
-additional workflows manually when following this path. The example uses the
-stable `v3` major ref; for strict reproducibility, replace it with an immutable
-release tag after selecting the version you have validated.
+additional workflows manually when following this path. The example pins the
+action to an immutable commit and retains the readable major version in its
+comment. Update that pin deliberately after validating a new release.
 
 ## Verify before enabling writes
 

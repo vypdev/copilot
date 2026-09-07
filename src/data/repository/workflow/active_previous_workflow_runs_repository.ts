@@ -50,24 +50,35 @@ export class ActivePreviousWorkflowRunsRepository implements PreviousWorkflowRun
             workflow_id: workflowIdentifier,
         };
 
-        return withWorkflowRunsRetry(async () => {
-            let activeRunCount = 0;
-            // The workflow-scoped endpoint limits the traversal to this workflow.
-            // Keep pagination exhaustive because an active older run may occur on
-            // a later page, while filtering status and run identity locally.
-            for await (const response of this.client.paginate.iterator(method, parameters)) {
-                activeRunCount += extractWorkflowRuns(response)
-                    .filter(run => isActivePreviousRun(run, query)).length;
-            }
-            return activeRunCount;
-        }, {
+        const retryDependencies = {
             delayPort: this.retryDelayPort,
             clock: this.clock,
             random: this.random,
             observer: this.observer,
             policy: this.retryPolicy,
             deadlineAtMilliseconds: context.deadlineAtMilliseconds,
-        });
+        };
+        const activeRunIdsByStatus = await Promise.all(WORKFLOW_ACTIVE_STATUSES.map(status =>
+            withWorkflowRunsRetry(async () => {
+                const activeRunIds: number[] = [];
+                // Query only active states. This keeps polling cost proportional
+                // to the live queue instead of traversing the workflow's entire
+                // completed-run history on every poll.
+                for await (const response of this.client.paginate.iterator(method, {
+                    ...parameters,
+                    status,
+                })) {
+                    activeRunIds.push(...extractWorkflowRuns(response)
+                        .filter(run => isActivePreviousRun(run, query))
+                        .map(run => run.id));
+                }
+                return activeRunIds;
+            }, retryDependencies),
+        ));
+
+        // Statuses are mutually exclusive, but deduplicate defensively in case
+        // provider pages change while the concurrent status queries complete.
+        return new Set(activeRunIdsByStatus.flat()).size;
     }
 }
 

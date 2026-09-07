@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 const { readFileSync, readdirSync } = require('node:fs');
+const { execFileSync } = require('node:child_process');
 const path = require('node:path');
 const yaml = require('js-yaml');
 
@@ -49,13 +50,29 @@ const BOT_GATED_WORKFLOW_FILES = new Set([
   'copilot_pull_request_comment.yml',
 ]);
 const BOT_GATE_EXPRESSION = "${{ vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN }}";
+const FORK_SAFE_BOT_GATE_EXPRESSION = "${{ (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && github.event.pull_request.head.repo.full_name == github.repository }}";
+const FORK_GATED_WORKFLOW_FILES = new Set([
+  'copilot_pull_request.yml',
+  'copilot_pull_request_comment.yml',
+]);
 const ZERO_OBJECT_ID = '0000000000000000000000000000000000000000';
+const IMMUTABLE_ACTION_REFERENCE = /^[^/\s]+\/[^@\s]+@[0-9a-f]{40}$/i;
+const PINNED_COPILOT_ACTION_REFERENCE = /^vypdev\/copilot@([0-9a-f]{40})$/i;
+const pinnedCopilotManifests = new Map();
 
-const requiredAgentInputs = [
-  'agent-provider', 'agent-model-provider', 'agent-model', 'agent-effort', 'agent-command',
-  'findings-provider', 'findings-model-provider', 'findings-model', 'findings-effort', 'findings-command',
-  'fixer-provider', 'fixer-model-provider', 'fixer-model', 'fixer-effort', 'fixer-command',
-];
+const BASE_AGENT_INPUTS = ['agent-provider', 'agent-model-provider', 'agent-model', 'agent-effort', 'agent-command'];
+const AGENT_ROLE_INPUTS = Object.freeze(Object.fromEntries(
+  ['findings', 'fixer', 'planner', 'reviewer', 'tester'].map(role => [role, [
+    `${role}-provider`, `${role}-model-provider`, `${role}-model`, `${role}-effort`, `${role}-command`,
+  ]]),
+));
+const WORKFLOW_AGENT_ROLES = Object.freeze({
+  'copilot_issue.yml': ['planner'],
+  'copilot_pull_request.yml': ['planner', 'reviewer'],
+  'copilot_commit.yml': ['findings'],
+  'copilot_issue_comment.yml': ['findings', 'fixer', 'planner', 'reviewer', 'tester'],
+  'copilot_pull_request_comment.yml': ['findings', 'fixer', 'planner', 'reviewer', 'tester'],
+});
 
 function workflowFiles(directory) {
   return readdirSync(directory)
@@ -74,6 +91,82 @@ function isCopilotAction(step) {
 
 function isQueueGateAction(step) {
   return isCopilotAction(step) && step.with?.['queue-gate-only'] === 'true';
+}
+
+function assertImmutableActions(file, workflow) {
+  const relativeFile = relativeWorkflow(file);
+  for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
+    const actionUses = [job.uses, ...(job.steps ?? []).map(step => step?.uses)]
+      .filter(value => typeof value === 'string');
+    for (const uses of actionUses) {
+      if (uses.startsWith('./') || uses.startsWith('docker://')) continue;
+      if (!IMMUTABLE_ACTION_REFERENCE.test(uses)) {
+        throw new Error(`${relativeFile} job ${jobId} action ${uses} must use an immutable 40-character commit SHA.`);
+      }
+    }
+    for (const [stepIndex, step] of (job.steps ?? []).entries()) {
+      if (/^actions\/checkout@/.test(step?.uses ?? '') && step.with?.['persist-credentials'] !== false) {
+        throw new Error(`${relativeFile} job ${jobId} step ${stepIndex + 1} checkout must set persist-credentials: false.`);
+      }
+    }
+  }
+
+  if (!relativeFile.endsWith('/copilot_pull_request.yml')) return;
+  for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
+    if ((job.steps ?? []).some(step => isCopilotAction(step) && step.uses === './')) {
+      throw new Error(`${relativeFile} job ${jobId} must not execute pull-request-controlled local action code.`);
+    }
+  }
+}
+
+function assertPinnedCopilotActionInputs(file, workflow) {
+  const relativeFile = relativeWorkflow(file);
+  for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
+    for (const [stepIndex, step] of (job.steps ?? []).entries()) {
+      const match = typeof step?.uses === 'string'
+        ? step.uses.match(PINNED_COPILOT_ACTION_REFERENCE)
+        : undefined;
+      if (!match) continue;
+      const manifest = loadPinnedCopilotManifest(match[1]);
+      const supportedInputs = new Set(Object.keys(manifest.inputs ?? {}));
+      const unsupported = Object.keys(step.with ?? {}).filter(input => !supportedInputs.has(input));
+      if (unsupported.length > 0) {
+        throw new Error(`${relativeFile} job ${jobId} step ${stepIndex + 1} passes inputs unsupported by ${step.uses}: ${unsupported.join(', ')}.`);
+      }
+    }
+  }
+}
+
+function assertPinnedCopilotHistoryCheckout(file, workflow) {
+  const relativeFile = relativeWorkflow(file);
+  if (relativeFile !== '.github/workflows/ci_check.yml') return;
+  for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
+    const checkout = (job.steps ?? []).find(step => /^actions\/checkout@/.test(step?.uses ?? ''));
+    if (checkout?.with?.['fetch-depth'] !== 0) {
+      throw new Error(`${relativeFile} job ${jobId} checkout must set fetch-depth: 0 so pinned in-repository action manifests can be validated.`);
+    }
+  }
+}
+
+function loadPinnedCopilotManifest(sha) {
+  const cached = pinnedCopilotManifests.get(sha);
+  if (cached) return cached;
+  let source;
+  try {
+    source = execFileSync('git', ['show', `${sha}:action.yml`], {
+      cwd: repositoryRoot,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+  } catch {
+    throw new Error(`cannot read action.yml from pinned Copilot revision ${sha}; fetch the full repository history.`);
+  }
+  const manifest = yaml.load(source);
+  if (!manifest || typeof manifest !== 'object') {
+    throw new Error(`pinned Copilot revision ${sha} has an invalid action.yml.`);
+  }
+  pinnedCopilotManifests.set(sha, manifest);
+  return manifest;
 }
 
 function runnerLabels(value) {
@@ -99,6 +192,12 @@ function assertRunner(file, workflow) {
 
 function assertAgentInputs(file, workflow) {
   const relativeFile = relativeWorkflow(file);
+  const roles = WORKFLOW_AGENT_ROLES[path.basename(file)];
+  if (!roles) return;
+  const requiredAgentInputs = [
+    ...BASE_AGENT_INPUTS,
+    ...roles.flatMap(role => AGENT_ROLE_INPUTS[role]),
+  ];
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
     for (const [stepIndex, step] of (job.steps ?? []).entries()) {
       if (jobId === 'queue-gate' || !isCopilotAction(step) || isQueueGateAction(step)) continue;
@@ -106,6 +205,36 @@ function assertAgentInputs(file, workflow) {
       if (missing.length > 0) {
         throw new Error(`${relativeFile} job ${jobId} step ${stepIndex + 1} is missing agent inputs: ${missing.join(', ')}.`);
       }
+    }
+  }
+}
+
+function assertNoJobLevelSecrets(file, workflow) {
+  const relativeFile = relativeWorkflow(file);
+  for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
+    const exposed = Object.entries(job.env ?? {})
+      .filter(([, value]) => String(value).includes('secrets.'))
+      .map(([name]) => name);
+    if (exposed.length > 0) {
+      throw new Error(`${relativeFile} job ${jobId} must scope Secrets to the exact step that consumes them: ${exposed.join(', ')}.`);
+    }
+  }
+}
+
+function assertAgentWorkflowPermissions(file, workflow) {
+  const relativeFile = relativeWorkflow(file);
+  if (!WORKFLOW_AGENT_ROLES[path.basename(file)]) return;
+  const expectedPermissions = path.basename(file) === 'copilot_pull_request.yml'
+    ? { checks: 'write', contents: 'read' }
+    : { contents: 'read' };
+  for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
+    const permissions = job.permissions ?? {};
+    const permissionKeys = Object.keys(permissions).sort();
+    const expectedKeys = Object.keys(expectedPermissions).sort();
+    if (permissionKeys.length !== expectedKeys.length
+      || permissionKeys.some((key, index) => key !== expectedKeys[index])
+      || expectedKeys.some(key => permissions[key] !== expectedPermissions[key])) {
+      throw new Error(`${relativeFile} job ${jobId} must grant GITHUB_TOKEN exactly ${expectedKeys.map(key => `${key}: ${expectedPermissions[key]}`).join(', ')}; mutations use the explicit PAT.`);
     }
   }
 }
@@ -134,6 +263,18 @@ function assertNoConcurrency(relativeFile, workflow) {
     if (job.concurrency !== undefined) {
       throw new Error(`${relativeFile} job ${jobId} must not define GitHub concurrency.`);
     }
+  }
+}
+
+function assertDirectEventTriggers(file, workflow) {
+  const relativeFile = relativeWorkflow(file);
+  const triggers = workflow.on ?? {};
+  if (triggers && typeof triggers === 'object' && Object.prototype.hasOwnProperty.call(triggers, 'workflow_run')) {
+    throw new Error(`${relativeFile} must use direct event triggers and must not define workflow_run.`);
+  }
+  if (!relativeFile.endsWith('/copilot_pull_request.yml')) return;
+  if (!triggers.pull_request || !triggers.pull_request_review) {
+    throw new Error(`${relativeFile} must define direct pull_request and pull_request_review triggers.`);
   }
 }
 
@@ -245,7 +386,7 @@ function assertMutationWorkflow(file, workflow) {
     throw new Error(`${relativeFile} must define the exact gate-first job graph.`);
   }
   assertNoConcurrency(relativeFile, workflow);
-  assertQueueGateJob(file, workflow, setup ? 'vypdev/copilot@v3' : './');
+  assertQueueGateJob(file, workflow, setup ? 'vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3' : './');
   assertExactTimeout(relativeFile, 'queue-gate', workflow.jobs['queue-gate'], QUEUE_GATE_TIMEOUT_MINUTES);
   assertExactTimeout(relativeFile, 'prepare-version-files', workflow.jobs['prepare-version-files'], PREPARE_VERSION_TIMEOUT_MINUTES);
   assertExactNeeds(relativeFile, 'queue-gate', workflow.jobs['queue-gate'], []);
@@ -276,8 +417,11 @@ function assertQueueWorkflow(file, workflow) {
   }
   const queueJob = workflow.jobs?.[manifest.jobId];
   if (!queueJob) throw new Error(`${relativeFile} must define queue job ${manifest.jobId}.`);
-  if (BOT_GATED_WORKFLOW_FILES.has(manifest.file) && queueJob.if !== BOT_GATE_EXPRESSION) {
-    throw new Error(`${relativeFile} queue job ${manifest.jobId} must use the generic COPILOT_BOT_LOGIN actor gate.`);
+  const expectedBotGate = FORK_GATED_WORKFLOW_FILES.has(manifest.file)
+    ? FORK_SAFE_BOT_GATE_EXPRESSION
+    : BOT_GATE_EXPRESSION;
+  if (BOT_GATED_WORKFLOW_FILES.has(manifest.file) && queueJob.if !== expectedBotGate) {
+    throw new Error(`${relativeFile} queue job ${manifest.jobId} must use the required bot actor${FORK_GATED_WORKFLOW_FILES.has(manifest.file) ? ' and same-repository PR' : ''} gate.`);
   }
   if (typeof queueJob['timeout-minutes'] !== 'number'
     || queueJob['timeout-minutes'] < MIN_QUEUE_JOB_TIMEOUT_MINUTES) {
@@ -299,22 +443,24 @@ function assertIncrementalRangeFetch(relativeFile, manifestFile, job) {
       ? {
         name: 'Fetch push review range',
         condition: `github.event.after != '${ZERO_OBJECT_ID}'`,
-        afterDepth: 2,
       }
     : manifestFile === 'copilot_pull_request.yml'
-      ? { name: 'Fetch incremental review range', condition: "github.event.action == 'synchronize'", afterDepth: 1 }
+      ? { name: 'Fetch incremental review range', condition: "github.event.action == 'synchronize'" }
       : undefined;
   if (!contract) return;
+  const checkout = (job.steps ?? []).find(candidate => /^actions\/checkout@/.test(candidate?.uses ?? ''));
   const step = (job.steps ?? []).find(candidate => candidate?.name === contract.name);
   const fetchScript = typeof step?.run === 'string' ? step.run.trim() : '';
   if (!step
+    || checkout?.with?.['persist-credentials'] !== false
+    || checkout?.with?.['fetch-depth'] !== 0
     || step.if !== contract.condition
     || step.env?.BEFORE_SHA !== '${{ github.event.before }}'
     || step.env?.AFTER_SHA !== '${{ github.event.after }}'
     || (manifestFile === 'copilot_commit.yml' && step.env?.BRANCH_CREATED !== '${{ github.event.created }}')
-    || !fetchScript.includes(`git fetch --no-tags --depth=${contract.afterDepth} origin "$AFTER_SHA"`)
-    || !fetchScript.includes(`${manifestFile === 'copilot_commit.yml' ? 'if [ "$BRANCH_CREATED" != "true" ] && ' : 'if '}! git fetch --no-tags --depth=1 origin "$BEFORE_SHA"; then`)) {
-    throw new Error(`${relativeFile} must fetch the exact GitHub before/after review range before invoking Copilot.`);
+    || !fetchScript.includes('git cat-file -e "${AFTER_SHA}^{commit}"')
+    || !fetchScript.includes(`${manifestFile === 'copilot_commit.yml' ? 'if [ "$BRANCH_CREATED" != "true" ] && ' : 'if '}! git cat-file -e "\${BEFORE_SHA}^{commit}"; then`)) {
+    throw new Error(`${relativeFile} must materialize and verify the exact GitHub before/after review range without persisted credentials.`);
   }
 }
 
@@ -326,10 +472,16 @@ function assertSequentialMutationWorkflow(file, workflow) {
 
 function validateWorkflow(file, workflow) {
   if (!workflow || typeof workflow !== 'object') throw new Error('workflow document is empty.');
+  assertDirectEventTriggers(file, workflow);
   assertRunner(file, workflow);
   assertSequentialMutationWorkflow(file, workflow);
   assertAgentInputs(file, workflow);
+  assertNoJobLevelSecrets(file, workflow);
+  assertAgentWorkflowPermissions(file, workflow);
   assertQueueWorkflow(file, workflow);
+  assertImmutableActions(file, workflow);
+  assertPinnedCopilotHistoryCheckout(file, workflow);
+  assertPinnedCopilotActionInputs(file, workflow);
 }
 
 function main() {
@@ -363,7 +515,14 @@ module.exports = {
   MUTATION_WORKFLOW_MANIFEST,
   BOT_GATED_WORKFLOW_FILES,
   BOT_GATE_EXPRESSION,
+  FORK_SAFE_BOT_GATE_EXPRESSION,
+  assertImmutableActions,
+  assertPinnedCopilotHistoryCheckout,
+  assertPinnedCopilotActionInputs,
   assertAgentInputs,
+  assertNoJobLevelSecrets,
+  assertAgentWorkflowPermissions,
+  assertDirectEventTriggers,
   assertMutationWorkflow,
   assertNoConcurrency,
   assertQueueBudget,

@@ -1,5 +1,5 @@
 import type { WorkflowPollingObserverPort } from '../../application/ports/workflow_run_ports';
-import { logDebugInfo } from '../../utils/logger';
+import { logDebugInfo, logInfo } from '../../utils/logger';
 
 export class LoggerWorkflowPollingObserverAdapter implements WorkflowPollingObserverPort {
     noActivePreviousRuns(): void {
@@ -7,7 +7,7 @@ export class LoggerWorkflowPollingObserverAdapter implements WorkflowPollingObse
     }
 
     waitingForPreviousRuns(activeRunCount: number, delayMilliseconds: number): void {
-        logDebugInfo(
+        logInfo(
             `⏳ Found ${activeRunCount} previous run(s) still active. Waiting ${delayMilliseconds / 1000}s...`,
         );
     }

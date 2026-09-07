@@ -20,7 +20,7 @@ export function buildLocalActionExecution(
         pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, pullRequestMergeTimeout,
         titleEmoji, branchManagementEmoji, imageConfiguration, token, agentModel,
         aiPullRequestDescription, aiPullRequestDescriptionMode, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity,
-        bugbotCommentLimit, bugbotFixVerifyCommands, agentTasks, branchManagementLauncherLabel, bugLabel,
+        bugbotCommentLimit, bugbotFixVerifyCommands, bugbotReviewConfiguration, agentTasks, branchManagementLauncherLabel, bugLabel,
         bugfixLabel, hotfixLabel, enhancementLabel, featureLabel, releaseLabel, questionLabel, helpLabel,
         deployLabel, deployedLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel,
         priorityHighLabel, priorityMediumLabel, priorityLowLabel, priorityNoneLabel, sizeXxlLabel, sizeXlLabel,
@@ -74,6 +74,7 @@ export function buildLocalActionExecution(
             bugbotFixVerifyCommands,
             agentTasks,
             aiPullRequestDescriptionMode,
+            bugbotReviewConfiguration,
         ),
         labels: buildLabels({
             branching: { launcher: branchManagementLauncherLabel },

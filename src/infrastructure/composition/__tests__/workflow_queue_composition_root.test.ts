@@ -1,5 +1,6 @@
 import * as github from '@actions/github';
 import { createWaitForPreviousWorkflowRunsUseCase } from '../workflow_queue_composition_root';
+import { WORKFLOW_ACTIVE_STATUSES } from '../../../data/repository/workflow/workflow_status';
 
 
 jest.mock('@actions/github');
@@ -27,13 +28,16 @@ describe('workflow queue composition root', () => {
 
     expect(github.getOctokit).toHaveBeenCalledWith('token');
     expect(github.getOctokit).toHaveBeenCalledTimes(1);
-    expect(iterator).toHaveBeenCalledWith(listWorkflowRuns, {
-      owner: 'org',
-      repo: 'repo',
-      per_page: 100,
-      workflow_id: 'copilot_issue.yml',
-    });
-    expect(iterator).toHaveBeenCalledTimes(1);
+    expect(iterator).toHaveBeenCalledTimes(WORKFLOW_ACTIVE_STATUSES.length);
+    for (const status of WORKFLOW_ACTIVE_STATUSES) {
+      expect(iterator).toHaveBeenCalledWith(listWorkflowRuns, {
+        owner: 'org',
+        repo: 'repo',
+        per_page: 100,
+        workflow_id: 'copilot_issue.yml',
+        status,
+      });
+    }
   });
 
   it('uses the workflow-scoped endpoint when the workflow identifier is available', async () => {
@@ -54,11 +58,13 @@ describe('workflow queue composition root', () => {
       workflowIdentifier: 'copilot_issue.yml',
     });
 
+    expect(iterator).toHaveBeenCalledTimes(WORKFLOW_ACTIVE_STATUSES.length);
     expect(iterator).toHaveBeenCalledWith(listWorkflowRuns, {
       owner: 'org',
       repo: 'repo',
       per_page: 100,
       workflow_id: 'copilot_issue.yml',
+      status: 'in_progress',
     });
   });
 });

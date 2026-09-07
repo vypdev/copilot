@@ -9,6 +9,22 @@ describe('GitHub comment publication policy', () => {
         expect(result).toContain('&lt;!-- hidden --&gt;');
     });
 
+    it('redacts both credential-shaped and exact environment secrets from every agent output', () => {
+        const previous = process.env.CUSTOM_SERVICE_TOKEN;
+        process.env.CUSTOM_SERVICE_TOKEN = 'opaque-value-without-a-known-prefix';
+        try {
+            const result = sanitizeAgentMarkdown(
+                'api_key=abcdefghijklmnop and opaque-value-without-a-known-prefix',
+            );
+            expect(result).not.toContain('abcdefghijklmnop');
+            expect(result).not.toContain('opaque-value-without-a-known-prefix');
+            expect(result).toContain('[REDACTED]');
+        } finally {
+            if (previous === undefined) delete process.env.CUSTOM_SERVICE_TOKEN;
+            else process.env.CUSTOM_SERVICE_TOKEN = previous;
+        }
+    });
+
     it('escapes original content for an inert HTML preformatted block', () => {
         expect(escapeHtml(`<script>alert("x")</script> & 'y'`)).toBe(
             '&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt; &amp; &#39;y&#39;',

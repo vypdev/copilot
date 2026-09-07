@@ -1,9 +1,9 @@
 export const PROGRESS_RESPONSE_SCHEMA = {
     type: 'object',
     properties: {
-        progress: { type: 'number', description: 'Completion percentage 0-100' },
-        summary: { type: 'string', description: 'Short explanation of the assessment' },
-        remaining: { type: 'string', description: 'When progress < 100: what is left to do to reach 100%. Omit or empty when progress is 100.' },
+        progress: { type: 'number', minimum: 0, maximum: 100, description: 'Completion percentage 0-100' },
+        summary: { type: 'string', minLength: 1, maxLength: 8_000, description: 'Short explanation of the assessment' },
+        remaining: { type: 'string', maxLength: 8_000, description: 'When progress < 100: what is left to do to reach 100%. Omit or empty when progress is 100.' },
     },
     required: ['progress', 'summary'],
     additionalProperties: false,

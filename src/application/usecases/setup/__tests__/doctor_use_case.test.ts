@@ -57,6 +57,29 @@ describe('SetupDoctorUseCase', () => {
         expect(output.showDoctorChecks).toHaveBeenCalled();
     });
 
+    it('does not fail when Codex uses authentication already present on the target runner', async () => {
+        const configuration = createDefaultSetupConfiguration();
+        const variables = { listVariables: jest.fn().mockResolvedValue(buildSetupRepositoryVariables(configuration)) };
+        const { output, dependencies } = createDependencies({
+            variables,
+            secrets: { list: jest.fn().mockResolvedValue(['PAT']), upsertSecrets: jest.fn() },
+            workspace: { prepare: jest.fn(), hasValidToken: jest.fn(), compareWorkflows: jest.fn().mockReturnValue([]) },
+        });
+
+        const healthy = await new SetupDoctorUseCase(
+            dependencies.validation,
+            dependencies.secrets,
+            dependencies.variables,
+            dependencies.workspace,
+            output,
+        ).execute({ owner: 'owner', repository: 'repo', setupToken: 'token', configuration });
+
+        expect(healthy).toBe(true);
+        expect(output.showDoctorChecks).toHaveBeenCalledWith(expect.arrayContaining([
+            expect.objectContaining({ area: expect.stringContaining('CODEX_ACCESS_TOKEN'), status: 'warn' }),
+        ]));
+    });
+
     it('fails when an installed workflow or variable differs from the expected contract', async () => {
         const configuration = createDefaultSetupConfiguration();
         const variables = { listVariables: jest.fn().mockResolvedValue([{ name: 'AGENT_PROVIDER', value: 'cursor' }]) };

@@ -26,12 +26,12 @@ describe('agent input builder', () => {
             [INPUT_KEYS.PLANNER_MODEL]: 'claude-model',
             [INPUT_KEYS.PLANNER_EFFORT]: 'high',
             [INPUT_KEYS.REVIEWER_PROVIDER]: 'cursor',
-            [INPUT_KEYS.REVIEWER_MODEL_PROVIDER]: 'openai',
+            [INPUT_KEYS.REVIEWER_MODEL_PROVIDER]: 'cursor',
             [INPUT_KEYS.REVIEWER_MODEL]: 'review-model',
         });
 
         expect(tasks.planner).toMatchObject({ provider: 'opencode', modelProvider: 'anthropic', model: 'claude-model', effort: 'high' });
-        expect(tasks.reviewer).toMatchObject({ provider: 'cursor', modelProvider: 'openai', model: 'review-model' });
+        expect(tasks.reviewer).toMatchObject({ provider: 'cursor', modelProvider: 'cursor', model: 'review-model' });
         expect(tasks.tester).toBeUndefined();
         expect(tasks.findings.provider).toBe('codex');
     });

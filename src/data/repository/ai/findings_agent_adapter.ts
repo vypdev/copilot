@@ -22,6 +22,7 @@ export class FindingsAgentAdapter extends AgentCapabilityAdapter implements Find
             configuration: request.configuration,
             prompt: promptText,
             capability: 'findings',
+            ...(options.expectJson && options.schema ? { outputSchema: options.schema } : {}),
             mapCliOutput: (output) => {
                 if (options.expectJson && options.schema) return interpretFindingsResponse(output, options);
                 return output;

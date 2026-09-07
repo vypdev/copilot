@@ -15,10 +15,13 @@ export function reconcileResolvedFindingIds(
 ): Set<string> {
     const activeIds = new Set(activeFindings.map((finding) => finding.id));
     const activeFingerprints = new Set(activeFindings.flatMap((finding) => finding.fingerprint ? [finding.fingerprint] : []));
+    const activeSemanticFingerprints = new Set(activeFindings.flatMap((finding) => finding.semanticFingerprint ? [finding.semanticFingerprint] : []));
     return new Set([...resolvedFindingIds].filter((findingId) => {
         const existing = existingByFindingId[findingId];
         if (!existing || activeIds.has(findingId)) return false;
         const fingerprint = existing.issue?.fingerprint ?? existing.pullRequest?.fingerprint;
-        return !fingerprint || !activeFingerprints.has(fingerprint);
+        const semanticFingerprint = existing.issue?.semanticFingerprint ?? existing.pullRequest?.semanticFingerprint;
+        return (!fingerprint || !activeFingerprints.has(fingerprint))
+            && (!semanticFingerprint || !activeSemanticFingerprints.has(semanticFingerprint));
     }));
 }

@@ -14,6 +14,7 @@ export const COPILOT_COMMAND_NAMES = [
     'findings',
     'fix',
     'dismiss',
+    'remember',
     'recheck',
     'implement',
 ] as const;
@@ -56,7 +57,7 @@ export function parseCopilotCommand(raw: unknown): CopilotCommandParseResult {
     if (tokens.length > MAX_ARGUMENTS) {
         return { kind: 'invalid', reason: `Copilot commands accept at most ${MAX_ARGUMENTS} arguments.` };
     }
-    if ((name === 'fix' || name === 'dismiss' || name === 'implement') && tokens.length === 0) {
+    if ((name === 'fix' || name === 'dismiss' || name === 'implement' || name === 'remember') && tokens.length === 0) {
         return { kind: 'invalid', reason: `/${name} requires at least one argument.` };
     }
     return {

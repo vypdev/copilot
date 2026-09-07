@@ -42,7 +42,7 @@ const MODEL_PROVIDER_CREDENTIALS: Readonly<Record<string, readonly string[]>> = 
 const CLI_CREDENTIALS: Readonly<Record<AgentProvider, readonly string[]>> = {
     opencode: ['OPENCODE_API_KEY'],
     cursor: ['CURSOR_API_KEY'],
-    codex: ['CODEX_ACCESS_TOKEN', 'OPENAI_API_KEY'],
+    codex: ['CODEX_API_KEY', 'CODEX_ACCESS_TOKEN', 'OPENAI_API_KEY'],
 };
 
 const KNOWN_AGENT_CREDENTIALS = [...new Set([

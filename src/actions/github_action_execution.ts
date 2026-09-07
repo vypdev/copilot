@@ -26,6 +26,8 @@ import { buildEmoji, buildImages, buildIssue, buildIssueTypes, buildLabels, buil
 import { loadProjectDetails } from './project_details_loader';
 import type { buildGithubActionEventInputs } from './github_event_inputs';
 import { DEFAULT_INACTIVITY_THRESHOLD_HOURS, MAX_INACTIVITY_THRESHOLD_HOURS } from '../domain/issue_inactivity';
+import { activeAgentTasks } from '../application/policies/agent_task_activation_policy';
+import type { AgentTaskConfiguration } from '../domain/agent';
 
 export interface GithubActionExecutionInput {
     readonly getInput: typeof getGithubActionInput;
@@ -35,15 +37,30 @@ export interface GithubActionExecutionInput {
     readonly token: string;
     readonly tokenUser: string;
     readonly singleAction: SingleAction;
+    readonly aiInputs?: ReturnType<typeof readGithubActionAiInputs>;
+    readonly activeAgentTasks?: ReturnType<typeof activeAgentTasks>;
+    readonly agentRuntimeAuthorized?: boolean;
 }
 
 export async function buildGithubActionExecution(
     input: GithubActionExecutionInput,
 ): Promise<Execution> {
     const { getInput, eventInputs, projectQuery, debug, singleAction, token } = input;
-    const aiInputs = readGithubActionAiInputs(getInput);
-    if (!singleAction.isCloseInactiveIssuesAction) {
-        prepareGithubAgentRuntime(aiInputs.requestedAgentTasks);
+    const aiInputs = input.aiInputs ?? readGithubActionAiInputs(getInput);
+    const agentTasks = input.agentRuntimeAuthorized === false
+        ? disableAgentTasks(aiInputs.requestedAgentTasks)
+        : aiInputs.requestedAgentTasks;
+    const runtimeTasks = input.activeAgentTasks ?? activeAgentTasks(
+        eventInputs,
+        singleAction,
+        input.tokenUser,
+        aiInputs.pullRequestDescriptionMode !== 'disabled',
+    );
+    if (!singleAction.isCloseInactiveIssuesAction && runtimeTasks.length > 0) {
+        prepareGithubAgentRuntime(
+            agentTasks,
+            runtimeTasks,
+        );
     }
 
     const projects = await loadProjectDetails(
@@ -98,8 +115,9 @@ export async function buildGithubActionExecution(
             aiInputs.bugbotSeverity,
             aiInputs.bugbotCommentLimit,
             aiInputs.bugbotFixVerifyCommands,
-            aiInputs.requestedAgentTasks,
+            agentTasks,
             aiInputs.pullRequestDescriptionMode,
+            aiInputs.bugbotReviewConfiguration,
         ),
         labels: buildLabels(labelInputs),
         issueTypes: buildIssueTypes(issueTypeInputs),
@@ -113,6 +131,16 @@ export async function buildGithubActionExecution(
         tokenUser: input.tokenUser,
         inputs: eventInputs,
     });
+}
+
+function disableAgentTasks(tasks: AgentTaskConfiguration): AgentTaskConfiguration {
+    return Object.fromEntries(
+        Object.entries(tasks).map(([task, configuration]) => [task, {
+            ...configuration,
+            model: '',
+            command: '',
+        }]),
+    ) as unknown as AgentTaskConfiguration;
 }
 
 export function readGithubActionSingleAction(getInput: typeof getGithubActionInput): SingleAction {

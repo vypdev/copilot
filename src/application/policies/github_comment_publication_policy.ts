@@ -1,5 +1,5 @@
 import { createUntrustedContent } from '../../domain/security/untrusted_content';
-import { redactSecretLikeValues } from '../../utils/secret_redaction';
+import { redactKnownEnvironmentSecrets, redactSecretLikeValues } from '../../utils/secret_redaction';
 
 /**
  * Model output is untrusted too. Keep useful Markdown, but neutralize the
@@ -7,7 +7,11 @@ import { redactSecretLikeValues } from '../../utils/secret_redaction';
  */
 export function sanitizeAgentMarkdown(raw: unknown, maxLength = 12_000): string {
     if (typeof raw !== 'string') return '';
-    const bounded = createUntrustedContent(raw, 'agent.comment.output', maxLength).text;
+    const bounded = createUntrustedContent(
+        redactKnownEnvironmentSecrets(redactSecretLikeValues(raw)),
+        'agent.comment.output',
+        maxLength,
+    ).text;
     return neutralizeGithubControls(bounded);
 }
 
@@ -19,9 +23,8 @@ export function sanitizeAgentMarkdown(raw: unknown, maxLength = 12_000): string 
 export function sanitizePublishedError(raw: unknown): string {
     if (typeof raw !== 'string') return '';
     const withoutStack = raw.split(/\n\s+at\s+/u, 1)[0];
-    const redacted = redactSecretLikeValues(withoutStack)
+    return sanitizeAgentMarkdown(withoutStack, 2_000)
         .replace(/\[REDACTED\]/gu, '[redacted]');
-    return sanitizeAgentMarkdown(redacted, 2_000);
 }
 
 export function escapeHtml(raw: unknown): string {

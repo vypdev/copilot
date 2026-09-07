@@ -27,14 +27,15 @@ export async function runBugbotAutofixCommitAndPush(
 
 export async function runUserRequestCommitAndPush(
     execution: Execution,
-    options: { branchOverride?: string } | undefined,
+    options: { branchOverride?: string; branchAlreadyCheckedOut?: boolean; workspacePaths?: string[] } | undefined,
     authenticatedUserPort: AuthenticatedUserPort,
     gitCommitPort: GitCommitPort,
 ): Promise<BugbotAutofixCommitResult> {
     const branch = options?.branchOverride ?? execution.commit.branch;
     return runCommitAndPushWorkflow(execution, {
         branch,
-        branchOverride: Boolean(options?.branchOverride),
+        branchOverride: Boolean(options?.branchOverride) && !options?.branchAlreadyCheckedOut,
+        workspacePaths: options?.workspacePaths,
         commitMessage: buildUserRequestCommitMessage(execution.issueNumber),
         noChangesMessage: 'No changes to commit after user request.',
     }, authenticatedUserPort, gitCommitPort);

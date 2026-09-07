@@ -131,13 +131,20 @@ export class SetupDoctorUseCase {
                 reportedGroups.add(alternativeGroup);
                 const groupRequirements = requirements.filter(candidate => candidate.alternativeGroups?.includes(alternativeGroup));
                 const available = groupRequirements.filter(candidate => remoteSecrets.has(candidate.name));
+                const runnerAuthenticationAllowed = groupRequirements.some(candidate =>
+                    candidate.runnerAuthenticationGroups?.includes(alternativeGroup),
+                );
                 const healthy = available.some(candidate => remoteHealthByName.get(candidate.name)?.status === 'valid');
                 const invalid = available.length > 0 && available.every(candidate => remoteHealthByName.get(candidate.name)?.status === 'invalid');
                 checks.push({
                     area: `Secrets ${groupRequirements.map(candidate => candidate.name).join(' or ')}`,
-                    status: available.length === 0 ? 'fail' : healthy ? 'pass' : invalid ? 'fail' : 'warn',
+                    status: available.length === 0
+                        ? runnerAuthenticationAllowed ? 'warn' : 'fail'
+                        : healthy ? 'pass' : invalid ? 'fail' : 'warn',
                     message: available.length === 0
-                        ? 'At least one alternative credential is missing.'
+                        ? runnerAuthenticationAllowed
+                            ? 'No fallback Secret is configured; the target runner must pass the Codex login preflight.'
+                            : 'At least one alternative credential is missing.'
                         : healthy
                             ? 'At least one alternative credential is valid.'
                             : invalid

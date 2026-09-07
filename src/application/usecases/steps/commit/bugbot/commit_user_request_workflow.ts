@@ -18,7 +18,15 @@ export async function commitUserRequestIfSuccessful(
         return [];
     }
     logInfo('Do user request succeeded; running commit and push.');
-    const commitResult = await runUserRequestCommitAndPush(param, { branchOverride }, authenticatedUserPort, gitCommitPort);
+    const payload = results.at(-1)?.payload as {
+        workspacePaths?: string[];
+        branchCheckedOut?: boolean;
+    } | undefined;
+    const commitResult = await runUserRequestCommitAndPush(param, {
+        branchOverride,
+        branchAlreadyCheckedOut: payload?.branchCheckedOut,
+        workspacePaths: payload?.workspacePaths,
+    }, authenticatedUserPort, gitCommitPort);
     if (!commitResult.success) {
         const message = sanitizePublishedError(commitResult.error) || 'Commit or push failed after user request.';
         return [new Result({

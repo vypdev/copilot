@@ -201,7 +201,8 @@ describe('mainRun', () => {
     expect(mockWaitForPreviousWorkflowRunsInvoke).not.toHaveBeenCalled();
   });
 
-  it('waits for previous runs when welcome is false', async () => {
+  it('waits for previous runs in GitHub Actions', async () => {
+    process.env.GITHUB_ACTIONS = 'true';
     process.env.GITHUB_RUN_ID = '200';
     process.env.GITHUB_WORKFLOW = 'CI';
     process.env.GITHUB_WORKFLOW_REF = 'org/repo/.github/workflows/copilot_issue.yml@refs/heads/master';
@@ -217,6 +218,9 @@ describe('mainRun', () => {
   });
 
   it('waits before setup so setup cannot overlap a previous mutation run', async () => {
+    process.env.GITHUB_ACTIONS = 'true';
+    process.env.GITHUB_RUN_ID = '200';
+    process.env.GITHUB_WORKFLOW_REF = 'org/repo/.github/workflows/copilot_issue.yml@refs/heads/master';
     const order: string[] = [];
     mockWaitForPreviousWorkflowRunsInvoke.mockImplementation(async () => {
       order.push('wait');
@@ -253,14 +257,24 @@ describe('mainRun', () => {
     expect(mockSetupExecutionInvoke).not.toHaveBeenCalled();
   });
 
-  it('skips wait when welcome is set', async () => {
+  it('still queues a GitHub workflow when a welcome message is configured', async () => {
+    process.env.GITHUB_ACTIONS = 'true';
+    process.env.GITHUB_RUN_ID = '200';
+    process.env.GITHUB_WORKFLOW_REF = 'org/repo/.github/workflows/copilot_issue.yml@refs/heads/master';
     const execution = mockExecution({
       welcome: { title: 'Hi', messages: ['Welcome'] },
       isPush: true,
     });
     await runMain(execution);
-    expect(createWaitForPreviousWorkflowRunsUseCase).not.toHaveBeenCalled();
+    expect(createWaitForPreviousWorkflowRunsUseCase).toHaveBeenCalledWith('token');
     expect(mockCommitInvoke).toHaveBeenCalled();
+  });
+
+  it('does not query the GitHub workflow queue outside GitHub Actions', async () => {
+    delete process.env.GITHUB_ACTIONS;
+    await runMain(mockExecution({ welcome: undefined }));
+    expect(createWaitForPreviousWorkflowRunsUseCase).not.toHaveBeenCalled();
+    expect(mockSetupExecutionInvoke).toHaveBeenCalled();
   });
 
   it('logs welcome boxen and runs SingleActionUseCase when welcome and isSingleAction', async () => {
@@ -465,6 +479,9 @@ describe('mainRun', () => {
   });
 
   it('propagates a canonical queue failure without exposing provider diagnostics', async () => {
+    process.env.GITHUB_ACTIONS = 'true';
+    process.env.GITHUB_RUN_ID = '200';
+    process.env.GITHUB_WORKFLOW_REF = 'org/repo/.github/workflows/copilot_issue.yml@refs/heads/master';
     const markers = [
       'provider-message-marker',
       'response-body-marker',

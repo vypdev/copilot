@@ -25,7 +25,7 @@ export async function runCommitAndPushPreflight(
   if (!options.branch?.trim()) {
     return { status: "failure", error: "No branch to commit to." };
   }
-  if (options.branchOverride && !(await checkoutBranch(options.branch, gitCommitPort))) {
+  if (options.branchOverride && !(await checkoutBranch(options.branch, gitCommitPort, execution.tokens.token))) {
     return { status: "failure", error: `Failed to checkout branch ${options.branch}.` };
   }
 
@@ -54,7 +54,7 @@ async function runVerification(
   logInfo(`Running ${verifyCommands.length} verify command(s)...`);
   const verify = await runVerifyCommands(
     verifyCommands,
-    (program, args) => gitCommitPort.execute(program, args),
+    (program, args) => gitCommitPort.execute(program, args, { untrusted: true }),
   );
   return verify.success
     ? undefined

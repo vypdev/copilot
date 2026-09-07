@@ -174,7 +174,10 @@ describe("createPullRequestUseCaseCompositionRoot", () => {
     expect(mockComposePullRequestUseCase).toHaveBeenCalledTimes(1);
     const argumentsPassed = mockComposePullRequestUseCase.mock.calls[0];
     expect(argumentsPassed[0]).toBe(mockDescriptionUseCase);
-    expect(argumentsPassed).toHaveLength(3);
+    expect(argumentsPassed).toHaveLength(4);
+    expect(argumentsPassed[3]).toEqual(expect.objectContaining({
+      isActorAllowedToModifyFiles: expect.any(Function),
+    }));
     expect(argumentsPassed[1]).toEqual(expect.objectContaining({
       updateTitle: expect.objectContaining({ invoke: expect.any(Function) }),
       assignReviewersToIssue: expect.objectContaining({ invoke: expect.any(Function) }),

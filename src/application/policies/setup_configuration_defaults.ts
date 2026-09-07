@@ -20,7 +20,6 @@ export const SETUP_AGENT_TASKS: readonly AgentTask[] = [
     'reviewer',
     'fixer',
     'tester',
-    'release',
 ];
 
 /** Features that can invoke each agent role at runtime. */
@@ -30,7 +29,6 @@ export const SETUP_AGENT_TASK_FEATURES: Readonly<Record<AgentTask, readonly stri
     reviewer: ['pullRequests', 'pullRequestComments'],
     fixer: ['issueComments', 'pullRequestComments'],
     tester: ['issueComments', 'pullRequestComments'],
-    release: ['release', 'hotfix'],
 };
 
 export function setupAgentTasksForFeatures(configuration: Pick<SetupConfiguration, 'features'>): AgentTask[] {
@@ -107,13 +105,21 @@ export function createDefaultSetupConfiguration(): SetupConfiguration {
         },
         ai: {
             pullRequestDescription: true,
-            pullRequestDescriptionMode: 'replace',
+            pullRequestDescriptionMode: 'append',
             ignoreFiles: 'build/*',
             membersOnly: false,
-            includeReasoning: true,
+            includeReasoning: false,
             bugbotSeverity: 'low',
             bugbotCommentLimit: 20,
             bugbotFixVerifyCommands: '',
+            bugbotDryRun: false,
+            bugbotEffort: 'smart',
+            bugbotReviewDrafts: false,
+            bugbotTraceRules: false,
+            bugbotSuggestedChanges: true,
+            bugbotTelemetry: true,
+            bugbotFailOnUnresolved: false,
+            bugbotOrganizationRules: '',
             provisioningMode: 'auto',
         },
         projects: {

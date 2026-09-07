@@ -9,6 +9,7 @@ import type {
 import { buildCommentBody } from "./marker";
 import { resolveFindingPathForPr } from "./path_validation";
 import { logInfo } from "../../../../ports/logging_ports";
+import { sanitizeAgentMarkdown } from '../../../../policies/github_comment_publication_policy';
 
 export interface PullRequestReviewCommentPublisherOptions {
   repository: BugbotPullRequestWritePort;
@@ -16,6 +17,8 @@ export interface PullRequestReviewCommentPublisherOptions {
   openPrNumber: number;
   prContext: BugbotPrContext;
   watermark: string;
+  ruleSources?: readonly string[];
+  omittedRuleCount?: number;
 }
 
 export class PullRequestReviewCommentPublisher {
@@ -32,12 +35,14 @@ export class PullRequestReviewCommentPublisher {
     existing: ExistingFindingInfo | undefined,
   ): Promise<void> {
     const { prContext, openPrNumber, execution } = this.options;
-    const findingBody = buildCommentBody(finding, false);
-    const body = `${findingBody}\n\n${this.options.watermark}`;
+    const allowSuggestedChanges = execution.ai?.getBugbotReviewConfiguration?.().suggestedChanges !== false;
     if (
       existing?.pullRequest != null &&
       existing.pullRequest.pullRequestNumber === openPrNumber
     ) {
+      // Existing comments do not carry enough anchor metadata to prove that a
+      // GitHub suggestion is still attached to a RIGHT-side changed line.
+      const body = `${buildCommentBody(finding, false, undefined, { includeSuggestedChange: false })}\n\n${this.options.watermark}`;
       if (existing.pullRequest.resolved) {
         await this.options.repository.unresolvePullRequestReviewThread(
           execution.owner,
@@ -59,6 +64,10 @@ export class PullRequestReviewCommentPublisher {
 
     const reportedPath = resolveFindingPathForPr(finding.file, prContext.prFiles);
     const anchor = resolveReviewAnchor(finding.line, finding.endLine, reportedPath, prContext);
+    const findingBody = buildCommentBody(finding, false, undefined, {
+      includeSuggestedChange: allowSuggestedChanges && anchor?.subjectType === 'line' && anchor.side === 'RIGHT',
+    });
+    const body = `${findingBody}\n\n${this.options.watermark}`;
     this.findingsToCreate.push(finding);
     if (!anchor) {
       this.unanchoredBodies.push(findingBody);
@@ -103,6 +112,12 @@ export class PullRequestReviewCommentPublisher {
         overflowCount,
         overflowTitles,
         this.options.watermark,
+        execution.ai?.getBugbotReviewConfiguration?.().traceRules === true
+          ? this.options.ruleSources ?? []
+          : [],
+        execution.ai?.getBugbotReviewConfiguration?.().traceRules === true
+          ? this.options.omittedRuleCount ?? 0
+          : 0,
       ),
       this.commentsToCreate,
       execution.tokens.token,
@@ -154,15 +169,19 @@ function buildReviewSummary(
   overflowCount: number,
   overflowTitles: readonly string[],
   watermark: string,
+  ruleSources: readonly string[] = [],
+  omittedRuleCount = 0,
 ): string {
   const findingLines = findings.map((finding) => {
-    const severity = finding.severity?.trim() || "unspecified";
+    const severity = sanitizeSummaryText(finding.severity, 32) || "unspecified";
+    const title = sanitizeSummaryText(finding.title, 500) || 'Potential problem';
+    const file = sanitizeSummaryText(finding.file, 500).replace(/`/gu, '\\`');
     const location = finding.file
-      ? ` — \`${finding.file}${finding.line ? `:${finding.line}` : ""}\``
+      ? ` — \`${file}${finding.line ? `:${finding.line}` : ""}\``
       : "";
-    return `- **${severity}**: ${finding.title}${location}`;
+    return `- **${severity}**: ${title}${location}`;
   });
-  const overflowLines = overflowTitles.slice(0, 15).map((title) => `- ${title}`);
+  const overflowLines = overflowTitles.slice(0, 15).map((title) => `- ${sanitizeSummaryText(title, 500) || 'Potential problem'}`);
   if (overflowCount > overflowLines.length) {
     overflowLines.push(`- …and ${overflowCount - overflowLines.length} more.`);
   }
@@ -181,6 +200,23 @@ function buildReviewSummary(
         + `**${overflowCount}** additional finding(s) were detected.\n\n${overflowLines.join("\n")}`,
     );
   }
+  if (ruleSources.length > 0 || omittedRuleCount > 0) {
+    const rows = ruleSources.map((rawSource) => {
+      const truncated = rawSource.endsWith(' (truncated)');
+      const source = sanitizeSummaryText(
+        truncated ? rawSource.slice(0, -' (truncated)'.length) : rawSource,
+        500,
+      ).replace(/`/g, '\\`').replace(/\|/g, '\\|');
+      return `| \`${source}\` | ${truncated ? 'truncated' : 'included'} |`;
+    });
+    if (omittedRuleCount > 0) rows.push(`| — | ${omittedRuleCount} omitted by duplicate, empty, or combined-budget policy |`);
+    sections.push(`### Review configuration\n\nRules in effective precedence order:\n\n| Source | Status |\n| --- | --- |\n${rows.join('\n')}`);
+  }
+  sections.push('To request an automatic repair for all active findings, reply with `/copilot fix all`.');
   sections.push(watermark);
   return sections.join("\n\n");
+}
+
+function sanitizeSummaryText(value: unknown, maximum: number): string {
+  return sanitizeAgentMarkdown(typeof value === 'string' ? value : '', maximum).replace(/[\r\n]+/gu, ' ').trim();
 }

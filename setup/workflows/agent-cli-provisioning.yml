@@ -13,7 +13,9 @@ jobs:
       contents: read
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
 
       - name: Verify selected CLI binary and headless contract
         shell: bash
@@ -24,12 +26,11 @@ jobs:
           PLANNER_PROVIDER: ${{ vars.PLANNER_PROVIDER }}
           REVIEWER_PROVIDER: ${{ vars.REVIEWER_PROVIDER }}
           TESTER_PROVIDER: ${{ vars.TESTER_PROVIDER }}
-          RELEASE_PROVIDER: ${{ vars.RELEASE_PROVIDER }}
           AGENT_COMMAND: ${{ vars.AGENT_COMMAND }}
         run: |
           set -euo pipefail
 
-          providers=("$AGENT_PROVIDER" "$FINDINGS_PROVIDER" "$FIXER_PROVIDER" "$PLANNER_PROVIDER" "$REVIEWER_PROVIDER" "$TESTER_PROVIDER" "$RELEASE_PROVIDER")
+          providers=("$AGENT_PROVIDER" "$FINDINGS_PROVIDER" "$FIXER_PROVIDER" "$PLANNER_PROVIDER" "$REVIEWER_PROVIDER" "$TESTER_PROVIDER")
           checked=""
           for provider in "${providers[@]}"; do
             [[ -z "${provider// }" ]] && continue

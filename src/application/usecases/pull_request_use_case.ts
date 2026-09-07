@@ -5,6 +5,7 @@ import { getTaskEmoji } from "../../utils/task_emoji";
 import type { ParamUseCase } from "./base/param_usecase";
 import type { PullRequestWorkflowSteps } from "./pull_request_workflow_steps";
 import { runPullRequestWorkflow } from "./pull_request_workflow";
+import type { ActorAuthorizationPort } from '../ports/actor_authorization_ports';
 
 export class PullRequestUseCase implements ParamUseCase<Execution, Result[]> {
   taskId: string = "PullRequestUseCase";
@@ -13,6 +14,7 @@ export class PullRequestUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly updatePullRequestDescriptionUseCase: ParamUseCase<Execution, Result[]>,
     private readonly workflowSteps: PullRequestWorkflowSteps,
     private readonly reviewPotentialProblemsUseCase?: ParamUseCase<Execution, Result[]>,
+    private readonly actorAuthorizationPort?: ActorAuthorizationPort,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
@@ -21,6 +23,7 @@ export class PullRequestUseCase implements ParamUseCase<Execution, Result[]> {
       updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase,
       reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
       workflowSteps: this.workflowSteps,
+      actorAuthorizationPort: this.actorAuthorizationPort,
     });
   }
 }

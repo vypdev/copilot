@@ -2,8 +2,11 @@
  * Prompt for Bugbot autofix (fix selected findings in workspace).
  */
 import { fillTemplate } from './fill';
+import { UNTRUSTED_CONTENT_POLICY } from '../domain/security/untrusted_content';
 
-const TEMPLATE = `You are in the repository workspace. Your task is to fix the reported code findings (bugs, vulnerabilities, or quality issues) listed below, and only those. The user has explicitly requested these fixes.
+const TEMPLATE = `${UNTRUSTED_CONTENT_POLICY}
+
+You are in the repository workspace. Your task is to fix the reported code findings (bugs, vulnerabilities, or quality issues) listed below, and only those. The user has explicitly requested these fixes.
 
 {{projectContextInstruction}}
 

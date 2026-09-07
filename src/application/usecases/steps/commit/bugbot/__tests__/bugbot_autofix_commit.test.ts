@@ -96,7 +96,7 @@ describe("runBugbotAutofixCommitAndPush", () => {
             branchOverride: "feature/42-from-pr",
         });
 
-        expect(mockExec).toHaveBeenCalledWith("git", ["fetch", "origin", "feature/42-from-pr"]);
+        expect(mockExec.mock.calls).toContainEqual(["git", ["fetch", "origin", "feature/42-from-pr"], expect.any(Object)]);
         expect(mockExec).toHaveBeenCalledWith("git", ["checkout", "feature/42-from-pr"]);
         expect(mockExec).toHaveBeenCalledWith("git", ["status", "--porcelain"], expect.any(Object));
         expect(result.success).toBe(true);
@@ -117,7 +117,7 @@ describe("runBugbotAutofixCommitAndPush", () => {
         });
 
         expect(mockExec).toHaveBeenCalledWith("git", ["stash", "push", "-u", "-m", "bugbot-autofix-before-checkout"]);
-        expect(mockExec).toHaveBeenCalledWith("git", ["fetch", "origin", "feature/42-from-pr"]);
+        expect(mockExec.mock.calls).toContainEqual(["git", ["fetch", "origin", "feature/42-from-pr"], expect.any(Object)]);
         expect(mockExec).toHaveBeenCalledWith("git", ["checkout", "feature/42-from-pr"]);
         expect(mockExec).toHaveBeenCalledWith("git", ["stash", "pop"]);
         expect(result.success).toBe(true);
@@ -203,7 +203,9 @@ describe("runBugbotAutofixCommitAndPush", () => {
 
         const result = await runBugbotAutofixCommitAndPush(exec);
 
-        expect(mockExec).toHaveBeenCalledWith("pnpm", ["test"]);
+        expect(mockExec).toHaveBeenCalledWith("pnpm", ["test"], {
+            env: expect.objectContaining({ HOME: expect.stringContaining('copilot-verify-runtime-') }),
+        });
         expect(result).toEqual({
             success: false,
             committed: false,
@@ -320,7 +322,9 @@ describe("runBugbotAutofixCommitAndPush", () => {
 
         expect(result.success).toBe(true);
         expect(result.committed).toBe(false);
-        expect(mockExec).toHaveBeenCalledWith("pnpm", ["run", "test with spaces"]);
+        expect(mockExec).toHaveBeenCalledWith("pnpm", ["run", "test with spaces"], {
+            env: expect.objectContaining({ HOME: expect.stringContaining('copilot-verify-runtime-') }),
+        });
     });
 
     it("limits verify commands to 20 and logs when configured count exceeds limit", async () => {
@@ -386,7 +390,7 @@ describe("runBugbotAutofixCommitAndPush", () => {
             "-m",
             "fix(#42): bugbot autofix - resolve reported findings",
         ]);
-        expect(mockExec).toHaveBeenCalledWith("git", ["push", "origin", "feature/42-foo"]);
+        expect(mockExec.mock.calls).toContainEqual(["git", ["push", "origin", "feature/42-foo"], expect.any(Object)]);
     });
 
     it("returns failure when commit or push throws", async () => {
@@ -572,7 +576,7 @@ describe("runUserRequestCommitAndPush", () => {
 
         expect(result.success).toBe(true);
         expect(result.committed).toBe(false);
-        expect(mockExec).toHaveBeenCalledWith("git", ["fetch", "origin", "feature/42-from-issue"]);
+        expect(mockExec.mock.calls).toContainEqual(["git", ["fetch", "origin", "feature/42-from-issue"], expect.any(Object)]);
         expect(mockExec).toHaveBeenCalledWith("git", ["checkout", "feature/42-from-issue"]);
     });
 
@@ -617,7 +621,7 @@ describe("runUserRequestCommitAndPush", () => {
             "-m",
             "chore(#42): apply user request",
         ]);
-        expect(mockExec).toHaveBeenCalledWith("git", ["push", "origin", "feature/42-foo"]);
+        expect(mockExec.mock.calls).toContainEqual(["git", ["push", "origin", "feature/42-foo"], expect.any(Object)]);
     });
 
     it("uses chore message without issue number when issueNumber is 0 or negative", async () => {

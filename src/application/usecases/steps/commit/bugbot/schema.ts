@@ -11,6 +11,7 @@ export const BUGBOT_RESPONSE_SCHEMA = {
     properties: {
         findings: {
             type: 'array',
+            maxItems: 200,
             items: {
                 type: 'object',
                 properties: {
@@ -30,6 +31,9 @@ export const BUGBOT_RESPONSE_SCHEMA = {
                     category: { type: 'string', enum: ['correctness', 'security', 'performance', 'reliability', 'maintainability'], description: 'Primary defect category' },
                     evidence: { type: 'string', maxLength: 8000, description: 'Concrete execution path, invariant, or code evidence proving impact' },
                     suggestion: { type: 'string', maxLength: 8000, description: 'Suggested fix when applicable' },
+                    symbol: { type: 'string', maxLength: 500, description: 'Nearest stable class, function, method, or configuration key when applicable' },
+                    codeSnippet: { type: 'string', maxLength: 2000, description: 'Minimal exact code fragment that anchors the root cause across line movement' },
+                    suggestedCode: { type: 'string', maxLength: 4000, description: 'Optional exact replacement for the reported changed-line range; omit for non-local or uncertain fixes' },
                 },
                 required: ['id', 'title', 'description'],
                 additionalProperties: false,
@@ -37,6 +41,7 @@ export const BUGBOT_RESPONSE_SCHEMA = {
         },
         resolved_finding_ids: {
             type: 'array',
+            maxItems: 500,
             items: {
                 type: 'string',
                 minLength: 1,
@@ -73,7 +78,8 @@ export const BUGBOT_FIX_INTENT_RESPONSE_SCHEMA = {
         },
         target_finding_ids: {
             type: 'array',
-            items: { type: 'string' },
+            maxItems: 500,
+            items: { type: 'string', minLength: 1, maxLength: MAX_FINDING_ID_LENGTH },
             description:
                 'When is_fix_request is true: the exact finding ids from the list we provided that the user wants fixed. Use the exact id strings. For "fix all" or "fix everything" include all listed ids. When is_fix_request is false, return an empty array.',
         },

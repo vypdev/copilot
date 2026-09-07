@@ -23,6 +23,7 @@ export class LanguageAgentAdapter extends AgentCapabilityAdapter implements Lang
             configuration: request.configuration,
             prompt: promptText,
             capability: 'language',
+            ...(options.expectJson && options.schema ? { outputSchema: options.schema } : {}),
             mapCliOutput: (output) => {
                 if (options.expectJson && options.schema) return interpretFindingsResponse(output, options);
                 return output;

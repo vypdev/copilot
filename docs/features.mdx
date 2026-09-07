@@ -108,15 +108,13 @@ Single actions that **throw an error** if the last step fails: `publish_github_a
 
 All AI features use the configured agent CLI and explicit model contract. The runtime is selected with `agent-provider`; the model provider and model are selected with `agent-model-provider` and `agent-model`. See [Agent CLI configuration](/agents/cli-configuration).
 
-<Warning>
-Codex is the default runtime for the repository's AI feature paths. OpenCode remains a supported and validated alternative. Cursor is WIP and must not be described as production-validated; see [Cursor runtime (WIP)](/agents/cursor-wip).
-</Warning>
+Codex is the default runtime for the repository's AI feature paths. OpenCode and Cursor are supported alternatives with deterministic adapter, policy, and failure-path coverage. Each deployment must still run an explicitly authorized authenticated smoke test for the chosen runtime, model, account, and runner image.
 
 | Runtime | Status | Documentation |
 | --- | --- | --- |
 | Codex with OpenAI | Default CLI path; verify authentication and model entitlement before production use | [Codex and OpenAI](/agents/codex-openai) |
 | OpenCode | Supported validated alternative | [OpenCode runtime](/agents/opencode) |
-| Cursor | WIP; authenticated smoke test pending | [Cursor runtime (WIP)](/agents/cursor-wip) |
+| Cursor | Supported; per-environment authenticated smoke test required | [Cursor runtime](/agents/cursor) |
 
 | Feature | Where it runs | Description |
 |--------|----------------|-------------|
@@ -124,7 +122,7 @@ Codex is the default runtime for the repository's AI feature paths. OpenCode rem
 | **Bugbot (potential problems)** | Push (commit) pipeline; optional single action `detect_potential_problems_action` / CLI `detect-potential-problems` | Analyzes branch vs base and posts findings as **issue comments** when no PR exists, or as one summarized review with inline comments when a PR is available; updates stored findings and resolves PR threads when findings are fixed. Configurable: `bugbot-severity`, `ai-ignore-files`. |
 | **Do user request** | Issue comment; PR review comment | When you comment asking to perform a change in the repo (or use `/copilot implement <request>`), the configured agent applies the changes in the workspace, runs verify commands, and the action commits and pushes with a generic message. Organization repositories require an org member; personal repositories require the owner or a `push`/`maintain`/`admin` collaborator. Uses the same `bugbot-fix-verify-commands` and agent CLI setup. |
 | **Think / reasoning** | Issue/PR comment pipeline; single action `think_action` | Deep code analysis and change proposals (configured agent CLI). On comments: answers when mentioned (or on any comment for question/help issues). Runs when the comment was not a fix/do request or when the user is not allowed to trigger file-modifying actions. |
-| **Explicit Copilot commands** | Issue and PR comments | `/copilot help`, `/copilot plan`, `/copilot clarify`, `/copilot estimate`, `/copilot test-plan`, `/copilot explain`, `/copilot diagnose`, `/copilot analyze`, `/copilot status`, `/copilot review`, `/copilot findings`, `/copilot recheck`, `/copilot fix`, `/copilot dismiss`, and `/copilot implement` provide a bounded, predictable interface. |
+| **Explicit Copilot commands** | Issue and PR comments | `/copilot help`, `/copilot plan`, `/copilot clarify`, `/copilot estimate`, `/copilot test-plan`, `/copilot explain`, `/copilot diagnose`, `/copilot analyze`, `/copilot status`, `/copilot review`, `/copilot findings`, `/copilot recheck`, `/copilot fix`, `/copilot dismiss`, `/copilot remember`, and `/copilot implement` provide a bounded, predictable interface. |
 | **Comment translation** | Issue comment; PR review comment | Translates comments to the configured locale (`issues-locale`, `pull-requests-locale`) when they are written in another language. |
 | **AI PR description** | Pull request pipeline | Fills the repo's `.github/pull_request_template.md` from issue and branch diff (configured agent CLI). |
 | **Copilot** | CLI `copilot do` | Code analysis and file edits via the configured agent runtime. |
@@ -146,7 +144,7 @@ the Action with the internal `queue-gate-only` mode and only the ephemeral
 `${{ github.token }}` read permissions; it admits the run and exits before project
 composition, agent provisioning, setup, or mutation work. The version-preparation and
 publication jobs depend on that gate transitively, so a failed or skipped admission
-cannot start a write-capable descendant. The setup templates use `vypdev/copilot@v3`
+cannot start a write-capable descendant. The setup templates use `vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3`
 for this gate and therefore require a published v3 bundle that supports
 `queue-gate-only`.
 
@@ -158,15 +156,15 @@ an execution or publish results.
 ### How it works
 
 1. For a GitHub Action run with a PAT, the action first compares the event actor with the authenticated PAT user. A normal run from the same account completes successfully before project composition, agent provisioning, setup, or queue polling. A valid explicit single action continues through the normal lifecycle.
-2. An admitted run resolves the current workflow file from `GITHUB_WORKFLOW_REF` and performs one paginated workflow-scoped traversal per poll with `per_page: 100`, then locally filters active statuses (`in_progress`, `queued`, `requested`, `waiting`, and `pending`) and runs with a **lower run ID** (i.e. started earlier). Unrelated workflows are never included.
+2. An admitted run resolves the current workflow file from `GITHUB_WORKFLOW_REF` and queries the workflow-scoped endpoint concurrently for `in_progress`, `queued`, `requested`, `waiting`, and `pending` runs with `per_page: 100`. It then keeps only runs with a **lower run ID** (i.e. started earlier). Completed history and unrelated workflows are never included.
 3. Provider failures fail closed. Transient 408/5xx/network errors use bounded exponential retry; HTTP 429 and rate-limited 403 responses honor `Retry-After` or `x-ratelimit-reset`, then use a slower bounded fallback. Diagnostics contain only the retry reason, attempt, delay, and safe reset timestamp metadata.
 4. If any such run exists, the action polls immediately and then uses adaptive 5s, 10s, 20s, 40s, and 60s maximum delays with bounded ±20% jitter. The absolute queue wait is limited to 90 minutes.
 5. When no earlier active run in the mutation queue remains, the action continues. A provider failure or queue deadline never becomes an empty result, so setup and mutation work cannot proceed with an unknown queue state.
 
-The queue deliberately traverses every page of the current workflow because exact
-counting must detect a matching run on a later page. The workflow-scoped endpoint
-keeps this bounded to one workflow's history, and `per_page: 100` minimizes the
-remaining API calls while preserving correctness.
+The queue deliberately traverses every page in each active-status subset because
+exact counting must detect a matching run on a later page. Querying only active
+states keeps each poll proportional to the live queue, and `per_page: 100` minimizes
+the remaining API calls while preserving correctness.
 
 So you get a **workflow-local mutation queue**: multiple triggers for the same
 workflow (e.g. many issue edits) run sequentially without blocking unrelated
@@ -185,8 +183,10 @@ jobs:
   copilot-issues:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: vypdev/copilot@v3
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
         with:
           token: ${{ secrets.PAT }}
           project-ids: '2,3'

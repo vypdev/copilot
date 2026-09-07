@@ -150,6 +150,7 @@ describe("IssueCommentUseCase", () => {
       { getUserFromToken: jest.fn(), getTokenUserDetails: jest.fn() },
       {
         execute: jest.fn(),
+        fetch: jest.fn(),
         configureAuthor: jest.fn(),
         stageAll: jest.fn(),
         stagePaths: jest.fn(),

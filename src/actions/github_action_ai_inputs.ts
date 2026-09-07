@@ -6,6 +6,7 @@ import { parseDelimitedValues } from './input_values_policy';
 import { buildAgentTasksFromInputs } from './agent_input_builder';
 import type { AgentTaskConfiguration } from '../data/model/agent';
 import { normalizePullRequestDescriptionMode, type PullRequestDescriptionMode } from '../domain/pull_request_description';
+import { normalizeBugbotReviewEffort, parseBugbotOrganizationRules, type BugbotReviewConfiguration } from '../domain/bugbot/review_configuration';
 
 export interface GithubActionAiInputs {
     readonly requestedAgentTasks: AgentTaskConfiguration;
@@ -17,6 +18,7 @@ export interface GithubActionAiInputs {
     readonly bugbotSeverity: string;
     readonly bugbotCommentLimit: number;
     readonly bugbotFixVerifyCommands: string[];
+    readonly bugbotReviewConfiguration: BugbotReviewConfiguration;
 }
 
 export function readGithubActionAgentTasks(
@@ -46,5 +48,15 @@ export function readGithubActionAiInputs(getInput: (key: string) => string): Git
         bugbotSeverity: getInput(INPUT_KEYS.BUGBOT_SEVERITY) || BUGBOT_MIN_SEVERITY,
         bugbotCommentLimit: parseBoundedPositiveIntegerInput(getInput(INPUT_KEYS.BUGBOT_COMMENT_LIMIT), BUGBOT_MAX_COMMENTS, 200),
         bugbotFixVerifyCommands: verifyCommands,
+        bugbotReviewConfiguration: {
+            publicationMode: isEnabledInput(getInput(INPUT_KEYS.BUGBOT_DRY_RUN)) ? 'dry-run' : 'publish',
+            effort: normalizeBugbotReviewEffort(getInput(INPUT_KEYS.BUGBOT_EFFORT)),
+            reviewDrafts: isEnabledInput(getInput(INPUT_KEYS.BUGBOT_REVIEW_DRAFTS)),
+            traceRules: isEnabledInput(getInput(INPUT_KEYS.BUGBOT_TRACE_RULES)),
+            suggestedChanges: getInput(INPUT_KEYS.BUGBOT_SUGGESTED_CHANGES).trim().toLowerCase() !== 'false',
+            telemetry: getInput(INPUT_KEYS.BUGBOT_TELEMETRY).trim().toLowerCase() !== 'false',
+            failOnUnresolved: isEnabledInput(getInput(INPUT_KEYS.BUGBOT_FAIL_ON_UNRESOLVED)),
+            organizationRules: parseBugbotOrganizationRules(getInput(INPUT_KEYS.BUGBOT_ORGANIZATION_RULES)),
+        },
     };
 }

@@ -28,20 +28,31 @@ export async function finishGithubAction(
     logInfo(`Publishing result: ${results.length} result(s), ${stepCount} step(s), ${errorCount} error(s).`);
 
     execution.currentConfiguration.results = results;
-    await new PublishResultUseCase(issueNotificationPort, createLogReportAdapter()).invoke(execution);
+    core.setOutput('bugbot-telemetry', JSON.stringify(extractBugbotTelemetry(results)));
+    const dryRun = results.some((result) => getResultPayload(result.payload)?.dryRun === true);
+    if (!dryRun) {
+        await new PublishResultUseCase(issueNotificationPort, createLogReportAdapter()).invoke(execution);
+    } else {
+        logInfo('Bugbot dry-run: result publication and repository configuration persistence are disabled.');
+    }
     commitPublishedRecommendationState(execution, results);
-    if (shouldPersistConfiguration(execution)) {
+    if (!dryRun && shouldPersistConfiguration(execution)) {
         await new StoreConfigurationUseCase(configurationStorePort).invoke(execution);
         logInfo('Configuration stored. Finishing.');
     } else {
         logInfo('Configuration persistence skipped: this single action does not modify execution configuration.');
     }
     const summary = await writeActionSummary(execution, summaryPort);
-    await publishCopilotEvidence(execution, results, summary, evidencePort);
+    if (!dryRun) await publishCopilotEvidence(execution, results, summary, evidencePort);
+    failActionForUnresolvedFindingsIfConfigured(execution, results, dryRun);
+    setFirstErrorIfExists(results);
+}
 
-    if (execution.isSingleAction && execution.singleAction.throwError) {
-        setFirstErrorIfExists(results);
-    }
+function extractBugbotTelemetry(results: readonly Result[]): unknown[] {
+    return results.flatMap((result) => {
+        const snapshot = getResultPayload(result.payload)?.bugbotTelemetry;
+        return snapshot && typeof snapshot === 'object' && !Array.isArray(snapshot) ? [snapshot] : [];
+    });
 }
 
 async function writeActionSummary(execution: Execution, summaryPort?: ActionSummaryPort): Promise<string> {
@@ -58,6 +69,7 @@ async function writeActionSummary(execution: Execution, summaryPort?: ActionSumm
             execution.labels?.lifecycle,
         ),
         pullRequestDescriptionMode: execution.ai?.getPullRequestDescriptionMode?.(),
+        failOnUnresolvedFindings: execution.ai?.getBugbotReviewConfiguration?.().failOnUnresolved === true,
         results: execution.currentConfiguration.results,
     });
     if (!summaryPort) return summaryText;
@@ -83,6 +95,7 @@ async function publishCopilotEvidence(
         headSha,
         summary,
         results,
+        failOnUnresolvedFindings: execution.ai?.getBugbotReviewConfiguration?.().failOnUnresolved === true,
     });
     if (!evidence) return;
     try {
@@ -92,6 +105,20 @@ async function publishCopilotEvidence(
     } catch (error) {
         logInfo(`Could not publish optional GitHub Check Run: ${error instanceof Error ? error.message : String(error)}`);
     }
+}
+
+function failActionForUnresolvedFindingsIfConfigured(
+    execution: Execution,
+    results: readonly Result[],
+    dryRun: boolean,
+): void {
+    if (dryRun || execution.ai?.getBugbotReviewConfiguration?.().failOnUnresolved !== true) return;
+    const unresolved = results.reduce((count, result) => {
+        const states = getResultPayload(getResultPayload(result.payload)?.findingStates);
+        return count + (typeof states?.open === 'number' ? states.open : 0)
+            + (typeof states?.reopened === 'number' ? states.reopened : 0);
+    }, 0);
+    if (unresolved > 0) core.setFailed(`Bugbot found ${unresolved} unresolved actionable finding(s).`);
 }
 
 function commitPublishedRecommendationState(execution: Execution, results: Result[]): void {

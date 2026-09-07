@@ -56,6 +56,7 @@ describe('CLI', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    process.exitCode = undefined;
     process.env.AGENT_PROVIDER = 'opencode';
     process.env.AGENT_MODEL = 'test-model';
     process.env.AGENT_COMMAND = 'opencode run --model openai/test-model';
@@ -75,6 +76,7 @@ describe('CLI', () => {
   });
 
   afterEach(() => {
+    process.exitCode = undefined;
     exitSpy?.mockRestore();
     consoleErrorSpy?.mockRestore();
     consoleLogSpy?.mockRestore();
@@ -115,7 +117,7 @@ describe('CLI', () => {
       await program.parseAsync(['node', 'cli', 'think', '-q', 'hello']);
 
       expect(logError).toHaveBeenCalled();
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(process.exitCode).toBe(1);
     });
 
     it('exits when getGitInfo returns non-GitHub URL', async () => {
@@ -125,7 +127,7 @@ describe('CLI', () => {
       await program.parseAsync(['node', 'cli', 'think', '-q', 'hello']);
 
       expect(logError).toHaveBeenCalled();
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(process.exitCode).toBe(1);
     });
   });
 
@@ -157,7 +159,7 @@ describe('CLI', () => {
 
       await program.parseAsync(['node', 'cli', 'do', '-p', 'hello']);
 
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(process.exitCode).toBe(1);
       expect(consoleSpy).toHaveBeenCalled();
       const errMsg = consoleSpy.mock.calls.flat().join(' ');
       expect(errMsg).toMatch(/error|Error/i);
@@ -174,7 +176,7 @@ describe('CLI', () => {
       await program.parseAsync(['node', 'cli', 'do', '-p', 'hello']);
 
       expect(logError).toHaveBeenCalled();
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(process.exitCode).toBe(1);
       expect(runLocalAction).not.toHaveBeenCalled();
     });
 
@@ -184,7 +186,7 @@ describe('CLI', () => {
 
       await program.parseAsync(['node', 'cli', 'do', '-p', 'hello']);
 
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(process.exitCode).toBe(1);
       expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Request failed'));
       consoleSpy.mockRestore();
     });
@@ -196,7 +198,7 @@ describe('CLI', () => {
 
       await program.parseAsync(['node', 'cli', 'do', '-p', 'hello', '--debug']);
 
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(process.exitCode).toBe(1);
       const messages = consoleSpy.mock.calls.flat().map(String);
       expect(messages.some((m) => m.includes('Error executing do'))).toBe(true);
       expect(consoleSpy).toHaveBeenCalledWith(err);
@@ -245,7 +247,7 @@ describe('CLI', () => {
       await program.parseAsync(['node', 'cli', 'check-progress', '-i', '1']);
 
       expect(logError).toHaveBeenCalled();
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(process.exitCode).toBe(1);
     });
 
     it('passes branch in params when -b is provided', async () => {
@@ -262,7 +264,7 @@ describe('CLI', () => {
 
       await program.parseAsync(['node', 'cli', 'check-progress', '-i', '1']);
 
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(process.exitCode).toBe(1);
       const messages = consoleSpy.mock.calls.flat().map(String);
       expect(messages.some((m) => m.includes('Error checking progress'))).toBe(true);
       consoleSpy.mockRestore();
@@ -289,7 +291,7 @@ describe('CLI', () => {
       await program.parseAsync(['node', 'cli', 'recommend-steps', '-i', '1']);
 
       expect(logError).toHaveBeenCalled();
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(process.exitCode).toBe(1);
       const runCalls = (runLocalAction as jest.Mock).mock.calls;
       const ranWithValidRepo = runCalls.some((c) => c[0]?.repo?.owner && c[0]?.repo?.repo);
       expect(ranWithValidRepo).toBe(false);
@@ -345,7 +347,7 @@ describe('CLI', () => {
 
       await program.parseAsync(['node', 'cli', 'setup']);
 
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(process.exitCode).toBe(1);
       const { logError } = require('../utils/logger');
       expect(logError).toHaveBeenCalledWith(expect.stringContaining('Not a git repository'));
     });
@@ -362,7 +364,7 @@ describe('CLI', () => {
       await program.parseAsync(['node', 'cli', 'setup']);
 
       expect(logError).toHaveBeenCalled();
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(process.exitCode).toBe(1);
       const runCalls = (runLocalAction as jest.Mock).mock.calls;
       const ranWithValidRepo = runCalls.length > 0 && runCalls[0][0]?.repo?.owner && runCalls[0][0]?.repo?.repo;
       expect(ranWithValidRepo).not.toBe(true);
@@ -378,7 +380,7 @@ describe('CLI', () => {
       expect(logError).toHaveBeenCalledWith(expect.stringContaining('Setup requires PERSONAL_ACCESS_TOKEN'));
       expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('PERSONAL_ACCESS_TOKEN'));
       expect(runLocalAction).not.toHaveBeenCalled();
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(process.exitCode).toBe(1);
     });
 
     it('does not offer local .env configuration when the setup token is missing', async () => {
@@ -391,7 +393,7 @@ describe('CLI', () => {
       expect(logError).toHaveBeenCalledWith(expect.stringContaining('Setup requires PERSONAL_ACCESS_TOKEN'));
       expect(logInfo).not.toHaveBeenCalledWith(expect.stringContaining('.env'));
       expect(runLocalAction).not.toHaveBeenCalled();
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(process.exitCode).toBe(1);
     });
   });
 
@@ -427,7 +429,7 @@ describe('CLI', () => {
       await program.parseAsync(['node', 'cli', 'detect-potential-problems', '-i', '1']);
 
       expect(logError).toHaveBeenCalled();
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(process.exitCode).toBe(1);
       const runCalls = (runLocalAction as jest.Mock).mock.calls;
       const ranWithValidRepo = runCalls.some((c) => c[0]?.repo?.owner && c[0]?.repo?.repo);
       expect(ranWithValidRepo).toBe(false);
@@ -453,7 +455,7 @@ describe('CLI', () => {
 
       await program.parseAsync(['node', 'cli', 'detect-potential-problems', '-i', '1']);
 
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      expect(process.exitCode).toBe(1);
       const messages = consoleSpy.mock.calls.flat().map(String);
       expect(messages.some((m) => m.includes('Error running detect-potential-problems'))).toBe(true);
       consoleSpy.mockRestore();

@@ -17,6 +17,7 @@ export class AgentCliClient {
             ...parsed,
             promptMode,
             maxOutputBytes: request.maxOutputBytes ?? 4 * 1024 * 1024,
+            maxPromptBytes: request.maxPromptBytes ?? 512 * 1024,
         });
     }
 }
@@ -27,6 +28,13 @@ function validateRequest(request: AgentCliRequest): void {
     }
     if (request.maxOutputBytes !== undefined && (!Number.isFinite(request.maxOutputBytes) || request.maxOutputBytes <= 0)) {
         throw new AgentCliError('Agent CLI maxOutputBytes must be a finite positive number.', 'configuration');
+    }
+    const maxPromptBytes = request.maxPromptBytes ?? 512 * 1024;
+    if (!Number.isFinite(maxPromptBytes) || maxPromptBytes <= 0) {
+        throw new AgentCliError('Agent CLI maxPromptBytes must be a finite positive number.', 'configuration');
+    }
+    if (Buffer.byteLength(request.prompt, 'utf8') > maxPromptBytes) {
+        throw new AgentCliError(`Agent CLI prompt exceeded the ${maxPromptBytes}-byte limit.`, 'configuration');
     }
 }
 
