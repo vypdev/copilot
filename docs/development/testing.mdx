@@ -29,7 +29,7 @@ Workflow queue tests inject a clock, random source, and scheduler/delay port. Th
 cover workflow-scoped active-status traversals and later-page matches, strict
 lower-ID/workflow-file filtering, malformed responses, fail-closed provider errors, 429 and
 rate-limited 403 headers, bounded fallback backoff/jitter, and the absolute deadline.
-The workflow contract test keeps the eight workflow names synchronized with the
+The workflow contract test keeps the nine queue-bearing workflow names synchronized with the
 validator and verifies the `90m queue / 120m job` budget, required runners, action
 inputs, missing/short timeouts, and forbidden mutation-workflow concurrency.
 
@@ -48,6 +48,12 @@ Configuration migration tests cover legacy payloads, transient `results`,
 malformed durable values, and future-schema preservation. Architecture tests
 also guard the narrow context contracts used by extracted policies and lifecycle
 reconciliation.
+
+Branch synchronization tests cover durable configuration and linked-branch discovery,
+pagination, parent/child comparisons, bot-owned sticky comments, explicit and natural-language
+commands, authorization, dry runs, clean merges, conflict eligibility, agent postflight,
+credential-free verification, unexpected workspace mutations, and remote-head races. The
+all-branch observer workflow is also contract-checked to remain free of agent inputs.
 
 Architecture tests additionally verify that production imports remain acyclic,
 application code does not depend on concrete adapters, and pure model/policy

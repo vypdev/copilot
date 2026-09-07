@@ -56,6 +56,13 @@ describe('SingleAction', () => {
         expect(s.isSingleActionWithoutIssue).toBe(true);
     });
 
+    it('isCheckBranchSyncAction', () => {
+      const s = new SingleAction(ACTIONS.CHECK_BRANCH_SYNC, '', '', '', '');
+      expect(s.isCheckBranchSyncAction).toBe(true);
+      expect(s.validSingleAction).toBe(true);
+      expect(s.isSingleActionWithoutIssue).toBe(true);
+    });
+
     it('isPublishIssueCommentAction', () => {
       const s = new SingleAction(
         ACTIONS.PUBLISH_ISSUE_COMMENT,

@@ -15,6 +15,7 @@ export class SingleAction {
         ACTIONS.RECOMMEND_STEPS,
         ACTIONS.CLOSE_INACTIVE_ISSUES,
         ACTIONS.PUBLISH_ISSUE_COMMENT,
+        ACTIONS.CHECK_BRANCH_SYNC,
     ];
     /**
      * Actions that throw an error if the last step failed
@@ -35,6 +36,7 @@ export class SingleAction {
         ACTIONS.THINK,
         ACTIONS.INITIAL_SETUP,
         ACTIONS.CLOSE_INACTIVE_ISSUES,
+        ACTIONS.CHECK_BRANCH_SYNC,
     ];
 
     isIssue: boolean = false;
@@ -95,6 +97,10 @@ export class SingleAction {
 
     get isPublishIssueCommentAction(): boolean {
         return this.currentSingleAction === ACTIONS.PUBLISH_ISSUE_COMMENT;
+    }
+
+    get isCheckBranchSyncAction(): boolean {
+        return this.currentSingleAction === ACTIONS.CHECK_BRANCH_SYNC;
     }
 
     get enabledSingleAction(): boolean {

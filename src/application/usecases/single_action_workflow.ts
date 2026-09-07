@@ -15,6 +15,7 @@ export interface SingleActionWorkflowPorts {
   recommendStepsUseCase: ParamUseCase<Execution, Result[]>;
   closeInactiveIssuesUseCase?: ParamUseCase<Execution, Result[]>;
   publishIssueCommentUseCase?: ParamUseCase<Execution, Result[]>;
+  observeBranchSyncUseCase?: ParamUseCase<Execution, Result[]>;
 }
 
 export async function runSingleActionWorkflow(
@@ -42,6 +43,7 @@ export async function runSingleActionWorkflow(
     { active: param.singleAction.isRecommendStepsAction, useCase: ports.recommendStepsUseCase },
     { active: param.singleAction.isCloseInactiveIssuesAction, useCase: ports.closeInactiveIssuesUseCase },
     { active: param.singleAction.isPublishIssueCommentAction, useCase: ports.publishIssueCommentUseCase },
+    { active: param.singleAction.isCheckBranchSyncAction, useCase: ports.observeBranchSyncUseCase },
   ].find(({ active, useCase }) => active && useCase !== undefined);
 
   if (!action || !action.useCase) return [];

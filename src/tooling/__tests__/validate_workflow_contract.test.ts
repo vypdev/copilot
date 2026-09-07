@@ -7,10 +7,11 @@ interface ContractModule {
   assertQueueWorkflow(file: string, workflow: Record<string, unknown>): void;
   assertDirectEventTriggers(file: string, workflow: Record<string, unknown>): void;
   assertRunner(file: string, workflow: Record<string, unknown>): void;
-  assertImmutableActions(file: string, workflow: Record<string, unknown>): void;
+  assertMajorActionReferences(file: string, workflow: Record<string, unknown>): void;
   assertCopilotActionInputs(file: string, workflow: Record<string, unknown>): void;
   assertNoJobLevelSecrets(file: string, workflow: Record<string, unknown>): void;
   assertAgentWorkflowPermissions(file: string, workflow: Record<string, unknown>): void;
+  assertLightweightBranchSyncWorkflow(file: string, workflow: Record<string, unknown>): void;
   MIN_QUEUE_JOB_TIMEOUT_MINUTES: number;
   QUEUE_GATE_TIMEOUT_MINUTES: number;
   PREPARE_VERSION_TIMEOUT_MINUTES: number;
@@ -26,10 +27,11 @@ const {
   assertQueueWorkflow,
   assertDirectEventTriggers,
   assertRunner,
-  assertImmutableActions,
+  assertMajorActionReferences,
   assertCopilotActionInputs,
   assertNoJobLevelSecrets,
   assertAgentWorkflowPermissions,
+  assertLightweightBranchSyncWorkflow,
   MIN_QUEUE_JOB_TIMEOUT_MINUTES,
   QUEUE_GATE_TIMEOUT_MINUTES,
   PREPARE_VERSION_TIMEOUT_MINUTES,
@@ -109,6 +111,18 @@ describe('workflow contract validator', () => {
     delete workflow.jobs['copilot-issues'].if;
     expect(() => assertQueueWorkflow(queueFile, workflow)).toThrow('required bot actor gate');
   });
+
+  it.each(['.github/workflows', 'setup/workflows'])(
+    'keeps the %s branch-sync observer all-branch, bot-push-safe, and agent-free',
+    (directory) => {
+      const file = path.join(process.cwd(), directory, 'copilot_branch_sync.yml');
+      const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+      expect(() => assertLightweightBranchSyncWorkflow(file, workflow)).not.toThrow();
+
+      workflow.jobs['branch-sync'].steps.at(-1).with['fixer-model'] = 'model';
+      expect(() => assertLightweightBranchSyncWorkflow(file, workflow)).toThrow('lightweight branch-sync');
+    },
+  );
 
   it.each(['copilot_pull_request.yml', 'copilot_pull_request_comment.yml'])(
     'requires same-repository PR gating for %s',
@@ -230,7 +244,7 @@ describe('workflow contract validator', () => {
     expect(report.if).toBe("${{ failure() && github.event.inputs.issue != '-1' }}");
     expect(report.permissions).toEqual({ contents: 'read', issues: 'write' });
     expect(report.steps[0]).toEqual(expect.objectContaining({
-      uses: expect.stringMatching(/^actions\/checkout@[0-9a-f]{40}$/),
+      uses: 'actions/checkout@v5',
       with: { 'persist-credentials': false },
     }));
     expect(action.uses).toBe('./');
@@ -261,14 +275,14 @@ describe('workflow contract validator', () => {
     const { file, workflow } = loadMutationWorkflow('setup/workflows', 'release_workflow.yml');
     workflow.jobs['queue-gate'].steps[1].uses = './';
 
-    expect(() => assertImmutableActions(file, workflow)).toThrow('must invoke Copilot with vypdev/copilot@v3');
+    expect(() => assertMajorActionReferences(file, workflow)).toThrow('must invoke Copilot with vypdev/copilot@v3');
   });
 
   it('rejects a distributed Copilot reference from an internal workflow', () => {
     const { file, workflow } = loadMutationWorkflow('.github/workflows', 'release_workflow.yml');
     workflow.jobs['queue-gate'].steps[1].uses = 'vypdev/copilot@v3';
 
-    expect(() => assertImmutableActions(file, workflow)).toThrow('must invoke Copilot with ./');
+    expect(() => assertMajorActionReferences(file, workflow)).toThrow('must invoke Copilot with ./');
   });
 
   it.each(mutationWorkflowNames)('rejects a missing failure reporter in %s', (fileName) => {
@@ -374,7 +388,7 @@ describe('workflow contract validator', () => {
           'timeout-minutes': 120,
           permissions: { actions: 'read', contents: 'read' },
           steps: [
-            { uses: 'actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09', with: { 'persist-credentials': false } },
+            { uses: 'actions/checkout@v5', with: { 'persist-credentials': false } },
             { uses: './', with: { 'queue-gate-only': 'true', token: '${{ github.token }}' } },
           ],
         },
@@ -433,13 +447,19 @@ describe('workflow contract validator', () => {
     })).toThrow('runs-on self-hosted, codex');
   });
 
-  it('rejects mutable action references and persisted checkout credentials', () => {
+  it('requires checkout v5, major tags for other actions, and explicit checkout credentials', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'ci_check.yml');
-    expect(() => assertImmutableActions(file, {
-      jobs: { test: { steps: [{ uses: 'actions/checkout@v5', with: { 'persist-credentials': false } }] } },
-    })).toThrow('immutable 40-character commit SHA');
-    expect(() => assertImmutableActions(file, {
-      jobs: { test: { steps: [{ uses: 'actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09' }] } },
+    expect(() => assertMajorActionReferences(file, {
+      jobs: { test: { steps: [{ uses: 'actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09', with: { 'persist-credentials': false } }] } },
+    })).toThrow('checkout must use actions/checkout@v5');
+    expect(() => assertMajorActionReferences(file, {
+      jobs: { test: { steps: [{ uses: 'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020' }] } },
+    })).toThrow('major version tag');
+    expect(() => assertMajorActionReferences(file, {
+      jobs: { test: { steps: [{ uses: 'actions/setup-node@main' }] } },
+    })).toThrow('major version tag');
+    expect(() => assertMajorActionReferences(file, {
+      jobs: { test: { steps: [{ uses: 'actions/checkout@v5' }] } },
     })).toThrow('persist-credentials: false');
   });
 
@@ -464,7 +484,7 @@ describe('workflow contract validator', () => {
     );
 
     expect(action).toBeDefined();
-    expect(() => assertImmutableActions(file, workflow)).not.toThrow();
+    expect(() => assertMajorActionReferences(file, workflow)).not.toThrow();
   });
 
   it('requires every specialized role reachable from a workflow', () => {

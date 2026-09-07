@@ -214,6 +214,101 @@ describe("runCommentAutomation", () => {
     expect(think.invoke).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['/copilot sync-branch --from release/3', 'release/3'],
+    ['/copilot update-branch', undefined],
+    ['/copilot updateBranch', undefined],
+  ])('routes authorized branch synchronization directly: %s', async (userComment, parentOverride) => {
+    const sync = { invoke: jest.fn().mockResolvedValue([successfulResult('sync')]) };
+    const language = { invoke: jest.fn() };
+    const intent = { invoke: jest.fn() };
+    const authorization = { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) };
+    const execution = { owner: 'o', repo: 'r', actor: 'alice', tokens: { token: 't' } } as Execution;
+
+    const results = await runCommentAutomation(
+      execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: language as never,
+        intentUseCase: intent as never,
+        thinkUseCase: {} as never,
+        autofixUseCase: {} as never,
+        doUserRequestUseCase: {} as never,
+        syncBranchUseCase: sync as never,
+        userComment,
+        gitCommitPort: {} as never,
+      },
+      authorization,
+      {} as never,
+    );
+
+    expect(results[0].id).toBe('sync');
+    expect(sync.invoke).toHaveBeenCalledWith({
+      execution,
+      options: { dryRun: false, useAgent: true, parentOverride },
+    });
+    expect(language.invoke).not.toHaveBeenCalled();
+    expect(intent.invoke).not.toHaveBeenCalled();
+  });
+
+  it("recognizes the mentioned branch-sync phrase without invoking intent detection", async () => {
+    const sync = { invoke: jest.fn().mockResolvedValue([successfulResult('sync')]) };
+    const intent = { invoke: jest.fn() };
+    const execution = {
+      owner: 'o', repo: 'r', actor: 'alice', tokenUser: 'vypbot', tokens: { token: 't' },
+    } as Execution;
+    const results = await runCommentAutomation(
+      execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: { invoke: jest.fn() } as never,
+        intentUseCase: intent as never,
+        thinkUseCase: {} as never,
+        autofixUseCase: {} as never,
+        doUserRequestUseCase: {} as never,
+        syncBranchUseCase: sync as never,
+        userComment: "@vypbot update the issue's branch",
+        gitCommitPort: {} as never,
+      },
+      { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) },
+      {} as never,
+    );
+
+    expect(results[0].id).toBe('sync');
+    expect(intent.invoke).not.toHaveBeenCalled();
+  });
+
+  it("rejects unauthorized or invalid branch-sync commands before mutation", async () => {
+    const sync = { invoke: jest.fn() };
+    const baseOptions = {
+      taskId: 'CommentAutomation',
+      languageUseCase: {} as never,
+      intentUseCase: {} as never,
+      thinkUseCase: {} as never,
+      autofixUseCase: {} as never,
+      doUserRequestUseCase: {} as never,
+      syncBranchUseCase: sync as never,
+      gitCommitPort: {} as never,
+    };
+    const execution = { owner: 'o', repo: 'r', actor: 'alice', tokens: { token: 't' } } as Execution;
+    const unauthorized = await runCommentAutomation(
+      execution,
+      { ...baseOptions, userComment: '/copilot sync-branch' },
+      { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(false) },
+      {} as never,
+    );
+    expect(unauthorized[0]).toMatchObject({ success: true, executed: false });
+
+    const invalid = await runCommentAutomation(
+      execution,
+      { ...baseOptions, userComment: '/copilot sync-branch --force' },
+      { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) },
+      {} as never,
+    );
+    expect(invalid[0]).toMatchObject({ success: false, executed: false });
+    expect(sync.invoke).not.toHaveBeenCalled();
+  });
+
   it('routes explicit review commands to the read-only Bugbot review use case', async () => {
     const review = { invoke: jest.fn().mockResolvedValue([successfulResult('review')]) };
     const think = { invoke: jest.fn() };

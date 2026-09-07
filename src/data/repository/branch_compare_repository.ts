@@ -5,6 +5,7 @@ import { Labels } from '../model/labels';
 import { SizeThresholds } from '../model/size_thresholds';
 import { classifyChangeSize } from './branch_change_size_policy';
 import type { SizeCategoryResult } from './branch_change_size_policy';
+import type { BranchSyncComparisonPort } from '../../application/ports/branch_sync_ports';
 
 export interface BranchComparisonFile {
     filename: string;
@@ -37,7 +38,7 @@ export interface BranchComparison {
  * Repository for comparing branches and computing size categories.
  * Isolated to allow unit tests with mocked Octokit and pure size logic.
  */
-export class BranchCompareRepository {
+export class BranchCompareRepository implements BranchSyncComparisonPort {
     constructor(private readonly githubClient: GithubClientPort<GithubBranchComparisonClient>) {}
 
     getChanges = async (
@@ -131,5 +132,22 @@ export class BranchCompareRepository {
             logError(`Error comparing branches: ${error}`);
             throw error;
         }
+    };
+
+    compare = async (
+        owner: string,
+        repository: string,
+        parentBranch: string,
+        workingBranch: string,
+        token: string,
+    ) => {
+        const comparison = await this.getChanges(
+            owner,
+            repository,
+            workingBranch,
+            parentBranch,
+            token,
+        );
+        return { aheadBy: comparison.aheadBy, behindBy: comparison.behindBy };
     };
 }

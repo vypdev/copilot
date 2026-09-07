@@ -126,6 +126,7 @@ describe("main run route composition root", () => {
       expect.anything(),
       expect.anything(),
       expect.anything(),
+      expect.anything(),
     );
   });
 
@@ -140,6 +141,7 @@ describe("main run route composition root", () => {
       expect.anything(),
       expect.anything(),
       mockIssue,
+      expect.anything(),
       expect.anything(),
       expect.anything(),
       expect.anything(),

@@ -1,7 +1,7 @@
 import { normalizePullRequestDescriptionMode } from '../../domain/pull_request_description';
+import { enabledSetupWorkflowFiles } from '../../domain/setup_workflow_catalog';
 import type {
     SetupConfiguration,
-    SetupCredentialRequirement,
     SetupPlan,
     SetupVariable,
 } from '../../domain/setup';
@@ -10,19 +10,9 @@ import {
     setupAgentTasksForFeatures,
 } from './setup_configuration_defaults';
 import { usesOrganizationStorage } from './setup_configuration_storage_policy';
+import { buildSetupCredentialRequirements } from './setup_credential_requirement_policy';
 
-const WORKFLOW_FILES: Readonly<Record<string, string[]>> = {
-    issues: ['copilot_issue.yml'],
-    pullRequests: ['copilot_pull_request.yml'],
-    commits: ['copilot_commit.yml'],
-    issueComments: ['copilot_issue_comment.yml'],
-    pullRequestComments: ['copilot_pull_request_comment.yml'],
-    release: ['release_workflow.yml'],
-    hotfix: ['hotfix_workflow.yml'],
-    agentProvisioning: ['agent-cli-provisioning.yml'],
-    credentialHealth: ['copilot_credential_health.yml'],
-    inactiveIssueClosure: ['copilot_close_inactive_issues.yml'],
-};
+export { buildSetupCredentialRequirements };
 
 const ISSUE_TEMPLATE_FILES = [
     'config.yml',
@@ -35,17 +25,8 @@ const ISSUE_TEMPLATE_FILES = [
     'release.yml',
 ];
 
-const SECRET_BY_MODEL_PROVIDER: Readonly<Record<string, string>> = {
-    openai: 'OPENAI_API_KEY',
-    anthropic: 'ANTHROPIC_API_KEY',
-    google: 'GOOGLE_API_KEY',
-    openrouter: 'OPENROUTER_API_KEY',
-};
-
 export function buildSetupPlan(configuration: SetupConfiguration): SetupPlan {
-    const workflowFiles = Object.entries(WORKFLOW_FILES)
-        .filter(([feature]) => configuration.features[feature] !== false)
-        .flatMap(([, files]) => files);
+    const workflowFiles = enabledSetupWorkflowFiles(configuration.features);
     const issueTemplateFiles = configuration.features.issueTemplates === false
         ? []
         : ISSUE_TEMPLATE_FILES.filter(file => configuration.features.release !== false || file !== 'release.yml')
@@ -69,105 +50,6 @@ export function buildSetupPlan(configuration: SetupConfiguration): SetupPlan {
         credentialRequirements,
         warnings: buildSetupWarnings(configuration),
     };
-}
-
-/** Builds the non-sensitive credential contract implied by the enabled workflows. */
-export function buildSetupCredentialRequirements(configuration: SetupConfiguration): SetupCredentialRequirement[] {
-    const requirements = new Map<string, SetupCredentialRequirement>();
-    const add = (
-        name: string,
-        kind: SetupCredentialRequirement['kind'],
-        description: string,
-        provider?: string,
-        model?: string,
-        alternativeGroup?: string,
-        validation: SetupCredentialRequirement['validation'] = 'metadata',
-        runnerAuthenticationGroup?: string,
-    ) => {
-        const existing = requirements.get(name);
-        if (!existing) {
-            requirements.set(name, {
-                name,
-                kind,
-                description,
-                provider,
-                model,
-                ...(alternativeGroup ? { alternativeGroups: [alternativeGroup] } : {}),
-                ...(runnerAuthenticationGroup ? { runnerAuthenticationGroups: [runnerAuthenticationGroup] } : {}),
-                ...(validation === 'unverifiable' ? { validation } : {}),
-            });
-            return;
-        }
-        const alternativeGroups = new Set([
-            ...(existing.alternativeGroups ?? []),
-            ...(alternativeGroup ? [alternativeGroup] : []),
-        ]);
-        const runnerAuthenticationGroups = new Set([
-            ...(existing.runnerAuthenticationGroups ?? []),
-            ...(runnerAuthenticationGroup ? [runnerAuthenticationGroup] : []),
-        ]);
-        requirements.set(name, {
-            ...existing,
-            alternativeGroups: alternativeGroups.size > 0 ? [...alternativeGroups] : undefined,
-            runnerAuthenticationGroups: runnerAuthenticationGroups.size > 0 ? [...runnerAuthenticationGroups] : undefined,
-            validation: existing.validation === 'unverifiable' || validation === 'unverifiable'
-                ? 'unverifiable'
-                : existing.validation,
-        });
-    };
-    add('PAT', 'workflowPat', 'A separate GitHub token owned by the bot account. It is used by workflows at runtime.');
-    for (const task of setupAgentTasksForFeatures(configuration)) {
-        const agent = configuration.agents[task];
-        const modelProvider = agent.modelProvider.trim().toLowerCase();
-        const alternativeGroup = `agent:${agent.provider}:${modelProvider || 'default'}`;
-        const providerCredential = modelProvider && !['local', 'ollama', 'lmstudio'].includes(modelProvider)
-            ? SECRET_BY_MODEL_PROVIDER[modelProvider] ?? `${modelProvider.replace(/-/g, '_').toUpperCase()}_API_KEY`
-            : undefined;
-
-        if (agent.provider === 'cursor') {
-            add('CURSOR_API_KEY', 'apiKey', 'Cursor API key used by the Cursor agent runtime.', 'cursor', agent.model);
-            continue;
-        }
-
-        if (agent.provider === 'opencode' && !['local', 'ollama', 'lmstudio'].includes(modelProvider)) {
-            add('OPENCODE_API_KEY', 'apiKey', 'OpenCode API key used by the OpenCode agent runtime.', 'opencode', agent.model, alternativeGroup);
-        }
-        if (agent.provider === 'codex') {
-            add(
-                'CODEX_API_KEY',
-                'apiKey',
-                'Optional Codex API-key fallback when the target runner has no authenticated Codex session.',
-                'codex',
-                agent.model,
-                alternativeGroup,
-                'metadata',
-                alternativeGroup,
-            );
-            add(
-                'CODEX_ACCESS_TOKEN',
-                'apiKey',
-                'Optional Codex access-token fallback when the target runner has no authenticated Codex session.',
-                'codex',
-                agent.model,
-                alternativeGroup,
-                'metadata',
-                alternativeGroup,
-            );
-        }
-        if (providerCredential) {
-            add(
-                providerCredential,
-                'apiKey',
-                `${modelProvider} API key for ${agent.model}.`,
-                modelProvider,
-                agent.model,
-                alternativeGroup,
-                SECRET_BY_MODEL_PROVIDER[modelProvider] ? 'metadata' : 'unverifiable',
-                agent.provider === 'codex' ? alternativeGroup : undefined,
-            );
-        }
-    }
-    return [...requirements.values()];
 }
 
 export function buildSetupRepositoryVariables(configuration: SetupConfiguration): SetupVariable[] {

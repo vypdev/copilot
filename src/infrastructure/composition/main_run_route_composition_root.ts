@@ -55,6 +55,11 @@ import { createOrganizationMembersCompositionRoot } from "./organization_members
 import { UpdatePullRequestDescriptionUseCase } from "../../application/usecases/steps/pull_request/update_pull_request_description_use_case";
 import { PullRequestLifecycleRepository } from "../../data/repository/pull_request/pull_request_lifecycle_repository";
 import { createCloseInactiveIssuesUseCase } from "./issue_inactivity_composition_root";
+import { createGraphqlTransportClient } from "./github_project_client_factory";
+import { BranchDependencyRepository } from "../../data/repository/branch_sync/branch_dependency_repository";
+import { BranchSyncWorkspaceAdapter } from "../branch_sync_workspace_adapter";
+import { ObserveBranchSyncUseCase } from "../../application/usecases/actions/observe_branch_sync_use_case";
+import { SyncBranchUseCase } from "../../application/usecases/branch_sync/sync_branch_use_case";
 
 function createDetectPotentialProblemsUseCase(): DetectPotentialProblemsUseCase {
   const bugbot = createBugbotCompositionRoot();
@@ -97,6 +102,11 @@ export function createSingleActionUseCaseCompositionRoot(): SingleActionUseCase 
     createCloseInactiveIssuesUseCase(),
     createActorAuthorizationRepository(),
     new PublishIssueCommentUseCase(issueDescriptionQueryPort),
+    new ObserveBranchSyncUseCase(
+      new BranchDependencyRepository(createGraphqlTransportClient()),
+      new BranchCompareRepository(createBranchComparisonClient()),
+      issueDescriptionQueryPort,
+    ),
   );
 }
 
@@ -111,6 +121,13 @@ export function createIssueCommentUseCaseCompositionRoot(): IssueCommentUseCase 
     createIssueContentCompositionRoot(),
     createOrganizationMembersCompositionRoot(),
     createFindingsQueryPort(),
+  );
+  const branchSync = new SyncBranchUseCase(
+    new BranchDependencyRepository(createGraphqlTransportClient()),
+    new BranchSyncWorkspaceAdapter(gitCommit),
+    fixer,
+    createAuthenticatedUserCompositionRoot(),
+    gitCommit,
   );
 
   return new IssueCommentUseCase(
@@ -137,6 +154,7 @@ export function createIssueCommentUseCaseCompositionRoot(): IssueCommentUseCase 
     new DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution, bugbot.telemetry),
     pullRequestDescription,
     new RememberBugbotRuleUseCase(bugbot.rules),
+    branchSync,
   );
 }
 
@@ -151,6 +169,13 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(): PullRequ
     createIssueContentCompositionRoot(),
     createOrganizationMembersCompositionRoot(),
     createFindingsQueryPort(),
+  );
+  const branchSync = new SyncBranchUseCase(
+    new BranchDependencyRepository(createGraphqlTransportClient()),
+    new BranchSyncWorkspaceAdapter(gitCommit),
+    fixer,
+    createAuthenticatedUserCompositionRoot(),
+    gitCommit,
   );
 
   return new PullRequestReviewCommentUseCase(
@@ -177,6 +202,7 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(): PullRequ
     new DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution, bugbot.telemetry),
     pullRequestDescription,
     new RememberBugbotRuleUseCase(bugbot.rules),
+    branchSync,
   );
 }
 

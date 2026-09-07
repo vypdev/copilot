@@ -9,6 +9,7 @@ import { buildCopilotHelpMessage } from '../policies/copilot_interaction_policy'
 import { parseBugbotReviewCommandOptions } from '../../domain/bugbot/review_command';
 import { commitUserRequestIfSuccessful } from './steps/commit/bugbot/commit_user_request_workflow';
 import { finalizeWorkspaceMutation, prepareWorkspaceMutation } from './steps/commit/workspace_mutation_guard';
+import { runBranchSyncCommand } from './branch_sync/branch_sync_comment_command';
 
 const LEARNED_BUGBOT_RULE_PATH = '.copilot/BUGBOT.learned.md';
 
@@ -25,6 +26,9 @@ export async function runExplicitCommentCommand(
     if (command.name === 'dismiss') return runDismissCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'remember') return runRememberCommand(param, options, command, actorAuthorizationPort, authenticatedUserPort);
     if (command.name === 'description') return runDescriptionCommand(param, options, actorAuthorizationPort);
+    if (command.name === 'sync-branch' || command.name === 'update-branch' || command.name === 'updatebranch') {
+        return runBranchSyncCommand(param, options, command.arguments, actorAuthorizationPort);
+    }
     if (['analyze', 'review', 'findings', 'recheck'].includes(command.name)) return runReviewCommand(param, options, command);
     if (command.name === 'fix' || command.name === 'implement') return undefined;
     return runThinkCommand(param, options, command);

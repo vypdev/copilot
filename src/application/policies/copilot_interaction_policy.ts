@@ -43,8 +43,11 @@ I’m **@${bot}**, the repository assistant. Use these commands on an issue or p
 - \`/copilot dismiss <finding-id>\` — dismiss a finding.
 - \`/copilot remember <rule>\` — add an authorized, versioned repository review rule.
 - \`/copilot implement <request>\` — apply an explicitly requested repository change.
+- \`/copilot sync-branch [--dry-run] [--no-agent] [--from <branch>]\` — merge the issue/PR parent into its working branch; the fixer is used only for eligible conflicts.
+- \`/copilot update-branch\` — alias for \`sync-branch\`.
+- \`/copilot updateBranch\` — camel-case compatibility alias.
 
-You can also ask a question in natural language by mentioning **@${bot}**. File-changing commands are restricted to authorized maintainers, run the configured checks, and report the resulting changes.`;
+You can also ask a question in natural language by mentioning **@${bot}**. For example: “@${bot} update the issue's branch”. File-changing commands are restricted to authorized maintainers, run the configured checks, and report the resulting changes.`;
 }
 
 /** Renders the one-time onboarding comment for a newly created issue. */

@@ -19,7 +19,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@v5
         with:
           persist-credentials: false
           # Contract tests inspect the immutable in-repository action revision
@@ -29,13 +29,13 @@ jobs:
       - name: Set up pnpm
         # Avoid the standalone @pnpm/exe binary, which has no working Intel
         # macOS build for this pnpm line.
-        uses: pnpm/action-setup@a8198c4bff370c8506180b035930dea56dbd5288 # v5
+        uses: pnpm/action-setup@v5
         with:
           version: 10.12.4
           standalone: false
 
       - name: Set up Node.js 24
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        uses: actions/setup-node@v7
         with:
           node-version: '24.x'
           cache: pnpm
@@ -69,7 +69,7 @@ jobs:
         run: pnpm run eval:bugbot
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@f2274c2c340e0c81c8f7dc407b2a477b8935f171 # v6
+        uses: codecov/codecov-action@v6
         # Coverage reporting is advisory; Codecov v6 requires gpg even when
         # fail_ci_if_error is false, and the internal macOS runner may not have it.
         continue-on-error: true

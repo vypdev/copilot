@@ -18,6 +18,7 @@ const FAILURE_REPORT_TIMEOUT_MINUTES = 5;
 const MIN_QUEUE_JOB_TIMEOUT_MINUTES = QUEUE_GATE_TIMEOUT_MINUTES;
 const FAILURE_REPORT_CONDITION = "${{ failure() && github.event.inputs.issue != '-1' }}";
 const DISTRIBUTED_COPILOT_ACTION = 'vypdev/copilot@v3';
+const CHECKOUT_ACTION = 'actions/checkout@v5';
 
 function assertQueueBudget(queueWaitMinutes, minimumJobTimeoutMinutes) {
   if (!Number.isFinite(queueWaitMinutes)
@@ -30,6 +31,7 @@ assertQueueBudget(QUEUE_WAIT_MINUTES, MIN_QUEUE_JOB_TIMEOUT_MINUTES);
 
 const QUEUE_WORKFLOW_MANIFEST = Object.freeze([
   ['copilot_commit.yml', 'Copilot - Commit', 'copilot-commits'],
+  ['copilot_branch_sync.yml', 'Copilot - Branch Sync', 'branch-sync'],
   ['copilot_issue.yml', 'Copilot - Issue', 'copilot-issues'],
   ['copilot_issue_comment.yml', 'Copilot - Issue Comment', 'copilot-issues'],
   ['copilot_pull_request.yml', 'Copilot - Pull Request', 'copilot-pull-requests'],
@@ -58,7 +60,7 @@ const FORK_GATED_WORKFLOW_FILES = new Set([
   'copilot_pull_request_comment.yml',
 ]);
 const ZERO_OBJECT_ID = '0000000000000000000000000000000000000000';
-const IMMUTABLE_ACTION_REFERENCE = /^[^/\s]+\/[^@\s]+@[0-9a-f]{40}$/i;
+const MAJOR_ACTION_REFERENCE = /^[^/\s]+\/[^@\s]+@v[1-9]\d*$/;
 const currentCopilotManifest = yaml.load(readFileSync(path.join(repositoryRoot, 'action.yml'), 'utf8'));
 
 const BASE_AGENT_INPUTS = ['agent-provider', 'agent-model-provider', 'agent-model', 'agent-effort', 'agent-command'];
@@ -103,7 +105,7 @@ function shouldPersistCheckoutCredentials(relativeFile, jobId) {
   return !relativeFile.startsWith('setup/workflows/') && jobId === 'prepare-compiled-files';
 }
 
-function assertImmutableActions(file, workflow) {
+function assertMajorActionReferences(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
     const actionUses = [job.uses, ...(job.steps ?? []).map(step => step?.uses)]
@@ -116,9 +118,15 @@ function assertImmutableActions(file, workflow) {
         }
         continue;
       }
+      if (uses.startsWith('actions/checkout@')) {
+        if (uses !== CHECKOUT_ACTION) {
+          throw new Error(`${relativeFile} job ${jobId} checkout must use ${CHECKOUT_ACTION}.`);
+        }
+        continue;
+      }
       if (uses.startsWith('./') || uses.startsWith('docker://')) continue;
-      if (!IMMUTABLE_ACTION_REFERENCE.test(uses)) {
-        throw new Error(`${relativeFile} job ${jobId} action ${uses} must use an immutable 40-character commit SHA.`);
+      if (!MAJOR_ACTION_REFERENCE.test(uses)) {
+        throw new Error(`${relativeFile} job ${jobId} action ${uses} must use a major version tag such as owner/action@v1.`);
       }
     }
     for (const [stepIndex, step] of (job.steps ?? []).entries()) {
@@ -212,6 +220,37 @@ function assertAgentWorkflowPermissions(file, workflow) {
       || expectedKeys.some(key => permissions[key] !== expectedPermissions[key])) {
       throw new Error(`${relativeFile} job ${jobId} must grant GITHUB_TOKEN exactly ${expectedKeys.map(key => `${key}: ${expectedPermissions[key]}`).join(', ')}; mutations use the explicit PAT.`);
     }
+  }
+}
+
+function assertLightweightBranchSyncWorkflow(file, workflow) {
+  if (path.basename(file) !== 'copilot_branch_sync.yml') return;
+  const relativeFile = relativeWorkflow(file);
+  const branches = workflow.on?.push?.branches;
+  if (!Array.isArray(branches) || branches.length !== 1 || branches[0] !== '**') {
+    throw new Error(`${relativeFile} must observe pushes on every branch exactly once.`);
+  }
+  const job = workflow.jobs?.['branch-sync'];
+  if (!job || Object.keys(workflow.jobs ?? {}).length !== 1 || job.if !== undefined) {
+    throw new Error(`${relativeFile} must have one ungated branch-sync job so bot pushes can propagate.`);
+  }
+  if (job.env !== undefined) {
+    throw new Error(`${relativeFile} branch-sync must not define an agent environment.`);
+  }
+  const permissions = job.permissions ?? {};
+  if (Object.keys(permissions).join(',') !== 'contents' || permissions.contents !== 'read') {
+    throw new Error(`${relativeFile} branch-sync must grant only contents: read to GITHUB_TOKEN.`);
+  }
+  const actionSteps = (job.steps ?? []).filter(isCopilotAction);
+  const inputs = actionSteps[0]?.with ?? {};
+  if (actionSteps.length !== 1
+    || inputs['single-action'] !== 'check_branch_sync_action'
+    || inputs.token !== '${{ secrets.PAT }}'
+    || Object.keys(inputs).some(key => key !== 'single-action' && key !== 'token')) {
+    throw new Error(`${relativeFile} must invoke only the lightweight branch-sync single action and PAT input.`);
+  }
+  if (/\b(AGENT_|CODEX_|OPENCODE_|CURSOR_|API_KEY|findings-|fixer-|planner-|reviewer-|tester-)/i.test(JSON.stringify(job))) {
+    throw new Error(`${relativeFile} branch-sync must not expose agent configuration or provider credentials.`);
   }
 }
 
@@ -378,7 +417,7 @@ function assertFailureReportingJob(relativeFile, job, expectedNeeds, expectedKin
 
 function assertActiveFailureReporter(relativeFile, steps, expectedKind) {
   if (steps.length !== 2
-    || !/^actions\/checkout@[0-9a-f]{40}$/i.test(steps[0]?.uses ?? '')
+    || steps[0]?.uses !== CHECKOUT_ACTION
     || steps[0]?.with?.['persist-credentials'] !== false
     || steps[1]?.uses !== './') {
     throw new Error(`${relativeFile} report-failure must checkout safely and invoke the local Copilot action.`);
@@ -530,8 +569,9 @@ function validateWorkflow(file, workflow) {
   assertAgentInputs(file, workflow);
   assertNoJobLevelSecrets(file, workflow);
   assertAgentWorkflowPermissions(file, workflow);
+  assertLightweightBranchSyncWorkflow(file, workflow);
   assertQueueWorkflow(file, workflow);
-  assertImmutableActions(file, workflow);
+  assertMajorActionReferences(file, workflow);
   assertCopilotActionInputs(file, workflow);
 }
 
@@ -568,11 +608,12 @@ module.exports = {
   BOT_GATED_WORKFLOW_FILES,
   BOT_GATE_EXPRESSION,
   FORK_SAFE_BOT_GATE_EXPRESSION,
-  assertImmutableActions,
+  assertMajorActionReferences,
   assertCopilotActionInputs,
   assertAgentInputs,
   assertNoJobLevelSecrets,
   assertAgentWorkflowPermissions,
+  assertLightweightBranchSyncWorkflow,
   assertDirectEventTriggers,
   assertMutationWorkflow,
   assertNoConcurrency,

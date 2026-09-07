@@ -36,7 +36,7 @@ Only active roles are provisioned and authenticated. Runtime, model provider, mo
 
 ## Security and reliability acceptance
 
-- Third-party workflow actions use immutable commit SHAs, distributed Copilot workflows use the maintained `v3` tag, checkout persistence is disabled outside authorized push jobs, the implicit `GITHUB_TOKEN` is read-only, and mutation workflows have bounded timeouts and concurrency.
+- Third-party workflow actions use reviewed major-version tags; distributed Copilot workflows use the maintained `v3` tag, checkout persistence is disabled outside authorized push jobs, the implicit `GITHUB_TOKEN` is read-only, and mutation workflows have bounded timeouts and concurrency.
 - PR and review-comment workflows run only for branches in the same repository. Fork events are skipped because the runtime PAT/provider Secrets are not a safe or reliable fork boundary; review forks in a separate credential-free workflow if that capability is required.
 - Agent credentials exist only on the Copilot action step. Release/tag jobs and repository verification commands do not inherit them.
 - Git fetch and push authentication is subprocess-scoped and is never persisted in remotes or Git configuration.

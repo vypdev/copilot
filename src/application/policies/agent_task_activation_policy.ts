@@ -4,6 +4,7 @@ import type { SingleAction } from '../../data/model/single_action';
 import type { GithubActionEventInputs } from '../../actions/github_event_inputs';
 import { parseCopilotCommand } from '../../domain/copilot_command';
 import { containsBotMention } from '../usecases/steps/common/think_input_policy';
+import { isNaturalLanguageBranchSyncRequest, parseBranchSyncCommandArguments } from '../../domain/branch_sync_command';
 
 const COMMENT_TASKS: readonly AgentTask[] = ['findings', 'fixer', 'planner', 'reviewer', 'tester'];
 
@@ -73,14 +74,24 @@ function activeCommentTasks(event: GithubActionEventInputs, botLogin: string): A
                 return ['fixer', isPullRequestComment(event) ? 'reviewer' : 'findings'];
             case 'implement':
                 return ['fixer'];
+            case 'sync-branch':
+            case 'update-branch':
+            case 'updatebranch':
+                return branchSyncAgentTasks(command.command.arguments);
             default:
                 return [];
         }
     }
+    if (isNaturalLanguageBranchSyncRequest(body, botLogin)) return ['fixer'];
     if (!body || !containsBotMention(body, botLogin)) return ['findings'];
     return isPullRequestComment(event)
         ? COMMENT_TASKS.filter(task => task !== 'tester')
         : ['findings', 'fixer', 'planner'];
+}
+
+function branchSyncAgentTasks(args: readonly string[]): AgentTask[] {
+    const parsed = parseBranchSyncCommandArguments(args);
+    return parsed.valid && parsed.options.useAgent && !parsed.options.dryRun ? ['fixer'] : [];
 }
 
 function eventAction(event: GithubActionEventInputs): string {

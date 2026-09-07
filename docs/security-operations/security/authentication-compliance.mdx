@@ -46,7 +46,7 @@ Use this mode only when all of the following are true:
 - fork and untrusted-contributor workflows cannot access the session;
 - workflow files and executed code are protected by review and branch rules;
 - no `pull_request_target` workflow executes attacker-controlled code with session access;
-- third-party Actions are pinned and reviewed;
+- third-party Actions intentionally track reviewed major-version tags;
 - the runner is isolated from unrelated tenants;
 - `auth.json` remains outside the repository and is readable only by the runner user;
 - revocation, rotation, compromise, and unexpected quota use have been considered.

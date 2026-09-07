@@ -94,3 +94,20 @@ application policy to identify normal runs triggered by the PAT owner. Those run
 complete without entering the queue; valid explicit single actions remain admitted.
 This decision belongs to the GitHub lifecycle and is deliberately not added to the
 shared `mainRun` path used by the local action.
+
+## Branch synchronization boundary
+
+Branch synchronization has two independent entry points behind the same semantic
+ports. The all-branch push workflow invokes `check_branch_sync_action`, which can
+reach only dependency discovery, branch comparison, and issue notification adapters.
+It has no agent role or agent environment. The comment command resolves one target,
+authorizes the actor, and delegates Git merge ownership to a specialized workspace
+adapter. The fixer capability becomes reachable only after Git reports eligible
+conflicts.
+
+The application use case owns orchestration and publishable results; pure policies
+own command parsing, dependency selection, and notification rendering; repositories
+translate GitHub GraphQL/REST responses; and the Git adapter owns transient merge
+state. Verification runs without credentials. The adapter rejects changes to Git
+heads, merge metadata, the non-conflicted index, or the prepared path set, then
+re-fetches both remote heads immediately before the trusted commit/push boundary.

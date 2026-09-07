@@ -64,6 +64,7 @@ function minimalExecution(singleAction: {
   isRecommendStepsAction?: boolean;
   isCloseInactiveIssuesAction?: boolean;
   isPublishIssueCommentAction?: boolean;
+  isCheckBranchSyncAction?: boolean;
 }): Execution {
   return {
     singleAction: {
@@ -101,6 +102,9 @@ function minimalExecution(singleAction: {
       },
       get isPublishIssueCommentAction() {
         return singleAction.isPublishIssueCommentAction ?? this.currentSingleAction === ACTIONS.PUBLISH_ISSUE_COMMENT;
+      },
+      get isCheckBranchSyncAction() {
+        return singleAction.isCheckBranchSyncAction ?? this.currentSingleAction === ACTIONS.CHECK_BRANCH_SYNC;
       },
     } as Execution['singleAction'],
   } as Execution;
@@ -209,6 +213,22 @@ describe('SingleActionUseCase', () => {
 
     expect(mockCheckProgressInvoke).toHaveBeenCalledWith(param);
     expect(results).toHaveLength(1);
+  });
+
+  it('dispatches the lightweight branch-sync observer without authorization or an agent', async () => {
+    const observe = { invoke: jest.fn().mockResolvedValue([]) };
+    const useCase = new SingleActionUseCase(
+      {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
+      undefined,
+      undefined,
+      undefined,
+      observe as any,
+    );
+    const param = minimalExecution({ validSingleAction: true, currentSingleAction: ACTIONS.CHECK_BRANCH_SYNC });
+
+    await useCase.invoke(param);
+
+    expect(observe.invoke).toHaveBeenCalledWith(param);
   });
 
   it('dispatches to RecommendStepsUseCase when action is recommend_steps', async () => {

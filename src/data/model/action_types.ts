@@ -11,4 +11,5 @@ export const ACTIONS = {
     RECOMMEND_STEPS: 'recommend_steps_action',
     CLOSE_INACTIVE_ISSUES: 'close_inactive_issues_action',
     PUBLISH_ISSUE_COMMENT: 'publish_issue_comment',
+    CHECK_BRANCH_SYNC: 'check_branch_sync_action',
 } as const;

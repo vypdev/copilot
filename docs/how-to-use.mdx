@@ -316,7 +316,8 @@ All `.yml` / `.yaml` files here are copied to `.github/workflows/`. Default file
 |------|--------|
 | `copilot_issue.yml` | Runs on issue events (opened, edited, labeled, unlabeled, etc.): creates branches, links to projects, assignees, deploy trigger. |
 | `copilot_pull_request.yml` | Runs on PR events: links PR to issue/project, reviewers, AI description, etc. |
-| `copilot_commit.yml` | Runs on push (all branches except main/develop by default): notifies issue, updates size and progress labels, bugbot. |
+| `copilot_commit.yml` | Runs the issue-centric push pipeline (all branches except main/develop by default): commit notice, size/progress, and Bugbot. |
+| `copilot_branch_sync.yml` | Lightweight push observer on all branches: detects parent/working drift and maintains a synchronization notice without loading Bugbot or an agent. |
 | `copilot_issue_comment.yml` | Runs on issue comment: e.g. Think action (answer questions). |
 | `copilot_pull_request_comment.yml` | Runs on PR review comment: e.g. translation checks. |
 | `release_workflow.yml` | **Manual** (`workflow_dispatch`): release flow (version, changelog, tag, release, deployed). Filename must match the action input `release-workflow` (default: `release_workflow.yml`) so the Issue workflow can dispatch it when the **deploy** label is added. |
@@ -325,7 +326,7 @@ All `.yml` / `.yaml` files here are copied to `.github/workflows/`. Default file
 | `copilot_credential_health.yml` | **Manual** (`workflow_dispatch`): validates selected remote credentials without exposing their values; used by `copilot doctor`. |
 | `copilot_close_inactive_issues.yml` | **Scheduled every 6 hours** (also `workflow_dispatch`): closes open issues waiting for a maintainer or issue author after the configured inactivity threshold. Opt-in. |
 
-Each Copilot workflow step passes at least `token` and the configured agent CLI inputs via `vars.*`. The **release** and **hotfix** workflows are **dispatched by the action** when an issue has the deploy label and the corresponding release/hotfix context (branch, version, etc.); they are not triggered by issue events directly.
+Each Copilot workflow step passes at least `token`. Agent-capable workflows also pass the configured CLI inputs via `vars.*`; `copilot_branch_sync.yml` deliberately does not. The **release** and **hotfix** workflows are **dispatched by the action** when an issue has the deploy label and the corresponding release/hotfix context (branch, version, etc.); they are not triggered by issue events directly.
 
 The `agent-cli-provisioning.yml` workflow checks the selected runtime binaries,
 versions, and non-interactive help commands without making a paid model request. Runtime

@@ -50,12 +50,22 @@ describe('activeAgentTasks', () => {
             .toEqual(['fixer', 'reviewer']);
         expect(activeAgentTasks(event('issue_comment', '/copilot description'), noSingleAction(), 'vypbot'))
             .toEqual([]);
+        expect(activeAgentTasks(event('issue_comment', '/copilot sync-branch'), noSingleAction(), 'vypbot'))
+            .toEqual(['fixer']);
+        expect(activeAgentTasks(event('issue_comment', '/copilot updateBranch'), noSingleAction(), 'vypbot'))
+            .toEqual(['fixer']);
+        expect(activeAgentTasks(event('issue_comment', '/copilot sync-branch --dry-run'), noSingleAction(), 'vypbot'))
+            .toEqual([]);
+        expect(activeAgentTasks(event('issue_comment', '/copilot sync-branch --no-agent'), noSingleAction(), 'vypbot'))
+            .toEqual([]);
     });
 
     it('uses findings only for translation and all reachable roles for mentioned natural language', () => {
         expect(activeAgentTasks(event('issue_comment', 'translate this'), noSingleAction(), 'vypbot')).toEqual(['findings']);
         expect(activeAgentTasks(event('issue_comment', '@vypbot please review and fix this'), noSingleAction(), 'vypbot'))
             .toEqual(['findings', 'fixer', 'planner']);
+        expect(activeAgentTasks(event('issue_comment', "@vypbot update the issue's branch"), noSingleAction(), 'vypbot'))
+            .toEqual(['fixer']);
         expect(activeAgentTasks(event('issue_comment', '@vypbot please review and fix this', { issue: { pull_request: {} } }), noSingleAction(), 'vypbot'))
             .toEqual(['findings', 'fixer', 'planner', 'reviewer']);
     });
@@ -73,6 +83,8 @@ describe('activeAgentTasks', () => {
         expect(activeAgentTasks(event('workflow_dispatch'), new SingleAction(ACTIONS.CHECK_PROGRESS, '', '', '', '')))
             .toEqual(['findings']);
         expect(activeAgentTasks(event('workflow_dispatch'), new SingleAction('unsupported', '', '', '', '')))
+            .toEqual([]);
+        expect(activeAgentTasks(event('push'), new SingleAction(ACTIONS.CHECK_BRANCH_SYNC, '', '', '', '')))
             .toEqual([]);
         expect(activeAgentTasks(event('issue_comment', '/copilot diagnose failure'), noSingleAction(), 'vypbot'))
             .toEqual(['planner']);

@@ -9,6 +9,8 @@ import { parseCopilotCommand } from '../../domain/copilot_command';
 import { invalidCommentCommandResult, runExplicitCommentCommand } from './comment_automation_command_workflow';
 import { runNaturalLanguageCommentAutomation } from './comment_automation_natural_language_workflow';
 import { ApplicationError } from '../errors/application_error';
+import { isNaturalLanguageBranchSyncRequest } from '../../domain/branch_sync_command';
+import { runBranchSyncCommand } from './branch_sync/branch_sync_comment_command';
 
 export type { CommentAutomationOptions } from "./comment_automation_contracts";
 
@@ -44,6 +46,9 @@ export async function runCommentAutomation(
       return runNaturalLanguageCommentAutomation(param, options, actorAuthorizationPort, [], {
         authenticatedUserPort,
       });
+    }
+    if (isNaturalLanguageBranchSyncRequest(options.userComment, param.tokenUser ?? '')) {
+      return runBranchSyncCommand(param, options, [], actorAuthorizationPort);
     }
     languageResults = await options.languageUseCase.invoke(param);
     if (!containsBotMention(options.userComment, param.tokenUser ?? '')) {

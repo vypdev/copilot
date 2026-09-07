@@ -3,6 +3,7 @@ import * as path from 'path';
 import { copySetupDirectory, copySetupFile } from './setup_file_copy';
 import { logInfo } from './logger';
 import type { SetupFeatures, SetupWorkflowComparison } from '../domain/setup';
+import { isSetupWorkflowEnabled } from '../domain/setup_workflow_catalog';
 
 /**
  * Ensure .github, .github/workflows and .github/ISSUE_TEMPLATE exist; create them if missing.
@@ -44,25 +45,13 @@ export function copySetupFiles(
   const setupDir = setupDirOverride ?? path.join(__dirname, '..', '..', 'setup');
   if (!fs.existsSync(setupDir)) return { copied: 0, skipped: 0 };
 
-  const workflowFeatures: Readonly<Record<string, string>> = {
-    'copilot_issue.yml': 'issues',
-    'copilot_pull_request.yml': 'pullRequests',
-    'copilot_commit.yml': 'commits',
-    'copilot_issue_comment.yml': 'issueComments',
-    'copilot_pull_request_comment.yml': 'pullRequestComments',
-    'release_workflow.yml': 'release',
-    'hotfix_workflow.yml': 'hotfix',
-    'agent-cli-provisioning.yml': 'agentProvisioning',
-    'copilot_credential_health.yml': 'credentialHealth',
-    'copilot_close_inactive_issues.yml': 'inactiveIssueClosure',
-  };
   const approvedWorkflowFiles = new Set(options.approvedWorkflowFiles ?? []);
   const backupDirectory = options.updateExistingWorkflows ? path.join(cwd, '.copilot', 'setup-backups', new Date().toISOString().replace(/[:.]/g, '-')) : undefined;
   const workflows = copySetupDirectory(
     path.join(setupDir, 'workflows'),
     path.join(cwd, '.github', 'workflows'),
     (fileName) => (fileName.endsWith('.yml') || fileName.endsWith('.yaml'))
-      && (features === undefined || features[workflowFeatures[fileName]] !== false)
+      && isSetupWorkflowEnabled(fileName, features)
       && (!options.updateExistingWorkflows
         || approvedWorkflowFiles.has(fileName)
         || !fs.existsSync(path.join(cwd, '.github', 'workflows', fileName))),
@@ -100,22 +89,10 @@ export function compareSetupWorkflows(
   setupDirOverride?: string,
 ): SetupWorkflowComparison[] {
   const setupDir = setupDirOverride ?? path.join(__dirname, '..', '..', 'setup');
-  const workflowFeatures: Readonly<Record<string, string>> = {
-    'copilot_issue.yml': 'issues',
-    'copilot_pull_request.yml': 'pullRequests',
-    'copilot_commit.yml': 'commits',
-    'copilot_issue_comment.yml': 'issueComments',
-    'copilot_pull_request_comment.yml': 'pullRequestComments',
-    'release_workflow.yml': 'release',
-    'hotfix_workflow.yml': 'hotfix',
-    'agent-cli-provisioning.yml': 'agentProvisioning',
-    'copilot_credential_health.yml': 'credentialHealth',
-    'copilot_close_inactive_issues.yml': 'inactiveIssueClosure',
-  };
   const sourceDirectory = path.join(setupDir, 'workflows');
   if (!fs.existsSync(sourceDirectory)) return [];
   return fs.readdirSync(sourceDirectory)
-    .filter(file => (file.endsWith('.yml') || file.endsWith('.yaml')) && (features === undefined || features[workflowFeatures[file]] !== false))
+    .filter(file => (file.endsWith('.yml') || file.endsWith('.yaml')) && isSetupWorkflowEnabled(file, features))
     .filter(file => fs.statSync(path.join(sourceDirectory, file)).isFile())
     .map(file => {
       const source = path.join(sourceDirectory, file);

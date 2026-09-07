@@ -34,6 +34,7 @@ export declare class SingleAction {
     get isRecommendStepsAction(): boolean;
     get isCloseInactiveIssuesAction(): boolean;
     get isPublishIssueCommentAction(): boolean;
+    get isCheckBranchSyncAction(): boolean;
     get enabledSingleAction(): boolean;
     get validSingleAction(): boolean;
     get isSingleActionWithoutIssue(): boolean;
