@@ -89,7 +89,7 @@ describe('setup configuration policy', () => {
         expect(buildSetupActionInputs(configuration)).toMatchObject({
             'planner-provider': 'cursor',
             'reviewer-model': 'claude-3-7-sonnet',
-            'ai-pull-request-description-mode': 'append',
+            'ai-pull-request-description-mode': 'replace',
         });
         expect(buildSetupPlan(configuration).warnings).toEqual(expect.arrayContaining([
             expect.stringContaining('Cursor is an experimental runtime'),
@@ -112,6 +112,19 @@ describe('setup configuration policy', () => {
         }])) as SetupConfigurationOverrides['agents'],
         });
         expect(buildSetupCredentialRequirements(cursor).map(requirement => requirement.name)).toEqual(['PAT', 'CURSOR_API_KEY']);
+    });
+
+    it.each([
+        { modelProvider: 'local', expected: ['PAT'] },
+        { modelProvider: '', expected: ['PAT', 'OPENCODE_API_KEY'] },
+    ])('does not invent a model-provider credential for a local or empty provider ($modelProvider)', ({ modelProvider, expected }) => {
+        const configuration = mergeSetupConfiguration(createDefaultSetupConfiguration(), {
+            agents: Object.fromEntries(['planner', 'findings', 'reviewer', 'fixer', 'tester'].map(task => [task, {
+                provider: 'opencode', modelProvider, model: 'local-model',
+            }])) as SetupConfigurationOverrides['agents'],
+        });
+
+        expect(buildSetupCredentialRequirements(configuration).map(requirement => requirement.name)).toEqual(expected);
     });
 
     it('does not request credentials for agent roles whose workflows are disabled', () => {

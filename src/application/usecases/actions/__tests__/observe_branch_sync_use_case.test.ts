@@ -66,6 +66,15 @@ describe("ObserveBranchSyncUseCase", () => {
     expect(results[0]).toMatchObject({ payload: { state: "aligned" } });
   });
 
+  it("reports an aligned branch without publishing when no stale warning exists", async () => {
+    const context = setup({ behindBy: 0 });
+    const results = await context.useCase.invoke(execution({ commit: { branch: "feature/42" } }));
+
+    expect(context.notifications.addComment).not.toHaveBeenCalled();
+    expect(context.notifications.updateComment).not.toHaveBeenCalled();
+    expect(results[0]).toMatchObject({ success: true, payload: { state: "aligned", behindBy: 0 } });
+  });
+
   it("does nothing for deleted pushes or unrelated branches", async () => {
     const deleted = setup();
     await expect(deleted.useCase.invoke(execution({ inputs: { after: "0".repeat(40) } }))).resolves.toEqual([]);
@@ -85,5 +94,17 @@ describe("ObserveBranchSyncUseCase", () => {
     expect(results[0]).toMatchObject({ success: false, executed: true });
     expect(results[0].steps[0]).toContain("issue #42");
     expect(JSON.stringify(results)).not.toContain("secret provider detail");
+  });
+
+  it("sanitizes a dependency-discovery failure at the observer boundary", async () => {
+    const context = setup();
+    context.dependencies.listOpenDependencies.mockRejectedValue(new Error("secret discovery detail"));
+
+    const results = await context.useCase.invoke(execution());
+
+    expect(context.comparisons.compare).not.toHaveBeenCalled();
+    expect(results[0]).toMatchObject({ success: false, executed: true });
+    expect(results[0].steps[0]).toBe("Unable to inspect branch synchronization safely.");
+    expect(JSON.stringify(results)).not.toContain("secret discovery detail");
   });
 });

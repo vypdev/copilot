@@ -35,6 +35,19 @@ describe("branch dependency policy", () => {
     ]);
   });
 
+  it("uses GitHub closing references even when no linked branch is present", () => {
+    expect(resolveOpenBranchDependencies(
+      [{ number: 8, linkedBranches: { nodes: [null, { ref: null }, { ref: { name: "  " } }] } }],
+      [{
+        number: 12,
+        body: "No textual issue reference",
+        baseRefName: "develop",
+        headRefName: "feature/eight",
+        closingIssuesReferences: { nodes: [null, { number: 8 }] },
+      }],
+    )).toEqual([{ issueNumber: 8, parentBranch: "develop", workingBranch: "feature/eight" }]);
+  });
+
   it("ignores malformed configuration and invalid self-dependencies", () => {
     expect(resolveOpenBranchDependencies(
       [{ number: 3, body: "<!-- copilot-configuration-start\nnot-json\ncopilot-configuration-end -->" }],
@@ -43,6 +56,21 @@ describe("branch dependency policy", () => {
     expect(resolveOpenBranchDependencies(
       [{ number: 4, body: `<!-- copilot-configuration-start\n${JSON.stringify({ parentBranch: "same", workingBranch: "same" })}\ncopilot-configuration-end -->` }],
       [],
+    )).toEqual([]);
+    expect(resolveOpenBranchDependencies(
+      [{ number: 5, body: `<!-- copilot-configuration-start\n${JSON.stringify({ parentBranch: "develop" })}\ncopilot-configuration-end -->` }],
+      [],
+    )).toEqual([]);
+  });
+
+  it("filters invalid PR dependencies after normalization", () => {
+    expect(resolveOpenBranchDependencies(
+      [{ number: 0 }, { number: 6 }, { number: 7 }],
+      [
+        { number: 20, body: "#0", baseRefName: "develop", headRefName: "feature/zero" },
+        { number: 21, body: "#6", baseRefName: " ", headRefName: "feature/six" },
+        { number: 22, body: "#7", baseRefName: "develop", headRefName: " " },
+      ],
     )).toEqual([]);
   });
 

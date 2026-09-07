@@ -57477,7 +57477,7 @@ function createDefaultSetupConfiguration() {
         },
         ai: {
             pullRequestDescription: true,
-            pullRequestDescriptionMode: 'append',
+            pullRequestDescriptionMode: 'replace',
             ignoreFiles: 'build/*',
             membersOnly: false,
             includeReasoning: false,
@@ -79522,7 +79522,7 @@ exports.PULL_REQUEST_DESCRIPTION_MODES = [
     'preserve',
     'disabled',
 ];
-exports.DEFAULT_PULL_REQUEST_DESCRIPTION_MODE = 'append';
+exports.DEFAULT_PULL_REQUEST_DESCRIPTION_MODE = 'replace';
 exports.MANAGED_PULL_REQUEST_DESCRIPTION_START = '<!-- copilot:managed-pr-description -->';
 exports.MANAGED_PULL_REQUEST_DESCRIPTION_END = '<!-- /copilot:managed-pr-description -->';
 /** Normalizes public configuration while keeping invalid values safe and backwards compatible. */

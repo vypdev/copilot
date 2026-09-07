@@ -44,7 +44,7 @@ Use `ai-pull-request-description-mode` when a team needs a different ownership m
 
 | Mode | Automatic runs | `/copilot description` | Behavior |
 | --- | --- | --- | --- |
-| `replace` | Yes | Yes | Preserves the existing legacy behavior: the generated text owns the complete body. |
+| `replace` | Yes | Yes | Default. The generated text owns the complete body. |
 | `append` | Yes | Yes | Keeps human-authored text and replaces only the bounded Copilot-managed section. |
 | `preserve` | No | Yes | Does not touch the body automatically; a maintainer can request an update explicitly from a PR comment. |
 | `disabled` | No | No | Description automation is fully disabled. |
@@ -63,7 +63,7 @@ Set `ai-pull-request-description: true` and configure the selected agent in your
     token: ${{ secrets.PAT }}
     project-ids: '2,3'
     ai-pull-request-description: true
-    ai-pull-request-description-mode: append
+    ai-pull-request-description-mode: replace
     agent-provider: codex
     agent-model-provider: openai
     agent-model: gpt-5.6-luna

@@ -72,6 +72,22 @@ describe('PublishIssueCommentUseCase', () => {
         );
     });
 
+    it.each([null, ''])('uses only the new content when an appended comment has no existing body (%p)', async (body) => {
+        listIssueComments.mockResolvedValue([{ id: 101, body }]);
+
+        const results = await useCase.invoke(execution('Deployment failed.', '101', 'append'));
+
+        expect(results[0].success).toBe(true);
+        expect(updateComment).toHaveBeenCalledWith(
+            'owner',
+            'repo',
+            42,
+            101,
+            'Deployment failed.',
+            'token',
+        );
+    });
+
     it('rejects updates when the comment does not belong to the selected issue', async () => {
         const results = await useCase.invoke(execution('Deployment failed.', '101', 'replace'));
 

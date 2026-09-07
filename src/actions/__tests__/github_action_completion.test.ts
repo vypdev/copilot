@@ -126,6 +126,29 @@ describe('finishGithubAction', () => {
         expect(mockStoreInvoke).not.toHaveBeenCalled();
     });
 
+    it('keeps every publication and persistence side effect disabled for a dry run', async () => {
+        const action = Object.assign(execution(), {
+            owner: 'test-owner',
+            repo: 'test-repo',
+            eventName: 'pull_request',
+            inputs: { pull_request: { head: { sha: 'abc1234' } } },
+            tokens: { token: 'product-pat' },
+        });
+        const results = [new Result({
+            id: 'BranchSyncUseCase',
+            success: true,
+            executed: true,
+            payload: { dryRun: true },
+        })];
+
+        await finishGithubAction(action, results, {} as never, {} as never, { publish: mockEvidencePublish });
+
+        expect(mockPublishInvoke).not.toHaveBeenCalled();
+        expect(mockStoreInvoke).not.toHaveBeenCalled();
+        expect(mockEvidencePublish).not.toHaveBeenCalled();
+        expect(core.setFailed).not.toHaveBeenCalled();
+    });
+
     it('publishes the summary only through the explicitly provided output port', async () => {
         const action = Object.assign(execution(), {
             owner: 'test-owner',

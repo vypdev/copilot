@@ -278,6 +278,31 @@ describe("runCommentAutomation", () => {
     expect(intent.invoke).not.toHaveBeenCalled();
   });
 
+  it("returns language results without intent detection when no bot login or mention is available", async () => {
+    const languageResult = successfulResult('language');
+    const language = { invoke: jest.fn().mockResolvedValue([languageResult]) };
+    const intent = { invoke: jest.fn() };
+    const results = await runCommentAutomation(
+      { owner: 'o', repo: 'r', actor: 'alice', tokens: { token: 't' } } as Execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: language as never,
+        intentUseCase: intent as never,
+        thinkUseCase: {} as never,
+        autofixUseCase: {} as never,
+        doUserRequestUseCase: {} as never,
+        userComment: 'plain comment',
+        gitCommitPort: {} as never,
+      },
+      {} as never,
+      {} as never,
+    );
+
+    expect(results).toEqual([languageResult]);
+    expect(language.invoke).toHaveBeenCalledTimes(1);
+    expect(intent.invoke).not.toHaveBeenCalled();
+  });
+
   it("rejects unauthorized or invalid branch-sync commands before mutation", async () => {
     const sync = { invoke: jest.fn() };
     const baseOptions = {
@@ -307,6 +332,63 @@ describe("runCommentAutomation", () => {
     );
     expect(invalid[0]).toMatchObject({ success: false, executed: false });
     expect(sync.invoke).not.toHaveBeenCalled();
+  });
+
+  it("reports branch synchronization as unavailable when the composition omits it", async () => {
+    const authorization = { isActorAllowedToModifyFiles: jest.fn() };
+    const results = await runCommentAutomation(
+      { owner: 'o', repo: 'r', actor: 'alice', tokens: { token: 't' } } as Execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: {} as never,
+        intentUseCase: {} as never,
+        thinkUseCase: {} as never,
+        autofixUseCase: {} as never,
+        doUserRequestUseCase: {} as never,
+        userComment: '/copilot sync-branch',
+        gitCommitPort: {} as never,
+      },
+      authorization,
+      {} as never,
+    );
+
+    expect(results[0]).toMatchObject({
+      id: 'CommentAutomation.BranchSync',
+      success: false,
+      executed: false,
+    });
+    expect(authorization.isActorAllowedToModifyFiles).not.toHaveBeenCalled();
+  });
+
+  it("honors ai-members-only before invoking comment automation", async () => {
+    const language = { invoke: jest.fn() };
+    const authorization = { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(false) };
+    const results = await runCommentAutomation(
+      {
+        owner: 'o',
+        repo: 'r',
+        actor: 'outsider',
+        tokenUser: 'vypbot',
+        tokens: { token: 't' },
+        ai: { getAiMembersOnly: () => true },
+      } as unknown as Execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: language as never,
+        intentUseCase: {} as never,
+        thinkUseCase: {} as never,
+        autofixUseCase: {} as never,
+        doUserRequestUseCase: {} as never,
+        userComment: '@vypbot please inspect this',
+        gitCommitPort: {} as never,
+      },
+      authorization,
+      {} as never,
+    );
+
+    expect(results[0]).toMatchObject({ success: true, executed: false });
+    expect(authorization.isActorAllowedToModifyFiles).toHaveBeenCalledWith('o', 'r', 'outsider', 't');
+    expect(language.invoke).not.toHaveBeenCalled();
   });
 
   it('routes explicit review commands to the read-only Bugbot review use case', async () => {

@@ -99,6 +99,19 @@ describe("SyncBranchUseCase", () => {
     expect(results[0].steps[0]).toContain("Dry run");
   });
 
+  it("reports a clean dry run without invoking verification or pushing", async () => {
+    const context = setup({ kind: "clean", parentSha: "parent", childSha: "child" });
+    const results = await context.useCase.invoke({
+      execution: execution(),
+      options: { dryRun: true, useAgent: true },
+    });
+
+    expect(context.workspace.abort).toHaveBeenCalledTimes(1);
+    expect(context.git.execute).not.toHaveBeenCalled();
+    expect(context.workspace.commitAndPush).not.toHaveBeenCalled();
+    expect(results[0]).toMatchObject({ success: true, payload: { outcome: "dry-run-clean" } });
+  });
+
   it.each([
     ["agent disabled", { dryRun: false, useAgent: false }, ["src/a.ts"]],
     ["sensitive path", options, [".github/workflows/release.yml"]],
@@ -128,6 +141,68 @@ describe("SyncBranchUseCase", () => {
     expect(raceResults[0].errors[0].message).toBe("parent changed");
   });
 
+  it("reports a rejected verification command without leaking provider details", async () => {
+    const context = setup({ kind: "clean", parentSha: "parent", childSha: "child" });
+    context.git.execute.mockRejectedValue(new Error("private verification detail"));
+
+    const results = await context.useCase.invoke({ execution: execution(), options });
+
+    expect(context.workspace.abort).toHaveBeenCalledTimes(1);
+    expect(results[0]).toMatchObject({ success: false });
+    expect(JSON.stringify(results)).not.toContain("private verification detail");
+  });
+
+  it("caps an oversized verification configuration before execution", async () => {
+    const context = setup({ kind: "clean", parentSha: "parent", childSha: "child" });
+    const commands = Array.from({ length: 25 }, (_, index) => `pnpm test:${index}`);
+    const results = await context.useCase.invoke({
+      execution: execution({
+        ai: {
+          getAgentConfiguration: () => ({ provider: "codex", model: "model", command: "codex exec -" }),
+          getBugbotFixVerifyCommands: () => commands,
+        },
+      }),
+      options,
+    });
+
+    expect(context.git.execute).toHaveBeenCalledTimes(20);
+    expect(results[0]).toMatchObject({ success: true, payload: { verificationCount: 20 } });
+  });
+
+  it("uses safe fallback messages when validation or race providers omit a reason", async () => {
+    const invalidResolution = setup({
+      kind: "conflicted", parentSha: "parent", childSha: "child", conflictPaths: ["src/a.ts"],
+    });
+    invalidResolution.workspace.validatePreparedMerge.mockResolvedValue({ valid: false });
+    const resolutionResults = await invalidResolution.useCase.invoke({ execution: execution(), options });
+    expect(resolutionResults[0].errors[0].message).toBe("The agent resolution did not pass workspace safety validation.");
+
+    const invalidVerification = setup({ kind: "clean", parentSha: "parent", childSha: "child" });
+    invalidVerification.workspace.validatePreparedMerge.mockResolvedValue({ valid: false });
+    const verificationResults = await invalidVerification.useCase.invoke({ execution: execution(), options });
+    expect(verificationResults[0].errors[0].message).toBe("Verification commands changed the prepared merge unexpectedly.");
+
+    const raced = setup({ kind: "clean", parentSha: "parent", childSha: "child" });
+    raced.workspace.assertRemoteHeadsUnchanged.mockResolvedValue({ valid: false });
+    const raceResults = await raced.useCase.invoke({ execution: execution(), options });
+    expect(raceResults[0].errors[0].message).toBe(
+      "A branch changed while synchronization was running; retry from the latest heads.",
+    );
+  });
+
+  it("fails closed when the conflict-resolution agent returns no usable response", async () => {
+    const context = setup({
+      kind: "conflicted", parentSha: "parent", childSha: "child", conflictPaths: ["src/a.ts"],
+    });
+    context.fixer.fix.mockResolvedValue({ text: "   " });
+
+    const results = await context.useCase.invoke({ execution: execution(), options });
+
+    expect(context.workspace.abort).toHaveBeenCalledTimes(1);
+    expect(context.workspace.validatePreparedMerge).not.toHaveBeenCalled();
+    expect(results[0].errors[0].message).toBe("The conflict-resolution agent returned no usable response.");
+  });
+
   it("returns an idempotent result for aligned branches and supports an explicit parent", async () => {
     const context = setup({ kind: "aligned", parentSha: "parent", childSha: "child" });
     const results = await context.useCase.invoke({
@@ -140,14 +215,31 @@ describe("SyncBranchUseCase", () => {
     expect(results[0]).toMatchObject({ success: true, executed: false });
   });
 
+  it("rejects a parent override that names the working branch", async () => {
+    const context = setup({ kind: "aligned", parentSha: "parent", childSha: "child" });
+    const results = await context.useCase.invoke({
+      execution: execution({ pullRequest: { number: -1 }, issue: { number: -1 }, issueNumber: 7 }),
+      options: { ...options, parentOverride: "feature/42" },
+    });
+
+    expect(context.dependencies.resolveTarget).toHaveBeenCalledWith("org", "repo", 7, "token");
+    expect(context.workspace.prepare).not.toHaveBeenCalled();
+    expect(results[0]).toMatchObject({ success: false, executed: false });
+  });
+
   it("fails closed when no target exists or a provider throws", async () => {
     const missing = setup({ kind: "aligned", parentSha: "parent", childSha: "child" });
     missing.dependencies.resolveTarget.mockResolvedValue(undefined);
-    const missingResults = await missing.useCase.invoke({ execution: execution(), options });
+    const missingResults = await missing.useCase.invoke({
+      execution: execution({ pullRequest: { number: -1 }, issue: { number: -1 }, issueNumber: -1 }),
+      options,
+    });
+    expect(missing.dependencies.resolveTarget).toHaveBeenCalledWith("org", "repo", -1, "token");
     expect(missingResults[0]).toMatchObject({ success: false, executed: false });
 
     const failed = setup({ kind: "clean", parentSha: "parent", childSha: "child" });
     failed.workspace.prepare.mockRejectedValue(new Error("secret provider detail"));
+    failed.workspace.abort.mockRejectedValue(new Error("abort detail"));
     const failedResults = await failed.useCase.invoke({ execution: execution(), options });
     expect(failedResults[0]).toMatchObject({ success: false, executed: true });
     expect(JSON.stringify(failedResults)).not.toContain("secret provider detail");

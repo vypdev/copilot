@@ -532,8 +532,8 @@ inputs:
     description: "Enable AI-powered automatic updates for pull request descriptions."
     default: "true"
   ai-pull-request-description-mode:
-    description: "PR description policy: replace (legacy full ownership), append (preserve human text), preserve (only explicit /copilot description), or disabled."
-    default: "append"
+    description: "PR description policy: replace (full ownership), append (preserve human text), preserve (only explicit /copilot description), or disabled."
+    default: "replace"
   ai-ignore-files:
     description: "Comma-separated list of files to ignore for AI operations."
     default: ""

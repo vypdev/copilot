@@ -105,7 +105,7 @@ export function createDefaultSetupConfiguration(): SetupConfiguration {
         },
         ai: {
             pullRequestDescription: true,
-            pullRequestDescriptionMode: 'append',
+            pullRequestDescriptionMode: 'replace',
             ignoreFiles: 'build/*',
             membersOnly: false,
             includeReasoning: false,
