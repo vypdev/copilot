@@ -19,6 +19,31 @@ describe('assessMergeChecksPoll', () => {
         })).toMatchObject({ kind: 'completed', source: 'pull-request-checks' });
     });
 
+    it('completes PR checks when the empty combined commit status remains pending', () => {
+        expect(assessMergeChecksPoll({
+            checkRuns: [completedCheck],
+            pullRequestNumber: 12,
+            combinedStatus: 'pending',
+            statuses: [],
+            registrationAttempts: 0,
+            maximumRegistrationAttempts: 3,
+        })).toMatchObject({ kind: 'completed', source: 'pull-request-checks' });
+    });
+
+    it('continues waiting when a legacy commit status is pending', () => {
+        expect(assessMergeChecksPoll({
+            checkRuns: [completedCheck],
+            pullRequestNumber: 12,
+            combinedStatus: 'pending',
+            statuses: [{ context: 'legacy', state: 'pending' }],
+            registrationAttempts: 0,
+            maximumRegistrationAttempts: 3,
+        })).toMatchObject({
+            kind: 'pending-status-checks',
+            statuses: [{ context: 'legacy', state: 'pending' }],
+        });
+    });
+
     it('waits for pending checks belonging to the pull request', () => {
         expect(assessMergeChecksPoll({
             checkRuns: [{ ...completedCheck, status: 'in_progress', conclusion: null }],

@@ -183,6 +183,31 @@ describe('MergeRepository', () => {
         expect(mockPullsMerge).toHaveBeenCalled();
         });
 
+        it('merges when PR checks complete and the empty combined status remains pending', async () => {
+        mockPullsCreate.mockResolvedValue({ data: { number: 351 } });
+        mockPullsListCommits.mockResolvedValue({ data: [] });
+        mockPullsUpdate.mockResolvedValue({});
+        mockPullsMerge.mockResolvedValue({ data: { merged: true } });
+        mockChecksListForRef.mockResolvedValue({
+            data: {
+                check_runs: [
+                    { name: 'CI Check', status: 'completed', conclusion: 'success', pull_requests: [{ number: 351 }] },
+                    { name: 'RepoWise code health', status: 'completed', conclusion: 'success', pull_requests: [{ number: 351 }] },
+                ],
+            },
+        });
+        mockReposGetCombinedStatusForRef.mockResolvedValue({
+            data: { state: 'pending', statuses: [] },
+        });
+
+        const result = await repo.mergeBranch('o', 'r', 'release/3.3.0', 'master', 30, 'token');
+
+        expect(result).toHaveLength(1);
+        expect(result[0].success).toBe(true);
+        expect(mockChecksListForRef).toHaveBeenCalledTimes(1);
+        expect(mockPullsMerge).toHaveBeenCalled();
+        });
+
         it('fails closed when check runs have failed without direct merge', async () => {
         mockPullsCreate.mockResolvedValue({ data: { number: 1 } });
         mockPullsListCommits.mockResolvedValue({ data: [] });

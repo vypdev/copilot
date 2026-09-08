@@ -10,7 +10,7 @@ export interface DeploymentMergeTarget {
     target: string;
 }
 
-/** Returns the ordered merge operations required after a successful deployment. */
+/** Returns the merge operations required after a successful deployment. */
 export function buildDeploymentMergePlan(
     configuration: DeploymentBranchConfiguration,
 ): DeploymentMergeTarget[] {

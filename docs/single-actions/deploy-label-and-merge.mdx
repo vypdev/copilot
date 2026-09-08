@@ -23,7 +23,7 @@ The **deployed** single action is intended to be run **after a successful deploy
    Replaces the **deploy** label with **deployed** on the issue.
 
 2. **Branch merges** (if a release or hotfix branch is configured):
-   - **Release:** merges the release branch into the default branch (e.g. `main`), then into the development branch (e.g. `develop`).
+   - **Release:** starts the release-to-default (e.g. `main`) and release-to-development (e.g. `develop`) PR flows concurrently, then waits for both to succeed.
    - **Hotfix:** merges the hotfix branch into the default branch, then merges the default branch into the development branch.
 
 3. **Issue closure**  

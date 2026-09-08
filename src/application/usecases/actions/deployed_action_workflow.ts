@@ -15,7 +15,7 @@ export interface DeployedActionWorkflowDependencies {
 
 const TASK_ID = 'DeployedActionUseCase';
 
-/** Replaces the deploy label, performs ordered merges, and closes only after all succeed. */
+/** Replaces the deploy label, performs the required merges, and closes only after all succeed. */
 export async function runDeployedActionWorkflow(
     param: Execution,
     dependencies: DeployedActionWorkflowDependencies,
@@ -100,16 +100,28 @@ async function mergeBranches(
         defaultBranch: param.branches.defaultBranch,
         developmentBranch: param.branches.development,
     });
-    const mergeResults: Result[][] = [];
-    for (const merge of plan) {
-        mergeResults.push(await branchMergePort.mergeBranch(
+    const executeMerge = (source: string, target: string): Promise<Result[]> => (
+        branchMergePort.mergeBranch(
             param.owner,
             param.repo,
-            merge.source,
-            merge.target,
+            source,
+            target,
             param.pullRequest.mergeTimeout,
             param.tokens.token,
-        ));
+        )
+    );
+
+    // Both release merges use the immutable release branch as their source, so
+    // their PRs and checks are independent and can run concurrently. A hotfix
+    // must remain sequential because the second merge uses the updated default
+    // branch produced by the first merge.
+    if (param.currentConfiguration.releaseBranch) {
+        return await Promise.all(plan.map((merge) => executeMerge(merge.source, merge.target)));
+    }
+
+    const mergeResults: Result[][] = [];
+    for (const merge of plan) {
+        mergeResults.push(await executeMerge(merge.source, merge.target));
     }
     return mergeResults;
 }
