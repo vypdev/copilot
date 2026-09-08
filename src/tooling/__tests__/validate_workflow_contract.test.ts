@@ -17,6 +17,8 @@ interface ContractModule {
   PREPARE_VERSION_TIMEOUT_MINUTES: number;
   PREPARE_COMPILED_TIMEOUT_MINUTES: number;
   TAG_TIMEOUT_MINUTES: number;
+  NPM_PUBLISH_TIMEOUT_MINUTES: number;
+  FINALIZE_RELEASE_TIMEOUT_MINUTES: number;
   QUEUE_WAIT_MINUTES: number;
   QUEUE_WORKFLOW_MANIFEST: readonly { file: string; workflowName: string; jobId: string }[];
   assertQueueBudget(queueWaitMinutes: number, minimumJobTimeoutMinutes: number): void;
@@ -37,6 +39,8 @@ const {
   PREPARE_VERSION_TIMEOUT_MINUTES,
   PREPARE_COMPILED_TIMEOUT_MINUTES,
   TAG_TIMEOUT_MINUTES,
+  NPM_PUBLISH_TIMEOUT_MINUTES,
+  FINALIZE_RELEASE_TIMEOUT_MINUTES,
   QUEUE_WAIT_MINUTES,
   QUEUE_WORKFLOW_MANIFEST,
   assertQueueBudget,
@@ -313,6 +317,41 @@ describe('workflow contract validator', () => {
     expectMutationRejected('.github/workflows', fileName, (workflow) => {
       workflow.jobs['prepare-compiled-files']['timeout-minutes'] = PREPARE_COMPILED_TIMEOUT_MINUTES - 1;
     }, 'job prepare-compiled-files must have timeout-minutes 20');
+  });
+
+  it('keeps npm publication between tag creation and release finalization', () => {
+    const { workflow } = loadMutationWorkflow('.github/workflows', 'release_workflow.yml');
+
+    expect(workflow.jobs['publish-npm']).toEqual(expect.objectContaining({
+      needs: ['tag'],
+      environment: 'npm',
+      'runs-on': 'ubuntu-latest',
+      'timeout-minutes': NPM_PUBLISH_TIMEOUT_MINUTES,
+      permissions: { contents: 'read', 'id-token': 'write' },
+    }));
+    expect(workflow.jobs['finalize-release']).toEqual(expect.objectContaining({
+      needs: ['publish-npm'],
+      'timeout-minutes': FINALIZE_RELEASE_TIMEOUT_MINUTES,
+      permissions: { contents: 'read' },
+    }));
+    expect(workflow.jobs['publish-npm'].if).toBeUndefined();
+    expect(workflow.jobs['publish-npm'].steps).toEqual(expect.arrayContaining([
+      expect.objectContaining({ run: 'pnpm install --frozen-lockfile' }),
+      expect.objectContaining({ run: 'npm publish --access public' }),
+    ]));
+    expect(JSON.stringify(workflow.jobs['publish-npm'])).not.toMatch(/NPM_TOKEN|NODE_AUTH_TOKEN/);
+  });
+
+  it.each([
+    ['missing OIDC permission', (job: Record<string, any>) => { delete job.permissions['id-token']; }, 'id-token: write'],
+    ['wrong environment', (job: Record<string, any>) => { job.environment = 'production'; }, 'npm environment'],
+    ['optional publication gate', (job: Record<string, any>) => { job.if = "${{ vars.NPM_PUBLISH_ENABLED == 'true' }}"; }, 'required release gate'],
+    ['self-hosted npm runner', (job: Record<string, any>) => { job['runs-on'] = ['self-hosted', 'codex']; }, 'runs-on ubuntu-latest'],
+    ['long-lived npm token', (job: Record<string, any>) => { job.steps.at(-1).env = { NODE_AUTH_TOKEN: '${{ secrets.NPM_TOKEN }}' }; }, 'authenticate only through OIDC'],
+  ])('rejects %s in the coordinated npm release job', (_reason, mutate, message) => {
+    expectMutationRejected('.github/workflows', 'release_workflow.yml', (workflow) => {
+      mutate(workflow.jobs['publish-npm']);
+    }, message);
   });
 
   it('requires explicit least-privilege read permissions for active tag jobs', () => {

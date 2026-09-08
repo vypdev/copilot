@@ -26,7 +26,13 @@ corepack pnpm run smoke:npm-package
 corepack pnpm run validate:documentation
 ```
 
-The internal release and hotfix workflows create the GitHub release. The separate [`publish_npm.yml`](https://github.com/vypdev/copilot/blob/master/.github/workflows/publish_npm.yml) workflow then publishes the exact release tag with npm trusted publishing on a GitHub-hosted runner:
+The project [`release_workflow.yml`](https://github.com/vypdev/copilot/blob/master/.github/workflows/release_workflow.yml) coordinates npm publishing with the rest of the release. It creates the version tag, publishes that exact tag to npm on a GitHub-hosted runner, and only then creates the GitHub release, updates the major GitHub Action reference, opens the merge PRs, and closes the launcher issue:
+
+```text
+create tag -> publish npm -> finalize GitHub release
+```
+
+The npm job installs the frozen dependency graph before validating and smoke-testing the package. It uses npm trusted publishing with these least-privilege permissions:
 
 ```yaml
 permissions:
@@ -34,9 +40,9 @@ permissions:
   id-token: write
 ```
 
-The npm package must be configured to trust this repository and workflow before the first automated publication. The workflow is enabled only when the repository variable `NPM_PUBLISH_ENABLED` is set to `true`. It publishes with `npm publish --access public`; trusted publishing generates provenance automatically and does not store an npm token in the repository. npm trusted publishing currently requires a GitHub-hosted runner.
+The npm package must be configured to trust this repository and workflow before automated publication. Configure the trusted publisher for organization `vypdev`, repository `copilot`, workflow filename `release_workflow.yml`, environment `npm`, and allow the `npm publish` action. The job publishes with `npm publish --access public`; trusted publishing generates provenance automatically and does not store an npm token in the repository. npm trusted publishing currently requires a GitHub-hosted runner.
 
-Configure the trusted publisher for `vypdev/copilot` and the workflow filename `publish_npm.yml`, then set the repository variable `NPM_PUBLISH_ENABLED=true`. Subsequent GitHub releases publish automatically. The package must exist before its trusted publisher can be configured.
+The repository-specific workflow is intentionally not copied to `setup/workflows`: consumers of the action do not publish `@vypdev/copilot` when running their own release workflows.
 
 To verify a published version independently:
 
