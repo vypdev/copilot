@@ -386,6 +386,7 @@ function assertNpmPublishJob(relativeFile, job) {
   const install = steps.find(step => step?.run === 'pnpm install --frozen-lockfile');
   const validation = steps.find(step => step?.name === 'Validate release identity and package contents');
   const publish = steps.find(step => step?.run === 'npm publish --access public');
+  const availability = steps.find(step => step?.name === 'Wait for npm registry availability');
   if (checkout?.with?.ref !== 'v${{ github.event.inputs.version }}'
     || checkout.with?.['fetch-depth'] !== 1
     || setupNode?.with?.['node-version'] !== '24.x'
@@ -395,7 +396,12 @@ function assertNpmPublishJob(relativeFile, job) {
     || validation?.env?.RELEASE_TAG !== 'v${{ github.event.inputs.version }}'
     || !String(validation?.run ?? '').includes('pnpm run validate:npm-package')
     || !String(validation?.run ?? '').includes('pnpm run smoke:npm-package')
-    || !publish) {
+    || !publish
+    || availability?.env?.PACKAGE_NAME !== '@vypdev/copilot'
+    || availability.env?.RELEASE_VERSION !== '${{ github.event.inputs.version }}'
+    || !String(availability.run ?? '').includes('npm view "$PACKAGE_NAME@$RELEASE_VERSION" version')
+    || !String(availability.run ?? '').includes('max_attempts=7')
+    || !String(availability.run ?? '').includes('sleep 20')) {
     throw new Error(`${relativeFile} publish-npm must install, validate, and publish the exact release tag.`);
   }
   if (JSON.stringify(job).includes('NPM_TOKEN') || JSON.stringify(job).includes('NODE_AUTH_TOKEN')) {
@@ -484,9 +490,10 @@ function assertActiveFailureReporter(relativeFile, steps, expectedKind) {
   }
   const inputs = steps[1].with ?? {};
   const expectedTitle = expectedKind === 'release' ? 'Release' : 'Hotfix';
+  const expectedToken = expectedKind === 'release' ? '${{ secrets.PAT }}' : '${{ github.token }}';
   if (inputs['single-action'] !== 'publish_issue_comment'
     || inputs['single-action-issue'] !== '${{ github.event.inputs.issue }}'
-    || inputs.token !== '${{ github.token }}'
+    || inputs.token !== expectedToken
     || !String(inputs['single-action-message'] ?? '').includes(`## ❌ ${expectedTitle} deployment failed`)
     || !String(inputs['single-action-message'] ?? '').includes('${{ github.run_id }}')) {
     throw new Error(`${relativeFile} report-failure must invoke publish_issue_comment with the launcher issue and run link.`);

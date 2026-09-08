@@ -244,6 +244,7 @@ describe('workflow contract validator', () => {
     const { workflow } = loadMutationWorkflow('.github/workflows', fileName);
     const report = workflow.jobs['report-failure'];
     const action = report.steps[1];
+    const expectedToken = fileName === 'release_workflow.yml' ? '${{ secrets.PAT }}' : '${{ github.token }}';
 
     expect(report.if).toBe("${{ failure() && github.event.inputs.issue != '-1' }}");
     expect(report.permissions).toEqual({ contents: 'read', issues: 'write' });
@@ -255,7 +256,7 @@ describe('workflow contract validator', () => {
     expect(action.with).toEqual(expect.objectContaining({
       'single-action': 'publish_issue_comment',
       'single-action-issue': '${{ github.event.inputs.issue }}',
-      token: '${{ github.token }}',
+      token: expectedToken,
     }));
     expect(action.with['single-action-message']).toContain('${{ github.run_id }}');
   });
@@ -338,6 +339,14 @@ describe('workflow contract validator', () => {
     expect(workflow.jobs['publish-npm'].steps).toEqual(expect.arrayContaining([
       expect.objectContaining({ run: 'pnpm install --frozen-lockfile' }),
       expect.objectContaining({ run: 'npm publish --access public' }),
+      expect.objectContaining({
+        name: 'Wait for npm registry availability',
+        env: {
+          PACKAGE_NAME: '@vypdev/copilot',
+          RELEASE_VERSION: '${{ github.event.inputs.version }}',
+        },
+        run: expect.stringContaining('sleep 20'),
+      }),
     ]));
     expect(JSON.stringify(workflow.jobs['publish-npm'])).not.toMatch(/NPM_TOKEN|NODE_AUTH_TOKEN/);
   });
@@ -347,7 +356,10 @@ describe('workflow contract validator', () => {
     ['wrong environment', (job: Record<string, any>) => { job.environment = 'production'; }, 'npm environment'],
     ['optional publication gate', (job: Record<string, any>) => { job.if = "${{ vars.NPM_PUBLISH_ENABLED == 'true' }}"; }, 'required release gate'],
     ['self-hosted npm runner', (job: Record<string, any>) => { job['runs-on'] = ['self-hosted', 'codex']; }, 'runs-on ubuntu-latest'],
-    ['long-lived npm token', (job: Record<string, any>) => { job.steps.at(-1).env = { NODE_AUTH_TOKEN: '${{ secrets.NPM_TOKEN }}' }; }, 'authenticate only through OIDC'],
+    ['long-lived npm token', (job: Record<string, any>) => {
+      const publish = job.steps.find((step: Record<string, any>) => step.run === 'npm publish --access public');
+      publish.env = { NODE_AUTH_TOKEN: '${{ secrets.NPM_TOKEN }}' };
+    }, 'authenticate only through OIDC'],
   ])('rejects %s in the coordinated npm release job', (_reason, mutate, message) => {
     expectMutationRejected('.github/workflows', 'release_workflow.yml', (workflow) => {
       mutate(workflow.jobs['publish-npm']);

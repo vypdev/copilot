@@ -241,6 +241,25 @@ jobs:
       - name: Publish @vypdev/copilot
         run: npm publish --access public
 
+      - name: Wait for npm registry availability
+        env:
+          PACKAGE_NAME: '@vypdev/copilot'
+          RELEASE_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          attempts=0
+          max_attempts=7
+          until published_version="$(npm view "$PACKAGE_NAME@$RELEASE_VERSION" version --prefer-online 2>/dev/null)" \
+            && [ "$published_version" = "$RELEASE_VERSION" ]; do
+            attempts=$((attempts + 1))
+            if [ "$attempts" -ge "$max_attempts" ]; then
+              echo "::error::$PACKAGE_NAME@$RELEASE_VERSION was not visible in the npm registry after 120 seconds."
+              exit 1
+            fi
+            echo "$PACKAGE_NAME@$RELEASE_VERSION is not visible in the npm registry yet; retrying in 20 seconds."
+            sleep 20
+          done
+          echo "$PACKAGE_NAME@$RELEASE_VERSION is available in the npm registry."
+
   finalize-release:
     name: Finalize GitHub release
     runs-on: [self-hosted, codex]
@@ -356,4 +375,4 @@ jobs:
             The release workflow did not complete successfully.
 
             [Review the workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          token: ${{ github.token }}
+          token: ${{ secrets.PAT }}

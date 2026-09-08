@@ -6,6 +6,7 @@
  */
 
 import { OctokitBranchMergeClientAdapter } from '../../../infrastructure/github/octokit_branch_adapters';
+import { MERGE_CHECKS_POLL_INTERVAL_SECONDS } from '../merge_checks_waiter';
 import { MergeRepository } from '../merge_repository';
 
 jest.mock('../../../utils/logger', () => ({
@@ -148,6 +149,10 @@ describe('MergeRepository', () => {
     });
 
     describe('waiting for checks: per-PR check runs, no checks, timeout', () => {
+        it('polls GitHub checks every 20 seconds', () => {
+            expect(MERGE_CHECKS_POLL_INTERVAL_SECONDS).toBe(20);
+        });
+
         it('waits for check runs (all completed) then merges', async () => {
         mockPullsCreate.mockResolvedValue({ data: { number: 1 } });
         mockPullsListCommits.mockResolvedValue({ data: [{ commit: { message: 'msg' } }] });
@@ -356,7 +361,7 @@ describe('MergeRepository', () => {
                 data: { state: 'success', statuses: [{ context: 'ci', state: 'success' }] },
             });
 
-        const promise = repo.mergeBranch('o', 'r', 'release/1.0', 'develop', 60, 'token');
+        const promise = repo.mergeBranch('o', 'r', 'release/1.0', 'develop', 100, 'token');
         await jest.runAllTimersAsync();
         const result = await promise;
 

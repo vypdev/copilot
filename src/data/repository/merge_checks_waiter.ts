@@ -8,6 +8,8 @@ import {
 } from './merge_checks_policy';
 import { assessMergeChecksPoll, type MergeChecksPollAssessment } from './merge_checks_waiter_policy';
 
+export const MERGE_CHECKS_POLL_INTERVAL_SECONDS = 20;
+
 /** Polls only the checks relevant to one pull request before a merge. */
 export class MergeChecksWaiter {
     async wait(
@@ -18,13 +20,12 @@ export class MergeChecksWaiter {
         pullRequestNumber: number,
         timeout: number,
     ): Promise<void> {
-        const pollIntervalSeconds = 10;
         const maxWaitForPrChecksAttempts = 3;
         let attempts = 0;
         let waitForPrChecksAttempts = 0;
         const maxAttempts = timeout === 0
             ? Number.POSITIVE_INFINITY
-            : Math.max(1, Math.ceil(timeout / pollIntervalSeconds));
+            : Math.max(1, Math.ceil(timeout / MERGE_CHECKS_POLL_INTERVAL_SECONDS));
 
         while (attempts < maxAttempts) {
             const { data: checkRuns } = await octokit.rest.checks.listForRef({ owner, repo: repository, ref: head });
@@ -42,7 +43,7 @@ export class MergeChecksWaiter {
             waitForPrChecksAttempts = assessment.nextRegistrationAttempts;
             if (this.handleAssessment(assessment, commitStatus.state, commitStatus.statuses, maxWaitForPrChecksAttempts)) return;
 
-            await this.waitForNextCheckPoll(pollIntervalSeconds);
+            await this.waitForNextCheckPoll();
             attempts++;
         }
 
@@ -94,8 +95,8 @@ export class MergeChecksWaiter {
         pendingChecks.forEach(check => logDebugInfo(`  - ${check.context} (State: ${check.state})`));
     }
 
-    private async waitForNextCheckPoll(pollIntervalSeconds: number): Promise<void> {
-        await new Promise(resolve => setTimeout(resolve, pollIntervalSeconds * 1000));
+    private async waitForNextCheckPoll(): Promise<void> {
+        await new Promise(resolve => setTimeout(resolve, MERGE_CHECKS_POLL_INTERVAL_SECONDS * 1000));
     }
 
     private assertChecksPassed(
