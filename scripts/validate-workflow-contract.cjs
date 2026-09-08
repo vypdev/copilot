@@ -14,6 +14,8 @@ const QUEUE_GATE_TIMEOUT_MINUTES = 120;
 const PREPARE_VERSION_TIMEOUT_MINUTES = 15;
 const PREPARE_COMPILED_TIMEOUT_MINUTES = 20;
 const TAG_TIMEOUT_MINUTES = 120;
+const NPM_PUBLISH_TIMEOUT_MINUTES = 20;
+const FINALIZE_RELEASE_TIMEOUT_MINUTES = 120;
 const FAILURE_REPORT_TIMEOUT_MINUTES = 5;
 const MIN_QUEUE_JOB_TIMEOUT_MINUTES = QUEUE_GATE_TIMEOUT_MINUTES;
 const FAILURE_REPORT_CONDITION = "${{ failure() && github.event.inputs.issue != '-1' }}";
@@ -159,14 +161,14 @@ function runnerLabels(value) {
 
 function assertRunner(file, workflow) {
   const relativeFile = relativeWorkflow(file);
-  const expected = relativeFile.startsWith('setup/workflows/')
-    ? ['ubuntu-latest']
-    : relativeFile === '.github/workflows/publish_npm.yml'
-      ? ['ubuntu-latest']
-    : relativeFile === '.github/workflows/repowise.yml'
-      ? ['self-hosted', 'coolify']
-      : ['self-hosted', 'codex'];
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
+    const expected = relativeFile.startsWith('setup/workflows/')
+      ? ['ubuntu-latest']
+      : relativeFile === '.github/workflows/release_workflow.yml' && jobId === 'publish-npm'
+        ? ['ubuntu-latest']
+        : relativeFile === '.github/workflows/repowise.yml'
+          ? ['self-hosted', 'coolify']
+          : ['self-hosted', 'codex'];
     const labels = runnerLabels(job['runs-on']);
     if (expected.length === 1 ? labels[0] !== expected[0] : expected.some(label => !labels.includes(label))) {
       throw new Error(`${relativeFile} job ${jobId} must use runs-on ${expected.join(', ')}.`);
@@ -359,6 +361,64 @@ function assertTagPermissions(relativeFile, job) {
   }
 }
 
+function assertNpmPublishJob(relativeFile, job) {
+  if (!job) throw new Error(`${relativeFile} must define publish-npm.`);
+  assertExactTimeout(relativeFile, 'publish-npm', job, NPM_PUBLISH_TIMEOUT_MINUTES);
+  assertExactNeeds(relativeFile, 'publish-npm', job, ['tag']);
+  if (job.if !== undefined) {
+    throw new Error(`${relativeFile} publish-npm must be a required release gate.`);
+  }
+  if (job.environment !== 'npm') {
+    throw new Error(`${relativeFile} publish-npm must use the npm environment.`);
+  }
+
+  const permissions = job.permissions ?? {};
+  const permissionKeys = Object.keys(permissions).sort();
+  if (permissionKeys.join(',') !== 'contents,id-token'
+    || permissions.contents !== 'read'
+    || permissions['id-token'] !== 'write') {
+    throw new Error(`${relativeFile} publish-npm must grant only contents: read and id-token: write permissions.`);
+  }
+
+  const steps = job.steps ?? [];
+  const checkout = steps.find(step => step?.uses === CHECKOUT_ACTION);
+  const setupNode = steps.find(step => step?.uses === 'actions/setup-node@v7');
+  const install = steps.find(step => step?.run === 'pnpm install --frozen-lockfile');
+  const validation = steps.find(step => step?.name === 'Validate release identity and package contents');
+  const publish = steps.find(step => step?.run === 'npm publish --access public');
+  if (checkout?.with?.ref !== 'v${{ github.event.inputs.version }}'
+    || checkout.with?.['fetch-depth'] !== 1
+    || setupNode?.with?.['node-version'] !== '24.x'
+    || setupNode.with?.['registry-url'] !== 'https://registry.npmjs.org'
+    || setupNode.with?.['package-manager-cache'] !== false
+    || !install
+    || validation?.env?.RELEASE_TAG !== 'v${{ github.event.inputs.version }}'
+    || !String(validation?.run ?? '').includes('pnpm run validate:npm-package')
+    || !String(validation?.run ?? '').includes('pnpm run smoke:npm-package')
+    || !publish) {
+    throw new Error(`${relativeFile} publish-npm must install, validate, and publish the exact release tag.`);
+  }
+  if (JSON.stringify(job).includes('NPM_TOKEN') || JSON.stringify(job).includes('NODE_AUTH_TOKEN')) {
+    throw new Error(`${relativeFile} publish-npm must authenticate only through OIDC.`);
+  }
+}
+
+function assertFinalizeReleaseJob(relativeFile, job) {
+  if (!job) throw new Error(`${relativeFile} must define finalize-release.`);
+  assertExactTimeout(relativeFile, 'finalize-release', job, FINALIZE_RELEASE_TIMEOUT_MINUTES);
+  assertExactNeeds(relativeFile, 'finalize-release', job, ['publish-npm']);
+  const permissions = job.permissions ?? {};
+  if (Object.keys(permissions).join(',') !== 'contents' || permissions.contents !== 'read') {
+    throw new Error(`${relativeFile} finalize-release must have only contents: read permissions.`);
+  }
+  const actions = (job.steps ?? [])
+    .filter(isCopilotAction)
+    .map(step => step.with?.['single-action']);
+  if (actions.join(',') !== 'create_release,publish_github_action,deployed_action') {
+    throw new Error(`${relativeFile} finalize-release must create the release, publish the action, and report deployment in order.`);
+  }
+}
+
 function assertTransitiveQueueGateAncestry(file, workflow, gateJobId, allowedFailureJobs = new Set()) {
   const relativeFile = relativeWorkflow(file);
   const jobs = workflow.jobs ?? {};
@@ -457,9 +517,12 @@ function assertMutationWorkflow(file, workflow) {
     throw new Error(`${relativeFile} must have workflow name ${JSON.stringify(manifest.workflowName)}.`);
   }
   const setup = relativeFile.startsWith('setup/workflows/');
+  const coordinatedNpmRelease = !setup && manifest.file === 'release_workflow.yml';
   const expectedJobs = setup
     ? ['queue-gate', 'prepare-version-files', 'tag', 'report-failure']
-    : ['queue-gate', 'prepare-version-files', 'prepare-compiled-files', 'tag', 'report-failure'];
+    : coordinatedNpmRelease
+      ? ['queue-gate', 'prepare-version-files', 'prepare-compiled-files', 'tag', 'publish-npm', 'finalize-release', 'report-failure']
+      : ['queue-gate', 'prepare-version-files', 'prepare-compiled-files', 'tag', 'report-failure'];
   const actualJobs = Object.keys(workflow.jobs ?? {});
   if (actualJobs.length !== expectedJobs.length || expectedJobs.some(jobId => !actualJobs.includes(jobId))) {
     throw new Error(`${relativeFile} must define the exact gate-first job graph.`);
@@ -486,10 +549,16 @@ function assertMutationWorkflow(file, workflow) {
     assertTagPermissions(relativeFile, workflow.jobs.tag);
     assertExactNeeds(relativeFile, 'prepare-compiled-files', workflow.jobs['prepare-compiled-files'], ['prepare-version-files']);
     assertExactNeeds(relativeFile, 'tag', workflow.jobs.tag, ['prepare-compiled-files']);
+    if (coordinatedNpmRelease) {
+      assertNpmPublishJob(relativeFile, workflow.jobs['publish-npm']);
+      assertFinalizeReleaseJob(relativeFile, workflow.jobs['finalize-release']);
+    }
     assertFailureReportingJob(
       relativeFile,
       workflow.jobs['report-failure'],
-      ['queue-gate', 'prepare-version-files', 'prepare-compiled-files', 'tag'],
+      coordinatedNpmRelease
+        ? ['queue-gate', 'prepare-version-files', 'prepare-compiled-files', 'tag', 'publish-npm', 'finalize-release']
+        : ['queue-gate', 'prepare-version-files', 'prepare-compiled-files', 'tag'],
       manifest.file.startsWith('release') ? 'release' : 'hotfix',
     );
   }
@@ -602,6 +671,8 @@ module.exports = {
   PREPARE_VERSION_TIMEOUT_MINUTES,
   PREPARE_COMPILED_TIMEOUT_MINUTES,
   TAG_TIMEOUT_MINUTES,
+  NPM_PUBLISH_TIMEOUT_MINUTES,
+  FINALIZE_RELEASE_TIMEOUT_MINUTES,
   FAILURE_REPORT_TIMEOUT_MINUTES,
   QUEUE_WORKFLOW_MANIFEST,
   MUTATION_WORKFLOW_MANIFEST,

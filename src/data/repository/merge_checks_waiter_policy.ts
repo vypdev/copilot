@@ -49,6 +49,7 @@ export function assessMergeChecksPoll(input: MergeChecksPollInput): MergeChecksP
         return assessPullRequestChecks(
             runsForPullRequest,
             input.combinedStatus,
+            input.statuses,
             input.registrationAttempts,
         );
     }
@@ -65,10 +66,24 @@ export function assessMergeChecksPoll(input: MergeChecksPollInput): MergeChecksP
 function assessPullRequestChecks(
     checkRuns: MergeCheckRun[],
     combinedStatus: string,
+    statuses: ReadonlyArray<MergeStatus>,
     registrationAttempts: number,
 ): MergeChecksPollAssessment {
     const pendingChecks = pendingCheckRuns(checkRuns);
-    if (pendingChecks.length === 0 && combinedStatus !== 'pending') {
+    if (pendingChecks.length > 0) {
+        return {
+            kind: 'pending-check-runs',
+            nextRegistrationAttempts: registrationAttempts,
+            pendingChecks,
+        };
+    }
+
+    // GitHub reports the combined commit status as `pending` when no legacy
+    // commit statuses exist. Check runs are a separate API, so that empty
+    // aggregate must not keep completed PR checks waiting forever.
+    const commitStatusesComplete = statuses.length === 0
+        || statusChecksAreComplete(combinedStatus, statuses);
+    if (commitStatusesComplete) {
         return {
             kind: 'completed',
             source: 'pull-request-checks',
@@ -77,9 +92,9 @@ function assessPullRequestChecks(
         };
     }
     return {
-        kind: 'pending-check-runs',
+        kind: 'pending-status-checks',
         nextRegistrationAttempts: registrationAttempts,
-        pendingChecks,
+        statuses: [...statuses],
     };
 }
 

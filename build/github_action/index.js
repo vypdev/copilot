@@ -53607,7 +53607,7 @@ function sanitizeTitle(title) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildDeploymentMergePlan = buildDeploymentMergePlan;
-/** Returns the ordered merge operations required after a successful deployment. */
+/** Returns the merge operations required after a successful deployment. */
 function buildDeploymentMergePlan(configuration) {
     if (configuration.releaseBranch) {
         return [
@@ -55830,7 +55830,7 @@ const deployed_action_policy_1 = __nccwpck_require__(5510);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const TASK_ID = 'DeployedActionUseCase';
-/** Replaces the deploy label, performs ordered merges, and closes only after all succeed. */
+/** Replaces the deploy label, performs the required merges, and closes only after all succeed. */
 async function runDeployedActionWorkflow(param, dependencies) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(TASK_ID)} Executing ${TASK_ID}.`);
     const results = [];
@@ -55901,9 +55901,17 @@ async function mergeBranches(param, branchMergePort) {
         defaultBranch: param.branches.defaultBranch,
         developmentBranch: param.branches.development,
     });
+    const executeMerge = (source, target) => (branchMergePort.mergeBranch(param.owner, param.repo, source, target, param.pullRequest.mergeTimeout, param.tokens.token));
+    // Both release merges use the immutable release branch as their source, so
+    // their PRs and checks are independent and can run concurrently. A hotfix
+    // must remain sequential because the second merge uses the updated default
+    // branch produced by the first merge.
+    if (param.currentConfiguration.releaseBranch) {
+        return await Promise.all(plan.map((merge) => executeMerge(merge.source, merge.target)));
+    }
     const mergeResults = [];
     for (const merge of plan) {
-        mergeResults.push(await branchMergePort.mergeBranch(param.owner, param.repo, merge.source, merge.target, param.pullRequest.mergeTimeout, param.tokens.token));
+        mergeResults.push(await executeMerge(merge.source, merge.target));
     }
     return mergeResults;
 }
@@ -71145,13 +71153,25 @@ const merge_checks_policy_1 = __nccwpck_require__(39281);
 function assessMergeChecksPoll(input) {
     const runsForPullRequest = (0, merge_checks_policy_1.selectPullRequestChecks)(input.checkRuns, input.pullRequestNumber);
     if (runsForPullRequest.length > 0) {
-        return assessPullRequestChecks(runsForPullRequest, input.combinedStatus, input.registrationAttempts);
+        return assessPullRequestChecks(runsForPullRequest, input.combinedStatus, input.statuses, input.registrationAttempts);
     }
     return assessRefChecks(input.checkRuns.length, input.combinedStatus, input.statuses, input.registrationAttempts, input.maximumRegistrationAttempts);
 }
-function assessPullRequestChecks(checkRuns, combinedStatus, registrationAttempts) {
+function assessPullRequestChecks(checkRuns, combinedStatus, statuses, registrationAttempts) {
     const pendingChecks = (0, merge_checks_policy_1.pendingCheckRuns)(checkRuns);
-    if (pendingChecks.length === 0 && combinedStatus !== 'pending') {
+    if (pendingChecks.length > 0) {
+        return {
+            kind: 'pending-check-runs',
+            nextRegistrationAttempts: registrationAttempts,
+            pendingChecks,
+        };
+    }
+    // GitHub reports the combined commit status as `pending` when no legacy
+    // commit statuses exist. Check runs are a separate API, so that empty
+    // aggregate must not keep completed PR checks waiting forever.
+    const commitStatusesComplete = statuses.length === 0
+        || statusChecksAreComplete(combinedStatus, statuses);
+    if (commitStatusesComplete) {
         return {
             kind: 'completed',
             source: 'pull-request-checks',
@@ -71160,9 +71180,9 @@ function assessPullRequestChecks(checkRuns, combinedStatus, registrationAttempts
         };
     }
     return {
-        kind: 'pending-check-runs',
+        kind: 'pending-status-checks',
         nextRegistrationAttempts: registrationAttempts,
-        pendingChecks,
+        statuses: [...statuses],
     };
 }
 function assessRefChecks(totalCheckRuns, combinedStatus, statuses, registrationAttempts, maximumRegistrationAttempts) {

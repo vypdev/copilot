@@ -71,6 +71,17 @@ function failureResult(step: string): Result[] {
   ];
 }
 
+function deferredMergeResult(): {
+  promise: Promise<Result[]>;
+  resolve: (result: Result[]) => void;
+} {
+  let resolve!: (result: Result[]) => void;
+  const promise = new Promise<Result[]>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+  return { promise, resolve };
+}
+
 describe('DeployedActionUseCase', () => {
   let useCase: DeployedActionUseCase;
 
@@ -151,11 +162,13 @@ describe('DeployedActionUseCase', () => {
   });
   });
 
-  describe('release branch: merge to default then develop, close issue when all succeed', () => {
-    it('merges release into default then into develop and closes issue when all merges succeed', async () => {
+  describe('release branch: merge to default and develop concurrently, close issue when all succeed', () => {
+    it('starts both release merges before either finishes and closes after both succeed', async () => {
+    const defaultMerge = deferredMergeResult();
+    const developmentMerge = deferredMergeResult();
     mockMergeBranch
-      .mockResolvedValueOnce(successResult('Merged release into main'))
-      .mockResolvedValueOnce(successResult('Merged release into develop'));
+      .mockReturnValueOnce(defaultMerge.promise)
+      .mockReturnValueOnce(developmentMerge.promise);
     const param = baseParam({
       currentConfiguration: {
         releaseBranch: 'release/1.0.0',
@@ -163,9 +176,11 @@ describe('DeployedActionUseCase', () => {
       },
     });
 
-    const results = await useCase.invoke(param);
+    const invocation = useCase.invoke(param);
+    await Promise.resolve();
 
     expect(mockMergeBranch).toHaveBeenCalledTimes(2);
+    expect(mockCloseIssue).not.toHaveBeenCalled();
     expect(mockMergeBranch).toHaveBeenNthCalledWith(
       1,
       'owner',
@@ -184,6 +199,10 @@ describe('DeployedActionUseCase', () => {
       60,
       'token'
     );
+    defaultMerge.resolve(successResult('Merged release into main'));
+    developmentMerge.resolve(successResult('Merged release into develop'));
+    const results = await invocation;
+
     expect(mockCloseIssue).toHaveBeenCalledWith('owner', 'repo', 42, 'token');
     expect(results.some((r) => r.steps?.some((s) => s.includes('closed after merge')))).toBe(true);
   });
@@ -261,10 +280,12 @@ describe('DeployedActionUseCase', () => {
   });
 
   describe('hotfix branch: merge hotfix to default, then default to develop', () => {
-    it('merges hotfix into default then default into develop and closes issue when all succeed', async () => {
+    it('waits for the hotfix merge before starting the dependent develop merge', async () => {
+    const defaultMerge = deferredMergeResult();
+    const developmentMerge = deferredMergeResult();
     mockMergeBranch
-      .mockResolvedValueOnce(successResult('Merged hotfix into main'))
-      .mockResolvedValueOnce(successResult('Merged main into develop'));
+      .mockReturnValueOnce(defaultMerge.promise)
+      .mockReturnValueOnce(developmentMerge.promise);
     const param = baseParam({
       currentConfiguration: {
         releaseBranch: undefined,
@@ -272,11 +293,19 @@ describe('DeployedActionUseCase', () => {
       },
     });
 
-    const results = await useCase.invoke(param);
+    const invocation = useCase.invoke(param);
+    await Promise.resolve();
+
+    expect(mockMergeBranch).toHaveBeenCalledTimes(1);
+    expect(mockMergeBranch).toHaveBeenNthCalledWith(1, 'owner', 'repo', 'hotfix/1.0.1', 'main', 60, 'token');
+    defaultMerge.resolve(successResult('Merged hotfix into main'));
+    await Promise.resolve();
 
     expect(mockMergeBranch).toHaveBeenCalledTimes(2);
-    expect(mockMergeBranch).toHaveBeenNthCalledWith(1, 'owner', 'repo', 'hotfix/1.0.1', 'main', 60, 'token');
     expect(mockMergeBranch).toHaveBeenNthCalledWith(2, 'owner', 'repo', 'main', 'develop', 60, 'token');
+    developmentMerge.resolve(successResult('Merged main into develop'));
+    const results = await invocation;
+
     expect(mockCloseIssue).toHaveBeenCalledWith('owner', 'repo', 42, 'token');
     expect(results.some((r) => r.steps?.some((s) => s.includes('closed after merge')))).toBe(true);
   });

@@ -158,7 +158,7 @@ jobs:
           message: 'gh-action: updated compiled files'
 
   tag:
-    name: Publish version
+    name: Create version tag
     runs-on: [self-hosted, codex]
     timeout-minutes: 120
     needs: [ prepare-compiled-files ]
@@ -195,7 +195,67 @@ jobs:
           fixer-effort: ${{ vars.FIXER_EFFORT }}
           fixer-command: ${{ vars.FIXER_COMMAND }}
           token: ${{ secrets.PAT }}
-  
+
+  publish-npm:
+    name: Publish @vypdev/copilot to npm
+    runs-on: ubuntu-latest
+    environment: npm
+    timeout-minutes: 20
+    needs: [ tag ]
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          ref: v${{ github.event.inputs.version }}
+          fetch-depth: 1
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+          registry-url: 'https://registry.npmjs.org'
+          package-manager-cache: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          version: 10.12.4
+          standalone: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate release identity and package contents
+        env:
+          RELEASE_TAG: v${{ github.event.inputs.version }}
+        run: |
+          test "$RELEASE_TAG" = "v$(node -p "require('./package.json').version")"
+          test "$(node -p "require('./package.json').name")" = "@vypdev/copilot"
+          pnpm run validate:npm-package
+          pnpm run smoke:npm-package
+
+      - name: Publish @vypdev/copilot
+        run: npm publish --access public
+
+  finalize-release:
+    name: Finalize GitHub release
+    runs-on: [self-hosted, codex]
+    timeout-minutes: 120
+    needs: [ publish-npm ]
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          ref: v${{ github.event.inputs.version }}
+          fetch-depth: 1
+
       - name: Copilot - Create Release
         uses: ./
         if: ${{ success() }}
@@ -276,7 +336,7 @@ jobs:
     name: Report deployment failure
     runs-on: [self-hosted, codex]
     timeout-minutes: 5
-    needs: [ queue-gate, prepare-version-files, prepare-compiled-files, tag ]
+    needs: [ queue-gate, prepare-version-files, prepare-compiled-files, tag, publish-npm, finalize-release ]
     if: ${{ failure() && github.event.inputs.issue != '-1' }}
     permissions:
       contents: read
