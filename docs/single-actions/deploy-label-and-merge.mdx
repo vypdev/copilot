@@ -48,7 +48,7 @@ For each PR we create (e.g. release→main, release→develop), we wait until th
 
 ### Timeout
 
-- A configurable **merge timeout** (input `merge-timeout`, default 600 seconds) limits how long we wait for checks **per merge**. A value of `0` means there is no artificial timeout. If a positive timeout is reached, the merge fails and no direct-merge bypass is attempted.
+- Checks are polled every 20 seconds to limit GitHub API usage. A configurable **merge timeout** (input `merge-timeout`, default 600 seconds) limits how long we wait for checks **per merge**. A value of `0` means there is no artificial timeout. If a positive timeout is reached, the merge fails and no direct-merge bypass is attempted.
 
 ## Summary table
 

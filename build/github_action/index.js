@@ -71046,20 +71046,20 @@ function isBlockingCombinedStatus(state) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.MergeChecksWaiter = void 0;
+exports.MergeChecksWaiter = exports.MERGE_CHECKS_POLL_INTERVAL_SECONDS = void 0;
 const logger_1 = __nccwpck_require__(91151);
 const merge_checks_policy_1 = __nccwpck_require__(39281);
 const merge_checks_waiter_policy_1 = __nccwpck_require__(88955);
+exports.MERGE_CHECKS_POLL_INTERVAL_SECONDS = 20;
 /** Polls only the checks relevant to one pull request before a merge. */
 class MergeChecksWaiter {
     async wait(octokit, owner, repository, head, pullRequestNumber, timeout) {
-        const pollIntervalSeconds = 10;
         const maxWaitForPrChecksAttempts = 3;
         let attempts = 0;
         let waitForPrChecksAttempts = 0;
         const maxAttempts = timeout === 0
             ? Number.POSITIVE_INFINITY
-            : Math.max(1, Math.ceil(timeout / pollIntervalSeconds));
+            : Math.max(1, Math.ceil(timeout / exports.MERGE_CHECKS_POLL_INTERVAL_SECONDS));
         while (attempts < maxAttempts) {
             const { data: checkRuns } = await octokit.rest.checks.listForRef({ owner, repo: repository, ref: head });
             const { data: commitStatus } = await octokit.rest.repos.getCombinedStatusForRef({ owner, repo: repository, ref: head });
@@ -71075,7 +71075,7 @@ class MergeChecksWaiter {
             waitForPrChecksAttempts = assessment.nextRegistrationAttempts;
             if (this.handleAssessment(assessment, commitStatus.state, commitStatus.statuses, maxWaitForPrChecksAttempts))
                 return;
-            await this.waitForNextCheckPoll(pollIntervalSeconds);
+            await this.waitForNextCheckPoll();
             attempts++;
         }
         throw new Error('Timed out waiting for checks to complete');
@@ -71118,8 +71118,8 @@ class MergeChecksWaiter {
         (0, logger_1.logDebugInfo)(`Waiting for ${pendingChecks.length} status checks to complete:`);
         pendingChecks.forEach(check => (0, logger_1.logDebugInfo)(`  - ${check.context} (State: ${check.state})`));
     }
-    async waitForNextCheckPoll(pollIntervalSeconds) {
-        await new Promise(resolve => setTimeout(resolve, pollIntervalSeconds * 1000));
+    async waitForNextCheckPoll() {
+        await new Promise(resolve => setTimeout(resolve, exports.MERGE_CHECKS_POLL_INTERVAL_SECONDS * 1000));
     }
     assertChecksPassed(checkRuns, combinedStatus, statuses) {
         const blockingChecks = (0, merge_checks_policy_1.blockingCheckRuns)(checkRuns);

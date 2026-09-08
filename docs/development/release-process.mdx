@@ -32,7 +32,7 @@ The project [`release_workflow.yml`](https://github.com/vypdev/copilot/blob/mast
 create tag -> publish npm -> finalize GitHub release
 ```
 
-The npm job installs the frozen dependency graph before validating and smoke-testing the package. It uses npm trusted publishing with these least-privilege permissions:
+The npm job installs the frozen dependency graph before validating and smoke-testing the package. After publishing, it waits until `npm view` exposes the exact version, polling every 20 seconds for up to 2 minutes. It uses npm trusted publishing with these least-privilege permissions:
 
 ```yaml
 permissions:
