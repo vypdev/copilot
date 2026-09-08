@@ -217,6 +217,26 @@ describe('mainRun', () => {
     });
   });
 
+  it('does not queue the issue-comment single action so a failed queue gate can still report', async () => {
+    process.env.GITHUB_ACTIONS = 'true';
+    delete process.env.GITHUB_RUN_ID;
+    delete process.env.GITHUB_WORKFLOW_REF;
+    const execution = mockExecution({
+      isSingleAction: true,
+      singleAction: {
+        validSingleAction: true,
+        isSingleActionWithoutIssue: false,
+        isPublishIssueCommentAction: true,
+      },
+    });
+
+    await runMain(execution);
+
+    expect(createWaitForPreviousWorkflowRunsUseCase).not.toHaveBeenCalled();
+    expect(mockSetupExecutionInvoke).toHaveBeenCalledWith(execution);
+    expect(mockSingleActionInvoke).toHaveBeenCalledWith(execution);
+  });
+
   it('waits before setup so setup cannot overlap a previous mutation run', async () => {
     process.env.GITHUB_ACTIONS = 'true';
     process.env.GITHUB_RUN_ID = '200';

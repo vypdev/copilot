@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 const { readFileSync, readdirSync } = require('node:fs');
-const { execFileSync } = require('node:child_process');
 const path = require('node:path');
 const yaml = require('js-yaml');
 
@@ -15,7 +14,11 @@ const QUEUE_GATE_TIMEOUT_MINUTES = 120;
 const PREPARE_VERSION_TIMEOUT_MINUTES = 15;
 const PREPARE_COMPILED_TIMEOUT_MINUTES = 20;
 const TAG_TIMEOUT_MINUTES = 120;
+const FAILURE_REPORT_TIMEOUT_MINUTES = 5;
 const MIN_QUEUE_JOB_TIMEOUT_MINUTES = QUEUE_GATE_TIMEOUT_MINUTES;
+const FAILURE_REPORT_CONDITION = "${{ failure() && github.event.inputs.issue != '-1' }}";
+const DISTRIBUTED_COPILOT_ACTION = 'vypdev/copilot@v3';
+const CHECKOUT_ACTION = 'actions/checkout@v5';
 
 function assertQueueBudget(queueWaitMinutes, minimumJobTimeoutMinutes) {
   if (!Number.isFinite(queueWaitMinutes)
@@ -28,6 +31,7 @@ assertQueueBudget(QUEUE_WAIT_MINUTES, MIN_QUEUE_JOB_TIMEOUT_MINUTES);
 
 const QUEUE_WORKFLOW_MANIFEST = Object.freeze([
   ['copilot_commit.yml', 'Copilot - Commit', 'copilot-commits'],
+  ['copilot_branch_sync.yml', 'Copilot - Branch Sync', 'branch-sync'],
   ['copilot_issue.yml', 'Copilot - Issue', 'copilot-issues'],
   ['copilot_issue_comment.yml', 'Copilot - Issue Comment', 'copilot-issues'],
   ['copilot_pull_request.yml', 'Copilot - Pull Request', 'copilot-pull-requests'],
@@ -56,9 +60,8 @@ const FORK_GATED_WORKFLOW_FILES = new Set([
   'copilot_pull_request_comment.yml',
 ]);
 const ZERO_OBJECT_ID = '0000000000000000000000000000000000000000';
-const IMMUTABLE_ACTION_REFERENCE = /^[^/\s]+\/[^@\s]+@[0-9a-f]{40}$/i;
-const PINNED_COPILOT_ACTION_REFERENCE = /^vypdev\/copilot@([0-9a-f]{40})$/i;
-const pinnedCopilotManifests = new Map();
+const MAJOR_ACTION_REFERENCE = /^[^/\s]+\/[^@\s]+@v[1-9]\d*$/;
+const currentCopilotManifest = yaml.load(readFileSync(path.join(repositoryRoot, 'action.yml'), 'utf8'));
 
 const BASE_AGENT_INPUTS = ['agent-provider', 'agent-model-provider', 'agent-model', 'agent-effort', 'agent-command'];
 const AGENT_ROLE_INPUTS = Object.freeze(Object.fromEntries(
@@ -93,80 +96,61 @@ function isQueueGateAction(step) {
   return isCopilotAction(step) && step.with?.['queue-gate-only'] === 'true';
 }
 
-function assertImmutableActions(file, workflow) {
+function shouldPersistCheckoutCredentials(relativeFile, jobId) {
+  const isMutationWorkflow = MUTATION_WORKFLOW_MANIFEST.some(
+    entry => relativeFile.endsWith(`/${entry.file}`),
+  );
+  if (!isMutationWorkflow) return false;
+  if (jobId === 'prepare-version-files') return true;
+  return !relativeFile.startsWith('setup/workflows/') && jobId === 'prepare-compiled-files';
+}
+
+function assertMajorActionReferences(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
     const actionUses = [job.uses, ...(job.steps ?? []).map(step => step?.uses)]
       .filter(value => typeof value === 'string');
     for (const uses of actionUses) {
+      if (isCopilotAction({ uses })) {
+        const expected = relativeFile.startsWith('setup/workflows/') ? DISTRIBUTED_COPILOT_ACTION : './';
+        if (uses !== expected) {
+          throw new Error(`${relativeFile} job ${jobId} must invoke Copilot with ${expected}.`);
+        }
+        continue;
+      }
+      if (uses.startsWith('actions/checkout@')) {
+        if (uses !== CHECKOUT_ACTION) {
+          throw new Error(`${relativeFile} job ${jobId} checkout must use ${CHECKOUT_ACTION}.`);
+        }
+        continue;
+      }
       if (uses.startsWith('./') || uses.startsWith('docker://')) continue;
-      if (!IMMUTABLE_ACTION_REFERENCE.test(uses)) {
-        throw new Error(`${relativeFile} job ${jobId} action ${uses} must use an immutable 40-character commit SHA.`);
+      if (!MAJOR_ACTION_REFERENCE.test(uses)) {
+        throw new Error(`${relativeFile} job ${jobId} action ${uses} must use a major version tag such as owner/action@v1.`);
       }
     }
     for (const [stepIndex, step] of (job.steps ?? []).entries()) {
-      if (/^actions\/checkout@/.test(step?.uses ?? '') && step.with?.['persist-credentials'] !== false) {
-        throw new Error(`${relativeFile} job ${jobId} step ${stepIndex + 1} checkout must set persist-credentials: false.`);
+      if (!/^actions\/checkout@/.test(step?.uses ?? '')) continue;
+      const expectedPersistence = shouldPersistCheckoutCredentials(relativeFile, jobId);
+      if (step.with?.['persist-credentials'] !== expectedPersistence) {
+        throw new Error(`${relativeFile} job ${jobId} step ${stepIndex + 1} checkout must set persist-credentials: ${expectedPersistence}.`);
       }
-    }
-  }
-
-  if (!relativeFile.endsWith('/copilot_pull_request.yml')) return;
-  for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
-    if ((job.steps ?? []).some(step => isCopilotAction(step) && step.uses === './')) {
-      throw new Error(`${relativeFile} job ${jobId} must not execute pull-request-controlled local action code.`);
     }
   }
 }
 
-function assertPinnedCopilotActionInputs(file, workflow) {
+function assertCopilotActionInputs(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
     for (const [stepIndex, step] of (job.steps ?? []).entries()) {
-      const match = typeof step?.uses === 'string'
-        ? step.uses.match(PINNED_COPILOT_ACTION_REFERENCE)
-        : undefined;
-      if (!match) continue;
-      const manifest = loadPinnedCopilotManifest(match[1]);
-      const supportedInputs = new Set(Object.keys(manifest.inputs ?? {}));
+      if (!isCopilotAction(step)) continue;
+      const supportedInputs = new Set(Object.keys(currentCopilotManifest.inputs ?? {}));
       const unsupported = Object.keys(step.with ?? {}).filter(input => !supportedInputs.has(input));
       if (unsupported.length > 0) {
         throw new Error(`${relativeFile} job ${jobId} step ${stepIndex + 1} passes inputs unsupported by ${step.uses}: ${unsupported.join(', ')}.`);
       }
     }
   }
-}
-
-function assertPinnedCopilotHistoryCheckout(file, workflow) {
-  const relativeFile = relativeWorkflow(file);
-  if (relativeFile !== '.github/workflows/ci_check.yml') return;
-  for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
-    const checkout = (job.steps ?? []).find(step => /^actions\/checkout@/.test(step?.uses ?? ''));
-    if (checkout?.with?.['fetch-depth'] !== 0) {
-      throw new Error(`${relativeFile} job ${jobId} checkout must set fetch-depth: 0 so pinned in-repository action manifests can be validated.`);
-    }
-  }
-}
-
-function loadPinnedCopilotManifest(sha) {
-  const cached = pinnedCopilotManifests.get(sha);
-  if (cached) return cached;
-  let source;
-  try {
-    source = execFileSync('git', ['show', `${sha}:action.yml`], {
-      cwd: repositoryRoot,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-  } catch {
-    throw new Error(`cannot read action.yml from pinned Copilot revision ${sha}; fetch the full repository history.`);
-  }
-  const manifest = yaml.load(source);
-  if (!manifest || typeof manifest !== 'object') {
-    throw new Error(`pinned Copilot revision ${sha} has an invalid action.yml.`);
-  }
-  pinnedCopilotManifests.set(sha, manifest);
-  return manifest;
 }
 
 function runnerLabels(value) {
@@ -236,6 +220,37 @@ function assertAgentWorkflowPermissions(file, workflow) {
       || expectedKeys.some(key => permissions[key] !== expectedPermissions[key])) {
       throw new Error(`${relativeFile} job ${jobId} must grant GITHUB_TOKEN exactly ${expectedKeys.map(key => `${key}: ${expectedPermissions[key]}`).join(', ')}; mutations use the explicit PAT.`);
     }
+  }
+}
+
+function assertLightweightBranchSyncWorkflow(file, workflow) {
+  if (path.basename(file) !== 'copilot_branch_sync.yml') return;
+  const relativeFile = relativeWorkflow(file);
+  const branches = workflow.on?.push?.branches;
+  if (!Array.isArray(branches) || branches.length !== 1 || branches[0] !== '**') {
+    throw new Error(`${relativeFile} must observe pushes on every branch exactly once.`);
+  }
+  const job = workflow.jobs?.['branch-sync'];
+  if (!job || Object.keys(workflow.jobs ?? {}).length !== 1 || job.if !== undefined) {
+    throw new Error(`${relativeFile} must have one ungated branch-sync job so bot pushes can propagate.`);
+  }
+  if (job.env !== undefined) {
+    throw new Error(`${relativeFile} branch-sync must not define an agent environment.`);
+  }
+  const permissions = job.permissions ?? {};
+  if (Object.keys(permissions).join(',') !== 'contents' || permissions.contents !== 'read') {
+    throw new Error(`${relativeFile} branch-sync must grant only contents: read to GITHUB_TOKEN.`);
+  }
+  const actionSteps = (job.steps ?? []).filter(isCopilotAction);
+  const inputs = actionSteps[0]?.with ?? {};
+  if (actionSteps.length !== 1
+    || inputs['single-action'] !== 'check_branch_sync_action'
+    || inputs.token !== '${{ secrets.PAT }}'
+    || Object.keys(inputs).some(key => key !== 'single-action' && key !== 'token')) {
+    throw new Error(`${relativeFile} must invoke only the lightweight branch-sync single action and PAT input.`);
+  }
+  if (/\b(AGENT_|CODEX_|OPENCODE_|CURSOR_|API_KEY|findings-|fixer-|planner-|reviewer-|tester-)/i.test(JSON.stringify(job))) {
+    throw new Error(`${relativeFile} branch-sync must not expose agent configuration or provider credentials.`);
   }
 }
 
@@ -344,7 +359,7 @@ function assertTagPermissions(relativeFile, job) {
   }
 }
 
-function assertTransitiveQueueGateAncestry(file, workflow, gateJobId) {
+function assertTransitiveQueueGateAncestry(file, workflow, gateJobId, allowedFailureJobs = new Set()) {
   const relativeFile = relativeWorkflow(file);
   const jobs = workflow.jobs ?? {};
   const ancestry = new Map();
@@ -363,10 +378,74 @@ function assertTransitiveQueueGateAncestry(file, workflow, gateJobId) {
   };
 
   for (const [jobId, job] of Object.entries(jobs)) {
-    assertNoUnsafeCondition(relativeFile, jobId, job);
+    if (!allowedFailureJobs.has(jobId)) assertNoUnsafeCondition(relativeFile, jobId, job);
     if (jobId !== gateJobId && !reachesGate(jobId)) {
       throw new Error(`${relativeFile} job ${jobId} is not a transitive descendant of ${gateJobId}.`);
     }
+  }
+}
+
+function assertFailureReportingJob(relativeFile, job, expectedNeeds, expectedKind) {
+  if (!job) throw new Error(`${relativeFile} must define report-failure.`);
+  assertExactTimeout(relativeFile, 'report-failure', job, FAILURE_REPORT_TIMEOUT_MINUTES);
+  assertExactNeeds(relativeFile, 'report-failure', job, expectedNeeds);
+  if (job.if !== FAILURE_REPORT_CONDITION) {
+    throw new Error(`${relativeFile} report-failure must run only for a failed deployment with a launcher issue.`);
+  }
+
+  const permissions = job.permissions ?? {};
+  const permissionKeys = Object.keys(permissions).sort();
+  const setup = relativeFile.startsWith('setup/workflows/');
+  const expectedPermissions = setup
+    ? { issues: 'write' }
+    : { contents: 'read', issues: 'write' };
+  if (permissionKeys.join(',') !== Object.keys(expectedPermissions).sort().join(',')
+    || Object.entries(expectedPermissions).some(([key, value]) => permissions[key] !== value)) {
+    throw new Error(`${relativeFile} report-failure must use its exact least-privilege permissions.`);
+  }
+  if (job.env !== undefined || Object.prototype.hasOwnProperty.call(job, 'continue-on-error')) {
+    throw new Error(`${relativeFile} report-failure must not define job-level secrets or bypasses.`);
+  }
+
+  const steps = job.steps ?? [];
+  if (setup) {
+    assertSetupFailureReporter(relativeFile, steps, expectedKind);
+  } else {
+    assertActiveFailureReporter(relativeFile, steps, expectedKind);
+  }
+}
+
+function assertActiveFailureReporter(relativeFile, steps, expectedKind) {
+  if (steps.length !== 2
+    || steps[0]?.uses !== CHECKOUT_ACTION
+    || steps[0]?.with?.['persist-credentials'] !== false
+    || steps[1]?.uses !== './') {
+    throw new Error(`${relativeFile} report-failure must checkout safely and invoke the local Copilot action.`);
+  }
+  const inputs = steps[1].with ?? {};
+  const expectedTitle = expectedKind === 'release' ? 'Release' : 'Hotfix';
+  if (inputs['single-action'] !== 'publish_issue_comment'
+    || inputs['single-action-issue'] !== '${{ github.event.inputs.issue }}'
+    || inputs.token !== '${{ github.token }}'
+    || !String(inputs['single-action-message'] ?? '').includes(`## ❌ ${expectedTitle} deployment failed`)
+    || !String(inputs['single-action-message'] ?? '').includes('${{ github.run_id }}')) {
+    throw new Error(`${relativeFile} report-failure must invoke publish_issue_comment with the launcher issue and run link.`);
+  }
+}
+
+function assertSetupFailureReporter(relativeFile, steps, expectedKind) {
+  if (steps.length !== 1
+    || steps[0]?.uses !== DISTRIBUTED_COPILOT_ACTION) {
+    throw new Error(`${relativeFile} report-failure must invoke the released Copilot action.`);
+  }
+  const inputs = steps[0].with ?? {};
+  const expectedTitle = expectedKind === 'release' ? 'Release' : 'Hotfix';
+  if (inputs['single-action'] !== 'publish_issue_comment'
+    || inputs['single-action-issue'] !== '${{ github.event.inputs.issue }}'
+    || inputs.token !== '${{ github.token }}'
+    || !String(inputs['single-action-message'] ?? '').includes(`## ❌ ${expectedTitle} deployment failed`)
+    || !String(inputs['single-action-message'] ?? '').includes('${{ github.run_id }}')) {
+    throw new Error(`${relativeFile} report-failure must invoke publish_issue_comment with the launcher issue and run link.`);
   }
 }
 
@@ -379,14 +458,14 @@ function assertMutationWorkflow(file, workflow) {
   }
   const setup = relativeFile.startsWith('setup/workflows/');
   const expectedJobs = setup
-    ? ['queue-gate', 'prepare-version-files', 'tag']
-    : ['queue-gate', 'prepare-version-files', 'prepare-compiled-files', 'tag'];
+    ? ['queue-gate', 'prepare-version-files', 'tag', 'report-failure']
+    : ['queue-gate', 'prepare-version-files', 'prepare-compiled-files', 'tag', 'report-failure'];
   const actualJobs = Object.keys(workflow.jobs ?? {});
   if (actualJobs.length !== expectedJobs.length || expectedJobs.some(jobId => !actualJobs.includes(jobId))) {
     throw new Error(`${relativeFile} must define the exact gate-first job graph.`);
   }
   assertNoConcurrency(relativeFile, workflow);
-  assertQueueGateJob(file, workflow, setup ? 'vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3' : './');
+  assertQueueGateJob(file, workflow, setup ? DISTRIBUTED_COPILOT_ACTION : './');
   assertExactTimeout(relativeFile, 'queue-gate', workflow.jobs['queue-gate'], QUEUE_GATE_TIMEOUT_MINUTES);
   assertExactTimeout(relativeFile, 'prepare-version-files', workflow.jobs['prepare-version-files'], PREPARE_VERSION_TIMEOUT_MINUTES);
   assertExactNeeds(relativeFile, 'queue-gate', workflow.jobs['queue-gate'], []);
@@ -395,14 +474,26 @@ function assertMutationWorkflow(file, workflow) {
     assertExactTimeout(relativeFile, 'tag', workflow.jobs.tag, TAG_TIMEOUT_MINUTES);
     assertTagPermissions(relativeFile, workflow.jobs.tag);
     assertExactNeeds(relativeFile, 'tag', workflow.jobs.tag, ['prepare-version-files']);
+    assertFailureReportingJob(
+      relativeFile,
+      workflow.jobs['report-failure'],
+      ['queue-gate', 'prepare-version-files', 'tag'],
+      manifest.file.startsWith('release') ? 'release' : 'hotfix',
+    );
   } else {
     assertExactTimeout(relativeFile, 'prepare-compiled-files', workflow.jobs['prepare-compiled-files'], PREPARE_COMPILED_TIMEOUT_MINUTES);
     assertExactTimeout(relativeFile, 'tag', workflow.jobs.tag, TAG_TIMEOUT_MINUTES);
     assertTagPermissions(relativeFile, workflow.jobs.tag);
     assertExactNeeds(relativeFile, 'prepare-compiled-files', workflow.jobs['prepare-compiled-files'], ['prepare-version-files']);
     assertExactNeeds(relativeFile, 'tag', workflow.jobs.tag, ['prepare-compiled-files']);
+    assertFailureReportingJob(
+      relativeFile,
+      workflow.jobs['report-failure'],
+      ['queue-gate', 'prepare-version-files', 'prepare-compiled-files', 'tag'],
+      manifest.file.startsWith('release') ? 'release' : 'hotfix',
+    );
   }
-  assertTransitiveQueueGateAncestry(file, workflow, 'queue-gate');
+  assertTransitiveQueueGateAncestry(file, workflow, 'queue-gate', new Set(['report-failure']));
   return true;
 }
 
@@ -478,10 +569,10 @@ function validateWorkflow(file, workflow) {
   assertAgentInputs(file, workflow);
   assertNoJobLevelSecrets(file, workflow);
   assertAgentWorkflowPermissions(file, workflow);
+  assertLightweightBranchSyncWorkflow(file, workflow);
   assertQueueWorkflow(file, workflow);
-  assertImmutableActions(file, workflow);
-  assertPinnedCopilotHistoryCheckout(file, workflow);
-  assertPinnedCopilotActionInputs(file, workflow);
+  assertMajorActionReferences(file, workflow);
+  assertCopilotActionInputs(file, workflow);
 }
 
 function main() {
@@ -511,17 +602,18 @@ module.exports = {
   PREPARE_VERSION_TIMEOUT_MINUTES,
   PREPARE_COMPILED_TIMEOUT_MINUTES,
   TAG_TIMEOUT_MINUTES,
+  FAILURE_REPORT_TIMEOUT_MINUTES,
   QUEUE_WORKFLOW_MANIFEST,
   MUTATION_WORKFLOW_MANIFEST,
   BOT_GATED_WORKFLOW_FILES,
   BOT_GATE_EXPRESSION,
   FORK_SAFE_BOT_GATE_EXPRESSION,
-  assertImmutableActions,
-  assertPinnedCopilotHistoryCheckout,
-  assertPinnedCopilotActionInputs,
+  assertMajorActionReferences,
+  assertCopilotActionInputs,
   assertAgentInputs,
   assertNoJobLevelSecrets,
   assertAgentWorkflowPermissions,
+  assertLightweightBranchSyncWorkflow,
   assertDirectEventTriggers,
   assertMutationWorkflow,
   assertNoConcurrency,

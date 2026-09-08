@@ -334,6 +334,11 @@
           "icon": "code-branch"
         },
         {
+          "title": "Branch synchronization",
+          "href": "/issues/branch-synchronization",
+          "icon": "code-branch"
+        },
+        {
           "title": "Notifications and auto-close",
           "href": "/issues/notifications-and-auto-close",
           "icon": "bell"

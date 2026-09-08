@@ -54569,9 +54569,10 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, l
     });
     (0, logger_1.logInfo)('GitHub Action: starting main run.');
     (0, logger_1.logDebugInfo)(`Event: ${execution.eventName}, actor: ${execution.actor}, repo: ${repository.owner}/${repository.repo}, debug: ${execution.debug}`);
-    if (process.env.GITHUB_ACTIONS === 'true') {
+    if (process.env.GITHUB_ACTIONS === 'true' && !execution.singleAction.isPublishIssueCommentAction) {
         // Every GitHub workflow invocation queues before setup or route work so
-        // executions of the same workflow file cannot overlap mutations.
+        // executions of the same workflow file cannot overlap mutations. A
+        // failure notification must remain runnable when that queue gate fails.
         await (0, main_run_lifecycle_1.waitForPreviousWorkflowRuns)(execution.tokens.token, repository);
     }
     await (0, execution_setup_composition_root_1.createSetupExecutionUseCase)(latestTagQueryPort).invoke(execution);
@@ -55105,6 +55106,9 @@ function readLocalCoreConfiguration(additionalParams, actionInputs) {
         singleActionVersion: input(additionalParams, actionInputs, input_keys_1.INPUT_KEYS.SINGLE_ACTION_VERSION),
         singleActionTitle: input(additionalParams, actionInputs, input_keys_1.INPUT_KEYS.SINGLE_ACTION_TITLE),
         singleActionChangelog: input(additionalParams, actionInputs, input_keys_1.INPUT_KEYS.SINGLE_ACTION_CHANGELOG),
+        singleActionMessage: input(additionalParams, actionInputs, input_keys_1.INPUT_KEYS.SINGLE_ACTION_MESSAGE),
+        singleActionCommentId: input(additionalParams, actionInputs, input_keys_1.INPUT_KEYS.SINGLE_ACTION_COMMENT_ID),
+        singleActionCommentMode: input(additionalParams, actionInputs, input_keys_1.INPUT_KEYS.SINGLE_ACTION_COMMENT_MODE),
         inactivityThresholdHours: (0, input_number_policy_1.parseBoundedPositiveIntegerInput)(input(additionalParams, actionInputs, input_keys_1.INPUT_KEYS.INACTIVITY_THRESHOLD_HOURS), issue_inactivity_1.DEFAULT_INACTIVITY_THRESHOLD_HOURS, issue_inactivity_1.MAX_INACTIVITY_THRESHOLD_HOURS),
         token: input(additionalParams, actionInputs, input_keys_1.INPUT_KEYS.TOKEN),
     };
@@ -55336,11 +55340,11 @@ const configuration_builders_1 = __nccwpck_require__(19094);
 const branches_builder_1 = __nccwpck_require__(30085);
 const size_threshold_builder_1 = __nccwpck_require__(39757);
 function buildLocalActionExecution(configuration, additionalParams) {
-    const { debug, singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog, inactivityThresholdHours, commitPrefixBuilder, branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount, pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, pullRequestMergeTimeout, titleEmoji, branchManagementEmoji, imageConfiguration, token, agentModel, aiPullRequestDescription, aiPullRequestDescriptionMode, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, bugbotReviewConfiguration, agentTasks, branchManagementLauncherLabel, bugLabel, bugfixLabel, hotfixLabel, enhancementLabel, featureLabel, releaseLabel, questionLabel, helpLabel, deployLabel, deployedLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel, priorityHighLabel, priorityMediumLabel, priorityLowLabel, priorityNoneLabel, sizeXxlLabel, sizeXlLabel, sizeLLabel, sizeMLabel, sizeSLabel, sizeXsLabel, lifecycle, issueTypeTask, issueTypeTaskDescription, issueTypeTaskColor, issueTypeBug, issueTypeBugDescription, issueTypeBugColor, issueTypeFeature, issueTypeFeatureDescription, issueTypeFeatureColor, issueTypeDocumentation, issueTypeDocumentationDescription, issueTypeDocumentationColor, issueTypeMaintenance, issueTypeMaintenanceDescription, issueTypeMaintenanceColor, issueTypeHotfix, issueTypeHotfixDescription, issueTypeHotfixColor, issueTypeRelease, issueTypeReleaseDescription, issueTypeReleaseColor, issueTypeQuestion, issueTypeQuestionDescription, issueTypeQuestionColor, issueTypeHelp, issueTypeHelpDescription, issueTypeHelpColor, issueLocale, pullRequestLocale, sizeXxlThresholdLines, sizeXxlThresholdFiles, sizeXxlThresholdCommits, sizeXlThresholdLines, sizeXlThresholdFiles, sizeXlThresholdCommits, sizeLThresholdLines, sizeLThresholdFiles, sizeLThresholdCommits, sizeMThresholdLines, sizeMThresholdFiles, sizeMThresholdCommits, sizeSThresholdLines, sizeSThresholdFiles, sizeSThresholdCommits, sizeXsThresholdLines, sizeXsThresholdFiles, sizeXsThresholdCommits, mainBranch, developmentBranch, featureTree, bugfixTree, hotfixTree, releaseTree, docsTree, choreTree, releaseWorkflow, hotfixWorkflow, projects, projectColumnIssueCreated, projectColumnPullRequestCreated, projectColumnIssueInProgress, projectColumnPullRequestInProgress, welcomeTitle, welcomeMessages, } = configuration;
+    const { debug, singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog, singleActionMessage, singleActionCommentId, singleActionCommentMode, inactivityThresholdHours, commitPrefixBuilder, branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount, pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, pullRequestMergeTimeout, titleEmoji, branchManagementEmoji, imageConfiguration, token, agentModel, aiPullRequestDescription, aiPullRequestDescriptionMode, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity, bugbotCommentLimit, bugbotFixVerifyCommands, bugbotReviewConfiguration, agentTasks, branchManagementLauncherLabel, bugLabel, bugfixLabel, hotfixLabel, enhancementLabel, featureLabel, releaseLabel, questionLabel, helpLabel, deployLabel, deployedLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel, priorityHighLabel, priorityMediumLabel, priorityLowLabel, priorityNoneLabel, sizeXxlLabel, sizeXlLabel, sizeLLabel, sizeMLabel, sizeSLabel, sizeXsLabel, lifecycle, issueTypeTask, issueTypeTaskDescription, issueTypeTaskColor, issueTypeBug, issueTypeBugDescription, issueTypeBugColor, issueTypeFeature, issueTypeFeatureDescription, issueTypeFeatureColor, issueTypeDocumentation, issueTypeDocumentationDescription, issueTypeDocumentationColor, issueTypeMaintenance, issueTypeMaintenanceDescription, issueTypeMaintenanceColor, issueTypeHotfix, issueTypeHotfixDescription, issueTypeHotfixColor, issueTypeRelease, issueTypeReleaseDescription, issueTypeReleaseColor, issueTypeQuestion, issueTypeQuestionDescription, issueTypeQuestionColor, issueTypeHelp, issueTypeHelpDescription, issueTypeHelpColor, issueLocale, pullRequestLocale, sizeXxlThresholdLines, sizeXxlThresholdFiles, sizeXxlThresholdCommits, sizeXlThresholdLines, sizeXlThresholdFiles, sizeXlThresholdCommits, sizeLThresholdLines, sizeLThresholdFiles, sizeLThresholdCommits, sizeMThresholdLines, sizeMThresholdFiles, sizeMThresholdCommits, sizeSThresholdLines, sizeSThresholdFiles, sizeSThresholdCommits, sizeXsThresholdLines, sizeXsThresholdFiles, sizeXsThresholdCommits, mainBranch, developmentBranch, featureTree, bugfixTree, hotfixTree, releaseTree, docsTree, choreTree, releaseWorkflow, hotfixWorkflow, projects, projectColumnIssueCreated, projectColumnPullRequestCreated, projectColumnIssueInProgress, projectColumnPullRequestInProgress, welcomeTitle, welcomeMessages, } = configuration;
     return (0, execution_builder_1.buildExecution)({
         debug,
         inactivityThresholdHours,
-        singleAction: new single_action_1.SingleAction(singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog),
+        singleAction: new single_action_1.SingleAction(singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog, singleActionMessage, singleActionCommentId, singleActionCommentMode),
         commitPrefixBuilder,
         issue: (0, configuration_builders_1.buildIssue)(branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount, additionalParams),
         pullRequest: (0, configuration_builders_1.buildPullRequest)(pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, pullRequestMergeTimeout, additionalParams),
@@ -55791,6 +55795,9 @@ exports.INPUT_KEYS = {
     SINGLE_ACTION_VERSION: 'single-action-version',
     SINGLE_ACTION_TITLE: 'single-action-title',
     SINGLE_ACTION_CHANGELOG: 'single-action-changelog',
+    SINGLE_ACTION_MESSAGE: 'single-action-message',
+    SINGLE_ACTION_COMMENT_ID: 'single-action-comment-id',
+    SINGLE_ACTION_COMMENT_MODE: 'single-action-comment-mode',
     INACTIVITY_THRESHOLD_HOURS: 'inactivity-threshold-hours',
     // Tokens
     TOKEN: 'token',
@@ -56607,6 +56614,87 @@ function findPreviousIssueBranch(branches, issueNumber, branchTypes) {
 
 /***/ }),
 
+/***/ 79895:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BRANCH_SYNC_ALIGNED_MARKER = exports.BRANCH_SYNC_STALE_MARKER = void 0;
+exports.selectBranchDependenciesForPush = selectBranchDependenciesForPush;
+exports.findLatestBranchSyncComment = findLatestBranchSyncComment;
+exports.isStaleBranchSyncComment = isStaleBranchSyncComment;
+exports.buildStaleBranchSyncComment = buildStaleBranchSyncComment;
+exports.buildAlignedBranchSyncComment = buildAlignedBranchSyncComment;
+const github_user_policy_1 = __nccwpck_require__(84403);
+exports.BRANCH_SYNC_STALE_MARKER = "<!-- copilot-branch-sync:stale -->";
+exports.BRANCH_SYNC_ALIGNED_MARKER = "<!-- copilot-branch-sync:aligned -->";
+const BRANCH_SYNC_KEY_MARKER = "<!-- copilot-branch-sync-key:";
+function selectBranchDependenciesForPush(dependencies, pushedBranch) {
+    const selected = dependencies.filter((dependency) => dependency.parentBranch === pushedBranch ||
+        dependency.workingBranch === pushedBranch);
+    const unique = new Map();
+    for (const dependency of selected) {
+        unique.set(`${dependency.issueNumber}:${dependency.parentBranch}:${dependency.workingBranch}`, dependency);
+    }
+    return [...unique.values()];
+}
+function findLatestBranchSyncComment(comments, botLogin, dependency) {
+    return [...comments]
+        .reverse()
+        .find((comment) => isBranchSyncComment(comment.body)
+        && matchesDependency(comment.body, dependency)
+        && Boolean(botLogin && comment.user?.login && (0, github_user_policy_1.githubUsersMatch)(botLogin, comment.user.login)));
+}
+function isStaleBranchSyncComment(body) {
+    return body?.includes(exports.BRANCH_SYNC_STALE_MARKER) === true;
+}
+function buildStaleBranchSyncComment(input) {
+    const { dependency, comparison } = input;
+    const compareUrl = buildCompareUrl(input.owner, input.repository, dependency.parentBranch, dependency.workingBranch);
+    const divergence = comparison.aheadBy > 0
+        ? ` It also contains ${comparison.aheadBy} commit(s) not present in the parent branch.`
+        : "";
+    return `${exports.BRANCH_SYNC_STALE_MARKER}
+${buildDependencyMarker(dependency)}
+
+## ⚠️ Branch synchronization recommended
+
+\`${dependency.workingBranch}\` is ${comparison.behindBy} commit(s) behind its parent branch \`${dependency.parentBranch}\`.${divergence}
+
+Run \`/copilot sync-branch\` in this conversation to merge the parent changes safely. If Git reports conflicts, the configured fixer agent can resolve eligible files before the verification commands run.
+
+[Compare parent and working branch](${compareUrl})`;
+}
+function buildAlignedBranchSyncComment(dependency) {
+    return `${exports.BRANCH_SYNC_ALIGNED_MARKER}
+${buildDependencyMarker(dependency)}
+
+## ✅ Branch synchronized
+
+\`${dependency.workingBranch}\` now contains the current history of its parent branch \`${dependency.parentBranch}\`.
+
+The previous synchronization recommendation has been resolved.`;
+}
+function isBranchSyncComment(body) {
+    return body?.includes(exports.BRANCH_SYNC_STALE_MARKER) === true
+        || body?.includes(exports.BRANCH_SYNC_ALIGNED_MARKER) === true;
+}
+function buildDependencyMarker(dependency) {
+    return `${BRANCH_SYNC_KEY_MARKER}${encodeURIComponent(dependency.parentBranch)}:${encodeURIComponent(dependency.workingBranch)} -->`;
+}
+function matchesDependency(body, dependency) {
+    if (!dependency || !body?.includes(BRANCH_SYNC_KEY_MARKER))
+        return true;
+    return body.includes(buildDependencyMarker(dependency));
+}
+function buildCompareUrl(owner, repository, parentBranch, workingBranch) {
+    return `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/compare/${encodeURIComponent(parentBranch)}...${encodeURIComponent(workingBranch)}`;
+}
+
+
+/***/ }),
+
 /***/ 51389:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -56813,8 +56901,11 @@ I’m **@${bot}**, the repository assistant. Use these commands on an issue or p
 - \`/copilot dismiss <finding-id>\` — dismiss a finding.
 - \`/copilot remember <rule>\` — add an authorized, versioned repository review rule.
 - \`/copilot implement <request>\` — apply an explicitly requested repository change.
+- \`/copilot sync-branch [--dry-run] [--no-agent] [--from <branch>]\` — merge the issue/PR parent into its working branch; the fixer is used only for eligible conflicts.
+- \`/copilot update-branch\` — alias for \`sync-branch\`.
+- \`/copilot updateBranch\` — camel-case compatibility alias.
 
-You can also ask a question in natural language by mentioning **@${bot}**. File-changing commands are restricted to authorized maintainers, run the configured checks, and report the resulting changes.`;
+You can also ask a question in natural language by mentioning **@${bot}**. For example: “@${bot} update the issue's branch”. File-changing commands are restricted to authorized maintainers, run the configured checks, and report the resulting changes.`;
 }
 /** Renders the one-time onboarding comment for a newly created issue. */
 function buildCopilotWelcomeMessage(username) {
@@ -57055,6 +57146,46 @@ function buildInitialLabelProvisioningPlan(labels, existingLabelNames) {
         ]),
         progress: planGroup(progressLabelDefinitions()),
     };
+}
+
+
+/***/ }),
+
+/***/ 61899:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.resolveIssueCommentPublicationRequest = resolveIssueCommentPublicationRequest;
+const comment_content_policy_1 = __nccwpck_require__(77454);
+const input_keys_1 = __nccwpck_require__(88539);
+function resolveIssueCommentPublicationRequest(input) {
+    if (!(0, comment_content_policy_1.hasVisibleCommentContent)(input.message)) {
+        return new Error(`${input_keys_1.INPUT_KEYS.SINGLE_ACTION_MESSAGE} must contain a visible message.`);
+    }
+    if (input.commentIdInput.length > 0 && input.commentId <= 0) {
+        return new Error(`${input_keys_1.INPUT_KEYS.SINGLE_ACTION_COMMENT_ID} must be a positive integer.`);
+    }
+    const mode = resolveMode(input.commentMode, input.commentId);
+    if (!mode) {
+        return new Error(`${input_keys_1.INPUT_KEYS.SINGLE_ACTION_COMMENT_MODE} must be create, replace, or append.`);
+    }
+    if (mode === 'create') {
+        if (input.commentId > 0) {
+            return new Error(`${input_keys_1.INPUT_KEYS.SINGLE_ACTION_COMMENT_ID} cannot be set when comment mode is create.`);
+        }
+        return { mode, message: input.message };
+    }
+    if (input.commentId <= 0) {
+        return new Error(`${input_keys_1.INPUT_KEYS.SINGLE_ACTION_COMMENT_ID} must be a positive integer when comment mode is ${mode}.`);
+    }
+    return { mode, message: input.message, commentId: input.commentId };
+}
+function resolveMode(mode, commentId) {
+    if (mode.length === 0)
+        return commentId > 0 ? 'replace' : 'create';
+    return mode === 'create' || mode === 'replace' || mode === 'append' ? mode : undefined;
 }
 
 
@@ -57346,7 +57477,7 @@ function createDefaultSetupConfiguration() {
         },
         ai: {
             pullRequestDescription: true,
-            pullRequestDescriptionMode: 'append',
+            pullRequestDescriptionMode: 'replace',
             ignoreFiles: 'build/*',
             membersOnly: false,
             includeReasoning: false,
@@ -57423,25 +57554,16 @@ function mergeSetupConfiguration(base, overrides = {}) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildSetupCredentialRequirements = void 0;
 exports.buildSetupPlan = buildSetupPlan;
-exports.buildSetupCredentialRequirements = buildSetupCredentialRequirements;
 exports.buildSetupRepositoryVariables = buildSetupRepositoryVariables;
 exports.buildSetupActionInputs = buildSetupActionInputs;
 const pull_request_description_1 = __nccwpck_require__(45315);
+const setup_workflow_catalog_1 = __nccwpck_require__(24596);
 const setup_configuration_defaults_1 = __nccwpck_require__(23381);
 const setup_configuration_storage_policy_1 = __nccwpck_require__(2554);
-const WORKFLOW_FILES = {
-    issues: ['copilot_issue.yml'],
-    pullRequests: ['copilot_pull_request.yml'],
-    commits: ['copilot_commit.yml'],
-    issueComments: ['copilot_issue_comment.yml'],
-    pullRequestComments: ['copilot_pull_request_comment.yml'],
-    release: ['release_workflow.yml'],
-    hotfix: ['hotfix_workflow.yml'],
-    agentProvisioning: ['agent-cli-provisioning.yml'],
-    credentialHealth: ['copilot_credential_health.yml'],
-    inactiveIssueClosure: ['copilot_close_inactive_issues.yml'],
-};
+const setup_credential_requirement_policy_1 = __nccwpck_require__(43562);
+Object.defineProperty(exports, "buildSetupCredentialRequirements", ({ enumerable: true, get: function () { return setup_credential_requirement_policy_1.buildSetupCredentialRequirements; } }));
 const ISSUE_TEMPLATE_FILES = [
     'config.yml',
     'feature_request.yml',
@@ -57452,16 +57574,8 @@ const ISSUE_TEMPLATE_FILES = [
     'hotfix.yml',
     'release.yml',
 ];
-const SECRET_BY_MODEL_PROVIDER = {
-    openai: 'OPENAI_API_KEY',
-    anthropic: 'ANTHROPIC_API_KEY',
-    google: 'GOOGLE_API_KEY',
-    openrouter: 'OPENROUTER_API_KEY',
-};
 function buildSetupPlan(configuration) {
-    const workflowFiles = Object.entries(WORKFLOW_FILES)
-        .filter(([feature]) => configuration.features[feature] !== false)
-        .flatMap(([, files]) => files);
+    const workflowFiles = (0, setup_workflow_catalog_1.enabledSetupWorkflowFiles)(configuration.features);
     const issueTemplateFiles = configuration.features.issueTemplates === false
         ? []
         : ISSUE_TEMPLATE_FILES.filter(file => configuration.features.release !== false || file !== 'release.yml')
@@ -57471,7 +57585,7 @@ function buildSetupPlan(configuration) {
         ...issueTemplateFiles.map(file => `ISSUE_TEMPLATE/${file}`),
         ...(configuration.features.pullRequestTemplate === false ? [] : ['pull_request_template.md']),
     ];
-    const credentialRequirements = buildSetupCredentialRequirements(configuration);
+    const credentialRequirements = (0, setup_credential_requirement_policy_1.buildSetupCredentialRequirements)(configuration);
     return {
         configuration,
         workflowFiles,
@@ -57485,66 +57599,6 @@ function buildSetupPlan(configuration) {
         credentialRequirements,
         warnings: buildSetupWarnings(configuration),
     };
-}
-/** Builds the non-sensitive credential contract implied by the enabled workflows. */
-function buildSetupCredentialRequirements(configuration) {
-    const requirements = new Map();
-    const add = (name, kind, description, provider, model, alternativeGroup, validation = 'metadata', runnerAuthenticationGroup) => {
-        const existing = requirements.get(name);
-        if (!existing) {
-            requirements.set(name, {
-                name,
-                kind,
-                description,
-                provider,
-                model,
-                ...(alternativeGroup ? { alternativeGroups: [alternativeGroup] } : {}),
-                ...(runnerAuthenticationGroup ? { runnerAuthenticationGroups: [runnerAuthenticationGroup] } : {}),
-                ...(validation === 'unverifiable' ? { validation } : {}),
-            });
-            return;
-        }
-        const alternativeGroups = new Set([
-            ...(existing.alternativeGroups ?? []),
-            ...(alternativeGroup ? [alternativeGroup] : []),
-        ]);
-        const runnerAuthenticationGroups = new Set([
-            ...(existing.runnerAuthenticationGroups ?? []),
-            ...(runnerAuthenticationGroup ? [runnerAuthenticationGroup] : []),
-        ]);
-        requirements.set(name, {
-            ...existing,
-            alternativeGroups: alternativeGroups.size > 0 ? [...alternativeGroups] : undefined,
-            runnerAuthenticationGroups: runnerAuthenticationGroups.size > 0 ? [...runnerAuthenticationGroups] : undefined,
-            validation: existing.validation === 'unverifiable' || validation === 'unverifiable'
-                ? 'unverifiable'
-                : existing.validation,
-        });
-    };
-    add('PAT', 'workflowPat', 'A separate GitHub token owned by the bot account. It is used by workflows at runtime.');
-    for (const task of (0, setup_configuration_defaults_1.setupAgentTasksForFeatures)(configuration)) {
-        const agent = configuration.agents[task];
-        const modelProvider = agent.modelProvider.trim().toLowerCase();
-        const alternativeGroup = `agent:${agent.provider}:${modelProvider || 'default'}`;
-        const providerCredential = modelProvider && !['local', 'ollama', 'lmstudio'].includes(modelProvider)
-            ? SECRET_BY_MODEL_PROVIDER[modelProvider] ?? `${modelProvider.replace(/-/g, '_').toUpperCase()}_API_KEY`
-            : undefined;
-        if (agent.provider === 'cursor') {
-            add('CURSOR_API_KEY', 'apiKey', 'Cursor API key used by the Cursor agent runtime.', 'cursor', agent.model);
-            continue;
-        }
-        if (agent.provider === 'opencode' && !['local', 'ollama', 'lmstudio'].includes(modelProvider)) {
-            add('OPENCODE_API_KEY', 'apiKey', 'OpenCode API key used by the OpenCode agent runtime.', 'opencode', agent.model, alternativeGroup);
-        }
-        if (agent.provider === 'codex') {
-            add('CODEX_API_KEY', 'apiKey', 'Optional Codex API-key fallback when the target runner has no authenticated Codex session.', 'codex', agent.model, alternativeGroup, 'metadata', alternativeGroup);
-            add('CODEX_ACCESS_TOKEN', 'apiKey', 'Optional Codex access-token fallback when the target runner has no authenticated Codex session.', 'codex', agent.model, alternativeGroup, 'metadata', alternativeGroup);
-        }
-        if (providerCredential) {
-            add(providerCredential, 'apiKey', `${modelProvider} API key for ${agent.model}.`, modelProvider, agent.model, alternativeGroup, SECRET_BY_MODEL_PROVIDER[modelProvider] ? 'metadata' : 'unverifiable', agent.provider === 'codex' ? alternativeGroup : undefined);
-        }
-    }
-    return [...requirements.values()];
 }
 function buildSetupRepositoryVariables(configuration) {
     const variables = [];
@@ -57941,6 +57995,126 @@ function validateSetupConfiguration(configuration) {
             errors.push(`Model provider and model for ${task} cannot contain whitespace.`);
     }
     return errors;
+}
+
+
+/***/ }),
+
+/***/ 43562:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildSetupCredentialRequirements = buildSetupCredentialRequirements;
+const setup_configuration_defaults_1 = __nccwpck_require__(23381);
+const SECRET_BY_MODEL_PROVIDER = {
+    openai: 'OPENAI_API_KEY',
+    anthropic: 'ANTHROPIC_API_KEY',
+    google: 'GOOGLE_API_KEY',
+    openrouter: 'OPENROUTER_API_KEY',
+};
+const LOCAL_MODEL_PROVIDERS = ['local', 'ollama', 'lmstudio'];
+/** Builds the non-sensitive credential contract implied by the enabled workflows. */
+function buildSetupCredentialRequirements(configuration) {
+    const requirements = new CredentialRequirementCollection();
+    requirements.add({
+        name: 'PAT',
+        kind: 'workflowPat',
+        description: 'A separate GitHub token owned by the bot account. It is used by workflows at runtime.',
+    });
+    for (const task of (0, setup_configuration_defaults_1.setupAgentTasksForFeatures)(configuration)) {
+        addAgentCredentialRequirements(requirements, configuration.agents[task]);
+    }
+    return requirements.values();
+}
+function addAgentCredentialRequirements(requirements, agent) {
+    const modelProvider = agent.modelProvider.trim().toLowerCase();
+    const alternativeGroup = `agent:${agent.provider}:${modelProvider || 'default'}`;
+    const providerCredential = credentialForModelProvider(modelProvider);
+    if (agent.provider === 'cursor') {
+        requirements.add({
+            name: 'CURSOR_API_KEY',
+            kind: 'apiKey',
+            description: 'Cursor API key used by the Cursor agent runtime.',
+            provider: 'cursor',
+            model: agent.model,
+        });
+        return;
+    }
+    if (agent.provider === 'opencode' && !LOCAL_MODEL_PROVIDERS.includes(modelProvider)) {
+        requirements.add({
+            name: 'OPENCODE_API_KEY',
+            kind: 'apiKey',
+            description: 'OpenCode API key used by the OpenCode agent runtime.',
+            provider: 'opencode',
+            model: agent.model,
+            alternativeGroup,
+        });
+    }
+    if (agent.provider === 'codex')
+        addCodexCredentials(requirements, agent, alternativeGroup);
+    if (providerCredential)
+        addModelProviderCredential(requirements, agent, modelProvider, providerCredential, alternativeGroup);
+}
+function addCodexCredentials(requirements, agent, alternativeGroup) {
+    for (const [name, description] of [
+        ['CODEX_API_KEY', 'Optional Codex API-key fallback when the target runner has no authenticated Codex session.'],
+        ['CODEX_ACCESS_TOKEN', 'Optional Codex access-token fallback when the target runner has no authenticated Codex session.'],
+    ]) {
+        requirements.add({
+            name,
+            kind: 'apiKey',
+            description,
+            provider: 'codex',
+            model: agent.model,
+            alternativeGroup,
+            runnerAuthenticationGroup: alternativeGroup,
+        });
+    }
+}
+function addModelProviderCredential(requirements, agent, modelProvider, name, alternativeGroup) {
+    requirements.add({
+        name,
+        kind: 'apiKey',
+        description: `${modelProvider} API key for ${agent.model}.`,
+        provider: modelProvider,
+        model: agent.model,
+        alternativeGroup,
+        validation: SECRET_BY_MODEL_PROVIDER[modelProvider] ? 'metadata' : 'unverifiable',
+        runnerAuthenticationGroup: agent.provider === 'codex' ? alternativeGroup : undefined,
+    });
+}
+function credentialForModelProvider(modelProvider) {
+    if (!modelProvider || LOCAL_MODEL_PROVIDERS.includes(modelProvider))
+        return undefined;
+    return SECRET_BY_MODEL_PROVIDER[modelProvider] ?? `${modelProvider.replace(/-/g, '_').toUpperCase()}_API_KEY`;
+}
+class CredentialRequirementCollection {
+    constructor() {
+        this.requirements = new Map();
+    }
+    add(input) {
+        const { alternativeGroup, runnerAuthenticationGroup, validation, ...requirement } = input;
+        const existing = this.requirements.get(input.name);
+        const alternativeGroups = uniqueDefined(existing?.alternativeGroups, alternativeGroup);
+        const runnerAuthenticationGroups = uniqueDefined(existing?.runnerAuthenticationGroups, runnerAuthenticationGroup);
+        const isUnverifiable = existing?.validation === 'unverifiable' || validation === 'unverifiable';
+        this.requirements.set(input.name, {
+            ...existing,
+            ...requirement,
+            alternativeGroups,
+            runnerAuthenticationGroups,
+            ...(isUnverifiable ? { validation: 'unverifiable' } : {}),
+        });
+    }
+    values() {
+        return [...this.requirements.values()];
+    }
+}
+function uniqueDefined(current, next) {
+    const values = new Set([...(current ?? []), ...(next ? [next] : [])]);
+    return values.size > 0 ? [...values] : undefined;
 }
 
 
@@ -59068,6 +59242,118 @@ function buildResult(errors, steps) {
 
 /***/ }),
 
+/***/ 84542:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ObserveBranchSyncUseCase = void 0;
+const result_1 = __nccwpck_require__(73817);
+const branch_sync_notification_policy_1 = __nccwpck_require__(79895);
+const logging_ports_1 = __nccwpck_require__(6152);
+const TASK_ID = "ObserveBranchSyncUseCase";
+/**
+ * Cheap push-time observer. It only queries branch relationships/comparisons
+ * and maintains one stateful notification per issue; no agent is reachable.
+ */
+class ObserveBranchSyncUseCase {
+    constructor(dependencies, comparisons, notifications) {
+        this.dependencies = dependencies;
+        this.comparisons = comparisons;
+        this.notifications = notifications;
+        this.taskId = TASK_ID;
+    }
+    async invoke(execution) {
+        const pushedBranch = execution.commit.branch.trim();
+        if (!pushedBranch || isDeletedPush(execution))
+            return [];
+        try {
+            const dependencies = (0, branch_sync_notification_policy_1.selectBranchDependenciesForPush)(await this.dependencies.listOpenDependencies(execution.owner, execution.repo, execution.tokens.token), pushedBranch);
+            if (dependencies.length === 0) {
+                (0, logging_ports_1.logInfo)(`No open branch dependencies are affected by ${pushedBranch}.`);
+                return [];
+            }
+            const results = [];
+            for (const dependency of dependencies) {
+                results.push(await this.reconcileDependency(execution, dependency));
+            }
+            return results;
+        }
+        catch (cause) {
+            (0, logging_ports_1.logError)("Branch synchronization observation failed.", { pushedBranch });
+            return [failure("Unable to inspect branch synchronization safely.", cause)];
+        }
+    }
+    async reconcileDependency(execution, dependency) {
+        try {
+            const comparison = await this.comparisons.compare(execution.owner, execution.repo, dependency.parentBranch, dependency.workingBranch, execution.tokens.token);
+            const comments = await this.notifications.listIssueComments(execution.owner, execution.repo, dependency.issueNumber, execution.tokens.token);
+            const latest = (0, branch_sync_notification_policy_1.findLatestBranchSyncComment)(comments, execution.tokenUser, dependency);
+            if (comparison.behindBy > 0) {
+                const comment = (0, branch_sync_notification_policy_1.buildStaleBranchSyncComment)({
+                    owner: execution.owner,
+                    repository: execution.repo,
+                    dependency,
+                    comparison,
+                });
+                if (latest && (0, branch_sync_notification_policy_1.isStaleBranchSyncComment)(latest.body)) {
+                    await this.notifications.updateComment(execution.owner, execution.repo, dependency.issueNumber, latest.id, comment, execution.tokens.token);
+                }
+                else {
+                    await this.notifications.addComment(execution.owner, execution.repo, dependency.issueNumber, comment, execution.tokens.token);
+                }
+                return success(dependency, comparison.behindBy, "stale");
+            }
+            if (latest && (0, branch_sync_notification_policy_1.isStaleBranchSyncComment)(latest.body)) {
+                await this.notifications.updateComment(execution.owner, execution.repo, dependency.issueNumber, latest.id, (0, branch_sync_notification_policy_1.buildAlignedBranchSyncComment)(dependency), execution.tokens.token);
+            }
+            return success(dependency, 0, "aligned");
+        }
+        catch (cause) {
+            (0, logging_ports_1.logError)("Branch synchronization dependency reconciliation failed.", {
+                issueNumber: dependency.issueNumber,
+            });
+            return failure(`Unable to inspect branch synchronization for issue #${dependency.issueNumber}.`, cause);
+        }
+    }
+}
+exports.ObserveBranchSyncUseCase = ObserveBranchSyncUseCase;
+function isDeletedPush(execution) {
+    const after = execution.inputs?.after;
+    return typeof after === "string" && /^0+$/u.test(after);
+}
+function success(dependency, behindBy, state) {
+    return new result_1.Result({
+        id: TASK_ID,
+        success: true,
+        executed: true,
+        steps: [
+            state === "stale"
+                ? `Issue #${dependency.issueNumber}: ${dependency.workingBranch} is ${behindBy} commit(s) behind ${dependency.parentBranch}.`
+                : `Issue #${dependency.issueNumber}: ${dependency.workingBranch} is aligned with ${dependency.parentBranch}.`,
+        ],
+        payload: { ...dependency, behindBy, state },
+    });
+}
+function failure(message, cause) {
+    return new result_1.Result({
+        id: TASK_ID,
+        success: false,
+        executed: true,
+        steps: [message],
+        errors: [withCause(message, cause)],
+    });
+}
+function withCause(message, cause) {
+    const error = new Error(message);
+    error.cause = cause;
+    return error;
+}
+
+
+/***/ }),
+
 /***/ 88729:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -59324,6 +59610,85 @@ function successResult(taskId, sourceTag, targetTag, releaseId) {
 }
 function failureResult(taskId, sourceTag, targetTag) {
     return [new result_1.Result({ id: taskId, success: false, executed: true, errors: [`Failed to update release \`${targetTag}\` from \`${sourceTag}\`.`] })];
+}
+
+
+/***/ }),
+
+/***/ 61313:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PublishIssueCommentUseCase = void 0;
+const logging_ports_1 = __nccwpck_require__(6152);
+const task_emoji_1 = __nccwpck_require__(46103);
+const publish_issue_comment_workflow_1 = __nccwpck_require__(30626);
+/** Application boundary for creating or updating a specific issue comment. */
+class PublishIssueCommentUseCase {
+    constructor(issueCommentPort) {
+        this.issueCommentPort = issueCommentPort;
+        this.taskId = 'PublishIssueCommentUseCase';
+    }
+    async invoke(param) {
+        (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
+        return (0, publish_issue_comment_workflow_1.runPublishIssueComment)(param, this.taskId, this.issueCommentPort);
+    }
+}
+exports.PublishIssueCommentUseCase = PublishIssueCommentUseCase;
+
+
+/***/ }),
+
+/***/ 30626:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.runPublishIssueComment = runPublishIssueComment;
+const result_1 = __nccwpck_require__(73817);
+const comment_watermark_1 = __nccwpck_require__(23623);
+const issue_comment_publication_policy_1 = __nccwpck_require__(61899);
+const logging_ports_1 = __nccwpck_require__(6152);
+async function runPublishIssueComment(param, taskId, issueCommentPort) {
+    const request = (0, issue_comment_publication_policy_1.resolveIssueCommentPublicationRequest)(param.singleAction);
+    if (request instanceof Error) {
+        return [new result_1.Result({ id: taskId, success: false, executed: true, errors: [request] })];
+    }
+    try {
+        if (request.mode === 'create') {
+            await issueCommentPort.addComment(param.owner, param.repo, param.singleAction.issue, request.message, param.tokens.token);
+        }
+        else {
+            const comments = await issueCommentPort.listIssueComments(param.owner, param.repo, param.singleAction.issue, param.tokens.token);
+            const target = comments.find(({ id }) => id === request.commentId);
+            if (!target) {
+                return [new result_1.Result({
+                        id: taskId,
+                        success: false,
+                        executed: true,
+                        errors: [`Comment ${request.commentId} does not belong to issue ${param.singleAction.issue}.`],
+                    })];
+            }
+            const message = request.mode === 'append'
+                ? appendCommentContent(target.body, request.message)
+                : request.message;
+            await issueCommentPort.updateComment(param.owner, param.repo, param.singleAction.issue, request.commentId, message, param.tokens.token);
+        }
+        // This single action publishes its own comment. An empty step list keeps
+        // the common completion phase from emitting a second issue comment.
+        return [new result_1.Result({ id: taskId, success: true, executed: true })];
+    }
+    catch (error) {
+        (0, logging_ports_1.logError)(`Error executing ${taskId}: ${error}`);
+        return [new result_1.Result({ id: taskId, success: false, executed: true, errors: [error] })];
+    }
+}
+function appendCommentContent(previous, addition) {
+    const existing = (0, comment_watermark_1.stripTrailingCommentWatermarks)(previous ?? '');
+    return existing.length > 0 ? `${existing}\n\n${addition}` : addition;
 }
 
 
@@ -59742,6 +60107,272 @@ function sameLabels(left, right) {
 
 /***/ }),
 
+/***/ 4643:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.runBranchSyncCommand = runBranchSyncCommand;
+const result_1 = __nccwpck_require__(73817);
+const branch_sync_command_1 = __nccwpck_require__(51114);
+/** Authorizes and runs an explicit or natural-language branch synchronization request. */
+async function runBranchSyncCommand(execution, options, args, authorization) {
+    const parsed = (0, branch_sync_command_1.parseBranchSyncCommandArguments)(args);
+    if (!parsed.valid)
+        return [invalid(options.taskId, parsed.reason)];
+    if (!options.syncBranchUseCase)
+        return [unavailable(options.taskId)];
+    const allowed = await authorization.isActorAllowedToModifyFiles(execution.owner, execution.repo, execution.actor, execution.tokens.token);
+    if (!allowed)
+        return [unauthorized(options.taskId)];
+    return options.syncBranchUseCase.invoke({ execution, options: parsed.options });
+}
+function invalid(taskId, reason) {
+    return new result_1.Result({ id: taskId, success: false, executed: false, errors: [reason] });
+}
+function unavailable(taskId) {
+    return new result_1.Result({
+        id: `${taskId}.BranchSync`,
+        success: false,
+        executed: false,
+        errors: ["Branch synchronization is not available in this composition."],
+    });
+}
+function unauthorized(taskId) {
+    return new result_1.Result({
+        id: `${taskId}.BranchSync`,
+        success: true,
+        executed: false,
+        steps: ["Branch synchronization skipped because the actor is not authorized to modify repository branches."],
+    });
+}
+
+
+/***/ }),
+
+/***/ 82113:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BRANCH_SYNC_TASK_ID = void 0;
+exports.branchSyncConflictEligibilityError = branchSyncConflictEligibilityError;
+exports.completedBranchSyncResult = completedBranchSyncResult;
+exports.unavailableBranchSyncResult = unavailableBranchSyncResult;
+exports.failedBranchSyncResult = failedBranchSyncResult;
+const agent_1 = __nccwpck_require__(79937);
+const result_1 = __nccwpck_require__(73817);
+const workspace_changes_1 = __nccwpck_require__(93370);
+exports.BRANCH_SYNC_TASK_ID = "SyncBranchUseCase";
+const MAX_AGENT_CONFLICT_PATHS = 20;
+function branchSyncConflictEligibilityError(preparation, useAgent, execution) {
+    if (!useAgent)
+        return "The merge has conflicts and agent resolution was disabled with --no-agent.";
+    if (!(0, agent_1.isAgentConfigurationReady)(execution.ai?.getAgentConfiguration("fixer"))) {
+        return "The merge has conflicts, but no fixer agent is configured.";
+    }
+    if (preparation.conflictPaths.length > MAX_AGENT_CONFLICT_PATHS) {
+        return `The merge has ${preparation.conflictPaths.length} conflicted files; the automated limit is ${MAX_AGENT_CONFLICT_PATHS}.`;
+    }
+    const sensitive = preparation.conflictPaths.filter(workspace_changes_1.isSensitiveWorkspacePath);
+    return sensitive.length > 0
+        ? `Automated conflict resolution is not allowed for sensitive paths: ${sensitive.join(", ")}.`
+        : undefined;
+}
+function completedBranchSyncResult(input) {
+    const { preparation, parentBranch, workingBranch, outcome } = input;
+    const text = {
+        "already-aligned": `No update was needed: \`${workingBranch}\` already contains \`${parentBranch}\`.`,
+        "dry-run-clean": `Dry run complete: \`${parentBranch}\` can be merged into \`${workingBranch}\` without conflicts. Nothing was pushed.`,
+        "dry-run-conflicted": `Dry run complete: the merge has ${preparation.kind === "conflicted" ? preparation.conflictPaths.length : 0} conflict(s). Nothing was pushed and no agent was invoked.`,
+        "merged-cleanly": `Merged \`${parentBranch}\` into \`${workingBranch}\` cleanly and pushed the result.`,
+        "merged-with-agent": `Merged \`${parentBranch}\` into \`${workingBranch}\`, used the fixer agent to resolve conflicts, verified the workspace, and pushed the result.`,
+    };
+    return new result_1.Result({
+        id: exports.BRANCH_SYNC_TASK_ID,
+        success: true,
+        executed: outcome !== "already-aligned",
+        stepFormat: "markdown",
+        steps: [text[outcome]],
+        payload: {
+            outcome,
+            parentBranch,
+            workingBranch,
+            parentSha: preparation.parentSha,
+            childSha: preparation.childSha,
+            conflictPaths: preparation.kind === "conflicted" ? preparation.conflictPaths : [],
+            verificationCount: input.verificationCount,
+            commitSha: input.commitSha,
+        },
+    });
+}
+function unavailableBranchSyncResult(reason) {
+    return new result_1.Result({ id: exports.BRANCH_SYNC_TASK_ID, success: false, executed: false, errors: [reason] });
+}
+function failedBranchSyncResult(reason, cause) {
+    return new result_1.Result({
+        id: exports.BRANCH_SYNC_TASK_ID,
+        success: false,
+        executed: true,
+        steps: [reason],
+        errors: [cause === undefined ? reason : errorWithCause(reason, cause)],
+    });
+}
+function errorWithCause(message, cause) {
+    const error = new Error(message);
+    error.cause = cause;
+    return error;
+}
+
+
+/***/ }),
+
+/***/ 392:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SyncBranchUseCase = void 0;
+const branch_sync_conflicts_1 = __nccwpck_require__(84434);
+const logging_ports_1 = __nccwpck_require__(6152);
+const verify_command_policy_1 = __nccwpck_require__(96031);
+const verify_command_runner_1 = __nccwpck_require__(57742);
+const branch_sync_execution_policy_1 = __nccwpck_require__(82113);
+/** Performs a race-safe parent-to-child merge and invokes the fixer only for eligible conflicts. */
+class SyncBranchUseCase {
+    constructor(dependencies, workspace, fixer, authenticatedUser, git) {
+        this.dependencies = dependencies;
+        this.workspace = workspace;
+        this.fixer = fixer;
+        this.authenticatedUser = authenticatedUser;
+        this.git = git;
+        this.taskId = branch_sync_execution_policy_1.BRANCH_SYNC_TASK_ID;
+    }
+    async invoke(request) {
+        const { execution, options } = request;
+        try {
+            const conversationNumber = resolveConversationNumber(execution);
+            const target = await this.dependencies.resolveTarget(execution.owner, execution.repo, conversationNumber, execution.tokens.token);
+            if (!target)
+                return [(0, branch_sync_execution_policy_1.unavailableBranchSyncResult)("No linked working branch with an identifiable parent was found for this issue or pull request.")];
+            const parentBranch = options.parentOverride ?? target.parentBranch;
+            if (parentBranch === target.workingBranch) {
+                return [(0, branch_sync_execution_policy_1.unavailableBranchSyncResult)("The parent and working branch must be different.")];
+            }
+            return await this.synchronize(execution, options, target, parentBranch);
+        }
+        catch (cause) {
+            await this.safeAbort();
+            (0, logging_ports_1.logError)("Branch synchronization failed.");
+            return [(0, branch_sync_execution_policy_1.failedBranchSyncResult)("Branch synchronization failed safely; no push was completed.", cause)];
+        }
+    }
+    async synchronize(execution, options, target, parentBranch) {
+        const preparation = await this.workspace.prepare(parentBranch, target.workingBranch, execution.tokens.token);
+        if (preparation.kind === "aligned") {
+            return [this.completed(preparation, parentBranch, target, "already-aligned", 0)];
+        }
+        if (options.dryRun) {
+            await this.workspace.abort();
+            const outcome = preparation.kind === "clean" ? "dry-run-clean" : "dry-run-conflicted";
+            return [this.completed(preparation, parentBranch, target, outcome, 0)];
+        }
+        const conflictResolution = await this.resolveConflicts(execution, preparation, parentBranch, target, options.useAgent);
+        if (conflictResolution.failure)
+            return [await this.abortFailure(conflictResolution.failure)];
+        const verification = await this.verifyPreparedMerge(execution, preparation);
+        if (verification.failure)
+            return [await this.abortFailure(verification.failure)];
+        const author = await this.authenticatedUser.getTokenUserDetails(execution.tokens.token);
+        const remoteValidation = await this.workspace.assertRemoteHeadsUnchanged(parentBranch, preparation.parentSha, target.workingBranch, preparation.childSha, execution.tokens.token);
+        if (!remoteValidation.valid) {
+            return [await this.abortFailure(remoteValidation.reason ?? "A branch changed while synchronization was running; retry from the latest heads.")];
+        }
+        const commitSha = await this.workspace.commitAndPush(target.workingBranch, `Merge ${parentBranch} into ${target.workingBranch}`, author, execution.tokens.token);
+        const outcome = conflictResolution.agentUsed ? "merged-with-agent" : "merged-cleanly";
+        return [this.completed(preparation, parentBranch, target, outcome, verification.commandCount, commitSha)];
+    }
+    async resolveConflicts(execution, preparation, parentBranch, target, useAgent) {
+        if (preparation.kind !== "conflicted")
+            return { agentUsed: false };
+        const failure = (0, branch_sync_execution_policy_1.branchSyncConflictEligibilityError)(preparation, useAgent, execution);
+        if (failure)
+            return { agentUsed: false, failure };
+        (0, logging_ports_1.logInfo)(`Invoking the fixer agent for ${preparation.conflictPaths.length} merge conflict(s).`);
+        const response = await this.fixer.fix({
+            configuration: execution.ai?.getAgentConfiguration("fixer"),
+            prompt: (0, branch_sync_conflicts_1.getBranchSyncConflictsPrompt)({
+                owner: execution.owner,
+                repo: execution.repo,
+                parentBranch,
+                workingBranch: target.workingBranch,
+                conflictPaths: preparation.conflictPaths.map((path) => `- ${path}`).join("\n"),
+            }),
+        });
+        if (!response?.text?.trim()) {
+            return { agentUsed: false, failure: "The conflict-resolution agent returned no usable response." };
+        }
+        const validation = await this.workspace.validatePreparedMerge(preparation.conflictPaths);
+        return validation.valid
+            ? { agentUsed: true }
+            : { agentUsed: false, failure: validation.reason ?? "The agent resolution did not pass workspace safety validation." };
+    }
+    async verifyPreparedMerge(execution, preparation) {
+        const commands = (0, verify_command_policy_1.limitVerifyCommands)(execution.ai?.getBugbotFixVerifyCommands?.() ?? []);
+        if (commands.length === verify_command_policy_1.MAX_VERIFY_COMMANDS)
+            (0, logging_ports_1.logInfo)(`Branch sync verification is capped at ${verify_command_policy_1.MAX_VERIFY_COMMANDS} commands.`);
+        const verification = await (0, verify_command_runner_1.runVerifyCommands)(commands, (program, args) => this.git.execute(program, args, { untrusted: true }));
+        if (!verification.success) {
+            return {
+                commandCount: commands.length,
+                failure: verification.error ?? `Verification failed: ${verification.failedCommand ?? "unknown command"}.`,
+            };
+        }
+        const conflictPaths = preparation.kind === "conflicted" ? preparation.conflictPaths : [];
+        const validation = await this.workspace.validatePreparedMerge(conflictPaths);
+        return validation.valid
+            ? { commandCount: commands.length }
+            : { commandCount: commands.length, failure: validation.reason ?? "Verification commands changed the prepared merge unexpectedly." };
+    }
+    completed(preparation, parentBranch, target, outcome, verificationCount, commitSha) {
+        return (0, branch_sync_execution_policy_1.completedBranchSyncResult)({
+            preparation,
+            parentBranch,
+            workingBranch: target.workingBranch,
+            outcome,
+            verificationCount,
+            commitSha,
+        });
+    }
+    async abortFailure(reason) {
+        await this.safeAbort();
+        return (0, branch_sync_execution_policy_1.failedBranchSyncResult)(reason);
+    }
+    async safeAbort() {
+        try {
+            await this.workspace.abort();
+        }
+        catch {
+            (0, logging_ports_1.logError)("Unable to abort the in-progress branch merge cleanly.");
+        }
+    }
+}
+exports.SyncBranchUseCase = SyncBranchUseCase;
+function resolveConversationNumber(execution) {
+    const candidates = [
+        execution.pullRequest.number,
+        execution.issue.number,
+        execution.issueNumber,
+    ];
+    return candidates.find((candidate) => candidate > 0) ?? -1;
+}
+
+
+/***/ }),
+
 /***/ 55721:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -59869,6 +60500,7 @@ const copilot_interaction_policy_1 = __nccwpck_require__(90108);
 const review_command_1 = __nccwpck_require__(1811);
 const commit_user_request_workflow_1 = __nccwpck_require__(43393);
 const workspace_mutation_guard_1 = __nccwpck_require__(24243);
+const branch_sync_comment_command_1 = __nccwpck_require__(4643);
 const LEARNED_BUGBOT_RULE_PATH = '.copilot/BUGBOT.learned.md';
 /** Executes deterministic /copilot commands without routing them through intent detection. */
 async function runExplicitCommentCommand(param, options, command, actorAuthorizationPort, authenticatedUserPort) {
@@ -59882,6 +60514,9 @@ async function runExplicitCommentCommand(param, options, command, actorAuthoriza
         return runRememberCommand(param, options, command, actorAuthorizationPort, authenticatedUserPort);
     if (command.name === 'description')
         return runDescriptionCommand(param, options, actorAuthorizationPort);
+    if (command.name === 'sync-branch' || command.name === 'update-branch' || command.name === 'updatebranch') {
+        return (0, branch_sync_comment_command_1.runBranchSyncCommand)(param, options, command.arguments, actorAuthorizationPort);
+    }
     if (['analyze', 'review', 'findings', 'recheck'].includes(command.name))
         return runReviewCommand(param, options, command);
     if (command.name === 'fix' || command.name === 'implement')
@@ -60157,6 +60792,8 @@ const copilot_command_1 = __nccwpck_require__(11771);
 const comment_automation_command_workflow_1 = __nccwpck_require__(63134);
 const comment_automation_natural_language_workflow_1 = __nccwpck_require__(10554);
 const application_error_1 = __nccwpck_require__(75999);
+const branch_sync_command_1 = __nccwpck_require__(51114);
+const branch_sync_comment_command_1 = __nccwpck_require__(4643);
 async function runCommentAutomation(param, options, actorAuthorizationPort, authenticatedUserPort) {
     (0, logging_ports_1.logInfo)(`${options.taskId} started.`);
     let languageResults = [];
@@ -60180,6 +60817,9 @@ async function runCommentAutomation(param, options, actorAuthorizationPort, auth
             return (0, comment_automation_natural_language_workflow_1.runNaturalLanguageCommentAutomation)(param, options, actorAuthorizationPort, [], {
                 authenticatedUserPort,
             });
+        }
+        if ((0, branch_sync_command_1.isNaturalLanguageBranchSyncRequest)(options.userComment, param.tokenUser ?? '')) {
+            return (0, branch_sync_comment_command_1.runBranchSyncCommand)(param, options, [], actorAuthorizationPort);
         }
         languageResults = await options.languageUseCase.invoke(param);
         if (!(0, think_input_policy_1.containsBotMention)(options.userComment, param.tokenUser ?? '')) {
@@ -60577,7 +61217,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueCommentUseCase = void 0;
 const comment_automation_use_case_1 = __nccwpck_require__(9661);
 class IssueCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, issueCommentUpdatePort, actorAuthorizationPort, authenticatedUserPort, gitCommitPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, issueCommentUpdatePort, actorAuthorizationPort, authenticatedUserPort, gitCommitPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
@@ -60591,6 +61231,7 @@ class IssueCommentUseCase {
         this.reviewPotentialProblemsUseCase = reviewPotentialProblemsUseCase;
         this.updatePullRequestDescriptionUseCase = updatePullRequestDescriptionUseCase;
         this.rememberBugbotRuleUseCase = rememberBugbotRuleUseCase;
+        this.syncBranchUseCase = syncBranchUseCase;
         this.taskId = "IssueCommentUseCase";
     }
     async invoke(param) {
@@ -60607,6 +61248,7 @@ class IssueCommentUseCase {
             reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
             updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase,
             rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
+            syncBranchUseCase: this.syncBranchUseCase,
         }, this.actorAuthorizationPort, this.authenticatedUserPort);
     }
 }
@@ -60744,7 +61386,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentUseCase = void 0;
 const comment_automation_use_case_1 = __nccwpck_require__(9661);
 class PullRequestReviewCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, issueCommentUpdatePort, actorAuthorizationPort, authenticatedUserPort, gitCommitPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, issueCommentUpdatePort, actorAuthorizationPort, authenticatedUserPort, gitCommitPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
@@ -60758,6 +61400,7 @@ class PullRequestReviewCommentUseCase {
         this.reviewPotentialProblemsUseCase = reviewPotentialProblemsUseCase;
         this.updatePullRequestDescriptionUseCase = updatePullRequestDescriptionUseCase;
         this.rememberBugbotRuleUseCase = rememberBugbotRuleUseCase;
+        this.syncBranchUseCase = syncBranchUseCase;
         this.taskId = "PullRequestReviewCommentUseCase";
     }
     async invoke(param) {
@@ -60774,6 +61417,7 @@ class PullRequestReviewCommentUseCase {
             reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
             updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase,
             rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
+            syncBranchUseCase: this.syncBranchUseCase,
         }, this.actorAuthorizationPort, this.authenticatedUserPort);
     }
 }
@@ -61306,7 +61950,7 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const single_action_workflow_1 = __nccwpck_require__(6130);
 class SingleActionUseCase {
-    constructor(deployedActionUseCase, publishGithubActionUseCase, createReleaseUseCase, createTagUseCase, thinkUseCase, initialSetupUseCase, checkProgressUseCase, detectPotentialProblemsUseCase, recommendStepsUseCase, closeInactiveIssuesUseCase, actorAuthorizationPort) {
+    constructor(deployedActionUseCase, publishGithubActionUseCase, createReleaseUseCase, createTagUseCase, thinkUseCase, initialSetupUseCase, checkProgressUseCase, detectPotentialProblemsUseCase, recommendStepsUseCase, closeInactiveIssuesUseCase, actorAuthorizationPort, publishIssueCommentUseCase, observeBranchSyncUseCase) {
         this.deployedActionUseCase = deployedActionUseCase;
         this.publishGithubActionUseCase = publishGithubActionUseCase;
         this.createReleaseUseCase = createReleaseUseCase;
@@ -61318,6 +61962,8 @@ class SingleActionUseCase {
         this.recommendStepsUseCase = recommendStepsUseCase;
         this.closeInactiveIssuesUseCase = closeInactiveIssuesUseCase;
         this.actorAuthorizationPort = actorAuthorizationPort;
+        this.publishIssueCommentUseCase = publishIssueCommentUseCase;
+        this.observeBranchSyncUseCase = observeBranchSyncUseCase;
         this.taskId = "SingleActionUseCase";
     }
     async invoke(param) {
@@ -61344,6 +61990,8 @@ class SingleActionUseCase {
             detectPotentialProblemsUseCase: this.detectPotentialProblemsUseCase,
             recommendStepsUseCase: this.recommendStepsUseCase,
             closeInactiveIssuesUseCase: this.closeInactiveIssuesUseCase,
+            publishIssueCommentUseCase: this.publishIssueCommentUseCase,
+            observeBranchSyncUseCase: this.observeBranchSyncUseCase,
         });
     }
 }
@@ -61384,6 +62032,8 @@ async function runSingleActionWorkflow(param, taskId, ports) {
         { active: param.singleAction.isDetectPotentialProblemsAction, useCase: ports.detectPotentialProblemsUseCase },
         { active: param.singleAction.isRecommendStepsAction, useCase: ports.recommendStepsUseCase },
         { active: param.singleAction.isCloseInactiveIssuesAction, useCase: ports.closeInactiveIssuesUseCase },
+        { active: param.singleAction.isPublishIssueCommentAction, useCase: ports.publishIssueCommentUseCase },
+        { active: param.singleAction.isCheckBranchSyncAction, useCase: ports.observeBranchSyncUseCase },
     ].find(({ active, useCase }) => active && useCase !== undefined);
     if (!action || !action.useCase)
         return [];
@@ -70341,6 +70991,8 @@ exports.ACTIONS = {
     DETECT_POTENTIAL_PROBLEMS: 'detect_potential_problems_action',
     RECOMMEND_STEPS: 'recommend_steps_action',
     CLOSE_INACTIVE_ISSUES: 'close_inactive_issues_action',
+    PUBLISH_ISSUE_COMMENT: 'publish_issue_comment',
+    CHECK_BRANCH_SYNC: 'check_branch_sync_action',
 };
 
 
@@ -71624,6 +72276,12 @@ class SingleAction {
     get isCloseInactiveIssuesAction() {
         return this.currentSingleAction === action_types_1.ACTIONS.CLOSE_INACTIVE_ISSUES;
     }
+    get isPublishIssueCommentAction() {
+        return this.currentSingleAction === action_types_1.ACTIONS.PUBLISH_ISSUE_COMMENT;
+    }
+    get isCheckBranchSyncAction() {
+        return this.currentSingleAction === action_types_1.ACTIONS.CHECK_BRANCH_SYNC;
+    }
     get enabledSingleAction() {
         return this.currentSingleAction.length > 0;
     }
@@ -71638,7 +72296,7 @@ class SingleAction {
     get throwError() {
         return this.actionsThrowError.indexOf(this.currentSingleAction) > -1;
     }
-    constructor(currentSingleAction, issue, version, title, changelog) {
+    constructor(currentSingleAction, issue, version, title, changelog, message = '', commentId = '', commentMode = '') {
         this.actions = [
             action_types_1.ACTIONS.DEPLOYED,
             action_types_1.ACTIONS.PUBLISH_GITHUB_ACTION,
@@ -71650,6 +72308,8 @@ class SingleAction {
             action_types_1.ACTIONS.DETECT_POTENTIAL_PROBLEMS,
             action_types_1.ACTIONS.RECOMMEND_STEPS,
             action_types_1.ACTIONS.CLOSE_INACTIVE_ISSUES,
+            action_types_1.ACTIONS.PUBLISH_ISSUE_COMMENT,
+            action_types_1.ACTIONS.CHECK_BRANCH_SYNC,
         ];
         /**
          * Actions that throw an error if the last step failed
@@ -71660,6 +72320,7 @@ class SingleAction {
             action_types_1.ACTIONS.DEPLOYED,
             action_types_1.ACTIONS.CREATE_TAG,
             action_types_1.ACTIONS.CLOSE_INACTIVE_ISSUES,
+            action_types_1.ACTIONS.PUBLISH_ISSUE_COMMENT,
         ];
         /**
          * Actions that do not require an issue
@@ -71668,6 +72329,7 @@ class SingleAction {
             action_types_1.ACTIONS.THINK,
             action_types_1.ACTIONS.INITIAL_SETUP,
             action_types_1.ACTIONS.CLOSE_INACTIVE_ISSUES,
+            action_types_1.ACTIONS.CHECK_BRANCH_SYNC,
         ];
         this.isIssue = false;
         this.isPullRequest = false;
@@ -71679,9 +72341,17 @@ class SingleAction {
         this.version = '';
         this.title = '';
         this.changelog = '';
+        this.message = '';
+        this.commentId = -1;
+        this.commentIdInput = '';
+        this.commentMode = '';
         this.version = version;
         this.title = title;
         this.changelog = changelog;
+        this.message = message;
+        this.commentIdInput = commentId.trim();
+        this.commentId = (0, positive_integer_policy_1.parsePositiveSafeInteger)(this.commentIdInput) ?? -1;
+        this.commentMode = commentMode.trim().toLowerCase();
         this.currentSingleAction = currentSingleAction;
         if (!this.isSingleActionWithoutIssue) {
             this.issue = (0, positive_integer_policy_1.parsePositiveSafeInteger)(issue) ?? -1;
@@ -73709,6 +74379,10 @@ class BranchCompareRepository {
                 throw error;
             }
         };
+        this.compare = async (owner, repository, parentBranch, workingBranch, token) => {
+            const comparison = await this.getChanges(owner, repository, workingBranch, parentBranch, token);
+            return { aheadBy: comparison.aheadBy, behindBy: comparison.behindBy };
+        };
     }
 }
 exports.BranchCompareRepository = BranchCompareRepository;
@@ -73786,6 +74460,215 @@ class BranchNameRepository {
     }
 }
 exports.BranchNameRepository = BranchNameRepository;
+
+
+/***/ }),
+
+/***/ 80742:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.resolveOpenBranchDependencies = resolveOpenBranchDependencies;
+exports.dependencyFromPullRequest = dependencyFromPullRequest;
+const config_1 = __nccwpck_require__(90450);
+const CONFIGURATION = /<!--\s*copilot-configuration-start\s*\n([\s\S]*?)\n\s*copilot-configuration-end\s*-->/iu;
+function resolveOpenBranchDependencies(issues, pullRequests) {
+    const candidates = [];
+    for (const issue of issues) {
+        const configured = dependencyFromConfiguration(issue);
+        if (configured)
+            candidates.push(configured);
+        const linkedBranches = new Set((issue.linkedBranches?.nodes ?? [])
+            .map((node) => normalizeBranch(node?.ref?.name))
+            .filter((branch) => Boolean(branch)));
+        for (const pullRequest of pullRequests) {
+            if (linkedBranches.has(pullRequest.headRefName) || pullRequestReferencesIssue(pullRequest, issue.number)) {
+                candidates.push({
+                    issueNumber: issue.number,
+                    parentBranch: pullRequest.baseRefName,
+                    workingBranch: pullRequest.headRefName,
+                });
+            }
+        }
+    }
+    return uniqueValidDependencies(candidates);
+}
+function dependencyFromPullRequest(pullRequest, conversationNumber = pullRequest.number) {
+    return {
+        issueNumber: conversationNumber,
+        parentBranch: pullRequest.baseRefName,
+        workingBranch: pullRequest.headRefName,
+    };
+}
+function dependencyFromConfiguration(issue) {
+    const serialized = issue.body?.match(CONFIGURATION)?.[1];
+    if (!serialized)
+        return undefined;
+    try {
+        const configuration = new config_1.Config(JSON.parse(serialized));
+        if (!configuration.parentBranch || !configuration.workingBranch)
+            return undefined;
+        return {
+            issueNumber: issue.number,
+            parentBranch: configuration.parentBranch,
+            workingBranch: configuration.workingBranch,
+        };
+    }
+    catch {
+        return undefined;
+    }
+}
+function pullRequestReferencesIssue(pullRequest, issueNumber) {
+    if ((pullRequest.closingIssuesReferences?.nodes ?? []).some((issue) => issue?.number === issueNumber)) {
+        return true;
+    }
+    const escaped = String(issueNumber).replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+    return new RegExp(`(?:^|[^\\w])#${escaped}(?!\\d)`, "u").test(pullRequest.body ?? "");
+}
+function normalizeBranch(branch) {
+    const normalized = branch?.replace(/^refs\/heads\//u, "").replace(/^\/+/, "").trim();
+    return normalized || undefined;
+}
+function uniqueValidDependencies(candidates) {
+    const unique = new Map();
+    for (const candidate of candidates) {
+        const parentBranch = normalizeBranch(candidate.parentBranch);
+        const workingBranch = normalizeBranch(candidate.workingBranch);
+        if (!parentBranch || !workingBranch || parentBranch === workingBranch || candidate.issueNumber < 1)
+            continue;
+        const dependency = { ...candidate, parentBranch, workingBranch };
+        unique.set(`${candidate.issueNumber}:${parentBranch}:${workingBranch}`, dependency);
+    }
+    return [...unique.values()];
+}
+
+
+/***/ }),
+
+/***/ 9627:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BranchDependencyRepository = void 0;
+const branch_dependency_policy_1 = __nccwpck_require__(80742);
+const OPEN_DEPENDENCIES_QUERY = `
+  query BranchSyncDependencies($owner: String!, $repo: String!, $issuesCursor: String, $pullsCursor: String) {
+    repository(owner: $owner, name: $repo) {
+      issues(first: 100, after: $issuesCursor, states: OPEN, orderBy: {field: UPDATED_AT, direction: DESC}) {
+        nodes {
+          number
+          body
+          linkedBranches(first: 100) { nodes { ref { name } } }
+        }
+        pageInfo { hasNextPage endCursor }
+      }
+      pullRequests(first: 100, after: $pullsCursor, states: OPEN, orderBy: {field: UPDATED_AT, direction: DESC}) {
+        nodes {
+          number
+          body
+          baseRefName
+          headRefName
+          closingIssuesReferences(first: 20) { nodes { number } }
+        }
+        pageInfo { hasNextPage endCursor }
+      }
+    }
+  }
+`;
+const CONVERSATION_QUERY = `
+  query BranchSyncConversation($owner: String!, $repo: String!, $number: Int!) {
+    repository(owner: $owner, name: $repo) {
+      issueOrPullRequest(number: $number) {
+        __typename
+        ... on Issue {
+          number
+          body
+          linkedBranches(first: 100) { nodes { ref { name } } }
+        }
+        ... on PullRequest {
+          number
+          body
+          baseRefName
+          headRefName
+          closingIssuesReferences(first: 20) { nodes { number } }
+        }
+      }
+    }
+  }
+`;
+/** Discovers durable Copilot configuration first, then GitHub-linked branch/PR evidence. */
+class BranchDependencyRepository {
+    constructor(client) {
+        this.client = client;
+    }
+    async listOpenDependencies(owner, repository, token) {
+        try {
+            const graphql = this.client.getClient(token).graphql;
+            const issues = [];
+            const pullRequests = [];
+            let issuesCursor;
+            let pullsCursor;
+            let loadIssues = true;
+            let loadPulls = true;
+            do {
+                const response = await graphql(OPEN_DEPENDENCIES_QUERY, {
+                    owner,
+                    repo: repository,
+                    issuesCursor,
+                    pullsCursor,
+                });
+                if (!response.repository)
+                    throw new Error("Repository was not returned by GitHub.");
+                if (loadIssues)
+                    issues.push(...compact(response.repository.issues?.nodes));
+                if (loadPulls)
+                    pullRequests.push(...compact(response.repository.pullRequests?.nodes));
+                const issuePage = response.repository.issues?.pageInfo;
+                const pullPage = response.repository.pullRequests?.pageInfo;
+                loadIssues = Boolean(issuePage?.hasNextPage && issuePage.endCursor);
+                loadPulls = Boolean(pullPage?.hasNextPage && pullPage.endCursor);
+                issuesCursor = loadIssues ? issuePage?.endCursor ?? undefined : undefined;
+                pullsCursor = loadPulls ? pullPage?.endCursor ?? undefined : undefined;
+            } while (loadIssues || loadPulls);
+            return (0, branch_dependency_policy_1.resolveOpenBranchDependencies)(issues, pullRequests);
+        }
+        catch (cause) {
+            throw withCause("Unable to discover open branch dependencies from GitHub.", cause);
+        }
+    }
+    async resolveTarget(owner, repository, conversationNumber, token) {
+        if (conversationNumber < 1)
+            return undefined;
+        try {
+            const response = await this.client.getClient(token).graphql(CONVERSATION_QUERY, { owner, repo: repository, number: conversationNumber });
+            const conversation = response.repository?.issueOrPullRequest;
+            if (!conversation)
+                return undefined;
+            if (conversation.__typename === "PullRequest") {
+                return { ...(0, branch_dependency_policy_1.dependencyFromPullRequest)(conversation, conversationNumber), conversationNumber };
+            }
+            const dependency = (await this.listOpenDependencies(owner, repository, token))
+                .find((candidate) => candidate.issueNumber === conversationNumber);
+            return dependency ? { ...dependency, conversationNumber } : undefined;
+        }
+        catch (cause) {
+            throw withCause("Unable to resolve the branch synchronization target from GitHub.", cause);
+        }
+    }
+}
+exports.BranchDependencyRepository = BranchDependencyRepository;
+function compact(values) {
+    return (values ?? []).filter((value) => value !== null);
+}
+function withCause(message, cause) {
+    const error = new Error(message);
+    error.cause = cause;
+    return error;
+}
 
 
 /***/ }),
@@ -77983,6 +78866,63 @@ function defaultAgentCommand(configuration) {
 
 /***/ }),
 
+/***/ 51114:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.parseBranchSyncCommandArguments = parseBranchSyncCommandArguments;
+exports.isNaturalLanguageBranchSyncRequest = isNaturalLanguageBranchSyncRequest;
+const NATURAL_LANGUAGE_PATTERNS = [
+    /\bupdate\s+(?:the\s+)?issue(?:'s|’s)?\s+branch\b/iu,
+    /\bsync(?:hronize)?\s+(?:the\s+)?(?:issue(?:'s|’s)?\s+)?branch\b/iu,
+    /\b(?:actualiza|sincroniza)\s+(?:la\s+)?rama(?:\s+de\s+(?:esta|la)\s+issue)?\b/iu,
+];
+function parseBranchSyncCommandArguments(args) {
+    let dryRun = false;
+    let useAgent = true;
+    let parentOverride;
+    for (let index = 0; index < args.length; index += 1) {
+        const argument = args[index];
+        if (argument === "--dry-run") {
+            dryRun = true;
+            continue;
+        }
+        if (argument === "--no-agent") {
+            useAgent = false;
+            continue;
+        }
+        if (argument.startsWith("--from=")) {
+            parentOverride = argument.slice("--from=".length).trim();
+        }
+        else if (argument === "--from") {
+            parentOverride = args[index + 1]?.trim();
+            index += 1;
+        }
+        else {
+            return { valid: false, reason: `Unsupported sync-branch option: ${argument}.` };
+        }
+        if (!parentOverride) {
+            return { valid: false, reason: "--from requires a parent branch name." };
+        }
+    }
+    return { valid: true, options: { dryRun, useAgent, parentOverride } };
+}
+function isNaturalLanguageBranchSyncRequest(raw, botUsername) {
+    const normalizedBot = botUsername.trim().replace(/^@/u, "");
+    if (!normalizedBot)
+        return false;
+    const mention = new RegExp(`@${escapeRegExp(normalizedBot)}\\b`, "iu");
+    return mention.test(raw) && NATURAL_LANGUAGE_PATTERNS.some((pattern) => pattern.test(raw));
+}
+function escapeRegExp(value) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+
+/***/ }),
+
 /***/ 91853:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -78296,6 +79236,9 @@ exports.COPILOT_COMMAND_NAMES = [
     'remember',
     'recheck',
     'implement',
+    'sync-branch',
+    'update-branch',
+    'updatebranch',
 ];
 const COMMAND_PREFIX = /^\/copilot(?:\s+|$)/iu;
 const MAX_COMMAND_LENGTH = 2000;
@@ -78579,7 +79522,7 @@ exports.PULL_REQUEST_DESCRIPTION_MODES = [
     'preserve',
     'disabled',
 ];
-exports.DEFAULT_PULL_REQUEST_DESCRIPTION_MODE = 'append';
+exports.DEFAULT_PULL_REQUEST_DESCRIPTION_MODE = 'replace';
 exports.MANAGED_PULL_REQUEST_DESCRIPTION_START = '<!-- copilot:managed-pr-description -->';
 exports.MANAGED_PULL_REQUEST_DESCRIPTION_END = '<!-- /copilot:managed-pr-description -->';
 /** Normalizes public configuration while keeping invalid values safe and backwards compatible. */
@@ -78730,6 +79673,203 @@ function isUnsafePromptCharacter(character) {
 function normalizeOrigin(origin) {
     const normalized = origin.trim().replace(/[^a-zA-Z0-9._:-]/g, '_');
     return normalized || 'unknown';
+}
+
+
+/***/ }),
+
+/***/ 24596:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.enabledSetupWorkflowFiles = enabledSetupWorkflowFiles;
+exports.isSetupWorkflowEnabled = isSetupWorkflowEnabled;
+const SETUP_WORKFLOWS = [
+    { file: 'copilot_issue.yml', feature: 'issues' },
+    { file: 'copilot_pull_request.yml', feature: 'pullRequests' },
+    { file: 'copilot_commit.yml', feature: 'commits' },
+    { file: 'copilot_branch_sync.yml', feature: 'commits' },
+    { file: 'copilot_issue_comment.yml', feature: 'issueComments' },
+    { file: 'copilot_pull_request_comment.yml', feature: 'pullRequestComments' },
+    { file: 'release_workflow.yml', feature: 'release' },
+    { file: 'hotfix_workflow.yml', feature: 'hotfix' },
+    { file: 'agent-cli-provisioning.yml', feature: 'agentProvisioning' },
+    { file: 'copilot_credential_health.yml', feature: 'credentialHealth' },
+    { file: 'copilot_close_inactive_issues.yml', feature: 'inactiveIssueClosure' },
+];
+function enabledSetupWorkflowFiles(features) {
+    return SETUP_WORKFLOWS
+        .filter(({ feature }) => features[feature] !== false)
+        .map(({ file }) => file);
+}
+function isSetupWorkflowEnabled(file, features) {
+    if (!features)
+        return true;
+    const definition = SETUP_WORKFLOWS.find((candidate) => candidate.file === file);
+    return !definition || features[definition.feature] !== false;
+}
+
+
+/***/ }),
+
+/***/ 81849:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BranchSyncWorkspaceAdapter = void 0;
+const workspace_changes_1 = __nccwpck_require__(93370);
+/** Owns Git's merge state while keeping credentials confined to fetch/push subprocesses. */
+class BranchSyncWorkspaceAdapter {
+    constructor(git) {
+        this.git = git;
+        this.mergeInProgress = false;
+    }
+    async prepare(parentBranch, workingBranch, token) {
+        this.snapshot = undefined;
+        this.mergeInProgress = false;
+        await this.assertValidBranch(parentBranch);
+        await this.assertValidBranch(workingBranch);
+        if ((await this.listWorkspacePaths()).length > 0)
+            throw new Error("Branch synchronization requires a clean workspace.");
+        await this.git.fetch(workingBranch, token);
+        await this.git.execute("git", ["checkout", "-B", workingBranch, "FETCH_HEAD"]);
+        const childSha = await this.read("git", ["rev-parse", "HEAD"]);
+        await this.git.fetch(parentBranch, token);
+        const parentSha = await this.read("git", ["rev-parse", "FETCH_HEAD"]);
+        if (await this.isAncestor(parentSha, childSha))
+            return { kind: "aligned", parentSha, childSha };
+        let mergeFailed = false;
+        try {
+            await this.git.execute("git", ["merge", "--no-ff", "--no-commit", parentSha]);
+        }
+        catch {
+            mergeFailed = true;
+        }
+        this.mergeInProgress = true;
+        const conflictPaths = await this.readPaths(["diff", "--name-only", "--diff-filter=U", "-z"]);
+        if (mergeFailed && conflictPaths.length === 0) {
+            await this.abort();
+            throw new Error("Git could not prepare the parent branch merge.");
+        }
+        const workspacePaths = await this.listWorkspacePaths();
+        const indexEntries = await this.readIndexEntries();
+        const conflicts = new Set(conflictPaths);
+        this.snapshot = {
+            parentSha,
+            childSha,
+            conflictPaths,
+            workspacePaths,
+            protectedIndexEntries: new Map([...indexEntries].filter(([path]) => !conflicts.has(path))),
+        };
+        return conflictPaths.length > 0
+            ? { kind: "conflicted", parentSha, childSha, conflictPaths }
+            : { kind: "clean", parentSha, childSha };
+    }
+    async validatePreparedMerge(conflictPaths) {
+        const snapshot = this.snapshot;
+        if (!snapshot || !sameSet(snapshot.conflictPaths, conflictPaths))
+            return invalid("Merge state does not match the expected conflict set.");
+        if (await this.read("git", ["rev-parse", "HEAD"]) !== snapshot.childSha)
+            return invalid("The agent changed HEAD.");
+        if (await this.read("git", ["rev-parse", "MERGE_HEAD"]) !== snapshot.parentSha)
+            return invalid("The agent changed the merge parent.");
+        if ((await this.readPaths(["diff", "--name-only", "--diff-filter=U", "-z"])).length > 0)
+            return invalid("Unresolved merge conflicts remain.");
+        if (!sameSet(await this.listWorkspacePaths(), snapshot.workspacePaths))
+            return invalid("The agent changed paths outside the prepared merge.");
+        if ((await this.readPaths(["diff", "--name-only", "-z"])).length > 0)
+            return invalid("The prepared merge contains unstaged changes.");
+        const indexEntries = await this.readIndexEntries();
+        for (const [path, entry] of snapshot.protectedIndexEntries) {
+            if (indexEntries.get(path) !== entry)
+                return invalid(`The agent changed non-conflicted path ${path}.`);
+        }
+        try {
+            await this.git.execute("git", ["diff", "--check"]);
+            await this.git.execute("git", ["diff", "--cached", "--check"]);
+        }
+        catch {
+            return invalid("The resolution contains whitespace errors or conflict markers.");
+        }
+        return { valid: true };
+    }
+    async assertRemoteHeadsUnchanged(parentBranch, parentSha, workingBranch, childSha, token) {
+        await this.git.fetch(parentBranch, token);
+        if (await this.read("git", ["rev-parse", "FETCH_HEAD"]) !== parentSha)
+            return invalid(`Parent branch ${parentBranch} changed during synchronization.`);
+        await this.git.fetch(workingBranch, token);
+        if (await this.read("git", ["rev-parse", "FETCH_HEAD"]) !== childSha)
+            return invalid(`Working branch ${workingBranch} changed during synchronization.`);
+        return { valid: true };
+    }
+    async commitAndPush(workingBranch, message, author, token) {
+        if (!this.snapshot)
+            throw new Error("No prepared branch synchronization is available.");
+        await this.git.configureAuthor(author.name, author.email);
+        await this.git.stageAll();
+        await this.git.commit(message);
+        const sha = await this.read("git", ["rev-parse", "HEAD"]);
+        await this.git.push(workingBranch, token);
+        this.snapshot = undefined;
+        this.mergeInProgress = false;
+        return sha;
+    }
+    async abort() {
+        if (!this.mergeInProgress)
+            return;
+        try {
+            await this.git.execute("git", ["merge", "--abort"]);
+        }
+        finally {
+            this.snapshot = undefined;
+            this.mergeInProgress = false;
+        }
+    }
+    async assertValidBranch(branch) {
+        if (!branch.trim() || branch.startsWith("-"))
+            throw new Error("Invalid branch name.");
+        await this.git.execute("git", ["check-ref-format", "--branch", branch]);
+    }
+    async isAncestor(ancestor, descendant) {
+        try {
+            return await this.git.execute("git", ["merge-base", "--is-ancestor", ancestor, descendant]) === 0;
+        }
+        catch {
+            return false;
+        }
+    }
+    async listWorkspacePaths() {
+        return (await (0, workspace_changes_1.listWorkspacePaths)(this.git)).sort();
+    }
+    async readPaths(args) {
+        return (await this.readRaw("git", args)).split("\0").filter(Boolean).sort();
+    }
+    async readIndexEntries() {
+        const entries = (await this.readRaw("git", ["ls-files", "-s", "-z"])).split("\0").filter(Boolean);
+        return new Map(entries.map((entry) => {
+            const separator = entry.indexOf("\t");
+            return [entry.slice(separator + 1), entry.slice(0, separator)];
+        }));
+    }
+    async read(program, args) {
+        return (await this.readRaw(program, args)).trim();
+    }
+    async readRaw(program, args) {
+        const chunks = [];
+        await this.git.execute(program, args, { stdout: (data) => chunks.push(data) });
+        return Buffer.concat(chunks).toString("utf8");
+    }
+}
+exports.BranchSyncWorkspaceAdapter = BranchSyncWorkspaceAdapter;
+function sameSet(left, right) {
+    return left.length === right.length && left.every((value) => right.includes(value));
+}
+function invalid(reason) {
+    return { valid: false, reason };
 }
 
 
@@ -79551,6 +80691,7 @@ const create_release_use_case_1 = __nccwpck_require__(25258);
 const create_tag_use_case_1 = __nccwpck_require__(22120);
 const deployed_action_use_case_1 = __nccwpck_require__(93185);
 const publish_github_action_use_case_1 = __nccwpck_require__(68891);
+const publish_issue_comment_use_case_1 = __nccwpck_require__(61313);
 const recommend_steps_use_case_1 = __nccwpck_require__(73746);
 const check_changes_issue_size_use_case_1 = __nccwpck_require__(28356);
 const bugbot_autofix_use_case_1 = __nccwpck_require__(45446);
@@ -79587,6 +80728,11 @@ const organization_members_composition_root_1 = __nccwpck_require__(50603);
 const update_pull_request_description_use_case_1 = __nccwpck_require__(75089);
 const pull_request_lifecycle_repository_1 = __nccwpck_require__(24189);
 const issue_inactivity_composition_root_1 = __nccwpck_require__(74914);
+const github_project_client_factory_1 = __nccwpck_require__(23691);
+const branch_dependency_repository_1 = __nccwpck_require__(9627);
+const branch_sync_workspace_adapter_1 = __nccwpck_require__(81849);
+const observe_branch_sync_use_case_1 = __nccwpck_require__(84542);
+const sync_branch_use_case_1 = __nccwpck_require__(392);
 function createDetectPotentialProblemsUseCase() {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();
     return new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.context, bugbot.publication, bugbot.resolution, bugbot.telemetry);
@@ -79595,7 +80741,7 @@ function createSingleActionUseCaseCompositionRoot() {
     const repositoryTagPort = new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)());
     const repositoryReleasePort = new repository_release_publication_repository_1.RepositoryReleasePublicationRepository((0, github_release_client_factory_1.createReleaseClient)());
     const issueDescriptionQueryPort = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
-    return new single_action_use_case_1.SingleActionUseCase(new deployed_action_use_case_1.DeployedActionUseCase((0, issue_labels_composition_root_1.createIssueLabelRepository)(), (0, issue_interaction_composition_root_1.createIssueClosureRepository)(), new merge_repository_1.MergeRepository((0, github_branch_client_factory_1.createBranchMergeClient)())), new publish_github_action_use_case_1.PublishGithubActionUseCase(repositoryTagPort, repositoryReleasePort), new create_release_use_case_1.CreateReleaseUseCase(repositoryReleasePort), new create_tag_use_case_1.CreateTagUseCase(repositoryTagPort), new think_use_case_1.ThinkUseCase(issueDescriptionQueryPort, (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), createDetectPotentialProblemsUseCase(), new recommend_steps_use_case_1.RecommendStepsUseCase(issueDescriptionQueryPort, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
+    return new single_action_use_case_1.SingleActionUseCase(new deployed_action_use_case_1.DeployedActionUseCase((0, issue_labels_composition_root_1.createIssueLabelRepository)(), (0, issue_interaction_composition_root_1.createIssueClosureRepository)(), new merge_repository_1.MergeRepository((0, github_branch_client_factory_1.createBranchMergeClient)())), new publish_github_action_use_case_1.PublishGithubActionUseCase(repositoryTagPort, repositoryReleasePort), new create_release_use_case_1.CreateReleaseUseCase(repositoryReleasePort), new create_tag_use_case_1.CreateTagUseCase(repositoryTagPort), new think_use_case_1.ThinkUseCase(issueDescriptionQueryPort, (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), createDetectPotentialProblemsUseCase(), new recommend_steps_use_case_1.RecommendStepsUseCase(issueDescriptionQueryPort, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase(issueDescriptionQueryPort), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), issueDescriptionQueryPort));
 }
 function createIssueCommentUseCaseCompositionRoot() {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();
@@ -79604,7 +80750,8 @@ function createIssueCommentUseCaseCompositionRoot() {
     const fixer = (0, agent_capability_composition_root_1.createFixerQueryPort)();
     const gitCommit = new git_commit_adapter_1.GitCommitAdapter();
     const pullRequestDescription = new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), (0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
-    return new issue_comment_use_case_1.IssueCommentUseCase(new check_issue_comment_language_use_case_1.CheckIssueCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer, gitCommit), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), gitCommit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution, bugbot.telemetry), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules));
+    const branchSync = new sync_branch_use_case_1.SyncBranchUseCase(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new branch_sync_workspace_adapter_1.BranchSyncWorkspaceAdapter(gitCommit), fixer, (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), gitCommit);
+    return new issue_comment_use_case_1.IssueCommentUseCase(new check_issue_comment_language_use_case_1.CheckIssueCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer, gitCommit), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), gitCommit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution, bugbot.telemetry), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync);
 }
 function createPullRequestReviewCommentUseCaseCompositionRoot() {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();
@@ -79613,7 +80760,8 @@ function createPullRequestReviewCommentUseCaseCompositionRoot() {
     const fixer = (0, agent_capability_composition_root_1.createFixerQueryPort)();
     const gitCommit = new git_commit_adapter_1.GitCommitAdapter();
     const pullRequestDescription = new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), (0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
-    return new pull_request_review_comment_use_case_1.PullRequestReviewCommentUseCase(new check_pull_request_comment_language_use_case_1.CheckPullRequestCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer, gitCommit), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), gitCommit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution, bugbot.telemetry), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules));
+    const branchSync = new sync_branch_use_case_1.SyncBranchUseCase(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new branch_sync_workspace_adapter_1.BranchSyncWorkspaceAdapter(gitCommit), fixer, (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), gitCommit);
+    return new pull_request_review_comment_use_case_1.PullRequestReviewCommentUseCase(new check_pull_request_comment_language_use_case_1.CheckPullRequestCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer, gitCommit), bugbot.issue, (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), gitCommit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution, bugbot.telemetry), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync);
 }
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort) {
     return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, issue_interaction_composition_root_1.createIssueNotificationRepository)()), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase(projectBoardCommandPort, (0, issue_labels_composition_root_1.createIssueLabelRepository)(), new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)())), createDetectPotentialProblemsUseCase(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
@@ -81337,6 +82485,29 @@ function getAnswerIssueHelpPrompt(params) {
 
 /***/ }),
 
+/***/ 84434:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getBranchSyncConflictsPrompt = getBranchSyncConflictsPrompt;
+const fill_1 = __nccwpck_require__(2559);
+const TEMPLATE = `You are resolving a merge that is already in progress in {{owner}}/{{repo}}.
+
+Parent branch: {{parentBranch}}
+Working branch: {{workingBranch}}
+Files with merge conflicts:
+{{conflictPaths}}
+
+Resolve every existing conflict conservatively, preserving the intent of both branches. You may inspect the repository and edit only the listed conflicted files. Do not run git commit, git push, git checkout, git reset, git rebase, or start another merge. Do not modify workflows, credentials, lockfiles, generated files, or any path outside the conflict list unless that path itself is listed. Remove all conflict markers and stage the resolved files. Run focused checks when useful, then give a concise summary of the decisions you made.`;
+function getBranchSyncConflictsPrompt(params) {
+    return (0, fill_1.fillTemplate)(TEMPLATE, params);
+}
+
+
+/***/ }),
+
 /***/ 56998:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -82775,6 +83946,7 @@ const fs = __importStar(__nccwpck_require__(57147));
 const path = __importStar(__nccwpck_require__(71017));
 const setup_file_copy_1 = __nccwpck_require__(90102);
 const logger_1 = __nccwpck_require__(91151);
+const setup_workflow_catalog_1 = __nccwpck_require__(24596);
 /**
  * Ensure .github, .github/workflows and .github/ISSUE_TEMPLATE exist; create them if missing.
  * @param cwd - Directory (repo root)
@@ -82809,22 +83981,10 @@ function copySetupFiles(cwd, setupDirOverride, features, options = {}) {
     const setupDir = setupDirOverride ?? path.join(__dirname, '..', '..', 'setup');
     if (!fs.existsSync(setupDir))
         return { copied: 0, skipped: 0 };
-    const workflowFeatures = {
-        'copilot_issue.yml': 'issues',
-        'copilot_pull_request.yml': 'pullRequests',
-        'copilot_commit.yml': 'commits',
-        'copilot_issue_comment.yml': 'issueComments',
-        'copilot_pull_request_comment.yml': 'pullRequestComments',
-        'release_workflow.yml': 'release',
-        'hotfix_workflow.yml': 'hotfix',
-        'agent-cli-provisioning.yml': 'agentProvisioning',
-        'copilot_credential_health.yml': 'credentialHealth',
-        'copilot_close_inactive_issues.yml': 'inactiveIssueClosure',
-    };
     const approvedWorkflowFiles = new Set(options.approvedWorkflowFiles ?? []);
     const backupDirectory = options.updateExistingWorkflows ? path.join(cwd, '.copilot', 'setup-backups', new Date().toISOString().replace(/[:.]/g, '-')) : undefined;
     const workflows = (0, setup_file_copy_1.copySetupDirectory)(path.join(setupDir, 'workflows'), path.join(cwd, '.github', 'workflows'), (fileName) => (fileName.endsWith('.yml') || fileName.endsWith('.yaml'))
-        && (features === undefined || features[workflowFeatures[fileName]] !== false)
+        && (0, setup_workflow_catalog_1.isSetupWorkflowEnabled)(fileName, features)
         && (!options.updateExistingWorkflows
             || approvedWorkflowFiles.has(fileName)
             || !fs.existsSync(path.join(cwd, '.github', 'workflows', fileName))), 'setup/workflows', {
@@ -82844,23 +84004,11 @@ function copySetupFiles(cwd, setupDirOverride, features, options = {}) {
 }
 function compareSetupWorkflows(cwd, features, setupDirOverride) {
     const setupDir = setupDirOverride ?? path.join(__dirname, '..', '..', 'setup');
-    const workflowFeatures = {
-        'copilot_issue.yml': 'issues',
-        'copilot_pull_request.yml': 'pullRequests',
-        'copilot_commit.yml': 'commits',
-        'copilot_issue_comment.yml': 'issueComments',
-        'copilot_pull_request_comment.yml': 'pullRequestComments',
-        'release_workflow.yml': 'release',
-        'hotfix_workflow.yml': 'hotfix',
-        'agent-cli-provisioning.yml': 'agentProvisioning',
-        'copilot_credential_health.yml': 'credentialHealth',
-        'copilot_close_inactive_issues.yml': 'inactiveIssueClosure',
-    };
     const sourceDirectory = path.join(setupDir, 'workflows');
     if (!fs.existsSync(sourceDirectory))
         return [];
     return fs.readdirSync(sourceDirectory)
-        .filter(file => (file.endsWith('.yml') || file.endsWith('.yaml')) && (features === undefined || features[workflowFeatures[file]] !== false))
+        .filter(file => (file.endsWith('.yml') || file.endsWith('.yaml')) && (0, setup_workflow_catalog_1.isSetupWorkflowEnabled)(file, features))
         .filter(file => fs.statSync(path.join(sourceDirectory, file)).isFile())
         .map(file => {
         const source = path.join(sourceDirectory, file);

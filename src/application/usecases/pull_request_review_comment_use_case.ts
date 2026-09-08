@@ -11,6 +11,7 @@ import type { GitCommitPort } from "../ports/git_ports";
 import type { DismissBugbotFindingsParam } from './steps/commit/bugbot/dismiss_bugbot_findings_use_case';
 import type { UpdatePullRequestDescriptionUseCase } from './steps/pull_request/update_pull_request_description_use_case';
 import type { RememberBugbotRuleParam } from './steps/commit/bugbot/remember_bugbot_rule_use_case';
+import type { SyncBranchRequest } from './branch_sync/sync_branch_use_case';
 
 export class PullRequestReviewCommentUseCase implements ParamUseCase<
   Execution,
@@ -35,6 +36,7 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
     private readonly reviewPotentialProblemsUseCase?: ParamUseCase<Execution, Result[]>,
     private readonly updatePullRequestDescriptionUseCase?: UpdatePullRequestDescriptionUseCase,
     private readonly rememberBugbotRuleUseCase?: ParamUseCase<RememberBugbotRuleParam, Result[]>,
+    private readonly syncBranchUseCase?: ParamUseCase<SyncBranchRequest, Result[]>,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
@@ -53,6 +55,7 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
         reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
         updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase,
         rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
+        syncBranchUseCase: this.syncBranchUseCase,
       },
       this.actorAuthorizationPort,
       this.authenticatedUserPort,

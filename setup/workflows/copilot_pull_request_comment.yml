@@ -14,11 +14,12 @@ jobs:
       contents: read
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@v5
         with:
           persist-credentials: false
+          fetch-depth: 0
 
-      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+      - uses: vypdev/copilot@v3
         with:
           ai-ignore-files: ${{ vars.AI_IGNORE_FILES || 'build/*' }}
           debug: ${{ vars.DEBUG }}
@@ -39,7 +40,7 @@ jobs:
           pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || 'en-US' }}
           commit-prefix-transforms: ${{ vars.COMMIT_PREFIX_TRANSFORMS || 'replace-slash' }}
           ai-pull-request-description: ${{ vars.AI_PULL_REQUEST_DESCRIPTION || 'true' }}
-          ai-pull-request-description-mode: ${{ vars.AI_PULL_REQUEST_DESCRIPTION_MODE || 'append' }}
+          ai-pull-request-description-mode: ${{ vars.AI_PULL_REQUEST_DESCRIPTION_MODE || 'replace' }}
           ai-members-only: ${{ vars.AI_MEMBERS_ONLY || 'false' }}
           ai-include-reasoning: ${{ vars.AI_INCLUDE_REASONING || 'false' }}
           bugbot-severity: ${{ vars.BUGBOT_SEVERITY || 'low' }}

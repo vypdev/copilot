@@ -150,6 +150,9 @@ export function readGithubActionSingleAction(getInput: typeof getGithubActionInp
         getInput(INPUT_KEYS.SINGLE_ACTION_VERSION),
         getInput(INPUT_KEYS.SINGLE_ACTION_TITLE),
         getInput(INPUT_KEYS.SINGLE_ACTION_CHANGELOG),
+        getInput(INPUT_KEYS.SINGLE_ACTION_MESSAGE),
+        getInput(INPUT_KEYS.SINGLE_ACTION_COMMENT_ID),
+        getInput(INPUT_KEYS.SINGLE_ACTION_COMMENT_MODE),
     );
 }
 

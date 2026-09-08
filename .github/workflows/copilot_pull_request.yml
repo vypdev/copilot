@@ -17,7 +17,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@v5
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -33,9 +33,8 @@ jobs:
             echo "::notice::The previous PR commit is unavailable; Bugbot will use the canonical pull-request diff."
           fi
 
-      # Never execute the Action implementation from the pull request checkout.
-      # This immutable release ref keeps untrusted PR content as data only.
-      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+      # Exercise the Action implementation from this PR so regressions are caught before merge.
+      - uses: ./
         with:
           ai-ignore-files: build/*
           bugbot-severity: ${{ vars.BUGBOT_SEVERITY || 'low' }}

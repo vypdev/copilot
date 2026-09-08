@@ -35,6 +35,9 @@ export function readLocalCoreConfiguration(
         singleActionVersion: input<string>(additionalParams, actionInputs, INPUT_KEYS.SINGLE_ACTION_VERSION),
         singleActionTitle: input<string>(additionalParams, actionInputs, INPUT_KEYS.SINGLE_ACTION_TITLE),
         singleActionChangelog: input<string>(additionalParams, actionInputs, INPUT_KEYS.SINGLE_ACTION_CHANGELOG),
+        singleActionMessage: input<string>(additionalParams, actionInputs, INPUT_KEYS.SINGLE_ACTION_MESSAGE),
+        singleActionCommentId: input<string>(additionalParams, actionInputs, INPUT_KEYS.SINGLE_ACTION_COMMENT_ID),
+        singleActionCommentMode: input<string>(additionalParams, actionInputs, INPUT_KEYS.SINGLE_ACTION_COMMENT_MODE),
         inactivityThresholdHours: parseBoundedPositiveIntegerInput(
             input(additionalParams, actionInputs, INPUT_KEYS.INACTIVITY_THRESHOLD_HOURS),
             DEFAULT_INACTIVITY_THRESHOLD_HOURS,

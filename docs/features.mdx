@@ -69,6 +69,7 @@ When the workflow runs on `push` (e.g. to any branch):
 | **Bugbot (potential problems)** | the configured agent analyzes the branch vs base and reports findings as **issue comments** when there is no PR, or as one summarized review with inline findings when a PR is available; it updates stored findings and **marks PR review threads as resolved** when applicable. Configurable via `bugbot-severity` and `ai-ignore-files`. See [Bugbot](/bugbot), [Issues](/issues#bugbot-potential-problems), and [Pull Requests](/pull-requests#bugbot-potential-problems). |
 | **Comments & images** | Posts commit summary comments with optional images. |
 | **Finding reconciliation** | Carries stable finding fingerprints across pushes and marks findings fixed, obsolete, dismissed, or reopened without creating duplicate comments. |
+| **Branch drift observer** | A separate lightweight workflow watches pushes on every branch, resolves open issue/PR branch relationships, and maintains one synchronization notice when a child is behind. It does not load Bugbot or an agent. See [Branch synchronization](/issues/branch-synchronization). |
 
 ---
 
@@ -85,7 +86,7 @@ reviewing the threshold and the workflow PAT permissions.
 
 ## Single actions
 
-When you set `single-action` (and, when required, `single-action-issue`, `single-action-version`, `single-action-title`, `single-action-changelog`), the action runs **only** that action and skips the normal issue/PR/push pipelines.
+When you set `single-action` (and the inputs required by that action), Copilot runs **only** that action and skips the normal issue/PR/push pipelines.
 
 | Single action value | Inputs required | Description |
 |--------------------|----------------|-------------|
@@ -99,8 +100,10 @@ When you set `single-action` (and, when required, `single-action-issue`, `single
 | **`publish_github_action`** | `single-action-version` | Publishes or updates the GitHub Action: creates/updates the major version tag (for example, `v3` from a `v3.x.y` release). Requires `create_tag` to have been run first. |
 | **`deployed_action`** | `single-action-issue` | Marks the issue as deployed; updates labels and project state (e.g. "deployed"). |
 | **`close_inactive_issues_action`** | `inactivity-threshold-hours` (optional) | Scans waiting issues and closes those inactive for the configured threshold; no issue number is required. |
+| **`publish_issue_comment`** | `single-action-issue`, `single-action-message`; optionally `single-action-comment-id` and `single-action-comment-mode` | Creates a Markdown comment, or replaces/appends to a specific comment on the issue. |
+| **`check_branch_sync_action`** | — | Internal lightweight push observer used by `copilot_branch_sync.yml`; compares related parent/working branches and updates the issue notice without an agent. |
 
-Single actions that **throw an error** if the last step fails: `publish_github_action`, `create_release`, `deployed_action`, `create_tag`, `close_inactive_issues_action`. This lets the workflow fail the job when the action does not succeed.
+Single actions that **throw an error** if the last step fails: `publish_github_action`, `create_release`, `deployed_action`, `create_tag`, `close_inactive_issues_action`, `publish_issue_comment`. This lets the workflow fail the job when the action does not succeed.
 
 ---
 
@@ -122,7 +125,8 @@ Codex is the default runtime for the repository's AI feature paths. OpenCode and
 | **Bugbot (potential problems)** | Push (commit) pipeline; optional single action `detect_potential_problems_action` / CLI `detect-potential-problems` | Analyzes branch vs base and posts findings as **issue comments** when no PR exists, or as one summarized review with inline comments when a PR is available; updates stored findings and resolves PR threads when findings are fixed. Configurable: `bugbot-severity`, `ai-ignore-files`. |
 | **Do user request** | Issue comment; PR review comment | When you comment asking to perform a change in the repo (or use `/copilot implement <request>`), the configured agent applies the changes in the workspace, runs verify commands, and the action commits and pushes with a generic message. Organization repositories require an org member; personal repositories require the owner or a `push`/`maintain`/`admin` collaborator. Uses the same `bugbot-fix-verify-commands` and agent CLI setup. |
 | **Think / reasoning** | Issue/PR comment pipeline; single action `think_action` | Deep code analysis and change proposals (configured agent CLI). On comments: answers when mentioned (or on any comment for question/help issues). Runs when the comment was not a fix/do request or when the user is not allowed to trigger file-modifying actions. |
-| **Explicit Copilot commands** | Issue and PR comments | `/copilot help`, `/copilot plan`, `/copilot clarify`, `/copilot estimate`, `/copilot test-plan`, `/copilot explain`, `/copilot diagnose`, `/copilot analyze`, `/copilot status`, `/copilot review`, `/copilot findings`, `/copilot recheck`, `/copilot fix`, `/copilot dismiss`, `/copilot remember`, and `/copilot implement` provide a bounded, predictable interface. |
+| **Explicit Copilot commands** | Issue and PR comments | `/copilot help`, `/copilot plan`, `/copilot clarify`, `/copilot estimate`, `/copilot test-plan`, `/copilot explain`, `/copilot diagnose`, `/copilot analyze`, `/copilot status`, `/copilot review`, `/copilot findings`, `/copilot recheck`, `/copilot fix`, `/copilot dismiss`, `/copilot remember`, `/copilot implement`, `/copilot sync-branch`, and `/copilot update-branch` provide a bounded, predictable interface. |
+| **Branch synchronization** | All-branch push observer; issue/PR command | Detection is agent-free. An authorized command merges parent into working branch, invokes the fixer only for eligible Git conflicts, validates the prepared merge, runs configured checks, revalidates remote heads, pushes, and reports the outcome. |
 | **Comment translation** | Issue comment; PR review comment | Translates comments to the configured locale (`issues-locale`, `pull-requests-locale`) when they are written in another language. |
 | **AI PR description** | Pull request pipeline | Fills the repo's `.github/pull_request_template.md` from issue and branch diff (configured agent CLI). |
 | **Copilot** | CLI `copilot do` | Code analysis and file edits via the configured agent runtime. |
@@ -144,7 +148,7 @@ the Action with the internal `queue-gate-only` mode and only the ephemeral
 `${{ github.token }}` read permissions; it admits the run and exits before project
 composition, agent provisioning, setup, or mutation work. The version-preparation and
 publication jobs depend on that gate transitively, so a failed or skipped admission
-cannot start a write-capable descendant. The setup templates use `vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3`
+cannot start a write-capable descendant. The setup templates use `vypdev/copilot@v3`
 for this gate and therefore require a published v3 bundle that supports
 `queue-gate-only`.
 
@@ -183,10 +187,10 @@ jobs:
   copilot-issues:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/checkout@v5
         with:
           persist-credentials: false
-      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+      - uses: vypdev/copilot@v3
         with:
           token: ${{ secrets.PAT }}
           project-ids: '2,3'

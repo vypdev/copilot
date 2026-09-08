@@ -15,6 +15,7 @@ export function buildLocalActionExecution(
 ) {
     const {
         debug, singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog,
+        singleActionMessage, singleActionCommentId, singleActionCommentMode,
         inactivityThresholdHours,
         commitPrefixBuilder, branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount,
         pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, pullRequestMergeTimeout,
@@ -48,6 +49,9 @@ export function buildLocalActionExecution(
             singleActionVersion,
             singleActionTitle,
             singleActionChangelog,
+            singleActionMessage,
+            singleActionCommentId,
+            singleActionCommentMode,
         ),
         commitPrefixBuilder,
         issue: buildIssue(branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount, additionalParams),

@@ -17,6 +17,7 @@ These actions need **`single-action-issue`** set to the issue number. The workfl
 | **`detect_potential_problems_action`** | `single-action-issue` | **Bugbot:** the configured agent analyzes the branch vs base and reports findings on the issue when no PR exists, or in one summarized review on an open PR; updates stored findings and resolves PR threads when findings are fixed. | Same as push-time Bugbot but on demand. See [Bugbot](/bugbot). |
 | **`recommend_steps_action`** | `single-action-issue` | Uses the configured agent's analysis role to recommend **implementation steps** from the issue description; **posts a comment** on the issue with the steps. | When you want a one-off suggestion for how to implement the issue. |
 | **`deployed_action`** | `single-action-issue` | Marks the issue as **deployed**; updates labels (e.g. `deployed`) and **project state** (e.g. column). | After a release or hotfix has been deployed; often called from your release/hotfix workflow. |
+| **`publish_issue_comment`** | `single-action-issue`, `single-action-message` | Creates a Markdown comment. With `single-action-comment-id`, it replaces that issue comment by default; set `single-action-comment-mode: append` to preserve its current content and append the message. | Reusable workflow notifications such as release or hotfix failures. |
 
 ## Actions that do not require an issue
 
@@ -28,6 +29,7 @@ These actions need **`single-action-issue`** set to the issue number. The workfl
 | **`create_tag`** | `single-action-version` | Creates a **Git tag** with prefix `v` (e.g. `v1.2.3`) for the given version from the release branch. | When you only need a tag (e.g. for versioning) without a full release. The tag is created from the `releaseBranch` stored in issue configuration. |
 | **`publish_github_action`** | `single-action-version` | **Publishes or updates** the GitHub Action: creates/updates the major version tag (for example, `v3` from a `v3.x.y` release) and the corresponding GitHub Release. Requires that `create_tag` has been run first to create the source tag `v{version}`. | In a CI job that builds and publishes the action, after `create_tag` and `create_release` have run. |
 | **`close_inactive_issues_action`** | — (`inactivity-threshold-hours` optional) | Scans open issues waiting for a maintainer or issue author and closes those whose `updated_at` exceeds the configured inactivity window. Revalidates each candidate before closing and posts an explanation. | From the scheduled `copilot_close_inactive_issues.yml` workflow; no issue number is required. |
+| **`check_branch_sync_action`** | — | Discovers open issue/PR branch relationships and updates stale/aligned notices without invoking an agent. | From the supplied all-branch `copilot_branch_sync.yml` observer; normally do not invoke it manually. |
 
 ## Actions that fail the job on failure
 
@@ -38,6 +40,7 @@ These single actions **throw an error** if their last step fails, so the **workf
 - **`deployed_action`**
 - **`create_tag`**
 - **`close_inactive_issues_action`**
+- **`publish_issue_comment`**
 
 Use them when you want the workflow to **fail** if the action does not succeed (e.g. release creation or tag creation fails).
 
@@ -59,6 +62,12 @@ The **`copilot do`** CLI command (for example, `copilot do -p "..."`) uses the c
 | `create_tag` | — | ✅ | — | — |
 | `publish_github_action` | — | ✅ | — | — |
 | `close_inactive_issues_action` | — | — | — | — |
+| `check_branch_sync_action` | — | — | — | — |
+| `publish_issue_comment` | ✅ | — | — | — |
+
+`publish_issue_comment` additionally requires `single-action-message`. Its optional
+`single-action-comment-id` selects an existing comment, and
+`single-action-comment-mode` accepts `create`, `replace`, or `append`.
 
 ## Next steps
 

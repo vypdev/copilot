@@ -7,11 +7,11 @@ interface ContractModule {
   assertQueueWorkflow(file: string, workflow: Record<string, unknown>): void;
   assertDirectEventTriggers(file: string, workflow: Record<string, unknown>): void;
   assertRunner(file: string, workflow: Record<string, unknown>): void;
-  assertImmutableActions(file: string, workflow: Record<string, unknown>): void;
-  assertPinnedCopilotHistoryCheckout(file: string, workflow: Record<string, unknown>): void;
-  assertPinnedCopilotActionInputs(file: string, workflow: Record<string, unknown>): void;
+  assertMajorActionReferences(file: string, workflow: Record<string, unknown>): void;
+  assertCopilotActionInputs(file: string, workflow: Record<string, unknown>): void;
   assertNoJobLevelSecrets(file: string, workflow: Record<string, unknown>): void;
   assertAgentWorkflowPermissions(file: string, workflow: Record<string, unknown>): void;
+  assertLightweightBranchSyncWorkflow(file: string, workflow: Record<string, unknown>): void;
   MIN_QUEUE_JOB_TIMEOUT_MINUTES: number;
   QUEUE_GATE_TIMEOUT_MINUTES: number;
   PREPARE_VERSION_TIMEOUT_MINUTES: number;
@@ -27,11 +27,11 @@ const {
   assertQueueWorkflow,
   assertDirectEventTriggers,
   assertRunner,
-  assertImmutableActions,
-  assertPinnedCopilotHistoryCheckout,
-  assertPinnedCopilotActionInputs,
+  assertMajorActionReferences,
+  assertCopilotActionInputs,
   assertNoJobLevelSecrets,
   assertAgentWorkflowPermissions,
+  assertLightweightBranchSyncWorkflow,
   MIN_QUEUE_JOB_TIMEOUT_MINUTES,
   QUEUE_GATE_TIMEOUT_MINUTES,
   PREPARE_VERSION_TIMEOUT_MINUTES,
@@ -112,6 +112,18 @@ describe('workflow contract validator', () => {
     expect(() => assertQueueWorkflow(queueFile, workflow)).toThrow('required bot actor gate');
   });
 
+  it.each(['.github/workflows', 'setup/workflows'])(
+    'keeps the %s branch-sync observer all-branch, bot-push-safe, and agent-free',
+    (directory) => {
+      const file = path.join(process.cwd(), directory, 'copilot_branch_sync.yml');
+      const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+      expect(() => assertLightweightBranchSyncWorkflow(file, workflow)).not.toThrow();
+
+      workflow.jobs['branch-sync'].steps.at(-1).with['fixer-model'] = 'model';
+      expect(() => assertLightweightBranchSyncWorkflow(file, workflow)).toThrow('lightweight branch-sync');
+    },
+  );
+
   it.each(['copilot_pull_request.yml', 'copilot_pull_request_comment.yml'])(
     'requires same-repository PR gating for %s',
     (fileName) => {
@@ -178,6 +190,111 @@ describe('workflow contract validator', () => {
         expect(() => validateWorkflow(file, workflow)).not.toThrow();
       }
     }
+  });
+
+  it.each(mutationDirectories.flatMap((directory) => mutationWorkflowNames.map((fileName) => [directory, fileName] as const)))(
+    'persists Git credentials only in the release/hotfix jobs that push in %s/%s',
+    (directory, fileName) => {
+      const { workflow } = loadMutationWorkflow(directory, fileName);
+      const preparationJobIds = directory === '.github/workflows'
+        ? ['prepare-version-files', 'prepare-compiled-files']
+        : ['prepare-version-files'];
+
+      for (const [jobId, job] of Object.entries(workflow.jobs)) {
+        const checkoutSteps = job.steps.filter((step: { uses?: string }) => step.uses?.startsWith('actions/checkout@'));
+        for (const checkout of checkoutSteps) {
+          expect(checkout.with['persist-credentials']).toBe(preparationJobIds.includes(jobId));
+        }
+      }
+
+      const commitSteps = preparationJobIds.flatMap(jobId => workflow.jobs[jobId].steps)
+        .filter((step: { uses?: string }) => step.uses?.startsWith('EndBug/add-and-commit@'));
+      expect(commitSteps).toHaveLength(preparationJobIds.length);
+      for (const step of commitSteps) {
+        expect(step.with.committer_name).toBe('GitHub Actions');
+        expect(step.with.committer_email).toBe('actions@github.com');
+        expect(step.with.default_author).toBe('user_info');
+      }
+    },
+  );
+
+  it.each(mutationWorkflowNames)('rejects missing credentials in a push job for %s', (fileName) => {
+    expectMutationRejected('.github/workflows', fileName, (workflow) => {
+      const checkout = workflow.jobs['prepare-version-files'].steps.find(
+        (step: { uses?: string }) => step.uses?.startsWith('actions/checkout@'),
+      );
+      checkout.with['persist-credentials'] = false;
+    }, 'persist-credentials: true');
+  });
+
+  it.each(mutationWorkflowNames)('rejects persisted credentials outside push jobs for %s', (fileName) => {
+    expectMutationRejected('.github/workflows', fileName, (workflow) => {
+      const checkout = workflow.jobs.tag.steps.find(
+        (step: { uses?: string }) => step.uses?.startsWith('actions/checkout@'),
+      );
+      checkout.with['persist-credentials'] = true;
+    }, 'persist-credentials: false');
+  });
+
+  it.each(mutationWorkflowNames)('reports active %s failures through the generic comment single action', (fileName) => {
+    const { workflow } = loadMutationWorkflow('.github/workflows', fileName);
+    const report = workflow.jobs['report-failure'];
+    const action = report.steps[1];
+
+    expect(report.if).toBe("${{ failure() && github.event.inputs.issue != '-1' }}");
+    expect(report.permissions).toEqual({ contents: 'read', issues: 'write' });
+    expect(report.steps[0]).toEqual(expect.objectContaining({
+      uses: 'actions/checkout@v5',
+      with: { 'persist-credentials': false },
+    }));
+    expect(action.uses).toBe('./');
+    expect(action.with).toEqual(expect.objectContaining({
+      'single-action': 'publish_issue_comment',
+      'single-action-issue': '${{ github.event.inputs.issue }}',
+      token: '${{ github.token }}',
+    }));
+    expect(action.with['single-action-message']).toContain('${{ github.run_id }}');
+  });
+
+  it.each(mutationWorkflowNames)('reports setup/%s failures through the generic comment single action', (fileName) => {
+    const { workflow } = loadMutationWorkflow('setup/workflows', fileName);
+    const report = workflow.jobs['report-failure'];
+    const action = report.steps[0];
+
+    expect(report.permissions).toEqual({ issues: 'write' });
+    expect(action.uses).toBe('vypdev/copilot@v3');
+    expect(action.with).toEqual(expect.objectContaining({
+      'single-action': 'publish_issue_comment',
+      'single-action-issue': '${{ github.event.inputs.issue }}',
+      token: '${{ github.token }}',
+    }));
+    expect(action.with['single-action-message']).toContain('${{ github.run_id }}');
+  });
+
+  it('rejects a local Copilot reference from a distributed setup workflow', () => {
+    const { file, workflow } = loadMutationWorkflow('setup/workflows', 'release_workflow.yml');
+    workflow.jobs['queue-gate'].steps[1].uses = './';
+
+    expect(() => assertMajorActionReferences(file, workflow)).toThrow('must invoke Copilot with vypdev/copilot@v3');
+  });
+
+  it('rejects a distributed Copilot reference from an internal workflow', () => {
+    const { file, workflow } = loadMutationWorkflow('.github/workflows', 'release_workflow.yml');
+    workflow.jobs['queue-gate'].steps[1].uses = 'vypdev/copilot@v3';
+
+    expect(() => assertMajorActionReferences(file, workflow)).toThrow('must invoke Copilot with ./');
+  });
+
+  it.each(mutationWorkflowNames)('rejects a missing failure reporter in %s', (fileName) => {
+    expectMutationRejected('.github/workflows', fileName, (workflow) => {
+      delete workflow.jobs['report-failure'];
+    }, 'must define the exact gate-first job graph');
+  });
+
+  it.each(mutationWorkflowNames)('rejects a failure reporter that can run without a failed deployment in %s', (fileName) => {
+    expectMutationRejected('.github/workflows', fileName, (workflow) => {
+      workflow.jobs['report-failure'].if = '${{ always() }}';
+    }, 'must run only for a failed deployment');
   });
 
   it.each(mutationDirectories.flatMap((directory) => mutationWorkflowNames.map((fileName) => [directory, fileName] as const)))('enforces the exact queue, preparation, and tag budgets for %s/%s', (directory, fileName) => {
@@ -271,8 +388,8 @@ describe('workflow contract validator', () => {
           'timeout-minutes': 120,
           permissions: { actions: 'read', contents: 'read' },
           steps: [
-            { uses: 'actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09', with: { 'persist-credentials': false } },
-            { uses: 'vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3', with: { 'queue-gate-only': 'true', token: '${{ github.token }}' } },
+            { uses: 'actions/checkout@v5', with: { 'persist-credentials': false } },
+            { uses: './', with: { 'queue-gate-only': 'true', token: '${{ github.token }}' } },
           ],
         },
         'prepare-version-files': {
@@ -330,17 +447,23 @@ describe('workflow contract validator', () => {
     })).toThrow('runs-on self-hosted, codex');
   });
 
-  it('rejects mutable action references and persisted checkout credentials', () => {
+  it('requires checkout v5, major tags for other actions, and explicit checkout credentials', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'ci_check.yml');
-    expect(() => assertImmutableActions(file, {
-      jobs: { test: { steps: [{ uses: 'actions/checkout@v5', with: { 'persist-credentials': false } }] } },
-    })).toThrow('immutable 40-character commit SHA');
-    expect(() => assertImmutableActions(file, {
-      jobs: { test: { steps: [{ uses: 'actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09' }] } },
+    expect(() => assertMajorActionReferences(file, {
+      jobs: { test: { steps: [{ uses: 'actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09', with: { 'persist-credentials': false } }] } },
+    })).toThrow('checkout must use actions/checkout@v5');
+    expect(() => assertMajorActionReferences(file, {
+      jobs: { test: { steps: [{ uses: 'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020' }] } },
+    })).toThrow('major version tag');
+    expect(() => assertMajorActionReferences(file, {
+      jobs: { test: { steps: [{ uses: 'actions/setup-node@main' }] } },
+    })).toThrow('major version tag');
+    expect(() => assertMajorActionReferences(file, {
+      jobs: { test: { steps: [{ uses: 'actions/checkout@v5' }] } },
     })).toThrow('persist-credentials: false');
   });
 
-  it('rejects inputs missing from the action manifest at the pinned revision', () => {
+  it('rejects inputs missing from the current Copilot action manifest', () => {
     const file = path.join(process.cwd(), 'setup', 'workflows', 'copilot_pull_request.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
     const action = workflow.jobs['copilot-pull-requests'].steps.find(
@@ -348,35 +471,26 @@ describe('workflow contract validator', () => {
     );
     action.with['future-unsupported-input'] = 'true';
 
-    expect(() => assertPinnedCopilotActionInputs(file, workflow)).toThrow(
+    expect(() => assertCopilotActionInputs(file, workflow)).toThrow(
       'passes inputs unsupported by vypdev/copilot@',
     );
   });
 
-  it('requires CI to fetch the history needed to validate pinned in-repository action manifests', () => {
-    const file = path.join(process.cwd(), '.github', 'workflows', 'ci_check.yml');
-    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
-    const checkout = workflow.jobs['ci-check'].steps.find(
-      (step: { uses?: string }) => step.uses?.startsWith('actions/checkout@'),
-    );
-    checkout.with['fetch-depth'] = 1;
-
-    expect(() => assertPinnedCopilotHistoryCheckout(file, workflow)).toThrow(
-      'fetch-depth: 0 so pinned in-repository action manifests can be validated',
-    );
-  });
-
-  it('rejects local action execution from the pull request workflow', () => {
+  it('executes the pull request workflow against the current checkout', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'copilot_pull_request.yml');
-    expect(() => assertImmutableActions(file, {
-      jobs: { review: { steps: [{ uses: './' }] } },
-    })).toThrow('pull-request-controlled local action code');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    const action = workflow.jobs['copilot-pull-requests'].steps.find(
+      (step: { uses?: string }) => step.uses === './',
+    );
+
+    expect(action).toBeDefined();
+    expect(() => assertMajorActionReferences(file, workflow)).not.toThrow();
   });
 
   it('requires every specialized role reachable from a workflow', () => {
     const file = path.join(process.cwd(), '.github', 'workflows', 'copilot_pull_request.yml');
     const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
-    const action = workflow.jobs['copilot-pull-requests'].steps.find((step: { uses?: string }) => step.uses?.includes('copilot@'));
+    const action = workflow.jobs['copilot-pull-requests'].steps.find((step: { uses?: string }) => step.uses === './');
     delete action.with['planner-provider'];
 
     expect(() => validateWorkflow(file, workflow)).toThrow('missing agent inputs: planner-provider');

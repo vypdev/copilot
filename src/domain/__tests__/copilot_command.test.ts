@@ -12,6 +12,9 @@ describe('Copilot command policy', () => {
         ['/copilot status', 'status'],
         ['/copilot description', 'description'],
         ['/copilot fix FINDING-1 FINDING-2', 'fix'],
+        ['/copilot sync-branch --dry-run', 'sync-branch'],
+        ['/copilot update-branch', 'update-branch'],
+        ['/copilot updateBranch', 'updatebranch'],
     ])('parses %s as an explicit command', (input, name) => {
         const result = parseCopilotCommand(input);
         expect(result.kind).toBe('command');

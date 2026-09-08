@@ -8,8 +8,10 @@ const root = path.resolve(__dirname, '..');
 const docsRoot = path.join(root, 'docs');
 const navigation = JSON.parse(fs.readFileSync(path.join(root, 'docs.json'), 'utf8'));
 const action = yaml.load(fs.readFileSync(path.join(root, 'action.yml'), 'utf8'));
-const COPILOT_ACTION_SHA = 'ae6bdef3be7d896bb2e390d169f103d384ae83a3';
-const IMMUTABLE_ACTION_REFERENCE = /^[^/\s]+\/[^@\s]+@[0-9a-f]{40}$/i;
+const COPILOT_ACTION_REFERENCE = 'v3';
+const DISTRIBUTED_COPILOT_ACTION = `vypdev/copilot@${COPILOT_ACTION_REFERENCE}`;
+const CHECKOUT_ACTION = 'actions/checkout@v5';
+const MAJOR_ACTION_REFERENCE = /^[^/\s]+\/[^@\s]+@v[1-9]\d*$/;
 
 const errors = [];
 const docsFiles = fs.readdirSync(docsRoot, { recursive: true })
@@ -60,10 +62,16 @@ for (const [index, source] of docsContent.entries()) {
       const snippet = yaml.load(match[1]);
       visitYaml(snippet, value => {
         if (!value || typeof value !== 'object' || typeof value.uses !== 'string') return;
-        if (!value.uses.startsWith('./') && !value.uses.startsWith('docker://')
-          && !IMMUTABLE_ACTION_REFERENCE.test(value.uses)) {
+        if (value.uses.startsWith('actions/checkout@')) {
+          if (value.uses !== CHECKOUT_ACTION) {
+            const line = source.slice(0, match.index).split('\n').length;
+            errors.push(`${file}:${line}: checkout examples must use ${CHECKOUT_ACTION}`);
+          }
+        } else if (value.uses !== DISTRIBUTED_COPILOT_ACTION
+          && !value.uses.startsWith('./') && !value.uses.startsWith('docker://')
+          && !MAJOR_ACTION_REFERENCE.test(value.uses)) {
           const line = source.slice(0, match.index).split('\n').length;
-          errors.push(`${file}:${line}: action ${value.uses} must use an immutable 40-character commit SHA`);
+          errors.push(`${file}:${line}: action ${value.uses} must use a major version tag such as owner/action@v1`);
         }
         if (/^actions\/checkout@/.test(value.uses) && value.with?.['persist-credentials'] !== false) {
           const line = source.slice(0, match.index).split('\n').length;
@@ -85,8 +93,8 @@ function visitYaml(value, visitor) {
 }
 
 for (const match of allDocumentation.matchAll(/uses:\s*vypdev\/copilot@([^\s"'`]+)/g)) {
-  if (match[1] !== COPILOT_ACTION_SHA) {
-    errors.push(`documentation uses vypdev/copilot@${match[1]}; expected immutable ref ${COPILOT_ACTION_SHA}`);
+  if (match[1] !== COPILOT_ACTION_REFERENCE) {
+    errors.push(`documentation uses vypdev/copilot@${match[1]}; expected major-version ref ${COPILOT_ACTION_REFERENCE}`);
   }
 }
 

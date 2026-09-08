@@ -34,11 +34,11 @@ function execution(): Execution {
     } as unknown as Execution;
 }
 
-function singleActionExecution(isRecommendStepsAction = false): Execution {
+function singleActionExecution(isRecommendStepsAction = false, isPublishIssueCommentAction = false): Execution {
     return {
         currentConfiguration: { results: [] },
         isSingleAction: true,
-        singleAction: { throwError: true, isRecommendStepsAction },
+        singleAction: { throwError: true, isRecommendStepsAction, isPublishIssueCommentAction },
     } as unknown as Execution;
 }
 
@@ -111,6 +111,42 @@ describe('finishGithubAction', () => {
         await finishGithubAction(action, [], {} as never, {} as never);
 
         expect(mockStoreInvoke).toHaveBeenCalledWith(action);
+    });
+
+    it('does not publish a second result comment for the issue-comment single action', async () => {
+        const action = singleActionExecution(false, true);
+
+        await finishGithubAction(action, [new Result({
+            id: 'PublishIssueCommentUseCase',
+            success: true,
+            executed: true,
+        })], {} as never, {} as never);
+
+        expect(mockPublishInvoke).not.toHaveBeenCalled();
+        expect(mockStoreInvoke).not.toHaveBeenCalled();
+    });
+
+    it('keeps every publication and persistence side effect disabled for a dry run', async () => {
+        const action = Object.assign(execution(), {
+            owner: 'test-owner',
+            repo: 'test-repo',
+            eventName: 'pull_request',
+            inputs: { pull_request: { head: { sha: 'abc1234' } } },
+            tokens: { token: 'product-pat' },
+        });
+        const results = [new Result({
+            id: 'BranchSyncUseCase',
+            success: true,
+            executed: true,
+            payload: { dryRun: true },
+        })];
+
+        await finishGithubAction(action, results, {} as never, {} as never, { publish: mockEvidencePublish });
+
+        expect(mockPublishInvoke).not.toHaveBeenCalled();
+        expect(mockStoreInvoke).not.toHaveBeenCalled();
+        expect(mockEvidencePublish).not.toHaveBeenCalled();
+        expect(core.setFailed).not.toHaveBeenCalled();
     });
 
     it('publishes the summary only through the explicitly provided output port', async () => {

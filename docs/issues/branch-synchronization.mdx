@@ -1,0 +1,112 @@
+---
+title: Branch synchronization
+description: Detect parent-branch drift on every push and safely align issue or pull-request branches.
+---
+
+# Branch synchronization
+
+Copilot can watch parent-to-child branch relationships and notify the related open issue when its working branch falls behind. Detection is intentionally separate from the normal commit workflow: `copilot_branch_sync.yml` listens to pushes on **all branches**, performs only GitHub metadata and comparison requests, and never loads Bugbot or an agent.
+
+This separation keeps pushes to `main`, `master`, `develop`, release branches, and intermediate feature branches observable without paying the cost or accepting the noise of the full commit-analysis pipeline.
+
+## Detection flow
+
+On each non-deletion push, the observer:
+
+1. reads open issues and open pull requests;
+2. resolves branch relationships from Copilot's durable issue configuration first, then from GitHub linked branches and PR base/head data;
+3. selects relationships where the pushed branch is either the parent or the working branch;
+4. compares each working branch with its parent; and
+5. creates or updates a single bot-authored synchronization notice on the issue.
+
+The notice is stateful. Further parent pushes update it instead of creating comment spam. When the working branch catches up—including after an automated synchronization—the same notice is marked resolved. A PAT-authored sync push is observed too, so a chain such as `develop → feature/A → feature/B` can propagate recommendations to the next level.
+
+<Info>
+  A manually created linked branch needs an open PR whose head is that branch to establish its parent. Branches created by Copilot already persist `parentBranch` and `workingBranch`, so they do not require this fallback.
+</Info>
+
+## Install the lightweight workflow
+
+`copilot setup` installs the observer together with the commit capability. For a manual installation, copy `setup/workflows/copilot_branch_sync.yml` or use this equivalent:
+
+```yaml
+name: Copilot - Branch Sync
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  branch-sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    steps:
+      - uses: vypdev/copilot@v3
+        with:
+          single-action: check_branch_sync_action
+          token: ${{ secrets.PAT }}
+```
+
+Do not add the normal `COPILOT_BOT_LOGIN` actor gate to this workflow. A synchronization push made by the bot must be allowed to run the observer so dependent child branches are checked. The explicit PAT performs GitHub reads and issue-comment writes; the implicit `GITHUB_TOKEN` remains read-only.
+
+## Align a branch
+
+An authorized maintainer can run either command in the related issue or PR:
+
+```text
+/copilot sync-branch
+/copilot update-branch
+/copilot updateBranch
+```
+
+The natural-language form is also supported:
+
+```text
+@vypbot update the issue's branch
+```
+
+Options:
+
+| Option | Effect |
+| --- | --- |
+| `--dry-run` | Prepares the merge and reports whether it is clean or conflicted, then aborts without calling the agent or pushing. |
+| `--no-agent` | Allows a clean merge but aborts safely if conflicts occur. |
+| `--from <branch>` or `--from=<branch>` | Uses an explicit parent branch after validating it as a Git ref. |
+
+`update-branch` and the proposed camel-case `updateBranch` spelling are compatibility aliases for the canonical `sync-branch` command.
+
+The command fetches the current remote heads, checks out the working branch, and prepares a no-fast-forward merge. A clean merge proceeds without an agent. Before the push, Copilot runs the configured `bugbot-fix-verify-commands`, verifies that those commands did not mutate the prepared merge, and confirms that neither remote head changed while the operation was running.
+
+## Conflict resolution boundary
+
+When Git reports conflicts, the configured fixer agent may resolve them under a narrow contract:
+
+- no more than 20 conflicted paths;
+- no credentials, private keys, environment files, or workflow files;
+- edits restricted to the paths Git identified as conflicted;
+- no agent-controlled checkout, reset, merge, commit, or push;
+- no unresolved markers, unexpected paths, changes to non-conflicted index entries, or changes to `HEAD`/`MERGE_HEAD`; and
+- all configured verification commands must pass in the credential-free untrusted-command environment.
+
+If any boundary fails, Copilot aborts the merge and does not push. Immediately before committing, it fetches both branches again and rejects stale work. Git credentials are scoped only to trusted fetch/push subprocesses and are never exposed to the agent or verification commands.
+
+## Result report
+
+Every command finishes with a comment in the conversation. The report distinguishes:
+
+- already aligned;
+- dry-run clean or conflicted;
+- merged cleanly without an agent;
+- merged after fixer-agent conflict resolution; or
+- safely aborted, with a publishable reason and no provider-secret details.
+
+Successful reports include the parent and working branches, verification count, and merge commit SHA in the structured run result. The subsequent push observer resolves the prior stale-branch notice.
+
+## Why the normal commit workflow remains limited
+
+`copilot_commit.yml` is an issue-centric, agent-capable pipeline: it can publish commit summaries, calculate size/progress, and run Bugbot. Its default exclusion of `master` and `develop` avoids irrelevant issue lookup, agent provisioning, duplicate PR analysis, higher API/model usage, and bot feedback loops on integration branches.
+
+The lightweight observer provides the useful part of all-branch visibility without broadening that expensive workflow. Repositories may still remove the commit-workflow exclusions deliberately, but branch synchronization does not require doing so.

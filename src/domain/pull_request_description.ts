@@ -7,7 +7,7 @@ export const PULL_REQUEST_DESCRIPTION_MODES = [
 
 export type PullRequestDescriptionMode = typeof PULL_REQUEST_DESCRIPTION_MODES[number];
 
-export const DEFAULT_PULL_REQUEST_DESCRIPTION_MODE: PullRequestDescriptionMode = 'append';
+export const DEFAULT_PULL_REQUEST_DESCRIPTION_MODE: PullRequestDescriptionMode = 'replace';
 
 export const MANAGED_PULL_REQUEST_DESCRIPTION_START = '<!-- copilot:managed-pr-description -->';
 export const MANAGED_PULL_REQUEST_DESCRIPTION_END = '<!-- /copilot:managed-pr-description -->';

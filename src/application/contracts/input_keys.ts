@@ -13,6 +13,9 @@ export const INPUT_KEYS = {
     SINGLE_ACTION_VERSION: 'single-action-version',
     SINGLE_ACTION_TITLE: 'single-action-title',
     SINGLE_ACTION_CHANGELOG: 'single-action-changelog',
+    SINGLE_ACTION_MESSAGE: 'single-action-message',
+    SINGLE_ACTION_COMMENT_ID: 'single-action-comment-id',
+    SINGLE_ACTION_COMMENT_MODE: 'single-action-comment-mode',
     INACTIVITY_THRESHOLD_HOURS: 'inactivity-threshold-hours',
 
     // Tokens

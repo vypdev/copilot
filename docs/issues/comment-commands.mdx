@@ -39,6 +39,9 @@ Commands are recognized at the beginning of a comment, case-insensitively. They 
 | `/copilot fix <finding-id>` | Fix one or more existing Bugbot findings. | Yes, if authorized |
 | `/copilot dismiss <finding-id>` | Dismiss one or more findings. | No file changes |
 | `/copilot implement <request>` | Apply a general code, test, refactoring, or documentation request. | Yes, if authorized |
+| `/copilot sync-branch [options]` | Merge the issue/PR parent into its working branch; use the fixer only if eligible conflicts occur. | Yes, if authorized |
+| `/copilot update-branch [options]` | Alias for `sync-branch`. | Yes, if authorized |
+| `/copilot updateBranch [options]` | Camel-case compatibility alias for `sync-branch`. | Yes, if authorized |
 
 `/copilot fix`, `/copilot dismiss`, and `/copilot implement` require arguments. The bot never treats a missing argument as permission to make a broad change.
 
@@ -51,6 +54,7 @@ Mention the bot and describe the outcome you want:
 @vypbot diagnose the 500 error described above
 @vypbot review the PR for authentication and injection vulnerabilities
 @vypbot add regression tests for the null response case
+@vypbot update the issue's branch
 ```
 
 The first three are read-only requests. The last one may be classified as a general implementation request. Natural-language file changes require an authorized actor and an available branch; the action runs the configured verification commands before committing and pushing.
@@ -64,6 +68,7 @@ The first three are read-only requests. The last one may be classified as a gene
 - An issue comment that changes files also needs an open PR referencing the issue so the action has a branch to update. PR comments use the PR head branch.
 - The workflow must grant `contents: write` for file-modifying actions. Verification failures prevent the commit.
 - Bot mentions are matched case-insensitively and with username boundaries, so `@vypbot-extra` does not accidentally trigger `@vypbot`.
+- Branch synchronization accepts `--dry-run`, `--no-agent`, and `--from <branch>` and applies additional Git-state, path, verification, and remote-race guards. See [Branch synchronization](/issues/branch-synchronization).
 
 ## New-issue welcome
 

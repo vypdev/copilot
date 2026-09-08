@@ -291,4 +291,17 @@ describe('BranchCompareRepository', () => {
             expect(logError).toHaveBeenCalledWith(expect.stringContaining('Error comparing branches'));
         });
     });
+
+    it('exposes the parent-to-working comparison through the branch-sync port', async () => {
+        mockCompareCommits.mockResolvedValue({
+            data: { ahead_by: 4, behind_by: 2, total_commits: 6, files: [], commits: [] },
+        });
+
+        await expect(repo.compare('o', 'r', 'develop', 'feature/42', 'token'))
+            .resolves.toEqual({ aheadBy: 4, behindBy: 2 });
+        expect(mockCompareCommits).toHaveBeenCalledWith(expect.objectContaining({
+            base: 'heads/develop',
+            head: 'heads/feature/42',
+        }));
+    });
 });

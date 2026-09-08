@@ -50,7 +50,7 @@ This workflow ensures that critical fixes reach production quickly while maintai
       name: Git Board - Issue
       runs-on: ubuntu-latest
       steps:
-        - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+        - uses: vypdev/copilot@v3
           with:
             deploy-label: deploy # [!code highlight]
             hotfix-workflow: hotfix_workflow.yml # [!code highlight]
@@ -97,14 +97,14 @@ This workflow ensures that critical fixes reach production quickly while maintai
       runs-on: ubuntu-latest
       steps:
         - name: Checkout Repository
-          uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+          uses: actions/checkout@v5
 
         // create a new tag version here
 
         // deploy logic here
 
         - name: Git Board - Deploy success notification
-          uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+          uses: vypdev/copilot@v3
           if: ${{ success() }}
           with:
             single-action: 'deployed_action'
@@ -134,7 +134,7 @@ jobs:
     name: Git Board - Issue
     runs-on: ubuntu-latest
     steps:
-      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+      - uses: vypdev/copilot@v3
         with:
           hotfix-label: hotfix # [!code highlight]
 ```
@@ -149,7 +149,7 @@ jobs:
     name: Git Board - Issue
     runs-on: ubuntu-latest
     steps:
-      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+      - uses: vypdev/copilot@v3
         with:
           hotfix-tree: hotfix # [!code highlight]
 ```
@@ -175,7 +175,7 @@ jobs:
     name: Git Board - Issue
     runs-on: ubuntu-latest
     steps:
-      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+      - uses: vypdev/copilot@v3
         with:
           main-branch: master # [!code highlight]
 ```
@@ -192,7 +192,7 @@ jobs:
     name: Git Board - Issue
     runs-on: ubuntu-latest
     steps:
-      - uses: vypdev/copilot@ae6bdef3be7d896bb2e390d169f103d384ae83a3 # v3
+      - uses: vypdev/copilot@v3
         with:
           images-issue-hotfix: url1, url2, url3 # [!code highlight]
 ```

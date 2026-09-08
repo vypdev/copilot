@@ -1,0 +1,24 @@
+name: Copilot - Branch Sync
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  branch-sync:
+    name: Copilot - Branch Sync
+    runs-on: [self-hosted, codex]
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: ./
+        with:
+          single-action: check_branch_sync_action
+          token: ${{ secrets.PAT }}
