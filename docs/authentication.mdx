@@ -48,7 +48,11 @@ For comment-driven assistance, read-only commands are available to anyone who ca
     Set these permissions for the repository:
 
     - **Actions**: Read and write
-    - **Checks**: Read and write (Bugbot Check Runs)
+    - **Checks**: Not required on the PAT when using the supplied pull-request
+      workflow. That workflow grants job-local `checks: write` to its short-lived
+      `GITHUB_TOKEN` and passes it only as `COPILOT_EVIDENCE_TOKEN`. Grant Checks
+      read/write to the PAT only for a reviewed custom workflow that deliberately
+      uses the PAT as the Check Run fallback.
     - **Contents**: Read and write
     - **Issues**: Read and write
     - **Metadata**: Read-only
@@ -63,6 +67,12 @@ For comment-driven assistance, read-only commands are available to anyone who ca
     - **Projects**: Read and write only for the selected organization projects
 
     The runtime PAT does not need organization Secrets, Variables, Custom repository roles, or Self-hosted runners administration.
+
+    Release and hotfix promotion/reconciliation PRs must still use this PAT (or
+    an explicitly designed GitHub App token), rather than `GITHUB_TOKEN`, because
+    most events produced by `GITHUB_TOKEN` do not start another workflow run.
+    That is what allows the marked PR `closed` event to wake
+    `copilot_deployment_orchestration.yml`.
 
     Finally press the **Generate new token** button.
 

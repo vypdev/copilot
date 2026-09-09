@@ -14,7 +14,9 @@ Documentation is part of the product contract. A page is complete only when its 
 - `.github/workflows/`: event, permissions, and variable propagation.
 - `docs.json`: tabs, groups, titles, icons, and routes.
 - `docs-page` catalog: supported MDX components and icon vocabulary.
-- `scripts/validate-documentation-contract.cjs`: cross-page links, YAML snippets, Action refs, and input coverage.
+- `scripts/validate-documentation-contract.cjs`: routes and heading anchors,
+  YAML snippets, Action refs and input names, workflow/single-action catalogs,
+  issue-template parity, and high-risk deployment documentation contracts.
 
 ## Change procedure
 
@@ -22,7 +24,11 @@ Documentation is part of the product contract. A page is complete only when its 
   <Step title="Inspect the contract">Read the implementation and workflow before changing prose.</Step>
   <Step title="Update the smallest page">Keep one user task or concept per page.</Step>
   <Step title="Validate components and routes">Use only supported MDX components and icons, and register every public page in `docs.json`.</Step>
-  <Step title="Run the documentation gates">Run `validate:agent-docs`, `validate:docs-page`, and `validate:documentation` to check links, YAML snippets, frontmatter, defaults, action refs, terms, and input coverage.</Step>
+  <Step title="Run the documentation gates">Run `validate:agent-docs`, `validate:docs-page`, `validate:documentation`, and `validate:workflows`. Together they check routes/anchors, YAML snippets, frontmatter, selected defaults, action refs and input names, catalogs, issue templates, terms, components/icons, and workflow contracts.</Step>
 </Steps>
+
+These gates cannot inspect npm or GitHub settings and do not replace real
+desktop/mobile, light/dark, or screen-reader review. Record those checks as
+explicit operator or UX evidence when a specification requires them.
 
 See the [documentation completeness plan](/development/documentation-completeness-plan) for the complete information architecture.

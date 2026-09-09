@@ -31,3 +31,19 @@ description: Required checks before enabling Copilot automation.
 - [ ] Provisioning and help checks pass.
 - [ ] Smoke tests are recorded without printing credentials.
 - [ ] Rollback refs and previous CLI versions are known.
+
+## Release and hotfix orchestration
+
+- [ ] `copilot_deployment_orchestration.yml` and every enabled publishing workflow (`release_workflow.yml` and/or `hotfix_workflow.yml`) are committed on the repository's default branch before an operation starts; this project enables both.
+- [ ] The workflow PAT can write Contents, Issues, Pull requests, and Actions, and belongs to a bot identity different from the release operator.
+- [ ] Merge commits are allowed when `production-lineage` is selected.
+- [ ] Native auto-merge is enabled when explicitly selecting `auto-merge`.
+- [ ] Every required GitHub Actions and third-party check supports `merge_group` before selecting merge queue; required integrations also report on `gh-readonly-queue/<base>` branches.
+- [ ] The 11 orchestration Repository Variables are reviewed, or their documented defaults are accepted intentionally.
+- [ ] For this project's package publication, the exact GitHub Environment `npm` exists and npm Trusted Publishers name `vypdev/copilot`, that Environment, and both publishing workflow filenames exactly.
+- [ ] Each npm publisher allows direct `npm publish`; no `NPM_TOKEN` or `NODE_AUTH_TOKEN` is configured for the OIDC path.
+- [ ] Node/npm meet npm Trusted Publishing minimums, `package.json.repository.url` matches the publishing repository, and the visibility interval/timeout are within their documented bounds.
+- [ ] A real end-to-end run has verified the issue control center and PR copy in GitHub; source-level tests cannot replace this manual UX gate.
+
+See [Release and hotfix orchestration](/issues/deployment-orchestration) for the
+exact values, defaults, decision paths, and recovery procedure.

@@ -120,7 +120,9 @@ Changelog can be read from a file or generated in a previous step and passed as 
 
 ## Workflow: create tag
 
-Create a Git tag with prefix `v` (e.g. `v1.2.0`) from the release branch:
+Create a Git tag with prefix `v` (for example `v1.2.0`). In a current
+deployment operation, the supplied workflow also passes the issue and operation
+ID so the tag is created at the accepted production SHA:
 
 ```yaml
 - uses: vypdev/copilot@v3
@@ -128,14 +130,18 @@ Create a Git tag with prefix `v` (e.g. `v1.2.0`) from the release branch:
     token: ${{ secrets.PAT }}
     single-action: create_tag
     single-action-version: "1.2.0"
-    single-action-issue: "100"  # Issue with releaseBranch in configuration
+    single-action-issue: ${{ inputs.issue-number }}
+    single-action-operation-id: ${{ inputs.operation-id }}
 ```
 
-**Note:** The tag is created from the `releaseBranch` stored in the issue configuration. The version input `1.2.0` will create tag `v1.2.0`.
+**Note:** This excerpt belongs inside the supplied workflow's `publish` mode;
+the continuation dispatch supplies both inputs. Do not invent or hard-code an
+operation ID. Calls without schema-v3 state retain the release-branch behavior
+only for compatibility with an older in-flight deployment.
 
 ## Workflow: deployed
 
-Mark issue `100` as deployed (e.g. from your release workflow):
+Resume legacy deployment issue `100` through the compatibility entry point:
 
 ```yaml
 - uses: vypdev/copilot@v3
@@ -144,6 +150,9 @@ Mark issue `100` as deployed (e.g. from your release workflow):
     single-action: deployed_action
     single-action-issue: "100"
 ```
+
+New release and hotfix workflows do not call `deployed_action`; they use the
+four internal deployment actions described in [Available actions](/single-actions/available-actions#internal-deployment-orchestration-actions).
 
 ## Workflow: publish or update an issue comment
 

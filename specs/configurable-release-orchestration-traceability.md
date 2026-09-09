@@ -7,6 +7,13 @@ call live providers. AC-40 and the human portion of AC-46 remain evidence gates
 for the implementation pull request because source code cannot establish visual
 readability in GitHub's desktop/mobile and light/dark renderers.
 
+Implementation landed in `df972490`. The 2026-09-10 documentation follow-up
+reconciles the public lifecycle, setup, npm OIDC, configuration, recovery,
+single-action, and compatibility contracts and adds executable parity checks.
+The specification remains in live-validation state until AC-40 and the human
+portion of AC-46 have reviewed screenshots and the ten-second comprehension
+result from a real end-to-end operation.
+
 ## Test-budget ledger
 
 The feature floor is allocated without double-counting cases:
@@ -71,7 +78,7 @@ separate gates.
 | 40 | GitHub desktop/mobile, light/dark, Mermaid/fallback review | Renderer tests provide deterministic fixtures; real GitHub screenshots belong in the implementation PR | UX acceptance section of SDD | **Manual PR gate** |
 | 41 | Persisted messages and rendered values sanitize mentions, commands, HTML/markers, headings, and Mermaid inputs | domain and presentation security tests | trust section | Automated |
 | 42 | Dedicated Job Summary distinguishes external wait from workflow failure | presentation and Action completion tests | What maintainers see | Automated |
-| 43 | Route registered; Action input names verified; workflow examples parsed | documentation and workflow validators | all linked pages | Automated |
+| 43 | Route/anchors registered; Action inputs and every single-action value verified; workflow catalog/examples parsed; embedded issue templates synchronized; high-risk defaults and prerequisites asserted | documentation and workflow validators | all linked pages | Automated |
 | 44 | Narrow context, provider-neutral ports, mutation-free presentation, acyclic graph | architecture and dependency-cycle tests | `/development/architecture` | Automated |
 | 45 | Non-overlapping 72-case ledger plus repository coverage gate | this ledger and Jest coverage | `/development/testing` | Automated |
 | 46 | Ten-second comprehension: kind, phase, publication, transition, and action | semantic renderer assertions; final comprehension judgment belongs in PR review | What maintainers see | **Automated semantics + manual PR gate** |

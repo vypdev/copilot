@@ -16,7 +16,7 @@ These inputs are used when you run the action in single-action mode. For the com
 
 ## When the action needs an issue
 
-For `check_progress_action`, `detect_potential_problems_action`, `recommend_steps_action`, `deployed_action`, and `publish_issue_comment`:
+For `check_progress_action`, `detect_potential_problems_action`, `recommend_steps_action`, `deployed_action`, `publish_issue_comment`, and every internal deployment action:
 
 | Input | Description | Example |
 |-------|-------------|---------|
@@ -26,6 +26,18 @@ For `check_progress_action`, `detect_potential_problems_action`, `recommend_step
 repository's open issues carrying a waiting-state label. Configure its optional
 `inactivity-threshold-hours` input (default: `168`) or the
 `INACTIVITY_THRESHOLD_HOURS` Repository Variable.
+
+### Internal operation identity
+
+`continue_deployment_action`, `published_deployment_action`, and
+`failed_deployment_action` require `single-action-operation-id`. It must be the
+exact durable ID supplied by Copilot for that launcher issue. The workflows also
+pass the matching version where applicable. `prepare_deployment_action` creates
+the operation ID and instead requires issue, version, title, and changelog.
+
+These four actions belong to `release_workflow.yml`, `hotfix_workflow.yml`, and
+`copilot_deployment_orchestration.yml`; do not invoke them manually or reuse an
+ID across issues.
 
 ## Publishing an issue comment
 

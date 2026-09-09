@@ -31,7 +31,7 @@ When the workflow runs on `issues` (opened, edited, labeled, unlabeled, etc.):
 
 | Feature | Description |
 |--------|-------------|
-| **Branch creation** | Creates branches from the development branch (or main for hotfix/release) based on issue labels (feature, bugfix, docs, chore, hotfix, release). Optional: requires a launcher label (e.g. `branched`) unless `branch-management-always` is true. |
+| **Branch creation** | Creates feature, bugfix, docs, chore, and release branches from the configured development line. A release records the exact development SHA at the cut; a hotfix instead starts from the commit behind the selected production version tag. Optional: non-release/hotfix types require a launcher label (for example `branched`) unless `branch-management-always` is true. |
 | **Branch–issue linking** | Links the new branch to the issue and adds a comment summarizing the actions taken. |
 | **Project linking** | Adds the issue to the configured GitHub Projects (by `project-ids`) and moves it to the configured column (e.g. "Todo", "In Progress"). |
 | **Assignees** | Assigns up to `desired-assignees-count` members to the issue (creator preferred if in org). |
@@ -66,7 +66,7 @@ When the workflow runs on `push` (e.g. to any branch):
 | **Commit prefix check** | Warns if commit messages do not follow the prefix derived from the branch name (using `commit-prefix-transforms`). |
 | **Reopen issue** | If `reopen-issue-on-push` is true, reopens the issue when new commits are pushed to its branch. |
 | **Size & progress** | Computes size (XS–XXL) and progress (0–100%) from the branch diff; updates the **issue** and any **open PRs** for that branch with the same labels. Uses the configured agent runtime. No separate workflow is needed. |
-| **Bugbot (potential problems)** | the configured agent analyzes the branch vs base and reports findings as **issue comments** when there is no PR, or as one summarized review with inline findings when a PR is available; it updates stored findings and **marks PR review threads as resolved** when applicable. Configurable via `bugbot-severity` and `ai-ignore-files`. See [Bugbot](/bugbot), [Issues](/issues#bugbot-potential-problems), and [Pull Requests](/pull-requests#bugbot-potential-problems). |
+| **Bugbot (potential problems)** | The configured agent analyzes the branch vs base and reports findings as **issue comments** when there is no PR, or as one summarized review with inline findings when a PR is available; it updates stored findings and **marks PR review threads as resolved** when applicable. Configurable via `bugbot-severity` and `ai-ignore-files`. See [Bugbot](/bugbot), [issue findings](/bugbot/detection#on-the-issue-when-no-pr-is-available), and [pull-request findings](/bugbot/detection#on-the-pull-request). |
 | **Comments & images** | Posts commit summary comments with optional images. |
 | **Finding reconciliation** | Carries stable finding fingerprints across pushes and marks findings fixed, obsolete, dismissed, or reopened without creating duplicate comments. |
 | **Branch drift observer** | A separate lightweight workflow watches pushes on every branch, resolves open issue/PR branch relationships, and maintains one synchronization notice when a child is behind. It does not load Bugbot or an agent. See [Branch synchronization](/issues/branch-synchronization). |
@@ -96,14 +96,18 @@ When you set `single-action` (and the inputs required by that action), Copilot r
 | **`think_action`** | — | Uses the configured agent for deep code analysis and change proposals (reasoning over the codebase). No issue required. |
 | **`initial_setup`** | — | Performs initial setup: creates labels, issue types, verifies access. If the repo has no version tags, creates default tag `v1.0.0` so release/hotfix issues get a base version. No issue required. |
 | **`create_release`** | `single-action-version`, `single-action-title`, `single-action-changelog` | Creates a GitHub release with the given version, title, and changelog. |
-| **`create_tag`** | `single-action-version` | Creates a Git tag with prefix `v` (e.g. `v1.2.0`) for the given version from the release branch. |
+| **`create_tag`** | `single-action-version`; orchestration also supplies issue and operation ID | In a schema-v3 deployment, creates or verifies the immutable `v<version>` tag at the accepted production SHA. The release-branch behavior exists only for legacy calls without orchestration state. |
 | **`publish_github_action`** | `single-action-version` | Publishes or updates the GitHub Action: creates/updates the major version tag (for example, `v3` from a `v3.x.y` release). Requires `create_tag` to have been run first. |
-| **`deployed_action`** | `single-action-issue` | Marks the issue as deployed; updates labels and project state (e.g. "deployed"). |
+| **`deployed_action`** | `single-action-issue` | Compatibility entry point for an existing deployment. With schema-v3 state it delegates to orchestration; without state it retains the bounded legacy completion path. New workflows use the internal actions below. |
 | **`close_inactive_issues_action`** | `inactivity-threshold-hours` (optional) | Scans waiting issues and closes those inactive for the configured threshold; no issue number is required. |
 | **`publish_issue_comment`** | `single-action-issue`, `single-action-message`; optionally `single-action-comment-id` and `single-action-comment-mode` | Creates a Markdown comment, or replaces/appends to a specific comment on the issue. |
 | **`check_branch_sync_action`** | — | Internal lightweight push observer used by `copilot_branch_sync.yml`; compares related parent/working branches and updates the issue notice without an agent. |
+| **`prepare_deployment_action`** | Internal: issue, version, title, changelog | Creates/resumes durable deployment state and opens the promotion PR. Supplied workflows only. |
+| **`continue_deployment_action`** | Internal: issue, operation ID | Verifies a managed closed PR and advances the operation. Supplied continuation workflow only. |
+| **`published_deployment_action`** | Internal: issue, operation ID, version | Records verified publication and creates configured reconciliation PRs. Supplied workflows only. |
+| **`failed_deployment_action`** | Internal: issue, operation ID, version/message | Persists a retryable publication failure without discarding completed facts. Supplied workflows only. |
 
-Single actions that **throw an error** if the last step fails: `publish_github_action`, `create_release`, `deployed_action`, `create_tag`, `close_inactive_issues_action`, `publish_issue_comment`. This lets the workflow fail the job when the action does not succeed.
+Single actions that **throw an error** if the last step fails: `publish_github_action`, `create_release`, `deployed_action`, `create_tag`, `close_inactive_issues_action`, `publish_issue_comment`, `prepare_deployment_action`, `continue_deployment_action`, `published_deployment_action`, and `failed_deployment_action`. The four deployment-orchestration actions are internal contracts and must not be invoked manually.
 
 ---
 

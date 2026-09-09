@@ -42,7 +42,35 @@ permissions:
   id-token: write
 ```
 
-The npm package must be configured to trust this repository and workflow before automated publication. Configure trusted publishers for organization `vypdev`, repository `copilot`, environment `npm`, and both publishing workflow filenames: `release_workflow.yml` and `hotfix_workflow.yml`. The job publishes with `npm publish --access public`; trusted publishing generates provenance automatically and does not store an npm token in the repository. npm trusted publishing currently requires a GitHub-hosted runner.
+The npm package must be configured to trust this repository and workflow before
+automated publication. Configure trusted publishers for organization `vypdev`,
+repository `copilot`, environment `npm`, and both publishing workflow filenames:
+`release_workflow.yml` and `hotfix_workflow.yml`. Enter only the exact,
+case-sensitive filename including its extension. For both connections, **Allowed
+actions** must permit direct `npm publish`; new npm publisher configurations may
+otherwise allow only staged publishing. The job publishes with `npm publish
+--access public`; trusted publishing generates provenance automatically and does
+not store an npm token in the repository.
+
+npm trusted publishing requires npm CLI 11.5.1 or newer, Node 22.14.0 or newer,
+a GitHub-hosted runner, `id-token: write`, and a `package.json.repository.url`
+that exactly matches the GitHub repository. Node 24 on `ubuntu-latest` satisfies
+the runtime minimum. `npm whoami` cannot validate this OIDC path ahead of time,
+because authentication is exchanged during the publish command. See the
+[npm Trusted Publishing reference](https://docs.npmjs.com/trusted-publishers/).
+
+The visibility wait is configured with Repository Variables:
+
+| Variable | Default | Allowed range |
+|---|---:|---:|
+| `NPM_VISIBILITY_POLL_INTERVAL_SECONDS` | `20` seconds | `10`–`60` seconds |
+| `NPM_VISIBILITY_TIMEOUT_SECONDS` | `120` seconds | `60`–`900` seconds |
+
+Before testing the lifecycle, the new release, hotfix, and
+`copilot_deployment_orchestration.yml` workflow files must all be present on
+`master`. The continuation relies on `pull_request: closed`, and GitHub resolves
+event and dispatch workflows through the default/base branch. See the
+[GitHub Actions event reference](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows).
 
 The repository-specific workflow is intentionally not copied to `setup/workflows`: consumers of the action do not publish `@vypdev/copilot` when running their own release workflows.
 

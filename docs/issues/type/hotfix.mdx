@@ -124,7 +124,11 @@ hotfix/1.2.3
 
 ## Source
 
-Hotfix branches are created from the master branch, specifically from the latest published tag. This ensures that hotfixes are based on the most recent stable production code. You can configure the master branch name as shown below:
+Hotfix branches are created from the commit behind the selected latest accepted
+production tag, not from the current tip of `main-branch`. The production branch
+name still defines the production role and promotion target, while the immutable
+tag defines the hotfix origin SHA. You can configure the production branch name
+as shown below:
 
 ```yml
 jobs:
@@ -172,7 +176,7 @@ name: 🔥 Hotfix Issue
 
 description: Request a new hotfix for copilot (only team members)
 title: "<YOUR TITLE HERE>"
-labels: [ "hotfix", "branched" ]
+labels: [ "hotfix", "branched", "priority: high" ]
 body:
   - type: markdown
     attributes:

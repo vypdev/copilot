@@ -22,6 +22,7 @@ Full documentation: **[docs.page/vypdev/copilot](https://docs.page/vypdev/copilo
 | [Features & capabilities](https://docs.page/vypdev/copilot/features) | Workflow triggers, single actions, agent execution, and concurrency |
 | [Authentication](https://docs.page/vypdev/copilot/authentication) | PAT setup, permissions, token best practices |
 | [Configuration](https://docs.page/vypdev/copilot/configuration) | All inputs: branches, labels, projects, images, etc. |
+| [Release orchestration](https://docs.page/vypdev/copilot/issues/deployment-orchestration) | Production-first release/hotfix flow, npm OIDC, reconciliation, and recovery |
 | [Agents](https://docs.page/vypdev/copilot/agents) | Runtime, model, CLI, policy, and failure behavior |
 | [Security & Operations](https://docs.page/vypdev/copilot/security-operations) | Credentials, trust boundaries, provisioning, verification, upgrades, and rollback |
 | [Development](https://docs.page/vypdev/copilot/development) | Architecture, testing, documentation, artifacts, and release process |
@@ -83,7 +84,8 @@ for action-level examples.
 - **Projects** — Link issues and PRs to boards and move them to the right columns.
 - **Single actions** — On-demand: check progress, think, create release/tag, mark deployed, etc.
 - **Branch synchronization** — Authorized issue/PR commands merge parent into working branch, call the fixer only for eligible conflicts, run verification, reject remote races, push, and report exactly what happened.
-- **Evidence and safety** — Every run writes a bounded Job Summary; PR reviews expose a `Copilot / Review` Check Run, active findings fail that check, agent sandboxes run without approval or network access, and all agent/comment content remains bounded, secret-redacted, and treated as untrusted data.
+- **Release and hotfix orchestration** — Cut from the correct immutable origin, promote through a protected production PR, publish only the accepted production commit, and reconcile it back through resumable managed PRs without keeping a runner polling checks.
+- **Evidence and safety** — Every run writes a bounded Job Summary; PR reviews expose a `Copilot / Review` Check Run, actionable findings are neutral by default and fail it only when `bugbot-fail-on-unresolved` is enabled, agent sandboxes run without approval or network access, and all agent/comment content remains bounded, secret-redacted, and treated as untrusted data.
 - **Bugbot quality** — Hierarchical rules, semantic finding identity, safe GitHub suggestions, analysis-only dry runs, a multilingual regression corpus, real-agent benchmark runner, content-free telemetry/analytics, and the provider-neutral `@vypdev/copilot/bugbot` API.
 - **Concurrency** — Each workflow waits only for older active runs of that same workflow. Polling is adaptive and rate-limit-aware, with a 90-minute queue deadline and no cancellation or overwrite of intermediate runs. Event templates can also skip bot-authored jobs before runner allocation through the optional, generic `COPILOT_BOT_LOGIN` Repository Variable. See [Features → Workflow concurrency](https://docs.page/vypdev/copilot/features#workflow-concurrency-and-sequential-execution).
 

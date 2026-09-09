@@ -19,6 +19,15 @@ corepack pnpm@10.12.4 run validate:workflows
 git diff --check
 ```
 
+`validate:documentation` also enforces heading fragments, the complete setup
+workflow and single-action catalogs, parity between the six embedded issue
+examples and their setup templates, and high-risk release contracts such as
+the default-branch continuation prerequisite, npm direct-publish policy,
+polling controls, orchestration Variables, and legacy-only `merge-timeout`.
+These deterministic checks cannot inspect live GitHub/npm settings or judge
+desktop/mobile, light/dark, and assistive-technology rendering; keep those as
+explicit operator and human UX gates.
+
 Tests MUST isolate environment variables such as `AGENT_PROVIDER`, `AGENT_MODEL_PROVIDER`, `AGENT_MODEL`, and `AGENT_COMMAND`. Real provider smoke tests are separate from deterministic unit tests and MUST NOT run without authorization and cost controls. Coverage thresholds are enforced by Jest and must not be reduced to accommodate a new code path; add focused tests instead.
 
 `eval:bugbot` runs the offline Bugbot quality harness. Corpus cases score precision, recall, F1, exact-location, severity, category, line distance, false positives/negatives, and confidence calibration independently, so prompt or model changes cannot hide false positives behind a single pass/fail number. `copilot bugbot-benchmark` can generate predictions with the real configured agent for a cost-controlled manual or scheduled gate; `copilot bugbot-eval` scores them. Ground truth is not passed to the agent. Extend the corpus when a production review exposes a new failure mode.

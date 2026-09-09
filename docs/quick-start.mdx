@@ -22,6 +22,18 @@ The setup PAT used by the operator is separate from the workflow `PAT` Secret.
 After setup, review and commit the generated `.github/` files, then customize the
 selected workflows as needed. See [How to use](/how-to-use) for the full flow.
 
+<Warning>
+  If you enable release or hotfix automation, merge
+  `copilot_deployment_orchestration.yml` and every publishing workflow you
+  enable (`release_workflow.yml` and/or `hotfix_workflow.yml`) into the
+  repository's default branch before launching the first operation. GitHub
+  cannot dispatch or wake a continuation workflow that exists only on the
+  temporary release/hotfix branch. This project enables both publishers. For
+  its npm publication, also configure the exact `npm` Environment and npm
+  Trusted Publisher entries before testing the flow. See
+  [Release and hotfix orchestration](/issues/deployment-orchestration#operator-preflight).
+</Warning>
+
 ## Manual workflow integration (advanced)
 
 If the setup wizard cannot be used, the Action can be wired directly into a
@@ -65,5 +77,7 @@ compatible release.
 2. Confirm the selected agent CLI version and model allowlists.
 3. Run the provider smoke procedure.
 4. Grant write permissions only to the workflows that need commits or comments.
+5. If releases are enabled, complete the production, continuation, npm OIDC,
+   and merge-policy checks in the deployment preflight.
 
 See [Configuration checklist](/configuration-checklist) and [Security](/security-operations/security/credentials).

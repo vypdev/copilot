@@ -30,7 +30,7 @@ The following parameters can be configured in the workflow:
 - `question-label`: Label to detect issues marked as questions (default: "question")
 - `help-label`: Label to detect help request issues (default: "help")
 - `deploy-label`: Label to detect deploy actions (default: "deploy")
-- `deployed-label`: Label to detect the deployed was (default: "deployed")
+- `deployed-label`: Label indicating that publication of the accepted production commit was verified (default: "deployed")
 - `docs-label`: Label to manage docs branches (default: "docs")
 - `documentation-label`: Label to manage docs branches (default: "documentation")
 - `chore-label`: Label to manage chore branches (default: "chore")
@@ -143,13 +143,15 @@ All three providers use the CLI contract:
 
 SDK and HTTP server transports are not part of the current public contract. CLI commands are executed without a shell and credentials are supplied through the runner environment or an explicitly controlled local credential store. Tokens must never be included in `agent-command`.
 #### AI model compatibility input
-- `ai-pull-request-description`: Enable AI-powered PR descriptions (default: `false`)
+- `ai-pull-request-description`: Enable AI-powered PR descriptions (default: `true`)
 - `ai-ignore-files`: Comma-separated list of files to ignore for AI operations
 - `ai-members-only`: Restrict AI features to organization/project members (default: `false`)
 
 #### Workflow Configuration
 - `release-workflow`: Release workflow for running release deploys (default: "release_workflow.yml")
 - `hotfix-workflow`: Hotfix workflow for running hotfix deploys (default: "hotfix_workflow.yml")
-- `merge-timeout`: Timeout for the merge workflow in seconds (default: "600")
+- `merge-timeout`: Timeout for deprecated `legacy-wait` in seconds (default:
+  `600`; `0` disables its artificial timeout). Other reconciliation PR modes
+  ignore it and let GitHub own pending checks and merge protection.
 - `inactivity-threshold-hours`: Inactivity window for the scheduled waiting-issue cleanup (default: "168" hours)
 - `commit-prefix-transforms`: Transforms for commit prefix from branch name (e.g. "replace-slash", "kebab-case")

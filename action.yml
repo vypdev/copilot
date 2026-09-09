@@ -1,4 +1,4 @@
-name: "Copilot - Github with super powers"
+name: "Copilot - GitHub with super powers"
 description: "Automates branch management, GitHub project linking, and issue/PR tracking with Git-Flow methodology."
 author: "Efra Espada"
 inputs:
@@ -463,7 +463,7 @@ inputs:
     description: "The number of reviewers desired for the pull request. If set to 0, no reviewers will be added. If the number exceeds the available members, all members will be reviewers. Max 15."
     default: "1"
   merge-timeout:
-    description: "The timeout for the merge workflow in seconds. If set to 0, the merge will not be timed out."
+    description: "Timeout in seconds that applies only to deprecated legacy-wait. Ignored by auto, auto-merge, merge-queue, and create-only. If set to 0, the legacy waiter has no artificial timeout."
     default: "600"
   token:
     description: "Fine-grained personal access token for branch and project operations"

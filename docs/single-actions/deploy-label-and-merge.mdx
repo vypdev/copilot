@@ -1,70 +1,118 @@
 ---
-title: Deploy label and merge flow
-description: How the deploy and deployed labels work and how post-deploy merges and check runs are handled.
+title: Deploy lifecycle and compatibility
+description: How deploy triggers production-first orchestration, when deployed is projected, and how legacy operations are resumed.
 ---
 
-# Deploy label and merge flow
+# Deploy lifecycle and compatibility
 
-This page describes how the **deploy** label is used and what happens when you run the **deployed** single action after a successful deployment. It also explains how branch merges and check runs are handled so that both release→default and release→develop (or hotfix equivalents) complete correctly.
+The `deploy` label starts a durable, production-first release or hotfix
+operation. The recommended path does not publish first and does not keep a
+runner polling pull-request checks.
 
-## The deploy label
+```mermaid
+flowchart LR
+  D[deploy label] --> P[Production promotion PR]
+  P --> A[Accepted production commit]
+  A --> U[Publish]
+  U --> R[Reconciliation PR]
+  R --> C[Complete]
+```
 
-- **`deploy`** — Applied to the issue when the release (or hotfix) is ready to be deployed. Your CI/CD or team adds this label when deployment has been triggered or is about to be.
-- **`deployed`** — Set by Copilot when the **deployed** single action runs and the issue had the **deploy** label. It indicates "deployment is done and post-deploy steps have been run."
+Text equivalent: `deploy` label → protected production PR → accepted production
+commit → publication → protected reconciliation PR → cleanup and completion.
 
-The **deployed** single action is intended to be run **after a successful deployment** (e.g. from a pipeline step or a manual trigger). It requires:
+See [Release and hotfix orchestration](/issues/deployment-orchestration) for the
+complete branch, configuration, state, and recovery contract.
 
-- An issue number (single action is run with `single-action-issue: <number>`).
-- The issue must have the **deploy** label and must **not** already have the **deployed** label.
+## Current behavior
 
-## What the deployed action does
+1. Adding `deploy` to a configured release or hotfix issue dispatches the
+   corresponding workflow in `prepare` mode.
+2. The workflow prepares the frozen source branch and invokes the internal
+   `prepare_deployment_action`.
+3. Copilot creates or reuses one marked promotion PR to `main-branch` and exits
+   successfully while GitHub owns checks, reviews, auto-merge, or merge queue.
+4. `copilot_deployment_orchestration.yml` receives the marked PR's `closed`
+   event. A verified merge dispatches the same release or hotfix workflow in
+   `publish` mode.
+5. The accepted production SHA is tagged and published. Only after publication
+   is verified does Copilot replace `deploy` with `deployed`.
+6. Copilot creates or reuses the configured reconciliation PR. Its merge wakes
+   the continuation again, after which cleanup and issue completion run.
 
-1. **Label update**  
-   Replaces the **deploy** label with **deployed** on the issue.
+Pending PR checks are therefore an external wait, not a pending release runner.
+Closing a managed PR without merging blocks the operation and never causes a
+direct-merge bypass.
 
-2. **Branch merges** (if a release or hotfix branch is configured):
-   - **Release:** starts the release-to-default (e.g. `main`) and release-to-development (e.g. `develop`) PR flows concurrently, then waits for both to succeed.
-   - **Hotfix:** merges the hotfix branch into the default branch, then merges the default branch into the development branch.
+## What `deployed` means
 
-3. **Issue closure**  
-   If **all** merge operations succeed, the issue is closed. If any merge fails, the issue is left open and the action reports that one or more merge operations failed.
+- `deploy` means the launcher issue requested deployment and the operation is
+  still preparing, promoting, or publishing.
+- `deployed` means publication of the accepted production commit was verified.
+  Reconciliation or cleanup may still be pending, so the issue control center
+  remains the authoritative status.
+- The issue closes, when configured, only after every reconciliation target and
+  cleanup step completes.
 
-Each merge is done via a **pull request**: create PR, wait for checks (see below), then merge the PR. A **direct** Git merge is used only when GitHub cannot create the pull request, preserving branch protection after a PR has been created.
+## Internal orchestration actions
 
-## Waiting for checks before merging
+The supplied workflows coordinate four internal single actions:
 
-For each PR we create (e.g. release→main, release→develop), we wait until the PR is ready to merge before calling the merge API.
+| Action | Owner | Purpose |
+|---|---|---|
+| `prepare_deployment_action` | Release/hotfix workflow, `prepare` mode | Create or resume durable state and the production promotion PR. |
+| `continue_deployment_action` | `copilot_deployment_orchestration.yml` | Verify a managed closed PR and dispatch the next phase. |
+| `published_deployment_action` | Release/hotfix workflow, `publish` mode | Record verified publication and create reconciliation PRs. |
+| `failed_deployment_action` | Release/hotfix failure job | Persist a retryable publication failure without losing completed facts. |
 
-### Per-PR check runs
+Do not invoke these manually. They require the exact issue and durable
+`single-action-operation-id`; preparation additionally requires the version,
+title, and changelog. Continuations reject missing, stale, forged, or mismatched
+operation identities.
 
-- GitHub's Checks API returns check runs **by ref** (branch), not by PR. The same branch can be the head of **multiple PRs** (e.g. release→main and release→develop).
-- We **only consider check runs that belong to the current PR**, using the `pull_requests` array on each check run (filter by `pull_request.number === this PR`). We do **not** use check runs from another PR (e.g. the first merge) to decide that the second PR is ready.
-- We wait until all check runs for **this** PR are completed and none have failed. Only then do we merge.
+## `deployed_action` compatibility
 
-### When the PR has no check runs
+`deployed_action` remains accepted for one migration period:
 
-- If there are **no** check runs on the ref, we use **commit status checks** (legacy) and merge when none are pending.
-- If there **are** check runs on the ref but **none** for this PR (e.g. they are from another PR with the same head), we wait a short number of polls (~30 seconds). If no check runs appear for this PR in that window, we evaluate the combined commit status and proceed only when it is complete and successful. We never bypass branch protection after a PR has been created.
+- when schema-v3 deployment state exists, it delegates to the state-aware
+  orchestration path;
+- when an older in-flight issue has no orchestration state, it retains the
+  bounded legacy post-deploy behavior so that the issue can be completed; and
+- new release and hotfix workflows must not use it as their normal publication
+  entry point.
 
-### Timeout
+The legacy compatibility path may poll checks and may use `merge-timeout`.
+`merge-timeout` has no effect on `auto`, `auto-merge`, `merge-queue`, or
+`create-only`; those modes delegate waiting and merge enforcement to GitHub.
 
-- Checks are polled every 20 seconds to limit GitHub API usage. A configurable **merge timeout** (input `merge-timeout`, default 600 seconds) limits how long we wait for checks **per merge**. A value of `0` means there is no artificial timeout. If a positive timeout is reached, the merge fails and no direct-merge bypass is attempted.
+## Rollout prerequisite
 
-## Summary table
+Before starting the first operation with this design, merge or install the
+shared continuation and every publishing workflow you enable on the
+repository's default branch:
 
-| Scenario | Behaviour |
-|----------|-----------|
-| PR has check runs for this PR | Wait until all are completed and none failed, then merge. |
-| PR has no check runs on ref | Use status checks; if none pending, merge. |
-| Check runs on ref but none for this PR | Wait a few polls (~30 s); then require successful combined status before merging. |
-| Timeout waiting for checks | Return failure; do not bypass branch protection. |
-| PR creation fails | Use the direct merge compatibility fallback and validate GitHub's response. |
-| PR merge fails | Return failure; issue is not closed. |
+- `release_workflow.yml` when release is enabled;
+- `hotfix_workflow.yml` when hotfix is enabled; and
+- `copilot_deployment_orchestration.yml`.
 
-## Related code and tests
+This project enables both deployment kinds and therefore installs all three.
+The continuation workflow must exist on the production/base branch before the
+promotion PR closes, otherwise that close event cannot resume the operation.
+Bot-created PRs use the workflow PAT because most events created with the
+repository `GITHUB_TOKEN` do not start another workflow run.
 
-- **Use case:** `src/application/usecases/actions/deployed_action_use_case.ts` — deploy label handling, merge order, issue close.
-- **Merge and checks:** `src/data/repository/merge_repository.ts` — PR creation, per-PR check filtering, status checks fallback, and the limited direct-merge compatibility fallback.
-- **Tests:**
-  - `src/application/usecases/actions/__tests__/deployed_action_use_case.test.ts` — deploy label validation, release/hotfix merge order, close on success, no close on merge failure.
-  - `src/data/repository/__tests__/merge_repository.test.ts` — check runs per PR, no check runs, timeout, direct merge fallback.
+## Recovery
+
+Do not restart the whole release or change its version after a partial success.
+Open the launcher issue control center and resume the displayed phase:
+
+| Visible phase | Safe action |
+|---|---|
+| `promotion_pr_pending` | Complete or correct the marked production PR, then rerun `prepare` only if instructed. |
+| `publishing` | Rerun `publish` with the same issue and operation ID; matching tags, npm versions, and releases are verified and reused. |
+| `reconciliation_pending` | Complete or correct the reconciliation PR; the package is already public and is never republished. |
+| `blocked` | Correct the reported cause and replay only the failed phase. |
+| `completed` | No action is required; duplicate events are safe no-ops. |
+
+An immutable version tag pointing to a different SHA is a hard conflict and is
+never moved automatically.

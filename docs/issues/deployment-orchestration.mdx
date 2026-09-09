@@ -44,6 +44,29 @@ names and prefixes are snapshotted when the operation starts.
   final reconciliation.
 </Info>
 
+## Operator preflight
+
+Complete this once before starting the first production-first operation:
+
+- merge or install `copilot_deployment_orchestration.yml` and every enabled
+  publishing workflow (`release_workflow.yml` and/or `hotfix_workflow.yml`) on
+  the repository's default branch; this project enables both;
+- ensure the workflow PAT belongs to a bot account different from the person
+  launching the release and can write Contents, Issues, Pull requests, and
+  Actions for this repository;
+- allow merge commits, which `production-lineage` requires for an auditable
+  ancestry relationship;
+- enable repository auto-merge if selecting `auto-merge`, or configure every
+  required check for `merge_group` if the target requires a merge queue;
+- for this project's npm publication, create the exact `npm` Environment and
+  both exact npm Trusted Publisher entries described below; and
+- run `copilot doctor` after the new workflows and Variables are on the default
+  branch.
+
+GitHub resolves event and dispatch workflows through the default/base branch.
+Installing the continuation only on a release branch is not sufficient: it must
+already be present when a managed promotion PR closes.
+
 ## Release lifecycle
 
 1. Copilot cuts `<release-tree>/<version>` from the exact current
@@ -123,6 +146,48 @@ advanced. The branch starts at the current target and receives the trusted
 reconciliation commit server-side, preserving target-only commits and giving
 target-dependent checks a unique head SHA.
 
+### Setup file and Repository Variable mapping
+
+Interactive `copilot setup` asks for these values. A non-interactive setup file
+places them under `repository`, and setup writes the corresponding Repository
+Variable when Variable management is enabled:
+
+| Action input | Setup configuration key | Repository Variable |
+|---|---|---|
+| `release-reconciliation-strategy` | `repository.releaseReconciliationStrategy` | `RELEASE_RECONCILIATION_STRATEGY` |
+| `hotfix-reconciliation-strategy` | `repository.hotfixReconciliationStrategy` | `HOTFIX_RECONCILIATION_STRATEGY` |
+| `reconciliation-pr-mode` | `repository.reconciliationPullRequestMode` | `RECONCILIATION_PR_MODE` |
+| `reconciliation-backmerge-mode` | `repository.reconciliationBackmergeMode` | `RECONCILIATION_BACKMERGE_MODE` |
+| `hotfix-active-release-policy` | `repository.hotfixActiveReleasePolicy` | `HOTFIX_ACTIVE_RELEASE_POLICY` |
+| `reconciliation-tree` | `repository.reconciliationTree` | `RECONCILIATION_TREE` |
+| `reconciliation-cleanup` | `repository.reconciliationCleanup` | `RECONCILIATION_CLEANUP` |
+| `reconciliation-issue-completion` | `repository.reconciliationIssueCompletion` | `RECONCILIATION_ISSUE_COMPLETION` |
+| `orchestration-presentation-mode` | `repository.orchestrationPresentationMode` | `ORCHESTRATION_PRESENTATION_MODE` |
+| `orchestration-diagrams` | `repository.orchestrationDiagrams` | `ORCHESTRATION_DIAGRAMS` |
+| `orchestration-comment-mode` | `repository.orchestrationCommentMode` | `ORCHESTRATION_COMMENT_MODE` |
+
+Action inputs are the runtime contract. Generated workflows read Repository
+Variables and fall back to the same defaults. Once an operation starts, its
+branch roles and orchestration choices are snapshotted; changing a Variable does
+not rewrite an in-flight deployment.
+
+A recommended non-interactive fragment is:
+
+```yaml
+repository:
+  releaseReconciliationStrategy: production-lineage
+  hotfixReconciliationStrategy: production-lineage
+  reconciliationPullRequestMode: auto
+  reconciliationBackmergeMode: auto
+  hotfixActiveReleasePolicy: prefer-release
+  reconciliationTree: sync
+  reconciliationCleanup: all
+  reconciliationIssueCompletion: close
+  orchestrationPresentationMode: guided
+  orchestrationDiagrams: true
+  orchestrationCommentMode: update
+```
+
 ### Invalid combinations
 
 Copilot rejects configuration before mutation when:
@@ -139,34 +204,58 @@ custom merge graphs are not accepted.
 
 ## Repository setup
 
-Run `copilot setup` or copy all three generated workflow contracts:
+Run `copilot setup` or copy the generated continuation and every enabled
+publishing contract to the default branch before launching an operation:
 
-- `release_workflow.yml` and `hotfix_workflow.yml`, each with internal
-  `prepare` and `publish` modes;
+- `release_workflow.yml` and/or `hotfix_workflow.yml`, according to the enabled
+  features, each with internal `prepare` and `publish` modes;
 - `copilot_deployment_orchestration.yml`, listening only to
   `pull_request: closed` and checking out the trusted PR base; and
 - `merge_group: checks_requested` on every workflow that provides a required
   check for merge-queue targets.
 
-The continuation workflow uses the PAT to ensure bot-created PR events can wake
-GitHub Actions. Grant only the repository permissions needed by enabled
-features: Contents read/write, Issues read/write, Pull requests read/write, and
-Actions read/write for continuation dispatch. The normal `GITHUB_TOKEN` remains
-read-only where it is sufficient. Never use `pull_request_target` to execute a
-managed PR head.
+This project enables both release and hotfix, so its installation contains all
+three files. A consumer that enables only one deployment kind still requires
+the shared continuation but does not need the other publishing workflow.
+
+Promotion and reconciliation PRs are created with the PAT so their events can
+wake GitHub Actions. Most events caused by the repository `GITHUB_TOKEN` do not
+start another workflow run. Grant only the repository permissions needed by
+enabled features: Contents read/write, Issues read/write, Pull requests
+read/write, and Actions read/write for continuation dispatch. The supplied PR
+workflow publishes its Check Run through a short-lived `GITHUB_TOKEN` with
+job-local `checks: write`; the PAT does not need Checks permission for that
+recommended path. Never use `pull_request_target` to execute a managed PR head.
 
 ### npm trusted publishing for this repository
 
 The project workflows publish `@vypdev/copilot` from `ubuntu-latest` through
 npm OIDC. No npm key is stored in GitHub.
 
-1. In GitHub, create an Environment named `npm`. Add required reviewers only if
-   you intentionally want a human publication gate.
+1. In GitHub, create an Environment named exactly `npm` before the first run.
+   Creating it implicitly from a workflow would leave it without protection
+   rules. Add required reviewers only if you intentionally want a human
+   publication gate; availability depends on repository visibility and the
+   GitHub plan. No Environment secret is required for OIDC.
 2. On npm, add GitHub Actions trusted publishers for organization `vypdev`,
    repository `copilot`, environment `npm`, and each workflow that publishes:
-   `release_workflow.yml` and `hotfix_workflow.yml`.
-3. Keep `id-token: write` scoped only to the `publish-npm` job.
-4. Do not define `NPM_TOKEN` or `NODE_AUTH_TOKEN` for this path.
+   `release_workflow.yml` and `hotfix_workflow.yml`. Enter only each filename,
+   including its extension; every field is case-sensitive and must match
+   exactly.
+3. For both npm connections, set **Allowed actions** to permit direct
+   **`npm publish`**. New publisher configurations may otherwise allow only
+   staged publishing, while these project workflows deliberately run
+   `npm publish --access public`.
+4. Use npm CLI 11.5.1 or newer and Node 22.14.0 or newer. The project uses Node
+   24 on `ubuntu-latest`, which satisfies that minimum. Self-hosted runners are
+   not supported by npm Trusted Publishing.
+5. Keep `package.json.repository.url` equal to
+   `https://github.com/vypdev/copilot.git`; npm requires the package repository
+   to match the publishing repository.
+6. Keep `id-token: write` scoped only to the `publish-npm` job.
+7. Do not define `NPM_TOKEN` or `NODE_AUTH_TOKEN` for this path. `npm whoami`
+   is not an OIDC preflight because npm obtains the short-lived credential only
+   during publication.
 
 The job checks out the immutable tag, installs the frozen lockfile, validates
 package name/version and tarball contents, smoke-tests the package, skips an
@@ -174,10 +263,25 @@ already-visible exact version, and polls `npm view` every 20 seconds for a
 bounded 120 seconds by default. Before finalization it also verifies that npm's
 registry `gitHead` matches the accepted production SHA.
 
-The reusable setup templates intentionally contain a generic publication
-extension point. Consumer repositories must implement their own registry or
-deployment publication and then invoke `published_deployment_action` with the
-same `operation-id`.
+The project-specific polling controls are Repository Variables, not Action
+inputs:
+
+| Variable | Default | Allowed range |
+|---|---:|---:|
+| `NPM_VISIBILITY_POLL_INTERVAL_SECONDS` | `20` seconds | `10`–`60` seconds |
+| `NPM_VISIBILITY_TIMEOUT_SECONDS` | `120` seconds | `60`–`900` seconds |
+
+An existing exact version is not blindly accepted: its version and `gitHead`
+must match the checked-out immutable tag.
+
+The project workflows above are specific to `@vypdev/copilot`: they compile,
+validate, smoke-test, and publish npm. Reusable files under `setup/workflows`
+are intentionally generic. They prepare the version, promote it, create the
+tag and GitHub Release, and expose a publication extension point; they do not
+build or publish `@vypdev/copilot` for consumer repositories. Consumers must
+implement their own registry or deployment step and invoke
+`published_deployment_action` with the same `operation-id` only after that
+publication succeeds.
 
 ## Protected branches and merge queues
 
@@ -187,6 +291,13 @@ same `operation-id`.
 - When a branch requires a merge queue, every required GitHub Actions check
   must run for `merge_group`. Confirm equivalent support for third-party checks
   such as code-health services before selecting queue mode.
+- GitHub merge queues are available for organization-owned public repositories
+  and organization-owned private repositories on Enterprise Cloud; they cannot
+  be enabled by a branch-protection pattern containing `*`.
+- Third-party CI must report on the temporary
+  `gh-readonly-queue/<base>` branches generated by the queue. Confirm this for
+  RepoWise or any equivalent required integration before making queue mode a
+  release dependency.
 - Strict development branches normally cause `auto` back-merge to use a sync
   branch when development advanced after the release cut.
 - Closing a managed PR without merge blocks the operation; it never bypasses
@@ -205,6 +316,33 @@ PRs state prominently that the package is already public and that merging or
 closing the PR cannot publish it again. Issue text follows `issues-locale`; PR
 text follows `pull-requests-locale`; Spanish and English are built in, with a
 safe English fallback.
+
+A pending control center leads with meaning rather than internal identifiers:
+
+```markdown
+# Release 3.4.0
+
+> **Current status:** Waiting for production acceptance
+>
+> **Action required:** Review or merge the production PR when its required
+> checks pass.
+
+## Progress
+- [x] Release cut from `develop`
+- [x] Version prepared and validated
+- [ ] Promotion PR merged into `master`
+- [ ] Package published
+- [ ] Production reconciled into `develop`
+
+[Open production PR](https://github.com/example/project/pull/42) ·
+[Inspect prepared commit](https://github.com/example/project/commit/abc123)
+```
+
+After npm succeeds but reconciliation is pending, the primary message instead
+states that the package is already public and that merging or closing the
+reconciliation PR cannot publish it again. A completed view says that no action
+is required. Real links, names, and hashes are sanitized and placed after these
+user-facing facts.
 
 ## Recovery by visible phase
 
@@ -242,6 +380,14 @@ For legacy in-progress issues without v3 orchestration state, the compatibility
 path remains available for one migration period. `deployed_action` uses the new
 state-aware path when state exists and otherwise retains the old behavior.
 New releases always use the production-first state machine.
+
+## External platform references
+
+- [npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers/)
+- [GitHub Actions events](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows)
+- [Triggering workflows with a PAT or GitHub App](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)
+- [GitHub merge queues](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue)
+- [GitHub deployment environments](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments)
 
 ## Security and durable facts
 

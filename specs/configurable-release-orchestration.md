@@ -1,10 +1,15 @@
 # Configurable Production-First Release Orchestration
 
-- Status: Ready for implementation
+- Status: Implemented; live rollout and human UX validation pending
 - Date: 2026-09-09
+- Last updated: 2026-09-10
 - Owners: Copilot maintainers
 - Scope: release and hotfix promotion, publication, reconciliation, and cleanup
+- Implementation: `df972490` plus the documentation/validation follow-up recorded
+  in the companion traceability matrix
 - Required review gates: architecture, product UX, security, and operations
+- Open validation gates: AC-40 and the human portion of AC-46 must be captured
+  from a real GitHub release/hotfix flow on desktop/mobile and light/dark views
 - Standard: [Product Specification Standard](./README.md)
 
 ## 1. Summary
@@ -42,7 +47,7 @@ intentionally not configurable.
 
 ## 2. Problem statement
 
-The current project workflow:
+The pre-implementation project workflow documented by this specification:
 
 1. prepares and commits version/build files on the release branch;
 2. creates the version tag from the release branch;

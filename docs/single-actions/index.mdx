@@ -14,8 +14,8 @@ When you set the **`single-action`** input (and any required targets such as `si
   <Card title="Configuration" icon="gear" href="/single-actions/configuration">
     single-action, single-action-issue, single-action-version, and other inputs.
   </Card>
-  <Card title="Deploy label and merge flow" icon="git-merge" href="/single-actions/deploy-label-and-merge">
-    Deploy/deployed labels, post-deploy merges (release/hotfix → default and develop), and how we wait for checks per PR.
+  <Card title="Deploy lifecycle and compatibility" icon="git-merge" href="/single-actions/deploy-label-and-merge">
+    Production-first orchestration, deploy/deployed meaning, internal continuations, recovery, and the bounded legacy path.
   </Card>
   <Card title="Workflow & CLI" icon="terminal" href="/single-actions/workflow-and-cli">
     Run from a GitHub Actions workflow or from the copilot CLI.
@@ -36,12 +36,12 @@ When you set the **`single-action`** input (and any required targets such as `si
 | **Inactive issue cleanup** | Close stale issues waiting for a maintainer or issue author; no issue number required. |
 
 <Info>
-**Actions that fail the job** if the last step fails: `publish_github_action`, `create_release`, `deployed_action`, `create_tag`, `close_inactive_issues_action`. The workflow will be marked as failed so you can act on it.
+**Actions that fail the job** if the last step fails: `publish_github_action`, `create_release`, `deployed_action`, `create_tag`, `close_inactive_issues_action`, `publish_issue_comment`, and the four internal deployment-orchestration actions. The workflow will be marked as failed so you can act on it.
 </Info>
 
 ## Next steps
 
 - **[Available actions](/single-actions/available-actions)** — Complete list with inputs and descriptions.
-- **[Deploy label and merge flow](/single-actions/deploy-label-and-merge)** — Deploy/deployed labels and post-deploy merges.
+- **[Deploy lifecycle and compatibility](/single-actions/deploy-label-and-merge)** — Production-first lifecycle, internal continuations, labels, recovery, and legacy compatibility.
 - **[Workflow & CLI](/single-actions/workflow-and-cli)** — How to run from a workflow and from the CLI.
 - **[Examples](/single-actions/examples)** — YAML and CLI examples.

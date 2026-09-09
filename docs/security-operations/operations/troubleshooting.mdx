@@ -39,9 +39,44 @@ This guide helps you resolve common issues you might encounter while using Copil
     - Failed workflow runs
 
     **Solutions:**
-    1. **Timeouts:** Increase `merge-timeout` if needed; check workflow step timeouts and monitor execution times.
+    1. **Timeouts:** Identify the phase before changing a timeout. `merge-timeout`
+       affects only deprecated `legacy-wait`; it cannot fix a pending promotion,
+       environment approval, merge queue, npm visibility wait, or reconciliation
+       PR in the production-first flow.
     2. **Network:** Check GitHub API status, verify network access, and monitor rate limits.
     3. **Triggers:** Verify event triggers, workflow conditions, and concurrent executions.
+  </Accordion>
+
+  <Accordion title="Release or hotfix orchestration stops" icon="rocket">
+    **Start with the launcher issue control center**, which distinguishes an
+    external wait from a failed runner:
+
+    1. **No continuation after a PR merge:** Confirm
+       `copilot_deployment_orchestration.yml` existed on the default/base branch
+       before the PR closed. Confirm the PR body still contains Copilot's managed
+       marker and that it was created with the workflow PAT rather than
+       `GITHUB_TOKEN`.
+    2. **Promotion pending:** Open the linked production PR and let GitHub own
+       required checks, reviews, auto-merge, or merge queue. Do not increase
+       `merge-timeout` and do not publish manually.
+    3. **npm `ENEEDAUTH`:** Verify both npm Trusted Publisher records use the
+       exact organization, repository, workflow filename, and `npm` Environment;
+       ensure **Allowed actions** permits direct `npm publish`, the job runs on
+       `ubuntu-latest`, and it has `id-token: write`. `npm whoami` is not an OIDC
+       preflight.
+    4. **npm visibility timeout:** `NPM_VISIBILITY_POLL_INTERVAL_SECONDS` accepts
+       10–60 seconds and defaults to 20;
+       `NPM_VISIBILITY_TIMEOUT_SECONDS` accepts 60–900 seconds and defaults to
+       120. Rerunning `publish` with the same operation ID verifies and reuses an
+       already-visible exact version.
+    5. **Reconciliation pending:** The package is already public. Complete or
+       correct the linked reconciliation PR; never increment or republish the
+       version to solve this phase.
+    6. **Immutable tag conflict:** Stop and inspect the reported SHAs. Copilot
+       never moves an existing version tag that points at another commit.
+
+    See [Release and hotfix orchestration](/issues/deployment-orchestration) for
+    preflight, state, configuration, and recovery details.
   </Accordion>
 
   <Accordion title="Action skips issue/PR/push pipelines" icon="user-slash" defaultOpen={true}>

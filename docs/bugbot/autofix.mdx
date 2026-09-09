@@ -41,7 +41,7 @@ For a natural-language comment, mention the configured bot user (for example,
 `@vypbot fix the authentication finding`). Explicit `/copilot fix <finding-id>`
 and `/copilot fix all` commands do not require a mention.
 
-**Important:** On **issue comments**, the action needs an **open pull request** that references the issue so it can determine which **branch** to checkout and push to. If there is no such PR, autofix is skipped (the action cannot push without a branch). See [Troubleshooting → Bugbot autofix](/security-operations/operations/troubleshooting#bugbot-autofix).
+**Important:** On **issue comments**, the action needs an **open pull request** that references the issue so it can determine which **branch** to checkout and push to. If there is no such PR, autofix is skipped (the action cannot push without a branch). See [Troubleshooting](/security-operations/operations/troubleshooting).
 
 ### From the pull request
 
@@ -114,7 +114,7 @@ This prevents a successful edit or test command from being mistaken for proof th
 
 ## Troubleshooting
 
-- **Bot didn’t run autofix:** Check that the selected agent CLI is configured, the comment is interpreted as a fix request (e.g. “fix it”, “fix all”), and there is at least one **unresolved** finding. On **issue comments**, ensure there is an **open PR** that references the issue so the action can resolve the branch. See [Troubleshooting → Bugbot autofix](/security-operations/operations/troubleshooting#bugbot-autofix).
+- **Bot didn’t run autofix:** Check that the selected agent CLI is configured, the comment is interpreted as a fix request (e.g. “fix it”, “fix all”), and there is at least one **unresolved** finding. On **issue comments**, ensure there is an **open PR** that references the issue so the action can resolve the branch. See [Troubleshooting](/security-operations/operations/troubleshooting).
 - **Commit not made:** Verify commands run after the fix; if any fails, no commit is made. If the configured agent didn’t change any files, there’s nothing to commit. If push failed (e.g. conflict or missing `contents: write`), check workflow permissions and token scope.
 
 ---

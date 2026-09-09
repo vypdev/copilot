@@ -110,7 +110,10 @@ Copilot provides extensive configuration options to customize your workflow. Use
     - `emoji-labeled-title`: Enable emoji titles based on labels (default: "true")
     - `commit-prefix-transforms`: Comma-separated list of transforms for commit prefix from branch name (e.g. "replace-slash", "kebab-case"). See README for full list.
     - `reopen-issue-on-push`: Reopen closed issues on new commits (default: "true")
-    - `merge-timeout`: Timeout for merge operations in seconds (default: 600)
+    - `merge-timeout`: Timeout in seconds for deprecated `legacy-wait` only
+      (default: `600`; `0` disables its artificial timeout). It is accepted but
+      ignored with a warning by `auto`, `auto-merge`, `merge-queue`, and
+      `create-only`.
     - `inactivity-threshold-hours`: Hours without activity before a waiting issue is closed by the scheduled cleanup (default: 168; valid range: 1–8760)
 
     ## Workflow Files

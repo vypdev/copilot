@@ -170,7 +170,7 @@ You can find this template in `.github/ISSUE_TEMPLATE/release.yml`. Below is an 
 name: 🚀 Release Issue
 description: Request a new release for copilot (only team members)
 title: "<YOUR TITLE HERE>"
-labels: ["release", "branched"]
+labels: ["release", "branched", "priority: medium"]
 body:
   - type: markdown
     attributes:
@@ -187,9 +187,9 @@ body:
       label: Release Type
       description: Indicate the type of release.
       options:
-        - Major
-        - Minor
         - Patch
+        - Minor
+        - Major
     validations:
       required: true
 
