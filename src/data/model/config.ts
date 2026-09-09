@@ -2,9 +2,10 @@ import {BranchConfiguration} from "./branch_configuration";
 import {isRecommendationState, RecommendationState} from "./recommendation_state";
 import {Result} from "./result";
 import { asModelInput, readOptionalString, readString } from './model_input';
+import { isDeploymentOperationSnapshot, type DeploymentOperationSnapshot } from '../../domain/deployment_operation';
 
 /** Version of the durable configuration contract stored in issue/PR content. */
-export const CONFIG_SCHEMA_VERSION = 2;
+export const CONFIG_SCHEMA_VERSION = 3;
 
 export interface ConfigurationMigrationResult {
     readonly payload: Record<string, unknown>;
@@ -59,6 +60,10 @@ export class Config {
     parentBranch: string | undefined;
     hotfixOriginBranch: string | undefined;
     hotfixBranch: string | undefined;
+    releaseOriginBranch: string | undefined;
+    releaseOriginSha: string | undefined;
+    hotfixOriginSha: string | undefined;
+    deploymentOrchestration: DeploymentOperationSnapshot | undefined;
     results: Result[] = [];
     branchConfiguration: BranchConfiguration | undefined;
     recommendationState: RecommendationState | undefined;
@@ -70,6 +75,9 @@ export class Config {
         this.hotfixOriginBranch = readOptionalString(input, 'hotfixOriginBranch');
         this.hotfixBranch = readOptionalString(input, 'hotfixBranch');
         this.releaseBranch = readOptionalString(input, 'releaseBranch');
+        this.releaseOriginBranch = readOptionalString(input, 'releaseOriginBranch');
+        this.releaseOriginSha = readOptionalString(input, 'releaseOriginSha');
+        this.hotfixOriginSha = readOptionalString(input, 'hotfixOriginSha');
         this.parentBranch = readOptionalString(input, 'parentBranch');
         this.workingBranch = readOptionalString(input, 'workingBranch');
         if (input['branchConfiguration'] !== undefined && input['branchConfiguration'] !== null) {
@@ -77,6 +85,9 @@ export class Config {
         }
         if (isRecommendationState(input['recommendationState'])) {
             this.recommendationState = input['recommendationState'];
+        }
+        if (isDeploymentOperationSnapshot(input['deploymentOrchestration'])) {
+            this.deploymentOrchestration = input['deploymentOrchestration'];
         }
     }
 }

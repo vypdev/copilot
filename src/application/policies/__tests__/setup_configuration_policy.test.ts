@@ -17,9 +17,9 @@ describe('setup configuration policy', () => {
         const configuration = createDefaultSetupConfiguration();
         const plan = buildSetupPlan(configuration);
 
-        expect(plan.workflowFiles).toHaveLength(10);
+        expect(plan.workflowFiles).toHaveLength(11);
         expect(plan.issueTemplateFiles).toHaveLength(8);
-        expect(plan.selectedFiles).toHaveLength(19);
+        expect(plan.selectedFiles).toHaveLength(20);
         expect(plan.variables).toEqual(expect.arrayContaining([
             { name: 'AGENT_PROVIDER', value: 'codex' },
             { name: 'AGENT_ALLOWED_MODELS', value: 'openai/gpt-5.6-luna' },

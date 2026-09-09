@@ -94,6 +94,17 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
     add('ISSUES_LOCALE', repository.issueLocale);
     add('PULL_REQUESTS_LOCALE', repository.pullRequestLocale);
     add('COMMIT_PREFIX_TRANSFORMS', repository.commitPrefixTransforms);
+    add('RELEASE_RECONCILIATION_STRATEGY', repository.releaseReconciliationStrategy);
+    add('HOTFIX_RECONCILIATION_STRATEGY', repository.hotfixReconciliationStrategy);
+    add('RECONCILIATION_PR_MODE', repository.reconciliationPullRequestMode);
+    add('RECONCILIATION_BACKMERGE_MODE', repository.reconciliationBackmergeMode);
+    add('HOTFIX_ACTIVE_RELEASE_POLICY', repository.hotfixActiveReleasePolicy);
+    add('RECONCILIATION_TREE', repository.reconciliationTree);
+    add('RECONCILIATION_CLEANUP', repository.reconciliationCleanup);
+    add('RECONCILIATION_ISSUE_COMPLETION', repository.reconciliationIssueCompletion);
+    add('ORCHESTRATION_PRESENTATION_MODE', repository.orchestrationPresentationMode);
+    add('ORCHESTRATION_DIAGRAMS', repository.orchestrationDiagrams);
+    add('ORCHESTRATION_COMMENT_MODE', repository.orchestrationCommentMode);
     add('AI_PULL_REQUEST_DESCRIPTION', configuration.ai.pullRequestDescription);
     add('AI_PULL_REQUEST_DESCRIPTION_MODE', configuration.ai.pullRequestDescriptionMode);
     add('AI_IGNORE_FILES', configuration.ai.ignoreFiles);
@@ -140,6 +151,17 @@ export function buildSetupActionInputs(configuration: SetupConfiguration): Recor
         'issues-locale': repository.issueLocale,
         'pull-requests-locale': repository.pullRequestLocale,
         'commit-prefix-transforms': repository.commitPrefixTransforms,
+        'release-reconciliation-strategy': repository.releaseReconciliationStrategy,
+        'hotfix-reconciliation-strategy': repository.hotfixReconciliationStrategy,
+        'reconciliation-pr-mode': repository.reconciliationPullRequestMode,
+        'reconciliation-backmerge-mode': repository.reconciliationBackmergeMode,
+        'hotfix-active-release-policy': repository.hotfixActiveReleasePolicy,
+        'reconciliation-tree': repository.reconciliationTree,
+        'reconciliation-cleanup': repository.reconciliationCleanup,
+        'reconciliation-issue-completion': repository.reconciliationIssueCompletion,
+        'orchestration-presentation-mode': repository.orchestrationPresentationMode,
+        'orchestration-diagrams': String(repository.orchestrationDiagrams),
+        'orchestration-comment-mode': repository.orchestrationCommentMode,
         'ai-pull-request-description': String(ai.pullRequestDescription),
         'ai-pull-request-description-mode': normalizePullRequestDescriptionMode(ai.pullRequestDescriptionMode),
         'ai-ignore-files': ai.ignoreFiles,
@@ -189,6 +211,9 @@ function buildSetupWarnings(configuration: SetupConfiguration): string[] {
     const warnings: string[] = [];
     if (configuration.features.release !== false && configuration.features.hotfix !== false) {
         warnings.push('Release and hotfix workflows require the workflow PAT Secret and a writable token.');
+    }
+    if (configuration.repository.reconciliationPullRequestMode === 'merge-queue') {
+        warnings.push('Merge queue mode requires every required first-party and third-party check to support the merge_group event; setup can validate only the bundled Copilot bridge.');
     }
     if (configuration.ai.provisioningMode === 'always') {
         warnings.push('Always-provision mode requires pinned CLI versions or a Cursor installer checksum in repository Variables.');

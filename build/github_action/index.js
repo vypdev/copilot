@@ -50778,6 +50778,65 @@ exports.DEFAULT_IMAGE_CONFIG = {
 
 /***/ }),
 
+/***/ 30098:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readDeploymentConfiguration = readDeploymentConfiguration;
+const application_error_1 = __nccwpck_require__(75999);
+const deployment_configuration_1 = __nccwpck_require__(22495);
+const input_keys_1 = __nccwpck_require__(88539);
+function readDeploymentConfiguration(getInput, branches) {
+    const errors = [];
+    const readEnum = (key, allowed, fallback) => {
+        const parsed = (0, deployment_configuration_1.parseDeploymentEnum)(getInput(key), allowed, fallback);
+        if (!parsed.valid)
+            errors.push(`${key} must be one of: ${allowed.join(", ")}.`);
+        return parsed.value;
+    };
+    const configuration = {
+        releaseReconciliationStrategy: readEnum(input_keys_1.INPUT_KEYS.RELEASE_RECONCILIATION_STRATEGY, deployment_configuration_1.RECONCILIATION_STRATEGIES, deployment_configuration_1.DEFAULT_DEPLOYMENT_CONFIGURATION.releaseReconciliationStrategy),
+        hotfixReconciliationStrategy: readEnum(input_keys_1.INPUT_KEYS.HOTFIX_RECONCILIATION_STRATEGY, deployment_configuration_1.RECONCILIATION_STRATEGIES, deployment_configuration_1.DEFAULT_DEPLOYMENT_CONFIGURATION.hotfixReconciliationStrategy),
+        reconciliationPullRequestMode: readEnum(input_keys_1.INPUT_KEYS.RECONCILIATION_PR_MODE, deployment_configuration_1.RECONCILIATION_PR_MODES, deployment_configuration_1.DEFAULT_DEPLOYMENT_CONFIGURATION.reconciliationPullRequestMode),
+        reconciliationBackmergeMode: readEnum(input_keys_1.INPUT_KEYS.RECONCILIATION_BACKMERGE_MODE, deployment_configuration_1.RECONCILIATION_BACKMERGE_MODES, deployment_configuration_1.DEFAULT_DEPLOYMENT_CONFIGURATION.reconciliationBackmergeMode),
+        hotfixActiveReleasePolicy: readEnum(input_keys_1.INPUT_KEYS.HOTFIX_ACTIVE_RELEASE_POLICY, deployment_configuration_1.HOTFIX_ACTIVE_RELEASE_POLICIES, deployment_configuration_1.DEFAULT_DEPLOYMENT_CONFIGURATION.hotfixActiveReleasePolicy),
+        reconciliationTree: String(getInput(input_keys_1.INPUT_KEYS.RECONCILIATION_TREE)
+            ?? deployment_configuration_1.DEFAULT_DEPLOYMENT_CONFIGURATION.reconciliationTree).trim()
+            || deployment_configuration_1.DEFAULT_DEPLOYMENT_CONFIGURATION.reconciliationTree,
+        reconciliationCleanup: readEnum(input_keys_1.INPUT_KEYS.RECONCILIATION_CLEANUP, deployment_configuration_1.RECONCILIATION_CLEANUP_MODES, deployment_configuration_1.DEFAULT_DEPLOYMENT_CONFIGURATION.reconciliationCleanup),
+        reconciliationIssueCompletion: readEnum(input_keys_1.INPUT_KEYS.RECONCILIATION_ISSUE_COMPLETION, deployment_configuration_1.RECONCILIATION_ISSUE_COMPLETION_MODES, deployment_configuration_1.DEFAULT_DEPLOYMENT_CONFIGURATION.reconciliationIssueCompletion),
+        orchestrationPresentationMode: readEnum(input_keys_1.INPUT_KEYS.ORCHESTRATION_PRESENTATION_MODE, deployment_configuration_1.ORCHESTRATION_PRESENTATION_MODES, deployment_configuration_1.DEFAULT_DEPLOYMENT_CONFIGURATION.orchestrationPresentationMode),
+        orchestrationDiagrams: readBoolean(getInput(input_keys_1.INPUT_KEYS.ORCHESTRATION_DIAGRAMS), deployment_configuration_1.DEFAULT_DEPLOYMENT_CONFIGURATION.orchestrationDiagrams, input_keys_1.INPUT_KEYS.ORCHESTRATION_DIAGRAMS, errors),
+        orchestrationCommentMode: readEnum(input_keys_1.INPUT_KEYS.ORCHESTRATION_COMMENT_MODE, deployment_configuration_1.ORCHESTRATION_COMMENT_MODES, deployment_configuration_1.DEFAULT_DEPLOYMENT_CONFIGURATION.orchestrationCommentMode),
+    };
+    errors.push(...(0, deployment_configuration_1.validateDeploymentConfiguration)(configuration, {
+        productionBranch: branches.productionBranch || "master",
+        developmentBranch: branches.developmentBranch || "develop",
+        releaseTree: branches.releaseTree || "release",
+        hotfixTree: branches.hotfixTree || "hotfix",
+    }));
+    if (errors.length > 0) {
+        throw new application_error_1.ApplicationError(`Invalid deployment configuration: ${errors.join(" ")}`, "validation");
+    }
+    return configuration;
+}
+function readBoolean(value, fallback, name, errors) {
+    if (value === undefined || value === null || String(value).trim() === "")
+        return fallback;
+    const normalized = String(value).trim().toLowerCase();
+    if (normalized === "true")
+        return true;
+    if (normalized === "false")
+        return false;
+    errors.push(`${name} must be true or false.`);
+    return fallback;
+}
+
+
+/***/ }),
+
 /***/ 20236:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -51085,6 +51144,7 @@ const action_summary_policy_1 = __nccwpck_require__(72995);
 const copilot_lifecycle_1 = __nccwpck_require__(72418);
 const copilot_evidence_policy_1 = __nccwpck_require__(47632);
 const configuration_persistence_policy_1 = __nccwpck_require__(65388);
+const deployment_presentation_policy_1 = __nccwpck_require__(83221);
 async function finishGithubAction(execution, results, issueNotificationPort, configurationStorePort, evidencePort, summaryPort) {
     const stepCount = results.reduce((acc, result) => acc + (result.steps?.length ?? 0), 0);
     const errorCount = results.reduce((acc, result) => acc + (result.errors?.length ?? 0), 0);
@@ -51092,11 +51152,13 @@ async function finishGithubAction(execution, results, issueNotificationPort, con
     execution.currentConfiguration.results = results;
     core.setOutput('bugbot-telemetry', JSON.stringify(extractBugbotTelemetry(results)));
     const dryRun = results.some((result) => (0, result_1.getResultPayload)(result.payload)?.dryRun === true);
-    if (!dryRun && !execution.singleAction.isPublishIssueCommentAction) {
+    const ownsDeploymentPresentation = execution.singleAction.isDeploymentOrchestrationAction
+        || (execution.singleAction.isDeployedAction && Boolean(execution.currentConfiguration.deploymentOrchestration));
+    if (!dryRun && !execution.singleAction.isPublishIssueCommentAction && !ownsDeploymentPresentation) {
         await new publish_resume_use_case_1.PublishResultUseCase(issueNotificationPort, (0, logger_adapter_1.createLogReportAdapter)()).invoke(execution);
     }
-    else if (execution.singleAction.isPublishIssueCommentAction) {
-        (0, logger_1.logInfo)('Result publication skipped: the issue-comment single action publishes its own content.');
+    else if (execution.singleAction.isPublishIssueCommentAction || ownsDeploymentPresentation) {
+        (0, logger_1.logInfo)('Generic result publication skipped: this single action owns its user-facing presentation.');
     }
     else {
         (0, logger_1.logInfo)('Bugbot dry-run: result publication and repository configuration persistence are disabled.');
@@ -51122,19 +51184,32 @@ function extractBugbotTelemetry(results) {
     });
 }
 async function writeActionSummary(execution, summaryPort) {
-    const summaryText = (0, action_summary_policy_1.buildActionSummary)({
-        owner: execution.owner,
-        repository: execution.repo,
-        eventName: execution.eventName,
-        issueNumber: execution.issue?.number ?? -1,
-        pullRequestNumber: execution.pullRequest?.number ?? -1,
-        lifecycleState: (0, copilot_lifecycle_1.lifecycleStateFromLabels)(execution.isPullRequest
-            ? execution.labels?.currentPullRequestLabels ?? []
-            : execution.labels?.currentIssueLabels ?? [], execution.labels?.lifecycle),
-        pullRequestDescriptionMode: execution.ai?.getPullRequestDescriptionMode?.(),
-        failOnUnresolvedFindings: execution.ai?.getBugbotReviewConfiguration?.().failOnUnresolved === true,
-        results: execution.currentConfiguration.results,
-    });
+    const operation = execution.currentConfiguration.deploymentOrchestration;
+    const summaryText = (execution.singleAction.isDeploymentOrchestrationAction || execution.singleAction.isDeployedAction) && operation
+        ? (0, deployment_presentation_policy_1.renderDeploymentJobSummary)(operation, {
+            owner: execution.owner,
+            repository: execution.repo,
+            issue: execution.singleAction.issue,
+            issueLocale: execution.locale.issue,
+            pullRequestLocale: execution.locale.pullRequest,
+            packageName: execution.owner === 'vypdev' && execution.repo === 'copilot' ? '@vypdev/copilot' : undefined,
+            workflowRunUrl: process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY && process.env.GITHUB_RUN_ID
+                ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
+                : undefined,
+        }, operation.lastFailure?.previousPhase, execution.currentConfiguration.results.flatMap((result) => result.steps ?? []))
+        : (0, action_summary_policy_1.buildActionSummary)({
+            owner: execution.owner,
+            repository: execution.repo,
+            eventName: execution.eventName,
+            issueNumber: execution.issue?.number ?? -1,
+            pullRequestNumber: execution.pullRequest?.number ?? -1,
+            lifecycleState: (0, copilot_lifecycle_1.lifecycleStateFromLabels)(execution.isPullRequest
+                ? execution.labels?.currentPullRequestLabels ?? []
+                : execution.labels?.currentIssueLabels ?? [], execution.labels?.lifecycle),
+            pullRequestDescriptionMode: execution.ai?.getPullRequestDescriptionMode?.(),
+            failOnUnresolvedFindings: execution.ai?.getBugbotReviewConfiguration?.().failOnUnresolved === true,
+            results: execution.currentConfiguration.results,
+        });
     if (!summaryPort)
         return summaryText;
     try {
@@ -51235,6 +51310,7 @@ const configuration_builders_1 = __nccwpck_require__(19094);
 const project_details_loader_1 = __nccwpck_require__(73448);
 const issue_inactivity_1 = __nccwpck_require__(38572);
 const agent_task_activation_policy_1 = __nccwpck_require__(46855);
+const deployment_configuration_builder_1 = __nccwpck_require__(30098);
 async function buildGithubActionExecution(input) {
     const { getInput, eventInputs, projectQuery, debug, singleAction, token } = input;
     const aiInputs = input.aiInputs ?? (0, github_action_ai_inputs_1.readGithubActionAiInputs)(getInput);
@@ -51254,6 +51330,12 @@ async function buildGithubActionExecution(input) {
     const localeInputs = (0, github_action_locale_inputs_1.readGithubActionLocaleInputs)(getInput);
     const sizeThresholdInputs = (0, github_action_threshold_inputs_1.readGithubActionThresholdInputs)(getInput);
     const branchInputs = (0, github_action_branch_inputs_1.readGithubActionBranchInputs)(getInput);
+    const deployment = (0, deployment_configuration_builder_1.readDeploymentConfiguration)(getInput, {
+        productionBranch: branchInputs.defaultBranch,
+        developmentBranch: branchInputs.development,
+        releaseTree: branchInputs.releaseTree,
+        hotfixTree: branchInputs.hotfixTree,
+    });
     return (0, execution_builder_1.buildExecution)({
         debug,
         inactivityThresholdHours: (0, input_number_policy_1.parseBoundedPositiveIntegerInput)(getInput(input_keys_1.INPUT_KEYS.INACTIVITY_THRESHOLD_HOURS), issue_inactivity_1.DEFAULT_INACTIVITY_THRESHOLD_HOURS, issue_inactivity_1.MAX_INACTIVITY_THRESHOLD_HOURS),
@@ -51273,6 +51355,7 @@ async function buildGithubActionExecution(input) {
         release: new release_1.Release(),
         hotfix: new hotfix_1.Hotfix(),
         workflows: (0, configuration_builders_1.buildWorkflows)(workflowInputs.release, workflowInputs.hotfix),
+        deployment,
         projects: (0, configuration_builders_1.buildProjects)(projectInputs),
         tokenUser: input.tokenUser,
         inputs: eventInputs,
@@ -51286,7 +51369,7 @@ function disableAgentTasks(tasks) {
         }]));
 }
 function readGithubActionSingleAction(getInput) {
-    return new single_action_1.SingleAction(getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_ISSUE), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_VERSION), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_TITLE), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_CHANGELOG), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_MESSAGE), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_COMMENT_ID), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_COMMENT_MODE));
+    return new single_action_1.SingleAction(getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_ISSUE), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_VERSION), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_TITLE), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_CHANGELOG), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_MESSAGE), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_COMMENT_ID), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_COMMENT_MODE), getInput(input_keys_1.INPUT_KEYS.SINGLE_ACTION_OPERATION_ID));
 }
 function getCommitPrefixBuilder(getInput) {
     return getInput(input_keys_1.INPUT_KEYS.COMMIT_PREFIX_TRANSFORMS) || 'replace-slash';
@@ -52097,6 +52180,7 @@ exports.INPUT_KEYS = {
     SINGLE_ACTION_TITLE: 'single-action-title',
     SINGLE_ACTION_CHANGELOG: 'single-action-changelog',
     SINGLE_ACTION_MESSAGE: 'single-action-message',
+    SINGLE_ACTION_OPERATION_ID: 'single-action-operation-id',
     SINGLE_ACTION_COMMENT_ID: 'single-action-comment-id',
     SINGLE_ACTION_COMMENT_MODE: 'single-action-comment-mode',
     INACTIVITY_THRESHOLD_HOURS: 'inactivity-threshold-hours',
@@ -52185,6 +52269,17 @@ exports.INPUT_KEYS = {
     // Workflows
     RELEASE_WORKFLOW: 'release-workflow',
     HOTFIX_WORKFLOW: 'hotfix-workflow',
+    RELEASE_RECONCILIATION_STRATEGY: 'release-reconciliation-strategy',
+    HOTFIX_RECONCILIATION_STRATEGY: 'hotfix-reconciliation-strategy',
+    RECONCILIATION_PR_MODE: 'reconciliation-pr-mode',
+    RECONCILIATION_BACKMERGE_MODE: 'reconciliation-backmerge-mode',
+    HOTFIX_ACTIVE_RELEASE_POLICY: 'hotfix-active-release-policy',
+    RECONCILIATION_TREE: 'reconciliation-tree',
+    RECONCILIATION_CLEANUP: 'reconciliation-cleanup',
+    RECONCILIATION_ISSUE_COMPLETION: 'reconciliation-issue-completion',
+    ORCHESTRATION_PRESENTATION_MODE: 'orchestration-presentation-mode',
+    ORCHESTRATION_DIAGRAMS: 'orchestration-diagrams',
+    ORCHESTRATION_COMMENT_MODE: 'orchestration-comment-mode',
     // Emoji
     EMOJI_LABELED_TITLE: 'emoji-labeled-title',
     BRANCH_MANAGEMENT_EMOJI: 'branch-management-emoji',
@@ -53627,6 +53722,497 @@ function buildDeploymentMergePlan(configuration) {
 
 /***/ }),
 
+/***/ 1779:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.validateDeploymentContinuation = validateDeploymentContinuation;
+/**
+ * Rejects forged, stale, or out-of-order workflow continuations before a
+ * publication-side mutation is attempted. Legacy releases without durable
+ * orchestration state remain supported during migration.
+ */
+function validateDeploymentContinuation(operation, expectedOperationId, allowedPhases, expectedVersion) {
+    if (!operation)
+        return undefined;
+    if (!expectedOperationId)
+        return "single-action-operation-id is required for a durable deployment continuation.";
+    if (expectedOperationId !== operation.operationId) {
+        return `Deployment operation mismatch: expected ${operation.operationId}, received ${expectedOperationId}.`;
+    }
+    if (!expectedVersion)
+        return "single-action-version is required for a durable publication continuation.";
+    if (expectedVersion !== operation.version) {
+        return `Deployment version mismatch: expected ${operation.version}, received ${expectedVersion}.`;
+    }
+    const effectivePhase = operation.phase === "blocked" && operation.lastFailure?.retryable
+        ? operation.lastFailure.previousPhase
+        : operation.phase;
+    if (!allowedPhases.includes(effectivePhase)) {
+        return `Deployment operation ${operation.operationId} cannot continue publication from phase ${operation.phase}.`;
+    }
+    return undefined;
+}
+
+
+/***/ }),
+
+/***/ 54037:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.projectDeploymentLabels = projectDeploymentLabels;
+const copilot_lifecycle_1 = __nccwpck_require__(72418);
+function projectDeploymentLabels(current, operation, labels) {
+    const managed = new Set((0, copilot_lifecycle_1.managedLifecycleLabelNames)(labels.lifecycle));
+    let projected = current.filter((label) => !managed.has(label));
+    if (operation.publicationVerified) {
+        projected = projected.filter((label) => label !== labels.deploy);
+        if (!projected.includes(labels.deployed))
+            projected.push(labels.deployed);
+    }
+    const selectedMode = operation.selectedPrMode ?? operation.prMode;
+    if (operation.phase === "completed")
+        projected.push(labels.lifecycle.verified);
+    else if (operation.phase === "blocked")
+        projected.push(labels.lifecycle.blocked, labels.lifecycle.awaitingMaintainer);
+    else if ((operation.phase === "promotion_pr_pending" || operation.phase === "reconciliation_pending") && selectedMode === "create-only") {
+        projected.push(labels.lifecycle.ready, labels.lifecycle.awaitingMaintainer);
+    }
+    else if (operation.phase === "promotion_pr_pending" || operation.phase === "reconciliation_pending") {
+        projected.push(labels.lifecycle.reviewing);
+    }
+    else {
+        projected.push(labels.lifecycle.inProgress);
+    }
+    return [...new Set(projected)];
+}
+
+
+/***/ }),
+
+/***/ 8352:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildInitialDeploymentOperation = buildInitialDeploymentOperation;
+exports.selectPullRequestMode = selectPullRequestMode;
+exports.selectBackmergeMode = selectBackmergeMode;
+exports.selectReconciliationTargetBranches = selectReconciliationTargetBranches;
+exports.reconciliationSource = reconciliationSource;
+exports.buildReconciliationTarget = buildReconciliationTarget;
+exports.buildReconciliationBranchName = buildReconciliationBranchName;
+exports.validateInitialDeploymentInput = validateInitialDeploymentInput;
+function buildInitialDeploymentOperation(input) {
+    const strategy = input.kind === "release"
+        ? input.configuration.releaseReconciliationStrategy
+        : input.configuration.hotfixReconciliationStrategy;
+    return {
+        operationId: input.operationId,
+        kind: input.kind,
+        version: input.version,
+        title: input.title,
+        changelog: input.changelog,
+        phase: "preparing",
+        strategy,
+        prMode: input.configuration.reconciliationPullRequestMode,
+        backmergeMode: input.configuration.reconciliationBackmergeMode,
+        hotfixActiveReleasePolicy: input.configuration.hotfixActiveReleasePolicy,
+        cleanup: input.configuration.reconciliationCleanup,
+        issueCompletion: input.configuration.reconciliationIssueCompletion,
+        presentationMode: input.configuration.orchestrationPresentationMode,
+        diagrams: input.configuration.orchestrationDiagrams,
+        commentMode: input.configuration.orchestrationCommentMode,
+        sourceBranch: input.sourceBranch,
+        sourceSha: input.sourceSha,
+        originBranch: input.originBranch,
+        originSha: input.originSha,
+        productionBranch: input.productionBranch,
+        developmentBranch: input.developmentBranch,
+        reconciliationTree: input.configuration.reconciliationTree,
+        tag: `v${input.version}`,
+        publicationWorkflow: input.publicationWorkflow,
+        publicationVerified: false,
+        reconciliationTargets: [],
+        lastFailure: null,
+    };
+}
+function selectPullRequestMode(configured, capabilities) {
+    if (configured === "create-only" || configured === "legacy-wait") {
+        return { kind: "mode", mode: configured, reason: "Explicitly configured." };
+    }
+    if (configured === "merge-queue" || (configured === "auto" && capabilities.mergeQueueRequired)) {
+        return capabilities.mergeQueueRequired
+            ? { kind: "mode", mode: "merge-queue", reason: "The target requires its merge queue." }
+            : { kind: "unsupported", reason: "The target does not expose a required merge queue." };
+    }
+    if (configured === "auto-merge") {
+        return capabilities.autoMergeAllowed
+            ? { kind: "mode", mode: "auto-merge", reason: "Native auto-merge was explicitly configured." }
+            : { kind: "unsupported", reason: "Native auto-merge is disabled for this repository." };
+    }
+    if (capabilities.immediatelyMergeable) {
+        return { kind: "mode", mode: "auto-merge", reason: "GitHub reports the PR ready; native auto-merge preserves branch protection." };
+    }
+    return capabilities.autoMergeAllowed
+        ? { kind: "mode", mode: "auto-merge", reason: "GitHub will merge after checks and reviews complete." }
+        : { kind: "mode", mode: "create-only", reason: "Repository auto-merge is unavailable; maintainer merge is required." };
+}
+function selectBackmergeMode(configured, requiresStrictStatusChecks, directHeadIsUpToDate, directSourceIsExact = true) {
+    const directIsUnsafe = !directSourceIsExact
+        || (requiresStrictStatusChecks && !directHeadIsUpToDate);
+    if (configured === "direct" && directIsUnsafe) {
+        const reason = !directSourceIsExact
+            ? "Direct reconciliation was rejected because its source branch no longer points at the stored release SHA. Use auto or sync-branch to keep this operation isolated."
+            : "Direct reconciliation cannot satisfy the target's strict up-to-date rule without merging development into production. Use auto or sync-branch.";
+        return { kind: "unsupported", reason };
+    }
+    if (configured === "sync-branch" || (configured === "auto" && directIsUnsafe)) {
+        return {
+            kind: "mode",
+            mode: "sync-branch",
+            reason: !directSourceIsExact
+                ? "A dedicated sync branch pins the stored release SHA after the source branch advanced."
+                : "A dedicated sync branch satisfies the target's strict up-to-date rule without changing production.",
+        };
+    }
+    return { kind: "mode", mode: "direct", reason: "The exact source can be reconciled directly into this target." };
+}
+function selectReconciliationTargetBranches(operation, activeReleaseBranches) {
+    if (operation.strategy === "manual")
+        return { kind: "manual" };
+    if (operation.kind === "release") {
+        return { kind: "targets", targetBranches: [operation.developmentBranch] };
+    }
+    const releases = [...new Set(activeReleaseBranches.filter(Boolean))];
+    if (operation.hotfixActiveReleasePolicy !== "development" && releases.length > 1) {
+        return { kind: "blocked", reason: "Multiple active release branches require an explicit hotfix reconciliation decision." };
+    }
+    if (operation.hotfixActiveReleasePolicy === "development" || releases.length === 0) {
+        return { kind: "targets", targetBranches: [operation.developmentBranch] };
+    }
+    if (operation.hotfixActiveReleasePolicy === "prefer-release") {
+        return { kind: "targets", targetBranches: releases };
+    }
+    return { kind: "targets", targetBranches: [...releases, operation.developmentBranch] };
+}
+function reconciliationSource(operation) {
+    return operation.strategy === "canonical-gitflow"
+        ? { branch: operation.sourceBranch, sha: operation.sourceSha }
+        : { branch: operation.productionBranch, sha: operation.productionSha ?? "" };
+}
+function buildReconciliationTarget(operation, targetBranch, mode) {
+    const source = reconciliationSource(operation);
+    return {
+        targetBranch,
+        sourceBranch: source.branch,
+        sourceSha: source.sha,
+        syncBranch: mode === "sync-branch" ? buildReconciliationBranchName(operation, targetBranch) : undefined,
+        status: "pending",
+    };
+}
+function buildReconciliationBranchName(operation, targetBranch) {
+    const safeTarget = targetBranch.replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "");
+    const safeOperation = operation.operationId.replace(/[^A-Za-z0-9]/g, "").slice(0, 8).toLowerCase();
+    return `${operation.reconciliationTree}/${operation.kind}-${operation.version}-to-${safeTarget}-${safeOperation}`;
+}
+function validateInitialDeploymentInput(input) {
+    const errors = [];
+    if (!/^[0-9]+\.[0-9]+\.[0-9]+$/.test(input.version))
+        errors.push("Version must use MAJOR.MINOR.PATCH format.");
+    if (!/^[A-Za-z0-9][A-Za-z0-9._/-]{0,199}$/.test(input.sourceBranch))
+        errors.push("Source branch is invalid.");
+    if (!/^[a-f0-9]{40}$/i.test(input.sourceSha))
+        errors.push("Source SHA must be a full commit SHA.");
+    if (!/^[a-f0-9]{40}$/i.test(input.originSha))
+        errors.push("Origin SHA must be a full commit SHA.");
+    if (input.sourceBranch === input.productionBranch || input.sourceBranch === input.developmentBranch) {
+        errors.push("A frozen release/hotfix branch is required as the deployment source.");
+    }
+    return errors;
+}
+
+
+/***/ }),
+
+/***/ 83221:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DEPLOYMENT_DASHBOARD_MARKER = void 0;
+exports.deploymentDashboardMarker = deploymentDashboardMarker;
+exports.renderDeploymentDashboard = renderDeploymentDashboard;
+exports.renderPromotionPullRequest = renderPromotionPullRequest;
+exports.renderReconciliationPullRequest = renderReconciliationPullRequest;
+exports.renderDeploymentJobSummary = renderDeploymentJobSummary;
+exports.normalizeLocale = normalizeLocale;
+const managed_pull_request_1 = __nccwpck_require__(95914);
+const EN = {
+    release: "Release", hotfix: "Hotfix", currentStatus: "Current status",
+    noAction: "No action is required while GitHub owns the pending transition.", actionRequired: "Action required",
+    progress: "Progress", currentTransition: "Current transition", whatNext: "What happens next", links: "Links",
+    technical: "Technical details", alreadyPublished: "Package status: already published", notPublished: "Package status: not published",
+    productionUpdated: "Production updated", developmentSynchronized: "Development synchronized", yes: "Yes", no: "No",
+    from: "From", to: "To", state: "State", compare: "Compare changes", controlCenter: "Release control center",
+    purpose: "Purpose", afterMerge: "After merge", purposePromotion: "accept the prepared change in production",
+    purposeReconciliation: "bring the accepted production state back to the development line",
+    afterPromotion: "After merge, Copilot will tag and publish the accepted production commit.",
+    noRepublish: "Merging or closing this PR cannot publish the package again.",
+    origin: "Origin", preparedSource: "Prepared source", destination: "Destination", publication: "Publication",
+    productionFact: "Production fact", developmentTarget: "Development target", completionEffect: "Completion effect",
+    closeIssue: "Close issue after all targets", keepIssue: "Keep issue open", readyBeforeReview: "Ready before review",
+    buildValidation: "Build and release validation", packageSmoke: "Package smoke test",
+    protectedChecks: "Protected-branch checks and reviews", syncReason: "A dedicated sync branch preserves target-only commits and isolates target-dependent checks.",
+    protectedFacts: "What Copilot protected", cut: "Source cut", promotion: "Production promotion", reconciliation: "Development reconciliation",
+    cleanup: "Cleanup and issue completion", jobSummary: "Deployment orchestration", result: "Result",
+    externalWait: "Waiting externally", workflowFailure: "Workflow failed", previousPhase: "Previous phase", resultingPhase: "Resulting phase",
+    retryable: "Retryable", createdReused: "Created, reused, or skipped", fallback: "prepared -> production PR -> accepted -> published -> reconciled -> complete",
+    phase: {
+        preparing: "preparing the version", promotion_pr_pending: "waiting for production approval", promoted: "accepted in production",
+        publishing: "publishing artifacts", published: "published; preparing development reconciliation",
+        reconciliation_pending: "waiting for development reconciliation", completed: "completed", blocked: "needs attention",
+    },
+    diagram: ["Source snapshot", "Version prepared", "Production PR", "Accepted in production", "Package and release", "Development reconciliation", "Complete"],
+};
+const ES = {
+    release: "Release", hotfix: "Hotfix", currentStatus: "Estado actual",
+    noAction: "No se requiere ninguna acción mientras GitHub gestiona la transición pendiente.", actionRequired: "Acción necesaria",
+    progress: "Progreso", currentTransition: "Transición actual", whatNext: "Qué ocurrirá después", links: "Enlaces",
+    technical: "Detalles técnicos", alreadyPublished: "Estado del paquete: ya publicado", notPublished: "Estado del paquete: no publicado",
+    productionUpdated: "Producción actualizada", developmentSynchronized: "Desarrollo sincronizado", yes: "Sí", no: "No",
+    from: "Origen", to: "Destino", state: "Estado", compare: "Comparar cambios", controlCenter: "Centro de control de la release",
+    purpose: "Propósito", afterMerge: "Después del merge", purposePromotion: "aceptar en producción el cambio preparado",
+    purposeReconciliation: "llevar el estado aceptado en producción de vuelta a desarrollo",
+    afterPromotion: "Tras el merge, Copilot etiquetará y publicará el commit aceptado en producción.",
+    noRepublish: "Mergear o cerrar esta PR no puede volver a publicar el paquete.",
+    origin: "Origen", preparedSource: "Fuente preparada", destination: "Destino", publication: "Publicación",
+    productionFact: "Estado de producción", developmentTarget: "Destino de desarrollo", completionEffect: "Efecto al completar",
+    closeIssue: "Cerrar la issue tras todos los destinos", keepIssue: "Mantener la issue abierta", readyBeforeReview: "Listo antes de revisar",
+    buildValidation: "Build y validación de release", packageSmoke: "Smoke test del paquete",
+    protectedChecks: "Checks y revisiones de la rama protegida", syncReason: "Una rama de sincronización dedicada preserva los commits exclusivos del destino y aísla sus checks.",
+    protectedFacts: "Qué ha protegido Copilot", cut: "Corte de la fuente", promotion: "Promoción a producción", reconciliation: "Reconciliación con desarrollo",
+    cleanup: "Limpieza y cierre de la issue", jobSummary: "Orquestación del despliegue", result: "Resultado",
+    externalWait: "Esperando fuera del workflow", workflowFailure: "Workflow fallido", previousPhase: "Fase anterior", resultingPhase: "Fase resultante",
+    retryable: "Reintentable", createdReused: "Creado, reutilizado u omitido", fallback: "preparada -> PR de producción -> aceptada -> publicada -> reconciliada -> completada",
+    phase: {
+        preparing: "preparando la versión", promotion_pr_pending: "esperando aprobación en producción", promoted: "aceptada en producción",
+        publishing: "publicando artefactos", published: "publicada; preparando la reconciliación",
+        reconciliation_pending: "esperando reconciliación con desarrollo", completed: "completada", blocked: "necesita atención",
+    },
+    diagram: ["Snapshot de origen", "Versión preparada", "PR de producción", "Aceptada en producción", "Paquete y release", "Reconciliación con desarrollo", "Completada"],
+};
+exports.DEPLOYMENT_DASHBOARD_MARKER = "copilot-deployment-dashboard";
+function deploymentDashboardMarker(operationId, issue) {
+    return `<!-- ${exports.DEPLOYMENT_DASHBOARD_MARKER} operation-id="${safeMarkerValue(operationId)}" issue="${issue}" -->`;
+}
+function renderDeploymentDashboard(operation, context) {
+    const messages = messagesFor(context.issueLocale);
+    const title = operation.kind === "release" ? messages.release : messages.hotfix;
+    const action = deploymentAction(operation, messages);
+    const lines = [
+        deploymentDashboardMarker(operation.operationId, context.issue), "",
+        `# ${operation.phase === "blocked" ? "❌" : operation.phase === "completed" ? "✅" : "🚀"} ${title} ${inline(operation.version)}`, "",
+        `> **${messages.currentStatus}: ${messages.phase[operation.phase]}.**`,
+    ];
+    if (action.required)
+        lines.push("", `## ${messages.actionRequired}`, "", action.message);
+    else
+        lines.push(`> ${action.message}`);
+    lines.push("");
+    if (operation.phase === "blocked")
+        lines.push(...factTable(operation, messages), "", `## ${messages.protectedFacts}`, "", protectedFact(operation, messages), "");
+    if (operation.presentationMode !== "quiet")
+        lines.push(`## ${messages.progress}`, "", ...progressLines(operation, messages), "");
+    if (operation.presentationMode === "guided" && operation.diagrams)
+        lines.push(...deploymentDiagram(messages), "");
+    if (operation.presentationMode !== "quiet") {
+        lines.push(`## ${messages.currentTransition}`, "", ...transitionTable(operation, messages), "", `## ${messages.whatNext}`, "", nextDescription(operation, messages), "", `## ${messages.links}`, "", deploymentLinks(operation, context, messages).join(" · "), "");
+    }
+    lines.push("<details>", `<summary>${messages.technical}</summary>`, "", `- Operation: ${inline(operation.operationId)}`, `- Strategy: ${inline(operation.strategy)}`, `- PR mode: ${inline(operation.selectedPrMode ?? operation.prMode)}`, `- Source SHA: ${inline(operation.sourceSha)}`, `- Production SHA: ${inline(operation.productionSha ?? "pending")}`, "</details>");
+    return lines.join("\n");
+}
+function renderPromotionPullRequest(operation, context) {
+    const messages = messagesFor(context.pullRequestLocale);
+    const kind = operation.kind === "release" ? "release" : "hotfix";
+    const title = `${kind}(${safeText(operation.version)}): promote to ${safeText(operation.productionBranch)}`;
+    const body = [
+        `# 🚀 ${capitalize(messages.purposePromotion)}`, "",
+        `> **${messages.purpose}:** ${capitalize(messages.purposePromotion)}.`,
+        `> **${messages.afterMerge}:** ${messages.afterPromotion}`, "",
+        `| ${messages.origin} | ${messages.preparedSource} | ${messages.destination} | ${messages.publication} |`,
+        "|---|---|---|---|",
+        `| ${inline(`${operation.originBranch}@${shortSha(operation.originSha)}`)} | ${inline(`${operation.sourceBranch}@${shortSha(operation.sourceSha)}`)} | ${inline(operation.productionBranch)} | ${messages.afterMerge} |`, "",
+        `## ${messages.readyBeforeReview}`, "",
+        `- ✅ ${messages.buildValidation}`, `- ✅ ${messages.packageSmoke}`, `- ⏳ ${messages.protectedChecks}`, "",
+        `## ${messages.afterMerge}`, "",
+        `- ${messages.afterPromotion}`, `- ${messages.reconciliation}: ${inline(operation.developmentBranch)}.`, "",
+        `[${messages.compare}](${compareUrl(context, operation.productionBranch, operation.sourceBranch)}) · [${messages.controlCenter}](${issueUrl(context)})`, "",
+        "<details>", `<summary>${messages.technical}</summary>`, "",
+        `Operation ${inline(operation.operationId)}; strategy ${inline(operation.strategy)}; merge mode ${inline(operation.prMode)}.`,
+        "</details>", "", (0, managed_pull_request_1.buildManagedPullRequestMarker)({ operationId: operation.operationId, phase: "promotion", issue: context.issue }),
+    ].join("\n");
+    return { title, body };
+}
+function renderReconciliationPullRequest(operation, target, context) {
+    const messages = messagesFor(context.pullRequestLocale);
+    const kind = operation.kind === "release" ? "release" : "hotfix";
+    const title = `${kind}(${safeText(operation.version)}): reconcile ${safeText(target.sourceBranch)} into ${safeText(target.targetBranch)}`;
+    const body = [
+        `# 🔄 ${capitalize(messages.purposeReconciliation)}`, "",
+        `> **${messages.alreadyPublished}.** ${messages.noRepublish}`, "",
+        `| ${messages.productionFact} | ${messages.developmentTarget} | ${messages.completionEffect} |`, "|---|---|---|",
+        `| ${inline(`${operation.tag}@${shortSha(operation.productionSha ?? target.sourceSha)}`)} | ${inline(target.targetBranch)} | ${operation.issueCompletion === "close" ? messages.closeIssue : messages.keepIssue} |`, "",
+        ...(target.syncBranch ? [`${messages.syncReason} ${inline(target.syncBranch)}`, ""] : []),
+        `${messages.noRepublish}`, "",
+        `[${messages.compare}](${compareUrl(context, target.targetBranch, target.syncBranch ?? target.sourceBranch)}) · [${messages.controlCenter}](${issueUrl(context)})`, "",
+        "<details>", `<summary>${messages.technical}</summary>`, "", `Operation ${inline(operation.operationId)}; source SHA ${inline(target.sourceSha)}.`,
+        "</details>", "", (0, managed_pull_request_1.buildManagedPullRequestMarker)({ operationId: operation.operationId, phase: "reconciliation", issue: context.issue }),
+    ].join("\n");
+    return { title, body };
+}
+function renderDeploymentJobSummary(operation, context, previousPhase, operations = []) {
+    const messages = messagesFor(context.issueLocale);
+    const externallyPending = operation.phase === "promotion_pr_pending" || operation.phase === "reconciliation_pending";
+    const result = operation.phase === "blocked" ? messages.workflowFailure : externallyPending ? messages.externalWait : messages.phase[operation.phase];
+    return [
+        `# ${operation.phase === "blocked" ? "❌" : externallyPending ? "⏳" : "✅"} ${messages.jobSummary}`, "",
+        `> **${messages.result}: ${result}.**`, "",
+        `| ${messages.previousPhase} | ${messages.resultingPhase} | ${messages.retryable} |`, "|---|---|---|",
+        `| ${inline(previousPhase ?? operation.phase)} | ${inline(operation.phase)} | ${operation.lastFailure?.retryable ? messages.yes : messages.no} |`, "",
+        `- Operation: ${inline(operation.operationId)}`,
+        `- ${messages.origin}: ${inline(`${operation.originBranch}@${shortSha(operation.originSha)}`)}`,
+        `- ${messages.preparedSource}: ${inline(`${operation.sourceBranch}@${shortSha(operation.sourceSha)}`)}`,
+        `- ${messages.productionFact}: ${inline(operation.productionSha ? `${operation.productionBranch}@${shortSha(operation.productionSha)}` : "pending")}`,
+        `- ${messages.publication}: ${operation.publicationVerified ? messages.alreadyPublished : messages.notPublished}`,
+        `- ${messages.createdReused}: ${safeText(operations.join(", ") || "none")}`, "",
+        deploymentLinks(operation, context, messages).join(" · "),
+    ].join("\n");
+}
+function progressLines(operation, messages) {
+    const phase = operation.phase === "blocked" ? operation.lastFailure?.previousPhase ?? "preparing" : operation.phase;
+    const reached = (expected) => phaseRank(phase) >= phaseRank(expected);
+    return [
+        `- [x] ${messages.cut}: ${inline(`${operation.originBranch}@${shortSha(operation.originSha)}`)}`,
+        `- [x] ${messages.buildValidation} + ${messages.packageSmoke}`,
+        `- [${operation.productionSha || reached("promoted") ? "x" : " "}] ${messages.promotion}: ${inline(operation.productionBranch)}`,
+        `- [${operation.publicationVerified ? "x" : " "}] ${operation.publicationVerified ? messages.alreadyPublished : messages.notPublished}`,
+        `- [${reconciliationCompleted(operation) ? "x" : " "}] ${messages.reconciliation}: ${inline(operation.developmentBranch)}`,
+        `- [${operation.phase === "completed" ? "x" : " "}] ${messages.cleanup}`,
+    ];
+}
+function deploymentDiagram(messages) {
+    const [source, prepared, production, accepted, publication, reconciliation, complete] = messages.diagram;
+    return [
+        "```mermaid", "flowchart LR", `    D[${source}] --> R[${prepared}]`, `    R --> P[${production}]`,
+        `    P --> A[${accepted}]`, `    A --> N[${publication}]`, `    N --> B[${reconciliation}]`, `    B --> C[${complete}]`, "```", "", messages.fallback,
+    ];
+}
+function transitionTable(operation, messages) {
+    const activeTarget = operation.reconciliationTargets.find((target) => target.status !== "completed");
+    const from = activeTarget?.syncBranch ?? activeTarget?.sourceBranch ?? operation.sourceBranch;
+    const to = activeTarget?.targetBranch ?? operation.productionBranch;
+    return [`| ${messages.from} | ${messages.to} | ${messages.state} |`, "|---|---|---|", `| ${inline(from)} | ${inline(to)} | ${inline(messages.phase[operation.phase])} |`];
+}
+function factTable(operation, messages) {
+    return [
+        `| ${messages.productionUpdated} | ${messages.alreadyPublished} | ${messages.developmentSynchronized} |`, "|---|---|---|",
+        `| ${operation.productionSha ? messages.yes : messages.no} | ${operation.publicationVerified ? messages.yes : messages.no} | ${reconciliationCompleted(operation) ? messages.yes : messages.no} |`,
+    ];
+}
+function protectedFact(operation, messages) {
+    if (operation.publicationVerified)
+        return `${messages.alreadyPublished}; ${messages.noRepublish}`;
+    if (operation.productionSha)
+        return `${messages.productionUpdated}: ${messages.yes}. ${messages.notPublished}.`;
+    return `${messages.productionUpdated}: ${messages.no}. ${messages.notPublished}.`;
+}
+function nextDescription(operation, messages) {
+    if (operation.phase === "blocked") {
+        const diagnostic = safeText(operation.lastFailure?.message ?? messages.workflowFailure);
+        return `${diagnostic}. ${operation.lastFailure?.retryable ? `${messages.actionRequired}: retry after correcting the cause.` : `${messages.actionRequired}: manual intervention is required.`}`;
+    }
+    if (operation.phase === "promotion_pr_pending")
+        return messages.afterPromotion;
+    if (operation.phase === "publishing" || operation.phase === "promoted")
+        return messages.afterPromotion;
+    if (operation.phase === "reconciliation_pending" || operation.phase === "published")
+        return messages.noRepublish;
+    if (operation.phase === "completed")
+        return `${messages.productionUpdated}: ${messages.yes}. ${messages.developmentSynchronized}: ${messages.yes}.`;
+    return `${messages.promotion}: ${inline(operation.sourceBranch)} -> ${inline(operation.productionBranch)}.`;
+}
+function deploymentAction(operation, messages) {
+    const manual = (operation.selectedPrMode ?? operation.prMode) === "create-only"
+        && (operation.phase === "promotion_pr_pending" || operation.phase === "reconciliation_pending");
+    if (manual)
+        return { required: true, message: `${messages.protectedChecks}: review and merge the managed PR when GitHub reports it ready.` };
+    if (operation.phase !== "blocked")
+        return { required: false, message: messages.noAction };
+    return {
+        required: true,
+        message: operation.lastFailure?.retryable
+            ? `${safeText(operation.lastFailure.message)}. Retry after correcting the cause.`
+            : `${safeText(operation.lastFailure?.message ?? messages.workflowFailure)}. Manual intervention is required.`,
+    };
+}
+function deploymentLinks(operation, context, messages) {
+    const links = [`[${messages.controlCenter}](${issueUrl(context)})`];
+    links.push(`[${safeText(operation.sourceBranch)} branch](${branchUrl(context, operation.sourceBranch)})`);
+    links.push(`[${shortSha(operation.originSha)} origin commit](${commitUrl(context, operation.originSha)})`);
+    links.push(`[${shortSha(operation.sourceSha)} prepared commit](${commitUrl(context, operation.sourceSha)})`);
+    const activeTarget = operation.reconciliationTargets.find((target) => target.status !== "completed");
+    links.push(`[${messages.compare}](${compareUrl(context, activeTarget?.targetBranch ?? operation.productionBranch, activeTarget?.syncBranch ?? activeTarget?.sourceBranch ?? operation.sourceBranch)})`);
+    if (operation.promotionPullRequest)
+        links.push(`[Promotion PR #${operation.promotionPullRequest}](${pullRequestUrl(context, operation.promotionPullRequest)})`);
+    for (const target of operation.reconciliationTargets) {
+        if (target.pullRequest)
+            links.push(`[Reconciliation PR #${target.pullRequest}](${pullRequestUrl(context, target.pullRequest)})`);
+    }
+    if (operation.productionSha)
+        links.push(`[${shortSha(operation.productionSha)} production commit](${commitUrl(context, operation.productionSha)})`);
+    if (operation.publicationVerified) {
+        links.push(`[${safeText(operation.tag)} GitHub Release](${repositoryUrl(context)}/releases/tag/${encodeURIComponent(operation.tag)})`);
+        links.push(`[v${safeText(operation.version.split(".")[0])} Action tag](${branchUrl(context, `v${operation.version.split(".")[0]}`)})`);
+        if (context.packageName)
+            links.push(`[${safeText(context.packageName)}@${safeText(operation.version)} on npm](${npmVersionUrl(context.packageName, operation.version)})`);
+    }
+    if (context.workflowRunUrl)
+        links.push(`[Workflow run](${safeUrl(context.workflowRunUrl)})`);
+    return links;
+}
+function messagesFor(locale) { return normalizeLocale(locale) === "es-ES" ? ES : EN; }
+function normalizeLocale(locale) { return locale.toLowerCase().startsWith("es") ? "es-ES" : "en-US"; }
+function reconciliationCompleted(operation) {
+    return operation.phase === "completed"
+        || (operation.reconciliationTargets.length > 0
+            && operation.reconciliationTargets.every((target) => target.status === "completed"));
+}
+function phaseRank(phase) { return ["preparing", "promotion_pr_pending", "promoted", "publishing", "published", "reconciliation_pending", "completed"].indexOf(phase); }
+function repositoryUrl(context) { return `https://github.com/${encodeURIComponent(context.owner)}/${encodeURIComponent(context.repository)}`; }
+function issueUrl(context) { return `${repositoryUrl(context)}/issues/${context.issue}`; }
+function pullRequestUrl(context, number) { return `${repositoryUrl(context)}/pull/${number}`; }
+function branchUrl(context, branch) { return `${repositoryUrl(context)}/tree/${encodeURIComponent(branch)}`; }
+function commitUrl(context, sha) { return `${repositoryUrl(context)}/commit/${encodeURIComponent(sha)}`; }
+function npmVersionUrl(packageName, version) { return `https://www.npmjs.com/package/${encodeURIComponent(packageName)}/v/${encodeURIComponent(version)}`; }
+function compareUrl(context, base, head) { return `${repositoryUrl(context)}/compare/${encodeURIComponent(base)}...${encodeURIComponent(head)}`; }
+function inline(value) { return `\`${safeText(value)}\``; }
+function safeText(value) { return value.replace(/[\r\n`<>]/g, "").replace(/@/g, "@\u200b").replace(/::/g, "﹕﹕").slice(0, 240); }
+function safeMarkerValue(value) { return value.replace(/[^A-Za-z0-9._-]/g, "").slice(0, 128); }
+function safeUrl(value) { return /^https:\/\/github\.com\//.test(value) ? value : "https://github.com"; }
+function shortSha(value) { return safeText(value).slice(0, 7); }
+function capitalize(value) { return value.charAt(0).toUpperCase() + value.slice(1); }
+
+
+/***/ }),
+
 /***/ 72712:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -54363,6 +54949,7 @@ exports.createDefaultSetupConfiguration = createDefaultSetupConfiguration;
 exports.mergeSetupConfiguration = mergeSetupConfiguration;
 const agent_1 = __nccwpck_require__(89040);
 const issue_inactivity_1 = __nccwpck_require__(38572);
+const deployment_configuration_1 = __nccwpck_require__(22495);
 exports.SETUP_AGENT_TASKS = [
     'planner',
     'findings',
@@ -54439,6 +55026,7 @@ function createDefaultSetupConfiguration() {
             issueLocale: 'en-US',
             pullRequestLocale: 'en-US',
             commitPrefixTransforms: 'replace-slash',
+            ...deployment_configuration_1.DEFAULT_DEPLOYMENT_CONFIGURATION,
         },
         ai: {
             pullRequestDescription: true,
@@ -54608,6 +55196,17 @@ function buildSetupRepositoryVariables(configuration) {
     add('ISSUES_LOCALE', repository.issueLocale);
     add('PULL_REQUESTS_LOCALE', repository.pullRequestLocale);
     add('COMMIT_PREFIX_TRANSFORMS', repository.commitPrefixTransforms);
+    add('RELEASE_RECONCILIATION_STRATEGY', repository.releaseReconciliationStrategy);
+    add('HOTFIX_RECONCILIATION_STRATEGY', repository.hotfixReconciliationStrategy);
+    add('RECONCILIATION_PR_MODE', repository.reconciliationPullRequestMode);
+    add('RECONCILIATION_BACKMERGE_MODE', repository.reconciliationBackmergeMode);
+    add('HOTFIX_ACTIVE_RELEASE_POLICY', repository.hotfixActiveReleasePolicy);
+    add('RECONCILIATION_TREE', repository.reconciliationTree);
+    add('RECONCILIATION_CLEANUP', repository.reconciliationCleanup);
+    add('RECONCILIATION_ISSUE_COMPLETION', repository.reconciliationIssueCompletion);
+    add('ORCHESTRATION_PRESENTATION_MODE', repository.orchestrationPresentationMode);
+    add('ORCHESTRATION_DIAGRAMS', repository.orchestrationDiagrams);
+    add('ORCHESTRATION_COMMENT_MODE', repository.orchestrationCommentMode);
     add('AI_PULL_REQUEST_DESCRIPTION', configuration.ai.pullRequestDescription);
     add('AI_PULL_REQUEST_DESCRIPTION_MODE', configuration.ai.pullRequestDescriptionMode);
     add('AI_IGNORE_FILES', configuration.ai.ignoreFiles);
@@ -54653,6 +55252,17 @@ function buildSetupActionInputs(configuration) {
         'issues-locale': repository.issueLocale,
         'pull-requests-locale': repository.pullRequestLocale,
         'commit-prefix-transforms': repository.commitPrefixTransforms,
+        'release-reconciliation-strategy': repository.releaseReconciliationStrategy,
+        'hotfix-reconciliation-strategy': repository.hotfixReconciliationStrategy,
+        'reconciliation-pr-mode': repository.reconciliationPullRequestMode,
+        'reconciliation-backmerge-mode': repository.reconciliationBackmergeMode,
+        'hotfix-active-release-policy': repository.hotfixActiveReleasePolicy,
+        'reconciliation-tree': repository.reconciliationTree,
+        'reconciliation-cleanup': repository.reconciliationCleanup,
+        'reconciliation-issue-completion': repository.reconciliationIssueCompletion,
+        'orchestration-presentation-mode': repository.orchestrationPresentationMode,
+        'orchestration-diagrams': String(repository.orchestrationDiagrams),
+        'orchestration-comment-mode': repository.orchestrationCommentMode,
         'ai-pull-request-description': String(ai.pullRequestDescription),
         'ai-pull-request-description-mode': (0, pull_request_description_1.normalizePullRequestDescriptionMode)(ai.pullRequestDescriptionMode),
         'ai-ignore-files': ai.ignoreFiles,
@@ -54701,6 +55311,9 @@ function buildSetupWarnings(configuration) {
     const warnings = [];
     if (configuration.features.release !== false && configuration.features.hotfix !== false) {
         warnings.push('Release and hotfix workflows require the workflow PAT Secret and a writable token.');
+    }
+    if (configuration.repository.reconciliationPullRequestMode === 'merge-queue') {
+        warnings.push('Merge queue mode requires every required first-party and third-party check to support the merge_group event; setup can validate only the bundled Copilot bridge.');
     }
     if (configuration.ai.provisioningMode === 'always') {
         warnings.push('Always-provision mode requires pinned CLI versions or a Cursor installer checksum in repository Variables.');
@@ -54901,6 +55514,7 @@ const setup_configuration_defaults_1 = __nccwpck_require__(23381);
 const agent_configuration_validation_policy_1 = __nccwpck_require__(60596);
 const setup_configuration_storage_policy_1 = __nccwpck_require__(2554);
 const issue_inactivity_1 = __nccwpck_require__(38572);
+const deployment_configuration_1 = __nccwpck_require__(22495);
 function validateSetupConfiguration(configuration) {
     const errors = [];
     const nonEmpty = [
@@ -54949,6 +55563,25 @@ function validateSetupConfiguration(configuration) {
     if (!['auto', 'always', 'disabled'].includes(configuration.ai.provisioningMode)) {
         errors.push('Agent provisioning must be auto, always, or disabled.');
     }
+    errors.push(...(0, deployment_configuration_1.validateDeploymentConfiguration)({
+        releaseReconciliationStrategy: configuration.repository.releaseReconciliationStrategy,
+        hotfixReconciliationStrategy: configuration.repository.hotfixReconciliationStrategy,
+        reconciliationPullRequestMode: configuration.repository.reconciliationPullRequestMode,
+        reconciliationBackmergeMode: configuration.repository.reconciliationBackmergeMode,
+        hotfixActiveReleasePolicy: configuration.repository.hotfixActiveReleasePolicy,
+        reconciliationTree: configuration.repository.reconciliationTree,
+        reconciliationCleanup: configuration.repository.reconciliationCleanup,
+        reconciliationIssueCompletion: configuration.repository.reconciliationIssueCompletion,
+        orchestrationPresentationMode: configuration.repository.orchestrationPresentationMode,
+        orchestrationDiagrams: configuration.repository.orchestrationDiagrams,
+        orchestrationCommentMode: configuration.repository.orchestrationCommentMode,
+    }, {
+        productionBranch: configuration.repository.mainBranch,
+        developmentBranch: configuration.repository.developmentBranch,
+        releaseTree: configuration.repository.releaseTree,
+        hotfixTree: configuration.repository.hotfixTree,
+        mergeQueueWorkflowSupported: true,
+    }));
     errors.push(...(0, setup_configuration_storage_policy_1.validateStorageConfiguration)(configuration.storage));
     for (const task of setup_configuration_defaults_1.SETUP_AGENT_TASKS) {
         const agent = configuration.agents[task];
@@ -55677,11 +56310,16 @@ exports.runCreateRelease = runCreateRelease;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const create_release_policy_1 = __nccwpck_require__(76549);
+const deployment_continuation_guard_1 = __nccwpck_require__(1779);
 async function runCreateRelease(param, taskId, repositoryReleasePort) {
+    const operation = param.currentConfiguration.deploymentOrchestration;
+    const continuationError = (0, deployment_continuation_guard_1.validateDeploymentContinuation)(operation, param.singleAction.operationId, ["publishing"], param.singleAction.version);
+    if (continuationError)
+        return [failureResult(taskId, continuationError)];
     const input = {
-        version: param.singleAction.version,
-        title: param.singleAction.title,
-        changelog: param.singleAction.changelog,
+        version: param.singleAction.version || operation?.version || '',
+        title: param.singleAction.title || operation?.title || '',
+        changelog: param.singleAction.changelog || operation?.changelog || '',
     };
     const validationError = (0, create_release_policy_1.validateReleaseInput)(input);
     if (validationError) {
@@ -55755,13 +56393,18 @@ exports.runCreateTag = runCreateTag;
 const result_1 = __nccwpck_require__(73817);
 const input_keys_1 = __nccwpck_require__(88539);
 const logging_ports_1 = __nccwpck_require__(6152);
+const deployment_continuation_guard_1 = __nccwpck_require__(1779);
 async function runCreateTag(param, taskId, repositoryTagPort) {
     const validationFailure = validateTagInput(param, taskId);
     if (validationFailure)
         return [validationFailure];
-    const tagName = `v${param.singleAction.version}`;
+    const operation = param.currentConfiguration.deploymentOrchestration;
+    const version = param.singleAction.version || operation?.version || '';
+    const tagName = `v${version}`;
     try {
-        const sha1Tag = await repositoryTagPort.createTag(param.owner, param.repo, param.currentConfiguration.releaseBranch, tagName, param.tokens.token);
+        const sha1Tag = operation?.productionSha
+            ? await repositoryTagPort.createOrVerifyTagAtSha(param.owner, param.repo, operation.productionSha, tagName, param.tokens.token)
+            : await repositoryTagPort.createTag(param.owner, param.repo, param.currentConfiguration.releaseBranch, tagName, param.tokens.token);
         return sha1Tag ? [new result_1.Result({ id: taskId, success: true, executed: true, steps: [`Tag ${tagName} is ready: ${sha1Tag}`] })]
             : noTagResult(taskId, tagName);
     }
@@ -55771,11 +56414,15 @@ async function runCreateTag(param, taskId, repositoryTagPort) {
     }
 }
 function validateTagInput(param, taskId) {
-    if (param.singleAction.version.length === 0) {
+    const operation = param.currentConfiguration.deploymentOrchestration;
+    const continuationError = (0, deployment_continuation_guard_1.validateDeploymentContinuation)(operation, param.singleAction.operationId, ["publishing"], param.singleAction.version);
+    if (continuationError)
+        return new result_1.Result({ id: taskId, success: false, executed: true, errors: [continuationError] });
+    if (param.singleAction.version.length === 0 && !operation?.version) {
         (0, logging_ports_1.logError)('Version is not set.');
         return new result_1.Result({ id: taskId, success: false, executed: true, errors: [`${input_keys_1.INPUT_KEYS.SINGLE_ACTION_VERSION} is not set.`] });
     }
-    if (param.currentConfiguration.releaseBranch === undefined) {
+    if (!operation?.productionSha && param.currentConfiguration.releaseBranch === undefined) {
         (0, logging_ports_1.logError)('Working branch not found in configuration.');
         return new result_1.Result({ id: taskId, success: false, executed: true, errors: ['Release branch not found in issue configuration.'] });
     }
@@ -55933,6 +56580,591 @@ function mergeFailureResult(param, mergesAttempted) {
         ? `Issue #${param.singleAction.issue} was not closed because one or more merge operations failed.`
         : `Issue #${param.singleAction.issue} was not closed because no release or hotfix branch was configured (no merge operations were performed).`;
     return new result_1.Result({ id: TASK_ID, success: false, executed: true, steps: [step] });
+}
+
+
+/***/ }),
+
+/***/ 36850:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DeploymentOrchestrationUseCase = void 0;
+const deployment_plan_policy_1 = __nccwpck_require__(8352);
+const deployment_presentation_policy_1 = __nccwpck_require__(83221);
+const deployment_operation_1 = __nccwpck_require__(92730);
+const managed_pull_request_1 = __nccwpck_require__(95914);
+const result_1 = __nccwpck_require__(73817);
+const deployment_lifecycle_policy_1 = __nccwpck_require__(54037);
+const TASK_ID = "DeploymentOrchestrationUseCase";
+class DeploymentOrchestrationUseCase {
+    constructor(dependencies) {
+        this.dependencies = dependencies;
+        this.taskId = TASK_ID;
+        this.checkpoints = new WeakMap();
+    }
+    async invoke(execution) {
+        const initial = execution.currentConfiguration.deploymentOrchestration;
+        this.checkpoints.set(execution, initial ? { operationId: initial.operationId, phase: initial.phase } : undefined);
+        try {
+            if (execution.singleAction.isPrepareDeploymentAction)
+                return [await this.prepare(execution)];
+            if (execution.singleAction.isDeployedAction && initial)
+                return [await this.published(execution)];
+            if (execution.singleAction.isContinueDeploymentAction)
+                return [await this.continue(execution)];
+            if (execution.singleAction.isPublishedDeploymentAction)
+                return [await this.published(execution)];
+            if (execution.singleAction.isFailedDeploymentAction)
+                return [await this.failed(execution)];
+            return [];
+        }
+        catch (error) {
+            await this.recordUnexpectedFailure(execution, error);
+            return [new result_1.Result({
+                    id: TASK_ID,
+                    success: false,
+                    executed: true,
+                    steps: ["Deployment orchestration is blocked. No unsafe transition was performed."],
+                    errors: [error],
+                })];
+        }
+    }
+    async prepare(execution) {
+        const existing = execution.currentConfiguration.deploymentOrchestration;
+        if (existing) {
+            if (existing.version !== execution.singleAction.version) {
+                throw new Error(`Issue already owns deployment operation ${existing.operationId} for version ${existing.version}.`);
+            }
+            if (existing.phase === "blocked"
+                && (!existing.lastFailure?.retryable
+                    || !["preparing", "promotion_pr_pending"].includes(existing.lastFailure.previousPhase))) {
+                await this.publishDashboard(execution, existing);
+                return blockedResult(existing, "The prepare mode cannot resume this blocked deployment phase.");
+            }
+            const resumed = existing.phase === "blocked" ? (0, deployment_operation_1.resumeBlockedDeployment)(existing) : undefined;
+            const current = resumed?.kind === "advance" ? resumed.operation : existing;
+            if (current !== existing) {
+                execution.currentConfiguration.deploymentOrchestration = current;
+                await this.persist(execution);
+            }
+            if (current.phase === "preparing" || current.phase === "promotion_pr_pending") {
+                const currentSourceSha = await this.dependencies.git.getBranchSha(execution.owner, execution.repo, current.sourceBranch, execution.tokens.token);
+                if (currentSourceSha !== current.sourceSha) {
+                    return await this.block(execution, current, "promotion", "The prepared source branch changed after its immutable SHA was stored.", false);
+                }
+                return await this.ensurePromotion(execution, current);
+            }
+            await this.publishDashboard(execution, current);
+            return success(`Deployment ${current.operationId} is already ${current.phase}; reused its durable state.`);
+        }
+        const kind = deploymentKind(execution);
+        const sourceBranch = kind === "release"
+            ? execution.currentConfiguration.releaseBranch
+            : execution.currentConfiguration.hotfixBranch;
+        if (!sourceBranch)
+            throw new Error(`No prepared ${kind} branch is stored on the launcher issue.`);
+        const sourceSha = await this.dependencies.git.getBranchSha(execution.owner, execution.repo, sourceBranch, execution.tokens.token);
+        const originBranch = kind === "release"
+            ? execution.currentConfiguration.releaseOriginBranch ?? execution.branches.development
+            : execution.currentConfiguration.hotfixOriginBranch ?? execution.currentConfiguration.parentBranch ?? execution.branches.defaultBranch;
+        const persistedOrigin = kind === "release"
+            ? execution.currentConfiguration.releaseOriginSha
+            : execution.currentConfiguration.hotfixOriginSha;
+        const originSha = persistedOrigin ?? await this.dependencies.git.getMergeBaseSha(execution.owner, execution.repo, originBranch, sourceBranch, execution.tokens.token);
+        const operation = (0, deployment_plan_policy_1.buildInitialDeploymentOperation)({
+            operationId: this.dependencies.operationId(),
+            kind,
+            version: execution.singleAction.version,
+            title: execution.singleAction.title,
+            changelog: execution.singleAction.changelog,
+            sourceBranch,
+            sourceSha,
+            originBranch,
+            originSha,
+            productionBranch: execution.branches.defaultBranch,
+            developmentBranch: execution.branches.development,
+            configuration: execution.deployment,
+            publicationWorkflow: kind === "release" ? execution.workflows.release : execution.workflows.hotfix,
+        });
+        const errors = (0, deployment_plan_policy_1.validateInitialDeploymentInput)({
+            operationId: operation.operationId,
+            kind,
+            version: operation.version,
+            title: operation.title,
+            changelog: operation.changelog,
+            sourceBranch,
+            sourceSha,
+            originBranch,
+            originSha,
+            productionBranch: operation.productionBranch,
+            developmentBranch: operation.developmentBranch,
+            configuration: execution.deployment,
+            publicationWorkflow: operation.publicationWorkflow,
+        });
+        if (errors.length > 0)
+            throw new Error(errors.join(" "));
+        execution.currentConfiguration.deploymentOrchestration = operation;
+        if (kind === "release") {
+            execution.currentConfiguration.releaseOriginBranch = originBranch;
+            execution.currentConfiguration.releaseOriginSha = originSha;
+        }
+        else {
+            execution.currentConfiguration.hotfixOriginSha = originSha;
+        }
+        await this.persist(execution);
+        await this.publishDashboard(execution, operation);
+        return await this.ensurePromotion(execution, operation);
+    }
+    async ensurePromotion(execution, operation) {
+        const promotion = await this.createOrReusePullRequest(execution, operation, "promotion");
+        if (promotion.merged)
+            return await this.advancePromotion(execution, operation, promotion);
+        if (promotion.state === "closed")
+            return await this.block(execution, operation, "promotion", `Promotion PR #${promotion.number} was closed without merge.`, true);
+        if (promotion.headSha !== operation.sourceSha) {
+            return await this.block(execution, operation, "promotion", `Promotion PR #${promotion.number} does not contain the persisted prepared SHA.`, false);
+        }
+        const pending = operation.phase === "promotion_pr_pending"
+            ? { ...operation, promotionPullRequest: promotion.number }
+            : (0, deployment_operation_1.transitionDeploymentOperation)({ ...operation, promotionPullRequest: promotion.number }, "preparing", "promotion_pr_pending").operation;
+        if (pending.phase !== "promotion_pr_pending")
+            throw new Error(`Cannot prepare promotion from ${operation.phase}.`);
+        execution.currentConfiguration.deploymentOrchestration = pending;
+        await this.persist(execution);
+        const managed = await this.configureMergeBehavior(execution, pending, promotion);
+        return success(managed.selectedPrMode === "create-only"
+            ? `Promotion PR #${promotion.number} is ready for maintainer review; this runner does not wait.`
+            : `Promotion PR #${promotion.number} is managed by GitHub; this runner does not wait for checks.`);
+    }
+    async continue(execution) {
+        let operation = requireOperation(execution);
+        const pullRequestNumber = execution.pullRequest.number;
+        if (pullRequestNumber < 1)
+            throw new Error("The continuation event has no pull request number.");
+        const pullRequest = await this.dependencies.pullRequests.getPullRequest(execution.owner, execution.repo, pullRequestNumber, execution.tokens.token);
+        const identity = (0, managed_pull_request_1.parseManagedPullRequestMarker)(pullRequest.body);
+        if (!identity || identity.operationId !== operation.operationId || identity.issue !== execution.singleAction.issue) {
+            throw new Error(`PR #${pullRequest.number} is not owned by deployment operation ${operation.operationId}.`);
+        }
+        if (operation.phase === "blocked") {
+            const previousPhase = operation.lastFailure?.previousPhase;
+            const eventCanResume = operation.lastFailure?.retryable === true
+                && (identity.phase === "promotion"
+                    ? previousPhase === "preparing" || previousPhase === "promotion_pr_pending"
+                    : previousPhase === "reconciliation_pending");
+            if (!eventCanResume) {
+                await this.publishDashboard(execution, operation);
+                return success(`PR #${pullRequest.number} cannot resume the existing ${operation.lastFailure?.category ?? "deployment"} block; the original diagnosis was preserved.`);
+            }
+            const resumed = (0, deployment_operation_1.resumeBlockedDeployment)(operation);
+            if (resumed.kind === "advance") {
+                operation = resumed.operation;
+                execution.currentConfiguration.deploymentOrchestration = operation;
+                await this.persist(execution);
+            }
+        }
+        if (pullRequest.repositoryFullName.toLowerCase() !== `${execution.owner}/${execution.repo}`.toLowerCase()) {
+            throw new Error("Cross-repository deployment continuation was rejected.");
+        }
+        if (pullRequest.state !== "closed")
+            return success(`PR #${pullRequest.number} is still open; no transition was applied.`);
+        if (!pullRequest.merged) {
+            return await this.block(execution, operation, identity.phase === "promotion" ? "promotion" : "reconciliation", `Managed ${identity.phase} PR #${pullRequest.number} was closed without merge.`, true);
+        }
+        if (identity.phase === "promotion")
+            return await this.advancePromotion(execution, operation, pullRequest);
+        return await this.advanceReconciliation(execution, operation, pullRequest);
+    }
+    async advancePromotion(execution, operation, pullRequest) {
+        if (["promoted", "publishing", "published", "reconciliation_pending", "completed"].includes(operation.phase)) {
+            return success(`Duplicate promotion event for PR #${pullRequest.number} was ignored; operation is ${operation.phase}.`);
+        }
+        if (operation.phase !== "promotion_pr_pending" && operation.phase !== "preparing") {
+            return success(`Out-of-order promotion event was ignored while operation is ${operation.phase}.`);
+        }
+        if (pullRequest.headBranch !== operation.sourceBranch || pullRequest.baseBranch !== operation.productionBranch || pullRequest.headSha !== operation.sourceSha) {
+            return await this.block(execution, operation, "promotion", "Promotion PR branches or prepared SHA do not match durable state.", false);
+        }
+        const productionSha = pullRequest.mergeCommitSha;
+        if (!productionSha)
+            return await this.block(execution, operation, "promotion", "Merged promotion PR has no production merge SHA.", true);
+        const [mergeReachable, sourceReachable] = await Promise.all([
+            this.dependencies.git.isCommitReachable(execution.owner, execution.repo, operation.productionBranch, productionSha, execution.tokens.token),
+            this.dependencies.git.isCommitReachable(execution.owner, execution.repo, operation.productionBranch, operation.sourceSha, execution.tokens.token),
+        ]);
+        if (!mergeReachable || !sourceReachable) {
+            return await this.block(execution, operation, "promotion", "GitHub does not confirm that the accepted production branch contains the promotion commit.", true);
+        }
+        let promoted = { ...operation, promotionPullRequest: pullRequest.number, productionSha, phase: "promoted", lastFailure: null };
+        execution.currentConfiguration.deploymentOrchestration = promoted;
+        await this.persist(execution);
+        promoted = { ...promoted, phase: "publishing" };
+        execution.currentConfiguration.deploymentOrchestration = promoted;
+        await this.persist(execution);
+        await this.publishDashboard(execution, promoted);
+        await this.publishMilestone(execution, promoted, "promotion-merged", `✅ Promotion PR #${pullRequest.number} merged. Publication is starting from production SHA \`${productionSha}\`.`);
+        await this.dependencies.continuation.dispatch(execution.owner, execution.repo, operation.publicationWorkflow, operation.productionBranch, operation.operationId, execution.singleAction.issue, operation.version, execution.tokens.token);
+        return success(`Promotion PR #${pullRequest.number} was verified; publication continuation was dispatched from ${operation.productionBranch}.`);
+    }
+    async published(execution) {
+        let operation = requireOperation(execution);
+        if (operation.phase === "blocked" && operation.lastFailure?.retryable) {
+            const resumed = (0, deployment_operation_1.resumeBlockedDeployment)(operation);
+            if (resumed.kind === "advance") {
+                operation = resumed.operation;
+                execution.currentConfiguration.deploymentOrchestration = operation;
+                await this.persist(execution);
+            }
+        }
+        if (operation.phase === "reconciliation_pending" && operation.publicationVerified) {
+            return await this.ensureNextReconciliation(execution, operation)
+                ?? success(`Publication for ${operation.tag} was already verified; reconciliation state was recovered.`);
+        }
+        if (operation.phase === "completed" && operation.publicationVerified) {
+            await this.publishDashboard(execution, operation);
+            return success(`Publication for ${operation.tag} was already verified; duplicate notification ignored.`);
+        }
+        if (operation.phase !== "published" && operation.phase !== "publishing" && operation.phase !== "promoted") {
+            throw new Error(`Publication cannot advance from phase ${operation.phase}.`);
+        }
+        if (!operation.productionSha)
+            throw new Error("The accepted production SHA is missing.");
+        const reachable = await this.dependencies.git.isCommitReachable(execution.owner, execution.repo, operation.productionBranch, operation.productionSha, execution.tokens.token);
+        if (!reachable)
+            return await this.block(execution, operation, "publication", "Published SHA is not reachable from the stored production branch.", false);
+        let published = { ...operation, phase: "published", publicationVerified: true, lastFailure: null };
+        execution.currentConfiguration.deploymentOrchestration = published;
+        await this.persist(execution);
+        await this.publishMilestone(execution, published, "publication-complete", `📦 ${published.tag} is published from accepted production SHA \`${published.productionSha}\`.`);
+        const activeReleases = operation.kind === "hotfix"
+            ? (await this.dependencies.git.listBranches(execution.owner, execution.repo, execution.branches.releaseTree, execution.tokens.token))
+                .filter((branch) => branch !== operation.sourceBranch)
+            : [];
+        const decision = (0, deployment_plan_policy_1.selectReconciliationTargetBranches)(published, activeReleases);
+        if (decision.kind === "blocked")
+            return await this.block(execution, published, "reconciliation", decision.reason, false);
+        if (decision.kind === "manual") {
+            await this.publishDashboard(execution, published);
+            return success(`${published.tag} is published. Manual reconciliation is configured, so the issue remains open.`);
+        }
+        published = {
+            ...published,
+            reconciliationTargets: decision.targetBranches.map((target) => (0, deployment_plan_policy_1.buildReconciliationTarget)(published, target, "direct")),
+            phase: "reconciliation_pending",
+        };
+        execution.currentConfiguration.deploymentOrchestration = published;
+        await this.persist(execution);
+        return await this.ensureNextReconciliation(execution, published)
+            ?? success(`${published.tag} is published; development reconciliation is now managed by GitHub.`);
+    }
+    async failed(execution) {
+        const operation = requireOperation(execution);
+        if (operation.phase === "completed")
+            return success(`Deployment ${operation.operationId} is already complete; a stale failure report was ignored.`);
+        if (operation.phase === "blocked") {
+            await this.publishDashboard(execution, operation);
+            return new result_1.Result({
+                id: TASK_ID,
+                success: false,
+                executed: true,
+                steps: [`Deployment ${operation.operationId} remains blocked; its original failure classification was preserved.`],
+                errors: [new Error(operation.lastFailure?.message ?? "Deployment remains blocked.")],
+            });
+        }
+        const category = operation.phase === "preparing" || operation.phase === "promotion_pr_pending"
+            ? "promotion"
+            : operation.phase === "promoted" || operation.phase === "publishing"
+                ? "publication"
+                : operation.lastFailure?.category ?? "reconciliation";
+        const message = execution.singleAction.message || `The ${category} workflow failed. Review the linked workflow run before retrying.`;
+        return await this.block(execution, operation, category, message, true);
+    }
+    async advanceReconciliation(execution, operation, pullRequest) {
+        if (operation.phase === "completed")
+            return success(`Duplicate reconciliation event for PR #${pullRequest.number} was ignored.`);
+        if (operation.phase !== "reconciliation_pending")
+            return success(`Out-of-order reconciliation event ignored while operation is ${operation.phase}.`);
+        const target = operation.reconciliationTargets.find((item) => item.pullRequest === pullRequest.number);
+        if (!target)
+            return await this.block(execution, operation, "reconciliation", `PR #${pullRequest.number} is not a configured reconciliation target.`, false);
+        if (pullRequest.baseBranch !== target.targetBranch || pullRequest.headBranch !== (target.syncBranch ?? target.sourceBranch)) {
+            return await this.block(execution, operation, "reconciliation", "Reconciliation PR branches do not match durable state.", false);
+        }
+        const mergeSha = pullRequest.mergeCommitSha;
+        if (!mergeSha || !(await this.dependencies.git.isCommitReachable(execution.owner, execution.repo, target.targetBranch, mergeSha, execution.tokens.token))) {
+            return await this.block(execution, operation, "reconciliation", "The reconciliation merge is not reachable from its target branch.", true);
+        }
+        if (!(await this.dependencies.git.isCommitReachable(execution.owner, execution.repo, target.targetBranch, target.sourceSha, execution.tokens.token))) {
+            return await this.block(execution, operation, "reconciliation", "The reconciliation target does not contain the stored release SHA.", false);
+        }
+        const updated = (0, deployment_operation_1.completeReconciliationTarget)(operation, pullRequest.number);
+        execution.currentConfiguration.deploymentOrchestration = updated;
+        await this.persist(execution);
+        if (!updated.reconciliationTargets.every((item) => item.status === "completed")) {
+            return await this.ensureNextReconciliation(execution, updated)
+                ?? success(`Reconciliation PR #${pullRequest.number} completed; the next configured target is ready.`);
+        }
+        return await this.finalizeReconciliation(execution, updated, ` after reconciliation PR #${pullRequest.number}`);
+    }
+    async finalizeReconciliation(execution, operation, completionContext = "") {
+        try {
+            await this.cleanup(execution, operation);
+            if (operation.issueCompletion === "close") {
+                await this.dependencies.issues.closeIssue(execution.owner, execution.repo, execution.singleAction.issue, execution.tokens.token);
+            }
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            return await this.block(execution, operation, "cleanup", message, true);
+        }
+        const completed = { ...operation, phase: "completed", lastFailure: null };
+        execution.currentConfiguration.deploymentOrchestration = completed;
+        await this.persist(execution);
+        await this.publishDashboard(execution, completed);
+        await this.publishMilestone(execution, completed, "orchestration-complete", `✅ Deployment ${completed.tag} and every configured reconciliation target are complete.`);
+        return success(`Deployment ${completed.tag} completed${completionContext}.`);
+    }
+    async ensureNextReconciliation(execution, operation) {
+        const index = operation.reconciliationTargets.findIndex((target) => target.status === "pending" && target.pullRequest === undefined);
+        if (index < 0) {
+            if (operation.reconciliationTargets.length > 0
+                && operation.reconciliationTargets.every((target) => target.status === "completed")) {
+                return await this.finalizeReconciliation(execution, operation);
+            }
+            await this.publishDashboard(execution, operation);
+            return;
+        }
+        let target = operation.reconciliationTargets[index];
+        const capabilities = await this.dependencies.pullRequests.getTargetCapabilities(execution.owner, execution.repo, target.targetBranch, execution.tokens.token);
+        const [targetSha, currentSourceSha] = await Promise.all([
+            this.dependencies.git.getBranchSha(execution.owner, execution.repo, target.targetBranch, execution.tokens.token),
+            this.dependencies.git.getBranchSha(execution.owner, execution.repo, target.sourceBranch, execution.tokens.token),
+        ]);
+        const directUpToDate = await this.dependencies.git.isCommitReachable(execution.owner, execution.repo, target.sourceBranch, targetSha, execution.tokens.token).catch(() => false);
+        const mode = (0, deployment_plan_policy_1.selectBackmergeMode)(operation.backmergeMode, capabilities.requiresStrictStatusChecks, directUpToDate, currentSourceSha === target.sourceSha);
+        if (mode.kind === "unsupported") {
+            return await this.block(execution, operation, "reconciliation", mode.reason, false);
+        }
+        if (mode.mode === "sync-branch") {
+            target = (0, deployment_plan_policy_1.buildReconciliationTarget)(operation, target.targetBranch, "sync-branch");
+            await this.dependencies.git.createOrVerifyBranch(execution.owner, execution.repo, target.syncBranch, targetSha, execution.tokens.token);
+            await this.dependencies.git.mergeCommitIntoBranch(execution.owner, execution.repo, target.syncBranch, targetSha, execution.tokens.token);
+            await this.dependencies.git.mergeCommitIntoBranch(execution.owner, execution.repo, target.syncBranch, target.sourceSha, execution.tokens.token);
+        }
+        const operationWithMode = replaceTarget(operation, index, target);
+        const pullRequest = await this.createOrReusePullRequest(execution, operationWithMode, "reconciliation", target);
+        if (pullRequest.state === "closed" && !pullRequest.merged) {
+            return await this.block(execution, operationWithMode, "reconciliation", `Reconciliation PR #${pullRequest.number} was closed without merge.`, true);
+        }
+        if (target.syncBranch) {
+            const [syncHead, sourceIncluded] = await Promise.all([
+                this.dependencies.git.getBranchSha(execution.owner, execution.repo, target.syncBranch, execution.tokens.token),
+                this.dependencies.git.isCommitReachable(execution.owner, execution.repo, target.syncBranch, target.sourceSha, execution.tokens.token),
+            ]);
+            if (pullRequest.headSha !== syncHead || !sourceIncluded) {
+                return await this.block(execution, operationWithMode, "reconciliation", `Reconciliation PR #${pullRequest.number} does not contain the verified sync-branch state.`, false);
+            }
+        }
+        else if (pullRequest.headSha !== target.sourceSha) {
+            return await this.block(execution, operationWithMode, "reconciliation", `Reconciliation PR #${pullRequest.number} source moved away from the stored release SHA.`, false);
+        }
+        const withPullRequest = replaceTarget(operationWithMode, index, { ...target, pullRequest: pullRequest.number });
+        execution.currentConfiguration.deploymentOrchestration = withPullRequest;
+        await this.persist(execution);
+        if (pullRequest.merged) {
+            return await this.advanceReconciliation(execution, withPullRequest, pullRequest);
+        }
+        await this.configureMergeBehavior(execution, withPullRequest, pullRequest);
+        return undefined;
+    }
+    async createOrReusePullRequest(execution, operation, phase, target) {
+        const headBranch = target?.syncBranch ?? target?.sourceBranch ?? operation.sourceBranch;
+        const baseBranch = target?.targetBranch ?? operation.productionBranch;
+        const query = {
+            owner: execution.owner,
+            repository: execution.repo,
+            operationId: operation.operationId,
+            phase,
+            issue: execution.singleAction.issue,
+            headBranch,
+            baseBranch,
+            token: execution.tokens.token,
+        };
+        const existing = await this.dependencies.pullRequests.findManagedPullRequests(query);
+        if (existing.length > 1)
+            throw new Error(`Multiple managed ${phase} PRs match operation ${operation.operationId}.`);
+        if (existing[0])
+            return existing[0];
+        const context = presentationContext(execution);
+        const content = phase === "promotion"
+            ? (0, deployment_presentation_policy_1.renderPromotionPullRequest)(operation, context)
+            : (0, deployment_presentation_policy_1.renderReconciliationPullRequest)(operation, target, context);
+        return await this.dependencies.pullRequests.createManagedPullRequest({ ...query, ...content });
+    }
+    async configureMergeBehavior(execution, operation, pullRequest) {
+        const capabilities = await this.dependencies.pullRequests.getTargetCapabilities(execution.owner, execution.repo, pullRequest.baseBranch, execution.tokens.token, pullRequest.number);
+        const decision = (0, deployment_plan_policy_1.selectPullRequestMode)(operation.prMode, capabilities);
+        if (decision.kind === "unsupported")
+            throw new Error(decision.reason);
+        const managed = { ...operation, selectedPrMode: decision.mode };
+        execution.currentConfiguration.deploymentOrchestration = managed;
+        await this.persist(execution);
+        await this.publishDashboard(execution, managed);
+        if (decision.mode === "auto-merge") {
+            if (operation.prMode === "auto" && capabilities.immediatelyMergeable) {
+                await this.dependencies.pullRequests.mergePullRequest(execution.owner, execution.repo, pullRequest.number, execution.tokens.token);
+            }
+            else {
+                await this.dependencies.pullRequests.enableAutoMerge(execution.owner, execution.repo, pullRequest.nodeId, execution.tokens.token);
+            }
+        }
+        else if (decision.mode === "merge-queue") {
+            await this.dependencies.pullRequests.enqueuePullRequest(execution.owner, execution.repo, pullRequest.nodeId, execution.tokens.token);
+        }
+        else if (decision.mode === "legacy-wait") {
+            await this.dependencies.legacyMerge.waitAndMerge(execution.owner, execution.repo, pullRequest.headBranch, pullRequest.number, pullRequest.baseBranch, execution.pullRequest.mergeTimeout, execution.tokens.token);
+        }
+        return managed;
+    }
+    async cleanup(execution, operation) {
+        const deleteSource = operation.cleanup === "all" || operation.cleanup === "source-only";
+        const deleteSync = operation.cleanup === "all" || operation.cleanup === "sync-only";
+        if (deleteSync) {
+            for (const target of operation.reconciliationTargets) {
+                if (target.syncBranch)
+                    await this.dependencies.git.deleteBranch(execution.owner, execution.repo, target.syncBranch, execution.tokens.token);
+            }
+        }
+        if (deleteSource)
+            await this.dependencies.git.deleteBranch(execution.owner, execution.repo, operation.sourceBranch, execution.tokens.token);
+    }
+    async projectDeploymentLabels(execution, operation) {
+        const labels = await this.dependencies.labels.getLabels(execution.owner, execution.repo, execution.singleAction.issue, execution.tokens.token);
+        const next = (0, deployment_lifecycle_policy_1.projectDeploymentLabels)(labels, operation, execution.labels);
+        if (next.join("\0") !== labels.join("\0")) {
+            await this.dependencies.labels.setLabels(execution.owner, execution.repo, execution.singleAction.issue, next, execution.tokens.token);
+        }
+    }
+    async block(execution, operation, category, message, retryable) {
+        const blocked = (0, deployment_operation_1.blockDeploymentOperation)(operation, category, message, retryable);
+        execution.currentConfiguration.deploymentOrchestration = blocked;
+        await this.persist(execution);
+        await this.publishDashboard(execution, blocked);
+        await this.publishMilestone(execution, blocked, "reconciliation-blocked", `❌ Deployment blocked: ${blocked.lastFailure?.message}`);
+        return new result_1.Result({ id: TASK_ID, success: false, executed: true, steps: [message], errors: [new Error(message)] });
+    }
+    async persist(execution) {
+        const expected = this.checkpoints.get(execution);
+        const query = {
+            owner: execution.owner,
+            repository: execution.repo,
+            issue: execution.singleAction.issue,
+            token: execution.tokens.token,
+        };
+        const actual = await this.dependencies.state.load(query);
+        if (!sameCheckpoint(actual, expected)) {
+            throw new Error("Concurrent deployment state change detected; reload the launcher issue and retry.");
+        }
+        await this.dependencies.state.save({ ...query, state: execution.currentConfiguration });
+        const operation = execution.currentConfiguration.deploymentOrchestration;
+        this.checkpoints.set(execution, operation ? { operationId: operation.operationId, phase: operation.phase } : undefined);
+        if (operation)
+            await this.projectDeploymentLabels(execution, operation);
+    }
+    async publishDashboard(execution, operation) {
+        const marker = (0, deployment_presentation_policy_1.deploymentDashboardMarker)(operation.operationId, execution.singleAction.issue);
+        const body = (0, deployment_presentation_policy_1.renderDeploymentDashboard)(operation, presentationContext(execution));
+        const current = await this.dependencies.presentation.findDashboard(execution.owner, execution.repo, execution.singleAction.issue, marker, execution.tokens.token);
+        if (current)
+            await this.dependencies.presentation.updateDashboard(execution.owner, execution.repo, execution.singleAction.issue, current.id, body, execution.tokens.token);
+        else
+            await this.dependencies.presentation.createDashboard(execution.owner, execution.repo, execution.singleAction.issue, body, execution.tokens.token);
+    }
+    async publishMilestone(execution, operation, name, body) {
+        if (operation.commentMode !== "milestones")
+            return;
+        const marker = `<!-- copilot-deployment-milestone operation-id="${operation.operationId}" name="${name}" -->`;
+        await this.dependencies.presentation.publishMilestone(execution.owner, execution.repo, execution.singleAction.issue, marker, body, execution.tokens.token);
+    }
+    async recordUnexpectedFailure(execution, error) {
+        const operation = execution.currentConfiguration.deploymentOrchestration;
+        if (!operation || operation.phase === "completed" || operation.phase === "blocked")
+            return;
+        const message = error instanceof Error ? error.message : String(error);
+        const category = operation.phase === "preparing" || operation.phase === "promotion_pr_pending"
+            ? "promotion"
+            : operation.phase === "promoted" || operation.phase === "publishing"
+                ? "publication"
+                : "reconciliation";
+        const blocked = (0, deployment_operation_1.blockDeploymentOperation)(operation, category, message, true);
+        execution.currentConfiguration.deploymentOrchestration = blocked;
+        try {
+            await this.persist(execution);
+            await this.publishDashboard(execution, blocked);
+        }
+        catch {
+            // Preserve the original provider failure returned by invoke.
+        }
+    }
+}
+exports.DeploymentOrchestrationUseCase = DeploymentOrchestrationUseCase;
+function requireOperation(execution) {
+    const operation = execution.currentConfiguration.deploymentOrchestration;
+    if (!operation)
+        throw new Error("No durable deployment operation exists on the launcher issue.");
+    if (!execution.singleAction.operationId && !execution.singleAction.isDeployedAction) {
+        throw new Error("single-action-operation-id is required for a durable deployment continuation.");
+    }
+    if (execution.singleAction.operationId && execution.singleAction.operationId !== operation.operationId) {
+        throw new Error(`Deployment operation mismatch: expected ${operation.operationId}, received ${execution.singleAction.operationId}.`);
+    }
+    if ((execution.singleAction.isPublishedDeploymentAction || execution.singleAction.isFailedDeploymentAction)
+        && execution.singleAction.version !== operation.version) {
+        throw new Error(`Deployment version mismatch: expected ${operation.version}, received ${execution.singleAction.version || "empty"}.`);
+    }
+    return operation;
+}
+function deploymentKind(execution) {
+    if (execution.currentConfiguration.hotfixBranch && !execution.currentConfiguration.releaseBranch)
+        return "hotfix";
+    if (execution.currentConfiguration.releaseBranch && !execution.currentConfiguration.hotfixBranch)
+        return "release";
+    if (execution.labels.isHotfix)
+        return "hotfix";
+    if (execution.labels.isRelease)
+        return "release";
+    throw new Error("The launcher issue does not identify exactly one release or hotfix source branch.");
+}
+function presentationContext(execution) {
+    return {
+        owner: execution.owner,
+        repository: execution.repo,
+        issue: execution.singleAction.issue,
+        issueLocale: execution.locale.issue,
+        pullRequestLocale: execution.locale.pullRequest,
+        packageName: execution.owner === "vypdev" && execution.repo === "copilot" ? "@vypdev/copilot" : undefined,
+    };
+}
+function replaceTarget(operation, index, target) {
+    return {
+        ...operation,
+        reconciliationTargets: operation.reconciliationTargets.map((current, currentIndex) => currentIndex === index ? target : current),
+    };
+}
+function success(step) {
+    return new result_1.Result({ id: TASK_ID, success: true, executed: true, steps: [step] });
+}
+function blockedResult(operation, fallback) {
+    const message = operation.lastFailure?.message ?? fallback;
+    return new result_1.Result({ id: TASK_ID, success: false, executed: true, steps: [message], errors: [new Error(message)] });
+}
+function sameCheckpoint(actual, expected) {
+    if (!actual || !expected)
+        return actual === undefined && expected === undefined;
+    return actual.operationId === expected.operationId && actual.phase === expected.phase;
 }
 
 
@@ -56549,11 +57781,13 @@ exports.runPublishGithubAction = runPublishGithubAction;
 const result_1 = __nccwpck_require__(73817);
 const input_keys_1 = __nccwpck_require__(88539);
 const logging_ports_1 = __nccwpck_require__(6152);
+const deployment_continuation_guard_1 = __nccwpck_require__(1779);
 async function runPublishGithubAction(param, taskId, repositoryTagPort, repositoryReleasePort) {
     const validationFailure = validateVersion(param, taskId);
     if (validationFailure)
         return [validationFailure];
-    const sourceTag = `v${param.singleAction.version}`;
+    const version = param.singleAction.version || param.currentConfiguration?.deploymentOrchestration?.version || '';
+    const sourceTag = `v${version}`;
     const targetTag = sourceTag.split('.')[0];
     try {
         await repositoryTagPort.updateTag(param.owner, param.repo, sourceTag, targetTag, param.tokens.token);
@@ -56572,7 +57806,10 @@ async function runPublishGithubAction(param, taskId, repositoryTagPort, reposito
     }
 }
 function validateVersion(param, taskId) {
-    if (param.singleAction.version.length > 0)
+    const continuationError = (0, deployment_continuation_guard_1.validateDeploymentContinuation)(param.currentConfiguration?.deploymentOrchestration, param.singleAction.operationId, ["publishing"], param.singleAction.version);
+    if (continuationError)
+        return new result_1.Result({ id: taskId, success: false, executed: true, errors: [continuationError] });
+    if (param.singleAction.version.length > 0 || param.currentConfiguration?.deploymentOrchestration?.version)
         return undefined;
     (0, logging_ports_1.logError)('Version is not set.');
     return new result_1.Result({ id: taskId, success: false, executed: true, errors: [`${input_keys_1.INPUT_KEYS.SINGLE_ACTION_VERSION} is not set.`] });
@@ -58269,6 +59506,10 @@ async function runSetupExecution(execution, dependencies) {
     if (await (0, resolve_execution_issue_number_1.resolveExecutionIssueNumber)(execution, dependencies.issueSetupPort) === undefined)
         return;
     execution.previousConfiguration = await loadPreviousConfiguration(execution, dependencies.configurationPort);
+    execution.currentConfiguration.deploymentOrchestration = execution.previousConfiguration?.deploymentOrchestration;
+    execution.currentConfiguration.releaseOriginBranch = execution.previousConfiguration?.releaseOriginBranch;
+    execution.currentConfiguration.releaseOriginSha = execution.previousConfiguration?.releaseOriginSha;
+    execution.currentConfiguration.hotfixOriginSha = execution.previousConfiguration?.hotfixOriginSha;
     await loadIssueLabels(execution, dependencies.issueSetupPort);
     execution.release.active = execution.labels.isRelease;
     execution.hotfix.active = execution.labels.isHotfix;
@@ -58707,7 +59948,7 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const single_action_workflow_1 = __nccwpck_require__(6130);
 class SingleActionUseCase {
-    constructor(deployedActionUseCase, publishGithubActionUseCase, createReleaseUseCase, createTagUseCase, thinkUseCase, initialSetupUseCase, checkProgressUseCase, detectPotentialProblemsUseCase, recommendStepsUseCase, closeInactiveIssuesUseCase, actorAuthorizationPort, publishIssueCommentUseCase, observeBranchSyncUseCase) {
+    constructor(deployedActionUseCase, publishGithubActionUseCase, createReleaseUseCase, createTagUseCase, thinkUseCase, initialSetupUseCase, checkProgressUseCase, detectPotentialProblemsUseCase, recommendStepsUseCase, closeInactiveIssuesUseCase, actorAuthorizationPort, publishIssueCommentUseCase, observeBranchSyncUseCase, deploymentOrchestrationUseCase) {
         this.deployedActionUseCase = deployedActionUseCase;
         this.publishGithubActionUseCase = publishGithubActionUseCase;
         this.createReleaseUseCase = createReleaseUseCase;
@@ -58721,6 +59962,7 @@ class SingleActionUseCase {
         this.actorAuthorizationPort = actorAuthorizationPort;
         this.publishIssueCommentUseCase = publishIssueCommentUseCase;
         this.observeBranchSyncUseCase = observeBranchSyncUseCase;
+        this.deploymentOrchestrationUseCase = deploymentOrchestrationUseCase;
         this.taskId = "SingleActionUseCase";
     }
     async invoke(param) {
@@ -58749,6 +59991,7 @@ class SingleActionUseCase {
             closeInactiveIssuesUseCase: this.closeInactiveIssuesUseCase,
             publishIssueCommentUseCase: this.publishIssueCommentUseCase,
             observeBranchSyncUseCase: this.observeBranchSyncUseCase,
+            deploymentOrchestrationUseCase: this.deploymentOrchestrationUseCase,
         });
     }
 }
@@ -58779,6 +60022,10 @@ async function runSingleActionWorkflow(param, taskId, ports) {
     }
     (0, logging_ports_1.logDebugInfo)(`SingleAction: dispatching to handler for action: ${param.singleAction.currentSingleAction}.`);
     const action = [
+        {
+            active: param.singleAction.isDeployedAction && Boolean(param.currentConfiguration.deploymentOrchestration),
+            useCase: ports.deploymentOrchestrationUseCase,
+        },
         { active: param.singleAction.isDeployedAction, useCase: ports.deployedActionUseCase },
         { active: param.singleAction.isPublishGithubAction, useCase: ports.publishGithubActionUseCase },
         { active: param.singleAction.isCreateReleaseAction, useCase: ports.createReleaseUseCase },
@@ -58791,6 +60038,7 @@ async function runSingleActionWorkflow(param, taskId, ports) {
         { active: param.singleAction.isCloseInactiveIssuesAction, useCase: ports.closeInactiveIssuesUseCase },
         { active: param.singleAction.isPublishIssueCommentAction, useCase: ports.publishIssueCommentUseCase },
         { active: param.singleAction.isCheckBranchSyncAction, useCase: ports.observeBranchSyncUseCase },
+        { active: param.singleAction.isDeploymentOrchestrationAction, useCase: ports.deploymentOrchestrationUseCase },
     ].find(({ active, useCase }) => active && useCase !== undefined);
     if (!action || !action.useCase)
         return [];
@@ -64772,6 +66020,8 @@ async function prepareHotfixBranch(param, commitTagQuery, linkedBranchCommand, b
     const lastAction = linkResult.at(-1);
     if (!lastAction?.success)
         return linkResult;
+    if (branchOid)
+        param.currentConfiguration.hotfixOriginSha = branchOid;
     (0, logging_ports_1.logDebugInfo)(`Hotfix branch successfully linked to issue: ${JSON.stringify(linkResult)}`);
     return [
         new result_1.Result({
@@ -64915,6 +66165,7 @@ async function prepareReleaseBranch(param, linkedBranchCommand, branches, taskId
     if (!lastAction?.success)
         return linkResult;
     const branchName = (0, result_1.getResultPayload)(lastAction.payload)?.newBranchName;
+    const baseSha = (0, result_1.getResultPayload)(lastAction.payload)?.baseSha;
     if (typeof branchName !== "string" || branchName.length === 0) {
         return [
             new result_1.Result({
@@ -64925,16 +66176,18 @@ async function prepareReleaseBranch(param, linkedBranchCommand, branches, taskId
             }),
         ];
     }
+    if (typeof baseSha === "string" && baseSha.length > 0) {
+        param.currentConfiguration.releaseOriginBranch = param.branches.development;
+        param.currentConfiguration.releaseOriginSha = baseSha;
+    }
     const fence = "```";
-    const inlineCode = "`";
     const reminders = [
         `Before deploying, apply any change needed in [**${release.branch}**](${releaseUrl}):\n> ${fence}bash\n> git fetch -v && git checkout ${release.branch}\n> ${fence}\n>\n> Version files, changelogs..`,
     ];
     const commitPrefix = await buildConfiguredCommitPrefix(param, branchName);
     if (commitPrefix)
         reminders.push(`Commit the needed changes with this prefix:\n> ${fence}\n>${commitPrefix}\n> ${fence}`);
-    reminders.push(`Create the tag version in [**${release.branch}**](${releaseUrl}).\n> Avoid using ${inlineCode}git merge --squash${inlineCode}, otherwise the created tag will be lost.`);
-    reminders.push(`Add the **${param.labels.deploy}** label to run the ${inlineCode}${param.workflows.release}${inlineCode} workflow.`);
+    reminders.push(`Add the **${param.labels.deploy}** label to run the \`${param.workflows.release}\` workflow. Copilot will create the immutable version tag only after the production promotion PR merges.`);
     reminders.push(buildReleaseReminder(param, releaseUrl, developmentUrl, mainUrl));
     (0, logging_ports_1.logDebugInfo)(`Release branch successfully linked to issue: ${JSON.stringify(linkResult)}`);
     return [
@@ -64957,8 +66210,7 @@ async function buildConfiguredCommitPrefix(param, branchName) {
 }
 function buildReleaseReminder(param, releaseUrl, developmentUrl, mainUrl) {
     const branch = param.release.branch;
-    const inlineCode = "`";
-    return `After deploying, the new changes on [${inlineCode}${branch}${inlineCode}](${releaseUrl}) must end on [${inlineCode}${param.branches.development}${inlineCode}](${developmentUrl}) and [${inlineCode}${param.branches.main}${inlineCode}](${mainUrl}).\n> **Quick actions:**\n> [New PR](https://github.com/${param.owner}/${param.repo}/compare/${param.branches.development}...${branch}?expand=1) from [${inlineCode}${branch}${inlineCode}](${releaseUrl}) to [${inlineCode}${param.branches.development}${inlineCode}](${developmentUrl}).\n> [New PR](https://github.com/${param.owner}/${param.repo}/compare/${param.branches.main}...${branch}?expand=1) from [${inlineCode}${branch}${inlineCode}](${releaseUrl}) to [${inlineCode}${param.branches.main}${inlineCode}](${mainUrl}).`;
+    return `Copilot will promote [\`${branch}\`](${releaseUrl}) into [\`${param.branches.main}\`](${mainUrl}) before publication, then reconcile the accepted production commit into the current [\`${param.branches.development}\`](${developmentUrl}) branch. Do not create the version tag or either merge PR manually unless the issue control center requests recovery.`;
 }
 
 
@@ -65825,6 +67077,10 @@ exports.ACTIONS = {
     CLOSE_INACTIVE_ISSUES: 'close_inactive_issues_action',
     PUBLISH_ISSUE_COMMENT: 'publish_issue_comment',
     CHECK_BRANCH_SYNC: 'check_branch_sync_action',
+    PREPARE_DEPLOYMENT: 'prepare_deployment_action',
+    CONTINUE_DEPLOYMENT: 'continue_deployment_action',
+    PUBLISHED_DEPLOYMENT: 'published_deployment_action',
+    FAILED_DEPLOYMENT: 'failed_deployment_action',
 };
 
 
@@ -66036,8 +67292,9 @@ exports.migrateConfigurationPayload = migrateConfigurationPayload;
 const branch_configuration_1 = __nccwpck_require__(71934);
 const recommendation_state_1 = __nccwpck_require__(68514);
 const model_input_1 = __nccwpck_require__(14637);
+const deployment_operation_1 = __nccwpck_require__(92730);
 /** Version of the durable configuration contract stored in issue/PR content. */
-exports.CONFIG_SCHEMA_VERSION = 2;
+exports.CONFIG_SCHEMA_VERSION = 3;
 /**
  * Normalizes persisted configuration without silently losing fields from a
  * newer installation. Unknown keys are deliberately retained so a downgrade
@@ -66081,6 +67338,9 @@ class Config {
         this.hotfixOriginBranch = (0, model_input_1.readOptionalString)(input, 'hotfixOriginBranch');
         this.hotfixBranch = (0, model_input_1.readOptionalString)(input, 'hotfixBranch');
         this.releaseBranch = (0, model_input_1.readOptionalString)(input, 'releaseBranch');
+        this.releaseOriginBranch = (0, model_input_1.readOptionalString)(input, 'releaseOriginBranch');
+        this.releaseOriginSha = (0, model_input_1.readOptionalString)(input, 'releaseOriginSha');
+        this.hotfixOriginSha = (0, model_input_1.readOptionalString)(input, 'hotfixOriginSha');
         this.parentBranch = (0, model_input_1.readOptionalString)(input, 'parentBranch');
         this.workingBranch = (0, model_input_1.readOptionalString)(input, 'workingBranch');
         if (input['branchConfiguration'] !== undefined && input['branchConfiguration'] !== null) {
@@ -66088,6 +67348,9 @@ class Config {
         }
         if ((0, recommendation_state_1.isRecommendationState)(input['recommendationState'])) {
             this.recommendationState = input['recommendationState'];
+        }
+        if ((0, deployment_operation_1.isDeploymentOperationSnapshot)(input['deploymentOrchestration'])) {
+            this.deploymentOrchestration = input['deploymentOrchestration'];
         }
     }
 }
@@ -66126,6 +67389,7 @@ const commit_1 = __nccwpck_require__(57525);
 const config_1 = __nccwpck_require__(90450);
 const github_user_policy_1 = __nccwpck_require__(84403);
 const issue_inactivity_1 = __nccwpck_require__(38572);
+const deployment_configuration_1 = __nccwpck_require__(22495);
 class Execution {
     get eventName() {
         return this.inputs?.eventName ?? '';
@@ -66216,6 +67480,7 @@ class Execution {
         this.hotfix = components.hotfix;
         this.project = components.projects;
         this.workflows = components.workflows;
+        this.deployment = components.deployment ?? { ...deployment_configuration_1.DEFAULT_DEPLOYMENT_CONFIGURATION };
         this.tokenUser = components.tokenUser;
         this.inactivityThresholdHours = components.inactivityThresholdHours ?? issue_inactivity_1.DEFAULT_INACTIVITY_THRESHOLD_HOURS;
         this.currentConfiguration = new config_1.Config({});
@@ -67114,6 +68379,24 @@ class SingleAction {
     get isCheckBranchSyncAction() {
         return this.currentSingleAction === action_types_1.ACTIONS.CHECK_BRANCH_SYNC;
     }
+    get isPrepareDeploymentAction() {
+        return this.currentSingleAction === action_types_1.ACTIONS.PREPARE_DEPLOYMENT;
+    }
+    get isContinueDeploymentAction() {
+        return this.currentSingleAction === action_types_1.ACTIONS.CONTINUE_DEPLOYMENT;
+    }
+    get isPublishedDeploymentAction() {
+        return this.currentSingleAction === action_types_1.ACTIONS.PUBLISHED_DEPLOYMENT;
+    }
+    get isFailedDeploymentAction() {
+        return this.currentSingleAction === action_types_1.ACTIONS.FAILED_DEPLOYMENT;
+    }
+    get isDeploymentOrchestrationAction() {
+        return this.isPrepareDeploymentAction
+            || this.isContinueDeploymentAction
+            || this.isPublishedDeploymentAction
+            || this.isFailedDeploymentAction;
+    }
     get enabledSingleAction() {
         return this.currentSingleAction.length > 0;
     }
@@ -67128,7 +68411,7 @@ class SingleAction {
     get throwError() {
         return this.actionsThrowError.indexOf(this.currentSingleAction) > -1;
     }
-    constructor(currentSingleAction, issue, version, title, changelog, message = '', commentId = '', commentMode = '') {
+    constructor(currentSingleAction, issue, version, title, changelog, message = '', commentId = '', commentMode = '', operationId = '') {
         this.actions = [
             action_types_1.ACTIONS.DEPLOYED,
             action_types_1.ACTIONS.PUBLISH_GITHUB_ACTION,
@@ -67142,6 +68425,10 @@ class SingleAction {
             action_types_1.ACTIONS.CLOSE_INACTIVE_ISSUES,
             action_types_1.ACTIONS.PUBLISH_ISSUE_COMMENT,
             action_types_1.ACTIONS.CHECK_BRANCH_SYNC,
+            action_types_1.ACTIONS.PREPARE_DEPLOYMENT,
+            action_types_1.ACTIONS.CONTINUE_DEPLOYMENT,
+            action_types_1.ACTIONS.PUBLISHED_DEPLOYMENT,
+            action_types_1.ACTIONS.FAILED_DEPLOYMENT,
         ];
         /**
          * Actions that throw an error if the last step failed
@@ -67153,6 +68440,10 @@ class SingleAction {
             action_types_1.ACTIONS.CREATE_TAG,
             action_types_1.ACTIONS.CLOSE_INACTIVE_ISSUES,
             action_types_1.ACTIONS.PUBLISH_ISSUE_COMMENT,
+            action_types_1.ACTIONS.PREPARE_DEPLOYMENT,
+            action_types_1.ACTIONS.CONTINUE_DEPLOYMENT,
+            action_types_1.ACTIONS.PUBLISHED_DEPLOYMENT,
+            action_types_1.ACTIONS.FAILED_DEPLOYMENT,
         ];
         /**
          * Actions that do not require an issue
@@ -67174,6 +68465,7 @@ class SingleAction {
         this.title = '';
         this.changelog = '';
         this.message = '';
+        this.operationId = '';
         this.commentId = -1;
         this.commentIdInput = '';
         this.commentMode = '';
@@ -67184,6 +68476,7 @@ class SingleAction {
         this.commentIdInput = commentId.trim();
         this.commentId = (0, positive_integer_policy_1.parsePositiveSafeInteger)(this.commentIdInput) ?? -1;
         this.commentMode = commentMode.trim().toLowerCase();
+        this.operationId = operationId.trim();
         this.currentSingleAction = currentSingleAction;
         if (!this.isSingleActionWithoutIssue) {
             this.issue = (0, positive_integer_policy_1.parsePositiveSafeInteger)(issue) ?? -1;
@@ -69121,13 +70414,14 @@ function missingLinkedBranchResult(branchName) {
 function unexpectedLinkedBranchResult(branchName) {
     return new result_1.Result({ id: RESULT_ID, success: false, executed: true, steps: [`Linked branch creation returned an unexpected branch ref for ${branchName}.`] });
 }
-function createdLinkedBranchResult(owner, repo, baseBranchName, newBranchName) {
+function createdLinkedBranchResult(owner, repo, baseBranchName, newBranchName, baseSha) {
     return new result_1.Result({
         id: RESULT_ID,
         success: true,
         executed: true,
         payload: {
             baseBranchName,
+            baseSha,
             baseBranchUrl: `https://github.com/${owner}/${repo}/tree/${baseBranchName}`,
             newBranchName,
             newBranchUrl: `https://github.com/${owner}/${repo}/tree/${newBranchName}`,
@@ -69191,7 +70485,7 @@ async function runCreateLinkedBranch(client, owner, repo, baseBranchName, newBra
             return [(0, linked_branch_result_policy_1.missingLinkedBranchResult)(newBranchName)];
         if (!(0, linked_branch_policy_1.isExpectedLinkedBranchRef)(linkedBranch.ref?.name, newBranchName))
             return [(0, linked_branch_result_policy_1.unexpectedLinkedBranchResult)(newBranchName)];
-        return [(0, linked_branch_result_policy_1.createdLinkedBranchResult)(owner, repo, baseBranchName, newBranchName)];
+        return [(0, linked_branch_result_policy_1.createdLinkedBranchResult)(owner, repo, baseBranchName, newBranchName, identifiers.branchOid)];
     }
     catch (error) {
         if ((0, github_error_policy_1.isGithubAlreadyExists)(error)) {
@@ -69660,6 +70954,324 @@ class CopilotEvidenceRepository {
     }
 }
 exports.CopilotEvidenceRepository = CopilotEvidenceRepository;
+
+
+/***/ }),
+
+/***/ 77509:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DeploymentContinuationRepository = void 0;
+class DeploymentContinuationRepository {
+    constructor(workflow) {
+        this.workflow = workflow;
+    }
+    async dispatch(owner, repository, workflow, ref, operationId, issue, version, token) {
+        await this.workflow.executeWorkflow(owner, repository, ref, workflow, {
+            mode: "publish",
+            "operation-id": operationId,
+            issue: String(issue),
+            version,
+        }, token);
+    }
+}
+exports.DeploymentContinuationRepository = DeploymentContinuationRepository;
+
+
+/***/ }),
+
+/***/ 91985:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DeploymentPresentationRepository = void 0;
+class DeploymentPresentationRepository {
+    constructor(issues) {
+        this.issues = issues;
+    }
+    async findDashboard(owner, repository, issue, marker, token) {
+        const comments = await this.issues.listIssueComments(owner, repository, issue, token);
+        const matches = comments.filter((comment) => comment.body?.includes(marker));
+        if (matches.length > 1)
+            throw new Error(`Multiple deployment dashboards match ${marker}.`);
+        const match = matches[0];
+        return match ? { id: match.id, body: match.body ?? "" } : undefined;
+    }
+    async createDashboard(owner, repository, issue, body, token) {
+        await this.issues.addComment(owner, repository, issue, body, token);
+    }
+    async updateDashboard(owner, repository, issue, commentId, body, token) {
+        await this.issues.updateComment(owner, repository, issue, commentId, body, token);
+    }
+    async publishMilestone(owner, repository, issue, marker, body, token) {
+        const comments = await this.issues.listIssueComments(owner, repository, issue, token);
+        if (comments.some((comment) => comment.body?.includes(marker)))
+            return;
+        await this.issues.addComment(owner, repository, issue, `${body}\n\n${marker}`, token);
+    }
+}
+exports.DeploymentPresentationRepository = DeploymentPresentationRepository;
+
+
+/***/ }),
+
+/***/ 3182:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DeploymentStateRepository = void 0;
+const config_1 = __nccwpck_require__(90450);
+const configuration_handler_1 = __nccwpck_require__(40188);
+const configuration_payload_policy_1 = __nccwpck_require__(58043);
+class DeploymentStateRepository {
+    constructor(issues) {
+        this.issues = issues;
+        this.block = new configuration_handler_1.ConfigurationHandler(issues);
+    }
+    async load(query) {
+        const description = await this.issues.getDescription(query.owner, query.repository, query.issue, query.token);
+        const raw = this.block.getContent(description);
+        if (!raw)
+            return undefined;
+        return new config_1.Config(JSON.parse(raw)).deploymentOrchestration;
+    }
+    async save(command) {
+        const description = await this.issues.getDescription(command.owner, command.repository, command.issue, command.token);
+        const stored = this.block.getContent(description);
+        const payload = (0, configuration_payload_policy_1.buildConfigurationPayload)({ currentConfiguration: command.state }, stored);
+        const updated = this.block.updateContent(description, payload);
+        if (updated === undefined)
+            throw new Error("Issue configuration markers are missing or inconsistent.");
+        await this.issues.updateDescription(command.owner, command.repository, command.issue, updated, command.token);
+    }
+}
+exports.DeploymentStateRepository = DeploymentStateRepository;
+
+
+/***/ }),
+
+/***/ 22368:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GithubDeploymentRepository = void 0;
+const managed_pull_request_1 = __nccwpck_require__(95914);
+class GithubDeploymentRepository {
+    constructor(clientProvider) {
+        this.clientProvider = clientProvider;
+    }
+    async findManagedPullRequests(query) {
+        const client = this.clientProvider.getClient(query.token);
+        const pullRequests = await client.paginate(client.rest.pulls.list, {
+            owner: query.owner,
+            repo: query.repository,
+            state: "all",
+            head: `${query.owner}:${query.headBranch}`,
+            base: query.baseBranch,
+            per_page: 100,
+        });
+        return pullRequests
+            .filter((pullRequest) => {
+            const marker = (0, managed_pull_request_1.parseManagedPullRequestMarker)(pullRequest.body);
+            return marker?.operationId === query.operationId
+                && marker.phase === query.phase
+                && marker.issue === query.issue;
+        })
+            .map((pullRequest) => mapPullRequest(pullRequest, query.owner, query.repository));
+    }
+    async createManagedPullRequest(command) {
+        const client = this.clientProvider.getClient(command.token);
+        const { data } = await client.rest.pulls.create({
+            owner: command.owner,
+            repo: command.repository,
+            head: command.headBranch,
+            base: command.baseBranch,
+            title: command.title,
+            body: command.body,
+            maintainer_can_modify: false,
+        });
+        return mapPullRequest(data, command.owner, command.repository);
+    }
+    async getPullRequest(owner, repository, pullRequest, token) {
+        const { data } = await this.clientProvider.getClient(token).rest.pulls.get({
+            owner,
+            repo: repository,
+            pull_number: pullRequest,
+        });
+        return mapPullRequest(data, owner, repository);
+    }
+    async getTargetCapabilities(owner, repository, targetBranch, token, pullRequest) {
+        const client = this.clientProvider.getClient(token);
+        const [{ data: repositoryData }, protection, queue, pullRequestState] = await Promise.all([
+            client.rest.repos.get({ owner, repo: repository }),
+            readBranchProtection(client, owner, repository, targetBranch),
+            readMergeQueueRequirement(client, owner, repository, targetBranch),
+            pullRequest === undefined
+                ? Promise.resolve(undefined)
+                : client.rest.pulls.get({ owner, repo: repository, pull_number: pullRequest }).then(({ data }) => data),
+        ]);
+        return {
+            autoMergeAllowed: repositoryData.allow_auto_merge === true,
+            mergeQueueRequired: queue,
+            immediatelyMergeable: pullRequestState?.mergeable === true && pullRequestState.mergeable_state === "clean",
+            requiresStrictStatusChecks: protection?.required_status_checks?.strict === true,
+        };
+    }
+    async enableAutoMerge(owner, repository, pullRequestNodeId, token) {
+        await this.clientProvider.getClient(token).graphql(`mutation EnableDeploymentAutoMerge($pullRequestId: ID!) {
+        enablePullRequestAutoMerge(input: {pullRequestId: $pullRequestId, mergeMethod: MERGE}) {
+          pullRequest { id }
+        }
+      }`, { pullRequestId: pullRequestNodeId, owner, repository });
+    }
+    async enqueuePullRequest(owner, repository, pullRequestNodeId, token) {
+        await this.clientProvider.getClient(token).graphql(`mutation EnqueueDeploymentPullRequest($pullRequestId: ID!) {
+        enqueuePullRequest(input: {pullRequestId: $pullRequestId}) { mergeQueueEntry { id } }
+      }`, { pullRequestId: pullRequestNodeId, owner, repository });
+    }
+    async mergePullRequest(owner, repository, pullRequest, token) {
+        const { data } = await this.clientProvider.getClient(token).rest.pulls.merge({
+            owner,
+            repo: repository,
+            pull_number: pullRequest,
+            merge_method: "merge",
+        });
+        if (!data.merged || !data.sha)
+            throw new Error(data.message ?? `Pull request #${pullRequest} was not merged.`);
+        return data.sha;
+    }
+    async getBranchSha(owner, repository, branch, token) {
+        const { data } = await this.clientProvider.getClient(token).rest.git.getRef({ owner, repo: repository, ref: `heads/${branch}` });
+        return data.object.sha;
+    }
+    async getMergeBaseSha(owner, repository, base, head, token) {
+        const { data } = await this.clientProvider.getClient(token).rest.repos.compareCommits({ owner, repo: repository, base, head });
+        const sha = data.merge_base_commit?.sha;
+        if (!sha)
+            throw new Error(`GitHub returned no merge base for ${base}...${head}.`);
+        return sha;
+    }
+    async isCommitReachable(owner, repository, branch, sha, token) {
+        const { data } = await this.clientProvider.getClient(token).rest.repos.compareCommits({ owner, repo: repository, base: sha, head: branch });
+        return data.merge_base_commit?.sha === sha;
+    }
+    async createOrVerifyBranch(owner, repository, branch, sha, token) {
+        const client = this.clientProvider.getClient(token);
+        try {
+            const { data } = await client.rest.git.getRef({ owner, repo: repository, ref: `heads/${branch}` });
+            if (data.object.sha !== sha) {
+                const { data: comparison } = await client.rest.repos.compareCommits({ owner, repo: repository, base: sha, head: branch });
+                if (comparison.merge_base_commit?.sha !== sha)
+                    throw new Error(`Branch ${branch} already exists at a different SHA.`);
+            }
+        }
+        catch (error) {
+            if (!isNotFound(error))
+                throw error;
+            await client.rest.git.createRef({ owner, repo: repository, ref: `refs/heads/${branch}`, sha });
+        }
+    }
+    async mergeCommitIntoBranch(owner, repository, branch, sourceSha, token) {
+        const client = this.clientProvider.getClient(token);
+        const { data: comparison } = await client.rest.repos.compareCommits({ owner, repo: repository, base: sourceSha, head: branch });
+        if (comparison.merge_base_commit?.sha === sourceSha)
+            return await this.getBranchSha(owner, repository, branch, token);
+        const { data } = await client.rest.repos.merge({
+            owner,
+            repo: repository,
+            base: branch,
+            head: sourceSha,
+            commit_message: `chore(release): reconcile ${sourceSha.slice(0, 7)} into ${branch}`,
+        });
+        if (!data.merged || !data.sha)
+            throw new Error(data.message ?? `Could not reconcile ${sourceSha} into ${branch}.`);
+        return data.sha;
+    }
+    async deleteBranch(owner, repository, branch, token) {
+        try {
+            await this.clientProvider.getClient(token).rest.git.deleteRef({ owner, repo: repository, ref: `heads/${branch}` });
+        }
+        catch (error) {
+            if (!isNotFound(error))
+                throw error;
+        }
+    }
+    async listBranches(owner, repository, prefix, token) {
+        const client = this.clientProvider.getClient(token);
+        const branches = await client.paginate(client.rest.repos.listBranches, { owner, repo: repository, per_page: 100 });
+        return branches.map(({ name }) => name).filter((name) => name.startsWith(`${prefix}/`));
+    }
+}
+exports.GithubDeploymentRepository = GithubDeploymentRepository;
+function mapPullRequest(value, owner, repository) {
+    return {
+        number: value.number,
+        nodeId: value.node_id,
+        body: value.body ?? "",
+        headBranch: value.head.ref,
+        headSha: value.head.sha,
+        baseBranch: value.base.ref,
+        state: value.state === "closed" ? "closed" : "open",
+        merged: value.merged === true,
+        mergeCommitSha: value.merge_commit_sha ?? undefined,
+        repositoryFullName: value.base.repo?.full_name ?? value.head.repo?.full_name ?? `${owner}/${repository}`,
+    };
+}
+async function readBranchProtection(client, owner, repository, branch) {
+    try {
+        return (await client.rest.repos.getBranchProtection({ owner, repo: repository, branch })).data;
+    }
+    catch (error) {
+        if (isNotFound(error))
+            return undefined;
+        throw error;
+    }
+}
+async function readMergeQueueRequirement(client, owner, repository, branch) {
+    const response = await client.graphql(`query DeploymentTargetRules($owner: String!, $repository: String!, $qualifiedName: String!) {
+      repository(owner: $owner, name: $repository) {
+        ref(qualifiedName: $qualifiedName) { branchProtectionRule { requiresMergeQueue } }
+      }
+    }`, { owner, repository, qualifiedName: `refs/heads/${branch}` });
+    return response.repository?.ref?.branchProtectionRule?.requiresMergeQueue === true;
+}
+function isNotFound(error) {
+    return typeof error === "object" && error !== null && "status" in error && error.status === 404;
+}
+
+
+/***/ }),
+
+/***/ 70245:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.LegacyDeploymentMergeRepository = void 0;
+const merge_checks_waiter_1 = __nccwpck_require__(43989);
+const merge_pull_request_flow_1 = __nccwpck_require__(81775);
+class LegacyDeploymentMergeRepository {
+    constructor(clients, waiter = new merge_checks_waiter_1.MergeChecksWaiter()) {
+        this.clients = clients;
+        this.waiter = waiter;
+    }
+    async waitAndMerge(owner, repository, headBranch, pullRequest, baseBranch, timeoutSeconds, token) {
+        const client = this.clients.getClient(token);
+        await this.waiter.wait(client, owner, repository, headBranch, pullRequest, timeoutSeconds);
+        await (0, merge_pull_request_flow_1.mergePullRequest)(client, owner, repository, pullRequest, headBranch, baseBranch);
+    }
+}
+exports.LegacyDeploymentMergeRepository = LegacyDeploymentMergeRepository;
 
 
 /***/ }),
@@ -72993,16 +74605,28 @@ class RepositoryReleasePublicationRepository {
         this.createRelease = async (owner, repository, version, title, changelog, token) => {
             try {
                 const octokit = this.githubClient.getClient(token);
-                const { data: release } = await octokit.rest.repos.createRelease({
-                    owner,
-                    repo: repository,
-                    tag_name: version,
-                    name: (0, release_tag_policy_1.releaseName)(version, title),
-                    body: changelog,
-                    draft: false,
-                    prerelease: false,
-                });
-                return release.html_url;
+                try {
+                    const { data: release } = await octokit.rest.repos.createRelease({
+                        owner,
+                        repo: repository,
+                        tag_name: version,
+                        name: (0, release_tag_policy_1.releaseName)(version, title),
+                        body: changelog,
+                        draft: false,
+                        prerelease: false,
+                    });
+                    return release.html_url;
+                }
+                catch (error) {
+                    if (!isAlreadyExists(error))
+                        throw error;
+                    const { data: existing } = await octokit.rest.repos.getReleaseByTag({
+                        owner,
+                        repo: repository,
+                        tag: version,
+                    });
+                    return existing.html_url;
+                }
             }
             catch (error) {
                 (0, logger_1.logError)(`Error creating release: ${error}`);
@@ -73012,6 +74636,10 @@ class RepositoryReleasePublicationRepository {
     }
 }
 exports.RepositoryReleasePublicationRepository = RepositoryReleasePublicationRepository;
+function isAlreadyExists(error) {
+    return typeof error === 'object' && error !== null && 'status' in error
+        && error.status === 422;
+}
 
 
 /***/ }),
@@ -73083,8 +74711,7 @@ class RepositoryTagRepository {
             const octokit = this.githubClient.getClient(token);
             const sourceTagSha = await (0, repository_tag_query_1.getRepositoryTagSha)(octokit, owner, repository, sourceTag);
             if (!sourceTagSha) {
-                (0, logger_1.logError)(`The '${sourceTag}' tag does not exist in the remote repository`);
-                return;
+                throw new Error(`The '${sourceTag}' tag does not exist in the remote repository.`);
             }
             const foundTargetTag = await (0, repository_tag_query_1.findRepositoryTag)(octokit, owner, repository, targetTag);
             if (foundTargetTag) {
@@ -73105,6 +74732,10 @@ class RepositoryTagRepository {
                     ref: (0, release_tag_policy_1.tagReferencePath)(targetTag),
                     sha: sourceTagSha,
                 });
+            }
+            const verifiedTargetSha = await (0, repository_tag_query_1.getRepositoryTagSha)(octokit, owner, repository, targetTag);
+            if (verifiedTargetSha !== sourceTagSha) {
+                throw new Error(`Moving tag '${targetTag}' was not verified at ${sourceTagSha}.`);
             }
         };
         this.createTag = async (owner, repository, branch, tag, token) => {
@@ -73133,6 +74764,23 @@ class RepositoryTagRepository {
                 (0, logger_1.logError)(`Error creating tag '${tag}': ${JSON.stringify(error, null, 2)}`);
                 throw error;
             }
+        };
+        this.createOrVerifyTagAtSha = async (owner, repository, sha, tag, token) => {
+            const octokit = this.githubClient.getClient(token);
+            const existingTag = await (0, repository_tag_query_1.findRepositoryTag)(octokit, owner, repository, tag);
+            if (existingTag) {
+                if (existingTag.object.sha !== sha) {
+                    throw new Error(`Immutable tag '${tag}' exists at ${existingTag.object.sha}, expected ${sha}.`);
+                }
+                return sha;
+            }
+            await octokit.rest.git.createRef({
+                owner,
+                repo: repository,
+                ref: `refs/tags/${tag}`,
+                sha,
+            });
+            return sha;
         };
     }
 }
@@ -74335,6 +75983,296 @@ function lifecycleStateFromLabels(currentLabels, labels = exports.DEFAULT_COPILO
 
 /***/ }),
 
+/***/ 22495:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DEFAULT_DEPLOYMENT_CONFIGURATION = exports.ORCHESTRATION_COMMENT_MODES = exports.ORCHESTRATION_PRESENTATION_MODES = exports.RECONCILIATION_ISSUE_COMPLETION_MODES = exports.RECONCILIATION_CLEANUP_MODES = exports.HOTFIX_ACTIVE_RELEASE_POLICIES = exports.RECONCILIATION_BACKMERGE_MODES = exports.RECONCILIATION_PR_MODES = exports.RECONCILIATION_STRATEGIES = void 0;
+exports.validateDeploymentConfiguration = validateDeploymentConfiguration;
+exports.isSafeBranchTree = isSafeBranchTree;
+exports.parseDeploymentEnum = parseDeploymentEnum;
+exports.RECONCILIATION_STRATEGIES = [
+    "production-lineage",
+    "canonical-gitflow",
+    "manual",
+];
+exports.RECONCILIATION_PR_MODES = [
+    "auto",
+    "auto-merge",
+    "merge-queue",
+    "create-only",
+    "legacy-wait",
+];
+exports.RECONCILIATION_BACKMERGE_MODES = [
+    "auto",
+    "direct",
+    "sync-branch",
+];
+exports.HOTFIX_ACTIVE_RELEASE_POLICIES = [
+    "prefer-release",
+    "development",
+    "both",
+];
+exports.RECONCILIATION_CLEANUP_MODES = [
+    "all",
+    "source-only",
+    "sync-only",
+    "none",
+];
+exports.RECONCILIATION_ISSUE_COMPLETION_MODES = ["close", "keep-open"];
+exports.ORCHESTRATION_PRESENTATION_MODES = ["guided", "compact", "quiet"];
+exports.ORCHESTRATION_COMMENT_MODES = ["update", "milestones"];
+exports.DEFAULT_DEPLOYMENT_CONFIGURATION = {
+    releaseReconciliationStrategy: "production-lineage",
+    hotfixReconciliationStrategy: "production-lineage",
+    reconciliationPullRequestMode: "auto",
+    reconciliationBackmergeMode: "auto",
+    hotfixActiveReleasePolicy: "prefer-release",
+    reconciliationTree: "sync",
+    reconciliationCleanup: "all",
+    reconciliationIssueCompletion: "close",
+    orchestrationPresentationMode: "guided",
+    orchestrationDiagrams: true,
+    orchestrationCommentMode: "update",
+};
+function validateDeploymentConfiguration(configuration, context) {
+    const errors = [];
+    for (const [name, value, allowed] of [
+        ["release reconciliation strategy", configuration.releaseReconciliationStrategy, exports.RECONCILIATION_STRATEGIES],
+        ["hotfix reconciliation strategy", configuration.hotfixReconciliationStrategy, exports.RECONCILIATION_STRATEGIES],
+        ["reconciliation PR mode", configuration.reconciliationPullRequestMode, exports.RECONCILIATION_PR_MODES],
+        ["reconciliation back-merge mode", configuration.reconciliationBackmergeMode, exports.RECONCILIATION_BACKMERGE_MODES],
+        ["hotfix active-release policy", configuration.hotfixActiveReleasePolicy, exports.HOTFIX_ACTIVE_RELEASE_POLICIES],
+        ["reconciliation cleanup", configuration.reconciliationCleanup, exports.RECONCILIATION_CLEANUP_MODES],
+        ["reconciliation issue completion", configuration.reconciliationIssueCompletion, exports.RECONCILIATION_ISSUE_COMPLETION_MODES],
+        ["orchestration presentation mode", configuration.orchestrationPresentationMode, exports.ORCHESTRATION_PRESENTATION_MODES],
+        ["orchestration comment mode", configuration.orchestrationCommentMode, exports.ORCHESTRATION_COMMENT_MODES],
+    ]) {
+        if (!allowed.includes(value)) {
+            errors.push(`The ${name} must be one of: ${allowed.join(", ")}.`);
+        }
+    }
+    if (typeof configuration.orchestrationDiagrams !== "boolean") {
+        errors.push("Orchestration diagrams must be a boolean.");
+    }
+    if (context.productionBranch === context.developmentBranch) {
+        errors.push("Production and development branches must be different.");
+    }
+    const protectedNames = new Set([context.productionBranch, context.developmentBranch]);
+    for (const [label, tree] of [
+        ["release", context.releaseTree],
+        ["hotfix", context.hotfixTree],
+        ["reconciliation", configuration.reconciliationTree],
+    ]) {
+        if (!isSafeBranchTree(tree)) {
+            errors.push(`The ${label} branch prefix must be a safe, non-empty Git ref segment.`);
+        }
+        else if (protectedNames.has(tree)) {
+            errors.push(`The ${label} branch prefix cannot equal a protected long-lived branch.`);
+        }
+    }
+    if (configuration.reconciliationPullRequestMode === "merge-queue"
+        && context.mergeQueueWorkflowSupported === false) {
+        errors.push("Merge-queue mode requires merge_group support in every required workflow.");
+    }
+    if ((configuration.releaseReconciliationStrategy === "manual"
+        || configuration.hotfixReconciliationStrategy === "manual")
+        && configuration.reconciliationIssueCompletion === "close") {
+        errors.push("Manual reconciliation cannot close the launcher issue automatically.");
+    }
+    return errors;
+}
+function isSafeBranchTree(value) {
+    const tree = value.trim();
+    return tree.length > 0
+        && tree.length <= 100
+        && !tree.startsWith("/")
+        && !tree.endsWith("/")
+        && !tree.includes("..")
+        && !tree.includes("@{")
+        && !/[~^:?*[\\\]\s]/.test(tree);
+}
+function parseDeploymentEnum(value, allowed, fallback) {
+    if (value === undefined || value === null || String(value).trim() === "") {
+        return { value: fallback, valid: true };
+    }
+    const normalized = String(value).trim();
+    return allowed.includes(normalized)
+        ? { value: normalized, valid: true }
+        : { value: fallback, valid: false };
+}
+
+
+/***/ }),
+
+/***/ 92730:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DEPLOYMENT_PHASES = void 0;
+exports.transitionDeploymentOperation = transitionDeploymentOperation;
+exports.blockDeploymentOperation = blockDeploymentOperation;
+exports.resumeBlockedDeployment = resumeBlockedDeployment;
+exports.completeReconciliationTarget = completeReconciliationTarget;
+exports.sanitizeDeploymentMessage = sanitizeDeploymentMessage;
+exports.isDeploymentOperationSnapshot = isDeploymentOperationSnapshot;
+const deployment_configuration_1 = __nccwpck_require__(22495);
+exports.DEPLOYMENT_PHASES = [
+    "preparing",
+    "promotion_pr_pending",
+    "promoted",
+    "publishing",
+    "published",
+    "reconciliation_pending",
+    "completed",
+    "blocked",
+];
+const NORMAL_TRANSITIONS = {
+    preparing: ["promotion_pr_pending"],
+    promotion_pr_pending: ["promoted"],
+    promoted: ["publishing"],
+    publishing: ["published"],
+    published: ["reconciliation_pending", "completed"],
+    reconciliation_pending: ["completed"],
+    completed: [],
+};
+function transitionDeploymentOperation(operation, expectedPhase, nextPhase) {
+    if (operation.phase === nextPhase) {
+        return { kind: "noop", operation, reason: `Operation is already ${nextPhase}.` };
+    }
+    if (operation.phase !== expectedPhase) {
+        return { kind: "noop", operation, reason: `Expected ${expectedPhase}, found ${operation.phase}.` };
+    }
+    if (nextPhase === "blocked") {
+        return { kind: "advance", operation: { ...operation, phase: nextPhase } };
+    }
+    if (expectedPhase === "blocked" || !NORMAL_TRANSITIONS[expectedPhase].includes(nextPhase)) {
+        return { kind: "invalid", operation, reason: `Transition ${expectedPhase} -> ${nextPhase} is not allowed.` };
+    }
+    return { kind: "advance", operation: { ...operation, phase: nextPhase, lastFailure: null } };
+}
+function blockDeploymentOperation(operation, category, message, retryable) {
+    if (operation.phase === "completed")
+        return operation;
+    const previousPhase = operation.phase === "blocked"
+        ? operation.lastFailure?.previousPhase ?? "preparing"
+        : operation.phase;
+    return {
+        ...operation,
+        phase: "blocked",
+        lastFailure: { category, message: sanitizeDeploymentMessage(message), retryable, previousPhase },
+    };
+}
+function resumeBlockedDeployment(operation) {
+    if (operation.phase !== "blocked" || !operation.lastFailure?.retryable) {
+        return { kind: "invalid", operation, reason: "Operation is not retryable from blocked state." };
+    }
+    return {
+        kind: "advance",
+        operation: { ...operation, phase: operation.lastFailure.previousPhase, lastFailure: null },
+    };
+}
+function completeReconciliationTarget(operation, pullRequest) {
+    const targets = operation.reconciliationTargets.map((target) => target.pullRequest === pullRequest ? { ...target, status: "completed" } : target);
+    return {
+        ...operation,
+        reconciliationTargets: targets,
+        lastFailure: null,
+    };
+}
+function sanitizeDeploymentMessage(value) {
+    return value
+        .replace(/::/g, "﹕﹕")
+        .replace(/@(?=[A-Za-z0-9_-])/g, "@\u200b")
+        .replace(/<!--/g, "&lt;!--")
+        .replace(/-->/g, "--&gt;")
+        .slice(0, 2000);
+}
+function isDeploymentOperationSnapshot(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value))
+        return false;
+    const operation = value;
+    return typeof operation.operationId === "string"
+        && /^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(operation.operationId)
+        && (operation.kind === "release" || operation.kind === "hotfix")
+        && typeof operation.version === "string" && /^[0-9]+\.[0-9]+\.[0-9]+$/.test(operation.version)
+        && typeof operation.title === "string" && operation.title.length <= 1000
+        && typeof operation.changelog === "string" && operation.changelog.length <= 50000
+        && exports.DEPLOYMENT_PHASES.includes(operation.phase)
+        && deployment_configuration_1.RECONCILIATION_STRATEGIES.includes(operation.strategy)
+        && deployment_configuration_1.RECONCILIATION_PR_MODES.includes(operation.prMode)
+        && (operation.selectedPrMode === undefined
+            || ["auto-merge", "merge-queue", "create-only", "legacy-wait"].includes(operation.selectedPrMode))
+        && deployment_configuration_1.RECONCILIATION_BACKMERGE_MODES.includes(operation.backmergeMode)
+        && deployment_configuration_1.HOTFIX_ACTIVE_RELEASE_POLICIES.includes(operation.hotfixActiveReleasePolicy)
+        && deployment_configuration_1.RECONCILIATION_CLEANUP_MODES.includes(operation.cleanup)
+        && deployment_configuration_1.RECONCILIATION_ISSUE_COMPLETION_MODES.includes(operation.issueCompletion)
+        && deployment_configuration_1.ORCHESTRATION_PRESENTATION_MODES.includes(operation.presentationMode)
+        && typeof operation.diagrams === "boolean"
+        && deployment_configuration_1.ORCHESTRATION_COMMENT_MODES.includes(operation.commentMode)
+        && isSafePersistedRef(operation.sourceBranch)
+        && isFullSha(operation.sourceSha)
+        && isSafePersistedRef(operation.originBranch)
+        && isFullSha(operation.originSha)
+        && isSafePersistedRef(operation.productionBranch)
+        && isSafePersistedRef(operation.developmentBranch)
+        && typeof operation.reconciliationTree === "string"
+        && typeof operation.tag === "string" && operation.tag === `v${operation.version}`
+        && typeof operation.publicationWorkflow === "string" && isSafeWorkflowName(operation.publicationWorkflow)
+        && (operation.promotionPullRequest === undefined || isPositiveInteger(operation.promotionPullRequest))
+        && (operation.productionSha === undefined || isFullSha(operation.productionSha))
+        && typeof operation.publicationVerified === "boolean"
+        && Array.isArray(operation.reconciliationTargets)
+        && operation.reconciliationTargets.every(isReconciliationTarget)
+        && (operation.lastFailure === undefined || operation.lastFailure === null || isDeploymentFailure(operation.lastFailure));
+}
+function isFullSha(value) {
+    return typeof value === "string" && /^[a-f0-9]{40}$/i.test(value);
+}
+function isPositiveInteger(value) {
+    return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+}
+function isSafePersistedRef(value) {
+    return typeof value === "string"
+        && value.length > 0
+        && value.length <= 200
+        && !value.includes("..")
+        && !value.includes("@{")
+        && !/[\s~^:?*[\\\]]/.test(value);
+}
+function isSafeWorkflowName(value) {
+    return value.length <= 200 && !value.includes("..") && /^[A-Za-z0-9][A-Za-z0-9._/-]*\.ya?ml$/.test(value);
+}
+function isReconciliationTarget(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value))
+        return false;
+    const target = value;
+    return isSafePersistedRef(target.targetBranch)
+        && isSafePersistedRef(target.sourceBranch)
+        && isFullSha(target.sourceSha)
+        && (target.syncBranch === undefined || isSafePersistedRef(target.syncBranch))
+        && (target.pullRequest === undefined || isPositiveInteger(target.pullRequest))
+        && ["pending", "completed", "blocked"].includes(target.status);
+}
+function isDeploymentFailure(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value))
+        return false;
+    const failure = value;
+    return ["promotion", "publication", "reconciliation", "cleanup"].includes(failure.category)
+        && typeof failure.message === "string"
+        && failure.message.length <= 2000
+        && typeof failure.retryable === "boolean"
+        && ["preparing", "promotion_pr_pending", "promoted", "publishing", "published", "reconciliation_pending", "completed"]
+            .includes(failure.previousPhase);
+}
+
+
+/***/ }),
+
 /***/ 84403:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -74404,6 +76342,38 @@ function hasLabel(labels, candidates) {
 }
 function normalize(value) {
     return value.trim().toLowerCase();
+}
+
+
+/***/ }),
+
+/***/ 95914:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildManagedPullRequestMarker = buildManagedPullRequestMarker;
+exports.parseManagedPullRequestMarker = parseManagedPullRequestMarker;
+exports.isSafeOperationId = isSafeOperationId;
+const MANAGED_PULL_REQUEST_PATTERN = /<!-- copilot-deployment operation-id="([A-Za-z0-9._-]+)" phase="(promotion|reconciliation)" issue="([1-9][0-9]*)" -->/;
+function buildManagedPullRequestMarker(identity) {
+    if (!isSafeOperationId(identity.operationId) || !Number.isSafeInteger(identity.issue) || identity.issue < 1) {
+        throw new Error("Managed pull request identity is invalid.");
+    }
+    return `<!-- copilot-deployment operation-id="${identity.operationId}" phase="${identity.phase}" issue="${identity.issue}" -->`;
+}
+function parseManagedPullRequestMarker(body) {
+    const match = MANAGED_PULL_REQUEST_PATTERN.exec(body ?? "");
+    if (!match)
+        return undefined;
+    const issue = Number(match[3]);
+    if (!Number.isSafeInteger(issue) || issue < 1 || !isSafeOperationId(match[1]))
+        return undefined;
+    return { operationId: match[1], phase: match[2], issue };
+}
+function isSafeOperationId(value) {
+    return /^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(value);
 }
 
 
@@ -74630,20 +76600,25 @@ const SETUP_WORKFLOWS = [
     { file: 'copilot_pull_request_comment.yml', feature: 'pullRequestComments' },
     { file: 'release_workflow.yml', feature: 'release' },
     { file: 'hotfix_workflow.yml', feature: 'hotfix' },
+    { file: 'copilot_deployment_orchestration.yml', feature: ['release', 'hotfix'] },
     { file: 'agent-cli-provisioning.yml', feature: 'agentProvisioning' },
     { file: 'copilot_credential_health.yml', feature: 'credentialHealth' },
     { file: 'copilot_close_inactive_issues.yml', feature: 'inactiveIssueClosure' },
 ];
 function enabledSetupWorkflowFiles(features) {
     return SETUP_WORKFLOWS
-        .filter(({ feature }) => features[feature] !== false)
+        .filter(({ feature }) => featureEnabled(feature, features))
         .map(({ file }) => file);
 }
 function isSetupWorkflowEnabled(file, features) {
     if (!features)
         return true;
     const definition = SETUP_WORKFLOWS.find((candidate) => candidate.file === file);
-    return !definition || features[definition.feature] !== false;
+    return !definition || featureEnabled(definition.feature, features);
+}
+function featureEnabled(feature, features) {
+    const candidates = Array.isArray(feature) ? feature : [feature];
+    return candidates.some((candidate) => features[candidate] !== false);
 }
 
 
@@ -75481,6 +77456,16 @@ const branch_dependency_repository_1 = __nccwpck_require__(9627);
 const branch_sync_workspace_adapter_1 = __nccwpck_require__(81849);
 const observe_branch_sync_use_case_1 = __nccwpck_require__(84542);
 const sync_branch_use_case_1 = __nccwpck_require__(392);
+const deployment_orchestration_use_case_1 = __nccwpck_require__(36850);
+const github_deployment_repository_1 = __nccwpck_require__(22368);
+const deployment_continuation_repository_1 = __nccwpck_require__(77509);
+const deployment_presentation_repository_1 = __nccwpck_require__(91985);
+const deployment_state_repository_1 = __nccwpck_require__(3182);
+const legacy_deployment_merge_repository_1 = __nccwpck_require__(70245);
+const octokit_deployment_adapter_1 = __nccwpck_require__(46819);
+const workflow_dispatch_repository_1 = __nccwpck_require__(29509);
+const github_workflow_client_factory_1 = __nccwpck_require__(29839);
+const node_crypto_1 = __nccwpck_require__(6005);
 function createDetectPotentialProblemsUseCase() {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();
     return new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.context, bugbot.publication, bugbot.resolution, bugbot.telemetry);
@@ -75489,7 +77474,19 @@ function createSingleActionUseCaseCompositionRoot() {
     const repositoryTagPort = new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)());
     const repositoryReleasePort = new repository_release_publication_repository_1.RepositoryReleasePublicationRepository((0, github_release_client_factory_1.createReleaseClient)());
     const issueDescriptionQueryPort = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
-    return new single_action_use_case_1.SingleActionUseCase(new deployed_action_use_case_1.DeployedActionUseCase((0, issue_labels_composition_root_1.createIssueLabelRepository)(), (0, issue_interaction_composition_root_1.createIssueClosureRepository)(), new merge_repository_1.MergeRepository((0, github_branch_client_factory_1.createBranchMergeClient)())), new publish_github_action_use_case_1.PublishGithubActionUseCase(repositoryTagPort, repositoryReleasePort), new create_release_use_case_1.CreateReleaseUseCase(repositoryReleasePort), new create_tag_use_case_1.CreateTagUseCase(repositoryTagPort), new think_use_case_1.ThinkUseCase(issueDescriptionQueryPort, (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), createDetectPotentialProblemsUseCase(), new recommend_steps_use_case_1.RecommendStepsUseCase(issueDescriptionQueryPort, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase(issueDescriptionQueryPort), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), issueDescriptionQueryPort));
+    const deploymentRepository = new github_deployment_repository_1.GithubDeploymentRepository(new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter());
+    const deploymentOrchestration = new deployment_orchestration_use_case_1.DeploymentOrchestrationUseCase({
+        pullRequests: deploymentRepository,
+        git: deploymentRepository,
+        continuation: new deployment_continuation_repository_1.DeploymentContinuationRepository(new workflow_dispatch_repository_1.WorkflowDispatchRepository((0, github_workflow_client_factory_1.createWorkflowDispatchClient)())),
+        legacyMerge: new legacy_deployment_merge_repository_1.LegacyDeploymentMergeRepository((0, github_branch_client_factory_1.createBranchMergeClient)()),
+        presentation: new deployment_presentation_repository_1.DeploymentPresentationRepository(issueDescriptionQueryPort),
+        state: new deployment_state_repository_1.DeploymentStateRepository(issueDescriptionQueryPort),
+        labels: (0, issue_labels_composition_root_1.createIssueLabelRepository)(),
+        issues: (0, issue_interaction_composition_root_1.createIssueClosureRepository)(),
+        operationId: node_crypto_1.randomUUID,
+    });
+    return new single_action_use_case_1.SingleActionUseCase(new deployed_action_use_case_1.DeployedActionUseCase((0, issue_labels_composition_root_1.createIssueLabelRepository)(), (0, issue_interaction_composition_root_1.createIssueClosureRepository)(), new merge_repository_1.MergeRepository((0, github_branch_client_factory_1.createBranchMergeClient)())), new publish_github_action_use_case_1.PublishGithubActionUseCase(repositoryTagPort, repositoryReleasePort), new create_release_use_case_1.CreateReleaseUseCase(repositoryReleasePort), new create_tag_use_case_1.CreateTagUseCase(repositoryTagPort), new think_use_case_1.ThinkUseCase(issueDescriptionQueryPort, (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), createDetectPotentialProblemsUseCase(), new recommend_steps_use_case_1.RecommendStepsUseCase(issueDescriptionQueryPort, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase(issueDescriptionQueryPort), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), issueDescriptionQueryPort), deploymentOrchestration);
 }
 function createIssueCommentUseCaseCompositionRoot() {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();
@@ -76123,6 +78120,24 @@ const github = __importStar(__nccwpck_require__(79848));
 function getOctokitClient(token) {
     return github.getOctokit(token);
 }
+
+
+/***/ }),
+
+/***/ 46819:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.OctokitDeploymentClientAdapter = void 0;
+const octokit_client_resolver_1 = __nccwpck_require__(54047);
+class OctokitDeploymentClientAdapter {
+    getClient(token) {
+        return (0, octokit_client_resolver_1.getOctokitClient)(token);
+    }
+}
+exports.OctokitDeploymentClientAdapter = OctokitDeploymentClientAdapter;
 
 
 /***/ }),
@@ -76843,6 +78858,10 @@ function buildConfigurationPayload(execution, storedRaw) {
         parentBranch: current.parentBranch,
         hotfixOriginBranch: current.hotfixOriginBranch,
         hotfixBranch: current.hotfixBranch,
+        releaseOriginBranch: current.releaseOriginBranch,
+        releaseOriginSha: current.releaseOriginSha,
+        hotfixOriginSha: current.hotfixOriginSha,
+        deploymentOrchestration: current.deploymentOrchestration,
         branchConfiguration: current.branchConfiguration,
         recommendationState: current.recommendationState,
     };

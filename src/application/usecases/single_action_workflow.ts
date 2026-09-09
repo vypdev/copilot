@@ -16,6 +16,7 @@ export interface SingleActionWorkflowPorts {
   closeInactiveIssuesUseCase?: ParamUseCase<Execution, Result[]>;
   publishIssueCommentUseCase?: ParamUseCase<Execution, Result[]>;
   observeBranchSyncUseCase?: ParamUseCase<Execution, Result[]>;
+  deploymentOrchestrationUseCase?: ParamUseCase<Execution, Result[]>;
 }
 
 export async function runSingleActionWorkflow(
@@ -32,6 +33,10 @@ export async function runSingleActionWorkflow(
 
   logDebugInfo(`SingleAction: dispatching to handler for action: ${param.singleAction.currentSingleAction}.`);
   const action = [
+    {
+      active: param.singleAction.isDeployedAction && Boolean(param.currentConfiguration.deploymentOrchestration),
+      useCase: ports.deploymentOrchestrationUseCase,
+    },
     { active: param.singleAction.isDeployedAction, useCase: ports.deployedActionUseCase },
     { active: param.singleAction.isPublishGithubAction, useCase: ports.publishGithubActionUseCase },
     { active: param.singleAction.isCreateReleaseAction, useCase: ports.createReleaseUseCase },
@@ -44,6 +49,7 @@ export async function runSingleActionWorkflow(
     { active: param.singleAction.isCloseInactiveIssuesAction, useCase: ports.closeInactiveIssuesUseCase },
     { active: param.singleAction.isPublishIssueCommentAction, useCase: ports.publishIssueCommentUseCase },
     { active: param.singleAction.isCheckBranchSyncAction, useCase: ports.observeBranchSyncUseCase },
+    { active: param.singleAction.isDeploymentOrchestrationAction, useCase: ports.deploymentOrchestrationUseCase },
   ].find(({ active, useCase }) => active && useCase !== undefined);
 
   if (!action || !action.useCase) return [];

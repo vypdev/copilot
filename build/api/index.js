@@ -2726,8 +2726,9 @@ exports.migrateConfigurationPayload = migrateConfigurationPayload;
 const branch_configuration_1 = __nccwpck_require__(1934);
 const recommendation_state_1 = __nccwpck_require__(8514);
 const model_input_1 = __nccwpck_require__(4637);
+const deployment_operation_1 = __nccwpck_require__(2730);
 /** Version of the durable configuration contract stored in issue/PR content. */
-exports.CONFIG_SCHEMA_VERSION = 2;
+exports.CONFIG_SCHEMA_VERSION = 3;
 /**
  * Normalizes persisted configuration without silently losing fields from a
  * newer installation. Unknown keys are deliberately retained so a downgrade
@@ -2771,6 +2772,9 @@ class Config {
         this.hotfixOriginBranch = (0, model_input_1.readOptionalString)(input, 'hotfixOriginBranch');
         this.hotfixBranch = (0, model_input_1.readOptionalString)(input, 'hotfixBranch');
         this.releaseBranch = (0, model_input_1.readOptionalString)(input, 'releaseBranch');
+        this.releaseOriginBranch = (0, model_input_1.readOptionalString)(input, 'releaseOriginBranch');
+        this.releaseOriginSha = (0, model_input_1.readOptionalString)(input, 'releaseOriginSha');
+        this.hotfixOriginSha = (0, model_input_1.readOptionalString)(input, 'hotfixOriginSha');
         this.parentBranch = (0, model_input_1.readOptionalString)(input, 'parentBranch');
         this.workingBranch = (0, model_input_1.readOptionalString)(input, 'workingBranch');
         if (input['branchConfiguration'] !== undefined && input['branchConfiguration'] !== null) {
@@ -2778,6 +2782,9 @@ class Config {
         }
         if ((0, recommendation_state_1.isRecommendationState)(input['recommendationState'])) {
             this.recommendationState = input['recommendationState'];
+        }
+        if ((0, deployment_operation_1.isDeploymentOperationSnapshot)(input['deploymentOrchestration'])) {
+            this.deploymentOrchestration = input['deploymentOrchestration'];
         }
     }
 }
@@ -2797,6 +2804,7 @@ const commit_1 = __nccwpck_require__(7525);
 const config_1 = __nccwpck_require__(450);
 const github_user_policy_1 = __nccwpck_require__(4403);
 const issue_inactivity_1 = __nccwpck_require__(8572);
+const deployment_configuration_1 = __nccwpck_require__(2495);
 class Execution {
     get eventName() {
         return this.inputs?.eventName ?? '';
@@ -2887,6 +2895,7 @@ class Execution {
         this.hotfix = components.hotfix;
         this.project = components.projects;
         this.workflows = components.workflows;
+        this.deployment = components.deployment ?? { ...deployment_configuration_1.DEFAULT_DEPLOYMENT_CONFIGURATION };
         this.tokenUser = components.tokenUser;
         this.inactivityThresholdHours = components.inactivityThresholdHours ?? issue_inactivity_1.DEFAULT_INACTIVITY_THRESHOLD_HOURS;
         this.currentConfiguration = new config_1.Config({});
@@ -3243,6 +3252,294 @@ function resolveBugbotReviewEffort(configured, complexity) {
     if (complexity.files <= 2 && changedLines <= 80)
         return 'low';
     return 'default';
+}
+
+
+/***/ }),
+
+/***/ 2495:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DEFAULT_DEPLOYMENT_CONFIGURATION = exports.ORCHESTRATION_COMMENT_MODES = exports.ORCHESTRATION_PRESENTATION_MODES = exports.RECONCILIATION_ISSUE_COMPLETION_MODES = exports.RECONCILIATION_CLEANUP_MODES = exports.HOTFIX_ACTIVE_RELEASE_POLICIES = exports.RECONCILIATION_BACKMERGE_MODES = exports.RECONCILIATION_PR_MODES = exports.RECONCILIATION_STRATEGIES = void 0;
+exports.validateDeploymentConfiguration = validateDeploymentConfiguration;
+exports.isSafeBranchTree = isSafeBranchTree;
+exports.parseDeploymentEnum = parseDeploymentEnum;
+exports.RECONCILIATION_STRATEGIES = [
+    "production-lineage",
+    "canonical-gitflow",
+    "manual",
+];
+exports.RECONCILIATION_PR_MODES = [
+    "auto",
+    "auto-merge",
+    "merge-queue",
+    "create-only",
+    "legacy-wait",
+];
+exports.RECONCILIATION_BACKMERGE_MODES = [
+    "auto",
+    "direct",
+    "sync-branch",
+];
+exports.HOTFIX_ACTIVE_RELEASE_POLICIES = [
+    "prefer-release",
+    "development",
+    "both",
+];
+exports.RECONCILIATION_CLEANUP_MODES = [
+    "all",
+    "source-only",
+    "sync-only",
+    "none",
+];
+exports.RECONCILIATION_ISSUE_COMPLETION_MODES = ["close", "keep-open"];
+exports.ORCHESTRATION_PRESENTATION_MODES = ["guided", "compact", "quiet"];
+exports.ORCHESTRATION_COMMENT_MODES = ["update", "milestones"];
+exports.DEFAULT_DEPLOYMENT_CONFIGURATION = {
+    releaseReconciliationStrategy: "production-lineage",
+    hotfixReconciliationStrategy: "production-lineage",
+    reconciliationPullRequestMode: "auto",
+    reconciliationBackmergeMode: "auto",
+    hotfixActiveReleasePolicy: "prefer-release",
+    reconciliationTree: "sync",
+    reconciliationCleanup: "all",
+    reconciliationIssueCompletion: "close",
+    orchestrationPresentationMode: "guided",
+    orchestrationDiagrams: true,
+    orchestrationCommentMode: "update",
+};
+function validateDeploymentConfiguration(configuration, context) {
+    const errors = [];
+    for (const [name, value, allowed] of [
+        ["release reconciliation strategy", configuration.releaseReconciliationStrategy, exports.RECONCILIATION_STRATEGIES],
+        ["hotfix reconciliation strategy", configuration.hotfixReconciliationStrategy, exports.RECONCILIATION_STRATEGIES],
+        ["reconciliation PR mode", configuration.reconciliationPullRequestMode, exports.RECONCILIATION_PR_MODES],
+        ["reconciliation back-merge mode", configuration.reconciliationBackmergeMode, exports.RECONCILIATION_BACKMERGE_MODES],
+        ["hotfix active-release policy", configuration.hotfixActiveReleasePolicy, exports.HOTFIX_ACTIVE_RELEASE_POLICIES],
+        ["reconciliation cleanup", configuration.reconciliationCleanup, exports.RECONCILIATION_CLEANUP_MODES],
+        ["reconciliation issue completion", configuration.reconciliationIssueCompletion, exports.RECONCILIATION_ISSUE_COMPLETION_MODES],
+        ["orchestration presentation mode", configuration.orchestrationPresentationMode, exports.ORCHESTRATION_PRESENTATION_MODES],
+        ["orchestration comment mode", configuration.orchestrationCommentMode, exports.ORCHESTRATION_COMMENT_MODES],
+    ]) {
+        if (!allowed.includes(value)) {
+            errors.push(`The ${name} must be one of: ${allowed.join(", ")}.`);
+        }
+    }
+    if (typeof configuration.orchestrationDiagrams !== "boolean") {
+        errors.push("Orchestration diagrams must be a boolean.");
+    }
+    if (context.productionBranch === context.developmentBranch) {
+        errors.push("Production and development branches must be different.");
+    }
+    const protectedNames = new Set([context.productionBranch, context.developmentBranch]);
+    for (const [label, tree] of [
+        ["release", context.releaseTree],
+        ["hotfix", context.hotfixTree],
+        ["reconciliation", configuration.reconciliationTree],
+    ]) {
+        if (!isSafeBranchTree(tree)) {
+            errors.push(`The ${label} branch prefix must be a safe, non-empty Git ref segment.`);
+        }
+        else if (protectedNames.has(tree)) {
+            errors.push(`The ${label} branch prefix cannot equal a protected long-lived branch.`);
+        }
+    }
+    if (configuration.reconciliationPullRequestMode === "merge-queue"
+        && context.mergeQueueWorkflowSupported === false) {
+        errors.push("Merge-queue mode requires merge_group support in every required workflow.");
+    }
+    if ((configuration.releaseReconciliationStrategy === "manual"
+        || configuration.hotfixReconciliationStrategy === "manual")
+        && configuration.reconciliationIssueCompletion === "close") {
+        errors.push("Manual reconciliation cannot close the launcher issue automatically.");
+    }
+    return errors;
+}
+function isSafeBranchTree(value) {
+    const tree = value.trim();
+    return tree.length > 0
+        && tree.length <= 100
+        && !tree.startsWith("/")
+        && !tree.endsWith("/")
+        && !tree.includes("..")
+        && !tree.includes("@{")
+        && !/[~^:?*[\\\]\s]/.test(tree);
+}
+function parseDeploymentEnum(value, allowed, fallback) {
+    if (value === undefined || value === null || String(value).trim() === "") {
+        return { value: fallback, valid: true };
+    }
+    const normalized = String(value).trim();
+    return allowed.includes(normalized)
+        ? { value: normalized, valid: true }
+        : { value: fallback, valid: false };
+}
+
+
+/***/ }),
+
+/***/ 2730:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DEPLOYMENT_PHASES = void 0;
+exports.transitionDeploymentOperation = transitionDeploymentOperation;
+exports.blockDeploymentOperation = blockDeploymentOperation;
+exports.resumeBlockedDeployment = resumeBlockedDeployment;
+exports.completeReconciliationTarget = completeReconciliationTarget;
+exports.sanitizeDeploymentMessage = sanitizeDeploymentMessage;
+exports.isDeploymentOperationSnapshot = isDeploymentOperationSnapshot;
+const deployment_configuration_1 = __nccwpck_require__(2495);
+exports.DEPLOYMENT_PHASES = [
+    "preparing",
+    "promotion_pr_pending",
+    "promoted",
+    "publishing",
+    "published",
+    "reconciliation_pending",
+    "completed",
+    "blocked",
+];
+const NORMAL_TRANSITIONS = {
+    preparing: ["promotion_pr_pending"],
+    promotion_pr_pending: ["promoted"],
+    promoted: ["publishing"],
+    publishing: ["published"],
+    published: ["reconciliation_pending", "completed"],
+    reconciliation_pending: ["completed"],
+    completed: [],
+};
+function transitionDeploymentOperation(operation, expectedPhase, nextPhase) {
+    if (operation.phase === nextPhase) {
+        return { kind: "noop", operation, reason: `Operation is already ${nextPhase}.` };
+    }
+    if (operation.phase !== expectedPhase) {
+        return { kind: "noop", operation, reason: `Expected ${expectedPhase}, found ${operation.phase}.` };
+    }
+    if (nextPhase === "blocked") {
+        return { kind: "advance", operation: { ...operation, phase: nextPhase } };
+    }
+    if (expectedPhase === "blocked" || !NORMAL_TRANSITIONS[expectedPhase].includes(nextPhase)) {
+        return { kind: "invalid", operation, reason: `Transition ${expectedPhase} -> ${nextPhase} is not allowed.` };
+    }
+    return { kind: "advance", operation: { ...operation, phase: nextPhase, lastFailure: null } };
+}
+function blockDeploymentOperation(operation, category, message, retryable) {
+    if (operation.phase === "completed")
+        return operation;
+    const previousPhase = operation.phase === "blocked"
+        ? operation.lastFailure?.previousPhase ?? "preparing"
+        : operation.phase;
+    return {
+        ...operation,
+        phase: "blocked",
+        lastFailure: { category, message: sanitizeDeploymentMessage(message), retryable, previousPhase },
+    };
+}
+function resumeBlockedDeployment(operation) {
+    if (operation.phase !== "blocked" || !operation.lastFailure?.retryable) {
+        return { kind: "invalid", operation, reason: "Operation is not retryable from blocked state." };
+    }
+    return {
+        kind: "advance",
+        operation: { ...operation, phase: operation.lastFailure.previousPhase, lastFailure: null },
+    };
+}
+function completeReconciliationTarget(operation, pullRequest) {
+    const targets = operation.reconciliationTargets.map((target) => target.pullRequest === pullRequest ? { ...target, status: "completed" } : target);
+    return {
+        ...operation,
+        reconciliationTargets: targets,
+        lastFailure: null,
+    };
+}
+function sanitizeDeploymentMessage(value) {
+    return value
+        .replace(/::/g, "﹕﹕")
+        .replace(/@(?=[A-Za-z0-9_-])/g, "@\u200b")
+        .replace(/<!--/g, "&lt;!--")
+        .replace(/-->/g, "--&gt;")
+        .slice(0, 2000);
+}
+function isDeploymentOperationSnapshot(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value))
+        return false;
+    const operation = value;
+    return typeof operation.operationId === "string"
+        && /^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(operation.operationId)
+        && (operation.kind === "release" || operation.kind === "hotfix")
+        && typeof operation.version === "string" && /^[0-9]+\.[0-9]+\.[0-9]+$/.test(operation.version)
+        && typeof operation.title === "string" && operation.title.length <= 1000
+        && typeof operation.changelog === "string" && operation.changelog.length <= 50000
+        && exports.DEPLOYMENT_PHASES.includes(operation.phase)
+        && deployment_configuration_1.RECONCILIATION_STRATEGIES.includes(operation.strategy)
+        && deployment_configuration_1.RECONCILIATION_PR_MODES.includes(operation.prMode)
+        && (operation.selectedPrMode === undefined
+            || ["auto-merge", "merge-queue", "create-only", "legacy-wait"].includes(operation.selectedPrMode))
+        && deployment_configuration_1.RECONCILIATION_BACKMERGE_MODES.includes(operation.backmergeMode)
+        && deployment_configuration_1.HOTFIX_ACTIVE_RELEASE_POLICIES.includes(operation.hotfixActiveReleasePolicy)
+        && deployment_configuration_1.RECONCILIATION_CLEANUP_MODES.includes(operation.cleanup)
+        && deployment_configuration_1.RECONCILIATION_ISSUE_COMPLETION_MODES.includes(operation.issueCompletion)
+        && deployment_configuration_1.ORCHESTRATION_PRESENTATION_MODES.includes(operation.presentationMode)
+        && typeof operation.diagrams === "boolean"
+        && deployment_configuration_1.ORCHESTRATION_COMMENT_MODES.includes(operation.commentMode)
+        && isSafePersistedRef(operation.sourceBranch)
+        && isFullSha(operation.sourceSha)
+        && isSafePersistedRef(operation.originBranch)
+        && isFullSha(operation.originSha)
+        && isSafePersistedRef(operation.productionBranch)
+        && isSafePersistedRef(operation.developmentBranch)
+        && typeof operation.reconciliationTree === "string"
+        && typeof operation.tag === "string" && operation.tag === `v${operation.version}`
+        && typeof operation.publicationWorkflow === "string" && isSafeWorkflowName(operation.publicationWorkflow)
+        && (operation.promotionPullRequest === undefined || isPositiveInteger(operation.promotionPullRequest))
+        && (operation.productionSha === undefined || isFullSha(operation.productionSha))
+        && typeof operation.publicationVerified === "boolean"
+        && Array.isArray(operation.reconciliationTargets)
+        && operation.reconciliationTargets.every(isReconciliationTarget)
+        && (operation.lastFailure === undefined || operation.lastFailure === null || isDeploymentFailure(operation.lastFailure));
+}
+function isFullSha(value) {
+    return typeof value === "string" && /^[a-f0-9]{40}$/i.test(value);
+}
+function isPositiveInteger(value) {
+    return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+}
+function isSafePersistedRef(value) {
+    return typeof value === "string"
+        && value.length > 0
+        && value.length <= 200
+        && !value.includes("..")
+        && !value.includes("@{")
+        && !/[\s~^:?*[\\\]]/.test(value);
+}
+function isSafeWorkflowName(value) {
+    return value.length <= 200 && !value.includes("..") && /^[A-Za-z0-9][A-Za-z0-9._/-]*\.ya?ml$/.test(value);
+}
+function isReconciliationTarget(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value))
+        return false;
+    const target = value;
+    return isSafePersistedRef(target.targetBranch)
+        && isSafePersistedRef(target.sourceBranch)
+        && isFullSha(target.sourceSha)
+        && (target.syncBranch === undefined || isSafePersistedRef(target.syncBranch))
+        && (target.pullRequest === undefined || isPositiveInteger(target.pullRequest))
+        && ["pending", "completed", "blocked"].includes(target.status);
+}
+function isDeploymentFailure(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value))
+        return false;
+    const failure = value;
+    return ["promotion", "publication", "reconciliation", "cleanup"].includes(failure.category)
+        && typeof failure.message === "string"
+        && failure.message.length <= 2000
+        && typeof failure.retryable === "boolean"
+        && ["preparing", "promotion_pr_pending", "promoted", "publishing", "published", "reconciliation_pending", "completed"]
+            .includes(failure.previousPhase);
 }
 
 

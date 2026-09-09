@@ -3,6 +3,7 @@ import { SETUP_AGENT_TASKS } from './setup_configuration_defaults';
 import { SUPPORTED_AGENT_PROVIDERS } from './agent_configuration_validation_policy';
 import { validateStorageConfiguration } from './setup_configuration_storage_policy';
 import { MAX_INACTIVITY_THRESHOLD_HOURS } from '../../domain/issue_inactivity';
+import { validateDeploymentConfiguration } from '../../domain/deployment_configuration';
 
 export function validateSetupConfiguration(configuration: SetupConfiguration): string[] {
     const errors: string[] = [];
@@ -50,6 +51,25 @@ export function validateSetupConfiguration(configuration: SetupConfiguration): s
     if (!['auto', 'always', 'disabled'].includes(configuration.ai.provisioningMode)) {
         errors.push('Agent provisioning must be auto, always, or disabled.');
     }
+    errors.push(...validateDeploymentConfiguration({
+        releaseReconciliationStrategy: configuration.repository.releaseReconciliationStrategy,
+        hotfixReconciliationStrategy: configuration.repository.hotfixReconciliationStrategy,
+        reconciliationPullRequestMode: configuration.repository.reconciliationPullRequestMode,
+        reconciliationBackmergeMode: configuration.repository.reconciliationBackmergeMode,
+        hotfixActiveReleasePolicy: configuration.repository.hotfixActiveReleasePolicy,
+        reconciliationTree: configuration.repository.reconciliationTree,
+        reconciliationCleanup: configuration.repository.reconciliationCleanup,
+        reconciliationIssueCompletion: configuration.repository.reconciliationIssueCompletion,
+        orchestrationPresentationMode: configuration.repository.orchestrationPresentationMode,
+        orchestrationDiagrams: configuration.repository.orchestrationDiagrams,
+        orchestrationCommentMode: configuration.repository.orchestrationCommentMode,
+    }, {
+        productionBranch: configuration.repository.mainBranch,
+        developmentBranch: configuration.repository.developmentBranch,
+        releaseTree: configuration.repository.releaseTree,
+        hotfixTree: configuration.repository.hotfixTree,
+        mergeQueueWorkflowSupported: true,
+    }));
     errors.push(...validateStorageConfiguration(configuration.storage));
     for (const task of SETUP_AGENT_TASKS) {
         const agent = configuration.agents[task];

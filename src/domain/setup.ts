@@ -1,6 +1,16 @@
 import type { AgentProvider, AgentTask } from './agent';
 import type { PullRequestDescriptionMode } from './pull_request_description';
 import type { BugbotReviewEffort } from './bugbot/review_configuration';
+import type {
+    HotfixActiveReleasePolicy,
+    OrchestrationCommentMode,
+    OrchestrationPresentationMode,
+    ReconciliationBackmergeMode,
+    ReconciliationCleanupMode,
+    ReconciliationIssueCompletionMode,
+    ReconciliationPullRequestMode,
+    ReconciliationStrategy,
+} from './deployment_configuration';
 
 export type SetupFeature =
     | 'issues'
@@ -47,6 +57,17 @@ export interface SetupRepositoryConfiguration {
     issueLocale: string;
     pullRequestLocale: string;
     commitPrefixTransforms: string;
+    releaseReconciliationStrategy: ReconciliationStrategy;
+    hotfixReconciliationStrategy: ReconciliationStrategy;
+    reconciliationPullRequestMode: ReconciliationPullRequestMode;
+    reconciliationBackmergeMode: ReconciliationBackmergeMode;
+    hotfixActiveReleasePolicy: HotfixActiveReleasePolicy;
+    reconciliationTree: string;
+    reconciliationCleanup: ReconciliationCleanupMode;
+    reconciliationIssueCompletion: ReconciliationIssueCompletionMode;
+    orchestrationPresentationMode: OrchestrationPresentationMode;
+    orchestrationDiagrams: boolean;
+    orchestrationCommentMode: OrchestrationCommentMode;
 }
 
 export interface SetupAiConfiguration {

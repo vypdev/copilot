@@ -43,7 +43,7 @@ export async function runCreateLinkedBranch(
         logDebugInfo(`Linked branch: ${JSON.stringify(linkedBranch)}`);
         if (linkedBranch == null) return [missingLinkedBranchResult(newBranchName)];
         if (!isExpectedLinkedBranchRef(linkedBranch.ref?.name, newBranchName)) return [unexpectedLinkedBranchResult(newBranchName)];
-        return [createdLinkedBranchResult(owner, repo, baseBranchName, newBranchName)];
+        return [createdLinkedBranchResult(owner, repo, baseBranchName, newBranchName, identifiers.branchOid)];
     } catch (error) {
         if (isGithubAlreadyExists(error)) {
             logInfo(`Linked branch ${newBranchName} already exists; treating the operation as idempotently complete.`);

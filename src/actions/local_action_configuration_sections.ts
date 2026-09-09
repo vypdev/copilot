@@ -14,6 +14,7 @@ import { buildImageConfiguration } from './image_configuration_builder';
 import { normalizePullRequestDescriptionMode } from '../domain/pull_request_description';
 import { DEFAULT_INACTIVITY_THRESHOLD_HOURS, MAX_INACTIVITY_THRESHOLD_HOURS } from '../domain/issue_inactivity';
 import { normalizeBugbotReviewEffort, parseBugbotOrganizationRules } from '../domain/bugbot/review_configuration';
+import { readDeploymentConfiguration } from './deployment_configuration_builder';
 
 export type LocalActionInputs = ReturnType<typeof getActionInputsWithDefaults>;
 
@@ -36,6 +37,7 @@ export function readLocalCoreConfiguration(
         singleActionTitle: input<string>(additionalParams, actionInputs, INPUT_KEYS.SINGLE_ACTION_TITLE),
         singleActionChangelog: input<string>(additionalParams, actionInputs, INPUT_KEYS.SINGLE_ACTION_CHANGELOG),
         singleActionMessage: input<string>(additionalParams, actionInputs, INPUT_KEYS.SINGLE_ACTION_MESSAGE),
+        singleActionOperationId: input<string>(additionalParams, actionInputs, INPUT_KEYS.SINGLE_ACTION_OPERATION_ID),
         singleActionCommentId: input<string>(additionalParams, actionInputs, INPUT_KEYS.SINGLE_ACTION_COMMENT_ID),
         singleActionCommentMode: input<string>(additionalParams, actionInputs, INPUT_KEYS.SINGLE_ACTION_COMMENT_MODE),
         inactivityThresholdHours: parseBoundedPositiveIntegerInput(
@@ -257,6 +259,10 @@ export function readLocalWorkflowConfiguration(
     actionInputs: LocalActionInputs,
 ) {
     const read = (key: string) => input(additionalParams, actionInputs, key);
+    const mainBranch = read(INPUT_KEYS.MAIN_BRANCH);
+    const developmentBranch = read(INPUT_KEYS.DEVELOPMENT_BRANCH);
+    const releaseTree = read(INPUT_KEYS.RELEASE_TREE);
+    const hotfixTree = read(INPUT_KEYS.HOTFIX_TREE);
     return {
         imageConfiguration: buildImageConfiguration((key) => additionalParams[key] ?? actionInputs[key]),
         releaseWorkflow: read(INPUT_KEYS.RELEASE_WORKFLOW),
@@ -266,12 +272,12 @@ export function readLocalWorkflowConfiguration(
         issueLocale: read(INPUT_KEYS.ISSUES_LOCALE) ?? Locale.DEFAULT,
         pullRequestLocale: read(INPUT_KEYS.PULL_REQUESTS_LOCALE) ?? Locale.DEFAULT,
         ...readThresholds(additionalParams, actionInputs),
-        mainBranch: read(INPUT_KEYS.MAIN_BRANCH),
-        developmentBranch: read(INPUT_KEYS.DEVELOPMENT_BRANCH),
+        mainBranch,
+        developmentBranch,
         featureTree: read(INPUT_KEYS.FEATURE_TREE),
         bugfixTree: read(INPUT_KEYS.BUGFIX_TREE),
-        hotfixTree: read(INPUT_KEYS.HOTFIX_TREE),
-        releaseTree: read(INPUT_KEYS.RELEASE_TREE),
+        hotfixTree,
+        releaseTree,
         docsTree: read(INPUT_KEYS.DOCS_TREE),
         choreTree: read(INPUT_KEYS.CHORE_TREE),
         commitPrefixBuilder: read(INPUT_KEYS.COMMIT_PREFIX_TRANSFORMS) || 'replace-slash',
@@ -281,5 +287,11 @@ export function readLocalWorkflowConfiguration(
         pullRequestDesiredAssigneesCount: parseIntegerInput(read(INPUT_KEYS.PULL_REQUEST_DESIRED_ASSIGNEES_COUNT), 0),
         pullRequestDesiredReviewersCount: parseIntegerInput(read(INPUT_KEYS.PULL_REQUEST_DESIRED_REVIEWERS_COUNT), 0),
         pullRequestMergeTimeout: parseNonNegativeIntegerInput(read(INPUT_KEYS.PULL_REQUEST_MERGE_TIMEOUT), 0),
+        deployment: readDeploymentConfiguration(read, {
+            productionBranch: mainBranch,
+            developmentBranch,
+            releaseTree,
+            hotfixTree,
+        }),
     };
 }

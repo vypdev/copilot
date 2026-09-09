@@ -18,8 +18,7 @@ export class RepositoryTagRepository implements RepositoryTagPort {
         const octokit = this.githubClient.getClient(token);
         const sourceTagSha = await getRepositoryTagSha(octokit, owner, repository, sourceTag);
         if (!sourceTagSha) {
-            logError(`The '${sourceTag}' tag does not exist in the remote repository`);
-            return;
+            throw new Error(`The '${sourceTag}' tag does not exist in the remote repository.`);
         }
 
         const foundTargetTag = await findRepositoryTag(octokit, owner, repository, targetTag);
@@ -40,6 +39,10 @@ export class RepositoryTagRepository implements RepositoryTagPort {
                 ref: tagReferencePath(targetTag),
                 sha: sourceTagSha,
             });
+        }
+        const verifiedTargetSha = await getRepositoryTagSha(octokit, owner, repository, targetTag);
+        if (verifiedTargetSha !== sourceTagSha) {
+            throw new Error(`Moving tag '${targetTag}' was not verified at ${sourceTagSha}.`);
         }
     };
     createTag = async (
@@ -74,5 +77,29 @@ export class RepositoryTagRepository implements RepositoryTagPort {
             logError(`Error creating tag '${tag}': ${JSON.stringify(error, null, 2)}`);
             throw error;
         }
+    };
+
+    createOrVerifyTagAtSha = async (
+        owner: string,
+        repository: string,
+        sha: string,
+        tag: string,
+        token: string,
+    ): Promise<string> => {
+        const octokit = this.githubClient.getClient(token);
+        const existingTag = await findRepositoryTag(octokit, owner, repository, tag);
+        if (existingTag) {
+            if (existingTag.object.sha !== sha) {
+                throw new Error(`Immutable tag '${tag}' exists at ${existingTag.object.sha}, expected ${sha}.`);
+            }
+            return sha;
+        }
+        await octokit.rest.git.createRef({
+            owner,
+            repo: repository,
+            ref: `refs/tags/${tag}`,
+            sha,
+        });
+        return sha;
     };
 }

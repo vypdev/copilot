@@ -28,6 +28,7 @@ import type { buildGithubActionEventInputs } from './github_event_inputs';
 import { DEFAULT_INACTIVITY_THRESHOLD_HOURS, MAX_INACTIVITY_THRESHOLD_HOURS } from '../domain/issue_inactivity';
 import { activeAgentTasks } from '../application/policies/agent_task_activation_policy';
 import type { AgentTaskConfiguration } from '../domain/agent';
+import { readDeploymentConfiguration } from './deployment_configuration_builder';
 
 export interface GithubActionExecutionInput {
     readonly getInput: typeof getGithubActionInput;
@@ -77,6 +78,12 @@ export async function buildGithubActionExecution(
     const localeInputs = readGithubActionLocaleInputs(getInput);
     const sizeThresholdInputs = readGithubActionThresholdInputs(getInput);
     const branchInputs = readGithubActionBranchInputs(getInput);
+    const deployment = readDeploymentConfiguration(getInput, {
+        productionBranch: branchInputs.defaultBranch,
+        developmentBranch: branchInputs.development,
+        releaseTree: branchInputs.releaseTree,
+        hotfixTree: branchInputs.hotfixTree,
+    });
 
     return buildExecution({
         debug,
@@ -127,6 +134,7 @@ export async function buildGithubActionExecution(
         release: new Release(),
         hotfix: new Hotfix(),
         workflows: buildWorkflows(workflowInputs.release, workflowInputs.hotfix),
+        deployment,
         projects: buildProjects(projectInputs),
         tokenUser: input.tokenUser,
         inputs: eventInputs,
@@ -153,6 +161,7 @@ export function readGithubActionSingleAction(getInput: typeof getGithubActionInp
         getInput(INPUT_KEYS.SINGLE_ACTION_MESSAGE),
         getInput(INPUT_KEYS.SINGLE_ACTION_COMMENT_ID),
         getInput(INPUT_KEYS.SINGLE_ACTION_COMMENT_MODE),
+        getInput(INPUT_KEYS.SINGLE_ACTION_OPERATION_ID),
     );
 }
 

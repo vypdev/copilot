@@ -196,6 +196,28 @@ describe('workflow contract validator', () => {
     }
   });
 
+  it.each(['.github/workflows', 'setup/workflows'])(
+    'validates the dedicated managed-PR continuation in %s',
+    (directory) => {
+      const file = path.join(process.cwd(), directory, 'copilot_deployment_orchestration.yml');
+      const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+      expect(() => validateWorkflow(file, workflow)).not.toThrow();
+      expect(workflow.jobs.continue.if).toContain('github.event.pull_request.head.repo.full_name == github.repository');
+    },
+  );
+
+  it.each([
+    '.github/workflows/ci_check.yml',
+    '.github/workflows/repowise.yml',
+    '.github/workflows/copilot_pull_request.yml',
+    'setup/workflows/copilot_pull_request.yml',
+  ])('requires merge-group checks in %s', (relativeFile) => {
+    const file = path.join(process.cwd(), relativeFile);
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    delete workflow.on.merge_group;
+    expect(() => validateWorkflow(file, workflow)).toThrow('must support merge_group checks_requested');
+  });
+
   it.each(mutationDirectories.flatMap((directory) => mutationWorkflowNames.map((fileName) => [directory, fileName] as const)))(
     'persists Git credentials only in the release/hotfix jobs that push in %s/%s',
     (directory, fileName) => {
@@ -240,38 +262,56 @@ describe('workflow contract validator', () => {
     }, 'persist-credentials: false');
   });
 
-  it.each(mutationWorkflowNames)('reports active %s failures through the generic comment single action', (fileName) => {
+  it.each(mutationWorkflowNames)('persists active %s publication failures and reports preparation failures', (fileName) => {
     const { workflow } = loadMutationWorkflow('.github/workflows', fileName);
     const report = workflow.jobs['report-failure'];
-    const action = report.steps[1];
-    const expectedToken = fileName === 'release_workflow.yml' ? '${{ secrets.PAT }}' : '${{ github.token }}';
+    const durable = report.steps[1];
+    const action = report.steps[2];
+    const expectedToken = '${{ secrets.PAT }}';
 
-    expect(report.if).toBe("${{ failure() && github.event.inputs.issue != '-1' }}");
+    expect(report.if).toBe("${{ failure() && inputs.issue != '-1' }}");
     expect(report.permissions).toEqual({ contents: 'read', issues: 'write' });
     expect(report.steps[0]).toEqual(expect.objectContaining({
       uses: 'actions/checkout@v5',
       with: { 'persist-credentials': false },
     }));
+    expect(durable.with).toEqual(expect.objectContaining({
+      'single-action': 'failed_deployment_action',
+      'single-action-operation-id': '${{ inputs.operation-id }}',
+      'single-action-version': '${{ inputs.version }}',
+      token: expectedToken,
+    }));
+    expect(durable.if).toBe("${{ inputs.mode == 'publish' }}");
     expect(action.uses).toBe('./');
+    expect(action.if).toBe("${{ inputs.mode == 'prepare' }}");
     expect(action.with).toEqual(expect.objectContaining({
       'single-action': 'publish_issue_comment',
-      'single-action-issue': '${{ github.event.inputs.issue }}',
+      'single-action-issue': '${{ inputs.issue }}',
       token: expectedToken,
     }));
     expect(action.with['single-action-message']).toContain('${{ github.run_id }}');
   });
 
-  it.each(mutationWorkflowNames)('reports setup/%s failures through the generic comment single action', (fileName) => {
+  it.each(mutationWorkflowNames)('persists setup/%s publication failures and reports preparation failures', (fileName) => {
     const { workflow } = loadMutationWorkflow('setup/workflows', fileName);
     const report = workflow.jobs['report-failure'];
-    const action = report.steps[0];
+    const durable = report.steps[0];
+    const action = report.steps[1];
 
     expect(report.permissions).toEqual({ issues: 'write' });
+    expect(durable.with).toEqual(expect.objectContaining({
+      'single-action': 'failed_deployment_action',
+      'single-action-operation-id': '${{ inputs.operation-id }}',
+      'single-action-version': '${{ inputs.version }}',
+      token: '${{ secrets.PAT }}',
+    }));
+    expect(durable.if).toBe("${{ inputs.mode == 'publish' }}");
     expect(action.uses).toBe('vypdev/copilot@v3');
+    expect(action.if).toBe("${{ inputs.mode == 'prepare' }}");
     expect(action.with).toEqual(expect.objectContaining({
       'single-action': 'publish_issue_comment',
-      'single-action-issue': '${{ github.event.inputs.issue }}',
-      token: '${{ github.token }}',
+      'single-action-issue': '${{ inputs.issue }}',
+      token: '${{ secrets.PAT }}',
     }));
     expect(action.with['single-action-message']).toContain('${{ github.run_id }}');
   });
@@ -302,50 +342,57 @@ describe('workflow contract validator', () => {
     }, 'must run only for a failed deployment');
   });
 
-  it.each(mutationDirectories.flatMap((directory) => mutationWorkflowNames.map((fileName) => [directory, fileName] as const)))('enforces the exact queue, preparation, and tag budgets for %s/%s', (directory, fileName) => {
+  it.each(mutationDirectories.flatMap((directory) => mutationWorkflowNames.map((fileName) => [directory, fileName] as const)))('enforces the exact queue and preparation budgets for %s/%s', (directory, fileName) => {
     expectMutationRejected(directory, fileName, (workflow) => {
       workflow.jobs['queue-gate']['timeout-minutes'] = QUEUE_GATE_TIMEOUT_MINUTES - 1;
     }, 'queue-gate must have timeout-minutes 120');
     expectMutationRejected(directory, fileName, (workflow) => {
-      workflow.jobs['prepare-version-files']['timeout-minutes'] = PREPARE_VERSION_TIMEOUT_MINUTES - 1;
-    }, 'job prepare-version-files must have timeout-minutes 15');
-    expectMutationRejected(directory, fileName, (workflow) => {
-      workflow.jobs.tag['timeout-minutes'] = TAG_TIMEOUT_MINUTES - 1;
-    }, 'job tag must have timeout-minutes 120');
+      workflow.jobs['prepare-version-files']['timeout-minutes'] = (directory === '.github/workflows' ? PREPARE_VERSION_TIMEOUT_MINUTES : 30) - 1;
+    }, `job prepare-version-files must have timeout-minutes ${directory === '.github/workflows' ? 15 : 30}`);
+    if (directory === '.github/workflows') {
+      expectMutationRejected(directory, fileName, (workflow) => {
+        workflow.jobs.tag['timeout-minutes'] = TAG_TIMEOUT_MINUTES - 1;
+      }, 'job tag must have timeout-minutes 10');
+    }
   });
 
   it.each(mutationWorkflowNames)('enforces the active compiled-files budget for %s', (fileName) => {
     expectMutationRejected('.github/workflows', fileName, (workflow) => {
       workflow.jobs['prepare-compiled-files']['timeout-minutes'] = PREPARE_COMPILED_TIMEOUT_MINUTES - 1;
-    }, 'job prepare-compiled-files must have timeout-minutes 20');
+    }, 'job prepare-compiled-files must have timeout-minutes 30');
   });
 
   it('keeps npm publication between tag creation and release finalization', () => {
     const { workflow } = loadMutationWorkflow('.github/workflows', 'release_workflow.yml');
 
     expect(workflow.jobs['publish-npm']).toEqual(expect.objectContaining({
-      needs: ['tag'],
+      needs: 'tag',
       environment: 'npm',
       'runs-on': 'ubuntu-latest',
       'timeout-minutes': NPM_PUBLISH_TIMEOUT_MINUTES,
       permissions: { contents: 'read', 'id-token': 'write' },
     }));
     expect(workflow.jobs['finalize-release']).toEqual(expect.objectContaining({
-      needs: ['publish-npm'],
+      needs: 'publish-npm',
       'timeout-minutes': FINALIZE_RELEASE_TIMEOUT_MINUTES,
-      permissions: { contents: 'read' },
+      permissions: { contents: 'write', issues: 'write', 'pull-requests': 'write' },
     }));
-    expect(workflow.jobs['publish-npm'].if).toBeUndefined();
+    expect(workflow.jobs['publish-npm'].if).toBe("${{ inputs.mode == 'publish' }}");
     expect(workflow.jobs['publish-npm'].steps).toEqual(expect.arrayContaining([
       expect.objectContaining({ run: 'pnpm install --frozen-lockfile' }),
       expect.objectContaining({ run: 'npm publish --access public' }),
       expect.objectContaining({
-        name: 'Wait for npm registry availability',
-        env: {
+        name: 'Verify published package identity',
+        run: expect.stringContaining('"$registry_git_head" = "$local_git_head"'),
+      }),
+      expect.objectContaining({
+        name: 'Wait for npm registry visibility',
+        env: expect.objectContaining({
           PACKAGE_NAME: '@vypdev/copilot',
-          RELEASE_VERSION: '${{ github.event.inputs.version }}',
-        },
-        run: expect.stringContaining('sleep 20'),
+          RELEASE_VERSION: '${{ inputs.version }}',
+          POLL_INTERVAL: "${{ vars.NPM_VISIBILITY_POLL_INTERVAL_SECONDS || '20' }}",
+        }),
+        run: expect.stringContaining('sleep "$POLL_INTERVAL"'),
       }),
     ]));
     expect(JSON.stringify(workflow.jobs['publish-npm'])).not.toMatch(/NPM_TOKEN|NODE_AUTH_TOKEN/);
@@ -354,7 +401,7 @@ describe('workflow contract validator', () => {
   it.each([
     ['missing OIDC permission', (job: Record<string, any>) => { delete job.permissions['id-token']; }, 'id-token: write'],
     ['wrong environment', (job: Record<string, any>) => { job.environment = 'production'; }, 'npm environment'],
-    ['optional publication gate', (job: Record<string, any>) => { job.if = "${{ vars.NPM_PUBLISH_ENABLED == 'true' }}"; }, 'required release gate'],
+    ['wrong phase gate', (job: Record<string, any>) => { job.if = "${{ vars.NPM_PUBLISH_ENABLED == 'true' }}"; }, 'only in publish mode'],
     ['self-hosted npm runner', (job: Record<string, any>) => { job['runs-on'] = ['self-hosted', 'codex']; }, 'runs-on ubuntu-latest'],
     ['long-lived npm token', (job: Record<string, any>) => {
       const publish = job.steps.find((step: Record<string, any>) => step.run === 'npm publish --access public');
@@ -366,14 +413,10 @@ describe('workflow contract validator', () => {
     }, message);
   });
 
-  it('requires explicit least-privilege read permissions for active tag jobs', () => {
+  it('keeps active tag jobs scoped to tag and issue writes', () => {
     for (const fileName of mutationWorkflowNames) {
-      expectMutationRejected('.github/workflows', fileName, (workflow) => {
-        delete workflow.jobs.tag.permissions;
-      }, 'tag must have only contents: read permissions');
-      expectMutationRejected('.github/workflows', fileName, (workflow) => {
-        workflow.jobs.tag.permissions = { contents: 'write' };
-      }, 'tag must have only contents: read permissions');
+      const { workflow } = loadMutationWorkflow('.github/workflows', fileName);
+      expect(workflow.jobs.tag.permissions).toEqual({ contents: 'write', issues: 'write' });
     }
   });
 
@@ -382,17 +425,17 @@ describe('workflow contract validator', () => {
       workflow.jobs['prepare-version-files'].needs = [];
     }, 'job prepare-version-files must need exactly queue-gate'],
     ['broken transitive edge', (workflow: MutationWorkflow) => {
-      workflow.jobs.tag.needs = ['queue-gate'];
-    }, 'job tag must need exactly prepare-compiled-files'],
+      workflow.jobs.promote.needs = ['queue-gate'];
+    }, 'job promote must need exactly prepare-compiled-files'],
     ['always bypass', (workflow: MutationWorkflow) => {
       workflow.jobs['prepare-version-files'].if = '${{ always() }}';
-    }, 'bypass-capable if condition'],
+    }, 'must run only in prepare mode'],
     ['failure bypass', (workflow: MutationWorkflow) => {
       workflow.jobs['prepare-version-files'].if = '${{ failure() }}';
-    }, 'bypass-capable if condition'],
+    }, 'must run only in prepare mode'],
     ['cancelled bypass', (workflow: MutationWorkflow) => {
       workflow.jobs['prepare-version-files'].if = '${{ cancelled() }}';
-    }, 'bypass-capable if condition'],
+    }, 'must run only in prepare mode'],
     ['queue-gate continue-on-error', (workflow: MutationWorkflow) => {
       workflow.jobs['queue-gate']['continue-on-error'] = false;
     }, 'queue-gate must not define bypass'],

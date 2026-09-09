@@ -339,6 +339,11 @@
           "icon": "code-branch"
         },
         {
+          "title": "Release orchestration",
+          "href": "/issues/deployment-orchestration",
+          "icon": "rocket"
+        },
+        {
           "title": "Notifications and auto-close",
           "href": "/issues/notifications-and-auto-close",
           "icon": "bell"

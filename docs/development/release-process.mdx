@@ -26,13 +26,15 @@ corepack pnpm run smoke:npm-package
 corepack pnpm run validate:documentation
 ```
 
-The project [`release_workflow.yml`](https://github.com/vypdev/copilot/blob/master/.github/workflows/release_workflow.yml) coordinates npm publishing with the rest of the release. It creates the version tag, publishes that exact tag to npm on a GitHub-hosted runner, and only then creates the GitHub release, updates the major GitHub Action reference, opens the merge PRs, and closes the launcher issue:
+The project [`release_workflow.yml`](https://github.com/vypdev/copilot/blob/master/.github/workflows/release_workflow.yml) coordinates npm publishing with the rest of the release. It first promotes the frozen release branch to production through a GitHub-managed PR. After that PR merges, the continuation creates the version tag at the accepted production SHA, publishes that exact tag to npm on a GitHub-hosted runner, creates the GitHub Release, updates the major GitHub Action reference, and begins development reconciliation:
 
 ```text
-create tag -> publish npm -> finalize GitHub release
+prepare release -> production PR -> accepted production SHA
+  -> create tag -> publish npm -> finalize GitHub release
+  -> production-to-development reconciliation -> close issue
 ```
 
-The npm job installs the frozen dependency graph before validating and smoke-testing the package. After publishing, it waits until `npm view` exposes the exact version, polling every 20 seconds for up to 2 minutes. It uses npm trusted publishing with these least-privilege permissions:
+The npm job installs the frozen dependency graph before validating and smoke-testing the package. After publishing, it waits until `npm view` exposes the exact version, polling every 20 seconds for up to 2 minutes, then verifies that the registry `gitHead` is the accepted production commit. It uses npm trusted publishing with these least-privilege permissions:
 
 ```yaml
 permissions:
@@ -40,9 +42,12 @@ permissions:
   id-token: write
 ```
 
-The npm package must be configured to trust this repository and workflow before automated publication. Configure the trusted publisher for organization `vypdev`, repository `copilot`, workflow filename `release_workflow.yml`, environment `npm`, and allow the `npm publish` action. The job publishes with `npm publish --access public`; trusted publishing generates provenance automatically and does not store an npm token in the repository. npm trusted publishing currently requires a GitHub-hosted runner.
+The npm package must be configured to trust this repository and workflow before automated publication. Configure trusted publishers for organization `vypdev`, repository `copilot`, environment `npm`, and both publishing workflow filenames: `release_workflow.yml` and `hotfix_workflow.yml`. The job publishes with `npm publish --access public`; trusted publishing generates provenance automatically and does not store an npm token in the repository. npm trusted publishing currently requires a GitHub-hosted runner.
 
 The repository-specific workflow is intentionally not copied to `setup/workflows`: consumers of the action do not publish `@vypdev/copilot` when running their own release workflows.
+
+For branch origins, merge modes, recovery, and repository setup, see [Release
+and hotfix orchestration](/issues/deployment-orchestration).
 
 To verify a published version independently:
 

@@ -60,6 +60,16 @@ import { BranchDependencyRepository } from "../../data/repository/branch_sync/br
 import { BranchSyncWorkspaceAdapter } from "../branch_sync_workspace_adapter";
 import { ObserveBranchSyncUseCase } from "../../application/usecases/actions/observe_branch_sync_use_case";
 import { SyncBranchUseCase } from "../../application/usecases/branch_sync/sync_branch_use_case";
+import { DeploymentOrchestrationUseCase } from "../../application/usecases/actions/deployment_orchestration_use_case";
+import { GithubDeploymentRepository } from "../../data/repository/deployment/github_deployment_repository";
+import { DeploymentContinuationRepository } from "../../data/repository/deployment/deployment_continuation_repository";
+import { DeploymentPresentationRepository } from "../../data/repository/deployment/deployment_presentation_repository";
+import { DeploymentStateRepository } from "../../data/repository/deployment/deployment_state_repository";
+import { LegacyDeploymentMergeRepository } from "../../data/repository/deployment/legacy_deployment_merge_repository";
+import { OctokitDeploymentClientAdapter } from "../github/octokit_deployment_adapter";
+import { WorkflowDispatchRepository } from "../../data/repository/workflow/workflow_dispatch_repository";
+import { createWorkflowDispatchClient } from "./github_workflow_client_factory";
+import { randomUUID } from "node:crypto";
 
 function createDetectPotentialProblemsUseCase(): DetectPotentialProblemsUseCase {
   const bugbot = createBugbotCompositionRoot();
@@ -78,6 +88,20 @@ export function createSingleActionUseCaseCompositionRoot(): SingleActionUseCase 
     createReleaseClient(),
   );
   const issueDescriptionQueryPort = createIssueContentCompositionRoot();
+  const deploymentRepository = new GithubDeploymentRepository(new OctokitDeploymentClientAdapter());
+  const deploymentOrchestration = new DeploymentOrchestrationUseCase({
+    pullRequests: deploymentRepository,
+    git: deploymentRepository,
+    continuation: new DeploymentContinuationRepository(
+      new WorkflowDispatchRepository(createWorkflowDispatchClient()),
+    ),
+    legacyMerge: new LegacyDeploymentMergeRepository(createBranchMergeClient()),
+    presentation: new DeploymentPresentationRepository(issueDescriptionQueryPort),
+    state: new DeploymentStateRepository(issueDescriptionQueryPort),
+    labels: createIssueLabelRepository(),
+    issues: createIssueClosureRepository(),
+    operationId: randomUUID,
+  });
   return new SingleActionUseCase(
     new DeployedActionUseCase(
       createIssueLabelRepository(),
@@ -107,6 +131,7 @@ export function createSingleActionUseCaseCompositionRoot(): SingleActionUseCase 
       new BranchCompareRepository(createBranchComparisonClient()),
       issueDescriptionQueryPort,
     ),
+    deploymentOrchestration,
   );
 }
 

@@ -64,6 +64,7 @@ export async function prepareHotfixBranch(
   );
   const lastAction = linkResult.at(-1);
   if (!lastAction?.success) return linkResult;
+  if (branchOid) param.currentConfiguration.hotfixOriginSha = branchOid;
 
   logDebugInfo(
     `Hotfix branch successfully linked to issue: ${JSON.stringify(linkResult)}`,

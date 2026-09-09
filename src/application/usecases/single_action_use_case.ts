@@ -23,6 +23,7 @@ export class SingleActionUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly actorAuthorizationPort?: ActorAuthorizationPort,
     private readonly publishIssueCommentUseCase?: ParamUseCase<Execution, Result[]>,
     private readonly observeBranchSyncUseCase?: ParamUseCase<Execution, Result[]>,
+    private readonly deploymentOrchestrationUseCase?: ParamUseCase<Execution, Result[]>,
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
@@ -56,6 +57,7 @@ export class SingleActionUseCase implements ParamUseCase<Execution, Result[]> {
       closeInactiveIssuesUseCase: this.closeInactiveIssuesUseCase,
       publishIssueCommentUseCase: this.publishIssueCommentUseCase,
       observeBranchSyncUseCase: this.observeBranchSyncUseCase,
+      deploymentOrchestrationUseCase: this.deploymentOrchestrationUseCase,
     });
   }
 }

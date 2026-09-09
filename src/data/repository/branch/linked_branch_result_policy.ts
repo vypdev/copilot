@@ -20,13 +20,14 @@ export function unexpectedLinkedBranchResult(branchName: string): Result {
     return new Result({ id: RESULT_ID, success: false, executed: true, steps: [`Linked branch creation returned an unexpected branch ref for ${branchName}.`] });
 }
 
-export function createdLinkedBranchResult(owner: string, repo: string, baseBranchName: string, newBranchName: string): Result {
+export function createdLinkedBranchResult(owner: string, repo: string, baseBranchName: string, newBranchName: string, baseSha: string): Result {
     return new Result({
         id: RESULT_ID,
         success: true,
         executed: true,
         payload: {
             baseBranchName,
+            baseSha,
             baseBranchUrl: `https://github.com/${owner}/${repo}/tree/${baseBranchName}`,
             newBranchName,
             newBranchUrl: `https://github.com/${owner}/${repo}/tree/${newBranchName}`,

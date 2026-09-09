@@ -176,6 +176,7 @@ describe("LinkedBranchRepository", () => {
         payload: {
           baseBranchName: "develop",
           baseBranchUrl: "https://github.com/owner/repo/tree/develop",
+          baseSha: "base-oid",
           newBranchName: "bugfix/42-new",
           newBranchUrl: "https://github.com/owner/repo/tree/bugfix/42-new",
         },

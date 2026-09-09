@@ -8,6 +8,10 @@ export interface ConfigurationPayloadContext {
         readonly parentBranch?: string;
         readonly hotfixOriginBranch?: string;
         readonly hotfixBranch?: string;
+        readonly releaseOriginBranch?: string;
+        readonly releaseOriginSha?: string;
+        readonly hotfixOriginSha?: string;
+        readonly deploymentOrchestration?: unknown;
         readonly branchConfiguration?: unknown;
         readonly recommendationState?: unknown;
     };
@@ -24,6 +28,10 @@ export function buildConfigurationPayload(execution: ConfigurationPayloadContext
         parentBranch: current.parentBranch,
         hotfixOriginBranch: current.hotfixOriginBranch,
         hotfixBranch: current.hotfixBranch,
+        releaseOriginBranch: current.releaseOriginBranch,
+        releaseOriginSha: current.releaseOriginSha,
+        hotfixOriginSha: current.hotfixOriginSha,
+        deploymentOrchestration: current.deploymentOrchestration,
         branchConfiguration: current.branchConfiguration,
         recommendationState: current.recommendationState,
     };

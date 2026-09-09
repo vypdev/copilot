@@ -3,18 +3,28 @@ name: Task - Hotfix
 on:
   workflow_dispatch:
     inputs:
+      mode:
+        description: 'Internal orchestration phase'
+        required: true
+        default: prepare
+        type: choice
+        options: [prepare, publish]
+      operation-id:
+        description: 'Internal durable operation identifier'
+        required: false
+        default: ''
       version:
-        description: 'Hotfix version'
-        required: true
-        default: '1.0.0'
+        description: 'Hotfix version (MAJOR.MINOR.PATCH)'
+        required: false
+        default: ''
       title:
-        description: 'Title'
-        required: true
-        default: 'New Version'
+        description: 'Hotfix title'
+        required: false
+        default: ''
       changelog:
-        description: 'Changelog'
-        required: true
-        default: '- Several improvements'
+        description: 'Hotfix changelog'
+        required: false
+        default: ''
       issue:
         description: 'Launcher issue'
         required: true
@@ -39,194 +49,152 @@ jobs:
           token: ${{ github.token }}
 
   prepare-version-files:
-    name: Prepare files for hotfix
+    name: Prepare and validate hotfix
+    if: ${{ inputs.mode == 'prepare' }}
     runs-on: ubuntu-latest
     needs: queue-gate
-    timeout-minutes: 15
+    timeout-minutes: 30
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v5
         with:
           persist-credentials: true
-
-      - name: Set up Node.js 24
-        uses: actions/setup-node@v7
-        with:
-          node-version: '24.x'
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v5
-        with:
-          version: 10.12.4
-          standalone: false
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Validate inputs
+      - name: Validate preparation inputs
         env:
-          VERSION: ${{ github.event.inputs.version }}
-          ISSUE: ${{ github.event.inputs.issue }}
-          TITLE: ${{ github.event.inputs.title }}
-          CHANGELOG: ${{ github.event.inputs.changelog }}
+          VERSION: ${{ inputs.version }}
+          ISSUE: ${{ inputs.issue }}
+          TITLE: ${{ inputs.title }}
+          CHANGELOG: ${{ inputs.changelog }}
         run: |
-          err=0
-          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::Version must be in semver format (e.g. 1.0.0)."
-            err=1
-          fi
-          if ! [[ "$ISSUE" =~ ^-?[0-9]+$ ]]; then
-            echo "::error::Issue must be a number (e.g. 123 or -1)."
-            err=1
-          fi
-          if [[ ${#TITLE} -gt 1000 ]]; then
-            echo "::error::Title must be at most 1000 characters."
-            err=1
-          fi
-          if [[ ${#CHANGELOG} -gt 50000 ]]; then
-            echo "::error::Changelog must be at most 50000 characters."
-            err=1
-          fi
-          [[ $err -eq 0 ]] || exit 1
-
-      # Example: generic step to perform the version update or compilation (uncomment and adjust as needed)
-      # - name: Generic step
-      #   uses: whatever/action@v2 
-
-      - name: Commit updated package.json and dist directory
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Version must use MAJOR.MINOR.PATCH."; exit 1; }
+          [[ "$ISSUE" =~ ^[1-9][0-9]*$ ]] || { echo "::error::Issue must be a positive number."; exit 1; }
+          [[ -n "$TITLE" && ${#TITLE} -le 1000 ]] || { echo "::error::Title must contain 1-1000 characters."; exit 1; }
+          [[ -n "$CHANGELOG" && ${#CHANGELOG} -le 50000 ]] || { echo "::error::Changelog must contain 1-50000 characters."; exit 1; }
+      # Add project-specific version, build, validation, smoke-test and generated-file steps here.
+      - name: Commit prepared hotfix files
         uses: EndBug/add-and-commit@v9
         with:
-          add: './build/ ./package.json'
+          add: './'
           committer_name: GitHub Actions
           committer_email: actions@github.com
           default_author: user_info
-          message: 'gh-action: updated compiled files and bumped version to ${{ github.event.inputs.version }} (hotfix)'
+          message: 'gh-action: prepare hotfix ${{ inputs.version }}'
 
-  tag:
-    name: Publish version
+  promote:
+    name: Open production promotion
+    if: ${{ inputs.mode == 'prepare' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 120
-    needs: [ prepare-version-files ]
+    needs: prepare-version-files
+    timeout-minutes: 10
     permissions:
       contents: read
+      issues: write
+      pull-requests: write
+      actions: write
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v5
         with:
           persist-credentials: false
-        
-      - name: Copilot - Create Tag
+      - name: Create or resume promotion PR
         uses: vypdev/copilot@v3
-        if: ${{ success() }}
         with:
-          debug: ${{ vars.DEBUG }}
+          single-action: prepare_deployment_action
+          single-action-issue: ${{ inputs.issue }}
+          single-action-version: ${{ inputs.version }}
+          single-action-title: ${{ inputs.title }}
+          single-action-changelog: ${{ inputs.changelog }}
           main-branch: ${{ vars.MAIN_BRANCH || 'master' }}
           development-branch: ${{ vars.DEVELOPMENT_BRANCH || 'develop' }}
           release-tree: ${{ vars.RELEASE_TREE || 'release' }}
           hotfix-tree: ${{ vars.HOTFIX_TREE || 'hotfix' }}
-          single-action: 'create_tag'
-          single-action-issue: '${{ github.event.inputs.issue }}'
-          single-action-version: '${{ github.event.inputs.version }}'
-          agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
-          agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
-          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
-          agent-effort: ${{ vars.AGENT_EFFORT }}
-          agent-command: ${{ vars.AGENT_COMMAND }}
-          findings-provider: ${{ vars.FINDINGS_PROVIDER }}
-          findings-model-provider: ${{ vars.FINDINGS_MODEL_PROVIDER }}
-          findings-model: ${{ vars.FINDINGS_MODEL }}
-          findings-effort: ${{ vars.FINDINGS_EFFORT }}
-          findings-command: ${{ vars.FINDINGS_COMMAND }}
-          fixer-provider: ${{ vars.FIXER_PROVIDER }}
-          fixer-model-provider: ${{ vars.FIXER_MODEL_PROVIDER }}
-          fixer-model: ${{ vars.FIXER_MODEL }}
-          fixer-effort: ${{ vars.FIXER_EFFORT }}
-          fixer-command: ${{ vars.FIXER_COMMAND }}
-          token: ${{ secrets.PAT }}
-  
-      - name: Copilot - Create Release
-        uses: vypdev/copilot@v3
-        if: ${{ success() }}
-        with:
-          debug: ${{ vars.DEBUG }}
-          main-branch: ${{ vars.MAIN_BRANCH || 'master' }}
-          development-branch: ${{ vars.DEVELOPMENT_BRANCH || 'develop' }}
-          release-tree: ${{ vars.RELEASE_TREE || 'release' }}
-          hotfix-tree: ${{ vars.HOTFIX_TREE || 'hotfix' }}
-          single-action: 'create_release'
-          single-action-issue: '${{ github.event.inputs.issue }}'
-          single-action-version: '${{ github.event.inputs.version }}'
-          single-action-title: '${{ github.event.inputs.title }}'
-          single-action-changelog: '${{ github.event.inputs.changelog }}'
-          agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
-          agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
-          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
-          agent-effort: ${{ vars.AGENT_EFFORT }}
-          agent-command: ${{ vars.AGENT_COMMAND }}
-          findings-provider: ${{ vars.FINDINGS_PROVIDER }}
-          findings-model-provider: ${{ vars.FINDINGS_MODEL_PROVIDER }}
-          findings-model: ${{ vars.FINDINGS_MODEL }}
-          findings-effort: ${{ vars.FINDINGS_EFFORT }}
-          findings-command: ${{ vars.FINDINGS_COMMAND }}
-          fixer-provider: ${{ vars.FIXER_PROVIDER }}
-          fixer-model-provider: ${{ vars.FIXER_MODEL_PROVIDER }}
-          fixer-model: ${{ vars.FIXER_MODEL }}
-          fixer-effort: ${{ vars.FIXER_EFFORT }}
-          fixer-command: ${{ vars.FIXER_COMMAND }}
+          release-workflow: ${{ vars.RELEASE_WORKFLOW || 'release_workflow.yml' }}
+          hotfix-workflow: ${{ vars.HOTFIX_WORKFLOW || 'hotfix_workflow.yml' }}
+          release-reconciliation-strategy: ${{ vars.RELEASE_RECONCILIATION_STRATEGY || 'production-lineage' }}
+          hotfix-reconciliation-strategy: ${{ vars.HOTFIX_RECONCILIATION_STRATEGY || 'production-lineage' }}
+          reconciliation-pr-mode: ${{ vars.RECONCILIATION_PR_MODE || 'auto' }}
+          reconciliation-backmerge-mode: ${{ vars.RECONCILIATION_BACKMERGE_MODE || 'auto' }}
+          hotfix-active-release-policy: ${{ vars.HOTFIX_ACTIVE_RELEASE_POLICY || 'prefer-release' }}
+          reconciliation-tree: ${{ vars.RECONCILIATION_TREE || 'sync' }}
+          reconciliation-cleanup: ${{ vars.RECONCILIATION_CLEANUP || 'all' }}
+          reconciliation-issue-completion: ${{ vars.RECONCILIATION_ISSUE_COMPLETION || 'close' }}
+          orchestration-presentation-mode: ${{ vars.ORCHESTRATION_PRESENTATION_MODE || 'guided' }}
+          orchestration-diagrams: ${{ vars.ORCHESTRATION_DIAGRAMS || 'true' }}
+          orchestration-comment-mode: ${{ vars.ORCHESTRATION_COMMENT_MODE || 'update' }}
+          issues-locale: ${{ vars.ISSUES_LOCALE || 'en-US' }}
+          pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || 'en-US' }}
           token: ${{ secrets.PAT }}
 
-      # Example: generic step to perform the deployment (uncomment and adjust as needed)
-      # - name: Generic step
-      #   uses: whatever/action@v2 
-
-      - name: Copilot - Deploy success notification
-        uses: vypdev/copilot@v3
-        if: ${{ success() }}
+  publish:
+    name: Publish accepted production commit
+    if: ${{ inputs.mode == 'publish' }}
+    runs-on: ubuntu-latest
+    needs: queue-gate
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
         with:
-          debug: ${{ vars.DEBUG }}
-          main-branch: ${{ vars.MAIN_BRANCH || 'master' }}
-          development-branch: ${{ vars.DEVELOPMENT_BRANCH || 'develop' }}
-          release-tree: ${{ vars.RELEASE_TREE || 'release' }}
-          hotfix-tree: ${{ vars.HOTFIX_TREE || 'hotfix' }}
-          single-action: 'deployed_action'
-          single-action-issue: '${{ github.event.inputs.issue }}'
-          agent-provider: ${{ vars.AGENT_PROVIDER || 'codex' }}
-          agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
-          agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
-          agent-effort: ${{ vars.AGENT_EFFORT }}
-          agent-command: ${{ vars.AGENT_COMMAND }}
-          findings-provider: ${{ vars.FINDINGS_PROVIDER }}
-          findings-model-provider: ${{ vars.FINDINGS_MODEL_PROVIDER }}
-          findings-model: ${{ vars.FINDINGS_MODEL }}
-          findings-effort: ${{ vars.FINDINGS_EFFORT }}
-          findings-command: ${{ vars.FINDINGS_COMMAND }}
-          fixer-provider: ${{ vars.FIXER_PROVIDER }}
-          fixer-model-provider: ${{ vars.FIXER_MODEL_PROVIDER }}
-          fixer-model: ${{ vars.FIXER_MODEL }}
-          fixer-effort: ${{ vars.FIXER_EFFORT }}
-          fixer-command: ${{ vars.FIXER_COMMAND }}
+          persist-credentials: false
+          ref: ${{ vars.MAIN_BRANCH || 'master' }}
+      - name: Create or verify production tag
+        uses: vypdev/copilot@v3
+        with:
+          single-action: create_tag
+          single-action-issue: ${{ inputs.issue }}
+          single-action-operation-id: ${{ inputs.operation-id }}
+          single-action-version: ${{ inputs.version }}
+          token: ${{ secrets.PAT }}
+      # Add project-specific deployment here. It runs only after production promotion merged.
+      - name: Create or verify GitHub Release
+        uses: vypdev/copilot@v3
+        with:
+          single-action: create_release
+          single-action-issue: ${{ inputs.issue }}
+          single-action-operation-id: ${{ inputs.operation-id }}
+          single-action-version: ${{ inputs.version }}
+          token: ${{ secrets.PAT }}
+      - name: Start configured reconciliation
+        uses: vypdev/copilot@v3
+        with:
+          single-action: published_deployment_action
+          single-action-issue: ${{ inputs.issue }}
+          single-action-operation-id: ${{ inputs.operation-id }}
+          single-action-version: ${{ inputs.version }}
           token: ${{ secrets.PAT }}
 
   report-failure:
-    name: Report deployment failure
+    name: Report orchestration failure
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [ queue-gate, prepare-version-files, tag ]
-    if: ${{ failure() && github.event.inputs.issue != '-1' }}
+    needs: [queue-gate, prepare-version-files, promote, publish]
+    if: ${{ failure() && inputs.issue != '-1' }}
     permissions:
       issues: write
     steps:
-      - name: Report failure on launcher issue
-        # This tag is published after the release changes reach master.
+      - name: Persist publication failure
+        if: ${{ inputs.mode == 'publish' }}
+        uses: vypdev/copilot@v3
+        with:
+          single-action: failed_deployment_action
+          single-action-issue: ${{ inputs.issue }}
+          single-action-operation-id: ${{ inputs.operation-id }}
+          single-action-version: ${{ inputs.version }}
+          single-action-message: Publication failed. Review ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} before retrying.
+          token: ${{ secrets.PAT }}
+      - name: Report preparation failure
+        if: ${{ inputs.mode == 'prepare' }}
         uses: vypdev/copilot@v3
         with:
           single-action: publish_issue_comment
-          single-action-issue: '${{ github.event.inputs.issue }}'
+          single-action-issue: ${{ inputs.issue }}
           single-action-message: |
-            ## ❌ Hotfix deployment failed
+            ## ❌ Hotfix orchestration needs attention
 
-            The hotfix workflow did not complete successfully.
+            Phase `${{ inputs.mode }}` failed. Review the control center before retrying.
 
             [Review the workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          token: ${{ github.token }}
+          token: ${{ secrets.PAT }}

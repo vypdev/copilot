@@ -66,19 +66,34 @@ export class RepositoryReleasePublicationRepository implements RepositoryRelease
     ): Promise<string | undefined> => {
         try {
             const octokit = this.githubClient.getClient(token);
-            const { data: release } = await octokit.rest.repos.createRelease({
-                owner,
-                repo: repository,
-                tag_name: version,
-                name: releaseName(version, title),
-                body: changelog,
-                draft: false,
-                prerelease: false,
-            });
-            return release.html_url;
+            try {
+                const { data: release } = await octokit.rest.repos.createRelease({
+                    owner,
+                    repo: repository,
+                    tag_name: version,
+                    name: releaseName(version, title),
+                    body: changelog,
+                    draft: false,
+                    prerelease: false,
+                });
+                return release.html_url;
+            } catch (error) {
+                if (!isAlreadyExists(error)) throw error;
+                const { data: existing } = await octokit.rest.repos.getReleaseByTag({
+                    owner,
+                    repo: repository,
+                    tag: version,
+                });
+                return existing.html_url;
+            }
         } catch (error) {
             logError(`Error creating release: ${error}`);
             throw error;
         }
     };
+}
+
+function isAlreadyExists(error: unknown): boolean {
+    return typeof error === 'object' && error !== null && 'status' in error
+        && (error as { status?: number }).status === 422;
 }

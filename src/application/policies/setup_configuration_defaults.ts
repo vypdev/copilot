@@ -13,6 +13,7 @@ import type {
     SetupStorageConfiguration,
 } from '../../domain/setup';
 import { DEFAULT_INACTIVITY_THRESHOLD_HOURS } from '../../domain/issue_inactivity';
+import { DEFAULT_DEPLOYMENT_CONFIGURATION } from '../../domain/deployment_configuration';
 
 export const SETUP_AGENT_TASKS: readonly AgentTask[] = [
     'planner',
@@ -102,6 +103,7 @@ export function createDefaultSetupConfiguration(): SetupConfiguration {
             issueLocale: 'en-US',
             pullRequestLocale: 'en-US',
             commitPrefixTransforms: 'replace-slash',
+            ...DEFAULT_DEPLOYMENT_CONFIGURATION,
         },
         ai: {
             pullRequestDescription: true,

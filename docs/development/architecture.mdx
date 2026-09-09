@@ -111,3 +111,43 @@ translate GitHub GraphQL/REST responses; and the Git adapter owns transient merg
 state. Verification runs without credentials. The adapter rejects changes to Git
 heads, merge metadata, the non-conflicted index, or the prepared path set, then
 re-fetches both remote heads immediately before the trusted commit/push boundary.
+
+## Deployment orchestration boundary
+
+Release and hotfix deployment is a durable state machine rather than one
+runner-owned script:
+
+```text
+preparing -> promotion_pr_pending -> promoted -> publishing
+  -> published -> reconciliation_pending -> completed
+
+any non-terminal phase -> blocked -> previous safe phase after correction
+```
+
+`deployment_configuration.ts`, `deployment_operation.ts`, and the pure planning,
+lifecycle, continuation-guard, and presentation policies own bounded values and
+decisions. They have no GitHub client, workflow payload, process, timer, or
+filesystem dependency. `DeploymentOrchestrationUseCase` receives the narrow
+`DeploymentOrchestrationContext`; the legacy `Execution` aggregate is only
+structurally adapted by the single-action boundary.
+
+Application ports expose managed-PR identity, target capabilities, exact commit
+reachability, trusted reconciliation refs, workflow continuation, durable issue
+state, and presentation operations. `GithubDeploymentRepository` maps REST and
+GraphQL provider facts. `DeploymentStateRepository` owns the hidden issue block
+mapping and preserves unknown/future configuration keys. The composition root is
+the only place that binds these repositories and the Octokit adapter.
+
+Durable transitions compare the operation ID and expected stored phase before
+each write. PR and publication side effects use deterministic markers, exact
+branch/SHA facts, and postcondition verification. A continuation event or
+workflow dispatch is only a wake-up signal: it must present the same operation
+ID, then authoritative issue and GitHub state are reloaded. The privileged PR
+completion workflow checks out the trusted base and never executes the PR head.
+
+Presentation is a separate mutation-free boundary. A typed English/Spanish
+catalog renders the durable issue dashboard, promotion and reconciliation PRs,
+and deployment Job Summary. Provider mutations accept those rendered values but
+cannot choose phase transitions. Architecture tests enforce the narrow context,
+provider-neutral port vocabulary, mutation-free renderer, global dependency
+direction, and acyclic production imports.

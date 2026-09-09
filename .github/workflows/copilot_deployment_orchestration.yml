@@ -1,0 +1,48 @@
+name: Copilot - Deployment Orchestration
+
+on:
+  pull_request:
+    types: [closed]
+
+concurrency:
+  group: copilot-deployment-${{ github.event.pull_request.base.repo.full_name }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  continue:
+    name: Verify managed PR and continue
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && contains(github.event.pull_request.body || '', '<!-- copilot-deployment ') }}
+    runs-on: [self-hosted, codex]
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: read
+      actions: write
+    steps:
+      - name: Read managed operation identity
+        id: identity
+        uses: actions/github-script@v9
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        with:
+          script: |
+            const match = process.env.PR_BODY.match(/<!-- copilot-deployment operation-id="([A-Za-z0-9._-]+)" phase="(promotion|reconciliation)" issue="([1-9][0-9]*)" -->/);
+            if (!match) core.setFailed('The managed deployment marker is malformed.');
+            else {
+              core.setOutput('operation-id', match[1]);
+              core.setOutput('issue', match[3]);
+            }
+      - name: Checkout trusted base branch
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.base.ref }}
+          fetch-depth: 1
+      - name: Advance durable deployment operation
+        uses: ./
+        with:
+          single-action: continue_deployment_action
+          single-action-issue: ${{ steps.identity.outputs.issue }}
+          single-action-operation-id: ${{ steps.identity.outputs.operation-id }}
+          token: ${{ secrets.PAT }}

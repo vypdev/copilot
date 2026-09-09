@@ -115,6 +115,53 @@ export class SetupPromptAdapter implements SetupPromptPort, SetupCredentialPromp
         repository.issueLocale = await this.askText('Issue comment locale', repository.issueLocale);
         repository.pullRequestLocale = await this.askText('Pull-request comment locale', repository.pullRequestLocale);
         repository.commitPrefixTransforms = await this.askText('Commit prefix transforms', repository.commitPrefixTransforms);
+        repository.releaseReconciliationStrategy = await this.askChoice(
+            'Release reconciliation strategy',
+            ['production-lineage', 'canonical-gitflow', 'manual'],
+            repository.releaseReconciliationStrategy,
+        ) as SetupConfiguration['repository']['releaseReconciliationStrategy'];
+        repository.hotfixReconciliationStrategy = await this.askChoice(
+            'Hotfix reconciliation strategy',
+            ['production-lineage', 'canonical-gitflow', 'manual'],
+            repository.hotfixReconciliationStrategy,
+        ) as SetupConfiguration['repository']['hotfixReconciliationStrategy'];
+        repository.reconciliationPullRequestMode = await this.askChoice(
+            'Managed reconciliation PR mode',
+            ['auto', 'auto-merge', 'merge-queue', 'create-only', 'legacy-wait'],
+            repository.reconciliationPullRequestMode,
+        ) as SetupConfiguration['repository']['reconciliationPullRequestMode'];
+        repository.reconciliationBackmergeMode = await this.askChoice(
+            'Reconciliation back-merge mode',
+            ['auto', 'direct', 'sync-branch'],
+            repository.reconciliationBackmergeMode,
+        ) as SetupConfiguration['repository']['reconciliationBackmergeMode'];
+        repository.hotfixActiveReleasePolicy = await this.askChoice(
+            'Hotfix target while a release is active',
+            ['prefer-release', 'development', 'both'],
+            repository.hotfixActiveReleasePolicy,
+        ) as SetupConfiguration['repository']['hotfixActiveReleasePolicy'];
+        repository.reconciliationTree = await this.askText('Reconciliation branch prefix', repository.reconciliationTree);
+        repository.reconciliationCleanup = await this.askChoice(
+            'Branch cleanup after reconciliation',
+            ['all', 'source-only', 'sync-only', 'none'],
+            repository.reconciliationCleanup,
+        ) as SetupConfiguration['repository']['reconciliationCleanup'];
+        repository.reconciliationIssueCompletion = await this.askChoice(
+            'Launcher issue behavior after reconciliation',
+            ['close', 'keep-open'],
+            repository.reconciliationIssueCompletion,
+        ) as SetupConfiguration['repository']['reconciliationIssueCompletion'];
+        repository.orchestrationPresentationMode = await this.askChoice(
+            'Release control-center detail',
+            ['guided', 'compact', 'quiet'],
+            repository.orchestrationPresentationMode,
+        ) as SetupConfiguration['repository']['orchestrationPresentationMode'];
+        repository.orchestrationDiagrams = await this.askBoolean('Show accessible Mermaid release diagrams?', repository.orchestrationDiagrams);
+        repository.orchestrationCommentMode = await this.askChoice(
+            'Release lifecycle comment mode',
+            ['update', 'milestones'],
+            repository.orchestrationCommentMode,
+        ) as SetupConfiguration['repository']['orchestrationCommentMode'];
 
         console.log(color('\n4. Configure AI, projects, and release safety\n', 36));
         const ai = defaults.ai;

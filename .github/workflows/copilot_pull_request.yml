@@ -5,8 +5,22 @@ on:
     types: [opened, reopened, edited, closed, synchronize]
   pull_request_review:
     types: [submitted, edited, dismissed]
+  merge_group:
+    types: [checks_requested]
 
 jobs:
+  copilot-merge-group:
+    if: ${{ github.event_name == 'merge_group' }}
+    name: Copilot - Pull Request
+    runs-on: [self-hosted, codex]
+    timeout-minutes: 10
+    permissions:
+      checks: write
+      contents: read
+    steps:
+      - name: Confirm merge-group compatibility
+        run: echo "Copilot PR analysis already ran on each constituent pull request."
+
   copilot-pull-requests:
     if: ${{ (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && github.event.pull_request.head.repo.full_name == github.repository }}
     name: Copilot - Pull Request

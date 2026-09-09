@@ -20,6 +20,7 @@ export declare class SingleAction {
     title: string;
     changelog: string;
     message: string;
+    operationId: string;
     commentId: number;
     commentIdInput: string;
     commentMode: string;
@@ -35,9 +36,14 @@ export declare class SingleAction {
     get isCloseInactiveIssuesAction(): boolean;
     get isPublishIssueCommentAction(): boolean;
     get isCheckBranchSyncAction(): boolean;
+    get isPrepareDeploymentAction(): boolean;
+    get isContinueDeploymentAction(): boolean;
+    get isPublishedDeploymentAction(): boolean;
+    get isFailedDeploymentAction(): boolean;
+    get isDeploymentOrchestrationAction(): boolean;
     get enabledSingleAction(): boolean;
     get validSingleAction(): boolean;
     get isSingleActionWithoutIssue(): boolean;
     get throwError(): boolean;
-    constructor(currentSingleAction: string, issue: string, version: string, title: string, changelog: string, message?: string, commentId?: string, commentMode?: string);
+    constructor(currentSingleAction: string, issue: string, version: string, title: string, changelog: string, message?: string, commentId?: string, commentMode?: string, operationId?: string);
 }

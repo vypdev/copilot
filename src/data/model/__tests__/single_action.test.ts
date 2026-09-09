@@ -81,6 +81,14 @@ describe('SingleAction', () => {
       expect(s.commentIdInput).toBe('101');
       expect(s.commentMode).toBe('append');
     });
+
+    it('recognizes a failed deployment continuation and preserves its operation identity', () => {
+      const s = new SingleAction(ACTIONS.FAILED_DEPLOYMENT, '42', '3.4.0', '', '', 'failed', '', '', 'operation-12345678');
+      expect(s.isFailedDeploymentAction).toBe(true);
+      expect(s.isDeploymentOrchestrationAction).toBe(true);
+      expect(s.operationId).toBe('operation-12345678');
+      expect(s.throwError).toBe(true);
+    });
   });
 
   describe('enabledSingleAction and validSingleAction', () => {

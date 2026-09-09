@@ -31,8 +31,18 @@ const REPOSITORY_STRING_KEYS = new Set([
     'issueLocale',
     'pullRequestLocale',
     'commitPrefixTransforms',
+    'releaseReconciliationStrategy',
+    'hotfixReconciliationStrategy',
+    'reconciliationPullRequestMode',
+    'reconciliationBackmergeMode',
+    'hotfixActiveReleasePolicy',
+    'reconciliationTree',
+    'reconciliationCleanup',
+    'reconciliationIssueCompletion',
+    'orchestrationPresentationMode',
+    'orchestrationCommentMode',
 ]);
-const REPOSITORY_BOOLEAN_KEYS = new Set(['branchManagementAlways', 'reopenIssueOnPush']);
+const REPOSITORY_BOOLEAN_KEYS = new Set(['branchManagementAlways', 'reopenIssueOnPush', 'orchestrationDiagrams']);
 const REPOSITORY_NUMBER_KEYS = new Set(['desiredAssigneesCount', 'desiredReviewersCount', 'mergeTimeout', 'inactivityThresholdHours']);
 const AI_STRING_KEYS = new Set(['ignoreFiles', 'pullRequestDescriptionMode', 'bugbotSeverity', 'bugbotFixVerifyCommands', 'bugbotEffort', 'bugbotOrganizationRules', 'provisioningMode']);
 const AI_NUMBER_KEYS = new Set(['bugbotCommentLimit']);

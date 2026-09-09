@@ -1,8 +1,9 @@
 import { BranchConfiguration } from "./branch_configuration";
 import { RecommendationState } from "./recommendation_state";
 import { Result } from "./result";
+import { type DeploymentOperationSnapshot } from '../../domain/deployment_operation';
 /** Version of the durable configuration contract stored in issue/PR content. */
-export declare const CONFIG_SCHEMA_VERSION = 2;
+export declare const CONFIG_SCHEMA_VERSION = 3;
 export interface ConfigurationMigrationResult {
     readonly payload: Record<string, unknown>;
     readonly sourceVersion: number;
@@ -23,6 +24,10 @@ export declare class Config {
     parentBranch: string | undefined;
     hotfixOriginBranch: string | undefined;
     hotfixBranch: string | undefined;
+    releaseOriginBranch: string | undefined;
+    releaseOriginSha: string | undefined;
+    hotfixOriginSha: string | undefined;
+    deploymentOrchestration: DeploymentOperationSnapshot | undefined;
     results: Result[];
     branchConfiguration: BranchConfiguration | undefined;
     recommendationState: RecommendationState | undefined;

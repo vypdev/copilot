@@ -19,6 +19,7 @@ import { Welcome } from "./welcome";
 import { Workflows } from "./workflows";
 import type { ExecutionInputs } from './execution_inputs';
 import type { ExecutionComponents } from './execution_components';
+import { type DeploymentConfigurationValues } from '../../domain/deployment_configuration';
 export declare class Execution {
     debug: boolean;
     welcome: Welcome | undefined;
@@ -46,6 +47,7 @@ export declare class Execution {
     issue: Issue;
     pullRequest: PullRequest;
     workflows: Workflows;
+    deployment: DeploymentConfigurationValues;
     project: Projects;
     previousConfiguration: Config | undefined;
     currentConfiguration: Config;

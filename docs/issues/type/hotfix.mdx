@@ -11,7 +11,8 @@ The hotfix process follows these steps after creating an issue with `hotfix` and
 
 <Steps>
   <Step title="Create Hotfix Branch">
-    A hotfix branch is created from `main-branch` at the latest tag version
+    A hotfix branch is created from the latest accepted production version tag,
+    and that exact origin SHA is persisted.
   </Step>
   <Step title="Create Bugfix Branch">
     A bugfix branch is created from the hotfix branch to implement the fix
@@ -22,20 +23,26 @@ The hotfix process follows these steps after creating an issue with `hotfix` and
   <Step title="Merge Bugfix">
     The bugfix is merged back into the hotfix branch via Pull Request
   </Step>
-  <Step title="Deploy New Version">
-    A new version is deployed from the hotfix branch by adding the `deploy-label` to the issue
+  <Step title="Promote to Production">
+    Copilot opens the hotfix PR to `main-branch` and lets GitHub enforce its
+    checks, reviews, auto-merge, or merge queue.
   </Step>
-  <Step title="Merge Hotfix">
-    After successful deployment, the hotfix branch is merged:
-    - First into `main-branch` with the new version tag
-    - Then into `development-branch` to keep changes synchronized
+  <Step title="Publish the Accepted Commit">
+    Only after promotion merges, Copilot tags and publishes the exact accepted
+    production merge SHA.
+  </Step>
+  <Step title="Reconcile the Fix">
+    By default, the fix is reconciled into one active release when present;
+    otherwise it is reconciled into development. `development` and `both` are
+    explicit alternatives.
   </Step>
   <Step title="Close Issue">
     The issue is automatically closed with the `deployed-label` label once the process completes
   </Step>
 </Steps>
 
-This workflow ensures that critical fixes reach production quickly while maintaining code quality and proper version control. The process is designed to minimize disruption while addressing urgent issues.
+See [Release and hotfix orchestration](/issues/deployment-orchestration) for
+configuration, multiple-active-release handling, OIDC setup, and recovery.
 
 <Warning>Deploy workflow files should be located in the `.github/workflows` directory of your repository.</Warning>
 
@@ -57,60 +64,9 @@ This workflow ensures that critical fixes reach production quickly while maintai
   ```
 </Card>
 
-<Card title="How do I control the end of the deployment?" icon="rocket">
-  The hotfix deployment workflow is defined in the `hotfix_workflow.yml` file.
-
-  The workflow requires the following inputs:
-  - `version`: The new version number
-  - `title`: Title for the release
-  - `changelog`: Description of changes
-  - `issue`: ID of the originating issue
-
-  <Warning>Remember to create a new tag for the new deployed version.</Warning>
-  
-  ```yml
-  name: Task - Hotfix
-
-  on:
-    workflow_dispatch:
-      inputs:
-        version:
-          description: 'Hotfix version'
-          required: true
-          default: '1.0.0'
-        title:
-          description: 'Title'
-          required: true
-          default: 'New Version'
-        changelog:
-          description: 'Changelog'
-          required: true
-          default: '- Several improvements'
-        issue:
-          description: 'Launcher issue'
-          required: true
-          default: '-1'
-
-  jobs:
-    deploy:
-      name: Git Board - Issue
-      runs-on: ubuntu-latest
-      steps:
-        - name: Checkout Repository
-          uses: actions/checkout@v5
-
-        // create a new tag version here
-
-        // deploy logic here
-
-        - name: Git Board - Deploy success notification
-          uses: vypdev/copilot@v3
-          if: ${{ success() }}
-          with:
-            single-action: 'deployed_action'
-            single-action-issue: '${{ github.event.inputs.issue }}'
-            token: ${{ secrets.PAT }}
-  ```
+<Card title="Who creates the tag?" icon="rocket">
+  The workflow creates or verifies it after production accepts the hotfix. The
+  immutable tag is never created from an unmerged hotfix head.
 </Card>
 
 ## Example
@@ -122,7 +78,8 @@ For a hotfix issue #123 fixing a critical login bug:
 3. Fix implemented and tested on bugfix branch
 4. PR merged into `hotfix/1.2.4`
 5. Version 1.2.4 deployed to production
-6. Changes merged to `master` and `develop`
+6. Promotion merged to `master`; package and GitHub Release published from that commit
+7. Fix reconciled into the configured active release and/or `develop`
 
 ## Label
 

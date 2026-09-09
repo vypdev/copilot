@@ -15,7 +15,7 @@ export function buildLocalActionExecution(
 ) {
     const {
         debug, singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog,
-        singleActionMessage, singleActionCommentId, singleActionCommentMode,
+        singleActionMessage, singleActionCommentId, singleActionCommentMode, singleActionOperationId,
         inactivityThresholdHours,
         commitPrefixBuilder, branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount,
         pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, pullRequestMergeTimeout,
@@ -39,6 +39,7 @@ export function buildLocalActionExecution(
         featureTree, bugfixTree, hotfixTree, releaseTree, docsTree, choreTree, releaseWorkflow, hotfixWorkflow,
         projects, projectColumnIssueCreated, projectColumnPullRequestCreated, projectColumnIssueInProgress,
         projectColumnPullRequestInProgress, welcomeTitle, welcomeMessages,
+        deployment,
     } = configuration;
     return buildExecution({
         debug,
@@ -52,6 +53,7 @@ export function buildLocalActionExecution(
             singleActionMessage,
             singleActionCommentId,
             singleActionCommentMode,
+            singleActionOperationId,
         ),
         commitPrefixBuilder,
         issue: buildIssue(branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount, additionalParams),
@@ -121,6 +123,7 @@ export function buildLocalActionExecution(
         release: new Release(),
         hotfix: new Hotfix(),
         workflows: buildWorkflows(releaseWorkflow, hotfixWorkflow),
+        deployment,
         projects: buildProjects({
             projects,
             issueCreated: projectColumnIssueCreated,

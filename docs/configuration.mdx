@@ -117,6 +117,23 @@ Copilot provides extensive configuration options to customize your workflow. Use
 
     - `release-workflow`: Release workflow filename (default: "release_workflow.yml")
     - `hotfix-workflow`: Hotfix workflow filename (default: "hotfix_workflow.yml")
+
+    ## Deployment orchestration
+
+    - `release-reconciliation-strategy`: `production-lineage` (default), `canonical-gitflow`, or `manual`
+    - `hotfix-reconciliation-strategy`: `production-lineage` (default), `canonical-gitflow`, or `manual`
+    - `reconciliation-pr-mode`: `auto` (default), `auto-merge`, `merge-queue`, `create-only`, or deprecated `legacy-wait`
+    - `reconciliation-backmerge-mode`: `auto` (default), `direct`, or `sync-branch`
+    - `hotfix-active-release-policy`: `prefer-release` (default), `development`, or `both`
+    - `reconciliation-tree`: Safe ephemeral branch prefix (default: `sync`)
+    - `reconciliation-cleanup`: `all` (default), `source-only`, `sync-only`, or `none`
+    - `reconciliation-issue-completion`: `close` (default) or `keep-open`
+    - `orchestration-presentation-mode`: `guided` (default), `compact`, or `quiet`
+    - `orchestration-diagrams`: Show a fixed Mermaid diagram and textual equivalent (default: `true`)
+    - `orchestration-comment-mode`: `update` (default) or `milestones`
+
+    See [Release and hotfix orchestration](/issues/deployment-orchestration)
+    before changing these coordinated safety settings.
   </Tab>
 
   <Tab title="Single Actions & Images" icon="image">
@@ -185,6 +202,7 @@ may be forwarded through Repository Variables instead.
 | `single-action-title` | empty | Title used by `create_release`. |
 | `single-action-changelog` | empty | Markdown body used by `create_release`. |
 | `single-action-message` | empty | Markdown body published by `publish_issue_comment`. |
+| `single-action-operation-id` | empty | Internal durable deployment identity. Continuation workflows must pass the exact ID parsed or dispatched by Copilot; do not set it for ordinary actions. |
 | `single-action-comment-id` | empty | Existing issue comment ID to replace or append to. |
 | `single-action-comment-mode` | empty | `create`, `replace`, or `append`; inferred from whether a comment ID is present when omitted. |
 | `inactivity-threshold-hours` | `168` | Hours without activity before the scheduled action closes an eligible waiting issue. |

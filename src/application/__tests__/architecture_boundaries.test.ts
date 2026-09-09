@@ -156,6 +156,28 @@ describe('application architecture boundaries', () => {
         expect(source).not.toContain("data/model/execution'");
         expect(source).toContain('LifecycleSynchronizationExecution');
     });
+
+    it('keeps deployment orchestration dependent on its narrow application context', () => {
+        const source = readFileSync(
+            join(applicationRoot, 'usecases/actions/deployment_orchestration_use_case.ts'),
+            'utf8',
+        );
+        expect(source).not.toContain('data/model/execution');
+        expect(source).toContain('DeploymentOrchestrationContext');
+        expect(source).toContain('DeploymentStateStorePort');
+    });
+
+    it('keeps deployment application ports provider-neutral', () => {
+        const source = readFileSync(join(applicationRoot, 'ports/deployment_orchestration_ports.ts'), 'utf8');
+        expect(source).not.toMatch(/@octokit|@actions|infrastructure\/|GithubDeployment/);
+        expect(source).not.toMatch(/graphql|pull_number|merge_commit_sha|node_id/);
+    });
+
+    it('keeps deployment presentation policies mutation-free', () => {
+        const source = readFileSync(join(applicationRoot, 'policies/deployment_presentation_policy.ts'), 'utf8');
+        expect(source).not.toMatch(/ports\//);
+        expect(source).not.toMatch(/updateDescription|addComment|createManagedPullRequest|deleteBranch|dispatch/);
+    });
 });
 
 describe('failure policy ownership', () => {
