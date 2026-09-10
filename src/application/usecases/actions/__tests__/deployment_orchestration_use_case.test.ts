@@ -57,7 +57,7 @@ const pr = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-function execution(action: "prepare" | "continue" | "published" | "failed" | "deployed", current?: DeploymentOperationSnapshot): Execution {
+function execution(action: "prepare" | "continue" | "published" | "failed", current?: DeploymentOperationSnapshot): Execution {
   durableState = current;
   return {
     owner: "owner",
@@ -82,13 +82,12 @@ function execution(action: "prepare" | "continue" | "published" | "failed" | "de
       changelog: "Changes",
       operationId: "operation-12345678",
       message: "Publication failed; inspect https://github.com/owner/repo/actions/runs/1",
-      isDeployedAction: action === "deployed",
       isPrepareDeploymentAction: action === "prepare",
       isContinueDeploymentAction: action === "continue",
       isPublishedDeploymentAction: action === "published",
       isFailedDeploymentAction: action === "failed",
     },
-    pullRequest: { number: 40, mergeTimeout: 600 },
+    pullRequest: { number: 40 },
     currentConfiguration: {
       branchType: "release",
       releaseBranch: "release/3.4.0",
@@ -125,7 +124,6 @@ function harness() {
     listBranches: jest.fn().mockResolvedValue([]),
   };
   const continuation = { dispatch: jest.fn() };
-  const legacyMerge = { waitAndMerge: jest.fn() };
   const presentation = {
     findDashboard: jest.fn().mockResolvedValue(undefined),
     createDashboard: jest.fn(),
@@ -142,14 +140,13 @@ function harness() {
     pullRequests,
     git,
     continuation,
-    legacyMerge,
     presentation,
     state,
     labels,
     issues,
     operationId: () => "operation-12345678",
   });
-  return { useCase, pullRequests, git, continuation, legacyMerge, presentation, state, labels, issues };
+  return { useCase, pullRequests, git, continuation, presentation, state, labels, issues };
 }
 
 describe("DeploymentOrchestrationUseCase", () => {
@@ -190,15 +187,6 @@ describe("DeploymentOrchestrationUseCase", () => {
     });
     await value.useCase.invoke(execution("prepare"));
     expect(value.pullRequests.mergePullRequest).toHaveBeenCalledWith("owner", "repo", 40, "pat");
-    expect(value.pullRequests.enableAutoMerge).not.toHaveBeenCalled();
-  });
-
-  it("uses the bounded existing-PR waiter only in legacy-wait mode", async () => {
-    const value = harness();
-    await value.useCase.invoke(execution("prepare", operation("preparing", { prMode: "legacy-wait" })));
-    expect(value.legacyMerge.waitAndMerge).toHaveBeenCalledWith(
-      "owner", "repo", "release/3.4.0", 40, "master", 600, "pat",
-    );
     expect(value.pullRequests.enableAutoMerge).not.toHaveBeenCalled();
   });
 
@@ -301,15 +289,6 @@ describe("DeploymentOrchestrationUseCase", () => {
       "owner", "repo", 355, expect.arrayContaining(["release", "deployed", "state:in-progress"]), "pat",
     );
     expect(input.currentConfiguration.deploymentOrchestration).toEqual(expect.objectContaining({ phase: "reconciliation_pending", publicationVerified: true }));
-  });
-
-  it("delegates the compatibility deployed action when durable state exists", async () => {
-    const value = harness();
-    value.pullRequests.createManagedPullRequest.mockResolvedValue(pr({ number: 41, headBranch: "master", headSha: productionSha, baseBranch: "develop" }));
-    const input = execution("deployed", operation("publishing"));
-    const result = await value.useCase.invoke(input);
-    expect(result[0].success).toBe(true);
-    expect(input.currentConfiguration.deploymentOrchestration?.publicationVerified).toBe(true);
   });
 
   it("does not republish or duplicate reconciliation after a duplicate notification", async () => {

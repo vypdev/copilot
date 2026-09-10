@@ -97,7 +97,7 @@ export async function runUpdatePullRequestDescriptionWorkflow(
             `UpdatePullRequestDescription: prompt length=${prompt.length}, issue description length=${issueDescription.length}. Calling configured agent.`,
         );
         const response = await dependencies.aiRepository.query({
-            configuration: param.ai?.getAgentConfiguration('planner'),
+            configuration: param.ai.getAgentConfiguration('planner'),
             agentId: AGENT_PLAN,
             prompt,
         });
@@ -166,8 +166,7 @@ async function loadPullRequestDetails(
 }
 
 function getPullRequestDescriptionMode(param: Execution): PullRequestDescriptionMode {
-    return param.ai.getPullRequestDescriptionMode?.()
-        ?? (param.ai.getAiPullRequestDescription() ? 'replace' : 'disabled');
+    return param.ai.getPullRequestDescriptionMode();
 }
 
 function extractDescription(response: string | Record<string, unknown> | undefined): string {

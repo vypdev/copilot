@@ -29,7 +29,7 @@ export async function runCommentAutomation(
     }
     const isPublicMetadataCommand = command.kind === 'command'
       && (command.command.name === 'help' || command.command.name === 'status');
-    if (!isPublicMetadataCommand && param.ai?.getAiMembersOnly?.() && !await actorAuthorizationPort.isActorAllowedToModifyFiles(
+    if (!isPublicMetadataCommand && param.ai.getAiMembersOnly() && !await actorAuthorizationPort.isActorAllowedToModifyFiles(
       param.owner,
       param.repo,
       param.actor,

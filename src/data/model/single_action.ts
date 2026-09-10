@@ -4,7 +4,6 @@ import { parsePositiveSafeInteger } from '../../domain/positive_integer_policy';
 export class SingleAction {
     currentSingleAction: string;
     actions: string[] = [
-        ACTIONS.DEPLOYED,
         ACTIONS.PUBLISH_GITHUB_ACTION,
         ACTIONS.CREATE_TAG,
         ACTIONS.CREATE_RELEASE,
@@ -27,7 +26,6 @@ export class SingleAction {
     actionsThrowError: string[] = [
        ACTIONS.PUBLISH_GITHUB_ACTION,
        ACTIONS.CREATE_RELEASE,
-       ACTIONS.DEPLOYED,
        ACTIONS.CREATE_TAG,
        ACTIONS.CLOSE_INACTIVE_ISSUES,
        ACTIONS.PUBLISH_ISSUE_COMMENT,
@@ -63,10 +61,6 @@ export class SingleAction {
     commentId: number = -1;
     commentIdInput: string = '';
     commentMode: string = '';
-
-    get isDeployedAction(): boolean {
-        return this.currentSingleAction === ACTIONS.DEPLOYED;
-    }
 
     get isPublishGithubAction(): boolean {
         return this.currentSingleAction === ACTIONS.PUBLISH_GITHUB_ACTION;

@@ -66,18 +66,6 @@ export interface DeploymentContinuationPort {
   ): Promise<void>;
 }
 
-export interface LegacyManagedPullRequestPort {
-  waitAndMerge(
-    owner: string,
-    repository: string,
-    headBranch: string,
-    pullRequest: number,
-    baseBranch: string,
-    timeoutSeconds: number,
-    token: string,
-  ): Promise<void>;
-}
-
 export interface DeploymentDashboardComment {
   readonly id: number;
   readonly body: string;
@@ -117,7 +105,7 @@ export interface DeploymentStateStorePort {
   save(command: DeploymentStateQuery & { readonly state: DeploymentIssueState }): Promise<void>;
 }
 
-/** Narrow legacy-aggregate view adapted structurally at the single-action boundary. */
+/** Narrow runtime view adapted structurally at the single-action boundary. */
 export interface DeploymentOrchestrationContext {
   readonly owner: string;
   readonly repo: string;
@@ -145,12 +133,11 @@ export interface DeploymentOrchestrationContext {
     readonly changelog: string;
     readonly operationId: string;
     readonly message: string;
-    readonly isDeployedAction: boolean;
     readonly isPrepareDeploymentAction: boolean;
     readonly isContinueDeploymentAction: boolean;
     readonly isPublishedDeploymentAction: boolean;
     readonly isFailedDeploymentAction: boolean;
   };
-  readonly pullRequest: { readonly number: number; readonly mergeTimeout: number };
+  readonly pullRequest: { readonly number: number };
   readonly currentConfiguration: DeploymentIssueState;
 }

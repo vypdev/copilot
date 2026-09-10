@@ -5,7 +5,7 @@ import {
 
 describe("branch dependency policy", () => {
   it("prefers durable issue configuration and de-duplicates matching PR evidence", () => {
-    const body = `Request\n<!-- copilot-configuration-start\n${JSON.stringify({ parentBranch: "develop", workingBranch: "feature/42-login" })}\ncopilot-configuration-end -->`;
+    const body = `Request\n<!-- copilot-configuration-start\n${JSON.stringify({ schemaVersion: 3, parentBranch: "develop", workingBranch: "feature/42-login" })}\ncopilot-configuration-end -->`;
     const result = resolveOpenBranchDependencies(
       [{ number: 42, body, linkedBranches: { nodes: [{ ref: { name: "refs/heads/feature/42-login" } }] } }],
       [{

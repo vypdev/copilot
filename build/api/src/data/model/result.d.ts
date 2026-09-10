@@ -7,8 +7,6 @@ export interface ResultInput {
     payload?: unknown;
     reminders?: string[];
     errors?: unknown[];
-    /** Compatibility input while callers migrate to the plural property. */
-    error?: unknown;
     stepFormat?: ResultStepFormat;
 }
 export declare function getResultPayload(payload: unknown): Record<string, unknown> | undefined;

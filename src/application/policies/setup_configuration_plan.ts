@@ -87,7 +87,6 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
     add('REOPEN_ISSUE_ON_PUSH', repository.reopenIssueOnPush);
     add('DESIRED_ASSIGNEES_COUNT', repository.desiredAssigneesCount);
     add('DESIRED_REVIEWERS_COUNT', repository.desiredReviewersCount);
-    add('MERGE_TIMEOUT', repository.mergeTimeout);
     if (configuration.features.inactiveIssueClosure !== false) {
         add('INACTIVITY_THRESHOLD_HOURS', repository.inactivityThresholdHours);
     }
@@ -105,7 +104,6 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
     add('ORCHESTRATION_PRESENTATION_MODE', repository.orchestrationPresentationMode);
     add('ORCHESTRATION_DIAGRAMS', repository.orchestrationDiagrams);
     add('ORCHESTRATION_COMMENT_MODE', repository.orchestrationCommentMode);
-    add('AI_PULL_REQUEST_DESCRIPTION', configuration.ai.pullRequestDescription);
     add('AI_PULL_REQUEST_DESCRIPTION_MODE', configuration.ai.pullRequestDescriptionMode);
     add('AI_IGNORE_FILES', configuration.ai.ignoreFiles);
     add('AI_MEMBERS_ONLY', configuration.ai.membersOnly);
@@ -119,7 +117,7 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
     add('BUGBOT_TRACE_RULES', configuration.ai.bugbotTraceRules);
     add('BUGBOT_SUGGESTED_CHANGES', configuration.ai.bugbotSuggestedChanges);
     add('BUGBOT_TELEMETRY', configuration.ai.bugbotTelemetry);
-    add('BUGBOT_FAIL_ON_UNRESOLVED', configuration.ai.bugbotFailOnUnresolved ?? false);
+    add('BUGBOT_FAIL_ON_UNRESOLVED', configuration.ai.bugbotFailOnUnresolved);
     add('BUGBOT_ORGANIZATION_RULES', configuration.ai.bugbotOrganizationRules);
     add('PROJECT_IDS', configuration.projects.ids);
     add('PROJECT_COLUMN_ISSUE_CREATED', configuration.projects.issueCreatedColumn);
@@ -146,7 +144,6 @@ export function buildSetupActionInputs(configuration: SetupConfiguration): Recor
         'reopen-issue-on-push': String(repository.reopenIssueOnPush),
         'desired-assignees-count': String(repository.desiredAssigneesCount),
         'desired-reviewers-count': String(repository.desiredReviewersCount),
-        'merge-timeout': String(repository.mergeTimeout),
         'inactivity-threshold-hours': String(repository.inactivityThresholdHours),
         'issues-locale': repository.issueLocale,
         'pull-requests-locale': repository.pullRequestLocale,
@@ -162,7 +159,6 @@ export function buildSetupActionInputs(configuration: SetupConfiguration): Recor
         'orchestration-presentation-mode': repository.orchestrationPresentationMode,
         'orchestration-diagrams': String(repository.orchestrationDiagrams),
         'orchestration-comment-mode': repository.orchestrationCommentMode,
-        'ai-pull-request-description': String(ai.pullRequestDescription),
         'ai-pull-request-description-mode': normalizePullRequestDescriptionMode(ai.pullRequestDescriptionMode),
         'ai-ignore-files': ai.ignoreFiles,
         'ai-members-only': String(ai.membersOnly),
@@ -176,7 +172,7 @@ export function buildSetupActionInputs(configuration: SetupConfiguration): Recor
         'bugbot-trace-rules': String(ai.bugbotTraceRules),
         'bugbot-suggested-changes': String(ai.bugbotSuggestedChanges),
         'bugbot-telemetry': String(ai.bugbotTelemetry),
-        'bugbot-fail-on-unresolved': String(ai.bugbotFailOnUnresolved ?? false),
+        'bugbot-fail-on-unresolved': String(ai.bugbotFailOnUnresolved),
         'bugbot-organization-rules': ai.bugbotOrganizationRules,
         'project-ids': projects.ids,
         'project-column-issue-created': projects.issueCreatedColumn,

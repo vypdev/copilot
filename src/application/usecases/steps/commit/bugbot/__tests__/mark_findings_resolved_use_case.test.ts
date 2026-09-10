@@ -8,6 +8,7 @@ import type {
 } from "../types";
 import type { Execution } from "../../../../../../data/model/execution";
 import { getCommentWatermark } from "../../../../../../utils/comment_watermark";
+import { buildMarker } from "../marker";
 
 jest.mock("../../../../../ports/logging_ports", () => ({
   logInfo: jest.fn(),
@@ -20,6 +21,7 @@ const mockListPrReviewComments = jest.fn();
 const mockUpdatePrReviewComment = jest.fn();
 const mockResolveThread = jest.fn();
 const mockUnresolveThread = jest.fn();
+const marker = (resolved: boolean) => buildMarker('f1', resolved, 'fp-11111111', 'sf-11111111');
 
 function markFindingsResolved(param: Omit<MarkFindingsResolvedParam, "ports">) {
   return markFindingsResolvedImpl({
@@ -80,9 +82,9 @@ function pullRequestFinding(
 }
 
 const unresolvedBody =
-  '## Finding\n\n<!-- copilot-bugbot finding_id:"f1" resolved:false -->';
+  `## Finding\n\n${marker(false)}`;
 const resolvedBody =
-  '## Finding\n\n<!-- copilot-bugbot finding_id:"f1" resolved:true -->';
+  `## Finding\n\n${marker(true)}`;
 
 function prComment(identity: string, body = unresolvedBody) {
   return { id: 201, identity, body };

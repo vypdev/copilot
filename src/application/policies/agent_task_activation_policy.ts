@@ -75,8 +75,6 @@ function activeCommentTasks(event: GithubActionEventInputs, botLogin: string): A
             case 'implement':
                 return ['fixer'];
             case 'sync-branch':
-            case 'update-branch':
-            case 'updatebranch':
                 return branchSyncAgentTasks(command.command.arguments);
             default:
                 return [];

@@ -7,7 +7,7 @@ import { getActionInputsWithDefaults } from '../utils/yml_utils';
 import { isEnabledInput } from './input_boolean_policy';
 import { resolveActionInput } from './action_input_source';
 import { loadProjectDetails } from './project_details_loader';
-import { parseBoundedPositiveIntegerInput, parseIntegerInput, parseNonNegativeIntegerInput } from './input_number_policy';
+import { parseBoundedPositiveIntegerInput, parseIntegerInput } from './input_number_policy';
 import { parseDelimitedValues } from './input_values_policy';
 import { buildAgentTasksFromValues } from './agent_input_builder';
 import { buildImageConfiguration } from './image_configuration_builder';
@@ -55,14 +55,10 @@ export function readLocalAgentConfiguration(
 ) {
     const agentTasks = buildAgentTasksFromValues({ ...actionInputs, ...additionalParams });
     const bugbotFixVerifyCommandsInput = input(additionalParams, actionInputs, INPUT_KEYS.BUGBOT_FIX_VERIFY_COMMANDS) ?? '';
-    const pullRequestDescription = isEnabledInput(input(additionalParams, actionInputs, INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION));
     return {
         agentTasks,
         agentModel: agentTasks.findings.model,
-        aiPullRequestDescription: pullRequestDescription,
-        aiPullRequestDescriptionMode: pullRequestDescription
-            ? normalizePullRequestDescriptionMode(input(additionalParams, actionInputs, INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION_MODE))
-            : 'disabled',
+        aiPullRequestDescriptionMode: normalizePullRequestDescriptionMode(input(additionalParams, actionInputs, INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION_MODE)),
         aiMembersOnly: isEnabledInput(input(additionalParams, actionInputs, INPUT_KEYS.AI_MEMBERS_ONLY)),
         aiIncludeReasoning: isEnabledInput(input(additionalParams, actionInputs, INPUT_KEYS.AI_INCLUDE_REASONING)),
         aiIgnoreFilesInput: input(additionalParams, actionInputs, INPUT_KEYS.AI_IGNORE_FILES),
@@ -286,7 +282,6 @@ export function readLocalWorkflowConfiguration(
         issueDesiredAssigneesCount: parseIntegerInput(read(INPUT_KEYS.DESIRED_ASSIGNEES_COUNT), 0),
         pullRequestDesiredAssigneesCount: parseIntegerInput(read(INPUT_KEYS.PULL_REQUEST_DESIRED_ASSIGNEES_COUNT), 0),
         pullRequestDesiredReviewersCount: parseIntegerInput(read(INPUT_KEYS.PULL_REQUEST_DESIRED_REVIEWERS_COUNT), 0),
-        pullRequestMergeTimeout: parseNonNegativeIntegerInput(read(INPUT_KEYS.PULL_REQUEST_MERGE_TIMEOUT), 0),
         deployment: readDeploymentConfiguration(read, {
             productionBranch: mainBranch,
             developmentBranch,

@@ -50,7 +50,7 @@ describe('PullRequestChangesRepository', () => {
     ]));
   });
 
-  it('uses every paginated file page for changed files and diff lines', async () => {
+  it('uses every paginated file page in the consolidated diff snapshot', async () => {
     const { provider, iterator } = createClient([
       [{ filename: 'first.ts', status: 'modified', additions: 1, deletions: 0, patch: '@@ -1,1 +8,2 @@' }],
       [
@@ -60,16 +60,18 @@ describe('PullRequestChangesRepository', () => {
     ]);
     const repository = new PullRequestChangesRepository(provider);
 
-    await expect(repository.getChangedFiles('owner', 'repo', 7, 'token')).resolves.toEqual([
+    const snapshot = await repository.getReviewDiffSnapshot('owner', 'repo', 7, 'token');
+
+    expect(snapshot.changes.map(({ filename, status }) => ({ filename, status }))).toEqual([
       { filename: 'first.ts', status: 'modified' },
       { filename: 'second.ts', status: 'added' },
       { filename: 'deletions.ts', status: 'modified' },
     ]);
-    await expect(repository.getFilesWithFirstDiffLine('owner', 'repo', 7, 'token')).resolves.toEqual([
+    expect(snapshot.filesWithFirstDiffLine).toEqual([
       { path: 'first.ts', firstLine: 8 },
       { path: 'second.ts', firstLine: 42 },
     ]);
-    expect(iterator).toHaveBeenCalledTimes(2);
+    expect(iterator).toHaveBeenCalledTimes(1);
     });
 
     it('fails closed when GitHub cannot list changed files', async () => {
@@ -79,7 +81,7 @@ describe('PullRequestChangesRepository', () => {
         });
         const repository = new PullRequestChangesRepository(provider);
 
-        await expect(repository.getChangedFiles('owner', 'repo', 7, 'token')).rejects.toThrow(
+        await expect(repository.getReviewDiffSnapshot('owner', 'repo', 7, 'token')).rejects.toThrow(
             'Unable to list pull request changed files.',
         );
     });

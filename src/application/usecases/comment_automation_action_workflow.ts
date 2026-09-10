@@ -52,7 +52,7 @@ async function runAutofixAction(
   ports: CommentAutomationActionPorts,
 ): Promise<Result[]> {
   if (!intentPayload) return [];
-  if (param.ai?.getBugbotReviewConfiguration?.().publicationMode === 'dry-run') {
+  if (param.ai.getBugbotReviewConfiguration().publicationMode === 'dry-run') {
     return [new Result({
       id: `${options.taskId}.Autofix`,
       success: true,

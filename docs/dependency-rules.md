@@ -218,7 +218,7 @@ GithubEverythingClient
 AiEverythingService
 GenericProviderAdapter
 Pick<AggregateFacade> as a substitute for a semantic port
-compatibility aliases or delegating shims for retired imports
+aliases or delegating shims for retired imports
 ```
 
 Shared internal transport is allowed below separate semantic adapters when
@@ -268,7 +268,7 @@ Primary tests:
 
 ## Known review targets
 
-- keep `Execution` as a compatibility aggregate while preventing new use cases
+- keep `Execution` as the runtime-boundary aggregate while preventing new use cases
   from taking it when a narrower context contract is sufficient;
 - keep provider-specific release/tag contracts behind application ports;
 - extend the executable boundary tests when a new layer or composition root is

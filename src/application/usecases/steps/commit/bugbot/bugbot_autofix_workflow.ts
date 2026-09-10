@@ -21,7 +21,7 @@ export async function runBugbotAutofixWorkflow(
         logDebugInfo('No target finding ids; skipping autofix.');
         return [];
     }
-    if (!isAgentConfigurationReady(param.execution.ai?.getAgentConfiguration('fixer'))) {
+    if (!isAgentConfigurationReady(param.execution.ai.getAgentConfiguration('fixer'))) {
         logDebugInfo('Agent not configured; skipping autofix.');
         return [];
     }
@@ -40,13 +40,12 @@ export async function runBugbotAutofixWorkflow(
 
         logInfo('Running configured build agent to fix selected findings (changes applied in workspace).');
         const response = await dependencies.aiRepository.fix({
-            configuration: param.execution.ai?.getAgentConfiguration('fixer'),
+            configuration: param.execution.ai.getAgentConfiguration('fixer'),
             prompt: preflight.prompt,
         });
         logDebugInfo(`BugbotAutofix: build agent response length=${response?.text?.length ?? 0}.`);
 
         return await finalizeBugbotAutofix(
-            param.execution,
             preflight.context,
             preflight.idsToFix,
             preflight.workspacePathsBefore,

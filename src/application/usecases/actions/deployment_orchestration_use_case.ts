@@ -4,7 +4,6 @@ import type {
   DeploymentOrchestrationContext,
   DeploymentPresentationPort,
   DeploymentStateStorePort,
-  LegacyManagedPullRequestPort,
   ManagedPullRequestPort,
   ManagedPullRequestRecord,
 } from "../../ports/deployment_orchestration_ports";
@@ -43,7 +42,6 @@ export interface DeploymentOrchestrationDependencies {
   readonly pullRequests: ManagedPullRequestPort;
   readonly git: DeploymentGitPort;
   readonly continuation: DeploymentContinuationPort;
-  readonly legacyMerge: LegacyManagedPullRequestPort;
   readonly presentation: DeploymentPresentationPort;
   readonly state: DeploymentStateStorePort;
   readonly labels: IssueLabelsPort;
@@ -64,7 +62,6 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
     this.checkpoints.set(execution, initial ? { operationId: initial.operationId, phase: initial.phase } : undefined);
     try {
       if (execution.singleAction.isPrepareDeploymentAction) return [await this.prepare(execution)];
-      if (execution.singleAction.isDeployedAction && initial) return [await this.published(execution)];
       if (execution.singleAction.isContinueDeploymentAction) return [await this.continue(execution)];
       if (execution.singleAction.isPublishedDeploymentAction) return [await this.published(execution)];
       if (execution.singleAction.isFailedDeploymentAction) return [await this.failed(execution)];
@@ -520,16 +517,6 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
       }
     } else if (decision.mode === "merge-queue") {
       await this.dependencies.pullRequests.enqueuePullRequest(execution.owner, execution.repo, pullRequest.nodeId, execution.tokens.token);
-    } else if (decision.mode === "legacy-wait") {
-      await this.dependencies.legacyMerge.waitAndMerge(
-        execution.owner,
-        execution.repo,
-        pullRequest.headBranch,
-        pullRequest.number,
-        pullRequest.baseBranch,
-        execution.pullRequest.mergeTimeout,
-        execution.tokens.token,
-      );
     }
     return managed;
   }
@@ -629,7 +616,7 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
 function requireOperation(execution: DeploymentOrchestrationContext): DeploymentOperationSnapshot {
   const operation = execution.currentConfiguration.deploymentOrchestration;
   if (!operation) throw new Error("No durable deployment operation exists on the launcher issue.");
-  if (!execution.singleAction.operationId && !execution.singleAction.isDeployedAction) {
+  if (!execution.singleAction.operationId) {
     throw new Error("single-action-operation-id is required for a durable deployment continuation.");
   }
   if (execution.singleAction.operationId && execution.singleAction.operationId !== operation.operationId) {

@@ -4,7 +4,6 @@ import { logError, logDebugInfo } from "../ports/logging_ports";
 import type { ParamUseCase } from "./base/param_usecase";
 
 export interface SingleActionWorkflowPorts {
-  deployedActionUseCase: ParamUseCase<Execution, Result[]>;
   publishGithubActionUseCase: ParamUseCase<Execution, Result[]>;
   createReleaseUseCase: ParamUseCase<Execution, Result[]>;
   createTagUseCase: ParamUseCase<Execution, Result[]>;
@@ -33,11 +32,6 @@ export async function runSingleActionWorkflow(
 
   logDebugInfo(`SingleAction: dispatching to handler for action: ${param.singleAction.currentSingleAction}.`);
   const action = [
-    {
-      active: param.singleAction.isDeployedAction && Boolean(param.currentConfiguration.deploymentOrchestration),
-      useCase: ports.deploymentOrchestrationUseCase,
-    },
-    { active: param.singleAction.isDeployedAction, useCase: ports.deployedActionUseCase },
     { active: param.singleAction.isPublishGithubAction, useCase: ports.publishGithubActionUseCase },
     { active: param.singleAction.isCreateReleaseAction, useCase: ports.createReleaseUseCase },
     { active: param.singleAction.isCreateTagAction, useCase: ports.createTagUseCase },

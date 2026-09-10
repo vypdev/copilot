@@ -53,7 +53,7 @@ export async function resolvePullRequestFinding(
 
   if (marker.resolved) return;
   const reason = resolution.resolution ?? 'fixed';
-  const replacement = `${resolvedNote(reason)}${buildMarker(resolution.findingId, true, marker.fingerprint, reason, marker.semanticFingerprint)}`;
+  const replacement = `${resolvedNote(reason)}${buildMarker(resolution.findingId, true, marker.fingerprint, marker.semanticFingerprint, reason)}`;
   const replaced = replaceMarkerInBody(
     comment.body,
     resolution.findingId,

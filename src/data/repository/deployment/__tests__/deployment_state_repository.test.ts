@@ -56,15 +56,15 @@ describe("DeploymentStateRepository", () => {
   });
 
   it("persists operation state in the existing hidden configuration block", async () => {
-    const value = harness({ schemaVersion: 2, branchType: "release", futureFact: "preserve" });
+    const value = harness({ schemaVersion: 3, branchType: "release", parentBranch: "develop" });
     await value.repository.save({ ...query, state: { branchType: "release", releaseBranch: "release/3.4.0", deploymentOrchestration: operation } });
     const updated = value.issues.updateDescription.mock.calls[0][3] as string;
     expect(updated).toContain('"schemaVersion": 3');
     expect(updated).toContain('"operationId": "operation-12345678"');
-    expect(updated).toContain('"futureFact": "preserve"');
+    expect(updated).toContain('"parentBranch": "develop"');
   });
 
-  it("adds a missing configuration block for a legacy launcher issue", async () => {
+  it("adds a missing configuration block for a launcher issue", async () => {
     const value = harness();
     await value.repository.save({ ...query, state: { branchType: "release", deploymentOrchestration: operation } });
     expect(value.issues.updateDescription).toHaveBeenCalledWith(

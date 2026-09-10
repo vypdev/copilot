@@ -18,6 +18,11 @@ jest.mock("../../../../../../utils/logger", () => ({
   logError: jest.fn(),
 }));
 
+const FINGERPRINT = 'fp-0123abcd';
+const SEMANTIC_FINGERPRINT = 'sf-0123abcd';
+const currentMarker = (id: string, resolved: boolean) =>
+  buildMarker(id, resolved, FINGERPRINT, SEMANTIC_FINGERPRINT);
+
 describe("marker", () => {
   describe("sanitizeFindingIdForMarker", () => {
     it("preserves internal marker-breaking characters for lossless validation", () => {
@@ -45,36 +50,38 @@ describe("marker", () => {
 
   describe("buildMarker", () => {
     it("produces comment with prefix and resolved true", () => {
-      const m = buildMarker("finding-1", true);
+      const m = currentMarker("finding-1", true);
       expect(m).toContain("copilot-bugbot");
       expect(m).toContain('finding_id:"finding-1"');
       expect(m).toContain("resolved:true");
     });
 
-  it("round-trips a locally computed fingerprint without breaking legacy markers", () => {
-      const marker = buildMarker("finding-1", false, "fp-0123abcd");
+    it("round-trips both locally computed fingerprints", () => {
+      const marker = currentMarker("finding-1", false);
 
       expect(marker).toContain('finding_fingerprint:"fp-0123abcd"');
       expect(parseMarker(marker)).toEqual([{
         findingId: "finding-1",
         resolved: false,
-        fingerprint: "fp-0123abcd",
+        fingerprint: FINGERPRINT,
+        semanticFingerprint: SEMANTIC_FINGERPRINT,
       }]);
     });
 
     it("rejects marker-breaking ids instead of changing identity", () => {
-      expect(() => buildMarker("id-->x", false)).toThrow(
+      expect(() => buildMarker("id-->x", false, FINGERPRINT, SEMANTIC_FINGERPRINT)).toThrow(
         "Finding ID contains marker-breaking characters.",
       );
     });
   });
 
   it("round-trips an explicit resolution reason", () => {
-    const marker = buildMarker("finding-1", true, "fp-0123abcd", "dismissed");
+    const marker = buildMarker("finding-1", true, FINGERPRINT, SEMANTIC_FINGERPRINT, "dismissed");
     expect(parseMarker(marker)).toEqual([{
       findingId: "finding-1",
       resolved: true,
-      fingerprint: "fp-0123abcd",
+      fingerprint: FINGERPRINT,
+      semanticFingerprint: SEMANTIC_FINGERPRINT,
       resolution: "dismissed",
     }]);
   });
@@ -86,38 +93,38 @@ describe("marker", () => {
     });
 
     it("parses single marker", () => {
-      const body = `Some text\n<!-- copilot-bugbot finding_id:"f1" resolved:false -->`;
-      expect(parseMarker(body)).toEqual([{ findingId: "f1", resolved: false }]);
+      const body = `Some text\n${currentMarker('f1', false)}`;
+      expect(parseMarker(body)).toEqual([{ findingId: "f1", resolved: false, fingerprint: FINGERPRINT, semanticFingerprint: SEMANTIC_FINGERPRINT }]);
     });
 
     it("parses resolved true", () => {
-      const body = `<!-- copilot-bugbot finding_id:"f2" resolved:true -->`;
-      expect(parseMarker(body)).toEqual([{ findingId: "f2", resolved: true }]);
+      const body = currentMarker('f2', true);
+      expect(parseMarker(body)).toEqual([{ findingId: "f2", resolved: true, fingerprint: FINGERPRINT, semanticFingerprint: SEMANTIC_FINGERPRINT }]);
     });
 
     it("parses multiple markers", () => {
-      const body = `<!-- copilot-bugbot finding_id:"a" resolved:false -->\n<!-- copilot-bugbot finding_id:"b" resolved:true -->`;
+      const body = `${currentMarker('a', false)}\n${currentMarker('b', true)}`;
       expect(parseMarker(body)).toEqual([
-        { findingId: "a", resolved: false },
-        { findingId: "b", resolved: true },
+        { findingId: "a", resolved: false, fingerprint: FINGERPRINT, semanticFingerprint: SEMANTIC_FINGERPRINT },
+        { findingId: "b", resolved: true, fingerprint: FINGERPRINT, semanticFingerprint: SEMANTIC_FINGERPRINT },
       ]);
     });
 
     it("tolerates extra whitespace around prefix and key", () => {
-      const body = `<!--   copilot-bugbot   finding_id: "f1"   resolved:false   -->`;
-      expect(parseMarker(body)).toEqual([{ findingId: "f1", resolved: false }]);
+      const body = `<!--   copilot-bugbot   finding_id: "f1"   resolved:false   finding_fingerprint: "${FINGERPRINT}"   finding_semantic: "${SEMANTIC_FINGERPRINT}"   -->`;
+      expect(parseMarker(body)).toEqual([{ findingId: "f1", resolved: false, fingerprint: FINGERPRINT, semanticFingerprint: SEMANTIC_FINGERPRINT }]);
     });
   });
 
   describe("markerRegexForFinding", () => {
     it("matches marker for given finding id", () => {
-      const body = `x <!-- copilot-bugbot finding_id:"my-id" resolved:false --> y`;
+      const body = `x ${currentMarker('my-id', false)} y`;
       const regex = markerRegexForFinding("my-id");
       expect(regex.test(body)).toBe(true);
     });
 
     it("escapes regex-special chars in id", () => {
-      const body = `<!-- copilot-bugbot finding_id:"file.ts:1" resolved:true -->`;
+      const body = currentMarker('file.ts:1', true);
       const regex = markerRegexForFinding("file.ts:1");
       expect(regex.test(body)).toBe(true);
     });
@@ -125,7 +132,7 @@ describe("marker", () => {
     it("rejects finding ids that cannot be represented losslessly", () => {
       const longId = "a".repeat(300);
 
-      expect(() => buildMarker(longId, false)).toThrow(
+      expect(() => buildMarker(longId, false, FINGERPRINT, SEMANTIC_FINGERPRINT)).toThrow(
         "Finding ID exceeds the maximum marker length.",
       );
       expect(() => markerRegexForFinding(longId)).toThrow(
@@ -134,7 +141,7 @@ describe("marker", () => {
     });
 
     it("matches when id has only safe chars (no escape needed)", () => {
-      const body = `<!-- copilot-bugbot finding_id:"src/foo.ts:10" resolved:false -->`;
+      const body = currentMarker('src/foo.ts:10', false);
       const regex = markerRegexForFinding("src/foo.ts:10");
       expect(regex.test(body)).toBe(true);
     });
@@ -142,7 +149,7 @@ describe("marker", () => {
 
   describe("replaceMarkerInBody", () => {
     it("replaces marker with new resolved state", () => {
-      const body = `## Title\n\n<!-- copilot-bugbot finding_id:"f1" resolved:false -->`;
+      const body = `## Title\n\n${currentMarker('f1', false)}`;
       const { updated, found, changed } = replaceMarkerInBody(body, "f1", true);
       expect(found).toBe(true);
       expect(changed).toBe(true);
@@ -150,7 +157,7 @@ describe("marker", () => {
     });
 
     it("uses custom replacement when provided", () => {
-      const body = `<!-- copilot-bugbot finding_id:"f1" resolved:false -->`;
+      const body = currentMarker('f1', false);
       const { updated, found, changed } = replaceMarkerInBody(
         body,
         "f1",
@@ -165,7 +172,7 @@ describe("marker", () => {
     it("reports an already-resolved marker as found without logging external context", () => {
       const { logError } = require("../../../../../../utils/logger");
       logError.mockClear();
-      const body = `<!-- copilot-bugbot finding_id:"external-id" resolved:true -->`;
+      const body = currentMarker('external-id', true);
 
       const { updated, found, changed } = replaceMarkerInBody(
         body,
@@ -217,6 +224,8 @@ describe("marker", () => {
         id: "f1",
         title: "Test Finding",
         description: "Description text",
+        fingerprint: FINGERPRINT,
+        semanticFingerprint: SEMANTIC_FINGERPRINT,
       };
       const body = buildCommentBody(finding, false);
       expect(body).toContain("## Test Finding");
@@ -231,6 +240,8 @@ describe("marker", () => {
         id: "f2",
         title: "T",
         description: "D",
+        fingerprint: FINGERPRINT,
+        semanticFingerprint: SEMANTIC_FINGERPRINT,
         severity: "medium",
       };
       const body = buildCommentBody(finding, false);
@@ -242,6 +253,8 @@ describe("marker", () => {
         id: "f3",
         title: "T",
         description: "D",
+        fingerprint: FINGERPRINT,
+        semanticFingerprint: SEMANTIC_FINGERPRINT,
         file: "src/foo.ts",
         line: 10,
       };
@@ -255,6 +268,8 @@ describe("marker", () => {
         id: "f4",
         title: "T",
         description: "D",
+        fingerprint: FINGERPRINT,
+        semanticFingerprint: SEMANTIC_FINGERPRINT,
         suggestion: "Use X instead.",
       };
       const body = buildCommentBody(finding, false);
@@ -263,7 +278,13 @@ describe("marker", () => {
     });
 
     it("adds Resolved note when resolved is true", () => {
-      const finding: BugbotFinding = { id: "f5", title: "T", description: "D" };
+      const finding: BugbotFinding = {
+        id: "f5",
+        title: "T",
+        description: "D",
+        fingerprint: FINGERPRINT,
+        semanticFingerprint: SEMANTIC_FINGERPRINT,
+      };
       const body = buildCommentBody(finding, true);
       expect(body).toContain("**Resolved**");
       expect(body).toContain("resolved:true");

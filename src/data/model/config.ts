@@ -7,49 +7,13 @@ import { isDeploymentOperationSnapshot, type DeploymentOperationSnapshot } from 
 /** Version of the durable configuration contract stored in issue/PR content. */
 export const CONFIG_SCHEMA_VERSION = 3;
 
-export interface ConfigurationMigrationResult {
-    readonly payload: Record<string, unknown>;
-    readonly sourceVersion: number;
-    readonly migrated: boolean;
-    readonly futureVersion: boolean;
-}
-
-/**
- * Normalizes persisted configuration without silently losing fields from a
- * newer installation. Unknown keys are deliberately retained so a downgrade
- * or a mixed-version workflow can round-trip data safely.
- */
-export function migrateConfigurationPayload(value: unknown): ConfigurationMigrationResult {
-    const original = { ...asModelInput(value) };
-    const sourceVersion = readSchemaVersion(original['schemaVersion']);
-
-    if (sourceVersion > CONFIG_SCHEMA_VERSION) {
-        return {
-            payload: original,
-            sourceVersion,
-            migrated: false,
-            futureVersion: true,
-        };
+/** Accepts only the currently supported durable configuration contract. */
+export function requireCurrentConfigurationPayload(value: unknown): Record<string, unknown> {
+    const input = asModelInput(value);
+    if (input.schemaVersion !== CONFIG_SCHEMA_VERSION) {
+        throw new Error(`Unsupported configuration schema. Expected ${CONFIG_SCHEMA_VERSION}.`);
     }
-
-    const payload = { ...original };
-    const hadTransientResults = Object.prototype.hasOwnProperty.call(payload, 'results');
-    delete payload.results;
-
-    if (payload.branchConfiguration === null) delete payload.branchConfiguration;
-    if (!isRecommendationState(payload.recommendationState)) delete payload.recommendationState;
-    payload.schemaVersion = CONFIG_SCHEMA_VERSION;
-
-    return {
-        payload,
-        sourceVersion,
-        migrated: sourceVersion !== CONFIG_SCHEMA_VERSION || hadTransientResults,
-        futureVersion: false,
-    };
-}
-
-function readSchemaVersion(value: unknown): number {
-    return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : 0;
+    return input;
 }
 
 export class Config {
@@ -69,8 +33,8 @@ export class Config {
     recommendationState: RecommendationState | undefined;
 
     constructor(data: unknown) {
-        const input = asModelInput(migrateConfigurationPayload(data).payload);
-        this.schemaVersion = readSchemaVersion(input.schemaVersion) || CONFIG_SCHEMA_VERSION;
+        const input = asModelInput(data);
+        this.schemaVersion = CONFIG_SCHEMA_VERSION;
         this.branchType = readString(input, 'branchType');
         this.hotfixOriginBranch = readOptionalString(input, 'hotfixOriginBranch');
         this.hotfixBranch = readOptionalString(input, 'hotfixBranch');

@@ -22,7 +22,7 @@ function baseParam(overrides: Record<string, unknown> = {}): Execution {
     repo: 'repo',
     issueNumber: 1,
     tokens: { token: 'token' },
-    ai: new Ai('http://localhost:4096', 'opencode/model', false, false, [], false, 'low', 20),
+    ai: new Ai('http://localhost:4096', 'opencode/model', false, [], false, 'low', 20),
     labels: { isQuestion: true, isHelp: false },
     issue: {
       opened: true,
@@ -72,7 +72,7 @@ describe('AnswerIssueHelpUseCase', () => {
 
   it('skips when OpenCode is not configured', async () => {
     const param = baseParam({
-      ai: new Ai('', '', false, false, [], false, 'low', 20),
+      ai: new Ai('', '', false, [], false, 'low', 20),
     });
 
     const results = await useCase.invoke(param);

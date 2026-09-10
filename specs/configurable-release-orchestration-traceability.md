@@ -8,8 +8,8 @@ for the implementation pull request because source code cannot establish visual
 readability in GitHub's desktop/mobile and light/dark renderers.
 
 Implementation landed in `df972490`. The 2026-09-10 documentation follow-up
-reconciles the public lifecycle, setup, npm OIDC, configuration, recovery,
-single-action, and compatibility contracts and adds executable parity checks.
+reconciles the public lifecycle, setup, npm OIDC, configuration, recovery, and
+single-action contracts and adds executable parity checks.
 The specification remains in live-validation state until AC-40 and the human
 portion of AC-46 have reviewed screenshots and the ten-second comprehension
 result from a real end-to-end operation.
@@ -22,7 +22,7 @@ The feature floor is allocated without double-counting cases:
 |---|---:|---|
 | Domain/configuration/planning | 18 | First 18 distinct rows in `deployment_configuration.test.ts`; additional planning cases are surplus. |
 | State/idempotent orchestration | 18 | First 18 cases in `deployment_orchestration_use_case.test.ts`; domain transition cases are surplus. |
-| GitHub/repository adapters | 12 | First 12 cases in `github_deployment_repository.test.ts`; state, legacy, release, and tag adapters are surplus. |
+| GitHub/repository adapters | 12 | First 12 cases in `github_deployment_repository.test.ts`; state, release, and tag adapter cases are surplus. |
 | Workflow/setup contracts | 8 | Gate-first DAG, continuation, merge-group, operation identity, OIDC, PAT, polling, and failure-projection cases in `validate_workflow_contract.test.ts`. |
 | UI/localization/sanitization | 10 | First 10 cases in `deployment_presentation_policy.test.ts`; lifecycle and Job Summary cases are surplus. |
 | Integration/replay/security | 6 | Concurrent state, forged marker, cross-repository event, duplicate event, cancellation recovery, and cleanup replay cases in `deployment_orchestration_use_case.test.ts`. |
@@ -41,7 +41,7 @@ separate gates.
 | 3 | Release preparation jobs commit version/build output before promotion | workflow contract and release repository tests | `/issues/type/release` | Automated |
 | 4 | Prepare/publish workflow modes and guarded publication actions | workflow and continuation-guard tests | `/issues/deployment-orchestration` | Automated |
 | 5 | `createOrVerifyTagAtSha(productionSha)` | tag repository and orchestration tests | `/development/release-process` | Automated |
-| 6 | Event-driven PR completion; no polling outside `legacy-wait` | workflow and use-case tests | `/issues/deployment-orchestration` | Automated |
+| 6 | Event-driven PR completion with no check polling | workflow and use-case tests | `/issues/deployment-orchestration` | Automated |
 | 7 | Deterministic sync branch created from target SHA | plan, adapter, and use-case strict-target tests | `/issues/deployment-orchestration` | Automated |
 | 8 | `selectBackmergeMode` and server-side sync merge | plan and orchestration tests | `/issues/deployment-orchestration` | Automated |
 | 9 | Direct mode for compatible targets | plan tests | `/issues/deployment-orchestration` | Automated |

@@ -23,7 +23,7 @@ describe("BranchDependencyRepository", () => {
           issues: {
             nodes: [{
               number: 2,
-              body: `<!-- copilot-configuration-start\n${JSON.stringify({ parentBranch: "main", workingBranch: "feature/two" })}\ncopilot-configuration-end -->`,
+              body: `<!-- copilot-configuration-start\n${JSON.stringify({ schemaVersion: 3, parentBranch: "main", workingBranch: "feature/two" })}\ncopilot-configuration-end -->`,
             }],
             pageInfo: { hasNextPage: false, endCursor: null },
           },
@@ -118,7 +118,7 @@ describe("BranchDependencyRepository", () => {
           issues: {
             nodes: [{
               number: 4,
-              body: `<!-- copilot-configuration-start\n${JSON.stringify({ parentBranch: "develop", workingBranch: "feature/four" })}\ncopilot-configuration-end -->`,
+              body: `<!-- copilot-configuration-start\n${JSON.stringify({ schemaVersion: 3, parentBranch: "develop", workingBranch: "feature/four" })}\ncopilot-configuration-end -->`,
             }],
             pageInfo: { hasNextPage: false },
           },

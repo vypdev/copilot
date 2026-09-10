@@ -7,7 +7,7 @@ import type { ProjectDetailQueryPort } from '../application/ports/project_detail
 import { INPUT_KEYS } from '../application/contracts/input_keys';
 import { isEnabledInput } from './input_boolean_policy';
 import { getGithubActionInput } from './github_action_input';
-import { parseBoundedPositiveIntegerInput, parseIntegerInput, parseNonNegativeIntegerInput } from './input_number_policy';
+import { parseBoundedPositiveIntegerInput, parseIntegerInput } from './input_number_policy';
 import { parseDelimitedValues } from './input_values_policy';
 import { readGithubActionAiInputs } from './github_action_ai_inputs';
 import { prepareGithubAgentRuntime } from './github_action_runtime';
@@ -103,7 +103,6 @@ export async function buildGithubActionExecution(
         pullRequest: buildPullRequest(
             parseIntegerInput(getInput(INPUT_KEYS.PULL_REQUEST_DESIRED_ASSIGNEES_COUNT), 0),
             parseIntegerInput(getInput(INPUT_KEYS.PULL_REQUEST_DESIRED_REVIEWERS_COUNT), 0),
-            parseNonNegativeIntegerInput(getInput(INPUT_KEYS.PULL_REQUEST_MERGE_TIMEOUT), 0),
             eventInputs,
         ),
         emoji: buildEmoji(
@@ -115,7 +114,6 @@ export async function buildGithubActionExecution(
         ai: new Ai(
             '',
             aiInputs.requestedAgentTasks.findings.model,
-            aiInputs.pullRequestDescription,
             aiInputs.membersOnly,
             aiInputs.ignoreFiles,
             aiInputs.includeReasoning,

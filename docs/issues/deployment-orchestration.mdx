@@ -121,7 +121,7 @@ persisted for the lifetime of an operation.
 |---|---|---|---|
 | `release-reconciliation-strategy` | `production-lineage` | `production-lineage`, `canonical-gitflow`, `manual` | Select the release source carried back after publication. |
 | `hotfix-reconciliation-strategy` | `production-lineage` | `production-lineage`, `canonical-gitflow`, `manual` | Select the hotfix source carried back after publication. |
-| `reconciliation-pr-mode` | `auto` | `auto`, `auto-merge`, `merge-queue`, `create-only`, `legacy-wait` | Select who merges managed PRs. |
+| `reconciliation-pr-mode` | `auto` | `auto`, `auto-merge`, `merge-queue`, `create-only` | Select who merges managed PRs. |
 | `reconciliation-backmerge-mode` | `auto` | `auto`, `direct`, `sync-branch` | Select the reconciliation PR head shape. |
 | `hotfix-active-release-policy` | `prefer-release` | `prefer-release`, `development`, `both` | Select hotfix reconciliation targets. |
 | `reconciliation-tree` | `sync` | Safe Git ref prefix, 1–100 characters | Prefix for deterministic ephemeral branches. |
@@ -137,9 +137,9 @@ the frozen release/hotfix head to development. `manual` publishes but creates no
 reconciliation PR and always leaves the issue open.
 
 `auto` PR mode selects a required merge queue first, native auto-merge when
-available, and otherwise a maintainer-owned PR. `legacy-wait` is the only mode
-that may use `merge-timeout`; it is retained for migration and is not the
-default.
+available, and otherwise a maintainer-owned PR. Every mode leaves checks,
+reviews, branch protection, and merge timing to GitHub; no release runner polls
+an open PR.
 
 `auto` back-merge mode uses a unique sync branch when a strict target has
 advanced. The branch starts at the current target and receives the trusted
@@ -376,10 +376,10 @@ If a workflow is canceled between tag creation and npm publication, rerun its
 GitHub Release already exists, the continuation verifies and reuses it. An
 immutable version tag at another SHA is never moved.
 
-For legacy in-progress issues without v3 orchestration state, the compatibility
-path remains available for one migration period. `deployed_action` uses the new
-state-aware path when state exists and otherwise retains the old behavior.
-New releases always use the production-first state machine.
+An issue without a current schema-v3 orchestration block is not resumable. Start
+a fresh deployment operation after confirming that no version tag, npm package,
+or GitHub Release was published manually. Copilot never guesses state from
+labels or branches and never delegates to a second deployment implementation.
 
 ## External platform references
 

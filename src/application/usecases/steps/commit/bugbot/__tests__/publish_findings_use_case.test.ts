@@ -5,6 +5,7 @@
 import { publishFindings as publishFindingsImpl, type PublishFindingsParam } from "../publish_findings_use_case";
 import type { BugbotFinding } from "../types";
 import type { BugbotContext } from "../types";
+import { Ai } from "../../../../../../data/model/ai";
 
 jest.mock("../../../../../../utils/logger", () => ({
     logDebugInfo: jest.fn(),
@@ -38,6 +39,8 @@ function finding(overrides: Partial<BugbotFinding> = {}): BugbotFinding {
         id: "f1",
         title: "Test",
         description: "Desc",
+        fingerprint: 'fp-11111111',
+        semanticFingerprint: 'sf-11111111',
         ...overrides,
     };
 }
@@ -59,6 +62,7 @@ const baseExecution = {
     repo: "r",
     issueNumber: 42,
     tokens: { token: "t" },
+    ai: new Ai("", "model", false, [], false, "low", 20),
 } as Parameters<typeof publishFindings>[0]["execution"];
 
 describe("publishFindings", () => {
@@ -105,7 +109,14 @@ describe("publishFindings", () => {
             execution: baseExecution,
             context: baseContext({
                 existingByFindingId: {
-                    f1: { issue: { commentId: 100, resolved: false } },
+                    f1: {
+                        issue: {
+                            commentId: 100,
+                            resolved: false,
+                            fingerprint: "fp-11111111",
+                            semanticFingerprint: "sf-11111111",
+                        },
+                    },
                 },
             }),
             findings: [finding()],
@@ -322,6 +333,8 @@ describe("publishFindings", () => {
                             commentIdentity: "PRRC_300",
                             pullRequestNumber: 50,
                             resolved: false,
+                            fingerprint: "fp-11111111",
+                            semanticFingerprint: "sf-11111111",
                         },
                     },
                 },
@@ -355,6 +368,8 @@ describe("publishFindings", () => {
                             commentIdentity: "PRRC_resolved",
                             pullRequestNumber: 50,
                             resolved: true,
+                            fingerprint: "fp-11111111",
+                            semanticFingerprint: "sf-11111111",
                         },
                     },
                 },
@@ -436,7 +451,14 @@ describe("publishFindings", () => {
             execution: baseExecution,
             context: baseContext({
                 existingByFindingId: {
-                    f1: { issue: { commentId: 100, resolved: false } },
+                    f1: {
+                        issue: {
+                            commentId: 100,
+                            resolved: false,
+                            fingerprint: "fp-11111111",
+                            semanticFingerprint: "sf-11111111",
+                        },
+                    },
                 },
             }),
             findings: [finding()],
@@ -490,6 +512,8 @@ describe("publishFindings", () => {
                             commentIdentity: "PRRC_300",
                             pullRequestNumber: 99,
                             resolved: false,
+                            fingerprint: "fp-11111111",
+                            semanticFingerprint: "sf-11111111",
                         },
                     },
                 },

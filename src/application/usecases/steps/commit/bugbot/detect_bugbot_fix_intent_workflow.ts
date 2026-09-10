@@ -46,7 +46,7 @@ export async function runDetectBugbotFixIntentWorkflow(
   const explicitCommand = parseCopilotCommand(commentBody);
   const isExplicitFix = explicitCommand.kind === 'command' && explicitCommand.command.name === 'fix';
   const isExplicitImplement = explicitCommand.kind === 'command' && explicitCommand.command.name === 'implement';
-  if (!isExplicitFix && !isExplicitImplement && !isAgentConfigurationReady(param.ai?.getAgentConfiguration("findings"))) {
+  if (!isExplicitFix && !isExplicitImplement && !isAgentConfigurationReady(param.ai.getAgentConfiguration("findings"))) {
     logInfo("Agent not configured; skipping bugbot fix intent detection.");
     return results;
   }
@@ -118,7 +118,7 @@ export async function runDetectBugbotFixIntentWorkflow(
     `DetectBugbotFixIntent: prompt length=${prompt.length}, unresolved findings=${unresolvedFindings.length}. Calling configured findings agent.`,
   );
   const response = await ports.aiRepository.query({
-    configuration: param.ai?.getAgentConfiguration("findings"),
+    configuration: param.ai.getAgentConfiguration("findings"),
     agentId: AGENT_PLAN,
     prompt,
     options: {

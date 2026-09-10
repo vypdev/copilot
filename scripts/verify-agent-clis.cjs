@@ -7,7 +7,7 @@ const { join } = require('node:path');
 
 const checksByProvider = {
   opencode: { name: 'opencode', command: 'opencode', args: ['run', '--help'], credential: ['OPENCODE_API_KEY'], localSession: true },
-  codex: { name: 'codex', command: 'codex', args: ['exec', '--help'], credential: ['CODEX_API_KEY', 'CODEX_ACCESS_TOKEN', 'OPENAI_API_KEY'], localSession: true },
+  codex: { name: 'codex', command: 'codex', args: ['exec', '--help'], credential: ['CODEX_API_KEY'], localSession: true },
   cursor: { name: 'cursor', command: 'agent', args: ['--help'], credential: ['CURSOR_API_KEY'] },
 };
 

@@ -3,7 +3,7 @@ export type PullRequestDescriptionMode = typeof PULL_REQUEST_DESCRIPTION_MODES[n
 export declare const DEFAULT_PULL_REQUEST_DESCRIPTION_MODE: PullRequestDescriptionMode;
 export declare const MANAGED_PULL_REQUEST_DESCRIPTION_START = "<!-- copilot:managed-pr-description -->";
 export declare const MANAGED_PULL_REQUEST_DESCRIPTION_END = "<!-- /copilot:managed-pr-description -->";
-/** Normalizes public configuration while keeping invalid values safe and backwards compatible. */
+/** Normalizes public configuration and keeps invalid values safe. */
 export declare function normalizePullRequestDescriptionMode(value: unknown): PullRequestDescriptionMode;
 export declare function hasManagedPullRequestDescription(body: unknown): boolean;
 /** Renders one bounded Copilot-owned section without taking ownership of the rest of the body. */

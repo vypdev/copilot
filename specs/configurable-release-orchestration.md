@@ -52,7 +52,7 @@ The pre-implementation project workflow documented by this specification:
 1. prepares and commits version/build files on the release branch;
 2. creates the version tag from the release branch;
 3. publishes npm and the GitHub Release;
-4. invokes `deployed_action`; and
+4. runs a second post-publication branch-completion path; and
 5. creates `release -> main` and `release -> development` PRs concurrently.
 
 This has four correctness and reliability problems:
@@ -217,11 +217,9 @@ Allowed values:
   not support merge queues.
 - `create-only`: create/reuse the PR and wait for an authorized person or another
   system to merge it.
-- `legacy-wait`: compatibility mode using the existing bounded poll-and-merge
-  adapter. It is deprecated and MUST NOT be the default.
 
-`merge-timeout` applies only to `legacy-wait`. Native auto-merge, merge queue,
-and create-only modes are event-driven and have no runner wait timeout.
+All PR modes are event-driven and have no runner wait timeout. Checks, reviews,
+branch protection, and merge timing remain owned by GitHub.
 
 #### `reconciliation-backmerge-mode`
 
@@ -351,7 +349,6 @@ The following inputs retain their current meaning:
 - `hotfix-tree`
 - `release-workflow`
 - `hotfix-workflow`
-- `merge-timeout`, only for `legacy-wait`
 - `issues-locale`, used for the issue control center and issue comments
 - `pull-requests-locale`, used for managed PR titles and descriptions
 
@@ -627,9 +624,9 @@ The application layer shall expose semantic ports for:
 
 GitHub GraphQL/REST details remain in provider adapters.
 
-The existing check-run polling adapter remains reachable only through
-`legacy-wait`. New modes MUST use GitHub's mergeability and protection decisions
-instead of reproducing them from Checks API responses.
+No check-run polling or direct post-check merge adapter is part of this design.
+Every mode MUST use GitHub's mergeability and protection decisions instead of
+reproducing them from Checks API responses.
 
 Merge queue support MUST be accompanied by `merge_group` triggers in every
 required GitHub Actions workflow. Setup validation MUST warn or fail when a
@@ -729,8 +726,7 @@ Every invocation shall log and summarize:
 - pending external action, if any; and
 - explicit recovery instructions when blocked.
 
-No invocation should emit repeated 20-second PR check polling logs outside
-`legacy-wait`.
+No invocation should emit repeated PR check polling logs.
 
 ## 16. GitHub product experience and UI/UX
 
@@ -1091,7 +1087,7 @@ libraries, or workflow-specific payload types.
 ### 17.2 Narrow contracts
 
 New orchestration policies MUST receive narrow immutable contracts rather than
-the complete legacy `Execution` aggregate. `Execution` is adapted once at the
+the complete `Execution` aggregate. `Execution` is adapted once at the
 route/composition boundary.
 
 Recommended application contracts include:
@@ -1144,8 +1140,9 @@ expected phase. Concurrent duplicate invocations may repeat safe reads but only
 one can persist a successful phase transition. Side effects are protected by
 deterministic identities and postcondition verification.
 
-Schema migration, future-field preservation, and legacy delegation remain
-separate policies from orchestration.
+Persisted orchestration and configuration readers accept only the current
+schema. Missing, malformed, or different-version state fails closed instead of
+being inferred or transformed by orchestration.
 
 ### 17.6 Executable architecture constraints
 
@@ -1177,7 +1174,7 @@ Minimum distribution:
 | GitHub/repository adapters and port contracts | 12 | PR identity, auto-merge, queue, refs, tag target, reachability, provider error mapping |
 | Workflow/setup contracts | 8 | phase dispatch, permissions, OIDC environment, PAT event delivery, variables, templates |
 | UI/UX, rendering, localization, and sanitization | 10 | all primary states, links, diagrams/fallbacks, en-US/es-ES, bounded comments |
-| Integration/replay/security scenarios | 6 | multi-run lifecycle, concurrent delivery, forged events, strict develop, legacy resume |
+| Integration/replay/security scenarios | 6 | multi-run lifecycle, concurrent delivery, forged events, strict develop, schema rejection |
 | **Total** | **72** | Cases cannot be double-counted between rows |
 
 ### 18.1 Coverage requirements
@@ -1267,7 +1264,7 @@ Update or add:
 - OIDC/trusted publishing prerequisites;
 - protected branch, strict check, auto-merge, and merge-queue guidance;
 - operator recovery for every blocked/partial-publication phase;
-- migration behavior for legacy in-progress releases;
+- strict behavior for absent, malformed, and different-version operation state;
 - issue/PR UI examples for guided, compact, and quiet modes; and
 - a troubleshooting decision tree beginning with the visible orchestration
   phase rather than raw error text.
@@ -1318,8 +1315,8 @@ deviation. Deviations require an explicit update to this specification.
 - Read the values in GitHub and local configuration builders.
 - Add repository Variables to active and setup workflow templates.
 - Snapshot effective values into durable issue orchestration state.
-- Increment the persisted configuration schema and provide migration from schema
-  v2.
+- Define schema v3 as the only accepted persisted configuration and operation
+  contract; reject every other schema without inference.
 
 ### 20.2 Application
 
@@ -1384,19 +1381,21 @@ deviation. Deviations require an explicit update to this specification.
   pass.
 - Run `graphify update .` after implementation.
 
-## 21. Backward compatibility and migration
+## 21. Version boundary, rollout, and rollback
 
-1. Existing issues without orchestration state are migrated lazily.
-2. A legacy release that is already tagged or published MUST be detected and
-   resumed from the first unverified phase; it MUST NOT be forced through a new
-   production-first publication attempt.
-3. `merge-timeout` remains accepted for `legacy-wait` and is ignored with an
-   informational message in event-driven modes.
-4. The current `deployed_action` input remains available during one compatibility
-   period. It delegates to the new state-aware orchestration when state exists
-   and uses clearly marked legacy behavior otherwise.
-5. Setup dry-run shows new Variables and workflow changes before provisioning.
-6. Unknown configuration fields and future schema versions remain preserved.
+1. There is no compatibility window or alternate deployment implementation.
+2. An issue without a valid schema-v3 orchestration block is not resumable and
+   MUST fail with instructions to inspect external artifacts before starting a
+   fresh operation.
+3. Different-version configuration and operation payloads are rejected; fields
+   are neither inferred nor silently preserved.
+4. Setup dry-run shows the complete Variables and workflow changes before
+   provisioning.
+5. Rollout requires the shared continuation and every enabled publisher on the
+   default branch before the first operation starts.
+6. Rollback restores one complete known-good bundle of Action code, setup
+   workflows, active workflows, and current-schema state contracts. It never
+   re-enables a removed deployment path.
 
 ## 22. Acceptance scenarios
 
@@ -1493,7 +1492,7 @@ readability, cover at least the following scenarios.
    typed localization catalogs, and documentation stubs.
 2. Define narrow domain/application/presentation contracts and add executable
    dependency-boundary tests before provider implementation.
-3. Add schema-v3 durable orchestration state and migration tests.
+3. Add strict schema-v3 durable orchestration state and rejection tests.
 4. Add pure planning, transition, lifecycle-label, and presentation-view-model
    policies with exhaustive table-driven tests.
 5. Add managed PR identity and idempotent lookup.
@@ -1510,13 +1509,12 @@ readability, cover at least the following scenarios.
 12. Implement hotfix active-release target policies.
 13. Implement final cleanup, issue completion, bounded notifications, and
     recovery commands.
-14. Add legacy migration/delegation behavior.
-15. Complete the 72-case minimum, UX fixture matrix, race/replay tests, and
+14. Complete the 72-case minimum, UX fixture matrix, race/replay tests, and
     requirement traceability matrix.
-16. Update active workflows, setup templates, user/developer docs, workflow
+15. Update active workflows, setup templates, user/developer docs, workflow
     contracts, and all generated bundles.
-17. Capture the human GitHub UX evidence required by section 18.4.
-18. Run unit, integration, architecture, workflow-contract, documentation, lint,
+16. Capture the human GitHub UX evidence required by section 18.4.
+17. Run unit, integration, architecture, workflow-contract, documentation, lint,
     build, coverage, and Graphify update checks.
 
 ## 24. Definition of done

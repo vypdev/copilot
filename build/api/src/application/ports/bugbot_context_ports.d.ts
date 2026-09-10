@@ -4,6 +4,5 @@ import type { BugbotRuleFileQueryPort } from './bugbot_rule_ports';
 export interface BugbotContextPorts {
     issue: BugbotIssueReadPort;
     pullRequest: BugbotPullRequestReadPort;
-    /** Optional for compatibility with embedders that do not expose a workspace. */
-    rules?: BugbotRuleFileQueryPort;
+    rules: BugbotRuleFileQueryPort;
 }

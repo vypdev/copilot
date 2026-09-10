@@ -18,9 +18,13 @@ class InMemoryReviewProvider {
   async getOpenPullRequestNumbersByHeadBranch() { return [7]; }
   async listPullRequestReviewComments() { return [...this.comments]; }
   async getPullRequestHeadSha() { return this.headSha; }
-  async getChangedFiles() { return [{ filename: 'src/auth.ts', status: 'modified' }]; }
-  async getFilesWithFirstDiffLine() { return [{ path: 'src/auth.ts', firstLine: 10 }]; }
-  async getFilesWithDiffLocations() { return [{ path: 'src/auth.ts', locations: [{ line: 10, side: 'RIGHT' as const }] }]; }
+  async getReviewDiffSnapshot() {
+    return {
+      changes: [{ filename: 'src/auth.ts', status: 'modified', additions: 1, deletions: 0, patch: '@@ -1 +1 @@\n+return token.admin' }],
+      filesWithFirstDiffLine: [{ path: 'src/auth.ts', firstLine: 10 }],
+      filesWithDiffLocations: [{ path: 'src/auth.ts', locations: [{ line: 10, side: 'RIGHT' as const }] }],
+    };
+  }
   async listPullRequestReviewThreadStates() { return { ...this.threadStates }; }
 
   async createReviewWithComments(
@@ -51,7 +55,7 @@ function execution(mode: 'publish' | 'dry-run' = 'publish'): Execution {
     inputs: { eventName: 'pull_request', pull_request: { head: { sha: 'a'.repeat(40) } } },
     pullRequest: { number: 7, head: 'feature/review', action: 'opened' },
     commit: { branch: 'feature/review' }, currentConfiguration: { parentBranch: 'main' }, branches: { development: 'main' },
-    ai: new Ai('', 'model', false, false, [], false, 'low', 20, [], undefined, undefined, { publicationMode: mode, traceRules: true }),
+    ai: new Ai('', 'model', false, [], false, 'low', 20, [], undefined, undefined, { publicationMode: mode, traceRules: true }),
   } as unknown as Execution;
 }
 
@@ -70,7 +74,7 @@ describe('Bugbot review lifecycle E2E contract', () => {
     const telemetry: unknown[] = [];
     const useCase = new DetectPotentialProblemsUseCase(
       { query: jest.fn(async () => responses.shift()) },
-      { issue: provider, pullRequest: provider },
+      { issue: provider, pullRequest: provider, rules: { loadRules: async () => [] } },
       { issueComments: provider, pullRequestComments: provider },
       { issueComments: provider, pullRequestComments: provider },
       { publish: (snapshot) => { telemetry.push(snapshot); } },
@@ -92,7 +96,7 @@ describe('Bugbot review lifecycle E2E contract', () => {
     const provider = new InMemoryReviewProvider();
     const useCase = new DetectPotentialProblemsUseCase(
       { query: jest.fn(async () => ({ findings: [finding()] })) },
-      { issue: provider, pullRequest: provider },
+      { issue: provider, pullRequest: provider, rules: { loadRules: async () => [] } },
       { issueComments: provider, pullRequestComments: provider },
       { issueComments: provider, pullRequestComments: provider },
     );

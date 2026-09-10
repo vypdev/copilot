@@ -24,7 +24,7 @@ function baseParam(overrides: Record<string, unknown> = {}): Execution {
     issueNumber: 42,
     tokens: { token: 'token' },
     currentConfiguration: new Config({}),
-    ai: new Ai('http://localhost:4096', 'opencode/model', false, false, [], false, 'low', 20),
+    ai: new Ai('http://localhost:4096', 'opencode/model', false, [], false, 'low', 20),
     ...overrides,
   } as unknown as Execution;
 }
@@ -38,7 +38,7 @@ describe('RecommendStepsUseCase', () => {
   });
 
   it('returns failure when ai has no opencode model or server URL', async () => {
-    const param = baseParam({ ai: new Ai('', '', false, false, [], false, 'low', 20) });
+    const param = baseParam({ ai: new Ai('', '', false, [], false, 'low', 20) });
     const results = await useCase.invoke(param);
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);

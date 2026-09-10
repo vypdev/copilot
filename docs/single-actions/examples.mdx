@@ -136,23 +136,7 @@ ID so the tag is created at the accepted production SHA:
 
 **Note:** This excerpt belongs inside the supplied workflow's `publish` mode;
 the continuation dispatch supplies both inputs. Do not invent or hard-code an
-operation ID. Calls without schema-v3 state retain the release-branch behavior
-only for compatibility with an older in-flight deployment.
-
-## Workflow: deployed
-
-Resume legacy deployment issue `100` through the compatibility entry point:
-
-```yaml
-- uses: vypdev/copilot@v3
-  with:
-    token: ${{ secrets.PAT }}
-    single-action: deployed_action
-    single-action-issue: "100"
-```
-
-New release and hotfix workflows do not call `deployed_action`; they use the
-four internal deployment actions described in [Available actions](/single-actions/available-actions#internal-deployment-orchestration-actions).
+operation ID. A call without matching durable operation state fails closed.
 
 ## Workflow: publish or update an issue comment
 

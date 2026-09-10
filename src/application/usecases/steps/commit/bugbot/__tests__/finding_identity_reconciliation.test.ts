@@ -12,14 +12,6 @@ describe('finding identity reconciliation', () => {
         expect(findExistingFindingInfo(existing, { id: 'missing' })).toBeUndefined();
     });
 
-    it('keeps exact-id compatibility for legacy markers without local identities', () => {
-        const legacy = { issue: { commentId: 1, resolved: false } };
-        expect(findExistingFindingInfo({ legacy }, {
-            id: 'legacy',
-            fingerprint: 'fp-11111111',
-        })).toBe(legacy);
-    });
-
     it('falls back to semantic identity after a file rename', () => {
         const fallback = { pullRequest: { commentIdentity: 'review-2', pullRequestNumber: 2, resolved: false, semanticFingerprint: 'sf-22222222' } };
         expect(findExistingFindingInfo({ old: fallback }, {

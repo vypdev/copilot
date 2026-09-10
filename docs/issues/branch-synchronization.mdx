@@ -54,12 +54,10 @@ Do not add the normal `COPILOT_BOT_LOGIN` actor gate to this workflow. A synchro
 
 ## Align a branch
 
-An authorized maintainer can run either command in the related issue or PR:
+An authorized maintainer can run this command in the related issue or PR:
 
 ```text
 /copilot sync-branch
-/copilot update-branch
-/copilot updateBranch
 ```
 
 The natural-language form is also supported:
@@ -75,8 +73,6 @@ Options:
 | `--dry-run` | Prepares the merge and reports whether it is clean or conflicted, then aborts without calling the agent or pushing. |
 | `--no-agent` | Allows a clean merge but aborts safely if conflicts occur. |
 | `--from <branch>` or `--from=<branch>` | Uses an explicit parent branch after validating it as a Git ref. |
-
-`update-branch` and the proposed camel-case `updateBranch` spelling are compatibility aliases for the canonical `sync-branch` command.
 
 The command fetches the current remote heads, checks out the working branch, and prepares a no-fast-forward merge. A clean merge proceeds without an agent. Before the push, Copilot runs the configured `bugbot-fix-verify-commands`, verifies that those commands did not mutate the prepared merge, and confirms that neither remote head changed while the operation was running.
 

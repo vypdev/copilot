@@ -8,7 +8,7 @@ const operation = {
 } as DeploymentOperationSnapshot;
 
 describe("validateDeploymentContinuation", () => {
-  it("keeps legacy publication actions compatible when no operation exists", () => {
+  it("allows standalone publication actions when no orchestration operation exists", () => {
     expect(validateDeploymentContinuation(undefined, "", ["publishing"], "")).toBeUndefined();
   });
 

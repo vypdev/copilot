@@ -3,12 +3,6 @@ import { SingleAction } from '../single_action';
 
 describe('SingleAction', () => {
   describe('action type getters', () => {
-    it('isDeployedAction', () => {
-      const s = new SingleAction(ACTIONS.DEPLOYED, '1', '', '', '');
-      expect(s.isDeployedAction).toBe(true);
-      expect(s.isPublishGithubAction).toBe(false);
-    });
-
     it('isPublishGithubAction', () => {
       const s = new SingleAction(ACTIONS.PUBLISH_GITHUB_ACTION, '1', '', '', '');
       expect(s.isPublishGithubAction).toBe(true);

@@ -76,7 +76,7 @@ Graphify -> topology, callers, paths, hubs, impact
 RepoWise  -> complexity, duplication, churn, health, risk
 Tests     -> behavior and contracts
 Source    -> authoritative current implementation
-Git       -> publication and historical evidence
+Git       -> publication and version evidence
 ```
 
 A RepoWise hotspot is not a refactoring instruction. Use Graphify and source
@@ -99,8 +99,8 @@ Current high-degree nodes are headed by logging functions, `Execution`,
 `Result`, `ParamUseCase`, `GithubClientPort`, and semantic ports. Logging is a
 legitimate cross-cutting concern; models and base contracts are monitored for
 responsibility concentration; provider client contracts remain technical and
-outside application behavior. Retired universal facades are no longer current
-god nodes.
+outside application behavior. Universal facade classes are absent from the
+current topology.
 
 Persistent tool warning:
 
@@ -110,16 +110,8 @@ docs.json produces zero nodes
 
 The warning is Graphify input behavior, not a production architecture defect.
 The graph shows current composition roots and application architecture tests as
-first-class nodes. Broad queries also surface historical documents, so current
-source paths must always be verified before acting.
-
-## Historical baseline
-
-The original reconstruction spike contained 2327 nodes and 6764 edges and
-highlighted `Execution`, `GithubClientPort`, `IssueRepository`,
-`RepositoryFactory`, and the former AI facade. Those metrics remain useful only
-as a historical comparison; several named facades no
-longer exist in production and must not be treated as current hotspots.
+first-class nodes. Query results must always be verified against current source
+paths before acting.
 
 ## Privacy and generated artifacts
 

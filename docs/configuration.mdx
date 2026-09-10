@@ -29,7 +29,6 @@ Copilot provides extensive configuration options to customize your workflow. Use
 
     ## AI Features
 
-    - `ai-pull-request-description`: Enable AI-powered automatic updates for pull request descriptions (default: "true"). When enabled, the configured agent CLI fills your repository's pull request template (`.github/pull_request_template.md`) using the issue description and the branch diff. See [Pull Requests → AI-generated PR description](/pull-requests/ai-description).
     - `ai-pull-request-description-mode`: Select the PR body policy: `replace` owns the complete generated body, `append` preserves human text and maintains a Copilot-managed section, `preserve` never updates automatically but allows `/copilot description`, and `disabled` never changes the body. Defaults to `replace`.
     - `issues-locale`: Target locale for issue comments (default: "en-US"). When comments are in another language, the configured agent translates them to this locale. See [Agent CLI configuration](/agents/cli-configuration).
     - `pull-requests-locale`: Target locale for PR review comments (default: "en-US"). Same translation behavior as `issues-locale` but for PR comments.
@@ -110,10 +109,6 @@ Copilot provides extensive configuration options to customize your workflow. Use
     - `emoji-labeled-title`: Enable emoji titles based on labels (default: "true")
     - `commit-prefix-transforms`: Comma-separated list of transforms for commit prefix from branch name (e.g. "replace-slash", "kebab-case"). See README for full list.
     - `reopen-issue-on-push`: Reopen closed issues on new commits (default: "true")
-    - `merge-timeout`: Timeout in seconds for deprecated `legacy-wait` only
-      (default: `600`; `0` disables its artificial timeout). It is accepted but
-      ignored with a warning by `auto`, `auto-merge`, `merge-queue`, and
-      `create-only`.
     - `inactivity-threshold-hours`: Hours without activity before a waiting issue is closed by the scheduled cleanup (default: 168; valid range: 1–8760)
 
     ## Workflow Files
@@ -125,7 +120,7 @@ Copilot provides extensive configuration options to customize your workflow. Use
 
     - `release-reconciliation-strategy`: `production-lineage` (default), `canonical-gitflow`, or `manual`
     - `hotfix-reconciliation-strategy`: `production-lineage` (default), `canonical-gitflow`, or `manual`
-    - `reconciliation-pr-mode`: `auto` (default), `auto-merge`, `merge-queue`, `create-only`, or deprecated `legacy-wait`
+    - `reconciliation-pr-mode`: `auto` (default), `auto-merge`, `merge-queue`, or `create-only`
     - `reconciliation-backmerge-mode`: `auto` (default), `direct`, or `sync-branch`
     - `hotfix-active-release-policy`: `prefer-release` (default), `development`, or `both`
     - `reconciliation-tree`: Safe ephemeral branch prefix (default: `sync`)
@@ -143,8 +138,8 @@ Copilot provides extensive configuration options to customize your workflow. Use
     ## Single Actions
 
     - `single-action`: Single action to run (e.g. `check_progress_action`, `think_action`, `create_release`). See [Single Actions](/single-actions).
-    - `single-action-issue`: Issue number for actions that require one (e.g. `check_progress_action`, `deployed_action`)
-    - `single-action-version`: Version for `create_release` or `create_tag`
+    - `single-action-issue`: Issue number for actions that require one (for example `check_progress_action` and workflow-owned deployment actions)
+    - `single-action-version`: Version for `create_release`, or the version bound to the durable deployment operation used by workflow-owned `create_tag`
     - `single-action-title`: Title for `create_release`
     - `single-action-changelog`: Changelog body for `create_release`
     - `single-action-message`: Markdown body for `publish_issue_comment`
@@ -267,19 +262,20 @@ Types. Each type has a configurable name, description, and color.
 | Question | `issue-type-question` | `issue-type-question-description` | `issue-type-question-color` | `Question` / `gray` |
 | Help | `issue-type-help` | `issue-type-help-description` | `issue-type-help-color` | `Help` / `purple` |
 
-## Persistence & Merging
+## Persistence and current-schema state
 
 Copilot persists certain configuration fields directly in the **GitHub Issue description** as a hidden JSON block. This allows the action to "remember" state across different runs and across issues/PRs.
 
-### Merging Strategy
+### Persistence strategy
 
-When updating the configuration (e.g. after a push or a label change), Copilot follows a protective merging strategy:
-1. **Current State**: The action computes the latest state (branches, types, etc.).
-2. **Persistence**: It reads the existing JSON block from the issue.
-3. **Smart Merge**: It preserves all fields from the stored configuration that are not explicitly overwritten by the current state. This includes `branchConfiguration` and any unknown keys.
-4. **Exclusions**: The `results` field is explicitly excluded from being saved to prevent payload bloat.
+When updating the configuration (for example, after a push or label change), Copilot uses one strict contract:
 
-This ensures that manual configuration or metadata added by other tools is not lost during routine updates.
+1. **Current state**: the action computes the latest supported branch and orchestration state.
+2. **Schema check**: stored state is accepted only when `schemaVersion` is the current version (`3`). A different or missing version is not migrated or inferred.
+3. **Known-field merge**: when a current event has no replacement for a known durable field, the value from valid current-schema state is retained. Unknown keys are discarded.
+4. **Transient exclusion**: `results` is never persisted, which prevents result payloads from accumulating in the issue description.
+
+The hidden block is owned by Copilot. Do not add third-party or manually managed keys to it; they are outside the contract and will be removed on the next write.
 
 ### Persistence failures
 

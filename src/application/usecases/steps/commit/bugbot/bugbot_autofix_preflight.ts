@@ -44,7 +44,7 @@ export async function prepareBugbotAutofix(
         logDebugInfo('No valid unresolved target findings; skipping autofix.');
         return [];
     }
-    const verifyCommands = execution.ai?.getBugbotFixVerifyCommands?.() ?? [];
+    const verifyCommands = execution.ai.getBugbotFixVerifyCommands();
     const prompt = buildBugbotFixPrompt(execution, context, idsToFix, userComment, verifyCommands);
     logDebugInfo(`BugbotAutofix: prompt length=${prompt.length}, target finding ids=${idsToFix.length}, verifyCommands=${verifyCommands.length}.`);
     return {

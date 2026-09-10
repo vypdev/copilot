@@ -15,7 +15,7 @@ function execution(overrides: Record<string, unknown> = {}): any {
         },
         ai: {
             getAgentConfiguration: jest.fn(() => ({ model: 'model', command: 'agent' })),
-            getAiPullRequestDescription: jest.fn(() => false),
+            getPullRequestDescriptionMode: jest.fn(() => 'disabled'),
         },
         ...overrides,
     };
@@ -59,7 +59,7 @@ describe('agent activity policy', () => {
             pullRequest: { number: 12, action: 'edited', commentBody: '' },
             ai: {
                 getAgentConfiguration: jest.fn((task: string) => task === 'planner' ? available : unavailable),
-                getAiPullRequestDescription: jest.fn(() => true),
+                getPullRequestDescriptionMode: jest.fn(() => 'replace'),
             },
         }), 'pull-request')).toBe(false);
     });
@@ -94,7 +94,7 @@ describe('agent activity policy', () => {
         expect(shouldTrackAgentActivity(execution({
             ai: {
                 getAgentConfiguration: jest.fn(() => ({ model: '', command: '' })),
-                getAiPullRequestDescription: jest.fn(() => false),
+                getPullRequestDescriptionMode: jest.fn(() => 'disabled'),
             },
         }), 'issue')).toBe(false);
     });

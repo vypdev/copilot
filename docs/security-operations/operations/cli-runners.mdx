@@ -10,7 +10,7 @@ Copilot uses one provider-specific, headless CLI per run. The provider adapter s
 | Runtime | Headless command | Credential reference |
 | --- | --- | --- |
 | OpenCode | `opencode run --model provider/model [--variant effort]` | Provider credential, for example `OPENAI_API_KEY` |
-| Codex | `codex exec --ephemeral --skip-git-repo-check --model model --config 'model_provider="provider"' -` | `CODEX_API_KEY`, `CODEX_ACCESS_TOKEN`, `OPENAI_API_KEY`, or a controlled local ChatGPT session |
+| Codex | `codex exec --ephemeral --skip-git-repo-check --model model --config 'model_provider="provider"' -` | `CODEX_API_KEY` or a controlled local ChatGPT session |
 | Cursor | `agent -p --output-format text --model model <prompt>` | `CURSOR_API_KEY` |
 
 There is no user-configurable transport setting, managed server lifecycle, SDK, or provider fallback in the current architecture. Additional provider-specific flags can be supplied through the audited command override, but the transport contract remains fixed: Codex must end in `-` and receive the prompt through stdin; OpenCode and Cursor receive one positional prompt argument. Invalid transport shapes fail before the process starts. If the selected runtime is unavailable or fails, the run fails closed.

@@ -7,7 +7,7 @@ import type {
   IssueDescriptionCommandPort,
   IssueDescriptionQueryPort,
 } from "../../../application/ports/issue_description_ports";
-import { Config } from "../../model/config";
+import { Config, requireCurrentConfigurationPayload } from "../../model/config";
 import { ConfigurationHandler } from "../../../manager/description/configuration_handler";
 import { buildConfigurationPayload } from "../../../manager/description/configuration_payload_policy";
 
@@ -22,7 +22,7 @@ export class DeploymentStateRepository implements DeploymentStateStorePort {
     const description = await this.issues.getDescription(query.owner, query.repository, query.issue, query.token);
     const raw = this.block.getContent(description);
     if (!raw) return undefined;
-    return new Config(JSON.parse(raw)).deploymentOrchestration;
+    return new Config(requireCurrentConfigurationPayload(JSON.parse(raw))).deploymentOrchestration;
   }
 
   async save(command: DeploymentStateQuery & { readonly state: DeploymentIssueState }): Promise<void> {

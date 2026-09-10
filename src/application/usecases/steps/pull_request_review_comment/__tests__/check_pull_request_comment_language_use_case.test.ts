@@ -6,9 +6,7 @@ jest.mock('../../../../../utils/logger', () => ({
   logDebugInfo: jest.fn(),
 }));
 
-const translatedKey = `<!-- content_translated
-If you'd like this comment to be translated again, please delete the entire comment, including this message. It will then be processed as a new one.
--->`;
+const translatedKey = '<!-- copilot:translated-comment:v2 -->';
 
 const mockAskAgent = jest.fn();
 const mockUpdateComment = jest.fn();

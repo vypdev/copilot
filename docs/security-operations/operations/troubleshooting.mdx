@@ -39,10 +39,10 @@ This guide helps you resolve common issues you might encounter while using Copil
     - Failed workflow runs
 
     **Solutions:**
-    1. **Timeouts:** Identify the phase before changing a timeout. `merge-timeout`
-       affects only deprecated `legacy-wait`; it cannot fix a pending promotion,
-       environment approval, merge queue, npm visibility wait, or reconciliation
-       PR in the production-first flow.
+    1. **Timeouts:** Identify the phase before changing a job timeout. A pending
+       promotion, environment approval, merge queue, or reconciliation PR is an
+       external GitHub wait and has no release runner to extend. npm visibility
+       has its own bounded polling interval and timeout.
     2. **Network:** Check GitHub API status, verify network access, and monitor rate limits.
     3. **Triggers:** Verify event triggers, workflow conditions, and concurrent executions.
   </Accordion>
@@ -58,7 +58,7 @@ This guide helps you resolve common issues you might encounter while using Copil
        `GITHUB_TOKEN`.
     2. **Promotion pending:** Open the linked production PR and let GitHub own
        required checks, reviews, auto-merge, or merge queue. Do not increase
-       `merge-timeout` and do not publish manually.
+       the pull-request checks and do not publish manually.
     3. **npm `ENEEDAUTH`:** Verify both npm Trusted Publisher records use the
        exact organization, repository, workflow filename, and `npm` Environment;
        ensure **Allowed actions** permits direct `npm publish`, the job runs on
@@ -88,7 +88,7 @@ This guide helps you resolve common issues you might encounter while using Copil
 
     **Solutions:**
     1. Use a **dedicated bot account** for the PAT (e.g. `copilot-bot`) so that the actor (developer) is different from the token user. Then the full pipelines run as expected.
-    2. If you want to run only specific actions when you are the actor, use `single-action` (e.g. `check_progress_action`, `deployed_action`) so the action runs that single action and exits.
+    2. If you want to run only a specific action when you are the actor, use `single-action` (for example `check_progress_action`) so the action runs that command and exits.
 
     See [Authentication](/authentication) for token setup and the note on token user vs. actor.
   </Accordion>

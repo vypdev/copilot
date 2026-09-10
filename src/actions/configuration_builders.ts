@@ -77,8 +77,8 @@ export function buildIssue(branchManagementAlways: boolean, reopenOnPush: boolea
     return new Issue(branchManagementAlways, reopenOnPush, desiredAssigneesCount, inputs);
 }
 
-export function buildPullRequest(desiredAssigneesCount: number, desiredReviewersCount: number, mergeTimeout: number, inputs?: ExecutionInputs): PullRequest {
-    return new PullRequest(desiredAssigneesCount, desiredReviewersCount, mergeTimeout, inputs);
+export function buildPullRequest(desiredAssigneesCount: number, desiredReviewersCount: number, inputs?: ExecutionInputs): PullRequest {
+    return new PullRequest(desiredAssigneesCount, desiredReviewersCount, inputs);
 }
 
 export function buildEmoji(emojiLabeledTitle: boolean, branchManagementEmoji: string): Emoji {

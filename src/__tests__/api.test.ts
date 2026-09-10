@@ -3,7 +3,7 @@ import type { Execution } from '../data/model/execution';
 
 describe('Bugbot public API', () => {
   it('applies request-scoped options, emits telemetry, and restores shared configuration', async () => {
-    const ai = new Ai('', '', false, false, [], false, 'low', 20, [], {
+    const ai = new Ai('', '', false, [], false, 'low', 20, [], {
       findings: { provider: 'codex', model: '', command: '' },
       fixer: { provider: 'codex', model: '', command: '' },
     });

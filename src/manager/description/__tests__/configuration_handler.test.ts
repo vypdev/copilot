@@ -71,7 +71,7 @@ describe('ConfigurationHandler', () => {
     });
 
     it('returns Config when description contains valid config JSON', async () => {
-      const configJson = JSON.stringify({ branchType: 'feature', parentBranch: 'develop' });
+      const configJson = JSON.stringify({ schemaVersion: 3, branchType: 'feature', parentBranch: 'develop' });
       mockGetDescription.mockResolvedValue(descriptionWithConfig(configJson));
 
       const result = await handler.get(configurationQuery());
@@ -103,8 +103,9 @@ describe('ConfigurationHandler', () => {
       expect(updatedDesc).toMatch(/"workingBranch":\s*"feature\/123"/);
     });
 
-    it('preserves all stored keys (including unknown ones) when current has undefined', async () => {
+    it('preserves current-schema fields when an event has no replacement value', async () => {
       const storedJson = JSON.stringify({
+        schemaVersion: 3,
         parentBranch: 'main',
         unknownKey: 'preserve-me',
         branchConfiguration: { name: 'leaf' },
@@ -125,36 +126,13 @@ describe('ConfigurationHandler', () => {
       const fullDesc = mockUpdateDescription.mock.calls[0][3];
       const parsed = JSON.parse(handler.getContent(fullDesc)!.trim());
       expect(parsed.parentBranch).toBe('main');
-      expect(parsed.unknownKey).toBe('preserve-me');
+      expect(parsed.unknownKey).toBeUndefined();
       expect(parsed.branchConfiguration).toEqual({ name: 'leaf' });
-    });
-
-    it('does not downgrade a configuration written by a newer workflow version', async () => {
-      const storedJson = JSON.stringify({
-        schemaVersion: 99,
-        parentBranch: 'main',
-        futurePolicy: { preserve: true },
-      });
-      mockGetDescription.mockResolvedValue(descriptionWithConfig(storedJson));
-      mockUpdateDescription.mockResolvedValue(undefined);
-
-      await handler.update(minimalExecution({
-        currentConfiguration: {
-          branchType: 'feature',
-          parentBranch: undefined,
-          branchConfiguration: undefined,
-        },
-      }));
-
-      const fullDesc = mockUpdateDescription.mock.calls[0][3];
-      const parsed = JSON.parse(handler.getContent(fullDesc)!.trim());
-      expect(parsed.schemaVersion).toBe(99);
-      expect(parsed.futurePolicy).toEqual({ preserve: true });
-      expect(parsed.parentBranch).toBe('main');
     });
 
     it('preserves workingBranch from stored when current workingBranch is undefined (PR edited event)', async () => {
       const storedJson = JSON.stringify({
+        schemaVersion: 3,
         branchType: 'bugfix',
         workingBranch: 'bugfix/319-setup-crash-on-repository-with-no-issues',
         parentBranch: 'develop',
@@ -186,6 +164,7 @@ describe('ConfigurationHandler', () => {
 
     it('always excludes results from the saved payload even if present in stored', async () => {
       const storedJson = JSON.stringify({
+        schemaVersion: 3,
         results: [{ some: 'result' }],
         parentBranch: 'main',
       });

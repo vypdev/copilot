@@ -39,7 +39,7 @@ export class DoUserRequestUseCase implements ParamUseCase<DoUserRequestParam, Re
         const results: Result[] = [];
         const { execution, userComment } = param;
 
-        if (!isAgentConfigurationReady(execution.ai?.getAgentConfiguration('fixer'))) {
+        if (!isAgentConfigurationReady(execution.ai.getAgentConfiguration('fixer'))) {
             logInfo("Agent not configured; skipping user request.");
             return results;
         }
@@ -77,7 +77,7 @@ export class DoUserRequestUseCase implements ParamUseCase<DoUserRequestParam, Re
         logDebugInfo(`DoUserRequest: prompt length=${prompt.length}, user comment length=${commentTrimmed.length}.`);
         logInfo("Running configured build agent to perform user request (changes applied in workspace).");
         const response = await this.aiRepository.fix({
-            configuration: execution.ai?.getAgentConfiguration('fixer'),
+            configuration: execution.ai.getAgentConfiguration('fixer'),
             prompt,
         });
 

@@ -37,7 +37,7 @@ export async function runDetectPotentialProblemsWorkflow(
     const telemetry = new BugbotReviewTelemetry(param);
     const publishTelemetry = async (outcome: BugbotReviewOutcome, category?: string) => {
         const snapshot = telemetry.snapshot(outcome, category);
-        if (param.ai?.getBugbotReviewConfiguration?.().telemetry !== false) {
+        if (param.ai.getBugbotReviewConfiguration().telemetry) {
             try {
                 await dependencies.telemetryPort?.publish(snapshot);
             } catch (error) {
@@ -61,7 +61,7 @@ export async function runDetectPotentialProblemsWorkflow(
             return [];
         }
         if (param.isPullRequest && param.inputs?.pull_request?.draft === true
-            && !param.ai?.getBugbotReviewConfiguration?.().reviewDrafts) {
+            && !param.ai.getBugbotReviewConfiguration().reviewDrafts) {
             return await complete(skippedDraftResult(), 'skipped');
         }
 
@@ -84,7 +84,7 @@ export async function runDetectPotentialProblemsWorkflow(
         if (await telemetry.measure('freshness', () => hasNewerBugbotRevision(param, context, dependencies.contextPorts))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
-        if (param.ai?.getBugbotReviewConfiguration?.().publicationMode === 'dry-run') {
+        if (param.ai.getBugbotReviewConfiguration().publicationMode === 'dry-run') {
             return await complete(dryRunResult(prepared, context), 'dry-run');
         }
         if (prepared.toPublish.length === 0 && prepared.resolvedFindingIds.size === 0) {
@@ -196,7 +196,7 @@ async function resolveContextOptions(
 }
 
 function shouldSkipDetection(param: Execution): boolean {
-    if (!isAgentConfigurationReady(param.ai?.getAgentConfiguration(param.isPullRequest ? 'reviewer' : 'findings'))) {
+    if (!isAgentConfigurationReady(param.ai.getAgentConfiguration(param.isPullRequest ? 'reviewer' : 'findings'))) {
         logDebugInfo('Agent not configured; skipping potential problems detection.');
         return true;
     }

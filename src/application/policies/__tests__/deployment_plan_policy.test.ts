@@ -99,7 +99,8 @@ describe("deployment plan policy", () => {
       .toBe("unsupported");
   });
 
-  it.each(["create-only", "legacy-wait"] as const)("preserves explicit %s mode", (mode) => {
+  it("preserves explicit create-only mode", () => {
+    const mode = "create-only" as const;
     expect(selectPullRequestMode(mode, { autoMergeAllowed: false, mergeQueueRequired: false, immediatelyMergeable: false, requiresStrictStatusChecks: false }))
       .toEqual(expect.objectContaining({ kind: "mode", mode }));
   });

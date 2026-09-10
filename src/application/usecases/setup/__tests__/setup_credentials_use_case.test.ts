@@ -113,13 +113,13 @@ describe('SetupCredentialsUseCase', () => {
             validateCredential: jest.fn().mockResolvedValue({ name: 'OPENAI_API_KEY', status: 'valid', message: 'ok' }),
         };
         const secrets = { list: jest.fn().mockResolvedValue([]), upsertSecrets: jest.fn() };
-        const alternativeGroup = 'agent:codex:openai';
+        const alternativeGroup = 'agent:opencode:openai';
 
         const result = await new SetupCredentialsUseCase(prompt, validation, secrets).collect({
             owner: 'owner', repository: 'repo', setupToken: 'setup-token',
             requirements: [
                 { ...requirement('PAT', 'workflowPat'), alternativeGroups: undefined },
-                { ...requirement('CODEX_ACCESS_TOKEN'), alternativeGroups: [alternativeGroup] },
+                { ...requirement('OPENCODE_API_KEY'), alternativeGroups: [alternativeGroup] },
                 { ...requirement('OPENAI_API_KEY'), alternativeGroups: [alternativeGroup] },
             ],
             manageSecrets: true,
@@ -148,12 +148,7 @@ describe('SetupCredentialsUseCase', () => {
             requirements: [
                 { ...requirement('PAT', 'workflowPat'), alternativeGroups: undefined },
                 {
-                    ...requirement('CODEX_ACCESS_TOKEN'),
-                    alternativeGroups: [alternativeGroup],
-                    runnerAuthenticationGroups: [alternativeGroup],
-                },
-                {
-                    ...requirement('OPENAI_API_KEY'),
+                    ...requirement('CODEX_API_KEY'),
                     alternativeGroups: [alternativeGroup],
                     runnerAuthenticationGroups: [alternativeGroup],
                 },
@@ -163,8 +158,7 @@ describe('SetupCredentialsUseCase', () => {
 
         expect(result.collection.apiKeys).toEqual([]);
         expect(result.checks).toEqual(expect.arrayContaining([
-            expect.objectContaining({ name: 'CODEX_ACCESS_TOKEN', status: 'not_required' }),
-            expect.objectContaining({ name: 'OPENAI_API_KEY', status: 'not_required' }),
+            expect.objectContaining({ name: 'CODEX_API_KEY', status: 'not_required' }),
         ]));
         expect(validation.validateCredential).not.toHaveBeenCalled();
     });
@@ -195,13 +189,9 @@ describe('SetupCredentialsUseCase', () => {
                 },
                 {
                     ...requirement('OPENAI_API_KEY'),
-                    alternativeGroups: [codexGroup, openCodeGroup],
-                    runnerAuthenticationGroups: [codexGroup],
-                },
-                {
-                    ...requirement('OPENCODE_API_KEY'),
                     alternativeGroups: [openCodeGroup],
                 },
+                { ...requirement('OPENCODE_API_KEY'), alternativeGroups: [openCodeGroup] },
             ],
             manageSecrets: true,
         })).rejects.toThrow('At least one of OPENAI_API_KEY or OPENCODE_API_KEY is required');

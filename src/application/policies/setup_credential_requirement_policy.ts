@@ -55,29 +55,26 @@ function addAgentCredentialRequirements(
             alternativeGroup,
         });
     }
-    if (agent.provider === 'codex') addCodexCredentials(requirements, agent, alternativeGroup);
-    if (providerCredential) addModelProviderCredential(requirements, agent, modelProvider, providerCredential, alternativeGroup);
+    if (agent.provider === 'codex') addCodexCredential(requirements, agent, alternativeGroup);
+    if (agent.provider === 'opencode' && providerCredential) {
+        addModelProviderCredential(requirements, agent, modelProvider, providerCredential, alternativeGroup);
+    }
 }
 
-function addCodexCredentials(
+function addCodexCredential(
     requirements: CredentialRequirementCollection,
     agent: SetupAgentRoleConfiguration,
     alternativeGroup: string,
 ): void {
-    for (const [name, description] of [
-        ['CODEX_API_KEY', 'Optional Codex API-key fallback when the target runner has no authenticated Codex session.'],
-        ['CODEX_ACCESS_TOKEN', 'Optional Codex access-token fallback when the target runner has no authenticated Codex session.'],
-    ] as const) {
-        requirements.add({
-            name,
-            kind: 'apiKey',
-            description,
-            provider: 'codex',
-            model: agent.model,
-            alternativeGroup,
-            runnerAuthenticationGroup: alternativeGroup,
-        });
-    }
+    requirements.add({
+        name: 'CODEX_API_KEY',
+        kind: 'apiKey',
+        description: 'Codex API key; omit it only when the target runner has an authenticated Codex session.',
+        provider: 'codex',
+        model: agent.model,
+        alternativeGroup,
+        runnerAuthenticationGroup: alternativeGroup,
+    });
 }
 
 function addModelProviderCredential(
@@ -95,7 +92,6 @@ function addModelProviderCredential(
         model: agent.model,
         alternativeGroup,
         validation: SECRET_BY_MODEL_PROVIDER[modelProvider] ? 'metadata' : 'unverifiable',
-        runnerAuthenticationGroup: agent.provider === 'codex' ? alternativeGroup : undefined,
     });
 }
 

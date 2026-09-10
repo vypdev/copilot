@@ -140,17 +140,7 @@ export class RepositoryVariablesRepository implements SetupRepositoryVariablesPo
         return { created, updated, skipped: 0, errors };
     }
 
-    /** Alias kept separate from Variables so callers cannot accidentally mix the two operations. */
     async upsert(
-        owner: string,
-        repository: string,
-        token: string,
-        variables: readonly { name: string; value: string }[],
-    ): Promise<{ created: number; updated: number; errors: string[] }> {
-        return this.upsertVariables(owner, repository, token, variables);
-    }
-
-    private async upsertVariables(
         owner: string,
         repository: string,
         token: string,

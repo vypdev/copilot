@@ -1,9 +1,9 @@
 ---
-title: Deploy lifecycle and compatibility
-description: How deploy triggers production-first orchestration, when deployed is projected, and how legacy operations are resumed.
+title: Deploy lifecycle
+description: How deploy triggers production-first orchestration and when deployed is projected.
 ---
 
-# Deploy lifecycle and compatibility
+# Deploy lifecycle
 
 The `deploy` label starts a durable, production-first release or hotfix
 operation. The recommended path does not publish first and does not keep a
@@ -54,36 +54,23 @@ direct-merge bypass.
 - The issue closes, when configured, only after every reconciliation target and
   cleanup step completes.
 
-## Internal orchestration actions
+## Workflow-owned deployment actions
 
-The supplied workflows coordinate four internal single actions:
+The supplied workflows coordinate five deployment single actions:
 
 | Action | Owner | Purpose |
 |---|---|---|
+| `create_tag` | Release/hotfix workflow, `publish` mode | Create or verify the immutable version tag at the production SHA accepted by the operation. |
 | `prepare_deployment_action` | Release/hotfix workflow, `prepare` mode | Create or resume durable state and the production promotion PR. |
 | `continue_deployment_action` | `copilot_deployment_orchestration.yml` | Verify a managed closed PR and dispatch the next phase. |
 | `published_deployment_action` | Release/hotfix workflow, `publish` mode | Record verified publication and create reconciliation PRs. |
 | `failed_deployment_action` | Release/hotfix failure job | Persist a retryable publication failure without losing completed facts. |
 
-Do not invoke these manually. They require the exact issue and durable
-`single-action-operation-id`; preparation additionally requires the version,
-title, and changelog. Continuations reject missing, stale, forged, or mismatched
-operation identities.
-
-## `deployed_action` compatibility
-
-`deployed_action` remains accepted for one migration period:
-
-- when schema-v3 deployment state exists, it delegates to the state-aware
-  orchestration path;
-- when an older in-flight issue has no orchestration state, it retains the
-  bounded legacy post-deploy behavior so that the issue can be completed; and
-- new release and hotfix workflows must not use it as their normal publication
-  entry point.
-
-The legacy compatibility path may poll checks and may use `merge-timeout`.
-`merge-timeout` has no effect on `auto`, `auto-merge`, `merge-queue`, or
-`create-only`; those modes delegate waiting and merge enforcement to GitHub.
+Do not invoke these manually. Except for preparation, they require the exact
+issue and durable `single-action-operation-id`; preparation creates that ID and
+requires the version, title, and changelog. `create_tag` also requires the
+matching operation version. All callbacks reject missing, stale, forged, or
+mismatched operation identities.
 
 ## Rollout prerequisite
 

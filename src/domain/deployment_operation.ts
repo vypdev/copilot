@@ -181,7 +181,7 @@ export function isDeploymentOperationSnapshot(value: unknown): value is Deployme
     && RECONCILIATION_STRATEGIES.includes(operation.strategy as ReconciliationStrategy)
     && RECONCILIATION_PR_MODES.includes(operation.prMode as ReconciliationPullRequestMode)
     && (operation.selectedPrMode === undefined
-      || ["auto-merge", "merge-queue", "create-only", "legacy-wait"].includes(operation.selectedPrMode))
+      || ["auto-merge", "merge-queue", "create-only"].includes(operation.selectedPrMode))
     && RECONCILIATION_BACKMERGE_MODES.includes(operation.backmergeMode as ReconciliationBackmergeMode)
     && HOTFIX_ACTIVE_RELEASE_POLICIES.includes(operation.hotfixActiveReleasePolicy as HotfixActiveReleasePolicy)
     && RECONCILIATION_CLEANUP_MODES.includes(operation.cleanup as ReconciliationCleanupMode)

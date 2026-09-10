@@ -1,34 +1,22 @@
 ---
-description: Copilot – coding conventions and where to change things
+description: Current TypeScript and contract-change conventions
 globs: src/**/*.ts
 alwaysApply: false
 ---
 
-# Code Conventions
+# Code conventions
 
-## Logging and constants
+The maintained convention document is `_agent/docs/code-conventions.md`.
 
-- Use **logger**: `logInfo`, `logError`, `logDebugInfo` from `src/utils/logger`. No ad-hoc `console.log`.
-- Use **constants**: `INPUT_KEYS` and `ACTIONS` from `src/utils/constants.ts` for input names and action names. No hardcoded strings for these.
-
-## Adding a new action input
-
-1. **`action.yml`**: Add the input with `description` and `default` (if any).
-2. **`src/utils/constants.ts`**: Add the key to `INPUT_KEYS` (e.g. `NEW_INPUT: 'new-input'`).
-3. **`src/actions/github_action.ts`**: Read the input (e.g. `core.getInput(INPUT_KEYS.NEW_INPUT)`) and pass it into the object used to build `Execution`.
-4. **Optional**: If the CLI must support it, add to `local_action.ts` and the corresponding CLI option.
-
-## Where to change content/descriptions
-
-- **PR description** (template filling, AI content): `src/manager/description/` (configuration_handler, content interfaces).
-- **Hotfix/release changelog** (markdown extraction, formatting): `src/manager/description/markdown_content_hotfix_handler.ts`.
-
-## Build and bundles
-
-- The project uses **`@vercel/ncc`** to bundle the action and CLI. Keep imports and dependencies compatible with ncc (no dynamic requires that ncc cannot see).
-- **Do not** edit or rely on `build/`; it is generated. Run tests and lint only on `src/`.
-
-## Style and lint
-
-- Prefer TypeScript; avoid `any` (lint rule: no-explicit-any).
-- Run `npm run lint` before committing; use `npm run lint:fix` when possible.
+- Application code uses semantic ports and application logging; it must not
+  import runtime loggers, concrete repositories, Octokit, or provider DTOs.
+- Input names come from `src/application/contracts/input_keys.ts`.
+- Single-action names come from `src/data/model/action_types.ts`.
+- Add a new input through `action.yml`, the input contract, its runtime
+  adapters, tests, setup workflows when applicable, and public documentation.
+- Prefer focused policies and ports over aggregate facades or delegating
+  wrappers.
+- Keep code compatible with `@vercel/ncc`; regenerate `build/` with
+  `pnpm build` and never edit generated files directly.
+- Run `pnpm lint`, `pnpm typecheck`, and the proportionate Jest suites before
+  committing.

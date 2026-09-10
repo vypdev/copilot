@@ -53,26 +53,29 @@ function requireFindingIdForMarker(findingId: string): string {
 export function buildMarker(
   findingId: string,
   resolved: boolean,
-  fingerprint?: string,
+  fingerprint: string,
+  semanticFingerprint: string,
   resolution?: BugbotFindingResolution,
-  semanticFingerprint?: string,
 ): string {
-    const safeId = requireFindingIdForMarker(findingId);
-    const safeFingerprint = fingerprint?.match(/^fp-[a-f0-9]{8}$/)?.[0];
-    const safeSemanticFingerprint = semanticFingerprint?.match(/^sf-[a-f0-9]{8}$/)?.[0];
+  const safeId = requireFindingIdForMarker(findingId);
+  const safeFingerprint = fingerprint.match(/^fp-[a-f0-9]{8}$/)?.[0];
+  const safeSemanticFingerprint = semanticFingerprint.match(/^sf-[a-f0-9]{8}$/)?.[0];
+  if (!safeFingerprint || !safeSemanticFingerprint) {
+    throw new ApplicationError('Finding marker requires valid local and semantic fingerprints.', 'validation');
+  }
     const safeResolution = resolved && resolution && ['fixed', 'obsolete', 'dismissed'].includes(resolution)
       ? ` finding_resolution:"${resolution}"`
       : '';
-    return `<!-- ${BUGBOT_MARKER_PREFIX} finding_id:"${safeId}" resolved:${resolved}${safeFingerprint ? ` finding_fingerprint:"${safeFingerprint}"` : ''}${safeSemanticFingerprint ? ` finding_semantic:"${safeSemanticFingerprint}"` : ''}${safeResolution} -->`;
+  return `<!-- ${BUGBOT_MARKER_PREFIX} finding_id:"${safeId}" resolved:${resolved} finding_fingerprint:"${safeFingerprint}" finding_semantic:"${safeSemanticFingerprint}"${safeResolution} -->`;
 }
 
 export function parseMarker(
   body: string | null,
-): Array<{ findingId: string; resolved: boolean; fingerprint?: string; semanticFingerprint?: string; resolution?: BugbotFindingResolution }> {
+): Array<{ findingId: string; resolved: boolean; fingerprint: string; semanticFingerprint: string; resolution?: BugbotFindingResolution }> {
   if (!body) return [];
-  const results: Array<{ findingId: string; resolved: boolean; fingerprint?: string; semanticFingerprint?: string; resolution?: BugbotFindingResolution }> = [];
+  const results: Array<{ findingId: string; resolved: boolean; fingerprint: string; semanticFingerprint: string; resolution?: BugbotFindingResolution }> = [];
   const regex = new RegExp(
-    `<!--\\s*${BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"([^"]+)"\\s+resolved:(true|false)(?:\\s+finding_fingerprint:\\s*"(fp-[a-f0-9]{8})")?(?:\\s+finding_semantic:\\s*"(sf-[a-f0-9]{8})")?(?:\\s+finding_resolution:\\s*"(fixed|obsolete|dismissed)")?\\s*-->`,
+    `<!--\\s*${BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"([^"]+)"\\s+resolved:(true|false)\\s+finding_fingerprint:\\s*"(fp-[a-f0-9]{8})"\\s+finding_semantic:\\s*"(sf-[a-f0-9]{8})"(?:\\s+finding_resolution:\\s*"(fixed|obsolete|dismissed)")?\\s*-->`,
     "g",
   );
   let m: RegExpExecArray | null;
@@ -80,8 +83,8 @@ export function parseMarker(
     results.push({
       findingId: m[1],
       resolved: m[2] === "true",
-      ...(m[3] ? { fingerprint: m[3] } : {}),
-      ...(m[4] ? { semanticFingerprint: m[4] } : {}),
+      fingerprint: m[3],
+      semanticFingerprint: m[4],
       ...(m[5] ? { resolution: m[5] as BugbotFindingResolution } : {}),
     });
   }
@@ -89,7 +92,7 @@ export function parseMarker(
 }
 
 /**
- * Regex to match the marker for a specific finding (same flexible format as parseMarker).
+ * Regex to match the current marker for a specific finding.
  * Finding IDs from external data (comments, API) are length-limited and validated to mitigate ReDoS.
  */
 export function markerRegexForFinding(findingId: string): RegExp {
@@ -98,7 +101,7 @@ export function markerRegexForFinding(findingId: string): RegExp {
     ? safeId
     : safeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(
-    `<!--\\s*${BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"${idForRegex}"\\s+resolved:(?:true|false)(?:\\s+finding_fingerprint:\\s*"fp-[a-f0-9]{8}")?(?:\\s+finding_semantic:\\s*"sf-[a-f0-9]{8}")?(?:\\s+finding_resolution:\\s*"(?:fixed|obsolete|dismissed)")?\\s*-->`,
+    `<!--\\s*${BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"${idForRegex}"\\s+resolved:(?:true|false)\\s+finding_fingerprint:\\s*"fp-[a-f0-9]{8}"\\s+finding_semantic:\\s*"sf-[a-f0-9]{8}"(?:\\s+finding_resolution:\\s*"(?:fixed|obsolete|dismissed)")?\\s*-->`,
     "g",
   );
 }
@@ -114,7 +117,10 @@ export function replaceMarkerInBody(
   replacement?: string,
 ): { updated: string; found: boolean; changed: boolean } {
   const regex = markerRegexForFinding(findingId);
-  const newMarker = replacement ?? buildMarker(findingId, newResolved);
+  const current = parseMarker(body).find((marker) => marker.findingId === findingId);
+  const newMarker = replacement ?? (current
+    ? buildMarker(findingId, newResolved, current.fingerprint, current.semanticFingerprint, current.resolution)
+    : '');
   const found = regex.test(body);
   regex.lastIndex = 0;
   if (!found) return { updated: body, found: false, changed: false };
@@ -164,7 +170,10 @@ export function buildCommentBody(
   const resolvedNote = resolved
     ? "\n\n---\n**Resolved** (no longer reported in latest analysis).\n"
     : "";
-  const marker = buildMarker(finding.id, resolved, finding.fingerprint, resolution, finding.semanticFingerprint);
+  if (!finding.fingerprint || !finding.semanticFingerprint) {
+    throw new ApplicationError('Prepared finding is missing its local identity.', 'validation');
+  }
+  const marker = buildMarker(finding.id, resolved, finding.fingerprint, finding.semanticFingerprint, resolution);
   return `## ${safeTitle}
 
 ${severity}${metadata ? `${metadata}\n\n` : ''}${fileLine}${safeDescription}

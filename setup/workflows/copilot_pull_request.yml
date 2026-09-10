@@ -63,11 +63,9 @@ jobs:
           reopen-issue-on-push: ${{ vars.REOPEN_ISSUE_ON_PUSH || 'true' }}
           desired-assignees-count: ${{ vars.DESIRED_ASSIGNEES_COUNT || '1' }}
           desired-reviewers-count: ${{ vars.DESIRED_REVIEWERS_COUNT || '1' }}
-          merge-timeout: ${{ vars.MERGE_TIMEOUT || '600' }}
           issues-locale: ${{ vars.ISSUES_LOCALE || 'en-US' }}
           pull-requests-locale: ${{ vars.PULL_REQUESTS_LOCALE || 'en-US' }}
           commit-prefix-transforms: ${{ vars.COMMIT_PREFIX_TRANSFORMS || 'replace-slash' }}
-          ai-pull-request-description: ${{ vars.AI_PULL_REQUEST_DESCRIPTION || 'true' }}
           ai-pull-request-description-mode: ${{ vars.AI_PULL_REQUEST_DESCRIPTION_MODE || 'replace' }}
           ai-members-only: ${{ vars.AI_MEMBERS_ONLY || 'false' }}
           ai-include-reasoning: ${{ vars.AI_INCLUDE_REASONING || 'false' }}
@@ -132,5 +130,4 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           CURSOR_API_KEY: ${{ (vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor') && secrets.CURSOR_API_KEY || '' }}
           CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
-          CODEX_ACCESS_TOKEN: ${{ secrets.CODEX_ACCESS_TOKEN }}
           COPILOT_EVIDENCE_TOKEN: ${{ github.token }}

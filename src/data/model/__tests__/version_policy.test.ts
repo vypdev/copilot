@@ -1,10 +1,10 @@
-import { DEFAULT_BASE_VERSION, DEFAULT_INITIAL_TAG, incrementVersion, getLatestVersion } from '../version_utils';
+import { DEFAULT_BASE_VERSION, DEFAULT_INITIAL_TAG, incrementVersion, getLatestVersion } from '../version_policy';
 
-jest.mock('../logger', () => ({
+jest.mock('../../../utils/logger', () => ({
   logDebugInfo: jest.fn(),
 }));
 
-describe('version_utils', () => {
+describe('version policy', () => {
   describe('DEFAULT_BASE_VERSION', () => {
     it('is 1.0.0 for repositories with no existing tags', () => {
       expect(DEFAULT_BASE_VERSION).toBe('1.0.0');

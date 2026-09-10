@@ -26,7 +26,6 @@ export function validateSetupConfiguration(configuration: SetupConfiguration): s
     if (configuration.repository.desiredReviewersCount < 0 || configuration.repository.desiredReviewersCount > 15) {
         errors.push('Desired reviewers must be between 0 and 15.');
     }
-    if (configuration.repository.mergeTimeout < 0) errors.push('Merge timeout cannot be negative.');
     if (!Number.isInteger(configuration.repository.inactivityThresholdHours)
         || configuration.repository.inactivityThresholdHours < 1
         || configuration.repository.inactivityThresholdHours > MAX_INACTIVITY_THRESHOLD_HOURS) {
@@ -44,8 +43,7 @@ export function validateSetupConfiguration(configuration: SetupConfiguration): s
     if (configuration.ai.bugbotOrganizationRules.length > 30_000) {
         errors.push('Bugbot organization rules must be at most 30000 characters.');
     }
-    if (configuration.ai.pullRequestDescriptionMode !== undefined
-        && !['replace', 'append', 'preserve', 'disabled'].includes(configuration.ai.pullRequestDescriptionMode)) {
+    if (!['replace', 'append', 'preserve', 'disabled'].includes(configuration.ai.pullRequestDescriptionMode)) {
         errors.push('Pull-request description mode must be replace, append, preserve, or disabled.');
     }
     if (!['auto', 'always', 'disabled'].includes(configuration.ai.provisioningMode)) {

@@ -1,6 +1,6 @@
 export declare const RECONCILIATION_STRATEGIES: readonly ["production-lineage", "canonical-gitflow", "manual"];
 export type ReconciliationStrategy = (typeof RECONCILIATION_STRATEGIES)[number];
-export declare const RECONCILIATION_PR_MODES: readonly ["auto", "auto-merge", "merge-queue", "create-only", "legacy-wait"];
+export declare const RECONCILIATION_PR_MODES: readonly ["auto", "auto-merge", "merge-queue", "create-only"];
 export type ReconciliationPullRequestMode = (typeof RECONCILIATION_PR_MODES)[number];
 export declare const RECONCILIATION_BACKMERGE_MODES: readonly ["auto", "direct", "sync-branch"];
 export type ReconciliationBackmergeMode = (typeof RECONCILIATION_BACKMERGE_MODES)[number];

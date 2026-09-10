@@ -107,7 +107,7 @@ Document:
 
 - validation and invalid cross-field combinations;
 - precedence and operation-time snapshot/reread behavior;
-- migration, legacy, unknown, and deprecated values;
+- migration, retired, unknown, and deprecated values;
 - one recommended example and one meaningful alternative; and
 - behavior intentionally not configurable.
 

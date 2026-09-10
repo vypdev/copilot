@@ -1,6 +1,5 @@
 /** Supported single-action commands understood by the domain model. */
 export const ACTIONS = {
-    DEPLOYED: 'deployed_action',
     PUBLISH_GITHUB_ACTION: 'publish_github_action',
     CREATE_RELEASE: 'create_release',
     CREATE_TAG: 'create_tag',

@@ -59,7 +59,6 @@ export const INPUT_KEYS = {
     TESTER_COMMAND: 'tester-command',
 
     // AI configuration
-    AI_PULL_REQUEST_DESCRIPTION: 'ai-pull-request-description',
     AI_PULL_REQUEST_DESCRIPTION_MODE: 'ai-pull-request-description-mode',
     AI_MEMBERS_ONLY: 'ai-members-only',
     AI_IGNORE_FILES: 'ai-ignore-files',
@@ -249,6 +248,5 @@ export const INPUT_KEYS = {
     // Pull Request
     PULL_REQUEST_DESIRED_ASSIGNEES_COUNT: 'desired-assignees-count',
     PULL_REQUEST_DESIRED_REVIEWERS_COUNT: 'desired-reviewers-count',
-    PULL_REQUEST_MERGE_TIMEOUT: 'merge-timeout',
 
 } as const;

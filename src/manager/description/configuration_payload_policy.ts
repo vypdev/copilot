@@ -1,4 +1,4 @@
-import { CONFIG_SCHEMA_VERSION, migrateConfigurationPayload } from '../../data/model/config';
+import { CONFIG_SCHEMA_VERSION } from '../../data/model/config';
 
 export interface ConfigurationPayloadContext {
     readonly currentConfiguration: {
@@ -36,15 +36,17 @@ export function buildConfigurationPayload(execution: ConfigurationPayloadContext
         recommendationState: current.recommendationState,
     };
     mergeMissingValues(payload, stored);
-    preserveFutureSchemaVersion(payload, stored);
-    delete payload.results;
     return JSON.stringify(payload, null, 4);
 }
 
 function parseStoredConfiguration(storedRaw: string | undefined): Record<string, unknown> | undefined {
     if (!storedRaw?.trim()) return undefined;
     try {
-        return migrateConfigurationPayload(JSON.parse(storedRaw)).payload;
+        const parsed = JSON.parse(storedRaw);
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+            && (parsed as Record<string, unknown>).schemaVersion === CONFIG_SCHEMA_VERSION
+            ? parsed as Record<string, unknown>
+            : undefined;
     } catch {
         return undefined;
     }
@@ -52,16 +54,7 @@ function parseStoredConfiguration(storedRaw: string | undefined): Record<string,
 
 function mergeMissingValues(payload: Record<string, unknown>, stored: Record<string, unknown> | undefined): void {
     if (!stored) return;
-    for (const key of Object.keys(stored)) {
+    for (const key of Object.keys(payload)) {
         if (payload[key] === undefined && stored[key] !== undefined) payload[key] = stored[key];
-    }
-}
-
-function preserveFutureSchemaVersion(
-    payload: Record<string, unknown>,
-    stored: Record<string, unknown> | undefined,
-): void {
-    if (typeof stored?.schemaVersion === 'number' && stored.schemaVersion > CONFIG_SCHEMA_VERSION) {
-        payload.schemaVersion = stored.schemaVersion;
     }
 }

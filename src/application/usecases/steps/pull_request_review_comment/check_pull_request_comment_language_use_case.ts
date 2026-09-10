@@ -21,7 +21,7 @@ export class CheckPullRequestCommentLanguageUseCase implements ParamUseCase<Exec
             owner: param.owner,
             repo: param.repo,
             token: param.tokens.token,
-            configuration: param.ai?.getAgentConfiguration('findings'),
+            configuration: param.ai.getAgentConfiguration('findings'),
         });
     }
 }

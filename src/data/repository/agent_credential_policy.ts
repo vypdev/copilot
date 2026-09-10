@@ -42,7 +42,7 @@ const MODEL_PROVIDER_CREDENTIALS: Readonly<Record<string, readonly string[]>> = 
 const CLI_CREDENTIALS: Readonly<Record<AgentProvider, readonly string[]>> = {
     opencode: ['OPENCODE_API_KEY'],
     cursor: ['CURSOR_API_KEY'],
-    codex: ['CODEX_API_KEY', 'CODEX_ACCESS_TOKEN', 'OPENAI_API_KEY'],
+    codex: ['CODEX_API_KEY'],
 };
 
 const KNOWN_AGENT_CREDENTIALS = [...new Set([
@@ -85,9 +85,7 @@ export function allowedCredentialVariables(
 ): readonly string[] {
     const selected = selectedModelProviderCredential(modelProvider);
     if (provider === 'cursor') return CLI_CREDENTIALS.cursor;
-    if (provider === 'codex') {
-        return uniqueCredentials([...CLI_CREDENTIALS.codex, ...(selected ? [selected] : [])]);
-    }
+    if (provider === 'codex') return CLI_CREDENTIALS.codex;
     return modelProvider?.trim()
         ? uniqueCredentials([...CLI_CREDENTIALS.opencode, ...(selected ? [selected] : [])])
         : uniqueCredentials([...CLI_CREDENTIALS.opencode, ...COMMON_OPENCODE_CREDENTIALS]);
@@ -95,14 +93,7 @@ export function allowedCredentialVariables(
 
 export function credentialVariables(configuration: AgentConfiguration): readonly string[] {
     if (configuration.provider === 'cursor') return CLI_CREDENTIALS.cursor;
-    if (configuration.provider === 'codex') {
-        return uniqueCredentials([
-            ...CLI_CREDENTIALS.codex,
-            ...(selectedModelProviderCredential(configuration.modelProvider)
-                ? [selectedModelProviderCredential(configuration.modelProvider)!]
-                : []),
-        ]);
-    }
+    if (configuration.provider === 'codex') return CLI_CREDENTIALS.codex;
 
     const modelProvider = configuration.modelProvider?.trim().toLowerCase();
     if (isLocalModelProvider(modelProvider)) return [];

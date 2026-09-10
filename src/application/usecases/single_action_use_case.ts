@@ -10,7 +10,6 @@ export class SingleActionUseCase implements ParamUseCase<Execution, Result[]> {
   taskId: string = "SingleActionUseCase";
 
   constructor(
-    private readonly deployedActionUseCase: ParamUseCase<Execution, Result[]>,
     private readonly publishGithubActionUseCase: ParamUseCase<Execution, Result[]>,
     private readonly createReleaseUseCase: ParamUseCase<Execution, Result[]>,
     private readonly createTagUseCase: ParamUseCase<Execution, Result[]>,
@@ -32,7 +31,7 @@ export class SingleActionUseCase implements ParamUseCase<Execution, Result[]> {
       logWarn(`Single action invoked but not a valid single action: ${param.singleAction.currentSingleAction}. Skipping.`);
       return [];
     }
-    if (isAgentBackedSingleAction(param) && param.ai?.getAiMembersOnly?.()) {
+    if (isAgentBackedSingleAction(param) && param.ai.getAiMembersOnly()) {
       const allowed = Boolean(this.actorAuthorizationPort && await this.actorAuthorizationPort.isActorAllowedToModifyFiles(
         param.owner,
         param.repo,
@@ -45,7 +44,6 @@ export class SingleActionUseCase implements ParamUseCase<Execution, Result[]> {
       }
     }
     return runSingleActionWorkflow(param, this.taskId, {
-      deployedActionUseCase: this.deployedActionUseCase,
       publishGithubActionUseCase: this.publishGithubActionUseCase,
       createReleaseUseCase: this.createReleaseUseCase,
       createTagUseCase: this.createTagUseCase,

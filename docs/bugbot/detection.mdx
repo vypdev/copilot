@@ -46,7 +46,7 @@ is matched case-insensitively and the request is routed to the same review
 flow. On an issue comment, Copilot resolves the branch from the open PR linked
 to the issue. These commands do not invoke autofix and do not modify files.
 
-Explicit reviews accept bounded per-run options, for example `/copilot review effort=high dry-run=true verbose=true suggestions=false`. Unknown keys and values are rejected rather than silently inferred.
+Explicit reviews accept bounded per-run options, for example `/copilot review effort=high dry-run=true trace-rules=true suggested-changes=false`. Unknown keys and values are rejected rather than silently inferred.
 
 You can run Bugbot detection **without pushing**:
 

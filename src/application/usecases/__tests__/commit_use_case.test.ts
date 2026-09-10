@@ -1,5 +1,6 @@
 import { CommitUseCase } from '../commit_use_case';
 import type { Execution } from '../../../data/model/execution';
+import { Ai } from '../../../data/model/ai';
 import { Result } from '../../../data/model/result';
 
 jest.mock('../../../utils/logger', () => ({
@@ -44,6 +45,7 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
       branch: 'feature/123',
     },
     issueNumber: 123,
+    ai: new Ai('', 'model', false, [], false, 'low', 20),
     ...overrides,
   } as unknown as Execution;
 }
@@ -133,7 +135,7 @@ describe('CommitUseCase', () => {
       repo: 'repo',
       actor: 'external-user',
       tokens: { token: 'token' },
-      ai: { getAiMembersOnly: () => true },
+      ai: new Ai('', 'model', true, [], false, 'low', 20),
     });
 
     await useCase.invoke(param);

@@ -322,7 +322,6 @@ function toPullRequestReviewOperationError(error, operation, context) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.analyzeBugbotRevision = analyzeBugbotRevision;
 const bugbot_reconciliation_policy_1 = __nccwpck_require__(8128);
-const bugbot_constants_1 = __nccwpck_require__(1389);
 const logging_ports_1 = __nccwpck_require__(6152);
 const limit_comments_1 = __nccwpck_require__(1643);
 const types_1 = __nccwpck_require__(2632);
@@ -358,7 +357,7 @@ function suppressDismissedFindings(execution, context, prepared) {
         const existing = (0, types_1.findExistingFindingInfo)(context.existingByFindingId, finding);
         return existing?.issue?.resolution !== 'dismissed' && existing?.pullRequest?.resolution !== 'dismissed';
     });
-    const limited = (0, limit_comments_1.applyCommentLimit)(activeFindings, execution.ai?.getBugbotCommentLimit?.() ?? bugbot_constants_1.BUGBOT_MAX_COMMENTS);
+    const limited = (0, limit_comments_1.applyCommentLimit)(activeFindings, execution.ai.getBugbotCommentLimit());
     return { ...prepared, ...limited, activeFindings };
 }
 
@@ -375,10 +374,9 @@ exports.applyDetectedFindings = applyDetectedFindings;
 const prepare_bugbot_findings_1 = __nccwpck_require__(5016);
 const mark_findings_resolved_use_case_1 = __nccwpck_require__(6963);
 const publish_findings_use_case_1 = __nccwpck_require__(8442);
-const bugbot_constants_1 = __nccwpck_require__(1389);
 const pull_request_review_errors_1 = __nccwpck_require__(6445);
 function prepareDetectedFindings(execution, response) {
-    return (0, prepare_bugbot_findings_1.prepareBugbotFindings)(response, execution.ai?.getAiIgnoreFiles?.() ?? [], execution.ai?.getBugbotMinSeverity?.(), execution.ai?.getBugbotCommentLimit?.() ?? bugbot_constants_1.BUGBOT_MAX_COMMENTS);
+    return (0, prepare_bugbot_findings_1.prepareBugbotFindings)(response, execution.ai.getAiIgnoreFiles(), execution.ai.getBugbotMinSeverity(), execution.ai.getBugbotCommentLimit());
 }
 async function applyDetectedFindings(execution, context, prepared, publicationPorts, resolutionPorts) {
     try {
@@ -693,9 +691,7 @@ exports.hasNewerBugbotRevision = hasNewerBugbotRevision;
 function expectedBugbotHeadSha(execution) {
     // Comment-triggered reviews intentionally target the latest remote head:
     // their payload SHA may predate an autofix committed in the same run.
-    // Some embedding clients provide Execution-compatible objects rather than
-    // class instances, so read the canonical input as a compatibility fallback.
-    const eventName = execution.eventName || execution.inputs?.eventName || '';
+    const eventName = execution.eventName;
     const candidate = eventName === 'pull_request'
         ? execution.inputs?.pull_request?.head?.sha
         : eventName === 'workflow_run'
@@ -832,7 +828,7 @@ class BugbotReviewTelemetry {
             this.execution.pullRequest?.number > 0 ? `pr-${this.execution.pullRequest.number}` : 'branch',
             headSha?.slice(0, 12) || String(Number.isFinite(startedAtEpoch) ? startedAtEpoch : this.startedAtMs),
         ].join(':');
-        const agent = this.execution.ai?.getAgentConfiguration?.(this.execution.isPullRequest ? 'reviewer' : 'findings');
+        const agent = this.execution.ai.getAgentConfiguration(this.execution.isPullRequest ? 'reviewer' : 'findings');
         const findingStates = this.context && this.prepared
             ? (0, bugbot_finding_status_policy_1.projectBugbotFindingStatuses)(this.context.existingByFindingId, this.prepared.activeFindings ?? this.prepared.toPublish, this.prepared.resolvedFindingIds, this.prepared.resolvedFindingResolutions).counts
             : undefined;
@@ -842,8 +838,8 @@ class BugbotReviewTelemetry {
             repository: `${this.execution.owner}/${this.execution.repo}`,
             ...(this.execution.pullRequest?.number > 0 ? { pullRequestNumber: this.execution.pullRequest.number } : {}),
             ...(headSha ? { headSha } : {}),
-            publicationMode: this.execution.ai?.getBugbotReviewConfiguration?.().publicationMode ?? 'publish',
-            configuredEffort: this.execution.ai?.getBugbotReviewConfiguration?.().effort ?? 'default',
+            publicationMode: this.execution.ai.getBugbotReviewConfiguration().publicationMode,
+            configuredEffort: this.execution.ai.getBugbotReviewConfiguration().effort,
             ...(agent?.provider ? { agentProvider: agent.provider } : {}),
             ...(agent?.model ? { agentModel: agent.model } : {}),
             startedAt: this.startedAt,
@@ -977,7 +973,7 @@ function buildBugbotPrompt(param, context) {
     const headBranch = param.pullRequest?.head?.trim() || param.commit?.branch || 'unknown';
     const baseBranch = param.currentConfiguration.parentBranch ?? param.branches.development ?? 'develop';
     const previousBlock = context.previousFindingsBlock;
-    const ignorePatterns = param.ai?.getAiIgnoreFiles?.() ?? [];
+    const ignorePatterns = param.ai.getAiIgnoreFiles();
     const ignoreBlock = ignorePatterns.length > 0
         ? (() => {
             const raw = ignorePatterns.join(", ");
@@ -989,7 +985,7 @@ function buildBugbotPrompt(param, context) {
         : "";
     const changes = (context.prContext?.changes ?? [])
         .filter((change) => !(0, file_ignore_1.fileMatchesIgnorePatterns)(change.filename, ignorePatterns));
-    const configuredEffort = param.ai?.getBugbotReviewConfiguration?.().effort ?? 'default';
+    const configuredEffort = param.ai.getBugbotReviewConfiguration().effort;
     const resolvedEffort = (0, review_configuration_1.resolveBugbotReviewEffort)(configuredEffort, {
         files: changes.length,
         additions: changes.reduce((sum, change) => sum + change.additions, 0),
@@ -1207,8 +1203,6 @@ async function loadOpenPullRequestComments(repository, owner, repo, openPrNumber
 }
 async function loadOpenPullRequestThreadStates(repository, owner, repo, openPrNumbers, token) {
     const statesByPullRequest = new Map();
-    if (!repository.listPullRequestReviewThreadStates)
-        return statesByPullRequest;
     await Promise.all(openPrNumbers.map(async (prNumber) => {
         statesByPullRequest.set(prNumber, await repository.listPullRequestReviewThreadStates(owner, repo, prNumber, token));
     }));
@@ -1220,20 +1214,10 @@ async function loadPullRequestContext(repository, owner, repo, openPrNumber, tok
     const prHeadSha = await repository.getPullRequestHeadSha(owner, repo, openPrNumber, token);
     if (!prHeadSha)
         return null;
-    const snapshot = repository.getReviewDiffSnapshot
-        ? await repository.getReviewDiffSnapshot(owner, repo, openPrNumber, token)
-        : undefined;
-    const [prFiles, filesWithLines, filesWithLocations] = snapshot
-        ? [
-            snapshot.changes.map(({ filename, status }) => ({ filename, status })),
-            snapshot.filesWithFirstDiffLine,
-            snapshot.filesWithDiffLocations,
-        ]
-        : await Promise.all([
-            repository.getChangedFiles(owner, repo, openPrNumber, token),
-            repository.getFilesWithFirstDiffLine(owner, repo, openPrNumber, token),
-            repository.getFilesWithDiffLocations?.(owner, repo, openPrNumber, token) ?? Promise.resolve([]),
-        ]);
+    const snapshot = await repository.getReviewDiffSnapshot(owner, repo, openPrNumber, token);
+    const prFiles = snapshot.changes.map(({ filename, status }) => ({ filename, status }));
+    const filesWithLines = snapshot.filesWithFirstDiffLine;
+    const filesWithLocations = snapshot.filesWithDiffLocations;
     const pathToFirstDiffLine = Object.fromEntries(filesWithLines.map(({ path, firstLine }) => [path, firstLine]));
     const pathToDiffLocations = Object.fromEntries(filesWithLocations.map(({ path, locations }) => [path, locations]));
     return {
@@ -1241,7 +1225,7 @@ async function loadPullRequestContext(repository, owner, repo, openPrNumber, tok
         prFiles,
         pathToFirstDiffLine,
         pathToDiffLocations,
-        ...(snapshot ? { changes: snapshot.changes } : {}),
+        changes: snapshot.changes,
     };
 }
 async function loadBugbotContext(param, options, ports) {
@@ -1271,17 +1255,17 @@ async function loadBugbotContext(param, options, ports) {
     const previousFindings = (0, bugbot_finding_context_1.collectPreviousBugbotFindings)(parsedComments.issueComments, parsedComments.existingByFindingId, parsedComments.prFindingIdToBody);
     const boundedPreviousFindings = (0, bugbot_finding_context_1.limitPreviousBugbotFindings)(previousFindings);
     const previousFindingsBlock = (0, bugbot_finding_context_1.buildPreviousFindingsBlock)(previousFindings);
-    const ignorePatterns = param.ai?.getAiIgnoreFiles?.() ?? [];
+    const ignorePatterns = param.ai.getAiIgnoreFiles();
     const reviewDiffBlock = (0, bugbot_review_context_1.buildReviewDiffBlock)(prContext, ignorePatterns);
     const reviewConversationBlock = (0, bugbot_review_context_1.buildReviewConversationBlock)(issueComments, pullRequestComments, param.tokenUser);
     const unresolvedFindingsWithBody = boundedPreviousFindings.map((finding) => ({
         id: finding.id,
         fullBody: finding.fullBody,
     }));
-    const repositoryRules = await ports.rules?.loadRules(prContext?.prFiles
+    const repositoryRules = await ports.rules.loadRules(prContext?.prFiles
         .map((file) => file.filename)
-        .filter((file) => !(0, file_ignore_1.fileMatchesIgnorePatterns)(file, ignorePatterns)) ?? []) ?? [];
-    const ruleSet = (0, bugbot_review_rules_1.buildBugbotReviewRuleSet)(param.ai?.getBugbotReviewConfiguration?.().organizationRules ?? [], repositoryRules);
+        .filter((file) => !(0, file_ignore_1.fileMatchesIgnorePatterns)(file, ignorePatterns)) ?? []);
+    const ruleSet = (0, bugbot_review_rules_1.buildBugbotReviewRuleSet)(param.ai.getBugbotReviewConfiguration().organizationRules, repositoryRules);
     (0, logging_ports_1.logDebugInfo)(`LoadBugbotContext: issue #${issueNumber}, branch ${headBranch}, open PRs=${openPrNumbers.length}, existing findings=${Object.keys(parsedComments.existingByFindingId).length}, unresolved with body=${unresolvedFindingsWithBody.length}, diff files=${prContext?.changes?.length ?? prContext?.prFiles.length ?? 0}, diff prompt chars=${reviewDiffBlock.length}, conversation chars=${reviewConversationBlock.length}.`);
     return {
         existingByFindingId: parsedComments.existingByFindingId,
@@ -1447,34 +1431,37 @@ function requireFindingIdForMarker(findingId) {
     }
     return safeId;
 }
-function buildMarker(findingId, resolved, fingerprint, resolution, semanticFingerprint) {
+function buildMarker(findingId, resolved, fingerprint, semanticFingerprint, resolution) {
     const safeId = requireFindingIdForMarker(findingId);
-    const safeFingerprint = fingerprint?.match(/^fp-[a-f0-9]{8}$/)?.[0];
-    const safeSemanticFingerprint = semanticFingerprint?.match(/^sf-[a-f0-9]{8}$/)?.[0];
+    const safeFingerprint = fingerprint.match(/^fp-[a-f0-9]{8}$/)?.[0];
+    const safeSemanticFingerprint = semanticFingerprint.match(/^sf-[a-f0-9]{8}$/)?.[0];
+    if (!safeFingerprint || !safeSemanticFingerprint) {
+        throw new application_error_1.ApplicationError('Finding marker requires valid local and semantic fingerprints.', 'validation');
+    }
     const safeResolution = resolved && resolution && ['fixed', 'obsolete', 'dismissed'].includes(resolution)
         ? ` finding_resolution:"${resolution}"`
         : '';
-    return `<!-- ${bugbot_constants_1.BUGBOT_MARKER_PREFIX} finding_id:"${safeId}" resolved:${resolved}${safeFingerprint ? ` finding_fingerprint:"${safeFingerprint}"` : ''}${safeSemanticFingerprint ? ` finding_semantic:"${safeSemanticFingerprint}"` : ''}${safeResolution} -->`;
+    return `<!-- ${bugbot_constants_1.BUGBOT_MARKER_PREFIX} finding_id:"${safeId}" resolved:${resolved} finding_fingerprint:"${safeFingerprint}" finding_semantic:"${safeSemanticFingerprint}"${safeResolution} -->`;
 }
 function parseMarker(body) {
     if (!body)
         return [];
     const results = [];
-    const regex = new RegExp(`<!--\\s*${bugbot_constants_1.BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"([^"]+)"\\s+resolved:(true|false)(?:\\s+finding_fingerprint:\\s*"(fp-[a-f0-9]{8})")?(?:\\s+finding_semantic:\\s*"(sf-[a-f0-9]{8})")?(?:\\s+finding_resolution:\\s*"(fixed|obsolete|dismissed)")?\\s*-->`, "g");
+    const regex = new RegExp(`<!--\\s*${bugbot_constants_1.BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"([^"]+)"\\s+resolved:(true|false)\\s+finding_fingerprint:\\s*"(fp-[a-f0-9]{8})"\\s+finding_semantic:\\s*"(sf-[a-f0-9]{8})"(?:\\s+finding_resolution:\\s*"(fixed|obsolete|dismissed)")?\\s*-->`, "g");
     let m;
     while ((m = regex.exec(body)) !== null) {
         results.push({
             findingId: m[1],
             resolved: m[2] === "true",
-            ...(m[3] ? { fingerprint: m[3] } : {}),
-            ...(m[4] ? { semanticFingerprint: m[4] } : {}),
+            fingerprint: m[3],
+            semanticFingerprint: m[4],
             ...(m[5] ? { resolution: m[5] } : {}),
         });
     }
     return results;
 }
 /**
- * Regex to match the marker for a specific finding (same flexible format as parseMarker).
+ * Regex to match the current marker for a specific finding.
  * Finding IDs from external data (comments, API) are length-limited and validated to mitigate ReDoS.
  */
 function markerRegexForFinding(findingId) {
@@ -1482,7 +1469,7 @@ function markerRegexForFinding(findingId) {
     const idForRegex = SAFE_FINDING_ID_REGEX_CHARS.test(safeId)
         ? safeId
         : safeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return new RegExp(`<!--\\s*${bugbot_constants_1.BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"${idForRegex}"\\s+resolved:(?:true|false)(?:\\s+finding_fingerprint:\\s*"fp-[a-f0-9]{8}")?(?:\\s+finding_semantic:\\s*"sf-[a-f0-9]{8}")?(?:\\s+finding_resolution:\\s*"(?:fixed|obsolete|dismissed)")?\\s*-->`, "g");
+    return new RegExp(`<!--\\s*${bugbot_constants_1.BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"${idForRegex}"\\s+resolved:(?:true|false)\\s+finding_fingerprint:\\s*"fp-[a-f0-9]{8}"\\s+finding_semantic:\\s*"sf-[a-f0-9]{8}"(?:\\s+finding_resolution:\\s*"(?:fixed|obsolete|dismissed)")?\\s*-->`, "g");
 }
 /**
  * Find the marker for this finding in body (using same pattern as parseMarker) and replace it.
@@ -1490,7 +1477,10 @@ function markerRegexForFinding(findingId) {
  */
 function replaceMarkerInBody(body, findingId, newResolved, replacement) {
     const regex = markerRegexForFinding(findingId);
-    const newMarker = replacement ?? buildMarker(findingId, newResolved);
+    const current = parseMarker(body).find((marker) => marker.findingId === findingId);
+    const newMarker = replacement ?? (current
+        ? buildMarker(findingId, newResolved, current.fingerprint, current.semanticFingerprint, current.resolution)
+        : '');
     const found = regex.test(body);
     regex.lastIndex = 0;
     if (!found)
@@ -1534,7 +1524,10 @@ function buildCommentBody(finding, resolved, resolution, options = {}) {
     const resolvedNote = resolved
         ? "\n\n---\n**Resolved** (no longer reported in latest analysis).\n"
         : "";
-    const marker = buildMarker(finding.id, resolved, finding.fingerprint, resolution, finding.semanticFingerprint);
+    if (!finding.fingerprint || !finding.semanticFingerprint) {
+        throw new application_error_1.ApplicationError('Prepared finding is missing its local identity.', 'validation');
+    }
+    const marker = buildMarker(finding.id, resolved, finding.fingerprint, finding.semanticFingerprint, resolution);
     return `## ${safeTitle}
 
 ${severity}${metadata ? `${metadata}\n\n` : ''}${fileLine}${safeDescription}
@@ -1879,7 +1872,7 @@ class PullRequestReviewCommentPublisher {
     }
     async publish(finding, existing) {
         const { prContext, openPrNumber, execution } = this.options;
-        const allowSuggestedChanges = execution.ai?.getBugbotReviewConfiguration?.().suggestedChanges !== false;
+        const allowSuggestedChanges = execution.ai.getBugbotReviewConfiguration().suggestedChanges;
         if (existing?.pullRequest != null &&
             existing.pullRequest.pullRequestNumber === openPrNumber) {
             // Existing comments do not carry enough anchor metadata to prove that a
@@ -1923,9 +1916,9 @@ class PullRequestReviewCommentPublisher {
         if (this.findingsToCreate.length === 0 && overflowCount === 0)
             return;
         const { repository, execution, openPrNumber, prContext } = this.options;
-        await repository.createReviewWithComments(execution.owner, execution.repo, openPrNumber, prContext.prHeadSha, buildReviewSummary(this.findingsToCreate, this.commentsToCreate.length, this.unanchoredBodies, overflowCount, overflowTitles, this.options.watermark, execution.ai?.getBugbotReviewConfiguration?.().traceRules === true
+        await repository.createReviewWithComments(execution.owner, execution.repo, openPrNumber, prContext.prHeadSha, buildReviewSummary(this.findingsToCreate, this.commentsToCreate.length, this.unanchoredBodies, overflowCount, overflowTitles, this.options.watermark, execution.ai.getBugbotReviewConfiguration().traceRules
             ? this.options.ruleSources ?? []
-            : [], execution.ai?.getBugbotReviewConfiguration?.().traceRules === true
+            : [], execution.ai.getBugbotReviewConfiguration().traceRules
             ? this.options.omittedRuleCount ?? 0
             : 0), this.commentsToCreate, execution.tokens.token);
     }
@@ -1936,9 +1929,9 @@ function resolveReviewAnchor(reportedLine, reportedEndLine, reportedPath, contex
         if (reportedPath && context.pathToFirstDiffLine[reportedPath] != null) {
             return { path: reportedPath, subjectType: 'line', line: context.pathToFirstDiffLine[reportedPath], side: 'RIGHT' };
         }
-        const legacyFallback = Object.entries(context.pathToFirstDiffLine)[0];
-        return legacyFallback
-            ? { path: legacyFallback[0], subjectType: 'line', line: legacyFallback[1], side: 'RIGHT' }
+        const firstAvailableLocation = Object.entries(context.pathToFirstDiffLine)[0];
+        return firstAvailableLocation
+            ? { path: firstAvailableLocation[0], subjectType: 'line', line: firstAvailableLocation[1], side: 'RIGHT' }
             : undefined;
     }
     if (reportedPath) {
@@ -2021,7 +2014,7 @@ const agent_task_policy_1 = __nccwpck_require__(5712);
 const schema_1 = __nccwpck_require__(6808);
 async function queryBugbotFindings(repository, execution, prompt) {
     return repository.query({
-        configuration: execution.ai?.getAgentConfiguration(execution.isPullRequest ? 'reviewer' : 'findings'),
+        configuration: execution.ai.getAgentConfiguration(execution.isPullRequest ? 'reviewer' : 'findings'),
         agentId: agent_task_policy_1.AGENT_PLAN,
         prompt,
         options: {
@@ -2056,7 +2049,7 @@ async function resolveIssueFinding(repository, resolution) {
     if (marker == null || marker.resolved)
         return;
     const reason = resolution.resolution ?? 'fixed';
-    const replacement = `${resolvedNote(reason)}${(0, marker_1.buildMarker)(resolution.findingId, true, marker.fingerprint, reason, marker.semanticFingerprint)}`;
+    const replacement = `${resolvedNote(reason)}${(0, marker_1.buildMarker)(resolution.findingId, true, marker.fingerprint, marker.semanticFingerprint, reason)}`;
     const replaced = (0, marker_1.replaceMarkerInBody)(body, resolution.findingId, true, replacement);
     if (!replaced.found || !replaced.changed)
         return;
@@ -2095,7 +2088,7 @@ async function resolvePullRequestFinding(repository, resolution) {
     if (marker.resolved)
         return;
     const reason = resolution.resolution ?? 'fixed';
-    const replacement = `${resolvedNote(reason)}${(0, marker_1.buildMarker)(resolution.findingId, true, marker.fingerprint, reason, marker.semanticFingerprint)}`;
+    const replacement = `${resolvedNote(reason)}${(0, marker_1.buildMarker)(resolution.findingId, true, marker.fingerprint, marker.semanticFingerprint, reason)}`;
     const replaced = (0, marker_1.replaceMarkerInBody)(comment.body, resolution.findingId, true, replacement);
     if (!replaced.found || !replaced.changed)
         return;
@@ -2327,9 +2320,6 @@ function identitiesAreCompatible(existing, finding) {
         existing.issue?.semanticFingerprint,
         existing.pullRequest?.semanticFingerprint,
     ].filter(Boolean);
-    // Legacy markers had no local identities, so preserve their exact-id migration path.
-    if (existingFingerprints.length === 0 && existingSemanticFingerprints.length === 0)
-        return true;
     return (finding.fingerprint !== undefined && existingFingerprints.includes(finding.fingerprint))
         || (finding.semanticFingerprint !== undefined
             && existingSemanticFingerprints.includes(finding.semanticFingerprint));
@@ -2394,7 +2384,7 @@ async function runDetectPotentialProblemsWorkflow(param, dependencies) {
     const telemetry = new bugbot_review_telemetry_1.BugbotReviewTelemetry(param);
     const publishTelemetry = async (outcome, category) => {
         const snapshot = telemetry.snapshot(outcome, category);
-        if (param.ai?.getBugbotReviewConfiguration?.().telemetry !== false) {
+        if (param.ai.getBugbotReviewConfiguration().telemetry) {
             try {
                 await dependencies.telemetryPort?.publish(snapshot);
             }
@@ -2419,7 +2409,7 @@ async function runDetectPotentialProblemsWorkflow(param, dependencies) {
             return [];
         }
         if (param.isPullRequest && param.inputs?.pull_request?.draft === true
-            && !param.ai?.getBugbotReviewConfiguration?.().reviewDrafts) {
+            && !param.ai.getBugbotReviewConfiguration().reviewDrafts) {
             return await complete(skippedDraftResult(), 'skipped');
         }
         const contextOptions = await resolveContextOptions(param, dependencies.contextPorts);
@@ -2441,7 +2431,7 @@ async function runDetectPotentialProblemsWorkflow(param, dependencies) {
         if (await telemetry.measure('freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(param, context, dependencies.contextPorts))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
-        if (param.ai?.getBugbotReviewConfiguration?.().publicationMode === 'dry-run') {
+        if (param.ai.getBugbotReviewConfiguration().publicationMode === 'dry-run') {
             return await complete(dryRunResult(prepared, context), 'dry-run');
         }
         if (prepared.toPublish.length === 0 && prepared.resolvedFindingIds.size === 0) {
@@ -2525,7 +2515,7 @@ async function resolveContextOptions(param, contextPorts) {
     return branch ? { branchOverride: branch } : null;
 }
 function shouldSkipDetection(param) {
-    if (!(0, agent_1.isAgentConfigurationReady)(param.ai?.getAgentConfiguration(param.isPullRequest ? 'reviewer' : 'findings'))) {
+    if (!(0, agent_1.isAgentConfigurationReady)(param.ai.getAgentConfiguration(param.isPullRequest ? 'reviewer' : 'findings'))) {
         (0, logging_ports_1.logDebugInfo)('Agent not configured; skipping potential problems detection.');
         return true;
     }
@@ -2602,11 +2592,10 @@ const agent_command_1 = __nccwpck_require__(7923);
 const pull_request_description_1 = __nccwpck_require__(5315);
 const review_configuration_1 = __nccwpck_require__(3994);
 class Ai {
-    constructor(_configurationSource, model, aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotMinSeverity, bugbotCommentLimit, bugbotFixVerifyCommands = [], agentTasks = {
+    constructor(_configurationSource, model, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotMinSeverity, bugbotCommentLimit, bugbotFixVerifyCommands = [], agentTasks = {
         findings: { provider: 'codex', modelProvider: 'openai', model, command: (0, agent_command_1.defaultAgentCommand)({ provider: 'codex', modelProvider: 'openai', model }) },
         fixer: { provider: 'codex', modelProvider: 'openai', model, command: (0, agent_command_1.defaultAgentCommand)({ provider: 'codex', modelProvider: 'openai', model }) },
     }, pullRequestDescriptionMode = pull_request_description_1.DEFAULT_PULL_REQUEST_DESCRIPTION_MODE, bugbotReviewConfiguration = review_configuration_1.DEFAULT_BUGBOT_REVIEW_CONFIGURATION) {
-        this.aiPullRequestDescription = aiPullRequestDescription;
         this.aiMembersOnly = aiMembersOnly;
         this.aiIgnoreFiles = aiIgnoreFiles;
         this.aiIncludeReasoning = aiIncludeReasoning;
@@ -2616,9 +2605,6 @@ class Ai {
         this.agentTasks = agentTasks;
         this.pullRequestDescriptionMode = (0, pull_request_description_1.normalizePullRequestDescriptionMode)(pullRequestDescriptionMode);
         this.bugbotReviewConfiguration = (0, review_configuration_1.normalizeBugbotReviewConfiguration)(bugbotReviewConfiguration);
-    }
-    getAiPullRequestDescription() {
-        return this.aiPullRequestDescription;
     }
     getPullRequestDescriptionMode() {
         return this.pullRequestDescriptionMode;
@@ -2722,52 +2708,26 @@ exports.Commit = Commit;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Config = exports.CONFIG_SCHEMA_VERSION = void 0;
-exports.migrateConfigurationPayload = migrateConfigurationPayload;
+exports.requireCurrentConfigurationPayload = requireCurrentConfigurationPayload;
 const branch_configuration_1 = __nccwpck_require__(1934);
 const recommendation_state_1 = __nccwpck_require__(8514);
 const model_input_1 = __nccwpck_require__(4637);
 const deployment_operation_1 = __nccwpck_require__(2730);
 /** Version of the durable configuration contract stored in issue/PR content. */
 exports.CONFIG_SCHEMA_VERSION = 3;
-/**
- * Normalizes persisted configuration without silently losing fields from a
- * newer installation. Unknown keys are deliberately retained so a downgrade
- * or a mixed-version workflow can round-trip data safely.
- */
-function migrateConfigurationPayload(value) {
-    const original = { ...(0, model_input_1.asModelInput)(value) };
-    const sourceVersion = readSchemaVersion(original['schemaVersion']);
-    if (sourceVersion > exports.CONFIG_SCHEMA_VERSION) {
-        return {
-            payload: original,
-            sourceVersion,
-            migrated: false,
-            futureVersion: true,
-        };
+/** Accepts only the currently supported durable configuration contract. */
+function requireCurrentConfigurationPayload(value) {
+    const input = (0, model_input_1.asModelInput)(value);
+    if (input.schemaVersion !== exports.CONFIG_SCHEMA_VERSION) {
+        throw new Error(`Unsupported configuration schema. Expected ${exports.CONFIG_SCHEMA_VERSION}.`);
     }
-    const payload = { ...original };
-    const hadTransientResults = Object.prototype.hasOwnProperty.call(payload, 'results');
-    delete payload.results;
-    if (payload.branchConfiguration === null)
-        delete payload.branchConfiguration;
-    if (!(0, recommendation_state_1.isRecommendationState)(payload.recommendationState))
-        delete payload.recommendationState;
-    payload.schemaVersion = exports.CONFIG_SCHEMA_VERSION;
-    return {
-        payload,
-        sourceVersion,
-        migrated: sourceVersion !== exports.CONFIG_SCHEMA_VERSION || hadTransientResults,
-        futureVersion: false,
-    };
-}
-function readSchemaVersion(value) {
-    return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : 0;
+    return input;
 }
 class Config {
     constructor(data) {
         this.results = [];
-        const input = (0, model_input_1.asModelInput)(migrateConfigurationPayload(data).payload);
-        this.schemaVersion = readSchemaVersion(input.schemaVersion) || exports.CONFIG_SCHEMA_VERSION;
+        const input = (0, model_input_1.asModelInput)(data);
+        this.schemaVersion = exports.CONFIG_SCHEMA_VERSION;
         this.branchType = (0, model_input_1.readString)(input, 'branchType');
         this.hotfixOriginBranch = (0, model_input_1.readOptionalString)(input, 'hotfixOriginBranch');
         this.hotfixBranch = (0, model_input_1.readOptionalString)(input, 'hotfixBranch');
@@ -3034,11 +2994,7 @@ class Result {
         this.success = data['success'] ?? false;
         this.executed = data['executed'] ?? false;
         this.steps = Array.isArray(data.steps) ? data.steps : [];
-        const rawErrors = Array.isArray(data.errors)
-            ? data.errors
-            : data.error === undefined
-                ? []
-                : [data.error];
+        const rawErrors = Array.isArray(data.errors) ? data.errors : [];
         this.errors = rawErrors.map(normalizeError);
         this.payload = data.payload;
         this.reminders = Array.isArray(data.reminders) ? data.reminders : [];
@@ -3276,7 +3232,6 @@ exports.RECONCILIATION_PR_MODES = [
     "auto-merge",
     "merge-queue",
     "create-only",
-    "legacy-wait",
 ];
 exports.RECONCILIATION_BACKMERGE_MODES = [
     "auto",
@@ -3478,7 +3433,7 @@ function isDeploymentOperationSnapshot(value) {
         && deployment_configuration_1.RECONCILIATION_STRATEGIES.includes(operation.strategy)
         && deployment_configuration_1.RECONCILIATION_PR_MODES.includes(operation.prMode)
         && (operation.selectedPrMode === undefined
-            || ["auto-merge", "merge-queue", "create-only", "legacy-wait"].includes(operation.selectedPrMode))
+            || ["auto-merge", "merge-queue", "create-only"].includes(operation.selectedPrMode))
         && deployment_configuration_1.RECONCILIATION_BACKMERGE_MODES.includes(operation.backmergeMode)
         && deployment_configuration_1.HOTFIX_ACTIVE_RELEASE_POLICIES.includes(operation.hotfixActiveReleasePolicy)
         && deployment_configuration_1.RECONCILIATION_CLEANUP_MODES.includes(operation.cleanup)
@@ -3637,7 +3592,7 @@ exports.PULL_REQUEST_DESCRIPTION_MODES = [
 exports.DEFAULT_PULL_REQUEST_DESCRIPTION_MODE = 'replace';
 exports.MANAGED_PULL_REQUEST_DESCRIPTION_START = '<!-- copilot:managed-pr-description -->';
 exports.MANAGED_PULL_REQUEST_DESCRIPTION_END = '<!-- /copilot:managed-pr-description -->';
-/** Normalizes public configuration while keeping invalid values safe and backwards compatible. */
+/** Normalizes public configuration and keeps invalid values safe. */
 function normalizePullRequestDescriptionMode(value) {
     const normalized = String(value ?? '').trim().toLowerCase();
     return exports.PULL_REQUEST_DESCRIPTION_MODES.includes(normalized)
@@ -4835,7 +4790,6 @@ const TASK_EMOJI = {
     RemoveIssueBranchesUseCase: '🧹',
     RemoveNotNeededBranchesUseCase: '🧹',
     DeployAddedUseCase: '🏷️',
-    DeployedAddedUseCase: '🏷️',
     MoveIssueToInProgressUseCase: '📥',
     UpdateIssueTypeUseCase: '🏷️',
     // Commit steps
@@ -4861,7 +4815,6 @@ const TASK_EMOJI = {
     CreateReleaseUseCase: '🎉',
     CreateTagUseCase: '🏷️',
     PublishGithubActionUseCase: '📦',
-    DeployedActionUseCase: '🚀',
     InitialSetupUseCase: '🛠️',
 };
 const DEFAULT_EMOJI = '▶️';

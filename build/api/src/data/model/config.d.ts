@@ -4,18 +4,8 @@ import { Result } from "./result";
 import { type DeploymentOperationSnapshot } from '../../domain/deployment_operation';
 /** Version of the durable configuration contract stored in issue/PR content. */
 export declare const CONFIG_SCHEMA_VERSION = 3;
-export interface ConfigurationMigrationResult {
-    readonly payload: Record<string, unknown>;
-    readonly sourceVersion: number;
-    readonly migrated: boolean;
-    readonly futureVersion: boolean;
-}
-/**
- * Normalizes persisted configuration without silently losing fields from a
- * newer installation. Unknown keys are deliberately retained so a downgrade
- * or a mixed-version workflow can round-trip data safely.
- */
-export declare function migrateConfigurationPayload(value: unknown): ConfigurationMigrationResult;
+/** Accepts only the currently supported durable configuration contract. */
+export declare function requireCurrentConfigurationPayload(value: unknown): Record<string, unknown>;
 export declare class Config {
     readonly schemaVersion: number;
     branchType: string;

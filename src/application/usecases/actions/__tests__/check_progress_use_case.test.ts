@@ -42,7 +42,7 @@ function baseParam(overrides: Record<string, unknown> = {}): Execution {
     repo: 'repo',
     issueNumber: 123,
     tokens: { token: 'token' },
-    ai: new Ai('http://localhost:4096', 'opencode/kimi-k2.5', false, false, [], false, 'low', 20),
+    ai: new Ai('http://localhost:4096', 'opencode/kimi-k2.5', false, [], false, 'low', 20),
     commit: { branch: 'feature/123-add-feature' },
     branches,
     ...overrides,
@@ -70,7 +70,7 @@ describe('CheckProgressUseCase', () => {
 
   it('returns error when AI config is missing (no server URL)', async () => {
     const param = baseParam({
-      ai: new Ai('', 'opencode/model', false, false, [], false, 'low', 20),
+      ai: new Ai('', 'opencode/model', false, [], false, 'low', 20),
     });
     const results = await useCase.invoke(param);
 
@@ -84,7 +84,7 @@ describe('CheckProgressUseCase', () => {
 
   it('returns error when AI config is missing (no model)', async () => {
     const param = baseParam({
-      ai: new Ai('http://localhost:4096', '', false, false, [], false, 'low', 20),
+      ai: new Ai('http://localhost:4096', '', false, [], false, 'low', 20),
     });
     const results = await useCase.invoke(param);
 

@@ -3,6 +3,7 @@
  */
 
 import type { Execution } from "../../../../../../data/model/execution";
+import { Ai } from "../../../../../../data/model/ai";
 import type { BugbotContext } from "../types";
 import { buildBugbotPrompt } from "../build_bugbot_prompt";
 
@@ -14,9 +15,13 @@ function mockExecution(overrides: Partial<Execution> = {}): Execution {
         commit: { branch: "feature/42-branch" },
         currentConfiguration: { parentBranch: "develop" },
         branches: { development: "develop" },
-        ai: undefined,
+        ai: new Ai("", "model", false, [], false, "low", 20),
         ...overrides,
     } as unknown as Execution;
+}
+
+function aiWithIgnoreFiles(patterns: string[]): Ai {
+    return new Ai("", "model", false, patterns, false, "low", 20);
 }
 
 function mockContext(overrides: Partial<BugbotContext> = {}): BugbotContext {
@@ -39,7 +44,7 @@ describe("buildBugbotPrompt", () => {
 
     it("includes ignore patterns when getAiIgnoreFiles returns patterns", () => {
         const prompt = buildBugbotPrompt(
-            mockExecution({ ai: { getAiIgnoreFiles: () => ["*.test.ts", "build/*"] } } as unknown as Partial<Execution>),
+            mockExecution({ ai: aiWithIgnoreFiles(["*.test.ts", "build/*"]) }),
             mockContext()
         );
         expect(prompt).toContain("Files to ignore");
@@ -50,7 +55,7 @@ describe("buildBugbotPrompt", () => {
     it("truncates ignore block when total length exceeds limit", () => {
         const longPatterns = Array.from({ length: 100 }, (_, i) => `pattern-${i}-${"x".repeat(50)}`);
         const prompt = buildBugbotPrompt(
-            mockExecution({ ai: { getAiIgnoreFiles: () => longPatterns } } as unknown as Partial<Execution>),
+            mockExecution({ ai: aiWithIgnoreFiles(longPatterns) }),
             mockContext()
         );
         expect(prompt).toContain("Files to ignore");
@@ -60,7 +65,7 @@ describe("buildBugbotPrompt", () => {
 
     it("omits ignore block when getAiIgnoreFiles returns empty", () => {
         const prompt = buildBugbotPrompt(
-            mockExecution({ ai: { getAiIgnoreFiles: () => [] } } as unknown as Partial<Execution>),
+            mockExecution({ ai: aiWithIgnoreFiles([]) }),
             mockContext()
         );
         expect(prompt).not.toContain("Files to ignore");

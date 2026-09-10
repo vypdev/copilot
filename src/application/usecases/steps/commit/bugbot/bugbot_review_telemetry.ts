@@ -63,7 +63,7 @@ export class BugbotReviewTelemetry {
             this.execution.pullRequest?.number > 0 ? `pr-${this.execution.pullRequest.number}` : 'branch',
             headSha?.slice(0, 12) || String(Number.isFinite(startedAtEpoch) ? startedAtEpoch : this.startedAtMs),
         ].join(':');
-        const agent = this.execution.ai?.getAgentConfiguration?.(this.execution.isPullRequest ? 'reviewer' : 'findings');
+        const agent = this.execution.ai.getAgentConfiguration(this.execution.isPullRequest ? 'reviewer' : 'findings');
         const findingStates = this.context && this.prepared
             ? projectBugbotFindingStatuses(
                 this.context.existingByFindingId,
@@ -78,8 +78,8 @@ export class BugbotReviewTelemetry {
             repository: `${this.execution.owner}/${this.execution.repo}`,
             ...(this.execution.pullRequest?.number > 0 ? { pullRequestNumber: this.execution.pullRequest.number } : {}),
             ...(headSha ? { headSha } : {}),
-            publicationMode: this.execution.ai?.getBugbotReviewConfiguration?.().publicationMode ?? 'publish',
-            configuredEffort: this.execution.ai?.getBugbotReviewConfiguration?.().effort ?? 'default',
+            publicationMode: this.execution.ai.getBugbotReviewConfiguration().publicationMode,
+            configuredEffort: this.execution.ai.getBugbotReviewConfiguration().effort,
             ...(agent?.provider ? { agentProvider: agent.provider } : {}),
             ...(agent?.model ? { agentModel: agent.model } : {}),
             startedAt: this.startedAt,

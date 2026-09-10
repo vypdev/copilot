@@ -4,6 +4,8 @@
 
 import { loadBugbotContext as loadBugbotContextImpl, type LoadBugbotContextOptions } from "../load_bugbot_context_use_case";
 import type { Execution } from "../../../../../../data/model/execution";
+import { Ai } from "../../../../../../data/model/ai";
+import { buildMarker } from "../marker";
 
 jest.mock("../../../../../../utils/logger", () => ({
     logDebugInfo: jest.fn(),
@@ -15,7 +17,12 @@ const mockListPullRequestReviewComments = jest.fn();
 const mockGetPullRequestHeadSha = jest.fn();
 const mockGetChangedFiles = jest.fn();
 const mockGetFilesWithFirstDiffLine = jest.fn();
+const mockGetFilesWithDiffLocations = jest.fn();
+const mockGetReviewDiffSnapshot = jest.fn();
 const mockListPullRequestReviewThreadStates = jest.fn();
+const mockLoadRules = jest.fn();
+const marker = (id: string, resolved: boolean) =>
+    buildMarker(id, resolved, 'fp-11111111', 'sf-11111111');
 
 
 
@@ -23,14 +30,14 @@ import type { BugbotContextPorts } from "../../../../../../application/ports/bug
 
 const testPorts: BugbotContextPorts = {
     issue: { listIssueComments: mockListIssueComments },
+    rules: { loadRules: mockLoadRules },
     pullRequest: {
         getHeadBranchForIssue: jest.fn(),
         getPullRequestReviewCommentBody: jest.fn(),
         getOpenPullRequestNumbersByHeadBranch: mockGetOpenPullRequestNumbersByHeadBranch,
         listPullRequestReviewComments: mockListPullRequestReviewComments,
         getPullRequestHeadSha: mockGetPullRequestHeadSha,
-        getChangedFiles: mockGetChangedFiles,
-        getFilesWithFirstDiffLine: mockGetFilesWithFirstDiffLine,
+        getReviewDiffSnapshot: mockGetReviewDiffSnapshot,
         listPullRequestReviewThreadStates: mockListPullRequestReviewThreadStates,
     },
 };
@@ -49,6 +56,7 @@ function baseParam(overrides: Partial<Execution> = {}): Execution {
         commit: { branch: "feature/42-foo" },
         currentConfiguration: {},
         branches: { development: "develop" },
+        ai: new Ai("", "model", false, [], false, "low", 20),
         ...overrides,
     } as unknown as Execution;
 }
@@ -61,7 +69,19 @@ describe("loadBugbotContext", () => {
         mockGetPullRequestHeadSha.mockReset();
         mockGetChangedFiles.mockReset();
         mockGetFilesWithFirstDiffLine.mockReset();
+        mockGetFilesWithDiffLocations.mockReset().mockResolvedValue([]);
+        mockGetReviewDiffSnapshot.mockReset().mockImplementation(async (...args: unknown[]) => ({
+            changes: (await mockGetChangedFiles(...args)).map((change: { filename: string; status: string }) => ({
+                additions: 0,
+                deletions: 0,
+                patch: "",
+                ...change,
+            })),
+            filesWithFirstDiffLine: await mockGetFilesWithFirstDiffLine(...args),
+            filesWithDiffLocations: await mockGetFilesWithDiffLocations(...args),
+        }));
         mockListPullRequestReviewThreadStates.mockReset().mockResolvedValue({});
+        mockLoadRules.mockReset().mockResolvedValue([]);
     });
 
     it("returns empty existingByFindingId and previousFindingsBlock when no issue comments", async () => {
@@ -92,22 +112,22 @@ describe("loadBugbotContext", () => {
             {
                 id: 100,
                 user: { login: "vypbot" },
-                body: "## Finding A\n\n<!-- copilot-bugbot finding_id:\"id-a\" resolved:false -->",
+                body: `## Finding A\n\n${marker('id-a', false)}`,
             },
             {
                 id: 101,
                 user: { login: "vypbot" },
-                body: "## Finding B\n\n<!-- copilot-bugbot finding_id:\"id-b\" resolved:true -->",
+                body: `## Finding B\n\n${marker('id-b', true)}`,
             },
         ]);
 
         const ctx = await loadBugbotContext(baseParam());
 
         expect(ctx.existingByFindingId["id-a"]).toEqual({
-            issue: { commentId: 100, resolved: false },
+            issue: { commentId: 100, resolved: false, fingerprint: 'fp-11111111', semanticFingerprint: 'sf-11111111' },
         });
         expect(ctx.existingByFindingId["id-b"]).toEqual({
-            issue: { commentId: 101, resolved: true },
+            issue: { commentId: 101, resolved: true, fingerprint: 'fp-11111111', semanticFingerprint: 'sf-11111111' },
         });
     });
 
@@ -116,32 +136,32 @@ describe("loadBugbotContext", () => {
             {
                 id: 100,
                 user: { login: 'contributor' },
-                body: '<!-- copilot-bugbot finding_id:"forged" resolved:true -->',
+                body: marker('forged', true),
             },
             {
                 id: 101,
                 user: { login: 'VypBot' },
-                body: '<!-- copilot-bugbot finding_id:"trusted" resolved:false -->',
+                body: marker('trusted', false),
             },
         ]);
 
         const ctx = await loadBugbotContext(baseParam({ tokenUser: 'vypbot' }));
 
         expect(ctx.existingByFindingId).toEqual({
-            trusted: { issue: { commentId: 101, resolved: false } },
+            trusted: { issue: { commentId: 101, resolved: false, fingerprint: 'fp-11111111', semanticFingerprint: 'sf-11111111' } },
         });
     });
 
-    it("ignores historical markers when either authenticated or comment author identity is unavailable", async () => {
+    it("ignores existing markers when either authenticated or comment author identity is unavailable", async () => {
         mockListIssueComments.mockResolvedValue([
             {
                 id: 100,
                 user: { login: 'vypbot' },
-                body: '<!-- copilot-bugbot finding_id:"missing-token-user" resolved:false -->',
+                body: marker('missing-token-user', false),
             },
             {
                 id: 101,
-                body: '<!-- copilot-bugbot finding_id:"missing-author" resolved:false -->',
+                body: marker('missing-author', false),
             },
         ]);
 
@@ -150,7 +170,7 @@ describe("loadBugbotContext", () => {
 
         expect(missingTokenUser.existingByFindingId).toEqual({});
         expect(missingCommentAuthor.existingByFindingId).toEqual({
-            'missing-token-user': { issue: { commentId: 100, resolved: false } },
+            'missing-token-user': { issue: { commentId: 100, resolved: false, fingerprint: 'fp-11111111', semanticFingerprint: 'sf-11111111' } },
         });
     });
 
@@ -159,19 +179,19 @@ describe("loadBugbotContext", () => {
             {
                 id: 100,
                 user: { login: "vypbot" },
-                body: "## First\n\n<!-- copilot-bugbot finding_id:\"id-a\" resolved:false -->",
+                body: `## First\n\n${marker('id-a', false)}`,
             },
             {
                 id: 101,
                 user: { login: "vypbot" },
-                body: "## Second (same finding)\n\n<!-- copilot-bugbot finding_id:\"id-a\" resolved:true -->",
+                body: `## Second (same finding)\n\n${marker('id-a', true)}`,
             },
         ]);
 
         const ctx = await loadBugbotContext(baseParam());
 
         expect(ctx.existingByFindingId["id-a"]).toEqual({
-            issue: { commentId: 101, resolved: true },
+            issue: { commentId: 101, resolved: true, fingerprint: 'fp-11111111', semanticFingerprint: 'sf-11111111' },
         });
     });
 
@@ -180,12 +200,12 @@ describe("loadBugbotContext", () => {
             {
                 id: 100,
                 user: { login: "vypbot" },
-                body: "## Open\n\n<!-- copilot-bugbot finding_id:\"open-1\" resolved:false -->",
+                body: `## Open\n\n${marker('open-1', false)}`,
             },
             {
                 id: 101,
                 user: { login: "vypbot" },
-                body: "## Closed\n\n<!-- copilot-bugbot finding_id:\"closed-1\" resolved:true -->",
+                body: `## Closed\n\n${marker('closed-1', true)}`,
             },
         ]);
 
@@ -267,7 +287,7 @@ describe("loadBugbotContext", () => {
                 id: 200,
                 identity: "PRRC_pr_f1",
                 authorLogin: "vypbot",
-                body: "## PR finding\n\n<!-- copilot-bugbot finding_id:\"pr-f1\" resolved:false -->",
+                body: `## PR finding\n\n${marker('pr-f1', false)}`,
             },
         ]);
 
@@ -278,6 +298,8 @@ describe("loadBugbotContext", () => {
                 commentIdentity: "PRRC_pr_f1",
                 pullRequestNumber: 50,
                 resolved: false,
+                fingerprint: 'fp-11111111',
+                semanticFingerprint: 'sf-11111111',
             },
         });
     });
@@ -289,7 +311,7 @@ describe("loadBugbotContext", () => {
                 id: 200,
                 identity: "PRRC_manual",
                 authorLogin: 'VypBot',
-                body: '<!-- copilot-bugbot finding_id:"manual" resolved:false -->',
+                body: marker('manual', false),
             },
         ]);
         mockListPullRequestReviewThreadStates.mockResolvedValue({ PRRC_manual: true });
@@ -305,7 +327,7 @@ describe("loadBugbotContext", () => {
 
     it("truncates fullBody to 12000 chars when loading from issue comments and appends truncation indicator", async () => {
         const longBody =
-            "## Finding\n\n" + "x".repeat(15000) + "\n\n<!-- copilot-bugbot finding_id:\"long-1\" resolved:false -->";
+            `## Finding\n\n${"x".repeat(15000)}\n\n${marker('long-1', false)}`;
         mockListIssueComments.mockResolvedValue([
             {
                 id: 100,
@@ -324,7 +346,7 @@ describe("loadBugbotContext", () => {
 
     it("keeps full mutation bodies and independent destination state after a partial resolution", async () => {
         const longBody =
-            "## Finding\n\n" + "x".repeat(15000) + "\n\n<!-- copilot-bugbot finding_id:\"partial-1\" resolved:false -->";
+            `## Finding\n\n${"x".repeat(15000)}\n\n${marker('partial-1', false)}`;
         mockListIssueComments.mockResolvedValue([{ id: 100, user: { login: "vypbot" }, body: longBody }]);
         mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([50]);
         mockListPullRequestReviewComments.mockResolvedValue([
@@ -332,7 +354,7 @@ describe("loadBugbotContext", () => {
                 id: 200,
                 identity: "PRRC_partial_1",
                 authorLogin: "vypbot",
-                body: "## Finding\n\n<!-- copilot-bugbot finding_id:\"partial-1\" resolved:true -->",
+                body: `## Finding\n\n${marker('partial-1', true)}`,
             },
         ]);
 
@@ -340,11 +362,13 @@ describe("loadBugbotContext", () => {
 
         expect(ctx.issueComments[0].body).toBe(longBody);
         expect(ctx.existingByFindingId["partial-1"]).toEqual({
-            issue: { commentId: 100, resolved: false },
+            issue: { commentId: 100, resolved: false, fingerprint: 'fp-11111111', semanticFingerprint: 'sf-11111111' },
             pullRequest: {
                 commentIdentity: "PRRC_partial_1",
                 pullRequestNumber: 50,
                 resolved: true,
+                fingerprint: 'fp-11111111',
+                semanticFingerprint: 'sf-11111111',
             },
         });
         expect(ctx.previousFindingsBlock).toContain("partial-1");
@@ -358,7 +382,7 @@ describe("loadBugbotContext", () => {
             Array.from({ length: 120 }, (_, index) => ({
                 id: index + 1,
                 user: { login: "vypbot" },
-                body: `## Finding ${index}\n\n${'x'.repeat(700)}\n\n<!-- copilot-bugbot finding_id:"finding-${index}" resolved:false -->`,
+                body: `## Finding ${index}\n\n${'x'.repeat(700)}\n\n${marker(`finding-${index}`, false)}`,
             })),
         );
 

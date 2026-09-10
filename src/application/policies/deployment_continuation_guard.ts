@@ -2,8 +2,8 @@ import type { DeploymentOperationSnapshot, DeploymentPhase } from "../../domain/
 
 /**
  * Rejects forged, stale, or out-of-order workflow continuations before a
- * publication-side mutation is attempted. Legacy releases without durable
- * orchestration state remain supported during migration.
+ * publication-side mutation is attempted. Standalone publication commands
+ * that do not belong to an orchestration operation are validated separately.
  */
 export function validateDeploymentContinuation(
   operation: DeploymentOperationSnapshot | undefined,

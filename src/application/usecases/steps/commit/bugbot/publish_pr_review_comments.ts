@@ -35,7 +35,7 @@ export class PullRequestReviewCommentPublisher {
     existing: ExistingFindingInfo | undefined,
   ): Promise<void> {
     const { prContext, openPrNumber, execution } = this.options;
-    const allowSuggestedChanges = execution.ai?.getBugbotReviewConfiguration?.().suggestedChanges !== false;
+  const allowSuggestedChanges = execution.ai.getBugbotReviewConfiguration().suggestedChanges;
     if (
       existing?.pullRequest != null &&
       existing.pullRequest.pullRequestNumber === openPrNumber
@@ -112,10 +112,10 @@ export class PullRequestReviewCommentPublisher {
         overflowCount,
         overflowTitles,
         this.options.watermark,
-        execution.ai?.getBugbotReviewConfiguration?.().traceRules === true
+        execution.ai.getBugbotReviewConfiguration().traceRules
           ? this.options.ruleSources ?? []
           : [],
-        execution.ai?.getBugbotReviewConfiguration?.().traceRules === true
+        execution.ai.getBugbotReviewConfiguration().traceRules
           ? this.options.omittedRuleCount ?? 0
           : 0,
       ),
@@ -135,9 +135,9 @@ function resolveReviewAnchor(
     if (reportedPath && context.pathToFirstDiffLine[reportedPath] != null) {
       return { path: reportedPath, subjectType: 'line', line: context.pathToFirstDiffLine[reportedPath], side: 'RIGHT' };
     }
-    const legacyFallback = Object.entries(context.pathToFirstDiffLine)[0];
-    return legacyFallback
-      ? { path: legacyFallback[0], subjectType: 'line', line: legacyFallback[1], side: 'RIGHT' }
+    const firstAvailableLocation = Object.entries(context.pathToFirstDiffLine)[0];
+    return firstAvailableLocation
+      ? { path: firstAvailableLocation[0], subjectType: 'line', line: firstAvailableLocation[1], side: 'RIGHT' }
       : undefined;
   }
   if (reportedPath) {

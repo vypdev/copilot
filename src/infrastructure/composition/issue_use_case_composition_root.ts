@@ -16,7 +16,6 @@ import { AssignMemberToIssueUseCase } from "../../application/usecases/steps/iss
 import { CheckPriorityIssueSizeUseCase } from "../../application/usecases/steps/issue/check_priority_issue_size_use_case";
 import { CloseNotAllowedIssueUseCase } from "../../application/usecases/steps/issue/close_not_allowed_issue_use_case";
 import { DeployAddedUseCase } from "../../application/usecases/steps/issue/label_deploy_added_use_case";
-import { DeployedAddedUseCase } from "../../application/usecases/steps/issue/label_deployed_added_use_case";
 import { LinkIssueProjectUseCase } from "../../application/usecases/steps/issue/link_issue_project_use_case";
 import { MoveIssueToInProgressUseCase } from "../../application/usecases/steps/issue/move_issue_to_in_progress";
 import { PrepareBranchesUseCase } from "../../application/usecases/steps/issue/prepare_branches_use_case";
@@ -113,7 +112,6 @@ export function createIssueUseCaseCompositionRoot(): IssueUseCase {
       new WorkflowDispatchRepository(createWorkflowDispatchClient()),
       moveIssueToInProgress,
     ),
-    deployedAdded: new DeployedAddedUseCase(),
   };
 
   return composeIssueUseCase(

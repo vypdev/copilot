@@ -23,7 +23,8 @@ git diff --check
 workflow and single-action catalogs, parity between the six embedded issue
 examples and their setup templates, and high-risk release contracts such as
 the default-branch continuation prerequisite, npm direct-publish policy,
-polling controls, orchestration Variables, and legacy-only `merge-timeout`.
+polling controls, and orchestration Variables. It also rejects removed public
+inputs, actions, commands, and orchestration modes.
 These deterministic checks cannot inspect live GitHub/npm settings or judge
 desktop/mobile, light/dark, and assistive-technology rendering; keep those as
 explicit operator and human UX gates.
@@ -53,9 +54,9 @@ case. It verifies deterministic labels for approved reviews, requested changes,
 and ambiguous multi-PR events without invoking an agent route. External check
 workflows are intentionally outside the workflows shipped by Copilot.
 
-Configuration migration tests cover legacy payloads, transient `results`,
-malformed durable values, and future-schema preservation. Architecture tests
-also guard the narrow context contracts used by extracted policies and lifecycle
+Configuration tests cover current-schema round trips and fail-closed handling of
+missing, malformed, or different-version durable values. Architecture tests also
+guard the narrow context contracts used by extracted policies and lifecycle
 reconciliation.
 
 Branch synchronization tests cover durable configuration and linked-branch discovery,

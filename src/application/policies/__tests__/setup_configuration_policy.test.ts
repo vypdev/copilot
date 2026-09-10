@@ -143,17 +143,13 @@ describe('setup configuration policy', () => {
         expect(buildSetupCredentialRequirements(configuration).map(requirement => requirement.name)).toEqual(['PAT']);
     });
 
-    it('models runtime and model-provider credentials as alternatives', () => {
+    it('models the Codex API key as optional when runner authentication is available', () => {
         const requirements = buildSetupCredentialRequirements(createDefaultSetupConfiguration());
-        const runtime = requirements.find(requirement => requirement.name === 'CODEX_ACCESS_TOKEN');
         const apiKey = requirements.find(requirement => requirement.name === 'CODEX_API_KEY');
-        const modelProvider = requirements.find(requirement => requirement.name === 'OPENAI_API_KEY');
 
-        expect(runtime?.alternativeGroups).toEqual(expect.arrayContaining(['agent:codex:openai']));
-        expect(modelProvider?.alternativeGroups).toEqual(expect.arrayContaining(['agent:codex:openai']));
-        expect(runtime?.runnerAuthenticationGroups).toEqual(expect.arrayContaining(['agent:codex:openai']));
+        expect(requirements.map(requirement => requirement.name)).toEqual(['PAT', 'CODEX_API_KEY']);
+        expect(apiKey?.alternativeGroups).toEqual(expect.arrayContaining(['agent:codex:openai']));
         expect(apiKey?.runnerAuthenticationGroups).toEqual(expect.arrayContaining(['agent:codex:openai']));
-        expect(modelProvider?.runnerAuthenticationGroups).toEqual(expect.arrayContaining(['agent:codex:openai']));
     });
 
     it('does not let Codex runner authentication satisfy an OpenCode credential group', () => {
@@ -165,14 +161,10 @@ describe('setup configuration policy', () => {
         const plan = buildSetupPlan(configuration);
         const openAi = plan.credentialRequirements.find(requirement => requirement.name === 'OPENAI_API_KEY');
 
-        expect(openAi?.alternativeGroups).toEqual(expect.arrayContaining([
-            'agent:codex:openai',
-            'agent:opencode:openai',
-        ]));
-        expect(openAi?.runnerAuthenticationGroups).toEqual(['agent:codex:openai']);
+        expect(openAi?.alternativeGroups).toEqual(['agent:opencode:openai']);
+        expect(openAi?.runnerAuthenticationGroups).toBeUndefined();
         expect(plan.requiredSecrets).toEqual(expect.arrayContaining(['OPENCODE_API_KEY', 'OPENAI_API_KEY']));
         expect(plan.requiredSecrets).not.toContain('CODEX_API_KEY');
-        expect(plan.requiredSecrets).not.toContain('CODEX_ACCESS_TOKEN');
     });
 
     it('marks custom provider credentials as intentionally unverifiable', () => {

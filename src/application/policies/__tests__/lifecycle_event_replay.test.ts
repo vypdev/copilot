@@ -19,7 +19,7 @@ describe('lifecycle event replay', () => {
         ['check_suite', { action: 'completed', check_suite: { head_sha: 'sha-1', status: 'queued', conclusion: null, pull_requests: [{ number: 8 }] } }, 'reviewing'],
         ['workflow_run', { action: 'completed', workflow_run: { head_sha: 'sha-1', status: 'completed', conclusion: 'success', pull_requests: [{ number: 8 }] } }, 'reviewing'],
     ])('replays %s into the expected lifecycle state', (eventName, payload, expectedState) => {
-        const pullRequest = new PullRequest(1, 1, 600, {
+        const pullRequest = new PullRequest(1, 1, {
             eventName,
             ...payload,
         });

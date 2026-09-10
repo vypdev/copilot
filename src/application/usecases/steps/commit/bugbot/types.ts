@@ -131,8 +131,6 @@ function identitiesAreCompatible(
     existing.issue?.semanticFingerprint,
     existing.pullRequest?.semanticFingerprint,
   ].filter(Boolean);
-  // Legacy markers had no local identities, so preserve their exact-id migration path.
-  if (existingFingerprints.length === 0 && existingSemanticFingerprints.length === 0) return true;
   return (finding.fingerprint !== undefined && existingFingerprints.includes(finding.fingerprint))
     || (finding.semanticFingerprint !== undefined
       && existingSemanticFingerprints.includes(finding.semanticFingerprint));

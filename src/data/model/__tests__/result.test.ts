@@ -30,18 +30,11 @@ describe('Result', () => {
     expect(r.reminders).toEqual(['Reminder']);
   });
 
-  it('normalizes string and unknown errors and preserves legacy singular errors', () => {
+  it('normalizes string and Error values from the errors collection', () => {
     const error = new Error('typed failure');
-    const r = new Result({ errors: ['string failure', error], error: 'legacy failure' });
+    const r = new Result({ errors: ['string failure', error] });
 
     expect(r.errors.map((item) => item.message)).toEqual(['string failure', 'typed failure']);
-  });
-
-  it('does not lose a legacy singular error when no plural errors are provided', () => {
-    const r = new Result({ error: new Error('legacy failure') });
-
-    expect(r.errors).toHaveLength(1);
-    expect(r.errors[0].message).toBe('legacy failure');
   });
 
   it('does not expose array payloads as object payloads and tolerates malformed collections', () => {

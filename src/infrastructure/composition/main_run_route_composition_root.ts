@@ -6,7 +6,6 @@ import { SingleActionUseCase } from "../../application/usecases/single_action_us
 import type { MainRunRouteHandlers } from "../../application/ports/main_run_route_ports";
 import { CreateReleaseUseCase } from "../../application/usecases/actions/create_release_use_case";
 import { CreateTagUseCase } from "../../application/usecases/actions/create_tag_use_case";
-import { DeployedActionUseCase } from "../../application/usecases/actions/deployed_action_use_case";
 import { PublishGithubActionUseCase } from "../../application/usecases/actions/publish_github_action_use_case";
 import { PublishIssueCommentUseCase } from "../../application/usecases/actions/publish_issue_comment_use_case";
 import { RecommendStepsUseCase } from "../../application/usecases/actions/recommend_steps_use_case";
@@ -23,7 +22,6 @@ import { CheckIssueCommentLanguageUseCase } from "../../application/usecases/ste
 import { CheckPullRequestCommentLanguageUseCase } from "../../application/usecases/steps/pull_request_review_comment/check_pull_request_comment_language_use_case";
 import { CommentLanguageTranslationWorkflow } from "../../application/usecases/steps/common/comment_language_translation_workflow";
 import { BranchCompareRepository } from "../../data/repository/branch_compare_repository";
-import { MergeRepository } from "../../data/repository/merge_repository";
 import { RepositoryReleasePublicationRepository } from "../../data/repository/release/repository_release_publication_repository";
 import { RepositoryTagRepository } from "../../data/repository/release/repository_tag_repository";
 import { GitCommitAdapter } from "../git_commit_adapter";
@@ -38,7 +36,6 @@ import { createBugbotCompositionRoot } from "./bugbot_composition_root";
 import { createCheckProgressCompositionRoot } from "./check_progress_composition_root";
 import {
   createBranchComparisonClient,
-  createBranchMergeClient,
 } from "./github_branch_client_factory";
 import { createPullRequestLifecycleClient } from "./github_pull_request_client_factory";
 import { createReleaseClient } from "./github_release_client_factory";
@@ -65,7 +62,6 @@ import { GithubDeploymentRepository } from "../../data/repository/deployment/git
 import { DeploymentContinuationRepository } from "../../data/repository/deployment/deployment_continuation_repository";
 import { DeploymentPresentationRepository } from "../../data/repository/deployment/deployment_presentation_repository";
 import { DeploymentStateRepository } from "../../data/repository/deployment/deployment_state_repository";
-import { LegacyDeploymentMergeRepository } from "../../data/repository/deployment/legacy_deployment_merge_repository";
 import { OctokitDeploymentClientAdapter } from "../github/octokit_deployment_adapter";
 import { WorkflowDispatchRepository } from "../../data/repository/workflow/workflow_dispatch_repository";
 import { createWorkflowDispatchClient } from "./github_workflow_client_factory";
@@ -95,7 +91,6 @@ export function createSingleActionUseCaseCompositionRoot(): SingleActionUseCase 
     continuation: new DeploymentContinuationRepository(
       new WorkflowDispatchRepository(createWorkflowDispatchClient()),
     ),
-    legacyMerge: new LegacyDeploymentMergeRepository(createBranchMergeClient()),
     presentation: new DeploymentPresentationRepository(issueDescriptionQueryPort),
     state: new DeploymentStateRepository(issueDescriptionQueryPort),
     labels: createIssueLabelRepository(),
@@ -103,11 +98,6 @@ export function createSingleActionUseCaseCompositionRoot(): SingleActionUseCase 
     operationId: randomUUID,
   });
   return new SingleActionUseCase(
-    new DeployedActionUseCase(
-      createIssueLabelRepository(),
-      createIssueClosureRepository(),
-      new MergeRepository(createBranchMergeClient()),
-    ),
     new PublishGithubActionUseCase(repositoryTagPort, repositoryReleasePort),
     new CreateReleaseUseCase(repositoryReleasePort),
     new CreateTagUseCase(repositoryTagPort),
@@ -171,7 +161,6 @@ export function createIssueCommentUseCaseCompositionRoot(): IssueCommentUseCase 
     ),
     new BugbotAutofixUseCase(fixer, bugbot.context, gitCommit),
     new DoUserRequestUseCase(fixer, gitCommit),
-    bugbot.issue,
     createActorAuthorizationRepository(),
     createAuthenticatedUserCompositionRoot(),
     gitCommit,
@@ -219,7 +208,6 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(): PullRequ
     ),
     new BugbotAutofixUseCase(fixer, bugbot.context, gitCommit),
     new DoUserRequestUseCase(fixer, gitCommit),
-    bugbot.issue,
     createActorAuthorizationRepository(),
     createAuthenticatedUserCompositionRoot(),
     gitCommit,

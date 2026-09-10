@@ -35,7 +35,7 @@ describe('AgentCliClient', () => {
                 OPENAI_API_KEY: null,
                 tokens: { access_token: 'access', refresh_token: 'refresh' },
             }));
-            const script = "process.stdout.write(JSON.stringify({ openai: process.env.OPENAI_API_KEY ?? null, codex: process.env.CODEX_ACCESS_TOKEN ?? null }))";
+            const script = "process.stdout.write(JSON.stringify({ openai: process.env.OPENAI_API_KEY ?? null, codex: process.env.CODEX_API_KEY ?? null }))";
             const output = await new AgentCliClient().execute({
                 command: `${process.execPath} -e ${JSON.stringify(script)}`,
                 prompt: 'ignored',
@@ -43,7 +43,7 @@ describe('AgentCliClient', () => {
                 environment: {
                     CODEX_HOME: directory,
                     OPENAI_API_KEY: 'api-key-that-must-not-be-used',
-                    CODEX_ACCESS_TOKEN: 'token-that-must-not-be-used',
+                    CODEX_API_KEY: 'token-that-must-not-be-used',
                 },
                 timeoutMs: 2000,
             });

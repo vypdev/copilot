@@ -20,7 +20,7 @@ describe('PullRequest', () => {
       pull_request: pr,
       eventName: 'pull_request',
     };
-    const p = new PullRequest(1, 2, 30, inputs);
+    const p = new PullRequest(1, 2, inputs);
     expect(p.action).toBe('opened');
     expect(p.id).toBe('PR_1');
     expect(p.title).toBe('Fix bug');
@@ -40,7 +40,7 @@ describe('PullRequest', () => {
   });
 
   it('uses closed and merged data provided in inputs', () => {
-    const p = new PullRequest(1, 2, 30, {
+    const p = new PullRequest(1, 2, {
       action: 'closed',
       pull_request: { ...pr, state: 'closed', merged: true },
       eventName: 'pull_request',
@@ -53,13 +53,13 @@ describe('PullRequest', () => {
 
   it('isSynchronize when action is synchronize', () => {
     const inputs = { action: 'synchronize', pull_request: pr, eventName: 'pull_request' };
-    const p = new PullRequest(1, 2, 30, inputs);
+    const p = new PullRequest(1, 2, inputs);
     expect(p.isOpened).toBe(false);
     expect(p.isSynchronize).toBe(true);
   });
 
   it('does not treat activity on an open pull request as a newly opened pull request', () => {
-    const p = new PullRequest(1, 2, 30, {
+    const p = new PullRequest(1, 2, {
       action: 'labeled',
       pull_request: pr,
       eventName: 'pull_request',
@@ -71,13 +71,13 @@ describe('PullRequest', () => {
   });
 
   it('resolves pull request identity from review and check-suite payloads', () => {
-    const review = new PullRequest(1, 2, 30, {
+    const review = new PullRequest(1, 2, {
       eventName: 'pull_request_review',
       action: 'submitted',
       pull_request: { ...pr, number: 43, state: 'open' },
       review: { pull_request: { number: 43 } },
     });
-    const checkSuite = new PullRequest(1, 2, 30, {
+    const checkSuite = new PullRequest(1, 2, {
       eventName: 'check_suite',
       check_suite: {
         head_branch: 'feature/43-checks',
@@ -97,7 +97,7 @@ describe('PullRequest', () => {
 
   it('isPullRequestReviewComment when eventName is pull_request_review_comment', () => {
     const inputs = { eventName: 'pull_request_review_comment', pull_request: pr };
-    const p = new PullRequest(1, 2, 30, inputs);
+    const p = new PullRequest(1, 2, inputs);
     expect(p.isPullRequestReviewComment).toBe(true);
     expect(p.isPullRequest).toBe(false);
   });
@@ -107,7 +107,7 @@ describe('PullRequest', () => {
       pull_request: pr,
       comment: { id: 99, body: 'LGTM', user: { login: 'bob' }, html_url: 'https://github.com/comment/99' },
     };
-    const p = new PullRequest(1, 2, 30, inputs);
+    const p = new PullRequest(1, 2, inputs);
     expect(p.commentId).toBe(99);
     expect(p.commentBody).toBe('LGTM');
     expect(p.commentAuthor).toBe('bob');
@@ -119,18 +119,18 @@ describe('PullRequest', () => {
       pull_request: pr,
       comment: { id: 1, in_reply_to_id: 100 },
     };
-    const p = new PullRequest(1, 2, 30, inputs);
+    const p = new PullRequest(1, 2, inputs);
     expect(p.commentInReplyToId).toBe(100);
   });
 
   it('commentInReplyToId returns undefined when in_reply_to_id absent', () => {
     const inputs = { pull_request: pr, comment: { id: 1 } };
-    const p = new PullRequest(1, 2, 30, inputs);
+    const p = new PullRequest(1, 2, inputs);
     expect(p.commentInReplyToId).toBeUndefined();
   });
 
   it('normalizes invalid pull request and comment identifiers', () => {
-    const p = new PullRequest(1, 2, 30, {
+    const p = new PullRequest(1, 2, {
       pull_request: { number: 0 },
       comment: { id: Number.NaN, in_reply_to_id: -1 },
     });

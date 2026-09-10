@@ -6,7 +6,7 @@ describe('SetupDoctorUseCase', () => {
         const output = { showDoctorChecks: jest.fn() };
         const dependencies = {
             validation: { validateSetupPat: jest.fn().mockResolvedValue({ status: 'valid', message: 'ok' }), validateCredential: jest.fn() },
-            secrets: { list: jest.fn().mockResolvedValue(['PAT', 'OPENAI_API_KEY', 'CODEX_ACCESS_TOKEN']), upsertSecrets: jest.fn() },
+            secrets: { list: jest.fn().mockResolvedValue(['PAT', 'OPENAI_API_KEY']), upsertSecrets: jest.fn() },
             variables: { listVariables: jest.fn().mockResolvedValue([]) },
             workspace: { prepare: jest.fn(), hasValidToken: jest.fn(), compareWorkflows: jest.fn().mockReturnValue([]) },
             ...overrides,
@@ -76,7 +76,7 @@ describe('SetupDoctorUseCase', () => {
 
         expect(healthy).toBe(true);
         expect(output.showDoctorChecks).toHaveBeenCalledWith(expect.arrayContaining([
-            expect.objectContaining({ area: expect.stringContaining('CODEX_ACCESS_TOKEN'), status: 'warn' }),
+            expect.objectContaining({ area: expect.stringContaining('CODEX_API_KEY'), status: 'warn' }),
         ]));
     });
 

@@ -73,7 +73,7 @@ export function selectPullRequestMode(
   configured: ReconciliationPullRequestMode,
   capabilities: TargetMergeCapabilities,
 ): PullRequestModeDecision {
-  if (configured === "create-only" || configured === "legacy-wait") {
+  if (configured === "create-only") {
     return { kind: "mode", mode: configured, reason: "Explicitly configured." };
   }
   if (configured === "merge-queue" || (configured === "auto" && capabilities.mergeQueueRequired)) {

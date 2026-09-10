@@ -1,70 +1,40 @@
 ---
-description: Copilot – entry points, flow, and key paths
+description: Current architecture, boundaries, and key source paths
 alwaysApply: true
 ---
 
-# Architecture & Key Paths
+# Architecture and key paths
 
-## Entry and main flow
+Use `_agent/docs/architecture.md` as the concise repository map and
+`docs/development/architecture.mdx` plus `docs/dependency-rules.md` as the
+authoritative architecture contract. Do not duplicate an older source tree or
+action catalog in this rule.
 
-1. **GitHub Action**: `src/actions/github_action.ts` reads inputs, builds `Execution`, calls `mainRun(execution)` from `common_action.ts`.
-2. **CLI**: `src/actions/local_action.ts` same flow with CLI/config inputs.
-3. **common_action.ts**: Sets up; calls `waitForPreviousRuns(execution)` (sequential workflow); then:
-   - **Single action** → `SingleActionUseCase`
-   - **Issue** → `IssueCommentUseCase` or `IssueUseCase`
-   - **Pull request** → `PullRequestReviewCommentUseCase` or `PullRequestUseCase`
-   - **Push** → `CommitUseCase`
+The dependency direction is:
 
-## Key paths
+```text
+entrypoint
+  -> lifecycle/composition root
+    -> application use case/workflow
+      -> semantic application port
+        -> specialized adapter
+          -> provider client/detail
+```
 
-| Area | Path | Purpose |
-|------|------|--------|
-| Action entry | `src/actions/github_action.ts` | Reads inputs, builds Execution |
-| CLI entry | `src/cli.ts` → `local_action.ts` | Same flow, local inputs |
-| Shared flow | `src/actions/common_action.ts` | mainRun, waitForPreviousRuns, dispatch to use cases |
-| Use cases | `src/usecase/` | issue_use_case, pull_request_use_case, commit_use_case, single_action_use_case |
-| Single actions | `src/usecase/actions/` | check_progress, detect_errors, recommend_steps, think, initial_setup, create_release, create_tag, publish_github_action, deployed_action |
-| Steps (issue) | `src/usecase/steps/issue/` | check_permissions, close_not_allowed_issue, assign_members, update_title, update_issue_type, link_issue_project, check_priority_issue_size, prepare_branches, remove_issue_branches, remove_not_needed_branches, label_deploy_added, label_deployed_added, move_issue_to_in_progress, answer_issue_help_use_case (question/help on open). On issue opened: RecommendStepsUseCase (non release/question/help) or AnswerIssueHelpUseCase (question/help). |
-| Steps (PR) | `src/usecase/steps/pull_request/` | update_title, assign_members (issue), assign_reviewers_to_issue, link_pr_project, link_pr_issue, sync_size_and_progress_from_issue, check_priority_pull_request_size, update_description (AI), close_issue_after_merging |
-| Steps (commit) | `src/usecase/steps/commit/` | notify commit, check size |
-| Steps (issue comment) | `src/usecase/steps/issue_comment/` | check_issue_comment_language (translation) |
-| Steps (PR review comment) | `src/usecase/steps/pull_request_review_comment/` | check_pull_request_comment_language (translation) |
-| Bugbot autofix & user request | `src/usecase/steps/commit/bugbot/` + `user_request_use_case.ts` | detect_bugbot_fix_intent_use_case (plan agent: is_fix_request, is_do_request, is_review_request, target_finding_ids), BugbotAutofixUseCase + runBugbotAutofixCommitAndPush (fix findings), DoUserRequestUseCase + runUserRequestCommitAndPush (generic “do this”). Permission: ProjectRepository.isActorAllowedToModifyFiles (org member, or repo owner/write collaborator for personal repos); natural-language mutation requires the bot mention. |
-| Manager (content) | `src/manager/` | description handlers, configuration_handler, markdown_content_hotfix_handler (PR description, hotfix changelog content) |
-| Models | `src/data/model/` | Execution, Issue, PullRequest, SingleAction, etc. |
-| Repos | `src/data/repository/` | branch_repository, issue_repository, workflow_repository, ai_repository (OpenCode), file_repository, project_repository |
-| Config | `src/utils/constants.ts` | INPUT_KEYS, ACTIONS, defaults |
-| Metadata | `action.yml` | Action inputs and defaults |
+Current source roots:
 
-## Single actions (by name)
+- `src/actions/`: GitHub and local runtime boundaries.
+- `src/application/usecases/`: orchestration and workflows.
+- `src/application/policies/`: deterministic application decisions.
+- `src/application/ports/`: semantic capability contracts.
+- `src/data/model/` and `src/domain/`: provider-neutral core.
+- `src/data/repository/`: specialized external adapters.
+- `src/infrastructure/github/`: Octokit and GraphQL transports.
+- `src/infrastructure/composition/`: the only dependency assembly layer.
 
-- `check_progress_action`, `detect_errors_action`, `recommend_steps_action` (need `single-action-issue`)
-- `think_action`, `initial_setup` (no issue)
-- `create_release` (version, title, changelog), `create_tag` (version), `publish_github_action`, `deployed_action` (issue)
+Release and hotfix deployment use the durable orchestration state machine. The
+canonical callback actions are declared in `src/data/model/action_types.ts`;
+there is no second deployment or branch-merge implementation.
 
-## CLI-only (not single actions)
-
-- **Do (AI assistant)**: `copilot do -p "..."` uses OpenCode build agent via `AiRepository.copilotMessage` in `src/cli.ts`. No workflow single-action equivalent.
-
-## Concurrency (sequential runs)
-
-`common_action.ts` calls `waitForPreviousRuns(execution)` (from `src/utils/queue_utils.ts`): lists workflow runs, waits until no previous run of the **same workflow name** is in progress/queued, then continues. Implemented in `WorkflowRepository.getActivePreviousRuns`.
-
-## Flow: issue comment & PR review comment (intent + permissions + actions)
-
-When the event is **issue_comment** or **pull_request_review_comment**, `common_action.ts` invokes `IssueCommentUseCase` or `PullRequestReviewCommentUseCase` respectively. Both follow the same flow:
-
-1. **Check language** (e.g. translation): `CheckIssueCommentLanguageUseCase` / `CheckPullRequestCommentLanguageUseCase`.
-2. **Detect intent** (OpenCode plan agent): `DetectBugbotFixIntentUseCase` runs and returns a payload with:
-   - `isFixRequest`: user asked to fix one or more bugbot findings.
-   - `isDoRequest`: user asked to perform some other change/task in the repo (generic “do this”).
-   - `targetFindingIds`: when fix request, which finding ids to fix.
-   - `context`, `branchOverride`: for autofix (e.g. branch from open PR when on issue comment).
-3. **Permission check**: `ProjectRepository.isActorAllowedToModifyFiles(owner, actor, token)`:
-   - If repo **owner is an organization**: actor must be a **member** of that org.
-   - If repo **owner is a user**: actor must be the **same** as the owner.
-   - If not allowed and the intent was fix or do-request, we skip the file-modifying use cases and log; Think still runs so the user gets a response.
-4. **Run at most one file-modifying action** (only if allowed):
-   - If **fix request** with targets and context: `BugbotAutofixUseCase` → `runBugbotAutofixCommitAndPush` → optionally `markFindingsResolved`.
-   - Else if **do request** (and not fix): `DoUserRequestUseCase` → `runUserRequestCommitAndPush`.
-5. **Think**: If **no** file-modifying action ran (no intent, no permission, or no targets/context), we run `ThinkUseCase` so the user gets an AI reply (e.g. answer to a question).
+Before changing a boundary, inspect the current source and run the architecture
+tests. Graphify output is a navigation aid, not an architecture authority.

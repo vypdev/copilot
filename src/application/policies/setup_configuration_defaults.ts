@@ -98,7 +98,6 @@ export function createDefaultSetupConfiguration(): SetupConfiguration {
             reopenIssueOnPush: true,
             desiredAssigneesCount: 1,
             desiredReviewersCount: 1,
-            mergeTimeout: 600,
             inactivityThresholdHours: DEFAULT_INACTIVITY_THRESHOLD_HOURS,
             issueLocale: 'en-US',
             pullRequestLocale: 'en-US',
@@ -106,7 +105,6 @@ export function createDefaultSetupConfiguration(): SetupConfiguration {
             ...DEFAULT_DEPLOYMENT_CONFIGURATION,
         },
         ai: {
-            pullRequestDescription: true,
             pullRequestDescriptionMode: 'replace',
             ignoreFiles: 'build/*',
             membersOnly: false,

@@ -9,7 +9,7 @@ jest.mock('../../../utils/logger', () => ({
 describe('LoggerWorkflowPollingObserverAdapter', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('reports the idle and waiting polling states with the historical messages', () => {
+  it('reports the idle and waiting polling states with the current messages', () => {
     const observer = new LoggerWorkflowPollingObserverAdapter();
 
     observer.noActivePreviousRuns();

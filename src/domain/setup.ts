@@ -52,7 +52,6 @@ export interface SetupRepositoryConfiguration {
     reopenIssueOnPush: boolean;
     desiredAssigneesCount: number;
     desiredReviewersCount: number;
-    mergeTimeout: number;
     inactivityThresholdHours: number;
     issueLocale: string;
     pullRequestLocale: string;
@@ -71,9 +70,7 @@ export interface SetupRepositoryConfiguration {
 }
 
 export interface SetupAiConfiguration {
-    pullRequestDescription: boolean;
-    /** Optional for backwards-compatible setup files created before v3.3.0. */
-    pullRequestDescriptionMode?: PullRequestDescriptionMode;
+    pullRequestDescriptionMode: PullRequestDescriptionMode;
     ignoreFiles: string;
     membersOnly: boolean;
     includeReasoning: boolean;
@@ -86,7 +83,7 @@ export interface SetupAiConfiguration {
     bugbotTraceRules: boolean;
     bugbotSuggestedChanges: boolean;
     bugbotTelemetry: boolean;
-    bugbotFailOnUnresolved?: boolean;
+    bugbotFailOnUnresolved: boolean;
     /** Newline-separated organization-level rules supplied by repository variables. */
     bugbotOrganizationRules: string;
     provisioningMode: 'auto' | 'always' | 'disabled';

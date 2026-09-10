@@ -1,6 +1,7 @@
 import { Result } from "../../../data/model/result";
 import type { Execution } from "../../../data/model/execution";
-import { runCommentAutomation } from "../comment_automation_use_case";
+import { Ai } from "../../../data/model/ai";
+import { runCommentAutomation as runCommentAutomationImpl } from "../comment_automation_use_case";
 
 jest.mock("../../../utils/logger", () => ({
   logInfo: jest.fn(),
@@ -23,6 +24,27 @@ function successfulResult(id: string, payload?: unknown): Result {
     executed: true,
     payload,
   });
+}
+
+function configuredAi(options: { membersOnly?: boolean; fixVerifyCommands?: string[] } = {}): Ai {
+  return new Ai(
+    "",
+    "model",
+    options.membersOnly ?? false,
+    [],
+    false,
+    "low",
+    20,
+    options.fixVerifyCommands ?? [],
+  );
+}
+
+function runCommentAutomation(
+  execution: Execution,
+  ...args: Parameters<typeof runCommentAutomationImpl> extends [Execution, ...infer Rest] ? Rest : never
+) {
+  if (!execution.ai) Object.assign(execution, { ai: configuredAi() });
+  return runCommentAutomationImpl(execution, ...args);
 }
 
 describe("runCommentAutomation", () => {
@@ -216,8 +238,6 @@ describe("runCommentAutomation", () => {
 
   it.each([
     ['/copilot sync-branch --from release/3', 'release/3'],
-    ['/copilot update-branch', undefined],
-    ['/copilot updateBranch', undefined],
   ])('routes authorized branch synchronization directly: %s', async (userComment, parentOverride) => {
     const sync = { invoke: jest.fn().mockResolvedValue([successfulResult('sync')]) };
     const language = { invoke: jest.fn() };
@@ -370,7 +390,7 @@ describe("runCommentAutomation", () => {
         actor: 'outsider',
         tokenUser: 'vypbot',
         tokens: { token: 't' },
-        ai: { getAiMembersOnly: () => true },
+        ai: configuredAi({ membersOnly: true }),
       } as unknown as Execution,
       {
         taskId: 'CommentAutomation',
@@ -683,7 +703,7 @@ describe("runCommentAutomation", () => {
       {
         owner: 'o', repo: 'r', actor: 'actor', tokens: { token: 't' },
         commit: { branch: 'feature/1-safe' }, issueNumber: 1,
-        ai: { getBugbotFixVerifyCommands: () => [] },
+        ai: configuredAi({ fixVerifyCommands: [] }),
       } as unknown as Execution,
       {
         taskId: 'CommentAutomation',

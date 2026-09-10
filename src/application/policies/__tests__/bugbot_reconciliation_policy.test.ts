@@ -14,7 +14,7 @@ describe('bugbot reconciliation policy', () => {
         expect(resolved).toEqual(new Set(['gone']));
     });
 
-    it('does not resolve a legacy id when its fingerprint is still active', () => {
+    it('does not resolve a previous id when its fingerprint is still active', () => {
         const resolved = reconcileResolvedFindingIds(
             new Set(['old-id']),
             { 'old-id': { issue: { commentId: 1, resolved: false, fingerprint: 'fp-12345678' } } },

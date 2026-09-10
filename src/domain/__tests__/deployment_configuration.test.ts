@@ -69,7 +69,7 @@ describe("deployment configuration", () => {
   it("rejects invalid enum values that arrive through a runtime setup file", () => {
     expect(validateDeploymentConfiguration(configuration({
       reconciliationPullRequestMode: "AUTO" as DeploymentConfigurationValues["reconciliationPullRequestMode"],
-    }), context)).toContain("The reconciliation PR mode must be one of: auto, auto-merge, merge-queue, create-only, legacy-wait.");
+    }), context)).toContain("The reconciliation PR mode must be one of: auto, auto-merge, merge-queue, create-only.");
   });
 
   it("rejects a non-boolean diagram value from untyped configuration", () => {

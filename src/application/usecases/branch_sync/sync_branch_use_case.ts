@@ -121,7 +121,7 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
 
     logInfo(`Invoking the fixer agent for ${preparation.conflictPaths.length} merge conflict(s).`);
     const response = await this.fixer.fix({
-      configuration: execution.ai?.getAgentConfiguration("fixer"),
+      configuration: execution.ai.getAgentConfiguration("fixer"),
       prompt: getBranchSyncConflictsPrompt({
         owner: execution.owner,
         repo: execution.repo,
@@ -143,7 +143,7 @@ export class SyncBranchUseCase implements ParamUseCase<SyncBranchRequest, Result
     execution: Execution,
     preparation: BranchMergePreparation,
   ): Promise<{ readonly commandCount: number; readonly failure?: string }> {
-    const commands = limitVerifyCommands(execution.ai?.getBugbotFixVerifyCommands?.() ?? []);
+    const commands = limitVerifyCommands(execution.ai.getBugbotFixVerifyCommands());
     if (commands.length === MAX_VERIFY_COMMANDS) logInfo(`Branch sync verification is capped at ${MAX_VERIFY_COMMANDS} commands.`);
     const verification = await runVerifyCommands(
       commands,

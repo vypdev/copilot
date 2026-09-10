@@ -10,7 +10,6 @@ import { normalizeBugbotReviewEffort, parseBugbotOrganizationRules, type BugbotR
 
 export interface GithubActionAiInputs {
     readonly requestedAgentTasks: AgentTaskConfiguration;
-    readonly pullRequestDescription: boolean;
     readonly pullRequestDescriptionMode: PullRequestDescriptionMode;
     readonly membersOnly: boolean;
     readonly includeReasoning: boolean;
@@ -30,7 +29,6 @@ export function readGithubActionAgentTasks(
 
 export function readGithubActionAiInputs(getInput: (key: string) => string): GithubActionAiInputs {
     const requestedAgentTasks = buildAgentTasksFromInputs(getInput);
-    const pullRequestDescription = isEnabledInput(getInput(INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION));
     const verifyCommands = getInput(INPUT_KEYS.BUGBOT_FIX_VERIFY_COMMANDS)
         .split(',')
         .map((command) => command.trim())
@@ -38,10 +36,7 @@ export function readGithubActionAiInputs(getInput: (key: string) => string): Git
 
     return {
         requestedAgentTasks,
-        pullRequestDescription,
-        pullRequestDescriptionMode: pullRequestDescription
-            ? normalizePullRequestDescriptionMode(getInput(INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION_MODE))
-            : 'disabled',
+        pullRequestDescriptionMode: normalizePullRequestDescriptionMode(getInput(INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION_MODE)),
         membersOnly: isEnabledInput(getInput(INPUT_KEYS.AI_MEMBERS_ONLY)),
         includeReasoning: isEnabledInput(getInput(INPUT_KEYS.AI_INCLUDE_REASONING)),
         ignoreFiles: parseDelimitedValues(getInput(INPUT_KEYS.AI_IGNORE_FILES)),

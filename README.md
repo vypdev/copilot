@@ -82,7 +82,7 @@ for action-level examples.
 - **Pull requests** — Link PRs to issues, update project columns, assign reviewers; optional AI-generated PR description and automatic Bugbot review with stable finding threads; use `/copilot analyze` or `@vypbot analyze ...` for read-only review, or request an authorized change.
 - **Push (commits)** — Notify the issue, update size/progress, and optionally run Bugbot; a separate agent-free observer watches every branch and recommends synchronizing children when their parent moves.
 - **Projects** — Link issues and PRs to boards and move them to the right columns.
-- **Single actions** — On-demand: check progress, think, create release/tag, mark deployed, etc.
+- **Single actions** — On-demand maintenance and analysis, plus workflow-owned callbacks for durable release and hotfix operations.
 - **Branch synchronization** — Authorized issue/PR commands merge parent into working branch, call the fixer only for eligible conflicts, run verification, reject remote races, push, and report exactly what happened.
 - **Release and hotfix orchestration** — Cut from the correct immutable origin, promote through a protected production PR, publish only the accepted production commit, and reconcile it back through resumable managed PRs without keeping a runner polling checks.
 - **Evidence and safety** — Every run writes a bounded Job Summary; PR reviews expose a `Copilot / Review` Check Run, actionable findings are neutral by default and fail it only when `bugbot-fail-on-unresolved` is enabled, agent sandboxes run without approval or network access, and all agent/comment content remains bounded, secret-redacted, and treated as untrusted data.

@@ -23,6 +23,17 @@ const allDocumentation = [
   fs.readFileSync(path.join(root, 'README.md'), 'utf8'),
   ...docsContent,
 ].join('\n');
+const internalDocumentationFiles = [
+  ...fs.readdirSync(path.join(root, '_agent', 'docs'), { recursive: true })
+    .filter(file => file.endsWith('.md'))
+    .map(file => path.join(root, '_agent', 'docs', file)),
+  ...fs.readdirSync(path.join(root, '.cursor', 'rules'), { recursive: true })
+    .filter(file => file.endsWith('.mdc'))
+    .map(file => path.join(root, '.cursor', 'rules', file)),
+];
+const internalDocumentation = internalDocumentationFiles
+  .map(file => fs.readFileSync(file, 'utf8'))
+  .join('\n');
 
 const routes = new Set();
 function collectRoutes(value) {
@@ -170,15 +181,27 @@ if (missingWorkflowInventory.length) {
 const actionTypesSource = fs.readFileSync(path.join(root, 'src', 'data', 'model', 'action_types.ts'), 'utf8');
 const actionValues = [...actionTypesSource.matchAll(/:\s*'([^']+)'/g)].map(match => match[1]);
 const availableActions = docsByFile.get('single-actions/available-actions.mdx') ?? '';
+const internalUseCaseFlows = fs.readFileSync(path.join(root, '_agent', 'docs', 'usecase-flows.md'), 'utf8');
 const missingActions = actionValues.filter(value => !availableActions.includes(`\`${value}\``));
 if (missingActions.length) {
   errors.push(`single-actions/available-actions.mdx: single-action catalog is missing: ${missingActions.join(', ')}`);
 }
-const internalActionSection = availableActions.split('## Internal deployment-orchestration actions')[1]?.split('\n## ')[0] ?? '';
-for (const value of ['prepare_deployment_action', 'continue_deployment_action', 'published_deployment_action', 'failed_deployment_action']) {
+const missingInternalActions = actionValues.filter(value => !internalUseCaseFlows.includes(`\`${value}\``));
+if (missingInternalActions.length) {
+  errors.push(`_agent/docs/usecase-flows.md: single-action dispatch catalog is missing: ${missingInternalActions.join(', ')}`);
+}
+const internalActionSection = availableActions.split('## Workflow-owned deployment actions')[1]?.split('\n## ')[0] ?? '';
+for (const value of ['create_tag', 'prepare_deployment_action', 'continue_deployment_action', 'published_deployment_action', 'failed_deployment_action']) {
   if (!internalActionSection.includes(`\`${value}\``)) {
-    errors.push(`single-actions/available-actions.mdx: ${value} must be documented as an internal deployment action`);
+    errors.push(`single-actions/available-actions.mdx: ${value} must be documented as a workflow-owned deployment action`);
   }
+}
+const issueFreeActionSection = availableActions.split('## Actions that do not require an issue')[1]?.split('\n## ')[0] ?? '';
+if (/^\|\s+\*\*`create_tag`\*\*\s+\|/m.test(issueFreeActionSection)) {
+  errors.push('single-actions/available-actions.mdx: create_tag cannot be documented as an issue-free action');
+}
+if (!internalActionSection.includes('durable operation')) {
+  errors.push('single-actions/available-actions.mdx: workflow-owned deployment actions must document their durable-operation boundary');
 }
 
 function documentedIssueTemplate(file) {
@@ -216,7 +239,7 @@ function requireText(file, expected, contract) {
   if (!(docsByFile.get(file) ?? '').includes(expected)) errors.push(`${file}: missing ${contract}: ${expected}`);
 }
 
-requireText('issues/configuration.mdx', '`ai-pull-request-description`: Enable AI-powered PR descriptions (default: `true`)', 'action default');
+requireText('issues/configuration.mdx', '`ai-pull-request-description-mode`: PR body policy', 'canonical PR description policy');
 requireText('bugbot/quality-observability.mdx', 'Check is neutral when a successful review reports actionable findings', 'non-blocking Bugbot default');
 requireText('issues/deployment-orchestration.mdx', '**Allowed actions** to permit direct', 'npm direct-publish prerequisite');
 requireText('issues/deployment-orchestration.mdx', '`NPM_VISIBILITY_POLL_INTERVAL_SECONDS`', 'npm polling variable');
@@ -234,9 +257,36 @@ for (const variable of [
   requireText('issues/deployment-orchestration.mdx', `\`${variable}\``, 'deployment Repository Variable mapping');
 }
 
-const mergeTimeoutDescription = action.inputs?.['merge-timeout']?.description ?? '';
-if (!/only deprecated `legacy-wait`|only to deprecated `legacy-wait`|only.*legacy-wait/i.test(mergeTimeoutDescription)) {
-  errors.push('action.yml: merge-timeout description must state that it applies only to legacy-wait');
+const publicContractText = [
+  fs.readFileSync(path.join(root, 'action.yml'), 'utf8'),
+  allDocumentation,
+  ...setupWorkflowFiles.map(file => fs.readFileSync(path.join(root, 'setup', 'workflows', file), 'utf8')),
+  fs.readFileSync(path.join(root, 'setup', 'pull_request_template.md'), 'utf8'),
+].join('\n');
+const maintainedContractText = `${publicContractText}\n${internalDocumentation}`;
+const retiredContracts = [
+  ['post-deployment single action', /\bdeployed_action\b/],
+  ['runner-owned PR wait mode', /\blegacy-wait\b/],
+  ['runner-owned PR timeout input', /\bmerge-timeout\b/],
+  ['PR description boolean input', /\bai-pull-request-description(?!-mode)\b/],
+  ['branch synchronization alias', /\/copilot\s+update-branch\b/],
+  ['camel-case branch synchronization alias', /\/copilot\s+updateBranch\b/],
+  ['unhyphenated Bugbot dry-run option', /\bdryrun=(?:true|false)\b/],
+  ['Bugbot verbose option alias', /\bverbose=(?:true|false)\b/],
+  ['Bugbot suggestions option alias', /\bsuggestions=(?:true|false)\b/],
+  ['manual deployed transition', /\bmark(?: an issue)? as deployed\b/i],
+];
+for (const [contract, pattern] of retiredContracts) {
+  if (pattern.test(maintainedContractText)) errors.push(`maintained contract still contains retired ${contract}`);
+}
+for (const [contract, pattern] of [
+  ['pre-clean-architecture source root', /\bsrc\/usecase\//],
+  ['removed global constants module', /\bsrc\/utils\/constants\.ts\b/],
+  ['provider-specific Bugbot guard', /\bOpenCode must be configured\b/],
+  ['npm-based contributor command', /\bnpm run (?:build|test|lint)/],
+  ['unsupported contributor runtime', /\b(?:Use Node|nvm use) 20\b/i],
+]) {
+  if (pattern.test(internalDocumentation)) errors.push(`internal documentation still contains ${contract}`);
 }
 
 const obsoleteDocumentation = [

@@ -41,7 +41,7 @@ The setup policy is intentionally split by responsibility:
 - `setup_resource_provisioning.ts` owns grouping and port calls for Variables
   and Secrets.
 
-The legacy `Execution` aggregate is adapted once at
+The runtime `Execution` aggregate is projected once at
 `initial_setup_request.ts`; the setup workflow consumes only the repository,
 credential, label, issue-type, and setup-configuration facts it needs.
 Action input keys are defined in `src/application/contracts/input_keys.ts`,
@@ -58,9 +58,9 @@ typed `ApplicationError` contract with a category, retry hint, and diagnostic
 cause; the cause is never published as user-facing workflow output.
 
 Configuration embedded in issue or pull-request content is versioned. Readers
-migrate legacy payloads, remove transient execution data, retain unknown keys,
-and preserve future schema versions so an older workflow cannot silently
-downgrade configuration written by a newer one.
+accept only the current schema and fail closed on missing, malformed, or
+different-version payloads. Writers emit only current, known fields, so stale
+state cannot silently change runtime behavior.
 
 ## Workflow queue boundary
 
@@ -128,14 +128,14 @@ any non-terminal phase -> blocked -> previous safe phase after correction
 lifecycle, continuation-guard, and presentation policies own bounded values and
 decisions. They have no GitHub client, workflow payload, process, timer, or
 filesystem dependency. `DeploymentOrchestrationUseCase` receives the narrow
-`DeploymentOrchestrationContext`; the legacy `Execution` aggregate is only
-structurally adapted by the single-action boundary.
+`DeploymentOrchestrationContext`; the `Execution` aggregate is structurally
+projected by the single-action boundary.
 
 Application ports expose managed-PR identity, target capabilities, exact commit
 reachability, trusted reconciliation refs, workflow continuation, durable issue
 state, and presentation operations. `GithubDeploymentRepository` maps REST and
-GraphQL provider facts. `DeploymentStateRepository` owns the hidden issue block
-mapping and preserves unknown/future configuration keys. The composition root is
+GraphQL provider facts. `DeploymentStateRepository` owns the strict schema-v3
+hidden issue block. The composition root is
 the only place that binds these repositories and the Octokit adapter.
 
 Durable transitions compare the operation ID and expected stored phase before

@@ -2,7 +2,6 @@ import { AgentConfiguration, AgentTask, AgentTaskConfiguration } from './agent';
 import { type PullRequestDescriptionMode } from '../../domain/pull_request_description';
 import { type BugbotReviewConfiguration } from '../../domain/bugbot/review_configuration';
 export declare class Ai {
-    private aiPullRequestDescription;
     private aiMembersOnly;
     private aiIgnoreFiles;
     private aiIncludeReasoning;
@@ -12,8 +11,7 @@ export declare class Ai {
     private agentTasks;
     private pullRequestDescriptionMode;
     private bugbotReviewConfiguration;
-    constructor(_configurationSource: string, model: string, aiPullRequestDescription: boolean, aiMembersOnly: boolean, aiIgnoreFiles: string[], aiIncludeReasoning: boolean, bugbotMinSeverity: string, bugbotCommentLimit: number, bugbotFixVerifyCommands?: string[], agentTasks?: AgentTaskConfiguration, pullRequestDescriptionMode?: PullRequestDescriptionMode, bugbotReviewConfiguration?: Partial<BugbotReviewConfiguration>);
-    getAiPullRequestDescription(): boolean;
+    constructor(_configurationSource: string, model: string, aiMembersOnly: boolean, aiIgnoreFiles: string[], aiIncludeReasoning: boolean, bugbotMinSeverity: string, bugbotCommentLimit: number, bugbotFixVerifyCommands?: string[], agentTasks?: AgentTaskConfiguration, pullRequestDescriptionMode?: PullRequestDescriptionMode, bugbotReviewConfiguration?: Partial<BugbotReviewConfiguration>);
     getPullRequestDescriptionMode(): PullRequestDescriptionMode;
     getAiMembersOnly(): boolean;
     getAiIgnoreFiles(): string[];

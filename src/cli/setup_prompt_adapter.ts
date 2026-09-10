@@ -110,7 +110,6 @@ export class SetupPromptAdapter implements SetupPromptPort, SetupCredentialPromp
         repository.reopenIssueOnPush = await this.askBoolean('Reopen closed issues when a related branch receives a push?', repository.reopenIssueOnPush);
         repository.desiredAssigneesCount = await this.askNumber('Desired issue assignees (0 disables automatic assignment)', repository.desiredAssigneesCount);
         repository.desiredReviewersCount = await this.askNumber('Desired pull-request reviewers (0 disables automatic assignment)', repository.desiredReviewersCount);
-        repository.mergeTimeout = await this.askNumber('Merge timeout in seconds (0 disables the timeout)', repository.mergeTimeout);
         repository.inactivityThresholdHours = await this.askNumber('Hours without activity before closing a waiting issue', repository.inactivityThresholdHours);
         repository.issueLocale = await this.askText('Issue comment locale', repository.issueLocale);
         repository.pullRequestLocale = await this.askText('Pull-request comment locale', repository.pullRequestLocale);
@@ -127,7 +126,7 @@ export class SetupPromptAdapter implements SetupPromptPort, SetupCredentialPromp
         ) as SetupConfiguration['repository']['hotfixReconciliationStrategy'];
         repository.reconciliationPullRequestMode = await this.askChoice(
             'Managed reconciliation PR mode',
-            ['auto', 'auto-merge', 'merge-queue', 'create-only', 'legacy-wait'],
+            ['auto', 'auto-merge', 'merge-queue', 'create-only'],
             repository.reconciliationPullRequestMode,
         ) as SetupConfiguration['repository']['reconciliationPullRequestMode'];
         repository.reconciliationBackmergeMode = await this.askChoice(
@@ -165,11 +164,10 @@ export class SetupPromptAdapter implements SetupPromptPort, SetupCredentialPromp
 
         console.log(color('\n4. Configure AI, projects, and release safety\n', 36));
         const ai = defaults.ai;
-        ai.pullRequestDescription = await this.askBoolean('Generate AI pull-request descriptions?', ai.pullRequestDescription);
         ai.pullRequestDescriptionMode = await this.askChoice(
             'Pull-request description mode',
             ['replace', 'append', 'preserve', 'disabled'],
-            ai.pullRequestDescriptionMode ?? 'replace',
+            ai.pullRequestDescriptionMode,
         ) as SetupConfiguration['ai']['pullRequestDescriptionMode'];
         ai.ignoreFiles = await this.askText('AI ignore file patterns (comma-separated)', ai.ignoreFiles);
         ai.membersOnly = await this.askBoolean('Restrict AI processing to repository members?', ai.membersOnly);

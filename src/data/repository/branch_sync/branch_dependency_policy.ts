@@ -1,5 +1,5 @@
 import type { BranchDependency } from "../../../application/ports/branch_sync_ports";
-import { Config } from "../../model/config";
+import { Config, requireCurrentConfigurationPayload } from "../../model/config";
 import type {
   GithubBranchSyncIssueNode,
   GithubBranchSyncPullRequestNode,
@@ -51,7 +51,7 @@ function dependencyFromConfiguration(
   const serialized = issue.body?.match(CONFIGURATION)?.[1];
   if (!serialized) return undefined;
   try {
-    const configuration = new Config(JSON.parse(serialized));
+    const configuration = new Config(requireCurrentConfigurationPayload(JSON.parse(serialized)));
     if (!configuration.parentBranch || !configuration.workingBranch) return undefined;
     return {
       issueNumber: issue.number,

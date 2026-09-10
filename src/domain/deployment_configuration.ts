@@ -10,7 +10,6 @@ export const RECONCILIATION_PR_MODES = [
   "auto-merge",
   "merge-queue",
   "create-only",
-  "legacy-wait",
 ] as const;
 export type ReconciliationPullRequestMode = (typeof RECONCILIATION_PR_MODES)[number];
 

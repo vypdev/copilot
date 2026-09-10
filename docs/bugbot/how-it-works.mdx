@@ -102,7 +102,10 @@ The analysis role reasons over the repo context and your comment; the execution 
 
 ## Technical reference
 
-For code paths, marker format, payload types, and constants, see the Bugbot rule file in the repository (`.cursor/rules/bugbot.mdc`). It is intended for contributors and AI assistants working on the Copilot codebase.
+For code paths, marker identity, payload types, and security invariants, see
+`_agent/docs/bugbot.md` and the source policies under
+`src/application/usecases/steps/commit/bugbot/`. The Cursor rule points to this
+same maintained contract instead of carrying another implementation catalog.
 
 ---
 

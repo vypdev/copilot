@@ -424,14 +424,17 @@ function assertFinalizeReleaseJob(relativeFile, job) {
   assertExactTimeout(relativeFile, 'finalize-release', job, FINALIZE_RELEASE_TIMEOUT_MINUTES);
   assertExactNeeds(relativeFile, 'finalize-release', job, ['publish-npm']);
   const permissions = job.permissions ?? {};
-  if (Object.keys(permissions).join(',') !== 'contents' || permissions.contents !== 'read') {
-    throw new Error(`${relativeFile} finalize-release must have only contents: read permissions.`);
+  if (Object.keys(permissions).join(',') !== 'contents,issues,pull-requests'
+    || permissions.contents !== 'write'
+    || permissions.issues !== 'write'
+    || permissions['pull-requests'] !== 'write') {
+    throw new Error(`${relativeFile} finalize-release must have only contents, issues, and pull-requests write permissions.`);
   }
   const actions = (job.steps ?? [])
     .filter(isCopilotAction)
     .map(step => step.with?.['single-action']);
-  if (actions.join(',') !== 'create_release,publish_github_action,deployed_action') {
-    throw new Error(`${relativeFile} finalize-release must create the release, publish the action, and report deployment in order.`);
+  if (actions.join(',') !== 'create_release,publish_github_action,published_deployment_action') {
+    throw new Error(`${relativeFile} finalize-release must create the release, publish the action, and start reconciliation in order.`);
   }
 }
 

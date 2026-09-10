@@ -12,7 +12,7 @@ describe('setup workflow catalog', () => {
         expect(isSetupWorkflowEnabled('copilot_branch_sync.yml', { commits: false })).toBe(false);
     });
 
-    it('keeps unmanaged workflow files eligible for backwards compatibility', () => {
+    it('keeps uncatalogued workflow files eligible for extension', () => {
         expect(isSetupWorkflowEnabled('custom.yml', { commits: false })).toBe(true);
         expect(isSetupWorkflowEnabled('custom.yml')).toBe(true);
     });

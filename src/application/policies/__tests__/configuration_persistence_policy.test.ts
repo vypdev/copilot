@@ -21,7 +21,6 @@ describe('shouldPersistConfiguration', () => {
         ACTIONS.CREATE_TAG,
         ACTIONS.CREATE_RELEASE,
         ACTIONS.PUBLISH_GITHUB_ACTION,
-        ACTIONS.DEPLOYED,
         ACTIONS.THINK,
         ACTIONS.CHECK_PROGRESS,
         ACTIONS.DETECT_POTENTIAL_PROBLEMS,

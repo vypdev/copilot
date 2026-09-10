@@ -11,7 +11,7 @@ This is technical and compliance guidance, not legal advice. Review the current 
 
 ### API key authentication
 
-Set `CODEX_API_KEY` as a GitHub Actions Secret and expose it only on the Copilot action step. The Action provisions the pinned Codex CLI, runs authentication preflight, and passes the credential only to the Codex subprocess without printing it. `OPENAI_API_KEY` and `CODEX_ACCESS_TOKEN` remain supported compatibility/enterprise alternatives.
+Set `CODEX_API_KEY` as a GitHub Actions Secret and expose it only on the Copilot action step. The Action provisions the pinned Codex CLI, runs authentication preflight, and passes the credential only to the Codex subprocess without printing it. No other exported credential name is accepted for the Codex runtime.
 
 This is the documented automation-oriented option. API-key usage is separate from ChatGPT Plus/Pro plan usage and is billed through the OpenAI API account. Configure billing limits and monitoring before enabling it.
 
@@ -62,8 +62,6 @@ Never commit, print, prompt, ticket, implicitly copy, or expose a Codex session 
 | Mode | Plan | Programmatic CI posture | Billing | Copilot behavior |
 | --- | --- | --- | --- | --- |
 | `CODEX_API_KEY` | API Platform | Documented for per-invocation Codex automation | API pay-as-you-go | Supported and preferred API-key variable |
-| `OPENAI_API_KEY` | API Platform | Compatibility mode in this integration | API pay-as-you-go | Supported fallback |
-| Enterprise access token | ChatGPT Enterprise | Intended for trusted automation | Workspace/plan terms | Supported when configured |
 | Local ChatGPT `auth.json` | Plus/Pro/personal | Local CLI documented; personal CI export not established | Uses session entitlements | Controlled self-hosted option; contractual status unconfirmed |
 
 ## Sources

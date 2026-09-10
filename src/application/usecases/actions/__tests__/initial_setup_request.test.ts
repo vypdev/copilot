@@ -3,7 +3,7 @@ import { createDefaultSetupConfiguration } from '../../../policies/setup_configu
 import { createInitialSetupRequest } from '../initial_setup_request';
 
 describe('createInitialSetupRequest', () => {
-    it('maps only setup facts from the legacy execution aggregate', () => {
+    it('maps only setup facts from the runtime execution aggregate', () => {
         const setupConfiguration = createDefaultSetupConfiguration();
         const execution = {
             owner: 'owner',

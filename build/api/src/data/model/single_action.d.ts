@@ -24,7 +24,6 @@ export declare class SingleAction {
     commentId: number;
     commentIdInput: string;
     commentMode: string;
-    get isDeployedAction(): boolean;
     get isPublishGithubAction(): boolean;
     get isCreateReleaseAction(): boolean;
     get isCreateTagAction(): boolean;

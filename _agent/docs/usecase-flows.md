@@ -36,8 +36,7 @@ mainRun
 8. **PrepareBranchesUseCase** (if `isBranched`) **or** **RemoveIssueBranchesUseCase** (if not).
 9. **RemoveNotNeededBranchesUseCase**
 10. **DeployAddedUseCase** (deploy label)
-11. **DeployedAddedUseCase** (deployed label)
-12. If **issue.opened**:
+11. If **issue.opened**:
     - If not release and not question/help → **RecommendStepsUseCase**
     - If question or help → **AnswerIssueHelpUseCase**
 
@@ -98,8 +97,8 @@ Same flow as **IssueCommentUseCase**, with:
 
 1. **NotifyNewCommitOnIssueUseCase**
 2. **CheckChangesIssueSizeUseCase**
-3. **CheckProgressUseCase** (OpenCode: progress + size labels on issue and PRs)
-4. **DetectPotentialProblemsUseCase** (Bugbot: detection, publish to issue/PR, resolved markers)
+3. **CheckProgressUseCase** (configured planner role: progress + size labels on issue and PRs)
+4. **DetectPotentialProblemsUseCase** (configured findings/reviewer roles: detection, publication, and resolution verification)
 
 ---
 
@@ -114,7 +113,6 @@ Invoked when:
 
 | Action | Use case |
 |--------|----------|
-| `deployed_action` | DeployedActionUseCase |
 | `publish_github_action` | PublishGithubActionUseCase |
 | `create_release` | CreateReleaseUseCase |
 | `create_tag` | CreateTagUseCase |
@@ -123,6 +121,13 @@ Invoked when:
 | `check_progress_action` | CheckProgressUseCase |
 | `detect_potential_problems_action` | DetectPotentialProblemsUseCase |
 | `recommend_steps_action` | RecommendStepsUseCase |
+| `close_inactive_issues_action` | CloseInactiveIssuesUseCase |
+| `publish_issue_comment` | PublishIssueCommentUseCase |
+| `check_branch_sync_action` | ObserveBranchSyncUseCase |
+| `prepare_deployment_action` | DeploymentOrchestrationUseCase |
+| `continue_deployment_action` | DeploymentOrchestrationUseCase |
+| `published_deployment_action` | DeploymentOrchestrationUseCase |
+| `failed_deployment_action` | DeploymentOrchestrationUseCase |
 
 (Action names are defined in `src/data/model/action_types.ts`; examples include
 `check_progress_action`, `detect_potential_problems_action`, and
@@ -138,13 +143,13 @@ Invoked when:
 | **issue_comment** | IssueCommentUseCase | Language → intent (fix/do) → permission → [BugbotAutofix + commit + mark] or [DoUserRequest + commit] or Think. |
 | **pull_request** (opened/sync/closed) | PullRequestUseCase | Title, assign, reviewers, project, link issue, sync labels, size, [AI description]; if merged: close issue. |
 | **pull_request_review_comment** | PullRequestReviewCommentUseCase | Same as IssueCommentUseCase (language → intent → permission → autofix/do/Think). |
-| **push** | CommitUseCase | Notify commit → size → progress (OpenCode) → bugbot detect (OpenCode). |
-| **single-action** | SingleActionUseCase | One of: deployed, publish_github_action, create_release, create_tag, think, initial_setup, check_progress, detect_potential_problems, recommend_steps. |
+| **push** | CommitUseCase | Notify commit → size → progress (planner role) → Bugbot detection (findings/reviewer roles). |
+| **single-action** | SingleActionUseCase | Dispatches exactly one canonical value from `ACTIONS`; publication, maintenance, branch observation, and durable deployment callbacks share this entry point. |
 
 ---
 
 ## 8. Flow dependencies
 
-- **Bugbot autofix / Do user request**: require OpenCode, `ActorAuthorizationPort.isActorAllowedToModifyFiles` (org member or repo owner), and on issue_comment optionally branch from PR (`getHeadBranchForIssue`).
+- **Bugbot autofix / Do user request**: require a configured execution role, `ActorAuthorizationPort.isActorAllowedToModifyFiles` (organization member or repository owner/write collaborator), and on `issue_comment` a branch resolved from an open linked PR.
 - **Think**: used in IssueComment and PullRequestReviewComment when neither autofix nor do user request runs (by intent or by permission).
 - **CommitUseCase**: NotifyNewCommitOnIssue, CheckChangesIssueSize, CheckProgress, DetectPotentialProblems (bugbot) always run in that order on every push with commits.

@@ -134,7 +134,7 @@ implementation detail optional. Every input must define:
 | Validation | Invalid values and invalid cross-field combinations |
 | Scope and precedence | Project/repository/operation scope and override order |
 | Persistence | Whether an in-flight operation snapshots or rereads the value |
-| Migration | Behavior for absent, legacy, renamed, or future values |
+| Migration | Behavior for absent, retired, renamed, or future values |
 | Security | Values that must never accept arbitrary code, refs, URLs, or secrets |
 
 Show at least one recommended configuration and one meaningful alternative.

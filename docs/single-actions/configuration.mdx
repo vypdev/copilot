@@ -16,7 +16,7 @@ These inputs are used when you run the action in single-action mode. For the com
 
 ## When the action needs an issue
 
-For `check_progress_action`, `detect_potential_problems_action`, `recommend_steps_action`, `deployed_action`, `publish_issue_comment`, and every internal deployment action:
+For `check_progress_action`, `detect_potential_problems_action`, `recommend_steps_action`, `publish_issue_comment`, and every workflow-owned deployment action:
 
 | Input | Description | Example |
 |-------|-------------|---------|
@@ -29,13 +29,13 @@ repository's open issues carrying a waiting-state label. Configure its optional
 
 ### Internal operation identity
 
-`continue_deployment_action`, `published_deployment_action`, and
+`create_tag`, `continue_deployment_action`, `published_deployment_action`, and
 `failed_deployment_action` require `single-action-operation-id`. It must be the
 exact durable ID supplied by Copilot for that launcher issue. The workflows also
 pass the matching version where applicable. `prepare_deployment_action` creates
 the operation ID and instead requires issue, version, title, and changelog.
 
-These four actions belong to `release_workflow.yml`, `hotfix_workflow.yml`, and
+These five actions belong to `release_workflow.yml`, `hotfix_workflow.yml`, and
 `copilot_deployment_orchestration.yml`; do not invoke them manually or reuse an
 ID across issues.
 
@@ -48,13 +48,18 @@ pass `single-action-comment-id`; the default mode is `replace`, while
 message. An explicit `create` mode rejects a comment ID so configuration errors
 cannot silently update the wrong comment.
 
-## When the action needs a version (release or tag)
+## When the action needs a version
 
-For `create_release` and `create_tag`:
+For standalone `create_release` and workflow-owned `create_tag`:
 
 | Input | Description | Example |
 |-------|-------------|---------|
 | `single-action-version` | Version string (e.g. semver) | `'1.2.0'` |
+
+`create_tag` additionally requires `single-action-issue` and the exact
+`single-action-operation-id` created for that issue. It is accepted only in the
+publish phase of the matching durable release or hotfix operation; it is not a
+standalone tag-creation command.
 
 For **`create_release`** only:
 

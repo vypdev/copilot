@@ -430,7 +430,7 @@ inputs:
     description: "Hotfix reconciliation source after production publication: production-lineage, canonical-gitflow, or manual."
     default: "production-lineage"
   reconciliation-pr-mode:
-    description: "Managed PR behavior: auto, auto-merge, merge-queue, create-only, or legacy-wait."
+    description: "Managed PR behavior: auto, auto-merge, merge-queue, or create-only."
     default: "auto"
   reconciliation-backmerge-mode:
     description: "Back-merge branch shape: auto, direct, or sync-branch."
@@ -462,9 +462,6 @@ inputs:
   desired-reviewers-count:
     description: "The number of reviewers desired for the pull request. If set to 0, no reviewers will be added. If the number exceeds the available members, all members will be reviewers. Max 15."
     default: "1"
-  merge-timeout:
-    description: "Timeout in seconds that applies only to deprecated legacy-wait. Ignored by auto, auto-merge, merge-queue, and create-only. If set to 0, the legacy waiter has no artificial timeout."
-    default: "600"
   token:
     description: "Fine-grained personal access token for branch and project operations"
     required: true
@@ -564,9 +561,6 @@ inputs:
   tester-command:
     description: "Optional CLI command override for test tasks."
     default: ""
-  ai-pull-request-description:
-    description: "Enable AI-powered automatic updates for pull request descriptions."
-    default: "true"
   ai-pull-request-description-mode:
     description: "PR description policy: replace (full ownership), append (preserve human text), preserve (only explicit /copilot description), or disabled."
     default: "replace"

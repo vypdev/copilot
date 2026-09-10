@@ -30,7 +30,6 @@ function execution(overrides: Record<string, unknown> = {}) {
         currentConfiguration: { results: [] },
         ai: {
             getPullRequestDescriptionMode: () => 'append',
-            getAiPullRequestDescription: () => true,
         },
         ...overrides,
     };

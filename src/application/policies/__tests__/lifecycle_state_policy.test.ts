@@ -44,7 +44,7 @@ describe('lifecycle state policy', () => {
         })).toBe('ready');
     });
 
-    it('uses external review and check evidence without changing the legacy fallback', () => {
+    it('uses external review and check evidence without changing the safe fallback', () => {
         const base = {
             eventName: 'pull_request_review',
             action: 'submitted',

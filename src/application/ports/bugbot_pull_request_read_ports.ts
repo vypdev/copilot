@@ -54,32 +54,14 @@ export interface BugbotPullRequestReadPort extends BugbotPullRequestQueryPort {
     pullNumber: number,
     token: string,
   ): Promise<string | undefined>;
-  getChangedFiles(
-    owner: string,
-    repository: string,
-    pullNumber: number,
-    token: string,
-  ): Promise<Array<{ filename: string; status: string }>>;
-  getFilesWithFirstDiffLine(
-    owner: string,
-    repository: string,
-    pullNumber: number,
-    token: string,
-  ): Promise<Array<{ path: string; firstLine: number }>>;
-  getFilesWithDiffLocations?(
-    owner: string,
-    repository: string,
-    pullNumber: number,
-    token: string,
-  ): Promise<Array<{ path: string; locations: PullRequestDiffLocation[] }>>;
   /** Loads all diff projections from one paginated GitHub request. */
-  getReviewDiffSnapshot?(
+  getReviewDiffSnapshot(
     owner: string,
     repository: string,
     pullNumber: number,
     token: string,
   ): Promise<PullRequestReviewDiffSnapshot>;
-  listPullRequestReviewThreadStates?(
+  listPullRequestReviewThreadStates(
     owner: string,
     repository: string,
     pullNumber: number,

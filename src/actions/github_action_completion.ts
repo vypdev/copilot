@@ -31,8 +31,7 @@ export async function finishGithubAction(
     execution.currentConfiguration.results = results;
     core.setOutput('bugbot-telemetry', JSON.stringify(extractBugbotTelemetry(results)));
     const dryRun = results.some((result) => getResultPayload(result.payload)?.dryRun === true);
-    const ownsDeploymentPresentation = execution.singleAction.isDeploymentOrchestrationAction
-        || (execution.singleAction.isDeployedAction && Boolean(execution.currentConfiguration.deploymentOrchestration));
+    const ownsDeploymentPresentation = execution.singleAction.isDeploymentOrchestrationAction;
     if (!dryRun && !execution.singleAction.isPublishIssueCommentAction && !ownsDeploymentPresentation) {
         await new PublishResultUseCase(issueNotificationPort, createLogReportAdapter()).invoke(execution);
     } else if (execution.singleAction.isPublishIssueCommentAction || ownsDeploymentPresentation) {
@@ -62,7 +61,7 @@ function extractBugbotTelemetry(results: readonly Result[]): unknown[] {
 
 async function writeActionSummary(execution: Execution, summaryPort?: ActionSummaryPort): Promise<string> {
     const operation = execution.currentConfiguration.deploymentOrchestration;
-    const summaryText = (execution.singleAction.isDeploymentOrchestrationAction || execution.singleAction.isDeployedAction) && operation
+    const summaryText = execution.singleAction.isDeploymentOrchestrationAction && operation
         ? renderDeploymentJobSummary(operation, {
             owner: execution.owner,
             repository: execution.repo,
@@ -86,8 +85,8 @@ async function writeActionSummary(execution: Execution, summaryPort?: ActionSumm
                 : execution.labels?.currentIssueLabels ?? [],
             execution.labels?.lifecycle,
         ),
-        pullRequestDescriptionMode: execution.ai?.getPullRequestDescriptionMode?.(),
-        failOnUnresolvedFindings: execution.ai?.getBugbotReviewConfiguration?.().failOnUnresolved === true,
+        pullRequestDescriptionMode: execution.ai.getPullRequestDescriptionMode(),
+        failOnUnresolvedFindings: execution.ai.getBugbotReviewConfiguration().failOnUnresolved,
         results: execution.currentConfiguration.results,
         });
     if (!summaryPort) return summaryText;
@@ -113,7 +112,7 @@ async function publishCopilotEvidence(
         headSha,
         summary,
         results,
-        failOnUnresolvedFindings: execution.ai?.getBugbotReviewConfiguration?.().failOnUnresolved === true,
+        failOnUnresolvedFindings: execution.ai.getBugbotReviewConfiguration().failOnUnresolved,
     });
     if (!evidence) return;
     try {
@@ -130,7 +129,7 @@ function failActionForUnresolvedFindingsIfConfigured(
     results: readonly Result[],
     dryRun: boolean,
 ): void {
-    if (dryRun || execution.ai?.getBugbotReviewConfiguration?.().failOnUnresolved !== true) return;
+    if (dryRun || !execution.ai.getBugbotReviewConfiguration().failOnUnresolved) return;
     const unresolved = results.reduce((count, result) => {
         const states = getResultPayload(getResultPayload(result.payload)?.findingStates);
         return count + (typeof states?.open === 'number' ? states.open : 0)

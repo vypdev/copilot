@@ -4,6 +4,7 @@ import type {
   PullRequestReviewCommentCommandPort,
   PullRequestReviewCommentQueryPort,
   PullRequestReviewThreadCommandPort,
+  PullRequestReviewThreadStateQueryPort,
 } from "../../../../application/ports/pull_request_review_comment_ports";
 
 describe("BugbotPullRequestRepository capabilities", () => {
@@ -12,14 +13,14 @@ describe("BugbotPullRequestRepository capabilities", () => {
       getHeadBranchForIssue: jest.fn().mockResolvedValue("feature/9"),
       getOpenPullRequestNumbersByHeadBranch: jest.fn().mockResolvedValue([9]),
     };
-    const changes: Pick<BugbotPullRequestReadPort, "getPullRequestHeadSha" | "getChangedFiles" | "getFilesWithFirstDiffLine"> = {
+    const snapshot = {
+      changes: [{ filename: "src/file.ts", status: "modified", additions: 1, deletions: 0, patch: "@@ -1 +1 @@" }],
+      filesWithFirstDiffLine: [{ path: "src/file.ts", firstLine: 1 }],
+      filesWithDiffLocations: [{ path: "src/file.ts", locations: [{ line: 1, side: "RIGHT" as const }] }],
+    };
+    const changes: Pick<BugbotPullRequestReadPort, "getPullRequestHeadSha" | "getReviewDiffSnapshot"> = {
       getPullRequestHeadSha: jest.fn().mockResolvedValue("sha"),
-      getChangedFiles: jest
-        .fn()
-        .mockResolvedValue([{ filename: "src/file.ts", status: "modified" }]),
-      getFilesWithFirstDiffLine: jest
-        .fn()
-        .mockResolvedValue([{ path: "src/file.ts", firstLine: 1 }]),
+      getReviewDiffSnapshot: jest.fn().mockResolvedValue(snapshot),
     };
     const reviewQuery: PullRequestReviewCommentQueryPort = {
       getPullRequestReviewCommentBody: jest.fn().mockResolvedValue("body"),
@@ -31,9 +32,10 @@ describe("BugbotPullRequestRepository capabilities", () => {
       createReviewWithComments: jest.fn().mockResolvedValue(undefined),
       updatePullRequestReviewComment: jest.fn().mockResolvedValue(undefined),
     };
-    const threadCommand: PullRequestReviewThreadCommandPort = {
+    const threadCommand: PullRequestReviewThreadCommandPort & PullRequestReviewThreadStateQueryPort = {
       resolvePullRequestReviewThread: jest.fn().mockResolvedValue(undefined),
       unresolvePullRequestReviewThread: jest.fn().mockResolvedValue(undefined),
+      listPullRequestReviewThreadStates: jest.fn().mockResolvedValue({ PRRC_7: false }),
     };
     const repository = new BugbotPullRequestRepository(
       lifecycle,
@@ -58,11 +60,8 @@ describe("BugbotPullRequestRepository capabilities", () => {
       repository.getPullRequestHeadSha("owner", "repo", 9, "token"),
     ).resolves.toBe("sha");
     await expect(
-      repository.getChangedFiles("owner", "repo", 9, "token"),
-    ).resolves.toEqual([{ filename: "src/file.ts", status: "modified" }]);
-    await expect(
-      repository.getFilesWithFirstDiffLine("owner", "repo", 9, "token"),
-    ).resolves.toEqual([{ path: "src/file.ts", firstLine: 1 }]);
+      repository.getReviewDiffSnapshot("owner", "repo", 9, "token"),
+    ).resolves.toEqual(snapshot);
     await expect(
       repository.getPullRequestReviewCommentBody(
         "owner",
@@ -114,13 +113,7 @@ describe("BugbotPullRequestRepository capabilities", () => {
       9,
       "token",
     );
-    expect(changes.getChangedFiles).toHaveBeenCalledWith(
-      "owner",
-      "repo",
-      9,
-      "token",
-    );
-    expect(changes.getFilesWithFirstDiffLine).toHaveBeenCalledWith(
+    expect(changes.getReviewDiffSnapshot).toHaveBeenCalledWith(
       "owner",
       "repo",
       9,
