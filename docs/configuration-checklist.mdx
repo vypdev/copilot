@@ -35,11 +35,13 @@ description: Required checks before enabling Copilot automation.
 ## Release and hotfix orchestration
 
 - [ ] `copilot_deployment_orchestration.yml` and every enabled publishing workflow (`release_workflow.yml` and/or `hotfix_workflow.yml`) are committed on the repository's default branch before an operation starts; this project enables both.
-- [ ] The workflow PAT can write Contents, Issues, Pull requests, and Actions, and belongs to a bot identity different from the release operator.
+- [ ] The workflow PAT can write Contents, Issues, Pull requests, and Actions; can read Metadata and classic branch-protection Administration policy; and belongs to a bot identity different from the release operator.
 - [ ] Merge commits are allowed when `production-lineage` is selected.
 - [ ] Native auto-merge is enabled when explicitly selecting `auto-merge`.
-- [ ] Every required GitHub Actions and third-party check supports `merge_group` before selecting merge queue; required integrations also report on `gh-readonly-queue/<base>` branches.
-- [ ] The 11 orchestration Repository Variables are reviewed, or their documented defaults are accepted intentionally.
+- [ ] Every required GitHub Actions check has an exact static job name and `merge_group: checks_requested`; third-party integrations report on `gh-readonly-queue/<base>` branches.
+- [ ] Every otherwise-unknown third-party or ambiguous check has a reviewed exact attestation matching its context, integration ID (or explicit `any` source), and logical target; no attestation is used to override known contrary evidence.
+- [ ] `copilot doctor --config <setup.yml>` reports production and development queue readiness after workflows and Variables are on the default branch; active release branches are revalidated dynamically during hotfix reconciliation.
+- [ ] The 12 orchestration Repository Variables are reviewed, including `MERGE_QUEUE_CHECK_ATTESTATIONS` (recommended default `[]`).
 - [ ] For this project's package publication, the exact GitHub Environment `npm` exists and npm Trusted Publishers name `vypdev/copilot`, that Environment, and both publishing workflow filenames exactly.
 - [ ] Each npm publisher allows direct `npm publish`; no `NPM_TOKEN` or `NODE_AUTH_TOKEN` is configured for the OIDC path.
 - [ ] Node/npm meet npm Trusted Publishing minimums, `package.json.repository.url` matches the publishing repository, and the visibility interval/timeout are within their documented bounds.

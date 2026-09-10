@@ -664,8 +664,9 @@ function assertDeploymentContinuationWorkflow(file, workflow) {
   const continuation = (job.steps ?? []).find(step => isCopilotAction(step) && step.with?.['single-action'] === 'continue_deployment_action');
   if (!continuation
     || continuation.with?.token !== '${{ secrets.PAT }}'
+    || continuation.with?.['merge-queue-check-attestations'] !== "${{ vars.MERGE_QUEUE_CHECK_ATTESTATIONS || '[]' }}"
     || continuation.with?.['single-action-operation-id'] !== '${{ steps.identity.outputs.operation-id }}') {
-    throw new Error(`${relativeFile} must invoke the continuation with the PAT so managed events can recurse safely.`);
+    throw new Error(`${relativeFile} must invoke continuation with the PAT and live merge-queue attestations so managed events can recurse safely.`);
   }
 }
 

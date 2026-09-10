@@ -57,7 +57,8 @@ Complete this once before starting the first production-first operation:
 - allow merge commits, which `production-lineage` requires for an auditable
   ancestry relationship;
 - enable repository auto-merge if selecting `auto-merge`, or configure every
-  required check for `merge_group` if the target requires a merge queue;
+  required check for `merge_group` if the target requires a merge queue, and
+  add an exact attestation only for a producer Copilot cannot inspect;
 - for this project's npm publication, create the exact `npm` Environment and
   both exact npm Trusted Publisher entries described below; and
 - run `copilot doctor` after the new workflows and Variables are on the default
@@ -74,19 +75,25 @@ already be present when a managed promotion PR closes.
    the launcher issue.
 2. Version files, build output, validation, and package smoke tests are committed
    on that frozen release branch.
-3. Copilot creates or reuses one marked promotion PR from the release branch to
-   `main-branch`, then asks GitHub for auto-merge, merge queue, or maintainer
-   merge according to configuration.
-4. The preparation run exits successfully. Pending checks are an external wait,
+3. Copilot reads classic protection and every effective ruleset for
+   `main-branch`. If queue mode is selected, it verifies every required producer
+   on the target and candidate refs before it creates or reuses the marked
+   promotion PR.
+4. Immediately before enqueue, Copilot rereads the policy, confirms whether the
+   PR is already queued, and binds the mutation to the verified head SHA.
+   Otherwise it asks GitHub for native auto-merge or leaves a maintainer-owned
+   PR according to configuration.
+5. The preparation run exits successfully. Pending checks are an external wait,
    not a workflow failure.
-5. After the marked PR merges, Copilot verifies its repository, marker, stored
+6. After the marked PR merges, Copilot verifies its repository, marker, stored
    head SHA, base, and accepted production SHA.
-6. The publication continuation creates `v<version>` at that exact production
+7. The publication continuation creates `v<version>` at that exact production
    SHA, publishes the package, waits for registry visibility, creates the
    GitHub Release, and updates the moving major Action tag.
-7. Copilot creates or reuses a reconciliation PR into current development. The
-   default source is the accepted production commit.
-8. After reconciliation merges, Copilot applies cleanup, closes or retains the
+8. Copilot applies the same live target-policy preflight before creating a sync
+   branch or reconciliation PR into current development. The default source is
+   the accepted production commit.
+9. After reconciliation merges, Copilot applies cleanup, closes or retains the
    issue as configured, and marks the operation complete.
 
 The immutable facts are visible in one issue control-center comment. Duplicate
@@ -114,14 +121,16 @@ of guessing.
 
 ## Configuration reference
 
-Every value below is a bounded Action input, supported by `copilot setup`, and
-persisted for the lifetime of an operation.
+Every value below is a bounded Action input supported by `copilot setup`.
+Deployment choices are persisted for the lifetime of an operation;
+merge-queue attestations remain live policy and are deliberately reread.
 
 | Input | Default | Allowed values or limit | Use |
 |---|---|---|---|
 | `release-reconciliation-strategy` | `production-lineage` | `production-lineage`, `canonical-gitflow`, `manual` | Select the release source carried back after publication. |
 | `hotfix-reconciliation-strategy` | `production-lineage` | `production-lineage`, `canonical-gitflow`, `manual` | Select the hotfix source carried back after publication. |
 | `reconciliation-pr-mode` | `auto` | `auto`, `auto-merge`, `merge-queue`, `create-only` | Select who merges managed PRs. |
+| `merge-queue-check-attestations` | `[]` | JSON array; 0–50 exact entries; max 16 KiB | Authorize an otherwise-unknown required check for named logical targets. |
 | `reconciliation-backmerge-mode` | `auto` | `auto`, `direct`, `sync-branch` | Select the reconciliation PR head shape. |
 | `hotfix-active-release-policy` | `prefer-release` | `prefer-release`, `development`, `both` | Select hotfix reconciliation targets. |
 | `reconciliation-tree` | `sync` | Safe Git ref prefix, 1–100 characters | Prefix for deterministic ephemeral branches. |
@@ -141,6 +150,17 @@ available, and otherwise a maintainer-owned PR. Every mode leaves checks,
 reviews, branch protection, and merge timing to GitHub; no release runner polls
 an open PR.
 
+Queue readiness is fail-closed. Copilot unions classic branch protection with
+repository- and organization-level effective rulesets for the exact target.
+Required checks are identified by `(context, integrationId)`—never by a
+human-facing product name alone. Accessible GitHub Actions checks are matched
+to literal job names and require `merge_group: checks_requested` on both the
+target and candidate workflow definitions. Required-workflow rules are read
+from their exact repository, path, ref, or SHA. Dynamic/reusable job naming,
+any-source rules, inaccessible content, and third-party configuration remain
+`unknown` unless covered by an exact reviewed attestation. A known missing
+trigger is `unsupported` and cannot be overridden.
+
 `auto` back-merge mode uses a unique sync branch when a strict target has
 advanced. The branch starts at the current target and receives the trusted
 reconciliation commit server-side, preserving target-only commits and giving
@@ -157,6 +177,7 @@ Variable when Variable management is enabled:
 | `release-reconciliation-strategy` | `repository.releaseReconciliationStrategy` | `RELEASE_RECONCILIATION_STRATEGY` |
 | `hotfix-reconciliation-strategy` | `repository.hotfixReconciliationStrategy` | `HOTFIX_RECONCILIATION_STRATEGY` |
 | `reconciliation-pr-mode` | `repository.reconciliationPullRequestMode` | `RECONCILIATION_PR_MODE` |
+| `merge-queue-check-attestations` | `repository.mergeQueueCheckAttestations` | `MERGE_QUEUE_CHECK_ATTESTATIONS` |
 | `reconciliation-backmerge-mode` | `repository.reconciliationBackmergeMode` | `RECONCILIATION_BACKMERGE_MODE` |
 | `hotfix-active-release-policy` | `repository.hotfixActiveReleasePolicy` | `HOTFIX_ACTIVE_RELEASE_POLICY` |
 | `reconciliation-tree` | `repository.reconciliationTree` | `RECONCILIATION_TREE` |
@@ -168,8 +189,12 @@ Variable when Variable management is enabled:
 
 Action inputs are the runtime contract. Generated workflows read Repository
 Variables and fall back to the same defaults. Once an operation starts, its
-branch roles and orchestration choices are snapshotted; changing a Variable does
-not rewrite an in-flight deployment.
+branch roles and orchestration choices are snapshotted; changing those Variables
+does not rewrite an in-flight deployment. Merge-queue attestations are the
+exception: they are live repository policy and are reread with effective target
+rules at every readiness decision. Both publishing workflows and the managed-PR
+continuation workflow pass `MERGE_QUEUE_CHECK_ATTESTATIONS`, so a multi-target
+operation does not fall back to stale or empty trust policy between events.
 
 A recommended non-interactive fragment is:
 
@@ -178,6 +203,7 @@ repository:
   releaseReconciliationStrategy: production-lineage
   hotfixReconciliationStrategy: production-lineage
   reconciliationPullRequestMode: auto
+  mergeQueueCheckAttestations: []
   reconciliationBackmergeMode: auto
   hotfixActiveReleasePolicy: prefer-release
   reconciliationTree: sync
@@ -188,6 +214,23 @@ repository:
   orchestrationCommentMode: update
 ```
 
+For an external producer that has independently been verified against queue
+branches, use an exact, reviewable entry rather than a global switch:
+
+```yaml
+repository:
+  reconciliationPullRequestMode: merge-queue
+  mergeQueueCheckAttestations:
+    - context: Vendor security gate
+      integrationId: 424242
+      targets: [production]
+```
+
+`integrationId: any` is accepted only when the GitHub required-check rule itself
+allows any source. Target values are `production`, `development`, and
+`active-release`. Unknown fields, duplicate check identities, invalid targets,
+control characters, more than 50 entries, or more than 16 KiB are rejected.
+
 ### Invalid combinations
 
 Copilot rejects configuration before mutation when:
@@ -195,7 +238,7 @@ Copilot rejects configuration before mutation when:
 - production and development are the same branch;
 - a release, hotfix, or reconciliation prefix is empty, unsafe, or equals a
   long-lived branch;
-- `merge-queue` is selected without required `merge_group` workflow support; or
+- an attestation is malformed or exceeds its bounds; or
 - either reconciliation strategy is `manual` while issue completion is `close`.
 
 Branch prefixes cannot contain whitespace, `..`, `@{`, Git ref control
@@ -211,8 +254,16 @@ publishing contract to the default branch before launching an operation:
   features, each with internal `prepare` and `publish` modes;
 - `copilot_deployment_orchestration.yml`, listening only to
   `pull_request: closed` and checking out the trusted PR base; and
-- `merge_group: checks_requested` on every workflow that provides a required
-  check for merge-queue targets.
+- a `merge_group` trigger covering `checks_requested` on every workflow that
+  provides a required check for merge-queue targets. The explicit filtered form
+  is recommended; GitHub's equivalent unfiltered string, list, null, and empty
+  mapping forms are also recognized.
+
+With a remote token, `copilot setup` shows live production/development readiness
+inside the plan before confirmation. `copilot doctor --config <setup.yml>` uses
+the same evaluator and fails when target policy drifts. Active release branches
+cannot be known statically; a hotfix discovers and revalidates each actual
+target before creating a sync branch or PR.
 
 This project enables both release and hotfix, so its installation contains all
 three files. A consumer that enables only one deployment kind still requires
@@ -289,15 +340,24 @@ publication succeeds.
   provide the ancestry guarantee required by this strategy.
 - Enable repository auto-merge before explicitly selecting `auto-merge`.
 - When a branch requires a merge queue, every required GitHub Actions check
-  must run for `merge_group`. Confirm equivalent support for third-party checks
-  such as code-health services before selecting queue mode.
+  must run for `merge_group`. Copilot verifies literal GitHub Actions job names
+  automatically and treats third-party or ambiguous producers as unknown until
+  an exact attestation is configured.
 - GitHub merge queues are available for organization-owned public repositories
   and organization-owned private repositories on Enterprise Cloud; they cannot
   be enabled by a branch-protection pattern containing `*`.
 - Third-party CI must report on the temporary
   `gh-readonly-queue/<base>` branches generated by the queue. Confirm this for
-  RepoWise or any equivalent required integration before making queue mode a
-  release dependency.
+  the relevant vendor before making queue mode a release dependency. Do not infer
+  the producer from a display name: a branded check may still be emitted by a
+  repository GitHub Actions workflow.
+- A 403, partial rules response, inaccessible workflow, or ambiguous job name
+  blocks automatic queue use. `create-only` is the explicit human-owned escape
+  hatch; there is no optimistic legacy queue mode.
+- The first failure leaves no new PR or sync branch. If policy changes between
+  preflight and enqueue, the already-created PR stays open and unqueued. Retry
+  after fixing policy; published npm/GitHub Release facts are preserved and are
+  not republished.
 - Strict development branches normally cause `auto` back-merge to use a sync
   branch when development advanced after the release cut.
 - Closing a managed PR without merge blocks the operation; it never bypasses

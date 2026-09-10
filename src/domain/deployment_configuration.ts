@@ -56,6 +56,7 @@ export interface DeploymentConfigurationValues {
   orchestrationPresentationMode: OrchestrationPresentationMode;
   orchestrationDiagrams: boolean;
   orchestrationCommentMode: OrchestrationCommentMode;
+  mergeQueueCheckAttestations: readonly MergeQueueCheckAttestation[];
 }
 
 export const DEFAULT_DEPLOYMENT_CONFIGURATION: Readonly<DeploymentConfigurationValues> = {
@@ -70,6 +71,7 @@ export const DEFAULT_DEPLOYMENT_CONFIGURATION: Readonly<DeploymentConfigurationV
   orchestrationPresentationMode: "guided",
   orchestrationDiagrams: true,
   orchestrationCommentMode: "update",
+  mergeQueueCheckAttestations: [],
 };
 
 export interface DeploymentConfigurationValidationContext {
@@ -77,7 +79,6 @@ export interface DeploymentConfigurationValidationContext {
   readonly developmentBranch: string;
   readonly releaseTree: string;
   readonly hotfixTree: string;
-  readonly mergeQueueWorkflowSupported?: boolean;
 }
 
 export function validateDeploymentConfiguration(
@@ -118,10 +119,7 @@ export function validateDeploymentConfiguration(
       errors.push(`The ${label} branch prefix cannot equal a protected long-lived branch.`);
     }
   }
-  if (configuration.reconciliationPullRequestMode === "merge-queue"
-      && context.mergeQueueWorkflowSupported === false) {
-    errors.push("Merge-queue mode requires merge_group support in every required workflow.");
-  }
+  errors.push(...normalizeMergeQueueCheckAttestations(configuration.mergeQueueCheckAttestations).errors);
   if ((configuration.releaseReconciliationStrategy === "manual"
       || configuration.hotfixReconciliationStrategy === "manual")
       && configuration.reconciliationIssueCompletion === "close") {
@@ -154,3 +152,7 @@ export function parseDeploymentEnum<T extends string>(
     ? { value: normalized as T, valid: true }
     : { value: fallback, valid: false };
 }
+import {
+  normalizeMergeQueueCheckAttestations,
+  type MergeQueueCheckAttestation,
+} from "./merge_queue_readiness";

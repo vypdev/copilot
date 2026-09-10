@@ -214,7 +214,9 @@ Allowed values:
 - `auto-merge`: use GitHub native auto-merge. Fail with an actionable message if
   repository settings do not support it.
 - `merge-queue`: enqueue the PR. Fail if the target or required integrations do
-  not support merge queues.
+  not support merge queues. Readiness is derived from live classic protection,
+  effective rulesets, and required producer contracts; see
+  [`merge-queue-readiness.md`](./merge-queue-readiness.md).
 - `create-only`: create/reuse the PR and wait for an authorized person or another
   system to merge it.
 
@@ -375,8 +377,9 @@ Validation MUST reject at least:
 - any tree value equal to a protected long-lived branch name;
 - empty or unsafe branch prefixes;
 - `production-lineage` with a non-ancestry-preserving merge method;
-- `merge-queue` when required workflow contracts do not include
-  `merge_group` support;
+- malformed merge-queue attestations at static input validation; live unknown
+  or unsupported producers are rejected by runtime preflight before side
+  effects and immediately before enqueue;
 - automatic issue closure with `manual` reconciliation;
 - `direct` back-merge when GitHub reports that satisfying strict rules would
   require merging development into production;
@@ -628,9 +631,15 @@ No check-run polling or direct post-check merge adapter is part of this design.
 Every mode MUST use GitHub's mergeability and protection decisions instead of
 reproducing them from Checks API responses.
 
-Merge queue support MUST be accompanied by `merge_group` triggers in every
-required GitHub Actions workflow. Setup validation MUST warn or fail when a
-required third-party check cannot be proven to support merge groups.
+Merge queue support MUST be accompanied by a `merge_group` trigger covering
+`checks_requested` in every required GitHub Actions workflow. The explicit
+filtered form is recommended and equivalent unfiltered GitHub syntax is valid.
+Runtime, setup, and doctor share the
+fail-closed evidence policy in
+[`merge-queue-readiness.md`](./merge-queue-readiness.md): accessible GitHub
+Actions producers are verified automatically, while an otherwise-unknown
+producer needs an exact reviewed attestation. Known contrary evidence cannot be
+overridden.
 
 ## 12. Idempotency and recovery rules
 

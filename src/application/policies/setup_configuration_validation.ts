@@ -61,12 +61,12 @@ export function validateSetupConfiguration(configuration: SetupConfiguration): s
         orchestrationPresentationMode: configuration.repository.orchestrationPresentationMode,
         orchestrationDiagrams: configuration.repository.orchestrationDiagrams,
         orchestrationCommentMode: configuration.repository.orchestrationCommentMode,
+        mergeQueueCheckAttestations: configuration.repository.mergeQueueCheckAttestations,
     }, {
         productionBranch: configuration.repository.mainBranch,
         developmentBranch: configuration.repository.developmentBranch,
         releaseTree: configuration.repository.releaseTree,
         hotfixTree: configuration.repository.hotfixTree,
-        mergeQueueWorkflowSupported: true,
     }));
     errors.push(...validateStorageConfiguration(configuration.storage));
     for (const task of SETUP_AGENT_TASKS) {

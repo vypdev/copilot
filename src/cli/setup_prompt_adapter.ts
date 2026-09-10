@@ -238,6 +238,11 @@ export class SetupPromptAdapter implements SetupPromptPort, SetupCredentialPromp
             `  Secret storage: ${plan.configuration.storage.secrets.defaultScope} scope${plan.configuration.storage.secrets.defaultScope === 'organization' ? ` (${plan.configuration.storage.secrets.organizationVisibility})` : ''}`,
             `  Labels and issue types: always checked by Copilot setup`,
             `  Initial tag: ${plan.configuration.createInitialTag ? 'v1.0.0 when no version tag exists' : 'disabled'}`, '',
+            ...(plan.mergeQueueReadiness.length > 0 ? [
+                color('Merge queue readiness', 36),
+                ...plan.mergeQueueReadiness.map(check => `  ${doctorIcon(check.status)} ${check.area}: ${check.message}`),
+                '',
+            ] : []),
             color('Strictly required Secrets', 33), `  ${plan.requiredSecrets.join(', ') || '(none)'}`,
             ...(plan.warnings.length > 0 ? ['', color('Important notes', 33), ...plan.warnings.map(warning => `  ⚠ ${warning}`)] : []),
         ].join('\n');
@@ -252,7 +257,7 @@ export class SetupPromptAdapter implements SetupPromptPort, SetupCredentialPromp
     async requestSetupPat(): Promise<string | undefined> {
         if (!this.readline) return undefined;
         console.log(renderBox(
-            'Enter a GitHub setup PAT. It is used in memory for this run only and is never stored in the repository, a .env file, or a GitHub Secret.\n\nRecommended fine-grained permissions for the selected setup features:\n  Repository: Metadata read, Contents read, Issues write, Actions read/write, Variables write, Secrets read/write, Workflows read/write.\n  Organization: Issue Types write and Projects read/write only when selected; Members read when member-only checks are enabled.\n  Contents write and Workflows write are needed only when changing workflow files through the GitHub API.\n\nThe workflow PAT is a different bot-account token and is requested separately.',
+            'Enter a GitHub setup PAT. It is used in memory for this run only and is never stored in the repository, a .env file, or a GitHub Secret.\n\nRecommended fine-grained permissions for the selected setup features:\n  Repository: Metadata read, Contents read, Issues write, Actions read/write, Variables write, Secrets read/write, Workflows read/write; Administration read when release/hotfix setup or doctor inspects classic branch protection.\n  Organization: Issue Types write and Projects read/write only when selected; Members read when member-only checks are enabled.\n  Contents write and Workflows write are needed only when changing workflow files through the GitHub API.\n\nThe workflow PAT is a different bot-account token and is requested separately.',
             'Setup PAT',
             33,
         ));

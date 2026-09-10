@@ -24,7 +24,7 @@ For comment-driven assistance, read-only commands are available to anyone who ca
   </Step>
 
   <Step title="Create the setup PAT">
-    The person running setup needs a separate fine-grained PAT. Give it only the permissions required by the selected setup features: repository Metadata read and repository Contents/Workflows read for inspection; Issues write for labels; Variables write for Repository Variables; Secrets read/write when provisioning Secrets; Actions read/write when checking or dispatching credential health; and organization Issue Types or Projects permissions only when those integrations are selected. If setup will use organization-level Actions Secrets or Variables, the token also needs the corresponding organization Actions Secrets/Variables read and write permissions. Organization scope is valid only for repositories owned by an organization; setup detects personal repositories and stops before attempting organization writes. Contents write and Workflows write are required only if the operator chooses to modify workflow files through the GitHub API.
+    The person running setup needs a separate fine-grained PAT. Give it only the permissions required by the selected setup features: repository Metadata read and repository Contents/Workflows read for inspection; Administration read when release/hotfix setup or doctor must inspect classic branch protection; Issues write for labels; Variables write for Repository Variables; Secrets read/write when provisioning Secrets; Actions read/write when checking or dispatching credential health; and organization Issue Types or Projects permissions only when those integrations are selected. If setup will use organization-level Actions Secrets or Variables, the token also needs the corresponding organization Actions Secrets/Variables read and write permissions. Organization scope is valid only for repositories owned by an organization; setup detects personal repositories and stops before attempting organization writes. Contents write and Workflows write are required only if the operator chooses to modify workflow files through the GitHub API.
 
     Enter it in the hidden prompt, or use `--token`/`PERSONAL_ACCESS_TOKEN` for automation. It remains in memory for the command and is not written to `.env`, a config file, or the `PAT` Secret.
   </Step>
@@ -48,6 +48,7 @@ For comment-driven assistance, read-only commands are available to anyone who ca
     Set these permissions for the repository:
 
     - **Actions**: Read and write
+    - **Administration**: Read-only when release or hotfix orchestration is enabled, so runtime can combine classic branch protection with effective rulesets before an automatic merge or enqueue
     - **Checks**: Not required on the PAT when using the supplied pull-request
       workflow. That workflow grants job-local `checks: write` to its short-lived
       `GITHUB_TOKEN` and passes it only as `COPILOT_EVIDENCE_TOKEN`. Grant Checks
@@ -58,7 +59,7 @@ For comment-driven assistance, read-only commands are available to anyone who ca
     - **Metadata**: Read-only
     - **Pull requests**: Read and write
 
-    Do not grant Administration, Secrets, Variables, Webhooks, or Workflows permissions to the runtime PAT unless an independently reviewed extension actually uses them. Workflow installation and Secret/Variable administration belong to the separate setup PAT.
+    Do not grant Administration write, Secrets, Variables, Webhooks, or Workflows permissions to the runtime PAT unless an independently reviewed extension actually uses them. Workflow installation and Secret/Variable administration belong to the separate setup PAT.
 
     **If your bot belongs to an organization** set these permissions for the organization:
 

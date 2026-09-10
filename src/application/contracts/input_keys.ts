@@ -114,6 +114,7 @@ export const INPUT_KEYS = {
     RELEASE_RECONCILIATION_STRATEGY: 'release-reconciliation-strategy',
     HOTFIX_RECONCILIATION_STRATEGY: 'hotfix-reconciliation-strategy',
     RECONCILIATION_PR_MODE: 'reconciliation-pr-mode',
+    MERGE_QUEUE_CHECK_ATTESTATIONS: 'merge-queue-check-attestations',
     RECONCILIATION_BACKMERGE_MODE: 'reconciliation-backmerge-mode',
     HOTFIX_ACTIVE_RELEASE_POLICY: 'hotfix-active-release-policy',
     RECONCILIATION_TREE: 'reconciliation-tree',

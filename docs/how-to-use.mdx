@@ -368,6 +368,7 @@ Release/hotfix setup also writes these bounded orchestration Variables:
 | `RELEASE_RECONCILIATION_STRATEGY` | `release-reconciliation-strategy` |
 | `HOTFIX_RECONCILIATION_STRATEGY` | `hotfix-reconciliation-strategy` |
 | `RECONCILIATION_PR_MODE` | `reconciliation-pr-mode` |
+| `MERGE_QUEUE_CHECK_ATTESTATIONS` | `merge-queue-check-attestations` |
 | `RECONCILIATION_BACKMERGE_MODE` | `reconciliation-backmerge-mode` |
 | `HOTFIX_ACTIVE_RELEASE_POLICY` | `hotfix-active-release-policy` |
 | `RECONCILIATION_TREE` | `reconciliation-tree` |
@@ -376,6 +377,12 @@ Release/hotfix setup also writes these bounded orchestration Variables:
 | `ORCHESTRATION_PRESENTATION_MODE` | `orchestration-presentation-mode` |
 | `ORCHESTRATION_DIAGRAMS` | `orchestration-diagrams` |
 | `ORCHESTRATION_COMMENT_MODE` | `orchestration-comment-mode` |
+
+`MERGE_QUEUE_CHECK_ATTESTATIONS` defaults to `[]`. Setup accepts it as a
+structured YAML array and serializes it as bounded JSON for the Action. It is a
+reviewed exception only for required producers Copilot cannot prove
+automatically; it is not a wildcard or a bypass for known-incompatible
+workflows.
 
 The project-only npm visibility Variables are
 `NPM_VISIBILITY_POLL_INTERVAL_SECONDS` (default `20`, allowed `10`–`60`) and

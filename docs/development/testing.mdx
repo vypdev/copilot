@@ -25,6 +25,13 @@ examples and their setup templates, and high-risk release contracts such as
 the default-branch continuation prerequisite, npm direct-publish policy,
 polling controls, and orchestration Variables. It also rejects removed public
 inputs, actions, commands, and orchestration modes.
+
+Merge-queue contract tests cover ruleset-only targets, classic/ruleset union,
+GitHub Actions workflow parsing on target and candidate refs, external exact
+attestations, setup/doctor drift, pre-PR and pre-enqueue ordering, queue
+membership idempotency, and head-bound enqueue. These tests use provider fakes;
+they never create a live queue entry or poll check runs.
+
 These deterministic checks cannot inspect live GitHub/npm settings or judge
 desktop/mobile, light/dark, and assistive-technology rendering; keep those as
 explicit operator and human UX gates.

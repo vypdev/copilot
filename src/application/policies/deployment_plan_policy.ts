@@ -4,6 +4,11 @@ import type {
   DeploymentOperationSnapshot,
   ReconciliationTargetState,
 } from "../../domain/deployment_operation";
+import type {
+  MergeQueueObservationProblem,
+  MergeQueueProducerEvidence,
+  MergeQueueReadiness,
+} from "../../domain/merge_queue_readiness";
 
 export interface InitialDeploymentOperationInput {
   readonly operationId: string;
@@ -63,6 +68,8 @@ export interface TargetMergeCapabilities {
   readonly mergeQueueRequired: boolean;
   readonly immediatelyMergeable: boolean;
   readonly requiresStrictStatusChecks: boolean;
+  readonly mergeQueueProducers: readonly MergeQueueProducerEvidence[];
+  readonly mergeQueueObservationProblems: readonly MergeQueueObservationProblem[];
 }
 
 export type PullRequestModeDecision =
@@ -76,10 +83,19 @@ export function selectPullRequestMode(
   if (configured === "create-only") {
     return { kind: "mode", mode: configured, reason: "Explicitly configured." };
   }
-  if (configured === "merge-queue" || (configured === "auto" && capabilities.mergeQueueRequired)) {
-    return capabilities.mergeQueueRequired
-      ? { kind: "mode", mode: "merge-queue", reason: "The target requires its merge queue." }
-      : { kind: "unsupported", reason: "The target does not expose a required merge queue." };
+  if (capabilities.mergeQueueObservationProblems.length > 0) {
+    return {
+      kind: "unsupported",
+      reason: `The target merge policy could not be verified: ${capabilities.mergeQueueObservationProblems[0].message}`,
+    };
+  }
+  if (capabilities.mergeQueueRequired) {
+    return configured === "auto-merge"
+      ? { kind: "unsupported", reason: "Auto-merge mode was selected, but the target requires its merge queue." }
+      : { kind: "mode", mode: "merge-queue", reason: "The target requires its merge queue." };
+  }
+  if (configured === "merge-queue") {
+    return { kind: "unsupported", reason: "The target does not expose a required merge queue." };
   }
   if (configured === "auto-merge") {
     return capabilities.autoMergeAllowed
@@ -92,6 +108,39 @@ export function selectPullRequestMode(
   return capabilities.autoMergeAllowed
     ? { kind: "mode", mode: "auto-merge", reason: "GitHub will merge after checks and reviews complete." }
     : { kind: "mode", mode: "create-only", reason: "Repository auto-merge is unavailable; maintainer merge is required." };
+}
+
+export function mergeQueueReadinessFailureMessage(readiness: MergeQueueReadiness, locale: string = "en-US"): string {
+  const spanish = locale.toLowerCase().startsWith("es");
+  const failed = readiness.producers.filter((producer) =>
+    producer.verdict === "unsupported" || producer.verdict === "unknown");
+  const producerDetails = failed.slice(0, 5)
+    .map((producer) => `${boundedDiagnostic(producer.name)} [${producer.verdict}]: ${boundedDiagnostic(producer.reason)}`)
+    .join("; ");
+  const problemDetails = readiness.problems.slice(0, 3)
+    .map((problem) => `${problem.area}: ${boundedDiagnostic(problem.message)}`)
+    .join("; ");
+  const details = [producerDetails, problemDetails].filter(Boolean).join("; ");
+  const hasUnsupportedProducer = failed.some((producer) => producer.verdict === "unsupported");
+  const hasObservationProblem = readiness.problems.length > 0;
+  if (spanish) {
+    const action = hasUnsupportedProducer
+      ? "Añade merge_group: checks_requested al workflow requerido y vuelve a intentarlo."
+      : hasObservationProblem
+        ? "Restaura el acceso de lectura y una respuesta válida para la política y los workflows del destino, y vuelve a intentarlo."
+        : "Haz que el productor requerido soporte merge groups o añade una atestación exacta revisada y vuelve a intentarlo.";
+    return `La preparación de la merge queue está en estado ${readiness.verdict} para el destino ${readiness.targetRole} ${boundedDiagnostic(readiness.targetBranch)}. ${details || "La evidencia del productor requerido está incompleta."} ${action}`;
+  }
+  const action = hasUnsupportedProducer
+    ? "Add merge_group: checks_requested to the required workflow, then retry."
+    : hasObservationProblem
+      ? "Restore read access and a valid response for the target policy and workflows, then retry."
+      : "Make the required producer support merge groups or add an exact reviewed check attestation, then retry.";
+  return `Merge queue readiness is ${readiness.verdict} for ${readiness.targetRole} target ${boundedDiagnostic(readiness.targetBranch)}. ${details || "Required producer evidence is incomplete."} ${action}`;
+}
+
+function boundedDiagnostic(value: string): string {
+  return value.replace(/[\r\n<>]/g, " ").replace(/::/g, "﹕﹕").replace(/@/g, "@\u200b").slice(0, 500);
 }
 
 export type BackmergeModeDecision =

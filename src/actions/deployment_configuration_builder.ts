@@ -14,6 +14,7 @@ import {
   type DeploymentConfigurationValues,
 } from "../domain/deployment_configuration";
 import { INPUT_KEYS } from "../application/contracts/input_keys";
+import { parseMergeQueueCheckAttestations } from "../domain/merge_queue_readiness";
 
 export interface DeploymentBranchInputContext {
   readonly productionBranch: string;
@@ -32,6 +33,10 @@ export function readDeploymentConfiguration(
     if (!parsed.valid) errors.push(`${key} must be one of: ${allowed.join(", ")}.`);
     return parsed.value;
   };
+  const mergeQueueCheckAttestations = parseMergeQueueCheckAttestations(
+    getInput(INPUT_KEYS.MERGE_QUEUE_CHECK_ATTESTATIONS),
+  );
+  errors.push(...mergeQueueCheckAttestations.errors);
   const configuration: DeploymentConfigurationValues = {
     releaseReconciliationStrategy: readEnum(
       INPUT_KEYS.RELEASE_RECONCILIATION_STRATEGY,
@@ -87,6 +92,7 @@ export function readDeploymentConfiguration(
       ORCHESTRATION_COMMENT_MODES,
       DEFAULT_DEPLOYMENT_CONFIGURATION.orchestrationCommentMode,
     ),
+    mergeQueueCheckAttestations: mergeQueueCheckAttestations.value,
   };
   errors.push(...validateDeploymentConfiguration(configuration, {
     productionBranch: branches.productionBranch || "master",

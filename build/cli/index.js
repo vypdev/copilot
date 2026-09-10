@@ -50910,6 +50910,7 @@ exports.readDeploymentConfiguration = readDeploymentConfiguration;
 const application_error_1 = __nccwpck_require__(75999);
 const deployment_configuration_1 = __nccwpck_require__(22495);
 const input_keys_1 = __nccwpck_require__(88539);
+const merge_queue_readiness_1 = __nccwpck_require__(12515);
 function readDeploymentConfiguration(getInput, branches) {
     const errors = [];
     const readEnum = (key, allowed, fallback) => {
@@ -50918,6 +50919,8 @@ function readDeploymentConfiguration(getInput, branches) {
             errors.push(`${key} must be one of: ${allowed.join(", ")}.`);
         return parsed.value;
     };
+    const mergeQueueCheckAttestations = (0, merge_queue_readiness_1.parseMergeQueueCheckAttestations)(getInput(input_keys_1.INPUT_KEYS.MERGE_QUEUE_CHECK_ATTESTATIONS));
+    errors.push(...mergeQueueCheckAttestations.errors);
     const configuration = {
         releaseReconciliationStrategy: readEnum(input_keys_1.INPUT_KEYS.RELEASE_RECONCILIATION_STRATEGY, deployment_configuration_1.RECONCILIATION_STRATEGIES, deployment_configuration_1.DEFAULT_DEPLOYMENT_CONFIGURATION.releaseReconciliationStrategy),
         hotfixReconciliationStrategy: readEnum(input_keys_1.INPUT_KEYS.HOTFIX_RECONCILIATION_STRATEGY, deployment_configuration_1.RECONCILIATION_STRATEGIES, deployment_configuration_1.DEFAULT_DEPLOYMENT_CONFIGURATION.hotfixReconciliationStrategy),
@@ -50932,6 +50935,7 @@ function readDeploymentConfiguration(getInput, branches) {
         orchestrationPresentationMode: readEnum(input_keys_1.INPUT_KEYS.ORCHESTRATION_PRESENTATION_MODE, deployment_configuration_1.ORCHESTRATION_PRESENTATION_MODES, deployment_configuration_1.DEFAULT_DEPLOYMENT_CONFIGURATION.orchestrationPresentationMode),
         orchestrationDiagrams: readBoolean(getInput(input_keys_1.INPUT_KEYS.ORCHESTRATION_DIAGRAMS), deployment_configuration_1.DEFAULT_DEPLOYMENT_CONFIGURATION.orchestrationDiagrams, input_keys_1.INPUT_KEYS.ORCHESTRATION_DIAGRAMS, errors),
         orchestrationCommentMode: readEnum(input_keys_1.INPUT_KEYS.ORCHESTRATION_COMMENT_MODE, deployment_configuration_1.ORCHESTRATION_COMMENT_MODES, deployment_configuration_1.DEFAULT_DEPLOYMENT_CONFIGURATION.orchestrationCommentMode),
+        mergeQueueCheckAttestations: mergeQueueCheckAttestations.value,
     };
     errors.push(...(0, deployment_configuration_1.validateDeploymentConfiguration)(configuration, {
         productionBranch: branches.productionBranch || "master",
@@ -51991,6 +51995,7 @@ exports.INPUT_KEYS = {
     RELEASE_RECONCILIATION_STRATEGY: 'release-reconciliation-strategy',
     HOTFIX_RECONCILIATION_STRATEGY: 'hotfix-reconciliation-strategy',
     RECONCILIATION_PR_MODE: 'reconciliation-pr-mode',
+    MERGE_QUEUE_CHECK_ATTESTATIONS: 'merge-queue-check-attestations',
     RECONCILIATION_BACKMERGE_MODE: 'reconciliation-backmerge-mode',
     HOTFIX_ACTIVE_RELEASE_POLICY: 'hotfix-active-release-policy',
     RECONCILIATION_TREE: 'reconciliation-tree',
@@ -53177,6 +53182,7 @@ function projectDeploymentLabels(current, operation, labels) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildInitialDeploymentOperation = buildInitialDeploymentOperation;
 exports.selectPullRequestMode = selectPullRequestMode;
+exports.mergeQueueReadinessFailureMessage = mergeQueueReadinessFailureMessage;
 exports.selectBackmergeMode = selectBackmergeMode;
 exports.selectReconciliationTargetBranches = selectReconciliationTargetBranches;
 exports.reconciliationSource = reconciliationSource;
@@ -53221,10 +53227,19 @@ function selectPullRequestMode(configured, capabilities) {
     if (configured === "create-only") {
         return { kind: "mode", mode: configured, reason: "Explicitly configured." };
     }
-    if (configured === "merge-queue" || (configured === "auto" && capabilities.mergeQueueRequired)) {
-        return capabilities.mergeQueueRequired
-            ? { kind: "mode", mode: "merge-queue", reason: "The target requires its merge queue." }
-            : { kind: "unsupported", reason: "The target does not expose a required merge queue." };
+    if (capabilities.mergeQueueObservationProblems.length > 0) {
+        return {
+            kind: "unsupported",
+            reason: `The target merge policy could not be verified: ${capabilities.mergeQueueObservationProblems[0].message}`,
+        };
+    }
+    if (capabilities.mergeQueueRequired) {
+        return configured === "auto-merge"
+            ? { kind: "unsupported", reason: "Auto-merge mode was selected, but the target requires its merge queue." }
+            : { kind: "mode", mode: "merge-queue", reason: "The target requires its merge queue." };
+    }
+    if (configured === "merge-queue") {
+        return { kind: "unsupported", reason: "The target does not expose a required merge queue." };
     }
     if (configured === "auto-merge") {
         return capabilities.autoMergeAllowed
@@ -53237,6 +53252,36 @@ function selectPullRequestMode(configured, capabilities) {
     return capabilities.autoMergeAllowed
         ? { kind: "mode", mode: "auto-merge", reason: "GitHub will merge after checks and reviews complete." }
         : { kind: "mode", mode: "create-only", reason: "Repository auto-merge is unavailable; maintainer merge is required." };
+}
+function mergeQueueReadinessFailureMessage(readiness, locale = "en-US") {
+    const spanish = locale.toLowerCase().startsWith("es");
+    const failed = readiness.producers.filter((producer) => producer.verdict === "unsupported" || producer.verdict === "unknown");
+    const producerDetails = failed.slice(0, 5)
+        .map((producer) => `${boundedDiagnostic(producer.name)} [${producer.verdict}]: ${boundedDiagnostic(producer.reason)}`)
+        .join("; ");
+    const problemDetails = readiness.problems.slice(0, 3)
+        .map((problem) => `${problem.area}: ${boundedDiagnostic(problem.message)}`)
+        .join("; ");
+    const details = [producerDetails, problemDetails].filter(Boolean).join("; ");
+    const hasUnsupportedProducer = failed.some((producer) => producer.verdict === "unsupported");
+    const hasObservationProblem = readiness.problems.length > 0;
+    if (spanish) {
+        const action = hasUnsupportedProducer
+            ? "Añade merge_group: checks_requested al workflow requerido y vuelve a intentarlo."
+            : hasObservationProblem
+                ? "Restaura el acceso de lectura y una respuesta válida para la política y los workflows del destino, y vuelve a intentarlo."
+                : "Haz que el productor requerido soporte merge groups o añade una atestación exacta revisada y vuelve a intentarlo.";
+        return `La preparación de la merge queue está en estado ${readiness.verdict} para el destino ${readiness.targetRole} ${boundedDiagnostic(readiness.targetBranch)}. ${details || "La evidencia del productor requerido está incompleta."} ${action}`;
+    }
+    const action = hasUnsupportedProducer
+        ? "Add merge_group: checks_requested to the required workflow, then retry."
+        : hasObservationProblem
+            ? "Restore read access and a valid response for the target policy and workflows, then retry."
+            : "Make the required producer support merge groups or add an exact reviewed check attestation, then retry.";
+    return `Merge queue readiness is ${readiness.verdict} for ${readiness.targetRole} target ${boundedDiagnostic(readiness.targetBranch)}. ${details || "Required producer evidence is incomplete."} ${action}`;
+}
+function boundedDiagnostic(value) {
+    return value.replace(/[\r\n<>]/g, " ").replace(/::/g, "﹕﹕").replace(/@/g, "@\u200b").slice(0, 500);
 }
 function selectBackmergeMode(configured, requiresStrictStatusChecks, directHeadIsUpToDate, directSourceIsExact = true) {
     const directIsUnsafe = !directSourceIsExact
@@ -53349,6 +53394,8 @@ const EN = {
     cleanup: "Cleanup and issue completion", jobSummary: "Deployment orchestration", result: "Result",
     externalWait: "Waiting externally", workflowFailure: "Workflow failed", previousPhase: "Previous phase", resultingPhase: "Resulting phase",
     retryable: "Retryable", createdReused: "Created, reused, or skipped", fallback: "prepared -> production PR -> accepted -> published -> reconciled -> complete",
+    retryAfterCorrection: "Retry after correcting the cause", manualIntervention: "Manual intervention is required",
+    reviewManagedPr: "review and merge the managed PR when GitHub reports it ready",
     phase: {
         preparing: "preparing the version", promotion_pr_pending: "waiting for production approval", promoted: "accepted in production",
         publishing: "publishing artifacts", published: "published; preparing development reconciliation",
@@ -53376,6 +53423,8 @@ const ES = {
     cleanup: "Limpieza y cierre de la issue", jobSummary: "Orquestación del despliegue", result: "Resultado",
     externalWait: "Esperando fuera del workflow", workflowFailure: "Workflow fallido", previousPhase: "Fase anterior", resultingPhase: "Fase resultante",
     retryable: "Reintentable", createdReused: "Creado, reutilizado u omitido", fallback: "preparada -> PR de producción -> aceptada -> publicada -> reconciliada -> completada",
+    retryAfterCorrection: "Vuelve a intentarlo después de corregir la causa", manualIntervention: "Se requiere intervención manual",
+    reviewManagedPr: "revisa y mergea la PR gestionada cuando GitHub indique que está lista",
     phase: {
         preparing: "preparando la versión", promotion_pr_pending: "esperando aprobación en producción", promoted: "aceptada en producción",
         publishing: "publicando artefactos", published: "publicada; preparando la reconciliación",
@@ -53456,7 +53505,7 @@ function renderDeploymentJobSummary(operation, context, previousPhase, operation
     const messages = messagesFor(context.issueLocale);
     const externallyPending = operation.phase === "promotion_pr_pending" || operation.phase === "reconciliation_pending";
     const result = operation.phase === "blocked" ? messages.workflowFailure : externallyPending ? messages.externalWait : messages.phase[operation.phase];
-    return [
+    const lines = [
         `# ${operation.phase === "blocked" ? "❌" : externallyPending ? "⏳" : "✅"} ${messages.jobSummary}`, "",
         `> **${messages.result}: ${result}.**`, "",
         `| ${messages.previousPhase} | ${messages.resultingPhase} | ${messages.retryable} |`, "|---|---|---|",
@@ -53467,8 +53516,12 @@ function renderDeploymentJobSummary(operation, context, previousPhase, operation
         `- ${messages.productionFact}: ${inline(operation.productionSha ? `${operation.productionBranch}@${shortSha(operation.productionSha)}` : "pending")}`,
         `- ${messages.publication}: ${operation.publicationVerified ? messages.alreadyPublished : messages.notPublished}`,
         `- ${messages.createdReused}: ${safeText(operations.join(", ") || "none")}`, "",
-        deploymentLinks(operation, context, messages).join(" · "),
-    ].join("\n");
+    ];
+    if (operation.phase === "blocked") {
+        lines.push(`## ${messages.actionRequired}`, "", `${safeText(operation.lastFailure?.message ?? messages.workflowFailure)}. ${operation.lastFailure?.retryable ? messages.retryAfterCorrection : messages.manualIntervention}.`, "");
+    }
+    lines.push(deploymentLinks(operation, context, messages).join(" · "));
+    return lines.join("\n");
 }
 function progressLines(operation, messages) {
     const phase = operation.phase === "blocked" ? operation.lastFailure?.previousPhase ?? "preparing" : operation.phase;
@@ -53511,7 +53564,7 @@ function protectedFact(operation, messages) {
 function nextDescription(operation, messages) {
     if (operation.phase === "blocked") {
         const diagnostic = safeText(operation.lastFailure?.message ?? messages.workflowFailure);
-        return `${diagnostic}. ${operation.lastFailure?.retryable ? `${messages.actionRequired}: retry after correcting the cause.` : `${messages.actionRequired}: manual intervention is required.`}`;
+        return `${diagnostic}. ${messages.actionRequired}: ${operation.lastFailure?.retryable ? messages.retryAfterCorrection : messages.manualIntervention}.`;
     }
     if (operation.phase === "promotion_pr_pending")
         return messages.afterPromotion;
@@ -53527,14 +53580,14 @@ function deploymentAction(operation, messages) {
     const manual = (operation.selectedPrMode ?? operation.prMode) === "create-only"
         && (operation.phase === "promotion_pr_pending" || operation.phase === "reconciliation_pending");
     if (manual)
-        return { required: true, message: `${messages.protectedChecks}: review and merge the managed PR when GitHub reports it ready.` };
+        return { required: true, message: `${messages.protectedChecks}: ${messages.reviewManagedPr}.` };
     if (operation.phase !== "blocked")
         return { required: false, message: messages.noAction };
     return {
         required: true,
         message: operation.lastFailure?.retryable
-            ? `${safeText(operation.lastFailure.message)}. Retry after correcting the cause.`
-            : `${safeText(operation.lastFailure?.message ?? messages.workflowFailure)}. Manual intervention is required.`,
+            ? `${safeText(operation.lastFailure.message)}. ${messages.retryAfterCorrection}.`
+            : `${safeText(operation.lastFailure?.message ?? messages.workflowFailure)}. ${messages.manualIntervention}.`,
     };
 }
 function deploymentLinks(operation, context, messages) {
@@ -54150,7 +54203,7 @@ const ISSUE_TEMPLATE_FILES = [
     'hotfix.yml',
     'release.yml',
 ];
-function buildSetupPlan(configuration) {
+function buildSetupPlan(configuration, mergeQueueReadiness = []) {
     const workflowFiles = (0, setup_workflow_catalog_1.enabledSetupWorkflowFiles)(configuration.features);
     const issueTemplateFiles = configuration.features.issueTemplates === false
         ? []
@@ -54173,6 +54226,7 @@ function buildSetupPlan(configuration) {
             || requirement.alternativeGroups.some(group => !requirement.runnerAuthenticationGroups?.includes(group)))
             .map(requirement => requirement.name),
         credentialRequirements,
+        mergeQueueReadiness: [...mergeQueueReadiness],
         warnings: buildSetupWarnings(configuration),
     };
 }
@@ -54221,6 +54275,7 @@ function buildSetupRepositoryVariables(configuration) {
     add('RELEASE_RECONCILIATION_STRATEGY', repository.releaseReconciliationStrategy);
     add('HOTFIX_RECONCILIATION_STRATEGY', repository.hotfixReconciliationStrategy);
     add('RECONCILIATION_PR_MODE', repository.reconciliationPullRequestMode);
+    add('MERGE_QUEUE_CHECK_ATTESTATIONS', JSON.stringify(repository.mergeQueueCheckAttestations));
     add('RECONCILIATION_BACKMERGE_MODE', repository.reconciliationBackmergeMode);
     add('HOTFIX_ACTIVE_RELEASE_POLICY', repository.hotfixActiveReleasePolicy);
     add('RECONCILIATION_TREE', repository.reconciliationTree);
@@ -54275,6 +54330,7 @@ function buildSetupActionInputs(configuration) {
         'release-reconciliation-strategy': repository.releaseReconciliationStrategy,
         'hotfix-reconciliation-strategy': repository.hotfixReconciliationStrategy,
         'reconciliation-pr-mode': repository.reconciliationPullRequestMode,
+        'merge-queue-check-attestations': JSON.stringify(repository.mergeQueueCheckAttestations),
         'reconciliation-backmerge-mode': repository.reconciliationBackmergeMode,
         'hotfix-active-release-policy': repository.hotfixActiveReleasePolicy,
         'reconciliation-tree': repository.reconciliationTree,
@@ -54332,7 +54388,7 @@ function buildSetupWarnings(configuration) {
         warnings.push('Release and hotfix workflows require the workflow PAT Secret and a writable token.');
     }
     if (configuration.repository.reconciliationPullRequestMode === 'merge-queue') {
-        warnings.push('Merge queue mode requires every required first-party and third-party check to support the merge_group event; setup can validate only the bundled Copilot bridge.');
+        warnings.push('Merge queue mode fails closed unless every required producer is verified automatically or covered by an exact reviewed attestation.');
     }
     if (configuration.ai.provisioningMode === 'always') {
         warnings.push('Always-provision mode requires pinned CLI versions or a Cursor installer checksum in repository Variables.');
@@ -54591,12 +54647,12 @@ function validateSetupConfiguration(configuration) {
         orchestrationPresentationMode: configuration.repository.orchestrationPresentationMode,
         orchestrationDiagrams: configuration.repository.orchestrationDiagrams,
         orchestrationCommentMode: configuration.repository.orchestrationCommentMode,
+        mergeQueueCheckAttestations: configuration.repository.mergeQueueCheckAttestations,
     }, {
         productionBranch: configuration.repository.mainBranch,
         developmentBranch: configuration.repository.developmentBranch,
         releaseTree: configuration.repository.releaseTree,
         hotfixTree: configuration.repository.hotfixTree,
-        mergeQueueWorkflowSupported: true,
     }));
     errors.push(...(0, setup_configuration_storage_policy_1.validateStorageConfiguration)(configuration.storage));
     for (const task of setup_configuration_defaults_1.SETUP_AGENT_TASKS) {
@@ -55449,11 +55505,13 @@ function noTagResult(taskId, tagName) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DeploymentOrchestrationUseCase = void 0;
 const deployment_plan_policy_1 = __nccwpck_require__(8352);
+const merge_queue_readiness_1 = __nccwpck_require__(12515);
 const deployment_presentation_policy_1 = __nccwpck_require__(83221);
 const deployment_operation_1 = __nccwpck_require__(92730);
 const managed_pull_request_1 = __nccwpck_require__(95914);
 const result_1 = __nccwpck_require__(73817);
 const deployment_lifecycle_policy_1 = __nccwpck_require__(54037);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const TASK_ID = "DeploymentOrchestrationUseCase";
 class DeploymentOrchestrationUseCase {
     constructor(dependencies) {
@@ -55573,6 +55631,10 @@ class DeploymentOrchestrationUseCase {
         return await this.ensurePromotion(execution, operation);
     }
     async ensurePromotion(execution, operation) {
+        const preflight = await this.inspectMergeBehavior(execution, operation, operation.productionBranch, "production", operation.sourceSha);
+        if (preflight.kind === "blocked") {
+            return await this.block(execution, operation, "promotion", preflight.reason, true);
+        }
         const promotion = await this.createOrReusePullRequest(execution, operation, "promotion");
         if (promotion.merged)
             return await this.advancePromotion(execution, operation, promotion);
@@ -55588,8 +55650,10 @@ class DeploymentOrchestrationUseCase {
             throw new Error(`Cannot prepare promotion from ${operation.phase}.`);
         execution.currentConfiguration.deploymentOrchestration = pending;
         await this.persist(execution);
-        const managed = await this.configureMergeBehavior(execution, pending, promotion);
-        return success(managed.selectedPrMode === "create-only"
+        const configured = await this.configureMergeBehavior(execution, pending, promotion, "promotion", "production");
+        if (configured.kind === "blocked")
+            return configured.result;
+        return success(configured.operation.selectedPrMode === "create-only"
             ? `Promotion PR #${promotion.number} is ready for maintainer review; this runner does not wait.`
             : `Promotion PR #${promotion.number} is managed by GitHub; this runner does not wait for checks.`);
     }
@@ -55792,7 +55856,12 @@ class DeploymentOrchestrationUseCase {
             return;
         }
         let target = operation.reconciliationTargets[index];
-        const capabilities = await this.dependencies.pullRequests.getTargetCapabilities(execution.owner, execution.repo, target.targetBranch, execution.tokens.token);
+        const targetRole = reconciliationTargetRole(operation, target.targetBranch);
+        const preflight = await this.inspectMergeBehavior(execution, operation, target.targetBranch, targetRole, target.sourceSha);
+        if (preflight.kind === "blocked") {
+            return await this.block(execution, operation, "reconciliation", preflight.reason, true);
+        }
+        const capabilities = preflight.capabilities;
         const [targetSha, currentSourceSha] = await Promise.all([
             this.dependencies.git.getBranchSha(execution.owner, execution.repo, target.targetBranch, execution.tokens.token),
             this.dependencies.git.getBranchSha(execution.owner, execution.repo, target.sourceBranch, execution.tokens.token),
@@ -55831,7 +55900,9 @@ class DeploymentOrchestrationUseCase {
         if (pullRequest.merged) {
             return await this.advanceReconciliation(execution, withPullRequest, pullRequest);
         }
-        await this.configureMergeBehavior(execution, withPullRequest, pullRequest);
+        const configured = await this.configureMergeBehavior(execution, withPullRequest, pullRequest, "reconciliation", targetRole);
+        if (configured.kind === "blocked")
+            return configured.result;
         return undefined;
     }
     async createOrReusePullRequest(execution, operation, phase, target) {
@@ -55858,15 +55929,18 @@ class DeploymentOrchestrationUseCase {
             : (0, deployment_presentation_policy_1.renderReconciliationPullRequest)(operation, target, context);
         return await this.dependencies.pullRequests.createManagedPullRequest({ ...query, ...content });
     }
-    async configureMergeBehavior(execution, operation, pullRequest) {
-        const capabilities = await this.dependencies.pullRequests.getTargetCapabilities(execution.owner, execution.repo, pullRequest.baseBranch, execution.tokens.token, pullRequest.number);
-        const decision = (0, deployment_plan_policy_1.selectPullRequestMode)(operation.prMode, capabilities);
-        if (decision.kind === "unsupported")
-            throw new Error(decision.reason);
+    async configureMergeBehavior(execution, operation, pullRequest, category, targetRole) {
+        const inspection = await this.inspectMergeBehavior(execution, operation, pullRequest.baseBranch, targetRole, pullRequest.headSha, pullRequest.number);
+        if (inspection.kind === "blocked") {
+            return {
+                kind: "blocked",
+                result: await this.block(execution, operation, category, inspection.reason, true),
+            };
+        }
+        const { capabilities, decision } = inspection;
         const managed = { ...operation, selectedPrMode: decision.mode };
         execution.currentConfiguration.deploymentOrchestration = managed;
         await this.persist(execution);
-        await this.publishDashboard(execution, managed);
         if (decision.mode === "auto-merge") {
             if (operation.prMode === "auto" && capabilities.immediatelyMergeable) {
                 await this.dependencies.pullRequests.mergePullRequest(execution.owner, execution.repo, pullRequest.number, execution.tokens.token);
@@ -55876,9 +55950,45 @@ class DeploymentOrchestrationUseCase {
             }
         }
         else if (decision.mode === "merge-queue") {
-            await this.dependencies.pullRequests.enqueuePullRequest(execution.owner, execution.repo, pullRequest.nodeId, execution.tokens.token);
+            const alreadyQueued = await this.dependencies.pullRequests.isPullRequestQueued(execution.owner, execution.repo, pullRequest.nodeId, execution.tokens.token);
+            if (!alreadyQueued) {
+                await this.dependencies.pullRequests.enqueuePullRequest(execution.owner, execution.repo, pullRequest.nodeId, pullRequest.headSha, execution.tokens.token);
+            }
         }
-        return managed;
+        await this.publishDashboard(execution, managed);
+        return { kind: "configured", operation: managed };
+    }
+    async inspectMergeBehavior(execution, operation, targetBranch, targetRole, candidateHeadSha, pullRequest) {
+        const capabilities = await this.dependencies.pullRequests.getTargetCapabilities(execution.owner, execution.repo, targetBranch, execution.tokens.token, { candidateHeadSha, ...(pullRequest === undefined ? {} : { pullRequest }) });
+        const decision = (0, deployment_plan_policy_1.selectPullRequestMode)(operation.prMode, capabilities);
+        if (decision.kind === "unsupported") {
+            if (capabilities.mergeQueueObservationProblems.length > 0) {
+                const readiness = (0, merge_queue_readiness_1.evaluateMergeQueueReadiness)({
+                    queueRequired: true,
+                    targetRole,
+                    targetBranch,
+                    producers: capabilities.mergeQueueProducers,
+                    problems: capabilities.mergeQueueObservationProblems,
+                    attestations: execution.deployment.mergeQueueCheckAttestations,
+                });
+                return { kind: "blocked", reason: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, execution.locale.issue) };
+            }
+            return { kind: "blocked", reason: decision.reason };
+        }
+        if (decision.mode === "merge-queue") {
+            const readiness = (0, merge_queue_readiness_1.evaluateMergeQueueReadiness)({
+                queueRequired: capabilities.mergeQueueRequired,
+                targetRole,
+                targetBranch,
+                producers: capabilities.mergeQueueProducers,
+                problems: capabilities.mergeQueueObservationProblems,
+                attestations: execution.deployment.mergeQueueCheckAttestations,
+            });
+            if (readiness.verdict !== "ready") {
+                return { kind: "blocked", reason: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, execution.locale.issue) };
+            }
+        }
+        return { kind: "ready", capabilities, decision };
     }
     async cleanup(execution, operation) {
         const deleteSource = operation.cleanup === "all" || operation.cleanup === "source-only";
@@ -55944,7 +56054,7 @@ class DeploymentOrchestrationUseCase {
         const operation = execution.currentConfiguration.deploymentOrchestration;
         if (!operation || operation.phase === "completed" || operation.phase === "blocked")
             return;
-        const message = error instanceof Error ? error.message : String(error);
+        const message = (0, github_comment_publication_policy_1.sanitizePublishedError)(error instanceof Error ? error.message : String(error));
         const category = operation.phase === "preparing" || operation.phase === "promotion_pr_pending"
             ? "promotion"
             : operation.phase === "promoted" || operation.phase === "publishing"
@@ -55988,6 +56098,13 @@ function deploymentKind(execution) {
     if (execution.labels.isRelease)
         return "release";
     throw new Error("The launcher issue does not identify exactly one release or hotfix source branch.");
+}
+function reconciliationTargetRole(operation, targetBranch) {
+    if (targetBranch === operation.productionBranch)
+        return "production";
+    if (targetBranch === operation.developmentBranch)
+        return "development";
+    return "active-release";
 }
 function presentationContext(execution) {
     return {
@@ -58626,7 +58743,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupDoctorUseCase = void 0;
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
 class SetupDoctorUseCase {
-    constructor(validation, secrets, variables, workspace, output, remoteHealth, remoteConfigurationReader) {
+    constructor(validation, secrets, variables, workspace, output, remoteHealth, remoteConfigurationReader, mergeQueueReadiness) {
         this.validation = validation;
         this.secrets = secrets;
         this.variables = variables;
@@ -58634,6 +58751,7 @@ class SetupDoctorUseCase {
         this.output = output;
         this.remoteHealth = remoteHealth;
         this.remoteConfigurationReader = remoteConfigurationReader;
+        this.mergeQueueReadiness = mergeQueueReadiness;
     }
     async execute(request) {
         const checks = [];
@@ -58642,6 +58760,14 @@ class SetupDoctorUseCase {
         if (pat.status !== 'valid') {
             this.output.showDoctorChecks(checks);
             return false;
+        }
+        if (this.mergeQueueReadiness) {
+            checks.push(...await this.mergeQueueReadiness.inspect({
+                owner: request.owner,
+                repository: request.repository,
+                token: request.setupToken,
+                configuration: request.configuration,
+            }));
         }
         const comparisons = this.workspace.compareWorkflows?.(request.configuration.features) ?? [];
         for (const comparison of comparisons) {
@@ -58776,6 +58902,154 @@ var setup_wizard_use_case_1 = __nccwpck_require__(43433);
 Object.defineProperty(exports, "SetupWizardUseCase", ({ enumerable: true, get: function () { return setup_wizard_use_case_1.SetupWizardUseCase; } }));
 var setup_credentials_use_case_1 = __nccwpck_require__(67438);
 Object.defineProperty(exports, "SetupCredentialsUseCase", ({ enumerable: true, get: function () { return setup_credentials_use_case_1.SetupCredentialsUseCase; } }));
+
+
+/***/ }),
+
+/***/ 9890:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupMergeQueueReadinessUseCase = void 0;
+const deployment_plan_policy_1 = __nccwpck_require__(8352);
+const merge_queue_readiness_1 = __nccwpck_require__(12515);
+const sensitive_text_1 = __nccwpck_require__(47122);
+class SetupMergeQueueReadinessUseCase {
+    constructor(targets) {
+        this.targets = targets;
+    }
+    async inspect(request) {
+        if (request.configuration.features.release === false && request.configuration.features.hotfix === false)
+            return [];
+        const configuredMode = request.configuration.repository.reconciliationPullRequestMode;
+        const spanish = request.configuration.repository.issueLocale.toLowerCase().startsWith("es");
+        const targets = uniqueTargets([
+            { role: "production", branch: request.configuration.repository.mainBranch },
+            { role: "development", branch: request.configuration.repository.developmentBranch },
+        ]);
+        const observedCheckIdentities = new Set();
+        const targetChecks = await Promise.all(targets.map(async (target) => {
+            const area = `Merge queue readiness · ${target.role} (${target.branch})`;
+            try {
+                const capabilities = await this.targets.getTargetCapabilities(request.owner, request.repository, target.branch, request.token);
+                const decision = (0, deployment_plan_policy_1.selectPullRequestMode)(configuredMode, capabilities);
+                for (const producer of capabilities.mergeQueueProducers) {
+                    if (producer.kind === "check" && producer.integrationId !== undefined) {
+                        observedCheckIdentities.add(`${producer.name}\0${producer.integrationId}`);
+                    }
+                }
+                if (decision.kind === "unsupported") {
+                    if (capabilities.mergeQueueObservationProblems.length === 0) {
+                        return [{ area, status: "fail", message: decision.reason }];
+                    }
+                    const readiness = (0, merge_queue_readiness_1.evaluateMergeQueueReadiness)({
+                        queueRequired: true,
+                        targetRole: target.role,
+                        targetBranch: target.branch,
+                        producers: capabilities.mergeQueueProducers,
+                        problems: capabilities.mergeQueueObservationProblems,
+                        attestations: request.configuration.repository.mergeQueueCheckAttestations,
+                    });
+                    return [{
+                            area,
+                            status: "fail",
+                            message: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, request.configuration.repository.issueLocale),
+                        }, ...producerChecks(readiness.producers, target.role, spanish)];
+                }
+                if (decision.mode !== "merge-queue") {
+                    return [{
+                            area,
+                            status: "pass",
+                            message: spanish
+                                ? `El modo seleccionado es ${decision.mode}; este destino no necesita evidencia de productores de merge queue.`
+                                : `Selected mode is ${decision.mode}; merge-queue producer evidence is not required for this target.`,
+                        }];
+                }
+                const readiness = (0, merge_queue_readiness_1.evaluateMergeQueueReadiness)({
+                    queueRequired: capabilities.mergeQueueRequired,
+                    targetRole: target.role,
+                    targetBranch: target.branch,
+                    producers: capabilities.mergeQueueProducers,
+                    problems: capabilities.mergeQueueObservationProblems,
+                    attestations: request.configuration.repository.mergeQueueCheckAttestations,
+                });
+                if (readiness.verdict !== "ready") {
+                    return [{
+                            area,
+                            status: "fail",
+                            message: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, request.configuration.repository.issueLocale),
+                        }, ...producerChecks(readiness.producers, target.role, spanish)];
+                }
+                const verified = readiness.producers.filter((producer) => producer.verdict === "verified").length;
+                const attested = readiness.producers.filter((producer) => producer.verdict === "attested").length;
+                return [{
+                        area,
+                        status: "pass",
+                        message: spanish
+                            ? `Listo. ${verified} productor(es) requerido(s) verificados automáticamente y ${attested} cubiertos por atestación exacta.`
+                            : `Ready. ${verified} required producer(s) verified automatically and ${attested} covered by exact attestation.`,
+                    }, ...producerChecks(readiness.producers, target.role, spanish)];
+            }
+            catch (error) {
+                return [{
+                        area,
+                        status: "fail",
+                        message: `Target policy could not be inspected: ${safeError(error)}`,
+                    }];
+            }
+        }));
+        const checks = targetChecks.flat();
+        if (request.configuration.features.hotfix !== false && configuredMode !== "create-only") {
+            checks.push({
+                area: "Merge queue readiness · active release",
+                status: "warn",
+                message: spanish
+                    ? "Las ramas de release activas se descubren dinámicamente y se revalidan antes de crear una rama o PR de reconciliación de hotfix."
+                    : "Active release branches are discovered dynamically and are revalidated before a hotfix reconciliation branch or PR is created.",
+            });
+        }
+        for (const attestation of request.configuration.repository.mergeQueueCheckAttestations) {
+            if (!observedCheckIdentities.has(`${attestation.context}\0${attestation.integrationId}`)) {
+                checks.push({
+                    area: `Merge queue attestation · ${attestation.context}`,
+                    status: "warn",
+                    message: spanish
+                        ? "Esta atestación exacta no coincide con ningún check requerido observado en producción o desarrollo."
+                        : "This exact attestation does not match a required check observed on production or development.",
+                });
+            }
+        }
+        return checks;
+    }
+}
+exports.SetupMergeQueueReadinessUseCase = SetupMergeQueueReadinessUseCase;
+function producerChecks(producers, role, spanish) {
+    return producers.map((producer) => ({
+        area: `Required producer · ${role} · ${producer.name}`,
+        status: producer.verdict === "verified" || producer.verdict === "attested" ? "pass" : "fail",
+        message: `${producer.verdict}: ${safeError(producer.reason)}${spanish && producer.verdict === "attested" ? " (atestación exacta revisada)" : ""}`,
+    }));
+}
+function uniqueTargets(targets) {
+    const seen = new Set();
+    return targets.filter((target) => {
+        const identity = `${target.role}\0${target.branch}`;
+        if (seen.has(identity))
+            return false;
+        seen.add(identity);
+        return true;
+    });
+}
+function safeError(error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return (0, sensitive_text_1.redactSensitiveText)(message)
+        .replace(/[\r\n<>]/g, " ")
+        .replace(/::/g, "﹕﹕")
+        .replace(/@/g, "@\u200b")
+        .slice(0, 240);
+}
 
 
 /***/ }),
@@ -58941,10 +59215,11 @@ exports.SetupWizardUseCase = void 0;
 const application_error_1 = __nccwpck_require__(75999);
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
 class SetupWizardUseCase {
-    constructor(prompt, remoteConfigurationReader, storagePrompt) {
+    constructor(prompt, remoteConfigurationReader, storagePrompt, mergeQueueReadiness) {
         this.prompt = prompt;
         this.remoteConfigurationReader = remoteConfigurationReader;
         this.storagePrompt = storagePrompt;
+        this.mergeQueueReadiness = mergeQueueReadiness;
     }
     async collect(request = {}) {
         this.lastRemoteConfiguration = undefined;
@@ -58976,7 +59251,15 @@ class SetupWizardUseCase {
         if (validationErrors.length > 0) {
             throw new application_error_1.ApplicationError(`Invalid setup configuration:\n${validationErrors.map(error => `- ${error}`).join('\n')}`, 'validation');
         }
-        const plan = (0, setup_configuration_policy_1.buildSetupPlan)(configuration);
+        const readiness = request.remoteTarget && this.mergeQueueReadiness
+            ? await this.mergeQueueReadiness.inspect({
+                owner: request.remoteTarget.owner,
+                repository: request.remoteTarget.repository,
+                token: request.remoteTarget.token,
+                configuration,
+            })
+            : [];
+        const plan = (0, setup_configuration_policy_1.buildSetupPlan)(configuration, readiness);
         this.prompt.showPlan(plan);
         if (!(await this.prompt.confirm(plan)))
             return undefined;
@@ -66925,6 +67208,7 @@ const setup_config_file_1 = __nccwpck_require__(11196);
 const setup_1 = __nccwpck_require__(36888);
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const setup_credentials_composition_root_1 = __nccwpck_require__(69084);
+const setup_doctor_composition_root_1 = __nccwpck_require__(56360);
 const setup_workspace_adapter_1 = __nccwpck_require__(5729);
 function registerSetupCommand(program) {
     program
@@ -66991,7 +67275,7 @@ function registerSetupCommand(program) {
             const remoteConfigurationReader = typeof setup_credentials_composition_root_1.createSetupRemoteConfigurationReadPort === 'function'
                 ? (0, setup_credentials_composition_root_1.createSetupRemoteConfigurationReadPort)()
                 : undefined;
-            const wizard = new setup_1.SetupWizardUseCase(prompt, remoteConfigurationReader, prompt);
+            const wizard = new setup_1.SetupWizardUseCase(prompt, remoteConfigurationReader, prompt, (0, setup_doctor_composition_root_1.createSetupMergeQueueReadinessUseCase)());
             const overrides = loadSetupOverrides(options);
             const configuration = await wizard.collect({
                 overrides,
@@ -67338,6 +67622,7 @@ exports.loadSetupConfigurationOverrides = loadSetupConfigurationOverrides;
 const node_fs_1 = __nccwpck_require__(87561);
 const yaml = __importStar(__nccwpck_require__(783));
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
+const merge_queue_readiness_1 = __nccwpck_require__(12515);
 const SETUP_OVERRIDE_KEYS = new Set([
     'features',
     'agents',
@@ -67376,6 +67661,7 @@ const REPOSITORY_STRING_KEYS = new Set([
 ]);
 const REPOSITORY_BOOLEAN_KEYS = new Set(['branchManagementAlways', 'reopenIssueOnPush', 'orchestrationDiagrams']);
 const REPOSITORY_NUMBER_KEYS = new Set(['desiredAssigneesCount', 'desiredReviewersCount', 'inactivityThresholdHours']);
+const REPOSITORY_STRUCTURED_KEYS = new Set(['mergeQueueCheckAttestations']);
 const AI_STRING_KEYS = new Set(['ignoreFiles', 'pullRequestDescriptionMode', 'bugbotSeverity', 'bugbotFixVerifyCommands', 'bugbotEffort', 'bugbotOrganizationRules', 'provisioningMode']);
 const AI_NUMBER_KEYS = new Set(['bugbotCommentLimit']);
 const AI_BOOLEAN_KEYS = new Set(['membersOnly', 'includeReasoning', 'bugbotDryRun', 'bugbotReviewDrafts', 'bugbotTraceRules', 'bugbotSuggestedChanges', 'bugbotTelemetry', 'bugbotFailOnUnresolved']);
@@ -67415,7 +67701,13 @@ function loadSetupConfigurationOverrides(filePath) {
             validateStringValues(agent, `agents.${task}`);
         }
     }
-    validateSection(raw.repository, 'repository', REPOSITORY_STRING_KEYS, REPOSITORY_BOOLEAN_KEYS, REPOSITORY_NUMBER_KEYS);
+    validateSection(raw.repository, 'repository', REPOSITORY_STRING_KEYS, REPOSITORY_BOOLEAN_KEYS, REPOSITORY_NUMBER_KEYS, REPOSITORY_STRUCTURED_KEYS);
+    if (raw.repository && raw.repository.mergeQueueCheckAttestations !== undefined) {
+        const result = (0, merge_queue_readiness_1.normalizeMergeQueueCheckAttestations)(raw.repository.mergeQueueCheckAttestations);
+        if (result.errors.length > 0)
+            throw new Error(result.errors.join(' '));
+        raw.repository.mergeQueueCheckAttestations = result.value;
+    }
     validateSection(raw.ai, 'ai', AI_STRING_KEYS, AI_BOOLEAN_KEYS, AI_NUMBER_KEYS);
     validateSection(raw.projects, 'projects', PROJECT_KEYS, new Set(), new Set());
     validateBooleanProperty(raw, 'createInitialTag');
@@ -67462,12 +67754,12 @@ function validateStorage(value) {
         }
     }
 }
-function validateSection(value, name, stringKeys, booleanKeys, numberKeys) {
+function validateSection(value, name, stringKeys, booleanKeys, numberKeys, structuredKeys = new Set()) {
     if (value === undefined)
         return;
     validateObject(value, name);
     const section = value;
-    validateObjectKeys(section, new Set([...stringKeys, ...booleanKeys, ...numberKeys]), name);
+    validateObjectKeys(section, new Set([...stringKeys, ...booleanKeys, ...numberKeys, ...structuredKeys]), name);
     for (const key of stringKeys)
         if (section[key] !== undefined && typeof section[key] !== 'string')
             throw new Error(`${name}.${key} must be a string.`);
@@ -67674,6 +67966,11 @@ class SetupPromptAdapter {
             `  Secret storage: ${plan.configuration.storage.secrets.defaultScope} scope${plan.configuration.storage.secrets.defaultScope === 'organization' ? ` (${plan.configuration.storage.secrets.organizationVisibility})` : ''}`,
             `  Labels and issue types: always checked by Copilot setup`,
             `  Initial tag: ${plan.configuration.createInitialTag ? 'v1.0.0 when no version tag exists' : 'disabled'}`, '',
+            ...(plan.mergeQueueReadiness.length > 0 ? [
+                (0, setup_prompt_rendering_1.color)('Merge queue readiness', 36),
+                ...plan.mergeQueueReadiness.map(check => `  ${(0, setup_prompt_rendering_1.doctorIcon)(check.status)} ${check.area}: ${check.message}`),
+                '',
+            ] : []),
             (0, setup_prompt_rendering_1.color)('Strictly required Secrets', 33), `  ${plan.requiredSecrets.join(', ') || '(none)'}`,
             ...(plan.warnings.length > 0 ? ['', (0, setup_prompt_rendering_1.color)('Important notes', 33), ...plan.warnings.map(warning => `  ⚠ ${warning}`)] : []),
         ].join('\n');
@@ -67687,7 +67984,7 @@ class SetupPromptAdapter {
     async requestSetupPat() {
         if (!this.readline)
             return undefined;
-        console.log((0, setup_prompt_rendering_1.renderBox)('Enter a GitHub setup PAT. It is used in memory for this run only and is never stored in the repository, a .env file, or a GitHub Secret.\n\nRecommended fine-grained permissions for the selected setup features:\n  Repository: Metadata read, Contents read, Issues write, Actions read/write, Variables write, Secrets read/write, Workflows read/write.\n  Organization: Issue Types write and Projects read/write only when selected; Members read when member-only checks are enabled.\n  Contents write and Workflows write are needed only when changing workflow files through the GitHub API.\n\nThe workflow PAT is a different bot-account token and is requested separately.', 'Setup PAT', 33));
+        console.log((0, setup_prompt_rendering_1.renderBox)('Enter a GitHub setup PAT. It is used in memory for this run only and is never stored in the repository, a .env file, or a GitHub Secret.\n\nRecommended fine-grained permissions for the selected setup features:\n  Repository: Metadata read, Contents read, Issues write, Actions read/write, Variables write, Secrets read/write, Workflows read/write; Administration read when release/hotfix setup or doctor inspects classic branch protection.\n  Organization: Issue Types write and Projects read/write only when selected; Members read when member-only checks are enabled.\n  Contents write and Workflows write are needed only when changing workflow files through the GitHub API.\n\nThe workflow PAT is a different bot-account token and is requested separately.', 'Setup PAT', 33));
         return this.askSecret('Setup PAT');
     }
     explainCredentialSeparation(requirements) {
@@ -71764,13 +72061,48 @@ exports.DeploymentStateRepository = DeploymentStateRepository;
 /***/ }),
 
 /***/ 22368:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
 
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GithubDeploymentRepository = void 0;
+const yaml = __importStar(__nccwpck_require__(783));
 const managed_pull_request_1 = __nccwpck_require__(95914);
+const sensitive_text_1 = __nccwpck_require__(47122);
 class GithubDeploymentRepository {
     constructor(clientProvider) {
         this.clientProvider = clientProvider;
@@ -71815,21 +72147,47 @@ class GithubDeploymentRepository {
         });
         return mapPullRequest(data, owner, repository);
     }
-    async getTargetCapabilities(owner, repository, targetBranch, token, pullRequest) {
+    async getTargetCapabilities(owner, repository, targetBranch, token, options = {}) {
         const client = this.clientProvider.getClient(token);
-        const [{ data: repositoryData }, protection, queue, pullRequestState] = await Promise.all([
+        const [{ data: repositoryData }, classic, rulesets, queue, pullRequestState] = await Promise.all([
             client.rest.repos.get({ owner, repo: repository }),
-            readBranchProtection(client, owner, repository, targetBranch),
-            readMergeQueueRequirement(client, owner, repository, targetBranch),
-            pullRequest === undefined
+            observeClassicProtection(client, owner, repository, targetBranch),
+            observeEffectiveRules(client, owner, repository, targetBranch),
+            observeClassicMergeQueue(client, owner, repository, targetBranch),
+            options.pullRequest === undefined
                 ? Promise.resolve(undefined)
-                : client.rest.pulls.get({ owner, repo: repository, pull_number: pullRequest }).then(({ data }) => data),
+                : client.rest.pulls.get({ owner, repo: repository, pull_number: options.pullRequest }).then(({ data }) => data),
         ]);
+        const candidateProblem = options.candidateHeadSha !== undefined && !/^[a-f0-9]{40}$/i.test(options.candidateHeadSha)
+            ? {
+                area: "workflow-contract",
+                message: "The candidate head SHA is invalid, so its workflow contract cannot be inspected.",
+            }
+            : undefined;
+        const candidateHeadChangedProblem = options.candidateHeadSha !== undefined
+            && candidateProblem === undefined
+            && pullRequestState !== undefined
+            && pullRequestState.head.sha !== options.candidateHeadSha
+            ? {
+                area: "workflow-contract",
+                message: "The pull request head changed during readiness inspection, so the observed workflow contract is stale.",
+            }
+            : undefined;
+        const effective = normalizeEffectiveRules(classic.value, rulesets.value);
+        const problems = [classic.problem, rulesets.problem, queue.problem, candidateProblem, candidateHeadChangedProblem, ...effective.problems]
+            .filter((problem) => problem !== undefined);
+        const mergeQueueRequired = queue.value === true || effective.mergeQueueRequired;
+        const candidateHeadSha = options.candidateHeadSha ?? pullRequestState?.head.sha;
+        const producerInspection = mergeQueueRequired
+            ? await inspectMergeQueueProducers(client, owner, repository, repositoryData.id, targetBranch, candidateHeadSha, effective.requiredChecks, effective.requiredWorkflows)
+            : { producers: [], problems: [] };
         return {
             autoMergeAllowed: repositoryData.allow_auto_merge === true,
-            mergeQueueRequired: queue,
+            mergeQueueRequired,
             immediatelyMergeable: pullRequestState?.mergeable === true && pullRequestState.mergeable_state === "clean",
-            requiresStrictStatusChecks: protection?.required_status_checks?.strict === true,
+            requiresStrictStatusChecks: effective.requiresStrictStatusChecks,
+            mergeQueueProducers: producerInspection.producers,
+            mergeQueueObservationProblems: [...problems, ...producerInspection.problems],
         };
     }
     async enableAutoMerge(owner, repository, pullRequestNodeId, token) {
@@ -71839,10 +72197,26 @@ class GithubDeploymentRepository {
         }
       }`, { pullRequestId: pullRequestNodeId, owner, repository });
     }
-    async enqueuePullRequest(owner, repository, pullRequestNodeId, token) {
-        await this.clientProvider.getClient(token).graphql(`mutation EnqueueDeploymentPullRequest($pullRequestId: ID!) {
-        enqueuePullRequest(input: {pullRequestId: $pullRequestId}) { mergeQueueEntry { id } }
-      }`, { pullRequestId: pullRequestNodeId, owner, repository });
+    async isPullRequestQueued(owner, repository, pullRequestNodeId, token) {
+        const response = await this.clientProvider.getClient(token).graphql(`query DeploymentPullRequestQueue($pullRequestId: ID!) {
+        node(id: $pullRequestId) {
+          ... on PullRequest { mergeQueueEntry { id } }
+        }
+      }`, { pullRequestId: pullRequestNodeId });
+        if (!response.node || !("mergeQueueEntry" in response.node)) {
+            throw new Error("GitHub returned no authoritative merge-queue membership for the pull request.");
+        }
+        return Boolean(response.node.mergeQueueEntry?.id);
+    }
+    async enqueuePullRequest(owner, repository, pullRequestNodeId, expectedHeadSha, token) {
+        const response = await this.clientProvider.getClient(token).graphql(`mutation EnqueueDeploymentPullRequest($pullRequestId: ID!, $expectedHeadOid: GitObjectID!) {
+        enqueuePullRequest(input: {pullRequestId: $pullRequestId, expectedHeadOid: $expectedHeadOid}) {
+          mergeQueueEntry { id }
+        }
+      }`, { pullRequestId: pullRequestNodeId, expectedHeadOid: expectedHeadSha, owner, repository });
+        if (!response.enqueuePullRequest?.mergeQueueEntry?.id) {
+            throw new Error("GitHub did not confirm that the pull request entered the merge queue.");
+        }
     }
     async mergePullRequest(owner, repository, pullRequest, token) {
         const { data } = await this.clientProvider.getClient(token).rest.pulls.merge({
@@ -71932,23 +72306,489 @@ function mapPullRequest(value, owner, repository) {
         repositoryFullName: value.base.repo?.full_name ?? value.head.repo?.full_name ?? `${owner}/${repository}`,
     };
 }
-async function readBranchProtection(client, owner, repository, branch) {
+async function observeClassicProtection(client, owner, repository, branch) {
     try {
-        return (await client.rest.repos.getBranchProtection({ owner, repo: repository, branch })).data;
+        const { data } = await client.rest.repos.getBranchProtection({ owner, repo: repository, branch });
+        if (!data || typeof data !== "object" || Array.isArray(data)) {
+            throw new Error("GitHub returned an invalid classic branch-protection response.");
+        }
+        return { value: data };
     }
     catch (error) {
         if (isNotFound(error))
-            return undefined;
-        throw error;
+            return { value: undefined };
+        return {
+            value: undefined,
+            problem: {
+                area: "classic-protection",
+                message: `Could not read classic branch protection: ${safeProviderError(error)}`,
+            },
+        };
     }
 }
-async function readMergeQueueRequirement(client, owner, repository, branch) {
-    const response = await client.graphql(`query DeploymentTargetRules($owner: String!, $repository: String!, $qualifiedName: String!) {
+async function observeEffectiveRules(client, owner, repository, branch) {
+    try {
+        const { data } = await client.request("GET /repos/{owner}/{repo}/rules/branches/{branch}", { owner, repo: repository, branch });
+        if (!Array.isArray(data))
+            throw new Error("GitHub returned a non-array effective-rules response.");
+        if (data.length > 1000)
+            throw new Error("GitHub returned more than 1000 effective rules.");
+        return { value: data };
+    }
+    catch (error) {
+        return {
+            value: [],
+            problem: {
+                area: "effective-rules",
+                message: `Could not read active rulesets: ${safeProviderError(error)}`,
+            },
+        };
+    }
+}
+async function observeClassicMergeQueue(client, owner, repository, branch) {
+    try {
+        const response = await client.graphql(`query DeploymentTargetRules($owner: String!, $repository: String!, $qualifiedName: String!) {
+        repository(owner: $owner, name: $repository) {
+          ref(qualifiedName: $qualifiedName) { branchProtectionRule { requiresMergeQueue } }
+        }
+      }`, { owner, repository, qualifiedName: `refs/heads/${branch}` });
+        const ref = response.repository?.ref;
+        if (!ref)
+            throw new Error("GitHub returned no target ref while reading the classic merge-queue rule.");
+        const rule = ref.branchProtectionRule;
+        if (rule === null)
+            return { value: false };
+        if (rule === undefined)
+            throw new Error("GitHub omitted the classic merge-queue rule from its response.");
+        if (typeof rule.requiresMergeQueue !== "boolean") {
+            throw new Error("GitHub returned an invalid classic merge-queue rule.");
+        }
+        return { value: rule.requiresMergeQueue };
+    }
+    catch (error) {
+        return {
+            value: false,
+            problem: {
+                area: "classic-protection",
+                message: `Could not read the classic merge-queue rule: ${safeProviderError(error)}`,
+            },
+        };
+    }
+}
+function normalizeEffectiveRules(protection, rules) {
+    const checks = new Map();
+    const workflows = new Map();
+    const problems = [];
+    const recordInvalidRule = (kind, area = "effective-rules") => {
+        if (problems.some((problem) => problem.area === area && problem.message.includes(kind)))
+            return;
+        problems.push({
+            area,
+            message: `GitHub returned an invalid ${kind}, so readiness cannot be proven.`,
+        });
+    };
+    const addCheck = (context, integrationId, source) => {
+        if (typeof context !== "string" || !context.trim()) {
+            recordInvalidRule("required status check", source === "classic" ? "classic-protection" : "effective-rules");
+            return;
+        }
+        if (integrationId !== undefined
+            && integrationId !== null
+            && integrationId !== "any"
+            && (typeof integrationId !== "number" || !Number.isSafeInteger(integrationId) || integrationId <= 0)) {
+            recordInvalidRule("required status check", source === "classic" ? "classic-protection" : "effective-rules");
+        }
+        const normalizedId = typeof integrationId === "number" && Number.isSafeInteger(integrationId) && integrationId > 0
+            ? integrationId
+            : "any";
+        const check = { context: context.trim(), integrationId: normalizedId };
+        checks.set(`${check.context}\0${check.integrationId}`, check);
+    };
+    const classicStatusChecks = protection?.required_status_checks;
+    if (classicStatusChecks !== undefined && classicStatusChecks !== null
+        && (typeof classicStatusChecks !== "object" || Array.isArray(classicStatusChecks))) {
+        recordInvalidRule("required status check", "classic-protection");
+    }
+    const classicChecks = classicStatusChecks && typeof classicStatusChecks === "object"
+        ? classicStatusChecks.checks
+        : undefined;
+    if (classicChecks !== undefined && !Array.isArray(classicChecks)) {
+        recordInvalidRule("required status check", "classic-protection");
+    }
+    for (const rawCheck of Array.isArray(classicChecks) ? classicChecks : []) {
+        if (!rawCheck || typeof rawCheck !== "object" || Array.isArray(rawCheck)) {
+            recordInvalidRule("required status check", "classic-protection");
+            continue;
+        }
+        const check = rawCheck;
+        addCheck(check.context, check.app_id, "classic");
+    }
+    const classicContexts = classicStatusChecks && typeof classicStatusChecks === "object"
+        ? classicStatusChecks.contexts
+        : undefined;
+    if (classicContexts !== undefined && !Array.isArray(classicContexts)) {
+        recordInvalidRule("required status check", "classic-protection");
+    }
+    for (const context of Array.isArray(classicContexts) ? classicContexts : []) {
+        if (![...checks.values()].some((check) => check.context === context))
+            addCheck(context, "any", "classic");
+    }
+    let strict = classicStatusChecks !== null
+        && typeof classicStatusChecks === "object"
+        && !Array.isArray(classicStatusChecks)
+        && classicStatusChecks.strict === true;
+    if (classicStatusChecks !== null
+        && typeof classicStatusChecks === "object"
+        && !Array.isArray(classicStatusChecks)
+        && classicStatusChecks.strict !== undefined
+        && typeof classicStatusChecks.strict !== "boolean") {
+        recordInvalidRule("required status check", "classic-protection");
+    }
+    let mergeQueueRequired = false;
+    for (const rawRule of rules) {
+        if (!rawRule || typeof rawRule !== "object" || Array.isArray(rawRule)) {
+            recordInvalidRule("effective rule entry");
+            continue;
+        }
+        const rule = rawRule;
+        if (typeof rule.type !== "string" || !rule.type) {
+            recordInvalidRule("effective rule entry");
+            continue;
+        }
+        if (rule.type === "merge_queue")
+            mergeQueueRequired = true;
+        if (rule.type === "required_status_checks") {
+            strict || (strict = rule.parameters?.strict_required_status_checks_policy === true);
+            if (rule.parameters?.strict_required_status_checks_policy !== undefined
+                && typeof rule.parameters.strict_required_status_checks_policy !== "boolean") {
+                recordInvalidRule("required status check");
+            }
+            const requiredChecks = rule.parameters?.required_status_checks;
+            if (!Array.isArray(requiredChecks)) {
+                recordInvalidRule("required status check");
+            }
+            else {
+                for (const rawCheck of requiredChecks) {
+                    if (!rawCheck || typeof rawCheck !== "object" || Array.isArray(rawCheck)) {
+                        recordInvalidRule("required status check");
+                        continue;
+                    }
+                    const check = rawCheck;
+                    addCheck(check.context, check.integration_id, "ruleset");
+                }
+            }
+        }
+        if (rule.type === "workflows") {
+            const requiredWorkflows = rule.parameters?.workflows;
+            if (!Array.isArray(requiredWorkflows)) {
+                recordInvalidRule("required workflow");
+                continue;
+            }
+            for (const rawWorkflow of requiredWorkflows) {
+                if (!rawWorkflow || typeof rawWorkflow !== "object" || Array.isArray(rawWorkflow)) {
+                    recordInvalidRule("required workflow");
+                    continue;
+                }
+                const workflow = rawWorkflow;
+                if (typeof workflow.path !== "string"
+                    || !workflow.path.trim()
+                    || typeof workflow.repository_id !== "number"
+                    || !Number.isSafeInteger(workflow.repository_id)
+                    || workflow.repository_id <= 0
+                    || (workflow.ref !== undefined && (typeof workflow.ref !== "string" || !workflow.ref.trim()))
+                    || (workflow.sha !== undefined && (typeof workflow.sha !== "string" || !/^[a-f0-9]{40}$/i.test(workflow.sha)))) {
+                    recordInvalidRule("required workflow");
+                    continue;
+                }
+                const normalized = {
+                    path: workflow.path,
+                    repositoryId: workflow.repository_id,
+                    ...(typeof workflow.ref === "string" ? { ref: workflow.ref } : {}),
+                    ...(typeof workflow.sha === "string" ? { sha: workflow.sha } : {}),
+                };
+                workflows.set(`${normalized.repositoryId}\0${normalized.path}\0${normalized.ref ?? ""}\0${normalized.sha ?? ""}`, normalized);
+            }
+        }
+    }
+    return {
+        mergeQueueRequired,
+        requiresStrictStatusChecks: strict,
+        requiredChecks: [...checks.values()],
+        requiredWorkflows: [...workflows.values()],
+        problems,
+    };
+}
+async function inspectMergeQueueProducers(client, owner, repository, repositoryId, targetBranch, candidateHeadSha, requiredChecks, requiredWorkflows) {
+    let githubActionsAppId;
+    let appLookupFailure;
+    if (requiredChecks.some((check) => check.integrationId !== "any")) {
+        try {
+            githubActionsAppId = (await client.rest.apps.getBySlug({ app_slug: "github-actions" })).data.id;
+        }
+        catch (error) {
+            appLookupFailure = `Could not resolve the GitHub Actions app identity: ${safeProviderError(error)}`;
+        }
+    }
+    const refs = [...new Set([
+            targetBranch,
+            ...(candidateHeadSha && /^[a-f0-9]{40}$/i.test(candidateHeadSha) ? [candidateHeadSha] : []),
+        ])];
+    const needsWorkflowSnapshots = requiredChecks.some((check) => check.integrationId === githubActionsAppId);
+    const snapshots = [];
+    const problems = [];
+    if (needsWorkflowSnapshots) {
+        const observations = await Promise.allSettled(refs.map((ref) => readRepositoryWorkflowSnapshot(client, owner, repository, ref)));
+        observations.forEach((observation, index) => {
+            if (observation.status === "fulfilled")
+                snapshots.push(observation.value);
+            else {
+                problems.push({
+                    area: "workflow-contract",
+                    message: `Could not inspect repository workflows at ${refs[index]}: ${safeProviderError(observation.reason)}`,
+                });
+            }
+        });
+    }
+    const checkProducers = requiredChecks.map((check) => {
+        if (check.integrationId !== githubActionsAppId || githubActionsAppId === undefined) {
+            return {
+                kind: "check",
+                name: check.context,
+                integrationId: check.integrationId,
+                support: "unknown",
+                reason: appLookupFailure
+                    ?? (check.integrationId === "any"
+                        ? "The required check accepts any source, so its merge-group producer cannot be identified automatically."
+                        : `Integration ${check.integrationId} is not GitHub Actions and requires an exact operator attestation.`),
+            };
+        }
+        return inspectGithubActionsCheck(check, refs, snapshots);
+    });
+    const workflowProducers = await Promise.all(requiredWorkflows.map((workflow) => inspectRequiredWorkflow(client, owner, repository, repositoryId, targetBranch, workflow)));
+    return { producers: [...checkProducers, ...workflowProducers], problems };
+}
+function inspectGithubActionsCheck(check, refs, snapshots) {
+    const verdicts = refs.map((ref) => {
+        const snapshot = snapshots.find((candidate) => candidate.ref === ref);
+        if (!snapshot)
+            return { support: "unknown", reason: `Workflow definitions at ${ref} were not available.` };
+        const matches = snapshot.contracts.filter((contract) => contract.jobNames.includes(check.context));
+        if (matches.length === 0) {
+            return {
+                support: "unknown",
+                reason: snapshot.parseFailures.length > 0
+                    ? `No exact static job match was found at ${ref}; ${snapshot.parseFailures.length} workflow file(s) could not be parsed.`
+                    : `No exact static workflow job named ${check.context} was found at ${ref}.`,
+            };
+        }
+        const supported = matches.filter((contract) => contract.mergeGroupSupported);
+        return supported.length > 0
+            ? { support: "supported", reason: `${supported.map((contract) => contract.path).join(", ")} handles merge_group.checks_requested at ${ref}.` }
+            : { support: "unsupported", reason: `${matches.map((contract) => contract.path).join(", ")} does not handle merge_group.checks_requested at ${ref}.` };
+    });
+    const support = verdicts.some((verdict) => verdict.support === "unsupported")
+        ? "unsupported"
+        : verdicts.some((verdict) => verdict.support === "unknown")
+            ? "unknown"
+            : "supported";
+    return {
+        kind: "check",
+        name: check.context,
+        integrationId: check.integrationId,
+        support,
+        reason: verdicts.map((verdict) => verdict.reason).join(" "),
+    };
+}
+async function readRepositoryWorkflowSnapshot(client, owner, repository, ref) {
+    const expression = `${ref}:.github/workflows`;
+    const response = await client.graphql(`query DeploymentWorkflowContracts($owner: String!, $repository: String!, $expression: String!) {
       repository(owner: $owner, name: $repository) {
-        ref(qualifiedName: $qualifiedName) { branchProtectionRule { requiresMergeQueue } }
+        object(expression: $expression) {
+          ... on Tree {
+            entries {
+              name
+              type
+              object {
+                ... on Blob { text byteSize isBinary }
+              }
+            }
+          }
+        }
       }
-    }`, { owner, repository, qualifiedName: `refs/heads/${branch}` });
-    return response.repository?.ref?.branchProtectionRule?.requiresMergeQueue === true;
+    }`, { owner, repository, expression });
+    const entries = response.repository?.object?.entries;
+    if (!Array.isArray(entries))
+        throw new Error("GitHub returned no valid .github/workflows tree.");
+    if (entries.length > 500)
+        throw new Error("GitHub returned more than 500 workflow entries.");
+    const contracts = [];
+    const parseFailures = [];
+    for (const entry of entries) {
+        if (entry.type !== "blob"
+            || typeof entry.name !== "string"
+            || !/\.ya?ml$/i.test(entry.name)
+            || entry.object?.isBinary
+            || typeof entry.object?.text !== "string")
+            continue;
+        const actualBytes = new TextEncoder().encode(entry.object.text).byteLength;
+        if (typeof entry.object.byteSize !== "number"
+            || !Number.isSafeInteger(entry.object.byteSize)
+            || entry.object.byteSize < 0
+            || entry.object.byteSize > 1000000
+            || actualBytes > 1000000) {
+            parseFailures.push(entry.name);
+            continue;
+        }
+        try {
+            contracts.push(parseWorkflowContract(`.github/workflows/${entry.name}`, entry.object.text));
+        }
+        catch {
+            parseFailures.push(entry.name);
+        }
+    }
+    return { ref, contracts, parseFailures };
+}
+async function inspectRequiredWorkflow(client, owner, repository, repositoryId, targetBranch, workflow) {
+    const name = `${workflow.path} (repository ${workflow.repositoryId})`;
+    try {
+        if (!isSafeWorkflowPath(workflow.path))
+            throw new Error("Required workflow path is unsafe or unsupported.");
+        let workflowOwner = owner;
+        let workflowRepository = repository;
+        if (workflow.repositoryId !== repositoryId) {
+            const { data } = await client.request("GET /repositories/{repository_id}", { repository_id: workflow.repositoryId });
+            const [resolvedOwner, resolvedRepository, extra] = String(data.full_name ?? "").split("/");
+            if (!resolvedOwner || !resolvedRepository || extra)
+                throw new Error("Required workflow repository identity is unavailable.");
+            workflowOwner = resolvedOwner;
+            workflowRepository = resolvedRepository;
+        }
+        const ref = workflow.sha ?? workflow.ref ?? targetBranch;
+        const { data } = await client.rest.repos.getContent({
+            owner: workflowOwner,
+            repo: workflowRepository,
+            path: workflow.path,
+            ref,
+        });
+        const text = decodeWorkflowContent(data);
+        const contract = parseWorkflowContract(workflow.path, text);
+        return {
+            kind: "workflow",
+            name,
+            path: workflow.path,
+            support: contract.mergeGroupSupported ? "supported" : "unsupported",
+            reason: contract.mergeGroupSupported
+                ? `${workflow.path} handles merge_group.checks_requested at ${ref}.`
+                : `${workflow.path} does not handle merge_group.checks_requested at ${ref}.`,
+        };
+    }
+    catch (error) {
+        return {
+            kind: "workflow",
+            name,
+            path: workflow.path,
+            support: "unknown",
+            reason: `The required workflow could not be verified: ${safeProviderError(error)}`,
+        };
+    }
+}
+function decodeWorkflowContent(data) {
+    if (!data || typeof data !== "object" || Array.isArray(data))
+        throw new Error("GitHub did not return one workflow file.");
+    const file = data;
+    if (file.encoding !== "base64" || typeof file.content !== "string")
+        throw new Error("Workflow content is unavailable.");
+    if (typeof file.size !== "number" || !Number.isSafeInteger(file.size) || file.size < 0) {
+        throw new Error("Workflow size metadata is unavailable.");
+    }
+    if (file.size > 1000000)
+        throw new Error("Workflow file exceeds the 1 MB inspection limit.");
+    const encoded = file.content.replace(/\s/g, "");
+    if (encoded.length > 1400000 || encoded.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(encoded)) {
+        throw new Error("Workflow content is not valid bounded base64.");
+    }
+    const decoded = Buffer.from(encoded, "base64");
+    if (decoded.byteLength > 1000000)
+        throw new Error("Workflow file exceeds the 1 MB inspection limit.");
+    if (decoded.byteLength !== file.size)
+        throw new Error("Workflow size metadata does not match its content.");
+    try {
+        return new TextDecoder("utf-8", { fatal: true }).decode(decoded);
+    }
+    catch {
+        throw new Error("Workflow content is not valid UTF-8.");
+    }
+}
+function parseWorkflowContract(path, content) {
+    const parsed = yaml.load(content, { schema: yaml.JSON_SCHEMA });
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+        throw new Error("Workflow YAML must be an object.");
+    const workflow = parsed;
+    const jobs = workflow.jobs && typeof workflow.jobs === "object" && !Array.isArray(workflow.jobs)
+        ? workflow.jobs
+        : {};
+    const jobNames = [];
+    for (const [jobId, value] of Object.entries(jobs)) {
+        if (!value || typeof value !== "object" || Array.isArray(value))
+            continue;
+        const job = value;
+        if (typeof job.uses === "string")
+            continue;
+        if (job.strategy
+            && typeof job.strategy === "object"
+            && !Array.isArray(job.strategy)
+            && "matrix" in job.strategy)
+            continue;
+        if (typeof job.name === "string") {
+            if (!job.name.includes("${{"))
+                jobNames.push(job.name);
+        }
+        else {
+            jobNames.push(jobId);
+        }
+    }
+    return {
+        path,
+        jobNames,
+        mergeGroupSupported: hasMergeGroupTrigger(workflow.on),
+    };
+}
+function hasMergeGroupTrigger(value) {
+    if (value === "merge_group")
+        return true;
+    if (Array.isArray(value))
+        return value.includes("merge_group");
+    if (!value || typeof value !== "object")
+        return false;
+    const triggers = value;
+    if (!("merge_group" in triggers))
+        return false;
+    const mergeGroup = triggers.merge_group;
+    if (mergeGroup === null || mergeGroup === "")
+        return true;
+    if (!mergeGroup || typeof mergeGroup !== "object" || Array.isArray(mergeGroup))
+        return false;
+    const types = mergeGroup.types;
+    return types === undefined
+        || types === "checks_requested"
+        || (Array.isArray(types) && types.includes("checks_requested"));
+}
+function isSafeWorkflowPath(value) {
+    return value.length <= 255
+        && /^\.github\/workflows\/[A-Za-z0-9._/-]+\.ya?ml$/i.test(value)
+        && !value.includes("..");
+}
+function safeProviderError(error) {
+    const message = error instanceof Error
+        ? error.message
+        : typeof error === "object" && error !== null && "message" in error
+            ? String(error.message)
+            : String(error);
+    return (0, sensitive_text_1.redactSensitiveText)(message)
+        .replace(/[\r\n<>]/g, " ")
+        .replace(/::/g, "﹕﹕")
+        .replace(/@/g, "@\u200b")
+        .slice(0, 240);
 }
 function isNotFound(error) {
     return typeof error === "object" && error !== null && "status" in error && error.status === 404;
@@ -76281,7 +77121,7 @@ function lifecycleStateFromLabels(currentLabels, labels = exports.DEFAULT_COPILO
 /***/ }),
 
 /***/ 22495:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
@@ -76332,6 +77172,7 @@ exports.DEFAULT_DEPLOYMENT_CONFIGURATION = {
     orchestrationPresentationMode: "guided",
     orchestrationDiagrams: true,
     orchestrationCommentMode: "update",
+    mergeQueueCheckAttestations: [],
 };
 function validateDeploymentConfiguration(configuration, context) {
     const errors = [];
@@ -76369,10 +77210,7 @@ function validateDeploymentConfiguration(configuration, context) {
             errors.push(`The ${label} branch prefix cannot equal a protected long-lived branch.`);
         }
     }
-    if (configuration.reconciliationPullRequestMode === "merge-queue"
-        && context.mergeQueueWorkflowSupported === false) {
-        errors.push("Merge-queue mode requires merge_group support in every required workflow.");
-    }
+    errors.push(...(0, merge_queue_readiness_1.normalizeMergeQueueCheckAttestations)(configuration.mergeQueueCheckAttestations).errors);
     if ((configuration.releaseReconciliationStrategy === "manual"
         || configuration.hotfixReconciliationStrategy === "manual")
         && configuration.reconciliationIssueCompletion === "close") {
@@ -76399,6 +77237,7 @@ function parseDeploymentEnum(value, allowed, fallback) {
         ? { value: normalized, valid: true }
         : { value: fallback, valid: false };
 }
+const merge_queue_readiness_1 = __nccwpck_require__(12515);
 
 
 /***/ }),
@@ -76670,6 +77509,143 @@ function parseManagedPullRequestMarker(body) {
 }
 function isSafeOperationId(value) {
     return /^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(value);
+}
+
+
+/***/ }),
+
+/***/ 12515:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MAX_MERGE_QUEUE_ATTESTATIONS_BYTES = exports.MAX_MERGE_QUEUE_ATTESTATIONS = exports.MERGE_QUEUE_TARGET_ROLES = void 0;
+exports.parseMergeQueueCheckAttestations = parseMergeQueueCheckAttestations;
+exports.normalizeMergeQueueCheckAttestations = normalizeMergeQueueCheckAttestations;
+exports.evaluateMergeQueueReadiness = evaluateMergeQueueReadiness;
+exports.MERGE_QUEUE_TARGET_ROLES = ["production", "development", "active-release"];
+exports.MAX_MERGE_QUEUE_ATTESTATIONS = 50;
+exports.MAX_MERGE_QUEUE_ATTESTATIONS_BYTES = 16384;
+function parseMergeQueueCheckAttestations(value) {
+    if (value === undefined || value === null || String(value).trim() === "")
+        return { value: [], errors: [] };
+    const serialized = String(value);
+    if (new TextEncoder().encode(serialized).byteLength > exports.MAX_MERGE_QUEUE_ATTESTATIONS_BYTES) {
+        return { value: [], errors: [`merge-queue-check-attestations must be at most ${exports.MAX_MERGE_QUEUE_ATTESTATIONS_BYTES} bytes.`] };
+    }
+    let parsed;
+    try {
+        parsed = JSON.parse(serialized);
+    }
+    catch {
+        return { value: [], errors: ["merge-queue-check-attestations must be a valid JSON array."] };
+    }
+    return normalizeMergeQueueCheckAttestations(parsed);
+}
+function normalizeMergeQueueCheckAttestations(value) {
+    if (!Array.isArray(value))
+        return { value: [], errors: ["Merge queue check attestations must be an array."] };
+    let serialized;
+    try {
+        serialized = JSON.stringify(value);
+    }
+    catch {
+        return { value: [], errors: ["Merge queue check attestations must be serializable JSON data."] };
+    }
+    if (new TextEncoder().encode(serialized).byteLength > exports.MAX_MERGE_QUEUE_ATTESTATIONS_BYTES) {
+        return { value: [], errors: [`Merge queue check attestations must be at most ${exports.MAX_MERGE_QUEUE_ATTESTATIONS_BYTES} bytes.`] };
+    }
+    if (value.length > exports.MAX_MERGE_QUEUE_ATTESTATIONS) {
+        return { value: [], errors: [`Merge queue check attestations must contain at most ${exports.MAX_MERGE_QUEUE_ATTESTATIONS} entries.`] };
+    }
+    const attestations = [];
+    const errors = [];
+    const identities = new Set();
+    value.forEach((candidate, index) => {
+        const prefix = `Merge queue check attestation ${index + 1}`;
+        if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+            errors.push(`${prefix} must be an object.`);
+            return;
+        }
+        const item = candidate;
+        const unexpected = Object.keys(item).filter((key) => !["context", "integrationId", "targets"].includes(key));
+        if (unexpected.length > 0)
+            errors.push(`${prefix} has unknown field(s): ${unexpected.join(", ")}.`);
+        const context = typeof item.context === "string" ? item.context.trim() : "";
+        if (!context || context.length > 255 || hasUnsafeControlCharacter(context)) {
+            errors.push(`${prefix} context must be a non-empty check name of at most 255 characters without control characters.`);
+        }
+        const integrationId = item.integrationId;
+        if (integrationId !== "any" && !(typeof integrationId === "number" && Number.isSafeInteger(integrationId) && integrationId > 0)) {
+            errors.push(`${prefix} integrationId must be a positive integer or "any".`);
+        }
+        const targets = Array.isArray(item.targets) ? item.targets : [];
+        const normalizedTargets = targets.filter((target) => typeof target === "string" && exports.MERGE_QUEUE_TARGET_ROLES.includes(target));
+        const targetsValid = targets.length >= 1
+            && targets.length <= exports.MERGE_QUEUE_TARGET_ROLES.length
+            && normalizedTargets.length === targets.length
+            && new Set(normalizedTargets).size === normalizedTargets.length;
+        if (!targetsValid) {
+            errors.push(`${prefix} targets must contain 1-${exports.MERGE_QUEUE_TARGET_ROLES.length} unique values from: ${exports.MERGE_QUEUE_TARGET_ROLES.join(", ")}.`);
+        }
+        const identityValid = context.length > 0
+            && context.length <= 255
+            && !hasUnsafeControlCharacter(context)
+            && (integrationId === "any"
+                || (typeof integrationId === "number" && Number.isSafeInteger(integrationId) && integrationId > 0));
+        if (identityValid) {
+            const identity = `${context}\0${integrationId}`;
+            if (identities.has(identity))
+                errors.push(`${prefix} duplicates check identity ${context}.`);
+            identities.add(identity);
+        }
+        if (unexpected.length === 0 && identityValid && targetsValid) {
+            attestations.push({ context, integrationId, targets: normalizedTargets });
+        }
+    });
+    return errors.length > 0 ? { value: [], errors } : { value: attestations, errors: [] };
+}
+function evaluateMergeQueueReadiness(input) {
+    if (!input.queueRequired) {
+        return {
+            verdict: "not_required",
+            targetRole: input.targetRole,
+            targetBranch: input.targetBranch,
+            producers: [],
+            problems: input.problems,
+        };
+    }
+    const producers = input.producers.map((producer) => {
+        if (producer.support === "supported")
+            return { ...producer, verdict: "verified" };
+        if (producer.support === "unsupported")
+            return { ...producer, verdict: "unsupported" };
+        const attested = producer.kind === "check"
+            && producer.integrationId !== undefined
+            && input.attestations.some((attestation) => attestation.context === producer.name
+                && attestation.integrationId === producer.integrationId
+                && attestation.targets.includes(input.targetRole));
+        return { ...producer, verdict: attested ? "attested" : "unknown" };
+    });
+    const verdict = producers.some((producer) => producer.verdict === "unsupported")
+        ? "unsupported"
+        : input.problems.length > 0 || producers.some((producer) => producer.verdict === "unknown")
+            ? "unknown"
+            : "ready";
+    return {
+        verdict,
+        targetRole: input.targetRole,
+        targetBranch: input.targetBranch,
+        producers,
+        problems: input.problems,
+    };
+}
+function hasUnsafeControlCharacter(value) {
+    return [...value].some((character) => {
+        const codePoint = character.codePointAt(0) ?? 0;
+        return codePoint <= 31 || codePoint === 127;
+    });
 }
 
 
@@ -78179,6 +79155,7 @@ function createSetupRemoteConfigurationReadPort() {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createSetupMergeQueueReadinessUseCase = createSetupMergeQueueReadinessUseCase;
 exports.createSetupDoctorUseCase = createSetupDoctorUseCase;
 const doctor_use_case_1 = __nccwpck_require__(87328);
 const setup_credential_validation_adapter_1 = __nccwpck_require__(47020);
@@ -78187,9 +79164,15 @@ const github_identity_client_factory_1 = __nccwpck_require__(93081);
 const setup_workspace_adapter_1 = __nccwpck_require__(5729);
 const setup_remote_credential_health_adapter_1 = __nccwpck_require__(1489);
 const octokit_credential_health_adapter_1 = __nccwpck_require__(41760);
+const github_deployment_repository_1 = __nccwpck_require__(22368);
+const octokit_deployment_adapter_1 = __nccwpck_require__(46819);
+const merge_queue_readiness_use_case_1 = __nccwpck_require__(9890);
+function createSetupMergeQueueReadinessUseCase() {
+    return new merge_queue_readiness_use_case_1.SetupMergeQueueReadinessUseCase(new github_deployment_repository_1.GithubDeploymentRepository(new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter()));
+}
 function createSetupDoctorUseCase(output) {
     const repositoryConfiguration = new repository_variables_repository_1.RepositoryVariablesRepository((0, github_identity_client_factory_1.createRepositoryVariablesClient)());
-    return new doctor_use_case_1.SetupDoctorUseCase(new setup_credential_validation_adapter_1.SetupCredentialValidationAdapter(), repositoryConfiguration, repositoryConfiguration, new setup_workspace_adapter_1.SetupWorkspaceAdapter(), output, new setup_remote_credential_health_adapter_1.SetupRemoteCredentialHealthAdapter(new octokit_credential_health_adapter_1.OctokitCredentialHealthClientAdapter()), repositoryConfiguration);
+    return new doctor_use_case_1.SetupDoctorUseCase(new setup_credential_validation_adapter_1.SetupCredentialValidationAdapter(), repositoryConfiguration, repositoryConfiguration, new setup_workspace_adapter_1.SetupWorkspaceAdapter(), output, new setup_remote_credential_health_adapter_1.SetupRemoteCredentialHealthAdapter(new octokit_credential_health_adapter_1.OctokitCredentialHealthClientAdapter()), repositoryConfiguration, createSetupMergeQueueReadinessUseCase());
 }
 
 

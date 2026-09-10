@@ -171,6 +171,7 @@ jobs:
           release-reconciliation-strategy: ${{ vars.RELEASE_RECONCILIATION_STRATEGY || 'production-lineage' }}
           hotfix-reconciliation-strategy: ${{ vars.HOTFIX_RECONCILIATION_STRATEGY || 'production-lineage' }}
           reconciliation-pr-mode: ${{ vars.RECONCILIATION_PR_MODE || 'auto' }}
+          merge-queue-check-attestations: ${{ vars.MERGE_QUEUE_CHECK_ATTESTATIONS || '[]' }}
           reconciliation-backmerge-mode: ${{ vars.RECONCILIATION_BACKMERGE_MODE || 'auto' }}
           hotfix-active-release-policy: ${{ vars.HOTFIX_ACTIVE_RELEASE_POLICY || 'prefer-release' }}
           reconciliation-tree: ${{ vars.RECONCILIATION_TREE || 'sync' }}

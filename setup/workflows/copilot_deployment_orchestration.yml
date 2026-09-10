@@ -45,4 +45,5 @@ jobs:
           single-action: continue_deployment_action
           single-action-issue: ${{ steps.identity.outputs.issue }}
           single-action-operation-id: ${{ steps.identity.outputs.operation-id }}
+          merge-queue-check-attestations: ${{ vars.MERGE_QUEUE_CHECK_ATTESTATIONS || '[]' }}
           token: ${{ secrets.PAT }}

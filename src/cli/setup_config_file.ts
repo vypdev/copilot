@@ -5,6 +5,7 @@ import {
     SETUP_FEATURE_DESCRIPTIONS,
     type SetupConfigurationOverrides,
 } from '../application/policies/setup_configuration_policy';
+import { normalizeMergeQueueCheckAttestations } from '../domain/merge_queue_readiness';
 
 const SETUP_OVERRIDE_KEYS = new Set([
     'features',
@@ -44,6 +45,7 @@ const REPOSITORY_STRING_KEYS = new Set([
 ]);
 const REPOSITORY_BOOLEAN_KEYS = new Set(['branchManagementAlways', 'reopenIssueOnPush', 'orchestrationDiagrams']);
 const REPOSITORY_NUMBER_KEYS = new Set(['desiredAssigneesCount', 'desiredReviewersCount', 'inactivityThresholdHours']);
+const REPOSITORY_STRUCTURED_KEYS = new Set(['mergeQueueCheckAttestations']);
 const AI_STRING_KEYS = new Set(['ignoreFiles', 'pullRequestDescriptionMode', 'bugbotSeverity', 'bugbotFixVerifyCommands', 'bugbotEffort', 'bugbotOrganizationRules', 'provisioningMode']);
 const AI_NUMBER_KEYS = new Set(['bugbotCommentLimit']);
 const AI_BOOLEAN_KEYS = new Set(['membersOnly', 'includeReasoning', 'bugbotDryRun', 'bugbotReviewDrafts', 'bugbotTraceRules', 'bugbotSuggestedChanges', 'bugbotTelemetry', 'bugbotFailOnUnresolved']);
@@ -84,7 +86,21 @@ export function loadSetupConfigurationOverrides(filePath: string): SetupConfigur
             validateStringValues(agent, `agents.${task}`);
         }
     }
-    validateSection(raw.repository, 'repository', REPOSITORY_STRING_KEYS, REPOSITORY_BOOLEAN_KEYS, REPOSITORY_NUMBER_KEYS);
+    validateSection(
+        raw.repository,
+        'repository',
+        REPOSITORY_STRING_KEYS,
+        REPOSITORY_BOOLEAN_KEYS,
+        REPOSITORY_NUMBER_KEYS,
+        REPOSITORY_STRUCTURED_KEYS,
+    );
+    if (raw.repository && (raw.repository as Record<string, unknown>).mergeQueueCheckAttestations !== undefined) {
+        const result = normalizeMergeQueueCheckAttestations(
+            (raw.repository as Record<string, unknown>).mergeQueueCheckAttestations,
+        );
+        if (result.errors.length > 0) throw new Error(result.errors.join(' '));
+        (raw.repository as Record<string, unknown>).mergeQueueCheckAttestations = result.value;
+    }
     validateSection(raw.ai, 'ai', AI_STRING_KEYS, AI_BOOLEAN_KEYS, AI_NUMBER_KEYS);
     validateSection(raw.projects, 'projects', PROJECT_KEYS, new Set(), new Set());
     validateBooleanProperty(raw, 'createInitialTag');
@@ -136,11 +152,12 @@ function validateSection(
     stringKeys: ReadonlySet<string>,
     booleanKeys: ReadonlySet<string>,
     numberKeys: ReadonlySet<string>,
+    structuredKeys: ReadonlySet<string> = new Set(),
 ): void {
     if (value === undefined) return;
     validateObject(value, name);
     const section = value as Record<string, unknown>;
-    validateObjectKeys(section, new Set([...stringKeys, ...booleanKeys, ...numberKeys]), name);
+    validateObjectKeys(section, new Set([...stringKeys, ...booleanKeys, ...numberKeys, ...structuredKeys]), name);
     for (const key of stringKeys) if (section[key] !== undefined && typeof section[key] !== 'string') throw new Error(`${name}.${key} must be a string.`);
     for (const key of booleanKeys) if (section[key] !== undefined && typeof section[key] !== 'boolean') throw new Error(`${name}.${key} must be a boolean.`);
     for (const key of numberKeys) if (section[key] !== undefined && (!Number.isInteger(section[key]) || (section[key] as number) < 0)) throw new Error(`${name}.${key} must be a non-negative integer.`);

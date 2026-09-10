@@ -19,7 +19,6 @@ const context = {
   developmentBranch: "develop",
   releaseTree: "release",
   hotfixTree: "hotfix",
-  mergeQueueWorkflowSupported: true,
 };
 
 const configuration = (overrides: Partial<DeploymentConfigurationValues> = {}): DeploymentConfigurationValues => ({
@@ -35,6 +34,7 @@ describe("deployment configuration", () => {
       reconciliationBackmergeMode: "auto",
       reconciliationTree: "sync",
       orchestrationPresentationMode: "guided",
+      mergeQueueCheckAttestations: [],
     }));
   });
 
@@ -106,15 +106,17 @@ describe("deployment configuration", () => {
       .toContain("The reconciliation branch prefix cannot equal a protected long-lived branch.");
   });
 
-  it("requires merge_group support for explicit merge queue mode", () => {
-    expect(validateDeploymentConfiguration(configuration({ reconciliationPullRequestMode: "merge-queue" }), {
-      ...context,
-      mergeQueueWorkflowSupported: false,
-    })).toContain("Merge-queue mode requires merge_group support in every required workflow.");
+  it("rejects malformed merge queue attestations", () => {
+    expect(validateDeploymentConfiguration(configuration({
+      mergeQueueCheckAttestations: [{ context: "CI", integrationId: 1, targets: ["unknown"] }] as never,
+    }), context)).toContain("Merge queue check attestation 1 targets must contain 1-3 unique values from: production, development, active-release.");
   });
 
-  it("allows merge queue when the workflow contract supports merge_group", () => {
-    expect(validateDeploymentConfiguration(configuration({ reconciliationPullRequestMode: "merge-queue" }), context)).toEqual([]);
+  it("accepts an exact bounded merge queue attestation", () => {
+    expect(validateDeploymentConfiguration(configuration({
+      reconciliationPullRequestMode: "merge-queue",
+      mergeQueueCheckAttestations: [{ context: "External CI", integrationId: 1234, targets: ["production"] }],
+    }), context)).toEqual([]);
   });
 
   it("does not allow manual release reconciliation to auto-close the issue", () => {

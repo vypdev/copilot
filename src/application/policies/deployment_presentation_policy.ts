@@ -57,6 +57,9 @@ interface DeploymentMessages {
   previousPhase: string;
   resultingPhase: string;
   retryable: string;
+  retryAfterCorrection: string;
+  manualIntervention: string;
+  reviewManagedPr: string;
   createdReused: string;
   fallback: string;
   phase: Readonly<Record<DeploymentPhase, string>>;
@@ -83,6 +86,8 @@ const EN: DeploymentMessages = {
   cleanup: "Cleanup and issue completion", jobSummary: "Deployment orchestration", result: "Result",
   externalWait: "Waiting externally", workflowFailure: "Workflow failed", previousPhase: "Previous phase", resultingPhase: "Resulting phase",
   retryable: "Retryable", createdReused: "Created, reused, or skipped", fallback: "prepared -> production PR -> accepted -> published -> reconciled -> complete",
+  retryAfterCorrection: "Retry after correcting the cause", manualIntervention: "Manual intervention is required",
+  reviewManagedPr: "review and merge the managed PR when GitHub reports it ready",
   phase: {
     preparing: "preparing the version", promotion_pr_pending: "waiting for production approval", promoted: "accepted in production",
     publishing: "publishing artifacts", published: "published; preparing development reconciliation",
@@ -111,6 +116,8 @@ const ES: DeploymentMessages = {
   cleanup: "Limpieza y cierre de la issue", jobSummary: "Orquestación del despliegue", result: "Resultado",
   externalWait: "Esperando fuera del workflow", workflowFailure: "Workflow fallido", previousPhase: "Fase anterior", resultingPhase: "Fase resultante",
   retryable: "Reintentable", createdReused: "Creado, reutilizado u omitido", fallback: "preparada -> PR de producción -> aceptada -> publicada -> reconciliada -> completada",
+  retryAfterCorrection: "Vuelve a intentarlo después de corregir la causa", manualIntervention: "Se requiere intervención manual",
+  reviewManagedPr: "revisa y mergea la PR gestionada cuando GitHub indique que está lista",
   phase: {
     preparing: "preparando la versión", promotion_pr_pending: "esperando aprobación en producción", promoted: "aceptada en producción",
     publishing: "publicando artefactos", published: "publicada; preparando la reconciliación",
@@ -224,7 +231,7 @@ export function renderDeploymentJobSummary(
   const messages = messagesFor(context.issueLocale);
   const externallyPending = operation.phase === "promotion_pr_pending" || operation.phase === "reconciliation_pending";
   const result = operation.phase === "blocked" ? messages.workflowFailure : externallyPending ? messages.externalWait : messages.phase[operation.phase];
-  return [
+  const lines = [
     `# ${operation.phase === "blocked" ? "❌" : externallyPending ? "⏳" : "✅"} ${messages.jobSummary}`, "",
     `> **${messages.result}: ${result}.**`, "",
     `| ${messages.previousPhase} | ${messages.resultingPhase} | ${messages.retryable} |`, "|---|---|---|",
@@ -235,8 +242,15 @@ export function renderDeploymentJobSummary(
     `- ${messages.productionFact}: ${inline(operation.productionSha ? `${operation.productionBranch}@${shortSha(operation.productionSha)}` : "pending")}`,
     `- ${messages.publication}: ${operation.publicationVerified ? messages.alreadyPublished : messages.notPublished}`,
     `- ${messages.createdReused}: ${safeText(operations.join(", ") || "none")}`, "",
-    deploymentLinks(operation, context, messages).join(" · "),
-  ].join("\n");
+  ];
+  if (operation.phase === "blocked") {
+    lines.push(
+      `## ${messages.actionRequired}`, "",
+      `${safeText(operation.lastFailure?.message ?? messages.workflowFailure)}. ${operation.lastFailure?.retryable ? messages.retryAfterCorrection : messages.manualIntervention}.`, "",
+    );
+  }
+  lines.push(deploymentLinks(operation, context, messages).join(" · "));
+  return lines.join("\n");
 }
 
 function progressLines(operation: DeploymentOperationSnapshot, messages: DeploymentMessages): string[] {
@@ -283,7 +297,7 @@ function protectedFact(operation: DeploymentOperationSnapshot, messages: Deploym
 function nextDescription(operation: DeploymentOperationSnapshot, messages: DeploymentMessages): string {
   if (operation.phase === "blocked") {
     const diagnostic = safeText(operation.lastFailure?.message ?? messages.workflowFailure);
-    return `${diagnostic}. ${operation.lastFailure?.retryable ? `${messages.actionRequired}: retry after correcting the cause.` : `${messages.actionRequired}: manual intervention is required.`}`;
+    return `${diagnostic}. ${messages.actionRequired}: ${operation.lastFailure?.retryable ? messages.retryAfterCorrection : messages.manualIntervention}.`;
   }
   if (operation.phase === "promotion_pr_pending") return messages.afterPromotion;
   if (operation.phase === "publishing" || operation.phase === "promoted") return messages.afterPromotion;
@@ -295,13 +309,13 @@ function nextDescription(operation: DeploymentOperationSnapshot, messages: Deplo
 function deploymentAction(operation: DeploymentOperationSnapshot, messages: DeploymentMessages): { required: boolean; message: string } {
   const manual = (operation.selectedPrMode ?? operation.prMode) === "create-only"
     && (operation.phase === "promotion_pr_pending" || operation.phase === "reconciliation_pending");
-  if (manual) return { required: true, message: `${messages.protectedChecks}: review and merge the managed PR when GitHub reports it ready.` };
+  if (manual) return { required: true, message: `${messages.protectedChecks}: ${messages.reviewManagedPr}.` };
   if (operation.phase !== "blocked") return { required: false, message: messages.noAction };
   return {
     required: true,
     message: operation.lastFailure?.retryable
-      ? `${safeText(operation.lastFailure.message)}. Retry after correcting the cause.`
-      : `${safeText(operation.lastFailure?.message ?? messages.workflowFailure)}. Manual intervention is required.`,
+      ? `${safeText(operation.lastFailure.message)}. ${messages.retryAfterCorrection}.`
+      : `${safeText(operation.lastFailure?.message ?? messages.workflowFailure)}. ${messages.manualIntervention}.`,
   };
 }
 

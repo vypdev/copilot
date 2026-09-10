@@ -3214,7 +3214,7 @@ function resolveBugbotReviewEffort(configured, complexity) {
 /***/ }),
 
 /***/ 2495:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
@@ -3264,6 +3264,7 @@ exports.DEFAULT_DEPLOYMENT_CONFIGURATION = {
     orchestrationPresentationMode: "guided",
     orchestrationDiagrams: true,
     orchestrationCommentMode: "update",
+    mergeQueueCheckAttestations: [],
 };
 function validateDeploymentConfiguration(configuration, context) {
     const errors = [];
@@ -3301,10 +3302,7 @@ function validateDeploymentConfiguration(configuration, context) {
             errors.push(`The ${label} branch prefix cannot equal a protected long-lived branch.`);
         }
     }
-    if (configuration.reconciliationPullRequestMode === "merge-queue"
-        && context.mergeQueueWorkflowSupported === false) {
-        errors.push("Merge-queue mode requires merge_group support in every required workflow.");
-    }
+    errors.push(...(0, merge_queue_readiness_1.normalizeMergeQueueCheckAttestations)(configuration.mergeQueueCheckAttestations).errors);
     if ((configuration.releaseReconciliationStrategy === "manual"
         || configuration.hotfixReconciliationStrategy === "manual")
         && configuration.reconciliationIssueCompletion === "close") {
@@ -3331,6 +3329,7 @@ function parseDeploymentEnum(value, allowed, fallback) {
         ? { value: normalized, valid: true }
         : { value: fallback, valid: false };
 }
+const merge_queue_readiness_1 = __nccwpck_require__(2515);
 
 
 /***/ }),
@@ -3567,6 +3566,142 @@ function hasLabel(labels, candidates) {
 }
 function normalize(value) {
     return value.trim().toLowerCase();
+}
+
+
+/***/ }),
+
+/***/ 2515:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MAX_MERGE_QUEUE_ATTESTATIONS_BYTES = exports.MAX_MERGE_QUEUE_ATTESTATIONS = exports.MERGE_QUEUE_TARGET_ROLES = void 0;
+exports.parseMergeQueueCheckAttestations = parseMergeQueueCheckAttestations;
+exports.normalizeMergeQueueCheckAttestations = normalizeMergeQueueCheckAttestations;
+exports.evaluateMergeQueueReadiness = evaluateMergeQueueReadiness;
+exports.MERGE_QUEUE_TARGET_ROLES = ["production", "development", "active-release"];
+exports.MAX_MERGE_QUEUE_ATTESTATIONS = 50;
+exports.MAX_MERGE_QUEUE_ATTESTATIONS_BYTES = 16384;
+function parseMergeQueueCheckAttestations(value) {
+    if (value === undefined || value === null || String(value).trim() === "")
+        return { value: [], errors: [] };
+    const serialized = String(value);
+    if (new TextEncoder().encode(serialized).byteLength > exports.MAX_MERGE_QUEUE_ATTESTATIONS_BYTES) {
+        return { value: [], errors: [`merge-queue-check-attestations must be at most ${exports.MAX_MERGE_QUEUE_ATTESTATIONS_BYTES} bytes.`] };
+    }
+    let parsed;
+    try {
+        parsed = JSON.parse(serialized);
+    }
+    catch {
+        return { value: [], errors: ["merge-queue-check-attestations must be a valid JSON array."] };
+    }
+    return normalizeMergeQueueCheckAttestations(parsed);
+}
+function normalizeMergeQueueCheckAttestations(value) {
+    if (!Array.isArray(value))
+        return { value: [], errors: ["Merge queue check attestations must be an array."] };
+    let serialized;
+    try {
+        serialized = JSON.stringify(value);
+    }
+    catch {
+        return { value: [], errors: ["Merge queue check attestations must be serializable JSON data."] };
+    }
+    if (new TextEncoder().encode(serialized).byteLength > exports.MAX_MERGE_QUEUE_ATTESTATIONS_BYTES) {
+        return { value: [], errors: [`Merge queue check attestations must be at most ${exports.MAX_MERGE_QUEUE_ATTESTATIONS_BYTES} bytes.`] };
+    }
+    if (value.length > exports.MAX_MERGE_QUEUE_ATTESTATIONS) {
+        return { value: [], errors: [`Merge queue check attestations must contain at most ${exports.MAX_MERGE_QUEUE_ATTESTATIONS} entries.`] };
+    }
+    const attestations = [];
+    const errors = [];
+    const identities = new Set();
+    value.forEach((candidate, index) => {
+        const prefix = `Merge queue check attestation ${index + 1}`;
+        if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+            errors.push(`${prefix} must be an object.`);
+            return;
+        }
+        const item = candidate;
+        const unexpected = Object.keys(item).filter((key) => !["context", "integrationId", "targets"].includes(key));
+        if (unexpected.length > 0)
+            errors.push(`${prefix} has unknown field(s): ${unexpected.join(", ")}.`);
+        const context = typeof item.context === "string" ? item.context.trim() : "";
+        if (!context || context.length > 255 || hasUnsafeControlCharacter(context)) {
+            errors.push(`${prefix} context must be a non-empty check name of at most 255 characters without control characters.`);
+        }
+        const integrationId = item.integrationId;
+        if (integrationId !== "any" && !(typeof integrationId === "number" && Number.isSafeInteger(integrationId) && integrationId > 0)) {
+            errors.push(`${prefix} integrationId must be a positive integer or "any".`);
+        }
+        const targets = Array.isArray(item.targets) ? item.targets : [];
+        const normalizedTargets = targets.filter((target) => typeof target === "string" && exports.MERGE_QUEUE_TARGET_ROLES.includes(target));
+        const targetsValid = targets.length >= 1
+            && targets.length <= exports.MERGE_QUEUE_TARGET_ROLES.length
+            && normalizedTargets.length === targets.length
+            && new Set(normalizedTargets).size === normalizedTargets.length;
+        if (!targetsValid) {
+            errors.push(`${prefix} targets must contain 1-${exports.MERGE_QUEUE_TARGET_ROLES.length} unique values from: ${exports.MERGE_QUEUE_TARGET_ROLES.join(", ")}.`);
+        }
+        const identityValid = context.length > 0
+            && context.length <= 255
+            && !hasUnsafeControlCharacter(context)
+            && (integrationId === "any"
+                || (typeof integrationId === "number" && Number.isSafeInteger(integrationId) && integrationId > 0));
+        if (identityValid) {
+            const identity = `${context}\0${integrationId}`;
+            if (identities.has(identity))
+                errors.push(`${prefix} duplicates check identity ${context}.`);
+            identities.add(identity);
+        }
+        if (unexpected.length === 0 && identityValid && targetsValid) {
+            attestations.push({ context, integrationId, targets: normalizedTargets });
+        }
+    });
+    return errors.length > 0 ? { value: [], errors } : { value: attestations, errors: [] };
+}
+function evaluateMergeQueueReadiness(input) {
+    if (!input.queueRequired) {
+        return {
+            verdict: "not_required",
+            targetRole: input.targetRole,
+            targetBranch: input.targetBranch,
+            producers: [],
+            problems: input.problems,
+        };
+    }
+    const producers = input.producers.map((producer) => {
+        if (producer.support === "supported")
+            return { ...producer, verdict: "verified" };
+        if (producer.support === "unsupported")
+            return { ...producer, verdict: "unsupported" };
+        const attested = producer.kind === "check"
+            && producer.integrationId !== undefined
+            && input.attestations.some((attestation) => attestation.context === producer.name
+                && attestation.integrationId === producer.integrationId
+                && attestation.targets.includes(input.targetRole));
+        return { ...producer, verdict: attested ? "attested" : "unknown" };
+    });
+    const verdict = producers.some((producer) => producer.verdict === "unsupported")
+        ? "unsupported"
+        : input.problems.length > 0 || producers.some((producer) => producer.verdict === "unknown")
+            ? "unknown"
+            : "ready";
+    return {
+        verdict,
+        targetRole: input.targetRole,
+        targetBranch: input.targetBranch,
+        producers,
+        problems: input.problems,
+    };
+}
+function hasUnsafeControlCharacter(value) {
+    return [...value].some((character) => {
+        const codePoint = character.codePointAt(0) ?? 0;
+        return codePoint <= 31 || codePoint === 127;
+    });
 }
 
 

@@ -21,4 +21,19 @@ describe("deployment configuration builder", () => {
     const read = (key: string) => key === INPUT_KEYS.RELEASE_RECONCILIATION_STRATEGY ? "PRODUCTION-LINEAGE" : undefined;
     expect(() => readDeploymentConfiguration(read, branches)).toThrow("release-reconciliation-strategy must be one of");
   });
+
+  it("parses the bounded attestation JSON Action input", () => {
+    const serialized = JSON.stringify([
+      { context: "External CI", integrationId: 999, targets: ["production"] },
+    ]);
+    const read = (key: string) => key === INPUT_KEYS.MERGE_QUEUE_CHECK_ATTESTATIONS ? serialized : undefined;
+    expect(readDeploymentConfiguration(read, branches).mergeQueueCheckAttestations).toEqual([
+      { context: "External CI", integrationId: 999, targets: ["production"] },
+    ]);
+  });
+
+  it("rejects malformed attestation JSON at the Action boundary", () => {
+    const read = (key: string) => key === INPUT_KEYS.MERGE_QUEUE_CHECK_ATTESTATIONS ? "not-json" : undefined;
+    expect(() => readDeploymentConfiguration(read, branches)).toThrow("must be a valid JSON array");
+  });
 });

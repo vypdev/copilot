@@ -68,6 +68,17 @@ export interface DoctorOutputPort {
     showDoctorChecks(checks: readonly DoctorCheck[]): void;
 }
 
+export interface SetupMergeQueueReadinessRequest {
+    owner: string;
+    repository: string;
+    token: string;
+    configuration: SetupConfiguration;
+}
+
+export interface SetupMergeQueueReadinessPort {
+    inspect(request: SetupMergeQueueReadinessRequest): Promise<readonly DoctorCheck[]>;
+}
+
 export interface SetupCredentialValidationPort {
     validateSetupPat(owner: string, repository: string, token: string): Promise<SetupCredentialCheck>;
     validateCredential(requirement: SetupCredentialRequirement, value: string): Promise<SetupCredentialCheck>;

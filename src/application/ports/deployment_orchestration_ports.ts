@@ -33,13 +33,34 @@ export interface ManagedPullRequestCreate extends ManagedPullRequestQuery {
   readonly body: string;
 }
 
-export interface ManagedPullRequestPort {
+export interface TargetMergeInspectionOptions {
+  readonly pullRequest?: number;
+  readonly candidateHeadSha?: string;
+}
+
+export interface TargetMergePolicyInspectionPort {
+  getTargetCapabilities(
+    owner: string,
+    repository: string,
+    targetBranch: string,
+    token: string,
+    options?: TargetMergeInspectionOptions,
+  ): Promise<TargetMergeCapabilities>;
+}
+
+export interface ManagedPullRequestPort extends TargetMergePolicyInspectionPort {
   findManagedPullRequests(query: ManagedPullRequestQuery): Promise<readonly ManagedPullRequestRecord[]>;
   createManagedPullRequest(command: ManagedPullRequestCreate): Promise<ManagedPullRequestRecord>;
   getPullRequest(owner: string, repository: string, pullRequest: number, token: string): Promise<ManagedPullRequestRecord>;
-  getTargetCapabilities(owner: string, repository: string, targetBranch: string, token: string, pullRequest?: number): Promise<TargetMergeCapabilities>;
   enableAutoMerge(owner: string, repository: string, pullRequestNodeId: string, token: string): Promise<void>;
-  enqueuePullRequest(owner: string, repository: string, pullRequestNodeId: string, token: string): Promise<void>;
+  isPullRequestQueued(owner: string, repository: string, pullRequestNodeId: string, token: string): Promise<boolean>;
+  enqueuePullRequest(
+    owner: string,
+    repository: string,
+    pullRequestNodeId: string,
+    expectedHeadSha: string,
+    token: string,
+  ): Promise<void>;
   mergePullRequest(owner: string, repository: string, pullRequest: number, token: string): Promise<string>;
 }
 

@@ -1,6 +1,7 @@
 import { normalizePullRequestDescriptionMode } from '../../domain/pull_request_description';
 import { enabledSetupWorkflowFiles } from '../../domain/setup_workflow_catalog';
 import type {
+    DoctorCheck,
     SetupConfiguration,
     SetupPlan,
     SetupVariable,
@@ -25,7 +26,7 @@ const ISSUE_TEMPLATE_FILES = [
     'release.yml',
 ];
 
-export function buildSetupPlan(configuration: SetupConfiguration): SetupPlan {
+export function buildSetupPlan(configuration: SetupConfiguration, mergeQueueReadiness: readonly DoctorCheck[] = []): SetupPlan {
     const workflowFiles = enabledSetupWorkflowFiles(configuration.features);
     const issueTemplateFiles = configuration.features.issueTemplates === false
         ? []
@@ -48,6 +49,7 @@ export function buildSetupPlan(configuration: SetupConfiguration): SetupPlan {
                 || requirement.alternativeGroups.some(group => !requirement.runnerAuthenticationGroups?.includes(group)))
             .map(requirement => requirement.name),
         credentialRequirements,
+        mergeQueueReadiness: [...mergeQueueReadiness],
         warnings: buildSetupWarnings(configuration),
     };
 }
@@ -96,6 +98,7 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
     add('RELEASE_RECONCILIATION_STRATEGY', repository.releaseReconciliationStrategy);
     add('HOTFIX_RECONCILIATION_STRATEGY', repository.hotfixReconciliationStrategy);
     add('RECONCILIATION_PR_MODE', repository.reconciliationPullRequestMode);
+    add('MERGE_QUEUE_CHECK_ATTESTATIONS', JSON.stringify(repository.mergeQueueCheckAttestations));
     add('RECONCILIATION_BACKMERGE_MODE', repository.reconciliationBackmergeMode);
     add('HOTFIX_ACTIVE_RELEASE_POLICY', repository.hotfixActiveReleasePolicy);
     add('RECONCILIATION_TREE', repository.reconciliationTree);
@@ -151,6 +154,7 @@ export function buildSetupActionInputs(configuration: SetupConfiguration): Recor
         'release-reconciliation-strategy': repository.releaseReconciliationStrategy,
         'hotfix-reconciliation-strategy': repository.hotfixReconciliationStrategy,
         'reconciliation-pr-mode': repository.reconciliationPullRequestMode,
+        'merge-queue-check-attestations': JSON.stringify(repository.mergeQueueCheckAttestations),
         'reconciliation-backmerge-mode': repository.reconciliationBackmergeMode,
         'hotfix-active-release-policy': repository.hotfixActiveReleasePolicy,
         'reconciliation-tree': repository.reconciliationTree,
@@ -209,7 +213,7 @@ function buildSetupWarnings(configuration: SetupConfiguration): string[] {
         warnings.push('Release and hotfix workflows require the workflow PAT Secret and a writable token.');
     }
     if (configuration.repository.reconciliationPullRequestMode === 'merge-queue') {
-        warnings.push('Merge queue mode requires every required first-party and third-party check to support the merge_group event; setup can validate only the bundled Copilot bridge.');
+        warnings.push('Merge queue mode fails closed unless every required producer is verified automatically or covered by an exact reviewed attestation.');
     }
     if (configuration.ai.provisioningMode === 'always') {
         warnings.push('Always-provision mode requires pinned CLI versions or a Cursor installer checksum in repository Variables.');

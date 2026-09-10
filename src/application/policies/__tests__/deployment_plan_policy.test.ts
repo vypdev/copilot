@@ -4,14 +4,25 @@ import {
   buildInitialDeploymentOperation,
   buildReconciliationBranchName,
   buildReconciliationTarget,
+  mergeQueueReadinessFailureMessage,
   reconciliationSource,
   selectBackmergeMode,
   selectPullRequestMode,
   selectReconciliationTargetBranches,
   validateInitialDeploymentInput,
+  type TargetMergeCapabilities,
 } from "../deployment_plan_policy";
 
 const sha = (letter: string) => letter.repeat(40);
+const capabilities = (overrides: Partial<TargetMergeCapabilities> = {}): TargetMergeCapabilities => ({
+  autoMergeAllowed: true,
+  mergeQueueRequired: false,
+  immediatelyMergeable: false,
+  requiresStrictStatusChecks: false,
+  mergeQueueProducers: [],
+  mergeQueueObservationProblems: [],
+  ...overrides,
+});
 const operation = (overrides: Partial<DeploymentOperationSnapshot> = {}): DeploymentOperationSnapshot => ({
   operationId: "operation-12345678",
   kind: "release",
@@ -75,34 +86,70 @@ describe("deployment plan policy", () => {
   });
 
   it("selects merge queue when required by the target", () => {
-    expect(selectPullRequestMode("auto", { autoMergeAllowed: true, mergeQueueRequired: true, immediatelyMergeable: false, requiresStrictStatusChecks: true }))
+    expect(selectPullRequestMode("auto", capabilities({ mergeQueueRequired: true, requiresStrictStatusChecks: true })))
       .toEqual(expect.objectContaining({ kind: "mode", mode: "merge-queue" }));
   });
 
   it("selects native auto-merge while checks are pending", () => {
-    expect(selectPullRequestMode("auto", { autoMergeAllowed: true, mergeQueueRequired: false, immediatelyMergeable: false, requiresStrictStatusChecks: true }))
+    expect(selectPullRequestMode("auto", capabilities({ requiresStrictStatusChecks: true })))
       .toEqual(expect.objectContaining({ kind: "mode", mode: "auto-merge" }));
   });
 
   it("falls back to create-only when auto-merge is unavailable", () => {
-    expect(selectPullRequestMode("auto", { autoMergeAllowed: false, mergeQueueRequired: false, immediatelyMergeable: false, requiresStrictStatusChecks: false }))
+    expect(selectPullRequestMode("auto", capabilities({ autoMergeAllowed: false })))
       .toEqual(expect.objectContaining({ kind: "mode", mode: "create-only" }));
   });
 
   it("rejects explicit auto-merge when the repository disables it", () => {
-    expect(selectPullRequestMode("auto-merge", { autoMergeAllowed: false, mergeQueueRequired: false, immediatelyMergeable: false, requiresStrictStatusChecks: false }).kind)
+    expect(selectPullRequestMode("auto-merge", capabilities({ autoMergeAllowed: false })).kind)
       .toBe("unsupported");
   });
 
   it("rejects explicit queue mode on a target without a required queue", () => {
-    expect(selectPullRequestMode("merge-queue", { autoMergeAllowed: true, mergeQueueRequired: false, immediatelyMergeable: false, requiresStrictStatusChecks: false }).kind)
+    expect(selectPullRequestMode("merge-queue", capabilities()).kind)
       .toBe("unsupported");
   });
 
   it("preserves explicit create-only mode", () => {
     const mode = "create-only" as const;
-    expect(selectPullRequestMode(mode, { autoMergeAllowed: false, mergeQueueRequired: false, immediatelyMergeable: false, requiresStrictStatusChecks: false }))
+    expect(selectPullRequestMode(mode, capabilities({ autoMergeAllowed: false })))
       .toEqual(expect.objectContaining({ kind: "mode", mode }));
+  });
+
+  it("fails closed when the target policy cannot be observed", () => {
+    expect(selectPullRequestMode("auto", capabilities({
+      mergeQueueObservationProblems: [{ area: "effective-rules", message: "Forbidden" }],
+    }))).toEqual(expect.objectContaining({ kind: "unsupported", reason: expect.stringContaining("Forbidden") }));
+  });
+
+  it("rejects explicit auto-merge when the target requires its queue", () => {
+    expect(selectPullRequestMode("auto-merge", capabilities({ mergeQueueRequired: true })).kind).toBe("unsupported");
+  });
+
+  it("renders equivalent Spanish recovery guidance for merge queue failures", () => {
+    const message = mergeQueueReadinessFailureMessage({
+      verdict: "unsupported",
+      targetRole: "production",
+      targetBranch: "master",
+      producers: [{ kind: "check", name: "CI Check", integrationId: 15368, verdict: "unsupported", reason: "Falta el trigger." }],
+      problems: [],
+    }, "es-ES");
+    expect(message).toContain("preparación de la merge queue");
+    expect(message).toContain("Añade merge_group: checks_requested");
+    expect(message).toContain("CI Check [unsupported]");
+  });
+
+  it("renders permission recovery rather than workflow advice for observation failures", () => {
+    const message = mergeQueueReadinessFailureMessage({
+      verdict: "unknown",
+      targetRole: "development",
+      targetBranch: "develop",
+      producers: [],
+      problems: [{ area: "effective-rules", message: "Forbidden" }],
+    }, "es-ES");
+    expect(message).toContain("effective-rules: Forbidden");
+    expect(message).toContain("Restaura el acceso de lectura");
+    expect(message).not.toContain("Añade merge_group");
   });
 
   it("uses a sync branch for a strict target whose source is stale", () => {

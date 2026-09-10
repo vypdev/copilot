@@ -133,7 +133,13 @@ projected by the single-action boundary.
 
 Application ports expose managed-PR identity, target capabilities, exact commit
 reachability, trusted reconciliation refs, workflow continuation, durable issue
-state, and presentation operations. `GithubDeploymentRepository` maps REST and
+state and presentation operations, effective target-policy inspection, and
+authoritative merge-queue membership. The GitHub deployment repository combines classic protection with
+all effective rulesets, maps required producer identities, and parses bounded
+workflow YAML. Pure readiness policy owns `ready`, `unknown`, and `unsupported`
+decisions plus exact attestation matching. Runtime, setup, and doctor share that
+policy; entrypoints never supply an optimistic static capability boolean.
+`GithubDeploymentRepository` maps REST and
 GraphQL provider facts. `DeploymentStateRepository` owns the strict schema-v3
 hidden issue block. The composition root is
 the only place that binds these repositories and the Octokit adapter.

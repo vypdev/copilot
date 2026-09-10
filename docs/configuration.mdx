@@ -121,6 +121,7 @@ Copilot provides extensive configuration options to customize your workflow. Use
     - `release-reconciliation-strategy`: `production-lineage` (default), `canonical-gitflow`, or `manual`
     - `hotfix-reconciliation-strategy`: `production-lineage` (default), `canonical-gitflow`, or `manual`
     - `reconciliation-pr-mode`: `auto` (default), `auto-merge`, `merge-queue`, or `create-only`
+    - `merge-queue-check-attestations`: JSON array of exact `(context, integrationId, targets)` attestations for otherwise-unverifiable required checks (default: `[]`; max 50 entries and 16 KiB)
     - `reconciliation-backmerge-mode`: `auto` (default), `direct`, or `sync-branch`
     - `hotfix-active-release-policy`: `prefer-release` (default), `development`, or `both`
     - `reconciliation-tree`: Safe ephemeral branch prefix (default: `sync`)
@@ -132,6 +133,14 @@ Copilot provides extensive configuration options to customize your workflow. Use
 
     See [Release and hotfix orchestration](/issues/deployment-orchestration)
     before changing these coordinated safety settings.
+
+    Queue readiness is live repository policy, not a snapshotted deployment
+    preference. Copilot combines classic branch protection and every effective
+    ruleset for the exact target, verifies accessible GitHub Actions workflow
+    contracts on the target and candidate refs, and fails closed before PR
+    creation and again before enqueue. An attestation can authorize only an
+    `unknown` check with the exact identity and logical target; it never
+    overrides a workflow proven to lack `merge_group: checks_requested`.
   </Tab>
 
   <Tab title="Single Actions & Images" icon="image">

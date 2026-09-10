@@ -171,4 +171,27 @@ describe('SetupDoctorUseCase', () => {
             expect.objectContaining({ area: 'GitHub Actions scopes', status: 'fail' }),
         ]));
     });
+
+    it('includes live merge-queue drift in doctor health', async () => {
+        const { output, dependencies } = createDependencies();
+        const readiness = {
+            inspect: jest.fn().mockResolvedValue([
+                { area: 'Merge queue readiness · production (master)', status: 'fail', message: 'CI Check is unsupported.' },
+            ]),
+        };
+        const healthy = await new SetupDoctorUseCase(
+            dependencies.validation,
+            dependencies.secrets,
+            dependencies.variables,
+            dependencies.workspace,
+            output,
+            undefined,
+            undefined,
+            readiness,
+        ).execute({ owner: 'owner', repository: 'repo', setupToken: 'token', configuration: createDefaultSetupConfiguration() });
+        expect(healthy).toBe(false);
+        expect(output.showDoctorChecks).toHaveBeenCalledWith(expect.arrayContaining([
+            expect.objectContaining({ area: 'Merge queue readiness · production (master)', status: 'fail' }),
+        ]));
+    });
 });

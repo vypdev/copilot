@@ -203,6 +203,24 @@ describe('workflow contract validator', () => {
       const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
       expect(() => validateWorkflow(file, workflow)).not.toThrow();
       expect(workflow.jobs.continue.if).toContain('github.event.pull_request.head.repo.full_name == github.repository');
+      const continuation = workflow.jobs.continue.steps.find(
+        (step: { with?: Record<string, unknown> }) => step.with?.['single-action'] === 'continue_deployment_action',
+      );
+      expect(continuation?.with?.['merge-queue-check-attestations'])
+        .toBe("${{ vars.MERGE_QUEUE_CHECK_ATTESTATIONS || '[]' }}");
+    },
+  );
+
+  it.each(['.github/workflows', 'setup/workflows'])(
+    'rejects continuation without live merge-queue attestations in %s',
+    (directory) => {
+      const file = path.join(process.cwd(), directory, 'copilot_deployment_orchestration.yml');
+      const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+      const continuation = workflow.jobs.continue.steps.find(
+        (step: { with?: Record<string, unknown> }) => step.with?.['single-action'] === 'continue_deployment_action',
+      );
+      delete continuation.with['merge-queue-check-attestations'];
+      expect(() => validateWorkflow(file, workflow)).toThrow('live merge-queue attestations');
     },
   );
 

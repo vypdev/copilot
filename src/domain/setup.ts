@@ -1,6 +1,7 @@
 import type { AgentProvider, AgentTask } from './agent';
 import type { PullRequestDescriptionMode } from './pull_request_description';
 import type { BugbotReviewEffort } from './bugbot/review_configuration';
+import type { MergeQueueCheckAttestation } from './merge_queue_readiness';
 import type {
     HotfixActiveReleasePolicy,
     OrchestrationCommentMode,
@@ -59,6 +60,7 @@ export interface SetupRepositoryConfiguration {
     releaseReconciliationStrategy: ReconciliationStrategy;
     hotfixReconciliationStrategy: ReconciliationStrategy;
     reconciliationPullRequestMode: ReconciliationPullRequestMode;
+    mergeQueueCheckAttestations: readonly MergeQueueCheckAttestation[];
     reconciliationBackmergeMode: ReconciliationBackmergeMode;
     hotfixActiveReleasePolicy: HotfixActiveReleasePolicy;
     reconciliationTree: string;
@@ -216,5 +218,6 @@ export interface SetupPlan {
     variables: SetupVariable[];
     requiredSecrets: string[];
     credentialRequirements: SetupCredentialRequirement[];
+    mergeQueueReadiness: DoctorCheck[];
     warnings: string[];
 }

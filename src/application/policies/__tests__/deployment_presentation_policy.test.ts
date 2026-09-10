@@ -208,7 +208,18 @@ describe("deployment presentation policy", () => {
     }), context, "publishing", ["::error:: @team\n# forged"]);
     expect(summary).toContain("Workflow failed");
     expect(summary).toContain("| `publishing` | `blocked` | Yes |");
+    expect(summary).toContain("## Action required");
+    expect(summary).toContain("bad. Retry after correcting the cause.");
     expect(summary).not.toContain("::error::");
     expect(summary).not.toContain("@team");
+  });
+
+  it("renders equivalent Spanish recovery guidance in dashboards and Job Summaries", () => {
+    const blocked = operation("blocked", {
+      lastFailure: { category: "promotion", message: "Falta merge_group", retryable: true, previousPhase: "preparing" },
+    });
+    const localized = { ...context, issueLocale: "es-ES" };
+    expect(renderDeploymentDashboard(blocked, localized)).toContain("Vuelve a intentarlo después de corregir la causa");
+    expect(renderDeploymentJobSummary(blocked, localized)).toContain("## Acción necesaria");
   });
 });

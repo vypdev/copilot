@@ -26,6 +26,7 @@ export interface DeploymentConfigurationValues {
     orchestrationPresentationMode: OrchestrationPresentationMode;
     orchestrationDiagrams: boolean;
     orchestrationCommentMode: OrchestrationCommentMode;
+    mergeQueueCheckAttestations: readonly MergeQueueCheckAttestation[];
 }
 export declare const DEFAULT_DEPLOYMENT_CONFIGURATION: Readonly<DeploymentConfigurationValues>;
 export interface DeploymentConfigurationValidationContext {
@@ -33,7 +34,6 @@ export interface DeploymentConfigurationValidationContext {
     readonly developmentBranch: string;
     readonly releaseTree: string;
     readonly hotfixTree: string;
-    readonly mergeQueueWorkflowSupported?: boolean;
 }
 export declare function validateDeploymentConfiguration(configuration: DeploymentConfigurationValues, context: DeploymentConfigurationValidationContext): string[];
 export declare function isSafeBranchTree(value: string): boolean;
@@ -41,3 +41,4 @@ export declare function parseDeploymentEnum<T extends string>(value: unknown, al
     value: T;
     valid: boolean;
 };
+import { type MergeQueueCheckAttestation } from "./merge_queue_readiness";

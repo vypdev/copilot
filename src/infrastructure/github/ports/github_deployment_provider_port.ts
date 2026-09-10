@@ -12,9 +12,13 @@ export interface GithubDeploymentPullRequest {
 }
 
 export interface GithubDeploymentClient {
+  request<T>(route: string, parameters: Record<string, unknown>): Promise<{ data: T }>;
   graphql<T>(query: string, variables: Record<string, unknown>): Promise<T>;
   paginate<T>(method: (parameters: Record<string, unknown>) => Promise<{ data: T[] }>, parameters: Record<string, unknown>): Promise<T[]>;
   rest: {
+    apps: {
+      getBySlug(parameters: Record<string, unknown>): Promise<{ data: { id: number; slug?: string } }>;
+    };
     pulls: {
       list(parameters: Record<string, unknown>): Promise<{ data: GithubDeploymentPullRequest[] }>;
       create(parameters: Record<string, unknown>): Promise<{ data: GithubDeploymentPullRequest }>;
@@ -22,8 +26,15 @@ export interface GithubDeploymentClient {
       merge(parameters: Record<string, unknown>): Promise<{ data: { merged: boolean; sha?: string; message?: string } }>;
     };
     repos: {
-      get(parameters: Record<string, unknown>): Promise<{ data: { allow_auto_merge?: boolean } }>;
-      getBranchProtection(parameters: Record<string, unknown>): Promise<{ data: { required_status_checks?: { strict?: boolean } | null } }>;
+      get(parameters: Record<string, unknown>): Promise<{ data: { id: number; allow_auto_merge?: boolean } }>;
+      getBranchProtection(parameters: Record<string, unknown>): Promise<{ data: {
+        required_status_checks?: {
+          strict?: boolean;
+          contexts?: string[];
+          checks?: Array<{ context: string; app_id?: number | null }>;
+        } | null;
+      } }>;
+      getContent(parameters: Record<string, unknown>): Promise<{ data: unknown }>;
       compareCommits(parameters: Record<string, unknown>): Promise<{ data: { status?: string; merge_base_commit?: { sha?: string } } }>;
       listBranches(parameters: Record<string, unknown>): Promise<{ data: Array<{ name: string }> }>;
       merge(parameters: Record<string, unknown>): Promise<{ data: { merged: boolean; sha?: string; message?: string } }>;

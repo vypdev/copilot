@@ -26,10 +26,22 @@ describe('setup configuration policy', () => {
             { name: 'MAIN_BRANCH', value: 'master' },
             { name: 'AI_IGNORE_FILES', value: 'build/*' },
             { name: 'BUGBOT_FAIL_ON_UNRESOLVED', value: 'false' },
+            { name: 'MERGE_QUEUE_CHECK_ATTESTATIONS', value: '[]' },
         ]));
+        expect(plan.mergeQueueReadiness).toEqual([]);
         expect(buildSetupActionInputs(configuration)['bugbot-fail-on-unresolved']).toBe('false');
+        expect(buildSetupActionInputs(configuration)['merge-queue-check-attestations']).toBe('[]');
         expect(plan.requiredSecrets).toEqual(['PAT']);
         expect(plan.warnings.length).toBeGreaterThan(0);
+    });
+
+    it('preserves live merge queue checks in the setup presentation plan', () => {
+        const plan = buildSetupPlan(createDefaultSetupConfiguration(), [
+            { area: 'Merge queue readiness · production (master)', status: 'pass', message: 'Ready.' },
+        ]);
+        expect(plan.mergeQueueReadiness).toEqual([
+            { area: 'Merge queue readiness · production (master)', status: 'pass', message: 'Ready.' },
+        ]);
     });
 
     it('removes optional files while retaining core setup resources', () => {

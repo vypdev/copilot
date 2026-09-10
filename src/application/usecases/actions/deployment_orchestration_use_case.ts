@@ -12,11 +12,20 @@ import type { IssueLabelsPort } from "../../ports/issue_management_ports";
 import {
   buildInitialDeploymentOperation,
   buildReconciliationTarget,
+  mergeQueueReadinessFailureMessage,
   selectBackmergeMode,
   selectPullRequestMode,
   selectReconciliationTargetBranches,
   validateInitialDeploymentInput,
 } from "../../policies/deployment_plan_policy";
+import type {
+  PullRequestModeDecision,
+  TargetMergeCapabilities,
+} from "../../policies/deployment_plan_policy";
+import {
+  evaluateMergeQueueReadiness,
+  type MergeQueueTargetRole,
+} from "../../../domain/merge_queue_readiness";
 import {
   deploymentDashboardMarker,
   renderDeploymentDashboard,
@@ -37,6 +46,7 @@ import { parseManagedPullRequestMarker } from "../../../domain/managed_pull_requ
 import { Result } from "../../../data/model/result";
 import type { ParamUseCase } from "../base/param_usecase";
 import { projectDeploymentLabels } from "../../policies/deployment_lifecycle_policy";
+import { sanitizePublishedError } from "../../policies/github_comment_publication_policy";
 
 export interface DeploymentOrchestrationDependencies {
   readonly pullRequests: ManagedPullRequestPort;
@@ -171,6 +181,16 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
   }
 
   private async ensurePromotion(execution: DeploymentOrchestrationContext, operation: DeploymentOperationSnapshot): Promise<Result> {
+    const preflight = await this.inspectMergeBehavior(
+      execution,
+      operation,
+      operation.productionBranch,
+      "production",
+      operation.sourceSha,
+    );
+    if (preflight.kind === "blocked") {
+      return await this.block(execution, operation, "promotion", preflight.reason, true);
+    }
     const promotion = await this.createOrReusePullRequest(execution, operation, "promotion");
     if (promotion.merged) return await this.advancePromotion(execution, operation, promotion);
     if (promotion.state === "closed") return await this.block(execution, operation, "promotion", `Promotion PR #${promotion.number} was closed without merge.`, true);
@@ -187,8 +207,9 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
     if (pending.phase !== "promotion_pr_pending") throw new Error(`Cannot prepare promotion from ${operation.phase}.`);
     execution.currentConfiguration.deploymentOrchestration = pending;
     await this.persist(execution);
-    const managed = await this.configureMergeBehavior(execution, pending, promotion);
-    return success(managed.selectedPrMode === "create-only"
+    const configured = await this.configureMergeBehavior(execution, pending, promotion, "promotion", "production");
+    if (configured.kind === "blocked") return configured.result;
+    return success(configured.operation.selectedPrMode === "create-only"
       ? `Promotion PR #${promotion.number} is ready for maintainer review; this runner does not wait.`
       : `Promotion PR #${promotion.number} is managed by GitHub; this runner does not wait for checks.`);
   }
@@ -412,9 +433,18 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
       return;
     }
     let target = operation.reconciliationTargets[index];
-    const capabilities = await this.dependencies.pullRequests.getTargetCapabilities(
-      execution.owner, execution.repo, target.targetBranch, execution.tokens.token,
+    const targetRole = reconciliationTargetRole(operation, target.targetBranch);
+    const preflight = await this.inspectMergeBehavior(
+      execution,
+      operation,
+      target.targetBranch,
+      targetRole,
+      target.sourceSha,
     );
+    if (preflight.kind === "blocked") {
+      return await this.block(execution, operation, "reconciliation", preflight.reason, true);
+    }
+    const capabilities = preflight.capabilities;
     const [targetSha, currentSourceSha] = await Promise.all([
       this.dependencies.git.getBranchSha(execution.owner, execution.repo, target.targetBranch, execution.tokens.token),
       this.dependencies.git.getBranchSha(execution.owner, execution.repo, target.sourceBranch, execution.tokens.token),
@@ -459,7 +489,14 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
     if (pullRequest.merged) {
       return await this.advanceReconciliation(execution, withPullRequest, pullRequest);
     }
-    await this.configureMergeBehavior(execution, withPullRequest, pullRequest);
+    const configured = await this.configureMergeBehavior(
+      execution,
+      withPullRequest,
+      pullRequest,
+      "reconciliation",
+      targetRole,
+    );
+    if (configured.kind === "blocked") return configured.result;
     return undefined;
   }
 
@@ -495,16 +532,30 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
     execution: DeploymentOrchestrationContext,
     operation: DeploymentOperationSnapshot,
     pullRequest: ManagedPullRequestRecord,
-  ): Promise<DeploymentOperationSnapshot> {
-    const capabilities = await this.dependencies.pullRequests.getTargetCapabilities(
-      execution.owner, execution.repo, pullRequest.baseBranch, execution.tokens.token, pullRequest.number,
+    category: "promotion" | "reconciliation",
+    targetRole: MergeQueueTargetRole,
+  ): Promise<
+    | { readonly kind: "configured"; readonly operation: DeploymentOperationSnapshot }
+    | { readonly kind: "blocked"; readonly result: Result }
+  > {
+    const inspection = await this.inspectMergeBehavior(
+      execution,
+      operation,
+      pullRequest.baseBranch,
+      targetRole,
+      pullRequest.headSha,
+      pullRequest.number,
     );
-    const decision = selectPullRequestMode(operation.prMode, capabilities);
-    if (decision.kind === "unsupported") throw new Error(decision.reason);
+    if (inspection.kind === "blocked") {
+      return {
+        kind: "blocked",
+        result: await this.block(execution, operation, category, inspection.reason, true),
+      };
+    }
+    const { capabilities, decision } = inspection;
     const managed: DeploymentOperationSnapshot = { ...operation, selectedPrMode: decision.mode };
     execution.currentConfiguration.deploymentOrchestration = managed;
     await this.persist(execution);
-    await this.publishDashboard(execution, managed);
     if (decision.mode === "auto-merge") {
       if (operation.prMode === "auto" && capabilities.immediatelyMergeable) {
         await this.dependencies.pullRequests.mergePullRequest(
@@ -516,9 +567,77 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
         );
       }
     } else if (decision.mode === "merge-queue") {
-      await this.dependencies.pullRequests.enqueuePullRequest(execution.owner, execution.repo, pullRequest.nodeId, execution.tokens.token);
+      const alreadyQueued = await this.dependencies.pullRequests.isPullRequestQueued(
+        execution.owner,
+        execution.repo,
+        pullRequest.nodeId,
+        execution.tokens.token,
+      );
+      if (!alreadyQueued) {
+        await this.dependencies.pullRequests.enqueuePullRequest(
+          execution.owner,
+          execution.repo,
+          pullRequest.nodeId,
+          pullRequest.headSha,
+          execution.tokens.token,
+        );
+      }
     }
-    return managed;
+    await this.publishDashboard(execution, managed);
+    return { kind: "configured", operation: managed };
+  }
+
+  private async inspectMergeBehavior(
+    execution: DeploymentOrchestrationContext,
+    operation: DeploymentOperationSnapshot,
+    targetBranch: string,
+    targetRole: MergeQueueTargetRole,
+    candidateHeadSha: string,
+    pullRequest?: number,
+  ): Promise<
+    | {
+        readonly kind: "ready";
+        readonly capabilities: TargetMergeCapabilities;
+        readonly decision: Extract<PullRequestModeDecision, { readonly kind: "mode" }>;
+      }
+    | { readonly kind: "blocked"; readonly reason: string }
+  > {
+    const capabilities = await this.dependencies.pullRequests.getTargetCapabilities(
+      execution.owner,
+      execution.repo,
+      targetBranch,
+      execution.tokens.token,
+      { candidateHeadSha, ...(pullRequest === undefined ? {} : { pullRequest }) },
+    );
+    const decision = selectPullRequestMode(operation.prMode, capabilities);
+    if (decision.kind === "unsupported") {
+      if (capabilities.mergeQueueObservationProblems.length > 0) {
+        const readiness = evaluateMergeQueueReadiness({
+          queueRequired: true,
+          targetRole,
+          targetBranch,
+          producers: capabilities.mergeQueueProducers,
+          problems: capabilities.mergeQueueObservationProblems,
+          attestations: execution.deployment.mergeQueueCheckAttestations,
+        });
+        return { kind: "blocked", reason: mergeQueueReadinessFailureMessage(readiness, execution.locale.issue) };
+      }
+      return { kind: "blocked", reason: decision.reason };
+    }
+    if (decision.mode === "merge-queue") {
+      const readiness = evaluateMergeQueueReadiness({
+        queueRequired: capabilities.mergeQueueRequired,
+        targetRole,
+        targetBranch,
+        producers: capabilities.mergeQueueProducers,
+        problems: capabilities.mergeQueueObservationProblems,
+        attestations: execution.deployment.mergeQueueCheckAttestations,
+      });
+      if (readiness.verdict !== "ready") {
+        return { kind: "blocked", reason: mergeQueueReadinessFailureMessage(readiness, execution.locale.issue) };
+      }
+    }
+    return { kind: "ready", capabilities, decision };
   }
 
   private async cleanup(execution: DeploymentOrchestrationContext, operation: DeploymentOperationSnapshot): Promise<void> {
@@ -596,7 +715,7 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
   private async recordUnexpectedFailure(execution: DeploymentOrchestrationContext, error: unknown): Promise<void> {
     const operation = execution.currentConfiguration.deploymentOrchestration;
     if (!operation || operation.phase === "completed" || operation.phase === "blocked") return;
-    const message = error instanceof Error ? error.message : String(error);
+    const message = sanitizePublishedError(error instanceof Error ? error.message : String(error));
     const category = operation.phase === "preparing" || operation.phase === "promotion_pr_pending"
       ? "promotion"
       : operation.phase === "promoted" || operation.phase === "publishing"
@@ -635,6 +754,15 @@ function deploymentKind(execution: DeploymentOrchestrationContext): "release" | 
   if (execution.labels.isHotfix) return "hotfix";
   if (execution.labels.isRelease) return "release";
   throw new Error("The launcher issue does not identify exactly one release or hotfix source branch.");
+}
+
+function reconciliationTargetRole(
+  operation: DeploymentOperationSnapshot,
+  targetBranch: string,
+): MergeQueueTargetRole {
+  if (targetBranch === operation.productionBranch) return "production";
+  if (targetBranch === operation.developmentBranch) return "development";
+  return "active-release";
 }
 
 function presentationContext(execution: DeploymentOrchestrationContext): DeploymentPresentationContext {

@@ -1,5 +1,6 @@
 import type {
     SetupPromptPort,
+    SetupMergeQueueReadinessPort,
     SetupRemoteConfigurationReadPort,
     SetupStoragePromptPort,
 } from '../../ports/setup_wizard_ports';
@@ -35,6 +36,7 @@ export class SetupWizardUseCase {
         private readonly prompt: SetupPromptPort,
         private readonly remoteConfigurationReader?: SetupRemoteConfigurationReadPort,
         private readonly storagePrompt?: SetupStoragePromptPort,
+        private readonly mergeQueueReadiness?: SetupMergeQueueReadinessPort,
     ) {}
 
     async collect(request: SetupWizardRequest = {}): Promise<SetupConfiguration | undefined> {
@@ -86,7 +88,15 @@ export class SetupWizardUseCase {
                 'validation',
             );
         }
-        const plan = buildSetupPlan(configuration);
+        const readiness = request.remoteTarget && this.mergeQueueReadiness
+            ? await this.mergeQueueReadiness.inspect({
+                owner: request.remoteTarget.owner,
+                repository: request.remoteTarget.repository,
+                token: request.remoteTarget.token,
+                configuration,
+            })
+            : [];
+        const plan = buildSetupPlan(configuration, readiness);
         this.prompt.showPlan(plan);
         if (!(await this.prompt.confirm(plan))) return undefined;
         return configuration;

@@ -12,6 +12,7 @@ import type {
     SetupCredentialValidationPort,
     SetupRepositoryConfigurationReadPort,
     SetupRepositorySecretsPort,
+    SetupMergeQueueReadinessPort,
     SetupRemoteConfigurationReadPort,
     SetupRemoteCredentialHealthPort,
 } from '../../ports/setup_wizard_ports';
@@ -33,6 +34,7 @@ export class SetupDoctorUseCase {
         private readonly output: DoctorOutputPort,
         private readonly remoteHealth?: SetupRemoteCredentialHealthPort,
         private readonly remoteConfigurationReader?: SetupRemoteConfigurationReadPort,
+        private readonly mergeQueueReadiness?: SetupMergeQueueReadinessPort,
     ) {}
 
     async execute(request: DoctorRequest): Promise<boolean> {
@@ -42,6 +44,15 @@ export class SetupDoctorUseCase {
         if (pat.status !== 'valid') {
             this.output.showDoctorChecks(checks);
             return false;
+        }
+
+        if (this.mergeQueueReadiness) {
+            checks.push(...await this.mergeQueueReadiness.inspect({
+                owner: request.owner,
+                repository: request.repository,
+                token: request.setupToken,
+                configuration: request.configuration,
+            }));
         }
 
         const comparisons = this.workspace.compareWorkflows?.(request.configuration.features) ?? [];

@@ -432,6 +432,9 @@ inputs:
   reconciliation-pr-mode:
     description: "Managed PR behavior: auto, auto-merge, merge-queue, or create-only."
     default: "auto"
+  merge-queue-check-attestations:
+    description: "JSON array of exact required-check attestations for merge queue targets; unknown checks block by default."
+    default: "[]"
   reconciliation-backmerge-mode:
     description: "Back-merge branch shape: auto, direct, or sync-branch."
     default: "auto"
