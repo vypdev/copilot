@@ -25,3 +25,9 @@ or implementation RFC:
 5. Include concrete flows, diagrams, representative UI/content examples, a
    numeric test budget, documentation work, configuration boundaries, and
    executable acceptance criteria whenever applicable.
+6. Consult `specs/catalog.json` and the relevant catalogued SDD before changing
+   a product capability. Update the SDD, catalog evidence, tests, and user
+   documentation together when the public or architectural contract changes.
+7. Run `pnpm run validate:specifications` for every specification or catalog
+   change. Regenerate `specs/CATALOG.md` with
+   `pnpm run generate:specifications` after editing catalog metadata.

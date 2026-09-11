@@ -1,0 +1,82 @@
+---
+title: Product specifications
+description: Find the product contract that owns a capability and keep its evidence aligned with implementation.
+---
+
+# Product specifications
+
+Copilot treats an SDD as a shared, testable product contract. Before changing a
+capability, find its owner in `specs/CATALOG.md`, read the primary SDD and any
+companion, then inspect the registered workflows, entrypoints, code, tests, and
+user documentation.
+
+```text
+capability change
+  -> owning SDD
+  -> policy/use case/port/adapter/presentation
+  -> tests and workflow contracts
+  -> user/operator documentation
+  -> catalog verification date
+```
+
+Text equivalent: a product change begins at its owning SDD, crosses the named
+architecture boundaries, is verified by tests and workflow contracts, updates
+the user-facing documentation, and finishes by refreshing catalog evidence.
+
+## Catalog workflow
+
+<Steps>
+  <Step title="Find ownership">Open `specs/CATALOG.md` and select the capability ID whose scope owns the behavior.</Step>
+  <Step title="Read before editing">Read the full SDD, including fixed invariants, configuration, UI states, failure recovery, test budget, and traceability.</Step>
+  <Step title="Change one contract">Update code, tests, workflows, visible content, documentation, and the SDD together when applicable.</Step>
+  <Step title="Refresh evidence">Edit repository-relative paths and `lastVerified` in `specs/catalog.json`; never edit the generated table by hand.</Step>
+  <Step title="Generate and validate">Run the commands below and include any required human UX evidence in the PR.</Step>
+</Steps>
+
+```bash
+corepack pnpm run generate:specifications
+corepack pnpm run validate:specifications
+corepack pnpm run validate:documentation
+corepack pnpm run validate:workflows
+```
+
+The specification validator rejects missing or escaped paths, duplicate
+capability/spec ownership, invalid status/date metadata, unregistered top-level
+SDDs, and a stale generated `CATALOG.md`.
+
+## As-built baselines
+
+Several capabilities existed before their SDD. Their status is **As-built
+baseline**, which means the behavior was reconstructed from current repository
+evidence. It does not mean all behavior is ideal.
+
+Every retrospective SDD separates:
+
+- observed behavior;
+- the intentional contract maintainers choose to preserve;
+- known debt and limitations;
+- historic rationale that remains unknown; and
+- proposed improvements that are not yet implemented.
+
+Do not rewrite a limitation as an implemented guarantee. Create a proposal or
+update the SDD status before changing architecture or public behavior.
+
+## Review checklist
+
+For a catalogued change, reviewers should be able to answer yes to all of these:
+
+- Does the owning SDD describe the visible normal, pending, action-required,
+  failed/blocked, partial, and complete states?
+- Are configuration defaults, bounds, precedence, migration, and fixed safety
+  rules explicit?
+- Do pure policy, application use cases, semantic ports, adapters, composition,
+  and presentation keep the documented dependency direction?
+- Does the numeric risk-derived test budget still cover retries, replay, races,
+  provider errors, security, UX, and migration?
+- Do issue, PR, comment, check, Job Summary, CLI, and documentation surfaces say
+  what happened, what is retained, and what to do next?
+- Are the catalog date and paths current, and do all validation commands pass?
+
+Human evidence remains necessary where automation cannot judge GitHub or
+terminal readability: desktop/mobile, light/dark, screen-reader order, narrow
+terminal widths, and real provider/setup/merge-queue behavior.

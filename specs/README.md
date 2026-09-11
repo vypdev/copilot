@@ -8,6 +8,38 @@ part in the original discussion and testable by someone who did not implement it
 New specifications start from [`_template.md`](./_template.md). Existing specs
 should converge on this standard when they are materially revised.
 
+The capability inventory and its implementation evidence live in
+[`catalog.json`](./catalog.json); [`CATALOG.md`](./CATALOG.md) is the generated
+human-readable view. Run `pnpm run validate:specifications` after changing a
+specification or any catalogued path, and `pnpm run generate:specifications`
+after changing catalog metadata.
+
+### Retrospective (as-built) specifications
+
+An already implemented capability MAY be documented with status
+`As-built baseline`. This is not a claim that the feature is perfect or that all
+historic design choices were intentional. Its purpose is to establish a
+reviewable contract before subsequent changes.
+
+An as-built baseline MUST:
+
+- label verified repository behavior as **observed behavior**;
+- label the behavior maintainers choose to preserve as the **intentional
+  contract**;
+- record defects, missing evidence, and architectural weaknesses under **known
+  debt and limitations**;
+- mark historic motivation as **unknown** when evidence does not establish it;
+- keep desired improvements separate from the current contract and link them to
+  follow-up work rather than presenting them as implemented;
+- cite current code, workflows, tests, and user documentation; and
+- use the same UX, architecture, configuration, security, testing,
+  documentation, acceptance, and Definition of Done standard as a prospective
+  specification.
+
+The baseline date and `Last verified` catalog date identify the repository
+snapshot that was audited. A behavior-changing implementation MUST update the
+relevant SDD, catalog evidence, tests, and user documentation in the same change.
+
 ## 1. Core criteria
 
 Every spec must be:

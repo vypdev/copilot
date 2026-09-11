@@ -97,5 +97,8 @@ jobs:
       - name: Validate workflow contract
         run: pnpm run validate:workflows
 
+      - name: Validate product specification catalog
+        run: pnpm run validate:specifications
+
       - name: Validate Git diff
         run: git diff --check

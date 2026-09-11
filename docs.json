@@ -273,6 +273,11 @@
           "icon": "vial"
         },
         {
+          "title": "Product specifications",
+          "href": "/development/specifications",
+          "icon": "diagram-project"
+        },
+        {
           "title": "Agent functionality audit",
           "href": "/development/agent-functionality-audit",
           "icon": "clipboard"

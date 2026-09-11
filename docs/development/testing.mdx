@@ -16,6 +16,7 @@ corepack pnpm@10.12.4 run validate:agent-docs
 corepack pnpm@10.12.4 run validate:docs-page
 corepack pnpm@10.12.4 run validate:documentation
 corepack pnpm@10.12.4 run validate:workflows
+corepack pnpm@10.12.4 run validate:specifications
 git diff --check
 ```
 
@@ -25,6 +26,11 @@ examples and their setup templates, and high-risk release contracts such as
 the default-branch continuation prerequisite, npm direct-publish policy,
 polling controls, and orchestration Variables. It also rejects removed public
 inputs, actions, commands, and orchestration modes.
+
+`validate:specifications` validates unique capability ownership, safe existing
+repository-relative evidence paths, complete registration of top-level SDDs,
+retrospective-baseline structure, and byte-for-byte freshness of the generated
+`specs/CATALOG.md` view.
 
 Merge-queue contract tests cover ruleset-only targets, classic/ruleset union,
 GitHub Actions workflow parsing on target and candidate refs, external exact

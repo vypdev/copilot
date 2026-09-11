@@ -2,6 +2,8 @@
 
 - Status: Draft
 - Date: YYYY-MM-DD
+- Catalog capability ID: <stable id in catalog.json>
+- Last verified: <YYYY-MM-DD for an as-built baseline, otherwise not applicable>
 - Owners: <product/engineering owners>
 - Scope: <one sentence>
 - Related issues/PRs: <links>
@@ -38,6 +40,17 @@ Number the actual current sequence. Separate verified facts from assumptions.
 - Incidents or concrete examples:
 - External primary sources:
 - Unknowns:
+
+### 2.4 Retrospective classification (as-built baselines only)
+
+- Observed behavior: <facts directly supported by current evidence>
+- Intentional contract: <observed behavior maintainers choose to preserve>
+- Known debt and limitations: <defects, constraints, and missing evidence>
+- Unknown rationale: <historic motivation that evidence cannot establish>
+- Proposed improvements: <future changes, clearly not represented as current>
+
+For a prospective specification, mark this subsection not applicable because no
+implemented baseline is being reconstructed.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -315,6 +328,10 @@ examples synchronized with implementation fixtures or contract tests.
 Adjust ordering to risk and dependencies; do not postpone documentation or UX
 until after behavior is considered complete.
 
+For an as-built baseline, interpret this as the required change sequence for
+future maintenance and state explicitly that the document itself proposes no
+behavior change.
+
 ## 19. Definition of Done
 
 - [ ] Every normative requirement has acceptance and traceability.
@@ -327,6 +344,8 @@ until after behavior is considered complete.
 - [ ] User/setup/operator/contributor documentation is complete and discoverable.
 - [ ] Failure, partial success, retry, idempotency, security, and cleanup pass.
 - [ ] Required generated artifacts and repository validation commands pass.
+- [ ] `specs/catalog.json` evidence and `specs/CATALOG.md` are current and
+      `pnpm run validate:specifications` passes.
 - [ ] No readiness-blocking decision remains unresolved.
 
 ## 20. References and decisions
