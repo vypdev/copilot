@@ -19,6 +19,25 @@ const {
   runProcess,
 } = require("../../../scripts/collect-architecture-metrics.cjs");
 
+function processExists(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ESRCH") return false;
+    throw error;
+  }
+}
+
+function waitForProcessExit(pid: number, timeoutMs: number): boolean {
+  const deadline = Date.now() + timeoutMs;
+  const waitBuffer = new Int32Array(new SharedArrayBuffer(4));
+  while (processExists(pid) && Date.now() < deadline) {
+    Atomics.wait(waitBuffer, 0, 0, 10);
+  }
+  return processExists(pid);
+}
+
 describe("collect architecture metrics", () => {
   it("applies bounded command-specific timeouts", () => {
     expect(commandTimeout(["pnpm", "exec", "jest", "--coverage"])).toBe(
@@ -45,31 +64,27 @@ describe("collect architecture metrics", () => {
 
   it("terminates the complete process group before returning from a timeout", () => {
     const directory = mkdtempSync(join(tmpdir(), "copilot-timeout-tree-"));
-    const marker = join(directory, "late.txt");
+    const descendantPidFile = join(directory, "descendant.pid");
     const parent = join(directory, "parent.cjs");
     writeFileSync(
       parent,
       [
         'const { spawn } = require("node:child_process");',
+        'const { writeFileSync } = require("node:fs");',
         'const { execPath } = require("node:process");',
-        `spawn(execPath, ["-e", ${JSON.stringify(
-          `setTimeout(() => require("node:fs").writeFileSync(${JSON.stringify(
-            marker,
-          )}, "late"), 500)`,
-        )}], { stdio: "ignore" });`,
+        'const descendant = spawn(execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "ignore" });',
+        `writeFileSync(${JSON.stringify(descendantPidFile)}, String(descendant.pid));`,
         "setInterval(() => {}, 1000);",
       ].join("\n"),
     );
 
-    expect(() => runProcess([execPath, parent], process.cwd(), 100)).toThrow(
-      "timed out after 100ms",
+    expect(() => runProcess([execPath, parent], process.cwd(), 1000)).toThrow(
+      "timed out after 1000ms",
     );
-    runProcess(
-      [execPath, "-e", "setTimeout(() => {}, 700)"],
-      process.cwd(),
-      3000,
-    );
-    expect(existsSync(marker)).toBe(false);
+    expect(existsSync(descendantPidFile)).toBe(true);
+    const descendantPid = Number(readFileSync(descendantPidFile, "utf8"));
+    expect(Number.isSafeInteger(descendantPid)).toBe(true);
+    expect(waitForProcessExit(descendantPid, 1000)).toBe(false);
   });
 
   it("builds single-repository RepoWise commands with an explicit coverage path", () => {
