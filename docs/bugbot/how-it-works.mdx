@@ -13,7 +13,7 @@ This page describes the **internal flow** of Bugbot: how detection runs, how the
 
 | What you do | What runs inside the action | Result |
 |-------------|-----------------------------|--------|
-| **Push** to branch (or run `detect_potential_problems_action`) | Context → analysis/normalization → revision-freshness gate → publication → resolution | New/updated issue comments for issue-only work, or one summarized review with inline findings for PR work; verified resolved threads on PR. |
+| **Push** to branch (or run `detect_potential_problems_action`) | Context → analysis/normalization → head guards → finding mutations → provider re-read → projection | New/updated issue comments for issue-only work; on PRs, a historical review snapshot, inline findings, reconciled threads, and one current status card. |
 | **Comment** “fix it” / “fix all” (with permission) | Intent (analysis role) → Autofix (execution role) → verify commands → commit & push | Code change on branch; findings remain open until a fresh independent review verifies them. |
 | **Comment** “add a test for X” (with permission) | Intent (analysis role) → Do user request (execution role) → verify commands → commit & push | Code change on branch. |
 | **Comment** “analyze this PR for vulnerabilities” | Review (analysis/detection role) | Read-only findings; no file changes. |
@@ -25,7 +25,7 @@ This page describes the **internal flow** of Bugbot: how detection runs, how the
 
 1. **Guards:** The configured agent runtime must be available; the branch must be linked to an issue (`issueNumber !== -1`). Otherwise detection is skipped.
 
-2. **Load context:** The action fetches **issue comments**, **PR review comments**, and review-thread state for the issue and any open PRs. Markers are trusted only when their author matches the authenticated workflow identity. A manually resolved thread is persisted as dismissed and is not reopened by a later model response. The action builds:
+2. **Load context:** The action fetches **issue comments**, **PR reviews**, **PR review comments**, and review-thread state (including the resolver identity) for the issue and any open PRs. Markers are trusted only when their author matches the authenticated workflow identity. A thread resolved by a person is persisted as dismissed on the next supported reconciliation; a manually reopened resolved thread requires verification before it can be considered clean. The action builds:
    - A map of **existing findings** (id → issue comment id, PR comment id, resolved).
    - A **previous findings block** (id, title, description) to send to the configured agent so it can report which are now **resolved**.
    - For the target PR: one canonical GitHub diff snapshot containing the changed-file manifest, bounded patches, and every addressable left/right diff location. All projections come from one paginated file traversal.
@@ -44,11 +44,15 @@ This page describes the **internal flow** of Bugbot: how detection runs, how the
 
 4. **Filter and limit:** The response is validated again locally even when the CLI claims schema support. Secrets are redacted before publication. Unsafe paths, malformed identities, unsupported enum values, low-confidence items, ignored files, and findings below `bugbot-severity` are rejected. Distinct root causes on the same line are retained; semantic duplicates are removed. Findings are ranked by severity and confidence before `bugbot-comment-limit` is applied.
 
-5. **Publish:** The PR head SHA is checked before analysis and again immediately before publication. Superseded runs exit successfully without publishing or resolving anything. For issue-only work, each finding is added or updated as an issue comment. For a PR, Bugbot creates **one review** with one summary and child line/range or file-level comments; it does not add a duplicate generic PR conversation comment. Existing findings are updated in place and overflow remains in the review summary.
+5. **Publish active findings:** The PR head SHA is checked before analysis and again immediately before publication. Superseded runs exit successfully without publishing or resolving anything. For issue-only work, each finding is added or updated as an issue comment. For a PR, Bugbot creates **one historical review snapshot** with child line/range or file-level comments; it does not add a duplicate finding comment in the PR conversation. Existing findings are updated in place and overflow remains in the snapshot while still contributing to current aggregate counts. When reopening a finding, the open marker is stored before the native thread is reopened, so an interrupted run cannot falsely claim a completed transition.
 
-6. **Mark resolved:** For each existing finding whose id is in `resolved_finding_ids`, the action **updates** the stored finding comment so the marker shows `resolved: true`, and **resolves the PR review thread** when applicable. Resolution runs only after publication succeeds.
+6. **Mark resolved:** For each existing finding whose id is in `resolved_finding_ids`, the action first **updates** the stored finding marker with `resolved: true` and its reason, then **resolves the PR review thread** when applicable. Resolution runs only after active publication succeeds. A retry discovers and repairs either half of an interrupted transition.
 
-Every exit path emits optional content-free telemetry. `bugbot-dry-run` stops after the second freshness gate and returns the complete projected state without publishing, resolving, committing, updating Checks, or persisting configuration.
+7. **Re-read and project:** After mutations, Bugbot verifies the PR head again and re-reads reviews, child comments, native thread facts, and the PR conversation from GitHub. A pure domain policy derives `open`, `reopened`, `fixed`, `obsolete`, `dismissed`, `verification-required`, or `unknown`. That one final projection updates the affected historical review status blocks, upserts the oldest trusted **Bugbot status** card, and feeds the Result, lifecycle labels, Job Summary, Check Run, and telemetry. Missing or malformed owned evidence fails closed; it is never presented as clean. User-facing PR, commit, run, review, and finding links come only from authenticated provider adapters. Finding links are accepted only when they belong to the same HTTPS server and repository, including GitHub Enterprise installations.
+
+Review and Commit workflow templates share a repository-and-branch concurrency key. A newer run cancels an older review of the same branch, while the application head guards and idempotent provider writes protect partial/canceled transitions. Other durable mutation workflows retain their workflow-local queue.
+
+Every exit path emits optional content-free telemetry. `bugbot-dry-run` stops after the second freshness gate and returns the complete proposed state without publishing, resolving, committing, updating Checks, or persisting configuration.
 
 ---
 

@@ -42,7 +42,7 @@ Copilot provides extensive configuration options to customize your workflow. Use
     - `bugbot-trace-rules`: Include rule source and included/truncated/omitted status in summaries without exposing rule contents (default `false`).
     - `bugbot-suggested-changes`: Enable exact RIGHT-side line suggestions (default `true`).
     - `bugbot-telemetry`: Emit content-free review telemetry (default `true`).
-    - `bugbot-fail-on-unresolved`: Fail the Action and its native Check when the latest review has open or reopened findings. Disabled by default, so findings are reported neutrally.
+    - `bugbot-fail-on-unresolved`: Fail the Action and its native Check when the final projection has `open`, `reopened`, or `verification-required` findings. Disabled by default, so those actionable states are reported neutrally; `unknown` and incomplete reconciliation always fail.
     - `bugbot-organization-rules`: Semicolon/newline-separated organization review rules.
     - `ai-members-only`: Restrict AI features to only organization/project members (default: "false"); when true, AI PR description is skipped if the PR author is not a member.
     - `ai-include-reasoning`: Include concise provider-supplied explanation metadata when available (default: `false`). It never requests or publishes hidden chain-of-thought.

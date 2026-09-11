@@ -27,13 +27,15 @@ event or canonical comment command
   -> revision-freshness gate
   -> native GitHub review/comment publication
   -> independent resolution verification
+  -> provider re-read and pure final projection
+  -> review blocks + canonical status card + evidence surfaces
 ```
 
 ## Detection and publication
 
 1. `load_bugbot_context_use_case.ts` loads authenticated markers, batched review
-   thread state, bounded human discussion, repository rules, the PR head, and a
-   single canonical GitHub diff snapshot.
+   thread/resolver state, bounded human discussion, repository rules, the PR
+   head, and a single canonical GitHub diff snapshot.
 2. `build_bugbot_prompt.ts` and `schema.ts` define the evidence and structured
    result contract. All CLI responses are validated locally.
 3. Preparation policies reject unsafe paths, malformed identities, unsupported
@@ -44,8 +46,20 @@ event or canonical comment command
    no publication or resolution mutation.
 5. PR output is one native review with a summary and line/range or file-level
    child comments. Issue comments are used only when no PR exists.
-6. Resolution updates provider state only after current evidence proves the
-   finding is fixed, obsolete, or explicitly dismissed.
+6. Resolution updates the marker before the native thread after current
+   evidence proves the finding is fixed, obsolete, or explicitly dismissed.
+7. `reconcile_bugbot_review_state_use_case.ts` re-reads GitHub, uses the pure
+   domain state/projection policies, repairs up to 20 affected historical
+   review blocks, and upserts the oldest trusted status card. Result, labels,
+   Summary, Check, and telemetry consume that projection.
+8. The semantic navigation port supplies trusted PR, commit, and optional run
+   links. The GitHub adapter honors `GITHUB_SERVER_URL`; provider-returned
+   finding links are retained only for the same HTTPS server and repository.
+
+Submitted review prose is historical. Current per-finding authority comes from
+the trusted marker plus native thread/resolver facts. Marker/thread drift is
+`verification-required`; missing or malformed owned evidence is `unknown` and
+fails closed.
 
 ## Finding identity
 
@@ -86,6 +100,8 @@ Canonical Bugbot options are `dry-run`, `trace-rules`, and
 - Keep analysis roles read-only and execution roles workspace-scoped.
 - Fail closed on unavailable providers, invalid configuration, stale revisions,
   or ambiguous finding identity.
+- Never render an arbitrary provider URL: navigation comes from the configured
+  adapter and returned review/comment links must remain inside that repository.
 
 ## Key source paths
 
@@ -93,7 +109,10 @@ Canonical Bugbot options are `dry-run`, `trace-rules`, and
 - `build_bugbot_prompt.ts`, `schema.ts`: analysis contract.
 - `prepare_bugbot_findings_policy.ts`: normalization, filtering, identity.
 - `marker.ts`, `types.ts`: durable finding identity and state.
+- `domain/bugbot/review_state.ts`, `review_projection.ts`: provider-neutral lifecycle and final projection.
 - `publish_findings_use_case.ts`, `publish_pr_review_comments.ts`: output.
 - `mark_findings_resolved_use_case.ts`: verified resolution.
+- `reconcile_bugbot_review_state_use_case.ts`: read-after-write presentation reconciliation.
+- `bugbot_review_navigation_ports.ts`, `github_bugbot_review_navigation_adapter.ts`: provider-owned safe navigation.
 - `detect_bugbot_fix_intent_workflow.ts`: comment intent.
 - `bugbot_autofix_workflow.ts`, `commit_and_push_preflight.ts`: guarded edits.

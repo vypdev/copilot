@@ -73,6 +73,8 @@ describe("BugbotAutofixUseCase", () => {
             { fix: (request: { configuration: unknown; prompt: string }) => mockCopilotMessage(request.configuration, request.prompt) },
             {
                 issue: { listIssueComments: jest.fn() },
+                reviewState: { listPullRequestReviews: jest.fn().mockResolvedValue([]) },
+                navigation: { forPullRequest: jest.fn() },
                 rules: { loadRules: jest.fn().mockResolvedValue([]) },
                 pullRequest: {
                     getHeadBranchForIssue: jest.fn(),

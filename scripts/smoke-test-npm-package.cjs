@@ -63,9 +63,13 @@ try {
   fs.mkdirSync(packageScope, { recursive: true });
   fs.symlinkSync(packageRoot, path.join(packageScope, 'copilot'), 'dir');
   fs.writeFileSync(path.join(consumerRoot, 'index.ts'), [
-    "import { BugbotReviewService, type BugbotReviewConfiguration } from '@vypdev/copilot/bugbot';",
+    "import { BugbotReviewService, type BugbotReviewConfiguration, type BugbotReviewNavigationPort } from '@vypdev/copilot/bugbot';",
     "const configuration: Partial<BugbotReviewConfiguration> = { effort: 'smart' };",
+    'const navigation: BugbotReviewNavigationPort = {',
+    "  forPullRequest: () => ({ pullRequestUrl: 'https://github.com/o/r/pull/1', commitUrl: 'https://github.com/o/r/commit/a' }),",
+    '};',
     'void configuration;',
+    'void navigation;',
     'void BugbotReviewService;',
   ].join('\n'));
   execFileSync(process.execPath, [

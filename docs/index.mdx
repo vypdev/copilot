@@ -77,6 +77,6 @@ For a complete list of what the action does (workflow triggers and single action
 
 ### Performance
 - Fast execution
-- **Sequential workflow handling** — The action waits for earlier active Copilot/Task mutation runs, so related workflows run one after another without discarding intermediate triggers (see [Features → Workflow concurrency](/features#workflow-concurrency-and-sequential-execution)).
+- **Workflow coordination** — Durable mutations queue without discarding intermediate events, while Commit and Pull Request review share a branch-scoped latest-revision lane so stale Bugbot analysis is canceled and safely reconciled (see [Features → Workflow concurrency](/features#workflow-concurrency-and-sequential-execution)).
 - Efficient resource utilization
 - Reliable automation

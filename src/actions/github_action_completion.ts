@@ -129,13 +129,28 @@ function failActionForUnresolvedFindingsIfConfigured(
     results: readonly Result[],
     dryRun: boolean,
 ): void {
-    if (dryRun || !execution.ai.getBugbotReviewConfiguration().failOnUnresolved) return;
-    const unresolved = results.reduce((count, result) => {
+    if (dryRun) return;
+    const aggregate = results.reduce((counts, result) => {
         const states = getResultPayload(getResultPayload(result.payload)?.findingStates);
-        return count + (typeof states?.open === 'number' ? states.open : 0)
-            + (typeof states?.reopened === 'number' ? states.reopened : 0);
-    }, 0);
-    if (unresolved > 0) core.setFailed(`Bugbot found ${unresolved} unresolved actionable finding(s).`);
+        return {
+            unresolved: counts.unresolved
+                + (typeof states?.open === 'number' ? states.open : 0)
+                + (typeof states?.reopened === 'number' ? states.reopened : 0)
+                + (typeof states?.['verification-required'] === 'number'
+                    ? states['verification-required']
+                    : 0),
+            unknown: counts.unknown
+                + (typeof states?.unknown === 'number' ? states.unknown : 0),
+        };
+    }, { unresolved: 0, unknown: 0 });
+    if (aggregate.unknown > 0) {
+        core.setFailed(`Bugbot could not verify ${aggregate.unknown} finding state(s).`);
+    } else if (
+        execution.ai.getBugbotReviewConfiguration().failOnUnresolved
+        && aggregate.unresolved > 0
+    ) {
+        core.setFailed(`Bugbot found ${aggregate.unresolved} unresolved actionable finding(s).`);
+    }
 }
 
 function commitPublishedRecommendationState(execution: Execution, results: Result[]): void {

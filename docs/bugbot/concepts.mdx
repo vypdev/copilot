@@ -13,7 +13,8 @@ A finding is a structured report produced by the configured agent after inspecti
 | Publication | Publish a bounded finding | Comment or review output |
 | Autofix | Apply an explicitly requested change | Workspace mutation |
 | Verification | Run configured checks | May block publication or commit |
-| Resolution | Mark a finding addressed | Comment/update marker |
+| Resolution | Mark a finding addressed | Marker first, then native thread |
+| Reconciliation | Re-read durable provider facts and derive one final state | Review status block, PR status card, Result, labels, Summary, Check, telemetry |
 
 Severity and publication policy must be explicit. A missing credential, invalid model policy, malformed response, timeout, or failed verification is terminal.
 
@@ -21,8 +22,15 @@ Severity and publication policy must be explicit. A missing credential, invalid 
 
 For `opened` and `reopened`, Bugbot analyzes the full PR. For `synchronize`, task 1 is bounded to the new `before..after` commit range while task 2 still checks every open finding against current code. A PR without an issue number can still receive a review. New findings are grouped under one review summary and published as stable inline comments anchored to valid changed lines. Issue comments are used only when there is no PR target. Findings are reconciled using a local fingerprint, so wording changes do not create duplicate findings.
 
-The action publishes a bounded Job Summary for every run. When the supplied evidence token can write Checks, it also publishes one stable Check Run: `Copilot / Plan` for issue and planning work, `Copilot / Review` for pull requests, and `Copilot / Verification` for push verification. A successful review with active or reopened findings is `neutral` by default; set `bugbot-fail-on-unresolved: true` to make those findings report `failure` and fail the Action invocation. A clean review is `success`, while an analysis error remains a failure in either policy. If Check Runs are unavailable, the action logs the optional publication failure and keeps the Job Summary as the evidence source.
+The action publishes a bounded Job Summary for every run. When the supplied evidence token can write Checks, it also publishes one stable Check Run: `Copilot / Plan` for issue and planning work, `Copilot / Review` for pull requests, and `Copilot / Verification` for push verification. A successful review with `open`, `reopened`, or `verification-required` findings is `neutral` by default; set `bugbot-fail-on-unresolved: true` to make those findings report `failure` and fail the Action invocation. `unknown`, an analysis error, or incomplete synchronization always fails. If Check Runs are unavailable, the action logs the optional publication failure and keeps the Job Summary as the evidence source.
 
-Finding markers preserve the resolution state. `fixed` means the agent confirmed the issue is gone, `obsolete` means the original situation no longer applies, and `dismissed` is an explicit authorized user decision. A finding that becomes active again is shown as `reopened` and is published again in the same destination.
+Finding markers preserve the resolution state. `fixed` means the agent confirmed the issue is gone, `obsolete` means the original situation no longer applies, and `dismissed` is a human native-thread decision. A finding that becomes active again is shown as `reopened` and is published again in the same destination. Marker/thread disagreement is `verification-required`; malformed or unverifiable trusted evidence is `unknown`.
+
+The source-of-truth boundary is deliberately layered:
+
+1. trusted marker plus native thread/resolver facts are durable per-finding evidence;
+2. the submitted review text is a historical snapshot, with only its generated status block mutable;
+3. one canonical PR status card is the aggregate human view; and
+4. Result, labels, Job Summary, Check Run, and telemetry consume the same provider-verified final projection.
 
 See [Detection](/bugbot/detection), [Finding publication](/bugbot/finding-publication), and [Autofix](/bugbot/autofix).

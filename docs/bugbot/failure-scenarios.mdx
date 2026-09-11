@@ -13,10 +13,25 @@ description: Diagnose terminal failures across detection, publication, autofix, 
     Stop and correct the workflow secret reference or GitHub permission. Never print or copy the secret into arguments.
   </Accordion>
   <Accordion title="The agent response is invalid" icon="circle-exclamation">
-    Treat malformed JSON or unparseable output as terminal. Do not publish an inferred finding.
+    Treat malformed JSON or unparseable output as terminal. Do not publish an inferred finding. When a PR target is already known and writable, Bugbot preserves prior durable facts and updates the canonical status card with the failed reconciliation.
   </Accordion>
   <Accordion title="Verification fails" icon="check-circle">
     Keep the workspace changes isolated, report the failed command, and do not commit or push.
+  </Accordion>
+  <Accordion title="The review and its thread disagree" icon="rotate">
+    Bugbot reports `verification-required`, never clean. A retry completes bot-owned partial transitions. If a person reopened a resolved thread, run `/copilot recheck` so the agent can decide whether the finding is active or still fixed.
+  </Accordion>
+  <Accordion title="A historical review still looks stale" icon="clock">
+    Use the canonical **Bugbot status** card and `Copilot / Review` Check for the aggregate state. Run `/copilot recheck` to repair the generated status block; the historical snapshot text is intentionally retained.
+  </Accordion>
+  <Accordion title="The status card says partial or unknown" icon="triangle-exclamation">
+    Open **Technical details** for the bounded failed operation. Correct permissions or wait for a provider rate limit, then run `/copilot recheck`. Completed markers and thread transitions are retained and reused; `unknown` always fails the Action and Check.
+  </Accordion>
+  <Accordion title="A manual resolve or reopen is not reflected yet" icon="users">
+    Native thread actions do not trigger a supported GitHub Actions event. Run `/copilot recheck` for immediate aggregation, or wait for the next pull-request, push, or explicit review event.
+  </Accordion>
+  <Accordion title="More than 20 review cards need repair" icon="layer-group">
+    Bugbot updates 20 historical review blocks per run and reports the exact remainder. Re-run `/copilot recheck` until the pending count reaches zero; the canonical status card remains the aggregate view throughout.
   </Accordion>
 </AccordionGroup>
 

@@ -17,6 +17,7 @@ const mockUpdateComment = jest.fn();
 const mockCreateReviewWithComments = jest.fn();
 const mockUpdatePullRequestReviewComment = jest.fn();
 const mockUnresolvePullRequestReviewThread = jest.fn();
+const mockUpdatePullRequestReview = jest.fn();
 
 
 
@@ -30,6 +31,7 @@ function publishFindings(param: Omit<PublishFindingsParam, "ports">) {
                 updatePullRequestReviewComment: mockUpdatePullRequestReviewComment,
                 unresolvePullRequestReviewThread: mockUnresolvePullRequestReviewThread,
             },
+            reviewState: { updatePullRequestReview: mockUpdatePullRequestReview },
         },
     });
 }
@@ -72,6 +74,7 @@ describe("publishFindings", () => {
         mockCreateReviewWithComments.mockReset().mockResolvedValue(undefined);
         mockUpdatePullRequestReviewComment.mockReset().mockResolvedValue(undefined);
         mockUnresolvePullRequestReviewThread.mockReset().mockResolvedValue(undefined);
+        mockUpdatePullRequestReview.mockReset().mockResolvedValue(undefined);
     });
 
     it("adds issue comment for new finding", async () => {
@@ -153,7 +156,8 @@ describe("publishFindings", () => {
             ]),
             "t"
         );
-        expect(mockCreateReviewWithComments.mock.calls[0][4]).toContain('/copilot fix all');
+        expect(mockCreateReviewWithComments.mock.calls[0][4]).toContain('Bugbot review snapshot');
+        expect(mockCreateReviewWithComments.mock.calls[0][4]).not.toContain('active potential problem');
     });
 
     it('traces included, truncated, and omitted rule sources in the review summary without rule contents', async () => {
@@ -357,7 +361,7 @@ describe("publishFindings", () => {
         expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
     });
 
-    it("reopens a resolved PR thread before refreshing a finding that is active again", async () => {
+    it("persists the open marker before reopening a finding that is active again", async () => {
         await publishFindings({
             execution: baseExecution,
             context: baseContext({
@@ -386,9 +390,41 @@ describe("publishFindings", () => {
             "o", "r", 50, "PRRC_resolved", "t",
         );
         expect(mockUpdatePullRequestReviewComment).toHaveBeenCalledTimes(1);
-        expect(mockUnresolvePullRequestReviewThread.mock.invocationCallOrder[0]).toBeLessThan(
-            mockUpdatePullRequestReviewComment.mock.invocationCallOrder[0],
+        expect(mockUpdatePullRequestReviewComment.mock.invocationCallOrder[0]).toBeLessThan(
+            mockUnresolvePullRequestReviewThread.mock.invocationCallOrder[0],
         );
+    });
+
+    it('does not let model output silently reopen a human dismissal', async () => {
+        await publishFindings({
+            execution: baseExecution,
+            context: baseContext({
+                existingByFindingId: {
+                    f1: {
+                        pullRequest: {
+                            commentIdentity: 'PRRC_dismissed',
+                            pullRequestNumber: 50,
+                            resolved: true,
+                            threadResolved: true,
+                            resolution: 'dismissed',
+                            fingerprint: 'fp-11111111',
+                            semanticFingerprint: 'sf-11111111',
+                        },
+                    },
+                },
+                openPrNumbers: [50],
+                prContext: {
+                    prHeadSha: 'sha1',
+                    prFiles: [{ filename: 'src/foo.ts', status: 'modified' }],
+                    pathToFirstDiffLine: { 'src/foo.ts': 5 },
+                },
+            }),
+            findings: [finding({ file: 'src/foo.ts', line: 5 })],
+        });
+
+        expect(mockUpdatePullRequestReviewComment).not.toHaveBeenCalled();
+        expect(mockUnresolvePullRequestReviewThread).not.toHaveBeenCalled();
+        expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
     });
 
     it("adds overflow comment when overflowCount > 0", async () => {

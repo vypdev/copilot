@@ -43,6 +43,11 @@ export interface ExistingPullRequestFindingInfo {
   resolved: boolean;
   /** Fresh GitHub thread state when the provider supplied it. */
   threadResolved?: boolean;
+  threadResolvedByLogin?: string;
+  parentReviewIdentity?: string;
+  url?: string;
+  /** Explicitly non-clean when durable marker and native provider facts disagree. */
+  verificationRequired?: boolean;
   fingerprint?: string;
   semanticFingerprint?: string;
   resolution?: BugbotFindingResolution;
@@ -66,7 +71,8 @@ export function isExistingFindingFullyResolved(
   );
   return (
     destinations.length > 0 &&
-    destinations.every((destination) => destination.resolved)
+    destinations.every((destination) => destination.resolved) &&
+    finding.pullRequest?.verificationRequired !== true
   );
 }
 

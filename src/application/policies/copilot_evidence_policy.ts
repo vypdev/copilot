@@ -15,8 +15,11 @@ export function buildCopilotEvidence(context: CopilotEvidenceContext): CopilotEv
     if (!headSha) return undefined;
     const failures = context.results.filter(result => !result.success && result.executed).length;
     const activeFindings = aggregateFindingStateCounts(context.results);
-    const hasActionableFindings = (activeFindings?.open ?? 0) + (activeFindings?.reopened ?? 0) > 0;
-    const conclusion = failures > 0 || (hasActionableFindings && context.failOnUnresolvedFindings)
+    const hasActionableFindings = (activeFindings?.open ?? 0)
+        + (activeFindings?.reopened ?? 0)
+        + (activeFindings?.verificationRequired ?? 0) > 0;
+    const hasUnknownFindings = (activeFindings?.unknown ?? 0) > 0;
+    const conclusion = failures > 0 || hasUnknownFindings || (hasActionableFindings && context.failOnUnresolvedFindings)
         ? 'failure'
         : context.results.length === 0 || hasActionableFindings
             ? 'neutral'
@@ -41,20 +44,31 @@ export function buildCopilotEvidence(context: CopilotEvidenceContext): CopilotEv
     };
 }
 
-function aggregateFindingStateCounts(results: readonly Result[]): { open: number; reopened: number } | undefined {
-    const counts = results.map(result => getFindingStateCounts(result.payload)).filter((value): value is { open: number; reopened: number } => value !== undefined);
+type EvidenceFindingCounts = { open: number; reopened: number; verificationRequired: number; unknown: number };
+
+function aggregateFindingStateCounts(results: readonly Result[]): EvidenceFindingCounts | undefined {
+    const counts = results.map(result => getFindingStateCounts(result.payload)).filter((value): value is EvidenceFindingCounts => value !== undefined);
     if (counts.length === 0) return undefined;
     return counts.reduce((total, current) => ({
         open: total.open + current.open,
         reopened: total.reopened + current.reopened,
-    }), { open: 0, reopened: 0 });
+        verificationRequired: total.verificationRequired + current.verificationRequired,
+        unknown: total.unknown + current.unknown,
+    }), { open: 0, reopened: 0, verificationRequired: 0, unknown: 0 });
 }
 
-function getFindingStateCounts(value: unknown): { open: number; reopened: number } | undefined {
+function getFindingStateCounts(value: unknown): EvidenceFindingCounts | undefined {
     const payload = getResultPayload(value);
     const counts = getResultPayload(payload?.findingStates);
     if (!counts) return undefined;
     return typeof counts.open === 'number' && typeof counts.reopened === 'number'
-        ? { open: counts.open, reopened: counts.reopened }
+        ? {
+            open: counts.open,
+            reopened: counts.reopened,
+            verificationRequired: typeof counts['verification-required'] === 'number'
+                ? counts['verification-required']
+                : 0,
+            unknown: typeof counts.unknown === 'number' ? counts.unknown : 0,
+        }
         : undefined;
 }

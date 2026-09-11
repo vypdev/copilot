@@ -1,4 +1,5 @@
 import type { BugbotReviewOutcome, BugbotReviewTelemetrySnapshot } from '../application/ports/bugbot_telemetry_ports';
+import type { BugbotFindingState } from '../domain/bugbot/review_state';
 
 export interface BugbotAnalyticsReport {
     readonly reviews: number;
@@ -11,7 +12,7 @@ export interface BugbotAnalyticsReport {
     readonly averageCandidateFindings: number;
     readonly averagePublishedFindings: number;
     readonly resolutionEvents: number;
-    readonly findingStateObservations: Readonly<Record<'open' | 'fixed' | 'obsolete' | 'dismissed' | 'reopened', number>>;
+    readonly findingStateObservations: Readonly<Record<BugbotFindingState, number>>;
     readonly estimatedInputTokens: number;
     readonly estimatedOutputTokens: number;
     readonly stageP95Ms: Readonly<Record<string, number>>;
@@ -54,7 +55,15 @@ export function buildBugbotAnalytics(snapshots: readonly BugbotReviewTelemetrySn
 function aggregateFindingStates(
     snapshots: readonly BugbotReviewTelemetrySnapshot[],
 ): BugbotAnalyticsReport['findingStateObservations'] {
-    const totals = { open: 0, fixed: 0, obsolete: 0, dismissed: 0, reopened: 0 };
+    const totals = {
+        open: 0,
+        fixed: 0,
+        obsolete: 0,
+        dismissed: 0,
+        reopened: 0,
+        'verification-required': 0,
+        unknown: 0,
+    };
     for (const snapshot of snapshots) {
         for (const state of Object.keys(totals) as Array<keyof typeof totals>) {
             totals[state] += snapshot.findingStates?.[state] ?? 0;

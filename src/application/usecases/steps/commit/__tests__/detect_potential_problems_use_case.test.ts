@@ -46,6 +46,8 @@ const mockCreateReviewWithComments = jest.fn();
 const mockUpdatePullRequestReviewComment = jest.fn();
 const mockResolvePullRequestReviewThread = jest.fn();
 const mockUnresolvePullRequestReviewThread = jest.fn();
+const mockListPullRequestReviews = jest.fn();
+const mockUpdatePullRequestReview = jest.fn();
 
 const mockAskAgent = jest.fn();
 
@@ -120,8 +122,19 @@ describe("DetectPotentialProblemsUseCase", () => {
             request.options,
           ),
       },
-      { issue: issuePort, pullRequest: pullRequestPort, rules: rulesPort },
-      { issueComments: issuePort, pullRequestComments: pullRequestPort },
+      {
+        issue: issuePort,
+        pullRequest: pullRequestPort,
+        reviewState: { listPullRequestReviews: mockListPullRequestReviews },
+        navigation: {
+          forPullRequest: () => ({
+            pullRequestUrl: 'https://github.com/org/repo/pull/7',
+            commitUrl: `https://github.com/org/repo/commit/${'a'.repeat(40)}`,
+          }),
+        },
+        rules: rulesPort,
+      },
+      { issueComments: issuePort, pullRequestComments: pullRequestPort, reviewState: { updatePullRequestReview: mockUpdatePullRequestReview } },
       { issueComments: issuePort, pullRequestComments: pullRequestPort },
     );
     mockListIssueComments.mockReset();
@@ -148,6 +161,8 @@ describe("DetectPotentialProblemsUseCase", () => {
     mockUpdatePullRequestReviewComment.mockReset();
     mockResolvePullRequestReviewThread.mockReset();
     mockUnresolvePullRequestReviewThread.mockReset();
+    mockListPullRequestReviews.mockReset().mockResolvedValue([]);
+    mockUpdatePullRequestReview.mockReset().mockResolvedValue(undefined);
     mockAskAgent.mockReset();
 
     mockListIssueComments.mockResolvedValue([]);
@@ -525,13 +540,13 @@ describe("DetectPotentialProblemsUseCase", () => {
       "token",
     );
     expect(
-      mockResolvePullRequestReviewThread.mock.invocationCallOrder[0],
-    ).toBeLessThan(
       mockUpdatePullRequestReviewComment.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      mockResolvePullRequestReviewThread.mock.invocationCallOrder[0],
     );
   });
 
-  it("reports a sanitized failure without updating the marker when review-thread resolution fails", async () => {
+  it("retains a resolved marker for retry when review-thread resolution fails", async () => {
     const { logError } = require("../../../../../utils/logger");
     mockListIssueComments.mockResolvedValue([]);
     mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([50]);
@@ -555,7 +570,13 @@ describe("DetectPotentialProblemsUseCase", () => {
 
     const results = await useCase.invoke(baseParam());
 
-    expect(mockUpdatePullRequestReviewComment).not.toHaveBeenCalled();
+    expect(mockUpdatePullRequestReviewComment).toHaveBeenCalledWith(
+      'owner',
+      'repo',
+      'PRRC_777',
+      expect.stringContaining('finding_resolution:"fixed"'),
+      'token',
+    );
     expect(results.some((result) => !result.success)).toBe(true);
     const visibleErrors = results
       .flatMap((result) => result.errors)
@@ -656,8 +677,19 @@ describe("DetectPotentialProblemsUseCase", () => {
             request.options,
           ),
       },
-      { issue: issuePort, pullRequest: pullRequestPort, rules: rulesPort },
-      { issueComments: issuePort, pullRequestComments: pullRequestPort },
+      {
+        issue: issuePort,
+        pullRequest: pullRequestPort,
+        reviewState: { listPullRequestReviews: mockListPullRequestReviews },
+        navigation: {
+          forPullRequest: () => ({
+            pullRequestUrl: 'https://github.com/org/repo/pull/7',
+            commitUrl: `https://github.com/org/repo/commit/${'a'.repeat(40)}`,
+          }),
+        },
+        rules: rulesPort,
+      },
+      { issueComments: issuePort, pullRequestComments: pullRequestPort, reviewState: { updatePullRequestReview: mockUpdatePullRequestReview } },
       { issueComments: issuePort, pullRequestComments: pullRequestPort },
     );
     mockAskAgent.mockResolvedValue({
@@ -753,7 +785,14 @@ describe("DetectPotentialProblemsUseCase", () => {
 
     await useCase.invoke(baseParam());
 
-    expect(mockAddComment).not.toHaveBeenCalled();
+    expect(mockAddComment).toHaveBeenCalledWith(
+      'owner',
+      'repo',
+      200,
+      expect.stringContaining('Bugbot status'),
+      'token',
+      { commitSha: 'sha1' },
+    );
     expect(mockCreateReviewWithComments).toHaveBeenCalledWith(
       "owner",
       "repo",

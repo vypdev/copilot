@@ -54,7 +54,7 @@ When the workflow runs on `pull_request` (opened, edited, etc.):
 | **Priority & size** | Applies priority and size checks (labels and thresholds). |
 | **AI PR description** | When `ai-pull-request-description-mode` is `replace`, `append`, or `preserve`, the selected agent CLI can generate a PR description from the issue and branch diff. `disabled` turns the feature off. See [Pull Requests → AI-generated PR description](/pull-requests/ai-description). |
 | **Comments & images** | Posts comments with optional images per branch type. |
-| **Bugbot review** | Reviews the full PR on open/reopen and the new commit range on synchronize; publishes stable line findings, reconciles resolved/reopened status, and exposes a Check Run. |
+| **Bugbot review** | Reviews the full PR on open/reopen and the new commit range on synchronize; publishes historical review snapshots and stable line findings, then reconciles native threads, review status blocks, one current PR card, and the Check from a provider-verified projection. |
 
 ### 3. Push events (`on: push`)
 
@@ -68,7 +68,7 @@ When the workflow runs on `push` (e.g. to any branch):
 | **Size & progress** | Computes size (XS–XXL) and progress (0–100%) from the branch diff; updates the **issue** and any **open PRs** for that branch with the same labels. Uses the configured agent runtime. No separate workflow is needed. |
 | **Bugbot (potential problems)** | The configured agent analyzes the branch vs base and reports findings as **issue comments** when there is no PR, or as one summarized review with inline findings when a PR is available; it updates stored findings and **marks PR review threads as resolved** when applicable. Configurable via `bugbot-severity` and `ai-ignore-files`. See [Bugbot](/bugbot), [issue findings](/bugbot/detection#on-the-issue-when-no-pr-is-available), and [pull-request findings](/bugbot/detection#on-the-pull-request). |
 | **Comments & images** | Posts commit summary comments with optional images. |
-| **Finding reconciliation** | Carries stable finding fingerprints across pushes and marks findings fixed, obsolete, dismissed, or reopened without creating duplicate comments. |
+| **Finding reconciliation** | Carries stable finding fingerprints across pushes and projects open, reopened, fixed, obsolete, dismissed, verification-required, or unknown without creating duplicate status comments. |
 | **Branch drift observer** | A separate lightweight workflow watches pushes on every branch, resolves open issue/PR branch relationships, and maintains one synchronization notice when a child is behind. It does not load Bugbot or an agent. See [Branch synchronization](/issues/branch-synchronization). |
 
 ---
@@ -141,10 +141,12 @@ Codex is the default runtime for the repository's AI feature paths. OpenCode and
 ## Workflow concurrency and sequential execution
 
 <Info>
-  **Sequential runs:** An admissible mutation run **waits** for any earlier active run of the same Copilot workflow to finish. Runs execute one after another instead of in parallel or being cancelled — something GitHub does not offer natively. Runs triggered by the PAT owner that would only re-trigger the normal pipeline complete before entering this queue.
+  **Two coordination policies:** durable mutation workflows preserve every admitted event in a workflow-local queue. The shipped Commit and Pull Request workflows instead share a repository/branch native concurrency group, so a newer code revision cancels a superseded review of that same branch.
 </Info>
 
-GitHub's native [concurrency](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#concurrency) can cancel in-progress runs when a new one starts (`cancel-in-progress: true`) and can retain only one pending run. Copilot adds an application-level queue per workflow: every started run waits for earlier active runs of that same workflow, so intermediate issue changes are not discarded by a native concurrency group.
+GitHub's native [concurrency](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#concurrency) can cancel in-progress runs when a new one starts (`cancel-in-progress: true`) and can retain only one pending run. That behavior is appropriate for replaceable code-review revisions: `copilot_commit.yml` and `copilot_pull_request.yml` use the exact shared key `copilot-bugbot-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}`. Application-level head guards still prevent an older run from updating a newer PR, and the next run repairs any durable half-transition discovered after cancellation.
+
+For non-replaceable issue, comment, deployment, release, and hotfix mutations, Copilot adds an application-level queue per workflow: every started run waits for earlier active runs of that same workflow, so intermediate events are not discarded by a native concurrency group. Runs triggered by the PAT owner that would only re-trigger the normal pipeline complete before entering this queue.
 
 Release and hotfix workflows use a separate first `queue-gate` job. That job invokes
 the Action with the internal `queue-gate-only` mode and only the ephemeral
@@ -173,9 +175,9 @@ exact counting must detect a matching run on a later page. Querying only active
 states keeps each poll proportional to the live queue, and `per_page: 100` minimizes
 the remaining API calls while preserving correctness.
 
-So you get a **workflow-local mutation queue**: multiple triggers for the same
-workflow (e.g. many issue edits) run sequentially without blocking unrelated
-Copilot workflows. Read-only CI may keep its own native concurrency policy.
+So you get a **workflow-local mutation queue** for durable events, plus a
+**cross-workflow latest-revision lane** for Commit and Pull Request review on
+the same branch. Unrelated branches and workflows do not block each other.
 
 ### Example
 
@@ -199,7 +201,7 @@ jobs:
           project-ids: '2,3'
 ```
 
-Mutation workflows deliberately do not use a GitHub Actions `concurrency` block: native cancellation retains only one pending run and can discard intermediate issue, branch, or release mutations. Native concurrency remains appropriate for replaceable read-only workflows such as CI and RepoWise.
+Durable mutation workflows deliberately do not use a GitHub Actions `concurrency` block: native cancellation retains only one pending run and can discard intermediate issue, comment, or release mutations. The Commit and Pull Request templates are the deliberate exception because their Bugbot result is replaceable by the newer head and every finding mutation is retry-convergent. Native concurrency also remains appropriate for replaceable read-only workflows such as CI and RepoWise.
 
 ---
 

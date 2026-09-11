@@ -40,6 +40,16 @@ export interface GithubReviewComment {
   path?: string;
   line?: number | null;
   user?: { login?: string | null } | null;
+  pull_request_review_id?: number | null;
+  html_url?: string | null;
+}
+
+export interface GithubPullRequestReview {
+  id: number;
+  body?: string | null;
+  user?: { login?: string | null } | null;
+  commit_id?: string | null;
+  html_url?: string | null;
 }
 
 export interface GithubPullRequestReviewCommentQueryClient {
@@ -57,6 +67,9 @@ export interface GithubPullRequestReviewCommentQueryClient {
       listReviewComments(
         parameters: Record<string, unknown>,
       ): Promise<{ data: GithubReviewComment[] }>;
+      listReviews(
+        parameters: Record<string, unknown>,
+      ): Promise<{ data: GithubPullRequestReview[] }>;
     };
   };
 }
@@ -66,7 +79,10 @@ export interface GithubPullRequestReviewCommentCreateClient {
     pulls: {
       createReview(
         parameters: Record<string, unknown>,
-      ): Promise<{ data: unknown }>;
+      ): Promise<{ data: GithubPullRequestReview }>;
+      updateReview(
+        parameters: Record<string, unknown>,
+      ): Promise<{ data: GithubPullRequestReview }>;
     };
   };
 }

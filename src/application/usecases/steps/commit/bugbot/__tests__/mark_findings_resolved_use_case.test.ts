@@ -43,6 +43,7 @@ function baseExecution(): Execution {
     owner: "o",
     repo: "r",
     issueNumber: 1,
+    tokenUser: 'bugbot',
     tokens: { token: "t" },
   } as unknown as Execution;
 }
@@ -98,6 +99,7 @@ describe("markFindingsResolved", () => {
     mockListPrReviewComments.mockReset().mockResolvedValue([]);
     mockUpdatePrReviewComment.mockReset().mockResolvedValue(undefined);
     mockResolveThread.mockReset().mockResolvedValue(undefined);
+    mockUnresolveThread.mockReset().mockResolvedValue(undefined);
   });
 
   it("does not mutate an issue destination that is already resolved", async () => {
@@ -114,7 +116,7 @@ describe("markFindingsResolved", () => {
     expect(mockUpdateComment).not.toHaveBeenCalled();
   });
 
-  it("repairs a marked PR thread even when the agent does not return its id", async () => {
+  it("leaves a human-unresolved resolved marker for explicit verification", async () => {
     const identity = "PRRC_repair";
     mockListPrReviewComments.mockResolvedValue([
       prComment(identity, resolvedBody),
@@ -129,7 +131,7 @@ describe("markFindingsResolved", () => {
     });
 
     expect(errors).toEqual([]);
-    expect(mockResolveThread).toHaveBeenCalledWith("o", "r", 5, identity, "t");
+    expect(mockResolveThread).not.toHaveBeenCalled();
     expect(mockUpdatePrReviewComment).not.toHaveBeenCalled();
   });
 
@@ -148,6 +150,85 @@ describe("markFindingsResolved", () => {
     expect(mockListPrReviewComments).not.toHaveBeenCalled();
     expect(mockResolveThread).not.toHaveBeenCalled();
     expect(mockUpdatePrReviewComment).not.toHaveBeenCalled();
+  });
+
+  it('persists a human dismissal marker on the next reconciliation', async () => {
+    const identity = 'PRRC_dismissed';
+    mockListPrReviewComments.mockResolvedValue([prComment(identity, unresolvedBody)]);
+    const errors = await markFindingsResolved({
+      execution: baseExecution(),
+      context: baseContext({
+        existingByFindingId: {
+          f1: {
+            pullRequest: {
+              commentIdentity: identity,
+              pullRequestNumber: 5,
+              resolved: true,
+              threadResolved: true,
+              threadResolvedByLogin: 'maintainer',
+              resolution: 'dismissed',
+            },
+          },
+        },
+      }),
+      resolvedFindingIds: new Set(),
+    });
+    expect(errors).toEqual([]);
+    expect(mockUpdatePrReviewComment).toHaveBeenCalledWith(
+      'o', 'r', identity, expect.stringContaining('finding_resolution:"dismissed"'), 't',
+    );
+    expect(mockResolveThread).toHaveBeenCalledWith('o', 'r', 5, identity, 't');
+  });
+
+  it('repairs a bot-owned partial reopen toward the open marker', async () => {
+    const identity = 'PRRC_reopen';
+    const errors = await markFindingsResolved({
+      execution: baseExecution(),
+      context: baseContext({
+        existingByFindingId: {
+          f1: {
+            pullRequest: {
+              commentIdentity: identity,
+              pullRequestNumber: 5,
+              resolved: false,
+              threadResolved: true,
+              threadResolvedByLogin: 'bugbot[bot]',
+              verificationRequired: true,
+            },
+          },
+        },
+      }),
+      resolvedFindingIds: new Set(),
+    });
+    expect(errors).toEqual([]);
+    expect(mockUnresolveThread).toHaveBeenCalledWith('o', 'r', 5, identity, 't');
+    expect(mockResolveThread).not.toHaveBeenCalled();
+  });
+
+  it('re-resolves a human-unresolved finding after the agent verifies the fix', async () => {
+    const identity = 'PRRC_verification';
+    mockListPrReviewComments.mockResolvedValue([prComment(identity, resolvedBody)]);
+    const errors = await markFindingsResolved({
+      execution: baseExecution(),
+      context: baseContext({
+        existingByFindingId: {
+          f1: {
+            pullRequest: {
+              commentIdentity: identity,
+              pullRequestNumber: 5,
+              resolved: true,
+              threadResolved: false,
+              resolution: 'fixed',
+              verificationRequired: true,
+            },
+          },
+        },
+      }),
+      resolvedFindingIds: new Set(['f1']),
+    });
+    expect(errors).toEqual([]);
+    expect(mockUpdatePrReviewComment).not.toHaveBeenCalled();
+    expect(mockResolveThread).toHaveBeenCalledWith('o', 'r', 5, identity, 't');
   });
 
   it("does not mutate a pending destination absent from the canonical resolved set", async () => {
@@ -214,7 +295,7 @@ describe("markFindingsResolved", () => {
     expect(mockUpdateComment).toHaveBeenCalledTimes(1);
   });
 
-  it("resolves a PR by opaque identity before updating its marker and then resolves issue", async () => {
+  it("updates the marker by opaque identity before resolving its PR thread and issue", async () => {
     const identity = "PRRC_9223372036854775807";
     mockListPrReviewComments.mockResolvedValue([prComment(identity)]);
     const existing: ExistingByFindingId = {
@@ -246,8 +327,8 @@ describe("markFindingsResolved", () => {
       expect.stringMatching(/resolved:true/),
       "t",
     );
-    expect(mockResolveThread.mock.invocationCallOrder[0]).toBeLessThan(
-      mockUpdatePrReviewComment.mock.invocationCallOrder[0],
+    expect(mockUpdatePrReviewComment.mock.invocationCallOrder[0]).toBeLessThan(
+      mockResolveThread.mock.invocationCallOrder[0],
     );
     expect(mockUpdateComment).toHaveBeenCalledTimes(1);
   });

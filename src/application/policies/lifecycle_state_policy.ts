@@ -46,8 +46,10 @@ export function resolveLifecycleState(
         const findingState = input.results
             .map(result => getResultPayload(result.payload)?.findingStates)
             .find(isFindingStateCounts);
-        if (findingState && (findingState.open > 0 || findingState.reopened > 0)) return 'changes-requested';
-        if (findingState && findingState.open === 0 && findingState.reopened === 0) return 'ready';
+        if (findingState?.unknown && findingState.unknown > 0) return 'blocked';
+        const verificationRequired = findingState?.['verification-required'] ?? 0;
+        if (findingState && (findingState.open > 0 || findingState.reopened > 0 || verificationRequired > 0)) return 'changes-requested';
+        if (findingState && findingState.open === 0 && findingState.reopened === 0 && verificationRequired === 0) return 'ready';
         if (input.externalEvidence?.checks === 'pending') return 'reviewing';
         if (input.externalEvidence?.review === 'approved') return 'ready';
         if (input.externalEvidence?.checks === 'success') return 'reviewing';
@@ -101,11 +103,24 @@ function readChecksEvidence(status: string | undefined, conclusion: string | nul
     return conclusion?.trim().toLowerCase() === 'success' ? 'success' : 'failure';
 }
 
-function isFindingStateCounts(value: unknown): value is { open: number; reopened: number } {
+function isFindingStateCounts(value: unknown): value is {
+    open: number;
+    reopened: number;
+    'verification-required'?: number;
+    unknown?: number;
+} {
     return typeof value === 'object'
         && value !== null
         && typeof (value as { open?: unknown }).open === 'number'
-        && typeof (value as { reopened?: unknown }).reopened === 'number';
+        && typeof (value as { reopened?: unknown }).reopened === 'number'
+        && (
+            (value as { 'verification-required'?: unknown })['verification-required'] === undefined
+            || typeof (value as { 'verification-required'?: unknown })['verification-required'] === 'number'
+        )
+        && (
+            (value as { unknown?: unknown }).unknown === undefined
+            || typeof (value as { unknown?: unknown }).unknown === 'number'
+        );
 }
 
 function hasExplicitPlanningCommand(results: readonly LifecycleStatePolicyResult[]): boolean {

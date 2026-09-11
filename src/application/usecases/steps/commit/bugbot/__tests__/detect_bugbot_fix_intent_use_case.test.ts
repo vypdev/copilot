@@ -77,7 +77,13 @@ describe("DetectBugbotFixIntentUseCase", () => {
         useCase = new DetectBugbotFixIntentUseCase(
             pullRequestPort,
             { query: (request: { configuration: unknown; agentId: string; prompt: string; options?: unknown }) => mockAskAgent(request.configuration, request.agentId, request.prompt, request.options) },
-            { issue: issuePort, pullRequest: pullRequestPort, rules: { loadRules: jest.fn().mockResolvedValue([]) } },
+            {
+                issue: issuePort,
+                pullRequest: pullRequestPort,
+                reviewState: { listPullRequestReviews: jest.fn().mockResolvedValue([]) },
+                navigation: { forPullRequest: jest.fn() },
+                rules: { loadRules: jest.fn().mockResolvedValue([]) },
+            },
         );
         mockLoadBugbotContext.mockReset();
         mockAskAgent.mockReset();

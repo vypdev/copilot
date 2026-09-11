@@ -3,6 +3,8 @@ import type { BugbotPullRequestReadPort } from "../../../../application/ports/bu
 import type {
   PullRequestReviewCommentCommandPort,
   PullRequestReviewCommentQueryPort,
+  PullRequestReviewSummaryQueryPort,
+  PullRequestReviewSummaryUpdatePort,
   PullRequestReviewThreadCommandPort,
   PullRequestReviewThreadStateQueryPort,
 } from "../../../../application/ports/pull_request_review_comment_ports";
@@ -22,20 +24,24 @@ describe("BugbotPullRequestRepository capabilities", () => {
       getPullRequestHeadSha: jest.fn().mockResolvedValue("sha"),
       getReviewDiffSnapshot: jest.fn().mockResolvedValue(snapshot),
     };
-    const reviewQuery: PullRequestReviewCommentQueryPort = {
+    const reviewQuery: PullRequestReviewCommentQueryPort & PullRequestReviewSummaryQueryPort = {
       getPullRequestReviewCommentBody: jest.fn().mockResolvedValue("body"),
       listPullRequestReviewComments: jest
         .fn()
         .mockResolvedValue([{ id: 7, identity: "PRRC_7", body: "body" }]),
+      listPullRequestReviews: jest.fn().mockResolvedValue([
+        { identity: '77', body: 'review', authorLogin: 'bot' },
+      ]),
     };
-    const reviewCommand: PullRequestReviewCommentCommandPort = {
+    const reviewCommand: PullRequestReviewCommentCommandPort & PullRequestReviewSummaryUpdatePort = {
       createReviewWithComments: jest.fn().mockResolvedValue(undefined),
       updatePullRequestReviewComment: jest.fn().mockResolvedValue(undefined),
+      updatePullRequestReview: jest.fn().mockResolvedValue(undefined),
     };
     const threadCommand: PullRequestReviewThreadCommandPort & PullRequestReviewThreadStateQueryPort = {
       resolvePullRequestReviewThread: jest.fn().mockResolvedValue(undefined),
       unresolvePullRequestReviewThread: jest.fn().mockResolvedValue(undefined),
-      listPullRequestReviewThreadStates: jest.fn().mockResolvedValue({ PRRC_7: false }),
+      listPullRequestReviewThreadStates: jest.fn().mockResolvedValue({ PRRC_7: { resolved: false } }),
     };
     const repository = new BugbotPullRequestRepository(
       lifecycle,
@@ -74,6 +80,9 @@ describe("BugbotPullRequestRepository capabilities", () => {
     await expect(
       repository.listPullRequestReviewComments("owner", "repo", 9, "token"),
     ).resolves.toEqual([{ id: 7, identity: "PRRC_7", body: "body" }]);
+    await expect(
+      repository.listPullRequestReviews('owner', 'repo', 9, 'token'),
+    ).resolves.toEqual([{ identity: '77', body: 'review', authorLogin: 'bot' }]);
     await repository.createReviewWithComments(
       "owner",
       "repo",
@@ -89,6 +98,9 @@ describe("BugbotPullRequestRepository capabilities", () => {
       "PRRC_7",
       "updated",
       "token",
+    );
+    await repository.updatePullRequestReview(
+      'owner', 'repo', 9, '77', 'updated review', 'token',
     );
     await repository.resolvePullRequestReviewThread(
       "owner",
@@ -132,6 +144,9 @@ describe("BugbotPullRequestRepository capabilities", () => {
       9,
       "token",
     );
+    expect(reviewQuery.listPullRequestReviews).toHaveBeenCalledWith(
+      'owner', 'repo', 9, 'token',
+    );
     expect(reviewCommand.createReviewWithComments).toHaveBeenCalledWith(
       "owner",
       "repo",
@@ -147,6 +162,9 @@ describe("BugbotPullRequestRepository capabilities", () => {
       "PRRC_7",
       "updated",
       "token",
+    );
+    expect(reviewCommand.updatePullRequestReview).toHaveBeenCalledWith(
+      'owner', 'repo', 9, '77', 'updated review', 'token',
     );
     expect(threadCommand.resolvePullRequestReviewThread).toHaveBeenCalledWith(
       "owner",

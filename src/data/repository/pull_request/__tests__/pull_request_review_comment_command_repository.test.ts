@@ -3,6 +3,7 @@ import { PullRequestReviewCommentCommandRepository } from "../pull_request_revie
 
 function createRepository(options: {
   createReview?: jest.Mock;
+  updateReview?: jest.Mock;
   graphql?: jest.Mock;
   createClientError?: Error;
   graphqlClientError?: Error;
@@ -15,6 +16,7 @@ function createRepository(options: {
         rest: {
           pulls: {
             createReview: options.createReview ?? jest.fn(),
+            updateReview: options.updateReview ?? jest.fn(),
           },
         },
       };
@@ -68,10 +70,12 @@ describe("PullRequestReviewCommentCommandRepository", () => {
   });
 
   it("publishes a body-only review when no diff line can host a finding", async () => {
-    const createReview = jest.fn().mockResolvedValue({ data: { id: 1 } });
+    const createReview = jest.fn().mockResolvedValue({
+      data: { id: 1, html_url: 'https://github.com/org/repo/pull/7#pullrequestreview-1' },
+    });
     const { repository } = createRepository({ createReview });
 
-    await repository.createReviewWithComments(
+    await expect(repository.createReviewWithComments(
       "owner",
       "repo",
       7,
@@ -79,7 +83,10 @@ describe("PullRequestReviewCommentCommandRepository", () => {
       "review-level finding",
       [],
       "token",
-    );
+    )).resolves.toEqual({
+      identity: '1',
+      url: 'https://github.com/org/repo/pull/7#pullrequestreview-1',
+    });
 
     expect(createReview).toHaveBeenCalledWith({
       owner: "owner",
@@ -89,6 +96,48 @@ describe("PullRequestReviewCommentCommandRepository", () => {
       body: "review-level finding",
       event: "COMMENT",
     });
+  });
+
+  it('updates a submitted parent review through its validated REST identity', async () => {
+    const updateReview = jest.fn().mockResolvedValue({ data: { id: 77 } });
+    const { repository } = createRepository({ updateReview });
+
+    await repository.updatePullRequestReview(
+      'owner', 'repo', 7, '77', 'historical snapshot', 'token',
+    );
+
+    expect(updateReview).toHaveBeenCalledWith({
+      owner: 'owner',
+      repo: 'repo',
+      pull_number: 7,
+      review_id: 77,
+      body: 'historical snapshot',
+    });
+  });
+
+  it.each(['opaque', '0', '-1', '1.5'])(
+    'rejects invalid parent review identity %s before provider access',
+    async (identity) => {
+      const { repository, createClient } = createRepository({});
+      await expect(
+        repository.updatePullRequestReview(
+          'owner', 'repo', 7, identity, 'body', 'token',
+        ),
+      ).rejects.toMatchObject({ operation: 'update-review' });
+      expect(createClient.getClient).not.toHaveBeenCalled();
+    },
+  );
+
+  it('sanitizes parent review update failures', async () => {
+    const updateReview = jest.fn().mockRejectedValue(
+      new Error('provider secret-token'),
+    );
+    const { repository } = createRepository({ updateReview });
+    await expect(
+      repository.updatePullRequestReview(
+        'owner', 'repo', 7, '77', 'body', 'token',
+      ),
+    ).rejects.toThrow('Unable to update the pull request review summary.');
   });
 
   it("publishes one summarized review containing every inline comment", async () => {

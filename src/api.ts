@@ -32,6 +32,15 @@ export { evaluateBugbotBenchmark, loadBugbotBenchmark, loadBugbotPredictions } f
 export { buildBugbotAnalytics, parseBugbotTelemetry } from './tooling/bugbot_analytics';
 export { buildSemanticFindingFingerprint, buildFindingFingerprint } from './domain/bugbot/finding_identity';
 export { normalizeBugbotReviewConfiguration, resolveBugbotReviewEffort } from './domain/bugbot/review_configuration';
+export {
+    BUGBOT_FINDING_STATES,
+    classifyBugbotFindingState,
+    countActionableBugbotFindings,
+    countBugbotFindingStates,
+    isBugbotActionableState,
+    isBugbotCleanState,
+} from './domain/bugbot/review_state';
+export { buildBugbotReviewProjection } from './domain/bugbot/review_projection';
 export { Execution } from './data/model/execution';
 export { Ai } from './data/model/ai';
 export type { FindingsQueryPort } from './application/ports/agent_findings_ports';
@@ -39,7 +48,28 @@ export type { BugbotContextPorts } from './application/ports/bugbot_context_port
 export type { BugbotFindingPublicationPorts } from './application/ports/bugbot_finding_publication_ports';
 export type { BugbotFindingResolutionPorts } from './application/ports/bugbot_finding_resolution_ports';
 export type { BugbotTelemetryPort } from './application/ports/bugbot_telemetry_ports';
+export type {
+    BugbotReviewNavigation,
+    BugbotReviewNavigationPort,
+} from './application/ports/bugbot_review_navigation_ports';
 export type { Result } from './data/model/result';
 export type { BugbotFinding } from './application/usecases/steps/commit/bugbot/types';
 export type { BugbotReviewConfiguration } from './domain/bugbot/review_configuration';
 export type { BugbotReviewTelemetrySnapshot } from './application/ports/bugbot_telemetry_ports';
+export type {
+    BugbotFindingState,
+    BugbotFindingStateCounts,
+    BugbotFindingEvidence,
+    BugbotResolvedFindingState,
+} from './domain/bugbot/review_state';
+export type {
+    BugbotProjectedFinding,
+    BugbotProjectionOutcome,
+    BugbotReviewProjection,
+} from './domain/bugbot/review_projection';
+export type {
+    PullRequestReviewReference,
+    PullRequestReviewSummary,
+    PullRequestReviewSummaryQueryPort,
+    PullRequestReviewSummaryUpdatePort,
+} from './application/ports/pull_request_review_comment_ports';

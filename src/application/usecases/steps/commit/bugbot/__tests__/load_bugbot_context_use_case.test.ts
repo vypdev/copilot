@@ -20,6 +20,7 @@ const mockGetFilesWithFirstDiffLine = jest.fn();
 const mockGetFilesWithDiffLocations = jest.fn();
 const mockGetReviewDiffSnapshot = jest.fn();
 const mockListPullRequestReviewThreadStates = jest.fn();
+const mockListPullRequestReviews = jest.fn();
 const mockLoadRules = jest.fn();
 const marker = (id: string, resolved: boolean) =>
     buildMarker(id, resolved, 'fp-11111111', 'sf-11111111');
@@ -30,6 +31,8 @@ import type { BugbotContextPorts } from "../../../../../../application/ports/bug
 
 const testPorts: BugbotContextPorts = {
     issue: { listIssueComments: mockListIssueComments },
+    reviewState: { listPullRequestReviews: mockListPullRequestReviews },
+    navigation: { forPullRequest: jest.fn() },
     rules: { loadRules: mockLoadRules },
     pullRequest: {
         getHeadBranchForIssue: jest.fn(),
@@ -81,6 +84,7 @@ describe("loadBugbotContext", () => {
             filesWithDiffLocations: await mockGetFilesWithDiffLocations(...args),
         }));
         mockListPullRequestReviewThreadStates.mockReset().mockResolvedValue({});
+        mockListPullRequestReviews.mockReset().mockResolvedValue([]);
         mockLoadRules.mockReset().mockResolvedValue([]);
     });
 
@@ -314,7 +318,9 @@ describe("loadBugbotContext", () => {
                 body: marker('manual', false),
             },
         ]);
-        mockListPullRequestReviewThreadStates.mockResolvedValue({ PRRC_manual: true });
+        mockListPullRequestReviewThreadStates.mockResolvedValue({
+            PRRC_manual: { resolved: true, resolvedByLogin: 'maintainer' },
+        });
 
         const ctx = await loadBugbotContext(baseParam({ tokenUser: 'vypbot' }));
 
@@ -323,6 +329,29 @@ describe("loadBugbotContext", () => {
             resolution: 'dismissed',
         }));
         expect(ctx.previousFindingsBlock).not.toContain('manual');
+    });
+
+    it('does not infer dismissal when Bugbot itself resolved the native thread', async () => {
+        mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([50]);
+        mockListPullRequestReviewComments.mockResolvedValue([
+            {
+                id: 200,
+                identity: 'PRRC_partial',
+                authorLogin: 'vypbot',
+                body: marker('partial', false),
+            },
+        ]);
+        mockListPullRequestReviewThreadStates.mockResolvedValue({
+            PRRC_partial: { resolved: true, resolvedByLogin: 'vypbot[bot]' },
+        });
+        const ctx = await loadBugbotContext(baseParam({ tokenUser: 'vypbot' }));
+        expect(ctx.existingByFindingId.partial?.pullRequest).toEqual(
+            expect.objectContaining({
+                resolved: false,
+                verificationRequired: true,
+            }),
+        );
+        expect(ctx.previousFindingsBlock).toContain('partial');
     });
 
     it("truncates fullBody to 12000 chars when loading from issue comments and appends truncation indicator", async () => {

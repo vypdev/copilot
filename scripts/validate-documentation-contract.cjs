@@ -240,7 +240,13 @@ function requireText(file, expected, contract) {
 }
 
 requireText('issues/configuration.mdx', '`ai-pull-request-description-mode`: PR body policy', 'canonical PR description policy');
-requireText('bugbot/quality-observability.mdx', 'Check is neutral when a successful review reports actionable findings', 'non-blocking Bugbot default');
+requireText('bugbot/quality-observability.mdx', 'Check is neutral when a successful review reports `open`, `reopened`, or `verification-required` findings', 'non-blocking Bugbot default');
+requireText('bugbot/quality-observability.mdx', '`unknown`, provider reconciliation errors, and analysis failures remain failures', 'fail-closed Bugbot projection');
+requireText('bugbot/detection.mdx', 'One stable **Bugbot status** comment', 'canonical Bugbot PR status');
+requireText('bugbot/detection.mdx', 'the review snapshot is history', 'historical Bugbot review semantics');
+requireText('bugbot/detection.mdx', 'including overflow', 'complete Bugbot aggregate counts');
+requireText('bugbot/how-it-works.mdx', 'same HTTPS server and repository', 'safe provider navigation boundary');
+requireText('bugbot/quality-observability.mdx', 'Context adapters must also provide trusted PR/commit/run navigation', 'public Bugbot navigation port');
 requireText('issues/deployment-orchestration.mdx', '**Allowed actions** to permit direct', 'npm direct-publish prerequisite');
 requireText('issues/deployment-orchestration.mdx', '`NPM_VISIBILITY_POLL_INTERVAL_SECONDS`', 'npm polling variable');
 requireText('issues/deployment-orchestration.mdx', '`NPM_VISIBILITY_TIMEOUT_SECONDS`', 'npm timeout variable');

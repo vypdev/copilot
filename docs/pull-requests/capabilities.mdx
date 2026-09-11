@@ -68,7 +68,7 @@ Use this for team branding or to show different visuals per type of PR. See [Con
 
 ## Bugbot on PRs
 
-**Bugbot** (potential problems) reviews the full PR on `opened` and `reopened`. On `synchronize`, it reviews the newly pushed commit range and checks every open finding against current code. It also reviews changes from the **push** workflow or the single action `detect_potential_problems_action`. It posts **review comments** on the PR at the relevant file and line for each finding. When a finding is resolved, the action **marks that review thread as resolved** and preserves whether it was fixed, obsolete, or dismissed. You can **ask the bot to fix findings** by replying in the thread or commenting on the PR. See [Bugbot](/bugbot).
+**Bugbot** (potential problems) reviews the full PR on `opened` and `reopened`. On `synchronize`, it reviews the newly pushed commit range and checks every open finding against current code. It also reviews changes from the **push** workflow or the single action `detect_potential_problems_action`. It posts up to the configured comment limit as **review comments** at validated file/line or file-level anchors and summarizes overflow in the review. Each submitted review remains a historical snapshot; after every mutation Bugbot re-reads GitHub, projects durable per-review facts into generated review status blocks, and projects every accepted current finding—including overflow—into one canonical PR status card, labels, Job Summary, and Check. The review block explicitly flags historical overflow because those entries have no individual thread to reconcile. You can **ask the bot to fix findings** by replying in the thread or commenting on the PR. See [Bugbot](/bugbot).
 
 ## Review state and evidence
 
@@ -83,7 +83,7 @@ Each run writes a bounded Job Summary. The supplied workflow grants
 `COPILOT_EVIDENCE_TOKEN`, keeping it out of agent processes. Copilot publishes
 one stable `Copilot / Review` Check for the PR head. Actionable findings are
 `neutral` by default and become `failure` only with
-`bugbot-fail-on-unresolved: true`; analysis failures always fail. Missing Checks
+`bugbot-fail-on-unresolved: true`; `unknown`, incomplete reconciliation, and analysis failures always fail. Missing Checks
 capability does not make an otherwise successful functional workflow fail.
 
 ## Next steps

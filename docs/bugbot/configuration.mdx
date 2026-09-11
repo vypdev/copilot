@@ -78,7 +78,7 @@ Commands are parsed without invoking a shell and unsafe shell operators are reje
 | `bugbot-trace-rules` | `false` | Lists each applied rule source and whether it was included, truncated, or omitted; never lists rule contents. |
 | `bugbot-suggested-changes` | `true` | Allows suggestions only when the exact RIGHT-side changed-line anchor is proved. |
 | `bugbot-telemetry` | `true` | Emits content-free timing, count, outcome and estimated-token telemetry. |
-| `bugbot-fail-on-unresolved` | `false` | Makes the Action and its native Check fail when the latest review has open or reopened findings. The default reports findings neutrally. |
+| `bugbot-fail-on-unresolved` | `false` | Makes the Action and its native Check fail for `open`, `reopened`, or `verification-required`. The default reports those actionable states neutrally; `unknown` and incomplete reconciliation always fail. |
 | `bugbot-organization-rules` | empty | Semicolon- or newline-separated organization rules applied before repository rules. Commas remain part of rule prose. |
 
 The same values are managed as Repository Variables by `copilot setup`. One review can override the safe subset without changing repository configuration:
@@ -113,6 +113,8 @@ Use repository-specific review and protected-branch controls in addition to igno
 ## Permissions and triggers
 
 Detection is read-oriented, but publication requires the GitHub permissions needed to create issue comments or pull-request review comments. Autofix and user-request workflows additionally require write permission and must be restricted to trusted actors and trusted code.
+
+PR reconciliation also reads submitted reviews and updates their generated status blocks, then upserts one issue-comment status card. Keep `pull-requests: write` and `issues: write` available to the configured PAT. No additional Bugbot toggle or secret is required. The shipped Commit and Pull Request workflows use the same repository/branch native concurrency key with `cancel-in-progress: true`; copy both templates together so push and PR synchronization reviews converge on one current head.
 
 Do not expose provider credentials to fork code, untrusted pull requests, or `pull_request_target` workflows that execute attacker-controlled code. Prefer private repositories, protected branches, reviewed workflows, approved environments, and controlled runners.
 

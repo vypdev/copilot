@@ -3,11 +3,14 @@ export type PullRequestReviewOperation =
   | "request-reviewers"
   | "assign-reviewers"
   | "list-comments"
+  | "list-threads"
+  | "list-reviews"
   | "get-comment"
   | "list-files"
   | "get-head-sha"
   | "publish-comments"
   | "update-comment"
+  | "update-review"
   | "resolve-thread"
   | "unresolve-thread"
   | "mark-resolved";
@@ -22,11 +25,14 @@ const ERROR_MESSAGES: Record<PullRequestReviewOperation, string> = {
   "request-reviewers": "Unable to request pull request reviewers.",
   "assign-reviewers": "Unable to assign pull request reviewers.",
   "list-comments": "Unable to list pull request review comments.",
+  "list-threads": "Unable to list pull request review threads.",
+  "list-reviews": "Unable to list pull request reviews.",
   "get-comment": "Unable to get the pull request review comment.",
   "list-files": "Unable to list pull request changed files.",
   "get-head-sha": "Unable to get the pull request head commit.",
   "publish-comments": "Failed to publish pull request review comments.",
   "update-comment": "Unable to update the pull request review comment.",
+  "update-review": "Unable to update the pull request review summary.",
   "resolve-thread": "Unable to resolve the pull request review thread.",
   "unresolve-thread": "Unable to reopen the pull request review thread.",
   "mark-resolved": "Unable to mark a pull request finding as resolved.",

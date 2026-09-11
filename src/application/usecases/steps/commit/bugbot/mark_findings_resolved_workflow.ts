@@ -5,6 +5,7 @@ import { logError } from '../../../../ports/logging_ports';
 import type { BugbotContext, BugbotFindingResolution, ExistingPullRequestFindingInfo } from './types';
 import { resolveIssueFinding } from './resolve_issue_finding';
 import { resolvePullRequestFinding } from './resolve_pull_request_finding';
+import { isHumanResolver } from '../../../../../domain/bugbot/review_state';
 
 export interface MarkFindingsResolvedParam {
     execution: Execution;
@@ -32,8 +33,27 @@ async function repairExistingPullRequestFinding(
     destination: ExistingPullRequestFindingInfo | undefined,
     errors: Error[],
 ): Promise<void> {
-    if (destination?.resolved && destination.threadResolved === false) {
-        await tryResolvePullRequestFinding(ports, execution, findingId, destination, errors);
+    if (destination == null) return;
+    if (destination.resolution === 'dismissed' && destination.threadResolved === true) {
+        await tryResolvePullRequestFinding(ports, execution, findingId, destination, errors, 'dismissed');
+        return;
+    }
+    if (!destination.resolved
+        && destination.threadResolved === true
+        && destination.threadResolvedByLogin != null
+        && execution.tokenUser?.trim()
+        && !isHumanResolver(destination.threadResolvedByLogin, execution.tokenUser)) {
+        try {
+            await ports.pullRequestComments.unresolvePullRequestReviewThread(
+                execution.owner,
+                execution.repo,
+                destination.pullRequestNumber,
+                destination.commentIdentity,
+                execution.tokens.token,
+            );
+        } catch {
+            addResolutionError(errors, 'pull request');
+        }
     }
 }
 
@@ -43,7 +63,7 @@ async function resolvePullRequestIfNeeded(
     destination: ExistingPullRequestFindingInfo | undefined,
     errors: Error[],
 ): Promise<void> {
-    if (destination != null && !destination.resolved) {
+    if (destination != null && (!destination.resolved || destination.verificationRequired === true)) {
         await tryResolvePullRequestFinding(
             param.ports,
             param.execution,

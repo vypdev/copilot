@@ -234,4 +234,19 @@ describe('finishGithubAction', () => {
 
         expect(core.setFailed).toHaveBeenCalledWith('Agent execution failed.');
     });
+
+    it('always fails unknown finding state and applies the configured policy to verification-required', async () => {
+        const resultWith = (findingStates: Record<string, number>) => new Result({
+            id: 'DetectPotentialProblemsUseCase', success: true, executed: true, payload: { findingStates },
+        });
+        await finishGithubAction(execution(), [resultWith({ open: 0, reopened: 0, unknown: 1 })], {} as never, {} as never);
+        expect(core.setFailed).toHaveBeenCalledWith('Bugbot could not verify 1 finding state(s).');
+
+        jest.mocked(core.setFailed).mockClear();
+        const blocking = Object.assign(execution(), {
+            ai: new Ai('', 'model', false, [], false, 'low', 20, [], undefined, undefined, { failOnUnresolved: true }),
+        });
+        await finishGithubAction(blocking, [resultWith({ open: 0, reopened: 0, 'verification-required': 2, unknown: 0 })], {} as never, {} as never);
+        expect(core.setFailed).toHaveBeenCalledWith('Bugbot found 2 unresolved actionable finding(s).');
+    });
 });

@@ -6,6 +6,7 @@ import type { Execution } from "../../../../../data/model/execution";
 import type { BugbotContextPorts } from "../../../../../application/ports/bugbot_context_ports";
 import type { BugbotPullRequestReadPort } from "../../../../../application/ports/bugbot_pull_request_read_ports";
 import type { PullRequestReviewComment } from "../../../../../application/ports/pull_request_review_comment_ports";
+import type { PullRequestReviewThreadState } from "../../../../../application/ports/pull_request_review_comment_ports";
 import type { BugbotContext } from "./types";
 import {
     buildPreviousFindingsBlock,
@@ -66,8 +67,8 @@ async function loadOpenPullRequestThreadStates(
     repo: string,
     openPrNumbers: number[],
     token: string,
-): Promise<ReadonlyMap<number, Readonly<Record<string, boolean>>>> {
-    const statesByPullRequest = new Map<number, Readonly<Record<string, boolean>>>();
+): Promise<ReadonlyMap<number, Readonly<Record<string, PullRequestReviewThreadState>>>> {
+    const statesByPullRequest = new Map<number, Readonly<Record<string, PullRequestReviewThreadState>>>();
     await Promise.all(openPrNumbers.map(async (prNumber) => {
         statesByPullRequest.set(
             prNumber,

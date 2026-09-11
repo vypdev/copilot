@@ -48,7 +48,9 @@ lower-ID/workflow-file filtering, malformed responses, fail-closed provider erro
 rate-limited 403 headers, bounded fallback backoff/jitter, and the absolute deadline.
 The workflow contract test keeps the nine queue-bearing workflow names synchronized with the
 validator and verifies the `90m queue / 120m job` budget, required runners, action
-inputs, missing/short timeouts, and forbidden mutation-workflow concurrency.
+inputs, missing/short timeouts, forbidden durable-mutation concurrency, and the
+exact shared branch concurrency contract permitted only for Commit/Pull Request
+Bugbot jobs.
 
 GitHub lifecycle tests cover admission before queue polling, PAT-owner normal-run
 discard, valid single-action preservation, identity lookup failure, and the absence

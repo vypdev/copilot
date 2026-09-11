@@ -23,7 +23,7 @@ export interface BugbotReviewTelemetrySnapshot {
     readonly publishedFindings: number;
     readonly overflowFindings: number;
     readonly resolvedFindings: number;
-    readonly findingStates?: Readonly<Record<'open' | 'fixed' | 'obsolete' | 'dismissed' | 'reopened', number>>;
+    readonly findingStates?: Readonly<Partial<Record<import('../../domain/bugbot/review_state').BugbotFindingState, number>>>;
     readonly outcome: BugbotReviewOutcome;
     readonly errorCategory?: string;
 }

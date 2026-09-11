@@ -21,6 +21,11 @@ const MIN_QUEUE_JOB_TIMEOUT_MINUTES = QUEUE_GATE_TIMEOUT_MINUTES;
 const FAILURE_REPORT_CONDITION = "${{ failure() && inputs.issue != '-1' }}";
 const DISTRIBUTED_COPILOT_ACTION = 'vypdev/copilot@v3';
 const CHECKOUT_ACTION = 'actions/checkout@v5';
+const BUGBOT_BRANCH_CONCURRENCY_GROUP = 'copilot-bugbot-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}';
+const BUGBOT_CONCURRENCY_JOBS = Object.freeze({
+  'copilot_commit.yml': 'copilot-commits',
+  'copilot_pull_request.yml': 'copilot-pull-requests',
+});
 
 function assertQueueBudget(queueWaitMinutes, minimumJobTimeoutMinutes) {
   if (!Number.isFinite(queueWaitMinutes)
@@ -279,6 +284,29 @@ function assertNoConcurrency(relativeFile, workflow) {
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
     if (job.concurrency !== undefined) {
       throw new Error(`${relativeFile} job ${jobId} must not define GitHub concurrency.`);
+    }
+  }
+}
+
+function assertReviewConcurrency(relativeFile, workflow) {
+  const targetJobId = BUGBOT_CONCURRENCY_JOBS[path.basename(relativeFile)];
+  if (!targetJobId) {
+    assertNoConcurrency(relativeFile, workflow);
+    return;
+  }
+  if (workflow.concurrency !== undefined) {
+    throw new Error(`${relativeFile} must scope Bugbot branch concurrency to job ${targetJobId}.`);
+  }
+  for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
+    if (jobId !== targetJobId) {
+      if (job.concurrency !== undefined) {
+        throw new Error(`${relativeFile} job ${jobId} must not define GitHub concurrency.`);
+      }
+      continue;
+    }
+    if (job.concurrency?.group !== BUGBOT_BRANCH_CONCURRENCY_GROUP
+      || job.concurrency?.['cancel-in-progress'] !== true) {
+      throw new Error(`${relativeFile} job ${jobId} must cancel superseded Bugbot runs with the shared branch concurrency group.`);
     }
   }
 }
@@ -689,7 +717,7 @@ function assertQueueWorkflow(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   const manifest = QUEUE_WORKFLOW_MANIFEST.find(entry => relativeFile.endsWith(`/${entry.file}`));
   if (!manifest) return;
-  assertNoConcurrency(relativeFile, workflow);
+  assertReviewConcurrency(relativeFile, workflow);
   if (assertMutationWorkflow(file, workflow)) return;
   if (workflow.name !== manifest.workflowName) {
     throw new Error(`${relativeFile} must have workflow name ${JSON.stringify(manifest.workflowName)}.`);
@@ -746,7 +774,7 @@ function assertIncrementalRangeFetch(relativeFile, manifestFile, job) {
 function assertSequentialMutationWorkflow(file, workflow) {
   const relativeFile = relativeWorkflow(file);
   if (!QUEUE_WORKFLOW_MANIFEST.some(entry => relativeFile.endsWith(`/${entry.file}`))) return;
-  assertNoConcurrency(relativeFile, workflow);
+  assertReviewConcurrency(relativeFile, workflow);
 }
 
 function validateWorkflow(file, workflow) {
@@ -809,6 +837,7 @@ module.exports = {
   assertDirectEventTriggers,
   assertMutationWorkflow,
   assertNoConcurrency,
+  assertReviewConcurrency,
   assertQueueBudget,
   assertExactTimeout,
   assertTagPermissions,

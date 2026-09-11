@@ -12,6 +12,8 @@ describe("PullRequestReviewCommentQueryRepository", () => {
             path: "src/first.ts",
             line: null,
             node_id: "node-1",
+            pull_request_review_id: 77,
+            html_url: 'https://github.com/org/repo/pull/21#discussion_r1',
           },
         ],
       };
@@ -49,6 +51,8 @@ describe("PullRequestReviewCommentQueryRepository", () => {
         body: null,
         path: "src/first.ts",
         line: undefined,
+        parentReviewIdentity: '77',
+        url: 'https://github.com/org/repo/pull/21#discussion_r1',
       },
       {
         id: 2,
@@ -66,6 +70,58 @@ describe("PullRequestReviewCommentQueryRepository", () => {
       pull_number: 21,
       per_page: 100,
     });
+  });
+
+  it('maps paginated parent reviews with opaque identities and URLs', async () => {
+    const listReviews = jest.fn();
+    const iterator = jest.fn(async function* () {
+      yield {
+        data: [{
+          id: 77,
+          body: 'Review body',
+          user: { login: 'bugbot' },
+          commit_id: 'abc1234',
+          html_url: 'https://github.com/org/repo/pull/21#pullrequestreview-77',
+        }],
+      };
+    });
+    const repository = new PullRequestReviewCommentQueryRepository({
+      getClient: () => ({
+        paginate: { iterator },
+        rest: { pulls: { listReviews } },
+      }),
+    } as never);
+
+    await expect(
+      repository.listPullRequestReviews('owner', 'repo', 21, 'token'),
+    ).resolves.toEqual([{
+      identity: '77',
+      body: 'Review body',
+      authorLogin: 'bugbot',
+      commitId: 'abc1234',
+      url: 'https://github.com/org/repo/pull/21#pullrequestreview-77',
+    }]);
+    expect(iterator).toHaveBeenCalledWith(listReviews, {
+      owner: 'owner',
+      repo: 'repo',
+      pull_number: 21,
+      per_page: 100,
+    });
+  });
+
+  it('rejects malformed review identities through a sanitized operation error', async () => {
+    const iterator = jest.fn(async function* () {
+      yield { data: [{ id: 0, body: 'bad' }] };
+    });
+    const repository = new PullRequestReviewCommentQueryRepository({
+      getClient: () => ({
+        paginate: { iterator },
+        rest: { pulls: { listReviews: jest.fn() } },
+      }),
+    } as never);
+    await expect(
+      repository.listPullRequestReviews('owner', 'repo', 21, 'token'),
+    ).rejects.toThrow('Unable to list pull request reviews.');
   });
 
   it("returns a nullable comment body from the point lookup", async () => {

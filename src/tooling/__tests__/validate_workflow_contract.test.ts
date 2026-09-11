@@ -96,7 +96,7 @@ describe('workflow contract validator', () => {
     expect(() => assertQueueBudget(90, 90)).not.toThrow();
   });
 
-  it('keeps every queue workflow sequential across repeated runs without cancellation or overwrite', () => {
+  it('serializes durable mutations while canceling superseded branch review runs', () => {
     for (const directory of ['.github/workflows', 'setup/workflows']) {
       for (const manifest of QUEUE_WORKFLOW_MANIFEST) {
         const file = path.join(process.cwd(), directory, manifest.file);
@@ -104,7 +104,14 @@ describe('workflow contract validator', () => {
           jobs: Record<string, { concurrency?: unknown }>;
         };
         expect(workflow.concurrency).toBeUndefined();
-        expect(workflow.jobs[manifest.jobId].concurrency).toBeUndefined();
+        if (['copilot_commit.yml', 'copilot_pull_request.yml'].includes(manifest.file)) {
+          expect(workflow.jobs[manifest.jobId].concurrency).toEqual({
+            group: 'copilot-bugbot-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}',
+            'cancel-in-progress': true,
+          });
+        } else {
+          expect(workflow.jobs[manifest.jobId].concurrency).toBeUndefined();
+        }
         expect(() => validateWorkflow(file, workflow)).not.toThrow();
       }
     }

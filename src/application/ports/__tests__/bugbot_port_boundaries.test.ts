@@ -4,11 +4,15 @@ import type { BugbotFindingPublicationPorts } from "../bugbot_finding_publicatio
 import type { BugbotFindingResolutionPorts } from "../bugbot_finding_resolution_ports";
 import type { BugbotPullRequestResolutionPort } from "../bugbot_pull_request_resolution_ports";
 import type { BugbotPullRequestWritePort } from "../bugbot_pull_request_write_ports";
+import type { BugbotContextPorts } from '../bugbot_context_ports';
 
 type Equal<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 type Assert<T extends true> = T;
 type PublicationKeysAreExact = Assert<
-  Equal<keyof BugbotFindingPublicationPorts, "issueComments" | "pullRequestComments">
+  Equal<keyof BugbotFindingPublicationPorts, "issueComments" | "pullRequestComments" | "reviewState">
+>;
+type ContextKeysAreExact = Assert<
+  Equal<keyof BugbotContextPorts, 'issue' | 'pullRequest' | 'reviewState' | 'navigation' | 'rules'>
 >;
 type ResolutionKeysAreExact = Assert<
   Equal<keyof BugbotFindingResolutionPorts, "issueComments" | "pullRequestComments">
@@ -45,6 +49,7 @@ describe("Bugbot port boundaries", () => {
       "bugbot_pull_request_resolution_ports.ts",
       "bugbot_finding_resolution_ports.ts",
       "bugbot_context_ports.ts",
+      "bugbot_review_navigation_ports.ts",
       "bugbot_write_ports.ts",
     ]) {
       expect(existsSync(join(portsDirectory, file))).toBe(true);
@@ -124,5 +129,37 @@ describe("Bugbot port boundaries", () => {
     );
     expect(writePortSource).toContain("unresolvePullRequestReviewThread");
     expect(writePortSource).not.toContain("resolvePullRequestReviewThread(");
+  });
+
+  it('segregates review-summary presentation from inline finding publication', () => {
+    const writePortSource = readFileSync(
+      join(portsDirectory, 'bugbot_pull_request_write_ports.ts'),
+      'utf8',
+    );
+    const publicationPortSource = readFileSync(
+      join(portsDirectory, 'bugbot_finding_publication_ports.ts'),
+      'utf8',
+    );
+    expect(writePortSource).not.toContain('PullRequestReviewSummaryUpdatePort');
+    expect(publicationPortSource).toContain('reviewState:');
+    expect(publicationPortSource).not.toContain('reviewState?');
+  });
+
+  it('requires provider-owned navigation instead of constructing provider URLs in use cases', () => {
+    const contextPortSource = readFileSync(
+      join(portsDirectory, 'bugbot_context_ports.ts'),
+      'utf8',
+    );
+    const reconciliationSource = readFileSync(
+      join(
+        portsDirectory,
+        '../usecases/steps/commit/bugbot/reconcile_bugbot_review_state_use_case.ts',
+      ),
+      'utf8',
+    );
+    expect(contextPortSource).toContain('navigation: BugbotReviewNavigationPort');
+    expect(contextPortSource).not.toContain('navigation?:');
+    expect(reconciliationSource).toContain('contextPorts.navigation.forPullRequest');
+    expect(reconciliationSource).not.toContain('https://github.com');
   });
 });

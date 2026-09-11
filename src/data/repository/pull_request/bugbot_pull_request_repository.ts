@@ -5,6 +5,9 @@ import type {
   PullRequestReviewComment,
   PullRequestReviewCommentCommandPort,
   PullRequestReviewCommentQueryPort,
+  PullRequestReviewSummary,
+  PullRequestReviewSummaryQueryPort,
+  PullRequestReviewSummaryUpdatePort,
   PullRequestReviewThreadCommandPort,
   PullRequestReviewThreadStateQueryPort,
 } from "../../../application/ports/pull_request_review_comment_ports";
@@ -17,8 +20,8 @@ export class BugbotPullRequestRepository
   constructor(
     private readonly lifecycle: Pick<BugbotPullRequestReadPort, "getHeadBranchForIssue" | "getOpenPullRequestNumbersByHeadBranch">,
     private readonly changes: Pick<BugbotPullRequestReadPort, "getPullRequestHeadSha" | "getReviewDiffSnapshot">,
-    private readonly reviewQuery: PullRequestReviewCommentQueryPort,
-    private readonly reviewCommand: PullRequestReviewCommentCommandPort,
+    private readonly reviewQuery: PullRequestReviewCommentQueryPort & PullRequestReviewSummaryQueryPort,
+    private readonly reviewCommand: PullRequestReviewCommentCommandPort & PullRequestReviewSummaryUpdatePort,
     private readonly threadCommand: PullRequestReviewThreadCommandPort & PullRequestReviewThreadStateQueryPort,
   ) {}
 
@@ -41,6 +44,9 @@ export class BugbotPullRequestRepository
     >
   ): Promise<PullRequestReviewComment[]> =>
     this.reviewQuery.listPullRequestReviewComments(...args);
+  listPullRequestReviews = (
+    ...args: Parameters<PullRequestReviewSummaryQueryPort['listPullRequestReviews']>
+  ): Promise<PullRequestReviewSummary[]> => this.reviewQuery.listPullRequestReviews(...args);
   getPullRequestHeadSha = (
     ...args: Parameters<BugbotPullRequestReadPort["getPullRequestHeadSha"]>
   ) => this.changes.getPullRequestHeadSha(...args);
@@ -58,6 +64,9 @@ export class BugbotPullRequestRepository
       BugbotPullRequestWritePort["updatePullRequestReviewComment"]
     >
   ) => this.reviewCommand.updatePullRequestReviewComment(...args);
+  updatePullRequestReview = (
+    ...args: Parameters<PullRequestReviewSummaryUpdatePort['updatePullRequestReview']>
+  ) => this.reviewCommand.updatePullRequestReview(...args);
   resolvePullRequestReviewThread = (
     ...args: Parameters<
       BugbotPullRequestResolutionPort["resolvePullRequestReviewThread"]
