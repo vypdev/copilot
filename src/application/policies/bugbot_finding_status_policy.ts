@@ -2,7 +2,7 @@ import type {
     BugbotFinding,
     BugbotFindingResolution,
     ExistingByFindingId,
-} from '../usecases/steps/commit/bugbot/types';
+} from '../../domain/bugbot/finding';
 import {
     BUGBOT_FINDING_STATES,
     countBugbotFindingStates,

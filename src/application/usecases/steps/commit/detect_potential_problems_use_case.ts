@@ -8,7 +8,7 @@ import { ParamUseCase } from '../../../usecases/base/param_usecase';
 import { runDetectPotentialProblemsWorkflow } from './detect_potential_problems_workflow';
 import type { BugbotTelemetryPort } from '../../../ports/bugbot_telemetry_ports';
 
-export type { BugbotFinding } from './bugbot/types';
+export type { BugbotFinding } from '../../../../domain/bugbot/finding';
 
 /** Application boundary for detecting, publishing and resolving Bugbot findings. */
 export class DetectPotentialProblemsUseCase implements ParamUseCase<Execution, Result[]> {

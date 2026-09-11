@@ -241,6 +241,16 @@ Terms:
     update it in place and create no additional generic PR comments.
 12. Provider or presentation failures MUST NOT roll back already successful
     GitHub mutations or describe them as failed.
+13. A final provider snapshot that omits a previously observed unresolved or
+    verification-required durable finding MUST retain that finding as
+    `unknown` and emit one bounded reconciliation error. Only fully resolved
+    durable findings may disappear without making the projection non-clean.
+14. Linked-issue and pull-request evidence MUST be projected independently and
+    folded conservatively. A clean state in one destination MUST NOT hide an
+    actionable, verification-required, or unknown state in the other.
+15. Final provider snapshot acquisition MUST verify the same pull-request head
+    immediately before and after reading its surfaces. Missing or changed head
+    evidence makes the run superseded and MUST produce no presentation writes.
 
 ## 5. Current versus proposed product journey
 
@@ -265,7 +275,7 @@ flowchart LR
     H1 -- yes --> M[Apply finding mutations]
     M --> H2{Head still current?}
     H2 -- no --> R[Stop; newer run will reconcile]
-    H2 -- yes --> Q[Re-read comments, reviews, and threads]
+    H2 -- yes --> Q[Re-read linked issue, PR comments, reviews, and threads]
     Q --> F[Build final projection]
     F --> U[Update review blocks and status card]
     U --> O[Result, labels, Summary, Check, telemetry]
@@ -291,8 +301,13 @@ The final state is derived in this order:
 5. classify any remaining marker/thread mismatch explicitly;
 6. overlay the current validated analysis only through the pure transition
    plan; and
-7. after writes, re-read and project what GitHub actually contains, not what the
-   application intended to write.
+7. after writes, re-read every durable destination (linked-issue comments, PR
+   comments, reviews, and thread facts) and project what GitHub actually
+   contains, not what the application intended to write;
+8. verify the same remote PR head immediately before and after that concurrent
+   read, discarding the entire snapshot if freshness changed; and
+9. project linked-issue and PR destinations separately before applying the
+   conservative cross-destination state fold.
 
 ### 6.2 Finding states
 
@@ -324,7 +339,10 @@ readiness. `unknown` is a system failure and fails the review regardless of
 | Resolved marker + open thread | Next supported review | `verification-required` | include in analysis; do not silently re-resolve |
 | Open marker + bot-resolved thread | Retry after partial reopen | repair toward open | unresolve thread, re-read |
 | Open marker + human-resolved thread | Human action | dismissed | persist dismissal on next reconciliation |
+| Previously non-clean durable finding absent from final snapshot | Provider omission, deletion, or inconsistent pagination | unknown | preserve identity in projection; publish one bounded diagnostic; recheck |
 | Any | Head changed before phase | superseded | stop phase; no current projection update |
+| Any | Head changes while final surfaces are being read | superseded | discard the incoherent snapshot; perform no presentation write |
+| Same finding is clean in one destination and non-clean in the other | Duplicated or partially synchronized durable evidence | most conservative observed state | retain both destination identities; publish the non-clean projection |
 | Any | Malformed/ambiguous trusted state | unknown | no destructive mutation; publish diagnostic |
 
 ### 6.4 Happy path: the PR #358 scenario
@@ -431,15 +449,16 @@ same active-state projection to act as a required merge gate.
 
 ```mermaid
 flowchart LR
-    E[Action/API entrypoint] --> U[Detect/reconcile use case]
-    U --> D[Domain lifecycle policy]
-    U --> Q[Finding and review query ports]
-    U --> C[Finding and review command ports]
-    G[GitHub adapters] --> Q
+    E[Action/API entrypoint] --> U[Detect workflow]
+    U --> T[Narrow reconciliation target]
+    T --> S[Snapshot acquisition + double head guard]
+    S --> P[Pure provider evidence projection]
+    P --> D[Pure reconciliation plan]
+    D --> V[Final review projection]
+    V --> R[Bounded presentation synchronization]
+    R --> C[Semantic command ports]
+    G[Provider adapters] --> S
     G --> C
-    U --> V[Final review projection]
-    V --> R[Localized renderers]
-    R --> C
     V --> O[Result / labels / Summary / Check / telemetry]
 ```
 
@@ -481,9 +500,22 @@ The orchestration is decomposed without creating a second pipeline:
 - `publishFindings` applies active publication first with a head guard.
 - `markFindingsResolved` applies marker-first resolution/dismissal and repairs
   interrupted marker/thread transitions.
-- `reconcileBugbotReviewState` performs the authoritative concurrent final
-  reads, builds the provider-backed projection, updates affected review blocks,
-  upserts one status card, and returns a complete/partial/failed report.
+- The workflow projects `Execution` once into `BugbotReconciliationTarget` and
+  a separate credential contract; no extracted reconciliation collaborator
+  imports the runtime aggregate.
+- `loadBugbotReconciliationSnapshot` guards the head before and after concurrent
+  reads and returns explicit per-surface completeness. A head change discards
+  the snapshot before any presentation write.
+- `projectBugbotProviderEvidence` parses trusted evidence independently per
+  destination and folds states conservatively. A clean issue or PR destination
+  cannot hide a non-clean sibling destination.
+- `buildBugbotReconciliationPlan` is pure and owns malformed, missing durable,
+  missing expected-publication, and overflow decisions.
+- `synchronizeBugbotReviewPresentation` owns only bounded review-summary and
+  canonical-card writes. It updates at most 20 reviews per run with concurrency
+  bounded to four and returns a complete/partial/failed report.
+- `reconcileBugbotReviewState` is the small orchestration shell joining those
+  collaborators; it performs no direct provider read or write.
 - The workflow produces the final `Result` and telemetry only from that report.
 
 Inputs and outputs MUST be immutable and provider-neutral. Errors MUST retain
@@ -551,6 +583,9 @@ presentation pattern:
 
 - GitHub comments/threads remain the durable state; no database or repository
   variable is introduced.
+- Final snapshot acquisition uses a head guard before and after its concurrent
+  surface reads. If the head changes, no data from that acquisition is
+  projected or published.
 - The status card marker contains schema version, PR number, verified head SHA,
   and projection digest. It contains no model text or secret.
 - Review bodies use start/end markers around only the mutable status block. The
@@ -901,13 +936,13 @@ counted across rows.
 
 | Area | Minimum distinct cases | Behaviors/risks covered |
 |---|---:|---|
-| Domain lifecycle, transition planning, and projection | 24 | every state, resolver precedence, fixed/obsolete/dismissed/reopened, mismatches, aggregate counts, deterministic digests |
-| Application ordering, idempotency, replay, cancellation, and races | 28 | active-before-resolution, three head guards, read-after-write, duplicate same-head, newer-head supersession, partial mutations, retry convergence, PR close/reopen |
+| Domain lifecycle, transition planning, and projection | 26 | every state, resolver precedence, fixed/obsolete/dismissed/reopened, per-destination projection, conservative cross-destination fold, mismatches, aggregate counts, deterministic digests |
+| Application ordering, idempotency, replay, cancellation, and races | 34 | active-before-resolution, mutation head guards, double snapshot head guard, read-after-write, per-surface completeness, missing durable evidence, resolved omission, duplicate same-head, newer-head supersession, partial mutations, retry convergence, PR close/reopen |
 | Adapters and provider error mapping | 18 | pagination, parent review id/URL, resolver identity, create/update review, status-card upsert, 401/403/404/409/422, malformed response, rate limit |
 | Workflow, composition, public API, and schema contracts | 8 | shared concurrency key, bot guard, permissions, trigger contract, composition wiring, API declarations, package exports |
 | UI/UX, localization, accessibility, links, and sanitization | 16 | pending, active, clean, failed, partial, superseded, historical snapshot, en/es/fallback, narrow content, markers, mentions, unsafe Markdown |
 | Integration, security, migration, and live-shaped replay | 12 | PR #358 replay, new PR lifecycle, multiple reviews, overflow/unanchored, manual resolve/unresolve, identity rotation, duplicate card repair, dry-run/fork trust |
-| **Total** | **106** | No double counting |
+| **Total** | **114** | No double counting |
 
 Coverage requirements:
 
@@ -948,12 +983,15 @@ graphify update .
 
 Local implementation evidence on 2026-09-11:
 
-- 373 suites and 2,836 tests pass under coverage;
-- global coverage is 93.04% statements, 84.16% branches, 94.16% functions,
-  and 94.63% lines;
+- 377 suites and 2,893 tests pass under coverage;
+- global coverage is 93.12% statements, 84.43% branches, 94.22% functions,
+  and 94.68% lines;
 - `review_state.ts` and `review_projection.ts` are 100% covered;
+- the finding domain contract, ownership/provider-projection policies,
+  reconciliation planning, coherent snapshot loader, orchestration shell, and
+  bounded presentation synchronizer are each 100% covered across statements,
+  branches, functions, and lines;
 - the presentation policy is 100% line/function and 96.72% branch covered;
-- the reconciler is 100% line/function and 90.44% branch covered; and
 - the GitHub navigation adapter is 100% line/function and 96.15% branch
   covered.
 
@@ -1058,6 +1096,18 @@ examples should reuse the same fixtures as presentation tests where practical.
     without importing GitHub DTOs and receives the same final projection.
 28. Given completed implementation, every documented example is validated
     against code fixtures and all repository/package gates pass.
+29. Given a previously observed unresolved or verification-required durable
+    finding that is absent from a successful final provider read, then it
+    remains visible as `unknown`, its origin review cannot claim that all
+    findings are resolved, one bounded diagnostic is published, and the Check
+    fails. A previously observed fully resolved finding may remain absent.
+30. Given that the same finding is clean in its linked issue but non-clean in
+    the PR, or clean in the PR but non-clean in its linked issue, then both
+    destinations retain their identities and the final state is the most
+    conservative observed state; the PR cannot claim clean.
+31. Given that the PR head changes between the two final snapshot guards, then
+    every concurrently read surface is discarded, the run is superseded, and
+    no review block or status card is created or updated from that snapshot.
 
 ## 17. Requirements traceability
 
@@ -1069,7 +1119,10 @@ examples should reuse the same fixtures as presentation tests where practical.
 | Safe resolution/reopen order | reconciliation plan/apply use case | every partial mutation boundary | How it works, Failure scenarios |
 | Human dismissal precedence | lifecycle policy + resolver adapter | bot/human/unknown resolver matrix | Concepts, Detection |
 | Freshness and concurrency | head guards + workflow contract | stale, duplicate, canceled, race cases | Workflow setup |
+| Coherent final snapshot | snapshot loader + explicit surface completeness | before/after head, head-change, missing-head, per-surface failure, shared issue/PR read cases | How it works, Failure scenarios |
 | No false clean partial state | final read + publication report | provider failure matrix | Troubleshooting |
+| Missing durable evidence | reconciliation policy + final projection | unresolved, verification-required, observed, and fully resolved omission cases | How it works, Failure scenarios |
+| Cross-destination disagreement | provider evidence projection policy | clean-issue/non-clean-PR and clean-PR/non-clean-issue regressions | How it works, Failure scenarios |
 | Bounded/noisy UX | renderer limits + digest policy | body/no-op/update-budget cases | Configuration |
 | Localization/accessibility | presentation policy | en/es/fallback and semantic rendering | Examples |
 | Trust/sanitization | marker/authorship policies | spoofing/Markdown/mention/URL cases | Security/operations |
@@ -1166,7 +1219,7 @@ evidence.
 - [x] Human resolve/unresolve, bot repair, missing resolver, stale head,
       cancellation, duplicate events, and PR close/reopen are covered.
 - [x] Architecture boundaries and workflow contracts are executable and pass.
-- [x] The 106-case minimum and changed-module coverage requirements pass.
+- [x] The 114-case minimum and changed-module coverage requirements pass.
 - [x] No new correctness toggle, legacy mode, parallel pipeline, or database was
       introduced.
 - [x] Status card, review block, thread body, labels, Job Summary, Check, and

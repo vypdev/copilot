@@ -150,16 +150,16 @@ describe("Bugbot port boundaries", () => {
       join(portsDirectory, 'bugbot_context_ports.ts'),
       'utf8',
     );
-    const reconciliationSource = readFileSync(
+    const snapshotLoaderSource = readFileSync(
       join(
         portsDirectory,
-        '../usecases/steps/commit/bugbot/reconcile_bugbot_review_state_use_case.ts',
+        '../usecases/steps/commit/bugbot/load_bugbot_reconciliation_snapshot_use_case.ts',
       ),
       'utf8',
     );
     expect(contextPortSource).toContain('navigation: BugbotReviewNavigationPort');
     expect(contextPortSource).not.toContain('navigation?:');
-    expect(reconciliationSource).toContain('contextPorts.navigation.forPullRequest');
-    expect(reconciliationSource).not.toContain('https://github.com');
+    expect(snapshotLoaderSource).toContain('ports.navigation.forPullRequest');
+    expect(snapshotLoaderSource).not.toContain('https://github.com');
   });
 });

@@ -95,6 +95,41 @@ complete without entering the queue; valid explicit single actions remain admitt
 This decision belongs to the GitHub lifecycle and is deliberately not added to the
 shared `mainRun` path used by the local action.
 
+## Bugbot reconciliation boundary
+
+Bugbot final reconciliation is a single pipeline split into four narrow
+responsibilities:
+
+```text
+reconcileBugbotReviewState
+  -> loadBugbotReconciliationSnapshot
+  -> projectBugbotProviderEvidence
+  -> buildBugbotReconciliationPlan
+  -> synchronizeBugbotReviewPresentation
+```
+
+The workflow projects `Execution` into the provider-neutral
+`BugbotReconciliationTarget` and credential contracts before entering this
+pipeline. The reconciler does not depend on the runtime aggregate and does not
+perform provider reads or presentation writes directly. Canonical finding and
+durable destination contracts live under `domain/bugbot`; application policies
+never import types from a concrete use-case directory.
+
+Snapshot acquisition verifies the pull-request head before reading any durable
+surface, reads independent surfaces concurrently, and verifies the head again
+afterward. A revision change discards the whole snapshot. Each surface records
+`verified`, `failed`, or `not-applicable`, so an empty successful read cannot be
+confused with a failed read. Provider projection keeps linked-issue and PR
+evidence separate and folds them conservatively: a clean destination cannot
+hide a non-clean or unverifiable destination.
+
+The pure reconciliation plan owns missing-publication and missing-durable-
+evidence decisions. The presentation use case owns only bounded review/status
+writes: at most 20 review summaries are selected per run and writes use bounded
+concurrency. Existing integration scenarios exercise the full pipeline, while
+snapshot, projection, plan, ownership, and presentation boundaries have focused
+unit tests.
+
 ## Branch synchronization boundary
 
 Branch synchronization has two independent entry points behind the same semantic

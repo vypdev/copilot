@@ -178,6 +178,49 @@ describe('application architecture boundaries', () => {
         expect(source).not.toMatch(/ports\//);
         expect(source).not.toMatch(/updateDescription|addComment|createManagedPullRequest|deleteBranch|dispatch/);
     });
+
+    it('keeps Bugbot reconciliation behind narrow contracts and one-way dependencies', () => {
+        const reconciliationSource = readFileSync(
+            join(
+                applicationRoot,
+                'usecases/steps/commit/bugbot/reconcile_bugbot_review_state_use_case.ts',
+            ),
+            'utf8',
+        );
+        const reconciliationPolicySource = readFileSync(
+            join(applicationRoot, 'policies/bugbot_reconciliation_policy.ts'),
+            'utf8',
+        );
+        const providerProjectionSource = readFileSync(
+            join(applicationRoot, 'policies/bugbot_provider_projection_policy.ts'),
+            'utf8',
+        );
+
+        expect(reconciliationSource).not.toContain('data/model/execution');
+        expect(reconciliationSource).not.toMatch(/listIssueComments|listPullRequestReviews|updateComment\(/);
+        expect(reconciliationSource).toContain('BugbotReconciliationTarget');
+        expect(reconciliationSource).toContain('loadBugbotReconciliationSnapshot');
+        expect(reconciliationSource).toContain('synchronizeBugbotReviewPresentation');
+        expect(reconciliationPolicySource).not.toContain('/usecases/');
+        expect(providerProjectionSource).not.toContain('/usecases/');
+    });
+
+    it('keeps canonical Bugbot finding contracts in the provider-neutral domain', () => {
+        const findingSource = readFileSync(
+            join(__dirname, '../../domain/bugbot/finding.ts'),
+            'utf8',
+        );
+        const contextSource = readFileSync(
+            join(applicationRoot, 'usecases/steps/commit/bugbot/types.ts'),
+            'utf8',
+        );
+
+        expect(findingSource).toContain('interface BugbotFinding');
+        expect(findingSource).toContain('type ExistingByFindingId');
+        expect(findingSource).not.toMatch(/GitHub|@actions|@octokit|application\//);
+        expect(contextSource).not.toContain('interface BugbotFinding');
+        expect(contextSource).not.toContain('interface ExistingFindingInfo');
+    });
 });
 
 describe('failure policy ownership', () => {

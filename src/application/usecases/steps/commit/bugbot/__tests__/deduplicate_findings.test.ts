@@ -3,7 +3,7 @@
  */
 
 import { deduplicateFindings } from '../deduplicate_findings';
-import type { BugbotFinding } from '../types';
+import type { BugbotFinding } from '../../../../../../domain/bugbot/finding';
 
 function finding(overrides: Partial<BugbotFinding> = {}): BugbotFinding {
     return {

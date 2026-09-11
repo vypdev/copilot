@@ -1,4 +1,4 @@
-import type { BugbotFinding } from "./types";
+import type { BugbotFinding } from "../../../../../domain/bugbot/finding";
 
 /**
  * Deduplicates only findings that describe the same normalized problem at the

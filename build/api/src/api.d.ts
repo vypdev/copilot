@@ -33,7 +33,7 @@ export type { BugbotFindingResolutionPorts } from './application/ports/bugbot_fi
 export type { BugbotTelemetryPort } from './application/ports/bugbot_telemetry_ports';
 export type { BugbotReviewNavigation, BugbotReviewNavigationPort, } from './application/ports/bugbot_review_navigation_ports';
 export type { Result } from './data/model/result';
-export type { BugbotFinding } from './application/usecases/steps/commit/bugbot/types';
+export type { BugbotFinding } from './domain/bugbot/finding';
 export type { BugbotReviewConfiguration } from './domain/bugbot/review_configuration';
 export type { BugbotReviewTelemetrySnapshot } from './application/ports/bugbot_telemetry_ports';
 export type { BugbotFindingState, BugbotFindingStateCounts, BugbotFindingEvidence, BugbotResolvedFindingState, } from './domain/bugbot/review_state';

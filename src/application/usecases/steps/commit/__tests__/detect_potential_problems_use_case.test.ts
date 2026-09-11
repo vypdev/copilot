@@ -12,8 +12,8 @@ import {
   buildFindingFingerprint,
   buildSemanticFindingFingerprint,
 } from "../../../../../domain/bugbot/finding_identity";
-import { buildMarker } from "../bugbot/marker";
-import type { BugbotFinding } from "../bugbot/types";
+import { buildMarker } from '../../../../policies/bugbot_finding_marker_policy';
+import type { BugbotFinding } from '../../../../../domain/bugbot/finding';
 
 jest.mock("@actions/github", () => {
   const actual =

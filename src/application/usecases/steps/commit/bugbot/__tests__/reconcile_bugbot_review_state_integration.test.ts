@@ -4,9 +4,12 @@ import type {
   PullRequestReviewSummary,
   PullRequestReviewThreadState,
 } from '../../../../../ports/pull_request_review_comment_ports';
-import { buildMarker } from '../marker';
-import { reconcileBugbotReviewState } from '../reconcile_bugbot_review_state_use_case';
-import type { BugbotContext, BugbotFinding } from '../types';
+import { buildMarker } from '../../../../../policies/bugbot_finding_marker_policy';
+import {
+  reconcileBugbotReviewState as reconcileBugbotReviewStateUseCase,
+} from '../reconcile_bugbot_review_state_use_case';
+import type { BugbotContext } from '../types';
+import type { BugbotFinding } from '../../../../../../domain/bugbot/finding';
 
 const head = 'a'.repeat(40);
 const marker = (resolved = false, resolution?: 'fixed' | 'obsolete' | 'dismissed') =>
@@ -16,6 +19,7 @@ function execution(): Execution {
   return {
     owner: 'org',
     repo: 'repo',
+    issueNumber: 42,
     tokenUser: 'bugbot',
     tokens: { token: 'token' },
     locale: { pullRequest: 'en-US' },
@@ -66,18 +70,25 @@ function harness(options: {
   thread?: PullRequestReviewThreadState;
   reviews?: PullRequestReviewSummary[];
   statusComments?: Array<{ id: number; body: string | null; user?: { login?: string } }>;
+  issueComments?: Array<{ id: number; body: string | null; user?: { login?: string } }>;
   updateReviewError?: Error;
 } = {}) {
   const comments = options.comment ? [options.comment] : [];
   const reviews = options.reviews ?? [];
   const statusComments = options.statusComments ?? [];
+  const issueComments = options.issueComments ?? [];
   const addComment = jest.fn().mockResolvedValue(undefined);
   const updateComment = jest.fn().mockResolvedValue(undefined);
   const updatePullRequestReview = options.updateReviewError
     ? jest.fn().mockRejectedValue(options.updateReviewError)
     : jest.fn().mockResolvedValue(undefined);
   const contextPorts = {
-    issue: { listIssueComments: jest.fn().mockResolvedValue(statusComments) },
+    issue: {
+      listIssueComments: jest.fn().mockImplementation(
+        (_owner: string, _repo: string, issueNumber: number) =>
+          Promise.resolve(issueNumber === 358 ? statusComments : issueComments),
+      ),
+    },
     pullRequest: {
       getHeadBranchForIssue: jest.fn(),
       getPullRequestReviewCommentBody: jest.fn(),
@@ -117,7 +128,53 @@ function harness(options: {
   };
 }
 
-describe('reconcileBugbotReviewState', () => {
+async function reconcileBugbotReviewState(input: {
+  execution: Execution;
+  loadedContext: BugbotContext;
+  activeFindings: readonly BugbotFinding[];
+  expectedPublishedFindings?: readonly BugbotFinding[];
+  mutationErrors?: readonly Error[];
+  contextPorts: ReturnType<typeof harness>['contextPorts'];
+  publicationPorts: ReturnType<typeof harness>['publicationPorts'];
+}) {
+  const pullRequestNumber = input.loadedContext.openPrNumbers[0];
+  const analyzedHeadSha = input.loadedContext.prContext?.prHeadSha;
+  if (!pullRequestNumber || !analyzedHeadSha) return undefined;
+  return reconcileBugbotReviewStateUseCase({
+    target: {
+      owner: input.execution.owner,
+      repository: input.execution.repo,
+      pullRequestNumber,
+      ...(input.execution.issueNumber > 0
+        ? { linkedIssueNumber: input.execution.issueNumber }
+        : {}),
+      analyzedHeadSha,
+      ...(input.execution.tokenUser
+        ? { trustedAuthorLogin: input.execution.tokenUser }
+        : {}),
+      locale: input.execution.locale?.pullRequest ?? 'en-US',
+    },
+    credential: { token: input.execution.tokens.token },
+    loadedContext: input.loadedContext,
+    activeFindings: input.activeFindings,
+    ...(input.expectedPublishedFindings
+      ? { expectedPublishedFindings: input.expectedPublishedFindings }
+      : {}),
+    ...(input.mutationErrors ? { mutationErrors: input.mutationErrors } : {}),
+    snapshotPorts: {
+      issueComments: input.contextPorts.issue,
+      pullRequest: input.contextPorts.pullRequest,
+      reviews: input.contextPorts.reviewState,
+      navigation: input.contextPorts.navigation,
+    },
+    presentationPorts: {
+      comments: input.publicationPorts.issueComments,
+      reviews: input.publicationPorts.reviewState,
+    },
+  });
+}
+
+describe('Bugbot review reconciliation integration', () => {
   it('does nothing when no pull request or analyzed head belongs to the context', async () => {
     const test = harness();
     await expect(reconcileBugbotReviewState({
@@ -236,6 +293,380 @@ describe('reconcileBugbotReviewState', () => {
     expect(report?.projection.counts.unknown).toBe(1);
     expect(report?.projection.outcome).toBe('partial');
     expect(report?.errors[0].message).toContain('not yet observable');
+  });
+
+  it('fails closed when previously observed non-clean findings disappear from the final snapshot', async () => {
+    const loadedContext: BugbotContext = {
+      ...context(),
+      existingByFindingId: {
+        'missing-issue': {
+          issue: { commentId: 10, resolved: false },
+        },
+        'missing-pr': {
+          pullRequest: {
+            commentIdentity: 'PRRC_missing',
+            pullRequestNumber: 358,
+            resolved: false,
+            parentReviewIdentity: '77',
+          },
+        },
+      },
+      unresolvedFindingsWithBody: [
+        { id: 'missing-issue', fullBody: '## Missing issue finding\n\nStill open.' },
+        { id: 'missing-pr', fullBody: '## Missing PR finding\n\nStill open.' },
+      ],
+    };
+    const test = harness({
+      reviews: [{
+        identity: '77',
+        authorLogin: 'bugbot',
+        commitId: 'b'.repeat(40),
+        body: '## 🤖 Bugbot review snapshot\n\nHistorical review.',
+      }],
+    });
+
+    const report = await reconcileBugbotReviewState({
+      execution: execution(),
+      loadedContext,
+      activeFindings: [],
+      contextPorts: test.contextPorts,
+      publicationPorts: test.publicationPorts,
+    });
+
+    expect(report?.projection.counts.unknown).toBe(2);
+    expect(report?.projection.outcome).toBe('partial');
+    expect(report?.projection.findings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: 'missing-issue', title: 'Missing issue finding' }),
+      expect.objectContaining({
+        id: 'missing-pr',
+        title: 'Missing PR finding',
+        parentReviewIdentity: '77',
+      }),
+    ]));
+    expect(report?.errors.map((error) => error.message)).toEqual([
+      'The final provider snapshot omitted 2 previously observed unresolved or unverified Bugbot finding(s).',
+    ]);
+    expect(test.updatePullRequestReview).toHaveBeenCalledWith(
+      'org',
+      'repo',
+      358,
+      '77',
+      expect.stringContaining('could not be verified'),
+      'token',
+    );
+    expect(test.addComment).toHaveBeenCalledWith(
+      'org',
+      'repo',
+      358,
+      expect.stringContaining('Unknown | 2'),
+      'token',
+      { commitSha: head },
+    );
+  });
+
+  it('reports one bounded error when the same finding is both durable and expected to publish', async () => {
+    const loadedContext: BugbotContext = {
+      ...context(),
+      existingByFindingId: {
+        'finding-1': {
+          pullRequest: {
+            commentIdentity: 'PRRC_missing',
+            pullRequestNumber: 358,
+            resolved: false,
+          },
+        },
+      },
+    };
+    const test = harness();
+
+    const report = await reconcileBugbotReviewState({
+      execution: execution(),
+      loadedContext,
+      activeFindings: [finding()],
+      contextPorts: test.contextPorts,
+      publicationPorts: test.publicationPorts,
+    });
+
+    expect(report?.projection.findings).toEqual([
+      expect.objectContaining({ id: 'finding-1', state: 'unknown', title: 'Unsafe retry' }),
+    ]);
+    expect(report?.errors.map((error) => error.message)).toEqual([
+      'The final provider snapshot omitted 1 previously observed unresolved or unverified Bugbot finding(s).',
+    ]);
+  });
+
+  it('allows previously observed fully resolved findings to remain absent', async () => {
+    const test = harness();
+    const report = await reconcileBugbotReviewState({
+      execution: execution(),
+      loadedContext: context(true),
+      activeFindings: [],
+      contextPorts: test.contextPorts,
+      publicationPorts: test.publicationPorts,
+    });
+
+    expect(report?.projection.findings).toEqual([]);
+    expect(report?.projection.outcome).toBe('complete');
+    expect(report?.errors).toEqual([]);
+    expect(test.addComment).toHaveBeenCalledWith(
+      'org',
+      'repo',
+      358,
+      expect.stringContaining('No active findings'),
+      'token',
+      { commitSha: head },
+    );
+  });
+
+  it('keeps a linked-issue finding verified when its marker is present on the final read', async () => {
+    const loadedContext: BugbotContext = {
+      ...context(),
+      existingByFindingId: {
+        'finding-1': { issue: { commentId: 10, resolved: false } },
+      },
+      unresolvedFindingsWithBody: [
+        { id: 'finding-1', fullBody: `## Unsafe retry\n\nStill open.\n${marker(false)}` },
+      ],
+    };
+    const test = harness({
+      issueComments: [{
+        id: 10,
+        user: { login: 'bugbot' },
+        body: `## Unsafe retry\n\nStill open.\n${marker(false)}`,
+      }],
+    });
+
+    const report = await reconcileBugbotReviewState({
+      execution: execution(),
+      loadedContext,
+      activeFindings: [],
+      contextPorts: test.contextPorts,
+      publicationPorts: test.publicationPorts,
+    });
+
+    expect(report?.projection.counts.open).toBe(1);
+    expect(report?.projection.counts.unknown).toBe(0);
+    expect(report?.projection.outcome).toBe('complete');
+    expect(report?.errors).toEqual([]);
+    expect(test.contextPorts.issue.listIssueComments).toHaveBeenCalledWith(
+      'org', 'repo', 42, 'token',
+    );
+  });
+
+  it('does not let observed issue evidence hide a missing non-clean PR destination', async () => {
+    const loadedContext: BugbotContext = {
+      ...context(),
+      existingByFindingId: {
+        'finding-1': {
+          issue: { commentId: 10, resolved: false },
+          pullRequest: {
+            commentIdentity: 'PRRC_missing',
+            pullRequestNumber: 358,
+            resolved: false,
+          },
+        },
+      },
+      unresolvedFindingsWithBody: [
+        { id: 'finding-1', fullBody: `## Unsafe retry\n\nStill open.\n${marker(false)}` },
+      ],
+    };
+    const test = harness({
+      issueComments: [{
+        id: 10,
+        user: { login: 'bugbot' },
+        body: `## Unsafe retry\n\nStill open.\n${marker(false)}`,
+      }],
+    });
+
+    const report = await reconcileBugbotReviewState({
+      execution: execution(),
+      loadedContext,
+      activeFindings: [],
+      contextPorts: test.contextPorts,
+      publicationPorts: test.publicationPorts,
+    });
+
+    expect(report?.projection.findings).toEqual([
+      expect.objectContaining({ id: 'finding-1', state: 'unknown' }),
+    ]);
+    expect(report?.errors).toHaveLength(1);
+  });
+
+  it('does not accept linked-issue evidence as proof of an expected PR publication', async () => {
+    const loadedContext: BugbotContext = {
+      ...context(),
+      existingByFindingId: {
+        'finding-1': { issue: { commentId: 10, resolved: false } },
+      },
+    };
+    const test = harness({
+      issueComments: [{
+        id: 10,
+        user: { login: 'bugbot' },
+        body: `## Unsafe retry\n\nStill open.\n${marker(false)}`,
+      }],
+    });
+
+    const report = await reconcileBugbotReviewState({
+      execution: execution(),
+      loadedContext,
+      activeFindings: [finding()],
+      contextPorts: test.contextPorts,
+      publicationPorts: test.publicationPorts,
+    });
+
+    expect(report?.projection.findings).toEqual([
+      expect.objectContaining({ id: 'finding-1', state: 'unknown' }),
+    ]);
+    expect(report?.errors.map((error) => error.message)).toEqual([
+      'Published finding finding-1 is not yet observable from GitHub.',
+    ]);
+  });
+
+  it('uses the PR conversation as issue evidence when both targets share a number', async () => {
+    const test = harness({
+      statusComments: [{
+        id: 10,
+        user: { login: 'bugbot' },
+        body: `## Unsafe retry\n\nStill open.\n${marker(false)}`,
+      }],
+    });
+    const sameTargetExecution = { ...execution(), issueNumber: 358 } as Execution;
+    const loadedContext: BugbotContext = {
+      ...context(),
+      existingByFindingId: {
+        'finding-1': { issue: { commentId: 10, resolved: false } },
+      },
+    };
+
+    const report = await reconcileBugbotReviewState({
+      execution: sameTargetExecution,
+      loadedContext,
+      activeFindings: [],
+      contextPorts: test.contextPorts,
+      publicationPorts: test.publicationPorts,
+    });
+
+    expect(report?.projection.counts.open).toBe(1);
+    expect(report?.errors).toEqual([]);
+    expect(test.contextPorts.issue.listIssueComments).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails closed when the linked-issue final read fails', async () => {
+    const test = harness();
+    test.contextPorts.issue.listIssueComments.mockImplementation(
+      (_owner: string, _repo: string, issueNumber: number) => issueNumber === 42
+        ? Promise.reject(new Error('private provider detail'))
+        : Promise.resolve([]),
+    );
+    const loadedContext: BugbotContext = {
+      ...context(),
+      existingByFindingId: {
+        'finding-1': { issue: { commentId: 10, resolved: false } },
+      },
+    };
+
+    const report = await reconcileBugbotReviewState({
+      execution: execution(),
+      loadedContext,
+      activeFindings: [],
+      contextPorts: test.contextPorts,
+      publicationPorts: test.publicationPorts,
+    });
+
+    expect(report?.projection.counts.unknown).toBe(1);
+    expect(report?.projection.outcome).toBe('partial');
+    expect(report?.errors.map((error) => error.message)).toEqual(expect.arrayContaining([
+      'Unable to re-read linked issue finding comments.',
+      'The final provider snapshot omitted 1 previously observed unresolved or unverified Bugbot finding(s).',
+    ]));
+    expect(report?.errors.map((error) => error.message).join(' ')).not.toContain(
+      'private provider detail',
+    );
+  });
+
+  it('fails closed when a trusted linked-issue comment has a malformed marker', async () => {
+    const test = harness({
+      issueComments: [{
+        id: 10,
+        user: { login: 'bugbot' },
+        body: '<!-- copilot-bugbot finding_id:"finding-1" resolved:maybe -->',
+      }],
+    });
+
+    const report = await reconcileBugbotReviewState({
+      execution: execution(),
+      loadedContext: context(),
+      activeFindings: [],
+      contextPorts: test.contextPorts,
+      publicationPorts: test.publicationPorts,
+    });
+
+    expect(report?.projection.findings).toEqual([
+      expect.objectContaining({
+        id: 'malformed-issue-comment-10',
+        state: 'unknown',
+      }),
+    ]);
+    expect(report?.errors.map((error) => error.message)).toContain(
+      'A trusted Bugbot finding marker is malformed.',
+    );
+  });
+
+  it('projects linked-issue markers through the shared lifecycle policy', async () => {
+    const loadedContext: BugbotContext = {
+      ...context(),
+      existingByFindingId: {
+        'finding-1': {
+          issue: { commentId: 10, resolved: true, resolution: 'fixed' },
+        },
+      },
+    };
+    const test = harness({
+      issueComments: [{
+        id: 10,
+        user: { login: 'bugbot' },
+        body: `## Unsafe retry\n\nReported again.\n${marker(true, 'fixed')}`,
+      }],
+    });
+
+    const report = await reconcileBugbotReviewState({
+      execution: execution(),
+      loadedContext,
+      activeFindings: [finding()],
+      expectedPublishedFindings: [],
+      contextPorts: test.contextPorts,
+      publicationPorts: test.publicationPorts,
+    });
+
+    expect(report?.projection.findings).toEqual([
+      expect.objectContaining({
+        id: 'finding-1',
+        state: 'verification-required',
+        title: 'Unsafe retry',
+      }),
+    ]);
+  });
+
+  it('ignores linked-issue markers not owned by the authenticated bot', async () => {
+    const test = harness({
+      issueComments: [{
+        id: 10,
+        user: { login: 'attacker' },
+        body: marker(false),
+      }],
+    });
+
+    const report = await reconcileBugbotReviewState({
+      execution: execution(),
+      loadedContext: context(),
+      activeFindings: [],
+      contextPorts: test.contextPorts,
+      publicationPorts: test.publicationPorts,
+    });
+
+    expect(report?.projection.findings).toEqual([]);
+    expect(report?.projection.outcome).toBe('complete');
   });
 
   it('does not treat intentionally unpersisted overflow as a missing publication', async () => {
@@ -745,5 +1176,44 @@ describe('reconcileBugbotReviewState', () => {
     expect(report?.reviewUpdates).toBe(20);
     expect(report?.pendingReviewUpdates).toBe(2);
     expect(report?.projection.outcome).toBe('partial');
+  });
+
+  it('preserves a bounded mutation diagnostic in the final projection', async () => {
+    const test = harness();
+    const privateSuffix = 'x'.repeat(600);
+    const report = await reconcileBugbotReviewState({
+      execution: execution(),
+      loadedContext: context(),
+      activeFindings: [],
+      mutationErrors: [new Error(`Publication failed: ${privateSuffix}`)],
+      contextPorts: test.contextPorts,
+      publicationPorts: test.publicationPorts,
+    });
+
+    expect(report?.projection.outcome).toBe('failed');
+    expect(report?.errors[0]?.message).toHaveLength(500);
+    expect(report?.projection.errors[0]).toHaveLength(500);
+  });
+
+  it('falls back to the durable id when a missing finding has no stored title', async () => {
+    const test = harness();
+    const loadedContext: BugbotContext = {
+      ...context(),
+      existingByFindingId: {
+        'missing-title': {
+          issue: { commentId: 1, resolved: false },
+        },
+      },
+      unresolvedFindingsWithBody: [{ id: 'missing-title', fullBody: 'No heading.' }],
+    };
+    const report = await reconcileBugbotReviewState({
+      execution: execution(),
+      loadedContext,
+      activeFindings: [],
+      contextPorts: test.contextPorts,
+      publicationPorts: test.publicationPorts,
+    });
+
+    expect(report?.projection.findings[0]?.title).toBe('missing-title');
   });
 });

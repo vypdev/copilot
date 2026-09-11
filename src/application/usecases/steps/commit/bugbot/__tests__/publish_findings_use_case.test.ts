@@ -3,7 +3,7 @@
  */
 
 import { publishFindings as publishFindingsImpl, type PublishFindingsParam } from "../publish_findings_use_case";
-import type { BugbotFinding } from "../types";
+import type { BugbotFinding } from '../../../../../../domain/bugbot/finding';
 import type { BugbotContext } from "../types";
 import { Ai } from "../../../../../../data/model/ai";
 

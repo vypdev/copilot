@@ -1,11 +1,13 @@
 import { deduplicateFindings } from './deduplicate_findings';
 import { fileMatchesIgnorePatterns } from './file_ignore';
 import { applyCommentLimit, type ApplyLimitResult } from './limit_comments';
-import { normalizeFindingIdForMarker } from './marker';
+import { normalizeFindingIdForMarker } from '../../../../policies/bugbot_finding_marker_policy';
 import { isSafeFindingFilePath } from './path_validation';
 import { meetsMinSeverity, normalizeMinSeverity, severityLevel } from './severity';
-import type { BugbotFinding } from './types';
-import type { BugbotFindingResolution } from './types';
+import type {
+    BugbotFinding,
+    BugbotFindingResolution,
+} from '../../../../../domain/bugbot/finding';
 import { buildFindingFingerprint, buildSemanticFindingFingerprint } from '../../../../../domain/bugbot/finding_identity';
 import { redactSensitiveText } from '../../../../../domain/security/sensitive_text';
 

@@ -1,4 +1,7 @@
-import { findExistingFindingInfo } from '../types';
+import {
+    findExistingFindingInfo,
+    isExistingFindingFullyResolved,
+} from '../finding';
 
 describe('finding identity reconciliation', () => {
     it('requires a compatible local identity before trusting an exact model id', () => {
@@ -30,5 +33,48 @@ describe('finding identity reconciliation', () => {
             fingerprint: 'fp-99999999',
             semanticFingerprint: 'sf-22222222',
         })).toBeUndefined();
+    });
+});
+
+describe('isExistingFindingFullyResolved', () => {
+    it('requires at least one durable destination and every destination resolved', () => {
+        expect(isExistingFindingFullyResolved({})).toBe(false);
+        expect(isExistingFindingFullyResolved({
+            issue: { commentId: 1, resolved: true },
+        })).toBe(true);
+        expect(isExistingFindingFullyResolved({
+            issue: { commentId: 1, resolved: true },
+            pullRequest: {
+                commentIdentity: 'PRRC_1',
+                pullRequestNumber: 10,
+                resolved: false,
+            },
+        })).toBe(false);
+    });
+
+    it('keeps verification-required pull-request destinations non-clean', () => {
+        expect(isExistingFindingFullyResolved({
+            pullRequest: {
+                commentIdentity: 'PRRC_1',
+                pullRequestNumber: 10,
+                resolved: true,
+                verificationRequired: true,
+            },
+        })).toBe(false);
+    });
+
+    it('matches direct semantic identity stored on a pull-request destination', () => {
+        const existing = {
+            pullRequest: {
+                commentIdentity: 'PRRC_1',
+                pullRequestNumber: 10,
+                resolved: false,
+                semanticFingerprint: 'sf-11111111',
+            },
+        };
+        expect(findExistingFindingInfo({ finding: existing }, {
+            id: 'finding',
+            semanticFingerprint: 'sf-11111111',
+        })).toBe(existing);
     });
 });

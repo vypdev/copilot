@@ -25,7 +25,10 @@ description: Diagnose terminal failures across detection, publication, autofix, 
     Use the canonical **Bugbot status** card and `Copilot / Review` Check for the aggregate state. Run `/copilot recheck` to repair the generated status block; the historical snapshot text is intentionally retained.
   </Accordion>
   <Accordion title="The status card says partial or unknown" icon="triangle-exclamation">
-    Open **Technical details** for the bounded failed operation. Correct permissions or wait for a provider rate limit, then run `/copilot recheck`. Completed markers and thread transitions are retained and reused; `unknown` always fails the Action and Check.
+    Open **Technical details** for the bounded failed operation. Correct permissions or wait for a provider rate limit, then run `/copilot recheck`. Every final-read surface is tracked independently, so an empty verified result is not confused with a failed read. A previously observed non-clean finding that disappears remains visible as `unknown`; only fully resolved findings may be omitted safely. Completed markers and thread transitions are retained and reused, and `unknown` always fails the Action and Check.
+  </Accordion>
+  <Accordion title="The PR received a newer commit during reconciliation" icon="git-commit">
+    Bugbot checks the PR head immediately before and after collecting the final snapshot. If either head differs from the analyzed commit, it discards the snapshot and performs no review/status writes. The newer workflow run owns the next projection; use `/copilot recheck` only if no newer run is active.
   </Accordion>
   <Accordion title="A manual resolve or reopen is not reflected yet" icon="users">
     Native thread actions do not trigger a supported GitHub Actions event. Run `/copilot recheck` for immediate aggregation, or wait for the next pull-request, push, or explicit review event.

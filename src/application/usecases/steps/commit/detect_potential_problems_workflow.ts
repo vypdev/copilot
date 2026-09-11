@@ -21,6 +21,7 @@ import {
     reconcileBugbotReviewState,
     type BugbotPresentationReport,
 } from './bugbot/reconcile_bugbot_review_state_use_case';
+import type { BugbotFinding } from '../../../../domain/bugbot/finding';
 
 export interface DetectPotentialProblemsWorkflowDependencies {
     aiRepository: FindingsQueryPort;
@@ -84,13 +85,12 @@ export async function runDetectPotentialProblemsWorkflow(
         if (prepared === undefined) {
             const analysisError = new Error('The configured agent returned no potential-problem analysis.');
             const presentation = param.ai.getBugbotReviewConfiguration().publicationMode === 'publish'
-                ? await telemetry.measure('projection', () => reconcileBugbotReviewState({
+                ? await telemetry.measure('projection', () => reconcileReviewState({
                     execution: param,
                     loadedContext: context,
                     activeFindings: [],
                     mutationErrors: [analysisError],
-                    contextPorts: dependencies.contextPorts,
-                    publicationPorts: dependencies.publicationPorts,
+                    dependencies,
                 }))
                 : undefined;
             if (presentation) telemetry.observeProjection(presentation.projection);
@@ -115,14 +115,13 @@ export async function runDetectPotentialProblemsWorkflow(
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
         const presentation = await telemetry.measure('projection', () =>
-            reconcileBugbotReviewState({
+            reconcileReviewState({
                 execution: param,
                 loadedContext: context,
                 activeFindings: prepared.activeFindings ?? prepared.toPublish,
                 expectedPublishedFindings: prepared.toPublish,
                 mutationErrors: resolutionErrors,
-                contextPorts: dependencies.contextPorts,
-                publicationPorts: dependencies.publicationPorts,
+                dependencies,
             }));
         if (presentation) telemetry.observeProjection(presentation.projection);
         logInfo(`Bugbot workflow completed in ${Date.now() - workflowStartedAt}ms.`);
@@ -307,4 +306,49 @@ function formatStateCounts(counts: Readonly<Record<string, number>>): string {
         .filter(([, count]) => count > 0)
         .map(([state, count]) => `${state}=${count}`)
         .join(', ') || 'none';
+}
+
+async function reconcileReviewState(input: {
+    readonly execution: Execution;
+    readonly loadedContext: BugbotContext;
+    readonly activeFindings: readonly BugbotFinding[];
+    readonly expectedPublishedFindings?: readonly BugbotFinding[];
+    readonly mutationErrors?: readonly Error[];
+    readonly dependencies: DetectPotentialProblemsWorkflowDependencies;
+}): Promise<BugbotPresentationReport | undefined> {
+    const pullRequestNumber = input.loadedContext.openPrNumbers[0];
+    const analyzedHeadSha = input.loadedContext.prContext?.prHeadSha;
+    if (!pullRequestNumber || !analyzedHeadSha) return undefined;
+    return reconcileBugbotReviewState({
+        target: {
+            owner: input.execution.owner,
+            repository: input.execution.repo,
+            pullRequestNumber,
+            ...(input.execution.issueNumber > 0
+                ? { linkedIssueNumber: input.execution.issueNumber }
+                : {}),
+            analyzedHeadSha,
+            ...(input.execution.tokenUser
+                ? { trustedAuthorLogin: input.execution.tokenUser }
+                : {}),
+            locale: input.execution.locale?.pullRequest ?? 'en-US',
+        },
+        credential: { token: input.execution.tokens.token },
+        loadedContext: input.loadedContext,
+        activeFindings: input.activeFindings,
+        ...(input.expectedPublishedFindings
+            ? { expectedPublishedFindings: input.expectedPublishedFindings }
+            : {}),
+        ...(input.mutationErrors ? { mutationErrors: input.mutationErrors } : {}),
+        snapshotPorts: {
+            issueComments: input.dependencies.contextPorts.issue,
+            pullRequest: input.dependencies.contextPorts.pullRequest,
+            reviews: input.dependencies.contextPorts.reviewState,
+            navigation: input.dependencies.contextPorts.navigation,
+        },
+        presentationPorts: {
+            comments: input.dependencies.publicationPorts.issueComments,
+            reviews: input.dependencies.publicationPorts.reviewState,
+        },
+    });
 }

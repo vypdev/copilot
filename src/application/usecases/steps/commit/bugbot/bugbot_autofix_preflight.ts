@@ -3,7 +3,7 @@ import { Result } from '../../../../../data/model/result';
 import type { GitCommitPort } from '../../../../../application/ports/git_ports';
 import type { BugbotContextPorts } from '../../../../../application/ports/bugbot_context_ports';
 import type { BugbotContext } from './types';
-import { isExistingFindingFullyResolved } from './types';
+import { isExistingFindingFullyResolved } from '../../../../../domain/bugbot/finding';
 import { buildBugbotFixPrompt } from './build_bugbot_fix_prompt';
 import { loadBugbotContext } from './load_bugbot_context_use_case';
 import { logDebugInfo, logError } from '../../../../ports/logging_ports';

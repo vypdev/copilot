@@ -3,10 +3,10 @@ import type { PullRequestReviewCommentDraft } from "../../../../ports/pull_reque
 import type { Execution } from "../../../../../data/model/execution";
 import type {
   BugbotFinding,
-  BugbotPrContext,
   ExistingFindingInfo,
-} from "./types";
-import { buildCommentBody } from "./marker";
+} from "../../../../../domain/bugbot/finding";
+import type { BugbotPrContext } from "./types";
+import { buildCommentBody } from '../../../../policies/bugbot_finding_marker_policy';
 import { resolveFindingPathForPr } from "./path_validation";
 import { logInfo } from "../../../../ports/logging_ports";
 import { sanitizeAgentMarkdown } from '../../../../policies/github_comment_publication_policy';

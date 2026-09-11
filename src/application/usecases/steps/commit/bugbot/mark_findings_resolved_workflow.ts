@@ -2,7 +2,11 @@ import type { BugbotFindingResolutionPorts } from '../../../../../application/po
 import { PullRequestReviewOperationError } from '../../../../../application/ports/pull_request_review_errors';
 import type { Execution } from '../../../../../data/model/execution';
 import { logError } from '../../../../ports/logging_ports';
-import type { BugbotContext, BugbotFindingResolution, ExistingPullRequestFindingInfo } from './types';
+import type { BugbotContext } from './types';
+import type {
+    BugbotFindingResolution,
+    ExistingPullRequestFindingInfo,
+} from '../../../../../domain/bugbot/finding';
 import { resolveIssueFinding } from './resolve_issue_finding';
 import { resolvePullRequestFinding } from './resolve_pull_request_finding';
 import { isHumanResolver } from '../../../../../domain/bugbot/review_state';

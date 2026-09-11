@@ -5,7 +5,7 @@
 import { BugbotAutofixUseCase } from "../bugbot_autofix_use_case";
 import { GitCommitAdapter } from "../../../../../../infrastructure/git_commit_adapter";
 import type { BugbotContext } from "../types";
-import { buildMarker } from "../marker";
+import { buildMarker } from '../../../../../policies/bugbot_finding_marker_policy';
 
 const mockExec = jest.fn();
 let workspaceInspectionCount = 0;

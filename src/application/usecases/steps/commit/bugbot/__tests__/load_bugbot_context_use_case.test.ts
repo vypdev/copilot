@@ -5,7 +5,7 @@
 import { loadBugbotContext as loadBugbotContextImpl, type LoadBugbotContextOptions } from "../load_bugbot_context_use_case";
 import type { Execution } from "../../../../../../data/model/execution";
 import { Ai } from "../../../../../../data/model/ai";
-import { buildMarker } from "../marker";
+import { buildMarker } from '../../../../../policies/bugbot_finding_marker_policy';
 
 jest.mock("../../../../../../utils/logger", () => ({
     logDebugInfo: jest.fn(),

@@ -5,10 +5,13 @@
  * threads when the user replies "fix it" in a PR.
  */
 
-import { BUGBOT_MARKER_PREFIX } from '../../../../policies/bugbot_constants';
-import { ApplicationError } from "../../../../errors/application_error";
-import type { BugbotFinding, BugbotFindingResolution } from "./types";
-import { sanitizeAgentMarkdown } from "../../../../../application/policies/github_comment_publication_policy";
+import { BUGBOT_MARKER_PREFIX } from './bugbot_constants';
+import { ApplicationError } from "../errors/application_error";
+import type {
+  BugbotFinding,
+  BugbotFindingResolution,
+} from "../../domain/bugbot/finding";
+import { sanitizeAgentMarkdown } from "./github_comment_publication_policy";
 
 /** Maximum lossless finding identity accepted by the marker contract. */
 export const MAX_FINDING_ID_LENGTH = 200;
@@ -63,9 +66,9 @@ export function buildMarker(
   if (!safeFingerprint || !safeSemanticFingerprint) {
     throw new ApplicationError('Finding marker requires valid local and semantic fingerprints.', 'validation');
   }
-    const safeResolution = resolved && resolution && ['fixed', 'obsolete', 'dismissed'].includes(resolution)
-      ? ` finding_resolution:"${resolution}"`
-      : '';
+  const safeResolution = resolved && resolution && ['fixed', 'obsolete', 'dismissed'].includes(resolution)
+    ? ` finding_resolution:"${resolution}"`
+    : '';
   return `<!-- ${BUGBOT_MARKER_PREFIX} finding_id:"${safeId}" resolved:${resolved} finding_fingerprint:"${safeFingerprint}" finding_semantic:"${safeSemanticFingerprint}"${safeResolution} -->`;
 }
 

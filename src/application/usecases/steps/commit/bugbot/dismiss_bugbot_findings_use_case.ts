@@ -4,9 +4,9 @@ import type { BugbotContextPorts } from '../../../../../application/ports/bugbot
 import type { BugbotFindingResolutionPorts } from '../../../../../application/ports/bugbot_finding_resolution_ports';
 import { loadBugbotContext } from './load_bugbot_context_use_case';
 import { markFindingsResolved } from './mark_findings_resolved_workflow';
-import { normalizeFindingIdForMarker } from './marker';
+import { normalizeFindingIdForMarker } from '../../../../policies/bugbot_finding_marker_policy';
 import { logError } from '../../../../ports/logging_ports';
-import type { BugbotFindingResolution } from './types';
+import type { BugbotFindingResolution } from '../../../../../domain/bugbot/finding';
 
 export interface DismissBugbotFindingsParam {
     execution: Execution;

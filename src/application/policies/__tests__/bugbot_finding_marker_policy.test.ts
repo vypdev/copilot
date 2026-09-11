@@ -11,12 +11,8 @@ import {
   replaceMarkerInBody,
   extractTitleFromBody,
   buildCommentBody,
-} from "../marker";
-import type { BugbotFinding } from "../types";
-
-jest.mock("../../../../../../utils/logger", () => ({
-  logError: jest.fn(),
-}));
+} from '../bugbot_finding_marker_policy';
+import type { BugbotFinding } from '../../../domain/bugbot/finding';
 
 const FINGERPRINT = 'fp-0123abcd';
 const SEMANTIC_FINGERPRINT = 'sf-0123abcd';
@@ -72,6 +68,13 @@ describe("marker", () => {
       expect(() => buildMarker("id-->x", false, FINGERPRINT, SEMANTIC_FINGERPRINT)).toThrow(
         "Finding ID contains marker-breaking characters.",
       );
+    });
+
+    it("rejects identities that were not produced by the local fingerprint policies", () => {
+      expect(() => buildMarker("finding-1", false, "untrusted", SEMANTIC_FINGERPRINT))
+        .toThrow("Finding marker requires valid local and semantic fingerprints.");
+      expect(() => buildMarker("finding-1", false, FINGERPRINT, "untrusted"))
+        .toThrow("Finding marker requires valid local and semantic fingerprints.");
     });
   });
 
@@ -169,9 +172,7 @@ describe("marker", () => {
       expect(updated).toBe("CUSTOM");
     });
 
-    it("reports an already-resolved marker as found without logging external context", () => {
-      const { logError } = require("../../../../../../utils/logger");
-      logError.mockClear();
+    it("reports an already-resolved marker as found without mutating the body", () => {
       const body = currentMarker('external-id', true);
 
       const { updated, found, changed } = replaceMarkerInBody(
@@ -183,18 +184,14 @@ describe("marker", () => {
       expect(found).toBe(true);
       expect(changed).toBe(false);
       expect(updated).toBe(body);
-      expect(logError).not.toHaveBeenCalled();
     });
 
     it("returns found false when marker not found", () => {
-      const { logError } = require("../../../../../../utils/logger");
-      logError.mockClear();
       const body = "No marker here.";
       const { updated, found, changed } = replaceMarkerInBody(body, "f1", true);
       expect(found).toBe(false);
       expect(changed).toBe(false);
       expect(updated).toBe(body);
-      expect(logError).not.toHaveBeenCalled();
     });
   });
 
@@ -288,6 +285,17 @@ describe("marker", () => {
       const body = buildCommentBody(finding, true);
       expect(body).toContain("**Resolved**");
       expect(body).toContain("resolved:true");
+    });
+
+    it("rejects an unprepared finding without both locally computed identities", () => {
+      const finding: BugbotFinding = {
+        id: "missing-identity",
+        title: "T",
+        description: "D",
+      };
+
+      expect(() => buildCommentBody(finding, false))
+        .toThrow("Prepared finding is missing its local identity.");
     });
   });
 });

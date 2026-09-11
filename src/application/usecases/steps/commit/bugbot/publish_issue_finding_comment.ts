@@ -1,7 +1,10 @@
 import type { BugbotIssueCommentWritePort } from "../../../../../application/ports/bugbot_issue_write_ports";
 import type { Execution } from "../../../../../data/model/execution";
-import type { BugbotFinding, ExistingFindingInfo } from "./types";
-import { buildCommentBody } from "./marker";
+import type {
+    BugbotFinding,
+    ExistingFindingInfo,
+} from "../../../../../domain/bugbot/finding";
+import { buildCommentBody } from '../../../../policies/bugbot_finding_marker_policy';
 import { logDebugInfo } from "../../../../ports/logging_ports";
 
 export async function publishIssueFindingComment(

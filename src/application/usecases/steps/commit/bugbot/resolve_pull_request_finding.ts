@@ -1,7 +1,11 @@
 import type { BugbotPullRequestResolutionPort } from "../../../../../application/ports/bugbot_pull_request_resolution_ports";
 import { PullRequestReviewOperationError } from "../../../../../application/ports/pull_request_review_errors";
-import { buildMarker, parseMarker, replaceMarkerInBody } from "./marker";
-import type { BugbotFindingResolution } from './types';
+import {
+  buildMarker,
+  parseMarker,
+  replaceMarkerInBody,
+} from '../../../../policies/bugbot_finding_marker_policy';
+import type { BugbotFindingResolution } from '../../../../../domain/bugbot/finding';
 
 export interface PullRequestFindingResolution {
   findingId: string;

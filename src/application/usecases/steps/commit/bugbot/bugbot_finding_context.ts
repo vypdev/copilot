@@ -4,11 +4,14 @@ import {
   MAX_FINDING_BODY_LENGTH,
   truncateFindingBody,
 } from "./build_bugbot_fix_prompt";
-import { normalizeFindingIdForMarker, parseMarker } from "./marker";
+import {
+  normalizeFindingIdForMarker,
+  parseMarker,
+} from '../../../../policies/bugbot_finding_marker_policy';
 import {
   isExistingFindingFullyResolved,
   type ExistingByFindingId,
-} from "./types";
+} from "../../../../../domain/bugbot/finding";
 import { githubUsersMatch } from '../../../../../domain/github_user_policy';
 import { isHumanResolver } from '../../../../../domain/bugbot/review_state';
 import { renderUntrustedField } from '../../../../../domain/security/untrusted_content';

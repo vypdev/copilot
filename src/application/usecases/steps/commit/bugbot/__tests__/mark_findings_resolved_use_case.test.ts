@@ -4,11 +4,11 @@ import {
 } from "../mark_findings_resolved_use_case";
 import type {
   BugbotContext,
-  ExistingByFindingId,
 } from "../types";
+import type { ExistingByFindingId } from '../../../../../../domain/bugbot/finding';
 import type { Execution } from "../../../../../../data/model/execution";
 import { getCommentWatermark } from "../../../../../../utils/comment_watermark";
-import { buildMarker } from "../marker";
+import { buildMarker } from '../../../../../policies/bugbot_finding_marker_policy';
 
 jest.mock("../../../../../ports/logging_ports", () => ({
   logInfo: jest.fn(),
