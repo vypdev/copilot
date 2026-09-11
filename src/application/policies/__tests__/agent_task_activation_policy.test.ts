@@ -52,7 +52,7 @@ describe('activeAgentTasks', () => {
             .toEqual([]);
         expect(activeAgentTasks(event('issue_comment', '/copilot sync-branch'), noSingleAction(), 'vypbot'))
             .toEqual(['fixer']);
-        expect(activeAgentTasks(event('issue_comment', '/copilot updateBranch'), noSingleAction(), 'vypbot'))
+        expect(activeAgentTasks(event('issue_comment', '/copilot sync-branch'), noSingleAction(), 'vypbot'))
             .toEqual(['fixer']);
         expect(activeAgentTasks(event('issue_comment', '/copilot sync-branch --dry-run'), noSingleAction(), 'vypbot'))
             .toEqual([]);

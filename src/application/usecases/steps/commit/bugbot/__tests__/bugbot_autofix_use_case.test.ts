@@ -5,6 +5,7 @@
 import { BugbotAutofixUseCase } from "../bugbot_autofix_use_case";
 import { GitCommitAdapter } from "../../../../../../infrastructure/git_commit_adapter";
 import type { BugbotContext } from "../types";
+import { buildMarker } from '../../../../../policies/bugbot_finding_marker_policy';
 
 const mockExec = jest.fn();
 let workspaceInspectionCount = 0;
@@ -51,7 +52,7 @@ function contextWithFindings(ids: string[]) {
         };
         issueComments.push({
             id: 100 + i,
-            body: `## Finding ${id}\n\nDescription.\n\n<!-- copilot-bugbot finding_id:"${id}" resolved:false -->`,
+            body: `## Finding ${id}\n\nDescription.\n\n${buildMarker(id, false, 'fp-11111111', 'sf-11111111')}`,
         });
     });
     return {
@@ -72,14 +73,21 @@ describe("BugbotAutofixUseCase", () => {
             { fix: (request: { configuration: unknown; prompt: string }) => mockCopilotMessage(request.configuration, request.prompt) },
             {
                 issue: { listIssueComments: jest.fn() },
+                reviewState: { listPullRequestReviews: jest.fn().mockResolvedValue([]) },
+                navigation: { forPullRequest: jest.fn() },
+                rules: { loadRules: jest.fn().mockResolvedValue([]) },
                 pullRequest: {
                     getHeadBranchForIssue: jest.fn(),
                     getPullRequestReviewCommentBody: jest.fn(),
                     getOpenPullRequestNumbersByHeadBranch: jest.fn(),
                     listPullRequestReviewComments: jest.fn(),
                     getPullRequestHeadSha: jest.fn(),
-                    getChangedFiles: jest.fn(),
-                    getFilesWithFirstDiffLine: jest.fn(),
+                    getReviewDiffSnapshot: jest.fn().mockResolvedValue({
+                        changes: [],
+                        filesWithFirstDiffLine: [],
+                        filesWithDiffLocations: [],
+                    }),
+                    listPullRequestReviewThreadStates: jest.fn().mockResolvedValue({}),
                 },
             },
             new GitCommitAdapter(),

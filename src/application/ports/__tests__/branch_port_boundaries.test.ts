@@ -15,7 +15,6 @@ describe("branch port boundaries", () => {
       "branch_lifecycle_ports.ts",
       "branch_preparation_ports.ts",
       "branch_workflow_ports.ts",
-      "branch_merge_ports.ts",
     ]) {
       expect(existsSync(join(portsDirectory, file))).toBe(true);
     }

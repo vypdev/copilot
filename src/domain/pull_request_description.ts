@@ -12,7 +12,7 @@ export const DEFAULT_PULL_REQUEST_DESCRIPTION_MODE: PullRequestDescriptionMode =
 export const MANAGED_PULL_REQUEST_DESCRIPTION_START = '<!-- copilot:managed-pr-description -->';
 export const MANAGED_PULL_REQUEST_DESCRIPTION_END = '<!-- /copilot:managed-pr-description -->';
 
-/** Normalizes public configuration while keeping invalid values safe and backwards compatible. */
+/** Normalizes public configuration and keeps invalid values safe. */
 export function normalizePullRequestDescriptionMode(value: unknown): PullRequestDescriptionMode {
     const normalized = String(value ?? '').trim().toLowerCase();
     return PULL_REQUEST_DESCRIPTION_MODES.includes(normalized as PullRequestDescriptionMode)

@@ -2,6 +2,7 @@ import { logDebugInfo } from '../../../utils/logger';
 import type {
     PullRequestReviewThreadCommandPort,
     PullRequestReviewThreadStateQueryPort,
+    PullRequestReviewThreadState,
 } from '../../../application/ports/pull_request_review_comment_ports';
 import {
     PullRequestReviewOperationError,
@@ -22,10 +23,10 @@ export class PullRequestReviewThreadRepository implements PullRequestReviewThrea
         repository: string,
         pullNumber: number,
         token: string,
-    ): Promise<Record<string, boolean>> => {
+    ): Promise<Record<string, PullRequestReviewThreadState>> => {
         try {
             const client = this.githubClient.getClient(token);
-            const states: Record<string, boolean> = {};
+            const states: Record<string, PullRequestReviewThreadState> = {};
             let cursor: string | null = null;
             do {
                 const result: {
@@ -34,6 +35,7 @@ export class PullRequestReviewThreadRepository implements PullRequestReviewThrea
                             reviewThreads?: {
                                 nodes?: Array<{
                                     isResolved?: boolean;
+                                    resolvedBy?: { login?: string | null } | null;
                                     comments?: { nodes?: Array<{ id?: string | null } | null> | null } | null;
                                 } | null> | null;
                                 pageInfo?: { hasNextPage?: boolean; endCursor?: string | null } | null;
@@ -47,6 +49,7 @@ export class PullRequestReviewThreadRepository implements PullRequestReviewThrea
                                 reviewThreads(first: 100, after: $cursor) {
                                     nodes {
                                         isResolved
+                                        resolvedBy { login }
                                         comments(first: 100) { nodes { id } }
                                     }
                                     pageInfo { hasNextPage endCursor }
@@ -60,7 +63,12 @@ export class PullRequestReviewThreadRepository implements PullRequestReviewThrea
                 for (const thread of threads?.nodes ?? []) {
                     if (!thread) continue;
                     for (const comment of thread.comments?.nodes ?? []) {
-                        if (comment?.id) states[comment.id] = thread.isResolved === true;
+                        if (comment?.id) {
+                            states[comment.id] = {
+                                resolved: thread.isResolved === true,
+                                ...(thread.resolvedBy?.login ? { resolvedByLogin: thread.resolvedBy.login } : {}),
+                            };
+                        }
                     }
                 }
                 cursor = threads?.pageInfo?.hasNextPage
@@ -69,7 +77,7 @@ export class PullRequestReviewThreadRepository implements PullRequestReviewThrea
             } while (cursor !== null);
             return states;
         } catch (error) {
-            throw toPullRequestReviewOperationError(error, 'list-comments');
+            throw toPullRequestReviewOperationError(error, 'list-threads');
         }
     };
 

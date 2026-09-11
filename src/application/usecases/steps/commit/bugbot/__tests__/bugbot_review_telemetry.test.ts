@@ -1,11 +1,14 @@
 import { BugbotReviewTelemetry } from '../bugbot_review_telemetry';
 import type { Execution } from '../../../../../../data/model/execution';
+import { Ai } from '../../../../../../data/model/ai';
+import { buildBugbotReviewProjection } from '../../../../../../domain/bugbot/review_projection';
 
 describe('Bugbot review telemetry', () => {
     it('records aggregate metadata without storing prompt or response contents', async () => {
         let now = 1_000;
         const telemetry = new BugbotReviewTelemetry({
-            owner: 'org', repo: 'repo', pullRequest: { number: 7 }, ai: { getBugbotReviewConfiguration: () => ({ publicationMode: 'dry-run', effort: 'smart' }) },
+            owner: 'org', repo: 'repo', pullRequest: { number: 7 },
+            ai: new Ai('', 'model', false, [], false, 'low', 20, [], undefined, undefined, { publicationMode: 'dry-run', effort: 'smart' }),
         } as unknown as Execution, { now: () => now, isoNow: () => '2026-01-01T00:00:00.000Z' });
         await telemetry.measure('analysis', async () => { now += 25; });
         telemetry.observeContext({
@@ -22,5 +25,34 @@ describe('Bugbot review telemetry', () => {
         expect(JSON.stringify(snapshot)).not.toContain('private prompt');
         expect(JSON.stringify(snapshot)).not.toContain('secret patch');
         expect(JSON.stringify(snapshot)).not.toContain('private response');
+    });
+
+    it('uses the final provider-verified projection instead of intended mutation state', () => {
+        const telemetry = new BugbotReviewTelemetry({
+            owner: 'org', repo: 'repo', pullRequest: { number: 7 },
+            ai: new Ai('', 'model', false, [], false, 'low', 20),
+        } as unknown as Execution);
+        telemetry.observeContext({
+            existingByFindingId: {},
+            prContext: { prHeadSha: 'a'.repeat(40), prFiles: [], pathToFirstDiffLine: {}, changes: [] },
+        } as never, 'prompt');
+        telemetry.observePrepared({
+            activeFindings: [{ id: 'f1' }],
+            toPublish: [{ id: 'f1' }],
+            resolvedFindingIds: new Set(),
+            resolvedFindingResolutions: new Map(),
+            overflowCount: 0,
+        } as never);
+        telemetry.observeProjection(buildBugbotReviewProjection({
+            pullRequestNumber: 7,
+            analyzedHeadSha: 'a'.repeat(40),
+            findings: [{ id: 'f1', state: 'unknown' }],
+            errors: ['Publication is not observable.'],
+        }));
+
+        expect(telemetry.snapshot('failed').findingStates).toEqual(expect.objectContaining({
+            open: 0,
+            unknown: 1,
+        }));
     });
 });

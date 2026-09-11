@@ -46,7 +46,7 @@ const forbidden = [
 ];
 for (const value of forbidden) {
   if (docs.includes(value) || auditableContent.includes(value)) {
-    throw new Error(`Forbidden legacy implementation/documentation reference: ${value}`);
+    throw new Error(`Forbidden retired implementation/documentation reference: ${value}`);
   }
 }
 for (const value of ['AGENT_ALLOWED_MODEL_PROVIDERS', 'AGENT_ALLOWED_MODELS', 'opencode run --model']) {
@@ -68,6 +68,7 @@ const requiredPages = [
   'security-operations/operations/upgrade-rollback.mdx', 'bugbot/finding-publication.mdx',
   'bugbot/permissions.mdx', 'bugbot/verification-commands.mdx',
   'development/architecture.mdx', 'development/local-development.mdx',
+  'development/specifications.mdx',
   'development/testing.mdx', 'development/build-artifacts.mdx',
   'development/release-process.mdx', 'development/documentation-completeness-plan.mdx',
   'development/agent-functionality-audit.mdx',

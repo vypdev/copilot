@@ -36,7 +36,7 @@ describe('checkAgentAuthentication', () => {
         expect(result.variables).toEqual(['CURSOR_API_KEY']);
     });
 
-    it('supports Codex API key, access token or OpenAI API key', () => {
+    it('accepts only the canonical Codex API key environment variable', () => {
         expect(
             checkAgentAuthentication(
                 { provider: 'codex', model: 'gpt-5-codex', command: 'codex' },
@@ -46,15 +46,9 @@ describe('checkAgentAuthentication', () => {
         expect(
             checkAgentAuthentication(
                 { provider: 'codex', model: 'gpt-5-codex', command: 'codex' },
-                { CODEX_ACCESS_TOKEN: 'token' }
-            ).status
-        ).toBe('available');
-        expect(
-            checkAgentAuthentication(
-                { provider: 'codex', model: 'gpt-5-codex', command: 'codex' },
                 { OPENAI_API_KEY: 'key' }
-            ).status
-        ).toBe('available');
+            ).status,
+        ).toBe('missing');
     });
 
     it('recognizes a local ChatGPT Codex session without exposing token values', () => {
@@ -89,29 +83,29 @@ describe('checkAgentAuthentication', () => {
             const environment = {
                 CODEX_HOME: directory,
                 OPENAI_API_KEY: 'api-key-that-must-not-be-used',
-                CODEX_ACCESS_TOKEN: 'token-that-must-not-be-used',
+                CODEX_API_KEY: 'codex-key-that-must-not-be-used',
                 PATH: '/usr/bin',
             };
 
             const isolated = buildAgentCliEnvironment('codex', environment);
 
             expect(isolated).not.toHaveProperty('OPENAI_API_KEY');
-            expect(isolated).not.toHaveProperty('CODEX_ACCESS_TOKEN');
+            expect(isolated).not.toHaveProperty('CODEX_API_KEY');
             expect(isolated.PATH).toBe('/usr/bin');
         } finally {
             rmSync(directory, { recursive: true, force: true });
         }
     });
 
-    it('keeps the Codex API fallback when no local session is available', () => {
+    it('passes only the canonical Codex API key when no local session is available', () => {
         const environment = {
             OPENAI_API_KEY: 'api-key',
-            CODEX_ACCESS_TOKEN: 'access-token',
+            CODEX_API_KEY: 'codex-api-key',
             OPENCODE_API_KEY: 'opencode-key',
             CURSOR_API_KEY: 'cursor-key',
         };
         const isolated = buildAgentCliEnvironment('codex', environment);
-        expect(isolated).toMatchObject({ OPENAI_API_KEY: 'api-key', CODEX_ACCESS_TOKEN: 'access-token' });
+        expect(isolated).toEqual({ CODEX_API_KEY: 'codex-api-key' });
         expect(isolated).not.toHaveProperty('OPENCODE_API_KEY');
         expect(isolated).not.toHaveProperty('CURSOR_API_KEY');
     });
@@ -136,9 +130,10 @@ describe('checkAgentAuthentication', () => {
             DATABASE_URL: 'postgres://secret',
             AWS_SESSION_TOKEN: 'aws-token',
             OPENAI_API_KEY: 'selected-provider-key',
+            CODEX_API_KEY: 'codex-api-key',
         }, 'openai');
 
-        expect(isolated).toEqual({ PATH: '/usr/bin', OPENAI_API_KEY: 'selected-provider-key' });
+        expect(isolated).toEqual({ PATH: '/usr/bin', CODEX_API_KEY: 'codex-api-key' });
     });
 
     it('passes only the selected runtime credentials to each CLI', () => {
@@ -146,19 +141,22 @@ describe('checkAgentAuthentication', () => {
             OPENAI_API_KEY: 'openai-key',
             OPENCODE_API_KEY: 'opencode-key',
             CURSOR_API_KEY: 'cursor-key',
-            CODEX_ACCESS_TOKEN: 'codex-token',
+            CODEX_API_KEY: 'codex-key',
         };
 
         const openCodeEnvironment = buildAgentCliEnvironment('opencode', environment, 'openai');
         expect(openCodeEnvironment).toMatchObject({ OPENAI_API_KEY: 'openai-key', OPENCODE_API_KEY: 'opencode-key' });
         expect(openCodeEnvironment).not.toHaveProperty('CURSOR_API_KEY');
-        expect(openCodeEnvironment).not.toHaveProperty('CODEX_ACCESS_TOKEN');
+        expect(openCodeEnvironment).not.toHaveProperty('CODEX_API_KEY');
+
+        const codexEnvironment = buildAgentCliEnvironment('codex', environment, 'openai');
+        expect(codexEnvironment).toEqual({ CODEX_API_KEY: 'codex-key' });
 
         const cursorEnvironment = buildAgentCliEnvironment('cursor', environment);
         expect(cursorEnvironment).toMatchObject({ CURSOR_API_KEY: 'cursor-key' });
         expect(cursorEnvironment).not.toHaveProperty('OPENAI_API_KEY');
         expect(cursorEnvironment).not.toHaveProperty('OPENCODE_API_KEY');
-        expect(cursorEnvironment).not.toHaveProperty('CODEX_ACCESS_TOKEN');
+        expect(cursorEnvironment).not.toHaveProperty('CODEX_API_KEY');
     });
 
     it('isolates credentials for custom OpenCode model providers', () => {

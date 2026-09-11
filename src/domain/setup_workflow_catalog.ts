@@ -2,7 +2,7 @@ import type { SetupFeature, SetupFeatures } from './setup';
 
 interface SetupWorkflowDefinition {
     readonly file: string;
-    readonly feature: SetupFeature;
+    readonly feature: SetupFeature | readonly SetupFeature[];
 }
 
 const SETUP_WORKFLOWS: readonly SetupWorkflowDefinition[] = [
@@ -14,6 +14,7 @@ const SETUP_WORKFLOWS: readonly SetupWorkflowDefinition[] = [
     { file: 'copilot_pull_request_comment.yml', feature: 'pullRequestComments' },
     { file: 'release_workflow.yml', feature: 'release' },
     { file: 'hotfix_workflow.yml', feature: 'hotfix' },
+    { file: 'copilot_deployment_orchestration.yml', feature: ['release', 'hotfix'] },
     { file: 'agent-cli-provisioning.yml', feature: 'agentProvisioning' },
     { file: 'copilot_credential_health.yml', feature: 'credentialHealth' },
     { file: 'copilot_close_inactive_issues.yml', feature: 'inactiveIssueClosure' },
@@ -21,12 +22,17 @@ const SETUP_WORKFLOWS: readonly SetupWorkflowDefinition[] = [
 
 export function enabledSetupWorkflowFiles(features: SetupFeatures): string[] {
     return SETUP_WORKFLOWS
-        .filter(({ feature }) => features[feature] !== false)
+        .filter(({ feature }) => featureEnabled(feature, features))
         .map(({ file }) => file);
 }
 
 export function isSetupWorkflowEnabled(file: string, features?: SetupFeatures): boolean {
     if (!features) return true;
     const definition = SETUP_WORKFLOWS.find((candidate) => candidate.file === file);
-    return !definition || features[definition.feature] !== false;
+    return !definition || featureEnabled(definition.feature, features);
+}
+
+function featureEnabled(feature: SetupWorkflowDefinition['feature'], features: SetupFeatures): boolean {
+    const candidates = Array.isArray(feature) ? feature : [feature];
+    return candidates.some((candidate) => features[candidate] !== false);
 }

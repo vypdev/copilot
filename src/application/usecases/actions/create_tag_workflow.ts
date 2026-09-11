@@ -1,8 +1,8 @@
 import type { Execution } from '../../../data/model/execution';
 import { Result } from '../../../data/model/result';
 import type { RepositoryTagPort } from '../../ports/repository_release_ports';
-import { INPUT_KEYS } from '../../contracts/input_keys';
 import { logError, logWarn } from '../../ports/logging_ports';
+import { validateDeploymentContinuation } from '../../policies/deployment_continuation_guard';
 
 export async function runCreateTag(
     param: Execution,
@@ -11,12 +11,14 @@ export async function runCreateTag(
 ): Promise<Result[]> {
     const validationFailure = validateTagInput(param, taskId);
     if (validationFailure) return [validationFailure];
-    const tagName = `v${param.singleAction.version}`;
+    const operation = param.currentConfiguration.deploymentOrchestration!;
+    const version = operation.version;
+    const tagName = `v${version}`;
     try {
-        const sha1Tag = await repositoryTagPort.createTag(
+        const sha1Tag = await repositoryTagPort.createOrVerifyTagAtSha(
             param.owner,
             param.repo,
-            param.currentConfiguration.releaseBranch!,
+            operation.productionSha!,
             tagName,
             param.tokens.token,
         );
@@ -29,13 +31,14 @@ export async function runCreateTag(
 }
 
 function validateTagInput(param: Execution, taskId: string): Result | undefined {
-    if (param.singleAction.version.length === 0) {
-        logError('Version is not set.');
-        return new Result({ id: taskId, success: false, executed: true, errors: [`${INPUT_KEYS.SINGLE_ACTION_VERSION} is not set.`] });
+    const operation = param.currentConfiguration.deploymentOrchestration;
+    if (!operation) {
+        return new Result({ id: taskId, success: false, executed: true, errors: ['create_tag requires a durable deployment operation.'] });
     }
-    if (param.currentConfiguration.releaseBranch === undefined) {
-        logError('Working branch not found in configuration.');
-        return new Result({ id: taskId, success: false, executed: true, errors: ['Release branch not found in issue configuration.'] });
+    const continuationError = validateDeploymentContinuation(operation, param.singleAction.operationId, ["publishing"], param.singleAction.version);
+    if (continuationError) return new Result({ id: taskId, success: false, executed: true, errors: [continuationError] });
+    if (!operation.productionSha) {
+        return new Result({ id: taskId, success: false, executed: true, errors: ['The deployment operation has no accepted production SHA.'] });
     }
     return undefined;
 }

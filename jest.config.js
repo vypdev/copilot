@@ -21,6 +21,12 @@ module.exports = {
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'text-summary', 'lcov'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
+  moduleNameMapper: {
+    // @actions/github v8 exposes an ESM Octokit dependency. The published
+    // action is bundled by ncc, while Jest exercises this external boundary
+    // through explicit mocks and this stable test double.
+    '^@actions/github$': '<rootDir>/test-support/actions-github.cjs'
+  },
   transform: {
     '^.+\\.ts$': 'ts-jest'
   },

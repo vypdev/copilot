@@ -17,6 +17,11 @@ import type { BugbotReviewOutcome, BugbotTelemetryPort } from '../../../ports/bu
 import { BugbotReviewTelemetry } from './bugbot/bugbot_review_telemetry';
 import { analyzeBugbotRevision } from './bugbot/analyze_bugbot_revision_use_case';
 import { expectedBugbotHeadSha, hasNewerBugbotRevision, isLoadedBugbotRevisionSuperseded } from './bugbot/bugbot_review_freshness';
+import {
+    reconcileBugbotReviewState,
+    type BugbotPresentationReport,
+} from './bugbot/reconcile_bugbot_review_state_use_case';
+import type { BugbotFinding } from '../../../../domain/bugbot/finding';
 
 export interface DetectPotentialProblemsWorkflowDependencies {
     aiRepository: FindingsQueryPort;
@@ -37,7 +42,7 @@ export async function runDetectPotentialProblemsWorkflow(
     const telemetry = new BugbotReviewTelemetry(param);
     const publishTelemetry = async (outcome: BugbotReviewOutcome, category?: string) => {
         const snapshot = telemetry.snapshot(outcome, category);
-        if (param.ai?.getBugbotReviewConfiguration?.().telemetry !== false) {
+        if (param.ai.getBugbotReviewConfiguration().telemetry) {
             try {
                 await dependencies.telemetryPort?.publish(snapshot);
             } catch (error) {
@@ -61,7 +66,7 @@ export async function runDetectPotentialProblemsWorkflow(
             return [];
         }
         if (param.isPullRequest && param.inputs?.pull_request?.draft === true
-            && !param.ai?.getBugbotReviewConfiguration?.().reviewDrafts) {
+            && !param.ai.getBugbotReviewConfiguration().reviewDrafts) {
             return await complete(skippedDraftResult(), 'skipped');
         }
 
@@ -78,22 +83,26 @@ export async function runDetectPotentialProblemsWorkflow(
         }
         const prepared = await analyzeBugbotRevision(param, context, { agent: dependencies.aiRepository, telemetry });
         if (prepared === undefined) {
-            return await complete(noAnalysisResult(), 'failed');
+            const analysisError = new Error('The configured agent returned no potential-problem analysis.');
+            const presentation = param.ai.getBugbotReviewConfiguration().publicationMode === 'publish'
+                ? await telemetry.measure('projection', () => reconcileReviewState({
+                    execution: param,
+                    loadedContext: context,
+                    activeFindings: [],
+                    mutationErrors: [analysisError],
+                    dependencies,
+                }))
+                : undefined;
+            if (presentation) telemetry.observeProjection(presentation.projection);
+            return await complete(noAnalysisResult(presentation), 'failed');
         }
         telemetry.observePrepared(prepared);
         if (await telemetry.measure('freshness', () => hasNewerBugbotRevision(param, context, dependencies.contextPorts))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
-        if (param.ai?.getBugbotReviewConfiguration?.().publicationMode === 'dry-run') {
+        if (param.ai.getBugbotReviewConfiguration().publicationMode === 'dry-run') {
             return await complete(dryRunResult(prepared, context), 'dry-run');
         }
-        if (prepared.toPublish.length === 0 && prepared.resolvedFindingIds.size === 0) {
-            return await complete(noFindingsResult(projectBugbotFindingStatuses(
-                context.existingByFindingId,
-                prepared.activeFindings ?? prepared.toPublish,
-            ).counts), 'no-findings');
-        }
-
         const resolutionErrors = await telemetry.measure('publication', () => applyDetectedFindings(
             param,
             context,
@@ -101,10 +110,26 @@ export async function runDetectPotentialProblemsWorkflow(
             dependencies.publicationPorts,
             dependencies.resolutionPorts,
         ));
+        if (await telemetry.measure('post-publication-freshness', () =>
+            hasNewerBugbotRevision(param, context, dependencies.contextPorts))) {
+            return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
+        }
+        const presentation = await telemetry.measure('projection', () =>
+            reconcileReviewState({
+                execution: param,
+                loadedContext: context,
+                activeFindings: prepared.activeFindings ?? prepared.toPublish,
+                expectedPublishedFindings: prepared.toPublish,
+                mutationErrors: resolutionErrors,
+                dependencies,
+            }));
+        if (presentation) telemetry.observeProjection(presentation.projection);
         logInfo(`Bugbot workflow completed in ${Date.now() - workflowStartedAt}ms.`);
+        const finalErrors = presentation?.errors ?? resolutionErrors;
+        const hasChanges = prepared.toPublish.length > 0 || prepared.resolvedFindingIds.size > 0;
         return await complete(
-            detectionResult(prepared, context, resolutionErrors),
-            resolutionErrors.length === 0 ? 'completed' : 'failed',
+            detectionResult(prepared, context, finalErrors, presentation),
+            finalErrors.length === 0 ? (hasChanges ? 'completed' : 'no-findings') : 'failed',
         );
     } catch (error) {
         const normalizedError = error instanceof PullRequestReviewOperationError
@@ -196,7 +221,7 @@ async function resolveContextOptions(
 }
 
 function shouldSkipDetection(param: Execution): boolean {
-    if (!isAgentConfigurationReady(param.ai?.getAgentConfiguration(param.isPullRequest ? 'reviewer' : 'findings'))) {
+    if (!isAgentConfigurationReady(param.ai.getAgentConfiguration(param.isPullRequest ? 'reviewer' : 'findings'))) {
         logDebugInfo('Agent not configured; skipping potential problems detection.');
         return true;
     }
@@ -207,48 +232,72 @@ function shouldSkipDetection(param: Execution): boolean {
     return false;
 }
 
-function noAnalysisResult(): Result {
+function noAnalysisResult(presentation?: BugbotPresentationReport): Result {
     logDebugInfo('DetectPotentialProblems: No response from configured agent.');
+    const errors = presentation?.errors.length
+        ? [...presentation.errors]
+        : [new Error('The configured agent returned no potential-problem analysis.')];
     return new Result({
         id: TASK_ID,
         success: false,
         executed: true,
-        errors: [new Error('The configured agent returned no potential-problem analysis.')],
-    });
-}
-
-function noFindingsResult(findingStates: Readonly<Record<string, number>>): Result {
-    return new Result({
-        id: TASK_ID,
-        success: true,
-        executed: true,
-        steps: [`Potential problems detection completed (no new findings, no resolved). States: ${formatStateCounts(findingStates)}.`],
-        payload: { findingStates },
+        ...(presentation ? {
+            steps: [`Bugbot analysis failed; the verified PR status was reconciled (${formatStateCounts(presentation.projection.counts)}).`],
+        } : {}),
+        errors,
+        ...(presentation ? {
+            payload: {
+                findingStates: presentation.projection.counts,
+                reviewProjection: presentation.projection,
+                statusCardOperation: presentation.statusCardOperation,
+                reviewUpdates: presentation.reviewUpdates,
+                pendingReviewUpdates: presentation.pendingReviewUpdates,
+            },
+        } : {}),
     });
 }
 
 function detectionResult(
     prepared: PreparedBugbotFindings,
     context: BugbotContext,
-    resolutionErrors: Error[],
+    resolutionErrors: readonly Error[],
+    presentation?: BugbotPresentationReport,
 ): Result {
-    const stepParts = [`${prepared.toPublish.length} new/current finding(s) from configured agent`];
+    const hasFindingChanges = prepared.toPublish.length > 0 || prepared.resolvedFindingIds.size > 0;
+    const stepParts = hasFindingChanges
+        ? [`${prepared.toPublish.length} new/current finding(s) from configured agent`]
+        : ['no new findings, no resolved'];
     if (prepared.overflowCount > 0) stepParts.push(`${prepared.overflowCount} more not published (see summary comment)`);
     if (prepared.resolvedFindingIds.size > 0) stepParts.push(`${prepared.resolvedFindingIds.size} marked as resolved by configured agent`);
-    const statusSummary = projectBugbotFindingStatuses(
-        context.existingByFindingId,
-        prepared.activeFindings ?? prepared.toPublish,
-        prepared.resolvedFindingIds,
-        prepared.resolvedFindingResolutions,
-    );
+    const statusSummary = presentation?.projection ?? projectBugbotFindingStatuses(
+            context.existingByFindingId,
+            prepared.activeFindings ?? prepared.toPublish,
+            prepared.resolvedFindingIds,
+            prepared.resolvedFindingResolutions,
+        );
     stepParts.push(`states: ${formatStateCounts(statusSummary.counts)}`);
+    if (presentation) {
+        stepParts.push(`status card: ${presentation.statusCardOperation}`);
+        stepParts.push(`review status blocks updated: ${presentation.reviewUpdates}`);
+        if (presentation.pendingReviewUpdates > 0) {
+            stepParts.push(`review status blocks pending: ${presentation.pendingReviewUpdates}`);
+        }
+    }
     return new Result({
         id: TASK_ID,
         success: resolutionErrors.length === 0,
         executed: true,
         steps: [`Potential problems detection completed. ${stepParts.join('; ')}.`],
-        errors: resolutionErrors,
-        payload: { findingStates: statusSummary.counts },
+        errors: [...resolutionErrors],
+        payload: {
+            findingStates: statusSummary.counts,
+            ...(presentation ? {
+                reviewProjection: presentation.projection,
+                statusCardOperation: presentation.statusCardOperation,
+                reviewUpdates: presentation.reviewUpdates,
+                pendingReviewUpdates: presentation.pendingReviewUpdates,
+            } : {}),
+        },
     });
 }
 
@@ -257,4 +306,49 @@ function formatStateCounts(counts: Readonly<Record<string, number>>): string {
         .filter(([, count]) => count > 0)
         .map(([state, count]) => `${state}=${count}`)
         .join(', ') || 'none';
+}
+
+async function reconcileReviewState(input: {
+    readonly execution: Execution;
+    readonly loadedContext: BugbotContext;
+    readonly activeFindings: readonly BugbotFinding[];
+    readonly expectedPublishedFindings?: readonly BugbotFinding[];
+    readonly mutationErrors?: readonly Error[];
+    readonly dependencies: DetectPotentialProblemsWorkflowDependencies;
+}): Promise<BugbotPresentationReport | undefined> {
+    const pullRequestNumber = input.loadedContext.openPrNumbers[0];
+    const analyzedHeadSha = input.loadedContext.prContext?.prHeadSha;
+    if (!pullRequestNumber || !analyzedHeadSha) return undefined;
+    return reconcileBugbotReviewState({
+        target: {
+            owner: input.execution.owner,
+            repository: input.execution.repo,
+            pullRequestNumber,
+            ...(input.execution.issueNumber > 0
+                ? { linkedIssueNumber: input.execution.issueNumber }
+                : {}),
+            analyzedHeadSha,
+            ...(input.execution.tokenUser
+                ? { trustedAuthorLogin: input.execution.tokenUser }
+                : {}),
+            locale: input.execution.locale?.pullRequest ?? 'en-US',
+        },
+        credential: { token: input.execution.tokens.token },
+        loadedContext: input.loadedContext,
+        activeFindings: input.activeFindings,
+        ...(input.expectedPublishedFindings
+            ? { expectedPublishedFindings: input.expectedPublishedFindings }
+            : {}),
+        ...(input.mutationErrors ? { mutationErrors: input.mutationErrors } : {}),
+        snapshotPorts: {
+            issueComments: input.dependencies.contextPorts.issue,
+            pullRequest: input.dependencies.contextPorts.pullRequest,
+            reviews: input.dependencies.contextPorts.reviewState,
+            navigation: input.dependencies.contextPorts.navigation,
+        },
+        presentationPorts: {
+            comments: input.dependencies.publicationPorts.issueComments,
+            reviews: input.dependencies.publicationPorts.reviewState,
+        },
+    });
 }

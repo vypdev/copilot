@@ -203,7 +203,7 @@ The explicit `--workflow-pat` and `--secret` options are provided for automation
 
 ### `copilot doctor`
 
-Checks the setup PAT, selected workflow templates, Repository Variables, Secret presence, and remote credential health. It never creates, updates, deletes, or overwrites configuration. The health workflow may create a normal `workflow_dispatch` run, but it does not change repository configuration or expose Secret values.
+Checks the setup PAT, selected workflow templates, Repository Variables, Secret presence, remote credential health, and live merge-queue readiness for production and development targets. It combines classic branch protection with effective rulesets, reports each target as pass/warn/fail, and detects drift in required workflow/check producers. Active release branches are discovered and revalidated at hotfix runtime. Doctor never creates, updates, deletes, or overwrites repository configuration. The credential health workflow may create a normal `workflow_dispatch` run, but it does not change repository configuration or expose Secret values.
 
 ```bash
 copilot doctor

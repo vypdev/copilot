@@ -50,30 +50,7 @@ export interface WorkflowRunsRetryDependencies {
 export function withWorkflowRunsRetry<T>(
     operation: () => Promise<T>,
     dependencies: WorkflowRunsRetryDependencies,
-): Promise<T>;
-export function withWorkflowRunsRetry<T>(
-    operation: () => Promise<T>,
-    delayPort: WorkflowPollingDelayPort,
-    policy: WorkflowRunsRetryPolicy,
-): Promise<T>;
-export function withWorkflowRunsRetry<T>(
-    operation: () => Promise<T>,
-    dependenciesOrDelayPort: WorkflowRunsRetryDependencies | WorkflowPollingDelayPort,
-    legacyPolicy?: WorkflowRunsRetryPolicy,
 ): Promise<T> {
-    const dependencies: WorkflowRunsRetryDependencies = 'clock' in dependenciesOrDelayPort
-        ? dependenciesOrDelayPort
-        : {
-            delayPort: dependenciesOrDelayPort,
-            clock: { nowMilliseconds: () => Date.now() },
-            random: { next: () => 0.5 },
-            policy: {
-                ...WORKFLOW_RUNS_RETRY_POLICY,
-                ...legacyPolicy,
-                jitterRatio: 0,
-            },
-            deadlineAtMilliseconds: Number.POSITIVE_INFINITY,
-        };
     return executeWithRetry(operation, dependencies, 0, 0);
 }
 

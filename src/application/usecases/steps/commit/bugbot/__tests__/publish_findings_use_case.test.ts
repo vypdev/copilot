@@ -3,8 +3,9 @@
  */
 
 import { publishFindings as publishFindingsImpl, type PublishFindingsParam } from "../publish_findings_use_case";
-import type { BugbotFinding } from "../types";
+import type { BugbotFinding } from '../../../../../../domain/bugbot/finding';
 import type { BugbotContext } from "../types";
+import { Ai } from "../../../../../../data/model/ai";
 
 jest.mock("../../../../../../utils/logger", () => ({
     logDebugInfo: jest.fn(),
@@ -16,6 +17,7 @@ const mockUpdateComment = jest.fn();
 const mockCreateReviewWithComments = jest.fn();
 const mockUpdatePullRequestReviewComment = jest.fn();
 const mockUnresolvePullRequestReviewThread = jest.fn();
+const mockUpdatePullRequestReview = jest.fn();
 
 
 
@@ -29,6 +31,7 @@ function publishFindings(param: Omit<PublishFindingsParam, "ports">) {
                 updatePullRequestReviewComment: mockUpdatePullRequestReviewComment,
                 unresolvePullRequestReviewThread: mockUnresolvePullRequestReviewThread,
             },
+            reviewState: { updatePullRequestReview: mockUpdatePullRequestReview },
         },
     });
 }
@@ -38,6 +41,8 @@ function finding(overrides: Partial<BugbotFinding> = {}): BugbotFinding {
         id: "f1",
         title: "Test",
         description: "Desc",
+        fingerprint: 'fp-11111111',
+        semanticFingerprint: 'sf-11111111',
         ...overrides,
     };
 }
@@ -59,6 +64,7 @@ const baseExecution = {
     repo: "r",
     issueNumber: 42,
     tokens: { token: "t" },
+    ai: new Ai("", "model", false, [], false, "low", 20),
 } as Parameters<typeof publishFindings>[0]["execution"];
 
 describe("publishFindings", () => {
@@ -68,6 +74,7 @@ describe("publishFindings", () => {
         mockCreateReviewWithComments.mockReset().mockResolvedValue(undefined);
         mockUpdatePullRequestReviewComment.mockReset().mockResolvedValue(undefined);
         mockUnresolvePullRequestReviewThread.mockReset().mockResolvedValue(undefined);
+        mockUpdatePullRequestReview.mockReset().mockResolvedValue(undefined);
     });
 
     it("adds issue comment for new finding", async () => {
@@ -105,7 +112,14 @@ describe("publishFindings", () => {
             execution: baseExecution,
             context: baseContext({
                 existingByFindingId: {
-                    f1: { issue: { commentId: 100, resolved: false } },
+                    f1: {
+                        issue: {
+                            commentId: 100,
+                            resolved: false,
+                            fingerprint: "fp-11111111",
+                            semanticFingerprint: "sf-11111111",
+                        },
+                    },
                 },
             }),
             findings: [finding()],
@@ -142,7 +156,8 @@ describe("publishFindings", () => {
             ]),
             "t"
         );
-        expect(mockCreateReviewWithComments.mock.calls[0][4]).toContain('/copilot fix all');
+        expect(mockCreateReviewWithComments.mock.calls[0][4]).toContain('Bugbot review snapshot');
+        expect(mockCreateReviewWithComments.mock.calls[0][4]).not.toContain('active potential problem');
     });
 
     it('traces included, truncated, and omitted rule sources in the review summary without rule contents', async () => {
@@ -322,6 +337,8 @@ describe("publishFindings", () => {
                             commentIdentity: "PRRC_300",
                             pullRequestNumber: 50,
                             resolved: false,
+                            fingerprint: "fp-11111111",
+                            semanticFingerprint: "sf-11111111",
                         },
                     },
                 },
@@ -344,7 +361,7 @@ describe("publishFindings", () => {
         expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
     });
 
-    it("reopens a resolved PR thread before refreshing a finding that is active again", async () => {
+    it("persists the open marker before reopening a finding that is active again", async () => {
         await publishFindings({
             execution: baseExecution,
             context: baseContext({
@@ -355,6 +372,8 @@ describe("publishFindings", () => {
                             commentIdentity: "PRRC_resolved",
                             pullRequestNumber: 50,
                             resolved: true,
+                            fingerprint: "fp-11111111",
+                            semanticFingerprint: "sf-11111111",
                         },
                     },
                 },
@@ -371,9 +390,41 @@ describe("publishFindings", () => {
             "o", "r", 50, "PRRC_resolved", "t",
         );
         expect(mockUpdatePullRequestReviewComment).toHaveBeenCalledTimes(1);
-        expect(mockUnresolvePullRequestReviewThread.mock.invocationCallOrder[0]).toBeLessThan(
-            mockUpdatePullRequestReviewComment.mock.invocationCallOrder[0],
+        expect(mockUpdatePullRequestReviewComment.mock.invocationCallOrder[0]).toBeLessThan(
+            mockUnresolvePullRequestReviewThread.mock.invocationCallOrder[0],
         );
+    });
+
+    it('does not let model output silently reopen a human dismissal', async () => {
+        await publishFindings({
+            execution: baseExecution,
+            context: baseContext({
+                existingByFindingId: {
+                    f1: {
+                        pullRequest: {
+                            commentIdentity: 'PRRC_dismissed',
+                            pullRequestNumber: 50,
+                            resolved: true,
+                            threadResolved: true,
+                            resolution: 'dismissed',
+                            fingerprint: 'fp-11111111',
+                            semanticFingerprint: 'sf-11111111',
+                        },
+                    },
+                },
+                openPrNumbers: [50],
+                prContext: {
+                    prHeadSha: 'sha1',
+                    prFiles: [{ filename: 'src/foo.ts', status: 'modified' }],
+                    pathToFirstDiffLine: { 'src/foo.ts': 5 },
+                },
+            }),
+            findings: [finding({ file: 'src/foo.ts', line: 5 })],
+        });
+
+        expect(mockUpdatePullRequestReviewComment).not.toHaveBeenCalled();
+        expect(mockUnresolvePullRequestReviewThread).not.toHaveBeenCalled();
+        expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
     });
 
     it("adds overflow comment when overflowCount > 0", async () => {
@@ -436,7 +487,14 @@ describe("publishFindings", () => {
             execution: baseExecution,
             context: baseContext({
                 existingByFindingId: {
-                    f1: { issue: { commentId: 100, resolved: false } },
+                    f1: {
+                        issue: {
+                            commentId: 100,
+                            resolved: false,
+                            fingerprint: "fp-11111111",
+                            semanticFingerprint: "sf-11111111",
+                        },
+                    },
                 },
             }),
             findings: [finding()],
@@ -490,6 +548,8 @@ describe("publishFindings", () => {
                             commentIdentity: "PRRC_300",
                             pullRequestNumber: 99,
                             resolved: false,
+                            fingerprint: "fp-11111111",
+                            semanticFingerprint: "sf-11111111",
                         },
                     },
                 },

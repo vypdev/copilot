@@ -21,6 +21,10 @@ export async function runSetupExecution(execution: Execution, dependencies: Setu
     if (await resolveExecutionIssueNumber(execution, dependencies.issueSetupPort) === undefined) return;
 
     execution.previousConfiguration = await loadPreviousConfiguration(execution, dependencies.configurationPort);
+    execution.currentConfiguration.deploymentOrchestration = execution.previousConfiguration?.deploymentOrchestration;
+    execution.currentConfiguration.releaseOriginBranch = execution.previousConfiguration?.releaseOriginBranch;
+    execution.currentConfiguration.releaseOriginSha = execution.previousConfiguration?.releaseOriginSha;
+    execution.currentConfiguration.hotfixOriginSha = execution.previousConfiguration?.hotfixOriginSha;
     await loadIssueLabels(execution, dependencies.issueSetupPort);
     execution.release.active = execution.labels.isRelease;
     execution.hotfix.active = execution.labels.isHotfix;

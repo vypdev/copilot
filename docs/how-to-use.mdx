@@ -149,7 +149,7 @@ The complete command reference, including every supported option, is in [Workflo
     - **Branch name prefixes**: The action uses inputs like `feature-tree`, `bugfix-tree`, `release-tree`, `hotfix-tree` (defaults: `feature`, `bugfix`, `release`, `hotfix`) to create branch names. If you change them, branch names will follow the new prefixes; keep templates and docs in sync.
     - **Project columns**: Default column names are "Todo" and "In Progress". If you rename columns in GitHub Projects, set the corresponding action inputs (`project-column-issue-created`, `project-column-issue-in-progress`, etc.) so the action moves issues/PRs to the correct columns.
 
-    **Bugbot autofix (issue/PR comments):** Workflows that run on `issue_comment` or `pull_request_review_comment` (so users can ask the bot to fix reported findings) must grant **`contents: write`** so the action can commit and push. On **issue_comment**, the action resolves the branch from an open PR that references the issue and checks out that branch before applying fixes and pushing. See [Bugbot autofix](/bugbot/autofix) and [Troubleshooting → Bugbot autofix](/security-operations/operations/troubleshooting#bugbot-autofix).
+    **Bugbot autofix (issue/PR comments):** Workflows that run on `issue_comment` or `pull_request_review_comment` (so users can ask the bot to fix reported findings) must grant **`contents: write`** so the action can commit and push. On **issue_comment**, the action resolves the branch from an open PR that references the issue and checks out that branch before applying fixes and pushing. See [Bugbot autofix](/bugbot/autofix) and [Troubleshooting](/security-operations/operations/troubleshooting).
   </Step>
 </Steps>
 
@@ -267,8 +267,6 @@ The setup creates three related label dimensions. The durable lifecycle phase is
 | `state-awaiting-maintainer-label` | `state:awaiting-maintainer` | Waiting for maintainer response, approval, or merge |
 | `state-awaiting-issue-author-label` | `state:awaiting-issue-author` | Waiting for information or changes from the issue author |
 
-Existing `copilot:state:*` labels are not migrated automatically and can be removed manually.
-
 ---
 
 ## Issue types created by `copilot setup` (defaults)
@@ -310,7 +308,10 @@ Used to build branch names (e.g. `feature/42-my-title`). Configurable via action
 
 ### `setup/workflows/`
 
-All `.yml` / `.yaml` files here are copied to `.github/workflows/`. Default filenames and roles:
+These are the available setup-managed workflows. `copilot setup` copies the
+files required by the selected features to `.github/workflows/`; a manual
+installation must preserve the dependencies described below. Default filenames
+and roles:
 
 | File | Purpose |
 |------|--------|
@@ -320,13 +321,29 @@ All `.yml` / `.yaml` files here are copied to `.github/workflows/`. Default file
 | `copilot_branch_sync.yml` | Lightweight push observer on all branches: detects parent/working drift and maintains a synchronization notice without loading Bugbot or an agent. |
 | `copilot_issue_comment.yml` | Runs on issue comment: e.g. Think action (answer questions). |
 | `copilot_pull_request_comment.yml` | Runs on PR review comment: e.g. translation checks. |
-| `release_workflow.yml` | **Manual** (`workflow_dispatch`): release flow (version, changelog, tag, release, deployed). Filename must match the action input `release-workflow` (default: `release_workflow.yml`) so the Issue workflow can dispatch it when the **deploy** label is added. |
-| `hotfix_workflow.yml` | **Manual** (`workflow_dispatch`): hotfix flow. Filename must match the action input `hotfix-workflow` (default: `hotfix_workflow.yml`). |
+| `release_workflow.yml` | **Manual** (`workflow_dispatch`) with internal `prepare` and `publish` modes: prepares a release from its frozen development cut, promotes it to production, then publishes only the accepted production commit and starts reconciliation. Filename must match `release-workflow`. |
+| `hotfix_workflow.yml` | **Manual** (`workflow_dispatch`) with internal `prepare` and `publish` modes: prepares a hotfix from the selected production tag, promotes it, then publishes and reconciles the accepted production commit. Filename must match `hotfix-workflow`. |
+| `copilot_deployment_orchestration.yml` | Runs on marked `pull_request: closed` events: verifies the operation identity, repository, branches, and SHAs, then resumes publication or final reconciliation without polling inside the original runner. |
 | `agent-cli-provisioning.yml` | **Manual** (`workflow_dispatch`): verifies that the selected agent runtime binaries and their non-interactive command surfaces are available on the target runner. |
 | `copilot_credential_health.yml` | **Manual** (`workflow_dispatch`): validates selected remote credentials without exposing their values; used by `copilot doctor`. |
 | `copilot_close_inactive_issues.yml` | **Scheduled every 6 hours** (also `workflow_dispatch`): closes open issues waiting for a maintainer or issue author after the configured inactivity threshold. Opt-in. |
 
-Each Copilot workflow step passes at least `token`. Agent-capable workflows also pass the configured CLI inputs via `vars.*`; `copilot_branch_sync.yml` deliberately does not. The **release** and **hotfix** workflows are **dispatched by the action** when an issue has the deploy label and the corresponding release/hotfix context (branch, version, etc.); they are not triggered by issue events directly.
+Each Copilot workflow step passes at least `token`. Agent-capable workflows also
+pass the configured CLI inputs via `vars.*`; `copilot_branch_sync.yml`
+deliberately does not. The **release** and **hotfix** workflows are dispatched by
+the action when an issue has the deploy label and the corresponding
+release/hotfix context; they are not triggered by issue events directly.
+The continuation and every enabled publishing workflow must be installed
+together on the default branch before the first operation. This project enables
+both release and hotfix, so it installs all three files. The close event cannot
+be resumed by a continuation that exists only on the release or hotfix branch.
+
+The distributed release/hotfix templates are registry-neutral. Their `publish`
+mode creates or verifies the production tag and GitHub Release and provides a
+clearly marked deployment extension point. This repository's own files under
+`.github/workflows/` additionally compile, validate, smoke-test, and publish
+`@vypdev/copilot` through npm OIDC; consumer setup templates never publish this
+package.
 
 The `agent-cli-provisioning.yml` workflow checks the selected runtime binaries,
 versions, and non-interactive help commands without making a paid model request. Runtime
@@ -343,6 +360,34 @@ project variables, and the AI/Bugbot variables. The workflow templates read
 `*_COMMAND` pass-through variables too, but custom commands are executable
 configuration and must be reviewed and added deliberately; setup does not invent
 them from a model selection.
+
+Release/hotfix setup also writes these bounded orchestration Variables:
+
+| Repository Variable | Action input |
+|---|---|
+| `RELEASE_RECONCILIATION_STRATEGY` | `release-reconciliation-strategy` |
+| `HOTFIX_RECONCILIATION_STRATEGY` | `hotfix-reconciliation-strategy` |
+| `RECONCILIATION_PR_MODE` | `reconciliation-pr-mode` |
+| `MERGE_QUEUE_CHECK_ATTESTATIONS` | `merge-queue-check-attestations` |
+| `RECONCILIATION_BACKMERGE_MODE` | `reconciliation-backmerge-mode` |
+| `HOTFIX_ACTIVE_RELEASE_POLICY` | `hotfix-active-release-policy` |
+| `RECONCILIATION_TREE` | `reconciliation-tree` |
+| `RECONCILIATION_CLEANUP` | `reconciliation-cleanup` |
+| `RECONCILIATION_ISSUE_COMPLETION` | `reconciliation-issue-completion` |
+| `ORCHESTRATION_PRESENTATION_MODE` | `orchestration-presentation-mode` |
+| `ORCHESTRATION_DIAGRAMS` | `orchestration-diagrams` |
+| `ORCHESTRATION_COMMENT_MODE` | `orchestration-comment-mode` |
+
+`MERGE_QUEUE_CHECK_ATTESTATIONS` defaults to `[]`. Setup accepts it as a
+structured YAML array and serializes it as bounded JSON for the Action. It is a
+reviewed exception only for required producers Copilot cannot prove
+automatically; it is not a wildcard or a bypass for known-incompatible
+workflows.
+
+The project-only npm visibility Variables are
+`NPM_VISIBILITY_POLL_INTERVAL_SECONDS` (default `20`, allowed `10`–`60`) and
+`NPM_VISIBILITY_TIMEOUT_SECONDS` (default `120`, allowed `60`–`900`). They are
+not Action inputs and are not created for registry-neutral consumer workflows.
 
 When enabled, inactivity cleanup also creates `INACTIVITY_THRESHOLD_HOURS` (168
 by default). The scheduled workflow closes only issues marked

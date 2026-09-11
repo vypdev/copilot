@@ -88,7 +88,7 @@ function makeIssue(inputs?: Record<string, unknown>): Issue {
 }
 
 function makePullRequest(inputs?: Record<string, unknown>): PullRequest {
-  return new PullRequest(0, 0, 0, inputs as never);
+  return new PullRequest(0, 0, inputs as never);
 }
 
 function makeBranches(): Branches {
@@ -196,7 +196,7 @@ function buildExecution(inputs?: Record<string, unknown>, overrides?: Partial<{
     emoji: new Emoji(false, ''),
     images: makeImages(),
     tokens: new Tokens('token'),
-    ai: new Ai('http://localhost', 'model', false, false, [], false, 'High', 10, []),
+    ai: new Ai('http://localhost', 'model', false, [], false, 'High', 10, []),
     labels,
     issueTypes: makeIssueTypes(),
     locale: new Locale('en', 'en'),
@@ -403,7 +403,7 @@ describe('Execution', () => {
       const pullRequest = makePullRequest();
       const emoji = new Emoji(true, 'x');
       const tokens = new Tokens('t');
-      const ai = new Ai('u', 'm', true, true, [], true, 'L', 5, []);
+      const ai = new Ai('u', 'm', true, [], true, 'L', 5, []);
       const labels = makeLabels();
       const issueTypes = makeIssueTypes();
       const locale = new Locale('es', 'es');

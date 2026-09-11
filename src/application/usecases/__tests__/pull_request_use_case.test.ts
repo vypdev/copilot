@@ -29,7 +29,7 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
       isClosed: false,
       isSynchronize: false,
     },
-    ai: { getAiPullRequestDescription: () => false },
+    ai: { getAiMembersOnly: () => false, getPullRequestDescriptionMode: () => 'disabled' },
     ...overrides,
   } as unknown as Execution;
 }
@@ -120,7 +120,7 @@ describe("PullRequestUseCase", () => {
         isMerged: false,
         action: "edited",
       },
-      ai: { getAiPullRequestDescription: () => true },
+      ai: { getAiMembersOnly: () => false, getPullRequestDescriptionMode: () => 'replace' },
     });
 
     await useCase.invoke(param);
@@ -131,7 +131,7 @@ describe("PullRequestUseCase", () => {
     expect(mockAssignMemberInvoke).not.toHaveBeenCalled();
   });
 
-  it("when PR is opened and ai getAiPullRequestDescription, calls UpdatePullRequestDescriptionUseCase", async () => {
+  it("when a PR opens in replace mode, calls UpdatePullRequestDescriptionUseCase", async () => {
     mockUpdateDescriptionInvoke.mockResolvedValue([
       new Result({ id: "desc", success: true, executed: true, steps: [] }),
     ]);
@@ -148,7 +148,7 @@ describe("PullRequestUseCase", () => {
         isMerged: false,
         action: "opened",
       },
-      ai: { getAiPullRequestDescription: () => true },
+      ai: { getAiMembersOnly: () => false, getPullRequestDescriptionMode: () => 'replace' },
     });
     const results = await useCase.invoke(param);
 
@@ -169,7 +169,7 @@ describe("PullRequestUseCase", () => {
         isMerged: false,
         action: "synchronize",
       },
-      ai: { getAiPullRequestDescription: () => true },
+      ai: { getAiMembersOnly: () => false, getPullRequestDescriptionMode: () => 'replace' },
     });
     await useCase.invoke(param);
 

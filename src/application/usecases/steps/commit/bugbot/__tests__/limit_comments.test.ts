@@ -4,7 +4,7 @@
 
 import { BUGBOT_MAX_COMMENTS } from '../../../../../policies/bugbot_constants';
 import { applyCommentLimit } from '../limit_comments';
-import type { BugbotFinding } from '../types';
+import type { BugbotFinding } from '../../../../../../domain/bugbot/finding';
 
 function finding(id: string, title: string): BugbotFinding {
     return { id, title, description: 'D' };

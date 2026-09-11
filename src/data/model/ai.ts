@@ -12,7 +12,6 @@ import {
 } from '../../domain/bugbot/review_configuration';
 
 export class Ai {
-    private aiPullRequestDescription: boolean;
     private aiMembersOnly: boolean;
     private aiIgnoreFiles: string[];
     private aiIncludeReasoning: boolean;
@@ -26,7 +25,6 @@ export class Ai {
     constructor(
         _configurationSource: string,
         model: string,
-        aiPullRequestDescription: boolean,
         aiMembersOnly: boolean,
         aiIgnoreFiles: string[],
         aiIncludeReasoning: boolean,
@@ -40,7 +38,6 @@ export class Ai {
         pullRequestDescriptionMode: PullRequestDescriptionMode = DEFAULT_PULL_REQUEST_DESCRIPTION_MODE,
         bugbotReviewConfiguration: Partial<BugbotReviewConfiguration> = DEFAULT_BUGBOT_REVIEW_CONFIGURATION,
     ) {
-        this.aiPullRequestDescription = aiPullRequestDescription;
         this.aiMembersOnly = aiMembersOnly;
         this.aiIgnoreFiles = aiIgnoreFiles;
         this.aiIncludeReasoning = aiIncludeReasoning;
@@ -50,10 +47,6 @@ export class Ai {
         this.agentTasks = agentTasks;
         this.pullRequestDescriptionMode = normalizePullRequestDescriptionMode(pullRequestDescriptionMode);
         this.bugbotReviewConfiguration = normalizeBugbotReviewConfiguration(bugbotReviewConfiguration);
-    }
-
-    getAiPullRequestDescription(): boolean {
-        return this.aiPullRequestDescription;
     }
 
     getPullRequestDescriptionMode(): PullRequestDescriptionMode {

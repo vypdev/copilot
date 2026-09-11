@@ -133,7 +133,7 @@ Confirm all items before requesting review.
 - [ ] Tests have been added or updated
 - [ ] Documentation has been updated (if applicable)
 - [ ] No new warnings or lint errors
-- [ ] Changes are backward compatible or breaking changes are documented
+- [ ] Breaking contract changes and required consumer updates are documented
 
 ---
 

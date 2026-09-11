@@ -27,6 +27,8 @@ pnpm run build
 | `pnpm run test:coverage` | Runs tests with coverage report. |
 | `pnpm run lint` | Runs ESLint on `src/` (recommended rules + unused-vars, no-explicit-any). |
 | `pnpm run lint:fix` | Auto-fixes fixable lint issues. |
+| `pnpm run validate:specifications` | Validates the capability catalog, generated index, and every registered evidence path. |
+| `pnpm run generate:specifications` | Regenerates `specs/CATALOG.md` from `specs/catalog.json`. |
 
 ## Project Structure
 
@@ -64,6 +66,9 @@ pnpm run build
 ## Documentation
 
 - Update the relevant docs in `docs/` when changing behavior or adding features.
+- Read the owning SDD in `specs/CATALOG.md` before changing a catalogued
+  capability. Update its specification, `specs/catalog.json`, tests, and user
+  documentation together when the contract changes.
 - For user-facing changes, update `README.md` and the docs at [docs.page/vypdev/copilot](https://docs.page/vypdev/copilot).
 - The project uses [docs.page](https://docs.page/) (invertase) for publishing; see `docs.json` for sidebar structure.
 - Use only **docs.page components** so the site builds without errors: **Card**, **CardGroup** (for multiple cards in a row; use `cols={2}` or `cols={3}`), **Callouts** (**Info**, **Warning**, **Error**, **Success** only — do not use Note or Tip), **Tabs**, **Accordion**, **Steps**, **Code Group**, etc. Do **not** use Mintlify-only components such as **Columns** (use **CardGroup** instead). See [docs.page Components](https://use.docs.page/components).

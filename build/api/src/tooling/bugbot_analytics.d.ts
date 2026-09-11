@@ -1,4 +1,5 @@
 import type { BugbotReviewOutcome, BugbotReviewTelemetrySnapshot } from '../application/ports/bugbot_telemetry_ports';
+import type { BugbotFindingState } from '../domain/bugbot/review_state';
 export interface BugbotAnalyticsReport {
     readonly reviews: number;
     readonly outcomes: Readonly<Record<BugbotReviewOutcome, number>>;
@@ -14,7 +15,7 @@ export interface BugbotAnalyticsReport {
     readonly averageCandidateFindings: number;
     readonly averagePublishedFindings: number;
     readonly resolutionEvents: number;
-    readonly findingStateObservations: Readonly<Record<'open' | 'fixed' | 'obsolete' | 'dismissed' | 'reopened', number>>;
+    readonly findingStateObservations: Readonly<Record<BugbotFindingState, number>>;
     readonly estimatedInputTokens: number;
     readonly estimatedOutputTokens: number;
     readonly stageP95Ms: Readonly<Record<string, number>>;

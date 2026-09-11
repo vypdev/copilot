@@ -87,7 +87,6 @@ function endpointFor(requirement: SetupCredentialRequirement): CredentialEndpoin
     switch (requirement.name) {
         case 'OPENAI_API_KEY':
         case 'CODEX_API_KEY':
-        case 'CODEX_ACCESS_TOKEN':
             return { url: new URL('https://api.openai.com/v1/models'), auth: 'bearer' };
         case 'ANTHROPIC_API_KEY':
             return { url: new URL('https://api.anthropic.com/v1/models'), auth: 'x-api-key' };

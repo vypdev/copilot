@@ -26,7 +26,7 @@ export async function runExplicitCommentCommand(
     if (command.name === 'dismiss') return runDismissCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'remember') return runRememberCommand(param, options, command, actorAuthorizationPort, authenticatedUserPort);
     if (command.name === 'description') return runDescriptionCommand(param, options, actorAuthorizationPort);
-    if (command.name === 'sync-branch' || command.name === 'update-branch' || command.name === 'updatebranch') {
+    if (command.name === 'sync-branch') {
         return runBranchSyncCommand(param, options, command.arguments, actorAuthorizationPort);
     }
     if (['analyze', 'review', 'findings', 'recheck'].includes(command.name)) return runReviewCommand(param, options, command);
@@ -183,9 +183,7 @@ async function runReviewCommand(
         return results;
     }
     const invokeReview = () => options.reviewPotentialProblemsUseCase!.invoke(param);
-    const reviewResults = typeof param.ai?.withBugbotReviewConfiguration === 'function'
-        ? await param.ai.withBugbotReviewConfiguration(parsedOptions.overrides, invokeReview)
-        : await invokeReview();
+    const reviewResults = await param.ai.withBugbotReviewConfiguration(parsedOptions.overrides, invokeReview);
     results.push(...reviewResults);
     return results;
 }

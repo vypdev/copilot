@@ -1,4 +1,3 @@
-import type { Execution } from '../../../../../data/model/execution';
 import { Result } from '../../../../../data/model/result';
 import type { GitCommitPort } from '../../../../../application/ports/git_ports';
 import type { BugbotContext } from './types';
@@ -6,7 +5,6 @@ import { logDebugInfo, logError } from '../../../../ports/logging_ports';
 import { finalizeWorkspaceMutation } from '../workspace_mutation_guard';
 
 export async function finalizeBugbotAutofix(
-    execution: Execution,
     context: BugbotContext,
     idsToFix: string[],
     workspacePathsBefore: string[],

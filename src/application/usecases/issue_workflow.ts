@@ -57,13 +57,12 @@ export async function runIssueWorkflow(
       : ports.workflowSteps.removeIssueBranches,
     ports.workflowSteps.removeNotNeededBranches,
     ports.workflowSteps.deployAdded,
-    ports.workflowSteps.deployedAdded,
   ];
   for (const step of regularSteps) {
     results.push(...(await step.invoke(param)));
   }
 
-  const membersOnly = param.ai?.getAiMembersOnly?.() === true;
+  const membersOnly = param.ai.getAiMembersOnly();
   const agentAllowed = !membersOnly || Boolean(ports.actorAuthorizationPort && await ports.actorAuthorizationPort.isActorAllowedToModifyFiles(
       param.owner,
       param.repo,

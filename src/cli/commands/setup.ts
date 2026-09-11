@@ -10,6 +10,7 @@ import { SetupWizardUseCase } from '../../application/usecases/setup';
 import { SETUP_FEATURE_DESCRIPTIONS, buildSetupCredentialRequirements } from '../../application/policies/setup_configuration_policy';
 import type { SetupConfigurationOverrides } from '../../application/policies/setup_configuration_policy';
 import { createSetupCredentialsUseCase, createSetupRemoteConfigurationReadPort } from '../../infrastructure/composition/setup_credentials_composition_root';
+import { createSetupMergeQueueReadinessUseCase } from '../../infrastructure/composition/setup_doctor_composition_root';
 import { SetupWorkspaceAdapter } from '../../infrastructure/setup_workspace_adapter';
 import type { SetupResourceScope } from '../../domain/setup';
 
@@ -77,7 +78,7 @@ export function registerSetupCommand(program: Command): void {
         const remoteConfigurationReader = typeof createSetupRemoteConfigurationReadPort === 'function'
           ? createSetupRemoteConfigurationReadPort()
           : undefined;
-        const wizard = new SetupWizardUseCase(prompt, remoteConfigurationReader, prompt);
+        const wizard = new SetupWizardUseCase(prompt, remoteConfigurationReader, prompt, createSetupMergeQueueReadinessUseCase());
         const overrides = loadSetupOverrides(options);
         const configuration = await wizard.collect({
           overrides,

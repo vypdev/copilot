@@ -3,7 +3,7 @@
  * structured JSON we can parse.
  */
 
-import { MAX_FINDING_ID_LENGTH } from './marker';
+import { MAX_FINDING_ID_LENGTH } from '../../../../policies/bugbot_finding_marker_policy';
 
 /** Detection returns findings and explicit lifecycle changes for prior finding IDs. */
 export const BUGBOT_RESPONSE_SCHEMA = {

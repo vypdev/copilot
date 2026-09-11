@@ -36,7 +36,7 @@ and the runtime command is equivalent to:
 opencode run --model openai/gpt-5.6-luna
 ```
 
-The default runtime is Codex. It can use a preinitialized local ChatGPT session on a controlled runner; `CODEX_API_KEY` is the official API-mode variable and `OPENAI_API_KEY`/`CODEX_ACCESS_TOKEN` remain optional compatibility alternatives. The runtime provider and model provider do not have to be the same. OpenCode can be the runtime while OpenAI is the model provider.
+The default runtime is Codex. It accepts `CODEX_API_KEY` or a preinitialized local ChatGPT session on a controlled runner. OpenCode can independently use OpenAI as its model provider with `OPENAI_API_KEY`.
 
 ## Recommended GitHub Actions configuration
 
@@ -108,7 +108,7 @@ Credentials are independent from allowlists:
 | Runtime/provider | Supported reference |
 | --- | --- |
 | OpenCode with OpenAI | `OPENAI_API_KEY` or a controlled local OpenCode login |
-| Codex | `CODEX_API_KEY`, `CODEX_ACCESS_TOKEN`, `OPENAI_API_KEY`, or a local ChatGPT Codex session on a controlled self-hosted runner |
+| Codex | `CODEX_API_KEY` or a local ChatGPT Codex session on a controlled self-hosted runner |
 | Cursor | `CURSOR_API_KEY` |
 
 Never place tokens in `with`, command arguments, prompts, repository files, or logs. See [Agent CLI runners](/security-operations/operations/cli-runners), [Agent CLI provisioning](/security-operations/operations/cli-provisioning), and [Codex authentication and compliance](/security-operations/security/authentication-compliance) for operational details.

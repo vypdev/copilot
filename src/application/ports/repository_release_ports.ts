@@ -1,6 +1,7 @@
 export interface RepositoryTagPort {
     updateTag(owner: string, repository: string, sourceTag: string, targetTag: string, token: string): Promise<void>;
     createTag(owner: string, repository: string, branch: string, tag: string, token: string): Promise<string | undefined>;
+    createOrVerifyTagAtSha(owner: string, repository: string, sha: string, tag: string, token: string): Promise<string>;
 }
 
 export interface RepositoryReleasePublicationPort {

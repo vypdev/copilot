@@ -5,9 +5,7 @@ import type { BugbotContext } from './types';
 export function expectedBugbotHeadSha(execution: Execution): string | undefined {
     // Comment-triggered reviews intentionally target the latest remote head:
     // their payload SHA may predate an autofix committed in the same run.
-    // Some embedding clients provide Execution-compatible objects rather than
-    // class instances, so read the canonical input as a compatibility fallback.
-    const eventName = execution.eventName || execution.inputs?.eventName || '';
+    const eventName = execution.eventName;
     const candidate = eventName === 'pull_request'
         ? execution.inputs?.pull_request?.head?.sha
         : eventName === 'workflow_run'

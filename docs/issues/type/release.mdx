@@ -7,35 +7,40 @@ Release issues are used to track and manage the process of creating new versions
 
 ## Workflow
 
-The release process follows these steps after creating an issue with `release` and `branched` labels:
+The release process follows these steps after creating an issue with `release`
+and `branched` labels:
 
 <Steps>
-  <Step title="Create Release Branch">
-    A release branch is created from `development-branch`
+  <Step title="Snapshot development">
+    Copilot creates the release branch from the exact current
+    `development-branch` SHA and persists that origin. Development commits made
+    after this cut are not part of the release.
   </Step>
-  <Step title="Create Feature Branch">
-    A feature branch is created from the release branch to implement any remaining changes
+  <Step title="Prepare the frozen release">
+    Version, build, changelog, fixes, validation, and package smoke-test changes
+    are completed on the release line.
   </Step>
-  <Step title="Apply Changes">
-    The needed changes are applied on the feature branch
+  <Step title="Promote to production">
+    Copilot opens `release/<version> -> main-branch` and delegates checks,
+    reviews, auto-merge, or merge queue behavior to GitHub. The workflow exits
+    while that external transition is pending.
   </Step>
-  <Step title="Merge Feature Branch">
-    The feature branch is merged back into the release branch via Pull Request
+  <Step title="Publish the accepted commit">
+    Only after the promotion PR merges, Copilot tags its accepted production
+    merge SHA and starts the configured package/GitHub publication.
   </Step>
-  <Step title="Deploy New Version">
-    A new version is deployed from the release branch by adding the `deploy-label` to the issue
+  <Step title="Reconcile development">
+    By default, the accepted production commit is reconciled into the current
+    development branch, preserving development commits made after the cut.
   </Step>
-  <Step title="Merge Release Branch">
-    After successful deployment, the release branch is merged:
-    - First into `main-branch` with the new version tag
-    - Then back into `development-branch` to keep changes synchronized
-  </Step>
-  <Step title="Close Issue">
-    The issue is automatically closed with the `deployed-label` label once the process completes
+  <Step title="Complete and clean up">
+    The configured temporary branches are removed and the launcher issue is
+    closed or retained only after all reconciliation targets complete.
   </Step>
 </Steps>
 
-This workflow ensures that releases are properly planned, tested, and deployed while maintaining code quality and proper version control.
+See [Release and hotfix orchestration](/issues/deployment-orchestration) for the
+full configuration, OIDC setup, strict-branch behavior, UI, and recovery guide.
 
 <Warning>Deploy workflow files should be located in the `.github/workflows` directory of your repository.</Warning>
 
@@ -57,60 +62,10 @@ This workflow ensures that releases are properly planned, tested, and deployed w
   ```
 </Card>
 
-<Card title="How do I control the end of the deployment?" icon="rocket">
-  The release deployment workflow is defined in the `release_workflow.yml` file.
-
-  The workflow requires the following inputs:
-  - `version`: The new version number
-  - `title`: Title for the release
-  - `changelog`: Description of changes
-  - `issue`: ID of the originating issue
-
-  <Warning>Remember to create a new tag for the new deployed version.</Warning>
-  
-  ```yml
-  name: Task - Release
-
-  on:
-    workflow_dispatch:
-      inputs:
-        version:
-          description: 'Release version'
-          required: true
-          default: '1.0.0'
-        title:
-          description: 'Title'
-          required: true
-          default: 'New Version'
-        changelog:
-          description: 'Changelog'
-          required: true
-          default: '- Several improvements'
-        issue:
-          description: 'Launcher issue'
-          required: true
-          default: '-1'
-
-  jobs:
-    deploy:
-      name: Git Board - Issue
-      runs-on: ubuntu-latest
-      steps:
-        - name: Checkout Repository
-          uses: actions/checkout@v5
-
-        // create a new tag version here
-
-        // deploy logic here
-
-        - name: Git Board - Deploy success notification
-          uses: vypdev/copilot@v3
-          if: ${{ success() }}
-          with:
-            single-action: 'deployed_action'
-            single-action-issue: '${{ github.event.inputs.issue }}'
-            token: ${{ secrets.PAT }}
-  ```
+<Card title="Who creates the tag?" icon="rocket">
+  The workflow creates or verifies the immutable version tag automatically,
+  after the production promotion merges. The tag must point to the accepted
+  `main-branch` merge SHA; maintainers do not create it from the release branch.
 </Card>
 
 ## Example
@@ -122,7 +77,9 @@ For a release issue #456 releasing version 1.3.0:
 3. Changes applied and tested on feature branch
 4. PR merged into `release/1.3.0`
 5. Version 1.3.0 deployed to production (add `deploy` label to the issue)
-6. Release branch merged to `master` (with tag) and back into `develop`
+6. Promotion PR merged into `master`; `v1.3.0` created at that accepted commit
+7. Package and GitHub Release published
+8. Accepted production commit reconciled into current `develop`
 
 ## Label
 
@@ -213,7 +170,7 @@ You can find this template in `.github/ISSUE_TEMPLATE/release.yml`. Below is an 
 name: 🚀 Release Issue
 description: Request a new release for copilot (only team members)
 title: "<YOUR TITLE HERE>"
-labels: ["release", "branched"]
+labels: ["release", "branched", "priority: medium"]
 body:
   - type: markdown
     attributes:
@@ -230,9 +187,9 @@ body:
       label: Release Type
       description: Indicate the type of release.
       options:
-        - Major
-        - Minor
         - Patch
+        - Minor
+        - Major
     validations:
       required: true
 

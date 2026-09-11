@@ -1,4 +1,5 @@
 import type { Execution } from '../../data/model/execution';
+import { Ai } from '../../data/model/ai';
 import { Result } from '../../data/model/result';
 import { finishGithubAction } from '../github_action_completion';
 import * as core from '@actions/core';
@@ -31,6 +32,7 @@ function execution(): Execution {
         currentConfiguration: { results: [] },
         isSingleAction: false,
         singleAction: { throwError: false },
+        ai: new Ai('', 'model', false, [], false, 'low', 20),
     } as unknown as Execution;
 }
 
@@ -39,6 +41,7 @@ function singleActionExecution(isRecommendStepsAction = false, isPublishIssueCom
         currentConfiguration: { results: [] },
         isSingleAction: true,
         singleAction: { throwError: true, isRecommendStepsAction, isPublishIssueCommentAction },
+        ai: new Ai('', 'model', false, [], false, 'low', 20),
     } as unknown as Execution;
 }
 
@@ -207,13 +210,13 @@ describe('finishGithubAction', () => {
             payload: { findingStates: { open: 2, reopened: 1, fixed: 0, obsolete: 0, dismissed: 0 } },
         });
         const nonBlocking = Object.assign(execution(), {
-            ai: { getBugbotReviewConfiguration: () => ({ failOnUnresolved: false }) },
+            ai: new Ai('', 'model', false, [], false, 'low', 20, [], undefined, undefined, { failOnUnresolved: false }),
         });
         await finishGithubAction(nonBlocking, [findingResult], {} as never, {} as never);
         expect(core.setFailed).not.toHaveBeenCalled();
 
         const blocking = Object.assign(execution(), {
-            ai: { getBugbotReviewConfiguration: () => ({ failOnUnresolved: true }) },
+            ai: new Ai('', 'model', false, [], false, 'low', 20, [], undefined, undefined, { failOnUnresolved: true }),
         });
         await finishGithubAction(blocking, [findingResult], {} as never, {} as never);
         expect(core.setFailed).toHaveBeenCalledWith('Bugbot found 3 unresolved actionable finding(s).');
@@ -230,5 +233,20 @@ describe('finishGithubAction', () => {
         await finishGithubAction(execution(), [failed], {} as never, {} as never);
 
         expect(core.setFailed).toHaveBeenCalledWith('Agent execution failed.');
+    });
+
+    it('always fails unknown finding state and applies the configured policy to verification-required', async () => {
+        const resultWith = (findingStates: Record<string, number>) => new Result({
+            id: 'DetectPotentialProblemsUseCase', success: true, executed: true, payload: { findingStates },
+        });
+        await finishGithubAction(execution(), [resultWith({ open: 0, reopened: 0, unknown: 1 })], {} as never, {} as never);
+        expect(core.setFailed).toHaveBeenCalledWith('Bugbot could not verify 1 finding state(s).');
+
+        jest.mocked(core.setFailed).mockClear();
+        const blocking = Object.assign(execution(), {
+            ai: new Ai('', 'model', false, [], false, 'low', 20, [], undefined, undefined, { failOnUnresolved: true }),
+        });
+        await finishGithubAction(blocking, [resultWith({ open: 0, reopened: 0, 'verification-required': 2, unknown: 0 })], {} as never, {} as never);
+        expect(core.setFailed).toHaveBeenCalledWith('Bugbot found 2 unresolved actionable finding(s).');
     });
 });

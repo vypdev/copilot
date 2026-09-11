@@ -33,7 +33,7 @@ export class CommitUseCase implements ParamUseCase<Execution, Result[]> {
 
             results.push(...(await this.notifyNewCommitUseCase.invoke(param)));
             results.push(...(await this.checkChangesIssueSizeUseCase.invoke(param)));
-            const agentAllowed = !param.ai?.getAiMembersOnly?.()
+            const agentAllowed = !param.ai.getAiMembersOnly()
                 || Boolean(this.actorAuthorizationPort && await this.actorAuthorizationPort.isActorAllowedToModifyFiles(
                     param.owner,
                     param.repo,

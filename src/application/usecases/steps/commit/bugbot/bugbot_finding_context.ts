@@ -1,14 +1,19 @@
 import type { PullRequestReviewComment } from "../../../../ports/pull_request_review_comment_ports";
+import type { PullRequestReviewThreadState } from "../../../../ports/pull_request_review_comment_ports";
 import {
   MAX_FINDING_BODY_LENGTH,
   truncateFindingBody,
 } from "./build_bugbot_fix_prompt";
-import { normalizeFindingIdForMarker, parseMarker } from "./marker";
+import {
+  normalizeFindingIdForMarker,
+  parseMarker,
+} from '../../../../policies/bugbot_finding_marker_policy';
 import {
   isExistingFindingFullyResolved,
   type ExistingByFindingId,
-} from "./types";
+} from "../../../../../domain/bugbot/finding";
 import { githubUsersMatch } from '../../../../../domain/github_user_policy';
+import { isHumanResolver } from '../../../../../domain/bugbot/review_state';
 import { renderUntrustedField } from '../../../../../domain/security/untrusted_content';
 
 export interface BugbotComment {
@@ -32,7 +37,7 @@ export function parseBugbotFindingComments(
     PullRequestReviewComment[]
   >,
   trustedAuthorLogin?: string,
-  reviewThreadStatesByPullRequest: ReadonlyMap<number, Readonly<Record<string, boolean>>> = new Map(),
+  reviewThreadStatesByPullRequest: ReadonlyMap<number, Readonly<Record<string, PullRequestReviewThreadState>>> = new Map(),
 ): ParsedBugbotFindingComments {
   const existingByFindingId = parseIssueFindingMarkers(issueComments, trustedAuthorLogin);
   const pullRequestFindings = parsePullRequestFindingMarkers(
@@ -73,7 +78,7 @@ function parseIssueFindingMarkers(issueComments: BugbotComment[], trustedAuthorL
 function parsePullRequestFindingMarkers(
   pullRequestCommentsByNumber: ReadonlyMap<number, PullRequestReviewComment[]>,
   trustedAuthorLogin?: string,
-  reviewThreadStatesByPullRequest: ReadonlyMap<number, Readonly<Record<string, boolean>>> = new Map(),
+  reviewThreadStatesByPullRequest: ReadonlyMap<number, Readonly<Record<string, PullRequestReviewThreadState>>> = new Map(),
 ): { existingByFindingId: ExistingByFindingId; prFindingIdToBody: Record<string, string> } {
   const existingByFindingId: ExistingByFindingId = {};
   const prFindingIdToBody: Record<string, string> = {};
@@ -96,7 +101,7 @@ function parsePullRequestComments(
   existingByFindingId: ExistingByFindingId,
   prFindingIdToBody: Record<string, string>,
   trustedAuthorLogin?: string,
-  reviewThreadStates: Readonly<Record<string, boolean>> = {},
+  reviewThreadStates: Readonly<Record<string, PullRequestReviewThreadState>> = {},
 ): void {
   for (const comment of comments) {
     if (!isTrustedAuthor(comment.authorLogin, trustedAuthorLogin)) continue;
@@ -104,8 +109,12 @@ function parsePullRequestComments(
     for (const marker of parseMarker(body)) {
       const findingId = normalizeFindingIdForMarker(marker.findingId);
       if (findingId == null) continue;
-      const threadResolved = reviewThreadStates[comment.identity];
-      const manuallyResolved = threadResolved === true && !marker.resolved;
+      const thread = reviewThreadStates[comment.identity];
+      const threadResolved = thread?.resolved;
+      const manuallyResolved = threadResolved === true && !marker.resolved
+        && isHumanResolver(thread.resolvedByLogin, trustedAuthorLogin);
+      const verificationRequired = (marker.resolved && threadResolved === false)
+        || (!marker.resolved && threadResolved === true && !manuallyResolved);
       existingByFindingId[findingId] = {
         ...(existingByFindingId[findingId] ?? {}),
         pullRequest: {
@@ -113,6 +122,10 @@ function parsePullRequestComments(
           pullRequestNumber,
           resolved: marker.resolved || manuallyResolved,
           ...(typeof threadResolved === 'boolean' ? { threadResolved } : {}),
+          ...(thread?.resolvedByLogin ? { threadResolvedByLogin: thread.resolvedByLogin } : {}),
+          ...(comment.parentReviewIdentity ? { parentReviewIdentity: comment.parentReviewIdentity } : {}),
+          ...(comment.url ? { url: comment.url } : {}),
+          ...(verificationRequired ? { verificationRequired: true } : {}),
           ...(marker.fingerprint ? { fingerprint: marker.fingerprint } : {}),
           ...(marker.semanticFingerprint ? { semanticFingerprint: marker.semanticFingerprint } : {}),
           ...(marker.resolution
@@ -183,7 +196,7 @@ export function collectPreviousBugbotFindings(
           )?.body ?? null)
         : null;
     const pullRequestBody =
-      data.pullRequest != null && !data.pullRequest.resolved
+      data.pullRequest != null && (!data.pullRequest.resolved || data.pullRequest.verificationRequired === true)
         ? (prFindingIdToBody[findingId] ?? null)
         : null;
     const rawBody = (issueBody ?? pullRequestBody ?? "").trim();

@@ -226,7 +226,7 @@ When there are **more findings than** `bugbot-comment-limit`, the action adds an
 > 5 more findings were detected. Consider reviewing the branch locally or increasing `bugbot-comment-limit`.  
 > Titles: "Possible race in cache", "Unused variable in handler", …
 
-On a PR, you see one review containing at most **N** inline finding comments and the overflow summary.
+On a PR, you see one review containing at most **N** inline finding comments and the overflow summary. The canonical **Bugbot status** still counts all accepted current findings; overflow entries appear without a thread link.
 
 ---
 
@@ -240,6 +240,31 @@ Each **finding** is posted as a comment with a **title**, **severity**, optional
 **Description:** The variable `user` may be null when passed to `validateSession`. Consider adding a null check before use.
 
 The action uses the marker to later mark this finding as resolved when the configured agent reports it fixed (e.g. after you or the bot change the code).
+
+---
+
+## Example: current PR status card
+
+The PR conversation contains at most one trusted current-state card. A healthy
+review with work remaining looks conceptually like this:
+
+> **Current status:** 2 findings require attention on `e6089b9`.
+>
+> **Action required:** Review the linked threads or comment `/copilot fix all`.
+
+| State | Count |
+| --- | ---: |
+| Open / reopened | 1 |
+| Verification required | 1 |
+| Fixed | 2 |
+| Obsolete | 1 |
+| Dismissed | 1 |
+| Unknown | 0 |
+
+`fixed`, `obsolete`, and `dismissed` are clean. `open`, `reopened`, and
+`verification-required` need attention. `unknown` and a partial/failed
+projection replace the action text with `/copilot recheck` and fail closed.
+A superseded run does not edit this card; the newer head owns the next update.
 
 ---
 

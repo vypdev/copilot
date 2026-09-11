@@ -8,8 +8,6 @@ export interface ResultInput {
     payload?: unknown;
     reminders?: string[];
     errors?: unknown[];
-    /** Compatibility input while callers migrate to the plural property. */
-    error?: unknown;
     stepFormat?: ResultStepFormat;
 }
 
@@ -44,11 +42,7 @@ export class Result {
         this.success = data['success'] ?? false;
         this.executed = data['executed'] ?? false;
         this.steps = Array.isArray(data.steps) ? data.steps : [];
-        const rawErrors = Array.isArray(data.errors)
-            ? data.errors
-            : data.error === undefined
-                ? []
-                : [data.error];
+        const rawErrors = Array.isArray(data.errors) ? data.errors : [];
         this.errors = rawErrors.map(normalizeError);
         this.payload = data.payload;
         this.reminders = Array.isArray(data.reminders) ? data.reminders : [];

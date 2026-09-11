@@ -1,7 +1,11 @@
 import type { BugbotPullRequestResolutionPort } from "../../../../../application/ports/bugbot_pull_request_resolution_ports";
 import { PullRequestReviewOperationError } from "../../../../../application/ports/pull_request_review_errors";
-import { buildMarker, parseMarker, replaceMarkerInBody } from "./marker";
-import type { BugbotFindingResolution } from './types';
+import {
+  buildMarker,
+  parseMarker,
+  replaceMarkerInBody,
+} from '../../../../policies/bugbot_finding_marker_policy';
+import type { BugbotFindingResolution } from '../../../../../domain/bugbot/finding';
 
 export interface PullRequestFindingResolution {
   findingId: string;
@@ -43,30 +47,34 @@ export async function resolvePullRequestFinding(
     throw new PullRequestReviewOperationError("resolve-thread");
   }
 
+  if (!marker.resolved) {
+    const reason = resolution.resolution ?? 'fixed';
+    const replacement = `${resolvedNote(reason)}${buildMarker(resolution.findingId, true, marker.fingerprint, marker.semanticFingerprint, reason)}`;
+    const replaced = replaceMarkerInBody(
+      comment.body,
+      resolution.findingId,
+      true,
+      replacement,
+    );
+    if (!replaced.found) throw new PullRequestReviewOperationError('update-comment');
+    if (replaced.changed) {
+      // Persist Bugbot's durable intent first. If the native mutation fails, a
+      // retry can safely repair the thread toward this explicit marker state.
+      await repository.updatePullRequestReviewComment(
+        resolution.owner,
+        resolution.repo,
+        resolution.commentIdentity,
+        replaced.updated,
+        resolution.token,
+      );
+    }
+  }
+
   await repository.resolvePullRequestReviewThread(
     resolution.owner,
     resolution.repo,
     resolution.pullRequestNumber,
     resolution.commentIdentity,
-    resolution.token,
-  );
-
-  if (marker.resolved) return;
-  const reason = resolution.resolution ?? 'fixed';
-  const replacement = `${resolvedNote(reason)}${buildMarker(resolution.findingId, true, marker.fingerprint, reason, marker.semanticFingerprint)}`;
-  const replaced = replaceMarkerInBody(
-    comment.body,
-    resolution.findingId,
-    true,
-    replacement,
-  );
-  if (!replaced.found || !replaced.changed) return;
-
-  await repository.updatePullRequestReviewComment(
-    resolution.owner,
-    resolution.repo,
-    resolution.commentIdentity,
-    replaced.updated,
     resolution.token,
   );
 }

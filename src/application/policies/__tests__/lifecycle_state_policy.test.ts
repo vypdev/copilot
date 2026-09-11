@@ -44,7 +44,22 @@ describe('lifecycle state policy', () => {
         })).toBe('ready');
     });
 
-    it('uses external review and check evidence without changing the legacy fallback', () => {
+    it('maps verification-required to changes-requested and unknown to blocked', () => {
+        const base = {
+            eventName: 'pull_request', action: 'synchronize', isIssue: false, isPullRequest: true,
+            issueOpened: false, issueDescriptionEdited: false, pullRequestMerged: false, pullRequestClosed: false,
+        };
+        expect(resolveLifecycleState({
+            ...base,
+            results: [{ ...result('DetectPotentialProblemsUseCase'), payload: { findingStates: { open: 0, reopened: 0, 'verification-required': 1, unknown: 0 } } }],
+        })).toBe('changes-requested');
+        expect(resolveLifecycleState({
+            ...base,
+            results: [{ ...result('DetectPotentialProblemsUseCase'), payload: { findingStates: { open: 0, reopened: 0, 'verification-required': 0, unknown: 1 } } }],
+        })).toBe('blocked');
+    });
+
+    it('uses external review and check evidence without changing the safe fallback', () => {
         const base = {
             eventName: 'pull_request_review',
             action: 'submitted',

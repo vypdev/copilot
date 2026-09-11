@@ -40,7 +40,7 @@ export async function analyzeProgress(
 ): Promise<ProgressAnalysis> {
     const issueNumber = param.issueNumber;
     const agentReady = isAgentConfigurationReady(
-        param.ai?.getAgentConfiguration('findings'),
+        param.ai.getAgentConfiguration('findings'),
     );
     if (!agentReady) {
         const message = 'Missing required agent configuration. Provide a model and a valid CLI command.';
@@ -105,14 +105,14 @@ export async function analyzeProgress(
     logInfo('🤖 Analyzing progress using the configured agent...');
     const attemptResult = parseProgressResponse(
         await dependencies.aiRepository.query({
-            configuration: param.ai?.getAgentConfiguration('findings'),
+            configuration: param.ai.getAgentConfiguration('findings'),
             agentId: AGENT_PLAN,
             prompt,
             options: {
                 expectJson: true,
                 schema: PROGRESS_RESPONSE_SCHEMA as unknown as Record<string, unknown>,
                 schemaName: 'progress_response',
-                includeReasoning: param.ai?.getAiIncludeReasoning() === true,
+                includeReasoning: param.ai.getAiIncludeReasoning(),
             },
         }),
     );

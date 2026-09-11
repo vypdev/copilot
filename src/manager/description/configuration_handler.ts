@@ -1,4 +1,4 @@
-import { Config } from "../../data/model/config";
+import { Config, requireCurrentConfigurationPayload } from "../../data/model/config";
 import type { Execution } from "../../data/model/execution";
 import type { ExecutionConfigurationQuery } from "../../application/ports/execution_configuration_ports";
 import { logError } from "../../utils/logger";
@@ -32,7 +32,7 @@ export class ConfigurationHandler extends IssueContentInterface {
             if (config === undefined) {
                 return undefined;
             }
-            const branchConfig = JSON.parse(config);
+            const branchConfig = requireCurrentConfigurationPayload(JSON.parse(config));
             return new Config(branchConfig);
         } catch (error) {
             logError(`Error reading issue configuration: ${error}`);

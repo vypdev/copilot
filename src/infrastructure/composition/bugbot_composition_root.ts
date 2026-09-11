@@ -21,6 +21,7 @@ import { WorkspaceBugbotRulesRepository } from '../filesystem/workspace_bugbot_r
 import { LoggerBugbotTelemetryAdapter } from '../logging/logger_bugbot_telemetry_adapter';
 import type { BugbotTelemetryPort } from '../../application/ports/bugbot_telemetry_ports';
 import type { BugbotLearnedRuleCommandPort, BugbotRuleFileQueryPort } from '../../application/ports/bugbot_rule_ports';
+import { GithubBugbotReviewNavigationAdapter } from '../github/github_bugbot_review_navigation_adapter';
 
 export type BugbotCompositionRoot = {
   issue: BugbotIssueRepository;
@@ -58,12 +59,13 @@ export function createBugbotCompositionRoot(): BugbotCompositionRoot {
     threadCommand,
   );
   const rules = new WorkspaceBugbotRulesRepository();
+  const navigation = new GithubBugbotReviewNavigationAdapter();
   return {
     issue,
     pullRequest,
-    context: { issue, pullRequest, rules },
+    context: { issue, pullRequest, reviewState: pullRequest, navigation, rules },
     resolution: { issueComments: issue, pullRequestComments: pullRequest },
-    publication: { issueComments: issue, pullRequestComments: pullRequest },
+    publication: { issueComments: issue, pullRequestComments: pullRequest, reviewState: pullRequest },
     telemetry: new LoggerBugbotTelemetryAdapter(),
     rules,
 

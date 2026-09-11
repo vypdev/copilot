@@ -24,7 +24,7 @@ Comments beginning with `/copilot` use a deterministic command boundary. Text el
 | `/copilot test-plan` | Propose a focused test strategy. | No |
 | `/copilot status` | Summarize the current lifecycle and next step. | No |
 | `/copilot description` | Generate or refresh the PR description using the configured policy, on explicit request. | Yes, PR body only |
-| `/copilot review [effort=smart|low|default|high] [dry-run=true] [verbose=true] [suggestions=false]` | Review with optional per-run settings. | No |
+| `/copilot review [effort=smart|low|default|high] [dry-run=true] [trace-rules=true] [suggested-changes=false]` | Review with optional per-run settings. | No |
 | `/copilot findings` | Summarize known Bugbot findings. | No |
 | `/copilot recheck` | Request a fresh analysis of the current context. | No |
 | `/copilot fix FINDING-ID` | Request an explicit Bugbot fix. Use `all` to target all open findings. | Yes, authorized users only |

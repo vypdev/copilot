@@ -16,8 +16,31 @@ corepack pnpm@10.12.4 run validate:agent-docs
 corepack pnpm@10.12.4 run validate:docs-page
 corepack pnpm@10.12.4 run validate:documentation
 corepack pnpm@10.12.4 run validate:workflows
+corepack pnpm@10.12.4 run validate:specifications
 git diff --check
 ```
+
+`validate:documentation` also enforces heading fragments, the complete setup
+workflow and single-action catalogs, parity between the six embedded issue
+examples and their setup templates, and high-risk release contracts such as
+the default-branch continuation prerequisite, npm direct-publish policy,
+polling controls, and orchestration Variables. It also rejects removed public
+inputs, actions, commands, and orchestration modes.
+
+`validate:specifications` validates unique capability ownership, safe existing
+repository-relative evidence paths, complete registration of top-level SDDs,
+retrospective-baseline structure, and byte-for-byte freshness of the generated
+`specs/CATALOG.md` view.
+
+Merge-queue contract tests cover ruleset-only targets, classic/ruleset union,
+GitHub Actions workflow parsing on target and candidate refs, external exact
+attestations, setup/doctor drift, pre-PR and pre-enqueue ordering, queue
+membership idempotency, and head-bound enqueue. These tests use provider fakes;
+they never create a live queue entry or poll check runs.
+
+These deterministic checks cannot inspect live GitHub/npm settings or judge
+desktop/mobile, light/dark, and assistive-technology rendering; keep those as
+explicit operator and human UX gates.
 
 Tests MUST isolate environment variables such as `AGENT_PROVIDER`, `AGENT_MODEL_PROVIDER`, `AGENT_MODEL`, and `AGENT_COMMAND`. Real provider smoke tests are separate from deterministic unit tests and MUST NOT run without authorization and cost controls. Coverage thresholds are enforced by Jest and must not be reduced to accommodate a new code path; add focused tests instead.
 
@@ -31,7 +54,9 @@ lower-ID/workflow-file filtering, malformed responses, fail-closed provider erro
 rate-limited 403 headers, bounded fallback backoff/jitter, and the absolute deadline.
 The workflow contract test keeps the nine queue-bearing workflow names synchronized with the
 validator and verifies the `90m queue / 120m job` budget, required runners, action
-inputs, missing/short timeouts, and forbidden mutation-workflow concurrency.
+inputs, missing/short timeouts, forbidden durable-mutation concurrency, and the
+exact shared branch concurrency contract permitted only for Commit/Pull Request
+Bugbot jobs.
 
 GitHub lifecycle tests cover admission before queue polling, PAT-owner normal-run
 discard, valid single-action preservation, identity lookup failure, and the absence
@@ -44,9 +69,9 @@ case. It verifies deterministic labels for approved reviews, requested changes,
 and ambiguous multi-PR events without invoking an agent route. External check
 workflows are intentionally outside the workflows shipped by Copilot.
 
-Configuration migration tests cover legacy payloads, transient `results`,
-malformed durable values, and future-schema preservation. Architecture tests
-also guard the narrow context contracts used by extracted policies and lifecycle
+Configuration tests cover current-schema round trips and fail-closed handling of
+missing, malformed, or different-version durable values. Architecture tests also
+guard the narrow context contracts used by extracted policies and lifecycle
 reconciliation.
 
 Branch synchronization tests cover durable configuration and linked-branch discovery,

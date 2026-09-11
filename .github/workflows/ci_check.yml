@@ -5,6 +5,8 @@ on:
     branches: [master]
   pull_request:
     types: [opened, synchronize]
+  merge_group:
+    types: [checks_requested]
   workflow_dispatch:
 
 concurrency:
@@ -94,6 +96,9 @@ jobs:
 
       - name: Validate workflow contract
         run: pnpm run validate:workflows
+
+      - name: Validate product specification catalog
+        run: pnpm run validate:specifications
 
       - name: Validate Git diff
         run: git diff --check

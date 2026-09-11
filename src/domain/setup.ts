@@ -1,6 +1,17 @@
 import type { AgentProvider, AgentTask } from './agent';
 import type { PullRequestDescriptionMode } from './pull_request_description';
 import type { BugbotReviewEffort } from './bugbot/review_configuration';
+import type { MergeQueueCheckAttestation } from './merge_queue_readiness';
+import type {
+    HotfixActiveReleasePolicy,
+    OrchestrationCommentMode,
+    OrchestrationPresentationMode,
+    ReconciliationBackmergeMode,
+    ReconciliationCleanupMode,
+    ReconciliationIssueCompletionMode,
+    ReconciliationPullRequestMode,
+    ReconciliationStrategy,
+} from './deployment_configuration';
 
 export type SetupFeature =
     | 'issues'
@@ -42,17 +53,26 @@ export interface SetupRepositoryConfiguration {
     reopenIssueOnPush: boolean;
     desiredAssigneesCount: number;
     desiredReviewersCount: number;
-    mergeTimeout: number;
     inactivityThresholdHours: number;
     issueLocale: string;
     pullRequestLocale: string;
     commitPrefixTransforms: string;
+    releaseReconciliationStrategy: ReconciliationStrategy;
+    hotfixReconciliationStrategy: ReconciliationStrategy;
+    reconciliationPullRequestMode: ReconciliationPullRequestMode;
+    mergeQueueCheckAttestations: readonly MergeQueueCheckAttestation[];
+    reconciliationBackmergeMode: ReconciliationBackmergeMode;
+    hotfixActiveReleasePolicy: HotfixActiveReleasePolicy;
+    reconciliationTree: string;
+    reconciliationCleanup: ReconciliationCleanupMode;
+    reconciliationIssueCompletion: ReconciliationIssueCompletionMode;
+    orchestrationPresentationMode: OrchestrationPresentationMode;
+    orchestrationDiagrams: boolean;
+    orchestrationCommentMode: OrchestrationCommentMode;
 }
 
 export interface SetupAiConfiguration {
-    pullRequestDescription: boolean;
-    /** Optional for backwards-compatible setup files created before v3.3.0. */
-    pullRequestDescriptionMode?: PullRequestDescriptionMode;
+    pullRequestDescriptionMode: PullRequestDescriptionMode;
     ignoreFiles: string;
     membersOnly: boolean;
     includeReasoning: boolean;
@@ -65,7 +85,7 @@ export interface SetupAiConfiguration {
     bugbotTraceRules: boolean;
     bugbotSuggestedChanges: boolean;
     bugbotTelemetry: boolean;
-    bugbotFailOnUnresolved?: boolean;
+    bugbotFailOnUnresolved: boolean;
     /** Newline-separated organization-level rules supplied by repository variables. */
     bugbotOrganizationRules: string;
     provisioningMode: 'auto' | 'always' | 'disabled';
@@ -198,5 +218,6 @@ export interface SetupPlan {
     variables: SetupVariable[];
     requiredSecrets: string[];
     credentialRequirements: SetupCredentialRequirement[];
+    mergeQueueReadiness: DoctorCheck[];
     warnings: string[];
 }

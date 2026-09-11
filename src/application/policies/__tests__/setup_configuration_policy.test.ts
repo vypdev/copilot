@@ -17,19 +17,31 @@ describe('setup configuration policy', () => {
         const configuration = createDefaultSetupConfiguration();
         const plan = buildSetupPlan(configuration);
 
-        expect(plan.workflowFiles).toHaveLength(10);
+        expect(plan.workflowFiles).toHaveLength(11);
         expect(plan.issueTemplateFiles).toHaveLength(8);
-        expect(plan.selectedFiles).toHaveLength(19);
+        expect(plan.selectedFiles).toHaveLength(20);
         expect(plan.variables).toEqual(expect.arrayContaining([
             { name: 'AGENT_PROVIDER', value: 'codex' },
             { name: 'AGENT_ALLOWED_MODELS', value: 'openai/gpt-5.6-luna' },
             { name: 'MAIN_BRANCH', value: 'master' },
             { name: 'AI_IGNORE_FILES', value: 'build/*' },
             { name: 'BUGBOT_FAIL_ON_UNRESOLVED', value: 'false' },
+            { name: 'MERGE_QUEUE_CHECK_ATTESTATIONS', value: '[]' },
         ]));
+        expect(plan.mergeQueueReadiness).toEqual([]);
         expect(buildSetupActionInputs(configuration)['bugbot-fail-on-unresolved']).toBe('false');
+        expect(buildSetupActionInputs(configuration)['merge-queue-check-attestations']).toBe('[]');
         expect(plan.requiredSecrets).toEqual(['PAT']);
         expect(plan.warnings.length).toBeGreaterThan(0);
+    });
+
+    it('preserves live merge queue checks in the setup presentation plan', () => {
+        const plan = buildSetupPlan(createDefaultSetupConfiguration(), [
+            { area: 'Merge queue readiness · production (master)', status: 'pass', message: 'Ready.' },
+        ]);
+        expect(plan.mergeQueueReadiness).toEqual([
+            { area: 'Merge queue readiness · production (master)', status: 'pass', message: 'Ready.' },
+        ]);
     });
 
     it('removes optional files while retaining core setup resources', () => {
@@ -143,17 +155,13 @@ describe('setup configuration policy', () => {
         expect(buildSetupCredentialRequirements(configuration).map(requirement => requirement.name)).toEqual(['PAT']);
     });
 
-    it('models runtime and model-provider credentials as alternatives', () => {
+    it('models the Codex API key as optional when runner authentication is available', () => {
         const requirements = buildSetupCredentialRequirements(createDefaultSetupConfiguration());
-        const runtime = requirements.find(requirement => requirement.name === 'CODEX_ACCESS_TOKEN');
         const apiKey = requirements.find(requirement => requirement.name === 'CODEX_API_KEY');
-        const modelProvider = requirements.find(requirement => requirement.name === 'OPENAI_API_KEY');
 
-        expect(runtime?.alternativeGroups).toEqual(expect.arrayContaining(['agent:codex:openai']));
-        expect(modelProvider?.alternativeGroups).toEqual(expect.arrayContaining(['agent:codex:openai']));
-        expect(runtime?.runnerAuthenticationGroups).toEqual(expect.arrayContaining(['agent:codex:openai']));
+        expect(requirements.map(requirement => requirement.name)).toEqual(['PAT', 'CODEX_API_KEY']);
+        expect(apiKey?.alternativeGroups).toEqual(expect.arrayContaining(['agent:codex:openai']));
         expect(apiKey?.runnerAuthenticationGroups).toEqual(expect.arrayContaining(['agent:codex:openai']));
-        expect(modelProvider?.runnerAuthenticationGroups).toEqual(expect.arrayContaining(['agent:codex:openai']));
     });
 
     it('does not let Codex runner authentication satisfy an OpenCode credential group', () => {
@@ -165,14 +173,10 @@ describe('setup configuration policy', () => {
         const plan = buildSetupPlan(configuration);
         const openAi = plan.credentialRequirements.find(requirement => requirement.name === 'OPENAI_API_KEY');
 
-        expect(openAi?.alternativeGroups).toEqual(expect.arrayContaining([
-            'agent:codex:openai',
-            'agent:opencode:openai',
-        ]));
-        expect(openAi?.runnerAuthenticationGroups).toEqual(['agent:codex:openai']);
+        expect(openAi?.alternativeGroups).toEqual(['agent:opencode:openai']);
+        expect(openAi?.runnerAuthenticationGroups).toBeUndefined();
         expect(plan.requiredSecrets).toEqual(expect.arrayContaining(['OPENCODE_API_KEY', 'OPENAI_API_KEY']));
         expect(plan.requiredSecrets).not.toContain('CODEX_API_KEY');
-        expect(plan.requiredSecrets).not.toContain('CODEX_ACCESS_TOKEN');
     });
 
     it('marks custom provider credentials as intentionally unverifiable', () => {

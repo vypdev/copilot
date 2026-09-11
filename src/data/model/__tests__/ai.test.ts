@@ -3,7 +3,7 @@ import { isAgentConfigurationReady } from '../agent';
 
 describe('Ai', () => {
     it('exposes independent task configurations', () => {
-        const ai = new Ai('http://opencode:4096', 'opencode/model', true, false, [], false, 'low', 10, [], {
+        const ai = new Ai('http://opencode:4096', 'opencode/model', false, [], false, 'low', 10, [], {
             findings: { provider: 'codex', model: 'gpt-5-codex', command: 'codex' },
             fixer: { provider: 'cursor', model: 'cursor-agent', command: 'cursor-agent' },
         });
@@ -17,7 +17,7 @@ describe('Ai', () => {
     });
 
     it('defaults both tasks to the configured Codex runtime', () => {
-        const ai = new Ai('http://opencode:4096', 'opencode/model', true, false, [], false, 'low', 10);
+        const ai = new Ai('http://opencode:4096', 'opencode/model', false, [], false, 'low', 10);
         const expected = { provider: 'codex', modelProvider: 'openai', model: 'opencode/model', command: "codex exec --ephemeral --skip-git-repo-check --model opencode/model --config 'model_provider=\"openai\"' -" };
 
         expect(ai.getAgentConfiguration('findings')).toEqual(expected);
@@ -25,9 +25,9 @@ describe('Ai', () => {
     });
 
     it('keeps general AI and bugbot settings available', () => {
-        const ai = new Ai('http://server', 'model', true, true, ['a', 'b'], false, 'error', 5, ['pnpm test']);
+        const ai = new Ai('http://server', 'model', true, ['a', 'b'], false, 'error', 5, ['pnpm test']);
 
-        expect(ai.getAiPullRequestDescription()).toBe(true);
+        expect(ai.getPullRequestDescriptionMode()).toBe('replace');
         expect(ai.getAiMembersOnly()).toBe(true);
         expect(ai.getAiIgnoreFiles()).toEqual(['a', 'b']);
         expect(ai.getAiIncludeReasoning()).toBe(false);

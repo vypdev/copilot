@@ -6,7 +6,7 @@ export interface GithubReleaseClient {
             createRef(parameters: Record<string, unknown>): Promise<unknown>;
         };
         repos: {
-            getReleaseByTag(parameters: Record<string, unknown>): Promise<{ data: { name?: string | null; body?: string | null; draft: boolean; prerelease: boolean } }>;
+            getReleaseByTag(parameters: Record<string, unknown>): Promise<{ data: { html_url?: string; tag_name?: string; name?: string | null; body?: string | null; draft: boolean; prerelease: boolean } }>;
             listReleases(parameters: Record<string, unknown>): Promise<{ data: Array<{ id: number; tag_name: string }> }>;
             updateRelease(parameters: Record<string, unknown>): Promise<unknown>;
             createRelease(parameters: Record<string, unknown>): Promise<{ data: { id: number; html_url: string } }>;

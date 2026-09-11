@@ -57,6 +57,7 @@ export async function prepareReleaseBranch(
   if (!lastAction?.success) return linkResult;
 
   const branchName = getResultPayload(lastAction.payload)?.newBranchName;
+  const baseSha = getResultPayload(lastAction.payload)?.baseSha;
   if (typeof branchName !== "string" || branchName.length === 0) {
     return [
       new Result({
@@ -67,9 +68,12 @@ export async function prepareReleaseBranch(
       }),
     ];
   }
+  if (typeof baseSha === "string" && baseSha.length > 0) {
+    param.currentConfiguration.releaseOriginBranch = param.branches.development;
+    param.currentConfiguration.releaseOriginSha = baseSha;
+  }
 
   const fence = "```";
-  const inlineCode = "`";
   const reminders = [
     `Before deploying, apply any change needed in [**${release.branch}**](${releaseUrl}):\n> ${fence}bash\n> git fetch -v && git checkout ${release.branch}\n> ${fence}\n>\n> Version files, changelogs..`,
   ];
@@ -79,10 +83,7 @@ export async function prepareReleaseBranch(
       `Commit the needed changes with this prefix:\n> ${fence}\n>${commitPrefix}\n> ${fence}`,
     );
   reminders.push(
-    `Create the tag version in [**${release.branch}**](${releaseUrl}).\n> Avoid using ${inlineCode}git merge --squash${inlineCode}, otherwise the created tag will be lost.`,
-  );
-  reminders.push(
-    `Add the **${param.labels.deploy}** label to run the ${inlineCode}${param.workflows.release}${inlineCode} workflow.`,
+    `Add the **${param.labels.deploy}** label to run the \`${param.workflows.release}\` workflow. Copilot will create the immutable version tag only after the production promotion PR merges.`,
   );
   reminders.push(
     buildReleaseReminder(param, releaseUrl, developmentUrl, mainUrl),
@@ -120,6 +121,5 @@ function buildReleaseReminder(
   mainUrl: string,
 ): string {
   const branch = param.release.branch;
-  const inlineCode = "`";
-  return `After deploying, the new changes on [${inlineCode}${branch}${inlineCode}](${releaseUrl}) must end on [${inlineCode}${param.branches.development}${inlineCode}](${developmentUrl}) and [${inlineCode}${param.branches.main}${inlineCode}](${mainUrl}).\n> **Quick actions:**\n> [New PR](https://github.com/${param.owner}/${param.repo}/compare/${param.branches.development}...${branch}?expand=1) from [${inlineCode}${branch}${inlineCode}](${releaseUrl}) to [${inlineCode}${param.branches.development}${inlineCode}](${developmentUrl}).\n> [New PR](https://github.com/${param.owner}/${param.repo}/compare/${param.branches.main}...${branch}?expand=1) from [${inlineCode}${branch}${inlineCode}](${releaseUrl}) to [${inlineCode}${param.branches.main}${inlineCode}](${mainUrl}).`;
+  return `Copilot will promote [\`${branch}\`](${releaseUrl}) into [\`${param.branches.main}\`](${mainUrl}) before publication, then reconcile the accepted production commit into the current [\`${param.branches.development}\`](${developmentUrl}) branch. Do not create the version tag or either merge PR manually unless the issue control center requests recovery.`;
 }

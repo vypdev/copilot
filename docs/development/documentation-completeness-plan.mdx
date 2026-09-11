@@ -14,7 +14,8 @@ This plan defines the public documentation structure and the evidence required t
 - Security: credentials, trust boundaries, forks, self-hosted runners, exposure, compliance.
 - Operations: provisioning, versions, verification, smoke tests, upgrades, rollback.
 - Bugbot: detection, publication, autofix, user requests, verification, permissions.
-- Development: architecture, local workflow, testing, artifacts, release.
+- Development: architecture, product specifications, local workflow, testing,
+  artifacts, documentation, and release.
 
 ## Acceptance criteria
 
@@ -27,8 +28,25 @@ Every public page MUST:
 - use MDX and appear in `docs.json` when it is a user-facing reference;
 - avoid secrets, authentication values, and unverifiable success claims.
 
-The repository validators check action inputs, defaults, allowlists, workflow references,
-navigation routes, local links, YAML snippets, Action version references, and forbidden
-legacy identifiers. Run `corepack pnpm run validate:documentation` for the cross-page
-contract check. A documentation change is incomplete until the documentation validators,
-tests, lint, build, and diff checks pass.
+The repository validators check navigation routes and heading fragments, local
+links, YAML snippets, Action version references, public Action input-name
+coverage, the complete setup-workflow inventory, every supported single-action
+value, embedded issue-template parity, high-risk deployment
+defaults/prerequisites, selected agent defaults and allowlists, supported MDX
+components/icons, forbidden retired identifiers, and every catalogued SDD/code/
+test/workflow/documentation path. They do not prove that an
+external npm/GitHub setting is configured or that GitHub's real desktop/mobile
+renderer is readable; those remain operator and manual UX evidence gates.
+
+Run:
+
+```bash
+corepack pnpm run validate:documentation
+corepack pnpm run validate:agent-docs
+corepack pnpm run validate:docs-page
+corepack pnpm run validate:workflows
+corepack pnpm run validate:specifications
+```
+
+A documentation change is incomplete until those gates, relevant tests,
+typecheck, lint, build, and diff review pass.

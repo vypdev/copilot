@@ -40,8 +40,6 @@ Commands are recognized at the beginning of a comment, case-insensitively. They 
 | `/copilot dismiss <finding-id>` | Dismiss one or more findings. | No file changes |
 | `/copilot implement <request>` | Apply a general code, test, refactoring, or documentation request. | Yes, if authorized |
 | `/copilot sync-branch [options]` | Merge the issue/PR parent into its working branch; use the fixer only if eligible conflicts occur. | Yes, if authorized |
-| `/copilot update-branch [options]` | Alias for `sync-branch`. | Yes, if authorized |
-| `/copilot updateBranch [options]` | Camel-case compatibility alias for `sync-branch`. | Yes, if authorized |
 
 `/copilot fix`, `/copilot dismiss`, and `/copilot implement` require arguments. The bot never treats a missing argument as permission to make a broad change.
 

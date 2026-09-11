@@ -27,7 +27,7 @@ function baseParam(overrides: Record<string, unknown> = {}) {
     issueNumber: 42,
     tokens: { token: 't' },
     pullRequest: { number: 10, head: 'feature/42-x', base: 'develop', creator: 'alice' },
-    ai: new Ai('http://localhost:4096', 'model', false, false, [], false, 'low', 20),
+    ai: new Ai('http://localhost:4096', 'model', false, [], false, 'low', 20),
     ...overrides,
   } as unknown as Parameters<UpdatePullRequestDescriptionUseCase['invoke']>[0];
 }
@@ -116,7 +116,6 @@ describe('UpdatePullRequestDescriptionUseCase', () => {
     const aiMembersOnly = new Ai(
       'http://localhost:4096',
       'model',
-      false,
       true, // aiMembersOnly
       [],
       false,

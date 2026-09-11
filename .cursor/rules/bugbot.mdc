@@ -1,129 +1,35 @@
 ---
-description: Detailed technical reference for Bugbot (detection, markers, context, intent, autofix, do user request, permissions)
+description: Current Bugbot boundaries and technical-source map
 alwaysApply: false
 ---
 
-# Bugbot – technical reference
+# Bugbot technical reference
 
-Bugbot has two main modes: **detection** (on push or single action) and **fix/do** (on issue comment or PR review comment). All Bugbot code lives under `src/usecase/steps/commit/bugbot/` and `src/usecase/steps/commit/` (DetectPotentialProblemsUseCase, user_request_use_case).
+Read `_agent/docs/bugbot.md` and the public `/bugbot` documentation before
+changing Bugbot. The implementation lives under
+`src/application/usecases/steps/commit/bugbot/`; provider implementations stay
+behind semantic application ports.
 
----
+Current invariants:
 
-## 1. Detection flow (push or single action)
+- Review and intent tasks are read-only; fixer tasks may mutate only after
+  application authorization.
+- Every structured response is validated locally, regardless of CLI-native
+  schema support.
+- One canonical PR diff snapshot supplies files, patches, and addressable
+  locations for a run.
+- Finding markers require both a local fingerprint and a semantic fingerprint.
+  Marker authorship must match the authenticated workflow identity.
+- Publication revalidates the PR head and uses one native review with line,
+  range, or file-level child comments.
+- Autofix verification and commit success do not resolve findings; a fresh
+  independent review must verify resolution.
+- Canonical comment options are `dry-run`, `trace-rules`, and
+  `suggested-changes`.
+- Canonical mutation/review commands are parsed by
+  `src/domain/bugbot/review_command.ts` and
+  `src/domain/copilot_command.ts`; do not add unversioned aliases.
 
-**Entry:** `CommitUseCase` (on push) calls `DetectPotentialProblemsUseCase`; or `SingleActionUseCase` when action is `detect_potential_problems_action`.
-
-**Steps:**
-
-1. **Guard:** OpenCode must be configured; `issueNumber !== -1`.
-2. **Load context:** `loadBugbotContext(param)` → issue comments + PR review comments parsed for markers; builds `existingByFindingId`, `issueComments`, `openPrNumbers`, `previousFindingsBlock`, `prContext`, `unresolvedFindingsWithBody`. Branch is `param.commit.branch` (or `options.branchOverride` when provided). PR context includes `prHeadSha`, `prFiles`, `pathToFirstDiffLine` for the first open PR.
-3. **Build prompt:** `buildBugbotPrompt(param, context)` – repo context, head/base branch, issue number, optional `ai-ignore-files`, and `previousFindingsBlock` (task 2: which previous findings are now resolved). A PR `synchronize` event with validated Git object ids scopes task 1 to `before..after`; the workflow fetches exactly those two objects after its shallow checkout, and task 2 still checks all open findings against current code. Other review modes use the full branch/base scope. The configured agent is asked to compute that diff and return `findings` + `resolved_finding_ids`.
-4. **Call configured findings/reviewer agent:** `queryBugbotFindings(..., BUGBOT_RESPONSE_SCHEMA)`.
-5. **Process response:** Filter findings: safe path (`isSafeFindingFilePath`), not in `ai-ignore-files` (`fileMatchesIgnorePatterns`), `meetsMinSeverity` (min from `bugbot-severity`), `deduplicateFindings`. Apply `applyCommentLimit(findings, bugbot-comment-limit)` → `toPublish`, `overflowCount`, `overflowTitles`.
-6. **Publish:** `publishFindings(execution, context, toPublish, overflowCount?, overflowTitles?)` – issue-only work adds or updates issue comments. When a PR context exists, new findings are sent in one submitted review with a summary body and inline comments; they are not mirrored as issue comments. Every inline comment uses a known-valid right-side diff line, falling back to the first changed file with an explicit note. Each finding body includes the **marker** `<!-- copilot-bugbot finding_id:"id" resolved:false -->`. Overflow stays in the review summary for PR work and uses one issue comment otherwise.
-7. **Mark resolved:** `markFindingsResolved(execution, context, resolvedFindingIds, normalizedResolvedIds)` – after publication succeeds, update each stored finding destination via `replaceMarkerInBody` to set `resolved:true`; if a PR comment exists, call `resolveReviewThread` when applicable.
-
-**Key paths (detection):**
-
-- `detect_potential_problems_use_case.ts` – orchestration
-- `load_bugbot_context_use_case.ts` – issue/PR comments, markers, previousFindingsBlock, prContext
-- `build_bugbot_prompt.ts` – prompt for plan agent (task 1: new findings, task 2: resolved ids)
-- `schema.ts` – BUGBOT_RESPONSE_SCHEMA (findings, resolved_finding_ids)
-- `marker.ts` – BUGBOT_MARKER_PREFIX, buildMarker, parseMarker, replaceMarkerInBody, extractTitleFromBody, buildCommentBody
-- `publish_findings_use_case.ts` – add/update issue comment, create/update PR review comment
-- `mark_findings_resolved_use_case.ts` – update comment body with resolved marker, resolve PR thread
-- `severity.ts`, `file_ignore.ts`, `path_validation.ts`, `limit_comments.ts`, `deduplicate_findings.ts`
-
----
-
-## 2. Marker format and context
-
-**Marker:** Hidden HTML comment in every finding comment (issue and PR):
-
-`<!-- copilot-bugbot finding_id:"<id>" resolved:true|false -->`
-
-- **Parse:** `parseMarker(body)` returns `{ findingId, resolved }[]`. Used when loading context from issue comments and PR review comments.
-- **Build:** `buildMarker(findingId, resolved)`. IDs are sanitized (`sanitizeFindingIdForMarker`) so they cannot break HTML (no `-->`, `<`, `>`, newlines, etc.).
-- **Update:** `replaceMarkerInBody(body, findingId, newResolved)` – used when marking a finding as resolved (same comment, body updated with `resolved:true`).
-
-**Context (`BugbotContext`):**
-
-- `existingByFindingId[id]`: `{ issueCommentId?, prCommentId?, prNumber?, resolved }` – from parsing all issue + PR comments for markers.
-- `issueComments`: raw list from API (for body when building previousFindingsBlock / unresolvedFindingsWithBody).
-- `openPrNumbers`, `previousFindingsBlock`, `prContext` (prHeadSha, prFiles, pathToFirstDiffLine), `unresolvedFindingsWithBody`: `{ id, fullBody }[]` for findings that are not resolved (body truncated to MAX_FINDING_BODY_LENGTH when loading).
-
----
-
-## 3. Fix intent and file-modifying actions (issue comment / PR review comment)
-
-**Entry:** `IssueCommentUseCase` or `PullRequestReviewCommentUseCase` (after language check).
-
-**Steps:**
-
-1. **Intent:** `DetectBugbotFixIntentUseCase.invoke(param)`  
-   - Guards: OpenCode configured, issue number set, comment body non-empty, branch (or branchOverride from `getHeadBranchForIssue` when commit.branch empty).  
-   - `loadBugbotContext(param, { branchOverride })` → unresolved findings.  
-   - Build `UnresolvedFindingSummary[]` (id, title from `extractTitleFromBody`, description = fullBody.slice(0, 4000)).  
-   - If PR review comment and `commentInReplyToId`: fetch parent comment body (`getPullRequestReviewCommentBody`), slice(0,1500).trim for prompt.  
-   - `buildBugbotFixIntentPrompt(commentBody, unresolvedFindings, parentCommentBody?)` → prompt asks: is_fix_request?, target_finding_ids?, is_do_request?, is_review_request?.
-   - `askAgent(OPENCODE_AGENT_PLAN, prompt, BUGBOT_FIX_INTENT_RESPONSE_SCHEMA)` → `{ is_fix_request, target_finding_ids, is_do_request, is_review_request }`.
-   - Payload: `isFixRequest`, `isDoRequest`, `isReviewRequest`, `targetFindingIds` (filtered to valid unresolved ids), `context`, `branchOverride`.
-
-2. **Permission:** `ProjectRepository.isActorAllowedToModifyFiles(owner, actor, token)`.  
-   - If owner is Organization: `orgs.checkMembershipForUser` (204 = allowed).  
-   - If owner is User: allowed for the owner or a repository collaborator with `push`, `maintain`, or `admin` permission.
-
-3. **Branch A – Bugbot autofix** (when `canRunBugbotAutofix(payload)` and `allowedToModifyFiles`):  
-   - `BugbotAutofixUseCase.invoke({ execution, targetFindingIds, userComment, context, branchOverride })`  
-   - Load context if not provided; filter targets to valid unresolved ids; `buildBugbotFixPrompt(...)` with repo, findings block (truncated fullBody per finding), user comment, verify commands; `copilotMessage(ai, prompt)` (build agent).  
-   - If success: `runBugbotAutofixCommitAndPush(execution, { branchOverride, targetFindingIds })` – optional checkout if branchOverride, run verify commands (from `getBugbotFixVerifyCommands`, max 20), git add/commit/push (message `fix(#N): bugbot autofix - resolve ...`).  
-   - If committed and context: `markFindingsResolved({ execution, context, resolvedFindingIds, normalizedResolvedIds })`.
-
-4. **Branch B – Do user request** (when `!runAutofix && canRunDoUserRequest(payload)` and `allowedToModifyFiles`):  
-   - `DoUserRequestUseCase.invoke({ execution, userComment, branchOverride })`  
-   - `buildUserRequestPrompt(execution, userComment)` – repo context + sanitized user request; `copilotMessage(ai, prompt)`.  
-   - If success: `runUserRequestCommitAndPush(execution, { branchOverride })` – same verify/checkout/add/commit/push with message `chore(#N): apply user request` or `chore: apply user request`.
-
-5. **Review** (when the bot is mentioned and the request is read-only analysis): the existing findings/review flow runs without file changes.
-6. **Think** (when no file-modifying action ran): `ThinkUseCase.invoke(param)` – answers the user (e.g. question).
-
-**Key paths (fix/do):**
-
-- `detect_bugbot_fix_intent_use_case.ts` – intent detection, branch resolution for issue_comment
-- `build_bugbot_fix_intent_prompt.ts` – prompt for is_fix_request / is_do_request / is_review_request / target_finding_ids
-- `bugbot_fix_intent_payload.ts` – getBugbotFixIntentPayload, canRunBugbotAutofix, canRunDoUserRequest
-- `schema.ts` – BUGBOT_FIX_INTENT_RESPONSE_SCHEMA (is_fix_request, target_finding_ids, is_do_request)
-- `bugbot_autofix_use_case.ts` – build prompt, copilotMessage (build agent)
-- `build_bugbot_fix_prompt.ts` – fix prompt (findings block, verify commands, truncate finding body to MAX_FINDING_BODY_LENGTH)
-- `bugbot_autofix_commit.ts` – runBugbotAutofixCommitAndPush, runUserRequestCommitAndPush (checkout, verify commands max 20, git config, add, commit, push)
-- `user_request_use_case.ts` – DoUserRequestUseCase, buildUserRequestPrompt
-- `mark_findings_resolved_use_case.ts` – update issue/PR comment with resolved marker
-- `project_repository.ts` – isActorAllowedToModifyFiles
-
----
-
-## 4. Configuration (inputs / Ai model)
-
-- **bugbot-severity:** Minimum severity to publish (info, low, medium, high). Default low. `getBugbotMinSeverity()`, `normalizeMinSeverity`, `meetsMinSeverity`.
-- **bugbot-comment-limit:** Max individual finding comments per issue/PR (overflow gets one summary). Default 20. `getBugbotCommentLimit()`, `applyCommentLimit`.
-- **bugbot-fix-verify-commands:** Comma-separated commands run after autofix (and do user request) before commit. `getBugbotFixVerifyCommands()`, parsed with shell-quote; max 20 executed. Stored in `Ai` model; read in `github_action.ts` / `local_action.ts`.
-- **ai-ignore-files:** Exclude paths from detection (and from reporting). Used in buildBugbotPrompt and in filtering findings.
-
----
-
-## 5. Constants and types
-
-- `BUGBOT_MARKER_PREFIX`: `'copilot-bugbot'`
-- `BUGBOT_MAX_COMMENTS`: 20 (default limit)
-- `MAX_FINDING_BODY_LENGTH`: 12000 (truncation when loading context and in build_bugbot_fix_prompt)
-- `MAX_VERIFY_COMMANDS`: 20 (in bugbot_autofix_commit)
-- Types: `BugbotContext`, `BugbotFinding` (id, title, description, file?, line?, severity?, suggestion?), `UnresolvedFindingSummary`, `BugbotFixIntentPayload`.
-
----
-
-## 6. Sanitization and safety
-
-- **User comment in prompts:** `sanitizeUserCommentForPrompt(raw)` – trim, escape backslashes, replace `"""`, truncate 4000 with no lone trailing backslash.
-- **Finding body in prompts:** `truncateFindingBody(body, MAX_FINDING_BODY_LENGTH)` with suffix `[... truncated for length ...]` (used in load_bugbot_context and build_bugbot_fix_prompt).
-- **Verify commands:** Parsed with shell-quote; no shell operators (;, |, etc.); max 20 run.
-- **Path:** `isSafeFindingFilePath` (no null byte, no `..`, no absolute); PR review comments always use a line confirmed from the current diff, with a clearly labelled fallback anchor when the reported file is outside that diff.
+Use the source types and policies as the executable contract. Do not restore an
+older marker shape, direct-diff reader, provider-specific application path, or
+alternate command spelling.

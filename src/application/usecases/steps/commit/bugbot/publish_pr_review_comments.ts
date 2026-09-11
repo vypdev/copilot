@@ -3,13 +3,14 @@ import type { PullRequestReviewCommentDraft } from "../../../../ports/pull_reque
 import type { Execution } from "../../../../../data/model/execution";
 import type {
   BugbotFinding,
-  BugbotPrContext,
   ExistingFindingInfo,
-} from "./types";
-import { buildCommentBody } from "./marker";
+} from "../../../../../domain/bugbot/finding";
+import type { BugbotPrContext } from "./types";
+import { buildCommentBody } from '../../../../policies/bugbot_finding_marker_policy';
 import { resolveFindingPathForPr } from "./path_validation";
 import { logInfo } from "../../../../ports/logging_ports";
 import { sanitizeAgentMarkdown } from '../../../../policies/github_comment_publication_policy';
+import { buildNewBugbotReviewSnapshotHeader } from '../../../../policies/bugbot_review_presentation_policy';
 
 export interface PullRequestReviewCommentPublisherOptions {
   repository: BugbotPullRequestWritePort;
@@ -35,15 +36,30 @@ export class PullRequestReviewCommentPublisher {
     existing: ExistingFindingInfo | undefined,
   ): Promise<void> {
     const { prContext, openPrNumber, execution } = this.options;
-    const allowSuggestedChanges = execution.ai?.getBugbotReviewConfiguration?.().suggestedChanges !== false;
+    const allowSuggestedChanges = execution.ai.getBugbotReviewConfiguration().suggestedChanges;
     if (
       existing?.pullRequest != null &&
       existing.pullRequest.pullRequestNumber === openPrNumber
     ) {
+      // A human dismissal is durable. Model output alone cannot reverse it;
+      // reopening the native thread is the explicit human signal to recheck.
+      if (existing.pullRequest.resolution === 'dismissed'
+          && existing.pullRequest.threadResolved !== false) {
+        return;
+      }
       // Existing comments do not carry enough anchor metadata to prove that a
       // GitHub suggestion is still attached to a RIGHT-side changed line.
       const body = `${buildCommentBody(finding, false, undefined, { includeSuggestedChange: false })}\n\n${this.options.watermark}`;
-      if (existing.pullRequest.resolved) {
+      await this.options.repository.updatePullRequestReviewComment(
+        execution.owner,
+        execution.repo,
+        existing.pullRequest.commentIdentity,
+        body,
+        execution.tokens.token,
+      );
+      if (existing.pullRequest.resolved || existing.pullRequest.threadResolved === true) {
+        // Persist the open marker before reopening the native thread. This
+        // leaves a deterministic recovery direction after partial failures.
         await this.options.repository.unresolvePullRequestReviewThread(
           execution.owner,
           execution.repo,
@@ -52,13 +68,6 @@ export class PullRequestReviewCommentPublisher {
           execution.tokens.token,
         );
       }
-      await this.options.repository.updatePullRequestReviewComment(
-        execution.owner,
-        execution.repo,
-        existing.pullRequest.commentIdentity,
-        body,
-        execution.tokens.token,
-      );
       return;
     }
 
@@ -112,12 +121,14 @@ export class PullRequestReviewCommentPublisher {
         overflowCount,
         overflowTitles,
         this.options.watermark,
-        execution.ai?.getBugbotReviewConfiguration?.().traceRules === true
+        execution.ai.getBugbotReviewConfiguration().traceRules
           ? this.options.ruleSources ?? []
           : [],
-        execution.ai?.getBugbotReviewConfiguration?.().traceRules === true
+        execution.ai.getBugbotReviewConfiguration().traceRules
           ? this.options.omittedRuleCount ?? 0
           : 0,
+        prContext.prHeadSha,
+        execution.locale?.pullRequest ?? 'en-US',
       ),
       this.commentsToCreate,
       execution.tokens.token,
@@ -135,9 +146,9 @@ function resolveReviewAnchor(
     if (reportedPath && context.pathToFirstDiffLine[reportedPath] != null) {
       return { path: reportedPath, subjectType: 'line', line: context.pathToFirstDiffLine[reportedPath], side: 'RIGHT' };
     }
-    const legacyFallback = Object.entries(context.pathToFirstDiffLine)[0];
-    return legacyFallback
-      ? { path: legacyFallback[0], subjectType: 'line', line: legacyFallback[1], side: 'RIGHT' }
+    const firstAvailableLocation = Object.entries(context.pathToFirstDiffLine)[0];
+    return firstAvailableLocation
+      ? { path: firstAvailableLocation[0], subjectType: 'line', line: firstAvailableLocation[1], side: 'RIGHT' }
       : undefined;
   }
   if (reportedPath) {
@@ -171,6 +182,8 @@ function buildReviewSummary(
   watermark: string,
   ruleSources: readonly string[] = [],
   omittedRuleCount = 0,
+  analyzedHeadSha = 'unknown',
+  locale = 'en-US',
 ): string {
   const findingLines = findings.map((finding) => {
     const severity = sanitizeSummaryText(finding.severity, 32) || "unspecified";
@@ -186,9 +199,12 @@ function buildReviewSummary(
     overflowLines.push(`- …and ${overflowCount - overflowLines.length} more.`);
   }
   const sections = [
-    "## 🤖 Bugbot review",
-    `Bugbot found **${findings.length + overflowCount}** active potential problem(s) in this revision. `
-      + `${inlineCount} finding(s) are attached to changed code in this review.`,
+    buildNewBugbotReviewSnapshotHeader(
+      analyzedHeadSha,
+      findings.length + overflowCount,
+      inlineCount,
+      locale,
+    ),
   ];
   if (findingLines.length > 0) sections.push(`### Findings\n\n${findingLines.join("\n")}`);
   if (unanchoredBodies.length > 0) {
@@ -212,7 +228,6 @@ function buildReviewSummary(
     if (omittedRuleCount > 0) rows.push(`| — | ${omittedRuleCount} omitted by duplicate, empty, or combined-budget policy |`);
     sections.push(`### Review configuration\n\nRules in effective precedence order:\n\n| Source | Status |\n| --- | --- |\n${rows.join('\n')}`);
   }
-  sections.push('To request an automatic repair for all active findings, reply with `/copilot fix all`.');
   sections.push(watermark);
   return sections.join("\n\n");
 }

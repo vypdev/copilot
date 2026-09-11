@@ -8,7 +8,6 @@ import {
 } from "./prepare_bugbot_findings";
 import { markFindingsResolved } from "./mark_findings_resolved_use_case";
 import { publishFindings } from "./publish_findings_use_case";
-import { BUGBOT_MAX_COMMENTS } from '../../../../policies/bugbot_constants';
 import { PullRequestReviewOperationError } from "../../../../../application/ports/pull_request_review_errors";
 
 export function prepareDetectedFindings(
@@ -17,9 +16,9 @@ export function prepareDetectedFindings(
 ): PreparedBugbotFindings | undefined {
   return prepareBugbotFindings(
     response,
-    execution.ai?.getAiIgnoreFiles?.() ?? [],
-    execution.ai?.getBugbotMinSeverity?.(),
-    execution.ai?.getBugbotCommentLimit?.() ?? BUGBOT_MAX_COMMENTS,
+    execution.ai.getAiIgnoreFiles(),
+    execution.ai.getBugbotMinSeverity(),
+    execution.ai.getBugbotCommentLimit(),
   );
 }
 

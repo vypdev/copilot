@@ -20,7 +20,7 @@ export function buildBugbotPrompt(param: Execution, context: BugbotContext): str
     const headBranch = param.pullRequest?.head?.trim() || param.commit?.branch || 'unknown';
     const baseBranch = param.currentConfiguration.parentBranch ?? param.branches.development ?? 'develop';
     const previousBlock = context.previousFindingsBlock;
-    const ignorePatterns = param.ai?.getAiIgnoreFiles?.() ?? [];
+    const ignorePatterns = param.ai.getAiIgnoreFiles();
     const ignoreBlock =
         ignorePatterns.length > 0
             ? (() => {
@@ -34,7 +34,7 @@ export function buildBugbotPrompt(param: Execution, context: BugbotContext): str
             : "";
     const changes = (context.prContext?.changes ?? [])
         .filter((change) => !fileMatchesIgnorePatterns(change.filename, ignorePatterns));
-    const configuredEffort = param.ai?.getBugbotReviewConfiguration?.().effort ?? 'default';
+    const configuredEffort = param.ai.getBugbotReviewConfiguration().effort;
     const resolvedEffort = resolveBugbotReviewEffort(configuredEffort, {
         files: changes.length,
         additions: changes.reduce((sum, change) => sum + change.additions, 0),

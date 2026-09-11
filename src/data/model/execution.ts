@@ -23,6 +23,7 @@ import { githubUsersMatch } from '../../domain/github_user_policy';
 import type { ExecutionInputs } from './execution_inputs';
 import type { ExecutionComponents } from './execution_components';
 import { DEFAULT_INACTIVITY_THRESHOLD_HOURS } from '../../domain/issue_inactivity';
+import { DEFAULT_DEPLOYMENT_CONFIGURATION, type DeploymentConfigurationValues } from '../../domain/deployment_configuration';
 
 
 export class Execution {
@@ -52,6 +53,7 @@ export class Execution {
     issue: Issue;
     pullRequest: PullRequest;
     workflows: Workflows;
+    deployment: DeploymentConfigurationValues;
     project: Projects;
     previousConfiguration: Config | undefined;
     currentConfiguration: Config;
@@ -184,6 +186,7 @@ export class Execution {
         this.hotfix = components.hotfix;
         this.project = components.projects;
         this.workflows = components.workflows;
+        this.deployment = components.deployment ?? { ...DEFAULT_DEPLOYMENT_CONFIGURATION };
         this.tokenUser = components.tokenUser;
         this.inactivityThresholdHours = components.inactivityThresholdHours ?? DEFAULT_INACTIVITY_THRESHOLD_HOURS;
         this.currentConfiguration = new Config({});

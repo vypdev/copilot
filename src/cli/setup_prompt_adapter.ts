@@ -110,19 +110,64 @@ export class SetupPromptAdapter implements SetupPromptPort, SetupCredentialPromp
         repository.reopenIssueOnPush = await this.askBoolean('Reopen closed issues when a related branch receives a push?', repository.reopenIssueOnPush);
         repository.desiredAssigneesCount = await this.askNumber('Desired issue assignees (0 disables automatic assignment)', repository.desiredAssigneesCount);
         repository.desiredReviewersCount = await this.askNumber('Desired pull-request reviewers (0 disables automatic assignment)', repository.desiredReviewersCount);
-        repository.mergeTimeout = await this.askNumber('Merge timeout in seconds (0 disables the timeout)', repository.mergeTimeout);
         repository.inactivityThresholdHours = await this.askNumber('Hours without activity before closing a waiting issue', repository.inactivityThresholdHours);
         repository.issueLocale = await this.askText('Issue comment locale', repository.issueLocale);
         repository.pullRequestLocale = await this.askText('Pull-request comment locale', repository.pullRequestLocale);
         repository.commitPrefixTransforms = await this.askText('Commit prefix transforms', repository.commitPrefixTransforms);
+        repository.releaseReconciliationStrategy = await this.askChoice(
+            'Release reconciliation strategy',
+            ['production-lineage', 'canonical-gitflow', 'manual'],
+            repository.releaseReconciliationStrategy,
+        ) as SetupConfiguration['repository']['releaseReconciliationStrategy'];
+        repository.hotfixReconciliationStrategy = await this.askChoice(
+            'Hotfix reconciliation strategy',
+            ['production-lineage', 'canonical-gitflow', 'manual'],
+            repository.hotfixReconciliationStrategy,
+        ) as SetupConfiguration['repository']['hotfixReconciliationStrategy'];
+        repository.reconciliationPullRequestMode = await this.askChoice(
+            'Managed reconciliation PR mode',
+            ['auto', 'auto-merge', 'merge-queue', 'create-only'],
+            repository.reconciliationPullRequestMode,
+        ) as SetupConfiguration['repository']['reconciliationPullRequestMode'];
+        repository.reconciliationBackmergeMode = await this.askChoice(
+            'Reconciliation back-merge mode',
+            ['auto', 'direct', 'sync-branch'],
+            repository.reconciliationBackmergeMode,
+        ) as SetupConfiguration['repository']['reconciliationBackmergeMode'];
+        repository.hotfixActiveReleasePolicy = await this.askChoice(
+            'Hotfix target while a release is active',
+            ['prefer-release', 'development', 'both'],
+            repository.hotfixActiveReleasePolicy,
+        ) as SetupConfiguration['repository']['hotfixActiveReleasePolicy'];
+        repository.reconciliationTree = await this.askText('Reconciliation branch prefix', repository.reconciliationTree);
+        repository.reconciliationCleanup = await this.askChoice(
+            'Branch cleanup after reconciliation',
+            ['all', 'source-only', 'sync-only', 'none'],
+            repository.reconciliationCleanup,
+        ) as SetupConfiguration['repository']['reconciliationCleanup'];
+        repository.reconciliationIssueCompletion = await this.askChoice(
+            'Launcher issue behavior after reconciliation',
+            ['close', 'keep-open'],
+            repository.reconciliationIssueCompletion,
+        ) as SetupConfiguration['repository']['reconciliationIssueCompletion'];
+        repository.orchestrationPresentationMode = await this.askChoice(
+            'Release control-center detail',
+            ['guided', 'compact', 'quiet'],
+            repository.orchestrationPresentationMode,
+        ) as SetupConfiguration['repository']['orchestrationPresentationMode'];
+        repository.orchestrationDiagrams = await this.askBoolean('Show accessible Mermaid release diagrams?', repository.orchestrationDiagrams);
+        repository.orchestrationCommentMode = await this.askChoice(
+            'Release lifecycle comment mode',
+            ['update', 'milestones'],
+            repository.orchestrationCommentMode,
+        ) as SetupConfiguration['repository']['orchestrationCommentMode'];
 
         console.log(color('\n4. Configure AI, projects, and release safety\n', 36));
         const ai = defaults.ai;
-        ai.pullRequestDescription = await this.askBoolean('Generate AI pull-request descriptions?', ai.pullRequestDescription);
         ai.pullRequestDescriptionMode = await this.askChoice(
             'Pull-request description mode',
             ['replace', 'append', 'preserve', 'disabled'],
-            ai.pullRequestDescriptionMode ?? 'replace',
+            ai.pullRequestDescriptionMode,
         ) as SetupConfiguration['ai']['pullRequestDescriptionMode'];
         ai.ignoreFiles = await this.askText('AI ignore file patterns (comma-separated)', ai.ignoreFiles);
         ai.membersOnly = await this.askBoolean('Restrict AI processing to repository members?', ai.membersOnly);
@@ -193,6 +238,11 @@ export class SetupPromptAdapter implements SetupPromptPort, SetupCredentialPromp
             `  Secret storage: ${plan.configuration.storage.secrets.defaultScope} scope${plan.configuration.storage.secrets.defaultScope === 'organization' ? ` (${plan.configuration.storage.secrets.organizationVisibility})` : ''}`,
             `  Labels and issue types: always checked by Copilot setup`,
             `  Initial tag: ${plan.configuration.createInitialTag ? 'v1.0.0 when no version tag exists' : 'disabled'}`, '',
+            ...(plan.mergeQueueReadiness.length > 0 ? [
+                color('Merge queue readiness', 36),
+                ...plan.mergeQueueReadiness.map(check => `  ${doctorIcon(check.status)} ${check.area}: ${check.message}`),
+                '',
+            ] : []),
             color('Strictly required Secrets', 33), `  ${plan.requiredSecrets.join(', ') || '(none)'}`,
             ...(plan.warnings.length > 0 ? ['', color('Important notes', 33), ...plan.warnings.map(warning => `  ⚠ ${warning}`)] : []),
         ].join('\n');
@@ -207,7 +257,7 @@ export class SetupPromptAdapter implements SetupPromptPort, SetupCredentialPromp
     async requestSetupPat(): Promise<string | undefined> {
         if (!this.readline) return undefined;
         console.log(renderBox(
-            'Enter a GitHub setup PAT. It is used in memory for this run only and is never stored in the repository, a .env file, or a GitHub Secret.\n\nRecommended fine-grained permissions for the selected setup features:\n  Repository: Metadata read, Contents read, Issues write, Actions read/write, Variables write, Secrets read/write, Workflows read/write.\n  Organization: Issue Types write and Projects read/write only when selected; Members read when member-only checks are enabled.\n  Contents write and Workflows write are needed only when changing workflow files through the GitHub API.\n\nThe workflow PAT is a different bot-account token and is requested separately.',
+            'Enter a GitHub setup PAT. It is used in memory for this run only and is never stored in the repository, a .env file, or a GitHub Secret.\n\nRecommended fine-grained permissions for the selected setup features:\n  Repository: Metadata read, Contents read, Issues write, Actions read/write, Variables write, Secrets read/write, Workflows read/write; Administration read when release/hotfix setup or doctor inspects classic branch protection.\n  Organization: Issue Types write and Projects read/write only when selected; Members read when member-only checks are enabled.\n  Contents write and Workflows write are needed only when changing workflow files through the GitHub API.\n\nThe workflow PAT is a different bot-account token and is requested separately.',
             'Setup PAT',
             33,
         ));

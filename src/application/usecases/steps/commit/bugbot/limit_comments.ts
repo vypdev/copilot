@@ -1,5 +1,5 @@
 import { BUGBOT_MAX_COMMENTS } from '../../../../policies/bugbot_constants';
-import type { BugbotFinding } from "./types";
+import type { BugbotFinding } from "../../../../../domain/bugbot/finding";
 
 export interface ApplyLimitResult {
     /** Findings to publish as individual comments (up to maxComments). */

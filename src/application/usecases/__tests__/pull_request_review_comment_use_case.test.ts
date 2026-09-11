@@ -1,11 +1,13 @@
 import { PullRequestReviewCommentUseCase } from "../pull_request_review_comment_use_case";
 import type { Execution } from "../../../data/model/execution";
+import { Ai } from "../../../data/model/ai";
 import { Result } from "../../../data/model/result";
 import type { BugbotContext } from "../steps/commit/bugbot/types";
 
 const mockLogInfo = jest.fn();
 jest.mock("../../ports/logging_ports", () => ({
   logInfo: (...args: unknown[]) => mockLogInfo(...args),
+  logError: jest.fn(),
 }));
 
 const mockCheckLanguageInvoke = jest.fn();
@@ -108,7 +110,7 @@ function baseExecution(overrides: Partial<Execution> = {}): Execution {
     },
     commit: { branch: "feature/296-bugbot-autofix" },
     singleAction: { enabledSingleAction: false } as Execution["singleAction"],
-    ai: {} as Execution["ai"],
+    ai: new Ai("", "model", false, [], false, "low", 20),
     labels: {} as Execution["labels"],
     locale: {} as Execution["locale"],
     sizeThresholds: {} as Execution["sizeThresholds"],
@@ -148,7 +150,6 @@ describe("PullRequestReviewCommentUseCase", () => {
       { taskId: "ThinkUseCase", invoke: mockThinkInvoke },
       { taskId: "BugbotAutofixUseCase", invoke: mockAutofixInvoke },
       { taskId: "DoUserRequestUseCase", invoke: mockDoUserRequestInvoke },
-      { updateComment: jest.fn() },
       { isActorAllowedToModifyFiles: mockIsActorAllowedToModifyFiles },
       { getUserFromToken: jest.fn(), getTokenUserDetails: jest.fn() },
       {

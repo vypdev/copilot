@@ -1,4 +1,5 @@
 import type { Execution } from "../../../data/model/execution";
+import { Ai } from "../../../data/model/ai";
 import { Result } from "../../../data/model/result";
 import { IssueUseCase } from "../issue_use_case";
 
@@ -15,7 +16,6 @@ const mockCheckPriorityInvoke = jest.fn();
 const mockPrepareBranchesInvoke = jest.fn();
 const mockRemoveNotNeededInvoke = jest.fn();
 const mockDeployAddedInvoke = jest.fn();
-const mockDeployedAddedInvoke = jest.fn();
 const mockRecommendStepsInvoke = jest.fn();
 const mockAnswerIssueHelpInvoke = jest.fn();
 
@@ -31,7 +31,6 @@ const workflowSteps = {
   prepareBranches: { taskId: 'prepare-branches', invoke: mockPrepareBranchesInvoke },
   removeNotNeededBranches: { taskId: 'remove-not-needed', invoke: mockRemoveNotNeededInvoke },
   deployAdded: { taskId: 'deploy-added', invoke: mockDeployAddedInvoke },
-  deployedAdded: { taskId: 'deployed-added', invoke: mockDeployedAddedInvoke },
 };
 
 function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
@@ -40,6 +39,7 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
     isBranched: true,
     issue: { opened: false },
     labels: { isRelease: false, isQuestion: false, isHelp: false },
+    ai: new Ai("", "model", false, [], false, "low", 20),
     ...overrides,
   } as unknown as Execution;
 }
@@ -68,7 +68,6 @@ describe("IssueUseCase", () => {
     mockPrepareBranchesInvoke.mockResolvedValue([]);
     mockRemoveNotNeededInvoke.mockResolvedValue([]);
     mockDeployAddedInvoke.mockResolvedValue([]);
-    mockDeployedAddedInvoke.mockResolvedValue([]);
     mockRecommendStepsInvoke.mockResolvedValue([]);
     mockAnswerIssueHelpInvoke.mockResolvedValue([]);
   });

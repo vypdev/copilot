@@ -1,4 +1,4 @@
-import { extractTitleFromBody } from "./marker";
+import { extractTitleFromBody } from '../../../../policies/bugbot_finding_marker_policy';
 import type { UnresolvedFindingSummary } from "./types";
 
 export interface BugbotFixIntent {

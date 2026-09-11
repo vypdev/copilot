@@ -3,6 +3,7 @@ import type { Execution } from '../../../../../data/model/execution';
 import type { BugbotContext } from './types';
 import type { PreparedBugbotFindings } from './prepare_bugbot_findings';
 import { projectBugbotFindingStatuses } from '../../../../policies/bugbot_finding_status_policy';
+import type { BugbotReviewProjection } from '../../../../../domain/bugbot/review_projection';
 
 export interface BugbotReviewTelemetryClock {
     now(): number;
@@ -22,6 +23,7 @@ export class BugbotReviewTelemetry {
     private responseCharacters = 0;
     private context?: BugbotContext;
     private prepared?: PreparedBugbotFindings;
+    private projection?: BugbotReviewProjection;
 
     constructor(
         private readonly execution: Execution,
@@ -53,6 +55,11 @@ export class BugbotReviewTelemetry {
         this.prepared = prepared;
     }
 
+    /** Uses the final provider-verified projection for every downstream metric. */
+    observeProjection(projection: BugbotReviewProjection): void {
+        this.projection = projection;
+    }
+
     snapshot(outcome: BugbotReviewOutcome, errorCategory?: string): BugbotReviewTelemetrySnapshot {
         const changes = this.context?.prContext?.changes ?? [];
         const headSha = this.context?.prContext?.prHeadSha;
@@ -63,23 +70,23 @@ export class BugbotReviewTelemetry {
             this.execution.pullRequest?.number > 0 ? `pr-${this.execution.pullRequest.number}` : 'branch',
             headSha?.slice(0, 12) || String(Number.isFinite(startedAtEpoch) ? startedAtEpoch : this.startedAtMs),
         ].join(':');
-        const agent = this.execution.ai?.getAgentConfiguration?.(this.execution.isPullRequest ? 'reviewer' : 'findings');
-        const findingStates = this.context && this.prepared
+        const agent = this.execution.ai.getAgentConfiguration(this.execution.isPullRequest ? 'reviewer' : 'findings');
+        const findingStates = this.projection?.counts ?? (this.context && this.prepared
             ? projectBugbotFindingStatuses(
                 this.context.existingByFindingId,
                 this.prepared.activeFindings ?? this.prepared.toPublish,
                 this.prepared.resolvedFindingIds,
                 this.prepared.resolvedFindingResolutions,
             ).counts
-            : undefined;
+            : undefined);
         return {
             schemaVersion: 1,
             reviewId,
             repository: `${this.execution.owner}/${this.execution.repo}`,
             ...(this.execution.pullRequest?.number > 0 ? { pullRequestNumber: this.execution.pullRequest.number } : {}),
             ...(headSha ? { headSha } : {}),
-            publicationMode: this.execution.ai?.getBugbotReviewConfiguration?.().publicationMode ?? 'publish',
-            configuredEffort: this.execution.ai?.getBugbotReviewConfiguration?.().effort ?? 'default',
+            publicationMode: this.execution.ai.getBugbotReviewConfiguration().publicationMode,
+            configuredEffort: this.execution.ai.getBugbotReviewConfiguration().effort,
             ...(agent?.provider ? { agentProvider: agent.provider } : {}),
             ...(agent?.model ? { agentModel: agent.model } : {}),
             startedAt: this.startedAt,

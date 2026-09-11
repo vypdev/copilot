@@ -2,7 +2,6 @@ import type { ExecutionInputs } from './execution_inputs';
 export declare class PullRequest {
     desiredAssigneesCount: number;
     desiredReviewersCount: number;
-    mergeTimeout: number;
     inputs: ExecutionInputs | undefined;
     get action(): string;
     get id(): string;
@@ -28,5 +27,5 @@ export declare class PullRequest {
     get commentUrl(): string;
     /** When the comment is a reply, the id of the parent review comment (for bugbot: include parent body in intent prompt). */
     get commentInReplyToId(): number | undefined;
-    constructor(desiredAssigneesCount: number, desiredReviewersCount: number, mergeTimeout: number, inputs?: ExecutionInputs | undefined);
+    constructor(desiredAssigneesCount: number, desiredReviewersCount: number, inputs?: ExecutionInputs | undefined);
 }

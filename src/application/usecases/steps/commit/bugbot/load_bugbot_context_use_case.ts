@@ -6,6 +6,7 @@ import type { Execution } from "../../../../../data/model/execution";
 import type { BugbotContextPorts } from "../../../../../application/ports/bugbot_context_ports";
 import type { BugbotPullRequestReadPort } from "../../../../../application/ports/bugbot_pull_request_read_ports";
 import type { PullRequestReviewComment } from "../../../../../application/ports/pull_request_review_comment_ports";
+import type { PullRequestReviewThreadState } from "../../../../../application/ports/pull_request_review_comment_ports";
 import type { BugbotContext } from "./types";
 import {
     buildPreviousFindingsBlock,
@@ -66,13 +67,12 @@ async function loadOpenPullRequestThreadStates(
     repo: string,
     openPrNumbers: number[],
     token: string,
-): Promise<ReadonlyMap<number, Readonly<Record<string, boolean>>>> {
-    const statesByPullRequest = new Map<number, Readonly<Record<string, boolean>>>();
-    if (!repository.listPullRequestReviewThreadStates) return statesByPullRequest;
+): Promise<ReadonlyMap<number, Readonly<Record<string, PullRequestReviewThreadState>>>> {
+    const statesByPullRequest = new Map<number, Readonly<Record<string, PullRequestReviewThreadState>>>();
     await Promise.all(openPrNumbers.map(async (prNumber) => {
         statesByPullRequest.set(
             prNumber,
-            await repository.listPullRequestReviewThreadStates!(owner, repo, prNumber, token),
+            await repository.listPullRequestReviewThreadStates(owner, repo, prNumber, token),
         );
     }));
     return statesByPullRequest;
@@ -89,20 +89,10 @@ async function loadPullRequestContext(
     const prHeadSha = await repository.getPullRequestHeadSha(owner, repo, openPrNumber, token);
     if (!prHeadSha) return null;
 
-    const snapshot = repository.getReviewDiffSnapshot
-        ? await repository.getReviewDiffSnapshot(owner, repo, openPrNumber, token)
-        : undefined;
-    const [prFiles, filesWithLines, filesWithLocations] = snapshot
-        ? [
-            snapshot.changes.map(({ filename, status }) => ({ filename, status })),
-            snapshot.filesWithFirstDiffLine,
-            snapshot.filesWithDiffLocations,
-        ]
-        : await Promise.all([
-            repository.getChangedFiles(owner, repo, openPrNumber, token),
-            repository.getFilesWithFirstDiffLine(owner, repo, openPrNumber, token),
-            repository.getFilesWithDiffLocations?.(owner, repo, openPrNumber, token) ?? Promise.resolve([]),
-        ]);
+    const snapshot = await repository.getReviewDiffSnapshot(owner, repo, openPrNumber, token);
+    const prFiles = snapshot.changes.map(({ filename, status }) => ({ filename, status }));
+    const filesWithLines = snapshot.filesWithFirstDiffLine;
+    const filesWithLocations = snapshot.filesWithDiffLocations;
     const pathToFirstDiffLine = Object.fromEntries(
         filesWithLines.map(({ path, firstLine }) => [path, firstLine])
     );
@@ -114,7 +104,7 @@ async function loadPullRequestContext(
         prFiles,
         pathToFirstDiffLine,
         pathToDiffLocations,
-        ...(snapshot ? { changes: snapshot.changes } : {}),
+        changes: snapshot.changes,
     };
 }
 
@@ -161,7 +151,7 @@ export async function loadBugbotContext(
     );
     const boundedPreviousFindings = limitPreviousBugbotFindings(previousFindings);
     const previousFindingsBlock = buildPreviousFindingsBlock(previousFindings);
-    const ignorePatterns = param.ai?.getAiIgnoreFiles?.() ?? [];
+    const ignorePatterns = param.ai.getAiIgnoreFiles();
     const reviewDiffBlock = buildReviewDiffBlock(prContext, ignorePatterns);
     const reviewConversationBlock = buildReviewConversationBlock(
         issueComments,
@@ -172,13 +162,13 @@ export async function loadBugbotContext(
         id: finding.id,
         fullBody: finding.fullBody,
     }));
-    const repositoryRules = await ports.rules?.loadRules(
+    const repositoryRules = await ports.rules.loadRules(
         prContext?.prFiles
             .map((file) => file.filename)
             .filter((file) => !fileMatchesIgnorePatterns(file, ignorePatterns)) ?? [],
-    ) ?? [];
+    );
     const ruleSet = buildBugbotReviewRuleSet(
-        param.ai?.getBugbotReviewConfiguration?.().organizationRules ?? [],
+        param.ai.getBugbotReviewConfiguration().organizationRules,
         repositoryRules,
     );
 

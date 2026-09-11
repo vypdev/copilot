@@ -1,6 +1,8 @@
 import type {
   PullRequestReviewCommentCommandPort,
   PullRequestReviewCommentDraft,
+  PullRequestReviewReference,
+  PullRequestReviewSummaryUpdatePort,
 } from "../../../application/ports/pull_request_review_comment_ports";
 import {
   PullRequestReviewOperationError,
@@ -14,7 +16,7 @@ import type {
 } from "../../../infrastructure/github/ports/github_pull_request_review_protocol";
 import { requireArrayPage } from "../github/github_pagination_policy";
 
-export class PullRequestReviewCommentCommandRepository implements PullRequestReviewCommentCommandPort {
+export class PullRequestReviewCommentCommandRepository implements PullRequestReviewCommentCommandPort, PullRequestReviewSummaryUpdatePort {
   constructor(
     private readonly createClient: GithubClientPort<GithubPullRequestReviewCommentCreateClient>,
     private readonly graphqlClient: GithubClientPort<GithubGraphqlTransportClient>,
@@ -50,8 +52,8 @@ export class PullRequestReviewCommentCommandRepository implements PullRequestRev
     body: string,
     comments: PullRequestReviewCommentDraft[],
     token: string,
-  ): Promise<void> {
-    if (comments.length === 0 && body.trim().length === 0) return;
+  ): Promise<PullRequestReviewReference | undefined> {
+    if (comments.length === 0 && body.trim().length === 0) return undefined;
 
     try {
       const existingBodies = await this.listExistingBodies(
@@ -63,7 +65,7 @@ export class PullRequestReviewCommentCommandRepository implements PullRequestRev
       const pendingComments = comments.filter(
         (comment) => !existingBodies.has(comment.body),
       );
-      if (comments.length > 0 && pendingComments.length === 0) return;
+      if (comments.length > 0 && pendingComments.length === 0) return undefined;
       const client = this.createClient.getClient(token);
       const reviewComments = pendingComments.map((comment) => ({
         body: comment.body,
@@ -81,7 +83,7 @@ export class PullRequestReviewCommentCommandRepository implements PullRequestRev
                 : {}),
             }),
       }));
-      await client.rest.pulls.createReview({
+      const { data } = await client.rest.pulls.createReview({
         owner,
         repo: repository,
         pull_number: pullRequestNumber,
@@ -90,11 +92,45 @@ export class PullRequestReviewCommentCommandRepository implements PullRequestRev
         event: "COMMENT",
         ...(reviewComments.length > 0 ? { comments: reviewComments } : {}),
       });
+      if (!Number.isSafeInteger(data.id) || data.id <= 0) {
+        throw new PullRequestReviewOperationError('publish-comments');
+      }
+      return {
+        identity: String(data.id),
+        ...(data.html_url ? { url: data.html_url } : {}),
+      };
     } catch (error) {
       const context = comments.length > 0
         ? { failedCount: comments.length, totalCount: comments.length }
         : undefined;
       throw toPullRequestReviewOperationError(error, "publish-comments", context);
+    }
+  }
+
+  async updatePullRequestReview(
+    owner: string,
+    repository: string,
+    pullRequestNumber: number,
+    reviewIdentity: string,
+    body: string,
+    token: string,
+  ): Promise<void> {
+    const reviewId = Number(reviewIdentity);
+    if (!Number.isSafeInteger(reviewId) || reviewId <= 0) {
+      throw new PullRequestReviewOperationError('update-review');
+    }
+    try {
+      const client = this.createClient.getClient(token);
+      const { data } = await client.rest.pulls.updateReview({
+        owner,
+        repo: repository,
+        pull_number: pullRequestNumber,
+        review_id: reviewId,
+        body,
+      });
+      if (data.id !== reviewId) throw new PullRequestReviewOperationError('update-review');
+    } catch (error) {
+      throw toPullRequestReviewOperationError(error, 'update-review');
     }
   }
 

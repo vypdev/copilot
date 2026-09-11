@@ -14,5 +14,4 @@ export interface IssueWorkflowSteps {
   prepareBranches: ParamUseCase<Execution, Result[]>;
   removeNotNeededBranches: ParamUseCase<Execution, Result[]>;
   deployAdded: ParamUseCase<Execution, Result[]>;
-  deployedAdded: ParamUseCase<Execution, Result[]>;
 }

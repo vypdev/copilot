@@ -28,7 +28,7 @@ Metadata commands are parsed before any model call. `ai-members-only` gates ever
 
 | Runtime | Authentication | Analysis boundary | Fixer boundary | Structured output |
 | --- | --- | --- | --- | --- |
-| Codex | `CODEX_API_KEY`, `CODEX_ACCESS_TOKEN`, `OPENAI_API_KEY`, or an operational preinitialized `codex login status` | Ephemeral, read-only, no approval, no network, user config/rules ignored | Ephemeral workspace-write after application authorization | Native managed schema when compatible, plus mandatory local validation |
+| Codex | `CODEX_API_KEY` or an operational preinitialized `codex login status` | Ephemeral, read-only, no approval, no network, user config/rules ignored | Ephemeral workspace-write after application authorization | Native managed schema when compatible, plus mandatory local validation |
 | OpenCode | Selected provider credential, controlled auth store, or no credential for an approved local provider | Pure inline agent with default-deny permissions | Only edit permission is added after application authorization | Mandatory local validation |
 | Cursor | `CURSOR_API_KEY` | Private temporary home, sandbox and approval boundary, denied shell/network tools | Controlled non-interactive write mode after application authorization | Mandatory local validation |
 

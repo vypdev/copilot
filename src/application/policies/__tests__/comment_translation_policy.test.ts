@@ -26,9 +26,8 @@ describe('comment translation policy', () => {
         expect(composeTranslatedComment(`text ${TRANSLATED_COMMENT_MARKER}`, 'original')).toBeUndefined();
     });
 
-    it('recognizes current and legacy translated comments for idempotency', () => {
+    it('recognizes only the current translated-comment marker', () => {
         expect(hasTranslatedCommentMarker(`text\n${TRANSLATED_COMMENT_MARKER}`)).toBe(true);
-        expect(hasTranslatedCommentMarker('text\n<!-- content_translated\nlegacy\n-->')).toBe(true);
         expect(hasTranslatedCommentMarker('plain comment')).toBe(false);
     });
 

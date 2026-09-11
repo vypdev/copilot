@@ -15,12 +15,12 @@ export function buildLocalActionExecution(
 ) {
     const {
         debug, singleAction, singleActionIssue, singleActionVersion, singleActionTitle, singleActionChangelog,
-        singleActionMessage, singleActionCommentId, singleActionCommentMode,
+        singleActionMessage, singleActionCommentId, singleActionCommentMode, singleActionOperationId,
         inactivityThresholdHours,
         commitPrefixBuilder, branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount,
-        pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, pullRequestMergeTimeout,
+        pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount,
         titleEmoji, branchManagementEmoji, imageConfiguration, token, agentModel,
-        aiPullRequestDescription, aiPullRequestDescriptionMode, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity,
+        aiPullRequestDescriptionMode, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotSeverity,
         bugbotCommentLimit, bugbotFixVerifyCommands, bugbotReviewConfiguration, agentTasks, branchManagementLauncherLabel, bugLabel,
         bugfixLabel, hotfixLabel, enhancementLabel, featureLabel, releaseLabel, questionLabel, helpLabel,
         deployLabel, deployedLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel,
@@ -39,6 +39,7 @@ export function buildLocalActionExecution(
         featureTree, bugfixTree, hotfixTree, releaseTree, docsTree, choreTree, releaseWorkflow, hotfixWorkflow,
         projects, projectColumnIssueCreated, projectColumnPullRequestCreated, projectColumnIssueInProgress,
         projectColumnPullRequestInProgress, welcomeTitle, welcomeMessages,
+        deployment,
     } = configuration;
     return buildExecution({
         debug,
@@ -52,10 +53,11 @@ export function buildLocalActionExecution(
             singleActionMessage,
             singleActionCommentId,
             singleActionCommentMode,
+            singleActionOperationId,
         ),
         commitPrefixBuilder,
         issue: buildIssue(branchManagementAlways, reopenIssueOnPush, issueDesiredAssigneesCount, additionalParams),
-        pullRequest: buildPullRequest(pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, pullRequestMergeTimeout, additionalParams),
+        pullRequest: buildPullRequest(pullRequestDesiredAssigneesCount, pullRequestDesiredReviewersCount, additionalParams),
         emoji: buildEmoji(titleEmoji, branchManagementEmoji),
         images: buildImages({
             onIssue: imageConfiguration.onIssue,
@@ -69,7 +71,6 @@ export function buildLocalActionExecution(
         ai: new Ai(
             '',
             agentModel,
-            aiPullRequestDescription,
             aiMembersOnly,
             aiIgnoreFiles,
             aiIncludeReasoning,
@@ -121,6 +122,7 @@ export function buildLocalActionExecution(
         release: new Release(),
         hotfix: new Hotfix(),
         workflows: buildWorkflows(releaseWorkflow, hotfixWorkflow),
+        deployment,
         projects: buildProjects({
             projects,
             issueCreated: projectColumnIssueCreated,

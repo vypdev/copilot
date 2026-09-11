@@ -7,7 +7,7 @@ import type { ProjectDetailQueryPort } from '../application/ports/project_detail
 import { INPUT_KEYS } from '../application/contracts/input_keys';
 import { isEnabledInput } from './input_boolean_policy';
 import { getGithubActionInput } from './github_action_input';
-import { parseBoundedPositiveIntegerInput, parseIntegerInput, parseNonNegativeIntegerInput } from './input_number_policy';
+import { parseBoundedPositiveIntegerInput, parseIntegerInput } from './input_number_policy';
 import { parseDelimitedValues } from './input_values_policy';
 import { readGithubActionAiInputs } from './github_action_ai_inputs';
 import { prepareGithubAgentRuntime } from './github_action_runtime';
@@ -28,6 +28,7 @@ import type { buildGithubActionEventInputs } from './github_event_inputs';
 import { DEFAULT_INACTIVITY_THRESHOLD_HOURS, MAX_INACTIVITY_THRESHOLD_HOURS } from '../domain/issue_inactivity';
 import { activeAgentTasks } from '../application/policies/agent_task_activation_policy';
 import type { AgentTaskConfiguration } from '../domain/agent';
+import { readDeploymentConfiguration } from './deployment_configuration_builder';
 
 export interface GithubActionExecutionInput {
     readonly getInput: typeof getGithubActionInput;
@@ -77,6 +78,12 @@ export async function buildGithubActionExecution(
     const localeInputs = readGithubActionLocaleInputs(getInput);
     const sizeThresholdInputs = readGithubActionThresholdInputs(getInput);
     const branchInputs = readGithubActionBranchInputs(getInput);
+    const deployment = readDeploymentConfiguration(getInput, {
+        productionBranch: branchInputs.defaultBranch,
+        developmentBranch: branchInputs.development,
+        releaseTree: branchInputs.releaseTree,
+        hotfixTree: branchInputs.hotfixTree,
+    });
 
     return buildExecution({
         debug,
@@ -96,7 +103,6 @@ export async function buildGithubActionExecution(
         pullRequest: buildPullRequest(
             parseIntegerInput(getInput(INPUT_KEYS.PULL_REQUEST_DESIRED_ASSIGNEES_COUNT), 0),
             parseIntegerInput(getInput(INPUT_KEYS.PULL_REQUEST_DESIRED_REVIEWERS_COUNT), 0),
-            parseNonNegativeIntegerInput(getInput(INPUT_KEYS.PULL_REQUEST_MERGE_TIMEOUT), 0),
             eventInputs,
         ),
         emoji: buildEmoji(
@@ -108,7 +114,6 @@ export async function buildGithubActionExecution(
         ai: new Ai(
             '',
             aiInputs.requestedAgentTasks.findings.model,
-            aiInputs.pullRequestDescription,
             aiInputs.membersOnly,
             aiInputs.ignoreFiles,
             aiInputs.includeReasoning,
@@ -127,6 +132,7 @@ export async function buildGithubActionExecution(
         release: new Release(),
         hotfix: new Hotfix(),
         workflows: buildWorkflows(workflowInputs.release, workflowInputs.hotfix),
+        deployment,
         projects: buildProjects(projectInputs),
         tokenUser: input.tokenUser,
         inputs: eventInputs,
@@ -153,6 +159,7 @@ export function readGithubActionSingleAction(getInput: typeof getGithubActionInp
         getInput(INPUT_KEYS.SINGLE_ACTION_MESSAGE),
         getInput(INPUT_KEYS.SINGLE_ACTION_COMMENT_ID),
         getInput(INPUT_KEYS.SINGLE_ACTION_COMMENT_MODE),
+        getInput(INPUT_KEYS.SINGLE_ACTION_OPERATION_ID),
     );
 }
 

@@ -65,4 +65,18 @@ describe('buildCopilotEvidence', () => {
 
         expect(evidence).toMatchObject({ name: 'Copilot / Review', conclusion: 'neutral' });
     });
+
+    it('treats verification-required as actionable and unknown as an unconditional failure', () => {
+        const findingStates = { open: 0, reopened: 0, 'verification-required': 1, unknown: 0 };
+        expect(buildCopilotEvidence({
+            eventName: 'pull_request', headSha: 'sha', summary: 'summary',
+            results: [new Result({ id: 'review', success: true, executed: true, payload: { findingStates } })],
+        })).toMatchObject({ conclusion: 'neutral', title: 'Copilot found actionable findings' });
+        expect(buildCopilotEvidence({
+            eventName: 'pull_request', headSha: 'sha', summary: 'summary',
+            results: [new Result({ id: 'review', success: true, executed: true, payload: {
+                findingStates: { ...findingStates, 'verification-required': 0, unknown: 1 },
+            } })],
+        })).toMatchObject({ conclusion: 'failure' });
+    });
 });

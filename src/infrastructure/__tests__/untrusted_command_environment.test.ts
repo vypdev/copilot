@@ -10,7 +10,7 @@ describe('prepareUntrustedCommandEnvironment', () => {
             GITHUB_TOKEN: 'github-secret',
             PAT: 'pat-secret',
             OPENAI_API_KEY: 'openai-secret',
-            CODEX_ACCESS_TOKEN: 'codex-secret',
+            CODEX_API_KEY: 'codex-secret',
             CODEX_HOME: '/sensitive/codex-home',
             OPENCODE_AUTH_FILE: '/sensitive/opencode-auth.json',
             AWS_SECRET_ACCESS_KEY: 'cloud-secret',

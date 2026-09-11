@@ -7,13 +7,14 @@ import { getActionInputsWithDefaults } from '../utils/yml_utils';
 import { isEnabledInput } from './input_boolean_policy';
 import { resolveActionInput } from './action_input_source';
 import { loadProjectDetails } from './project_details_loader';
-import { parseBoundedPositiveIntegerInput, parseIntegerInput, parseNonNegativeIntegerInput } from './input_number_policy';
+import { parseBoundedPositiveIntegerInput, parseIntegerInput } from './input_number_policy';
 import { parseDelimitedValues } from './input_values_policy';
 import { buildAgentTasksFromValues } from './agent_input_builder';
 import { buildImageConfiguration } from './image_configuration_builder';
 import { normalizePullRequestDescriptionMode } from '../domain/pull_request_description';
 import { DEFAULT_INACTIVITY_THRESHOLD_HOURS, MAX_INACTIVITY_THRESHOLD_HOURS } from '../domain/issue_inactivity';
 import { normalizeBugbotReviewEffort, parseBugbotOrganizationRules } from '../domain/bugbot/review_configuration';
+import { readDeploymentConfiguration } from './deployment_configuration_builder';
 
 export type LocalActionInputs = ReturnType<typeof getActionInputsWithDefaults>;
 
@@ -36,6 +37,7 @@ export function readLocalCoreConfiguration(
         singleActionTitle: input<string>(additionalParams, actionInputs, INPUT_KEYS.SINGLE_ACTION_TITLE),
         singleActionChangelog: input<string>(additionalParams, actionInputs, INPUT_KEYS.SINGLE_ACTION_CHANGELOG),
         singleActionMessage: input<string>(additionalParams, actionInputs, INPUT_KEYS.SINGLE_ACTION_MESSAGE),
+        singleActionOperationId: input<string>(additionalParams, actionInputs, INPUT_KEYS.SINGLE_ACTION_OPERATION_ID),
         singleActionCommentId: input<string>(additionalParams, actionInputs, INPUT_KEYS.SINGLE_ACTION_COMMENT_ID),
         singleActionCommentMode: input<string>(additionalParams, actionInputs, INPUT_KEYS.SINGLE_ACTION_COMMENT_MODE),
         inactivityThresholdHours: parseBoundedPositiveIntegerInput(
@@ -53,14 +55,10 @@ export function readLocalAgentConfiguration(
 ) {
     const agentTasks = buildAgentTasksFromValues({ ...actionInputs, ...additionalParams });
     const bugbotFixVerifyCommandsInput = input(additionalParams, actionInputs, INPUT_KEYS.BUGBOT_FIX_VERIFY_COMMANDS) ?? '';
-    const pullRequestDescription = isEnabledInput(input(additionalParams, actionInputs, INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION));
     return {
         agentTasks,
         agentModel: agentTasks.findings.model,
-        aiPullRequestDescription: pullRequestDescription,
-        aiPullRequestDescriptionMode: pullRequestDescription
-            ? normalizePullRequestDescriptionMode(input(additionalParams, actionInputs, INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION_MODE))
-            : 'disabled',
+        aiPullRequestDescriptionMode: normalizePullRequestDescriptionMode(input(additionalParams, actionInputs, INPUT_KEYS.AI_PULL_REQUEST_DESCRIPTION_MODE)),
         aiMembersOnly: isEnabledInput(input(additionalParams, actionInputs, INPUT_KEYS.AI_MEMBERS_ONLY)),
         aiIncludeReasoning: isEnabledInput(input(additionalParams, actionInputs, INPUT_KEYS.AI_INCLUDE_REASONING)),
         aiIgnoreFilesInput: input(additionalParams, actionInputs, INPUT_KEYS.AI_IGNORE_FILES),
@@ -257,6 +255,10 @@ export function readLocalWorkflowConfiguration(
     actionInputs: LocalActionInputs,
 ) {
     const read = (key: string) => input(additionalParams, actionInputs, key);
+    const mainBranch = read(INPUT_KEYS.MAIN_BRANCH);
+    const developmentBranch = read(INPUT_KEYS.DEVELOPMENT_BRANCH);
+    const releaseTree = read(INPUT_KEYS.RELEASE_TREE);
+    const hotfixTree = read(INPUT_KEYS.HOTFIX_TREE);
     return {
         imageConfiguration: buildImageConfiguration((key) => additionalParams[key] ?? actionInputs[key]),
         releaseWorkflow: read(INPUT_KEYS.RELEASE_WORKFLOW),
@@ -266,12 +268,12 @@ export function readLocalWorkflowConfiguration(
         issueLocale: read(INPUT_KEYS.ISSUES_LOCALE) ?? Locale.DEFAULT,
         pullRequestLocale: read(INPUT_KEYS.PULL_REQUESTS_LOCALE) ?? Locale.DEFAULT,
         ...readThresholds(additionalParams, actionInputs),
-        mainBranch: read(INPUT_KEYS.MAIN_BRANCH),
-        developmentBranch: read(INPUT_KEYS.DEVELOPMENT_BRANCH),
+        mainBranch,
+        developmentBranch,
         featureTree: read(INPUT_KEYS.FEATURE_TREE),
         bugfixTree: read(INPUT_KEYS.BUGFIX_TREE),
-        hotfixTree: read(INPUT_KEYS.HOTFIX_TREE),
-        releaseTree: read(INPUT_KEYS.RELEASE_TREE),
+        hotfixTree,
+        releaseTree,
         docsTree: read(INPUT_KEYS.DOCS_TREE),
         choreTree: read(INPUT_KEYS.CHORE_TREE),
         commitPrefixBuilder: read(INPUT_KEYS.COMMIT_PREFIX_TRANSFORMS) || 'replace-slash',
@@ -280,6 +282,11 @@ export function readLocalWorkflowConfiguration(
         issueDesiredAssigneesCount: parseIntegerInput(read(INPUT_KEYS.DESIRED_ASSIGNEES_COUNT), 0),
         pullRequestDesiredAssigneesCount: parseIntegerInput(read(INPUT_KEYS.PULL_REQUEST_DESIRED_ASSIGNEES_COUNT), 0),
         pullRequestDesiredReviewersCount: parseIntegerInput(read(INPUT_KEYS.PULL_REQUEST_DESIRED_REVIEWERS_COUNT), 0),
-        pullRequestMergeTimeout: parseNonNegativeIntegerInput(read(INPUT_KEYS.PULL_REQUEST_MERGE_TIMEOUT), 0),
+        deployment: readDeploymentConfiguration(read, {
+            productionBranch: mainBranch,
+            developmentBranch,
+            releaseTree,
+            hotfixTree,
+        }),
     };
 }

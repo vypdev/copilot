@@ -44,7 +44,7 @@ async function runVerification(
   execution: Execution,
   gitCommitPort: GitCommitPort,
 ): Promise<string | undefined> {
-  const configured = execution.ai?.getBugbotFixVerifyCommands?.() ?? [];
+  const configured = execution.ai.getBugbotFixVerifyCommands();
   const verifyCommands = limitVerifyCommands(Array.isArray(configured) ? configured : []);
   if (Array.isArray(configured) && configured.length > MAX_VERIFY_COMMANDS) {
     logInfo(`Limiting verify commands to ${MAX_VERIFY_COMMANDS} (configured: ${configured.length}).`);

@@ -80,4 +80,22 @@ describe('action summary policy', () => {
 
         expect(summary).toContain('open=1, reopened=2, fixed=1, obsolete=1');
     });
+
+    it('shows verification-required as actionable and unknown as a failure', () => {
+        const base = {
+            owner: 'owner', repository: 'repo', eventName: 'pull_request', issueNumber: -1, pullRequestNumber: 12,
+        };
+        expect(buildActionSummary({
+            ...base,
+            results: [new Result({ id: 'review', success: true, executed: true, payload: {
+                findingStates: { open: 0, reopened: 0, fixed: 0, obsolete: 0, dismissed: 0, 'verification-required': 1, unknown: 0 },
+            } })],
+        })).toContain('⚠️ Findings');
+        expect(buildActionSummary({
+            ...base,
+            results: [new Result({ id: 'review', success: true, executed: true, payload: {
+                findingStates: { open: 0, reopened: 0, fixed: 0, obsolete: 0, dismissed: 0, 'verification-required': 0, unknown: 1 },
+            } })],
+        })).toContain('❌ Failure');
+    });
 });

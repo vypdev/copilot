@@ -4,7 +4,6 @@ import { parsePositiveSafeInteger } from '../../domain/positive_integer_policy';
 export class SingleAction {
     currentSingleAction: string;
     actions: string[] = [
-        ACTIONS.DEPLOYED,
         ACTIONS.PUBLISH_GITHUB_ACTION,
         ACTIONS.CREATE_TAG,
         ACTIONS.CREATE_RELEASE,
@@ -16,6 +15,10 @@ export class SingleAction {
         ACTIONS.CLOSE_INACTIVE_ISSUES,
         ACTIONS.PUBLISH_ISSUE_COMMENT,
         ACTIONS.CHECK_BRANCH_SYNC,
+        ACTIONS.PREPARE_DEPLOYMENT,
+        ACTIONS.CONTINUE_DEPLOYMENT,
+        ACTIONS.PUBLISHED_DEPLOYMENT,
+        ACTIONS.FAILED_DEPLOYMENT,
     ];
     /**
      * Actions that throw an error if the last step failed
@@ -23,10 +26,13 @@ export class SingleAction {
     actionsThrowError: string[] = [
        ACTIONS.PUBLISH_GITHUB_ACTION,
        ACTIONS.CREATE_RELEASE,
-       ACTIONS.DEPLOYED,
        ACTIONS.CREATE_TAG,
        ACTIONS.CLOSE_INACTIVE_ISSUES,
        ACTIONS.PUBLISH_ISSUE_COMMENT,
+       ACTIONS.PREPARE_DEPLOYMENT,
+       ACTIONS.CONTINUE_DEPLOYMENT,
+       ACTIONS.PUBLISHED_DEPLOYMENT,
+       ACTIONS.FAILED_DEPLOYMENT,
     ];
 
     /**
@@ -51,13 +57,10 @@ export class SingleAction {
     title: string = '';
     changelog: string = '';
     message: string = '';
+    operationId: string = '';
     commentId: number = -1;
     commentIdInput: string = '';
     commentMode: string = '';
-
-    get isDeployedAction(): boolean {
-        return this.currentSingleAction === ACTIONS.DEPLOYED;
-    }
 
     get isPublishGithubAction(): boolean {
         return this.currentSingleAction === ACTIONS.PUBLISH_GITHUB_ACTION;
@@ -103,6 +106,29 @@ export class SingleAction {
         return this.currentSingleAction === ACTIONS.CHECK_BRANCH_SYNC;
     }
 
+    get isPrepareDeploymentAction(): boolean {
+        return this.currentSingleAction === ACTIONS.PREPARE_DEPLOYMENT;
+    }
+
+    get isContinueDeploymentAction(): boolean {
+        return this.currentSingleAction === ACTIONS.CONTINUE_DEPLOYMENT;
+    }
+
+    get isPublishedDeploymentAction(): boolean {
+        return this.currentSingleAction === ACTIONS.PUBLISHED_DEPLOYMENT;
+    }
+
+    get isFailedDeploymentAction(): boolean {
+        return this.currentSingleAction === ACTIONS.FAILED_DEPLOYMENT;
+    }
+
+    get isDeploymentOrchestrationAction(): boolean {
+        return this.isPrepareDeploymentAction
+            || this.isContinueDeploymentAction
+            || this.isPublishedDeploymentAction
+            || this.isFailedDeploymentAction;
+    }
+
     get enabledSingleAction(): boolean {
         return this.currentSingleAction.length > 0;
     }
@@ -130,6 +156,7 @@ export class SingleAction {
         message: string = '',
         commentId: string = '',
         commentMode: string = '',
+        operationId: string = '',
     ) {
         this.version = version;
         this.title = title;
@@ -138,6 +165,7 @@ export class SingleAction {
         this.commentIdInput = commentId.trim();
         this.commentId = parsePositiveSafeInteger(this.commentIdInput) ?? -1;
         this.commentMode = commentMode.trim().toLowerCase();
+        this.operationId = operationId.trim();
         this.currentSingleAction = currentSingleAction;
         if (!this.isSingleActionWithoutIssue) {
             this.issue = parsePositiveSafeInteger(issue) ?? -1;

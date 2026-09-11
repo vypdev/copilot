@@ -41,7 +41,7 @@ The setup policy is intentionally split by responsibility:
 - `setup_resource_provisioning.ts` owns grouping and port calls for Variables
   and Secrets.
 
-The legacy `Execution` aggregate is adapted once at
+The runtime `Execution` aggregate is projected once at
 `initial_setup_request.ts`; the setup workflow consumes only the repository,
 credential, label, issue-type, and setup-configuration facts it needs.
 Action input keys are defined in `src/application/contracts/input_keys.ts`,
@@ -58,9 +58,9 @@ typed `ApplicationError` contract with a category, retry hint, and diagnostic
 cause; the cause is never published as user-facing workflow output.
 
 Configuration embedded in issue or pull-request content is versioned. Readers
-migrate legacy payloads, remove transient execution data, retain unknown keys,
-and preserve future schema versions so an older workflow cannot silently
-downgrade configuration written by a newer one.
+accept only the current schema and fail closed on missing, malformed, or
+different-version payloads. Writers emit only current, known fields, so stale
+state cannot silently change runtime behavior.
 
 ## Workflow queue boundary
 
@@ -95,6 +95,41 @@ complete without entering the queue; valid explicit single actions remain admitt
 This decision belongs to the GitHub lifecycle and is deliberately not added to the
 shared `mainRun` path used by the local action.
 
+## Bugbot reconciliation boundary
+
+Bugbot final reconciliation is a single pipeline split into four narrow
+responsibilities:
+
+```text
+reconcileBugbotReviewState
+  -> loadBugbotReconciliationSnapshot
+  -> projectBugbotProviderEvidence
+  -> buildBugbotReconciliationPlan
+  -> synchronizeBugbotReviewPresentation
+```
+
+The workflow projects `Execution` into the provider-neutral
+`BugbotReconciliationTarget` and credential contracts before entering this
+pipeline. The reconciler does not depend on the runtime aggregate and does not
+perform provider reads or presentation writes directly. Canonical finding and
+durable destination contracts live under `domain/bugbot`; application policies
+never import types from a concrete use-case directory.
+
+Snapshot acquisition verifies the pull-request head before reading any durable
+surface, reads independent surfaces concurrently, and verifies the head again
+afterward. A revision change discards the whole snapshot. Each surface records
+`verified`, `failed`, or `not-applicable`, so an empty successful read cannot be
+confused with a failed read. Provider projection keeps linked-issue and PR
+evidence separate and folds them conservatively: a clean destination cannot
+hide a non-clean or unverifiable destination.
+
+The pure reconciliation plan owns missing-publication and missing-durable-
+evidence decisions. The presentation use case owns only bounded review/status
+writes: at most 20 review summaries are selected per run and writes use bounded
+concurrency. Existing integration scenarios exercise the full pipeline, while
+snapshot, projection, plan, ownership, and presentation boundaries have focused
+unit tests.
+
 ## Branch synchronization boundary
 
 Branch synchronization has two independent entry points behind the same semantic
@@ -111,3 +146,49 @@ translate GitHub GraphQL/REST responses; and the Git adapter owns transient merg
 state. Verification runs without credentials. The adapter rejects changes to Git
 heads, merge metadata, the non-conflicted index, or the prepared path set, then
 re-fetches both remote heads immediately before the trusted commit/push boundary.
+
+## Deployment orchestration boundary
+
+Release and hotfix deployment is a durable state machine rather than one
+runner-owned script:
+
+```text
+preparing -> promotion_pr_pending -> promoted -> publishing
+  -> published -> reconciliation_pending -> completed
+
+any non-terminal phase -> blocked -> previous safe phase after correction
+```
+
+`deployment_configuration.ts`, `deployment_operation.ts`, and the pure planning,
+lifecycle, continuation-guard, and presentation policies own bounded values and
+decisions. They have no GitHub client, workflow payload, process, timer, or
+filesystem dependency. `DeploymentOrchestrationUseCase` receives the narrow
+`DeploymentOrchestrationContext`; the `Execution` aggregate is structurally
+projected by the single-action boundary.
+
+Application ports expose managed-PR identity, target capabilities, exact commit
+reachability, trusted reconciliation refs, workflow continuation, durable issue
+state and presentation operations, effective target-policy inspection, and
+authoritative merge-queue membership. The GitHub deployment repository combines classic protection with
+all effective rulesets, maps required producer identities, and parses bounded
+workflow YAML. Pure readiness policy owns `ready`, `unknown`, and `unsupported`
+decisions plus exact attestation matching. Runtime, setup, and doctor share that
+policy; entrypoints never supply an optimistic static capability boolean.
+`GithubDeploymentRepository` maps REST and
+GraphQL provider facts. `DeploymentStateRepository` owns the strict schema-v3
+hidden issue block. The composition root is
+the only place that binds these repositories and the Octokit adapter.
+
+Durable transitions compare the operation ID and expected stored phase before
+each write. PR and publication side effects use deterministic markers, exact
+branch/SHA facts, and postcondition verification. A continuation event or
+workflow dispatch is only a wake-up signal: it must present the same operation
+ID, then authoritative issue and GitHub state are reloaded. The privileged PR
+completion workflow checks out the trusted base and never executes the PR head.
+
+Presentation is a separate mutation-free boundary. A typed English/Spanish
+catalog renders the durable issue dashboard, promotion and reconciliation PRs,
+and deployment Job Summary. Provider mutations accept those rendered values but
+cannot choose phase transitions. Architecture tests enforce the narrow context,
+provider-neutral port vocabulary, mutation-free renderer, global dependency
+direction, and acyclic production imports.

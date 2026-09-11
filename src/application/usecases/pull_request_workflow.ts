@@ -75,7 +75,7 @@ async function canUseAgent(
   param: Execution,
   authorization: ActorAuthorizationPort | undefined,
 ): Promise<boolean> {
-  if (!param.ai?.getAiMembersOnly?.()) return true;
+  if (!param.ai.getAiMembersOnly()) return true;
   if (!authorization) return false;
   return authorization.isActorAllowedToModifyFiles(
     param.owner,
@@ -86,10 +86,8 @@ async function canUseAgent(
 }
 
 function shouldUpdatePullRequestDescriptionAutomatically(param: Execution): boolean {
-  const mode = param.ai.getPullRequestDescriptionMode?.();
-  return mode === undefined
-    ? param.ai.getAiPullRequestDescription()
-    : mode === 'replace' || mode === 'append';
+  const mode = param.ai.getPullRequestDescriptionMode();
+  return mode === 'replace' || mode === 'append';
 }
 
 async function runPullRequestReview(

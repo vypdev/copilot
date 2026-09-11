@@ -18,8 +18,6 @@ export const COPILOT_COMMAND_NAMES = [
     'recheck',
     'implement',
     'sync-branch',
-    'update-branch',
-    'updatebranch',
 ] as const;
 
 export type CopilotCommandName = typeof COPILOT_COMMAND_NAMES[number];

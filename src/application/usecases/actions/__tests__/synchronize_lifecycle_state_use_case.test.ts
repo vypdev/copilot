@@ -74,30 +74,6 @@ describe('SynchronizeLifecycleStateUseCase', () => {
         );
     });
 
-    it('does not migrate legacy copilot-prefixed labels automatically', async () => {
-        const setLabels = jest.fn().mockResolvedValue(undefined);
-        const useCase = new SynchronizeLifecycleStateUseCase({ setLabels, getLabels: jest.fn() });
-        const param = execution({
-            labels: {
-                ...execution().labels,
-                currentIssueLabels: ['bug', 'copilot:state:ready'],
-            },
-        });
-
-        await useCase.invoke({
-            execution: param,
-            results: [{ id: 'RecommendStepsUseCase', success: true, executed: true, steps: [], errors: [] } as never],
-        });
-
-        expect(setLabels).toHaveBeenCalledWith(
-            'owner',
-            'repo',
-            7,
-            ['bug', 'copilot:state:ready', 'state:planned', 'state:awaiting-maintainer'],
-            'token',
-        );
-    });
-
     it('maps active findings to the issue-author waiting label', async () => {
         const setLabels = jest.fn().mockResolvedValue(undefined);
         const useCase = new SynchronizeLifecycleStateUseCase({ setLabels, getLabels: jest.fn() });

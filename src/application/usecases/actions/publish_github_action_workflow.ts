@@ -3,6 +3,7 @@ import { Result } from '../../../data/model/result';
 import type { RepositoryReleasePublicationPort, RepositoryTagPort } from '../../ports/repository_release_ports';
 import { INPUT_KEYS } from '../../contracts/input_keys';
 import { logError, logInfo } from '../../ports/logging_ports';
+import { validateDeploymentContinuation } from '../../policies/deployment_continuation_guard';
 
 export async function runPublishGithubAction(
     param: Execution,
@@ -12,7 +13,8 @@ export async function runPublishGithubAction(
 ): Promise<Result[]> {
     const validationFailure = validateVersion(param, taskId);
     if (validationFailure) return [validationFailure];
-    const sourceTag = `v${param.singleAction.version}`;
+    const version = param.singleAction.version || param.currentConfiguration?.deploymentOrchestration?.version || '';
+    const sourceTag = `v${version}`;
     const targetTag = sourceTag.split('.')[0];
     try {
         await repositoryTagPort.updateTag(param.owner, param.repo, sourceTag, targetTag, param.tokens.token);
@@ -37,7 +39,14 @@ export async function runPublishGithubAction(
 }
 
 function validateVersion(param: Execution, taskId: string): Result | undefined {
-    if (param.singleAction.version.length > 0) return undefined;
+    const continuationError = validateDeploymentContinuation(
+        param.currentConfiguration?.deploymentOrchestration,
+        param.singleAction.operationId,
+        ["publishing"],
+        param.singleAction.version,
+    );
+    if (continuationError) return new Result({ id: taskId, success: false, executed: true, errors: [continuationError] });
+    if (param.singleAction.version.length > 0 || param.currentConfiguration?.deploymentOrchestration?.version) return undefined;
     logError('Version is not set.');
     return new Result({ id: taskId, success: false, executed: true, errors: [`${INPUT_KEYS.SINGLE_ACTION_VERSION} is not set.`] });
 }

@@ -1,4 +1,4 @@
-name: "Copilot - Github with super powers"
+name: "Copilot - GitHub with super powers"
 description: "Automates branch management, GitHub project linking, and issue/PR tracking with Git-Flow methodology."
 author: "Efra Espada"
 inputs:
@@ -22,6 +22,9 @@ inputs:
     default: ""
   single-action-message:
     description: "Markdown message for the publish_issue_comment single action."
+    default: ""
+  single-action-operation-id:
+    description: "Expected durable deployment operation ID for trusted continuation actions."
     default: ""
   single-action-comment-id:
     description: "Optional issue comment ID to replace or append to."
@@ -420,15 +423,48 @@ inputs:
   hotfix-workflow:
     description: "Hotfix workflow for running hotfix deploys."
     default: "hotfix_workflow.yml"
+  release-reconciliation-strategy:
+    description: "Release reconciliation source after production publication: production-lineage, canonical-gitflow, or manual."
+    default: "production-lineage"
+  hotfix-reconciliation-strategy:
+    description: "Hotfix reconciliation source after production publication: production-lineage, canonical-gitflow, or manual."
+    default: "production-lineage"
+  reconciliation-pr-mode:
+    description: "Managed PR behavior: auto, auto-merge, merge-queue, or create-only."
+    default: "auto"
+  merge-queue-check-attestations:
+    description: "JSON array of exact required-check attestations for merge queue targets; unknown checks block by default."
+    default: "[]"
+  reconciliation-backmerge-mode:
+    description: "Back-merge branch shape: auto, direct, or sync-branch."
+    default: "auto"
+  hotfix-active-release-policy:
+    description: "Hotfix reconciliation target policy: prefer-release, development, or both."
+    default: "prefer-release"
+  reconciliation-tree:
+    description: "Safe prefix for ephemeral reconciliation branches."
+    default: "sync"
+  reconciliation-cleanup:
+    description: "Branch cleanup after reconciliation: all, source-only, sync-only, or none."
+    default: "all"
+  reconciliation-issue-completion:
+    description: "Launcher issue behavior after completion: close or keep-open."
+    default: "close"
+  orchestration-presentation-mode:
+    description: "Release control-center detail: guided, compact, or quiet."
+    default: "guided"
+  orchestration-diagrams:
+    description: "Render fixed-label Mermaid diagrams with a textual equivalent in guided mode."
+    default: "true"
+  orchestration-comment-mode:
+    description: "Issue notification policy: update or milestones."
+    default: "update"
   desired-assignees-count:
     description: "The number of assignees desired for the issue or pull request. If set to 0, no assignees will be added. If the number exceeds the available members, all members will be assigned. Max 10."
     default: "1"
   desired-reviewers-count:
     description: "The number of reviewers desired for the pull request. If set to 0, no reviewers will be added. If the number exceeds the available members, all members will be reviewers. Max 15."
     default: "1"
-  merge-timeout:
-    description: "The timeout for the merge workflow in seconds. If set to 0, the merge will not be timed out."
-    default: "600"
   token:
     description: "Fine-grained personal access token for branch and project operations"
     required: true
@@ -528,9 +564,6 @@ inputs:
   tester-command:
     description: "Optional CLI command override for test tasks."
     default: ""
-  ai-pull-request-description:
-    description: "Enable AI-powered automatic updates for pull request descriptions."
-    default: "true"
   ai-pull-request-description-mode:
     description: "PR description policy: replace (full ownership), append (preserve human text), preserve (only explicit /copilot description), or disabled."
     default: "replace"

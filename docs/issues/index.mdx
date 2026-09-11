@@ -72,8 +72,6 @@ During setup, Copilot creates the lifecycle labels once. The durable lifecycle p
 
 At most one durable phase and one waiting label are synchronized at a time. The temporary `state:ai-processing` label can coexist with either dimension and is best-effort: a label API failure does not hide the actual agent result. The label names are configurable through the action inputs, and all ten defaults are provisioned by `copilot setup` in the destination repository.
 
-Existing legacy labels such as `copilot:state:ready` are intentionally not migrated or removed automatically. They can be deleted manually after adopting the `state:*` labels.
-
 ## Daily agent workflow
 
 Use [comment commands](/issues/comment-commands) when you want a reproducible action from an issue or PR. `/copilot help` shows the complete catalog. For a read-only analysis, use `/copilot analyze` (or `/copilot review`, `/copilot findings`, or `/copilot recheck`). For a reported finding, use `/copilot fix FINDING-ID` or `/copilot dismiss FINDING-ID`; for a general change, use `/copilot implement <request>`. You can also mention `@vypbot` and describe the request in natural language. A repeated review reconciles the existing finding marker and updates the same publication instead of creating a second copy.

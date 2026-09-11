@@ -5,7 +5,7 @@ description: Run one-off actions on demand: check progress, detect problems, thi
 
 # Single Actions
 
-When you set the **`single-action`** input (and any required targets such as `single-action-issue` or `single-action-version`), Copilot runs **only** that action and skips the normal issue, pull request, and push pipelines. Use this for on-demand runs: progress check without pushing, Bugbot detection, recommend steps, think, create release or tag, mark deployed, initial setup, or scheduled inactivity cleanup.
+When you set the **`single-action`** input (and any required targets such as `single-action-issue` or `single-action-version`), Copilot runs **only** that action and skips the normal issue, pull request, and push pipelines. Supported on-demand uses include progress checks, Bugbot detection, recommendations, analysis, GitHub Release creation, initial setup, and scheduled inactivity cleanup. Tagging and deployment state transitions are workflow-owned steps bound to a durable release or hotfix operation.
 
 <CardGroup cols={2}>
   <Card title="Available actions" icon="list" href="/single-actions/available-actions">
@@ -14,8 +14,8 @@ When you set the **`single-action`** input (and any required targets such as `si
   <Card title="Configuration" icon="gear" href="/single-actions/configuration">
     single-action, single-action-issue, single-action-version, and other inputs.
   </Card>
-  <Card title="Deploy label and merge flow" icon="git-merge" href="/single-actions/deploy-label-and-merge">
-    Deploy/deployed labels, post-deploy merges (release/hotfix → default and develop), and how we wait for checks per PR.
+  <Card title="Deploy lifecycle" icon="git-merge" href="/single-actions/deploy-label-and-merge">
+    Production-first orchestration, deploy/deployed meaning, internal continuations, and recovery.
   </Card>
   <Card title="Workflow & CLI" icon="terminal" href="/single-actions/workflow-and-cli">
     Run from a GitHub Actions workflow or from the copilot CLI.
@@ -31,17 +31,17 @@ When you set the **`single-action`** input (and any required targets such as `si
 |-------------|-------------|
 | **Progress / Bugbot / Recommend steps** | Run on demand with `single-action-issue`; no need to push or wait for the commit workflow. |
 | **Think** | Deep code analysis or questions; no issue required. Use from workflow or CLI with `-q "<question>"`. |
-| **Release / Tag** | Create a GitHub release or tag with `single-action-version` (and for release: title, changelog). |
-| **Deployed / Setup** | Mark an issue as deployed, or run initial setup (labels, issue types). |
+| **GitHub Release / Setup** | Create a standalone GitHub Release, or run initial setup for labels and issue types. |
+| **Durable deployment callbacks** | Supplied release/hotfix workflows create the accepted tag and advance operation state with the exact issue and operation ID. |
 | **Inactive issue cleanup** | Close stale issues waiting for a maintainer or issue author; no issue number required. |
 
 <Info>
-**Actions that fail the job** if the last step fails: `publish_github_action`, `create_release`, `deployed_action`, `create_tag`, `close_inactive_issues_action`. The workflow will be marked as failed so you can act on it.
+**Actions that fail the job** if the last step fails: `publish_github_action`, `create_release`, `close_inactive_issues_action`, `publish_issue_comment`, and all five workflow-owned deployment actions: `create_tag`, `prepare_deployment_action`, `continue_deployment_action`, `published_deployment_action`, and `failed_deployment_action`. The workflow will be marked as failed so you can act on it.
 </Info>
 
 ## Next steps
 
 - **[Available actions](/single-actions/available-actions)** — Complete list with inputs and descriptions.
-- **[Deploy label and merge flow](/single-actions/deploy-label-and-merge)** — Deploy/deployed labels and post-deploy merges.
+- **[Deploy lifecycle](/single-actions/deploy-label-and-merge)** — Production-first lifecycle, internal continuations, labels, and recovery.
 - **[Workflow & CLI](/single-actions/workflow-and-cli)** — How to run from a workflow and from the CLI.
 - **[Examples](/single-actions/examples)** — YAML and CLI examples.

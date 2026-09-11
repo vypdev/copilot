@@ -273,6 +273,11 @@
           "icon": "vial"
         },
         {
+          "title": "Product specifications",
+          "href": "/development/specifications",
+          "icon": "diagram-project"
+        },
+        {
           "title": "Agent functionality audit",
           "href": "/development/agent-functionality-audit",
           "icon": "clipboard"
@@ -337,6 +342,11 @@
           "title": "Branch synchronization",
           "href": "/issues/branch-synchronization",
           "icon": "code-branch"
+        },
+        {
+          "title": "Release orchestration",
+          "href": "/issues/deployment-orchestration",
+          "icon": "rocket"
         },
         {
           "title": "Notifications and auto-close",

@@ -3,12 +3,6 @@ import { SingleAction } from '../single_action';
 
 describe('SingleAction', () => {
   describe('action type getters', () => {
-    it('isDeployedAction', () => {
-      const s = new SingleAction(ACTIONS.DEPLOYED, '1', '', '', '');
-      expect(s.isDeployedAction).toBe(true);
-      expect(s.isPublishGithubAction).toBe(false);
-    });
-
     it('isPublishGithubAction', () => {
       const s = new SingleAction(ACTIONS.PUBLISH_GITHUB_ACTION, '1', '', '', '');
       expect(s.isPublishGithubAction).toBe(true);
@@ -80,6 +74,14 @@ describe('SingleAction', () => {
       expect(s.commentId).toBe(101);
       expect(s.commentIdInput).toBe('101');
       expect(s.commentMode).toBe('append');
+    });
+
+    it('recognizes a failed deployment continuation and preserves its operation identity', () => {
+      const s = new SingleAction(ACTIONS.FAILED_DEPLOYMENT, '42', '3.4.0', '', '', 'failed', '', '', 'operation-12345678');
+      expect(s.isFailedDeploymentAction).toBe(true);
+      expect(s.isDeploymentOrchestrationAction).toBe(true);
+      expect(s.operationId).toBe('operation-12345678');
+      expect(s.throwError).toBe(true);
     });
   });
 

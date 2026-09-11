@@ -3,6 +3,7 @@ import { SETUP_AGENT_TASKS } from './setup_configuration_defaults';
 import { SUPPORTED_AGENT_PROVIDERS } from './agent_configuration_validation_policy';
 import { validateStorageConfiguration } from './setup_configuration_storage_policy';
 import { MAX_INACTIVITY_THRESHOLD_HOURS } from '../../domain/issue_inactivity';
+import { validateDeploymentConfiguration } from '../../domain/deployment_configuration';
 
 export function validateSetupConfiguration(configuration: SetupConfiguration): string[] {
     const errors: string[] = [];
@@ -25,7 +26,6 @@ export function validateSetupConfiguration(configuration: SetupConfiguration): s
     if (configuration.repository.desiredReviewersCount < 0 || configuration.repository.desiredReviewersCount > 15) {
         errors.push('Desired reviewers must be between 0 and 15.');
     }
-    if (configuration.repository.mergeTimeout < 0) errors.push('Merge timeout cannot be negative.');
     if (!Number.isInteger(configuration.repository.inactivityThresholdHours)
         || configuration.repository.inactivityThresholdHours < 1
         || configuration.repository.inactivityThresholdHours > MAX_INACTIVITY_THRESHOLD_HOURS) {
@@ -43,13 +43,31 @@ export function validateSetupConfiguration(configuration: SetupConfiguration): s
     if (configuration.ai.bugbotOrganizationRules.length > 30_000) {
         errors.push('Bugbot organization rules must be at most 30000 characters.');
     }
-    if (configuration.ai.pullRequestDescriptionMode !== undefined
-        && !['replace', 'append', 'preserve', 'disabled'].includes(configuration.ai.pullRequestDescriptionMode)) {
+    if (!['replace', 'append', 'preserve', 'disabled'].includes(configuration.ai.pullRequestDescriptionMode)) {
         errors.push('Pull-request description mode must be replace, append, preserve, or disabled.');
     }
     if (!['auto', 'always', 'disabled'].includes(configuration.ai.provisioningMode)) {
         errors.push('Agent provisioning must be auto, always, or disabled.');
     }
+    errors.push(...validateDeploymentConfiguration({
+        releaseReconciliationStrategy: configuration.repository.releaseReconciliationStrategy,
+        hotfixReconciliationStrategy: configuration.repository.hotfixReconciliationStrategy,
+        reconciliationPullRequestMode: configuration.repository.reconciliationPullRequestMode,
+        reconciliationBackmergeMode: configuration.repository.reconciliationBackmergeMode,
+        hotfixActiveReleasePolicy: configuration.repository.hotfixActiveReleasePolicy,
+        reconciliationTree: configuration.repository.reconciliationTree,
+        reconciliationCleanup: configuration.repository.reconciliationCleanup,
+        reconciliationIssueCompletion: configuration.repository.reconciliationIssueCompletion,
+        orchestrationPresentationMode: configuration.repository.orchestrationPresentationMode,
+        orchestrationDiagrams: configuration.repository.orchestrationDiagrams,
+        orchestrationCommentMode: configuration.repository.orchestrationCommentMode,
+        mergeQueueCheckAttestations: configuration.repository.mergeQueueCheckAttestations,
+    }, {
+        productionBranch: configuration.repository.mainBranch,
+        developmentBranch: configuration.repository.developmentBranch,
+        releaseTree: configuration.repository.releaseTree,
+        hotfixTree: configuration.repository.hotfixTree,
+    }));
     errors.push(...validateStorageConfiguration(configuration.storage));
     for (const task of SETUP_AGENT_TASKS) {
         const agent = configuration.agents[task];

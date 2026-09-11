@@ -25,12 +25,11 @@ describe('configuration builders', () => {
     it('preserves issue and pull request input context', () => {
         const inputs = { action: 'opened', issue: { title: 'Issue from CLI' } };
         const issue = buildIssue(true, false, 2, inputs);
-        const pullRequest = buildPullRequest(1, 2, 30, inputs);
+        const pullRequest = buildPullRequest(1, 2, inputs);
 
         expect(issue.inputs).toBe(inputs);
         expect(issue.branchManagementAlways).toBe(true);
         expect(pullRequest.inputs).toBe(inputs);
-        expect(pullRequest.mergeTimeout).toBe(30);
     });
 
     it('builds emoji and token configuration', () => {

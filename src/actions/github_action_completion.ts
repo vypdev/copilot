@@ -14,6 +14,7 @@ import type { CopilotEvidencePort } from '../application/ports/copilot_evidence_
 import { buildCopilotEvidence } from '../application/policies/copilot_evidence_policy';
 import type { ActionSummaryPort } from '../application/ports/action_summary_ports';
 import { shouldPersistConfiguration } from '../application/policies/configuration_persistence_policy';
+import { renderDeploymentJobSummary } from '../application/policies/deployment_presentation_policy';
 
 export async function finishGithubAction(
     execution: Execution,
@@ -30,10 +31,11 @@ export async function finishGithubAction(
     execution.currentConfiguration.results = results;
     core.setOutput('bugbot-telemetry', JSON.stringify(extractBugbotTelemetry(results)));
     const dryRun = results.some((result) => getResultPayload(result.payload)?.dryRun === true);
-    if (!dryRun && !execution.singleAction.isPublishIssueCommentAction) {
+    const ownsDeploymentPresentation = execution.singleAction.isDeploymentOrchestrationAction;
+    if (!dryRun && !execution.singleAction.isPublishIssueCommentAction && !ownsDeploymentPresentation) {
         await new PublishResultUseCase(issueNotificationPort, createLogReportAdapter()).invoke(execution);
-    } else if (execution.singleAction.isPublishIssueCommentAction) {
-        logInfo('Result publication skipped: the issue-comment single action publishes its own content.');
+    } else if (execution.singleAction.isPublishIssueCommentAction || ownsDeploymentPresentation) {
+        logInfo('Generic result publication skipped: this single action owns its user-facing presentation.');
     } else {
         logInfo('Bugbot dry-run: result publication and repository configuration persistence are disabled.');
     }
@@ -58,7 +60,20 @@ function extractBugbotTelemetry(results: readonly Result[]): unknown[] {
 }
 
 async function writeActionSummary(execution: Execution, summaryPort?: ActionSummaryPort): Promise<string> {
-    const summaryText = buildActionSummary({
+    const operation = execution.currentConfiguration.deploymentOrchestration;
+    const summaryText = execution.singleAction.isDeploymentOrchestrationAction && operation
+        ? renderDeploymentJobSummary(operation, {
+            owner: execution.owner,
+            repository: execution.repo,
+            issue: execution.singleAction.issue,
+            issueLocale: execution.locale.issue,
+            pullRequestLocale: execution.locale.pullRequest,
+            packageName: execution.owner === 'vypdev' && execution.repo === 'copilot' ? '@vypdev/copilot' : undefined,
+            workflowRunUrl: process.env.GITHUB_SERVER_URL && process.env.GITHUB_REPOSITORY && process.env.GITHUB_RUN_ID
+                ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
+                : undefined,
+        }, operation.lastFailure?.previousPhase, execution.currentConfiguration.results.flatMap((result) => result.steps ?? []))
+        : buildActionSummary({
         owner: execution.owner,
         repository: execution.repo,
         eventName: execution.eventName,
@@ -70,10 +85,10 @@ async function writeActionSummary(execution: Execution, summaryPort?: ActionSumm
                 : execution.labels?.currentIssueLabels ?? [],
             execution.labels?.lifecycle,
         ),
-        pullRequestDescriptionMode: execution.ai?.getPullRequestDescriptionMode?.(),
-        failOnUnresolvedFindings: execution.ai?.getBugbotReviewConfiguration?.().failOnUnresolved === true,
+        pullRequestDescriptionMode: execution.ai.getPullRequestDescriptionMode(),
+        failOnUnresolvedFindings: execution.ai.getBugbotReviewConfiguration().failOnUnresolved,
         results: execution.currentConfiguration.results,
-    });
+        });
     if (!summaryPort) return summaryText;
     try {
         await summaryPort.publish(summaryText);
@@ -97,7 +112,7 @@ async function publishCopilotEvidence(
         headSha,
         summary,
         results,
-        failOnUnresolvedFindings: execution.ai?.getBugbotReviewConfiguration?.().failOnUnresolved === true,
+        failOnUnresolvedFindings: execution.ai.getBugbotReviewConfiguration().failOnUnresolved,
     });
     if (!evidence) return;
     try {
@@ -114,13 +129,28 @@ function failActionForUnresolvedFindingsIfConfigured(
     results: readonly Result[],
     dryRun: boolean,
 ): void {
-    if (dryRun || execution.ai?.getBugbotReviewConfiguration?.().failOnUnresolved !== true) return;
-    const unresolved = results.reduce((count, result) => {
+    if (dryRun) return;
+    const aggregate = results.reduce((counts, result) => {
         const states = getResultPayload(getResultPayload(result.payload)?.findingStates);
-        return count + (typeof states?.open === 'number' ? states.open : 0)
-            + (typeof states?.reopened === 'number' ? states.reopened : 0);
-    }, 0);
-    if (unresolved > 0) core.setFailed(`Bugbot found ${unresolved} unresolved actionable finding(s).`);
+        return {
+            unresolved: counts.unresolved
+                + (typeof states?.open === 'number' ? states.open : 0)
+                + (typeof states?.reopened === 'number' ? states.reopened : 0)
+                + (typeof states?.['verification-required'] === 'number'
+                    ? states['verification-required']
+                    : 0),
+            unknown: counts.unknown
+                + (typeof states?.unknown === 'number' ? states.unknown : 0),
+        };
+    }, { unresolved: 0, unknown: 0 });
+    if (aggregate.unknown > 0) {
+        core.setFailed(`Bugbot could not verify ${aggregate.unknown} finding state(s).`);
+    } else if (
+        execution.ai.getBugbotReviewConfiguration().failOnUnresolved
+        && aggregate.unresolved > 0
+    ) {
+        core.setFailed(`Bugbot found ${aggregate.unresolved} unresolved actionable finding(s).`);
+    }
 }
 
 function commitPublishedRecommendationState(execution: Execution, results: Result[]): void {

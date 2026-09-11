@@ -44,6 +44,7 @@ describe("Project release capability repositories", () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        mockGetRef.mockReset();
     });
 
     it("returns the default branch through the repository metadata capability", async () => {
@@ -92,7 +93,8 @@ describe("Project release capability repositories", () => {
     it("updates an existing tag from the source tag", async () => {
         mockGetRef
             .mockResolvedValueOnce({ data: { object: { sha: "source-sha" } } })
-            .mockResolvedValueOnce({ data: { object: { sha: "old-target-sha" } } });
+            .mockResolvedValueOnce({ data: { object: { sha: "old-target-sha" } } })
+            .mockResolvedValueOnce({ data: { object: { sha: "source-sha" } } });
         mockUpdateRef.mockResolvedValue(undefined);
 
         await tagRepository.updateTag("owner", "repo", "source", "target", "token");
@@ -110,7 +112,8 @@ describe("Project release capability repositories", () => {
     it("creates the target tag when it does not exist", async () => {
         mockGetRef
             .mockResolvedValueOnce({ data: { object: { sha: "source-sha" } } })
-            .mockRejectedValueOnce({ status: 404 });
+            .mockRejectedValueOnce({ status: 404 })
+            .mockResolvedValueOnce({ data: { object: { sha: "source-sha" } } });
         mockCreateRef.mockResolvedValue(undefined);
 
         await tagRepository.updateTag("owner", "repo", "source", "target", "token");
@@ -123,10 +126,11 @@ describe("Project release capability repositories", () => {
         });
     });
 
-    it("skips tag updates when the source tag is missing", async () => {
+    it("rejects tag updates when the source tag is missing", async () => {
         mockGetRef.mockRejectedValueOnce({ status: 404 });
 
-        await tagRepository.updateTag("owner", "repo", "source", "target", "token");
+        await expect(tagRepository.updateTag("owner", "repo", "source", "target", "token"))
+            .rejects.toThrow("does not exist");
 
         expect(mockUpdateRef).not.toHaveBeenCalled();
         expect(mockCreateRef).not.toHaveBeenCalled();

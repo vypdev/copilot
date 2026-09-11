@@ -102,7 +102,6 @@ async function findThreadComment(
     thread: ThreadNode,
     commentIdentity: string,
 ): Promise<LocatedReviewThread | null> {
-    let commentsCursor: string | null = null;
     const seenCommentCursors = new Set<string>();
     let commentNodes = thread.comments?.nodes ?? [];
     let commentsPageInfo = thread.comments?.pageInfo;
@@ -111,7 +110,7 @@ async function findThreadComment(
         if (commentNodes.some((comment) => comment?.id === commentIdentity)) {
             return { id: thread.id, isResolved: thread.isResolved === true };
         }
-        commentsCursor = nextConnectionCursor(commentsPageInfo, seenCommentCursors);
+        const commentsCursor = nextConnectionCursor(commentsPageInfo, seenCommentCursors);
         if (commentsCursor === null) return null;
         const nextComments = await client.graphql<ThreadCommentsResult>(THREAD_COMMENTS_QUERY, {
             threadId: thread.id,

@@ -73,6 +73,13 @@ child.on("error", (error) => {
   writeSync(3, `${JSON.stringify({ setupError: error.message })}\n`);
 });
 
+child.on("exit", () => {
+  // A descendant can be created concurrently with the first group signal.
+  // Once the direct child has exited it cannot fork again, so signaling the
+  // group a second time closes that race before the runner reports completion.
+  if (forwardedSignal) signalProcessGroup("SIGKILL");
+});
+
 child.on("close", (code, signal) => {
   clearTimeout(terminationTimer);
   clearTimeout(killTimer);

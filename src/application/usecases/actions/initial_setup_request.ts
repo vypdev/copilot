@@ -16,7 +16,7 @@ export interface InitialSetupRequest extends SetupRepositoryContext {
     workflowUpdates: readonly string[];
 }
 
-/** Converts the legacy execution aggregate into the setup use case's explicit request. */
+/** Converts the runtime execution aggregate into the setup use case's explicit request. */
 export function createInitialSetupRequest(execution: Execution): InitialSetupRequest {
     return {
         owner: execution.owner,

@@ -103,7 +103,7 @@ async function queryThinkAnswer(
 ): Promise<string> {
     logDebugInfo(`Think: calling configured agent (prompt length=${prompt.length}).`);
     const response = await repository.query({
-        configuration: param.ai?.getAgentConfiguration(agentTask),
+        configuration: param.ai.getAgentConfiguration(agentTask),
         agentId: AGENT_PLAN,
         prompt,
         options: {

@@ -20,7 +20,7 @@ export function branchSyncConflictEligibilityError(
   execution: Execution,
 ): string | undefined {
   if (!useAgent) return "The merge has conflicts and agent resolution was disabled with --no-agent.";
-  if (!isAgentConfigurationReady(execution.ai?.getAgentConfiguration("fixer"))) {
+  if (!isAgentConfigurationReady(execution.ai.getAgentConfiguration("fixer"))) {
     return "The merge has conflicts, but no fixer agent is configured.";
   }
   if (preparation.conflictPaths.length > MAX_AGENT_CONFLICT_PATHS) {

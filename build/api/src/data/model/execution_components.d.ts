@@ -16,6 +16,7 @@ import type { Tokens } from './tokens';
 import type { Welcome } from './welcome';
 import type { Workflows } from './workflows';
 import type { ExecutionInputs } from './execution_inputs';
+import type { DeploymentConfigurationValues } from '../../domain/deployment_configuration';
 /** Immutable construction contract for the runtime execution aggregate. */
 export interface ExecutionComponents {
     debug: boolean;
@@ -35,6 +36,7 @@ export interface ExecutionComponents {
     release: Release;
     hotfix: Hotfix;
     workflows: Workflows;
+    deployment?: DeploymentConfigurationValues;
     projects: Projects;
     tokenUser?: string;
     welcome?: Welcome;

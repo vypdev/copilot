@@ -34,18 +34,34 @@ describe("PullRequestReviewThreadRepository", () => {
       })
       .mockResolvedValueOnce({
         repository: { pullRequest: { reviewThreads: {
-          nodes: [{ isResolved: true, comments: { nodes: [{ id: "PRRC_2" }, null] } }],
+          nodes: [{ isResolved: true, resolvedBy: { login: 'maintainer' }, comments: { nodes: [{ id: "PRRC_2" }, null] } }],
           pageInfo: { hasNextPage: false, endCursor: null },
         } } },
       });
 
     await expect(repository.listPullRequestReviewThreadStates(
       "owner", "repo", 7, "token",
-    )).resolves.toEqual({ PRRC_1: false, PRRC_2: true });
+    )).resolves.toEqual({
+      PRRC_1: { resolved: false },
+      PRRC_2: { resolved: true, resolvedByLogin: 'maintainer' },
+    });
 
     expect(mockGraphql).toHaveBeenCalledTimes(2);
     expect(mockGraphql.mock.calls[0][1]).toEqual(expect.objectContaining({ cursor: null }));
     expect(mockGraphql.mock.calls[1][1]).toEqual(expect.objectContaining({ cursor: "next" }));
+    expect(mockGraphql.mock.calls[0][0]).toContain('resolvedBy { login }');
+  });
+
+  it('translates review-thread read failures to the semantic thread operation', async () => {
+    mockGraphql.mockRejectedValue(new Error('provider secret'));
+
+    await expect(repository.listPullRequestReviewThreadStates(
+      'owner', 'repo', 7, 'token',
+    )).rejects.toMatchObject({
+      name: 'PullRequestReviewOperationError',
+      operation: 'list-threads',
+      message: 'Unable to list pull request review threads.',
+    });
   });
 
   it("resolves the thread containing the requested comment", async () => {

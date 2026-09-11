@@ -21,6 +21,14 @@ describe('projectBugbotFindingStatuses', () => {
             dismissed: 'dismissed',
             reopened: 'reopened',
         });
-        expect(result.counts).toEqual({ open: 1, fixed: 1, obsolete: 1, dismissed: 1, reopened: 1 });
+        expect(result.counts).toEqual({
+            open: 1,
+            fixed: 1,
+            obsolete: 1,
+            dismissed: 1,
+            reopened: 1,
+            'verification-required': 0,
+            unknown: 0,
+        });
     });
 });

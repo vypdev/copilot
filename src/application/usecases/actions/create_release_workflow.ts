@@ -3,16 +3,20 @@ import { Result } from '../../../data/model/result';
 import type { RepositoryReleasePublicationPort } from '../../ports/repository_release_ports';
 import { logError, logWarn } from '../../ports/logging_ports';
 import { validateReleaseInput, versionForRelease } from './create_release_policy';
+import { validateDeploymentContinuation } from '../../policies/deployment_continuation_guard';
 
 export async function runCreateRelease(
     param: Execution,
     taskId: string,
     repositoryReleasePort: RepositoryReleasePublicationPort,
 ): Promise<Result[]> {
+    const operation = param.currentConfiguration.deploymentOrchestration;
+    const continuationError = validateDeploymentContinuation(operation, param.singleAction.operationId, ["publishing"], param.singleAction.version);
+    if (continuationError) return [failureResult(taskId, continuationError)];
     const input = {
-        version: param.singleAction.version,
-        title: param.singleAction.title,
-        changelog: param.singleAction.changelog,
+        version: param.singleAction.version || operation?.version || '',
+        title: param.singleAction.title || operation?.title || '',
+        changelog: param.singleAction.changelog || operation?.changelog || '',
     };
     const validationError = validateReleaseInput(input);
     if (validationError) {

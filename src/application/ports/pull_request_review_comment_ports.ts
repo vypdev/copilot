@@ -7,6 +7,24 @@ export type PullRequestReviewComment = {
   path?: string;
   line?: number;
   authorLogin?: string;
+  /** Opaque identity of the submitted review that owns this comment. */
+  parentReviewIdentity?: string;
+  /** Safe provider URL for user-facing navigation. */
+  url?: string;
+};
+
+export type PullRequestReviewSummary = {
+  /** Lossless opaque provider identity used by mutations. */
+  identity: string;
+  body: string | null;
+  authorLogin?: string;
+  commitId?: string;
+  url?: string;
+};
+
+export type PullRequestReviewReference = {
+  identity: string;
+  url?: string;
 };
 
 export type PullRequestReviewCommentDraft = {
@@ -52,7 +70,7 @@ export interface PullRequestReviewCommentCreatePort {
     body: string,
     comments: PullRequestReviewCommentDraft[],
     token: string,
-  ): Promise<void>;
+  ): Promise<PullRequestReviewReference | undefined>;
 }
 
 export interface PullRequestReviewCommentUpdatePort {
@@ -69,6 +87,26 @@ export interface PullRequestReviewCommentCommandPort
   extends
     PullRequestReviewCommentCreatePort,
     PullRequestReviewCommentUpdatePort {}
+
+export interface PullRequestReviewSummaryQueryPort {
+  listPullRequestReviews(
+    owner: string,
+    repository: string,
+    pullRequestNumber: number,
+    token: string,
+  ): Promise<PullRequestReviewSummary[]>;
+}
+
+export interface PullRequestReviewSummaryUpdatePort {
+  updatePullRequestReview(
+    owner: string,
+    repository: string,
+    pullRequestNumber: number,
+    reviewIdentity: string,
+    body: string,
+    token: string,
+  ): Promise<void>;
+}
 
 export interface PullRequestReviewThreadCommandPort {
   resolvePullRequestReviewThread(
@@ -95,5 +133,10 @@ export interface PullRequestReviewThreadStateQueryPort {
     repository: string,
     pullRequestNumber: number,
     token: string,
-  ): Promise<Record<string, boolean>>;
+  ): Promise<Record<string, PullRequestReviewThreadState>>;
+}
+
+export interface PullRequestReviewThreadState {
+  resolved: boolean;
+  resolvedByLogin?: string;
 }

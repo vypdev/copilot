@@ -4,7 +4,6 @@ import { parsePositiveSafeInteger } from '../../domain/positive_integer_policy';
 export class PullRequest {
     desiredAssigneesCount: number;
     desiredReviewersCount: number;
-    mergeTimeout: number;
     inputs: ExecutionInputs | undefined = undefined;
 
     get action(): string {
@@ -118,12 +117,10 @@ export class PullRequest {
     constructor(
         desiredAssigneesCount: number,
         desiredReviewersCount: number,
-        mergeTimeout: number,
         inputs: ExecutionInputs | undefined = undefined,
     ) {
         this.desiredAssigneesCount = desiredAssigneesCount;
         this.desiredReviewersCount = desiredReviewersCount;
-        this.mergeTimeout = mergeTimeout;
         this.inputs = inputs;
     }
 }

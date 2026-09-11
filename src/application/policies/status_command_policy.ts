@@ -23,8 +23,7 @@ export interface CopilotStatusExecutionContext {
     };
     readonly currentConfiguration: { readonly results?: readonly { readonly payload: unknown }[] };
     readonly ai: {
-        readonly getAiPullRequestDescription: () => boolean;
-        readonly getPullRequestDescriptionMode?: () => string;
+        readonly getPullRequestDescriptionMode: () => string;
     };
 }
 
@@ -89,8 +88,7 @@ export function buildCopilotStatusSnapshot(execution: CopilotStatusExecutionCont
         issueLabels,
         pullRequestLabels,
         ...(findingStates ? { activeFindings: findingStates } : {}),
-        pullRequestDescriptionMode: execution.ai.getPullRequestDescriptionMode?.()
-            ?? (execution.ai.getAiPullRequestDescription() ? 'replace' : 'disabled'),
+        pullRequestDescriptionMode: execution.ai.getPullRequestDescriptionMode(),
     };
 }
 

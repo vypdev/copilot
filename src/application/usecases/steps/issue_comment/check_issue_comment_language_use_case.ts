@@ -21,7 +21,7 @@ export class CheckIssueCommentLanguageUseCase implements ParamUseCase<Execution,
             owner: param.owner,
             repo: param.repo,
             token: param.tokens.token,
-            configuration: param.ai?.getAgentConfiguration('findings'),
+            configuration: param.ai.getAgentConfiguration('findings'),
         });
     }
 }

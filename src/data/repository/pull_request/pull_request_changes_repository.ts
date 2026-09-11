@@ -31,21 +31,6 @@ export class PullRequestChangesRepository {
         return allFiles;
     }
 
-    getChangedFiles = async (
-        owner: string,
-        repository: string,
-        pullNumber: number,
-        token: string
-    ): Promise<{filename: string, status: string}[]> => {
-        try {
-            return (await this.listAllFiles(owner, repository, pullNumber, token))
-                .map(({ filename, status }) => ({ filename, status }));
-        } catch (error) {
-            logError(`Error getting changed files from pull request: ${error}.`);
-            throw toPullRequestReviewOperationError(error, "list-files");
-        }
-    };
-
     /** First commentable right-side line of the first hunk in a GitHub patch. */
     private static firstLineFromPatch(patch: string): number | undefined {
         const lines = patch.split('\n');
@@ -98,47 +83,6 @@ export class PullRequestChangesRepository {
         return locations;
     }
 
-    /**
-     * Returns for each changed file the first line number that appears in the diff (right side).
-     * Used so review comments use a line that GitHub can resolve (avoids "line could not be resolved").
-     */
-    getFilesWithFirstDiffLine = async (
-        owner: string,
-        repository: string,
-        pullNumber: number,
-        token: string
-    ): Promise<Array<{ path: string; firstLine: number }>> => {
-        try {
-            return (await this.listAllFiles(owner, repository, pullNumber, token))
-                .filter((f) => f.status !== 'removed' && (f.patch ?? '').length > 0)
-                .flatMap((f) => {
-                    const firstLine = PullRequestChangesRepository.firstLineFromPatch(f.patch ?? '');
-                    return firstLine === undefined ? [] : [{ path: f.filename, firstLine }];
-                });
-        } catch (error) {
-            logError(`Error getting files with diff lines (owner=${owner}, repo=${repository}, pullNumber=${pullNumber}): ${error}.`);
-            throw toPullRequestReviewOperationError(error, "list-files");
-        }
-    };
-
-    getFilesWithDiffLocations = async (
-        owner: string,
-        repository: string,
-        pullNumber: number,
-        token: string,
-    ): Promise<Array<{ path: string; locations: PullRequestDiffLocation[] }>> => {
-        try {
-            return (await this.listAllFiles(owner, repository, pullNumber, token))
-                .flatMap((file) => {
-                    const locations = PullRequestChangesRepository.locationsFromPatch(file.patch ?? '');
-                    return locations.length === 0 ? [] : [{ path: file.filename, locations }];
-                });
-        } catch (error) {
-            logError(`Error getting files with diff locations (owner=${owner}, repo=${repository}, pullNumber=${pullNumber}): ${error}.`);
-            throw toPullRequestReviewOperationError(error, 'list-files');
-        }
-    };
-
     getReviewDiffSnapshot = async (
         owner: string,
         repository: string,
@@ -167,33 +111,6 @@ export class PullRequestChangesRepository {
         } catch (error) {
             logError(`Error getting pull request review diff snapshot: ${error}.`);
             throw toPullRequestReviewOperationError(error, 'list-files');
-        }
-    };
-
-    getPullRequestChanges = async (
-        owner: string,
-        repository: string,
-        pullNumber: number,
-        token: string
-    ): Promise<Array<{
-        filename: string,
-        status: string,
-        additions: number,
-        deletions: number,
-        patch: string
-    }>> => {
-        try {
-            return (await this.listAllFiles(owner, repository, pullNumber, token))
-                .map(({ filename, status, additions, deletions, patch }) => ({
-                    filename,
-                    status,
-                    additions,
-                    deletions,
-                    patch: patch || '',
-                }));
-        } catch (error) {
-            logError(`Error getting pull request changes: ${error}.`);
-            throw toPullRequestReviewOperationError(error, "list-files");
         }
     };
 

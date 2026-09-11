@@ -120,7 +120,9 @@ Changelog can be read from a file or generated in a previous step and passed as 
 
 ## Workflow: create tag
 
-Create a Git tag with prefix `v` (e.g. `v1.2.0`) from the release branch:
+Create a Git tag with prefix `v` (for example `v1.2.0`). In a current
+deployment operation, the supplied workflow also passes the issue and operation
+ID so the tag is created at the accepted production SHA:
 
 ```yaml
 - uses: vypdev/copilot@v3
@@ -128,22 +130,13 @@ Create a Git tag with prefix `v` (e.g. `v1.2.0`) from the release branch:
     token: ${{ secrets.PAT }}
     single-action: create_tag
     single-action-version: "1.2.0"
-    single-action-issue: "100"  # Issue with releaseBranch in configuration
+    single-action-issue: ${{ inputs.issue-number }}
+    single-action-operation-id: ${{ inputs.operation-id }}
 ```
 
-**Note:** The tag is created from the `releaseBranch` stored in the issue configuration. The version input `1.2.0` will create tag `v1.2.0`.
-
-## Workflow: deployed
-
-Mark issue `100` as deployed (e.g. from your release workflow):
-
-```yaml
-- uses: vypdev/copilot@v3
-  with:
-    token: ${{ secrets.PAT }}
-    single-action: deployed_action
-    single-action-issue: "100"
-```
+**Note:** This excerpt belongs inside the supplied workflow's `publish` mode;
+the continuation dispatch supplies both inputs. Do not invent or hard-code an
+operation ID. A call without matching durable operation state fails closed.
 
 ## Workflow: publish or update an issue comment
 

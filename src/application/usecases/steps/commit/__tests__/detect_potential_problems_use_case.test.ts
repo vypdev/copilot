@@ -8,6 +8,12 @@ import { DetectPotentialProblemsUseCase } from "../detect_potential_problems_use
 import { PullRequestReviewCommentCommandRepository } from "../../../../../data/repository/pull_request/pull_request_review_comment_command_repository";
 import { Ai } from "../../../../../data/model/ai";
 import type { Execution } from "../../../../../data/model/execution";
+import {
+  buildFindingFingerprint,
+  buildSemanticFindingFingerprint,
+} from "../../../../../domain/bugbot/finding_identity";
+import { buildMarker } from '../../../../policies/bugbot_finding_marker_policy';
+import type { BugbotFinding } from '../../../../../domain/bugbot/finding';
 
 jest.mock("@actions/github", () => {
   const actual =
@@ -35,12 +41,24 @@ const mockGetPullRequestHeadSha = jest.fn();
 const mockGetChangedFiles = jest.fn();
 const mockGetFilesWithFirstDiffLine = jest.fn();
 const mockGetFilesWithDiffLocations = jest.fn();
+const mockGetReviewDiffSnapshot = jest.fn();
 const mockCreateReviewWithComments = jest.fn();
 const mockUpdatePullRequestReviewComment = jest.fn();
 const mockResolvePullRequestReviewThread = jest.fn();
 const mockUnresolvePullRequestReviewThread = jest.fn();
+const mockListPullRequestReviews = jest.fn();
+const mockUpdatePullRequestReview = jest.fn();
 
 const mockAskAgent = jest.fn();
+
+function markerFor(finding: BugbotFinding, resolved = false): string {
+  return buildMarker(
+    finding.id,
+    resolved,
+    buildFindingFingerprint(finding),
+    buildSemanticFindingFingerprint(finding),
+  );
+}
 
 function baseParam(overrides: Record<string, unknown> = {}): Execution {
   return {
@@ -55,7 +73,6 @@ function baseParam(overrides: Record<string, unknown> = {}): Execution {
     ai: new Ai(
       "http://localhost:4096",
       "opencode/model",
-      false,
       false,
       [],
       false,
@@ -75,6 +92,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       addComment: mockAddComment,
       updateComment: mockUpdateComment,
     };
+    const rulesPort = { loadRules: jest.fn().mockResolvedValue([]) };
     const pullRequestPort = {
       getHeadBranchForIssue: mockGetHeadBranchForIssue,
       getPullRequestReviewCommentBody: jest.fn(),
@@ -82,9 +100,8 @@ describe("DetectPotentialProblemsUseCase", () => {
         mockGetOpenPullRequestNumbersByHeadBranch,
       listPullRequestReviewComments: mockListPullRequestReviewComments,
       getPullRequestHeadSha: mockGetPullRequestHeadSha,
-      getChangedFiles: mockGetChangedFiles,
-      getFilesWithFirstDiffLine: mockGetFilesWithFirstDiffLine,
-      getFilesWithDiffLocations: mockGetFilesWithDiffLocations,
+      getReviewDiffSnapshot: mockGetReviewDiffSnapshot,
+      listPullRequestReviewThreadStates: jest.fn().mockResolvedValue({}),
       createReviewWithComments: mockCreateReviewWithComments,
       updatePullRequestReviewComment: mockUpdatePullRequestReviewComment,
       resolvePullRequestReviewThread: mockResolvePullRequestReviewThread,
@@ -105,8 +122,19 @@ describe("DetectPotentialProblemsUseCase", () => {
             request.options,
           ),
       },
-      { issue: issuePort, pullRequest: pullRequestPort },
-      { issueComments: issuePort, pullRequestComments: pullRequestPort },
+      {
+        issue: issuePort,
+        pullRequest: pullRequestPort,
+        reviewState: { listPullRequestReviews: mockListPullRequestReviews },
+        navigation: {
+          forPullRequest: () => ({
+            pullRequestUrl: 'https://github.com/org/repo/pull/7',
+            commitUrl: `https://github.com/org/repo/commit/${'a'.repeat(40)}`,
+          }),
+        },
+        rules: rulesPort,
+      },
+      { issueComments: issuePort, pullRequestComments: pullRequestPort, reviewState: { updatePullRequestReview: mockUpdatePullRequestReview } },
       { issueComments: issuePort, pullRequestComments: pullRequestPort },
     );
     mockListIssueComments.mockReset();
@@ -119,10 +147,22 @@ describe("DetectPotentialProblemsUseCase", () => {
     mockGetChangedFiles.mockReset();
     mockGetFilesWithFirstDiffLine.mockReset();
     mockGetFilesWithDiffLocations.mockReset();
+    mockGetReviewDiffSnapshot.mockReset().mockImplementation(async (...args: unknown[]) => ({
+      changes: (await mockGetChangedFiles(...args)).map((change: { filename: string; status: string }) => ({
+        additions: 0,
+        deletions: 0,
+        patch: "",
+        ...change,
+      })),
+      filesWithFirstDiffLine: await mockGetFilesWithFirstDiffLine(...args),
+      filesWithDiffLocations: await mockGetFilesWithDiffLocations(...args),
+    }));
     mockCreateReviewWithComments.mockReset();
     mockUpdatePullRequestReviewComment.mockReset();
     mockResolvePullRequestReviewThread.mockReset();
     mockUnresolvePullRequestReviewThread.mockReset();
+    mockListPullRequestReviews.mockReset().mockResolvedValue([]);
+    mockUpdatePullRequestReview.mockReset().mockResolvedValue(undefined);
     mockAskAgent.mockReset();
 
     mockListIssueComments.mockResolvedValue([]);
@@ -135,7 +175,7 @@ describe("DetectPotentialProblemsUseCase", () => {
 
   it("returns empty results when the findings CLI is not configured", async () => {
     const param = baseParam({
-      ai: new Ai("", "opencode/model", false, false, [], false, "low", 20, [], {
+      ai: new Ai("", "opencode/model", false, [], false, "low", 20, [], {
         findings: { provider: "opencode", model: "opencode/model", command: "" },
         fixer: { provider: "opencode", model: "opencode/model", command: "" },
       }),
@@ -154,7 +194,6 @@ describe("DetectPotentialProblemsUseCase", () => {
         "http://localhost:4096",
         "",
         false,
-        false,
         [],
         false,
         "low",
@@ -166,38 +205,6 @@ describe("DetectPotentialProblemsUseCase", () => {
 
     expect(results).toHaveLength(0);
     expect(mockAskAgent).not.toHaveBeenCalled();
-  });
-
-  it("returns empty results when ai is undefined", async () => {
-    const param = baseParam({ ai: undefined });
-
-    const results = await useCase.invoke(param);
-
-    expect(results).toHaveLength(0);
-    expect(mockAskAgent).not.toHaveBeenCalled();
-  });
-
-  it("uses default ignore patterns and comment limit when ai has no getAiIgnoreFiles nor getBugbotCommentLimit", async () => {
-    const minimalAi = {
-      getAgentConfiguration: () => ({
-        provider: "opencode",
-        model: "opencode/model",
-        command: "opencode run",
-      }),
-      getBugbotMinSeverity: () => "low",
-    } as unknown as Execution["ai"];
-    const param = baseParam({ ai: minimalAi });
-    mockAskAgent.mockResolvedValue({
-      findings: [{ id: "f1", title: "One", description: "D" }],
-      resolved_finding_ids: [],
-    });
-
-    const results = await useCase.invoke(param);
-
-    expect(results).toHaveLength(1);
-    expect(results[0].success).toBe(true);
-    expect(mockAddComment).toHaveBeenCalledTimes(1);
-    expect(mockAddComment.mock.calls[0][3]).toContain("One");
   });
 
   it("returns empty results when issue number is -1", async () => {
@@ -378,6 +385,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     const results = await useCase.invoke(baseParam({
       issueNumber: -1,
       isPullRequest: true,
+      eventName: "pull_request",
       inputs: {
         eventName: "pull_request",
         pull_request: { head: { sha: eventSha } },
@@ -410,6 +418,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     const results = await useCase.invoke(baseParam({
       issueNumber: -1,
       isPullRequest: true,
+      eventName: "pull_request",
       inputs: { eventName: "pull_request", pull_request: {} },
       pullRequest: { number: 100, head: "feature/head", action: "synchronize" },
     }));
@@ -428,7 +437,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     mockListIssueComments.mockResolvedValue([
       {
         id: 999,
-        body: `## Existing problem\n\nDetails.\n\n<!-- copilot-bugbot finding_id:"existing-finding-id" resolved:false -->`,
+        body: `## Existing problem\n\nDetails.\n\n${markerFor(finding)}`,
         user: { login: "bot" },
       },
     ]);
@@ -452,7 +461,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     mockListIssueComments.mockResolvedValue([
       {
         id: 888,
-        body: `## Old bug\n\nDescription.\n\n<!-- copilot-bugbot finding_id:"old-bug-id" resolved:false -->`,
+        body: `## Old bug\n\nDescription.\n\n${markerFor({ id: "old-bug-id", title: "Old bug", description: "Description." })}`,
         user: { login: "bot" },
       },
     ]);
@@ -483,7 +492,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     mockListIssueComments.mockResolvedValue([
       {
         id: 889,
-        body: `## Still open\n\nDescription.\n\n<!-- copilot-bugbot finding_id:"still-open" resolved:false -->`,
+        body: `## Still open\n\nDescription.\n\n${markerFor({ id: "still-open", title: "Still open", description: "Description." })}`,
         user: { login: 'bot' },
       },
     ]);
@@ -504,7 +513,7 @@ describe("DetectPotentialProblemsUseCase", () => {
         id: 777,
         identity: "PRRC_777",
         authorLogin: "bot",
-        body: `## PR finding\n\n<!-- copilot-bugbot finding_id:"pr-finding" resolved:false -->`,
+        body: `## PR finding\n\n${markerFor({ id: "pr-finding", title: "PR finding", description: "Description." })}`,
         path: "src/a.ts",
         line: 1,
       },
@@ -531,13 +540,13 @@ describe("DetectPotentialProblemsUseCase", () => {
       "token",
     );
     expect(
-      mockResolvePullRequestReviewThread.mock.invocationCallOrder[0],
-    ).toBeLessThan(
       mockUpdatePullRequestReviewComment.mock.invocationCallOrder[0],
+    ).toBeLessThan(
+      mockResolvePullRequestReviewThread.mock.invocationCallOrder[0],
     );
   });
 
-  it("reports a sanitized failure without updating the marker when review-thread resolution fails", async () => {
+  it("retains a resolved marker for retry when review-thread resolution fails", async () => {
     const { logError } = require("../../../../../utils/logger");
     mockListIssueComments.mockResolvedValue([]);
     mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([50]);
@@ -546,7 +555,7 @@ describe("DetectPotentialProblemsUseCase", () => {
         id: 777,
         identity: "PRRC_777",
         authorLogin: "bot",
-        body: `## PR finding\n\n<!-- copilot-bugbot finding_id:"pr-finding" resolved:false -->`,
+        body: `## PR finding\n\n${markerFor({ id: "pr-finding", title: "PR finding", description: "Description." })}`,
         path: "src/a.ts",
         line: 1,
       },
@@ -561,7 +570,13 @@ describe("DetectPotentialProblemsUseCase", () => {
 
     const results = await useCase.invoke(baseParam());
 
-    expect(mockUpdatePullRequestReviewComment).not.toHaveBeenCalled();
+    expect(mockUpdatePullRequestReviewComment).toHaveBeenCalledWith(
+      'owner',
+      'repo',
+      'PRRC_777',
+      expect.stringContaining('finding_resolution:"fixed"'),
+      'token',
+    );
     expect(results.some((result) => !result.success)).toBe(true);
     const visibleErrors = results
       .flatMap((result) => result.errors)
@@ -578,7 +593,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     mockListIssueComments.mockResolvedValue([
       {
         id: 666,
-        body: `## Unfixed\n\n<!-- copilot-bugbot finding_id:"unfixed-id" resolved:false -->`,
+        body: `## Unfixed\n\n${markerFor({ id: "unfixed-id", title: "Unfixed", description: "Description." })}`,
         user: { login: "bot" },
       },
     ]);
@@ -633,8 +648,8 @@ describe("DetectPotentialProblemsUseCase", () => {
         mockGetOpenPullRequestNumbersByHeadBranch,
       listPullRequestReviewComments: mockListPullRequestReviewComments,
       getPullRequestHeadSha: mockGetPullRequestHeadSha,
-      getChangedFiles: mockGetChangedFiles,
-      getFilesWithFirstDiffLine: mockGetFilesWithFirstDiffLine,
+      getReviewDiffSnapshot: mockGetReviewDiffSnapshot,
+      listPullRequestReviewThreadStates: jest.fn().mockResolvedValue({}),
       createReviewWithComments:
         commandRepository.createReviewWithComments.bind(commandRepository),
       updatePullRequestReviewComment: jest.fn(),
@@ -646,6 +661,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       addComment: mockAddComment,
       updateComment: mockUpdateComment,
     };
+    const rulesPort = { loadRules: jest.fn().mockResolvedValue([]) };
     const integratedUseCase = new DetectPotentialProblemsUseCase(
       {
         query: (request: {
@@ -661,8 +677,19 @@ describe("DetectPotentialProblemsUseCase", () => {
             request.options,
           ),
       },
-      { issue: issuePort, pullRequest: pullRequestPort },
-      { issueComments: issuePort, pullRequestComments: pullRequestPort },
+      {
+        issue: issuePort,
+        pullRequest: pullRequestPort,
+        reviewState: { listPullRequestReviews: mockListPullRequestReviews },
+        navigation: {
+          forPullRequest: () => ({
+            pullRequestUrl: 'https://github.com/org/repo/pull/7',
+            commitUrl: `https://github.com/org/repo/commit/${'a'.repeat(40)}`,
+          }),
+        },
+        rules: rulesPort,
+      },
+      { issueComments: issuePort, pullRequestComments: pullRequestPort, reviewState: { updatePullRequestReview: mockUpdatePullRequestReview } },
       { issueComments: issuePort, pullRequestComments: pullRequestPort },
     );
     mockAskAgent.mockResolvedValue({
@@ -711,7 +738,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     mockListIssueComments.mockResolvedValue([
       {
         id: 1,
-        body: '<!-- copilot-bugbot finding_id:"old-1" resolved:false -->',
+        body: markerFor({ id: "old-1", title: "Old", description: "Description." }),
         user: { login: "bot" },
       },
     ]);
@@ -758,7 +785,14 @@ describe("DetectPotentialProblemsUseCase", () => {
 
     await useCase.invoke(baseParam());
 
-    expect(mockAddComment).not.toHaveBeenCalled();
+    expect(mockAddComment).toHaveBeenCalledWith(
+      'owner',
+      'repo',
+      200,
+      expect.stringContaining('Bugbot status'),
+      'token',
+      { commitSha: 'sha1' },
+    );
     expect(mockCreateReviewWithComments).toHaveBeenCalledWith(
       "owner",
       "repo",
@@ -789,7 +823,7 @@ describe("DetectPotentialProblemsUseCase", () => {
         id: 555,
         identity: "PRRC_555",
         authorLogin: "bot",
-        body: `## Same\n\n<!-- copilot-bugbot finding_id:"same-pr-finding" resolved:false -->`,
+        body: `## Same\n\n${markerFor(finding)}`,
         path: "x.ts",
         line: 1,
       },
@@ -829,7 +863,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     mockListIssueComments.mockResolvedValue([
       {
         id: 111,
-        body: `## Extracted Title Here\n\nSome body.\n\n<!-- copilot-bugbot finding_id:"ex-id" resolved:false -->`,
+        body: `## Extracted Title Here\n\nSome body.\n\n${markerFor({ id: "ex-id", title: "Extracted Title Here", description: "Some body." })}`,
         user: { login: "bot" },
       },
     ]);
@@ -857,7 +891,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     mockListIssueComments.mockResolvedValue([
       {
         id: 222,
-        body: `## Already resolved\n\n<!-- copilot-bugbot finding_id:"done-id" resolved:true -->`,
+        body: `## Already resolved\n\n${markerFor({ id: "done-id", title: "Already resolved", description: "Description." }, true)}`,
         user: { login: "bot" },
       },
     ]);
@@ -876,7 +910,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       mockListIssueComments.mockResolvedValue([
         {
           id: 333,
-          body: `## Whitespace variant\n\n<!--  copilot-bugbot   finding_id: "spacey-id"   resolved:false -->`,
+          body: `## Whitespace variant\n\n<!--  copilot-bugbot   finding_id: "spacey-id"   resolved:false   finding_fingerprint: "fp-11111111"   finding_semantic: "sf-11111111"   -->`,
           user: { login: "bot" },
         },
       ]);
@@ -913,7 +947,7 @@ describe("DetectPotentialProblemsUseCase", () => {
             id: 444,
             identity: "PRRC_444",
             authorLogin: "bot",
-            body: `## PR spacey\n\n<!--  copilot-bugbot   finding_id: "pr-spacey-id"   resolved:false   -->`,
+            body: `## PR spacey\n\n<!--  copilot-bugbot   finding_id: "pr-spacey-id"   resolved:false   finding_fingerprint: "fp-11111111"   finding_semantic: "sf-11111111"   -->`,
             path: "src/b.ts",
             line: 1,
           },
@@ -923,7 +957,7 @@ describe("DetectPotentialProblemsUseCase", () => {
             id: 444,
             identity: "PRRC_444",
             authorLogin: "bot",
-            body: `## PR spacey\n\n<!--  copilot-bugbot   finding_id: "pr-spacey-id"   resolved:false   -->`,
+            body: `## PR spacey\n\n<!--  copilot-bugbot   finding_id: "pr-spacey-id"   resolved:false   finding_fingerprint: "fp-11111111"   finding_semantic: "sf-11111111"   -->`,
             path: "src/b.ts",
             line: 1,
           },
@@ -945,7 +979,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       mockListIssueComments.mockResolvedValue([
         {
           id: 555,
-          body: `## Regex id\n\n<!-- copilot-bugbot finding_id:"${findingId}" resolved:false -->`,
+          body: `## Regex id\n\n${markerFor({ id: findingId, title: "Regex id", description: "Description." })}`,
           user: { login: "bot" },
         },
       ]);
@@ -987,7 +1021,6 @@ describe("DetectPotentialProblemsUseCase", () => {
         ai: new Ai(
           "http://localhost:4096",
           "opencode/model",
-          false,
           false,
           [],
           false,
@@ -1053,7 +1086,6 @@ describe("DetectPotentialProblemsUseCase", () => {
         ai: new Ai(
           "http://localhost:4096",
           "opencode/model",
-          false,
           false,
           ["src/ignored/*", "**/build/**"],
           false,

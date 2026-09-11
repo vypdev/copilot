@@ -88,11 +88,35 @@ describe('setup configuration file loader', () => {
         });
     });
 
+    it('loads structured merge-queue attestations without string coercion', () => {
+        const file = join(directory, 'merge-queue.yml');
+        writeFileSync(file, [
+            'repository:',
+            '  reconciliationPullRequestMode: merge-queue',
+            '  mergeQueueCheckAttestations:',
+            '    - context: Vendor security gate',
+            '      integrationId: 424242',
+            '      targets: [production, development]',
+        ].join('\n'));
+
+        expect(loadSetupConfigurationOverrides(file)).toEqual({
+            repository: {
+                reconciliationPullRequestMode: 'merge-queue',
+                mergeQueueCheckAttestations: [{
+                    context: 'Vendor security gate',
+                    integrationId: 424242,
+                    targets: ['production', 'development'],
+                }],
+            },
+        });
+    });
+
     it.each([
         ['a secret-like value', '{"actionInputs":{"token":"secret"}}', /must not contain secrets/],
         ['an unknown field', '{"reposotory":{"mainBranch":"main"}}', /Unknown setup configuration field/],
-        ['a wrong nested type', '{"repository":{"mergeTimeout":"600"}}', /repository\.mergeTimeout must be a non-negative integer/],
+        ['a wrong nested type', '{"repository":{"desiredReviewersCount":"2"}}', /repository\.desiredReviewersCount must be a non-negative integer/],
         ['an unknown feature', '{"features":{"pulls":true}}', /Unknown features field/],
+        ['an invalid merge-queue attestation', '{"repository":{"mergeQueueCheckAttestations":[{"context":"CI","integrationId":1,"targets":["all"]}]}}', /targets must contain/],
     ])('rejects %s', (_name, content, error) => {
         const file = join(directory, 'invalid.yml');
         writeFileSync(file, content);

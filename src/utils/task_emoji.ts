@@ -26,7 +26,6 @@ const TASK_EMOJI: Record<string, string> = {
     RemoveIssueBranchesUseCase: '🧹',
     RemoveNotNeededBranchesUseCase: '🧹',
     DeployAddedUseCase: '🏷️',
-    DeployedAddedUseCase: '🏷️',
     MoveIssueToInProgressUseCase: '📥',
     UpdateIssueTypeUseCase: '🏷️',
     // Commit steps
@@ -52,7 +51,6 @@ const TASK_EMOJI: Record<string, string> = {
     CreateReleaseUseCase: '🎉',
     CreateTagUseCase: '🏷️',
     PublishGithubActionUseCase: '📦',
-    DeployedActionUseCase: '🚀',
     InitialSetupUseCase: '🛠️',
 };
 

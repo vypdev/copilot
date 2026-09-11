@@ -30,7 +30,7 @@ When `bugbot-telemetry` is enabled, each review records only identifiers and agg
 
 The Action exports all review snapshots as the `bugbot-telemetry` JSON output and includes the current outcome/effort/latency in the Job Summary. Logs also contain one `[bugbot.telemetry]` JSON record per review.
 
-The native `Copilot / Review` Check is neutral when a successful review reports actionable findings. Repositories that intentionally use Bugbot as a merge gate can set `BUGBOT_FAIL_ON_UNRESOLVED=true` (or `bugbot-fail-on-unresolved: true`); only then do open or reopened findings fail both the Check and Action invocation. Analysis failures remain failures in either mode.
+The native `Copilot / Review` Check is neutral when a successful review reports `open`, `reopened`, or `verification-required` findings. Repositories that intentionally use Bugbot as a merge gate can set `BUGBOT_FAIL_ON_UNRESOLVED=true` (or `bugbot-fail-on-unresolved: true`); only then do those actionable states fail both the Check and Action invocation. `unknown`, provider reconciliation errors, and analysis failures remain failures in either mode. Telemetry state counts come from the same final provider-verified projection as the Check and Job Summary, not from intended mutations.
 
 Aggregate an Action log, JSON array, or JSONL export with:
 
@@ -43,6 +43,6 @@ The report separates non-failure rate from completed-review rate, and includes o
 
 ## Programmatic API
 
-The npm package exports `@vypdev/copilot/bugbot`. `BugbotReviewService` accepts a findings-agent port and one `BugbotScmGateway` containing context, publication, resolution, and optional telemetry ports. Consumers can provide GitHub, GitLab, or internal SCM adapters without changing the review application layer. Its `review(execution, options)` method supports the same scoped dry-run, effort, trace, and suggestion options.
+The npm package exports `@vypdev/copilot/bugbot`. `BugbotReviewService` accepts a findings-agent port and one `BugbotScmGateway` containing context, publication, resolution, and optional telemetry ports. The context and publication contracts require semantic review-summary read/update capabilities in addition to inline-comment/thread capabilities, so an adapter cannot silently omit final projection support. Context adapters must also provide trusted PR/commit/run navigation; the application never guesses a provider hostname. Consumers can provide GitHub, GitLab, or internal SCM adapters without changing the review application layer. Its `review(execution, options)` method supports the same scoped dry-run, effort, trace, and suggestion options.
 
-The API also exports the benchmark evaluator, telemetry parser/aggregator, identity helpers, and review-configuration normalizers. The bundled GitHub adapter remains one concrete integration; no workflow name or project-specific CI check is part of the generic review service.
+The API also exports the benchmark evaluator, telemetry parser/aggregator, identity helpers, review-configuration normalizers, finding-state classifier, final projection builder/types, and semantic review-summary and navigation port types. The bundled GitHub adapter remains one concrete integration; it uses `GITHUB_SERVER_URL` so GitHub Enterprise links remain correct and adds a run link only when `GITHUB_REPOSITORY` and `GITHUB_RUN_ID` identify the current repository. No workflow name or project-specific CI check is part of the generic review service.

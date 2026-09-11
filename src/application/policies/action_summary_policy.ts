@@ -18,8 +18,11 @@ export function buildActionSummary(context: ActionSummaryContext): string {
     const failures = context.results.filter(result => !result.success && result.executed);
     const findingStates = aggregateFindingStateCounts(context.results);
     const bugbotTelemetry = context.results.map(result => getBugbotTelemetry(result.payload)).find(Boolean);
-    const hasActionableFindings = (findingStates?.open ?? 0) + (findingStates?.reopened ?? 0) > 0;
-    const status = failures.length > 0 || (hasActionableFindings && context.failOnUnresolvedFindings)
+    const hasActionableFindings = (findingStates?.open ?? 0)
+        + (findingStates?.reopened ?? 0)
+        + (findingStates?.['verification-required'] ?? 0) > 0;
+    const hasUnknownFindings = (findingStates?.unknown ?? 0) > 0;
+    const status = failures.length > 0 || hasUnknownFindings || (hasActionableFindings && context.failOnUnresolvedFindings)
         ? '❌ Failure'
         : hasActionableFindings
             ? '⚠️ Findings'
@@ -73,13 +76,29 @@ function formatBugbotTelemetry(telemetry: ReturnType<typeof getBugbotTelemetry>)
         : '—';
 }
 
-function getFindingStateCounts(value: unknown): { open: number; reopened: number; fixed: number; obsolete: number; dismissed: number } | undefined {
+type FindingStateCounts = {
+    open: number;
+    reopened: number;
+    fixed: number;
+    obsolete: number;
+    dismissed: number;
+    'verification-required': number;
+    unknown: number;
+};
+
+function getFindingStateCounts(value: unknown): FindingStateCounts | undefined {
     const payload = getResultPayload(value);
-    const stateCounts = getResultPayload(payload?.findingStates) as Partial<Record<'open' | 'reopened' | 'fixed' | 'obsolete' | 'dismissed', unknown>> | undefined;
+    const stateCounts = getResultPayload(payload?.findingStates) as Partial<Record<keyof FindingStateCounts, unknown>> | undefined;
     if (!stateCounts) return undefined;
-    const states = ['open', 'reopened', 'fixed', 'obsolete', 'dismissed'] as const;
-    if (!states.every(state => typeof stateCounts[state] === 'number')) return undefined;
-    return Object.fromEntries(states.map(state => [state, stateCounts[state]])) as { open: number; reopened: number; fixed: number; obsolete: number; dismissed: number };
+    const establishedStates = ['open', 'reopened', 'fixed', 'obsolete', 'dismissed'] as const;
+    if (!establishedStates.every(state => typeof stateCounts[state] === 'number')) return undefined;
+    return {
+        ...Object.fromEntries(establishedStates.map(state => [state, stateCounts[state]])),
+        'verification-required': typeof stateCounts['verification-required'] === 'number'
+            ? stateCounts['verification-required']
+            : 0,
+        unknown: typeof stateCounts.unknown === 'number' ? stateCounts.unknown : 0,
+    } as FindingStateCounts;
 }
 
 function aggregateFindingStateCounts(results: readonly Result[]): ReturnType<typeof getFindingStateCounts> {
@@ -91,7 +110,17 @@ function aggregateFindingStateCounts(results: readonly Result[]): ReturnType<typ
         fixed: total.fixed + current.fixed,
         obsolete: total.obsolete + current.obsolete,
         dismissed: total.dismissed + current.dismissed,
-    }), { open: 0, reopened: 0, fixed: 0, obsolete: 0, dismissed: 0 });
+        'verification-required': total['verification-required'] + current['verification-required'],
+        unknown: total.unknown + current.unknown,
+    }), {
+        open: 0,
+        reopened: 0,
+        fixed: 0,
+        obsolete: 0,
+        dismissed: 0,
+        'verification-required': 0,
+        unknown: 0,
+    });
 }
 
 function formatFindingStates(counts: ReturnType<typeof getFindingStateCounts>): string {

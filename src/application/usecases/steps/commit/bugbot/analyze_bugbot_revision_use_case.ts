@@ -1,10 +1,10 @@
 import type { Execution } from '../../../../../data/model/execution';
 import type { FindingsQueryPort } from '../../../../ports/agent_findings_ports';
 import { reconcileResolvedFindingIds } from '../../../../policies/bugbot_reconciliation_policy';
-import { BUGBOT_MAX_COMMENTS } from '../../../../policies/bugbot_constants';
 import { logInfo } from '../../../../ports/logging_ports';
 import { applyCommentLimit } from './limit_comments';
-import { findExistingFindingInfo, type BugbotContext } from './types';
+import type { BugbotContext } from './types';
+import { findExistingFindingInfo } from '../../../../../domain/bugbot/finding';
 import { buildBugbotPrompt } from './build_bugbot_prompt';
 import { prepareDetectedFindings } from './apply_detected_findings';
 import type { PreparedBugbotFindings } from './prepare_bugbot_findings';
@@ -61,6 +61,6 @@ function suppressDismissedFindings(
         const existing = findExistingFindingInfo(context.existingByFindingId, finding);
         return existing?.issue?.resolution !== 'dismissed' && existing?.pullRequest?.resolution !== 'dismissed';
     });
-    const limited = applyCommentLimit(activeFindings, execution.ai?.getBugbotCommentLimit?.() ?? BUGBOT_MAX_COMMENTS);
+    const limited = applyCommentLimit(activeFindings, execution.ai.getBugbotCommentLimit());
     return { ...prepared, ...limited, activeFindings };
 }

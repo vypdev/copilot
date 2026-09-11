@@ -7,7 +7,6 @@ import { escapeHtml, sanitizeAgentMarkdown } from './github_comment_publication_
 /** Opaque marker: it is metadata, not an instruction for another agent. */
 export const TRANSLATED_COMMENT_MARKER = '<!-- copilot:translated-comment:v2 -->';
 
-const LEGACY_TRANSLATED_COMMENT_MARKER = '<!-- content_translated';
 const MAX_TRANSLATED_COMMENT_LENGTH = DEFAULT_UNTRUSTED_CONTENT_LIMIT;
 const MAX_ESCAPED_ORIGINAL_LENGTH = 40_000;
 
@@ -18,7 +17,7 @@ export type TranslationPublication = {
 
 export function hasTranslatedCommentMarker(body: string | null | undefined): boolean {
     return typeof body === 'string'
-        && (body.includes(TRANSLATED_COMMENT_MARKER) || body.includes(LEGACY_TRANSLATED_COMMENT_MARKER));
+        && body.includes(TRANSLATED_COMMENT_MARKER);
 }
 
 /**

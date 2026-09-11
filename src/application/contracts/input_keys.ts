@@ -14,6 +14,7 @@ export const INPUT_KEYS = {
     SINGLE_ACTION_TITLE: 'single-action-title',
     SINGLE_ACTION_CHANGELOG: 'single-action-changelog',
     SINGLE_ACTION_MESSAGE: 'single-action-message',
+    SINGLE_ACTION_OPERATION_ID: 'single-action-operation-id',
     SINGLE_ACTION_COMMENT_ID: 'single-action-comment-id',
     SINGLE_ACTION_COMMENT_MODE: 'single-action-comment-mode',
     INACTIVITY_THRESHOLD_HOURS: 'inactivity-threshold-hours',
@@ -58,7 +59,6 @@ export const INPUT_KEYS = {
     TESTER_COMMAND: 'tester-command',
 
     // AI configuration
-    AI_PULL_REQUEST_DESCRIPTION: 'ai-pull-request-description',
     AI_PULL_REQUEST_DESCRIPTION_MODE: 'ai-pull-request-description-mode',
     AI_MEMBERS_ONLY: 'ai-members-only',
     AI_IGNORE_FILES: 'ai-ignore-files',
@@ -111,6 +111,18 @@ export const INPUT_KEYS = {
     // Workflows
     RELEASE_WORKFLOW: 'release-workflow',
     HOTFIX_WORKFLOW: 'hotfix-workflow',
+    RELEASE_RECONCILIATION_STRATEGY: 'release-reconciliation-strategy',
+    HOTFIX_RECONCILIATION_STRATEGY: 'hotfix-reconciliation-strategy',
+    RECONCILIATION_PR_MODE: 'reconciliation-pr-mode',
+    MERGE_QUEUE_CHECK_ATTESTATIONS: 'merge-queue-check-attestations',
+    RECONCILIATION_BACKMERGE_MODE: 'reconciliation-backmerge-mode',
+    HOTFIX_ACTIVE_RELEASE_POLICY: 'hotfix-active-release-policy',
+    RECONCILIATION_TREE: 'reconciliation-tree',
+    RECONCILIATION_CLEANUP: 'reconciliation-cleanup',
+    RECONCILIATION_ISSUE_COMPLETION: 'reconciliation-issue-completion',
+    ORCHESTRATION_PRESENTATION_MODE: 'orchestration-presentation-mode',
+    ORCHESTRATION_DIAGRAMS: 'orchestration-diagrams',
+    ORCHESTRATION_COMMENT_MODE: 'orchestration-comment-mode',
 
     // Emoji
     EMOJI_LABELED_TITLE: 'emoji-labeled-title',
@@ -237,6 +249,5 @@ export const INPUT_KEYS = {
     // Pull Request
     PULL_REQUEST_DESIRED_ASSIGNEES_COUNT: 'desired-assignees-count',
     PULL_REQUEST_DESIRED_REVIEWERS_COUNT: 'desired-reviewers-count',
-    PULL_REQUEST_MERGE_TIMEOUT: 'merge-timeout',
 
 } as const;

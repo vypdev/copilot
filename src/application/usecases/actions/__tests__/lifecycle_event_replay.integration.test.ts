@@ -153,7 +153,7 @@ function executionFromInputs(
         isIssue: false,
         isPullRequest: true,
         issue: new Issue(false, false, 0, inputs),
-        pullRequest: new PullRequest(0, 0, 0, inputs),
+        pullRequest: new PullRequest(0, 0, inputs),
         labels: {
             currentIssueLabels: [],
             currentPullRequestLabels,

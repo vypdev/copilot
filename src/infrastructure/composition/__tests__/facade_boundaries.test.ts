@@ -12,7 +12,7 @@ function productionTypeScriptFiles(directory: string): string[] {
 }
 
 describe('repository facade composition boundaries', () => {
-    it('keeps compatibility facade imports inside the composition root', () => {
+    it('keeps repository facade imports inside the composition root', () => {
         const sourceRoot = join(__dirname, '../../..');
         const compositionRoot = join(sourceRoot, 'infrastructure/composition');
         const facadePatterns = [

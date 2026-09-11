@@ -156,6 +156,71 @@ describe('application architecture boundaries', () => {
         expect(source).not.toContain("data/model/execution'");
         expect(source).toContain('LifecycleSynchronizationExecution');
     });
+
+    it('keeps deployment orchestration dependent on its narrow application context', () => {
+        const source = readFileSync(
+            join(applicationRoot, 'usecases/actions/deployment_orchestration_use_case.ts'),
+            'utf8',
+        );
+        expect(source).not.toContain('data/model/execution');
+        expect(source).toContain('DeploymentOrchestrationContext');
+        expect(source).toContain('DeploymentStateStorePort');
+    });
+
+    it('keeps deployment application ports provider-neutral', () => {
+        const source = readFileSync(join(applicationRoot, 'ports/deployment_orchestration_ports.ts'), 'utf8');
+        expect(source).not.toMatch(/@octokit|@actions|infrastructure\/|GithubDeployment/);
+        expect(source).not.toMatch(/graphql|pull_number|merge_commit_sha|node_id/);
+    });
+
+    it('keeps deployment presentation policies mutation-free', () => {
+        const source = readFileSync(join(applicationRoot, 'policies/deployment_presentation_policy.ts'), 'utf8');
+        expect(source).not.toMatch(/ports\//);
+        expect(source).not.toMatch(/updateDescription|addComment|createManagedPullRequest|deleteBranch|dispatch/);
+    });
+
+    it('keeps Bugbot reconciliation behind narrow contracts and one-way dependencies', () => {
+        const reconciliationSource = readFileSync(
+            join(
+                applicationRoot,
+                'usecases/steps/commit/bugbot/reconcile_bugbot_review_state_use_case.ts',
+            ),
+            'utf8',
+        );
+        const reconciliationPolicySource = readFileSync(
+            join(applicationRoot, 'policies/bugbot_reconciliation_policy.ts'),
+            'utf8',
+        );
+        const providerProjectionSource = readFileSync(
+            join(applicationRoot, 'policies/bugbot_provider_projection_policy.ts'),
+            'utf8',
+        );
+
+        expect(reconciliationSource).not.toContain('data/model/execution');
+        expect(reconciliationSource).not.toMatch(/listIssueComments|listPullRequestReviews|updateComment\(/);
+        expect(reconciliationSource).toContain('BugbotReconciliationTarget');
+        expect(reconciliationSource).toContain('loadBugbotReconciliationSnapshot');
+        expect(reconciliationSource).toContain('synchronizeBugbotReviewPresentation');
+        expect(reconciliationPolicySource).not.toContain('/usecases/');
+        expect(providerProjectionSource).not.toContain('/usecases/');
+    });
+
+    it('keeps canonical Bugbot finding contracts in the provider-neutral domain', () => {
+        const findingSource = readFileSync(
+            join(__dirname, '../../domain/bugbot/finding.ts'),
+            'utf8',
+        );
+        const contextSource = readFileSync(
+            join(applicationRoot, 'usecases/steps/commit/bugbot/types.ts'),
+            'utf8',
+        );
+
+        expect(findingSource).toContain('interface BugbotFinding');
+        expect(findingSource).toContain('type ExistingByFindingId');
+        expect(findingSource).not.toMatch(/GitHub|@actions|@octokit|application\//);
+        expect(contextSource).not.toContain('interface BugbotFinding');
+        expect(contextSource).not.toContain('interface ExistingFindingInfo');
+    });
 });
 
 describe('failure policy ownership', () => {

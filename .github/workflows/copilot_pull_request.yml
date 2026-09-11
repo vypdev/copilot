@@ -5,13 +5,30 @@ on:
     types: [opened, reopened, edited, closed, synchronize]
   pull_request_review:
     types: [submitted, edited, dismissed]
+  merge_group:
+    types: [checks_requested]
 
 jobs:
+  copilot-merge-group:
+    if: ${{ github.event_name == 'merge_group' }}
+    name: Copilot - Pull Request
+    runs-on: [self-hosted, codex]
+    timeout-minutes: 10
+    permissions:
+      checks: write
+      contents: read
+    steps:
+      - name: Confirm merge-group compatibility
+        run: echo "Copilot PR analysis already ran on each constituent pull request."
+
   copilot-pull-requests:
     if: ${{ (vars.COPILOT_BOT_LOGIN == '' || github.actor != vars.COPILOT_BOT_LOGIN) && github.event.pull_request.head.repo.full_name == github.repository }}
     name: Copilot - Pull Request
     runs-on: [self-hosted, codex]
     timeout-minutes: 120
+    concurrency:
+      group: copilot-bugbot-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}
+      cancel-in-progress: true
     permissions:
       checks: write
       contents: read
@@ -95,5 +112,4 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           CURSOR_API_KEY: ${{ (vars.AGENT_PROVIDER == 'cursor' || vars.FINDINGS_PROVIDER == 'cursor' || vars.FIXER_PROVIDER == 'cursor' || vars.PLANNER_PROVIDER == 'cursor' || vars.REVIEWER_PROVIDER == 'cursor' || vars.TESTER_PROVIDER == 'cursor') && secrets.CURSOR_API_KEY || '' }}
           CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
-          CODEX_ACCESS_TOKEN: ${{ secrets.CODEX_ACCESS_TOKEN }}
           COPILOT_EVIDENCE_TOKEN: ${{ github.token }}

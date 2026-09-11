@@ -30,7 +30,7 @@ export async function runThinkWorkflow(
             return skipped(taskId);
         }
         const agentTask = resolveThinkAgentTask(request.command?.name, request.destinationType);
-        if (!isAgentConfigurationReady(param.ai?.getAgentConfiguration(agentTask))) {
+        if (!isAgentConfigurationReady(param.ai.getAgentConfiguration(agentTask))) {
             return [
                 new Result({
                     id: taskId,

@@ -6,6 +6,15 @@ import { createRepositoryVariablesClient } from './github_identity_client_factor
 import { SetupWorkspaceAdapter } from '../setup_workspace_adapter';
 import { SetupRemoteCredentialHealthAdapter } from '../setup_remote_credential_health_adapter';
 import { OctokitCredentialHealthClientAdapter } from '../github/octokit_credential_health_adapter';
+import { GithubDeploymentRepository } from '../../data/repository/deployment/github_deployment_repository';
+import { OctokitDeploymentClientAdapter } from '../github/octokit_deployment_adapter';
+import { SetupMergeQueueReadinessUseCase } from '../../application/usecases/setup/merge_queue_readiness_use_case';
+
+export function createSetupMergeQueueReadinessUseCase(): SetupMergeQueueReadinessUseCase {
+    return new SetupMergeQueueReadinessUseCase(
+        new GithubDeploymentRepository(new OctokitDeploymentClientAdapter()),
+    );
+}
 
 export function createSetupDoctorUseCase(output: DoctorOutputPort): SetupDoctorUseCase {
     const repositoryConfiguration = new RepositoryVariablesRepository(createRepositoryVariablesClient());
@@ -17,5 +26,6 @@ export function createSetupDoctorUseCase(output: DoctorOutputPort): SetupDoctorU
         output,
         new SetupRemoteCredentialHealthAdapter(new OctokitCredentialHealthClientAdapter()),
         repositoryConfiguration,
+        createSetupMergeQueueReadinessUseCase(),
     );
 }

@@ -6,7 +6,11 @@
 import type { Execution } from "../../../../../data/model/execution";
 import type { BugbotFindingPublicationPorts } from "../../../../../application/ports/bugbot_finding_publication_ports";
 import { getCommentWatermark } from "../../../../../utils/comment_watermark";
-import { findExistingFindingInfo, type BugbotContext, type BugbotFinding } from "./types";
+import type { BugbotContext } from "./types";
+import {
+    findExistingFindingInfo,
+    type BugbotFinding,
+} from "../../../../../domain/bugbot/finding";
 import { publishIssueFindingComment } from "./publish_issue_finding_comment";
 import { PullRequestReviewCommentPublisher } from "./publish_pr_review_comments";
 import { publishOverflowComment } from "./publish_overflow_comment";

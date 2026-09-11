@@ -55,7 +55,7 @@ These lifecycles remain independent and share only provider-neutral contracts.
 ## Current design notes
 
 - There is no universal repository, AI, or provider facade in production.
-- `Execution` is the legacy-compatible runtime aggregate and remains a high-
+- `Execution` is the runtime aggregate and remains a high-
   connectivity hub; new use cases should accept the narrowest context contract
   that their capability needs.
 - Setup configuration is split into focused defaults, plan, validation, and
@@ -66,4 +66,4 @@ These lifecycles remain independent and share only provider-neutral contracts.
   isolation, application outer-layer isolation, and composition boundaries.
 
 Always inspect current source and run the architecture tests; generated Graphify
-topology and historical documents are navigation aids, not authority.
+topology and reports are navigation aids, not authority.

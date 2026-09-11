@@ -28,9 +28,9 @@ export function parseBugbotReviewCommandOptions(arguments_: readonly string[]): 
         }
         const booleanValue = parseBoolean(value);
         if (booleanValue === undefined) return invalid(`${key} must be true or false.`);
-        if (key === 'dry-run' || key === 'dryrun') overrides.publicationMode = booleanValue ? 'dry-run' : 'publish';
-        else if (key === 'trace-rules' || key === 'verbose') overrides.traceRules = booleanValue;
-        else if (key === 'suggestions' || key === 'suggested-changes') overrides.suggestedChanges = booleanValue;
+        if (key === 'dry-run') overrides.publicationMode = booleanValue ? 'dry-run' : 'publish';
+        else if (key === 'trace-rules') overrides.traceRules = booleanValue;
+        else if (key === 'suggested-changes') overrides.suggestedChanges = booleanValue;
         else return invalid(`Unknown review option "${key}".`);
     }
     return { valid: true, overrides };
@@ -43,5 +43,5 @@ function parseBoolean(value: string): boolean | undefined {
 }
 
 function invalid(reason: string): BugbotReviewCommandParseResult {
-    return { valid: false, reason: `${reason} Supported options: effort, dry-run, trace-rules/verbose, suggestions.` };
+    return { valid: false, reason: `${reason} Supported options: effort, dry-run, trace-rules, suggested-changes.` };
 }

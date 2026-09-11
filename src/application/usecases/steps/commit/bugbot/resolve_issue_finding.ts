@@ -1,7 +1,11 @@
 import type { BugbotIssueCommentUpdatePort } from "../../../../../application/ports/bugbot_issue_write_ports";
 import { stripTrailingCommentWatermarks } from "../../../../../utils/comment_watermark";
-import { buildMarker, parseMarker, replaceMarkerInBody } from "./marker";
-import type { BugbotFindingResolution } from './types';
+import {
+  buildMarker,
+  parseMarker,
+  replaceMarkerInBody,
+} from '../../../../policies/bugbot_finding_marker_policy';
+import type { BugbotFindingResolution } from '../../../../../domain/bugbot/finding';
 
 export interface IssueFindingResolution {
   findingId: string;
@@ -30,7 +34,7 @@ export async function resolveIssueFinding(
   if (marker == null || marker.resolved) return;
 
   const reason = resolution.resolution ?? 'fixed';
-  const replacement = `${resolvedNote(reason)}${buildMarker(resolution.findingId, true, marker.fingerprint, reason, marker.semanticFingerprint)}`;
+  const replacement = `${resolvedNote(reason)}${buildMarker(resolution.findingId, true, marker.fingerprint, marker.semanticFingerprint, reason)}`;
   const replaced = replaceMarkerInBody(
     body,
     resolution.findingId,

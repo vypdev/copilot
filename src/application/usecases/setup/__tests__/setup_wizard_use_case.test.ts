@@ -83,4 +83,23 @@ describe('SetupWizardUseCase', () => {
             { secrets: true, variables: true },
         );
     });
+
+    it('adds live merge-queue readiness to the setup plan when a remote target is available', async () => {
+        const prompt: jest.Mocked<SetupPromptPort> = {
+            collect: jest.fn(async defaults => defaults),
+            showPlan: jest.fn(), confirm: jest.fn(async (_plan) => true), close: jest.fn(),
+        };
+        const readiness = {
+            inspect: jest.fn().mockResolvedValue([
+                { area: 'Merge queue readiness · production (master)', status: 'pass', message: 'Ready.' },
+            ]),
+        };
+        await new SetupWizardUseCase(prompt, undefined, undefined, readiness).collect({
+            remoteTarget: { owner: 'owner', repository: 'repo', token: 'token' },
+        });
+        expect(readiness.inspect).toHaveBeenCalledWith(expect.objectContaining({ owner: 'owner', repository: 'repo' }));
+        expect(prompt.showPlan).toHaveBeenCalledWith(expect.objectContaining({
+            mergeQueueReadiness: [expect.objectContaining({ status: 'pass' })],
+        }));
+    });
 });

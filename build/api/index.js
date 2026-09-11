@@ -76,12 +76,173 @@ exports.BUGBOT_MIN_SEVERITY = 'low';
 
 /***/ }),
 
+/***/ 8024:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+/**
+ * Bugbot marker: we embed a hidden HTML comment in each finding comment (issue and PR)
+ * with finding_id and resolved flag. This lets us (1) find existing findings when loading
+ * context, (2) update the same comment when the agent re-reports or marks resolved, (3) match
+ * threads when the user replies "fix it" in a PR.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MAX_FINDING_ID_LENGTH = void 0;
+exports.sanitizeFindingIdForMarker = sanitizeFindingIdForMarker;
+exports.normalizeFindingIdForMarker = normalizeFindingIdForMarker;
+exports.buildMarker = buildMarker;
+exports.parseMarker = parseMarker;
+exports.markerRegexForFinding = markerRegexForFinding;
+exports.replaceMarkerInBody = replaceMarkerInBody;
+exports.extractTitleFromBody = extractTitleFromBody;
+exports.buildCommentBody = buildCommentBody;
+const bugbot_constants_1 = __nccwpck_require__(1389);
+const application_error_1 = __nccwpck_require__(5999);
+const github_comment_publication_policy_1 = __nccwpck_require__(2712);
+/** Maximum lossless finding identity accepted by the marker contract. */
+exports.MAX_FINDING_ID_LENGTH = 200;
+/** Safe character set for finding IDs in regex (alphanumeric, path/segment chars). */
+const SAFE_FINDING_ID_REGEX_CHARS = /^[a-zA-Z0-9_\-.:/]+$/;
+/**
+ * Canonicalize only insignificant outer whitespace. Internal characters are
+ * never removed: doing so would make distinct finding identities collide.
+ */
+function sanitizeFindingIdForMarker(findingId) {
+    return findingId.trim();
+}
+function normalizeFindingIdForMarker(findingId) {
+    const safeId = sanitizeFindingIdForMarker(findingId);
+    return safeId.length > 0 &&
+        safeId.length <= exports.MAX_FINDING_ID_LENGTH &&
+        !/[\r\n]|-->|<!|[>"]/.test(safeId)
+        ? safeId
+        : null;
+}
+function requireFindingIdForMarker(findingId) {
+    const safeId = normalizeFindingIdForMarker(findingId);
+    if (safeId == null) {
+        throw new application_error_1.ApplicationError(findingId.trim().length === 0
+            ? "Finding ID is empty after marker sanitization."
+            : findingId.trim().length > exports.MAX_FINDING_ID_LENGTH
+                ? "Finding ID exceeds the maximum marker length."
+                : "Finding ID contains marker-breaking characters.", 'validation');
+    }
+    return safeId;
+}
+function buildMarker(findingId, resolved, fingerprint, semanticFingerprint, resolution) {
+    const safeId = requireFindingIdForMarker(findingId);
+    const safeFingerprint = fingerprint.match(/^fp-[a-f0-9]{8}$/)?.[0];
+    const safeSemanticFingerprint = semanticFingerprint.match(/^sf-[a-f0-9]{8}$/)?.[0];
+    if (!safeFingerprint || !safeSemanticFingerprint) {
+        throw new application_error_1.ApplicationError('Finding marker requires valid local and semantic fingerprints.', 'validation');
+    }
+    const safeResolution = resolved && resolution && ['fixed', 'obsolete', 'dismissed'].includes(resolution)
+        ? ` finding_resolution:"${resolution}"`
+        : '';
+    return `<!-- ${bugbot_constants_1.BUGBOT_MARKER_PREFIX} finding_id:"${safeId}" resolved:${resolved} finding_fingerprint:"${safeFingerprint}" finding_semantic:"${safeSemanticFingerprint}"${safeResolution} -->`;
+}
+function parseMarker(body) {
+    if (!body)
+        return [];
+    const results = [];
+    const regex = new RegExp(`<!--\\s*${bugbot_constants_1.BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"([^"]+)"\\s+resolved:(true|false)\\s+finding_fingerprint:\\s*"(fp-[a-f0-9]{8})"\\s+finding_semantic:\\s*"(sf-[a-f0-9]{8})"(?:\\s+finding_resolution:\\s*"(fixed|obsolete|dismissed)")?\\s*-->`, "g");
+    let m;
+    while ((m = regex.exec(body)) !== null) {
+        results.push({
+            findingId: m[1],
+            resolved: m[2] === "true",
+            fingerprint: m[3],
+            semanticFingerprint: m[4],
+            ...(m[5] ? { resolution: m[5] } : {}),
+        });
+    }
+    return results;
+}
+/**
+ * Regex to match the current marker for a specific finding.
+ * Finding IDs from external data (comments, API) are length-limited and validated to mitigate ReDoS.
+ */
+function markerRegexForFinding(findingId) {
+    const safeId = requireFindingIdForMarker(findingId);
+    const idForRegex = SAFE_FINDING_ID_REGEX_CHARS.test(safeId)
+        ? safeId
+        : safeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp(`<!--\\s*${bugbot_constants_1.BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"${idForRegex}"\\s+resolved:(?:true|false)\\s+finding_fingerprint:\\s*"fp-[a-f0-9]{8}"\\s+finding_semantic:\\s*"sf-[a-f0-9]{8}"(?:\\s+finding_resolution:\\s*"(?:fixed|obsolete|dismissed)")?\\s*-->`, "g");
+}
+/**
+ * Find the marker for this finding in body (using same pattern as parseMarker) and replace it.
+ * Returns whether the marker exists independently from whether the body changed.
+ */
+function replaceMarkerInBody(body, findingId, newResolved, replacement) {
+    const regex = markerRegexForFinding(findingId);
+    const current = parseMarker(body).find((marker) => marker.findingId === findingId);
+    const newMarker = replacement ?? (current
+        ? buildMarker(findingId, newResolved, current.fingerprint, current.semanticFingerprint, current.resolution)
+        : '');
+    const found = regex.test(body);
+    regex.lastIndex = 0;
+    if (!found)
+        return { updated: body, found: false, changed: false };
+    const updated = body.replace(regex, newMarker);
+    return { updated, found: true, changed: updated !== body };
+}
+/** Extract title from comment body (first ## line) for context when sending to the agent. */
+function extractTitleFromBody(body) {
+    if (!body)
+        return "";
+    const match = body.match(/^##\s+(.+)$/m);
+    return (match?.[1] ?? "").trim();
+}
+/** Builds the visible comment body (title, severity, location, description, suggestion) plus the hidden marker for this finding. */
+function buildCommentBody(finding, resolved, resolution, options = {}) {
+    const safeTitle = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.title, 500) || "Potential problem";
+    const safeDescription = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.description, 8000) || "No description provided.";
+    const safeSeverity = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.severity, 32);
+    const safeFile = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.file, 500).replace(/`/g, "\\`");
+    const safeSuggestion = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.suggestion, 8000);
+    const safeEvidence = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.evidence, 8000);
+    const safeCategory = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.category, 32);
+    const severity = safeSeverity
+        ? `**Severity:** ${safeSeverity}\n\n`
+        : "";
+    const fileLine = safeFile
+        ? `**Location:** \`${safeFile}${finding.line != null ? `:${finding.line}${finding.endLine != null && finding.endLine > finding.line ? `-${finding.endLine}` : ''}` : ""}\`\n\n`
+        : "";
+    const metadata = [
+        safeCategory ? `**Category:** ${safeCategory}` : '',
+        finding.confidence !== undefined ? `**Confidence:** ${Math.round(finding.confidence * 100)}%` : '',
+    ].filter(Boolean).join(' · ');
+    const evidence = safeEvidence ? `**Evidence:**\n${safeEvidence}\n\n` : '';
+    const suggestion = safeSuggestion
+        ? `**Suggested fix:**\n${safeSuggestion}\n\n`
+        : "";
+    const suggestedChange = options.includeSuggestedChange && finding.suggestedCode
+        ? `**Apply this change:**\n\n\`\`\`suggestion\n${finding.suggestedCode}\n\`\`\`\n\n`
+        : '';
+    const resolvedNote = resolved
+        ? "\n\n---\n**Resolved** (no longer reported in latest analysis).\n"
+        : "";
+    if (!finding.fingerprint || !finding.semanticFingerprint) {
+        throw new application_error_1.ApplicationError('Prepared finding is missing its local identity.', 'validation');
+    }
+    const marker = buildMarker(finding.id, resolved, finding.fingerprint, finding.semanticFingerprint, resolution);
+    return `## ${safeTitle}
+
+${severity}${metadata ? `${metadata}\n\n` : ''}${fileLine}${safeDescription}
+${evidence}
+${suggestion}${suggestedChange}${resolvedNote}${marker}`;
+}
+
+
+/***/ }),
+
 /***/ 3822:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectBugbotFindingStatuses = projectBugbotFindingStatuses;
+const review_state_1 = __nccwpck_require__(9200);
 /** Projects durable comment markers and the current analysis into a stable finding state. */
 function projectBugbotFindingStatuses(existingByFindingId, activeFindings, resolvedFindingIds = new Set(), resolvedFindingResolutions = new Map()) {
     const ids = new Set([
@@ -94,11 +255,19 @@ function projectBugbotFindingStatuses(existingByFindingId, activeFindings, resol
         const existing = existingByFindingId[id];
         const previouslyResolved = [existing?.issue, existing?.pullRequest].some(destination => destination?.resolved === true);
         if (active) {
-            statuses.set(id, previouslyResolved ? 'reopened' : 'open');
+            statuses.set(id, existing?.pullRequest?.verificationRequired
+                ? 'verification-required'
+                : previouslyResolved
+                    ? 'reopened'
+                    : 'open');
             continue;
         }
         if (resolvedFindingIds.has(id)) {
             statuses.set(id, resolvedFindingResolutions.get(id) ?? existing?.issue?.resolution ?? existing?.pullRequest?.resolution ?? 'fixed');
+            continue;
+        }
+        if (existing?.pullRequest?.verificationRequired) {
+            statuses.set(id, 'verification-required');
             continue;
         }
         if (previouslyResolved && (existing?.issue?.resolution || existing?.pullRequest?.resolution)) {
@@ -110,16 +279,207 @@ function projectBugbotFindingStatuses(existingByFindingId, activeFindings, resol
     return { statuses, counts: countStatuses(statuses) };
 }
 function countStatuses(statuses) {
-    const counts = {
-        open: 0,
-        fixed: 0,
-        obsolete: 0,
-        dismissed: 0,
-        reopened: 0,
-    };
-    for (const status of statuses.values())
-        counts[status] += 1;
+    const counts = (0, review_state_1.countBugbotFindingStates)(statuses.values());
+    for (const state of review_state_1.BUGBOT_FINDING_STATES)
+        counts[state] ?? (counts[state] = 0);
     return counts;
+}
+
+
+/***/ }),
+
+/***/ 5821:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.projectBugbotProviderEvidence = projectBugbotProviderEvidence;
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
+const bugbot_constants_1 = __nccwpck_require__(1389);
+const github_user_policy_1 = __nccwpck_require__(4403);
+const review_state_1 = __nccwpck_require__(9200);
+/**
+ * Converts a provider snapshot into semantic finding evidence. Issue and PR
+ * destinations are projected independently and then folded conservatively, so
+ * a clean destination can never hide a non-clean one.
+ */
+function projectBugbotProviderEvidence(input) {
+    const activeById = new Map(input.activeFindings.map((finding) => [finding.id, finding]));
+    const issueFindings = new Map();
+    const pullRequestFindings = new Map();
+    const malformedFindings = new Map();
+    const issueFindingIds = new Set();
+    const pullRequestFindingIds = new Set();
+    for (const comment of input.snapshot.linkedIssueComments) {
+        if (!isTrustedAuthor(comment.user?.login, input.trustedAuthorLogin))
+            continue;
+        const markers = (0, bugbot_finding_marker_policy_1.parseMarker)(comment.body);
+        if (markers.length === 0 && containsBugbotFindingMarkerSyntax(comment.body)) {
+            const id = `malformed-issue-comment-${comment.id}`;
+            malformedFindings.set(id, malformedFinding(id));
+        }
+        for (const marker of markers) {
+            issueFindingIds.add(marker.findingId);
+            const active = activeById.get(marker.findingId);
+            const previous = input.existingByFindingId[marker.findingId];
+            issueFindings.set(marker.findingId, {
+                id: marker.findingId,
+                state: (0, review_state_1.classifyBugbotFindingState)({
+                    markerResolved: marker.resolved,
+                    ...(marker.resolution ? { markerResolution: marker.resolution } : {}),
+                    currentAnalysisReportsFinding: active !== undefined,
+                    wasResolvedBeforeCurrentAnalysis: active !== undefined && previous?.issue?.resolved === true,
+                }),
+                title: active?.title || (0, bugbot_finding_marker_policy_1.extractTitleFromBody)(comment.body) || marker.findingId,
+            });
+        }
+    }
+    for (const comment of input.snapshot.pullRequestComments) {
+        if (!isTrustedAuthor(comment.authorLogin, input.trustedAuthorLogin))
+            continue;
+        const markers = (0, bugbot_finding_marker_policy_1.parseMarker)(comment.body);
+        const url = safeProviderUrl(comment.url, input.snapshot.navigation?.pullRequestUrl);
+        if (markers.length === 0 && containsBugbotFindingMarkerSyntax(comment.body)) {
+            const id = `malformed-comment-${comment.identity}`;
+            malformedFindings.set(id, malformedFinding(id, {
+                ...(url ? { url } : {}),
+                ...(comment.parentReviewIdentity
+                    ? { parentReviewIdentity: comment.parentReviewIdentity }
+                    : {}),
+            }));
+        }
+        for (const marker of markers) {
+            pullRequestFindingIds.add(marker.findingId);
+            const active = activeById.get(marker.findingId);
+            const previous = input.existingByFindingId[marker.findingId];
+            pullRequestFindings.set(marker.findingId, {
+                id: marker.findingId,
+                state: projectPullRequestState({
+                    markerResolved: marker.resolved,
+                    resolution: marker.resolution,
+                    thread: input.snapshot.reviewThreads[comment.identity],
+                    threadStateAvailable: input.snapshot.completeness.reviewThreads === 'verified',
+                    trustedAuthorLogin: input.trustedAuthorLogin,
+                    currentAnalysisReportsFinding: active !== undefined,
+                    reopened: active !== undefined
+                        && [previous?.issue, previous?.pullRequest]
+                            .some((destination) => destination?.resolved),
+                }),
+                title: active?.title || (0, bugbot_finding_marker_policy_1.extractTitleFromBody)(comment.body) || marker.findingId,
+                ...(url ? { url } : {}),
+                ...(comment.parentReviewIdentity
+                    ? { parentReviewIdentity: comment.parentReviewIdentity }
+                    : {}),
+            });
+        }
+    }
+    for (const review of input.snapshot.reviews) {
+        if (!isTrustedAuthor(review.authorLogin, input.trustedAuthorLogin))
+            continue;
+        const markers = (0, bugbot_finding_marker_policy_1.parseMarker)(review.body);
+        const url = safeProviderUrl(review.url, input.snapshot.navigation?.pullRequestUrl);
+        if (markers.length === 0 && containsBugbotFindingMarkerSyntax(review.body)) {
+            const id = `malformed-review-${review.identity}`;
+            malformedFindings.set(id, malformedFinding(id, {
+                ...(url ? { url } : {}),
+                parentReviewIdentity: review.identity,
+            }));
+        }
+        for (const marker of markers) {
+            pullRequestFindingIds.add(marker.findingId);
+            if (pullRequestFindings.has(marker.findingId))
+                continue;
+            pullRequestFindings.set(marker.findingId, {
+                id: marker.findingId,
+                state: marker.resolved ? marker.resolution ?? 'fixed' : 'open',
+                title: activeById.get(marker.findingId)?.title ?? marker.findingId,
+                ...(url ? { url } : {}),
+                parentReviewIdentity: review.identity,
+            });
+        }
+    }
+    const findings = new Map(malformedFindings);
+    for (const [findingId, issue] of issueFindings) {
+        findings.set(findingId, issue);
+    }
+    for (const [findingId, pullRequest] of pullRequestFindings) {
+        const issue = issueFindings.get(findingId);
+        findings.set(findingId, issue ? mergeDestinationFindings(issue, pullRequest) : pullRequest);
+    }
+    return {
+        findings: [...findings.values()],
+        observed: { issueFindingIds, pullRequestFindingIds },
+        malformedEvidence: malformedFindings.size > 0,
+    };
+}
+const STATE_PRIORITY = {
+    unknown: 7,
+    'verification-required': 6,
+    reopened: 5,
+    open: 4,
+    dismissed: 3,
+    obsolete: 2,
+    fixed: 1,
+};
+function mergeDestinationFindings(issue, pullRequest) {
+    return {
+        ...issue,
+        ...pullRequest,
+        state: STATE_PRIORITY[issue.state] >= STATE_PRIORITY[pullRequest.state]
+            ? issue.state
+            : pullRequest.state,
+    };
+}
+function malformedFinding(id, metadata = {}) {
+    return {
+        id,
+        state: 'unknown',
+        title: 'Malformed Bugbot finding marker',
+        ...metadata,
+    };
+}
+function projectPullRequestState(input) {
+    if (!input.threadStateAvailable)
+        return 'unknown';
+    return (0, review_state_1.classifyBugbotFindingState)({
+        markerResolved: input.markerResolved,
+        ...(input.resolution ? { markerResolution: input.resolution } : {}),
+        thread: input.thread,
+        botLogin: input.trustedAuthorLogin,
+        currentAnalysisReportsFinding: input.currentAnalysisReportsFinding,
+        wasResolvedBeforeCurrentAnalysis: input.reopened,
+    });
+}
+function safeProviderUrl(value, trustedPullRequestUrl) {
+    if (!value || value.length > 2000 || !trustedPullRequestUrl)
+        return undefined;
+    try {
+        const url = new URL(value);
+        const trusted = new URL(trustedPullRequestUrl);
+        const repositoryPath = trusted.pathname.replace(/\/pull\/\d+\/?$/u, '');
+        if (url.protocol !== 'https:' ||
+            url.username ||
+            url.password ||
+            !url.hostname ||
+            url.origin !== trusted.origin ||
+            (url.pathname !== repositoryPath && !url.pathname.startsWith(`${repositoryPath}/`))) {
+            return undefined;
+        }
+        return url.toString().replace(/\(/gu, '%28').replace(/\)/gu, '%29');
+    }
+    catch {
+        return undefined;
+    }
+}
+function isTrustedAuthor(authorLogin, trustedAuthorLogin) {
+    if (!authorLogin?.trim() || !trustedAuthorLogin?.trim())
+        return false;
+    return (0, github_user_policy_1.githubUsersMatch)(authorLogin, trustedAuthorLogin);
+}
+function containsBugbotFindingMarkerSyntax(body) {
+    if (!body)
+        return false;
+    return new RegExp(`<!--\\s*${bugbot_constants_1.BUGBOT_MARKER_PREFIX}\\s+finding_id`, 'u').test(body);
 }
 
 
@@ -130,7 +490,87 @@ function countStatuses(statuses) {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildBugbotReconciliationPlan = buildBugbotReconciliationPlan;
+exports.describeBugbotSnapshotFailures = describeBugbotSnapshotFailures;
+exports.findMissingNonCleanDurableFindingIds = findMissingNonCleanDurableFindingIds;
 exports.reconcileResolvedFindingIds = reconcileResolvedFindingIds;
+/** Builds the deterministic, side-effect-free plan consumed by presentation. */
+function buildBugbotReconciliationPlan(input) {
+    const diagnostics = [...(input.diagnostics ?? [])];
+    const projected = new Map(input.providerProjection.findings.map((finding) => [finding.id, finding]));
+    if (input.providerProjection.malformedEvidence) {
+        diagnostics.push('A trusted Bugbot finding marker is malformed.');
+    }
+    const missingDurableFindingIds = findMissingNonCleanDurableFindingIds(input.existingByFindingId, input.providerProjection.observed);
+    const missingDurableFindingIdSet = new Set(missingDurableFindingIds);
+    for (const findingId of missingDurableFindingIds) {
+        const previous = input.existingByFindingId[findingId];
+        const providerFinding = projected.get(findingId);
+        projected.set(findingId, {
+            ...providerFinding,
+            id: findingId,
+            state: 'unknown',
+            title: providerFinding?.title
+                ?? input.previousFindingTitles.get(findingId)
+                ?? findingId,
+            ...(previous?.pullRequest?.parentReviewIdentity
+                ? { parentReviewIdentity: previous.pullRequest.parentReviewIdentity }
+                : {}),
+        });
+    }
+    if (missingDurableFindingIds.length > 0) {
+        diagnostics.push(`The final provider snapshot omitted ${missingDurableFindingIds.length} previously observed unresolved or unverified Bugbot finding(s).`);
+    }
+    const expectedPublishedIds = new Set(input.expectedPublishedFindings.map((finding) => finding.id));
+    for (const finding of input.expectedPublishedFindings) {
+        if (input.providerProjection.observed.pullRequestFindingIds.has(finding.id))
+            continue;
+        const existing = projected.get(finding.id);
+        projected.set(finding.id, {
+            ...existing,
+            id: finding.id,
+            state: 'unknown',
+            title: finding.title,
+        });
+        if (!missingDurableFindingIdSet.has(finding.id)) {
+            diagnostics.push(`Published finding ${finding.id} is not yet observable from GitHub.`);
+        }
+    }
+    for (const finding of input.activeFindings) {
+        if (projected.has(finding.id) || expectedPublishedIds.has(finding.id))
+            continue;
+        projected.set(finding.id, {
+            id: finding.id,
+            state: 'open',
+            title: finding.title,
+        });
+    }
+    return { findings: [...projected.values()], diagnostics };
+}
+/** Maps explicit snapshot completeness to bounded, provider-safe diagnostics. */
+function describeBugbotSnapshotFailures(completeness) {
+    const messages = [
+        ['pullRequestComments', 'Unable to re-read pull request review comments.'],
+        ['reviewThreads', 'Unable to re-read pull request review thread state.'],
+        ['reviews', 'Unable to re-read pull request reviews.'],
+        ['conversation', 'Unable to re-read the pull request conversation.'],
+        ['linkedIssueComments', 'Unable to re-read linked issue finding comments.'],
+        ['navigation', 'Unable to build safe Bugbot navigation links.'],
+    ];
+    return messages.flatMap(([surface, message]) => completeness[surface] === 'failed' ? [message] : []);
+}
+/**
+ * Finds durable findings whose last trusted state was not clean but which are
+ * absent from the final provider projection. A successful read is not proof
+ * that a previously observed finding was deleted intentionally, so omission
+ * must fail closed until a later read can verify its state.
+ */
+function findMissingNonCleanDurableFindingIds(existingByFindingId, observed) {
+    return Object.entries(existingByFindingId)
+        .filter(([findingId, finding]) => hasMissingNonCleanDurableDestination(findingId, finding, observed))
+        .map(([findingId]) => findingId)
+        .sort((left, right) => left.localeCompare(right));
+}
 /**
  * Accepts a model's resolution claims only when they refer to an existing
  * finding and no active finding with the same id or local fingerprint remains.
@@ -149,6 +589,280 @@ function reconcileResolvedFindingIds(resolvedFindingIds, existingByFindingId, ac
         return (!fingerprint || !activeFingerprints.has(fingerprint))
             && (!semanticFingerprint || !activeSemanticFingerprints.has(semanticFingerprint));
     }));
+}
+function hasMissingNonCleanDurableDestination(findingId, finding, observed) {
+    const issueMissing = finding.issue?.resolved === false
+        && !observed.issueFindingIds.has(findingId);
+    const pullRequestRequiresEvidence = finding.pullRequest?.resolved === false
+        || finding.pullRequest?.verificationRequired === true;
+    const pullRequestMissing = pullRequestRequiresEvidence
+        && !observed.pullRequestFindingIds.has(findingId);
+    return issueMissing || pullRequestMissing;
+}
+
+
+/***/ }),
+
+/***/ 3288:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.selectOwnedBugbotReviews = selectOwnedBugbotReviews;
+exports.isTrustedBugbotAuthor = isTrustedBugbotAuthor;
+const github_user_policy_1 = __nccwpck_require__(4403);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
+/** Associates trusted review summaries with every child finding they own. */
+function selectOwnedBugbotReviews(input) {
+    const findingById = new Map(input.findings.map((finding) => [finding.id, finding]));
+    const childFindingIds = new Map();
+    for (const finding of input.findings) {
+        if (!finding.parentReviewIdentity)
+            continue;
+        addFinding(childFindingIds, finding.parentReviewIdentity, finding.id);
+    }
+    for (const comment of input.comments) {
+        if (!comment.parentReviewIdentity
+            || !isTrustedBugbotAuthor(comment.authorLogin, input.trustedAuthorLogin))
+            continue;
+        for (const marker of (0, bugbot_finding_marker_policy_1.parseMarker)(comment.body)) {
+            addFinding(childFindingIds, comment.parentReviewIdentity, marker.findingId);
+        }
+    }
+    return input.reviews.flatMap((review) => {
+        if (!isTrustedBugbotAuthor(review.authorLogin, input.trustedAuthorLogin))
+            return [];
+        const ids = new Set(childFindingIds.get(review.identity) ?? []);
+        for (const marker of (0, bugbot_finding_marker_policy_1.parseMarker)(review.body))
+            ids.add(marker.findingId);
+        if (ids.size === 0)
+            return [];
+        return [{
+                review,
+                findings: [...ids]
+                    .map((id) => findingById.get(id))
+                    .filter((finding) => finding !== undefined),
+            }];
+    });
+}
+function isTrustedBugbotAuthor(authorLogin, trustedAuthorLogin) {
+    if (!authorLogin?.trim() || !trustedAuthorLogin?.trim())
+        return false;
+    return (0, github_user_policy_1.githubUsersMatch)(authorLogin, trustedAuthorLogin);
+}
+function addFinding(findingsByReview, reviewIdentity, findingId) {
+    const ids = findingsByReview.get(reviewIdentity) ?? new Set();
+    ids.add(findingId);
+    findingsByReview.set(reviewIdentity, ids);
+}
+
+
+/***/ }),
+
+/***/ 3799:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BUGBOT_REVIEW_STATUS_END = exports.BUGBOT_REVIEW_STATUS_START = exports.BUGBOT_REVIEW_MARKER_PREFIX = exports.BUGBOT_STATUS_MARKER_PREFIX = void 0;
+exports.normalizeBugbotPresentationLocale = normalizeBugbotPresentationLocale;
+exports.buildBugbotStatusMarker = buildBugbotStatusMarker;
+exports.isBugbotStatusComment = isBugbotStatusComment;
+exports.renderBugbotStatusCard = renderBugbotStatusCard;
+exports.renderBugbotReviewSnapshot = renderBugbotReviewSnapshot;
+exports.buildNewBugbotReviewSnapshotHeader = buildNewBugbotReviewSnapshotHeader;
+const review_state_1 = __nccwpck_require__(9200);
+const github_comment_publication_policy_1 = __nccwpck_require__(2712);
+exports.BUGBOT_STATUS_MARKER_PREFIX = 'copilot-bugbot-status';
+exports.BUGBOT_REVIEW_MARKER_PREFIX = 'copilot-bugbot-review';
+exports.BUGBOT_REVIEW_STATUS_START = '<!-- copilot-bugbot-review-status:start';
+exports.BUGBOT_REVIEW_STATUS_END = '<!-- copilot-bugbot-review-status:end -->';
+function normalizeBugbotPresentationLocale(locale) {
+    return locale.trim().toLowerCase() === 'es-es' ? 'es-ES' : 'en-US';
+}
+function buildBugbotStatusMarker(projection) {
+    return `<!-- ${exports.BUGBOT_STATUS_MARKER_PREFIX} schema="1" pr="${projection.pullRequestNumber}" verified_head="${projection.verifiedHeadSha}" digest="${projection.digest}" -->`;
+}
+function isBugbotStatusComment(body) {
+    if (!body)
+        return false;
+    return new RegExp(`<!--\\s*${exports.BUGBOT_STATUS_MARKER_PREFIX}\\s+schema="1"\\s+pr="\\d+"\\s+verified_head="[a-fA-F0-9]{7,64}"\\s+digest="[a-f0-9]{8}"\\s*-->`, 'u').test(body);
+}
+function renderBugbotStatusCard(projection, locale, links) {
+    const language = normalizeBugbotPresentationLocale(locale);
+    const actionable = projection.findings.filter((finding) => (0, review_state_1.isBugbotActionableState)(finding.state));
+    const unknown = projection.counts.unknown;
+    const shortHead = projection.verifiedHeadSha.slice(0, 7);
+    const heading = language === 'es-ES' ? '## 🤖 Estado de Bugbot' : '## 🤖 Bugbot status';
+    const status = unknown > 0
+        ? language === 'es-ES'
+            ? `${unknown} hallazgo(s) tienen un estado desconocido en \`${shortHead}\`.`
+            : `${unknown} finding(s) have unknown state on \`${shortHead}\`.`
+        : projection.outcome === 'partial' || projection.outcome === 'failed'
+            ? language === 'es-ES'
+                ? `Bugbot no pudo sincronizar por completo el estado de \`${shortHead}\`.`
+                : `Bugbot could not fully synchronize the state of \`${shortHead}\`.`
+            : actionable.length === 0
+                ? language === 'es-ES'
+                    ? `No hay hallazgos activos en \`${shortHead}\`.`
+                    : `No active findings on \`${shortHead}\`.`
+                : language === 'es-ES'
+                    ? `${actionable.length} hallazgo(s) requieren atención en \`${shortHead}\`.`
+                    : `${actionable.length} finding(s) require attention on \`${shortHead}\`.`;
+    const action = projection.outcome === 'partial' || projection.outcome === 'failed' || unknown > 0
+        ? language === 'es-ES'
+            ? 'Ejecuta `/copilot recheck`; los detalles técnicos indican qué quedó pendiente.'
+            : 'Run `/copilot recheck`; the technical details identify what remains pending.'
+        : actionable.length === 0
+            ? language === 'es-ES' ? 'No se requiere ninguna acción.' : 'No action required.'
+            : language === 'es-ES'
+                ? 'Revisa los threads enlazados o comenta `/copilot fix all`.'
+                : 'Review the linked threads or comment `/copilot fix all`.';
+    const stateHeading = language === 'es-ES' ? '### Estado actual' : '### Current state';
+    const findingsHeading = language === 'es-ES' ? '### Hallazgos' : '### Findings';
+    const stateColumn = language === 'es-ES' ? 'Estado' : 'State';
+    const countColumn = language === 'es-ES' ? 'Cantidad' : 'Count';
+    const rows = [
+        ['Open / reopened', projection.counts.open + projection.counts.reopened],
+        ['Verification required', projection.counts['verification-required']],
+        ['Fixed', projection.counts.fixed],
+        ['Obsolete', projection.counts.obsolete],
+        ['Dismissed', projection.counts.dismissed],
+        ['Unknown', projection.counts.unknown],
+    ].map(([state, count]) => `| ${state} | ${count} |`);
+    const findingRows = projection.findings.length === 0
+        ? [language === 'es-ES' ? '- No hay hallazgos registrados.' : '- No findings recorded.']
+        : projection.findings.slice(0, 20).map((finding) => renderFindingRow(finding));
+    if (projection.findings.length > 20) {
+        findingRows.push(language === 'es-ES'
+            ? `- …y ${projection.findings.length - 20} más.`
+            : `- …and ${projection.findings.length - 20} more.`);
+    }
+    const navigation = [
+        `[Pull request](${links.pullRequestUrl})`,
+        `[${language === 'es-ES' ? 'Commit verificado' : 'Verified commit'}](${links.commitUrl})`,
+        ...(links.runUrl
+            ? [`[${language === 'es-ES' ? 'Ejecución' : 'Workflow run'}](${links.runUrl})`]
+            : []),
+    ].join(' · ');
+    const details = projection.errors.length === 0
+        ? (language === 'es-ES' ? 'Ninguna operación pendiente.' : 'No pending operations.')
+        : projection.errors
+            .slice(0, 10)
+            .map((error) => `- ${(0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(error, 500)}`)
+            .join('\n');
+    return [
+        buildBugbotStatusMarker(projection),
+        heading,
+        '',
+        `> **${language === 'es-ES' ? 'Estado actual' : 'Current status'}:** ${status}`,
+        '>',
+        `> **${language === 'es-ES' ? 'Acción requerida' : 'Action required'}:** ${action}`,
+        '',
+        stateHeading,
+        '',
+        `| ${stateColumn} | ${countColumn} |`,
+        '| --- | ---: |',
+        ...rows,
+        '',
+        findingsHeading,
+        '',
+        ...findingRows,
+        '',
+        navigation,
+        '',
+        '<details>',
+        `<summary>${language === 'es-ES' ? 'Detalles técnicos' : 'Technical details'}</summary>`,
+        '',
+        `Projection: ${projection.outcome} · Analyzed head: ${projection.analyzedHeadSha} · Digest: ${projection.digest}`,
+        '',
+        details,
+        '',
+        '</details>',
+    ].join('\n');
+}
+function renderBugbotReviewSnapshot(originalBody, input) {
+    const language = normalizeBugbotPresentationLocale(input.locale);
+    const hasUntrackedOverflow = /### Additional findings omitted by the comment limit/u.test(originalBody ?? '');
+    const normalized = normalizeHistoricalSnapshot(originalBody ?? '', input.analyzedHeadSha, language);
+    const actionable = input.findings.filter((finding) => (0, review_state_1.isBugbotActionableState)(finding.state)).length;
+    const unknown = input.findings.filter((finding) => finding.state === 'unknown').length;
+    const status = unknown > 0
+        ? language === 'es-ES'
+            ? `No se pudo verificar el estado de ${unknown} hallazgo(s) de este review.`
+            : `The state of ${unknown} finding(s) from this review could not be verified.`
+        : actionable === 0 && hasUntrackedOverflow
+            ? language === 'es-ES'
+                ? 'Ningún hallazgo con seguimiento individual de este review requiere atención. El snapshot también contiene overflow histórico sin thread individual; consulta el estado agregado.'
+                : 'No individually tracked finding from this review requires attention. The snapshot also contains historical overflow without individual threads; see the aggregate status.'
+            : actionable === 0
+                ? language === 'es-ES'
+                    ? 'Todos los hallazgos originados en este review están resueltos.'
+                    : 'All findings originating in this review are resolved.'
+                : hasUntrackedOverflow
+                    ? language === 'es-ES'
+                        ? `${actionable} hallazgo(s) con seguimiento individual de este review requieren atención. El snapshot también contiene overflow histórico sin thread individual.`
+                        : `${actionable} individually tracked finding(s) from this review require attention. The snapshot also contains historical overflow without individual threads.`
+                    : language === 'es-ES'
+                        ? `${actionable} hallazgo(s) originados en este review requieren atención.`
+                        : `${actionable} finding(s) originating in this review require attention.`;
+    const linkLabel = language === 'es-ES' ? 'Ver estado agregado de Bugbot' : 'See aggregate Bugbot status';
+    return [
+        `<!-- ${exports.BUGBOT_REVIEW_MARKER_PREFIX} schema="1" review="${input.reviewIdentity}" analyzed_head="${input.analyzedHeadSha}" -->`,
+        `${exports.BUGBOT_REVIEW_STATUS_START} digest="${input.projectionDigest}" -->`,
+        `> **${language === 'es-ES' ? 'Estado actual' : 'Current status'}:** ${status}`,
+        `> ${language === 'es-ES' ? 'Última reconciliación en' : 'Last reconciled on'} \`${input.currentHeadSha.slice(0, 7)}\`. [${linkLabel}](${input.statusUrl}).`,
+        exports.BUGBOT_REVIEW_STATUS_END,
+        '',
+        normalized,
+    ].join('\n');
+}
+function buildNewBugbotReviewSnapshotHeader(analyzedHeadSha, findingCount, inlineCount, locale) {
+    const language = normalizeBugbotPresentationLocale(locale);
+    return [
+        `<!-- ${exports.BUGBOT_REVIEW_MARKER_PREFIX} schema="1" analyzed_head="${analyzedHeadSha}" -->`,
+        `${exports.BUGBOT_REVIEW_STATUS_START} digest="pending" -->`,
+        `> **${language === 'es-ES' ? 'Estado actual' : 'Current status'}:** ${findingCount} ${language === 'es-ES' ? 'hallazgo(s) requieren atención' : 'finding(s) require attention'}.`,
+        exports.BUGBOT_REVIEW_STATUS_END,
+        '',
+        language === 'es-ES' ? '## 🤖 Snapshot del review de Bugbot' : '## 🤖 Bugbot review snapshot',
+        language === 'es-ES'
+            ? `Bugbot reportó **${findingCount}** problema(s) potencial(es) cuando se analizó el commit \`${analyzedHeadSha.slice(0, 7)}\`. Este snapshot es histórico; usa el bloque de estado superior para conocer el estado actual. ${inlineCount} hallazgo(s) están enlazados al código modificado.`
+            : `Bugbot reported **${findingCount}** potential problem(s) when commit \`${analyzedHeadSha.slice(0, 7)}\` was analyzed. This snapshot is historical; use the status block above for current state. ${inlineCount} finding(s) are linked to changed code.`,
+    ].join('\n');
+}
+function normalizeHistoricalSnapshot(originalBody, analyzedHeadSha, locale) {
+    let body = originalBody
+        .replace(new RegExp(`<!--\\s*${exports.BUGBOT_REVIEW_MARKER_PREFIX}\\s+schema="1"[^>]*-->\\s*`, 'gu'), '')
+        .replace(new RegExp(`${escapeRegExp(exports.BUGBOT_REVIEW_STATUS_START)}[\\s\\S]*?${escapeRegExp(exports.BUGBOT_REVIEW_STATUS_END)}\\s*`, 'gu'), '')
+        .trim();
+    body = body
+        .replace(/^## 🤖 Bugbot review\s*$/mu, locale === 'es-ES' ? '## 🤖 Snapshot del review de Bugbot' : '## 🤖 Bugbot review snapshot')
+        .replace(/Bugbot found \*\*(\d+)\*\* active potential problem\(s\) in this revision\.[^\n]*/u, (_match, count) => locale === 'es-ES'
+        ? `Bugbot reportó **${count}** problema(s) potencial(es) cuando se analizó el commit \`${analyzedHeadSha.slice(0, 7)}\`. Este snapshot es histórico; usa el bloque de estado superior para conocer el estado actual.`
+        : `Bugbot reported **${count}** potential problem(s) when commit \`${analyzedHeadSha.slice(0, 7)}\` was analyzed. This snapshot is historical; use the status block above for current state.`)
+        .replace(/^To request an automatic repair for all active findings,[^\n]*\n?/gmu, '')
+        .trim();
+    if (!/^## 🤖 (?:Bugbot review snapshot|Snapshot del review de Bugbot)$/mu.test(body)) {
+        const heading = locale === 'es-ES' ? '## 🤖 Snapshot del review de Bugbot' : '## 🤖 Bugbot review snapshot';
+        body = `${heading}\n\n${body}`;
+    }
+    return body;
+}
+function renderFindingRow(finding) {
+    const label = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.title || finding.id, 500).replace(/[\r\n]+/gu, ' ');
+    const state = stateLabel(finding.state);
+    return finding.url
+        ? `- ${state} — [${label}](${finding.url})`
+        : `- ${state} — ${label}`;
+}
+function stateLabel(state) {
+    if (state === 'fixed' || state === 'obsolete' || state === 'dismissed')
+        return `[x] ${state}`;
+    return `[ ] ${state}`;
+}
+function escapeRegExp(value) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 
@@ -280,11 +994,14 @@ const ERROR_MESSAGES = {
     "request-reviewers": "Unable to request pull request reviewers.",
     "assign-reviewers": "Unable to assign pull request reviewers.",
     "list-comments": "Unable to list pull request review comments.",
+    "list-threads": "Unable to list pull request review threads.",
+    "list-reviews": "Unable to list pull request reviews.",
     "get-comment": "Unable to get the pull request review comment.",
     "list-files": "Unable to list pull request changed files.",
     "get-head-sha": "Unable to get the pull request head commit.",
     "publish-comments": "Failed to publish pull request review comments.",
     "update-comment": "Unable to update the pull request review comment.",
+    "update-review": "Unable to update the pull request review summary.",
     "resolve-thread": "Unable to resolve the pull request review thread.",
     "unresolve-thread": "Unable to reopen the pull request review thread.",
     "mark-resolved": "Unable to mark a pull request finding as resolved.",
@@ -322,10 +1039,9 @@ function toPullRequestReviewOperationError(error, operation, context) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.analyzeBugbotRevision = analyzeBugbotRevision;
 const bugbot_reconciliation_policy_1 = __nccwpck_require__(8128);
-const bugbot_constants_1 = __nccwpck_require__(1389);
 const logging_ports_1 = __nccwpck_require__(6152);
 const limit_comments_1 = __nccwpck_require__(1643);
-const types_1 = __nccwpck_require__(2632);
+const finding_1 = __nccwpck_require__(1011);
 const build_bugbot_prompt_1 = __nccwpck_require__(2483);
 const apply_detected_findings_1 = __nccwpck_require__(793);
 const query_bugbot_findings_1 = __nccwpck_require__(3059);
@@ -355,10 +1071,10 @@ function suppressDismissedResolutionClaims(context, resolvedFindingIds) {
 }
 function suppressDismissedFindings(execution, context, prepared) {
     const activeFindings = (prepared.activeFindings ?? prepared.toPublish).filter((finding) => {
-        const existing = (0, types_1.findExistingFindingInfo)(context.existingByFindingId, finding);
+        const existing = (0, finding_1.findExistingFindingInfo)(context.existingByFindingId, finding);
         return existing?.issue?.resolution !== 'dismissed' && existing?.pullRequest?.resolution !== 'dismissed';
     });
-    const limited = (0, limit_comments_1.applyCommentLimit)(activeFindings, execution.ai?.getBugbotCommentLimit?.() ?? bugbot_constants_1.BUGBOT_MAX_COMMENTS);
+    const limited = (0, limit_comments_1.applyCommentLimit)(activeFindings, execution.ai.getBugbotCommentLimit());
     return { ...prepared, ...limited, activeFindings };
 }
 
@@ -375,10 +1091,9 @@ exports.applyDetectedFindings = applyDetectedFindings;
 const prepare_bugbot_findings_1 = __nccwpck_require__(5016);
 const mark_findings_resolved_use_case_1 = __nccwpck_require__(6963);
 const publish_findings_use_case_1 = __nccwpck_require__(8442);
-const bugbot_constants_1 = __nccwpck_require__(1389);
 const pull_request_review_errors_1 = __nccwpck_require__(6445);
 function prepareDetectedFindings(execution, response) {
-    return (0, prepare_bugbot_findings_1.prepareBugbotFindings)(response, execution.ai?.getAiIgnoreFiles?.() ?? [], execution.ai?.getBugbotMinSeverity?.(), execution.ai?.getBugbotCommentLimit?.() ?? bugbot_constants_1.BUGBOT_MAX_COMMENTS);
+    return (0, prepare_bugbot_findings_1.prepareBugbotFindings)(response, execution.ai.getAiIgnoreFiles(), execution.ai.getBugbotMinSeverity(), execution.ai.getBugbotCommentLimit());
 }
 async function applyDetectedFindings(execution, context, prepared, publicationPorts, resolutionPorts) {
     try {
@@ -422,9 +1137,10 @@ exports.limitPreviousBugbotFindings = limitPreviousBugbotFindings;
 exports.collectPreviousBugbotFindings = collectPreviousBugbotFindings;
 exports.buildPreviousFindingsBlock = buildPreviousFindingsBlock;
 const build_bugbot_fix_prompt_1 = __nccwpck_require__(9819);
-const marker_1 = __nccwpck_require__(2274);
-const types_1 = __nccwpck_require__(2632);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
+const finding_1 = __nccwpck_require__(1011);
 const github_user_policy_1 = __nccwpck_require__(4403);
+const review_state_1 = __nccwpck_require__(9200);
 const untrusted_content_1 = __nccwpck_require__(7057);
 function parseBugbotFindingComments(issueComments, pullRequestCommentsByNumber, trustedAuthorLogin, reviewThreadStatesByPullRequest = new Map()) {
     const existingByFindingId = parseIssueFindingMarkers(issueComments, trustedAuthorLogin);
@@ -441,8 +1157,8 @@ function parseIssueFindingMarkers(issueComments, trustedAuthorLogin) {
     for (const comment of issueComments) {
         if (!isTrustedAuthor(comment.user?.login, trustedAuthorLogin))
             continue;
-        for (const marker of (0, marker_1.parseMarker)(comment.body)) {
-            const findingId = (0, marker_1.normalizeFindingIdForMarker)(marker.findingId);
+        for (const marker of (0, bugbot_finding_marker_policy_1.parseMarker)(comment.body)) {
+            const findingId = (0, bugbot_finding_marker_policy_1.normalizeFindingIdForMarker)(marker.findingId);
             if (findingId == null)
                 continue;
             findings[findingId] = {
@@ -472,12 +1188,16 @@ function parsePullRequestComments(comments, pullRequestNumber, existingByFinding
         if (!isTrustedAuthor(comment.authorLogin, trustedAuthorLogin))
             continue;
         const body = comment.body ?? "";
-        for (const marker of (0, marker_1.parseMarker)(body)) {
-            const findingId = (0, marker_1.normalizeFindingIdForMarker)(marker.findingId);
+        for (const marker of (0, bugbot_finding_marker_policy_1.parseMarker)(body)) {
+            const findingId = (0, bugbot_finding_marker_policy_1.normalizeFindingIdForMarker)(marker.findingId);
             if (findingId == null)
                 continue;
-            const threadResolved = reviewThreadStates[comment.identity];
-            const manuallyResolved = threadResolved === true && !marker.resolved;
+            const thread = reviewThreadStates[comment.identity];
+            const threadResolved = thread?.resolved;
+            const manuallyResolved = threadResolved === true && !marker.resolved
+                && (0, review_state_1.isHumanResolver)(thread.resolvedByLogin, trustedAuthorLogin);
+            const verificationRequired = (marker.resolved && threadResolved === false)
+                || (!marker.resolved && threadResolved === true && !manuallyResolved);
             existingByFindingId[findingId] = {
                 ...(existingByFindingId[findingId] ?? {}),
                 pullRequest: {
@@ -485,6 +1205,10 @@ function parsePullRequestComments(comments, pullRequestNumber, existingByFinding
                     pullRequestNumber,
                     resolved: marker.resolved || manuallyResolved,
                     ...(typeof threadResolved === 'boolean' ? { threadResolved } : {}),
+                    ...(thread?.resolvedByLogin ? { threadResolvedByLogin: thread.resolvedByLogin } : {}),
+                    ...(comment.parentReviewIdentity ? { parentReviewIdentity: comment.parentReviewIdentity } : {}),
+                    ...(comment.url ? { url: comment.url } : {}),
+                    ...(verificationRequired ? { verificationRequired: true } : {}),
                     ...(marker.fingerprint ? { fingerprint: marker.fingerprint } : {}),
                     ...(marker.semanticFingerprint ? { semanticFingerprint: marker.semanticFingerprint } : {}),
                     ...(marker.resolution
@@ -531,12 +1255,12 @@ function limitPreviousBugbotFindings(previousFindings, maximumLength = exports.M
 }
 function collectPreviousBugbotFindings(issueComments, existingByFindingId, prFindingIdToBody) {
     return Object.entries(existingByFindingId).flatMap(([findingId, data]) => {
-        if ((0, types_1.isExistingFindingFullyResolved)(data))
+        if ((0, finding_1.isExistingFindingFullyResolved)(data))
             return [];
         const issueBody = data.issue != null && !data.issue.resolved
             ? (issueComments.find((comment) => comment.id === data.issue?.commentId)?.body ?? null)
             : null;
-        const pullRequestBody = data.pullRequest != null && !data.pullRequest.resolved
+        const pullRequestBody = data.pullRequest != null && (!data.pullRequest.resolved || data.pullRequest.verificationRequired === true)
             ? (prFindingIdToBody[findingId] ?? null)
             : null;
         const rawBody = (issueBody ?? pullRequestBody ?? "").trim();
@@ -693,9 +1417,7 @@ exports.hasNewerBugbotRevision = hasNewerBugbotRevision;
 function expectedBugbotHeadSha(execution) {
     // Comment-triggered reviews intentionally target the latest remote head:
     // their payload SHA may predate an autofix committed in the same run.
-    // Some embedding clients provide Execution-compatible objects rather than
-    // class instances, so read the canonical input as a compatibility fallback.
-    const eventName = execution.eventName || execution.inputs?.eventName || '';
+    const eventName = execution.eventName;
     const candidate = eventName === 'pull_request'
         ? execution.inputs?.pull_request?.head?.sha
         : eventName === 'workflow_run'
@@ -822,6 +1544,10 @@ class BugbotReviewTelemetry {
     observePrepared(prepared) {
         this.prepared = prepared;
     }
+    /** Uses the final provider-verified projection for every downstream metric. */
+    observeProjection(projection) {
+        this.projection = projection;
+    }
     snapshot(outcome, errorCategory) {
         const changes = this.context?.prContext?.changes ?? [];
         const headSha = this.context?.prContext?.prHeadSha;
@@ -832,18 +1558,18 @@ class BugbotReviewTelemetry {
             this.execution.pullRequest?.number > 0 ? `pr-${this.execution.pullRequest.number}` : 'branch',
             headSha?.slice(0, 12) || String(Number.isFinite(startedAtEpoch) ? startedAtEpoch : this.startedAtMs),
         ].join(':');
-        const agent = this.execution.ai?.getAgentConfiguration?.(this.execution.isPullRequest ? 'reviewer' : 'findings');
-        const findingStates = this.context && this.prepared
+        const agent = this.execution.ai.getAgentConfiguration(this.execution.isPullRequest ? 'reviewer' : 'findings');
+        const findingStates = this.projection?.counts ?? (this.context && this.prepared
             ? (0, bugbot_finding_status_policy_1.projectBugbotFindingStatuses)(this.context.existingByFindingId, this.prepared.activeFindings ?? this.prepared.toPublish, this.prepared.resolvedFindingIds, this.prepared.resolvedFindingResolutions).counts
-            : undefined;
+            : undefined);
         return {
             schemaVersion: 1,
             reviewId,
             repository: `${this.execution.owner}/${this.execution.repo}`,
             ...(this.execution.pullRequest?.number > 0 ? { pullRequestNumber: this.execution.pullRequest.number } : {}),
             ...(headSha ? { headSha } : {}),
-            publicationMode: this.execution.ai?.getBugbotReviewConfiguration?.().publicationMode ?? 'publish',
-            configuredEffort: this.execution.ai?.getBugbotReviewConfiguration?.().effort ?? 'default',
+            publicationMode: this.execution.ai.getBugbotReviewConfiguration().publicationMode,
+            configuredEffort: this.execution.ai.getBugbotReviewConfiguration().effort,
             ...(agent?.provider ? { agentProvider: agent.provider } : {}),
             ...(agent?.model ? { agentModel: agent.model } : {}),
             startedAt: this.startedAt,
@@ -977,7 +1703,7 @@ function buildBugbotPrompt(param, context) {
     const headBranch = param.pullRequest?.head?.trim() || param.commit?.branch || 'unknown';
     const baseBranch = param.currentConfiguration.parentBranch ?? param.branches.development ?? 'develop';
     const previousBlock = context.previousFindingsBlock;
-    const ignorePatterns = param.ai?.getAiIgnoreFiles?.() ?? [];
+    const ignorePatterns = param.ai.getAiIgnoreFiles();
     const ignoreBlock = ignorePatterns.length > 0
         ? (() => {
             const raw = ignorePatterns.join(", ");
@@ -989,7 +1715,7 @@ function buildBugbotPrompt(param, context) {
         : "";
     const changes = (context.prContext?.changes ?? [])
         .filter((change) => !(0, file_ignore_1.fileMatchesIgnorePatterns)(change.filename, ignorePatterns));
-    const configuredEffort = param.ai?.getBugbotReviewConfiguration?.().effort ?? 'default';
+    const configuredEffort = param.ai.getBugbotReviewConfiguration().effort;
     const resolvedEffort = (0, review_configuration_1.resolveBugbotReviewEffort)(configuredEffort, {
         files: changes.length,
         additions: changes.reduce((sum, change) => sum + change.additions, 0),
@@ -1207,8 +1933,6 @@ async function loadOpenPullRequestComments(repository, owner, repo, openPrNumber
 }
 async function loadOpenPullRequestThreadStates(repository, owner, repo, openPrNumbers, token) {
     const statesByPullRequest = new Map();
-    if (!repository.listPullRequestReviewThreadStates)
-        return statesByPullRequest;
     await Promise.all(openPrNumbers.map(async (prNumber) => {
         statesByPullRequest.set(prNumber, await repository.listPullRequestReviewThreadStates(owner, repo, prNumber, token));
     }));
@@ -1220,20 +1944,10 @@ async function loadPullRequestContext(repository, owner, repo, openPrNumber, tok
     const prHeadSha = await repository.getPullRequestHeadSha(owner, repo, openPrNumber, token);
     if (!prHeadSha)
         return null;
-    const snapshot = repository.getReviewDiffSnapshot
-        ? await repository.getReviewDiffSnapshot(owner, repo, openPrNumber, token)
-        : undefined;
-    const [prFiles, filesWithLines, filesWithLocations] = snapshot
-        ? [
-            snapshot.changes.map(({ filename, status }) => ({ filename, status })),
-            snapshot.filesWithFirstDiffLine,
-            snapshot.filesWithDiffLocations,
-        ]
-        : await Promise.all([
-            repository.getChangedFiles(owner, repo, openPrNumber, token),
-            repository.getFilesWithFirstDiffLine(owner, repo, openPrNumber, token),
-            repository.getFilesWithDiffLocations?.(owner, repo, openPrNumber, token) ?? Promise.resolve([]),
-        ]);
+    const snapshot = await repository.getReviewDiffSnapshot(owner, repo, openPrNumber, token);
+    const prFiles = snapshot.changes.map(({ filename, status }) => ({ filename, status }));
+    const filesWithLines = snapshot.filesWithFirstDiffLine;
+    const filesWithLocations = snapshot.filesWithDiffLocations;
     const pathToFirstDiffLine = Object.fromEntries(filesWithLines.map(({ path, firstLine }) => [path, firstLine]));
     const pathToDiffLocations = Object.fromEntries(filesWithLocations.map(({ path, locations }) => [path, locations]));
     return {
@@ -1241,7 +1955,7 @@ async function loadPullRequestContext(repository, owner, repo, openPrNumber, tok
         prFiles,
         pathToFirstDiffLine,
         pathToDiffLocations,
-        ...(snapshot ? { changes: snapshot.changes } : {}),
+        changes: snapshot.changes,
     };
 }
 async function loadBugbotContext(param, options, ports) {
@@ -1271,17 +1985,17 @@ async function loadBugbotContext(param, options, ports) {
     const previousFindings = (0, bugbot_finding_context_1.collectPreviousBugbotFindings)(parsedComments.issueComments, parsedComments.existingByFindingId, parsedComments.prFindingIdToBody);
     const boundedPreviousFindings = (0, bugbot_finding_context_1.limitPreviousBugbotFindings)(previousFindings);
     const previousFindingsBlock = (0, bugbot_finding_context_1.buildPreviousFindingsBlock)(previousFindings);
-    const ignorePatterns = param.ai?.getAiIgnoreFiles?.() ?? [];
+    const ignorePatterns = param.ai.getAiIgnoreFiles();
     const reviewDiffBlock = (0, bugbot_review_context_1.buildReviewDiffBlock)(prContext, ignorePatterns);
     const reviewConversationBlock = (0, bugbot_review_context_1.buildReviewConversationBlock)(issueComments, pullRequestComments, param.tokenUser);
     const unresolvedFindingsWithBody = boundedPreviousFindings.map((finding) => ({
         id: finding.id,
         fullBody: finding.fullBody,
     }));
-    const repositoryRules = await ports.rules?.loadRules(prContext?.prFiles
+    const repositoryRules = await ports.rules.loadRules(prContext?.prFiles
         .map((file) => file.filename)
-        .filter((file) => !(0, file_ignore_1.fileMatchesIgnorePatterns)(file, ignorePatterns)) ?? []) ?? [];
-    const ruleSet = (0, bugbot_review_rules_1.buildBugbotReviewRuleSet)(param.ai?.getBugbotReviewConfiguration?.().organizationRules ?? [], repositoryRules);
+        .filter((file) => !(0, file_ignore_1.fileMatchesIgnorePatterns)(file, ignorePatterns)) ?? []);
+    const ruleSet = (0, bugbot_review_rules_1.buildBugbotReviewRuleSet)(param.ai.getBugbotReviewConfiguration().organizationRules, repositoryRules);
     (0, logging_ports_1.logDebugInfo)(`LoadBugbotContext: issue #${issueNumber}, branch ${headBranch}, open PRs=${openPrNumbers.length}, existing findings=${Object.keys(parsedComments.existingByFindingId).length}, unresolved with body=${unresolvedFindingsWithBody.length}, diff files=${prContext?.changes?.length ?? prContext?.prFiles.length ?? 0}, diff prompt chars=${reviewDiffBlock.length}, conversation chars=${reviewConversationBlock.length}.`);
     return {
         existingByFindingId: parsedComments.existingByFindingId,
@@ -1296,6 +2010,103 @@ async function loadBugbotContext(param, options, ports) {
         reviewRuleSources: [...ruleSet.sources],
         omittedReviewRules: ruleSet.omitted,
     };
+}
+
+
+/***/ }),
+
+/***/ 4861:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.loadBugbotReconciliationSnapshot = loadBugbotReconciliationSnapshot;
+const pull_request_review_errors_1 = __nccwpck_require__(6445);
+/**
+ * Acquires one coherent final snapshot around two head guards. Surface reads
+ * run concurrently, while the second guard rejects data collected across a
+ * pull-request revision change.
+ */
+async function loadBugbotReconciliationSnapshot(target, credential, ports) {
+    const initialHeadSha = await readHead(target, credential, ports);
+    if (!initialHeadSha || initialHeadSha !== target.analyzedHeadSha) {
+        return superseded(target, initialHeadSha);
+    }
+    const conversationPromise = ports.issueComments.listIssueComments(target.owner, target.repository, target.pullRequestNumber, credential.token);
+    const linkedIssueNumber = target.linkedIssueNumber;
+    const linkedIssueSharesConversation = linkedIssueNumber !== undefined
+        && linkedIssueNumber === target.pullRequestNumber;
+    const linkedIssuePromise = linkedIssueNumber === undefined
+        ? Promise.resolve([])
+        : linkedIssueSharesConversation
+            ? conversationPromise
+            : ports.issueComments.listIssueComments(target.owner, target.repository, linkedIssueNumber, credential.token);
+    const [commentsRead, threadsRead, reviewsRead, conversationRead, linkedIssueRead] = await Promise.allSettled([
+        ports.pullRequest.listPullRequestReviewComments(target.owner, target.repository, target.pullRequestNumber, credential.token),
+        ports.pullRequest.listPullRequestReviewThreadStates(target.owner, target.repository, target.pullRequestNumber, credential.token),
+        ports.reviews.listPullRequestReviews(target.owner, target.repository, target.pullRequestNumber, credential.token),
+        conversationPromise,
+        linkedIssuePromise,
+    ]);
+    const finalHeadSha = await readHead(target, credential, ports);
+    if (!finalHeadSha || finalHeadSha !== target.analyzedHeadSha) {
+        return superseded(target, finalHeadSha);
+    }
+    let navigation;
+    let navigationState = 'verified';
+    try {
+        navigation = ports.navigation.forPullRequest(target.owner, target.repository, target.pullRequestNumber, finalHeadSha);
+    }
+    catch {
+        navigationState = 'failed';
+    }
+    const conversationComments = valueOr(conversationRead, []);
+    return {
+        kind: 'current',
+        snapshot: {
+            verifiedHeadSha: finalHeadSha,
+            pullRequestComments: valueOr(commentsRead, []),
+            reviewThreads: valueOr(threadsRead, {}),
+            reviews: valueOr(reviewsRead, []),
+            conversationComments,
+            linkedIssueComments: linkedIssueSharesConversation
+                ? conversationComments
+                : valueOr(linkedIssueRead, []),
+            ...(navigation ? { navigation } : {}),
+            completeness: {
+                pullRequestComments: stateOf(commentsRead),
+                reviewThreads: stateOf(threadsRead),
+                reviews: stateOf(reviewsRead),
+                conversation: stateOf(conversationRead),
+                navigation: navigationState,
+                linkedIssueComments: linkedIssueNumber === undefined
+                    ? 'not-applicable'
+                    : linkedIssueSharesConversation
+                        ? stateOf(conversationRead)
+                        : stateOf(linkedIssueRead),
+            },
+        },
+    };
+}
+async function readHead(target, credential, ports) {
+    try {
+        return await ports.pullRequest.getPullRequestHeadSha(target.owner, target.repository, target.pullRequestNumber, credential.token);
+    }
+    catch {
+        throw new pull_request_review_errors_1.PullRequestReviewOperationError('get-head-sha');
+    }
+}
+function superseded(target, verifiedHeadSha) {
+    return {
+        kind: 'superseded',
+        verifiedHeadSha: verifiedHeadSha ?? target.analyzedHeadSha,
+    };
+}
+function valueOr(result, fallback) {
+    return result.status === 'fulfilled' ? result.value : fallback;
+}
+function stateOf(result) {
+    return result.status === 'fulfilled' ? 'verified' : 'failed';
 }
 
 
@@ -1323,6 +2134,7 @@ const pull_request_review_errors_1 = __nccwpck_require__(6445);
 const logging_ports_1 = __nccwpck_require__(6152);
 const resolve_issue_finding_1 = __nccwpck_require__(5300);
 const resolve_pull_request_finding_1 = __nccwpck_require__(4567);
+const review_state_1 = __nccwpck_require__(9200);
 async function markFindingsResolved(param) {
     const errors = [];
     for (const [findingId, existing] of Object.entries(param.context.existingByFindingId)) {
@@ -1335,12 +2147,27 @@ async function markFindingsResolved(param) {
     return errors;
 }
 async function repairExistingPullRequestFinding(ports, execution, findingId, destination, errors) {
-    if (destination?.resolved && destination.threadResolved === false) {
-        await tryResolvePullRequestFinding(ports, execution, findingId, destination, errors);
+    if (destination == null)
+        return;
+    if (destination.resolution === 'dismissed' && destination.threadResolved === true) {
+        await tryResolvePullRequestFinding(ports, execution, findingId, destination, errors, 'dismissed');
+        return;
+    }
+    if (!destination.resolved
+        && destination.threadResolved === true
+        && destination.threadResolvedByLogin != null
+        && execution.tokenUser?.trim()
+        && !(0, review_state_1.isHumanResolver)(destination.threadResolvedByLogin, execution.tokenUser)) {
+        try {
+            await ports.pullRequestComments.unresolvePullRequestReviewThread(execution.owner, execution.repo, destination.pullRequestNumber, destination.commentIdentity, execution.tokens.token);
+        }
+        catch {
+            addResolutionError(errors, 'pull request');
+        }
     }
 }
 async function resolvePullRequestIfNeeded(param, findingId, destination, errors) {
-    if (destination != null && !destination.resolved) {
+    if (destination != null && (!destination.resolved || destination.verificationRequired === true)) {
         await tryResolvePullRequestFinding(param.ports, param.execution, findingId, destination, errors, param.resolvedFindingResolutions?.get(findingId));
     }
 }
@@ -1389,157 +2216,6 @@ function addResolutionError(errors, destination) {
         : new Error('Unable to mark an issue finding as resolved.');
     (0, logging_ports_1.logError)(error);
     errors.push(error);
-}
-
-
-/***/ }),
-
-/***/ 2274:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-/**
- * Bugbot marker: we embed a hidden HTML comment in each finding comment (issue and PR)
- * with finding_id and resolved flag. This lets us (1) find existing findings when loading
- * context, (2) update the same comment when the agent re-reports or marks resolved, (3) match
- * threads when the user replies "fix it" in a PR.
- */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.MAX_FINDING_ID_LENGTH = void 0;
-exports.sanitizeFindingIdForMarker = sanitizeFindingIdForMarker;
-exports.normalizeFindingIdForMarker = normalizeFindingIdForMarker;
-exports.buildMarker = buildMarker;
-exports.parseMarker = parseMarker;
-exports.markerRegexForFinding = markerRegexForFinding;
-exports.replaceMarkerInBody = replaceMarkerInBody;
-exports.extractTitleFromBody = extractTitleFromBody;
-exports.buildCommentBody = buildCommentBody;
-const bugbot_constants_1 = __nccwpck_require__(1389);
-const application_error_1 = __nccwpck_require__(5999);
-const github_comment_publication_policy_1 = __nccwpck_require__(2712);
-/** Maximum lossless finding identity accepted by the marker contract. */
-exports.MAX_FINDING_ID_LENGTH = 200;
-/** Safe character set for finding IDs in regex (alphanumeric, path/segment chars). */
-const SAFE_FINDING_ID_REGEX_CHARS = /^[a-zA-Z0-9_\-.:/]+$/;
-/**
- * Canonicalize only insignificant outer whitespace. Internal characters are
- * never removed: doing so would make distinct finding identities collide.
- */
-function sanitizeFindingIdForMarker(findingId) {
-    return findingId.trim();
-}
-function normalizeFindingIdForMarker(findingId) {
-    const safeId = sanitizeFindingIdForMarker(findingId);
-    return safeId.length > 0 &&
-        safeId.length <= exports.MAX_FINDING_ID_LENGTH &&
-        !/[\r\n]|-->|<!|[>"]/.test(safeId)
-        ? safeId
-        : null;
-}
-function requireFindingIdForMarker(findingId) {
-    const safeId = normalizeFindingIdForMarker(findingId);
-    if (safeId == null) {
-        throw new application_error_1.ApplicationError(findingId.trim().length === 0
-            ? "Finding ID is empty after marker sanitization."
-            : findingId.trim().length > exports.MAX_FINDING_ID_LENGTH
-                ? "Finding ID exceeds the maximum marker length."
-                : "Finding ID contains marker-breaking characters.", 'validation');
-    }
-    return safeId;
-}
-function buildMarker(findingId, resolved, fingerprint, resolution, semanticFingerprint) {
-    const safeId = requireFindingIdForMarker(findingId);
-    const safeFingerprint = fingerprint?.match(/^fp-[a-f0-9]{8}$/)?.[0];
-    const safeSemanticFingerprint = semanticFingerprint?.match(/^sf-[a-f0-9]{8}$/)?.[0];
-    const safeResolution = resolved && resolution && ['fixed', 'obsolete', 'dismissed'].includes(resolution)
-        ? ` finding_resolution:"${resolution}"`
-        : '';
-    return `<!-- ${bugbot_constants_1.BUGBOT_MARKER_PREFIX} finding_id:"${safeId}" resolved:${resolved}${safeFingerprint ? ` finding_fingerprint:"${safeFingerprint}"` : ''}${safeSemanticFingerprint ? ` finding_semantic:"${safeSemanticFingerprint}"` : ''}${safeResolution} -->`;
-}
-function parseMarker(body) {
-    if (!body)
-        return [];
-    const results = [];
-    const regex = new RegExp(`<!--\\s*${bugbot_constants_1.BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"([^"]+)"\\s+resolved:(true|false)(?:\\s+finding_fingerprint:\\s*"(fp-[a-f0-9]{8})")?(?:\\s+finding_semantic:\\s*"(sf-[a-f0-9]{8})")?(?:\\s+finding_resolution:\\s*"(fixed|obsolete|dismissed)")?\\s*-->`, "g");
-    let m;
-    while ((m = regex.exec(body)) !== null) {
-        results.push({
-            findingId: m[1],
-            resolved: m[2] === "true",
-            ...(m[3] ? { fingerprint: m[3] } : {}),
-            ...(m[4] ? { semanticFingerprint: m[4] } : {}),
-            ...(m[5] ? { resolution: m[5] } : {}),
-        });
-    }
-    return results;
-}
-/**
- * Regex to match the marker for a specific finding (same flexible format as parseMarker).
- * Finding IDs from external data (comments, API) are length-limited and validated to mitigate ReDoS.
- */
-function markerRegexForFinding(findingId) {
-    const safeId = requireFindingIdForMarker(findingId);
-    const idForRegex = SAFE_FINDING_ID_REGEX_CHARS.test(safeId)
-        ? safeId
-        : safeId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    return new RegExp(`<!--\\s*${bugbot_constants_1.BUGBOT_MARKER_PREFIX}\\s+finding_id:\\s*"${idForRegex}"\\s+resolved:(?:true|false)(?:\\s+finding_fingerprint:\\s*"fp-[a-f0-9]{8}")?(?:\\s+finding_semantic:\\s*"sf-[a-f0-9]{8}")?(?:\\s+finding_resolution:\\s*"(?:fixed|obsolete|dismissed)")?\\s*-->`, "g");
-}
-/**
- * Find the marker for this finding in body (using same pattern as parseMarker) and replace it.
- * Returns whether the marker exists independently from whether the body changed.
- */
-function replaceMarkerInBody(body, findingId, newResolved, replacement) {
-    const regex = markerRegexForFinding(findingId);
-    const newMarker = replacement ?? buildMarker(findingId, newResolved);
-    const found = regex.test(body);
-    regex.lastIndex = 0;
-    if (!found)
-        return { updated: body, found: false, changed: false };
-    const updated = body.replace(regex, newMarker);
-    return { updated, found: true, changed: updated !== body };
-}
-/** Extract title from comment body (first ## line) for context when sending to the agent. */
-function extractTitleFromBody(body) {
-    if (!body)
-        return "";
-    const match = body.match(/^##\s+(.+)$/m);
-    return (match?.[1] ?? "").trim();
-}
-/** Builds the visible comment body (title, severity, location, description, suggestion) plus the hidden marker for this finding. */
-function buildCommentBody(finding, resolved, resolution, options = {}) {
-    const safeTitle = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.title, 500) || "Potential problem";
-    const safeDescription = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.description, 8000) || "No description provided.";
-    const safeSeverity = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.severity, 32);
-    const safeFile = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.file, 500).replace(/`/g, "\\`");
-    const safeSuggestion = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.suggestion, 8000);
-    const safeEvidence = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.evidence, 8000);
-    const safeCategory = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(finding.category, 32);
-    const severity = safeSeverity
-        ? `**Severity:** ${safeSeverity}\n\n`
-        : "";
-    const fileLine = safeFile
-        ? `**Location:** \`${safeFile}${finding.line != null ? `:${finding.line}${finding.endLine != null && finding.endLine > finding.line ? `-${finding.endLine}` : ''}` : ""}\`\n\n`
-        : "";
-    const metadata = [
-        safeCategory ? `**Category:** ${safeCategory}` : '',
-        finding.confidence !== undefined ? `**Confidence:** ${Math.round(finding.confidence * 100)}%` : '',
-    ].filter(Boolean).join(' · ');
-    const evidence = safeEvidence ? `**Evidence:**\n${safeEvidence}\n\n` : '';
-    const suggestion = safeSuggestion
-        ? `**Suggested fix:**\n${safeSuggestion}\n\n`
-        : "";
-    const suggestedChange = options.includeSuggestedChange && finding.suggestedCode
-        ? `**Apply this change:**\n\n\`\`\`suggestion\n${finding.suggestedCode}\n\`\`\`\n\n`
-        : '';
-    const resolvedNote = resolved
-        ? "\n\n---\n**Resolved** (no longer reported in latest analysis).\n"
-        : "";
-    const marker = buildMarker(finding.id, resolved, finding.fingerprint, resolution, finding.semanticFingerprint);
-    return `## ${safeTitle}
-
-${severity}${metadata ? `${metadata}\n\n` : ''}${fileLine}${safeDescription}
-${evidence}
-${suggestion}${suggestedChange}${resolvedNote}${marker}`;
 }
 
 
@@ -1639,7 +2315,7 @@ exports.prepareFindings = prepareFindings;
 const deduplicate_findings_1 = __nccwpck_require__(2908);
 const file_ignore_1 = __nccwpck_require__(304);
 const limit_comments_1 = __nccwpck_require__(1643);
-const marker_1 = __nccwpck_require__(2274);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
 const path_validation_1 = __nccwpck_require__(124);
 const severity_1 = __nccwpck_require__(4626);
 const finding_identity_1 = __nccwpck_require__(1853);
@@ -1678,7 +2354,7 @@ function normalizeFindings(findings) {
     return (Array.isArray(findings) ? findings : []).slice(0, exports.MAX_AGENT_FINDINGS).flatMap(value => {
         if (!isRecord(value))
             return [];
-        const normalizedId = typeof value.id === 'string' ? (0, marker_1.normalizeFindingIdForMarker)(value.id) : null;
+        const normalizedId = typeof value.id === 'string' ? (0, bugbot_finding_marker_policy_1.normalizeFindingIdForMarker)(value.id) : null;
         const title = boundedText(value.title, 500);
         const description = boundedText(value.description, 8000);
         if (normalizedId == null || !title || !description)
@@ -1739,7 +2415,7 @@ function normalizeResolvedFindingIds(findingIds) {
     return new Set((Array.isArray(findingIds) ? findingIds : []).slice(0, exports.MAX_AGENT_RESOLVED_FINDING_IDS).flatMap(findingId => {
         if (typeof findingId !== 'string')
             return [];
-        const normalizedId = (0, marker_1.normalizeFindingIdForMarker)(findingId);
+        const normalizedId = (0, bugbot_finding_marker_policy_1.normalizeFindingIdForMarker)(findingId);
         return normalizedId == null ? [] : [normalizedId];
     }));
 }
@@ -1747,7 +2423,7 @@ function normalizeResolvedFindingReasons(value) {
     if (value == null || typeof value !== 'object' || Array.isArray(value))
         return new Map();
     return new Map(Object.entries(value).flatMap(([findingId, reason]) => {
-        const normalizedId = (0, marker_1.normalizeFindingIdForMarker)(findingId);
+        const normalizedId = (0, bugbot_finding_marker_policy_1.normalizeFindingIdForMarker)(findingId);
         return normalizedId && (reason === 'fixed' || reason === 'obsolete')
             ? [[normalizedId, reason]]
             : [];
@@ -1776,7 +2452,7 @@ function isRecord(value) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.publishFindings = publishFindings;
 const comment_watermark_1 = __nccwpck_require__(3623);
-const types_1 = __nccwpck_require__(2632);
+const finding_1 = __nccwpck_require__(1011);
 const publish_issue_finding_comment_1 = __nccwpck_require__(4950);
 const publish_pr_review_comments_1 = __nccwpck_require__(352);
 const publish_overflow_comment_1 = __nccwpck_require__(974);
@@ -1799,10 +2475,10 @@ async function publishFindings(param) {
         : undefined;
     for (const finding of findings) {
         if (execution.issueNumber > 0 && !reviewPublisher) {
-            await (0, publish_issue_finding_comment_1.publishIssueFindingComment)(ports.issueComments, execution, finding, (0, types_1.findExistingFindingInfo)(existingByFindingId, finding), commitSha);
+            await (0, publish_issue_finding_comment_1.publishIssueFindingComment)(ports.issueComments, execution, finding, (0, finding_1.findExistingFindingInfo)(existingByFindingId, finding), commitSha);
         }
         if (reviewPublisher) {
-            await reviewPublisher.publish(finding, (0, types_1.findExistingFindingInfo)(existingByFindingId, finding));
+            await reviewPublisher.publish(finding, (0, finding_1.findExistingFindingInfo)(existingByFindingId, finding));
         }
     }
     await reviewPublisher?.flush(overflowCount, overflowTitles);
@@ -1820,10 +2496,10 @@ async function publishFindings(param) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.publishIssueFindingComment = publishIssueFindingComment;
-const marker_1 = __nccwpck_require__(2274);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
 const logging_ports_1 = __nccwpck_require__(6152);
 async function publishIssueFindingComment(repository, execution, finding, existing, commitSha) {
-    const body = (0, marker_1.buildCommentBody)(finding, false);
+    const body = (0, bugbot_finding_marker_policy_1.buildCommentBody)(finding, false);
     const options = commitSha ? { commitSha } : undefined;
     if (existing?.issue != null) {
         await repository.updateComment(execution.owner, execution.repo, execution.issueNumber, existing.issue.commentId, body, execution.tokens.token, options);
@@ -1866,10 +2542,11 @@ There are **${overflowCount}** more finding(s) that were not published as indivi
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentPublisher = void 0;
-const marker_1 = __nccwpck_require__(2274);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
 const path_validation_1 = __nccwpck_require__(124);
 const logging_ports_1 = __nccwpck_require__(6152);
 const github_comment_publication_policy_1 = __nccwpck_require__(2712);
+const bugbot_review_presentation_policy_1 = __nccwpck_require__(3799);
 class PullRequestReviewCommentPublisher {
     constructor(options) {
         this.options = options;
@@ -1879,21 +2556,29 @@ class PullRequestReviewCommentPublisher {
     }
     async publish(finding, existing) {
         const { prContext, openPrNumber, execution } = this.options;
-        const allowSuggestedChanges = execution.ai?.getBugbotReviewConfiguration?.().suggestedChanges !== false;
+        const allowSuggestedChanges = execution.ai.getBugbotReviewConfiguration().suggestedChanges;
         if (existing?.pullRequest != null &&
             existing.pullRequest.pullRequestNumber === openPrNumber) {
+            // A human dismissal is durable. Model output alone cannot reverse it;
+            // reopening the native thread is the explicit human signal to recheck.
+            if (existing.pullRequest.resolution === 'dismissed'
+                && existing.pullRequest.threadResolved !== false) {
+                return;
+            }
             // Existing comments do not carry enough anchor metadata to prove that a
             // GitHub suggestion is still attached to a RIGHT-side changed line.
-            const body = `${(0, marker_1.buildCommentBody)(finding, false, undefined, { includeSuggestedChange: false })}\n\n${this.options.watermark}`;
-            if (existing.pullRequest.resolved) {
+            const body = `${(0, bugbot_finding_marker_policy_1.buildCommentBody)(finding, false, undefined, { includeSuggestedChange: false })}\n\n${this.options.watermark}`;
+            await this.options.repository.updatePullRequestReviewComment(execution.owner, execution.repo, existing.pullRequest.commentIdentity, body, execution.tokens.token);
+            if (existing.pullRequest.resolved || existing.pullRequest.threadResolved === true) {
+                // Persist the open marker before reopening the native thread. This
+                // leaves a deterministic recovery direction after partial failures.
                 await this.options.repository.unresolvePullRequestReviewThread(execution.owner, execution.repo, openPrNumber, existing.pullRequest.commentIdentity, execution.tokens.token);
             }
-            await this.options.repository.updatePullRequestReviewComment(execution.owner, execution.repo, existing.pullRequest.commentIdentity, body, execution.tokens.token);
             return;
         }
         const reportedPath = (0, path_validation_1.resolveFindingPathForPr)(finding.file, prContext.prFiles);
         const anchor = resolveReviewAnchor(finding.line, finding.endLine, reportedPath, prContext);
-        const findingBody = (0, marker_1.buildCommentBody)(finding, false, undefined, {
+        const findingBody = (0, bugbot_finding_marker_policy_1.buildCommentBody)(finding, false, undefined, {
             includeSuggestedChange: allowSuggestedChanges && anchor?.subjectType === 'line' && anchor.side === 'RIGHT',
         });
         const body = `${findingBody}\n\n${this.options.watermark}`;
@@ -1923,11 +2608,11 @@ class PullRequestReviewCommentPublisher {
         if (this.findingsToCreate.length === 0 && overflowCount === 0)
             return;
         const { repository, execution, openPrNumber, prContext } = this.options;
-        await repository.createReviewWithComments(execution.owner, execution.repo, openPrNumber, prContext.prHeadSha, buildReviewSummary(this.findingsToCreate, this.commentsToCreate.length, this.unanchoredBodies, overflowCount, overflowTitles, this.options.watermark, execution.ai?.getBugbotReviewConfiguration?.().traceRules === true
+        await repository.createReviewWithComments(execution.owner, execution.repo, openPrNumber, prContext.prHeadSha, buildReviewSummary(this.findingsToCreate, this.commentsToCreate.length, this.unanchoredBodies, overflowCount, overflowTitles, this.options.watermark, execution.ai.getBugbotReviewConfiguration().traceRules
             ? this.options.ruleSources ?? []
-            : [], execution.ai?.getBugbotReviewConfiguration?.().traceRules === true
+            : [], execution.ai.getBugbotReviewConfiguration().traceRules
             ? this.options.omittedRuleCount ?? 0
-            : 0), this.commentsToCreate, execution.tokens.token);
+            : 0, prContext.prHeadSha, execution.locale?.pullRequest ?? 'en-US'), this.commentsToCreate, execution.tokens.token);
     }
 }
 exports.PullRequestReviewCommentPublisher = PullRequestReviewCommentPublisher;
@@ -1936,9 +2621,9 @@ function resolveReviewAnchor(reportedLine, reportedEndLine, reportedPath, contex
         if (reportedPath && context.pathToFirstDiffLine[reportedPath] != null) {
             return { path: reportedPath, subjectType: 'line', line: context.pathToFirstDiffLine[reportedPath], side: 'RIGHT' };
         }
-        const legacyFallback = Object.entries(context.pathToFirstDiffLine)[0];
-        return legacyFallback
-            ? { path: legacyFallback[0], subjectType: 'line', line: legacyFallback[1], side: 'RIGHT' }
+        const firstAvailableLocation = Object.entries(context.pathToFirstDiffLine)[0];
+        return firstAvailableLocation
+            ? { path: firstAvailableLocation[0], subjectType: 'line', line: firstAvailableLocation[1], side: 'RIGHT' }
             : undefined;
     }
     if (reportedPath) {
@@ -1962,7 +2647,7 @@ function resolveReviewAnchor(reportedLine, reportedEndLine, reportedPath, contex
     const fallback = context.prFiles.find((file) => file.status !== 'removed') ?? context.prFiles[0];
     return fallback ? { path: fallback.filename, subjectType: 'file' } : undefined;
 }
-function buildReviewSummary(findings, inlineCount, unanchoredBodies, overflowCount, overflowTitles, watermark, ruleSources = [], omittedRuleCount = 0) {
+function buildReviewSummary(findings, inlineCount, unanchoredBodies, overflowCount, overflowTitles, watermark, ruleSources = [], omittedRuleCount = 0, analyzedHeadSha = 'unknown', locale = 'en-US') {
     const findingLines = findings.map((finding) => {
         const severity = sanitizeSummaryText(finding.severity, 32) || "unspecified";
         const title = sanitizeSummaryText(finding.title, 500) || 'Potential problem';
@@ -1977,9 +2662,7 @@ function buildReviewSummary(findings, inlineCount, unanchoredBodies, overflowCou
         overflowLines.push(`- …and ${overflowCount - overflowLines.length} more.`);
     }
     const sections = [
-        "## 🤖 Bugbot review",
-        `Bugbot found **${findings.length + overflowCount}** active potential problem(s) in this revision. `
-            + `${inlineCount} finding(s) are attached to changed code in this review.`,
+        (0, bugbot_review_presentation_policy_1.buildNewBugbotReviewSnapshotHeader)(analyzedHeadSha, findings.length + overflowCount, inlineCount, locale),
     ];
     if (findingLines.length > 0)
         sections.push(`### Findings\n\n${findingLines.join("\n")}`);
@@ -2000,7 +2683,6 @@ function buildReviewSummary(findings, inlineCount, unanchoredBodies, overflowCou
             rows.push(`| — | ${omittedRuleCount} omitted by duplicate, empty, or combined-budget policy |`);
         sections.push(`### Review configuration\n\nRules in effective precedence order:\n\n| Source | Status |\n| --- | --- |\n${rows.join('\n')}`);
     }
-    sections.push('To request an automatic repair for all active findings, reply with `/copilot fix all`.');
     sections.push(watermark);
     return sections.join("\n\n");
 }
@@ -2021,7 +2703,7 @@ const agent_task_policy_1 = __nccwpck_require__(5712);
 const schema_1 = __nccwpck_require__(6808);
 async function queryBugbotFindings(repository, execution, prompt) {
     return repository.query({
-        configuration: execution.ai?.getAgentConfiguration(execution.isPullRequest ? 'reviewer' : 'findings'),
+        configuration: execution.ai.getAgentConfiguration(execution.isPullRequest ? 'reviewer' : 'findings'),
         agentId: agent_task_policy_1.AGENT_PLAN,
         prompt,
         options: {
@@ -2035,6 +2717,80 @@ async function queryBugbotFindings(repository, execution, prompt) {
 
 /***/ }),
 
+/***/ 7515:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.reconcileBugbotReviewState = reconcileBugbotReviewState;
+const review_projection_1 = __nccwpck_require__(859);
+const bugbot_reconciliation_policy_1 = __nccwpck_require__(8128);
+const bugbot_provider_projection_policy_1 = __nccwpck_require__(5821);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
+const load_bugbot_reconciliation_snapshot_use_case_1 = __nccwpck_require__(4861);
+const synchronize_bugbot_review_presentation_use_case_1 = __nccwpck_require__(4491);
+/**
+ * Orchestrates final Bugbot reconciliation. Provider acquisition, pure state
+ * planning, and presentation mutations are deliberately owned by dedicated
+ * collaborators.
+ */
+async function reconcileBugbotReviewState(input) {
+    const snapshotResult = await (0, load_bugbot_reconciliation_snapshot_use_case_1.loadBugbotReconciliationSnapshot)(input.target, input.credential, input.snapshotPorts);
+    if (snapshotResult.kind === 'superseded') {
+        return {
+            projection: (0, review_projection_1.buildBugbotReviewProjection)({
+                pullRequestNumber: input.target.pullRequestNumber,
+                analyzedHeadSha: input.target.analyzedHeadSha,
+                verifiedHeadSha: snapshotResult.verifiedHeadSha,
+                findings: [],
+                superseded: true,
+            }),
+            reviewUpdates: 0,
+            pendingReviewUpdates: 0,
+            statusCardOperation: 'unchanged',
+            errors: [],
+        };
+    }
+    const snapshot = snapshotResult.snapshot;
+    const diagnostics = [
+        ...(input.mutationErrors ?? []).map(toSafeOperationMessage),
+        ...(!input.target.trustedAuthorLogin?.trim()
+            ? ['The authenticated Bugbot identity is unavailable.']
+            : []),
+        ...(0, bugbot_reconciliation_policy_1.describeBugbotSnapshotFailures)(snapshot.completeness),
+    ];
+    const providerProjection = (0, bugbot_provider_projection_policy_1.projectBugbotProviderEvidence)({
+        snapshot,
+        trustedAuthorLogin: input.target.trustedAuthorLogin,
+        activeFindings: input.activeFindings,
+        existingByFindingId: input.loadedContext.existingByFindingId,
+    });
+    const plan = (0, bugbot_reconciliation_policy_1.buildBugbotReconciliationPlan)({
+        providerProjection,
+        existingByFindingId: input.loadedContext.existingByFindingId,
+        previousFindingTitles: new Map(input.loadedContext.unresolvedFindingsWithBody.map(({ id, fullBody }) => [
+            id,
+            (0, bugbot_finding_marker_policy_1.extractTitleFromBody)(fullBody) || id,
+        ])),
+        activeFindings: input.activeFindings,
+        expectedPublishedFindings: input.expectedPublishedFindings ?? input.activeFindings,
+        diagnostics,
+    });
+    return (0, synchronize_bugbot_review_presentation_use_case_1.synchronizeBugbotReviewPresentation)({
+        target: input.target,
+        credential: input.credential,
+        snapshot,
+        plan,
+        ports: input.presentationPorts,
+    });
+}
+function toSafeOperationMessage(error) {
+    return error.message.slice(0, 500);
+}
+
+
+/***/ }),
+
 /***/ 5300:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -2042,7 +2798,7 @@ async function queryBugbotFindings(repository, execution, prompt) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveIssueFinding = resolveIssueFinding;
 const comment_watermark_1 = __nccwpck_require__(3623);
-const marker_1 = __nccwpck_require__(2274);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
 function resolvedNote(resolution) {
     if (resolution === 'dismissed')
         return "\n\n---\n**Dismissed** (explicitly dismissed by an authorized user).\n";
@@ -2052,12 +2808,12 @@ function resolvedNote(resolution) {
 }
 async function resolveIssueFinding(repository, resolution) {
     const body = (0, comment_watermark_1.stripTrailingCommentWatermarks)(resolution.comment.body);
-    const marker = (0, marker_1.parseMarker)(body).find((candidate) => candidate.findingId === resolution.findingId);
+    const marker = (0, bugbot_finding_marker_policy_1.parseMarker)(body).find((candidate) => candidate.findingId === resolution.findingId);
     if (marker == null || marker.resolved)
         return;
     const reason = resolution.resolution ?? 'fixed';
-    const replacement = `${resolvedNote(reason)}${(0, marker_1.buildMarker)(resolution.findingId, true, marker.fingerprint, reason, marker.semanticFingerprint)}`;
-    const replaced = (0, marker_1.replaceMarkerInBody)(body, resolution.findingId, true, replacement);
+    const replacement = `${resolvedNote(reason)}${(0, bugbot_finding_marker_policy_1.buildMarker)(resolution.findingId, true, marker.fingerprint, marker.semanticFingerprint, reason)}`;
+    const replaced = (0, bugbot_finding_marker_policy_1.replaceMarkerInBody)(body, resolution.findingId, true, replacement);
     if (!replaced.found || !replaced.changed)
         return;
     await repository.updateComment(resolution.owner, resolution.repo, resolution.issueNumber, resolution.comment.id, replaced.updated, resolution.token);
@@ -2073,7 +2829,7 @@ async function resolveIssueFinding(repository, resolution) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolvePullRequestFinding = resolvePullRequestFinding;
 const pull_request_review_errors_1 = __nccwpck_require__(6445);
-const marker_1 = __nccwpck_require__(2274);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
 function resolvedNote(resolution) {
     if (resolution === 'dismissed')
         return "\n\n---\n**Dismissed** (explicitly dismissed by an authorized user).\n";
@@ -2087,19 +2843,23 @@ async function resolvePullRequestFinding(repository, resolution) {
     if (comment?.body == null) {
         throw new pull_request_review_errors_1.PullRequestReviewOperationError("resolve-thread");
     }
-    const marker = (0, marker_1.parseMarker)(comment.body).find((candidate) => candidate.findingId === resolution.findingId);
+    const marker = (0, bugbot_finding_marker_policy_1.parseMarker)(comment.body).find((candidate) => candidate.findingId === resolution.findingId);
     if (marker == null) {
         throw new pull_request_review_errors_1.PullRequestReviewOperationError("resolve-thread");
     }
+    if (!marker.resolved) {
+        const reason = resolution.resolution ?? 'fixed';
+        const replacement = `${resolvedNote(reason)}${(0, bugbot_finding_marker_policy_1.buildMarker)(resolution.findingId, true, marker.fingerprint, marker.semanticFingerprint, reason)}`;
+        const replaced = (0, bugbot_finding_marker_policy_1.replaceMarkerInBody)(comment.body, resolution.findingId, true, replacement);
+        if (!replaced.found)
+            throw new pull_request_review_errors_1.PullRequestReviewOperationError('update-comment');
+        if (replaced.changed) {
+            // Persist Bugbot's durable intent first. If the native mutation fails, a
+            // retry can safely repair the thread toward this explicit marker state.
+            await repository.updatePullRequestReviewComment(resolution.owner, resolution.repo, resolution.commentIdentity, replaced.updated, resolution.token);
+        }
+    }
     await repository.resolvePullRequestReviewThread(resolution.owner, resolution.repo, resolution.pullRequestNumber, resolution.commentIdentity, resolution.token);
-    if (marker.resolved)
-        return;
-    const reason = resolution.resolution ?? 'fixed';
-    const replacement = `${resolvedNote(reason)}${(0, marker_1.buildMarker)(resolution.findingId, true, marker.fingerprint, reason, marker.semanticFingerprint)}`;
-    const replaced = (0, marker_1.replaceMarkerInBody)(comment.body, resolution.findingId, true, replacement);
-    if (!replaced.found || !replaced.changed)
-        return;
-    await repository.updatePullRequestReviewComment(resolution.owner, resolution.repo, resolution.commentIdentity, replaced.updated, resolution.token);
 }
 
 
@@ -2160,7 +2920,7 @@ function sanitizeUserCommentForPrompt(raw) {
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BUGBOT_FIX_INTENT_RESPONSE_SCHEMA = exports.BUGBOT_RESPONSE_SCHEMA = void 0;
-const marker_1 = __nccwpck_require__(2274);
+const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
 /** Detection returns findings and explicit lifecycle changes for prior finding IDs. */
 exports.BUGBOT_RESPONSE_SCHEMA = {
     type: 'object',
@@ -2174,7 +2934,7 @@ exports.BUGBOT_RESPONSE_SCHEMA = {
                     id: {
                         type: 'string',
                         minLength: 1,
-                        maxLength: marker_1.MAX_FINDING_ID_LENGTH,
+                        maxLength: bugbot_finding_marker_policy_1.MAX_FINDING_ID_LENGTH,
                         description: 'Stable unique id for this finding (e.g. file:line:summary)',
                     },
                     title: { type: 'string', minLength: 1, maxLength: 500, description: 'Short title of the problem' },
@@ -2201,7 +2961,7 @@ exports.BUGBOT_RESPONSE_SCHEMA = {
             items: {
                 type: 'string',
                 minLength: 1,
-                maxLength: marker_1.MAX_FINDING_ID_LENGTH,
+                maxLength: bugbot_finding_marker_policy_1.MAX_FINDING_ID_LENGTH,
             },
             description: 'Ids of previously reported issues (from the list we sent) that are now fixed in the current code. Only include ids we asked you to check.',
         },
@@ -2232,7 +2992,7 @@ exports.BUGBOT_FIX_INTENT_RESPONSE_SCHEMA = {
         target_finding_ids: {
             type: 'array',
             maxItems: 500,
-            items: { type: 'string', minLength: 1, maxLength: marker_1.MAX_FINDING_ID_LENGTH },
+            items: { type: 'string', minLength: 1, maxLength: bugbot_finding_marker_policy_1.MAX_FINDING_ID_LENGTH },
             description: 'When is_fix_request is true: the exact finding ids from the list we provided that the user wants fixed. Use the exact id strings. For "fix all" or "fix everything" include all listed ids. When is_fix_request is false, return an empty array.',
         },
         is_do_request: {
@@ -2287,52 +3047,150 @@ function meetsMinSeverity(findingSeverity, minSeverity) {
 
 /***/ }),
 
-/***/ 2632:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ 4491:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
-/**
- * Bugbot types: data structures used across detection, publishing, and autofix.
- * GitHub supplies the canonical PR diff and the configured agent can inspect
- * the read-only workspace for context before returning findings.
- */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isExistingFindingFullyResolved = isExistingFindingFullyResolved;
-exports.findExistingFindingInfo = findExistingFindingInfo;
-function isExistingFindingFullyResolved(finding) {
-    const destinations = [finding.issue, finding.pullRequest].filter((destination) => destination != null);
-    return (destinations.length > 0 &&
-        destinations.every((destination) => destination.resolved));
-}
-function findExistingFindingInfo(existingByFindingId, finding) {
-    const direct = existingByFindingId[finding.id];
-    if (direct && identitiesAreCompatible(direct, finding))
-        return direct;
-    const candidates = Object.values(existingByFindingId);
-    if (finding.fingerprint) {
-        const locationMatch = candidates.find((candidate) => candidate.issue?.fingerprint === finding.fingerprint
-            || candidate.pullRequest?.fingerprint === finding.fingerprint);
-        if (locationMatch)
-            return locationMatch;
+exports.synchronizeBugbotReviewPresentation = synchronizeBugbotReviewPresentation;
+const bugbot_review_presentation_policy_1 = __nccwpck_require__(3799);
+const bugbot_review_ownership_policy_1 = __nccwpck_require__(3288);
+const review_projection_1 = __nccwpck_require__(859);
+const MAX_REVIEW_UPDATES_PER_RUN = 20;
+const REVIEW_UPDATE_CONCURRENCY = 4;
+/**
+ * Synchronizes only user-facing durable presentation. It receives a completed
+ * semantic plan and has no responsibility for provider reads or lifecycle
+ * classification.
+ */
+async function synchronizeBugbotReviewPresentation(input) {
+    const initialErrors = input.plan.diagnostics.map((message) => new Error(message));
+    let projection = buildProjection(input, initialErrors);
+    const navigation = input.snapshot.navigation;
+    if (!navigation) {
+        return report(projection, 0, 0, 'failed', initialErrors);
     }
-    if (!finding.semanticFingerprint)
-        return undefined;
-    const semanticMatches = candidates.filter((candidate) => candidate.issue?.semanticFingerprint === finding.semanticFingerprint
-        || candidate.pullRequest?.semanticFingerprint === finding.semanticFingerprint);
-    return semanticMatches.length === 1 ? semanticMatches[0] : undefined;
+    const plannedReviewUpdates = planReviewUpdates(input, projection.digest, navigation);
+    const selectedReviewUpdates = plannedReviewUpdates.slice(0, MAX_REVIEW_UPDATES_PER_RUN);
+    const reviewWriteResults = await mapWithConcurrency(selectedReviewUpdates, REVIEW_UPDATE_CONCURRENCY, async ({ ownedReview, body }) => {
+        await input.ports.reviews.updatePullRequestReview(input.target.owner, input.target.repository, input.target.pullRequestNumber, ownedReview.review.identity, body, input.credential.token);
+    });
+    const reviewUpdates = reviewWriteResults.filter((result) => result === 'fulfilled').length;
+    const reviewErrors = reviewWriteResults.flatMap((result, index) => result === 'rejected'
+        ? [new Error(`Unable to update Bugbot review ${selectedReviewUpdates[index].ownedReview.review.identity}.`)]
+        : []);
+    const pendingReviewUpdates = Math.max(0, plannedReviewUpdates.length - MAX_REVIEW_UPDATES_PER_RUN);
+    if (pendingReviewUpdates > 0) {
+        reviewErrors.push(new Error(`${pendingReviewUpdates} Bugbot review status block(s) remain pending; run /copilot recheck.`));
+    }
+    const errorsBeforeStatus = [...initialErrors, ...reviewErrors];
+    projection = buildProjection(input, errorsBeforeStatus);
+    const statusResult = await synchronizeStatusCard(input, projection, navigation);
+    const errors = [...errorsBeforeStatus, ...statusResult.errors];
+    if (statusResult.errors.length > 0)
+        projection = buildProjection(input, errors);
+    return report(projection, reviewUpdates, pendingReviewUpdates, statusResult.operation, errors);
 }
-function identitiesAreCompatible(existing, finding) {
-    const existingFingerprints = [existing.issue?.fingerprint, existing.pullRequest?.fingerprint].filter(Boolean);
-    const existingSemanticFingerprints = [
-        existing.issue?.semanticFingerprint,
-        existing.pullRequest?.semanticFingerprint,
-    ].filter(Boolean);
-    // Legacy markers had no local identities, so preserve their exact-id migration path.
-    if (existingFingerprints.length === 0 && existingSemanticFingerprints.length === 0)
-        return true;
-    return (finding.fingerprint !== undefined && existingFingerprints.includes(finding.fingerprint))
-        || (finding.semanticFingerprint !== undefined
-            && existingSemanticFingerprints.includes(finding.semanticFingerprint));
+function planReviewUpdates(input, projectionDigest, navigation) {
+    return (0, bugbot_review_ownership_policy_1.selectOwnedBugbotReviews)({
+        reviews: input.snapshot.reviews,
+        comments: input.snapshot.pullRequestComments,
+        trustedAuthorLogin: input.target.trustedAuthorLogin,
+        findings: input.plan.findings,
+    }).flatMap((ownedReview) => {
+        const body = (0, bugbot_review_presentation_policy_1.renderBugbotReviewSnapshot)(ownedReview.review.body, {
+            reviewIdentity: ownedReview.review.identity,
+            analyzedHeadSha: ownedReview.review.commitId ?? input.target.analyzedHeadSha,
+            currentHeadSha: input.snapshot.verifiedHeadSha,
+            projectionDigest,
+            findings: ownedReview.findings,
+            locale: input.target.locale,
+            statusUrl: navigation.pullRequestUrl,
+        });
+        return body === ownedReview.review.body ? [] : [{ ownedReview, body }];
+    });
+}
+async function synchronizeStatusCard(input, projection, navigation) {
+    if (!input.target.trustedAuthorLogin?.trim()
+        || input.snapshot.completeness.conversation !== 'verified') {
+        return statusFailure();
+    }
+    const statusBody = (0, bugbot_review_presentation_policy_1.renderBugbotStatusCard)(projection, input.target.locale, navigation);
+    const trustedStatusComments = input.snapshot.conversationComments
+        .filter((comment) => (0, bugbot_review_ownership_policy_1.isTrustedBugbotAuthor)(comment.user?.login, input.target.trustedAuthorLogin)
+        && (0, bugbot_review_presentation_policy_1.isBugbotStatusComment)(comment.body))
+        .sort((left, right) => left.id - right.id);
+    let operation = 'unchanged';
+    let failed = false;
+    const canonical = trustedStatusComments[0];
+    try {
+        if (!canonical) {
+            await input.ports.comments.addComment(input.target.owner, input.target.repository, input.target.pullRequestNumber, statusBody, input.credential.token, { commitSha: input.snapshot.verifiedHeadSha });
+            operation = 'created';
+        }
+        else if (!canonical.body?.startsWith(statusBody)) {
+            await input.ports.comments.updateComment(input.target.owner, input.target.repository, input.target.pullRequestNumber, canonical.id, statusBody, input.credential.token, { commitSha: input.snapshot.verifiedHeadSha });
+            operation = 'updated';
+        }
+    }
+    catch {
+        failed = true;
+    }
+    const duplicateResults = await mapWithConcurrency(trustedStatusComments.slice(1), REVIEW_UPDATE_CONCURRENCY, async (duplicate) => {
+        await input.ports.comments.updateComment(input.target.owner, input.target.repository, input.target.pullRequestNumber, duplicate.id, [
+            '## 🤖 Bugbot status moved',
+            '',
+            `This duplicate status card is no longer current. [Use the canonical PR status](${navigation.pullRequestUrl}).`,
+        ].join('\n'), input.credential.token, { commitSha: input.snapshot.verifiedHeadSha });
+    });
+    if (duplicateResults.includes('rejected'))
+        failed = true;
+    if (duplicateResults.includes('fulfilled'))
+        operation = 'updated';
+    return failed ? statusFailure() : { operation, errors: [] };
+}
+function buildProjection(input, errors) {
+    return (0, review_projection_1.buildBugbotReviewProjection)({
+        pullRequestNumber: input.target.pullRequestNumber,
+        analyzedHeadSha: input.target.analyzedHeadSha,
+        verifiedHeadSha: input.snapshot.verifiedHeadSha,
+        findings: input.plan.findings,
+        errors: errors.map((error) => error.message.slice(0, 500)),
+    });
+}
+function statusFailure() {
+    return {
+        operation: 'failed',
+        errors: [new Error('Unable to create or update the canonical Bugbot PR status card.')],
+    };
+}
+function report(projection, reviewUpdates, pendingReviewUpdates, statusCardOperation, errors) {
+    return {
+        projection,
+        reviewUpdates,
+        pendingReviewUpdates,
+        statusCardOperation,
+        errors,
+    };
+}
+async function mapWithConcurrency(values, concurrency, operation) {
+    const results = Array(values.length);
+    let nextIndex = 0;
+    const worker = async () => {
+        while (nextIndex < values.length) {
+            const index = nextIndex;
+            nextIndex += 1;
+            try {
+                await operation(values[index]);
+                results[index] = 'fulfilled';
+            }
+            catch {
+                results[index] = 'rejected';
+            }
+        }
+    };
+    await Promise.all(Array.from({ length: Math.min(concurrency, values.length) }, () => worker()));
+    return results;
 }
 
 
@@ -2387,6 +3245,7 @@ const bugbot_finding_status_policy_1 = __nccwpck_require__(3822);
 const bugbot_review_telemetry_1 = __nccwpck_require__(6790);
 const analyze_bugbot_revision_use_case_1 = __nccwpck_require__(4658);
 const bugbot_review_freshness_1 = __nccwpck_require__(4307);
+const reconcile_bugbot_review_state_use_case_1 = __nccwpck_require__(7515);
 const TASK_ID = 'DetectPotentialProblemsUseCase';
 /** Coordinates Bugbot context, analysis and finding publication behind application ports. */
 async function runDetectPotentialProblemsWorkflow(param, dependencies) {
@@ -2394,7 +3253,7 @@ async function runDetectPotentialProblemsWorkflow(param, dependencies) {
     const telemetry = new bugbot_review_telemetry_1.BugbotReviewTelemetry(param);
     const publishTelemetry = async (outcome, category) => {
         const snapshot = telemetry.snapshot(outcome, category);
-        if (param.ai?.getBugbotReviewConfiguration?.().telemetry !== false) {
+        if (param.ai.getBugbotReviewConfiguration().telemetry) {
             try {
                 await dependencies.telemetryPort?.publish(snapshot);
             }
@@ -2419,7 +3278,7 @@ async function runDetectPotentialProblemsWorkflow(param, dependencies) {
             return [];
         }
         if (param.isPullRequest && param.inputs?.pull_request?.draft === true
-            && !param.ai?.getBugbotReviewConfiguration?.().reviewDrafts) {
+            && !param.ai.getBugbotReviewConfiguration().reviewDrafts) {
             return await complete(skippedDraftResult(), 'skipped');
         }
         const contextOptions = await resolveContextOptions(param, dependencies.contextPorts);
@@ -2435,21 +3294,45 @@ async function runDetectPotentialProblemsWorkflow(param, dependencies) {
         }
         const prepared = await (0, analyze_bugbot_revision_use_case_1.analyzeBugbotRevision)(param, context, { agent: dependencies.aiRepository, telemetry });
         if (prepared === undefined) {
-            return await complete(noAnalysisResult(), 'failed');
+            const analysisError = new Error('The configured agent returned no potential-problem analysis.');
+            const presentation = param.ai.getBugbotReviewConfiguration().publicationMode === 'publish'
+                ? await telemetry.measure('projection', () => reconcileReviewState({
+                    execution: param,
+                    loadedContext: context,
+                    activeFindings: [],
+                    mutationErrors: [analysisError],
+                    dependencies,
+                }))
+                : undefined;
+            if (presentation)
+                telemetry.observeProjection(presentation.projection);
+            return await complete(noAnalysisResult(presentation), 'failed');
         }
         telemetry.observePrepared(prepared);
         if (await telemetry.measure('freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(param, context, dependencies.contextPorts))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
-        if (param.ai?.getBugbotReviewConfiguration?.().publicationMode === 'dry-run') {
+        if (param.ai.getBugbotReviewConfiguration().publicationMode === 'dry-run') {
             return await complete(dryRunResult(prepared, context), 'dry-run');
         }
-        if (prepared.toPublish.length === 0 && prepared.resolvedFindingIds.size === 0) {
-            return await complete(noFindingsResult((0, bugbot_finding_status_policy_1.projectBugbotFindingStatuses)(context.existingByFindingId, prepared.activeFindings ?? prepared.toPublish).counts), 'no-findings');
-        }
         const resolutionErrors = await telemetry.measure('publication', () => (0, apply_detected_findings_1.applyDetectedFindings)(param, context, prepared, dependencies.publicationPorts, dependencies.resolutionPorts));
+        if (await telemetry.measure('post-publication-freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(param, context, dependencies.contextPorts))) {
+            return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
+        }
+        const presentation = await telemetry.measure('projection', () => reconcileReviewState({
+            execution: param,
+            loadedContext: context,
+            activeFindings: prepared.activeFindings ?? prepared.toPublish,
+            expectedPublishedFindings: prepared.toPublish,
+            mutationErrors: resolutionErrors,
+            dependencies,
+        }));
+        if (presentation)
+            telemetry.observeProjection(presentation.projection);
         (0, logging_ports_1.logInfo)(`Bugbot workflow completed in ${Date.now() - workflowStartedAt}ms.`);
-        return await complete(detectionResult(prepared, context, resolutionErrors), resolutionErrors.length === 0 ? 'completed' : 'failed');
+        const finalErrors = presentation?.errors ?? resolutionErrors;
+        const hasChanges = prepared.toPublish.length > 0 || prepared.resolvedFindingIds.size > 0;
+        return await complete(detectionResult(prepared, context, finalErrors, presentation), finalErrors.length === 0 ? (hasChanges ? 'completed' : 'no-findings') : 'failed');
     }
     catch (error) {
         const normalizedError = error instanceof pull_request_review_errors_1.PullRequestReviewOperationError
@@ -2525,7 +3408,7 @@ async function resolveContextOptions(param, contextPorts) {
     return branch ? { branchOverride: branch } : null;
 }
 function shouldSkipDetection(param) {
-    if (!(0, agent_1.isAgentConfigurationReady)(param.ai?.getAgentConfiguration(param.isPullRequest ? 'reviewer' : 'findings'))) {
+    if (!(0, agent_1.isAgentConfigurationReady)(param.ai.getAgentConfiguration(param.isPullRequest ? 'reviewer' : 'findings'))) {
         (0, logging_ports_1.logDebugInfo)('Agent not configured; skipping potential problems detection.');
         return true;
     }
@@ -2535,39 +3418,63 @@ function shouldSkipDetection(param) {
     }
     return false;
 }
-function noAnalysisResult() {
+function noAnalysisResult(presentation) {
     (0, logging_ports_1.logDebugInfo)('DetectPotentialProblems: No response from configured agent.');
+    const errors = presentation?.errors.length
+        ? [...presentation.errors]
+        : [new Error('The configured agent returned no potential-problem analysis.')];
     return new result_1.Result({
         id: TASK_ID,
         success: false,
         executed: true,
-        errors: [new Error('The configured agent returned no potential-problem analysis.')],
+        ...(presentation ? {
+            steps: [`Bugbot analysis failed; the verified PR status was reconciled (${formatStateCounts(presentation.projection.counts)}).`],
+        } : {}),
+        errors,
+        ...(presentation ? {
+            payload: {
+                findingStates: presentation.projection.counts,
+                reviewProjection: presentation.projection,
+                statusCardOperation: presentation.statusCardOperation,
+                reviewUpdates: presentation.reviewUpdates,
+                pendingReviewUpdates: presentation.pendingReviewUpdates,
+            },
+        } : {}),
     });
 }
-function noFindingsResult(findingStates) {
-    return new result_1.Result({
-        id: TASK_ID,
-        success: true,
-        executed: true,
-        steps: [`Potential problems detection completed (no new findings, no resolved). States: ${formatStateCounts(findingStates)}.`],
-        payload: { findingStates },
-    });
-}
-function detectionResult(prepared, context, resolutionErrors) {
-    const stepParts = [`${prepared.toPublish.length} new/current finding(s) from configured agent`];
+function detectionResult(prepared, context, resolutionErrors, presentation) {
+    const hasFindingChanges = prepared.toPublish.length > 0 || prepared.resolvedFindingIds.size > 0;
+    const stepParts = hasFindingChanges
+        ? [`${prepared.toPublish.length} new/current finding(s) from configured agent`]
+        : ['no new findings, no resolved'];
     if (prepared.overflowCount > 0)
         stepParts.push(`${prepared.overflowCount} more not published (see summary comment)`);
     if (prepared.resolvedFindingIds.size > 0)
         stepParts.push(`${prepared.resolvedFindingIds.size} marked as resolved by configured agent`);
-    const statusSummary = (0, bugbot_finding_status_policy_1.projectBugbotFindingStatuses)(context.existingByFindingId, prepared.activeFindings ?? prepared.toPublish, prepared.resolvedFindingIds, prepared.resolvedFindingResolutions);
+    const statusSummary = presentation?.projection ?? (0, bugbot_finding_status_policy_1.projectBugbotFindingStatuses)(context.existingByFindingId, prepared.activeFindings ?? prepared.toPublish, prepared.resolvedFindingIds, prepared.resolvedFindingResolutions);
     stepParts.push(`states: ${formatStateCounts(statusSummary.counts)}`);
+    if (presentation) {
+        stepParts.push(`status card: ${presentation.statusCardOperation}`);
+        stepParts.push(`review status blocks updated: ${presentation.reviewUpdates}`);
+        if (presentation.pendingReviewUpdates > 0) {
+            stepParts.push(`review status blocks pending: ${presentation.pendingReviewUpdates}`);
+        }
+    }
     return new result_1.Result({
         id: TASK_ID,
         success: resolutionErrors.length === 0,
         executed: true,
         steps: [`Potential problems detection completed. ${stepParts.join('; ')}.`],
-        errors: resolutionErrors,
-        payload: { findingStates: statusSummary.counts },
+        errors: [...resolutionErrors],
+        payload: {
+            findingStates: statusSummary.counts,
+            ...(presentation ? {
+                reviewProjection: presentation.projection,
+                statusCardOperation: presentation.statusCardOperation,
+                reviewUpdates: presentation.reviewUpdates,
+                pendingReviewUpdates: presentation.pendingReviewUpdates,
+            } : {}),
+        },
     });
 }
 function formatStateCounts(counts) {
@@ -2575,6 +3482,44 @@ function formatStateCounts(counts) {
         .filter(([, count]) => count > 0)
         .map(([state, count]) => `${state}=${count}`)
         .join(', ') || 'none';
+}
+async function reconcileReviewState(input) {
+    const pullRequestNumber = input.loadedContext.openPrNumbers[0];
+    const analyzedHeadSha = input.loadedContext.prContext?.prHeadSha;
+    if (!pullRequestNumber || !analyzedHeadSha)
+        return undefined;
+    return (0, reconcile_bugbot_review_state_use_case_1.reconcileBugbotReviewState)({
+        target: {
+            owner: input.execution.owner,
+            repository: input.execution.repo,
+            pullRequestNumber,
+            ...(input.execution.issueNumber > 0
+                ? { linkedIssueNumber: input.execution.issueNumber }
+                : {}),
+            analyzedHeadSha,
+            ...(input.execution.tokenUser
+                ? { trustedAuthorLogin: input.execution.tokenUser }
+                : {}),
+            locale: input.execution.locale?.pullRequest ?? 'en-US',
+        },
+        credential: { token: input.execution.tokens.token },
+        loadedContext: input.loadedContext,
+        activeFindings: input.activeFindings,
+        ...(input.expectedPublishedFindings
+            ? { expectedPublishedFindings: input.expectedPublishedFindings }
+            : {}),
+        ...(input.mutationErrors ? { mutationErrors: input.mutationErrors } : {}),
+        snapshotPorts: {
+            issueComments: input.dependencies.contextPorts.issue,
+            pullRequest: input.dependencies.contextPorts.pullRequest,
+            reviews: input.dependencies.contextPorts.reviewState,
+            navigation: input.dependencies.contextPorts.navigation,
+        },
+        presentationPorts: {
+            comments: input.dependencies.publicationPorts.issueComments,
+            reviews: input.dependencies.publicationPorts.reviewState,
+        },
+    });
 }
 
 
@@ -2602,11 +3547,10 @@ const agent_command_1 = __nccwpck_require__(7923);
 const pull_request_description_1 = __nccwpck_require__(5315);
 const review_configuration_1 = __nccwpck_require__(3994);
 class Ai {
-    constructor(_configurationSource, model, aiPullRequestDescription, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotMinSeverity, bugbotCommentLimit, bugbotFixVerifyCommands = [], agentTasks = {
+    constructor(_configurationSource, model, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotMinSeverity, bugbotCommentLimit, bugbotFixVerifyCommands = [], agentTasks = {
         findings: { provider: 'codex', modelProvider: 'openai', model, command: (0, agent_command_1.defaultAgentCommand)({ provider: 'codex', modelProvider: 'openai', model }) },
         fixer: { provider: 'codex', modelProvider: 'openai', model, command: (0, agent_command_1.defaultAgentCommand)({ provider: 'codex', modelProvider: 'openai', model }) },
     }, pullRequestDescriptionMode = pull_request_description_1.DEFAULT_PULL_REQUEST_DESCRIPTION_MODE, bugbotReviewConfiguration = review_configuration_1.DEFAULT_BUGBOT_REVIEW_CONFIGURATION) {
-        this.aiPullRequestDescription = aiPullRequestDescription;
         this.aiMembersOnly = aiMembersOnly;
         this.aiIgnoreFiles = aiIgnoreFiles;
         this.aiIncludeReasoning = aiIncludeReasoning;
@@ -2616,9 +3560,6 @@ class Ai {
         this.agentTasks = agentTasks;
         this.pullRequestDescriptionMode = (0, pull_request_description_1.normalizePullRequestDescriptionMode)(pullRequestDescriptionMode);
         this.bugbotReviewConfiguration = (0, review_configuration_1.normalizeBugbotReviewConfiguration)(bugbotReviewConfiguration);
-    }
-    getAiPullRequestDescription() {
-        return this.aiPullRequestDescription;
     }
     getPullRequestDescriptionMode() {
         return this.pullRequestDescriptionMode;
@@ -2722,55 +3663,33 @@ exports.Commit = Commit;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Config = exports.CONFIG_SCHEMA_VERSION = void 0;
-exports.migrateConfigurationPayload = migrateConfigurationPayload;
+exports.requireCurrentConfigurationPayload = requireCurrentConfigurationPayload;
 const branch_configuration_1 = __nccwpck_require__(1934);
 const recommendation_state_1 = __nccwpck_require__(8514);
 const model_input_1 = __nccwpck_require__(4637);
+const deployment_operation_1 = __nccwpck_require__(2730);
 /** Version of the durable configuration contract stored in issue/PR content. */
-exports.CONFIG_SCHEMA_VERSION = 2;
-/**
- * Normalizes persisted configuration without silently losing fields from a
- * newer installation. Unknown keys are deliberately retained so a downgrade
- * or a mixed-version workflow can round-trip data safely.
- */
-function migrateConfigurationPayload(value) {
-    const original = { ...(0, model_input_1.asModelInput)(value) };
-    const sourceVersion = readSchemaVersion(original['schemaVersion']);
-    if (sourceVersion > exports.CONFIG_SCHEMA_VERSION) {
-        return {
-            payload: original,
-            sourceVersion,
-            migrated: false,
-            futureVersion: true,
-        };
+exports.CONFIG_SCHEMA_VERSION = 3;
+/** Accepts only the currently supported durable configuration contract. */
+function requireCurrentConfigurationPayload(value) {
+    const input = (0, model_input_1.asModelInput)(value);
+    if (input.schemaVersion !== exports.CONFIG_SCHEMA_VERSION) {
+        throw new Error(`Unsupported configuration schema. Expected ${exports.CONFIG_SCHEMA_VERSION}.`);
     }
-    const payload = { ...original };
-    const hadTransientResults = Object.prototype.hasOwnProperty.call(payload, 'results');
-    delete payload.results;
-    if (payload.branchConfiguration === null)
-        delete payload.branchConfiguration;
-    if (!(0, recommendation_state_1.isRecommendationState)(payload.recommendationState))
-        delete payload.recommendationState;
-    payload.schemaVersion = exports.CONFIG_SCHEMA_VERSION;
-    return {
-        payload,
-        sourceVersion,
-        migrated: sourceVersion !== exports.CONFIG_SCHEMA_VERSION || hadTransientResults,
-        futureVersion: false,
-    };
-}
-function readSchemaVersion(value) {
-    return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? value : 0;
+    return input;
 }
 class Config {
     constructor(data) {
         this.results = [];
-        const input = (0, model_input_1.asModelInput)(migrateConfigurationPayload(data).payload);
-        this.schemaVersion = readSchemaVersion(input.schemaVersion) || exports.CONFIG_SCHEMA_VERSION;
+        const input = (0, model_input_1.asModelInput)(data);
+        this.schemaVersion = exports.CONFIG_SCHEMA_VERSION;
         this.branchType = (0, model_input_1.readString)(input, 'branchType');
         this.hotfixOriginBranch = (0, model_input_1.readOptionalString)(input, 'hotfixOriginBranch');
         this.hotfixBranch = (0, model_input_1.readOptionalString)(input, 'hotfixBranch');
         this.releaseBranch = (0, model_input_1.readOptionalString)(input, 'releaseBranch');
+        this.releaseOriginBranch = (0, model_input_1.readOptionalString)(input, 'releaseOriginBranch');
+        this.releaseOriginSha = (0, model_input_1.readOptionalString)(input, 'releaseOriginSha');
+        this.hotfixOriginSha = (0, model_input_1.readOptionalString)(input, 'hotfixOriginSha');
         this.parentBranch = (0, model_input_1.readOptionalString)(input, 'parentBranch');
         this.workingBranch = (0, model_input_1.readOptionalString)(input, 'workingBranch');
         if (input['branchConfiguration'] !== undefined && input['branchConfiguration'] !== null) {
@@ -2778,6 +3697,9 @@ class Config {
         }
         if ((0, recommendation_state_1.isRecommendationState)(input['recommendationState'])) {
             this.recommendationState = input['recommendationState'];
+        }
+        if ((0, deployment_operation_1.isDeploymentOperationSnapshot)(input['deploymentOrchestration'])) {
+            this.deploymentOrchestration = input['deploymentOrchestration'];
         }
     }
 }
@@ -2797,6 +3719,7 @@ const commit_1 = __nccwpck_require__(7525);
 const config_1 = __nccwpck_require__(450);
 const github_user_policy_1 = __nccwpck_require__(4403);
 const issue_inactivity_1 = __nccwpck_require__(8572);
+const deployment_configuration_1 = __nccwpck_require__(2495);
 class Execution {
     get eventName() {
         return this.inputs?.eventName ?? '';
@@ -2887,6 +3810,7 @@ class Execution {
         this.hotfix = components.hotfix;
         this.project = components.projects;
         this.workflows = components.workflows;
+        this.deployment = components.deployment ?? { ...deployment_configuration_1.DEFAULT_DEPLOYMENT_CONFIGURATION };
         this.tokenUser = components.tokenUser;
         this.inactivityThresholdHours = components.inactivityThresholdHours ?? issue_inactivity_1.DEFAULT_INACTIVITY_THRESHOLD_HOURS;
         this.currentConfiguration = new config_1.Config({});
@@ -3025,11 +3949,7 @@ class Result {
         this.success = data['success'] ?? false;
         this.executed = data['executed'] ?? false;
         this.steps = Array.isArray(data.steps) ? data.steps : [];
-        const rawErrors = Array.isArray(data.errors)
-            ? data.errors
-            : data.error === undefined
-                ? []
-                : [data.error];
+        const rawErrors = Array.isArray(data.errors) ? data.errors : [];
         this.errors = rawErrors.map(normalizeError);
         this.payload = data.payload;
         this.reminders = Array.isArray(data.reminders) ? data.reminders : [];
@@ -3101,6 +4021,61 @@ function defaultAgentCommand(configuration) {
             return parts.join(' ');
         }
     }
+}
+
+
+/***/ }),
+
+/***/ 1011:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+/**
+ * Provider-neutral Bugbot finding and durable identity contracts.
+ *
+ * These types are shared by analysis, reconciliation, and publication. Keeping
+ * them in the domain prevents policies from depending on a particular use-case
+ * folder and gives every adapter one stable semantic vocabulary.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isExistingFindingFullyResolved = isExistingFindingFullyResolved;
+exports.findExistingFindingInfo = findExistingFindingInfo;
+function isExistingFindingFullyResolved(finding) {
+    const destinations = [finding.issue, finding.pullRequest].filter((destination) => destination != null);
+    return (destinations.length > 0 &&
+        destinations.every((destination) => destination.resolved) &&
+        finding.pullRequest?.verificationRequired !== true);
+}
+function findExistingFindingInfo(existingByFindingId, finding) {
+    const direct = existingByFindingId[finding.id];
+    if (direct && identitiesAreCompatible(direct, finding))
+        return direct;
+    const candidates = Object.values(existingByFindingId);
+    if (finding.fingerprint) {
+        const locationMatch = candidates.find((candidate) => candidate.issue?.fingerprint === finding.fingerprint
+            || candidate.pullRequest?.fingerprint === finding.fingerprint);
+        if (locationMatch)
+            return locationMatch;
+    }
+    if (!finding.semanticFingerprint)
+        return undefined;
+    const semanticMatches = candidates.filter((candidate) => candidate.issue?.semanticFingerprint === finding.semanticFingerprint
+        || candidate.pullRequest?.semanticFingerprint === finding.semanticFingerprint);
+    return semanticMatches.length === 1 ? semanticMatches[0] : undefined;
+}
+function identitiesAreCompatible(existing, finding) {
+    const existingFingerprints = [
+        existing.issue?.fingerprint,
+        existing.pullRequest?.fingerprint,
+    ].filter(Boolean);
+    const existingSemanticFingerprints = [
+        existing.issue?.semanticFingerprint,
+        existing.pullRequest?.semanticFingerprint,
+    ].filter(Boolean);
+    return (finding.fingerprint !== undefined
+        && existingFingerprints.includes(finding.fingerprint))
+        || (finding.semanticFingerprint !== undefined
+            && existingSemanticFingerprints.includes(finding.semanticFingerprint));
 }
 
 
@@ -3248,6 +4223,422 @@ function resolveBugbotReviewEffort(configured, complexity) {
 
 /***/ }),
 
+/***/ 859:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildBugbotReviewProjection = buildBugbotReviewProjection;
+const review_state_1 = __nccwpck_require__(9200);
+function buildBugbotReviewProjection(input) {
+    const findings = [...input.findings].sort((left, right) => left.id.localeCompare(right.id));
+    const counts = (0, review_state_1.countBugbotFindingStates)(findings.map((finding) => finding.state));
+    const errors = [...(input.errors ?? [])];
+    const outcome = input.superseded
+        ? 'superseded'
+        : input.dryRun
+            ? 'dry-run'
+            : errors.length > 0 || counts.unknown > 0
+                ? (findings.length > 0 ? 'partial' : 'failed')
+                : 'complete';
+    const canonical = JSON.stringify({
+        schemaVersion: 1,
+        pullRequestNumber: input.pullRequestNumber,
+        analyzedHeadSha: input.analyzedHeadSha,
+        verifiedHeadSha: input.verifiedHeadSha ?? input.analyzedHeadSha,
+        findings: findings.map(({ id, state, parentReviewIdentity }) => ({
+            id,
+            state,
+            parentReviewIdentity,
+        })),
+        counts: review_state_1.BUGBOT_FINDING_STATES.map((state) => [state, counts[state]]),
+        outcome,
+        errors,
+    });
+    return {
+        schemaVersion: 1,
+        pullRequestNumber: input.pullRequestNumber,
+        analyzedHeadSha: input.analyzedHeadSha,
+        verifiedHeadSha: input.verifiedHeadSha ?? input.analyzedHeadSha,
+        findings,
+        counts,
+        actionableCount: findings.filter((finding) => (0, review_state_1.isBugbotActionableState)(finding.state)).length,
+        outcome,
+        errors,
+        digest: stableDigest(canonical),
+    };
+}
+function stableDigest(value) {
+    let hash = 0x811c9dc5;
+    for (let index = 0; index < value.length; index += 1) {
+        hash ^= value.charCodeAt(index);
+        hash = Math.imul(hash, 0x01000193);
+    }
+    return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+
+/***/ }),
+
+/***/ 9200:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BUGBOT_FINDING_STATES = void 0;
+exports.classifyBugbotFindingState = classifyBugbotFindingState;
+exports.isBugbotActionableState = isBugbotActionableState;
+exports.isBugbotCleanState = isBugbotCleanState;
+exports.isHumanResolver = isHumanResolver;
+exports.countBugbotFindingStates = countBugbotFindingStates;
+exports.countActionableBugbotFindings = countActionableBugbotFindings;
+exports.BUGBOT_FINDING_STATES = [
+    'open',
+    'reopened',
+    'fixed',
+    'obsolete',
+    'dismissed',
+    'verification-required',
+    'unknown',
+];
+/**
+ * Resolves one provider-neutral Bugbot lifecycle state from durable marker and
+ * native thread facts. The model is intentionally fail-closed: disagreement
+ * never projects a clean PR unless a human dismissal can be attributed.
+ */
+function classifyBugbotFindingState(evidence) {
+    if (evidence.trusted === false || evidence.malformed === true)
+        return 'unknown';
+    const thread = evidence.thread;
+    if (evidence.markerResolved) {
+        if (thread?.resolved === false)
+            return 'verification-required';
+        if (evidence.markerResolution === 'dismissed')
+            return 'dismissed';
+        if (evidence.currentAnalysisReportsFinding === true)
+            return 'verification-required';
+        return evidence.markerResolution ?? 'fixed';
+    }
+    if (thread?.resolved === true) {
+        if (isHumanResolver(thread.resolvedByLogin, evidence.botLogin))
+            return 'dismissed';
+        return 'verification-required';
+    }
+    return evidence.wasResolvedBeforeCurrentAnalysis === true ? 'reopened' : 'open';
+}
+function isBugbotActionableState(state) {
+    return state === 'open' || state === 'reopened' || state === 'verification-required';
+}
+function isBugbotCleanState(state) {
+    return state === 'fixed' || state === 'obsolete' || state === 'dismissed';
+}
+function isHumanResolver(resolverLogin, botLogin) {
+    const resolver = normalizeLogin(resolverLogin);
+    const bot = normalizeLogin(botLogin);
+    return resolver.length > 0 && bot.length > 0 && resolver !== bot;
+}
+function normalizeLogin(value) {
+    return value?.trim().replace(/\[bot\]$/iu, '').toLowerCase() ?? '';
+}
+function countBugbotFindingStates(states) {
+    const counts = Object.fromEntries(exports.BUGBOT_FINDING_STATES.map((state) => [state, 0]));
+    for (const state of states)
+        counts[state] += 1;
+    return counts;
+}
+function countActionableBugbotFindings(counts) {
+    return counts.open + counts.reopened + counts['verification-required'];
+}
+
+
+/***/ }),
+
+/***/ 2495:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DEFAULT_DEPLOYMENT_CONFIGURATION = exports.ORCHESTRATION_COMMENT_MODES = exports.ORCHESTRATION_PRESENTATION_MODES = exports.RECONCILIATION_ISSUE_COMPLETION_MODES = exports.RECONCILIATION_CLEANUP_MODES = exports.HOTFIX_ACTIVE_RELEASE_POLICIES = exports.RECONCILIATION_BACKMERGE_MODES = exports.RECONCILIATION_PR_MODES = exports.RECONCILIATION_STRATEGIES = void 0;
+exports.validateDeploymentConfiguration = validateDeploymentConfiguration;
+exports.isSafeBranchTree = isSafeBranchTree;
+exports.parseDeploymentEnum = parseDeploymentEnum;
+exports.RECONCILIATION_STRATEGIES = [
+    "production-lineage",
+    "canonical-gitflow",
+    "manual",
+];
+exports.RECONCILIATION_PR_MODES = [
+    "auto",
+    "auto-merge",
+    "merge-queue",
+    "create-only",
+];
+exports.RECONCILIATION_BACKMERGE_MODES = [
+    "auto",
+    "direct",
+    "sync-branch",
+];
+exports.HOTFIX_ACTIVE_RELEASE_POLICIES = [
+    "prefer-release",
+    "development",
+    "both",
+];
+exports.RECONCILIATION_CLEANUP_MODES = [
+    "all",
+    "source-only",
+    "sync-only",
+    "none",
+];
+exports.RECONCILIATION_ISSUE_COMPLETION_MODES = ["close", "keep-open"];
+exports.ORCHESTRATION_PRESENTATION_MODES = ["guided", "compact", "quiet"];
+exports.ORCHESTRATION_COMMENT_MODES = ["update", "milestones"];
+exports.DEFAULT_DEPLOYMENT_CONFIGURATION = {
+    releaseReconciliationStrategy: "production-lineage",
+    hotfixReconciliationStrategy: "production-lineage",
+    reconciliationPullRequestMode: "auto",
+    reconciliationBackmergeMode: "auto",
+    hotfixActiveReleasePolicy: "prefer-release",
+    reconciliationTree: "sync",
+    reconciliationCleanup: "all",
+    reconciliationIssueCompletion: "close",
+    orchestrationPresentationMode: "guided",
+    orchestrationDiagrams: true,
+    orchestrationCommentMode: "update",
+    mergeQueueCheckAttestations: [],
+};
+function validateDeploymentConfiguration(configuration, context) {
+    const errors = [];
+    for (const [name, value, allowed] of [
+        ["release reconciliation strategy", configuration.releaseReconciliationStrategy, exports.RECONCILIATION_STRATEGIES],
+        ["hotfix reconciliation strategy", configuration.hotfixReconciliationStrategy, exports.RECONCILIATION_STRATEGIES],
+        ["reconciliation PR mode", configuration.reconciliationPullRequestMode, exports.RECONCILIATION_PR_MODES],
+        ["reconciliation back-merge mode", configuration.reconciliationBackmergeMode, exports.RECONCILIATION_BACKMERGE_MODES],
+        ["hotfix active-release policy", configuration.hotfixActiveReleasePolicy, exports.HOTFIX_ACTIVE_RELEASE_POLICIES],
+        ["reconciliation cleanup", configuration.reconciliationCleanup, exports.RECONCILIATION_CLEANUP_MODES],
+        ["reconciliation issue completion", configuration.reconciliationIssueCompletion, exports.RECONCILIATION_ISSUE_COMPLETION_MODES],
+        ["orchestration presentation mode", configuration.orchestrationPresentationMode, exports.ORCHESTRATION_PRESENTATION_MODES],
+        ["orchestration comment mode", configuration.orchestrationCommentMode, exports.ORCHESTRATION_COMMENT_MODES],
+    ]) {
+        if (!allowed.includes(value)) {
+            errors.push(`The ${name} must be one of: ${allowed.join(", ")}.`);
+        }
+    }
+    if (typeof configuration.orchestrationDiagrams !== "boolean") {
+        errors.push("Orchestration diagrams must be a boolean.");
+    }
+    if (context.productionBranch === context.developmentBranch) {
+        errors.push("Production and development branches must be different.");
+    }
+    const protectedNames = new Set([context.productionBranch, context.developmentBranch]);
+    for (const [label, tree] of [
+        ["release", context.releaseTree],
+        ["hotfix", context.hotfixTree],
+        ["reconciliation", configuration.reconciliationTree],
+    ]) {
+        if (!isSafeBranchTree(tree)) {
+            errors.push(`The ${label} branch prefix must be a safe, non-empty Git ref segment.`);
+        }
+        else if (protectedNames.has(tree)) {
+            errors.push(`The ${label} branch prefix cannot equal a protected long-lived branch.`);
+        }
+    }
+    errors.push(...(0, merge_queue_readiness_1.normalizeMergeQueueCheckAttestations)(configuration.mergeQueueCheckAttestations).errors);
+    if ((configuration.releaseReconciliationStrategy === "manual"
+        || configuration.hotfixReconciliationStrategy === "manual")
+        && configuration.reconciliationIssueCompletion === "close") {
+        errors.push("Manual reconciliation cannot close the launcher issue automatically.");
+    }
+    return errors;
+}
+function isSafeBranchTree(value) {
+    const tree = value.trim();
+    return tree.length > 0
+        && tree.length <= 100
+        && !tree.startsWith("/")
+        && !tree.endsWith("/")
+        && !tree.includes("..")
+        && !tree.includes("@{")
+        && !/[~^:?*[\\\]\s]/.test(tree);
+}
+function parseDeploymentEnum(value, allowed, fallback) {
+    if (value === undefined || value === null || String(value).trim() === "") {
+        return { value: fallback, valid: true };
+    }
+    const normalized = String(value).trim();
+    return allowed.includes(normalized)
+        ? { value: normalized, valid: true }
+        : { value: fallback, valid: false };
+}
+const merge_queue_readiness_1 = __nccwpck_require__(2515);
+
+
+/***/ }),
+
+/***/ 2730:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DEPLOYMENT_PHASES = void 0;
+exports.transitionDeploymentOperation = transitionDeploymentOperation;
+exports.blockDeploymentOperation = blockDeploymentOperation;
+exports.resumeBlockedDeployment = resumeBlockedDeployment;
+exports.completeReconciliationTarget = completeReconciliationTarget;
+exports.sanitizeDeploymentMessage = sanitizeDeploymentMessage;
+exports.isDeploymentOperationSnapshot = isDeploymentOperationSnapshot;
+const deployment_configuration_1 = __nccwpck_require__(2495);
+exports.DEPLOYMENT_PHASES = [
+    "preparing",
+    "promotion_pr_pending",
+    "promoted",
+    "publishing",
+    "published",
+    "reconciliation_pending",
+    "completed",
+    "blocked",
+];
+const NORMAL_TRANSITIONS = {
+    preparing: ["promotion_pr_pending"],
+    promotion_pr_pending: ["promoted"],
+    promoted: ["publishing"],
+    publishing: ["published"],
+    published: ["reconciliation_pending", "completed"],
+    reconciliation_pending: ["completed"],
+    completed: [],
+};
+function transitionDeploymentOperation(operation, expectedPhase, nextPhase) {
+    if (operation.phase === nextPhase) {
+        return { kind: "noop", operation, reason: `Operation is already ${nextPhase}.` };
+    }
+    if (operation.phase !== expectedPhase) {
+        return { kind: "noop", operation, reason: `Expected ${expectedPhase}, found ${operation.phase}.` };
+    }
+    if (nextPhase === "blocked") {
+        return { kind: "advance", operation: { ...operation, phase: nextPhase } };
+    }
+    if (expectedPhase === "blocked" || !NORMAL_TRANSITIONS[expectedPhase].includes(nextPhase)) {
+        return { kind: "invalid", operation, reason: `Transition ${expectedPhase} -> ${nextPhase} is not allowed.` };
+    }
+    return { kind: "advance", operation: { ...operation, phase: nextPhase, lastFailure: null } };
+}
+function blockDeploymentOperation(operation, category, message, retryable) {
+    if (operation.phase === "completed")
+        return operation;
+    const previousPhase = operation.phase === "blocked"
+        ? operation.lastFailure?.previousPhase ?? "preparing"
+        : operation.phase;
+    return {
+        ...operation,
+        phase: "blocked",
+        lastFailure: { category, message: sanitizeDeploymentMessage(message), retryable, previousPhase },
+    };
+}
+function resumeBlockedDeployment(operation) {
+    if (operation.phase !== "blocked" || !operation.lastFailure?.retryable) {
+        return { kind: "invalid", operation, reason: "Operation is not retryable from blocked state." };
+    }
+    return {
+        kind: "advance",
+        operation: { ...operation, phase: operation.lastFailure.previousPhase, lastFailure: null },
+    };
+}
+function completeReconciliationTarget(operation, pullRequest) {
+    const targets = operation.reconciliationTargets.map((target) => target.pullRequest === pullRequest ? { ...target, status: "completed" } : target);
+    return {
+        ...operation,
+        reconciliationTargets: targets,
+        lastFailure: null,
+    };
+}
+function sanitizeDeploymentMessage(value) {
+    return value
+        .replace(/::/g, "﹕﹕")
+        .replace(/@(?=[A-Za-z0-9_-])/g, "@\u200b")
+        .replace(/<!--/g, "&lt;!--")
+        .replace(/-->/g, "--&gt;")
+        .slice(0, 2000);
+}
+function isDeploymentOperationSnapshot(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value))
+        return false;
+    const operation = value;
+    return typeof operation.operationId === "string"
+        && /^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(operation.operationId)
+        && (operation.kind === "release" || operation.kind === "hotfix")
+        && typeof operation.version === "string" && /^[0-9]+\.[0-9]+\.[0-9]+$/.test(operation.version)
+        && typeof operation.title === "string" && operation.title.length <= 1000
+        && typeof operation.changelog === "string" && operation.changelog.length <= 50000
+        && exports.DEPLOYMENT_PHASES.includes(operation.phase)
+        && deployment_configuration_1.RECONCILIATION_STRATEGIES.includes(operation.strategy)
+        && deployment_configuration_1.RECONCILIATION_PR_MODES.includes(operation.prMode)
+        && (operation.selectedPrMode === undefined
+            || ["auto-merge", "merge-queue", "create-only"].includes(operation.selectedPrMode))
+        && deployment_configuration_1.RECONCILIATION_BACKMERGE_MODES.includes(operation.backmergeMode)
+        && deployment_configuration_1.HOTFIX_ACTIVE_RELEASE_POLICIES.includes(operation.hotfixActiveReleasePolicy)
+        && deployment_configuration_1.RECONCILIATION_CLEANUP_MODES.includes(operation.cleanup)
+        && deployment_configuration_1.RECONCILIATION_ISSUE_COMPLETION_MODES.includes(operation.issueCompletion)
+        && deployment_configuration_1.ORCHESTRATION_PRESENTATION_MODES.includes(operation.presentationMode)
+        && typeof operation.diagrams === "boolean"
+        && deployment_configuration_1.ORCHESTRATION_COMMENT_MODES.includes(operation.commentMode)
+        && isSafePersistedRef(operation.sourceBranch)
+        && isFullSha(operation.sourceSha)
+        && isSafePersistedRef(operation.originBranch)
+        && isFullSha(operation.originSha)
+        && isSafePersistedRef(operation.productionBranch)
+        && isSafePersistedRef(operation.developmentBranch)
+        && typeof operation.reconciliationTree === "string"
+        && typeof operation.tag === "string" && operation.tag === `v${operation.version}`
+        && typeof operation.publicationWorkflow === "string" && isSafeWorkflowName(operation.publicationWorkflow)
+        && (operation.promotionPullRequest === undefined || isPositiveInteger(operation.promotionPullRequest))
+        && (operation.productionSha === undefined || isFullSha(operation.productionSha))
+        && typeof operation.publicationVerified === "boolean"
+        && Array.isArray(operation.reconciliationTargets)
+        && operation.reconciliationTargets.every(isReconciliationTarget)
+        && (operation.lastFailure === undefined || operation.lastFailure === null || isDeploymentFailure(operation.lastFailure));
+}
+function isFullSha(value) {
+    return typeof value === "string" && /^[a-f0-9]{40}$/i.test(value);
+}
+function isPositiveInteger(value) {
+    return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+}
+function isSafePersistedRef(value) {
+    return typeof value === "string"
+        && value.length > 0
+        && value.length <= 200
+        && !value.includes("..")
+        && !value.includes("@{")
+        && !/[\s~^:?*[\\\]]/.test(value);
+}
+function isSafeWorkflowName(value) {
+    return value.length <= 200 && !value.includes("..") && /^[A-Za-z0-9][A-Za-z0-9._/-]*\.ya?ml$/.test(value);
+}
+function isReconciliationTarget(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value))
+        return false;
+    const target = value;
+    return isSafePersistedRef(target.targetBranch)
+        && isSafePersistedRef(target.sourceBranch)
+        && isFullSha(target.sourceSha)
+        && (target.syncBranch === undefined || isSafePersistedRef(target.syncBranch))
+        && (target.pullRequest === undefined || isPositiveInteger(target.pullRequest))
+        && ["pending", "completed", "blocked"].includes(target.status);
+}
+function isDeploymentFailure(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value))
+        return false;
+    const failure = value;
+    return ["promotion", "publication", "reconciliation", "cleanup"].includes(failure.category)
+        && typeof failure.message === "string"
+        && failure.message.length <= 2000
+        && typeof failure.retryable === "boolean"
+        && ["preparing", "promotion_pr_pending", "promoted", "publishing", "published", "reconciliation_pending", "completed"]
+            .includes(failure.previousPhase);
+}
+
+
+/***/ }),
+
 /***/ 4403:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -3320,6 +4711,142 @@ function normalize(value) {
 
 /***/ }),
 
+/***/ 2515:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MAX_MERGE_QUEUE_ATTESTATIONS_BYTES = exports.MAX_MERGE_QUEUE_ATTESTATIONS = exports.MERGE_QUEUE_TARGET_ROLES = void 0;
+exports.parseMergeQueueCheckAttestations = parseMergeQueueCheckAttestations;
+exports.normalizeMergeQueueCheckAttestations = normalizeMergeQueueCheckAttestations;
+exports.evaluateMergeQueueReadiness = evaluateMergeQueueReadiness;
+exports.MERGE_QUEUE_TARGET_ROLES = ["production", "development", "active-release"];
+exports.MAX_MERGE_QUEUE_ATTESTATIONS = 50;
+exports.MAX_MERGE_QUEUE_ATTESTATIONS_BYTES = 16384;
+function parseMergeQueueCheckAttestations(value) {
+    if (value === undefined || value === null || String(value).trim() === "")
+        return { value: [], errors: [] };
+    const serialized = String(value);
+    if (new TextEncoder().encode(serialized).byteLength > exports.MAX_MERGE_QUEUE_ATTESTATIONS_BYTES) {
+        return { value: [], errors: [`merge-queue-check-attestations must be at most ${exports.MAX_MERGE_QUEUE_ATTESTATIONS_BYTES} bytes.`] };
+    }
+    let parsed;
+    try {
+        parsed = JSON.parse(serialized);
+    }
+    catch {
+        return { value: [], errors: ["merge-queue-check-attestations must be a valid JSON array."] };
+    }
+    return normalizeMergeQueueCheckAttestations(parsed);
+}
+function normalizeMergeQueueCheckAttestations(value) {
+    if (!Array.isArray(value))
+        return { value: [], errors: ["Merge queue check attestations must be an array."] };
+    let serialized;
+    try {
+        serialized = JSON.stringify(value);
+    }
+    catch {
+        return { value: [], errors: ["Merge queue check attestations must be serializable JSON data."] };
+    }
+    if (new TextEncoder().encode(serialized).byteLength > exports.MAX_MERGE_QUEUE_ATTESTATIONS_BYTES) {
+        return { value: [], errors: [`Merge queue check attestations must be at most ${exports.MAX_MERGE_QUEUE_ATTESTATIONS_BYTES} bytes.`] };
+    }
+    if (value.length > exports.MAX_MERGE_QUEUE_ATTESTATIONS) {
+        return { value: [], errors: [`Merge queue check attestations must contain at most ${exports.MAX_MERGE_QUEUE_ATTESTATIONS} entries.`] };
+    }
+    const attestations = [];
+    const errors = [];
+    const identities = new Set();
+    value.forEach((candidate, index) => {
+        const prefix = `Merge queue check attestation ${index + 1}`;
+        if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
+            errors.push(`${prefix} must be an object.`);
+            return;
+        }
+        const item = candidate;
+        const unexpected = Object.keys(item).filter((key) => !["context", "integrationId", "targets"].includes(key));
+        if (unexpected.length > 0)
+            errors.push(`${prefix} has unknown field(s): ${unexpected.join(", ")}.`);
+        const context = typeof item.context === "string" ? item.context.trim() : "";
+        if (!context || context.length > 255 || hasUnsafeControlCharacter(context)) {
+            errors.push(`${prefix} context must be a non-empty check name of at most 255 characters without control characters.`);
+        }
+        const integrationId = item.integrationId;
+        if (integrationId !== "any" && !(typeof integrationId === "number" && Number.isSafeInteger(integrationId) && integrationId > 0)) {
+            errors.push(`${prefix} integrationId must be a positive integer or "any".`);
+        }
+        const targets = Array.isArray(item.targets) ? item.targets : [];
+        const normalizedTargets = targets.filter((target) => typeof target === "string" && exports.MERGE_QUEUE_TARGET_ROLES.includes(target));
+        const targetsValid = targets.length >= 1
+            && targets.length <= exports.MERGE_QUEUE_TARGET_ROLES.length
+            && normalizedTargets.length === targets.length
+            && new Set(normalizedTargets).size === normalizedTargets.length;
+        if (!targetsValid) {
+            errors.push(`${prefix} targets must contain 1-${exports.MERGE_QUEUE_TARGET_ROLES.length} unique values from: ${exports.MERGE_QUEUE_TARGET_ROLES.join(", ")}.`);
+        }
+        const identityValid = context.length > 0
+            && context.length <= 255
+            && !hasUnsafeControlCharacter(context)
+            && (integrationId === "any"
+                || (typeof integrationId === "number" && Number.isSafeInteger(integrationId) && integrationId > 0));
+        if (identityValid) {
+            const identity = `${context}\0${integrationId}`;
+            if (identities.has(identity))
+                errors.push(`${prefix} duplicates check identity ${context}.`);
+            identities.add(identity);
+        }
+        if (unexpected.length === 0 && identityValid && targetsValid) {
+            attestations.push({ context, integrationId, targets: normalizedTargets });
+        }
+    });
+    return errors.length > 0 ? { value: [], errors } : { value: attestations, errors: [] };
+}
+function evaluateMergeQueueReadiness(input) {
+    if (!input.queueRequired) {
+        return {
+            verdict: "not_required",
+            targetRole: input.targetRole,
+            targetBranch: input.targetBranch,
+            producers: [],
+            problems: input.problems,
+        };
+    }
+    const producers = input.producers.map((producer) => {
+        if (producer.support === "supported")
+            return { ...producer, verdict: "verified" };
+        if (producer.support === "unsupported")
+            return { ...producer, verdict: "unsupported" };
+        const attested = producer.kind === "check"
+            && producer.integrationId !== undefined
+            && input.attestations.some((attestation) => attestation.context === producer.name
+                && attestation.integrationId === producer.integrationId
+                && attestation.targets.includes(input.targetRole));
+        return { ...producer, verdict: attested ? "attested" : "unknown" };
+    });
+    const verdict = producers.some((producer) => producer.verdict === "unsupported")
+        ? "unsupported"
+        : input.problems.length > 0 || producers.some((producer) => producer.verdict === "unknown")
+            ? "unknown"
+            : "ready";
+    return {
+        verdict,
+        targetRole: input.targetRole,
+        targetBranch: input.targetBranch,
+        producers,
+        problems: input.problems,
+    };
+}
+function hasUnsafeControlCharacter(value) {
+    return [...value].some((character) => {
+        const codePoint = character.codePointAt(0) ?? 0;
+        return codePoint <= 31 || codePoint === 127;
+    });
+}
+
+
+/***/ }),
+
 /***/ 5315:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -3340,7 +4867,7 @@ exports.PULL_REQUEST_DESCRIPTION_MODES = [
 exports.DEFAULT_PULL_REQUEST_DESCRIPTION_MODE = 'replace';
 exports.MANAGED_PULL_REQUEST_DESCRIPTION_START = '<!-- copilot:managed-pr-description -->';
 exports.MANAGED_PULL_REQUEST_DESCRIPTION_END = '<!-- /copilot:managed-pr-description -->';
-/** Normalizes public configuration while keeping invalid values safe and backwards compatible. */
+/** Normalizes public configuration and keeps invalid values safe. */
 function normalizePullRequestDescriptionMode(value) {
     const normalized = String(value ?? '').trim().toLowerCase();
     return exports.PULL_REQUEST_DESCRIPTION_MODES.includes(normalized)
@@ -4107,7 +5634,15 @@ function buildBugbotAnalytics(snapshots) {
     };
 }
 function aggregateFindingStates(snapshots) {
-    const totals = { open: 0, fixed: 0, obsolete: 0, dismissed: 0, reopened: 0 };
+    const totals = {
+        open: 0,
+        fixed: 0,
+        obsolete: 0,
+        dismissed: 0,
+        reopened: 0,
+        'verification-required': 0,
+        unknown: 0,
+    };
     for (const snapshot of snapshots) {
         for (const state of Object.keys(totals)) {
             totals[state] += snapshot.findingStates?.[state] ?? 0;
@@ -4538,7 +6073,6 @@ const TASK_EMOJI = {
     RemoveIssueBranchesUseCase: '🧹',
     RemoveNotNeededBranchesUseCase: '🧹',
     DeployAddedUseCase: '🏷️',
-    DeployedAddedUseCase: '🏷️',
     MoveIssueToInProgressUseCase: '📥',
     UpdateIssueTypeUseCase: '🏷️',
     // Commit steps
@@ -4564,7 +6098,6 @@ const TASK_EMOJI = {
     CreateReleaseUseCase: '🎉',
     CreateTagUseCase: '🏷️',
     PublishGithubActionUseCase: '📦',
-    DeployedActionUseCase: '🚀',
     InitialSetupUseCase: '🛠️',
 };
 const DEFAULT_EMOJI = '▶️';
@@ -4626,7 +6159,7 @@ var __webpack_exports__ = {};
 var exports = __webpack_exports__;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Ai = exports.Execution = exports.resolveBugbotReviewEffort = exports.normalizeBugbotReviewConfiguration = exports.buildFindingFingerprint = exports.buildSemanticFindingFingerprint = exports.parseBugbotTelemetry = exports.buildBugbotAnalytics = exports.loadBugbotPredictions = exports.loadBugbotBenchmark = exports.evaluateBugbotBenchmark = exports.evaluateBugbotQualityGate = exports.evaluateBugbotFindings = exports.BugbotReviewService = void 0;
+exports.Ai = exports.Execution = exports.buildBugbotReviewProjection = exports.isBugbotCleanState = exports.isBugbotActionableState = exports.countBugbotFindingStates = exports.countActionableBugbotFindings = exports.classifyBugbotFindingState = exports.BUGBOT_FINDING_STATES = exports.resolveBugbotReviewEffort = exports.normalizeBugbotReviewConfiguration = exports.buildFindingFingerprint = exports.buildSemanticFindingFingerprint = exports.parseBugbotTelemetry = exports.buildBugbotAnalytics = exports.loadBugbotPredictions = exports.loadBugbotBenchmark = exports.evaluateBugbotBenchmark = exports.evaluateBugbotQualityGate = exports.evaluateBugbotFindings = exports.BugbotReviewService = void 0;
 const detect_potential_problems_use_case_1 = __nccwpck_require__(6287);
 /** Provider-neutral programmatic entry point. Consumers supply agent and SCM adapters. */
 class BugbotReviewService {
@@ -4654,6 +6187,15 @@ Object.defineProperty(exports, "buildFindingFingerprint", ({ enumerable: true, g
 var review_configuration_1 = __nccwpck_require__(3994);
 Object.defineProperty(exports, "normalizeBugbotReviewConfiguration", ({ enumerable: true, get: function () { return review_configuration_1.normalizeBugbotReviewConfiguration; } }));
 Object.defineProperty(exports, "resolveBugbotReviewEffort", ({ enumerable: true, get: function () { return review_configuration_1.resolveBugbotReviewEffort; } }));
+var review_state_1 = __nccwpck_require__(9200);
+Object.defineProperty(exports, "BUGBOT_FINDING_STATES", ({ enumerable: true, get: function () { return review_state_1.BUGBOT_FINDING_STATES; } }));
+Object.defineProperty(exports, "classifyBugbotFindingState", ({ enumerable: true, get: function () { return review_state_1.classifyBugbotFindingState; } }));
+Object.defineProperty(exports, "countActionableBugbotFindings", ({ enumerable: true, get: function () { return review_state_1.countActionableBugbotFindings; } }));
+Object.defineProperty(exports, "countBugbotFindingStates", ({ enumerable: true, get: function () { return review_state_1.countBugbotFindingStates; } }));
+Object.defineProperty(exports, "isBugbotActionableState", ({ enumerable: true, get: function () { return review_state_1.isBugbotActionableState; } }));
+Object.defineProperty(exports, "isBugbotCleanState", ({ enumerable: true, get: function () { return review_state_1.isBugbotCleanState; } }));
+var review_projection_1 = __nccwpck_require__(859);
+Object.defineProperty(exports, "buildBugbotReviewProjection", ({ enumerable: true, get: function () { return review_projection_1.buildBugbotReviewProjection; } }));
 var execution_1 = __nccwpck_require__(1546);
 Object.defineProperty(exports, "Execution", ({ enumerable: true, get: function () { return execution_1.Execution; } }));
 var ai_1 = __nccwpck_require__(7478);

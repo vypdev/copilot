@@ -33,7 +33,7 @@ export interface AgentActivityExecutionContext {
         readonly isDetectPotentialProblemsAction: boolean;
     };
     readonly ai: {
-        readonly getAiPullRequestDescription: () => boolean;
+        readonly getPullRequestDescriptionMode: () => string;
         readonly getAgentConfiguration: (task: AgentTask) => AgentConfiguration | undefined;
     };
 }
@@ -58,7 +58,8 @@ export function shouldTrackAgentActivity(
         case 'pull-request':
             return ['opened', 'reopened', 'synchronize'].includes(execution.pullRequest.action)
                 && (isAgentReady(execution, 'reviewer')
-                    || (execution.ai.getAiPullRequestDescription() && isAgentReady(execution, 'planner')));
+                    || (['replace', 'append'].includes(execution.ai.getPullRequestDescriptionMode())
+                        && isAgentReady(execution, 'planner')));
         case 'push':
             return execution.commit.commits.length > 0 && isAgentReady(execution, 'findings');
         case 'single-action':
@@ -79,7 +80,7 @@ function isAgentBackedSingleAction(execution: AgentActivityExecutionContext): bo
 }
 
 function isAgentReady(execution: AgentActivityExecutionContext, task: AgentTask): boolean {
-    return isAgentConfigurationReady(execution.ai?.getAgentConfiguration(task));
+    return isAgentConfigurationReady(execution.ai.getAgentConfiguration(task));
 }
 
 function hasComment(execution: AgentActivityExecutionContext): boolean {
