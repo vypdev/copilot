@@ -16,6 +16,7 @@ function baseParam(overrides: Record<string, unknown> = {}) {
   return {
     owner: 'o',
     repo: 'r',
+    isPullRequest: false,
     issueNumber: 1,
     tokenUser: 'bot',
     tokens: { token: 't' },
@@ -285,6 +286,7 @@ describe('ThinkUseCase', () => {
     mockAskAgent.mockResolvedValue({ answer: 'Reply' });
     mockAddComment.mockResolvedValue(undefined);
     const param = baseParam({
+      isPullRequest: true,
       issue: { ...baseParam().issue, isIssueComment: false, commentBody: '', number: 0 },
       pullRequest: {
         isPullRequestReviewComment: true,
@@ -335,6 +337,7 @@ describe('ThinkUseCase', () => {
     mockAskAgent.mockResolvedValue({ answer: 'Reply' });
     mockAddComment.mockResolvedValue(undefined);
     const param = baseParam({
+      isPullRequest: true,
       issue: { ...baseParam().issue, isIssueComment: false, commentBody: '' },
       pullRequest: {
         isPullRequestReviewComment: true,

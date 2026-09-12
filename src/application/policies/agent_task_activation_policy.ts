@@ -5,6 +5,7 @@ import type { GithubActionEventInputs } from '../../actions/github_event_inputs'
 import { parseCopilotCommand } from '../../domain/copilot_command';
 import { containsBotMention, isCopilotCommentRequest } from '../../domain/copilot_comment_request';
 import { isNaturalLanguageBranchSyncRequest, parseBranchSyncCommandArguments } from '../../domain/branch_sync_command';
+import { isPullRequestConversationComment } from '../../domain/github_comment_target';
 
 const COMMENT_TASKS: readonly AgentTask[] = ['findings', 'fixer', 'planner', 'reviewer', 'tester'];
 
@@ -112,6 +113,5 @@ function commentBody(event: GithubActionEventInputs): string {
 
 function isPullRequestComment(event: GithubActionEventInputs): boolean {
     if (event.eventName === 'pull_request_review_comment') return true;
-    const issue = event.issue;
-    return Boolean(issue && typeof issue === 'object' && issue.pull_request);
+    return isPullRequestConversationComment(event);
 }

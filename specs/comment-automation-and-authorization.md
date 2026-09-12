@@ -2,7 +2,7 @@
 
 - Status: Implemented
 - Date: 2026-09-11
-- Last updated: 2026-09-12
+- Last updated: 2026-09-13
 - Owners: Copilot maintainers
 - Scope: parsing and routing issue/PR comments to read-only or mutation-capable use cases
 - Related issues/PRs: Bugbot and branch synchronization SDDs
@@ -59,6 +59,11 @@ modify the wrong branch.
 10. Issue and PR comment routes project one frozen, credential-free
     `CommentAutomationContext`; shared workflows receive only capability facts
     and repository-bound semantic ports.
+11. A general PR-conversation comment is transported as `issue_comment`, but
+    the trusted `issue.pull_request` marker and `issue.number` classify its
+    target as that exact PR. It remains on the comment coordinator, skips
+    issue-only setup, uses PR labels/locale/specialists, and supplies the PR
+    number to read-only review commands without scanning for a candidate PR.
 
 ### 2.3 Evidence and contract classification
 
@@ -142,6 +147,9 @@ is removed outright; there is no compatibility flag or legacy route.
 
 - `/copilot help` and `/copilot status` do not require mutation authority.
 - `/copilot analyze|review|findings|recheck` use read-only Bugbot.
+- On a general PR-conversation comment, those review commands load the exact PR
+  named by GitHub's payload and review its canonical diff; they never reinterpret
+  the PR number as an issue-only target.
 - `/copilot sync-branch --dry-run` prepares and aborts without push or agent.
 - A plain comment without a bot mention receives no language, intent, project,
   runtime, or publication handling.
@@ -216,6 +224,11 @@ provider client, `Ai` instance, or configuration getter. Command-specific review
 overrides create a new frozen context and cannot mutate the run-wide AI model.
 There is no legacy aggregate overload or compatibility route.
 
+Target classification is independent from GitHub's event name: the
+`issue_comment` transport continues to select the comment coordinator, while the
+payload's PR marker selects PR setup and read-only PR capabilities. This avoids
+both dual issue/PR setup and the previous false issue classification.
+
 ## 9. UI/UX and content contract
 
 ```markdown
@@ -275,13 +288,13 @@ branch. Finding dismissal and learned rules require explicit follow-up commands.
 
 | Area | Minimum cases | Risks |
 |---|---:|---|
-| Parser/mention/route policy | 24 | limits, vocabulary, precedence, collisions |
+| Parser/mention/route policy | 26 | limits, vocabulary, precedence, collisions, PR-conversation classification |
 | Workflow/idempotency/races | 18 | fallback, duplicate, branch/push race |
 | Authorization/adapters | 14 | org/personal permissions, API errors |
 | Workflow/config contracts | 8 | events, permissions, active roles, inert passive comments |
-| UX/localization/sanitization | 14 | help/errors/links/mentions/Markdown |
-| Integration/security/migration | 14 | comment→commit/review, prompt injection |
-| **Total** | **92** | no double counting |
+| UX/localization/sanitization | 15 | help/errors/links/mentions/Markdown, target locale |
+| Integration/security/migration | 16 | comment→commit/review, exact PR diff, prompt injection |
+| **Total** | **97** | no double counting |
 
 Global coverage remains mandatory; command and route policies SHOULD have 100%
 branch coverage. Use fake authorization/agents/git; no live models or waits.
@@ -312,6 +325,9 @@ English/non-English requests.
     workspace operation and never scans open PRs for a branch.
 11. An unaddressed human or machine comment exits before project lookup, AI
     configuration, runtime provisioning, translation, or publication.
+12. `/copilot recheck` in a general PR conversation routes through the comment
+    coordinator but projects the exact PR number, PR locale, reviewer role, and
+    canonical PR diff; issue-only setup is not invoked.
 
 ## 17. Requirements traceability
 

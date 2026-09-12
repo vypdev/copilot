@@ -51786,8 +51786,10 @@ exports.resolveMainRunRoute = resolveMainRunRoute;
 function resolveMainRunRoute(input) {
     if (input.isSingleAction)
         return 'single-action';
+    if (input.isIssueComment)
+        return 'issue-comment';
     if (input.isIssue)
-        return input.isIssueComment ? 'issue-comment' : 'issue';
+        return 'issue';
     if (input.isPullRequest) {
         return input.isPullRequestReviewComment ? 'pull-request-review-comment' : 'pull-request';
     }
@@ -67301,14 +67303,14 @@ function resolveThinkRequest(param) {
         : (0, think_input_policy_1.extractMentionQuestion)(commentBody, param.tokenUser ?? '');
     if (!question)
         return { kind: 'skip', reason: 'empty-question' };
-    const isIssueComment = param.issue.isIssueComment;
+    const isPullRequestTarget = param.isPullRequest;
     return {
         kind: 'ready',
         commentBody,
         question,
-        issueNumberForContext: isIssueComment ? param.issue.number : param.issueNumber,
-        destinationNumber: isIssueComment ? param.issue.number : param.pullRequest.number,
-        destinationType: isIssueComment ? 'issue' : 'PR',
+        issueNumberForContext: isPullRequestTarget ? param.issueNumber : param.issue.number,
+        destinationNumber: isPullRequestTarget ? param.pullRequest.number : param.issue.number,
+        destinationType: isPullRequestTarget ? 'PR' : 'issue',
         ...(command.kind === 'command' ? { command: command.command } : {}),
     };
 }
@@ -68931,8 +68933,8 @@ const comment_language_translation_workflow_1 = __nccwpck_require__(72770);
 function projectIssueCommentLanguageRequest(source) {
     return (0, comment_language_translation_workflow_1.projectCommentLanguageRequest)({
         commentBody: source.issue.commentBody,
-        locale: source.locale.issue,
-        issueNumber: source.issue.number,
+        locale: source.isPullRequest ? source.locale.pullRequest : source.locale.issue,
+        issueNumber: source.isPullRequest ? source.pullRequest.number : source.issue.number,
         commentId: source.issue.commentId,
         configuration: source.ai.getAgentConfiguration('findings'),
     });
@@ -72237,7 +72239,9 @@ class Execution {
         return this.singleAction.enabledSingleAction;
     }
     get isIssue() {
-        return this.issue.isIssue || this.issue.isIssueComment || this.singleAction.isIssue;
+        return this.issue.isIssue
+            || (this.issue.isIssueComment && !this.pullRequest.isPullRequestConversationComment)
+            || this.singleAction.isIssue;
     }
     get isPullRequest() {
         return this.pullRequest.isPullRequest || this.pullRequest.isPullRequestReviewComment || this.singleAction.isPullRequest;
@@ -72978,6 +72982,7 @@ exports.Projects = Projects;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequest = void 0;
 const positive_integer_policy_1 = __nccwpck_require__(19879);
+const github_comment_target_1 = __nccwpck_require__(21486);
 class PullRequest {
     get action() {
         return this.inputs?.action ?? '';
@@ -72996,6 +73001,9 @@ class PullRequest {
             ?? (0, positive_integer_policy_1.parsePositiveSafeInteger)(this.inputs?.review?.pull_request?.number)
             ?? uniquePullRequestNumber(this.inputs?.check_suite?.pull_requests)
             ?? uniquePullRequestNumber(this.inputs?.workflow_run?.pull_requests)
+            ?? (this.isPullRequestConversationComment
+                ? (0, positive_integer_policy_1.parsePositiveSafeInteger)(this.inputs?.issue?.number)
+                : undefined)
             ?? -1;
     }
     get url() {
@@ -73034,12 +73042,16 @@ class PullRequest {
             && this.action === 'synchronize';
     }
     get isPullRequest() {
-        return [
+        return this.isPullRequestConversationComment || [
             'pull_request',
             'pull_request_review',
             'check_suite',
             'workflow_run',
         ].includes(this.inputs?.eventName ?? '');
+    }
+    /** GitHub delivers comments in a PR conversation through `issue_comment`. */
+    get isPullRequestConversationComment() {
+        return (0, github_comment_target_1.isPullRequestConversationComment)(this.inputs);
     }
     get isPullRequestReviewComment() {
         return this.inputs?.eventName === 'pull_request_review_comment';
@@ -81833,6 +81845,24 @@ function canonicalJson(value) {
 }
 function isRecord(value) {
     return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+
+/***/ }),
+
+/***/ 21486:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isPullRequestConversationComment = isPullRequestConversationComment;
+/** Identifies GitHub's `issue_comment` transport when its target is an exact PR. */
+function isPullRequestConversationComment(input) {
+    if (input?.eventName !== 'issue_comment')
+        return false;
+    const marker = input.issue?.pull_request;
+    return typeof marker === 'object' && marker !== null && !Array.isArray(marker);
 }
 
 

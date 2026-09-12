@@ -3,6 +3,7 @@ import { resolveThinkAgentTask } from '../../../../../application/policies/agent
 
 function baseParam(overrides: Record<string, unknown> = {}) {
     return {
+        isPullRequest: false,
         issue: { isIssueComment: true, commentBody: '/copilot review security', number: 7 },
         pullRequest: { isPullRequestReviewComment: false, commentBody: '', number: 0 },
         issueNumber: 7,
@@ -24,6 +25,20 @@ describe('think request policy', () => {
         expect(resolveThinkRequest(baseParam({ tokenUser: 'copilot', issue: { isIssueComment: true, commentBody: 'please review', number: 7 } }))).toMatchObject({
             kind: 'skip',
             reason: 'not-mentioned',
+        });
+    });
+
+    it('targets the exact PR for a general PR-conversation comment', () => {
+        expect(resolveThinkRequest(baseParam({
+            isPullRequest: true,
+            issueNumber: 42,
+            issue: { isIssueComment: true, commentBody: '/copilot explain the failure', number: 42 },
+            pullRequest: { isPullRequestReviewComment: false, commentBody: '', number: 42 },
+        }))).toMatchObject({
+            kind: 'ready',
+            issueNumberForContext: 42,
+            destinationNumber: 42,
+            destinationType: 'PR',
         });
     });
 

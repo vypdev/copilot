@@ -91,10 +91,19 @@ describe('P2-D shared capability context projections', () => {
   it('projects issue and pull-request translation requests with route parity and copied agent selections', () => {
     const selected = { ...configuration };
     const issue = projectIssueCommentLanguageRequest({
+      isPullRequest: false,
       issue: { commentBody: 'hola', number: 7, commentId: 70 },
-      locale: { issue: 'en' },
+      pullRequest: { number: -1 },
+      locale: { issue: 'en', pullRequest: 'es' },
       ai: { getAgentConfiguration: () => selected },
       tokens: { token: 'secret-value' },
+    } as never);
+    const pullRequestConversation = projectIssueCommentLanguageRequest({
+      isPullRequest: true,
+      issue: { commentBody: 'ciao', number: 9, commentId: 90 },
+      pullRequest: { number: 9 },
+      locale: { issue: 'en', pullRequest: 'it' },
+      ai: { getAgentConfiguration: () => ({ ...configuration }) },
     } as never);
     const pullRequest = projectPullRequestCommentLanguageRequest({
       pullRequest: { commentBody: 'bonjour', number: 8, commentId: 80 },
@@ -107,8 +116,15 @@ describe('P2-D shared capability context projections', () => {
     expect(issue).toMatchObject({ issueNumber: 7, commentId: 70, locale: 'en' });
     expect(issue.configuration?.model).toBe('gpt-5.6-luna');
     expect(Object.isFrozen(issue.configuration)).toBe(true);
+    expect(pullRequestConversation).toMatchObject({
+      commentBody: 'ciao',
+      issueNumber: 9,
+      commentId: 90,
+      locale: 'it',
+    });
     expect(pullRequest).toMatchObject({ commentBody: 'bonjour', issueNumber: 8, commentId: 80, locale: 'es' });
     expectDataOnly(issue);
+    expectDataOnly(pullRequestConversation);
     expectDataOnly(pullRequest);
   });
 

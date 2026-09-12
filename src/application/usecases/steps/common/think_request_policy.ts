@@ -16,6 +16,7 @@ export type ThinkRequestDecision =
     };
 
 export interface ThinkRequestSource {
+    readonly isPullRequest: boolean;
     readonly issue: {
         readonly commentBody: string;
         readonly isIssueComment: boolean;
@@ -53,14 +54,14 @@ export function resolveThinkRequest(
         : extractMentionQuestion(commentBody, param.tokenUser ?? '');
     if (!question) return { kind: 'skip', reason: 'empty-question' };
 
-    const isIssueComment = param.issue.isIssueComment;
+    const isPullRequestTarget = param.isPullRequest;
     return {
         kind: 'ready',
         commentBody,
         question,
-        issueNumberForContext: isIssueComment ? param.issue.number : param.issueNumber,
-        destinationNumber: isIssueComment ? param.issue.number : param.pullRequest.number,
-        destinationType: isIssueComment ? 'issue' : 'PR',
+        issueNumberForContext: isPullRequestTarget ? param.issueNumber : param.issue.number,
+        destinationNumber: isPullRequestTarget ? param.pullRequest.number : param.issue.number,
+        destinationType: isPullRequestTarget ? 'PR' : 'issue',
         ...(command.kind === 'command' ? { command: command.command } : {}),
     };
 }

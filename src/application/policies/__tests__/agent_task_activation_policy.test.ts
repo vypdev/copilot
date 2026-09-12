@@ -96,6 +96,8 @@ describe('activeAgentTasks', () => {
         expect(activeAgentTasks(event('issues', '', { action: 42 }), noSingleAction())).toEqual([]);
         expect(activeAgentTasks(event('issue_comment', '', { comment: null }), noSingleAction(), 'vypbot'))
             .toEqual([]);
+        expect(activeAgentTasks(event('issue_comment', '/copilot review', { issue: { pull_request: 'invalid' } }), noSingleAction(), 'vypbot'))
+            .toEqual(['findings']);
         expect(activeAgentTasks(event('unknown'), noSingleAction())).toEqual([]);
     });
 });

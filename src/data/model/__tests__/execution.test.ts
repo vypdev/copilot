@@ -292,6 +292,19 @@ describe('Execution', () => {
       expect(e.isIssue).toBe(true);
     });
 
+    it('classifies a PR conversation comment as a pull request target, not an issue target', () => {
+      const e = buildExecution({
+        eventName: 'issue_comment',
+        issue: { number: 362, pull_request: { url: 'https://api.github.com/repos/o/r/pulls/362' } },
+        comment: { body: '/copilot recheck' },
+      });
+
+      expect(e.isIssue).toBe(false);
+      expect(e.isPullRequest).toBe(true);
+      expect(e.pullRequest.number).toBe(362);
+      expect(e.issue.isIssueComment).toBe(true);
+    });
+
     it('isPullRequest returns true when pullRequest.isPullRequest is true', () => {
       const pullRequest = makePullRequest({ eventName: 'pull_request' });
       const e = buildExecution(undefined, { pullRequest });
@@ -510,6 +523,22 @@ describe('Execution', () => {
       await setupExecution(e);
       expect(e.issueNumber).toBe(42);
       expect(mockConfigGet).toHaveBeenCalledWith(314);
+    });
+
+    it('sets up a PR conversation comment from its exact payload number', async () => {
+      const e = buildExecution({
+        eventName: 'issue_comment',
+        repo: { owner: 'owner', repo: 'repository' },
+        issue: { number: 362, pull_request: { url: 'https://api.github.com/repos/owner/repository/pulls/362' } },
+        comment: { body: '/copilot recheck' },
+      });
+
+      await setupExecution(e);
+
+      expect(e.issueNumber).toBe(362);
+      expect(mockConfigGet).toHaveBeenCalledWith(362);
+      expect(mockGetLabels).toHaveBeenCalledWith(362);
+      expect(mockGetReleaseVersionInvoke).not.toHaveBeenCalled();
     });
 
     it('sets issueNumber from commit branch when isPush and not single action', async () => {

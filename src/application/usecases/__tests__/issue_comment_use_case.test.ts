@@ -94,7 +94,11 @@ function baseExecution(overrides: Partial<Execution> = {}): Execution {
   return {
     owner: "o",
     repo: "r",
+    eventName: "issue_comment",
     issueNumber: 296,
+    isIssue: true,
+    isPullRequest: false,
+    isPush: false,
     tokens: { token: "t" },
     issue: {
       isIssueComment: true,
@@ -112,7 +116,7 @@ function baseExecution(overrides: Partial<Execution> = {}): Execution {
     singleAction: { enabledSingleAction: false } as Execution["singleAction"],
     ai: new Ai("", "model", false, [], false, "low", 20),
     labels: {} as Execution["labels"],
-    locale: {} as Execution["locale"],
+    locale: { issue: "en", pullRequest: "en" } as Execution["locale"],
     sizeThresholds: {} as Execution["sizeThresholds"],
     branches: {} as Execution["branches"],
     release: {} as Execution["release"],
@@ -539,6 +543,54 @@ describe("IssueCommentUseCase", () => {
     expect(mockAutofixInvoke).not.toHaveBeenCalled();
     expect(mockDoUserRequestInvoke).not.toHaveBeenCalled();
     expect(mockThinkInvoke).toHaveBeenCalledTimes(1);
+  });
+
+  it("reviews the exact PR diff for a general PR-conversation recheck command", async () => {
+    const mockReview = jest.fn().mockResolvedValue([new Result({
+      id: "review",
+      success: true,
+      executed: true,
+    })]);
+    const routedUseCase = new IssueCommentUseCase(
+      { invoke: mockCheckLanguageInvoke } as never,
+      { invoke: mockDetectIntentInvoke } as never,
+      { invoke: mockThinkInvoke } as never,
+      { invoke: mockAutofixInvoke } as never,
+      { invoke: mockDoUserRequestInvoke } as never,
+      { isActorAllowedToModifyFiles: mockIsActorAllowedToModifyFiles },
+      {} as never,
+      undefined,
+      { invoke: mockReview } as never,
+    );
+    const execution = baseExecution({
+      issueNumber: 362,
+      isIssue: false,
+      isPullRequest: true,
+      issue: {
+        ...baseExecution().issue,
+        number: 362,
+        commentBody: "/copilot recheck",
+      } as never,
+      pullRequest: {
+        ...baseExecution().pullRequest,
+        number: 362,
+      } as never,
+      inputs: {
+        eventName: "issue_comment",
+        issue: { number: 362, pull_request: { url: "https://api.github.com/repos/o/r/pulls/362" } },
+      },
+    });
+
+    await routedUseCase.invoke(execution);
+
+    expect(mockReview).toHaveBeenCalledWith(expect.objectContaining({
+      target: expect.objectContaining({
+        isPullRequest: true,
+        pullRequestNumber: 362,
+      }),
+      trigger: expect.objectContaining({ kind: "issue_comment" }),
+    }));
+    expect(mockDetectIntentInvoke).not.toHaveBeenCalled();
   });
 
   it("binds optional description and branch-sync capabilities to the route execution", async () => {

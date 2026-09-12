@@ -15,9 +15,11 @@ function baseParam(overrides: Record<string, unknown> = {}) {
   return projectIssueCommentLanguageRequest({
     owner: 'o',
     repo: 'r',
+    isPullRequest: false,
     issue: { number: 1, commentId: 42, commentBody: 'Hello world' },
+    pullRequest: { number: -1 },
     tokens: { token: 't' },
-    locale: { issue: 'Spanish' },
+    locale: { issue: 'Spanish', pullRequest: 'French' },
     ai: { getAgentConfiguration: () => ({ provider: 'opencode', model: 'model' }) },
     ...overrides,
   } as never);
@@ -35,6 +37,19 @@ describe('CheckIssueCommentLanguageUseCase', () => {
     );
     mockAskAgent.mockReset();
     mockUpdateComment.mockReset();
+  });
+
+  it('projects PR-conversation comments with the PR locale and number', () => {
+    expect(baseParam({
+      isPullRequest: true,
+      issue: { number: 9, commentId: 90, commentBody: 'Review this' },
+      pullRequest: { number: 9 },
+    })).toMatchObject({
+      commentBody: 'Review this',
+      locale: 'French',
+      issueNumber: 9,
+      commentId: 90,
+    });
   });
 
   it('returns success executed false when commentBody is empty', async () => {

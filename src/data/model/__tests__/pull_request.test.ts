@@ -102,6 +102,42 @@ describe('PullRequest', () => {
     expect(p.isPullRequest).toBe(false);
   });
 
+  it('resolves a PR conversation comment from the issue payload marker', () => {
+    const p = new PullRequest(1, 2, {
+      eventName: 'issue_comment',
+      issue: { number: 44, pull_request: { url: 'https://api.github.com/repos/o/r/pulls/44' } },
+      comment: { id: 100, body: '/copilot recheck' },
+    });
+
+    expect(p.isPullRequestConversationComment).toBe(true);
+    expect(p.isPullRequest).toBe(true);
+    expect(p.number).toBe(44);
+  });
+
+  it('does not project an ordinary issue comment as a pull request', () => {
+    const p = new PullRequest(1, 2, {
+      eventName: 'issue_comment',
+      issue: { number: 45 },
+    });
+
+    expect(p.isPullRequestConversationComment).toBe(false);
+    expect(p.isPullRequest).toBe(false);
+    expect(p.number).toBe(-1);
+  });
+
+  it('rejects malformed PR markers on issue-comment payloads', () => {
+    for (const marker of [null, false, 'pull-request', []]) {
+      const p = new PullRequest(1, 2, {
+        eventName: 'issue_comment',
+        issue: { number: 45, pull_request: marker },
+      } as never);
+
+      expect(p.isPullRequestConversationComment).toBe(false);
+      expect(p.isPullRequest).toBe(false);
+      expect(p.number).toBe(-1);
+    }
+  });
+
   it('review comment fields from inputs.comment or pull_request_review_comment', () => {
     const inputs = {
       pull_request: pr,

@@ -8,7 +8,8 @@ export type MainRunRouteInput = ApplicationMainRunRouteInput;
 
 export function resolveMainRunRoute(input: MainRunRouteInput): MainRunRoute {
     if (input.isSingleAction) return 'single-action';
-    if (input.isIssue) return input.isIssueComment ? 'issue-comment' : 'issue';
+    if (input.isIssueComment) return 'issue-comment';
+    if (input.isIssue) return 'issue';
     if (input.isPullRequest) {
         return input.isPullRequestReviewComment ? 'pull-request-review-comment' : 'pull-request';
     }

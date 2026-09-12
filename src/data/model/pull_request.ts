@@ -1,5 +1,6 @@
 import type { EventCommentPayload, ExecutionInputs } from './execution_inputs';
 import { parsePositiveSafeInteger } from '../../domain/positive_integer_policy';
+import { isPullRequestConversationComment } from '../../domain/github_comment_target';
 
 export class PullRequest {
     desiredAssigneesCount: number;
@@ -27,6 +28,9 @@ export class PullRequest {
             ?? parsePositiveSafeInteger(this.inputs?.review?.pull_request?.number)
             ?? uniquePullRequestNumber(this.inputs?.check_suite?.pull_requests)
             ?? uniquePullRequestNumber(this.inputs?.workflow_run?.pull_requests)
+            ?? (this.isPullRequestConversationComment
+                ? parsePositiveSafeInteger(this.inputs?.issue?.number)
+                : undefined)
             ?? -1;
     }
 
@@ -75,12 +79,17 @@ export class PullRequest {
     }
 
     get isPullRequest(): boolean {
-        return [
+        return this.isPullRequestConversationComment || [
             'pull_request',
             'pull_request_review',
             'check_suite',
             'workflow_run',
         ].includes(this.inputs?.eventName ?? '');
+    }
+
+    /** GitHub delivers comments in a PR conversation through `issue_comment`. */
+    get isPullRequestConversationComment(): boolean {
+        return isPullRequestConversationComment(this.inputs);
     }
 
     get isPullRequestReviewComment(): boolean {

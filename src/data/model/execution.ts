@@ -74,7 +74,9 @@ export class Execution {
     }
 
     get isIssue(): boolean {
-        return this.issue.isIssue || this.issue.isIssueComment || this.singleAction.isIssue;
+        return this.issue.isIssue
+            || (this.issue.isIssueComment && !this.pullRequest.isPullRequestConversationComment)
+            || this.singleAction.isIssue;
     }
 
     get isPullRequest(): boolean {
