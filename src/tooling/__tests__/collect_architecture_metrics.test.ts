@@ -18,6 +18,9 @@ const {
   parseLcovInventory,
   runProcess,
 } = require("../../../scripts/collect-architecture-metrics.cjs");
+const {
+  signalPosixProcessGroup,
+} = require("../../../scripts/process-group-signal.cjs");
 
 function processExists(pid: number): boolean {
   try {
@@ -39,6 +42,48 @@ function waitForProcessExit(pid: number, timeoutMs: number): boolean {
 }
 
 describe("collect architecture metrics", () => {
+  it("keeps post-exit process-group cleanup idempotent on macOS", () => {
+    const permissionDenied = Object.assign(new Error("kill EPERM"), {
+      code: "EPERM",
+    });
+    const noSuchProcess = Object.assign(new Error("kill ESRCH"), {
+      code: "ESRCH",
+    });
+    const unexpected = Object.assign(new Error("kill EINVAL"), {
+      code: "EINVAL",
+    });
+    const kill = jest.fn<void, [number, NodeJS.Signals]>();
+
+    expect(signalPosixProcessGroup(kill, 42, "SIGKILL")).toBe(true);
+    expect(kill).toHaveBeenCalledWith(-42, "SIGKILL");
+
+    kill.mockImplementationOnce(() => {
+      throw noSuchProcess;
+    });
+    expect(signalPosixProcessGroup(kill, 42, "SIGKILL")).toBe(false);
+
+    kill.mockImplementationOnce(() => {
+      throw permissionDenied;
+    });
+    expect(
+      signalPosixProcessGroup(kill, 42, "SIGKILL", { leaderExited: true }),
+    ).toBe(false);
+
+    kill.mockImplementationOnce(() => {
+      throw permissionDenied;
+    });
+    expect(() => signalPosixProcessGroup(kill, 42, "SIGKILL")).toThrow(
+      permissionDenied,
+    );
+
+    kill.mockImplementationOnce(() => {
+      throw unexpected;
+    });
+    expect(() =>
+      signalPosixProcessGroup(kill, 42, "SIGKILL", { leaderExited: true }),
+    ).toThrow(unexpected);
+  });
+
   it("applies bounded command-specific timeouts", () => {
     expect(commandTimeout(["pnpm", "exec", "jest", "--coverage"])).toBe(
       600_000,
