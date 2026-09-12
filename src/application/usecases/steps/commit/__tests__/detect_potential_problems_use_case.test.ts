@@ -559,6 +559,25 @@ describe("DetectPotentialProblemsUseCase", () => {
     );
   });
 
+  it("fails presentation closed when an open PR has no trusted author bound", async () => {
+    mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
+    mockFindExactHeadCandidateNumbers.mockResolvedValue([100]);
+    mockGetPullRequestHeadSha.mockResolvedValue("abc123");
+
+    const results = await invokeUseCase(useCase, baseParam({ tokenUser: undefined }));
+
+    expect(results).toHaveLength(1);
+    expect(results[0].success).toBe(false);
+    expect(results[0].payload).toEqual(expect.objectContaining({
+      reviewProjection: expect.objectContaining({
+        errors: expect.arrayContaining([
+          "The authenticated Bugbot identity is unavailable.",
+        ]),
+      }),
+    }));
+    expect(mockAddComment).not.toHaveBeenCalled();
+  });
+
   it("rejects an event PR whose provider head is already stale", async () => {
     const eventSha = "a".repeat(40);
     const currentSha = "b".repeat(40);

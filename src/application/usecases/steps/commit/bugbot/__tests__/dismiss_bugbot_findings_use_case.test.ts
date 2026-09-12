@@ -101,4 +101,26 @@ describe('DismissBugbotFindingsUseCase', () => {
         expect(mockMarkFindingsResolved).not.toHaveBeenCalled();
         expect(results[0].success).toBe(true);
     });
+
+    it('loads the default context when no commit or pull-request branch is available', async () => {
+        const useCase = new DismissBugbotFindingsUseCase({
+            contextPorts: {} as never,
+            resolutionPorts: {} as never,
+        });
+        const request = operation();
+        const branchlessOperation: BugbotContextSelectionContext = {
+            ...request,
+            target: {
+                ...request.target,
+                commitBranch: '',
+                headBranch: '',
+            },
+        };
+
+        const results = await useCase.invoke({ operation: branchlessOperation, findingIds: ['missing'] });
+
+        expect(mockLoadBugbotContext.mock.calls[0][0].target.headRef).toBe('');
+        expect(mockMarkFindingsResolved).not.toHaveBeenCalled();
+        expect(results[0].success).toBe(true);
+    });
 });
