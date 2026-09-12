@@ -1,19 +1,22 @@
 import { Result } from "../../data/model/result";
 import type { Execution } from "../../data/model/execution";
-import type { AuthenticatedUserPort } from "../ports/authenticated_user_ports";
-import type { GitCommitPort } from "../ports/git_ports";
+import type { BugbotGitMutationPort } from "../ports/bugbot_git_ports";
 import type { CommentAutomationOptions } from "./comment_automation_contracts";
 import type { BugbotFixIntentPayload } from "./steps/commit/bugbot/bugbot_fix_intent_payload";
 import { commitAutofixAndResolveFindings } from "./steps/commit/bugbot/commit_autofix_and_resolve_workflow";
 import { commitUserRequestIfSuccessful } from "./steps/commit/bugbot/commit_user_request_workflow";
 import { logInfo } from "../ports/logging_ports";
 import { ApplicationError, toApplicationError } from "../errors/application_error";
+import {
+  projectBugbotAutofixOperationContext,
+  projectBugbotCommitContext,
+  projectBugbotReviewOperationContext,
+} from './steps/commit/bugbot/bugbot_review_operation_context';
 
 export type CommentAutomationAction = "autofix" | "do-user-request" | "review" | "think";
 
 export interface CommentAutomationActionPorts {
-  authenticatedUserPort: AuthenticatedUserPort;
-  gitCommitPort: GitCommitPort;
+  bugbotGitMutationPort: BugbotGitMutationPort;
 }
 
 /** Runs the selected mutating action and returns any result records it produces. */
@@ -43,7 +46,7 @@ async function runReviewAction(
     })];
   }
   logInfo("Running natural-language read-only review.");
-  return options.reviewPotentialProblemsUseCase.invoke(param);
+  return options.reviewPotentialProblemsUseCase.invoke(projectBugbotReviewOperationContext(param));
 }
 
 async function runAutofixAction(
@@ -64,18 +67,17 @@ async function runAutofixAction(
   }
   logInfo("Running bugbot autofix.");
   const autofixResults = await options.autofixUseCase.invoke({
-    execution: param,
+    operation: projectBugbotAutofixOperationContext(param),
     targetFindingIds: intentPayload.targetFindingIds,
     userComment: options.userComment,
     context: intentPayload.context,
     branchOverride: intentPayload.branchOverride,
   });
   const resolutionErrors = await commitAutofixAndResolveFindings(
-    param,
+    projectBugbotCommitContext(param),
     intentPayload,
     autofixResults,
-    ports.authenticatedUserPort,
-    ports.gitCommitPort,
+    ports.bugbotGitMutationPort,
   );
   if (resolutionErrors.length > 0) {
     autofixResults.push(
@@ -97,7 +99,9 @@ async function runAutofixAction(
   }
   if (autofixResults.at(-1)?.success && options.reviewPotentialProblemsUseCase) {
     logInfo('Running an independent post-autofix review because bot-authored push workflows are intentionally discarded.');
-    autofixResults.push(...await options.reviewPotentialProblemsUseCase.invoke(param));
+    autofixResults.push(...await options.reviewPotentialProblemsUseCase.invoke(
+      projectBugbotReviewOperationContext(param),
+    ));
   }
   return autofixResults;
 }
@@ -116,11 +120,10 @@ async function runDoUserRequestAction(
     branchOverride: intentPayload.branchOverride,
   });
   const commitResults = await commitUserRequestIfSuccessful(
-    param,
+    projectBugbotCommitContext(param),
     intentPayload.branchOverride,
     doResults,
-    ports.authenticatedUserPort,
-    ports.gitCommitPort,
+    ports.bugbotGitMutationPort,
   );
   return [...doResults, ...commitResults];
 }

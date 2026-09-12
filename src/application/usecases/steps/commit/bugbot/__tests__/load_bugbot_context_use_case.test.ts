@@ -62,6 +62,7 @@ function ports(
   overrides: Partial<BoundBugbotContextReadPorts> = {},
 ): BoundBugbotContextReadPorts {
   return {
+    getPullRequestReviewCommentBody: jest.fn().mockResolvedValue(null),
     getPullRequest: jest.fn().mockResolvedValue(identity),
     findOpenPullRequestsByExactHead: jest.fn().mockResolvedValue([identity]),
     listIssueComments: jest.fn().mockResolvedValue({

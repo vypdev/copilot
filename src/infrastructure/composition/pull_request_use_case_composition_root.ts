@@ -35,8 +35,9 @@ import { TimerDelayAdapter } from "../time/timer_delay_adapter";
 import { DetectPotentialProblemsUseCase } from "../../application/usecases/steps/commit/detect_potential_problems_use_case";
 import { createBugbotCompositionRoot } from "./bugbot_composition_root";
 import { createActorAuthorizationRepository } from './actor_authorization_composition_root';
+import type { BugbotScmBinding } from './bugbot_scm_port_factory';
 
-export function createPullRequestUseCaseCompositionRoot(): PullRequestUseCase {
+export function createPullRequestUseCaseCompositionRoot(binding: BugbotScmBinding): PullRequestUseCase {
   const issueLifecycle = new IssueLifecycleRepository(
     createIssueLifecycleClient(),
   );
@@ -51,7 +52,7 @@ export function createPullRequestUseCaseCompositionRoot(): PullRequestUseCase {
   const organizationMembers = createOrganizationMembersCompositionRoot();
 
   const projectBoard = createProjectBoardCompositionRoot();
-  const bugbot = createBugbotCompositionRoot();
+  const bugbot = createBugbotCompositionRoot(binding);
   const issueTitle = new IssueTitleRepository(createIssueTitleClient(), issueMetadata);
   const issueClosure = new IssueClosureRepository(issueLifecycle, issueContent);
   const issueAssignee = new IssueAssignmentRepository(createIssueAssignmentClient());
@@ -98,9 +99,7 @@ export function createPullRequestUseCaseCompositionRoot(): PullRequestUseCase {
     workflowSteps,
     new DetectPotentialProblemsUseCase(
       createFindingsQueryPort(),
-      bugbot.context,
-      bugbot.publication,
-      bugbot.resolution,
+      bugbot.scm,
       bugbot.telemetry,
     ),
     createActorAuthorizationRepository(),

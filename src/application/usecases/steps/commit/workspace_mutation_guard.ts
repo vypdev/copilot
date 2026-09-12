@@ -1,6 +1,6 @@
 import type { GitCommitPort } from '../../../ports/git_ports';
 import { ApplicationError } from '../../../errors/application_error';
-import { checkoutBranch } from './bugbot/git_branch_checkout';
+import { checkoutBranch } from './git_branch_checkout';
 import {
     isSensitiveWorkspacePath,
     listWorkspacePaths,
@@ -29,7 +29,10 @@ export async function prepareWorkspaceMutation(
 
     let branchCheckedOut = false;
     if (options.branch?.trim()) {
-        branchCheckedOut = await checkoutBranch(options.branch, gitCommitPort, options.token);
+        branchCheckedOut = await checkoutBranch(options.branch, {
+            execute: gitCommitPort.execute.bind(gitCommitPort),
+            fetch: (branch) => gitCommitPort.fetch(branch, options.token),
+        });
         if (!branchCheckedOut) {
             throw new ApplicationError(
                 'provider.unavailable',

@@ -10,8 +10,6 @@ const head = 'a'.repeat(40);
 
 function target(overrides: Partial<BugbotReconciliationTarget> = {}): BugbotReconciliationTarget {
   return {
-    owner: 'org',
-    repository: 'repo',
     pullRequestNumber: 10,
     analyzedHeadSha: head,
     trustedAuthorLogin: 'bugbot',
@@ -62,7 +60,7 @@ function harness() {
   return {
     ports: {
       comments: { addComment, updateComment },
-      reviews: { updatePullRequestReview },
+      updatePullRequestReview,
     },
     addComment,
     updateComment,
@@ -76,7 +74,6 @@ describe('synchronizeBugbotReviewPresentation', () => {
     const currentSnapshot = snapshot({ navigation: undefined });
     const result = await synchronizeBugbotReviewPresentation({
       target: target(),
-      credential: { token: 'token' },
       snapshot: currentSnapshot,
       plan: plan({ diagnostics: ['Unable to build safe Bugbot navigation links.'] }),
       ports: test.ports,
@@ -94,7 +91,6 @@ describe('synchronizeBugbotReviewPresentation', () => {
     const test = harness();
     const result = await synchronizeBugbotReviewPresentation({
       target: target(),
-      credential: { token: 'token' },
       snapshot: snapshot(),
       plan: plan(),
       ports: test.ports,
@@ -103,11 +99,8 @@ describe('synchronizeBugbotReviewPresentation', () => {
     expect(result.statusCardOperation).toBe('created');
     expect(result.projection.outcome).toBe('complete');
     expect(test.addComment).toHaveBeenCalledWith(
-      'org',
-      'repo',
       10,
       expect.stringContaining('No active findings'),
-      'token',
       { commitSha: head },
     );
   });
@@ -119,7 +112,6 @@ describe('synchronizeBugbotReviewPresentation', () => {
     });
     const result = await synchronizeBugbotReviewPresentation({
       target: target(),
-      credential: { token: 'token' },
       snapshot: currentSnapshot,
       plan: plan({ diagnostics: ['Unable to re-read the pull request conversation.'] }),
       ports: test.ports,
@@ -154,7 +146,6 @@ describe('synchronizeBugbotReviewPresentation', () => {
     });
     const result = await synchronizeBugbotReviewPresentation({
       target: target(),
-      credential: { token: 'token' },
       snapshot: currentSnapshot,
       plan: plan({ findings: [{ id: 'finding', state: 'open', title: 'Finding' }] }),
       ports: test.ports,
@@ -164,11 +155,8 @@ describe('synchronizeBugbotReviewPresentation', () => {
     expect(result.projection.outcome).toBe('partial');
     expect(result.errors[0]?.message).toBe('Unable to update Bugbot review 77.');
     expect(test.addComment).toHaveBeenCalledWith(
-      'org',
-      'repo',
       10,
       expect.stringContaining('could not fully synchronize'),
-      'token',
       { commitSha: head },
     );
   });
@@ -196,17 +184,15 @@ describe('synchronizeBugbotReviewPresentation', () => {
     });
     await synchronizeBugbotReviewPresentation({
       target: target(),
-      credential: { token: 'token' },
       snapshot: baseSnapshot,
       plan: currentPlan,
       ports: test.ports,
     });
-    const currentBody = test.updatePullRequestReview.mock.calls[0]?.[4] as string;
+    const currentBody = test.updatePullRequestReview.mock.calls[0]?.[2] as string;
     test.updatePullRequestReview.mockClear();
 
     const result = await synchronizeBugbotReviewPresentation({
       target: target(),
-      credential: { token: 'token' },
       snapshot: snapshot({
         ...baseSnapshot,
         reviews: [{
@@ -236,7 +222,6 @@ describe('synchronizeBugbotReviewPresentation', () => {
     });
     const result = await synchronizeBugbotReviewPresentation({
       target: target(),
-      credential: { token: 'token' },
       snapshot: currentSnapshot,
       plan: plan(),
       ports: test.ports,
@@ -245,12 +230,9 @@ describe('synchronizeBugbotReviewPresentation', () => {
     expect(result.statusCardOperation).toBe('updated');
     expect(test.updateComment).toHaveBeenCalledTimes(2);
     expect(test.updateComment).toHaveBeenCalledWith(
-      'org',
-      'repo',
       10,
       3,
       expect.stringContaining('no longer current'),
-      'token',
       { commitSha: head },
     );
   });
@@ -271,7 +253,6 @@ describe('synchronizeBugbotReviewPresentation', () => {
     });
     const result = await synchronizeBugbotReviewPresentation({
       target: target(),
-      credential: { token: 'token' },
       snapshot: currentSnapshot,
       plan: plan(),
       ports: test.ports,

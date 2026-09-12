@@ -35,6 +35,8 @@ const mockBugbot = {
   publication: { kind: "bugbot-publication" },
   resolution: { kind: "bugbot-resolution" },
 };
+const mockBugbotRoot = { scm: mockBugbot, telemetry: { kind: 'telemetry' } };
+const binding = { owner: 'owner', repository: 'repo', token: 'token' };
 
 const mockComposePullRequestUseCase = jest.fn(
   (..._arguments: unknown[]) => mockComposedUseCase,
@@ -55,7 +57,7 @@ const mockCreateOrganizationMembersCompositionRoot = jest.fn(
   () => mockOrganizationMembers,
 );
 const mockCreateProjectBoardCompositionRoot = jest.fn(() => mockProjectBoard);
-const mockCreateBugbotCompositionRoot = jest.fn(() => mockBugbot);
+const mockCreateBugbotCompositionRoot = jest.fn(() => mockBugbotRoot);
 const mockPullRequestLifecycleRepository = jest
   .fn()
   .mockReturnValueOnce(mockPullRequestLifecycle)
@@ -151,7 +153,7 @@ import { createPullRequestUseCaseCompositionRoot } from "../pull_request_use_cas
 
 describe("createPullRequestUseCaseCompositionRoot", () => {
   it("binds the dedicated reviewer capability and preserves shared lifecycle identity", () => {
-    const root = createPullRequestUseCaseCompositionRoot();
+    const root = createPullRequestUseCaseCompositionRoot(binding);
 
     expect(mockCreatePullRequestLifecycleClient).toHaveBeenCalledTimes(1);
     expect(mockPullRequestLifecycleRepository).toHaveBeenCalledTimes(1);

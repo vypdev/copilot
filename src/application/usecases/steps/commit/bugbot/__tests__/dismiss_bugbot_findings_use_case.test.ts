@@ -1,4 +1,5 @@
 import { DismissBugbotFindingsUseCase } from '../dismiss_bugbot_findings_use_case';
+import type { BugbotContextSelectionContext } from '../bugbot_review_operation_context';
 
 const mockLoadBugbotContext = jest.fn();
 const mockMarkFindingsResolved = jest.fn();
@@ -10,18 +11,23 @@ jest.mock('../mark_findings_resolved_workflow', () => ({
     markFindingsResolved: (...args: unknown[]) => mockMarkFindingsResolved(...args),
 }));
 
-function execution() {
+function operation(): BugbotContextSelectionContext {
     return {
-        owner: 'owner',
-        repo: 'repo',
-        issueNumber: 7,
-        tokens: { token: 'token' },
-        commit: { branch: 'feature/7' },
-        ai: {
-            getBugbotReviewConfiguration: () => ({ organizationRules: [] }),
-            getAiIgnoreFiles: () => [],
+        repository: { owner: 'owner', name: 'repo' },
+        target: {
+            issueNumber: 7,
+            isPullRequest: false,
+            pullRequestNumber: -1,
+            headBranch: 'feature/7',
+            commitBranch: 'feature/7',
+            baseBranch: 'develop',
+            pullRequestAction: '',
+            draft: false,
         },
-    } as never;
+        trigger: { kind: 'issue_comment', headOwner: 'owner' },
+        ignorePatterns: [],
+        organizationRules: [],
+    };
 }
 
 describe('DismissBugbotFindingsUseCase', () => {
@@ -44,11 +50,11 @@ describe('DismissBugbotFindingsUseCase', () => {
 
     it('dismisses only IDs that exist in persisted findings', async () => {
         const useCase = new DismissBugbotFindingsUseCase({
-            contextPorts: { loader: { bind: () => ({}) }, issue: {}, pullRequest: {} } as never,
+            contextPorts: {} as never,
             resolutionPorts: {} as never,
         });
 
-        const results = await useCase.invoke({ execution: execution(), findingIds: ['finding-1', 'missing'] });
+        const results = await useCase.invoke({ operation: operation(), findingIds: ['finding-1', 'missing'] });
 
         expect(mockMarkFindingsResolved).toHaveBeenCalledWith(expect.objectContaining({
             resolvedFindingIds: new Set(['finding-1']),
@@ -58,13 +64,63 @@ describe('DismissBugbotFindingsUseCase', () => {
 
     it('is an idempotent no-op when no requested finding exists', async () => {
         const useCase = new DismissBugbotFindingsUseCase({
-            contextPorts: { loader: { bind: () => ({}) }, issue: {}, pullRequest: {} } as never,
+            contextPorts: {} as never,
             resolutionPorts: {} as never,
         });
 
-        const results = await useCase.invoke({ execution: execution(), findingIds: ['missing'] });
+        const results = await useCase.invoke({ operation: operation(), findingIds: ['missing'] });
 
         expect(mockMarkFindingsResolved).not.toHaveBeenCalled();
         expect(results[0].steps[0]).toContain('nothing was dismissed');
+    });
+
+    it('uses the head fallback and PR override while ignoring an invalid finding id', async () => {
+        const useCase = new DismissBugbotFindingsUseCase({
+            contextPorts: {} as never,
+            resolutionPorts: {} as never,
+        });
+        const request = operation();
+        const fallbackOperation: BugbotContextSelectionContext = {
+            ...request,
+            target: {
+                ...request.target,
+                commitBranch: '',
+                headBranch: 'feature/from-pr',
+                pullRequestNumber: 19,
+            },
+        };
+
+        const results = await useCase.invoke({ operation: fallbackOperation, findingIds: ['\n'] });
+
+        expect(mockLoadBugbotContext).toHaveBeenCalledWith(expect.objectContaining({
+            target: expect.objectContaining({
+                headRef: 'feature/from-pr',
+                pullRequestSelection: { kind: 'event', number: 19 },
+            }),
+        }), expect.anything());
+        expect(mockMarkFindingsResolved).not.toHaveBeenCalled();
+        expect(results[0].success).toBe(true);
+    });
+
+    it('loads the default context when no commit or pull-request branch is available', async () => {
+        const useCase = new DismissBugbotFindingsUseCase({
+            contextPorts: {} as never,
+            resolutionPorts: {} as never,
+        });
+        const request = operation();
+        const branchlessOperation: BugbotContextSelectionContext = {
+            ...request,
+            target: {
+                ...request.target,
+                commitBranch: '',
+                headBranch: '',
+            },
+        };
+
+        const results = await useCase.invoke({ operation: branchlessOperation, findingIds: ['missing'] });
+
+        expect(mockLoadBugbotContext.mock.calls[0][0].target.headRef).toBe('');
+        expect(mockMarkFindingsResolved).not.toHaveBeenCalled();
+        expect(results[0].success).toBe(true);
     });
 });

@@ -25,6 +25,7 @@ import { BranchCompareRepository } from "../../data/repository/branch_compare_re
 import { RepositoryReleasePublicationRepository } from "../../data/repository/release/repository_release_publication_repository";
 import { RepositoryTagRepository } from "../../data/repository/release/repository_tag_repository";
 import { GitCommitAdapter } from "../git_commit_adapter";
+import { BoundBugbotGitMutationAdapter } from '../bound_bugbot_git_mutation_adapter';
 import { createActorAuthorizationRepository } from "./actor_authorization_composition_root";
 import {
   createFindingsQueryPort,
@@ -68,14 +69,14 @@ import { OctokitDeploymentClientAdapter } from "../github/octokit_deployment_ada
 import { WorkflowDispatchRepository } from "../../data/repository/workflow/workflow_dispatch_repository";
 import { createWorkflowDispatchClient } from "./github_workflow_client_factory";
 import { randomUUID } from "node:crypto";
+import type { BugbotScmBinding } from './bugbot_scm_port_factory';
+import type { Execution } from '../../data/model/execution';
 
-function createDetectPotentialProblemsUseCase(): DetectPotentialProblemsUseCase {
-  const bugbot = createBugbotCompositionRoot();
+function createDetectPotentialProblemsUseCase(binding: BugbotScmBinding): DetectPotentialProblemsUseCase {
+  const bugbot = createBugbotCompositionRoot(binding);
   return new DetectPotentialProblemsUseCase(
     createFindingsQueryPort(),
-    bugbot.context,
-    bugbot.publication,
-    bugbot.resolution,
+    bugbot.scm,
     bugbot.telemetry,
   );
 }
@@ -84,6 +85,7 @@ export type MainRunCompositionSurface = "github-workflow" | "local";
 
 export function createSingleActionUseCaseCompositionRoot(
   surface: MainRunCompositionSurface,
+  binding: BugbotScmBinding,
 ): SingleActionUseCase {
   const issueDescriptionQueryPort = createIssueContentCompositionRoot();
   const repositoryTagPort = surface === "github-workflow"
@@ -108,7 +110,7 @@ export function createSingleActionUseCaseCompositionRoot(
     ),
     createInitialSetupCompositionRoot(),
     createCheckProgressCompositionRoot(),
-    createDetectPotentialProblemsUseCase(),
+    createDetectPotentialProblemsUseCase(binding),
     new RecommendStepsUseCase(
       issueDescriptionQueryPort,
       createFindingsQueryPort(),
@@ -146,12 +148,14 @@ function createDeploymentOrchestrationUseCase(
   });
 }
 
-export function createIssueCommentUseCaseCompositionRoot(): IssueCommentUseCase {
-  const bugbot = createBugbotCompositionRoot();
+export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBinding): IssueCommentUseCase {
+  const bugbot = createBugbotCompositionRoot(binding);
   const findings = createFindingsQueryPort();
   const language = createLanguageQueryPort();
   const fixer = createFixerQueryPort();
   const gitCommit = new GitCommitAdapter();
+  const authenticatedUser = createAuthenticatedUserCompositionRoot();
+  const bugbotGit = new BoundBugbotGitMutationAdapter(gitCommit, authenticatedUser, binding.token);
   const pullRequestDescription = new UpdatePullRequestDescriptionUseCase(
     new PullRequestLifecycleRepository(createPullRequestLifecycleClient()),
     createIssueContentCompositionRoot(),
@@ -171,34 +175,35 @@ export function createIssueCommentUseCaseCompositionRoot(): IssueCommentUseCase 
       new CommentLanguageTranslationWorkflow(bugbot.issue, language),
     ),
     new DetectBugbotFixIntentUseCase(
-      bugbot.context.pullRequest,
       findings,
-      bugbot.context,
+      bugbot.scm.context,
     ),
     new ThinkUseCase(
       createIssueContentCompositionRoot(),
       createIssueNotificationRepository(),
       findings,
     ),
-    new BugbotAutofixUseCase(fixer, bugbot.context, gitCommit),
+    new BugbotAutofixUseCase(fixer, bugbot.scm.context, bugbotGit),
     new DoUserRequestUseCase(fixer, gitCommit),
     createActorAuthorizationRepository(),
-    createAuthenticatedUserCompositionRoot(),
     gitCommit,
-    new DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }),
-    new DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution, bugbot.telemetry),
+    bugbotGit,
+    new DismissBugbotFindingsUseCase({ contextPorts: bugbot.scm.context, resolutionPorts: bugbot.scm.resolution }),
+    new DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry),
     pullRequestDescription,
     new RememberBugbotRuleUseCase(bugbot.rules),
     branchSync,
   );
 }
 
-export function createPullRequestReviewCommentUseCaseCompositionRoot(): PullRequestReviewCommentUseCase {
-  const bugbot = createBugbotCompositionRoot();
+export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: BugbotScmBinding): PullRequestReviewCommentUseCase {
+  const bugbot = createBugbotCompositionRoot(binding);
   const findings = createFindingsQueryPort();
   const language = createLanguageQueryPort();
   const fixer = createFixerQueryPort();
   const gitCommit = new GitCommitAdapter();
+  const authenticatedUser = createAuthenticatedUserCompositionRoot();
+  const bugbotGit = new BoundBugbotGitMutationAdapter(gitCommit, authenticatedUser, binding.token);
   const pullRequestDescription = new UpdatePullRequestDescriptionUseCase(
     new PullRequestLifecycleRepository(createPullRequestLifecycleClient()),
     createIssueContentCompositionRoot(),
@@ -218,22 +223,21 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(): PullRequ
       new CommentLanguageTranslationWorkflow(bugbot.issue, language),
     ),
     new DetectBugbotFixIntentUseCase(
-      bugbot.context.pullRequest,
       findings,
-      bugbot.context,
+      bugbot.scm.context,
     ),
     new ThinkUseCase(
       createIssueContentCompositionRoot(),
       createIssueNotificationRepository(),
       findings,
     ),
-    new BugbotAutofixUseCase(fixer, bugbot.context, gitCommit),
+    new BugbotAutofixUseCase(fixer, bugbot.scm.context, bugbotGit),
     new DoUserRequestUseCase(fixer, gitCommit),
     createActorAuthorizationRepository(),
-    createAuthenticatedUserCompositionRoot(),
     gitCommit,
-    new DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }),
-    new DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution, bugbot.telemetry),
+    bugbotGit,
+    new DismissBugbotFindingsUseCase({ contextPorts: bugbot.scm.context, resolutionPorts: bugbot.scm.resolution }),
+    new DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry),
     pullRequestDescription,
     new RememberBugbotRuleUseCase(bugbot.rules),
     branchSync,
@@ -242,6 +246,7 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(): PullRequ
 
 export function createCommitUseCaseCompositionRoot(
   projectBoardCommandPort: ProjectBoardCommandPort,
+  binding: BugbotScmBinding,
 ): CommitUseCase {
   return new CommitUseCase(
     new NotifyNewCommitOnIssueUseCase(createIssueNotificationRepository()),
@@ -251,7 +256,7 @@ export function createCommitUseCaseCompositionRoot(
       new PullRequestLifecycleRepository(createPullRequestLifecycleClient()),
       new BranchCompareRepository(createBranchComparisonClient()),
     ),
-    createDetectPotentialProblemsUseCase(),
+    createDetectPotentialProblemsUseCase(binding),
     createCheckProgressCompositionRoot(),
     createActorAuthorizationRepository(),
   );
@@ -263,30 +268,48 @@ export function createMainRunRouteCompositionRoot(
 ): MainRunRouteHandlers {
   // Composition is scoped to one main run. Each route is built only when it is
   // actually selected, while repeated calls in the same run reuse its graph.
-  const singleAction = lazy(() => createSingleActionUseCaseCompositionRoot(surface));
-  const issueComment = lazy(() => createIssueCommentUseCaseCompositionRoot());
+  const singleAction = lazyWith((execution: Execution) =>
+    createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution)));
+  const issueComment = lazyWith((execution: Execution) =>
+    createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution)));
   const issue = lazy(() => createIssueUseCaseCompositionRoot());
-  const pullRequestReviewComment = lazy(() => createPullRequestReviewCommentUseCaseCompositionRoot());
-  const pullRequest = lazy(() => createPullRequestUseCaseCompositionRoot());
-  const push = lazy(() => createCommitUseCaseCompositionRoot(projectBoardCommandPort));
+  const pullRequestReviewComment = lazyWith((execution: Execution) =>
+    createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution)));
+  const pullRequest = lazyWith((execution: Execution) =>
+    createPullRequestUseCaseCompositionRoot(bugbotBinding(execution)));
+  const push = lazyWith((execution: Execution) =>
+    createCommitUseCaseCompositionRoot(projectBoardCommandPort, bugbotBinding(execution)));
 
   return {
     "single-action": async (execution) =>
-      singleAction().invoke(execution),
+      singleAction(execution).invoke(execution),
     "issue-comment": async (execution) =>
-      issueComment().invoke(execution),
+      issueComment(execution).invoke(execution),
     issue: async (execution) =>
       issue().invoke(execution),
     "pull-request-review-comment": async (execution) =>
-      pullRequestReviewComment().invoke(execution),
+      pullRequestReviewComment(execution).invoke(execution),
     "pull-request": async (execution) =>
-      pullRequest().invoke(execution),
+      pullRequest(execution).invoke(execution),
     push: async (execution) =>
-      push().invoke(execution),
+      push(execution).invoke(execution),
   };
 }
 
 function lazy<T>(factory: () => T): () => T {
   let value: T | undefined;
   return () => value ?? (value = factory());
+}
+
+function lazyWith<T, TArg>(factory: (arg: TArg) => T): (arg: TArg) => T {
+  let value: T | undefined;
+  return (arg) => value ?? (value = factory(arg));
+}
+
+function bugbotBinding(execution: Execution): BugbotScmBinding {
+  return {
+    owner: execution.owner,
+    repository: execution.repo,
+    token: execution.tokens.token,
+  };
 }

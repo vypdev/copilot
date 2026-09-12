@@ -60487,6 +60487,7 @@ const commit_autofix_and_resolve_workflow_1 = __nccwpck_require__(93455);
 const commit_user_request_workflow_1 = __nccwpck_require__(43393);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
+const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
 /** Runs the selected mutating action and returns any result records it produces. */
 async function runCommentAutomationAction(param, options, route, intentPayload, ports) {
     if (route === "review")
@@ -60507,7 +60508,7 @@ async function runReviewAction(param, options) {
             })];
     }
     (0, logging_ports_1.logInfo)("Running natural-language read-only review.");
-    return options.reviewPotentialProblemsUseCase.invoke(param);
+    return options.reviewPotentialProblemsUseCase.invoke((0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param));
 }
 async function runAutofixAction(param, options, intentPayload, ports) {
     if (!intentPayload)
@@ -60523,13 +60524,13 @@ async function runAutofixAction(param, options, intentPayload, ports) {
     }
     (0, logging_ports_1.logInfo)("Running bugbot autofix.");
     const autofixResults = await options.autofixUseCase.invoke({
-        execution: param,
+        operation: (0, bugbot_review_operation_context_1.projectBugbotAutofixOperationContext)(param),
         targetFindingIds: intentPayload.targetFindingIds,
         userComment: options.userComment,
         context: intentPayload.context,
         branchOverride: intentPayload.branchOverride,
     });
-    const resolutionErrors = await (0, commit_autofix_and_resolve_workflow_1.commitAutofixAndResolveFindings)(param, intentPayload, autofixResults, ports.authenticatedUserPort, ports.gitCommitPort);
+    const resolutionErrors = await (0, commit_autofix_and_resolve_workflow_1.commitAutofixAndResolveFindings)((0, bugbot_review_operation_context_1.projectBugbotCommitContext)(param), intentPayload, autofixResults, ports.bugbotGitMutationPort);
     if (resolutionErrors.length > 0) {
         autofixResults.push(new result_1.Result({
             id: `${options.taskId}.AutofixPostflight`,
@@ -60544,7 +60545,7 @@ async function runAutofixAction(param, options, intentPayload, ports) {
     }
     if (autofixResults.at(-1)?.success && options.reviewPotentialProblemsUseCase) {
         (0, logging_ports_1.logInfo)('Running an independent post-autofix review because bot-authored push workflows are intentionally discarded.');
-        autofixResults.push(...await options.reviewPotentialProblemsUseCase.invoke(param));
+        autofixResults.push(...await options.reviewPotentialProblemsUseCase.invoke((0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param)));
     }
     return autofixResults;
 }
@@ -60557,7 +60558,7 @@ async function runDoUserRequestAction(param, options, intentPayload, ports) {
         userComment: intentPayload.requestText?.trim() || options.userComment,
         branchOverride: intentPayload.branchOverride,
     });
-    const commitResults = await (0, commit_user_request_workflow_1.commitUserRequestIfSuccessful)(param, intentPayload.branchOverride, doResults, ports.authenticatedUserPort, ports.gitCommitPort);
+    const commitResults = await (0, commit_user_request_workflow_1.commitUserRequestIfSuccessful)((0, bugbot_review_operation_context_1.projectBugbotCommitContext)(param), intentPayload.branchOverride, doResults, ports.bugbotGitMutationPort);
     return [...doResults, ...commitResults];
 }
 
@@ -60580,9 +60581,10 @@ const commit_user_request_workflow_1 = __nccwpck_require__(43393);
 const workspace_mutation_guard_1 = __nccwpck_require__(24243);
 const branch_sync_comment_command_1 = __nccwpck_require__(4643);
 const application_error_1 = __nccwpck_require__(75999);
+const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
 const LEARNED_BUGBOT_RULE_PATH = '.copilot/BUGBOT.learned.md';
 /** Executes deterministic /copilot commands without routing them through intent detection. */
-async function runExplicitCommentCommand(param, options, command, actorAuthorizationPort, authenticatedUserPort) {
+async function runExplicitCommentCommand(param, options, command, actorAuthorizationPort) {
     if (command.name === 'help')
         return runHelpCommand(param, options);
     if (command.name === 'status')
@@ -60590,7 +60592,7 @@ async function runExplicitCommentCommand(param, options, command, actorAuthoriza
     if (command.name === 'dismiss')
         return runDismissCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'remember')
-        return runRememberCommand(param, options, command, actorAuthorizationPort, authenticatedUserPort);
+        return runRememberCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'description')
         return runDescriptionCommand(param, options, actorAuthorizationPort);
     if (command.name === 'sync-branch') {
@@ -60602,7 +60604,7 @@ async function runExplicitCommentCommand(param, options, command, actorAuthoriza
         return undefined;
     return runThinkCommand(param, options, command);
 }
-async function runRememberCommand(param, options, command, actorAuthorizationPort, authenticatedUserPort) {
+async function runRememberCommand(param, options, command, actorAuthorizationPort) {
     const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token);
     if (!allowed || !options.rememberBugbotRuleUseCase) {
         return [new result_1.Result({
@@ -60621,7 +60623,7 @@ async function runRememberCommand(param, options, command, actorAuthorizationPor
     catch (error) {
         return [rememberFailure(error)];
     }
-    const results = await options.rememberBugbotRuleUseCase.invoke({ execution: param, rule: command.arguments.join(' ') });
+    const results = await options.rememberBugbotRuleUseCase.invoke({ rule: command.arguments.join(' ') });
     if (!results.some((result) => result.executed))
         return results;
     try {
@@ -60636,7 +60638,7 @@ async function runRememberCommand(param, options, command, actorAuthorizationPor
     catch (error) {
         return [...results, rememberFailure(error)];
     }
-    const commitResults = await (0, commit_user_request_workflow_1.commitUserRequestIfSuccessful)(param, undefined, results, authenticatedUserPort, options.gitCommitPort);
+    const commitResults = await (0, commit_user_request_workflow_1.commitUserRequestIfSuccessful)((0, bugbot_review_operation_context_1.projectBugbotCommitContext)(param), undefined, results, options.bugbotGitMutationPort);
     return [...results, ...commitResults];
 }
 function rememberFailure(error) {
@@ -60687,7 +60689,7 @@ async function runDismissCommand(param, options, command, actorAuthorizationPort
             })];
     }
     return options.dismissBugbotFindingsUseCase.invoke({
-        execution: param,
+        operation: (0, bugbot_review_operation_context_1.projectBugbotContextSelectionContext)(param),
         findingIds: command.arguments,
     });
 }
@@ -60711,7 +60713,7 @@ async function runReviewCommand(param, options, command) {
         }));
         return results;
     }
-    const invokeReview = () => options.reviewPotentialProblemsUseCase.invoke(param);
+    const invokeReview = () => options.reviewPotentialProblemsUseCase.invoke((0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param));
     const reviewResults = await param.ai.withBugbotReviewConfiguration(parsedOptions.overrides, invokeReview);
     results.push(...reviewResults);
     return results;
@@ -60759,7 +60761,7 @@ async function completeCommentAutomation(param, options, decision, ports) {
     }
     return (0, comment_automation_action_workflow_1.runCommentAutomationAction)(param, options, decision.route, decision.intentPayload, {
         ...ports,
-        gitCommitPort: options.gitCommitPort,
+        bugbotGitMutationPort: options.bugbotGitMutationPort,
     });
 }
 function logUnauthorizedActionSkip(decision) {
@@ -60784,9 +60786,10 @@ const bugbot_fix_intent_payload_1 = __nccwpck_require__(25734);
 const comment_automation_route_policy_1 = __nccwpck_require__(47058);
 const copilot_comment_request_1 = __nccwpck_require__(86819);
 const copilot_command_1 = __nccwpck_require__(11771);
+const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
 async function resolveCommentAutomationDecision(param, options, actorAuthorizationPort) {
     (0, logging_ports_1.logInfo)("Running bugbot fix intent detection (before Think).");
-    const intentResults = await options.intentUseCase.invoke(param);
+    const intentResults = await options.intentUseCase.invoke((0, bugbot_review_operation_context_1.projectBugbotFixIntentContext)(param));
     const intentPayload = (0, bugbot_fix_intent_payload_1.getBugbotFixIntentPayload)(intentResults);
     const parsedCommand = (0, copilot_command_1.parseCopilotCommand)(options.userComment);
     const explicitMutationCommand = parsedCommand.kind === 'command'
@@ -60870,7 +60873,7 @@ const comment_automation_natural_language_workflow_1 = __nccwpck_require__(10554
 const application_error_1 = __nccwpck_require__(75999);
 const branch_sync_command_1 = __nccwpck_require__(51114);
 const branch_sync_comment_command_1 = __nccwpck_require__(4643);
-async function runCommentAutomation(param, options, actorAuthorizationPort, authenticatedUserPort) {
+async function runCommentAutomation(param, options, actorAuthorizationPort) {
     (0, logging_ports_1.logInfo)(`${options.taskId} started.`);
     let languageResults = [];
     try {
@@ -60889,22 +60892,18 @@ async function runCommentAutomation(param, options, actorAuthorizationPort, auth
             return [new result_1.Result({ id: options.taskId, success: true, executed: false })];
         }
         if (command.kind === 'command') {
-            const explicitResults = await (0, comment_automation_command_workflow_1.runExplicitCommentCommand)(param, options, command.command, actorAuthorizationPort, authenticatedUserPort);
+            const explicitResults = await (0, comment_automation_command_workflow_1.runExplicitCommentCommand)(param, options, command.command, actorAuthorizationPort);
             if (explicitResults)
                 return explicitResults;
             // Explicit fix/implement commands are already mention-gated by their
             // deterministic prefix and still flow through structured intent parsing.
-            return (0, comment_automation_natural_language_workflow_1.runNaturalLanguageCommentAutomation)(param, options, actorAuthorizationPort, [], {
-                authenticatedUserPort,
-            });
+            return (0, comment_automation_natural_language_workflow_1.runNaturalLanguageCommentAutomation)(param, options, actorAuthorizationPort, [], {});
         }
         if ((0, branch_sync_command_1.isNaturalLanguageBranchSyncRequest)(options.userComment, param.tokenUser ?? '')) {
             return (0, branch_sync_comment_command_1.runBranchSyncCommand)(param, options, [], actorAuthorizationPort);
         }
         languageResults = await options.languageUseCase.invoke(param);
-        return await (0, comment_automation_natural_language_workflow_1.runNaturalLanguageCommentAutomation)(param, options, actorAuthorizationPort, languageResults, {
-            authenticatedUserPort,
-        });
+        return await (0, comment_automation_natural_language_workflow_1.runNaturalLanguageCommentAutomation)(param, options, actorAuthorizationPort, languageResults, {});
     }
     catch (cause) {
         const semanticError = new application_error_1.ApplicationError('workflow.failed', "Comment automation failed.", { cause });
@@ -60933,6 +60932,7 @@ const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const application_error_1 = __nccwpck_require__(75999);
+const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
 class CommitUseCase {
     constructor(notifyNewCommitUseCase, checkChangesIssueSizeUseCase, detectPotentialProblemsUseCase, checkProgressUseCase, actorAuthorizationPort) {
         this.notifyNewCommitUseCase = notifyNewCommitUseCase;
@@ -60959,7 +60959,7 @@ class CommitUseCase {
                 || Boolean(this.actorAuthorizationPort && await this.actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token));
             if (agentAllowed) {
                 results.push(...(await this.checkProgressUseCase.invoke(param)));
-                results.push(...(await this.detectPotentialProblemsUseCase.invoke(param)));
+                results.push(...(await this.detectPotentialProblemsUseCase.invoke((0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param))));
             }
             else {
                 (0, logging_ports_1.logInfo)('Skipping push agent analysis because ai-members-only is enabled and the actor is not authorized.');
@@ -61438,15 +61438,15 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueCommentUseCase = void 0;
 const comment_automation_use_case_1 = __nccwpck_require__(9661);
 class IssueCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, authenticatedUserPort, gitCommitPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, gitCommitPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
         this.autofixUseCase = autofixUseCase;
         this.doUserRequestUseCase = doUserRequestUseCase;
         this.actorAuthorizationPort = actorAuthorizationPort;
-        this.authenticatedUserPort = authenticatedUserPort;
         this.gitCommitPort = gitCommitPort;
+        this.bugbotGitMutationPort = bugbotGitMutationPort;
         this.dismissBugbotFindingsUseCase = dismissBugbotFindingsUseCase;
         this.reviewPotentialProblemsUseCase = reviewPotentialProblemsUseCase;
         this.updatePullRequestDescriptionUseCase = updatePullRequestDescriptionUseCase;
@@ -61464,12 +61464,13 @@ class IssueCommentUseCase {
             doUserRequestUseCase: this.doUserRequestUseCase,
             userComment: param.issue.commentBody ?? "",
             gitCommitPort: this.gitCommitPort,
+            bugbotGitMutationPort: this.bugbotGitMutationPort,
             dismissBugbotFindingsUseCase: this.dismissBugbotFindingsUseCase,
             reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
             updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase,
             rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
             syncBranchUseCase: this.syncBranchUseCase,
-        }, this.actorAuthorizationPort, this.authenticatedUserPort);
+        }, this.actorAuthorizationPort);
     }
 }
 exports.IssueCommentUseCase = IssueCommentUseCase;
@@ -61606,15 +61607,15 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentUseCase = void 0;
 const comment_automation_use_case_1 = __nccwpck_require__(9661);
 class PullRequestReviewCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, authenticatedUserPort, gitCommitPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, gitCommitPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
         this.autofixUseCase = autofixUseCase;
         this.doUserRequestUseCase = doUserRequestUseCase;
         this.actorAuthorizationPort = actorAuthorizationPort;
-        this.authenticatedUserPort = authenticatedUserPort;
         this.gitCommitPort = gitCommitPort;
+        this.bugbotGitMutationPort = bugbotGitMutationPort;
         this.dismissBugbotFindingsUseCase = dismissBugbotFindingsUseCase;
         this.reviewPotentialProblemsUseCase = reviewPotentialProblemsUseCase;
         this.updatePullRequestDescriptionUseCase = updatePullRequestDescriptionUseCase;
@@ -61632,12 +61633,13 @@ class PullRequestReviewCommentUseCase {
             doUserRequestUseCase: this.doUserRequestUseCase,
             userComment: param.pullRequest.commentBody ?? "",
             gitCommitPort: this.gitCommitPort,
+            bugbotGitMutationPort: this.bugbotGitMutationPort,
             dismissBugbotFindingsUseCase: this.dismissBugbotFindingsUseCase,
             reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
             updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase,
             rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
             syncBranchUseCase: this.syncBranchUseCase,
-        }, this.actorAuthorizationPort, this.authenticatedUserPort);
+        }, this.actorAuthorizationPort);
     }
 }
 exports.PullRequestReviewCommentUseCase = PullRequestReviewCommentUseCase;
@@ -61688,6 +61690,7 @@ exports.runPullRequestWorkflow = runPullRequestWorkflow;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
+const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
 /** Coordinates pull-request lifecycle actions while preserving their sequential order. */
 async function runPullRequestWorkflow(param, taskId, ports) {
     try {
@@ -61755,7 +61758,7 @@ function shouldUpdatePullRequestDescriptionAutomatically(param) {
 async function runPullRequestReview(param, ports) {
     if (!ports.reviewPotentialProblemsUseCase || !shouldReviewPullRequest(param))
         return [];
-    return ports.reviewPotentialProblemsUseCase.invoke(param);
+    return ports.reviewPotentialProblemsUseCase.invoke((0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param));
 }
 function shouldReviewPullRequest(param) {
     return ['opened', 'reopened', 'synchronize'].includes(param.pullRequest.action);
@@ -61853,12 +61856,21 @@ exports.runSingleActionWorkflow = runSingleActionWorkflow;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
+const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
 async function runSingleActionWorkflow(param, taskId, ports) {
     if (!param.singleAction.validSingleAction) {
         (0, logging_ports_1.logDebugInfo)(`Single action is not valid: ${param.singleAction.currentSingleAction}. Skipping.`);
         return [];
     }
     (0, logging_ports_1.logDebugInfo)(`SingleAction: dispatching to handler for action: ${param.singleAction.currentSingleAction}.`);
+    if (param.singleAction.isDetectPotentialProblemsAction) {
+        try {
+            return await ports.detectPotentialProblemsUseCase.invoke((0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param));
+        }
+        catch (error) {
+            return singleActionFailure(param, taskId, error);
+        }
+    }
     const action = [
         { active: param.singleAction.isPublishGithubAction, useCase: ports.publishGithubActionUseCase },
         { active: param.singleAction.isCreateReleaseAction, useCase: ports.createReleaseUseCase },
@@ -61866,7 +61878,6 @@ async function runSingleActionWorkflow(param, taskId, ports) {
         { active: param.singleAction.isThinkAction, useCase: ports.thinkUseCase },
         { active: param.singleAction.isInitialSetupAction, useCase: ports.initialSetupUseCase },
         { active: param.singleAction.isCheckProgressAction, useCase: ports.checkProgressUseCase },
-        { active: param.singleAction.isDetectPotentialProblemsAction, useCase: ports.detectPotentialProblemsUseCase },
         { active: param.singleAction.isRecommendStepsAction, useCase: ports.recommendStepsUseCase },
         { active: param.singleAction.isCloseInactiveIssuesAction, useCase: ports.closeInactiveIssuesUseCase },
         { active: param.singleAction.isPublishIssueCommentAction, useCase: ports.publishIssueCommentUseCase },
@@ -61879,18 +61890,19 @@ async function runSingleActionWorkflow(param, taskId, ports) {
         return await action.useCase.invoke(param);
     }
     catch (error) {
-        const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', `Single action ${param.singleAction.currentSingleAction} failed.`);
-        (0, logging_ports_1.logError)(semanticError);
-        return [
-            new result_1.Result({
-                id: taskId,
-                success: false,
-                executed: true,
-                steps: [`Error executing single action: ${param.singleAction.currentSingleAction}.`],
-                errors: [semanticError],
-            }),
-        ];
+        return singleActionFailure(param, taskId, error);
     }
+}
+function singleActionFailure(param, taskId, error) {
+    const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', `Single action ${param.singleAction.currentSingleAction} failed.`);
+    (0, logging_ports_1.logError)(semanticError);
+    return [new result_1.Result({
+            id: taskId,
+            success: false,
+            executed: true,
+            steps: [`Error executing single action: ${param.singleAction.currentSingleAction}.`],
+            errors: [semanticError],
+        })];
 }
 
 
@@ -61951,10 +61963,10 @@ exports.applyDetectedFindings = applyDetectedFindings;
 const mark_findings_resolved_use_case_1 = __nccwpck_require__(96963);
 const publish_findings_use_case_1 = __nccwpck_require__(88442);
 const pull_request_review_errors_1 = __nccwpck_require__(46445);
-async function applyDetectedFindings(execution, context, prepared, publicationPorts, resolutionPorts) {
+async function applyDetectedFindings(operation, context, prepared, publicationPorts, resolutionPorts) {
     try {
         await (0, publish_findings_use_case_1.publishFindings)({
-            execution,
+            operation,
             context,
             findings: prepared.toPublish,
             commitSha: context.prContext?.prHeadSha ?? "",
@@ -61970,7 +61982,7 @@ async function applyDetectedFindings(execution, context, prepared, publicationPo
         return [publicationError];
     }
     const resolutionErrors = await (0, mark_findings_resolved_use_case_1.markFindingsResolved)({
-        execution,
+        operation,
         context,
         resolvedFindingIds: prepared.resolvedFindingIds,
         resolvedFindingResolutions: prepared.resolvedFindingResolutions,
@@ -61992,25 +62004,25 @@ exports.runBugbotAutofixCommitAndPush = runBugbotAutofixCommitAndPush;
 exports.runUserRequestCommitAndPush = runUserRequestCommitAndPush;
 const commit_message_policy_1 = __nccwpck_require__(85518);
 const commit_and_push_workflow_1 = __nccwpck_require__(53708);
-async function runBugbotAutofixCommitAndPush(execution, options, authenticatedUserPort, gitCommitPort) {
-    const branch = options?.branchOverride ?? execution.commit.branch;
-    return (0, commit_and_push_workflow_1.runCommitAndPushWorkflow)(execution, {
+async function runBugbotAutofixCommitAndPush(context, options, gitCommitPort) {
+    const branch = options?.branchOverride ?? context.branch;
+    return (0, commit_and_push_workflow_1.runCommitAndPushWorkflow)(context, {
         branch,
         branchOverride: Boolean(options?.branchOverride) && !options?.branchAlreadyCheckedOut,
         workspacePaths: options?.workspacePaths,
-        commitMessage: (0, commit_message_policy_1.buildBugbotCommitMessage)(execution.issueNumber, options?.targetFindingIds ?? []),
+        commitMessage: (0, commit_message_policy_1.buildBugbotCommitMessage)(context.issueNumber, options?.targetFindingIds ?? []),
         noChangesMessage: 'No changes to commit after autofix.',
-    }, authenticatedUserPort, gitCommitPort);
+    }, gitCommitPort);
 }
-async function runUserRequestCommitAndPush(execution, options, authenticatedUserPort, gitCommitPort) {
-    const branch = options?.branchOverride ?? execution.commit.branch;
-    return (0, commit_and_push_workflow_1.runCommitAndPushWorkflow)(execution, {
+async function runUserRequestCommitAndPush(context, options, gitCommitPort) {
+    const branch = options?.branchOverride ?? context.branch;
+    return (0, commit_and_push_workflow_1.runCommitAndPushWorkflow)(context, {
         branch,
         branchOverride: Boolean(options?.branchOverride) && !options?.branchAlreadyCheckedOut,
         workspacePaths: options?.workspacePaths,
-        commitMessage: (0, commit_message_policy_1.buildUserRequestCommitMessage)(execution.issueNumber),
+        commitMessage: (0, commit_message_policy_1.buildUserRequestCommitMessage)(context.issueNumber),
         noChangesMessage: 'No changes to commit after user request.',
-    }, authenticatedUserPort, gitCommitPort);
+    }, gitCommitPort);
 }
 
 
@@ -62069,26 +62081,21 @@ const finding_1 = __nccwpck_require__(31011);
 const build_bugbot_fix_prompt_1 = __nccwpck_require__(89819);
 const load_bugbot_context_use_case_1 = __nccwpck_require__(4050);
 const bugbot_context_request_1 = __nccwpck_require__(98299);
-const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
 const logging_ports_1 = __nccwpck_require__(6152);
 const workspace_mutation_guard_1 = __nccwpck_require__(24243);
 const application_error_1 = __nccwpck_require__(75999);
-async function prepareBugbotAutofix(execution, targetFindingIds, userComment, providedContext, branchOverride, contextPorts, gitCommitPort) {
+async function prepareBugbotAutofix(operation, targetFindingIds, userComment, providedContext, branchOverride, contextPorts, gitCommitPort) {
     const canonicalHint = providedContext?.canonicalPullRequest;
     const targetBranch = branchOverride?.trim() || canonicalHint?.headRef;
     const checkoutBranch = branchOverride?.trim()
-        || (!execution.commit.branch?.trim() ? canonicalHint?.headRef : undefined);
+        || (!operation.target.commitBranch ? canonicalHint?.headRef : undefined);
     let context;
     try {
-        context = await (0, load_bugbot_context_use_case_1.loadBugbotContext)((0, bugbot_context_request_1.projectBugbotContextRequest)((0, bugbot_review_operation_context_1.projectBugbotContextSelectionContext)(execution), {
+        context = await (0, load_bugbot_context_use_case_1.loadBugbotContext)((0, bugbot_context_request_1.projectBugbotContextRequest)(operation, {
             ...(targetBranch ? { branchOverride: targetBranch } : {}),
             ...(canonicalHint ? { pullRequestNumberOverride: canonicalHint.number } : {}),
             exactHeadPullRequestRequired: true,
-        }), contextPorts.loader.bind({
-            owner: execution.owner,
-            repository: execution.repo,
-            token: execution.tokens.token,
-        }));
+        }), contextPorts);
         if (!context.canonicalPullRequest) {
             throw new application_error_1.ApplicationError('workflow.stale', 'Bugbot autofix requires one verified canonical pull request.');
         }
@@ -62108,7 +62115,6 @@ async function prepareBugbotAutofix(execution, targetFindingIds, userComment, pr
         mutation = await (0, workspace_mutation_guard_1.prepareWorkspaceMutation)(gitCommitPort, {
             operation: 'Bugbot autofix',
             branch: checkoutBranch,
-            token: execution.tokens.token,
         });
     }
     catch (error) {
@@ -62116,8 +62122,8 @@ async function prepareBugbotAutofix(execution, targetFindingIds, userComment, pr
         (0, logging_ports_1.logError)(semanticError);
         return [failure(semanticError)];
     }
-    const verifyCommands = execution.ai.getBugbotFixVerifyCommands();
-    const prompt = (0, build_bugbot_fix_prompt_1.buildBugbotFixPrompt)(execution, context, idsToFix, userComment, verifyCommands);
+    const verifyCommands = [...operation.verifyCommands];
+    const prompt = (0, build_bugbot_fix_prompt_1.buildBugbotFixPrompt)(operation, context, idsToFix, userComment, verifyCommands);
     (0, logging_ports_1.logDebugInfo)(`BugbotAutofix: prompt length=${prompt.length}, target finding ids=${idsToFix.length}, verifyCommands=${verifyCommands.length}.`);
     return {
         context,
@@ -62191,17 +62197,17 @@ async function runBugbotAutofixWorkflow(param, dependencies) {
         (0, logging_ports_1.logDebugInfo)('No target finding ids; skipping autofix.');
         return [];
     }
-    if (!(0, agent_1.isAgentConfigurationReady)(param.execution.ai.getAgentConfiguration('fixer'))) {
+    if (!(0, agent_1.isAgentConfigurationReady)(param.operation.agentConfiguration)) {
         (0, logging_ports_1.logDebugInfo)('Agent not configured; skipping autofix.');
         return [];
     }
     try {
-        const preflight = await (0, bugbot_autofix_preflight_1.prepareBugbotAutofix)(param.execution, param.targetFindingIds, param.userComment, param.context, param.branchOverride, dependencies.contextPorts, dependencies.gitCommitPort);
+        const preflight = await (0, bugbot_autofix_preflight_1.prepareBugbotAutofix)(param.operation, param.targetFindingIds, param.userComment, param.context, param.branchOverride, dependencies.contextPorts, dependencies.gitCommitPort);
         if (Array.isArray(preflight))
             return preflight;
         (0, logging_ports_1.logInfo)('Running configured build agent to fix selected findings (changes applied in workspace).');
         const response = await dependencies.aiRepository.fix({
-            configuration: param.execution.ai.getAgentConfiguration('fixer'),
+            configuration: param.operation.agentConfiguration,
             prompt: preflight.prompt,
         });
         (0, logging_ports_1.logDebugInfo)(`BugbotAutofix: build agent response length=${response?.text?.length ?? 0}.`);
@@ -62651,38 +62657,17 @@ function isBot(author, botLogin) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.expectedBugbotHeadSha = expectedBugbotHeadSha;
 exports.isLoadedBugbotRevisionSuperseded = isLoadedBugbotRevisionSuperseded;
 exports.hasNewerBugbotRevision = hasNewerBugbotRevision;
-function expectedBugbotHeadSha(execution) {
-    // Comment-triggered reviews intentionally target the latest remote head:
-    // their payload SHA may predate an autofix committed in the same run.
-    const eventName = execution.eventName;
-    const candidate = eventName === 'pull_request'
-        ? execution.inputs?.pull_request?.head?.sha
-        : eventName === 'workflow_run'
-            ? execution.inputs?.workflow_run?.head_sha
-            : eventName === 'check_suite'
-                ? execution.inputs?.check_suite?.head_sha
-                : undefined;
-    return typeof candidate === 'string' && /^[0-9a-f]{7,64}$/iu.test(candidate.trim())
-        ? candidate.trim().toLowerCase()
-        : undefined;
-}
 function isLoadedBugbotRevisionSuperseded(context, expectedHeadSha) {
     return expectedHeadSha !== undefined && context.prContext !== null
         && context.prContext.prHeadSha.toLowerCase() !== expectedHeadSha;
 }
 /** Re-reads the remote head immediately before publication to close the analysis race window. */
-async function hasNewerBugbotRevision(execution, context, ports) {
+async function hasNewerBugbotRevision(context, ports) {
     if (!context.prContext || !context.canonicalPullRequest)
         return false;
-    const reader = ports.loader.bind({
-        owner: execution.owner,
-        repository: execution.repo,
-        token: execution.tokens.token,
-    });
-    const currentHead = await reader.getPullRequestHeadSha(context.canonicalPullRequest.number);
+    const currentHead = await ports.getPullRequestHeadSha(context.canonicalPullRequest.number);
     return currentHead !== undefined && currentHead.toLowerCase() !== context.prContext.prHeadSha.toLowerCase();
 }
 
@@ -62697,6 +62682,9 @@ async function hasNewerBugbotRevision(execution, context, ports) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectBugbotContextSelectionContext = projectBugbotContextSelectionContext;
 exports.projectBugbotReviewOperationContext = projectBugbotReviewOperationContext;
+exports.projectBugbotFixIntentContext = projectBugbotFixIntentContext;
+exports.projectBugbotAutofixOperationContext = projectBugbotAutofixOperationContext;
+exports.projectBugbotCommitContext = projectBugbotCommitContext;
 const positive_integer_policy_1 = __nccwpck_require__(19879);
 /** Copies only the non-secret facts required to select canonical Bugbot context. */
 function projectBugbotContextSelectionContext(source) {
@@ -62722,6 +62710,47 @@ function projectBugbotReviewOperationContext(source) {
         }),
     });
 }
+/** Copies only comment, target and agent facts needed for intent classification. */
+function projectBugbotFixIntentContext(source) {
+    const selection = projectBugbotContextSelectionContext(source);
+    const isPullRequestReviewComment = source.pullRequest.isPullRequestReviewComment === true;
+    const parentCommentId = (0, positive_integer_policy_1.parsePositiveSafeInteger)(source.pullRequest.commentInReplyToId);
+    return Object.freeze({
+        ...selection,
+        comment: Object.freeze({
+            body: isPullRequestReviewComment
+                ? source.pullRequest.commentBody ?? ''
+                : source.issue.isIssueComment === true
+                    ? source.issue.commentBody ?? ''
+                    : '',
+            isPullRequestReviewComment,
+            ...(parentCommentId ? { parentCommentId } : {}),
+        }),
+        agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('findings') }),
+    });
+}
+/** Copies only target, fixer and verification facts needed for one autofix. */
+function projectBugbotAutofixOperationContext(source) {
+    const configuredVerifyCommands = source.ai.getBugbotFixVerifyCommands();
+    return Object.freeze({
+        ...projectBugbotContextSelectionContext(source),
+        agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('fixer') }),
+        verifyCommands: Object.freeze(Array.isArray(configuredVerifyCommands)
+            ? [...configuredVerifyCommands]
+            : []),
+    });
+}
+/** Copies the complete authority-free input needed for commit verification. */
+function projectBugbotCommitContext(source) {
+    const configuredVerifyCommands = source.ai.getBugbotFixVerifyCommands();
+    return Object.freeze({
+        issueNumber: source.issueNumber,
+        branch: source.commit.branch?.trim() ?? '',
+        verifyCommands: Object.freeze(Array.isArray(configuredVerifyCommands)
+            ? [...configuredVerifyCommands]
+            : []),
+    });
+}
 function projectSelectionFacts(source, organizationRules) {
     const repositoryId = (0, positive_integer_policy_1.parsePositiveSafeInteger)(source.inputs?.repository?.id);
     const trustedAuthorLogin = source.tokenUser?.trim();
@@ -62731,6 +62760,7 @@ function projectSelectionFacts(source, organizationRules) {
         : commitBranch;
     const expectedHeadSha = normalizeExpectedHeadSha(source.eventName, source.inputs);
     const headOwner = source.inputs?.pull_request?.head?.repo?.owner?.login?.trim();
+    const configuredIgnorePatterns = source.ai.getAiIgnoreFiles();
     return Object.freeze({
         repository: Object.freeze({
             owner: source.owner,
@@ -62757,8 +62787,12 @@ function projectSelectionFacts(source, organizationRules) {
             headOwner: headOwner || source.owner,
         }),
         ...(trustedAuthorLogin ? { trustedAuthorLogin } : {}),
-        ignorePatterns: Object.freeze([...source.ai.getAiIgnoreFiles()]),
-        organizationRules: Object.freeze([...organizationRules]),
+        ignorePatterns: Object.freeze(Array.isArray(configuredIgnorePatterns)
+            ? [...configuredIgnorePatterns]
+            : []),
+        organizationRules: Object.freeze(Array.isArray(organizationRules)
+            ? [...organizationRules]
+            : []),
     });
 }
 function normalizeExpectedHeadSha(eventName, inputs) {
@@ -63088,11 +63122,11 @@ function truncateFindingBody(body, maxLength) {
  * strict scope rules, and the verify commands to run.
  */
 function buildBugbotFixPrompt(param, context, targetFindingIds, userComment, verifyCommands) {
-    const headBranch = param.pullRequest?.head?.trim() || param.commit?.branch || 'unknown';
-    const baseBranch = param.currentConfiguration.parentBranch ?? param.branches.development ?? "develop";
-    const issueNumber = param.issueNumber;
-    const owner = param.owner;
-    const repo = param.repo;
+    const headBranch = param.target.headBranch || param.target.commitBranch || 'unknown';
+    const baseBranch = param.target.baseBranch;
+    const issueNumber = param.target.issueNumber;
+    const owner = param.repository.owner;
+    const repo = param.repository.name;
     const prNumber = context.canonicalPullRequest?.number ?? null;
     const safeId = (id) => id.replace(/`/g, "\\`");
     const findingsBlock = targetFindingIds
@@ -63245,18 +63279,18 @@ function normalizedObjectId(value) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCommitAndPushPreflight = runCommitAndPushPreflight;
 const logging_ports_1 = __nccwpck_require__(6152);
-const git_branch_checkout_1 = __nccwpck_require__(76333);
+const git_branch_checkout_1 = __nccwpck_require__(68549);
 const verify_command_policy_1 = __nccwpck_require__(96031);
 const verify_command_runner_1 = __nccwpck_require__(57742);
 const workspace_changes_1 = __nccwpck_require__(93370);
-async function runCommitAndPushPreflight(execution, options, gitCommitPort) {
+async function runCommitAndPushPreflight(context, options, gitCommitPort) {
     if (!options.branch?.trim()) {
         return { status: "failure", error: "No branch to commit to." };
     }
-    if (options.branchOverride && !(await (0, git_branch_checkout_1.checkoutBranch)(options.branch, gitCommitPort, execution.tokens.token))) {
+    if (options.branchOverride && !(await (0, git_branch_checkout_1.checkoutBranch)(options.branch, gitCommitPort))) {
         return { status: "failure", error: `Failed to checkout branch ${options.branch}.` };
     }
-    const verification = await runVerification(execution, gitCommitPort);
+    const verification = await runVerification(context, gitCommitPort);
     if (verification)
         return { status: "failure", error: verification };
     if (!(await (0, workspace_changes_1.hasWorkspaceChanges)(gitCommitPort))) {
@@ -63267,8 +63301,8 @@ async function runCommitAndPushPreflight(execution, options, gitCommitPort) {
     }
     return { status: "ready" };
 }
-async function runVerification(execution, gitCommitPort) {
-    const configured = execution.ai.getBugbotFixVerifyCommands();
+async function runVerification(context, gitCommitPort) {
+    const configured = [...context.verifyCommands];
     const verifyCommands = (0, verify_command_policy_1.limitVerifyCommands)(Array.isArray(configured) ? configured : []);
     if (Array.isArray(configured) && configured.length > verify_command_policy_1.MAX_VERIFY_COMMANDS) {
         (0, logging_ports_1.logInfo)(`Limiting verify commands to ${verify_command_policy_1.MAX_VERIFY_COMMANDS} (configured: ${configured.length}).`);
@@ -63295,8 +63329,8 @@ exports.runCommitAndPushWorkflow = runCommitAndPushWorkflow;
 const logging_ports_1 = __nccwpck_require__(6152);
 const commit_and_push_preflight_1 = __nccwpck_require__(49629);
 const application_error_1 = __nccwpck_require__(75999);
-async function runCommitAndPushWorkflow(execution, options, authenticatedUserPort, gitCommitPort) {
-    const preflight = await (0, commit_and_push_preflight_1.runCommitAndPushPreflight)(execution, options, gitCommitPort);
+async function runCommitAndPushWorkflow(context, options, gitCommitPort) {
+    const preflight = await (0, commit_and_push_preflight_1.runCommitAndPushPreflight)(context, options, gitCommitPort);
     if (preflight.status === 'failure') {
         return { success: false, committed: false, error: preflight.error };
     }
@@ -63305,7 +63339,7 @@ async function runCommitAndPushWorkflow(execution, options, authenticatedUserPor
         return { success: true, committed: false };
     }
     try {
-        const { name, email } = await authenticatedUserPort.getTokenUserDetails(execution.tokens.token);
+        const { name, email } = await gitCommitPort.getAuthenticatedUserDetails();
         await gitCommitPort.configureAuthor(name, email);
         (0, logging_ports_1.logDebugInfo)(`Git author set to ${name} <${email}>.`);
         if (options.workspacePaths) {
@@ -63315,7 +63349,7 @@ async function runCommitAndPushWorkflow(execution, options, authenticatedUserPor
             await gitCommitPort.stageAll();
         }
         await gitCommitPort.commit(options.commitMessage);
-        await gitCommitPort.push(options.branch, execution.tokens.token);
+        await gitCommitPort.push(options.branch);
         (0, logging_ports_1.logInfo)(`Pushed commit to origin/${options.branch}.`);
         return { success: true, committed: true };
     }
@@ -63339,7 +63373,7 @@ exports.commitAutofixAndResolveFindings = commitAutofixAndResolveFindings;
 const logging_ports_1 = __nccwpck_require__(6152);
 const bugbot_autofix_commit_1 = __nccwpck_require__(98158);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
-async function commitAutofixAndResolveFindings(param, payload, autofixResults, authenticatedUserPort, gitCommitPort) {
+async function commitAutofixAndResolveFindings(context, payload, autofixResults, gitCommitPort) {
     const lastAutofix = autofixResults.at(-1);
     if (!lastAutofix?.success) {
         (0, logging_ports_1.logInfo)("Bugbot autofix did not succeed; skipping commit.");
@@ -63347,12 +63381,12 @@ async function commitAutofixAndResolveFindings(param, payload, autofixResults, a
     }
     (0, logging_ports_1.logInfo)("Bugbot autofix succeeded; running commit and push.");
     const autofixPayload = lastAutofix.payload;
-    const commitResult = await (0, bugbot_autofix_commit_1.runBugbotAutofixCommitAndPush)(param, {
+    const commitResult = await (0, bugbot_autofix_commit_1.runBugbotAutofixCommitAndPush)(context, {
         branchOverride: payload.branchOverride,
         branchAlreadyCheckedOut: autofixPayload?.branchCheckedOut,
         targetFindingIds: payload.targetFindingIds,
         workspacePaths: autofixPayload?.workspacePaths,
-    }, authenticatedUserPort, gitCommitPort);
+    }, gitCommitPort);
     if (!commitResult.success) {
         const message = (0, github_comment_publication_policy_1.sanitizePublishedError)(commitResult.error) || 'Commit or push failed after autofix.';
         (0, logging_ports_1.logInfo)(`Bugbot autofix commit failed: ${message}`);
@@ -63438,18 +63472,18 @@ const bugbot_autofix_commit_1 = __nccwpck_require__(98158);
 const result_1 = __nccwpck_require__(73817);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const application_error_1 = __nccwpck_require__(75999);
-async function commitUserRequestIfSuccessful(param, branchOverride, results, authenticatedUserPort, gitCommitPort) {
+async function commitUserRequestIfSuccessful(context, branchOverride, results, gitCommitPort) {
     if (!results.at(-1)?.success) {
         (0, logging_ports_1.logInfo)('Do user request did not succeed; skipping commit.');
         return [];
     }
     (0, logging_ports_1.logInfo)('Do user request succeeded; running commit and push.');
     const payload = results.at(-1)?.payload;
-    const commitResult = await (0, bugbot_autofix_commit_1.runUserRequestCommitAndPush)(param, {
+    const commitResult = await (0, bugbot_autofix_commit_1.runUserRequestCommitAndPush)(context, {
         branchOverride,
         branchAlreadyCheckedOut: payload?.branchCheckedOut,
         workspacePaths: payload?.workspacePaths,
-    }, authenticatedUserPort, gitCommitPort);
+    }, gitCommitPort);
     if (!commitResult.success) {
         const message = (0, github_comment_publication_policy_1.sanitizePublishedError)(commitResult.error) || 'Commit or push failed after user request.';
         return [new result_1.Result({
@@ -63570,8 +63604,7 @@ const detect_bugbot_fix_intent_workflow_1 = __nccwpck_require__(88390);
 const TASK_ID = "DetectBugbotFixIntentUseCase";
 /** Application boundary for detecting Bugbot fix intent in user comments. */
 class DetectBugbotFixIntentUseCase {
-    constructor(pullRequestQueryPort, aiRepository, contextPorts) {
-        this.pullRequestQueryPort = pullRequestQueryPort;
+    constructor(aiRepository, contextPorts) {
         this.aiRepository = aiRepository;
         this.contextPorts = contextPorts;
         this.taskId = TASK_ID;
@@ -63579,7 +63612,6 @@ class DetectBugbotFixIntentUseCase {
     async invoke(param) {
         (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         return (0, detect_bugbot_fix_intent_workflow_1.runDetectBugbotFixIntentWorkflow)(param, {
-            pullRequestQueryPort: this.pullRequestQueryPort,
             aiRepository: this.aiRepository,
             contextPorts: this.contextPorts,
         });
@@ -63605,18 +63637,17 @@ const copilot_command_1 = __nccwpck_require__(11771);
 const build_bugbot_fix_intent_prompt_1 = __nccwpck_require__(18799);
 const load_bugbot_context_use_case_1 = __nccwpck_require__(4050);
 const bugbot_context_request_1 = __nccwpck_require__(98299);
-const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
 const schema_1 = __nccwpck_require__(16808);
 const detect_bugbot_fix_intent_policy_1 = __nccwpck_require__(14796);
 const TASK_ID = "DetectBugbotFixIntentUseCase";
 /** Detects whether a comment requests a finding fix, repository change, or read-only review. */
 async function runDetectBugbotFixIntentWorkflow(param, ports) {
     const results = [];
-    if (param.issueNumber <= 0 && param.pullRequest.number <= 0) {
+    if (param.target.issueNumber <= 0 && param.target.pullRequestNumber <= 0) {
         (0, logging_ports_1.logInfo)("No issue or pull request number; skipping bugbot fix intent detection.");
         return results;
     }
-    const commentBody = (0, detect_bugbot_fix_intent_policy_1.selectBugbotCommentBody)(param);
+    const commentBody = param.comment.body;
     if (!commentBody?.trim()) {
         (0, logging_ports_1.logInfo)("No comment body; skipping bugbot fix intent detection.");
         return results;
@@ -63624,7 +63655,7 @@ async function runDetectBugbotFixIntentWorkflow(param, ports) {
     const explicitCommand = (0, copilot_command_1.parseCopilotCommand)(commentBody);
     const isExplicitFix = explicitCommand.kind === 'command' && explicitCommand.command.name === 'fix';
     const isExplicitImplement = explicitCommand.kind === 'command' && explicitCommand.command.name === 'implement';
-    if (!isExplicitFix && !isExplicitImplement && !(0, agent_1.isAgentConfigurationReady)(param.ai.getAgentConfiguration("findings"))) {
+    if (!isExplicitFix && !isExplicitImplement && !(0, agent_1.isAgentConfigurationReady)(param.agentConfiguration)) {
         (0, logging_ports_1.logInfo)("Agent not configured; skipping bugbot fix intent detection.");
         return results;
     }
@@ -63632,18 +63663,14 @@ async function runDetectBugbotFixIntentWorkflow(param, ports) {
     const contextOptions = branchOverride
         ? {
             branchOverride,
-            ...(param.pullRequest.number > 0 ? { pullRequestNumberOverride: param.pullRequest.number } : {}),
+            ...(param.target.pullRequestNumber > 0 ? { pullRequestNumberOverride: param.target.pullRequestNumber } : {}),
         }
         : undefined;
-    const context = await (0, load_bugbot_context_use_case_1.loadBugbotContext)((0, bugbot_context_request_1.projectBugbotContextRequest)((0, bugbot_review_operation_context_1.projectBugbotContextSelectionContext)(param), contextOptions), ports.contextPorts.loader.bind({
-        owner: param.owner,
-        repository: param.repo,
-        token: param.tokens.token,
-    }));
+    const context = await (0, load_bugbot_context_use_case_1.loadBugbotContext)((0, bugbot_context_request_1.projectBugbotContextRequest)(param, contextOptions), ports.contextPorts);
     const unresolvedWithBody = context.unresolvedFindingsWithBody ?? [];
     const unresolvedIds = new Set(unresolvedWithBody.map((finding) => finding.id));
     const unresolvedFindings = (0, detect_bugbot_fix_intent_policy_1.buildUnresolvedFindingSummaries)(unresolvedWithBody);
-    const parentCommentBody = await resolveParentCommentBody(param, ports.pullRequestQueryPort);
+    const parentCommentBody = await resolveParentCommentBody(param, ports.contextPorts);
     if (isExplicitImplement) {
         const requestText = explicitCommand.command.arguments.join(' ').trim();
         results.push(new result_1.Result({
@@ -63689,7 +63716,7 @@ async function runDetectBugbotFixIntentWorkflow(param, ports) {
     const prompt = (0, build_bugbot_fix_intent_prompt_1.buildBugbotFixIntentPrompt)(commentBody, unresolvedFindings, parentCommentBody);
     (0, logging_ports_1.logDebugInfo)(`DetectBugbotFixIntent: prompt length=${prompt.length}, unresolved findings=${unresolvedFindings.length}. Calling configured findings agent.`);
     const response = await ports.aiRepository.query({
-        configuration: param.ai.getAgentConfiguration("findings"),
+        configuration: param.agentConfiguration,
         agentId: agent_task_policy_1.AGENT_PLAN,
         prompt,
         options: {
@@ -63730,18 +63757,18 @@ async function runDetectBugbotFixIntentWorkflow(param, ports) {
     return results;
 }
 function resolveBranchOverride(param) {
-    const pullRequestBranch = param.pullRequest.isPullRequestReviewComment
-        ? param.pullRequest.head?.trim()
+    const pullRequestBranch = param.comment.isPullRequestReviewComment
+        ? param.target.headBranch.trim()
         : undefined;
     if (pullRequestBranch)
         return pullRequestBranch;
-    return param.commit.branch?.trim() || undefined;
+    return param.target.commitBranch.trim() || undefined;
 }
-async function resolveParentCommentBody(param, pullRequestQueryPort) {
-    if (!param.pullRequest.isPullRequestReviewComment || !param.pullRequest.commentInReplyToId) {
+async function resolveParentCommentBody(param, contextPorts) {
+    if (!param.comment.isPullRequestReviewComment || !param.comment.parentCommentId) {
         return undefined;
     }
-    const parentBody = await pullRequestQueryPort.getPullRequestReviewCommentBody(param.owner, param.repo, param.pullRequest.number, param.pullRequest.commentInReplyToId, param.tokens.token);
+    const parentBody = await contextPorts.getPullRequestReviewCommentBody(param.target.pullRequestNumber, param.comment.parentCommentId);
     return parentBody ?? undefined;
 }
 
@@ -63762,7 +63789,6 @@ const mark_findings_resolved_workflow_1 = __nccwpck_require__(65916);
 const bugbot_finding_marker_policy_1 = __nccwpck_require__(98024);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
-const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
 /** Dismisses only findings present in the current persisted Bugbot context. */
 class DismissBugbotFindingsUseCase {
     constructor(dependencies) {
@@ -63771,7 +63797,7 @@ class DismissBugbotFindingsUseCase {
     }
     async invoke(param) {
         try {
-            const context = await loadDismissContext(param.execution, this.dependencies.contextPorts);
+            const context = await loadDismissContext(param.operation, this.dependencies.contextPorts);
             const requestedIds = new Set(param.findingIds.flatMap(id => {
                 const normalized = (0, bugbot_finding_marker_policy_1.normalizeFindingIdForMarker)(id);
                 return normalized ? [normalized] : [];
@@ -63787,7 +63813,7 @@ class DismissBugbotFindingsUseCase {
                     })];
             }
             const errors = await (0, mark_findings_resolved_workflow_1.markFindingsResolved)({
-                execution: param.execution,
+                operation: param.operation,
                 context,
                 resolvedFindingIds: dismissibleIds,
                 resolvedFindingResolutions: new Map([...dismissibleIds].map(id => [id, 'dismissed'])),
@@ -63814,21 +63840,17 @@ class DismissBugbotFindingsUseCase {
     }
 }
 exports.DismissBugbotFindingsUseCase = DismissBugbotFindingsUseCase;
-async function loadDismissContext(execution, ports) {
-    const reviewContext = (0, bugbot_review_operation_context_1.projectBugbotContextSelectionContext)(execution);
-    const reader = ports.loader.bind({
-        owner: execution.owner,
-        repository: execution.repo,
-        token: execution.tokens.token,
-    });
-    const branch = execution.commit.branch?.trim() || execution.pullRequest?.head?.trim();
+async function loadDismissContext(operation, ports) {
+    const branch = operation.target.commitBranch || operation.target.headBranch;
     if (branch) {
-        return (0, load_bugbot_context_use_case_1.loadBugbotContext)((0, bugbot_context_request_1.projectBugbotContextRequest)(reviewContext, {
+        return (0, load_bugbot_context_use_case_1.loadBugbotContext)((0, bugbot_context_request_1.projectBugbotContextRequest)(operation, {
             branchOverride: branch,
-            ...(execution.pullRequest?.number > 0 ? { pullRequestNumberOverride: execution.pullRequest.number } : {}),
-        }), reader);
+            ...(operation.target.pullRequestNumber > 0
+                ? { pullRequestNumberOverride: operation.target.pullRequestNumber }
+                : {}),
+        }), ports);
     }
-    return (0, load_bugbot_context_use_case_1.loadBugbotContext)((0, bugbot_context_request_1.projectBugbotContextRequest)(reviewContext), reader);
+    return (0, load_bugbot_context_use_case_1.loadBugbotContext)((0, bugbot_context_request_1.projectBugbotContextRequest)(operation), ports);
 }
 
 
@@ -63898,67 +63920,6 @@ function fileMatchesIgnorePatterns(filePath, ignorePatterns) {
         return false;
     const regexes = getCachedRegexes(ignorePatterns);
     return regexes.some((regex) => regex.test(normalized));
-}
-
-
-/***/ }),
-
-/***/ 76333:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.checkoutBranch = checkoutBranch;
-const logging_ports_1 = __nccwpck_require__(6152);
-const application_error_1 = __nccwpck_require__(75999);
-const STASH_MESSAGE = "bugbot-autofix-before-checkout";
-async function hasUncommittedChanges(gitCommitPort) {
-    let output = "";
-    await gitCommitPort.execute("git", ["status", "--porcelain"], {
-        stdout: (data) => {
-            output += data.toString();
-        },
-    });
-    return output.trim().length > 0;
-}
-/** Infrastructure boundary for checking out a branch without losing workspace changes. */
-async function checkoutBranch(branch, gitCommitPort, token) {
-    let didStash = false;
-    try {
-        didStash = await stashWorkspaceChanges(gitCommitPort);
-        await gitCommitPort.fetch(branch, token);
-        await gitCommitPort.execute("git", ["checkout", branch]);
-        (0, logging_ports_1.logInfo)(`Checked out branch ${branch}.`);
-        return didStash ? restoreStashedChanges(gitCommitPort) : true;
-    }
-    catch (err) {
-        const semanticError = (0, application_error_1.toApplicationError)(err, 'workflow.failed', `Failed to checkout branch ${branch}.`);
-        (0, logging_ports_1.logError)(semanticError);
-        if (didStash)
-            (0, logging_ports_1.logError)("Changes were stashed; run 'git stash pop' manually to restore them.");
-        return false;
-    }
-}
-async function stashWorkspaceChanges(gitCommitPort) {
-    if (!await hasUncommittedChanges(gitCommitPort))
-        return false;
-    (0, logging_ports_1.logDebugInfo)("Uncommitted changes present; stashing before checkout.");
-    await gitCommitPort.execute("git", ["stash", "push", "-u", "-m", STASH_MESSAGE]);
-    return true;
-}
-async function restoreStashedChanges(gitCommitPort) {
-    try {
-        await gitCommitPort.execute("git", ["stash", "pop"]);
-        (0, logging_ports_1.logDebugInfo)("Restored stashed changes after checkout.");
-        return true;
-    }
-    catch (error) {
-        const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Failed to restore stashed changes after checkout.');
-        (0, logging_ports_1.logError)(semanticError);
-        (0, logging_ports_1.logError)("Changes remain stashed; run 'git stash pop' manually to restore them.");
-        return false;
-    }
 }
 
 
@@ -64171,12 +64132,12 @@ const pull_request_review_errors_1 = __nccwpck_require__(46445);
  * run concurrently, while the second guard rejects data collected across a
  * pull-request revision change.
  */
-async function loadBugbotReconciliationSnapshot(target, credential, ports) {
-    const initialHeadSha = await readHead(target, credential, ports);
+async function loadBugbotReconciliationSnapshot(target, ports) {
+    const initialHeadSha = await readHead(target, ports);
     if (!initialHeadSha || initialHeadSha !== target.analyzedHeadSha) {
         return superseded(target, initialHeadSha);
     }
-    const conversationPromise = ports.issueComments.listIssueComments(target.owner, target.repository, target.pullRequestNumber, credential.token);
+    const conversationPromise = ports.listIssueComments(target.pullRequestNumber);
     const linkedIssueNumber = target.linkedIssueNumber;
     const linkedIssueSharesConversation = linkedIssueNumber !== undefined
         && linkedIssueNumber === target.pullRequestNumber;
@@ -64184,22 +64145,22 @@ async function loadBugbotReconciliationSnapshot(target, credential, ports) {
         ? Promise.resolve([])
         : linkedIssueSharesConversation
             ? conversationPromise
-            : ports.issueComments.listIssueComments(target.owner, target.repository, linkedIssueNumber, credential.token);
+            : ports.listIssueComments(linkedIssueNumber);
     const [commentsRead, threadsRead, reviewsRead, conversationRead, linkedIssueRead] = await Promise.allSettled([
-        ports.pullRequest.listPullRequestReviewComments(target.owner, target.repository, target.pullRequestNumber, credential.token),
-        ports.pullRequest.listPullRequestReviewThreadStates(target.owner, target.repository, target.pullRequestNumber, credential.token),
-        ports.reviews.listPullRequestReviews(target.owner, target.repository, target.pullRequestNumber, credential.token),
+        ports.listPullRequestReviewComments(target.pullRequestNumber),
+        ports.listPullRequestReviewThreadStates(target.pullRequestNumber),
+        ports.listPullRequestReviews(target.pullRequestNumber),
         conversationPromise,
         linkedIssuePromise,
     ]);
-    const finalHeadSha = await readHead(target, credential, ports);
+    const finalHeadSha = await readHead(target, ports);
     if (!finalHeadSha || finalHeadSha !== target.analyzedHeadSha) {
         return superseded(target, finalHeadSha);
     }
     let navigation;
     let navigationState = 'verified';
     try {
-        navigation = ports.navigation.forPullRequest(target.owner, target.repository, target.pullRequestNumber, finalHeadSha);
+        navigation = ports.navigationForPullRequest(target.pullRequestNumber, finalHeadSha);
     }
     catch {
         navigationState = 'failed';
@@ -64232,9 +64193,9 @@ async function loadBugbotReconciliationSnapshot(target, credential, ports) {
         },
     };
 }
-async function readHead(target, credential, ports) {
+async function readHead(target, ports) {
     try {
-        return await ports.pullRequest.getPullRequestHeadSha(target.owner, target.repository, target.pullRequestNumber, credential.token);
+        return await ports.getPullRequestHeadSha(target.pullRequestNumber);
     }
     catch {
         throw new pull_request_review_errors_1.PullRequestReviewOperationError('get-head-sha');
@@ -64285,7 +64246,7 @@ const application_error_1 = __nccwpck_require__(75999);
 async function markFindingsResolved(param) {
     const errors = [];
     for (const [findingId, existing] of Object.entries(param.context.existingByFindingId)) {
-        await repairExistingPullRequestFinding(param.ports, param.execution, findingId, existing.pullRequest, errors);
+        await repairExistingPullRequestFinding(param.ports, param.operation, findingId, existing.pullRequest, errors);
         if (!param.resolvedFindingIds.has(findingId))
             continue;
         await resolvePullRequestIfNeeded(param, findingId, existing.pullRequest, errors);
@@ -64293,20 +64254,20 @@ async function markFindingsResolved(param) {
     }
     return errors;
 }
-async function repairExistingPullRequestFinding(ports, execution, findingId, destination, errors) {
+async function repairExistingPullRequestFinding(ports, operation, findingId, destination, errors) {
     if (destination == null)
         return;
     if (destination.resolution === 'dismissed' && destination.threadResolved === true) {
-        await tryResolvePullRequestFinding(ports, execution, findingId, destination, errors, 'dismissed');
+        await tryResolvePullRequestFinding(ports, findingId, destination, errors, 'dismissed');
         return;
     }
     if (!destination.resolved
         && destination.threadResolved === true
         && destination.threadResolvedByLogin != null
-        && execution.tokenUser?.trim()
-        && !(0, review_state_1.isHumanResolver)(destination.threadResolvedByLogin, execution.tokenUser)) {
+        && operation.trustedAuthorLogin?.trim()
+        && !(0, review_state_1.isHumanResolver)(destination.threadResolvedByLogin, operation.trustedAuthorLogin)) {
         try {
-            await ports.pullRequestComments.unresolvePullRequestReviewThread(execution.owner, execution.repo, destination.pullRequestNumber, destination.commentIdentity, execution.tokens.token);
+            await ports.pullRequestComments.unresolvePullRequestReviewThread(destination.pullRequestNumber, destination.commentIdentity);
         }
         catch {
             addResolutionError(errors, 'pull request');
@@ -64315,7 +64276,7 @@ async function repairExistingPullRequestFinding(ports, execution, findingId, des
 }
 async function resolvePullRequestIfNeeded(param, findingId, destination, errors) {
     if (destination != null && (!destination.resolved || destination.verificationRequired === true)) {
-        await tryResolvePullRequestFinding(param.ports, param.execution, findingId, destination, errors, param.resolvedFindingResolutions?.get(findingId));
+        await tryResolvePullRequestFinding(param.ports, findingId, destination, errors, param.resolvedFindingResolutions?.get(findingId));
     }
 }
 async function resolveIssueIfNeeded(param, findingId, destination, errors) {
@@ -64330,10 +64291,7 @@ async function resolveIssueIfNeeded(param, findingId, destination, errors) {
         await (0, resolve_issue_finding_1.resolveIssueFinding)(param.ports.issueComments, {
             findingId,
             comment: { id: comment.id, body: comment.body },
-            owner: param.execution.owner,
-            repo: param.execution.repo,
-            issueNumber: param.execution.issueNumber,
-            token: param.execution.tokens.token,
+            issueNumber: param.operation.target.issueNumber,
             resolution: param.resolvedFindingResolutions?.get(findingId),
         });
     }
@@ -64341,15 +64299,12 @@ async function resolveIssueIfNeeded(param, findingId, destination, errors) {
         addResolutionError(errors, 'issue');
     }
 }
-async function tryResolvePullRequestFinding(ports, execution, findingId, destination, errors, resolution) {
+async function tryResolvePullRequestFinding(ports, findingId, destination, errors, resolution) {
     try {
         await (0, resolve_pull_request_finding_1.resolvePullRequestFinding)(ports.pullRequestComments, {
             findingId,
             commentIdentity: destination.commentIdentity,
             pullRequestNumber: destination.pullRequestNumber,
-            owner: execution.owner,
-            repo: execution.repo,
-            token: execution.tokens.token,
             resolution,
         });
     }
@@ -64619,15 +64574,15 @@ const publish_issue_finding_comment_1 = __nccwpck_require__(84950);
 const publish_pr_review_comments_1 = __nccwpck_require__(50352);
 const publish_overflow_comment_1 = __nccwpck_require__(10974);
 async function publishFindings(param) {
-    const { execution, context, findings, commitSha, overflowCount = 0, overflowTitles = [], ports } = param;
+    const { operation, context, findings, commitSha, overflowCount = 0, overflowTitles = [], ports } = param;
     const { existingByFindingId, canonicalPullRequest, prContext } = context;
-    const watermark = commitSha && execution.owner && execution.repo
-        ? (0, comment_watermark_1.getCommentWatermark)({ commitSha, owner: execution.owner, repo: execution.repo })
+    const watermark = commitSha
+        ? (0, comment_watermark_1.getCommentWatermark)({ commitSha, owner: operation.repository.owner, repo: operation.repository.name })
         : (0, comment_watermark_1.getCommentWatermark)();
     const reviewPublisher = prContext && canonicalPullRequest
         ? new publish_pr_review_comments_1.PullRequestReviewCommentPublisher({
             repository: ports.pullRequestComments,
-            execution,
+            operation,
             openPrNumber: canonicalPullRequest.number,
             prContext,
             watermark,
@@ -64636,16 +64591,16 @@ async function publishFindings(param) {
         })
         : undefined;
     for (const finding of findings) {
-        if (execution.issueNumber > 0 && !reviewPublisher) {
-            await (0, publish_issue_finding_comment_1.publishIssueFindingComment)(ports.issueComments, execution, finding, (0, finding_1.findExistingFindingInfo)(existingByFindingId, finding), commitSha);
+        if (operation.target.issueNumber > 0 && !reviewPublisher) {
+            await (0, publish_issue_finding_comment_1.publishIssueFindingComment)(ports.issueComments, operation.target.issueNumber, finding, (0, finding_1.findExistingFindingInfo)(existingByFindingId, finding), commitSha);
         }
         if (reviewPublisher) {
             await reviewPublisher.publish(finding, (0, finding_1.findExistingFindingInfo)(existingByFindingId, finding));
         }
     }
     await reviewPublisher?.flush(overflowCount, overflowTitles);
-    if (execution.issueNumber > 0 && !reviewPublisher) {
-        await (0, publish_overflow_comment_1.publishOverflowComment)(ports.issueComments, execution, overflowCount, overflowTitles, commitSha);
+    if (operation.target.issueNumber > 0 && !reviewPublisher) {
+        await (0, publish_overflow_comment_1.publishOverflowComment)(ports.issueComments, operation.target.issueNumber, overflowCount, overflowTitles, commitSha);
     }
 }
 
@@ -64661,15 +64616,15 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.publishIssueFindingComment = publishIssueFindingComment;
 const bugbot_finding_marker_policy_1 = __nccwpck_require__(98024);
 const logging_ports_1 = __nccwpck_require__(6152);
-async function publishIssueFindingComment(repository, execution, finding, existing, commitSha) {
+async function publishIssueFindingComment(repository, issueNumber, finding, existing, commitSha) {
     const body = (0, bugbot_finding_marker_policy_1.buildCommentBody)(finding, false);
     const options = commitSha ? { commitSha } : undefined;
     if (existing?.issue != null) {
-        await repository.updateComment(execution.owner, execution.repo, execution.issueNumber, existing.issue.commentId, body, execution.tokens.token, options);
+        await repository.updateComment(issueNumber, existing.issue.commentId, body, options);
         (0, logging_ports_1.logDebugInfo)(`Updated bugbot comment for finding ${finding.id} on issue.`);
         return;
     }
-    await repository.addComment(execution.owner, execution.repo, execution.issueNumber, body, execution.tokens.token, options);
+    await repository.addComment(issueNumber, body, options);
     (0, logging_ports_1.logDebugInfo)(`Added bugbot comment for finding ${finding.id} on issue.`);
 }
 
@@ -64684,7 +64639,7 @@ async function publishIssueFindingComment(repository, execution, finding, existi
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.publishOverflowComment = publishOverflowComment;
 const logging_ports_1 = __nccwpck_require__(6152);
-async function publishOverflowComment(repository, execution, overflowCount, overflowTitles, commitSha) {
+async function publishOverflowComment(repository, issueNumber, overflowCount, overflowTitles, commitSha) {
     if (overflowCount <= 0)
         return;
     const titlesList = overflowTitles.length > 0
@@ -64693,7 +64648,7 @@ async function publishOverflowComment(repository, execution, overflowCount, over
     const body = `## More findings (comment limit)
 
 There are **${overflowCount}** more finding(s) that were not published as individual comments. Review locally or in the full diff to see the list.${titlesList}`;
-    await repository.addComment(execution.owner, execution.repo, execution.issueNumber, body, execution.tokens.token, commitSha ? { commitSha } : undefined);
+    await repository.addComment(issueNumber, body, commitSha ? { commitSha } : undefined);
     (0, logging_ports_1.logDebugInfo)(`Added overflow comment: ${overflowCount} additional finding(s) not published individually.`);
 }
 
@@ -64720,8 +64675,8 @@ class PullRequestReviewCommentPublisher {
         this.unanchoredBodies = [];
     }
     async publish(finding, existing) {
-        const { prContext, openPrNumber, execution } = this.options;
-        const allowSuggestedChanges = execution.ai.getBugbotReviewConfiguration().suggestedChanges;
+        const { prContext, openPrNumber, operation } = this.options;
+        const allowSuggestedChanges = operation.analysis.reviewConfiguration.suggestedChanges;
         if (existing?.pullRequest != null &&
             existing.pullRequest.pullRequestNumber === openPrNumber) {
             // A human dismissal is durable. Model output alone cannot reverse it;
@@ -64733,11 +64688,11 @@ class PullRequestReviewCommentPublisher {
             // Existing comments do not carry enough anchor metadata to prove that a
             // GitHub suggestion is still attached to a RIGHT-side changed line.
             const body = `${(0, bugbot_finding_marker_policy_1.buildCommentBody)(finding, false, undefined, { includeSuggestedChange: false })}\n\n${this.options.watermark}`;
-            await this.options.repository.updatePullRequestReviewComment(execution.owner, execution.repo, existing.pullRequest.commentIdentity, body, execution.tokens.token);
+            await this.options.repository.updatePullRequestReviewComment(existing.pullRequest.commentIdentity, body);
             if (existing.pullRequest.resolved || existing.pullRequest.threadResolved === true) {
                 // Persist the open marker before reopening the native thread. This
                 // leaves a deterministic recovery direction after partial failures.
-                await this.options.repository.unresolvePullRequestReviewThread(execution.owner, execution.repo, openPrNumber, existing.pullRequest.commentIdentity, execution.tokens.token);
+                await this.options.repository.unresolvePullRequestReviewThread(openPrNumber, existing.pullRequest.commentIdentity);
             }
             return;
         }
@@ -64772,12 +64727,12 @@ class PullRequestReviewCommentPublisher {
     async flush(overflowCount = 0, overflowTitles = []) {
         if (this.findingsToCreate.length === 0 && overflowCount === 0)
             return;
-        const { repository, execution, openPrNumber, prContext } = this.options;
-        await repository.createReviewWithComments(execution.owner, execution.repo, openPrNumber, prContext.prHeadSha, buildReviewSummary(this.findingsToCreate, this.commentsToCreate.length, this.unanchoredBodies, overflowCount, overflowTitles, this.options.watermark, execution.ai.getBugbotReviewConfiguration().traceRules
+        const { repository, operation, openPrNumber, prContext } = this.options;
+        await repository.createReviewWithComments(openPrNumber, prContext.prHeadSha, buildReviewSummary(this.findingsToCreate, this.commentsToCreate.length, this.unanchoredBodies, overflowCount, overflowTitles, this.options.watermark, operation.analysis.reviewConfiguration.traceRules
             ? this.options.ruleSources ?? []
-            : [], execution.ai.getBugbotReviewConfiguration().traceRules
+            : [], operation.analysis.reviewConfiguration.traceRules
             ? this.options.omittedRuleCount ?? 0
-            : 0, prContext.prHeadSha, execution.locale?.pullRequest ?? 'en-US'), this.commentsToCreate, execution.tokens.token);
+            : 0, prContext.prHeadSha, operation.locale.pullRequest), this.commentsToCreate);
     }
 }
 exports.PullRequestReviewCommentPublisher = PullRequestReviewCommentPublisher;
@@ -64902,7 +64857,7 @@ const synchronize_bugbot_review_presentation_use_case_1 = __nccwpck_require__(44
  * collaborators.
  */
 async function reconcileBugbotReviewState(input) {
-    const snapshotResult = await (0, load_bugbot_reconciliation_snapshot_use_case_1.loadBugbotReconciliationSnapshot)(input.target, input.credential, input.snapshotPorts);
+    const snapshotResult = await (0, load_bugbot_reconciliation_snapshot_use_case_1.loadBugbotReconciliationSnapshot)(input.target, input.snapshotPorts);
     if (snapshotResult.kind === 'superseded') {
         return {
             projection: (0, review_projection_1.buildBugbotReviewProjection)({
@@ -64947,7 +64902,6 @@ async function reconcileBugbotReviewState(input) {
     });
     return (0, synchronize_bugbot_review_presentation_use_case_1.synchronizeBugbotReviewPresentation)({
         target: input.target,
-        credential: input.credential,
         snapshot,
         plan,
         ports: input.presentationPorts,
@@ -65029,7 +64983,7 @@ async function resolveIssueFinding(repository, resolution) {
     const replaced = (0, bugbot_finding_marker_policy_1.replaceMarkerInBody)(body, resolution.findingId, true, replacement);
     if (!replaced.found || !replaced.changed)
         return;
-    await repository.updateComment(resolution.owner, resolution.repo, resolution.issueNumber, resolution.comment.id, replaced.updated, resolution.token);
+    await repository.updateComment(resolution.issueNumber, resolution.comment.id, replaced.updated);
 }
 
 
@@ -65052,7 +65006,7 @@ function resolvedNote(resolution) {
     return "\n\n---\n**Resolved** (configured agent confirmed fixed in latest analysis).\n";
 }
 async function resolvePullRequestFinding(repository, resolution) {
-    const comments = await repository.listPullRequestReviewComments(resolution.owner, resolution.repo, resolution.pullRequestNumber, resolution.token);
+    const comments = await repository.listPullRequestReviewComments(resolution.pullRequestNumber);
     const comment = comments.find((candidate) => candidate.identity === resolution.commentIdentity);
     if (comment?.body == null) {
         throw new pull_request_review_errors_1.PullRequestReviewOperationError("resolve-thread");
@@ -65070,10 +65024,10 @@ async function resolvePullRequestFinding(repository, resolution) {
         if (replaced.changed) {
             // Persist Bugbot's durable intent first. If the native mutation fails, a
             // retry can safely repair the thread toward this explicit marker state.
-            await repository.updatePullRequestReviewComment(resolution.owner, resolution.repo, resolution.commentIdentity, replaced.updated, resolution.token);
+            await repository.updatePullRequestReviewComment(resolution.commentIdentity, replaced.updated);
         }
     }
-    await repository.resolvePullRequestReviewThread(resolution.owner, resolution.repo, resolution.pullRequestNumber, resolution.commentIdentity, resolution.token);
+    await repository.resolvePullRequestReviewThread(resolution.pullRequestNumber, resolution.commentIdentity);
 }
 
 
@@ -65300,7 +65254,7 @@ async function synchronizeBugbotReviewPresentation(input) {
     const plannedReviewUpdates = planReviewUpdates(input, projection, navigation);
     const selectedReviewUpdates = plannedReviewUpdates.slice(0, MAX_REVIEW_UPDATES_PER_RUN);
     const reviewWriteResults = await mapWithConcurrency(selectedReviewUpdates, REVIEW_UPDATE_CONCURRENCY, async ({ ownedReview, body }) => {
-        await input.ports.reviews.updatePullRequestReview(input.target.owner, input.target.repository, input.target.pullRequestNumber, ownedReview.review.identity, body, input.credential.token);
+        await input.ports.updatePullRequestReview(input.target.pullRequestNumber, ownedReview.review.identity, body);
     });
     const reviewUpdates = reviewWriteResults.filter((result) => result === 'fulfilled').length;
     const reviewErrors = reviewWriteResults.flatMap((result, index) => result === 'rejected'
@@ -65353,11 +65307,11 @@ async function synchronizeStatusCard(input, projection, navigation) {
     const canonical = trustedStatusComments[0];
     try {
         if (!canonical) {
-            await input.ports.comments.addComment(input.target.owner, input.target.repository, input.target.pullRequestNumber, statusBody, input.credential.token, { commitSha: input.snapshot.verifiedHeadSha });
+            await input.ports.comments.addComment(input.target.pullRequestNumber, statusBody, { commitSha: input.snapshot.verifiedHeadSha });
             operation = 'created';
         }
         else if (!canonical.body?.startsWith(statusBody)) {
-            await input.ports.comments.updateComment(input.target.owner, input.target.repository, input.target.pullRequestNumber, canonical.id, statusBody, input.credential.token, { commitSha: input.snapshot.verifiedHeadSha });
+            await input.ports.comments.updateComment(input.target.pullRequestNumber, canonical.id, statusBody, { commitSha: input.snapshot.verifiedHeadSha });
             operation = 'updated';
         }
     }
@@ -65365,11 +65319,11 @@ async function synchronizeStatusCard(input, projection, navigation) {
         failed = true;
     }
     const duplicateResults = await mapWithConcurrency(trustedStatusComments.slice(1), REVIEW_UPDATE_CONCURRENCY, async (duplicate) => {
-        await input.ports.comments.updateComment(input.target.owner, input.target.repository, input.target.pullRequestNumber, duplicate.id, [
+        await input.ports.comments.updateComment(input.target.pullRequestNumber, duplicate.id, [
             '## 🤖 Bugbot status moved',
             '',
             `This duplicate status card is no longer current. [Use the canonical PR status](${navigation.pullRequestUrl}).`,
-        ].join('\n'), input.credential.token, { commitSha: input.snapshot.verifiedHeadSha });
+        ].join('\n'), { commitSha: input.snapshot.verifiedHeadSha });
     });
     if (duplicateResults.includes('rejected'))
         failed = true;
@@ -65824,20 +65778,16 @@ exports.DetectPotentialProblemsUseCase = void 0;
 const detect_potential_problems_workflow_1 = __nccwpck_require__(37033);
 /** Application boundary for detecting, publishing and resolving Bugbot findings. */
 class DetectPotentialProblemsUseCase {
-    constructor(aiRepository, contextPorts, publicationPorts, resolutionPorts, telemetryPort) {
+    constructor(aiRepository, scm, telemetryPort) {
         this.aiRepository = aiRepository;
-        this.contextPorts = contextPorts;
-        this.publicationPorts = publicationPorts;
-        this.resolutionPorts = resolutionPorts;
+        this.scm = scm;
         this.telemetryPort = telemetryPort;
         this.taskId = 'DetectPotentialProblemsUseCase';
     }
     async invoke(param) {
         return await (0, detect_potential_problems_workflow_1.runDetectPotentialProblemsWorkflow)(param, {
             aiRepository: this.aiRepository,
-            contextPorts: this.contextPorts,
-            publicationPorts: this.publicationPorts,
-            resolutionPorts: this.resolutionPorts,
+            scm: this.scm,
             telemetryPort: this.telemetryPort,
         });
     }
@@ -65868,12 +65818,10 @@ const analyze_bugbot_revision_use_case_1 = __nccwpck_require__(4658);
 const bugbot_review_freshness_1 = __nccwpck_require__(14307);
 const reconcile_bugbot_review_state_use_case_1 = __nccwpck_require__(57515);
 const application_error_1 = __nccwpck_require__(75999);
-const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
 const TASK_ID = 'DetectPotentialProblemsUseCase';
 /** Coordinates Bugbot context, analysis and finding publication behind application ports. */
-async function runDetectPotentialProblemsWorkflow(param, dependencies) {
+async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
     const workflowStartedAt = Date.now();
-    const reviewContext = (0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param);
     const telemetry = new bugbot_review_telemetry_1.BugbotReviewTelemetry(reviewContext);
     const publishTelemetry = async (outcome, category) => {
         const snapshot = telemetry.snapshot(outcome, category);
@@ -65912,12 +65860,7 @@ async function runDetectPotentialProblemsWorkflow(param, dependencies) {
             return [];
         }
         const contextRequest = (0, bugbot_context_request_1.projectBugbotContextRequest)(reviewContext, contextOptions);
-        const contextReader = dependencies.contextPorts.loader.bind({
-            owner: param.owner,
-            repository: param.repo,
-            token: param.tokens.token,
-        });
-        const context = await telemetry.measure('context', () => (0, load_bugbot_context_use_case_1.loadBugbotContext)(contextRequest, contextReader));
+        const context = await telemetry.measure('context', () => (0, load_bugbot_context_use_case_1.loadBugbotContext)(contextRequest, dependencies.scm.context));
         const eventHeadSha = reviewContext.trigger.expectedHeadSha;
         if ((0, bugbot_review_freshness_1.isLoadedBugbotRevisionSuperseded)(context, eventHeadSha)) {
             return await complete(supersededResult(context.prContext?.prHeadSha, eventHeadSha), 'superseded');
@@ -65927,7 +65870,7 @@ async function runDetectPotentialProblemsWorkflow(param, dependencies) {
             const analysisError = new application_error_1.ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.');
             const presentation = reviewContext.analysis.reviewConfiguration.publicationMode === 'publish'
                 ? await telemetry.measure('projection', () => reconcileReviewState({
-                    execution: param,
+                    operation: reviewContext,
                     loadedContext: context,
                     activeFindings: [],
                     mutationErrors: [analysisError],
@@ -65939,18 +65882,18 @@ async function runDetectPotentialProblemsWorkflow(param, dependencies) {
             return await complete(noAnalysisResult(presentation), 'failed');
         }
         telemetry.observePrepared(prepared);
-        if (await telemetry.measure('freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(param, context, dependencies.contextPorts))) {
+        if (await telemetry.measure('freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
         if (reviewContext.analysis.reviewConfiguration.publicationMode === 'dry-run') {
             return await complete(dryRunResult(prepared, context), 'dry-run');
         }
-        const resolutionErrors = await telemetry.measure('publication', () => (0, apply_detected_findings_1.applyDetectedFindings)(param, context, prepared, dependencies.publicationPorts, dependencies.resolutionPorts));
-        if (await telemetry.measure('post-publication-freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(param, context, dependencies.contextPorts))) {
+        const resolutionErrors = await telemetry.measure('publication', () => (0, apply_detected_findings_1.applyDetectedFindings)(reviewContext, context, prepared, dependencies.scm.publication, dependencies.scm.resolution));
+        if (await telemetry.measure('post-publication-freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
         const presentation = await telemetry.measure('projection', () => reconcileReviewState({
-            execution: param,
+            operation: reviewContext,
             loadedContext: context,
             activeFindings: prepared.activeFindings ?? prepared.toPublish,
             expectedPublishedFindings: prepared.toPublish,
@@ -66145,36 +66088,86 @@ async function reconcileReviewState(input) {
         return undefined;
     return (0, reconcile_bugbot_review_state_use_case_1.reconcileBugbotReviewState)({
         target: {
-            owner: input.execution.owner,
-            repository: input.execution.repo,
             pullRequestNumber,
-            ...(input.execution.issueNumber > 0
-                ? { linkedIssueNumber: input.execution.issueNumber }
+            ...(input.operation.target.issueNumber > 0
+                ? { linkedIssueNumber: input.operation.target.issueNumber }
                 : {}),
             analyzedHeadSha,
-            ...(input.execution.tokenUser
-                ? { trustedAuthorLogin: input.execution.tokenUser }
+            ...(input.operation.trustedAuthorLogin
+                ? { trustedAuthorLogin: input.operation.trustedAuthorLogin }
                 : {}),
-            locale: input.execution.locale?.pullRequest ?? 'en-US',
+            locale: input.operation.locale.pullRequest,
         },
-        credential: { token: input.execution.tokens.token },
         loadedContext: input.loadedContext,
         activeFindings: input.activeFindings,
         ...(input.expectedPublishedFindings
             ? { expectedPublishedFindings: input.expectedPublishedFindings }
             : {}),
         ...(input.mutationErrors ? { mutationErrors: input.mutationErrors } : {}),
-        snapshotPorts: {
-            issueComments: input.dependencies.contextPorts.issue,
-            pullRequest: input.dependencies.contextPorts.pullRequest,
-            reviews: input.dependencies.contextPorts.reviewState,
-            navigation: input.dependencies.contextPorts.navigation,
-        },
-        presentationPorts: {
-            comments: input.dependencies.publicationPorts.issueComments,
-            reviews: input.dependencies.publicationPorts.reviewState,
+        snapshotPorts: input.dependencies.scm.reconciliation.snapshot,
+        presentationPorts: input.dependencies.scm.reconciliation.presentation,
+    });
+}
+
+
+/***/ }),
+
+/***/ 68549:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.checkoutBranch = checkoutBranch;
+const application_error_1 = __nccwpck_require__(75999);
+const logging_ports_1 = __nccwpck_require__(6152);
+const STASH_MESSAGE = 'bugbot-autofix-before-checkout';
+async function hasUncommittedChanges(port) {
+    let output = '';
+    await port.execute('git', ['status', '--porcelain'], {
+        stdout: (data) => {
+            output += data.toString();
         },
     });
+    return output.trim().length > 0;
+}
+/** Checks out a branch through an already authority-bound Git capability. */
+async function checkoutBranch(branch, port) {
+    let didStash = false;
+    try {
+        didStash = await stashWorkspaceChanges(port);
+        await port.fetch(branch);
+        await port.execute('git', ['checkout', branch]);
+        (0, logging_ports_1.logInfo)(`Checked out branch ${branch}.`);
+        return didStash ? restoreStashedChanges(port) : true;
+    }
+    catch (err) {
+        const semanticError = (0, application_error_1.toApplicationError)(err, 'workflow.failed', `Failed to checkout branch ${branch}.`);
+        (0, logging_ports_1.logError)(semanticError);
+        if (didStash)
+            (0, logging_ports_1.logError)("Changes were stashed; run 'git stash pop' manually to restore them.");
+        return false;
+    }
+}
+async function stashWorkspaceChanges(port) {
+    if (!await hasUncommittedChanges(port))
+        return false;
+    (0, logging_ports_1.logDebugInfo)('Uncommitted changes present; stashing before checkout.');
+    await port.execute('git', ['stash', 'push', '-u', '-m', STASH_MESSAGE]);
+    return true;
+}
+async function restoreStashedChanges(port) {
+    try {
+        await port.execute('git', ['stash', 'pop']);
+        (0, logging_ports_1.logDebugInfo)('Restored stashed changes after checkout.');
+        return true;
+    }
+    catch (error) {
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Failed to restore stashed changes after checkout.');
+        (0, logging_ports_1.logError)(semanticError);
+        (0, logging_ports_1.logError)("Changes remain stashed; run 'git stash pop' manually to restore them.");
+        return false;
+    }
 }
 
 
@@ -66415,7 +66408,7 @@ exports.MAX_AUTOMATED_CHANGED_PATHS = void 0;
 exports.prepareWorkspaceMutation = prepareWorkspaceMutation;
 exports.finalizeWorkspaceMutation = finalizeWorkspaceMutation;
 const application_error_1 = __nccwpck_require__(75999);
-const git_branch_checkout_1 = __nccwpck_require__(76333);
+const git_branch_checkout_1 = __nccwpck_require__(68549);
 const workspace_changes_1 = __nccwpck_require__(93370);
 exports.MAX_AUTOMATED_CHANGED_PATHS = 100;
 /** Establishes a clean and deterministic repository boundary before an agent may mutate files. */
@@ -66426,7 +66419,10 @@ async function prepareWorkspaceMutation(gitCommitPort, options) {
     }
     let branchCheckedOut = false;
     if (options.branch?.trim()) {
-        branchCheckedOut = await (0, git_branch_checkout_1.checkoutBranch)(options.branch, gitCommitPort, options.token);
+        branchCheckedOut = await (0, git_branch_checkout_1.checkoutBranch)(options.branch, {
+            execute: gitCommitPort.execute.bind(gitCommitPort),
+            fetch: (branch) => gitCommitPort.fetch(branch, options.token),
+        });
         if (!branchCheckedOut) {
             throw new application_error_1.ApplicationError('provider.unavailable', `${options.operation} refused: failed to checkout target branch ${options.branch}.`);
         }
@@ -80456,6 +80452,50 @@ function assertInstalledAgentRuntimeVersion(provider, output) {
 
 /***/ }),
 
+/***/ 51520:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.BoundBugbotGitMutationAdapter = void 0;
+/** Keeps the route credential at the infrastructure boundary for Bugbot mutations. */
+class BoundBugbotGitMutationAdapter {
+    constructor(git, authenticatedUser, token) {
+        this.git = git;
+        this.authenticatedUser = authenticatedUser;
+        this.token = token;
+    }
+    execute(...args) {
+        return this.git.execute(...args);
+    }
+    getAuthenticatedUserDetails() {
+        return this.authenticatedUser.getTokenUserDetails(this.token);
+    }
+    configureAuthor(name, email) {
+        return this.git.configureAuthor(name, email);
+    }
+    fetch(branch) {
+        return this.git.fetch(branch, this.token);
+    }
+    stageAll() {
+        return this.git.stageAll();
+    }
+    stagePaths(paths) {
+        return this.git.stagePaths(paths);
+    }
+    commit(message) {
+        return this.git.commit(message);
+    }
+    push(branch) {
+        return this.git.push(branch, this.token);
+    }
+}
+exports.BoundBugbotGitMutationAdapter = BoundBugbotGitMutationAdapter;
+
+
+/***/ }),
+
 /***/ 81849:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -80720,8 +80760,8 @@ const pull_request_review_thread_repository_1 = __nccwpck_require__(23314);
 const workspace_bugbot_rules_repository_1 = __nccwpck_require__(50183);
 const logger_bugbot_telemetry_adapter_1 = __nccwpck_require__(34685);
 const github_bugbot_review_navigation_adapter_1 = __nccwpck_require__(19008);
-const bugbot_context_port_factory_1 = __nccwpck_require__(94124);
-function createBugbotCompositionRoot() {
+const bugbot_scm_port_factory_1 = __nccwpck_require__(19937);
+function createBugbotCompositionRoot(binding) {
     const issueContent = new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
     const issue = new bugbot_issue_repository_1.BugbotIssueRepository(issueContent);
     const reviewCommentClient = (0, github_pull_request_client_factory_1.createPullRequestReviewCommentClient)();
@@ -80735,13 +80775,10 @@ function createBugbotCompositionRoot() {
     const pullRequest = new bugbot_pull_request_repository_1.BugbotPullRequestRepository(changes, reviewQuery, reviewCommand, threadCommand);
     const rules = new workspace_bugbot_rules_repository_1.WorkspaceBugbotRulesRepository();
     const navigation = new github_bugbot_review_navigation_adapter_1.GithubBugbotReviewNavigationAdapter();
-    const loader = new bugbot_context_port_factory_1.BugbotContextPortFactory(bugbotIssueComments, lifecycle, changes, reviewQuery, threadCommand, rules);
+    const scm = new bugbot_scm_port_factory_1.BugbotScmPortFactory(bugbotIssueComments, issue, lifecycle, changes, pullRequest, reviewQuery, threadCommand, rules, navigation).bind(binding);
     return {
         issue,
-        pullRequest,
-        context: { loader, issue, pullRequest, reviewState: pullRequest, navigation, rules },
-        resolution: { issueComments: issue, pullRequestComments: pullRequest },
-        publication: { issueComments: issue, pullRequestComments: pullRequest, reviewState: pullRequest },
+        scm,
         telemetry: new logger_bugbot_telemetry_adapter_1.LoggerBugbotTelemetryAdapter(),
         rules,
     };
@@ -80750,30 +80787,33 @@ function createBugbotCompositionRoot() {
 
 /***/ }),
 
-/***/ 94124:
+/***/ 19937:
 /***/ ((__unused_webpack_module, exports) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.BugbotContextPortFactory = void 0;
-/** Binds route credentials once and exposes only semantic, repository-scoped reads. */
-class BugbotContextPortFactory {
-    constructor(issues, lifecycle, changes, reviewComments, reviewThreads, rules) {
+exports.BugbotScmPortFactory = void 0;
+/** Binds repository identity and credential once, outside application workflows. */
+class BugbotScmPortFactory {
+    constructor(boundedIssues, issues, lifecycle, changes, pullRequests, reviewComments, reviewThreads, rules, navigation) {
+        this.boundedIssues = boundedIssues;
         this.issues = issues;
         this.lifecycle = lifecycle;
         this.changes = changes;
+        this.pullRequests = pullRequests;
         this.reviewComments = reviewComments;
         this.reviewThreads = reviewThreads;
         this.rules = rules;
+        this.navigation = navigation;
     }
     bind(binding) {
         const { owner, repository, token } = binding;
-        return {
+        const context = {
             getPullRequest: (pullRequestNumber) => this.lifecycle.getBugbotPullRequestIdentity(owner, repository, pullRequestNumber, token),
             findOpenPullRequestsByExactHead: (headOwner, headRef) => this.lifecycle.findOpenBugbotPullRequestsByExactHead(owner, repository, headOwner, headRef, token),
             listIssueComments: async (issueNumber) => {
-                const result = await this.issues.listBugbotIssueCommentsBounded(owner, repository, issueNumber, token);
+                const result = await this.boundedIssues.listBugbotIssueCommentsBounded(owner, repository, issueNumber, token);
                 return { value: result.items, coverage: result.coverage };
             },
             listPullRequestReviewComments: async (pullRequestNumber) => {
@@ -80789,11 +80829,42 @@ class BugbotContextPortFactory {
                 return { value: result.snapshot, coverage: result.coverage };
             },
             getPullRequestHeadSha: (pullRequestNumber) => this.changes.getPullRequestHeadSha(owner, repository, pullRequestNumber, token),
+            getPullRequestReviewCommentBody: (pullRequestNumber, commentId) => this.pullRequests.getPullRequestReviewCommentBody(owner, repository, pullRequestNumber, commentId, token),
             loadRules: (paths) => this.rules.loadRules(paths),
+        };
+        const issueComments = {
+            addComment: (issueNumber, body, options) => this.issues.addComment(owner, repository, issueNumber, body, token, options),
+            updateComment: (issueNumber, commentId, body, options) => this.issues.updateComment(owner, repository, issueNumber, commentId, body, token, options),
+        };
+        const pullRequestComments = {
+            createReviewWithComments: (pullRequestNumber, commitId, body, comments) => this.pullRequests.createReviewWithComments(owner, repository, pullRequestNumber, commitId, body, comments, token),
+            updatePullRequestReviewComment: (commentIdentity, body) => this.pullRequests.updatePullRequestReviewComment(owner, repository, commentIdentity, body, token),
+            resolvePullRequestReviewThread: (pullRequestNumber, commentIdentity) => this.pullRequests.resolvePullRequestReviewThread(owner, repository, pullRequestNumber, commentIdentity, token),
+            unresolvePullRequestReviewThread: (pullRequestNumber, commentIdentity) => this.pullRequests.unresolvePullRequestReviewThread(owner, repository, pullRequestNumber, commentIdentity, token),
+            listPullRequestReviewComments: (pullRequestNumber) => this.pullRequests.listPullRequestReviewComments(owner, repository, pullRequestNumber, token),
+        };
+        return {
+            context,
+            publication: { issueComments, pullRequestComments },
+            resolution: { issueComments, pullRequestComments },
+            reconciliation: {
+                snapshot: {
+                    listIssueComments: (issueNumber) => this.issues.listIssueComments(owner, repository, issueNumber, token),
+                    listPullRequestReviewComments: (pullRequestNumber) => this.pullRequests.listPullRequestReviewComments(owner, repository, pullRequestNumber, token),
+                    listPullRequestReviewThreadStates: (pullRequestNumber) => this.pullRequests.listPullRequestReviewThreadStates(owner, repository, pullRequestNumber, token),
+                    listPullRequestReviews: (pullRequestNumber) => this.pullRequests.listPullRequestReviews(owner, repository, pullRequestNumber, token),
+                    getPullRequestHeadSha: (pullRequestNumber) => this.pullRequests.getPullRequestHeadSha(owner, repository, pullRequestNumber, token),
+                    navigationForPullRequest: (pullRequestNumber, headSha) => this.navigation.forPullRequest(owner, repository, pullRequestNumber, headSha),
+                },
+                presentation: {
+                    comments: issueComments,
+                    updatePullRequestReview: (pullRequestNumber, reviewIdentity, body) => this.pullRequests.updatePullRequestReview(owner, repository, pullRequestNumber, reviewIdentity, body, token),
+                },
+            },
         };
     }
 }
-exports.BugbotContextPortFactory = BugbotContextPortFactory;
+exports.BugbotScmPortFactory = BugbotScmPortFactory;
 
 
 /***/ }),
@@ -81338,6 +81409,7 @@ const branch_compare_repository_1 = __nccwpck_require__(95859);
 const repository_release_publication_repository_1 = __nccwpck_require__(42075);
 const repository_tag_repository_1 = __nccwpck_require__(58717);
 const git_commit_adapter_1 = __nccwpck_require__(18606);
+const bound_bugbot_git_mutation_adapter_1 = __nccwpck_require__(51520);
 const actor_authorization_composition_root_1 = __nccwpck_require__(233);
 const agent_capability_composition_root_1 = __nccwpck_require__(85079);
 const authenticated_user_composition_root_1 = __nccwpck_require__(33885);
@@ -81372,11 +81444,11 @@ const octokit_deployment_adapter_1 = __nccwpck_require__(46819);
 const workflow_dispatch_repository_1 = __nccwpck_require__(29509);
 const github_workflow_client_factory_1 = __nccwpck_require__(29839);
 const node_crypto_1 = __nccwpck_require__(6005);
-function createDetectPotentialProblemsUseCase() {
-    const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();
-    return new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.context, bugbot.publication, bugbot.resolution, bugbot.telemetry);
+function createDetectPotentialProblemsUseCase(binding) {
+    const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
+    return new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.scm, bugbot.telemetry);
 }
-function createSingleActionUseCaseCompositionRoot(surface) {
+function createSingleActionUseCaseCompositionRoot(surface, binding) {
     const issueDescriptionQueryPort = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
     const repositoryTagPort = surface === "github-workflow"
         ? new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)())
@@ -81389,7 +81461,7 @@ function createSingleActionUseCaseCompositionRoot(surface) {
         : undefined;
     return new single_action_use_case_1.SingleActionUseCase(repositoryTagPort && repositoryReleasePort
         ? new publish_github_action_use_case_1.PublishGithubActionUseCase(repositoryTagPort, repositoryReleasePort)
-        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase(repositoryReleasePort) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase(repositoryTagPort) : undefined, new think_use_case_1.ThinkUseCase(issueDescriptionQueryPort, (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), createDetectPotentialProblemsUseCase(), new recommend_steps_use_case_1.RecommendStepsUseCase(issueDescriptionQueryPort, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase(issueDescriptionQueryPort), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), issueDescriptionQueryPort), deploymentOrchestration);
+        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase(repositoryReleasePort) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase(repositoryTagPort) : undefined, new think_use_case_1.ThinkUseCase(issueDescriptionQueryPort, (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase(issueDescriptionQueryPort, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase(issueDescriptionQueryPort), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), issueDescriptionQueryPort), deploymentOrchestration);
 }
 function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publication) {
     const deploymentClient = new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter();
@@ -81406,50 +81478,65 @@ function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publica
         operationId: node_crypto_1.randomUUID,
     });
 }
-function createIssueCommentUseCaseCompositionRoot() {
-    const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();
+function createIssueCommentUseCaseCompositionRoot(binding) {
+    const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
     const findings = (0, agent_capability_composition_root_1.createFindingsQueryPort)();
     const language = (0, agent_capability_composition_root_1.createLanguageQueryPort)();
     const fixer = (0, agent_capability_composition_root_1.createFixerQueryPort)();
     const gitCommit = new git_commit_adapter_1.GitCommitAdapter();
+    const authenticatedUser = (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)();
+    const bugbotGit = new bound_bugbot_git_mutation_adapter_1.BoundBugbotGitMutationAdapter(gitCommit, authenticatedUser, binding.token);
     const pullRequestDescription = new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), (0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
     const branchSync = new sync_branch_use_case_1.SyncBranchUseCase(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new branch_sync_workspace_adapter_1.BranchSyncWorkspaceAdapter(gitCommit), fixer, (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), gitCommit);
-    return new issue_comment_use_case_1.IssueCommentUseCase(new check_issue_comment_language_use_case_1.CheckIssueCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer, gitCommit), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), gitCommit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution, bugbot.telemetry), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync);
+    return new issue_comment_use_case_1.IssueCommentUseCase(new check_issue_comment_language_use_case_1.CheckIssueCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(findings, bugbot.scm.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.scm.context, bugbotGit), new user_request_use_case_1.DoUserRequestUseCase(fixer, gitCommit), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), gitCommit, bugbotGit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.scm.context, resolutionPorts: bugbot.scm.resolution }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync);
 }
-function createPullRequestReviewCommentUseCaseCompositionRoot() {
-    const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();
+function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
+    const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
     const findings = (0, agent_capability_composition_root_1.createFindingsQueryPort)();
     const language = (0, agent_capability_composition_root_1.createLanguageQueryPort)();
     const fixer = (0, agent_capability_composition_root_1.createFixerQueryPort)();
     const gitCommit = new git_commit_adapter_1.GitCommitAdapter();
+    const authenticatedUser = (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)();
+    const bugbotGit = new bound_bugbot_git_mutation_adapter_1.BoundBugbotGitMutationAdapter(gitCommit, authenticatedUser, binding.token);
     const pullRequestDescription = new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), (0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
     const branchSync = new sync_branch_use_case_1.SyncBranchUseCase(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new branch_sync_workspace_adapter_1.BranchSyncWorkspaceAdapter(gitCommit), fixer, (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), gitCommit);
-    return new pull_request_review_comment_use_case_1.PullRequestReviewCommentUseCase(new check_pull_request_comment_language_use_case_1.CheckPullRequestCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(bugbot.context.pullRequest, findings, bugbot.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.context, gitCommit), new user_request_use_case_1.DoUserRequestUseCase(fixer, gitCommit), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), gitCommit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.context, resolutionPorts: bugbot.resolution }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.context, bugbot.publication, bugbot.resolution, bugbot.telemetry), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync);
+    return new pull_request_review_comment_use_case_1.PullRequestReviewCommentUseCase(new check_pull_request_comment_language_use_case_1.CheckPullRequestCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(findings, bugbot.scm.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.scm.context, bugbotGit), new user_request_use_case_1.DoUserRequestUseCase(fixer, gitCommit), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), gitCommit, bugbotGit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.scm.context, resolutionPorts: bugbot.scm.resolution }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync);
 }
-function createCommitUseCaseCompositionRoot(projectBoardCommandPort) {
-    return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, issue_interaction_composition_root_1.createIssueNotificationRepository)()), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase(projectBoardCommandPort, (0, issue_labels_composition_root_1.createIssueLabelRepository)(), new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)())), createDetectPotentialProblemsUseCase(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
+function createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding) {
+    return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, issue_interaction_composition_root_1.createIssueNotificationRepository)()), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase(projectBoardCommandPort, (0, issue_labels_composition_root_1.createIssueLabelRepository)(), new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)())), createDetectPotentialProblemsUseCase(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
 }
 function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface) {
     // Composition is scoped to one main run. Each route is built only when it is
     // actually selected, while repeated calls in the same run reuse its graph.
-    const singleAction = lazy(() => createSingleActionUseCaseCompositionRoot(surface));
-    const issueComment = lazy(() => createIssueCommentUseCaseCompositionRoot());
+    const singleAction = lazyWith((execution) => createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution)));
+    const issueComment = lazyWith((execution) => createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution)));
     const issue = lazy(() => (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)());
-    const pullRequestReviewComment = lazy(() => createPullRequestReviewCommentUseCaseCompositionRoot());
-    const pullRequest = lazy(() => (0, pull_request_use_case_composition_root_1.createPullRequestUseCaseCompositionRoot)());
-    const push = lazy(() => createCommitUseCaseCompositionRoot(projectBoardCommandPort));
+    const pullRequestReviewComment = lazyWith((execution) => createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution)));
+    const pullRequest = lazyWith((execution) => (0, pull_request_use_case_composition_root_1.createPullRequestUseCaseCompositionRoot)(bugbotBinding(execution)));
+    const push = lazyWith((execution) => createCommitUseCaseCompositionRoot(projectBoardCommandPort, bugbotBinding(execution)));
     return {
-        "single-action": async (execution) => singleAction().invoke(execution),
-        "issue-comment": async (execution) => issueComment().invoke(execution),
+        "single-action": async (execution) => singleAction(execution).invoke(execution),
+        "issue-comment": async (execution) => issueComment(execution).invoke(execution),
         issue: async (execution) => issue().invoke(execution),
-        "pull-request-review-comment": async (execution) => pullRequestReviewComment().invoke(execution),
-        "pull-request": async (execution) => pullRequest().invoke(execution),
-        push: async (execution) => push().invoke(execution),
+        "pull-request-review-comment": async (execution) => pullRequestReviewComment(execution).invoke(execution),
+        "pull-request": async (execution) => pullRequest(execution).invoke(execution),
+        push: async (execution) => push(execution).invoke(execution),
     };
 }
 function lazy(factory) {
     let value;
     return () => value ?? (value = factory());
+}
+function lazyWith(factory) {
+    let value;
+    return (arg) => value ?? (value = factory(arg));
+}
+function bugbotBinding(execution) {
+    return {
+        owner: execution.owner,
+        repository: execution.repo,
+        token: execution.tokens.token,
+    };
 }
 
 
@@ -81561,14 +81648,14 @@ const timer_delay_adapter_1 = __nccwpck_require__(71942);
 const detect_potential_problems_use_case_1 = __nccwpck_require__(6287);
 const bugbot_composition_root_1 = __nccwpck_require__(67395);
 const actor_authorization_composition_root_1 = __nccwpck_require__(233);
-function createPullRequestUseCaseCompositionRoot() {
+function createPullRequestUseCaseCompositionRoot(binding) {
     const issueLifecycle = new issue_lifecycle_repository_1.IssueLifecycleRepository((0, github_issue_client_factory_1.createIssueLifecycleClient)());
     const issueContent = new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
     const pullRequestLifecycle = new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)());
     const issueMetadata = new issue_metadata_repository_1.IssueMetadataRepository((0, github_issue_client_factory_1.createIssueMetadataClient)(), (0, github_project_client_factory_1.createGraphqlTransportClient)());
     const organizationMembers = (0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)();
     const projectBoard = (0, project_board_composition_root_1.createProjectBoardCompositionRoot)();
-    const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();
+    const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
     const issueTitle = new issue_title_repository_1.IssueTitleRepository((0, github_issue_client_factory_1.createIssueTitleClient)(), issueMetadata);
     const issueClosure = new issue_closure_repository_1.IssueClosureRepository(issueLifecycle, issueContent);
     const issueAssignee = new issue_assignment_repository_1.IssueAssignmentRepository((0, github_issue_client_factory_1.createIssueAssignmentClient)());
@@ -81585,7 +81672,7 @@ function createPullRequestUseCaseCompositionRoot() {
         checkPriorityPullRequestSize: new check_priority_pull_request_size_use_case_1.CheckPriorityPullRequestSizeUseCase(projectBoard.command),
         closeIssueAfterMerging: new close_issue_after_merging_use_case_1.CloseIssueAfterMergingUseCase(issueClosure),
     };
-    return (0, pull_request_use_case_composition_1.composePullRequestUseCase)(new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase(pullRequestLifecycle, issueContent, organizationMembers, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps, new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.context, bugbot.publication, bugbot.resolution, bugbot.telemetry), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
+    return (0, pull_request_use_case_composition_1.composePullRequestUseCase)(new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase(pullRequestLifecycle, issueContent, organizationMembers, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), workflowSteps, new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.scm, bugbot.telemetry), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
 }
 
 

@@ -1197,10 +1197,10 @@ exports.applyDetectedFindings = applyDetectedFindings;
 const mark_findings_resolved_use_case_1 = __nccwpck_require__(6963);
 const publish_findings_use_case_1 = __nccwpck_require__(8442);
 const pull_request_review_errors_1 = __nccwpck_require__(6445);
-async function applyDetectedFindings(execution, context, prepared, publicationPorts, resolutionPorts) {
+async function applyDetectedFindings(operation, context, prepared, publicationPorts, resolutionPorts) {
     try {
         await (0, publish_findings_use_case_1.publishFindings)({
-            execution,
+            operation,
             context,
             findings: prepared.toPublish,
             commitSha: context.prContext?.prHeadSha ?? "",
@@ -1216,7 +1216,7 @@ async function applyDetectedFindings(execution, context, prepared, publicationPo
         return [publicationError];
     }
     const resolutionErrors = await (0, mark_findings_resolved_use_case_1.markFindingsResolved)({
-        execution,
+        operation,
         context,
         resolvedFindingIds: prepared.resolvedFindingIds,
         resolvedFindingResolutions: prepared.resolvedFindingResolutions,
@@ -1610,127 +1610,18 @@ function isBot(author, botLogin) {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.expectedBugbotHeadSha = expectedBugbotHeadSha;
 exports.isLoadedBugbotRevisionSuperseded = isLoadedBugbotRevisionSuperseded;
 exports.hasNewerBugbotRevision = hasNewerBugbotRevision;
-function expectedBugbotHeadSha(execution) {
-    // Comment-triggered reviews intentionally target the latest remote head:
-    // their payload SHA may predate an autofix committed in the same run.
-    const eventName = execution.eventName;
-    const candidate = eventName === 'pull_request'
-        ? execution.inputs?.pull_request?.head?.sha
-        : eventName === 'workflow_run'
-            ? execution.inputs?.workflow_run?.head_sha
-            : eventName === 'check_suite'
-                ? execution.inputs?.check_suite?.head_sha
-                : undefined;
-    return typeof candidate === 'string' && /^[0-9a-f]{7,64}$/iu.test(candidate.trim())
-        ? candidate.trim().toLowerCase()
-        : undefined;
-}
 function isLoadedBugbotRevisionSuperseded(context, expectedHeadSha) {
     return expectedHeadSha !== undefined && context.prContext !== null
         && context.prContext.prHeadSha.toLowerCase() !== expectedHeadSha;
 }
 /** Re-reads the remote head immediately before publication to close the analysis race window. */
-async function hasNewerBugbotRevision(execution, context, ports) {
+async function hasNewerBugbotRevision(context, ports) {
     if (!context.prContext || !context.canonicalPullRequest)
         return false;
-    const reader = ports.loader.bind({
-        owner: execution.owner,
-        repository: execution.repo,
-        token: execution.tokens.token,
-    });
-    const currentHead = await reader.getPullRequestHeadSha(context.canonicalPullRequest.number);
+    const currentHead = await ports.getPullRequestHeadSha(context.canonicalPullRequest.number);
     return currentHead !== undefined && currentHead.toLowerCase() !== context.prContext.prHeadSha.toLowerCase();
-}
-
-
-/***/ }),
-
-/***/ 6660:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.projectBugbotContextSelectionContext = projectBugbotContextSelectionContext;
-exports.projectBugbotReviewOperationContext = projectBugbotReviewOperationContext;
-const positive_integer_policy_1 = __nccwpck_require__(9879);
-/** Copies only the non-secret facts required to select canonical Bugbot context. */
-function projectBugbotContextSelectionContext(source) {
-    const reviewConfiguration = source.ai.getBugbotReviewConfiguration();
-    return projectSelectionFacts(source, reviewConfiguration.organizationRules);
-}
-/** Copies only non-secret review facts out of the mutable route aggregate. */
-function projectBugbotReviewOperationContext(source) {
-    const reviewConfiguration = source.ai.getBugbotReviewConfiguration();
-    const { organizationRules, ...analysisReviewConfiguration } = reviewConfiguration;
-    const selection = projectSelectionFacts(source, organizationRules);
-    const agentConfiguration = source.ai.getAgentConfiguration(source.isPullRequest ? 'reviewer' : 'findings');
-    return Object.freeze({
-        ...selection,
-        locale: Object.freeze({
-            pullRequest: source.locale?.pullRequest ?? 'en-US',
-        }),
-        analysis: Object.freeze({
-            agentConfiguration: Object.freeze({ ...agentConfiguration }),
-            minimumSeverity: source.ai.getBugbotMinSeverity(),
-            commentLimit: source.ai.getBugbotCommentLimit(),
-            reviewConfiguration: Object.freeze({ ...analysisReviewConfiguration }),
-        }),
-    });
-}
-function projectSelectionFacts(source, organizationRules) {
-    const repositoryId = (0, positive_integer_policy_1.parsePositiveSafeInteger)(source.inputs?.repository?.id);
-    const trustedAuthorLogin = source.tokenUser?.trim();
-    const commitBranch = source.commit?.branch?.trim() ?? '';
-    const headBranch = source.isPullRequest
-        ? source.pullRequest?.head?.trim() ?? ''
-        : commitBranch;
-    const expectedHeadSha = normalizeExpectedHeadSha(source.eventName, source.inputs);
-    const headOwner = source.inputs?.pull_request?.head?.repo?.owner?.login?.trim();
-    return Object.freeze({
-        repository: Object.freeze({
-            owner: source.owner,
-            name: source.repo,
-            ...(repositoryId ? { id: repositoryId } : {}),
-        }),
-        target: Object.freeze({
-            issueNumber: source.issueNumber,
-            isPullRequest: source.isPullRequest,
-            pullRequestNumber: source.pullRequest?.number ?? -1,
-            headBranch,
-            commitBranch,
-            baseBranch: source.currentConfiguration?.parentBranch
-                ?? source.branches?.development
-                ?? 'develop',
-            pullRequestAction: source.pullRequest?.action ?? '',
-            draft: source.inputs?.pull_request?.draft === true,
-        }),
-        trigger: Object.freeze({
-            kind: source.eventName || 'unknown',
-            ...(typeof source.inputs?.before === 'string' ? { before: source.inputs.before } : {}),
-            ...(typeof source.inputs?.after === 'string' ? { after: source.inputs.after } : {}),
-            ...(expectedHeadSha ? { expectedHeadSha } : {}),
-            headOwner: headOwner || source.owner,
-        }),
-        ...(trustedAuthorLogin ? { trustedAuthorLogin } : {}),
-        ignorePatterns: Object.freeze([...source.ai.getAiIgnoreFiles()]),
-        organizationRules: Object.freeze([...organizationRules]),
-    });
-}
-function normalizeExpectedHeadSha(eventName, inputs) {
-    // Comment-triggered reviews intentionally target the latest remote head.
-    const candidate = eventName === 'pull_request'
-        ? inputs?.pull_request?.head?.sha
-        : eventName === 'workflow_run'
-            ? inputs?.workflow_run?.head_sha
-            : eventName === 'check_suite'
-                ? inputs?.check_suite?.head_sha
-                : undefined;
-    return typeof candidate === 'string' && /^[0-9a-f]{7,64}$/iu.test(candidate.trim())
-        ? candidate.trim().toLowerCase()
-        : undefined;
 }
 
 
@@ -1980,11 +1871,11 @@ function truncateFindingBody(body, maxLength) {
  * strict scope rules, and the verify commands to run.
  */
 function buildBugbotFixPrompt(param, context, targetFindingIds, userComment, verifyCommands) {
-    const headBranch = param.pullRequest?.head?.trim() || param.commit?.branch || 'unknown';
-    const baseBranch = param.currentConfiguration.parentBranch ?? param.branches.development ?? "develop";
-    const issueNumber = param.issueNumber;
-    const owner = param.owner;
-    const repo = param.repo;
+    const headBranch = param.target.headBranch || param.target.commitBranch || 'unknown';
+    const baseBranch = param.target.baseBranch;
+    const issueNumber = param.target.issueNumber;
+    const owner = param.repository.owner;
+    const repo = param.repository.name;
     const prNumber = context.canonicalPullRequest?.number ?? null;
     const safeId = (id) => id.replace(/`/g, "\\`");
     const findingsBlock = targetFindingIds
@@ -2432,12 +2323,12 @@ const pull_request_review_errors_1 = __nccwpck_require__(6445);
  * run concurrently, while the second guard rejects data collected across a
  * pull-request revision change.
  */
-async function loadBugbotReconciliationSnapshot(target, credential, ports) {
-    const initialHeadSha = await readHead(target, credential, ports);
+async function loadBugbotReconciliationSnapshot(target, ports) {
+    const initialHeadSha = await readHead(target, ports);
     if (!initialHeadSha || initialHeadSha !== target.analyzedHeadSha) {
         return superseded(target, initialHeadSha);
     }
-    const conversationPromise = ports.issueComments.listIssueComments(target.owner, target.repository, target.pullRequestNumber, credential.token);
+    const conversationPromise = ports.listIssueComments(target.pullRequestNumber);
     const linkedIssueNumber = target.linkedIssueNumber;
     const linkedIssueSharesConversation = linkedIssueNumber !== undefined
         && linkedIssueNumber === target.pullRequestNumber;
@@ -2445,22 +2336,22 @@ async function loadBugbotReconciliationSnapshot(target, credential, ports) {
         ? Promise.resolve([])
         : linkedIssueSharesConversation
             ? conversationPromise
-            : ports.issueComments.listIssueComments(target.owner, target.repository, linkedIssueNumber, credential.token);
+            : ports.listIssueComments(linkedIssueNumber);
     const [commentsRead, threadsRead, reviewsRead, conversationRead, linkedIssueRead] = await Promise.allSettled([
-        ports.pullRequest.listPullRequestReviewComments(target.owner, target.repository, target.pullRequestNumber, credential.token),
-        ports.pullRequest.listPullRequestReviewThreadStates(target.owner, target.repository, target.pullRequestNumber, credential.token),
-        ports.reviews.listPullRequestReviews(target.owner, target.repository, target.pullRequestNumber, credential.token),
+        ports.listPullRequestReviewComments(target.pullRequestNumber),
+        ports.listPullRequestReviewThreadStates(target.pullRequestNumber),
+        ports.listPullRequestReviews(target.pullRequestNumber),
         conversationPromise,
         linkedIssuePromise,
     ]);
-    const finalHeadSha = await readHead(target, credential, ports);
+    const finalHeadSha = await readHead(target, ports);
     if (!finalHeadSha || finalHeadSha !== target.analyzedHeadSha) {
         return superseded(target, finalHeadSha);
     }
     let navigation;
     let navigationState = 'verified';
     try {
-        navigation = ports.navigation.forPullRequest(target.owner, target.repository, target.pullRequestNumber, finalHeadSha);
+        navigation = ports.navigationForPullRequest(target.pullRequestNumber, finalHeadSha);
     }
     catch {
         navigationState = 'failed';
@@ -2493,9 +2384,9 @@ async function loadBugbotReconciliationSnapshot(target, credential, ports) {
         },
     };
 }
-async function readHead(target, credential, ports) {
+async function readHead(target, ports) {
     try {
-        return await ports.pullRequest.getPullRequestHeadSha(target.owner, target.repository, target.pullRequestNumber, credential.token);
+        return await ports.getPullRequestHeadSha(target.pullRequestNumber);
     }
     catch {
         throw new pull_request_review_errors_1.PullRequestReviewOperationError('get-head-sha');
@@ -2544,7 +2435,7 @@ const application_error_1 = __nccwpck_require__(5999);
 async function markFindingsResolved(param) {
     const errors = [];
     for (const [findingId, existing] of Object.entries(param.context.existingByFindingId)) {
-        await repairExistingPullRequestFinding(param.ports, param.execution, findingId, existing.pullRequest, errors);
+        await repairExistingPullRequestFinding(param.ports, param.operation, findingId, existing.pullRequest, errors);
         if (!param.resolvedFindingIds.has(findingId))
             continue;
         await resolvePullRequestIfNeeded(param, findingId, existing.pullRequest, errors);
@@ -2552,20 +2443,20 @@ async function markFindingsResolved(param) {
     }
     return errors;
 }
-async function repairExistingPullRequestFinding(ports, execution, findingId, destination, errors) {
+async function repairExistingPullRequestFinding(ports, operation, findingId, destination, errors) {
     if (destination == null)
         return;
     if (destination.resolution === 'dismissed' && destination.threadResolved === true) {
-        await tryResolvePullRequestFinding(ports, execution, findingId, destination, errors, 'dismissed');
+        await tryResolvePullRequestFinding(ports, findingId, destination, errors, 'dismissed');
         return;
     }
     if (!destination.resolved
         && destination.threadResolved === true
         && destination.threadResolvedByLogin != null
-        && execution.tokenUser?.trim()
-        && !(0, review_state_1.isHumanResolver)(destination.threadResolvedByLogin, execution.tokenUser)) {
+        && operation.trustedAuthorLogin?.trim()
+        && !(0, review_state_1.isHumanResolver)(destination.threadResolvedByLogin, operation.trustedAuthorLogin)) {
         try {
-            await ports.pullRequestComments.unresolvePullRequestReviewThread(execution.owner, execution.repo, destination.pullRequestNumber, destination.commentIdentity, execution.tokens.token);
+            await ports.pullRequestComments.unresolvePullRequestReviewThread(destination.pullRequestNumber, destination.commentIdentity);
         }
         catch {
             addResolutionError(errors, 'pull request');
@@ -2574,7 +2465,7 @@ async function repairExistingPullRequestFinding(ports, execution, findingId, des
 }
 async function resolvePullRequestIfNeeded(param, findingId, destination, errors) {
     if (destination != null && (!destination.resolved || destination.verificationRequired === true)) {
-        await tryResolvePullRequestFinding(param.ports, param.execution, findingId, destination, errors, param.resolvedFindingResolutions?.get(findingId));
+        await tryResolvePullRequestFinding(param.ports, findingId, destination, errors, param.resolvedFindingResolutions?.get(findingId));
     }
 }
 async function resolveIssueIfNeeded(param, findingId, destination, errors) {
@@ -2589,10 +2480,7 @@ async function resolveIssueIfNeeded(param, findingId, destination, errors) {
         await (0, resolve_issue_finding_1.resolveIssueFinding)(param.ports.issueComments, {
             findingId,
             comment: { id: comment.id, body: comment.body },
-            owner: param.execution.owner,
-            repo: param.execution.repo,
-            issueNumber: param.execution.issueNumber,
-            token: param.execution.tokens.token,
+            issueNumber: param.operation.target.issueNumber,
             resolution: param.resolvedFindingResolutions?.get(findingId),
         });
     }
@@ -2600,15 +2488,12 @@ async function resolveIssueIfNeeded(param, findingId, destination, errors) {
         addResolutionError(errors, 'issue');
     }
 }
-async function tryResolvePullRequestFinding(ports, execution, findingId, destination, errors, resolution) {
+async function tryResolvePullRequestFinding(ports, findingId, destination, errors, resolution) {
     try {
         await (0, resolve_pull_request_finding_1.resolvePullRequestFinding)(ports.pullRequestComments, {
             findingId,
             commentIdentity: destination.commentIdentity,
             pullRequestNumber: destination.pullRequestNumber,
-            owner: execution.owner,
-            repo: execution.repo,
-            token: execution.tokens.token,
             resolution,
         });
     }
@@ -2874,15 +2759,15 @@ const publish_issue_finding_comment_1 = __nccwpck_require__(4950);
 const publish_pr_review_comments_1 = __nccwpck_require__(352);
 const publish_overflow_comment_1 = __nccwpck_require__(974);
 async function publishFindings(param) {
-    const { execution, context, findings, commitSha, overflowCount = 0, overflowTitles = [], ports } = param;
+    const { operation, context, findings, commitSha, overflowCount = 0, overflowTitles = [], ports } = param;
     const { existingByFindingId, canonicalPullRequest, prContext } = context;
-    const watermark = commitSha && execution.owner && execution.repo
-        ? (0, comment_watermark_1.getCommentWatermark)({ commitSha, owner: execution.owner, repo: execution.repo })
+    const watermark = commitSha
+        ? (0, comment_watermark_1.getCommentWatermark)({ commitSha, owner: operation.repository.owner, repo: operation.repository.name })
         : (0, comment_watermark_1.getCommentWatermark)();
     const reviewPublisher = prContext && canonicalPullRequest
         ? new publish_pr_review_comments_1.PullRequestReviewCommentPublisher({
             repository: ports.pullRequestComments,
-            execution,
+            operation,
             openPrNumber: canonicalPullRequest.number,
             prContext,
             watermark,
@@ -2891,16 +2776,16 @@ async function publishFindings(param) {
         })
         : undefined;
     for (const finding of findings) {
-        if (execution.issueNumber > 0 && !reviewPublisher) {
-            await (0, publish_issue_finding_comment_1.publishIssueFindingComment)(ports.issueComments, execution, finding, (0, finding_1.findExistingFindingInfo)(existingByFindingId, finding), commitSha);
+        if (operation.target.issueNumber > 0 && !reviewPublisher) {
+            await (0, publish_issue_finding_comment_1.publishIssueFindingComment)(ports.issueComments, operation.target.issueNumber, finding, (0, finding_1.findExistingFindingInfo)(existingByFindingId, finding), commitSha);
         }
         if (reviewPublisher) {
             await reviewPublisher.publish(finding, (0, finding_1.findExistingFindingInfo)(existingByFindingId, finding));
         }
     }
     await reviewPublisher?.flush(overflowCount, overflowTitles);
-    if (execution.issueNumber > 0 && !reviewPublisher) {
-        await (0, publish_overflow_comment_1.publishOverflowComment)(ports.issueComments, execution, overflowCount, overflowTitles, commitSha);
+    if (operation.target.issueNumber > 0 && !reviewPublisher) {
+        await (0, publish_overflow_comment_1.publishOverflowComment)(ports.issueComments, operation.target.issueNumber, overflowCount, overflowTitles, commitSha);
     }
 }
 
@@ -2915,15 +2800,15 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.publishIssueFindingComment = publishIssueFindingComment;
 const bugbot_finding_marker_policy_1 = __nccwpck_require__(8024);
 const logging_ports_1 = __nccwpck_require__(6152);
-async function publishIssueFindingComment(repository, execution, finding, existing, commitSha) {
+async function publishIssueFindingComment(repository, issueNumber, finding, existing, commitSha) {
     const body = (0, bugbot_finding_marker_policy_1.buildCommentBody)(finding, false);
     const options = commitSha ? { commitSha } : undefined;
     if (existing?.issue != null) {
-        await repository.updateComment(execution.owner, execution.repo, execution.issueNumber, existing.issue.commentId, body, execution.tokens.token, options);
+        await repository.updateComment(issueNumber, existing.issue.commentId, body, options);
         (0, logging_ports_1.logDebugInfo)(`Updated bugbot comment for finding ${finding.id} on issue.`);
         return;
     }
-    await repository.addComment(execution.owner, execution.repo, execution.issueNumber, body, execution.tokens.token, options);
+    await repository.addComment(issueNumber, body, options);
     (0, logging_ports_1.logDebugInfo)(`Added bugbot comment for finding ${finding.id} on issue.`);
 }
 
@@ -2937,7 +2822,7 @@ async function publishIssueFindingComment(repository, execution, finding, existi
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.publishOverflowComment = publishOverflowComment;
 const logging_ports_1 = __nccwpck_require__(6152);
-async function publishOverflowComment(repository, execution, overflowCount, overflowTitles, commitSha) {
+async function publishOverflowComment(repository, issueNumber, overflowCount, overflowTitles, commitSha) {
     if (overflowCount <= 0)
         return;
     const titlesList = overflowTitles.length > 0
@@ -2946,7 +2831,7 @@ async function publishOverflowComment(repository, execution, overflowCount, over
     const body = `## More findings (comment limit)
 
 There are **${overflowCount}** more finding(s) that were not published as individual comments. Review locally or in the full diff to see the list.${titlesList}`;
-    await repository.addComment(execution.owner, execution.repo, execution.issueNumber, body, execution.tokens.token, commitSha ? { commitSha } : undefined);
+    await repository.addComment(issueNumber, body, commitSha ? { commitSha } : undefined);
     (0, logging_ports_1.logDebugInfo)(`Added overflow comment: ${overflowCount} additional finding(s) not published individually.`);
 }
 
@@ -2972,8 +2857,8 @@ class PullRequestReviewCommentPublisher {
         this.unanchoredBodies = [];
     }
     async publish(finding, existing) {
-        const { prContext, openPrNumber, execution } = this.options;
-        const allowSuggestedChanges = execution.ai.getBugbotReviewConfiguration().suggestedChanges;
+        const { prContext, openPrNumber, operation } = this.options;
+        const allowSuggestedChanges = operation.analysis.reviewConfiguration.suggestedChanges;
         if (existing?.pullRequest != null &&
             existing.pullRequest.pullRequestNumber === openPrNumber) {
             // A human dismissal is durable. Model output alone cannot reverse it;
@@ -2985,11 +2870,11 @@ class PullRequestReviewCommentPublisher {
             // Existing comments do not carry enough anchor metadata to prove that a
             // GitHub suggestion is still attached to a RIGHT-side changed line.
             const body = `${(0, bugbot_finding_marker_policy_1.buildCommentBody)(finding, false, undefined, { includeSuggestedChange: false })}\n\n${this.options.watermark}`;
-            await this.options.repository.updatePullRequestReviewComment(execution.owner, execution.repo, existing.pullRequest.commentIdentity, body, execution.tokens.token);
+            await this.options.repository.updatePullRequestReviewComment(existing.pullRequest.commentIdentity, body);
             if (existing.pullRequest.resolved || existing.pullRequest.threadResolved === true) {
                 // Persist the open marker before reopening the native thread. This
                 // leaves a deterministic recovery direction after partial failures.
-                await this.options.repository.unresolvePullRequestReviewThread(execution.owner, execution.repo, openPrNumber, existing.pullRequest.commentIdentity, execution.tokens.token);
+                await this.options.repository.unresolvePullRequestReviewThread(openPrNumber, existing.pullRequest.commentIdentity);
             }
             return;
         }
@@ -3024,12 +2909,12 @@ class PullRequestReviewCommentPublisher {
     async flush(overflowCount = 0, overflowTitles = []) {
         if (this.findingsToCreate.length === 0 && overflowCount === 0)
             return;
-        const { repository, execution, openPrNumber, prContext } = this.options;
-        await repository.createReviewWithComments(execution.owner, execution.repo, openPrNumber, prContext.prHeadSha, buildReviewSummary(this.findingsToCreate, this.commentsToCreate.length, this.unanchoredBodies, overflowCount, overflowTitles, this.options.watermark, execution.ai.getBugbotReviewConfiguration().traceRules
+        const { repository, operation, openPrNumber, prContext } = this.options;
+        await repository.createReviewWithComments(openPrNumber, prContext.prHeadSha, buildReviewSummary(this.findingsToCreate, this.commentsToCreate.length, this.unanchoredBodies, overflowCount, overflowTitles, this.options.watermark, operation.analysis.reviewConfiguration.traceRules
             ? this.options.ruleSources ?? []
-            : [], execution.ai.getBugbotReviewConfiguration().traceRules
+            : [], operation.analysis.reviewConfiguration.traceRules
             ? this.options.omittedRuleCount ?? 0
-            : 0, prContext.prHeadSha, execution.locale?.pullRequest ?? 'en-US'), this.commentsToCreate, execution.tokens.token);
+            : 0, prContext.prHeadSha, operation.locale.pullRequest), this.commentsToCreate);
     }
 }
 exports.PullRequestReviewCommentPublisher = PullRequestReviewCommentPublisher;
@@ -3152,7 +3037,7 @@ const synchronize_bugbot_review_presentation_use_case_1 = __nccwpck_require__(44
  * collaborators.
  */
 async function reconcileBugbotReviewState(input) {
-    const snapshotResult = await (0, load_bugbot_reconciliation_snapshot_use_case_1.loadBugbotReconciliationSnapshot)(input.target, input.credential, input.snapshotPorts);
+    const snapshotResult = await (0, load_bugbot_reconciliation_snapshot_use_case_1.loadBugbotReconciliationSnapshot)(input.target, input.snapshotPorts);
     if (snapshotResult.kind === 'superseded') {
         return {
             projection: (0, review_projection_1.buildBugbotReviewProjection)({
@@ -3197,7 +3082,6 @@ async function reconcileBugbotReviewState(input) {
     });
     return (0, synchronize_bugbot_review_presentation_use_case_1.synchronizeBugbotReviewPresentation)({
         target: input.target,
-        credential: input.credential,
         snapshot,
         plan,
         ports: input.presentationPorts,
@@ -3235,7 +3119,7 @@ async function resolveIssueFinding(repository, resolution) {
     const replaced = (0, bugbot_finding_marker_policy_1.replaceMarkerInBody)(body, resolution.findingId, true, replacement);
     if (!replaced.found || !replaced.changed)
         return;
-    await repository.updateComment(resolution.owner, resolution.repo, resolution.issueNumber, resolution.comment.id, replaced.updated, resolution.token);
+    await repository.updateComment(resolution.issueNumber, resolution.comment.id, replaced.updated);
 }
 
 
@@ -3257,7 +3141,7 @@ function resolvedNote(resolution) {
     return "\n\n---\n**Resolved** (configured agent confirmed fixed in latest analysis).\n";
 }
 async function resolvePullRequestFinding(repository, resolution) {
-    const comments = await repository.listPullRequestReviewComments(resolution.owner, resolution.repo, resolution.pullRequestNumber, resolution.token);
+    const comments = await repository.listPullRequestReviewComments(resolution.pullRequestNumber);
     const comment = comments.find((candidate) => candidate.identity === resolution.commentIdentity);
     if (comment?.body == null) {
         throw new pull_request_review_errors_1.PullRequestReviewOperationError("resolve-thread");
@@ -3275,10 +3159,10 @@ async function resolvePullRequestFinding(repository, resolution) {
         if (replaced.changed) {
             // Persist Bugbot's durable intent first. If the native mutation fails, a
             // retry can safely repair the thread toward this explicit marker state.
-            await repository.updatePullRequestReviewComment(resolution.owner, resolution.repo, resolution.commentIdentity, replaced.updated, resolution.token);
+            await repository.updatePullRequestReviewComment(resolution.commentIdentity, replaced.updated);
         }
     }
-    await repository.resolvePullRequestReviewThread(resolution.owner, resolution.repo, resolution.pullRequestNumber, resolution.commentIdentity, resolution.token);
+    await repository.resolvePullRequestReviewThread(resolution.pullRequestNumber, resolution.commentIdentity);
 }
 
 
@@ -3501,7 +3385,7 @@ async function synchronizeBugbotReviewPresentation(input) {
     const plannedReviewUpdates = planReviewUpdates(input, projection, navigation);
     const selectedReviewUpdates = plannedReviewUpdates.slice(0, MAX_REVIEW_UPDATES_PER_RUN);
     const reviewWriteResults = await mapWithConcurrency(selectedReviewUpdates, REVIEW_UPDATE_CONCURRENCY, async ({ ownedReview, body }) => {
-        await input.ports.reviews.updatePullRequestReview(input.target.owner, input.target.repository, input.target.pullRequestNumber, ownedReview.review.identity, body, input.credential.token);
+        await input.ports.updatePullRequestReview(input.target.pullRequestNumber, ownedReview.review.identity, body);
     });
     const reviewUpdates = reviewWriteResults.filter((result) => result === 'fulfilled').length;
     const reviewErrors = reviewWriteResults.flatMap((result, index) => result === 'rejected'
@@ -3554,11 +3438,11 @@ async function synchronizeStatusCard(input, projection, navigation) {
     const canonical = trustedStatusComments[0];
     try {
         if (!canonical) {
-            await input.ports.comments.addComment(input.target.owner, input.target.repository, input.target.pullRequestNumber, statusBody, input.credential.token, { commitSha: input.snapshot.verifiedHeadSha });
+            await input.ports.comments.addComment(input.target.pullRequestNumber, statusBody, { commitSha: input.snapshot.verifiedHeadSha });
             operation = 'created';
         }
         else if (!canonical.body?.startsWith(statusBody)) {
-            await input.ports.comments.updateComment(input.target.owner, input.target.repository, input.target.pullRequestNumber, canonical.id, statusBody, input.credential.token, { commitSha: input.snapshot.verifiedHeadSha });
+            await input.ports.comments.updateComment(input.target.pullRequestNumber, canonical.id, statusBody, { commitSha: input.snapshot.verifiedHeadSha });
             operation = 'updated';
         }
     }
@@ -3566,11 +3450,11 @@ async function synchronizeStatusCard(input, projection, navigation) {
         failed = true;
     }
     const duplicateResults = await mapWithConcurrency(trustedStatusComments.slice(1), REVIEW_UPDATE_CONCURRENCY, async (duplicate) => {
-        await input.ports.comments.updateComment(input.target.owner, input.target.repository, input.target.pullRequestNumber, duplicate.id, [
+        await input.ports.comments.updateComment(input.target.pullRequestNumber, duplicate.id, [
             '## 🤖 Bugbot status moved',
             '',
             `This duplicate status card is no longer current. [Use the canonical PR status](${navigation.pullRequestUrl}).`,
-        ].join('\n'), input.credential.token, { commitSha: input.snapshot.verifiedHeadSha });
+        ].join('\n'), { commitSha: input.snapshot.verifiedHeadSha });
     });
     if (duplicateResults.includes('rejected'))
         failed = true;
@@ -3635,20 +3519,16 @@ exports.DetectPotentialProblemsUseCase = void 0;
 const detect_potential_problems_workflow_1 = __nccwpck_require__(7033);
 /** Application boundary for detecting, publishing and resolving Bugbot findings. */
 class DetectPotentialProblemsUseCase {
-    constructor(aiRepository, contextPorts, publicationPorts, resolutionPorts, telemetryPort) {
+    constructor(aiRepository, scm, telemetryPort) {
         this.aiRepository = aiRepository;
-        this.contextPorts = contextPorts;
-        this.publicationPorts = publicationPorts;
-        this.resolutionPorts = resolutionPorts;
+        this.scm = scm;
         this.telemetryPort = telemetryPort;
         this.taskId = 'DetectPotentialProblemsUseCase';
     }
     async invoke(param) {
         return await (0, detect_potential_problems_workflow_1.runDetectPotentialProblemsWorkflow)(param, {
             aiRepository: this.aiRepository,
-            contextPorts: this.contextPorts,
-            publicationPorts: this.publicationPorts,
-            resolutionPorts: this.resolutionPorts,
+            scm: this.scm,
             telemetryPort: this.telemetryPort,
         });
     }
@@ -3678,12 +3558,10 @@ const analyze_bugbot_revision_use_case_1 = __nccwpck_require__(4658);
 const bugbot_review_freshness_1 = __nccwpck_require__(4307);
 const reconcile_bugbot_review_state_use_case_1 = __nccwpck_require__(7515);
 const application_error_1 = __nccwpck_require__(5999);
-const bugbot_review_operation_context_1 = __nccwpck_require__(6660);
 const TASK_ID = 'DetectPotentialProblemsUseCase';
 /** Coordinates Bugbot context, analysis and finding publication behind application ports. */
-async function runDetectPotentialProblemsWorkflow(param, dependencies) {
+async function runDetectPotentialProblemsWorkflow(reviewContext, dependencies) {
     const workflowStartedAt = Date.now();
-    const reviewContext = (0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param);
     const telemetry = new bugbot_review_telemetry_1.BugbotReviewTelemetry(reviewContext);
     const publishTelemetry = async (outcome, category) => {
         const snapshot = telemetry.snapshot(outcome, category);
@@ -3722,12 +3600,7 @@ async function runDetectPotentialProblemsWorkflow(param, dependencies) {
             return [];
         }
         const contextRequest = (0, bugbot_context_request_1.projectBugbotContextRequest)(reviewContext, contextOptions);
-        const contextReader = dependencies.contextPorts.loader.bind({
-            owner: param.owner,
-            repository: param.repo,
-            token: param.tokens.token,
-        });
-        const context = await telemetry.measure('context', () => (0, load_bugbot_context_use_case_1.loadBugbotContext)(contextRequest, contextReader));
+        const context = await telemetry.measure('context', () => (0, load_bugbot_context_use_case_1.loadBugbotContext)(contextRequest, dependencies.scm.context));
         const eventHeadSha = reviewContext.trigger.expectedHeadSha;
         if ((0, bugbot_review_freshness_1.isLoadedBugbotRevisionSuperseded)(context, eventHeadSha)) {
             return await complete(supersededResult(context.prContext?.prHeadSha, eventHeadSha), 'superseded');
@@ -3737,7 +3610,7 @@ async function runDetectPotentialProblemsWorkflow(param, dependencies) {
             const analysisError = new application_error_1.ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.');
             const presentation = reviewContext.analysis.reviewConfiguration.publicationMode === 'publish'
                 ? await telemetry.measure('projection', () => reconcileReviewState({
-                    execution: param,
+                    operation: reviewContext,
                     loadedContext: context,
                     activeFindings: [],
                     mutationErrors: [analysisError],
@@ -3749,18 +3622,18 @@ async function runDetectPotentialProblemsWorkflow(param, dependencies) {
             return await complete(noAnalysisResult(presentation), 'failed');
         }
         telemetry.observePrepared(prepared);
-        if (await telemetry.measure('freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(param, context, dependencies.contextPorts))) {
+        if (await telemetry.measure('freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
         if (reviewContext.analysis.reviewConfiguration.publicationMode === 'dry-run') {
             return await complete(dryRunResult(prepared, context), 'dry-run');
         }
-        const resolutionErrors = await telemetry.measure('publication', () => (0, apply_detected_findings_1.applyDetectedFindings)(param, context, prepared, dependencies.publicationPorts, dependencies.resolutionPorts));
-        if (await telemetry.measure('post-publication-freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(param, context, dependencies.contextPorts))) {
+        const resolutionErrors = await telemetry.measure('publication', () => (0, apply_detected_findings_1.applyDetectedFindings)(reviewContext, context, prepared, dependencies.scm.publication, dependencies.scm.resolution));
+        if (await telemetry.measure('post-publication-freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(context, dependencies.scm.context))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
         const presentation = await telemetry.measure('projection', () => reconcileReviewState({
-            execution: param,
+            operation: reviewContext,
             loadedContext: context,
             activeFindings: prepared.activeFindings ?? prepared.toPublish,
             expectedPublishedFindings: prepared.toPublish,
@@ -3955,35 +3828,24 @@ async function reconcileReviewState(input) {
         return undefined;
     return (0, reconcile_bugbot_review_state_use_case_1.reconcileBugbotReviewState)({
         target: {
-            owner: input.execution.owner,
-            repository: input.execution.repo,
             pullRequestNumber,
-            ...(input.execution.issueNumber > 0
-                ? { linkedIssueNumber: input.execution.issueNumber }
+            ...(input.operation.target.issueNumber > 0
+                ? { linkedIssueNumber: input.operation.target.issueNumber }
                 : {}),
             analyzedHeadSha,
-            ...(input.execution.tokenUser
-                ? { trustedAuthorLogin: input.execution.tokenUser }
+            ...(input.operation.trustedAuthorLogin
+                ? { trustedAuthorLogin: input.operation.trustedAuthorLogin }
                 : {}),
-            locale: input.execution.locale?.pullRequest ?? 'en-US',
+            locale: input.operation.locale.pullRequest,
         },
-        credential: { token: input.execution.tokens.token },
         loadedContext: input.loadedContext,
         activeFindings: input.activeFindings,
         ...(input.expectedPublishedFindings
             ? { expectedPublishedFindings: input.expectedPublishedFindings }
             : {}),
         ...(input.mutationErrors ? { mutationErrors: input.mutationErrors } : {}),
-        snapshotPorts: {
-            issueComments: input.dependencies.contextPorts.issue,
-            pullRequest: input.dependencies.contextPorts.pullRequest,
-            reviews: input.dependencies.contextPorts.reviewState,
-            navigation: input.dependencies.contextPorts.navigation,
-        },
-        presentationPorts: {
-            comments: input.dependencies.publicationPorts.issueComments,
-            reviews: input.dependencies.publicationPorts.reviewState,
-        },
+        snapshotPorts: input.dependencies.scm.reconciliation.snapshot,
+        presentationPorts: input.dependencies.scm.reconciliation.presentation,
     });
 }
 
@@ -3999,73 +3861,6 @@ exports.isAgentConfigurationReady = exports.AGENT_EXECUTABLE_BASENAMES = void 0;
 var agent_1 = __nccwpck_require__(9040);
 Object.defineProperty(exports, "AGENT_EXECUTABLE_BASENAMES", ({ enumerable: true, get: function () { return agent_1.AGENT_EXECUTABLE_BASENAMES; } }));
 Object.defineProperty(exports, "isAgentConfigurationReady", ({ enumerable: true, get: function () { return agent_1.isAgentConfigurationReady; } }));
-
-
-/***/ }),
-
-/***/ 7478:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Ai = void 0;
-const pull_request_description_1 = __nccwpck_require__(5315);
-const review_configuration_1 = __nccwpck_require__(3994);
-class Ai {
-    constructor(_configurationSource, model, aiMembersOnly, aiIgnoreFiles, aiIncludeReasoning, bugbotMinSeverity, bugbotCommentLimit, bugbotFixVerifyCommands = [], agentTasks = {
-        findings: { provider: 'codex', modelProvider: 'openai', model },
-        fixer: { provider: 'codex', modelProvider: 'openai', model },
-    }, pullRequestDescriptionMode = pull_request_description_1.DEFAULT_PULL_REQUEST_DESCRIPTION_MODE, bugbotReviewConfiguration = review_configuration_1.DEFAULT_BUGBOT_REVIEW_CONFIGURATION) {
-        this.aiMembersOnly = aiMembersOnly;
-        this.aiIgnoreFiles = aiIgnoreFiles;
-        this.aiIncludeReasoning = aiIncludeReasoning;
-        this.bugbotMinSeverity = bugbotMinSeverity;
-        this.bugbotCommentLimit = bugbotCommentLimit;
-        this.bugbotFixVerifyCommands = bugbotFixVerifyCommands;
-        this.agentTasks = agentTasks;
-        this.pullRequestDescriptionMode = (0, pull_request_description_1.normalizePullRequestDescriptionMode)(pullRequestDescriptionMode);
-        this.bugbotReviewConfiguration = (0, review_configuration_1.normalizeBugbotReviewConfiguration)(bugbotReviewConfiguration);
-    }
-    getPullRequestDescriptionMode() {
-        return this.pullRequestDescriptionMode;
-    }
-    getAiMembersOnly() {
-        return this.aiMembersOnly;
-    }
-    getAiIgnoreFiles() {
-        return this.aiIgnoreFiles;
-    }
-    getAiIncludeReasoning() {
-        return this.aiIncludeReasoning;
-    }
-    getBugbotMinSeverity() {
-        return this.bugbotMinSeverity;
-    }
-    getBugbotCommentLimit() {
-        return this.bugbotCommentLimit;
-    }
-    getBugbotFixVerifyCommands() {
-        return this.bugbotFixVerifyCommands;
-    }
-    getBugbotReviewConfiguration() {
-        return this.bugbotReviewConfiguration;
-    }
-    /** Applies command-scoped review options and restores the shared configuration afterwards. */
-    async withBugbotReviewConfiguration(overrides, operation) {
-        const previous = this.bugbotReviewConfiguration;
-        this.bugbotReviewConfiguration = (0, review_configuration_1.normalizeBugbotReviewConfiguration)({ ...previous, ...overrides });
-        try {
-            return await operation();
-        }
-        finally {
-            this.bugbotReviewConfiguration = previous;
-        }
-    }
-    getAgentConfiguration(task) {
-        return this.agentTasks[task] ?? this.agentTasks.findings;
-    }
-}
-exports.Ai = Ai;
 
 
 /***/ }),
@@ -4731,64 +4526,6 @@ function parsePositiveSafeInteger(value) {
         return undefined;
     const parsed = Number(normalized);
     return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
-}
-
-
-/***/ }),
-
-/***/ 5315:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.MANAGED_PULL_REQUEST_DESCRIPTION_END = exports.MANAGED_PULL_REQUEST_DESCRIPTION_START = exports.DEFAULT_PULL_REQUEST_DESCRIPTION_MODE = exports.PULL_REQUEST_DESCRIPTION_MODES = void 0;
-exports.normalizePullRequestDescriptionMode = normalizePullRequestDescriptionMode;
-exports.hasManagedPullRequestDescription = hasManagedPullRequestDescription;
-exports.renderManagedPullRequestDescription = renderManagedPullRequestDescription;
-exports.mergeManagedPullRequestDescription = mergeManagedPullRequestDescription;
-exports.shouldAutomaticallyUpdatePullRequestDescription = shouldAutomaticallyUpdatePullRequestDescription;
-exports.PULL_REQUEST_DESCRIPTION_MODES = [
-    'replace',
-    'append',
-    'preserve',
-    'disabled',
-];
-exports.DEFAULT_PULL_REQUEST_DESCRIPTION_MODE = 'replace';
-exports.MANAGED_PULL_REQUEST_DESCRIPTION_START = '<!-- copilot:managed-pr-description -->';
-exports.MANAGED_PULL_REQUEST_DESCRIPTION_END = '<!-- /copilot:managed-pr-description -->';
-/** Normalizes public configuration and keeps invalid values safe. */
-function normalizePullRequestDescriptionMode(value) {
-    const normalized = String(value ?? '').trim().toLowerCase();
-    return exports.PULL_REQUEST_DESCRIPTION_MODES.includes(normalized)
-        ? normalized
-        : exports.DEFAULT_PULL_REQUEST_DESCRIPTION_MODE;
-}
-function hasManagedPullRequestDescription(body) {
-    return typeof body === 'string' && body.includes(exports.MANAGED_PULL_REQUEST_DESCRIPTION_START);
-}
-/** Renders one bounded Copilot-owned section without taking ownership of the rest of the body. */
-function renderManagedPullRequestDescription(generated) {
-    return [
-        exports.MANAGED_PULL_REQUEST_DESCRIPTION_START,
-        generated.trim(),
-        exports.MANAGED_PULL_REQUEST_DESCRIPTION_END,
-    ].join('\n');
-}
-/** Replaces the existing managed section, or appends one when none exists. */
-function mergeManagedPullRequestDescription(currentBody, generated) {
-    const current = typeof currentBody === 'string' ? currentBody.trim() : '';
-    const managed = renderManagedPullRequestDescription(generated);
-    const start = current.indexOf(exports.MANAGED_PULL_REQUEST_DESCRIPTION_START);
-    const end = current.indexOf(exports.MANAGED_PULL_REQUEST_DESCRIPTION_END, start + exports.MANAGED_PULL_REQUEST_DESCRIPTION_START.length);
-    if (start >= 0 && end >= start) {
-        const before = current.slice(0, start).trimEnd();
-        const after = current.slice(end + exports.MANAGED_PULL_REQUEST_DESCRIPTION_END.length).trimStart();
-        return [before, managed, after].filter(Boolean).join('\n\n').trim();
-    }
-    return current ? `${current}\n\n${managed}` : managed;
-}
-function shouldAutomaticallyUpdatePullRequestDescription(mode) {
-    return mode === 'replace' || mode === 'append';
 }
 
 
@@ -6119,19 +5856,20 @@ var exports = __webpack_exports__;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ApplicationError = exports.buildBugbotReviewProjection = exports.isBugbotCleanState = exports.isBugbotActionableState = exports.countBugbotFindingStates = exports.countActionableBugbotFindings = exports.classifyBugbotFindingState = exports.BUGBOT_FINDING_STATES = exports.resolveBugbotReviewEffort = exports.normalizeBugbotReviewConfiguration = exports.buildFindingFingerprint = exports.buildSemanticFindingFingerprint = exports.parseBugbotTelemetry = exports.buildBugbotAnalytics = exports.loadBugbotPredictions = exports.loadBugbotBenchmark = exports.evaluateBugbotBenchmark = exports.evaluateBugbotQualityGate = exports.evaluateBugbotFindings = exports.BugbotReviewService = void 0;
-const ai_1 = __nccwpck_require__(7478);
 const detect_potential_problems_use_case_1 = __nccwpck_require__(6287);
 const application_error_1 = __nccwpck_require__(5999);
 const application_error_context_1 = __nccwpck_require__(4034);
+const review_configuration_1 = __nccwpck_require__(3994);
 /** Provider-neutral programmatic entry point. Consumers supply agent and SCM adapters. */
 class BugbotReviewService {
     constructor(agent, scm) {
-        this.useCase = new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(agent, scm.context, scm.publication, scm.resolution, scm.telemetry);
+        this.repository = snapshotRepositoryBinding(scm);
+        this.useCase = new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(agent, scm, scm.telemetry);
     }
     async review(request) {
         return (0, application_error_context_1.runAtApplicationErrorBoundary)(async () => {
             try {
-                return await this.useCase.invoke(buildReviewExecution(request));
+                return await this.useCase.invoke(buildReviewOperationContext(request, this.repository));
             }
             catch (cause) {
                 throw (0, application_error_1.toApplicationError)(cause, 'unexpected', 'Bugbot review failed.');
@@ -6140,13 +5878,18 @@ class BugbotReviewService {
     }
 }
 exports.BugbotReviewService = BugbotReviewService;
-function buildReviewExecution(request) {
+function snapshotRepositoryBinding(scm) {
+    return Object.freeze({
+        owner: requireText(scm?.repository?.owner, 'Bound repository owner', 100),
+        name: requireText(scm?.repository?.name, 'Bound repository name', 100),
+    });
+}
+function buildReviewOperationContext(request, binding) {
     if (!request || typeof request !== 'object') {
         throw new application_error_1.ApplicationError('validation.invalid-input', 'Bugbot review request is missing or invalid.');
     }
-    const owner = requireText(request.repository?.owner, 'Repository owner', 100);
-    const repository = requireText(request.repository?.name, 'Repository name', 100);
-    const token = requireText(request.credential?.token, 'SCM credential', 10000, 'authorization.credential-invalid');
+    const owner = requireText(binding?.owner, 'Bound repository owner', 100);
+    const repository = requireText(binding?.name, 'Bound repository name', 100);
     const commentLimit = request.commentLimit ?? 20;
     if (!Number.isSafeInteger(commentLimit) || commentLimit < 1 || commentLimit > 100) {
         throw new application_error_1.ApplicationError('configuration.invalid', 'Bugbot comment limit must be an integer between 1 and 100.');
@@ -6163,51 +5906,48 @@ function buildReviewExecution(request) {
     if (!['info', 'low', 'medium', 'high'].includes(minimumSeverity)) {
         throw new application_error_1.ApplicationError('configuration.invalid', 'Bugbot minimum severity is invalid.');
     }
-    const ai = new ai_1.Ai('', agent.model, false, ignoreFiles, false, minimumSeverity, commentLimit, [], { findings: agent, fixer: agent, reviewer: agent }, 'replace', configuration);
+    const normalizedConfiguration = (0, review_configuration_1.normalizeBugbotReviewConfiguration)(configuration);
+    const { organizationRules, ...reviewConfiguration } = normalizedConfiguration;
     const isPullRequest = target.kind === 'pull-request';
     const issueNumber = isPullRequest ? target.linkedIssueNumber ?? -1 : target.issueNumber ?? -1;
     const branch = isPullRequest ? target.head : target.branch;
     const eventName = isPullRequest ? 'pull_request' : 'push';
     const action = isPullRequest ? target.action ?? 'synchronize' : '';
-    const inputs = {
-        eventName,
-        action,
-        repo: { owner, repo: repository },
-        ref: `refs/heads/${branch}`,
-        ...(target.before ? { before: target.before } : {}),
-        ...(!isPullRequest && target.after ? { after: target.after } : {}),
-        ...(isPullRequest ? {
-            pull_request: {
-                number: target.number,
-                draft: target.draft ?? false,
-                head: { ref: target.head, ...(target.expectedHeadSha ? { sha: target.expectedHeadSha } : {}) },
-                base: { ref: target.base ?? 'develop' },
-            },
-        } : {}),
-    };
-    // This is the only public-to-internal aggregate boundary. Every mutable
-    // input is copied, and the aggregate itself remains absent from the API.
-    return {
-        ai,
-        owner,
-        repo: repository,
-        issueNumber,
-        isPullRequest,
-        eventName,
-        inputs,
-        tokenUser: optionalText(request.authenticatedUser, 'Authenticated user', 255),
-        tokens: { token },
-        commit: { branch },
-        branches: { development: target.base ?? 'develop' },
-        currentConfiguration: { parentBranch: target.base },
-        pullRequest: isPullRequest
-            ? { number: target.number, head: target.head, action }
-            : { number: -1, head: '', action: '' },
-        locale: {
-            issue: optionalText(request.locale?.issue, 'Issue locale', 64) ?? 'en-US',
+    const authenticatedUser = optionalText(request.authenticatedUser, 'Authenticated user', 255);
+    return Object.freeze({
+        repository: Object.freeze({ owner, name: repository }),
+        target: Object.freeze({
+            issueNumber,
+            isPullRequest,
+            pullRequestNumber: isPullRequest ? target.number : -1,
+            headBranch: branch,
+            commitBranch: branch,
+            baseBranch: target.base ?? 'develop',
+            pullRequestAction: action,
+            draft: isPullRequest ? target.draft ?? false : false,
+        }),
+        trigger: Object.freeze({
+            kind: eventName,
+            ...(target.before ? { before: target.before } : {}),
+            ...(!isPullRequest && target.after ? { after: target.after } : {}),
+            ...(isPullRequest && target.expectedHeadSha
+                ? { expectedHeadSha: target.expectedHeadSha.toLowerCase() }
+                : {}),
+            headOwner: owner,
+        }),
+        ...(authenticatedUser ? { trustedAuthorLogin: authenticatedUser } : {}),
+        ignorePatterns: Object.freeze(ignoreFiles),
+        organizationRules: Object.freeze([...organizationRules]),
+        locale: Object.freeze({
             pullRequest: optionalText(request.locale?.pullRequest, 'Pull request locale', 64) ?? 'en-US',
-        },
-    };
+        }),
+        analysis: Object.freeze({
+            agentConfiguration: Object.freeze(agent),
+            minimumSeverity,
+            commentLimit,
+            reviewConfiguration: Object.freeze(reviewConfiguration),
+        }),
+    });
 }
 function normalizeTarget(target) {
     if (!target || !['pull-request', 'branch'].includes(target.kind)) {
@@ -6317,10 +6057,10 @@ function optionalObjectId(value, field) {
 function optionalText(value, field, maximum) {
     return value === undefined ? undefined : requireText(value, field, maximum);
 }
-function requireText(value, field, maximum, code = 'validation.invalid-input') {
+function requireText(value, field, maximum) {
     const normalized = typeof value === 'string' ? value.trim() : '';
     if (!normalized || normalized.length > maximum || /[\r\n\0]/u.test(normalized)) {
-        throw new application_error_1.ApplicationError(code, `${field} is missing or invalid.`);
+        throw new application_error_1.ApplicationError('validation.invalid-input', `${field} is missing or invalid.`);
     }
     return normalized;
 }
@@ -6337,9 +6077,9 @@ Object.defineProperty(exports, "parseBugbotTelemetry", ({ enumerable: true, get:
 var finding_identity_1 = __nccwpck_require__(1853);
 Object.defineProperty(exports, "buildSemanticFindingFingerprint", ({ enumerable: true, get: function () { return finding_identity_1.buildSemanticFindingFingerprint; } }));
 Object.defineProperty(exports, "buildFindingFingerprint", ({ enumerable: true, get: function () { return finding_identity_1.buildFindingFingerprint; } }));
-var review_configuration_1 = __nccwpck_require__(3994);
-Object.defineProperty(exports, "normalizeBugbotReviewConfiguration", ({ enumerable: true, get: function () { return review_configuration_1.normalizeBugbotReviewConfiguration; } }));
-Object.defineProperty(exports, "resolveBugbotReviewEffort", ({ enumerable: true, get: function () { return review_configuration_1.resolveBugbotReviewEffort; } }));
+var review_configuration_2 = __nccwpck_require__(3994);
+Object.defineProperty(exports, "normalizeBugbotReviewConfiguration", ({ enumerable: true, get: function () { return review_configuration_2.normalizeBugbotReviewConfiguration; } }));
+Object.defineProperty(exports, "resolveBugbotReviewEffort", ({ enumerable: true, get: function () { return review_configuration_2.resolveBugbotReviewEffort; } }));
 var review_state_1 = __nccwpck_require__(9200);
 Object.defineProperty(exports, "BUGBOT_FINDING_STATES", ({ enumerable: true, get: function () { return review_state_1.BUGBOT_FINDING_STATES; } }));
 Object.defineProperty(exports, "classifyBugbotFindingState", ({ enumerable: true, get: function () { return review_state_1.classifyBugbotFindingState; } }));

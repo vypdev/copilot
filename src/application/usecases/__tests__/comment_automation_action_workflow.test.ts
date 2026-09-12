@@ -1,4 +1,5 @@
 import { runCommentAutomationAction } from '../comment_automation_action_workflow';
+import { Ai } from '../../../data/model/ai';
 import { Result } from '../../../data/model/result';
 
 const mockCommitAutofix = jest.fn();
@@ -11,6 +12,34 @@ function options(overrides: Record<string, unknown> = {}) {
     taskId: 'CommentAutomation',
     userComment: '@vypbot analyze this',
     ...overrides,
+  } as never;
+}
+
+function execution(publicationMode: 'publish' | 'dry-run' = 'publish') {
+  return {
+    owner: 'org',
+    repo: 'repo',
+    issueNumber: 7,
+    isPullRequest: false,
+    eventName: 'issue_comment',
+    tokenUser: 'bot',
+    commit: { branch: 'feature/review' },
+    currentConfiguration: { parentBranch: 'develop' },
+    branches: { development: 'develop' },
+    pullRequest: { number: -1, head: '', action: '' },
+    ai: new Ai(
+      '',
+      'model',
+      false,
+      [],
+      false,
+      'low',
+      20,
+      [],
+      undefined,
+      undefined,
+      { publicationMode },
+    ),
   } as never;
 }
 
@@ -47,7 +76,7 @@ describe('runCommentAutomationAction', () => {
     const review = { invoke: jest.fn().mockResolvedValue([reviewResult]) };
     const autofix = { invoke: jest.fn().mockResolvedValue([new Result({ id: 'autofix', success: true, executed: true })]) };
     const results = await runCommentAutomationAction(
-      { ai: { getBugbotReviewConfiguration: () => ({ publicationMode: 'publish' }) } } as never,
+      execution(),
       options({ autofixUseCase: autofix, reviewPotentialProblemsUseCase: review }),
       'autofix',
       { targetFindingIds: ['finding-1'] } as never,
@@ -62,7 +91,7 @@ describe('runCommentAutomationAction', () => {
   it('blocks autofix mutations in global dry-run mode', async () => {
     const autofix = { invoke: jest.fn() };
     const results = await runCommentAutomationAction(
-      { ai: { getBugbotReviewConfiguration: () => ({ publicationMode: 'dry-run' }) } } as never,
+      execution('dry-run'),
       options({ autofixUseCase: autofix }),
       'autofix',
       { targetFindingIds: ['finding-1'] } as never,

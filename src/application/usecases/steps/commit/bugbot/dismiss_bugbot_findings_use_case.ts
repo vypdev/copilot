@@ -1,4 +1,3 @@
-import type { Execution } from '../../../../../data/model/execution';
 import { Result } from '../../../../../data/model/result';
 import type { BugbotContextPorts } from '../../../../../application/ports/bugbot_context_ports';
 import type { BugbotFindingResolutionPorts } from '../../../../../application/ports/bugbot_finding_resolution_ports';
@@ -9,10 +8,10 @@ import { normalizeFindingIdForMarker } from '../../../../policies/bugbot_finding
 import { logError } from '../../../../ports/logging_ports';
 import type { BugbotFindingResolution } from '../../../../../domain/bugbot/finding';
 import { toApplicationError } from '../../../../errors/application_error';
-import { projectBugbotContextSelectionContext } from './bugbot_review_operation_context';
+import type { BugbotContextSelectionContext } from './bugbot_review_operation_context';
 
 export interface DismissBugbotFindingsParam {
-    execution: Execution;
+    operation: BugbotContextSelectionContext;
     findingIds: readonly string[];
 }
 
@@ -29,7 +28,7 @@ export class DismissBugbotFindingsUseCase {
 
     async invoke(param: DismissBugbotFindingsParam): Promise<Result[]> {
         try {
-            const context = await loadDismissContext(param.execution, this.dependencies.contextPorts);
+            const context = await loadDismissContext(param.operation, this.dependencies.contextPorts);
             const requestedIds = new Set(param.findingIds.flatMap(id => {
                 const normalized = normalizeFindingIdForMarker(id);
                 return normalized ? [normalized] : [];
@@ -46,7 +45,7 @@ export class DismissBugbotFindingsUseCase {
             }
 
             const errors = await markFindingsResolved({
-                execution: param.execution,
+                operation: param.operation,
                 context,
                 resolvedFindingIds: dismissibleIds,
                 resolvedFindingResolutions: new Map([...dismissibleIds].map(id => [id, 'dismissed' as BugbotFindingResolution])),
@@ -77,21 +76,17 @@ export class DismissBugbotFindingsUseCase {
 }
 
 async function loadDismissContext(
-    execution: Execution,
+    operation: BugbotContextSelectionContext,
     ports: BugbotContextPorts,
 ) {
-    const reviewContext = projectBugbotContextSelectionContext(execution);
-    const reader = ports.loader.bind({
-        owner: execution.owner,
-        repository: execution.repo,
-        token: execution.tokens.token,
-    });
-    const branch = execution.commit.branch?.trim() || execution.pullRequest?.head?.trim();
+    const branch = operation.target.commitBranch || operation.target.headBranch;
     if (branch) {
-        return loadBugbotContext(projectBugbotContextRequest(reviewContext, {
+        return loadBugbotContext(projectBugbotContextRequest(operation, {
             branchOverride: branch,
-            ...(execution.pullRequest?.number > 0 ? { pullRequestNumberOverride: execution.pullRequest.number } : {}),
-        }), reader);
+            ...(operation.target.pullRequestNumber > 0
+                ? { pullRequestNumberOverride: operation.target.pullRequestNumber }
+                : {}),
+        }), ports);
     }
-    return loadBugbotContext(projectBugbotContextRequest(reviewContext), reader);
+    return loadBugbotContext(projectBugbotContextRequest(operation), ports);
 }

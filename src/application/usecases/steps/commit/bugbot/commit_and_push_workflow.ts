@@ -1,9 +1,8 @@
-import type { GitCommitPort } from '../../../../../application/ports/git_ports';
-import type { AuthenticatedUserPort } from '../../../../../application/ports/authenticated_user_ports';
-import type { Execution } from '../../../../../data/model/execution';
+import type { BugbotGitMutationPort } from '../../../../../application/ports/bugbot_git_ports';
 import { logDebugInfo, logError, logInfo } from '../../../../ports/logging_ports';
 import { runCommitAndPushPreflight } from './commit_and_push_preflight';
 import { toApplicationError } from '../../../../errors/application_error';
+import type { BugbotCommitContext } from './bugbot_review_operation_context';
 export interface CommitAndPushWorkflowResult {
     success: boolean;
     committed: boolean;
@@ -19,12 +18,11 @@ export interface CommitAndPushWorkflowOptions {
 }
 
 export async function runCommitAndPushWorkflow(
-    execution: Execution,
+    context: BugbotCommitContext,
     options: CommitAndPushWorkflowOptions,
-    authenticatedUserPort: AuthenticatedUserPort,
-    gitCommitPort: GitCommitPort,
+    gitCommitPort: BugbotGitMutationPort,
 ): Promise<CommitAndPushWorkflowResult> {
-    const preflight = await runCommitAndPushPreflight(execution, options, gitCommitPort);
+    const preflight = await runCommitAndPushPreflight(context, options, gitCommitPort);
     if (preflight.status === 'failure') {
         return { success: false, committed: false, error: preflight.error };
     }
@@ -34,7 +32,7 @@ export async function runCommitAndPushWorkflow(
     }
 
     try {
-        const { name, email } = await authenticatedUserPort.getTokenUserDetails(execution.tokens.token);
+        const { name, email } = await gitCommitPort.getAuthenticatedUserDetails();
         await gitCommitPort.configureAuthor(name, email);
         logDebugInfo(`Git author set to ${name} <${email}>.`);
         if (options.workspacePaths) {
@@ -43,7 +41,7 @@ export async function runCommitAndPushWorkflow(
             await gitCommitPort.stageAll();
         }
         await gitCommitPort.commit(options.commitMessage);
-        await gitCommitPort.push(options.branch, execution.tokens.token);
+        await gitCommitPort.push(options.branch);
         logInfo(`Pushed commit to origin/${options.branch}.`);
         return { success: true, committed: true };
     } catch (error) {

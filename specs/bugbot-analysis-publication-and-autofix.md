@@ -185,9 +185,9 @@ resolution eligibility, and credential isolation are not configurable.
 | Domain | finding, canonical PR selection, coverage, identity, review state/projection | GitHub/CLI/credentials |
 | Policies | bounded packing/concurrency/eligibility, filtering, ranking, ownership, presentation/reconciliation | I/O |
 | Use cases | load/analyze/publish/fix/reconcile sequences | provider DTOs/credentials |
-| Ports | auth-bound context, findings, resolution, agent, git, telemetry/navigation | concrete clients |
+| Ports | repository-bound context, findings, resolution, agent, git, telemetry/navigation | concrete clients, tokens in method parameters |
 | Adapters | GitHub surfaces, CLI agent, filesystem rules | finding policy |
-| Composition | capability wiring | product decisions |
+| Composition | repository/credential binding and capability wiring | product decisions, credentials in use-case requests |
 
 ```mermaid
 flowchart LR
@@ -260,6 +260,13 @@ reader, translation, migration, or deprecation window. Dry run and non-blocking
 unresolved default enable controlled first use. After real publication, rollback
 must preserve visible history and incorrect mutations are reverted through Git,
 not deleted invisibly.
+
+P2-C additionally replaces every unbound Bugbot SCM/Git method with a bound
+semantic port. Public programmatic reviews supply an already repository-bound
+gateway as the single source of repository identity; `BugbotReviewRequest`
+contains target/review facts and no credential or duplicate repository, and the
+service never constructs `Execution`. Removed credential/request and unbound
+gateway shapes are invalid immediately and receive no compatibility adapter.
 
 ## 14. Testing strategy and numeric budget
 

@@ -1,7 +1,6 @@
 import { Result } from '../../data/model/result';
 import type { Execution } from '../../data/model/execution';
 import type { ActorAuthorizationPort } from '../ports/actor_authorization_ports';
-import type { AuthenticatedUserPort } from '../ports/authenticated_user_ports';
 import type { CommentAutomationOptions } from './comment_automation_contracts';
 import type { ParsedCopilotCommand } from '../../domain/copilot_command';
 import { buildCopilotStatusResult } from '../policies/status_command_policy';
@@ -11,6 +10,11 @@ import { commitUserRequestIfSuccessful } from './steps/commit/bugbot/commit_user
 import { finalizeWorkspaceMutation, prepareWorkspaceMutation } from './steps/commit/workspace_mutation_guard';
 import { runBranchSyncCommand } from './branch_sync/branch_sync_comment_command';
 import { ApplicationError, toApplicationError } from '../errors/application_error';
+import {
+    projectBugbotCommitContext,
+    projectBugbotContextSelectionContext,
+    projectBugbotReviewOperationContext,
+} from './steps/commit/bugbot/bugbot_review_operation_context';
 
 const LEARNED_BUGBOT_RULE_PATH = '.copilot/BUGBOT.learned.md';
 
@@ -20,12 +24,11 @@ export async function runExplicitCommentCommand(
     options: CommentAutomationOptions,
     command: ParsedCopilotCommand,
     actorAuthorizationPort: ActorAuthorizationPort,
-    authenticatedUserPort: AuthenticatedUserPort,
 ): Promise<Result[] | undefined> {
     if (command.name === 'help') return runHelpCommand(param, options);
     if (command.name === 'status') return [buildCopilotStatusResult(param, options.taskId)];
     if (command.name === 'dismiss') return runDismissCommand(param, options, command, actorAuthorizationPort);
-    if (command.name === 'remember') return runRememberCommand(param, options, command, actorAuthorizationPort, authenticatedUserPort);
+    if (command.name === 'remember') return runRememberCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'description') return runDescriptionCommand(param, options, actorAuthorizationPort);
     if (command.name === 'sync-branch') {
         return runBranchSyncCommand(param, options, command.arguments, actorAuthorizationPort);
@@ -40,7 +43,6 @@ async function runRememberCommand(
     options: CommentAutomationOptions,
     command: ParsedCopilotCommand,
     actorAuthorizationPort: ActorAuthorizationPort,
-    authenticatedUserPort: AuthenticatedUserPort,
 ): Promise<Result[]> {
     const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token);
     if (!allowed || !options.rememberBugbotRuleUseCase) {
@@ -59,7 +61,7 @@ async function runRememberCommand(
     } catch (error) {
         return [rememberFailure(error)];
     }
-    const results = await options.rememberBugbotRuleUseCase.invoke({ execution: param, rule: command.arguments.join(' ') });
+    const results = await options.rememberBugbotRuleUseCase.invoke({ rule: command.arguments.join(' ') });
     if (!results.some((result) => result.executed)) return results;
     try {
         const { workspacePaths } = await finalizeWorkspaceMutation(
@@ -78,7 +80,12 @@ async function runRememberCommand(
     } catch (error) {
         return [...results, rememberFailure(error)];
     }
-    const commitResults = await commitUserRequestIfSuccessful(param, undefined, results, authenticatedUserPort, options.gitCommitPort);
+    const commitResults = await commitUserRequestIfSuccessful(
+        projectBugbotCommitContext(param),
+        undefined,
+        results,
+        options.bugbotGitMutationPort,
+    );
     return [...results, ...commitResults];
 }
 
@@ -155,7 +162,7 @@ async function runDismissCommand(
         })];
     }
     return options.dismissBugbotFindingsUseCase.invoke({
-        execution: param,
+        operation: projectBugbotContextSelectionContext(param),
         findingIds: command.arguments,
     });
 }
@@ -183,7 +190,9 @@ async function runReviewCommand(
         }));
         return results;
     }
-    const invokeReview = () => options.reviewPotentialProblemsUseCase!.invoke(param);
+    const invokeReview = () => options.reviewPotentialProblemsUseCase!.invoke(
+        projectBugbotReviewOperationContext(param),
+    );
     const reviewResults = await param.ai.withBugbotReviewConfiguration(parsedOptions.overrides, invokeReview);
     results.push(...reviewResults);
     return results;

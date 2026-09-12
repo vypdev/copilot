@@ -5,10 +5,12 @@ import type { ParamUseCase } from "./base/param_usecase";
 import type { PullRequestWorkflowSteps } from "./pull_request_workflow_steps";
 import { ApplicationError } from '../errors/application_error';
 import type { ActorAuthorizationPort } from '../ports/actor_authorization_ports';
+import type { BugbotReviewOperationContext } from './steps/commit/bugbot/bugbot_review_operation_context';
+import { projectBugbotReviewOperationContext } from './steps/commit/bugbot/bugbot_review_operation_context';
 
 export interface PullRequestWorkflowPorts {
   updatePullRequestDescriptionUseCase: ParamUseCase<Execution, Result[]>;
-  reviewPotentialProblemsUseCase?: ParamUseCase<Execution, Result[]>;
+  reviewPotentialProblemsUseCase?: ParamUseCase<BugbotReviewOperationContext, Result[]>;
   workflowSteps: PullRequestWorkflowSteps;
   actorAuthorizationPort?: ActorAuthorizationPort;
 }
@@ -95,7 +97,7 @@ async function runPullRequestReview(
   ports: PullRequestWorkflowPorts,
 ): Promise<Result[]> {
   if (!ports.reviewPotentialProblemsUseCase || !shouldReviewPullRequest(param)) return [];
-  return ports.reviewPotentialProblemsUseCase.invoke(param);
+  return ports.reviewPotentialProblemsUseCase.invoke(projectBugbotReviewOperationContext(param));
 }
 
 function shouldReviewPullRequest(param: Execution): boolean {

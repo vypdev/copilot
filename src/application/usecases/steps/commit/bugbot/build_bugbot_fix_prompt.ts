@@ -1,9 +1,9 @@
-import type { Execution } from "../../../../../data/model/execution";
 import type { BugbotContext } from "./types";
 import { getBugbotFixPrompt } from "../../../../../prompts";
 import { PROJECT_CONTEXT_INSTRUCTION } from "../../../../../utils/project_context_instruction";
 import { sanitizeUserCommentForPrompt } from "./sanitize_user_comment_for_prompt";
 import { renderUntrustedField } from '../../../../../domain/security/untrusted_content';
+import type { BugbotAutofixOperationContext } from './bugbot_review_operation_context';
 
 /** Maximum characters for a single finding's full comment body to avoid prompt bloat and token limits. */
 export const MAX_FINDING_BODY_LENGTH = 12000;
@@ -25,17 +25,17 @@ export function truncateFindingBody(body: string, maxLength: number): string {
  * strict scope rules, and the verify commands to run.
  */
 export function buildBugbotFixPrompt(
-    param: Execution,
+    param: BugbotAutofixOperationContext,
     context: BugbotContext,
     targetFindingIds: string[],
     userComment: string,
     verifyCommands: string[]
 ): string {
-    const headBranch = param.pullRequest?.head?.trim() || param.commit?.branch || 'unknown';
-    const baseBranch = param.currentConfiguration.parentBranch ?? param.branches.development ?? "develop";
-    const issueNumber = param.issueNumber;
-    const owner = param.owner;
-    const repo = param.repo;
+    const headBranch = param.target.headBranch || param.target.commitBranch || 'unknown';
+    const baseBranch = param.target.baseBranch;
+    const issueNumber = param.target.issueNumber;
+    const owner = param.repository.owner;
+    const repo = param.repository.name;
     const prNumber = context.canonicalPullRequest?.number ?? null;
 
     const safeId = (id: string) => id.replace(/`/g, "\\`");

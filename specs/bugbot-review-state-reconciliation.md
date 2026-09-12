@@ -503,9 +503,10 @@ The orchestration is decomposed without creating a second pipeline:
 - `publishFindings` applies active publication first with a head guard.
 - `markFindingsResolved` applies marker-first resolution/dismissal and repairs
   interrupted marker/thread transitions.
-- The workflow projects `Execution` once into `BugbotReconciliationTarget` and
-  a separate credential contract; no extracted reconciliation collaborator
-  imports the runtime aggregate.
+- Route coordinators project immutable Bugbot fact contexts, while composition
+  binds repository identity and credential once into semantic SCM/Git ports.
+  No reconciliation collaborator imports the runtime aggregate or receives a
+  credential contract.
 - `loadBugbotReconciliationSnapshot` guards the head before and after concurrent
   reads and returns explicit per-surface completeness. A head change discards
   the snapshot before any presentation write.
@@ -521,7 +522,7 @@ The orchestration is decomposed without creating a second pipeline:
   collaborators; it performs no direct provider read or write.
 - The workflow produces the final `Result` and telemetry only from that report.
 
-Inputs and outputs MUST be immutable and provider-neutral. Errors MUST retain
+Inputs and outputs MUST be immutable, credential-free, and provider-neutral. Errors MUST retain
 phase, operation, target identity, retryability, and whether a durable mutation
 already succeeded, without including secret tokens or raw model/provider text.
 
@@ -542,9 +543,13 @@ Extend narrowly instead of turning the existing gateway into an Octokit mirror:
 - A required navigation port returns trusted absolute HTTPS PR, commit, and
   optional run URLs. Application code does not construct provider URLs.
 
-The generic `BugbotScmGateway` public API receives the same semantic
-capabilities. Non-GitHub providers may render equivalent current-state and
-snapshot surfaces without importing GitHub terminology.
+The generic `BugbotScmGateway` public API is already bound to one repository and
+credential and exposes the same token-free semantic capabilities. The public
+gateway is the single source of repository identity; the review request
+contains no credential or duplicate repository and is projected directly into
+Bugbot fact contexts without constructing `Execution`. Non-GitHub providers may render
+equivalent current-state and snapshot surfaces without importing GitHub
+terminology.
 
 ### 8.5 GitHub adapters
 

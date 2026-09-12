@@ -24,7 +24,7 @@ const changedPath = [
   'src/application/usecases/steps/commit/bugbot/load_bugbot_context_use_case.ts',
   'src/application/usecases/steps/commit/bugbot/bugbot_review_telemetry.ts',
   'src/data/repository/issue/bugbot_issue_comment_query_repository.ts',
-  'src/infrastructure/composition/bugbot_context_port_factory.ts',
+  'src/infrastructure/composition/bugbot_scm_port_factory.ts',
 ];
 
 for (const file of changedPath) {

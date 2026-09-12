@@ -1,6 +1,6 @@
 # Semantic Errors and Capability Contexts
 
-- Status: In implementation — P0-A, P2-A, and P2-B complete; remaining P2 context slices queued
+- Status: In implementation — P0-A and P2-A through P2-C complete; remaining P2 context slices queued
 - Date: 2026-09-11
 - Last updated: 2026-09-12
 - Catalog capability ID: `execution-lifecycle`
@@ -327,6 +327,49 @@ MUST NOT preserve it with overloads, union parameters, compatibility factories,
 dual readers/writers, feature flags, or deprecated exports. P2-G may reduce the
 16-file boundary list further, but it may not add an entry.
 
+#### 6.5.4 P2-C Bugbot bound-I/O and mutation cut
+
+P2-C removes `Execution`, `Ai`, repository credentials, and unbound provider
+method signatures from every Bugbot leaf. Route coordinators project five
+deeply readonly fact contracts: review, fix-intent, autofix, commit, and
+dismissal. Learned-rule storage receives only the approved rule. These
+contracts MAY share existing immutable selection facts, but MUST NOT contain a
+token, provider client, repository, callback, or getter.
+
+Infrastructure composition receives `{ owner, repository, token }` once and
+returns repository-bound semantic ports. Bound context, publication,
+resolution, final-snapshot, and presentation methods accept only operation
+identities and validated content. A separate bound Git mutation port owns the
+credential used by fetch/push and authenticated-author lookup; Bugbot use cases
+cannot pass or inspect that credential. Reviewer/fixer processes continue to
+receive no SCM credential.
+
+`BugbotReviewService` accepts an already bound `BugbotScmGateway` and projects a
+`BugbotReviewOperationContext` directly from `BugbotReviewRequest`. The gateway
+is the single source of repository identity. The public request contains no
+repository duplicate or `credential`, and the service no longer constructs an
+internal `Execution`. This is the sole public shape: no overload, unbound
+gateway, credential fallback, aggregate builder, or deprecated alias remains.
+At construction, the service MUST validate, copy, and freeze the gateway's
+owner/name pair rather than retain the caller-owned object. A later gateway
+mutation MUST NOT change review facts or desynchronize them from the SCM
+capabilities that were bound for the original repository.
+
+The final reconciliation snapshot keeps its two remote-head guards, concurrent
+surface reads, conservative projection, bounded presentation writes, and
+partial-failure semantics. Only ownership moves: the application receives
+token-free ports and immutable facts. P2-C is complete only when production
+Bugbot leaf imports of `Execution` are zero, the checked-in aggregate ceiling
+shrinks in the same commit, and the public declarations expose only the bound
+gateway/request contract.
+
+Implementation evidence: composition binds each SCM and Git credential once;
+the public request is credential-free and constructs the immutable review
+context directly; the complete Bugbot review, intent, autofix, commit,
+dismissal, reconciliation, and lifecycle suites pass; the AST boundary suite
+finds zero production Bugbot leaf imports; and the exact aggregate inventory is
+104.
+
 ### 6.6 State machine
 
 | State | Entered when | User-visible meaning | Allowed next states | Recovery/owner |
@@ -484,6 +527,16 @@ the remaining rows are mandatory floors for their clean-cut slices.
 | final exact 16-file allowlist and indirect-alias audit | 1 | reserved for P2-G closure |
 | **Total** | **52** | no double counting |
 
+The ten P2-C cases are non-overlapping: two context projection and credential
+exclusion cases; two bound SCM read/publication/resolution cases; two final
+snapshot and partial-write/replay cases; two bound Git autofix/commit cases;
+one public API direct-context and removed-credential negative case; and one AST
+case proving zero Bugbot leaf imports plus absence of token-bearing leaf
+contracts. The public API case also mutates the caller-owned gateway identity
+after construction and proves the frozen snapshot remains authoritative.
+Existing lifecycle, publication, resolution, and autofix suites are
+parity evidence and do not inflate this floor.
+
 `scripts/validate-setup-execution-coverage.cjs` enforces at least 95% lines and
 statements plus 90% branches and functions independently for every executable
 module in the P2-A setup path. The broader setup characterization suite remains
@@ -518,6 +571,9 @@ failure contract instead of redefining it.
    command port and not a token or mutable flag in the context.
 9. Given every final allowlist entry, an architecture review classifies it as an
    entrypoint, route coordinator, or aggregate definition.
+10. Given a bound gateway whose caller-owned identity is mutated after service
+    construction, reviews continue using the validated frozen identity that
+    matches the originally bound SCM capabilities.
 
 ## 17. Requirements traceability
 
@@ -527,6 +583,7 @@ failure contract instead of redefining it.
 | correlation and UI | entrypoint factory, presenter | UUID and view tests | operations |
 | clean public API | package boundary | positive/negative TypeScript API fixtures | API reference/change notice |
 | narrow contexts | `setup_execution_boundary.ts`, `SetupExecutionContext`, and capability use cases | setup boundary, issue-resolution, branch-resolution, composition, characterization, and per-file coverage gates | architecture |
+| P2-C bound Bugbot I/O | route context projectors, bound SCM/Git composition, Bugbot workflows | P2-C projection, binding, freshness, publication, replay, API and AST cases | Bugbot architecture, programmatic API, permissions |
 | shrinking allowlist | AST architecture check | fixture plus final inventory | dependency rules |
 
 ## 18. Implementation sequence

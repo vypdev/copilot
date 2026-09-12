@@ -6,9 +6,9 @@ import type {
   BugbotContext,
 } from "../types";
 import type { ExistingByFindingId } from '../../../../../../domain/bugbot/finding';
-import type { Execution } from "../../../../../../data/model/execution";
 import { getCommentWatermark } from "../../../../../../utils/comment_watermark";
 import { buildMarker } from '../../../../../policies/bugbot_finding_marker_policy';
+import type { BugbotContextSelectionContext } from '../bugbot_review_operation_context';
 
 jest.mock("../../../../../ports/logging_ports", () => ({
   logInfo: jest.fn(),
@@ -38,14 +38,24 @@ function markFindingsResolved(param: Omit<MarkFindingsResolvedParam, "ports">) {
   });
 }
 
-function baseExecution(): Execution {
+function baseOperation(): BugbotContextSelectionContext {
   return {
-    owner: "o",
-    repo: "r",
-    issueNumber: 1,
-    tokenUser: 'bugbot',
-    tokens: { token: "t" },
-  } as unknown as Execution;
+    repository: { owner: 'o', name: 'r' },
+    target: {
+      issueNumber: 1,
+      isPullRequest: false,
+      pullRequestNumber: -1,
+      headBranch: 'feature/1',
+      commitBranch: 'feature/1',
+      baseBranch: 'develop',
+      pullRequestAction: '',
+      draft: false,
+    },
+    trigger: { kind: 'push', headOwner: 'o' },
+    trustedAuthorLogin: 'bugbot',
+    ignorePatterns: [],
+    organizationRules: [],
+  };
 }
 
 function baseContext(overrides: Partial<BugbotContext> = {}): BugbotContext {
@@ -107,7 +117,7 @@ describe("markFindingsResolved", () => {
 
   it("does not mutate an issue destination that is already resolved", async () => {
     const errors = await markFindingsResolved({
-      execution: baseExecution(),
+      operation: baseOperation(),
       context: baseContext({
         existingByFindingId: issueFinding(100, true),
         issueComments: [{ id: 100, body: resolvedBody }],
@@ -126,7 +136,7 @@ describe("markFindingsResolved", () => {
     ]);
 
     const errors = await markFindingsResolved({
-      execution: baseExecution(),
+      operation: baseOperation(),
       context: baseContext({
         existingByFindingId: pullRequestFinding(identity, true, 5, false),
       }),
@@ -142,7 +152,7 @@ describe("markFindingsResolved", () => {
     const identity = "PRRC_resolved";
 
     const errors = await markFindingsResolved({
-      execution: baseExecution(),
+      operation: baseOperation(),
       context: baseContext({
         existingByFindingId: pullRequestFinding(identity, true, 5, true),
       }),
@@ -159,7 +169,7 @@ describe("markFindingsResolved", () => {
     const identity = 'PRRC_dismissed';
     mockListPrReviewComments.mockResolvedValue([prComment(identity, unresolvedBody)]);
     const errors = await markFindingsResolved({
-      execution: baseExecution(),
+      operation: baseOperation(),
       context: baseContext({
         existingByFindingId: {
           f1: {
@@ -178,15 +188,15 @@ describe("markFindingsResolved", () => {
     });
     expect(errors).toEqual([]);
     expect(mockUpdatePrReviewComment).toHaveBeenCalledWith(
-      'o', 'r', identity, expect.stringContaining('finding_resolution:"dismissed"'), 't',
+      identity, expect.stringContaining('finding_resolution:"dismissed"'),
     );
-    expect(mockResolveThread).toHaveBeenCalledWith('o', 'r', 5, identity, 't');
+    expect(mockResolveThread).toHaveBeenCalledWith(5, identity);
   });
 
   it('repairs a bot-owned partial reopen toward the open marker', async () => {
     const identity = 'PRRC_reopen';
     const errors = await markFindingsResolved({
-      execution: baseExecution(),
+      operation: baseOperation(),
       context: baseContext({
         existingByFindingId: {
           f1: {
@@ -204,7 +214,7 @@ describe("markFindingsResolved", () => {
       resolvedFindingIds: new Set(),
     });
     expect(errors).toEqual([]);
-    expect(mockUnresolveThread).toHaveBeenCalledWith('o', 'r', 5, identity, 't');
+    expect(mockUnresolveThread).toHaveBeenCalledWith(5, identity);
     expect(mockResolveThread).not.toHaveBeenCalled();
   });
 
@@ -212,7 +222,7 @@ describe("markFindingsResolved", () => {
     const identity = 'PRRC_verification';
     mockListPrReviewComments.mockResolvedValue([prComment(identity, resolvedBody)]);
     const errors = await markFindingsResolved({
-      execution: baseExecution(),
+      operation: baseOperation(),
       context: baseContext({
         existingByFindingId: {
           f1: {
@@ -231,12 +241,12 @@ describe("markFindingsResolved", () => {
     });
     expect(errors).toEqual([]);
     expect(mockUpdatePrReviewComment).not.toHaveBeenCalled();
-    expect(mockResolveThread).toHaveBeenCalledWith('o', 'r', 5, identity, 't');
+    expect(mockResolveThread).toHaveBeenCalledWith(5, identity);
   });
 
   it("does not mutate a pending destination absent from the canonical resolved set", async () => {
     await markFindingsResolved({
-      execution: baseExecution(),
+      operation: baseOperation(),
       context: baseContext({
         existingByFindingId: issueFinding(100, false),
         issueComments: [{ id: 100, body: unresolvedBody }],
@@ -251,7 +261,7 @@ describe("markFindingsResolved", () => {
     const fullBody = `${unresolvedBody}\n\n${"x".repeat(15000)}\n\n${getCommentWatermark()}`;
 
     const errors = await markFindingsResolved({
-      execution: baseExecution(),
+      operation: baseOperation(),
       context: baseContext({
         existingByFindingId: issueFinding(100, false),
         issueComments: [{ id: 100, body: fullBody }],
@@ -260,7 +270,7 @@ describe("markFindingsResolved", () => {
     });
 
     expect(errors).toEqual([]);
-    const updatedBody = mockUpdateComment.mock.calls[0][4] as string;
+    const updatedBody = mockUpdateComment.mock.calls[0][2] as string;
     expect(updatedBody).toContain("x".repeat(15000));
     expect(updatedBody).toMatch(/resolved:true/);
     expect(updatedBody).not.toContain("Made with ❤️ by");
@@ -284,7 +294,7 @@ describe("markFindingsResolved", () => {
     };
 
     const errors = await markFindingsResolved({
-      execution: baseExecution(),
+      operation: baseOperation(),
       context: baseContext({
         existingByFindingId: existing,
         issueComments: [{ id: 100, body: unresolvedBody }],
@@ -313,7 +323,7 @@ describe("markFindingsResolved", () => {
     };
 
     const errors = await markFindingsResolved({
-      execution: baseExecution(),
+      operation: baseOperation(),
       context: baseContext({
         existingByFindingId: existing,
         issueComments: [{ id: 100, body: unresolvedBody }],
@@ -322,13 +332,10 @@ describe("markFindingsResolved", () => {
     });
 
     expect(errors).toEqual([]);
-    expect(mockResolveThread).toHaveBeenCalledWith("o", "r", 6, identity, "t");
+    expect(mockResolveThread).toHaveBeenCalledWith(6, identity);
     expect(mockUpdatePrReviewComment).toHaveBeenCalledWith(
-      "o",
-      "r",
       identity,
       expect.stringMatching(/resolved:true/),
-      "t",
     );
     expect(mockUpdatePrReviewComment.mock.invocationCallOrder[0]).toBeLessThan(
       mockResolveThread.mock.invocationCallOrder[0],
@@ -338,7 +345,7 @@ describe("markFindingsResolved", () => {
 
   it("returns a semantic issue error when its full comment is unavailable", async () => {
     const errors = await markFindingsResolved({
-      execution: baseExecution(),
+      operation: baseOperation(),
       context: baseContext({
         existingByFindingId: issueFinding(999, false),
       }),
@@ -356,7 +363,7 @@ describe("markFindingsResolved", () => {
     ]);
 
     const errors = await markFindingsResolved({
-      execution: baseExecution(),
+      operation: baseOperation(),
       context: baseContext({
         existingByFindingId: pullRequestFinding("PRRC_missing", false),
       }),
@@ -376,7 +383,7 @@ describe("markFindingsResolved", () => {
     ]);
 
     const errors = await markFindingsResolved({
-      execution: baseExecution(),
+      operation: baseOperation(),
       context: baseContext({
         existingByFindingId: pullRequestFinding(identity, false),
       }),
@@ -390,7 +397,7 @@ describe("markFindingsResolved", () => {
 
   it("treats an already-resolved issue marker as idempotent even if context was stale", async () => {
     const errors = await markFindingsResolved({
-      execution: baseExecution(),
+      operation: baseOperation(),
       context: baseContext({
         existingByFindingId: issueFinding(100, false),
         issueComments: [{ id: 100, body: resolvedBody }],
@@ -424,7 +431,7 @@ describe("markFindingsResolved", () => {
     };
 
     const errors = await markFindingsResolved({
-      execution: baseExecution(),
+      operation: baseOperation(),
       context: baseContext({
         existingByFindingId: existing,
         issueComments: [{ id: 100, body: unresolvedBody }],

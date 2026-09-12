@@ -1,4 +1,4 @@
-import type { BugbotIssueCommentUpdatePort } from "../../../../../application/ports/bugbot_issue_write_ports";
+import type { BoundBugbotIssueCommentUpdatePort } from "../../../../../application/ports/bugbot_issue_write_ports";
 import { stripTrailingCommentWatermarks } from "../../../../../utils/comment_watermark";
 import {
   buildMarker,
@@ -10,10 +10,7 @@ import type { BugbotFindingResolution } from '../../../../../domain/bugbot/findi
 export interface IssueFindingResolution {
   findingId: string;
   comment: { id: number; body: string };
-  owner: string;
-  repo: string;
   issueNumber: number;
-  token: string;
   resolution?: BugbotFindingResolution;
 }
 
@@ -24,7 +21,7 @@ function resolvedNote(resolution: BugbotFindingResolution): string {
 }
 
 export async function resolveIssueFinding(
-  repository: BugbotIssueCommentUpdatePort,
+  repository: BoundBugbotIssueCommentUpdatePort,
   resolution: IssueFindingResolution,
 ): Promise<void> {
   const body = stripTrailingCommentWatermarks(resolution.comment.body);
@@ -44,11 +41,8 @@ export async function resolveIssueFinding(
   if (!replaced.found || !replaced.changed) return;
 
   await repository.updateComment(
-    resolution.owner,
-    resolution.repo,
     resolution.issueNumber,
     resolution.comment.id,
     replaced.updated,
-    resolution.token,
   );
 }

@@ -150,8 +150,6 @@ async function reconcileBugbotReviewState(input: {
   if (!pullRequestNumber || !analyzedHeadSha) return undefined;
   return reconcileBugbotReviewStateUseCase({
     target: {
-      owner: input.execution.owner,
-      repository: input.execution.repo,
       pullRequestNumber,
       ...(input.execution.issueNumber > 0
         ? { linkedIssueNumber: input.execution.issueNumber }
@@ -162,7 +160,6 @@ async function reconcileBugbotReviewState(input: {
         : {}),
       locale: input.execution.locale?.pullRequest ?? 'en-US',
     },
-    credential: { token: input.execution.tokens.token },
     loadedContext: input.loadedContext,
     activeFindings: input.activeFindings,
     ...(input.expectedPublishedFindings
@@ -170,14 +167,75 @@ async function reconcileBugbotReviewState(input: {
       : {}),
     ...(input.mutationErrors ? { mutationErrors: input.mutationErrors } : {}),
     snapshotPorts: {
-      issueComments: input.contextPorts.issue,
-      pullRequest: input.contextPorts.pullRequest,
-      reviews: input.contextPorts.reviewState,
-      navigation: input.contextPorts.navigation,
+      listIssueComments: (issueNumber) => input.contextPorts.issue.listIssueComments(
+        input.execution.owner,
+        input.execution.repo,
+        issueNumber,
+        input.execution.tokens.token,
+      ),
+      listPullRequestReviewComments: (number) =>
+        input.contextPorts.pullRequest.listPullRequestReviewComments(
+          input.execution.owner,
+          input.execution.repo,
+          number,
+          input.execution.tokens.token,
+        ),
+      listPullRequestReviewThreadStates: (number) =>
+        input.contextPorts.pullRequest.listPullRequestReviewThreadStates(
+          input.execution.owner,
+          input.execution.repo,
+          number,
+          input.execution.tokens.token,
+        ),
+      listPullRequestReviews: (number) => input.contextPorts.reviewState.listPullRequestReviews(
+        input.execution.owner,
+        input.execution.repo,
+        number,
+        input.execution.tokens.token,
+      ),
+      getPullRequestHeadSha: (number) => input.contextPorts.pullRequest.getPullRequestHeadSha(
+        input.execution.owner,
+        input.execution.repo,
+        number,
+        input.execution.tokens.token,
+      ),
+      navigationForPullRequest: (number, verifiedHead) => input.contextPorts.navigation.forPullRequest(
+        input.execution.owner,
+        input.execution.repo,
+        number,
+        verifiedHead,
+      ),
     },
     presentationPorts: {
-      comments: input.publicationPorts.issueComments,
-      reviews: input.publicationPorts.reviewState,
+      comments: {
+        addComment: (issueNumber, body, options) => input.publicationPorts.issueComments.addComment(
+          input.execution.owner,
+          input.execution.repo,
+          issueNumber,
+          body,
+          input.execution.tokens.token,
+          options,
+        ),
+        updateComment: (issueNumber, commentId, body, options) =>
+          input.publicationPorts.issueComments.updateComment(
+            input.execution.owner,
+            input.execution.repo,
+            issueNumber,
+            commentId,
+            body,
+            input.execution.tokens.token,
+            options,
+          ),
+      },
+      updatePullRequestReview: (number, identity, body) =>
+        input.publicationPorts.reviewState.updatePullRequestReview(
+          input.execution.owner,
+          input.execution.repo,
+          number,
+          identity,
+          body,
+          input.execution.tokens.token,
+        ),
     },
   });
 }

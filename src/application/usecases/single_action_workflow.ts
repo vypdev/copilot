@@ -3,6 +3,8 @@ import { Result } from "../../data/model/result";
 import { logError, logDebugInfo } from "../ports/logging_ports";
 import type { ParamUseCase } from "./base/param_usecase";
 import { toApplicationError } from "../errors/application_error";
+import type { BugbotReviewOperationContext } from './steps/commit/bugbot/bugbot_review_operation_context';
+import { projectBugbotReviewOperationContext } from './steps/commit/bugbot/bugbot_review_operation_context';
 
 export interface SingleActionWorkflowPorts {
   publishGithubActionUseCase?: ParamUseCase<Execution, Result[]>;
@@ -11,7 +13,7 @@ export interface SingleActionWorkflowPorts {
   thinkUseCase: ParamUseCase<Execution, Result[]>;
   initialSetupUseCase: ParamUseCase<Execution, Result[]>;
   checkProgressUseCase: ParamUseCase<Execution, Result[]>;
-  detectPotentialProblemsUseCase: ParamUseCase<Execution, Result[]>;
+  detectPotentialProblemsUseCase: ParamUseCase<BugbotReviewOperationContext, Result[]>;
   recommendStepsUseCase: ParamUseCase<Execution, Result[]>;
   closeInactiveIssuesUseCase?: ParamUseCase<Execution, Result[]>;
   publishIssueCommentUseCase?: ParamUseCase<Execution, Result[]>;
@@ -32,6 +34,15 @@ export async function runSingleActionWorkflow(
   }
 
   logDebugInfo(`SingleAction: dispatching to handler for action: ${param.singleAction.currentSingleAction}.`);
+  if (param.singleAction.isDetectPotentialProblemsAction) {
+    try {
+      return await ports.detectPotentialProblemsUseCase.invoke(
+        projectBugbotReviewOperationContext(param),
+      );
+    } catch (error) {
+      return singleActionFailure(param, taskId, error);
+    }
+  }
   const action = [
     { active: param.singleAction.isPublishGithubAction, useCase: ports.publishGithubActionUseCase },
     { active: param.singleAction.isCreateReleaseAction, useCase: ports.createReleaseUseCase },
@@ -39,7 +50,6 @@ export async function runSingleActionWorkflow(
     { active: param.singleAction.isThinkAction, useCase: ports.thinkUseCase },
     { active: param.singleAction.isInitialSetupAction, useCase: ports.initialSetupUseCase },
     { active: param.singleAction.isCheckProgressAction, useCase: ports.checkProgressUseCase },
-    { active: param.singleAction.isDetectPotentialProblemsAction, useCase: ports.detectPotentialProblemsUseCase },
     { active: param.singleAction.isRecommendStepsAction, useCase: ports.recommendStepsUseCase },
     { active: param.singleAction.isCloseInactiveIssuesAction, useCase: ports.closeInactiveIssuesUseCase },
     { active: param.singleAction.isPublishIssueCommentAction, useCase: ports.publishIssueCommentUseCase },
@@ -52,16 +62,18 @@ export async function runSingleActionWorkflow(
   try {
     return await action.useCase.invoke(param);
   } catch (error) {
-    const semanticError = toApplicationError(error, 'workflow.failed', `Single action ${param.singleAction.currentSingleAction} failed.`);
-    logError(semanticError);
-    return [
-      new Result({
-        id: taskId,
-        success: false,
-        executed: true,
-        steps: [`Error executing single action: ${param.singleAction.currentSingleAction}.`],
-        errors: [semanticError],
-      }),
-    ];
+    return singleActionFailure(param, taskId, error);
   }
+}
+
+function singleActionFailure(param: Execution, taskId: string, error: unknown): Result[] {
+  const semanticError = toApplicationError(error, 'workflow.failed', `Single action ${param.singleAction.currentSingleAction} failed.`);
+  logError(semanticError);
+  return [new Result({
+    id: taskId,
+    success: false,
+    executed: true,
+    steps: [`Error executing single action: ${param.singleAction.currentSingleAction}.`],
+    errors: [semanticError],
+  })];
 }

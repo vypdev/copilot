@@ -42,6 +42,26 @@ export interface BugbotReviewOperationContext extends BugbotContextSelectionCont
   };
 }
 
+export interface BugbotFixIntentContext extends BugbotContextSelectionContext {
+  readonly comment: {
+    readonly body: string;
+    readonly isPullRequestReviewComment: boolean;
+    readonly parentCommentId?: number;
+  };
+  readonly agentConfiguration: Readonly<AgentConfiguration>;
+}
+
+export interface BugbotAutofixOperationContext extends BugbotContextSelectionContext {
+  readonly agentConfiguration: Readonly<AgentConfiguration>;
+  readonly verifyCommands: readonly string[];
+}
+
+export interface BugbotCommitContext {
+  readonly issueNumber: number;
+  readonly branch: string;
+  readonly verifyCommands: readonly string[];
+}
+
 export interface BugbotContextSelectionSource {
   readonly owner: string;
   readonly repo: string;
@@ -86,6 +106,34 @@ export interface BugbotReviewOperationSource extends BugbotContextSelectionSourc
   };
 }
 
+export interface BugbotFixIntentSource extends BugbotContextSelectionSource {
+  readonly issue: {
+    readonly commentBody?: string;
+    readonly isIssueComment?: boolean;
+  };
+  readonly pullRequest: BugbotContextSelectionSource['pullRequest'] & {
+    readonly commentBody?: string;
+    readonly isPullRequestReviewComment?: boolean;
+    readonly commentInReplyToId?: number;
+  };
+  readonly ai: BugbotContextSelectionSource['ai'] & {
+    getAgentConfiguration(task: AgentTask): AgentConfiguration;
+  };
+}
+
+export interface BugbotAutofixOperationSource extends BugbotContextSelectionSource {
+  readonly ai: BugbotContextSelectionSource['ai'] & {
+    getAgentConfiguration(task: AgentTask): AgentConfiguration;
+    getBugbotFixVerifyCommands(): string[];
+  };
+}
+
+export interface BugbotCommitSource {
+  readonly issueNumber: number;
+  readonly commit: { readonly branch?: string };
+  readonly ai: { getBugbotFixVerifyCommands(): string[] };
+}
+
 /** Copies only the non-secret facts required to select canonical Bugbot context. */
 export function projectBugbotContextSelectionContext(
   source: BugbotContextSelectionSource,
@@ -119,6 +167,54 @@ export function projectBugbotReviewOperationContext(
   });
 }
 
+/** Copies only comment, target and agent facts needed for intent classification. */
+export function projectBugbotFixIntentContext(
+  source: BugbotFixIntentSource,
+): BugbotFixIntentContext {
+  const selection = projectBugbotContextSelectionContext(source);
+  const isPullRequestReviewComment = source.pullRequest.isPullRequestReviewComment === true;
+  const parentCommentId = parsePositiveSafeInteger(source.pullRequest.commentInReplyToId);
+  return Object.freeze({
+    ...selection,
+    comment: Object.freeze({
+      body: isPullRequestReviewComment
+        ? source.pullRequest.commentBody ?? ''
+        : source.issue.isIssueComment === true
+          ? source.issue.commentBody ?? ''
+          : '',
+      isPullRequestReviewComment,
+      ...(parentCommentId ? { parentCommentId } : {}),
+    }),
+    agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('findings') }),
+  });
+}
+
+/** Copies only target, fixer and verification facts needed for one autofix. */
+export function projectBugbotAutofixOperationContext(
+  source: BugbotAutofixOperationSource,
+): BugbotAutofixOperationContext {
+  const configuredVerifyCommands = source.ai.getBugbotFixVerifyCommands();
+  return Object.freeze({
+    ...projectBugbotContextSelectionContext(source),
+    agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration('fixer') }),
+    verifyCommands: Object.freeze(Array.isArray(configuredVerifyCommands)
+      ? [...configuredVerifyCommands]
+      : []),
+  });
+}
+
+/** Copies the complete authority-free input needed for commit verification. */
+export function projectBugbotCommitContext(source: BugbotCommitSource): BugbotCommitContext {
+  const configuredVerifyCommands = source.ai.getBugbotFixVerifyCommands();
+  return Object.freeze({
+    issueNumber: source.issueNumber,
+    branch: source.commit.branch?.trim() ?? '',
+    verifyCommands: Object.freeze(Array.isArray(configuredVerifyCommands)
+      ? [...configuredVerifyCommands]
+      : []),
+  });
+}
+
 function projectSelectionFacts(
   source: BugbotContextSelectionSource,
   organizationRules: readonly string[],
@@ -131,6 +227,7 @@ function projectSelectionFacts(
     : commitBranch;
   const expectedHeadSha = normalizeExpectedHeadSha(source.eventName, source.inputs);
   const headOwner = source.inputs?.pull_request?.head?.repo?.owner?.login?.trim();
+  const configuredIgnorePatterns = source.ai.getAiIgnoreFiles();
 
   return Object.freeze({
     repository: Object.freeze({
@@ -158,8 +255,12 @@ function projectSelectionFacts(
       headOwner: headOwner || source.owner,
     }),
     ...(trustedAuthorLogin ? { trustedAuthorLogin } : {}),
-    ignorePatterns: Object.freeze([...source.ai.getAiIgnoreFiles()]),
-    organizationRules: Object.freeze([...organizationRules]),
+    ignorePatterns: Object.freeze(Array.isArray(configuredIgnorePatterns)
+      ? [...configuredIgnorePatterns]
+      : []),
+    organizationRules: Object.freeze(Array.isArray(organizationRules)
+      ? [...organizationRules]
+      : []),
   });
 }
 

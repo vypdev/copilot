@@ -1,18 +1,16 @@
 import { logInfo } from '../../../../ports/logging_ports';
 import { runUserRequestCommitAndPush } from './bugbot_autofix_commit';
 import { Result } from '../../../../../data/model/result';
-import type { Execution } from '../../../../../data/model/execution';
-import type { AuthenticatedUserPort } from '../../../../../application/ports/authenticated_user_ports';
-import type { GitCommitPort } from '../../../../../application/ports/git_ports';
+import type { BugbotGitMutationPort } from '../../../../../application/ports/bugbot_git_ports';
 import { sanitizePublishedError } from '../../../../../application/policies/github_comment_publication_policy';
 import { ApplicationError } from '../../../../errors/application_error';
+import type { BugbotCommitContext } from './bugbot_review_operation_context';
 
 export async function commitUserRequestIfSuccessful(
-    param: Execution,
+    context: BugbotCommitContext,
     branchOverride: string | undefined,
     results: Result[],
-    authenticatedUserPort: AuthenticatedUserPort,
-    gitCommitPort: GitCommitPort,
+    gitCommitPort: BugbotGitMutationPort,
 ): Promise<Result[]> {
     if (!results.at(-1)?.success) {
         logInfo('Do user request did not succeed; skipping commit.');
@@ -23,11 +21,11 @@ export async function commitUserRequestIfSuccessful(
         workspacePaths?: string[];
         branchCheckedOut?: boolean;
     } | undefined;
-    const commitResult = await runUserRequestCommitAndPush(param, {
+    const commitResult = await runUserRequestCommitAndPush(context, {
         branchOverride,
         branchAlreadyCheckedOut: payload?.branchCheckedOut,
         workspacePaths: payload?.workspacePaths,
-    }, authenticatedUserPort, gitCommitPort);
+    }, gitCommitPort);
     if (!commitResult.success) {
         const message = sanitizePublishedError(commitResult.error) || 'Commit or push failed after user request.';
         return [new Result({

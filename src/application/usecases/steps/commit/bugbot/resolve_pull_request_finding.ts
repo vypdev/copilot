@@ -1,4 +1,4 @@
-import type { BugbotPullRequestResolutionPort } from "../../../../../application/ports/bugbot_pull_request_resolution_ports";
+import type { BoundBugbotPullRequestResolutionPort } from "../../../../../application/ports/bugbot_pull_request_resolution_ports";
 import { PullRequestReviewOperationError } from "../../../../../application/ports/pull_request_review_errors";
 import {
   buildMarker,
@@ -11,9 +11,6 @@ export interface PullRequestFindingResolution {
   findingId: string;
   commentIdentity: string;
   pullRequestNumber: number;
-  owner: string;
-  repo: string;
-  token: string;
   resolution?: BugbotFindingResolution;
 }
 
@@ -24,14 +21,11 @@ function resolvedNote(resolution: BugbotFindingResolution): string {
 }
 
 export async function resolvePullRequestFinding(
-  repository: BugbotPullRequestResolutionPort,
+  repository: BoundBugbotPullRequestResolutionPort,
   resolution: PullRequestFindingResolution,
 ): Promise<void> {
   const comments = await repository.listPullRequestReviewComments(
-    resolution.owner,
-    resolution.repo,
     resolution.pullRequestNumber,
-    resolution.token,
   );
   const comment = comments.find(
     (candidate) => candidate.identity === resolution.commentIdentity,
@@ -61,20 +55,14 @@ export async function resolvePullRequestFinding(
       // Persist Bugbot's durable intent first. If the native mutation fails, a
       // retry can safely repair the thread toward this explicit marker state.
       await repository.updatePullRequestReviewComment(
-        resolution.owner,
-        resolution.repo,
         resolution.commentIdentity,
         replaced.updated,
-        resolution.token,
       );
     }
   }
 
   await repository.resolvePullRequestReviewThread(
-    resolution.owner,
-    resolution.repo,
     resolution.pullRequestNumber,
     resolution.commentIdentity,
-    resolution.token,
   );
 }

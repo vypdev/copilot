@@ -93,7 +93,11 @@ import { createBugbotCompositionRoot } from "../bugbot_composition_root";
 
 describe("createBugbotCompositionRoot", () => {
   it("wires review query, command, and thread capabilities explicitly", () => {
-    const root = createBugbotCompositionRoot();
+    const root = createBugbotCompositionRoot({
+      owner: 'owner',
+      repository: 'repository',
+      token: 'token',
+    });
 
     expect(mockCreateIssueContentClient).toHaveBeenCalledTimes(1);
     expect(mockCreateGraphqlTransportClient).toHaveBeenCalledTimes(1);
@@ -130,13 +134,10 @@ describe("createBugbotCompositionRoot", () => {
       threadCommand,
     );
     expect(root.issue).toBe(issue);
-    expect(root.pullRequest).toBe(pullRequest);
-    expect(root.context.issue).toBe(root.issue);
-    expect(root.context.pullRequest).toBe(root.pullRequest);
-
-    expect(root.resolution.issueComments).toBe(root.issue);
-    expect(root.resolution.pullRequestComments).toBe(root.pullRequest);
-    expect(root.publication.issueComments).toBe(root.issue);
-    expect(root.publication.pullRequestComments).toBe(root.pullRequest);
+    expect(root.scm.context).toBeDefined();
+    expect(root.scm.publication).toBeDefined();
+    expect(root.scm.resolution).toBeDefined();
+    expect(root.scm.reconciliation).toBeDefined();
+    expect(JSON.stringify(root.scm)).not.toContain('token');
   });
 });

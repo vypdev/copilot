@@ -1,5 +1,4 @@
-import type { BugbotIssueCommentWritePort } from "../../../../../application/ports/bugbot_issue_write_ports";
-import type { Execution } from "../../../../../data/model/execution";
+import type { BoundBugbotIssueCommentWritePort } from "../../../../../application/ports/bugbot_issue_write_ports";
 import type {
     BugbotFinding,
     ExistingFindingInfo,
@@ -8,8 +7,8 @@ import { buildCommentBody } from '../../../../policies/bugbot_finding_marker_pol
 import { logDebugInfo } from "../../../../ports/logging_ports";
 
 export async function publishIssueFindingComment(
-    repository: BugbotIssueCommentWritePort,
-    execution: Execution,
+    repository: BoundBugbotIssueCommentWritePort,
+    issueNumber: number,
     finding: BugbotFinding,
     existing: ExistingFindingInfo | undefined,
     commitSha: string | undefined
@@ -19,12 +18,9 @@ export async function publishIssueFindingComment(
 
     if (existing?.issue != null) {
         await repository.updateComment(
-            execution.owner,
-            execution.repo,
-            execution.issueNumber,
+            issueNumber,
             existing.issue.commentId,
             body,
-            execution.tokens.token,
             options
         );
         logDebugInfo(`Updated bugbot comment for finding ${finding.id} on issue.`);
@@ -32,11 +28,8 @@ export async function publishIssueFindingComment(
     }
 
     await repository.addComment(
-        execution.owner,
-        execution.repo,
-        execution.issueNumber,
+        issueNumber,
         body,
-        execution.tokens.token,
         options
     );
     logDebugInfo(`Added bugbot comment for finding ${finding.id} on issue.`);

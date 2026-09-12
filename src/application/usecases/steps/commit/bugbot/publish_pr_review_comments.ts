@@ -1,6 +1,5 @@
-import type { BugbotPullRequestWritePort } from "../../../../ports/bugbot_pull_request_write_ports";
+import type { BoundBugbotPullRequestWritePort } from "../../../../ports/bugbot_pull_request_write_ports";
 import type { PullRequestReviewCommentDraft } from "../../../../ports/pull_request_review_comment_ports";
-import type { Execution } from "../../../../../data/model/execution";
 import type {
   BugbotFinding,
   ExistingFindingInfo,
@@ -11,10 +10,11 @@ import { resolveFindingPathForPr } from "./path_validation";
 import { logInfo } from "../../../../ports/logging_ports";
 import { sanitizeAgentMarkdown } from '../../../../policies/github_comment_publication_policy';
 import { buildNewBugbotReviewSnapshotHeader } from '../../../../policies/bugbot_review_presentation_policy';
+import type { BugbotReviewOperationContext } from './bugbot_review_operation_context';
 
 export interface PullRequestReviewCommentPublisherOptions {
-  repository: BugbotPullRequestWritePort;
-  execution: Execution;
+  repository: BoundBugbotPullRequestWritePort;
+  operation: BugbotReviewOperationContext;
   openPrNumber: number;
   prContext: BugbotPrContext;
   watermark: string;
@@ -35,8 +35,8 @@ export class PullRequestReviewCommentPublisher {
     finding: BugbotFinding,
     existing: ExistingFindingInfo | undefined,
   ): Promise<void> {
-    const { prContext, openPrNumber, execution } = this.options;
-    const allowSuggestedChanges = execution.ai.getBugbotReviewConfiguration().suggestedChanges;
+    const { prContext, openPrNumber, operation } = this.options;
+    const allowSuggestedChanges = operation.analysis.reviewConfiguration.suggestedChanges;
     if (
       existing?.pullRequest != null &&
       existing.pullRequest.pullRequestNumber === openPrNumber
@@ -51,21 +51,15 @@ export class PullRequestReviewCommentPublisher {
       // GitHub suggestion is still attached to a RIGHT-side changed line.
       const body = `${buildCommentBody(finding, false, undefined, { includeSuggestedChange: false })}\n\n${this.options.watermark}`;
       await this.options.repository.updatePullRequestReviewComment(
-        execution.owner,
-        execution.repo,
         existing.pullRequest.commentIdentity,
         body,
-        execution.tokens.token,
       );
       if (existing.pullRequest.resolved || existing.pullRequest.threadResolved === true) {
         // Persist the open marker before reopening the native thread. This
         // leaves a deterministic recovery direction after partial failures.
         await this.options.repository.unresolvePullRequestReviewThread(
-          execution.owner,
-          execution.repo,
           openPrNumber,
           existing.pullRequest.commentIdentity,
-          execution.tokens.token,
         );
       }
       return;
@@ -108,10 +102,8 @@ export class PullRequestReviewCommentPublisher {
     overflowTitles: readonly string[] = [],
   ): Promise<void> {
     if (this.findingsToCreate.length === 0 && overflowCount === 0) return;
-    const { repository, execution, openPrNumber, prContext } = this.options;
+    const { repository, operation, openPrNumber, prContext } = this.options;
     await repository.createReviewWithComments(
-      execution.owner,
-      execution.repo,
       openPrNumber,
       prContext.prHeadSha,
       buildReviewSummary(
@@ -121,17 +113,16 @@ export class PullRequestReviewCommentPublisher {
         overflowCount,
         overflowTitles,
         this.options.watermark,
-        execution.ai.getBugbotReviewConfiguration().traceRules
+        operation.analysis.reviewConfiguration.traceRules
           ? this.options.ruleSources ?? []
           : [],
-        execution.ai.getBugbotReviewConfiguration().traceRules
+        operation.analysis.reviewConfiguration.traceRules
           ? this.options.omittedRuleCount ?? 0
           : 0,
         prContext.prHeadSha,
-        execution.locale?.pullRequest ?? 'en-US',
+        operation.locale.pullRequest,
       ),
       this.commentsToCreate,
-      execution.tokens.token,
     );
   }
 }

@@ -447,6 +447,6 @@ and catalog evidence in the implementation slice.
   not enumeration, is the required fact.
 - Implementation evidence: `src/domain/bugbot/context.ts`,
   `src/application/usecases/steps/commit/bugbot/load_bugbot_context_use_case.ts`,
-  `src/infrastructure/composition/bugbot_context_port_factory.ts`, provider
+  `src/infrastructure/composition/bugbot_scm_port_factory.ts`, provider
   bounded-read repositories, Bugbot context tests, and the documentation named
   in section 15.

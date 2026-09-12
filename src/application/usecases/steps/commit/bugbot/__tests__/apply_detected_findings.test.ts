@@ -1,4 +1,4 @@
-import type { Execution } from "../../../../../../data/model/execution";
+import type { BugbotReviewOperationContext } from '../bugbot_review_operation_context';
 import type { BugbotFindingPublicationPorts } from "../../../../../ports/bugbot_finding_publication_ports";
 import type { BugbotFindingResolutionPorts } from "../../../../../ports/bugbot_finding_resolution_ports";
 import { applyDetectedFindings } from "../apply_detected_findings";
@@ -38,7 +38,7 @@ describe("applyDetectedFindings", () => {
     );
 
     const errors = await applyDetectedFindings(
-      {} as Execution,
+      {} as BugbotReviewOperationContext,
       {} as BugbotContext,
       preparedFindings(),
       {} as BugbotFindingPublicationPorts,
@@ -57,7 +57,7 @@ describe("applyDetectedFindings", () => {
     mockMarkFindingsResolved.mockResolvedValue([]);
 
     await applyDetectedFindings(
-      {} as Execution,
+      {} as BugbotReviewOperationContext,
       {} as BugbotContext,
       preparedFindings(),
       {} as BugbotFindingPublicationPorts,

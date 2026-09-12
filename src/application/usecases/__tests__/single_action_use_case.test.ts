@@ -206,6 +206,47 @@ describe('SingleActionUseCase', () => {
     expect(results).toHaveLength(1);
   });
 
+  it('projects the Bugbot context before dispatching potential-problem detection', async () => {
+    const expected = new Result({ id: 'bugbot', success: true, executed: true, steps: [] });
+    mockDetectProblemsInvoke.mockResolvedValue([expected]);
+    const useCase = new SingleActionUseCase(
+      {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
+      { invoke: mockDetectProblemsInvoke } as any,
+      {} as any,
+    );
+    const param = minimalExecution({
+      validSingleAction: true,
+      currentSingleAction: ACTIONS.DETECT_POTENTIAL_PROBLEMS,
+    });
+
+    const results = await useCase.invoke(param);
+
+    expect(mockDetectProblemsInvoke).toHaveBeenCalledWith(expect.objectContaining({
+      analysis: expect.any(Object),
+      target: expect.any(Object),
+    }));
+    expect(mockDetectProblemsInvoke).not.toHaveBeenCalledWith(param);
+    expect(results).toEqual([expected]);
+  });
+
+  it('returns a semantic failure when projected Bugbot detection rejects', async () => {
+    mockDetectProblemsInvoke.mockRejectedValue(new Error('review failed'));
+    const useCase = new SingleActionUseCase(
+      {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
+      { invoke: mockDetectProblemsInvoke } as any,
+      {} as any,
+    );
+    const param = minimalExecution({
+      validSingleAction: true,
+      currentSingleAction: ACTIONS.DETECT_POTENTIAL_PROBLEMS,
+    });
+
+    const results = await useCase.invoke(param);
+
+    expect(results[0]).toEqual(expect.objectContaining({ success: false, executed: true }));
+    expect(results[0].errors[0]).toEqual(expect.objectContaining({ code: 'workflow.failed' }));
+  });
+
   it('dispatches the lightweight branch-sync observer without authorization or an agent', async () => {
     const observe = { invoke: jest.fn().mockResolvedValue([]) };
     const useCase = new SingleActionUseCase(

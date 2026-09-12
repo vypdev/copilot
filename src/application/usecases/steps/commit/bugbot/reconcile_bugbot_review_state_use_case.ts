@@ -1,6 +1,5 @@
 import type {
   BugbotPresentationReport,
-  BugbotReconciliationCredential,
   BugbotReconciliationTarget,
 } from '../../../../contracts/bugbot_reconciliation';
 import type { BugbotFinding } from '../../../../../domain/bugbot/finding';
@@ -30,7 +29,6 @@ export type { BugbotPresentationReport } from '../../../../contracts/bugbot_reco
  */
 export async function reconcileBugbotReviewState(input: {
   readonly target: BugbotReconciliationTarget;
-  readonly credential: BugbotReconciliationCredential;
   readonly loadedContext: BugbotContext;
   readonly activeFindings: readonly BugbotFinding[];
   /** Findings this run attempted to persist; overflow-only items are excluded. */
@@ -41,7 +39,6 @@ export async function reconcileBugbotReviewState(input: {
 }): Promise<BugbotPresentationReport> {
   const snapshotResult = await loadBugbotReconciliationSnapshot(
     input.target,
-    input.credential,
     input.snapshotPorts,
   );
   if (snapshotResult.kind === 'superseded') {
@@ -92,7 +89,6 @@ export async function reconcileBugbotReviewState(input: {
   });
   return synchronizeBugbotReviewPresentation({
     target: input.target,
-    credential: input.credential,
     snapshot,
     plan,
     ports: input.presentationPorts,

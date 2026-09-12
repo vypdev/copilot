@@ -1,11 +1,11 @@
-import type { Execution } from '../../../../../data/model/execution';
 import type { FixerQueryPort } from '../../../../ports/agent_fixer_ports';
 import type { BugbotContextPorts } from '../../../../../application/ports/bugbot_context_ports';
-import type { GitCommitPort } from '../../../../../application/ports/git_ports';
+import type { BugbotGitMutationPort } from '../../../../../application/ports/bugbot_git_ports';
 import type { BugbotContext } from './types';
+import type { BugbotAutofixOperationContext } from './bugbot_review_operation_context';
 
 export interface BugbotAutofixParam {
-    execution: Execution;
+    operation: BugbotAutofixOperationContext;
     targetFindingIds: string[];
     userComment: string;
     context?: BugbotContext;
@@ -15,5 +15,5 @@ export interface BugbotAutofixParam {
 export interface BugbotAutofixWorkflowDependencies {
     aiRepository: FixerQueryPort;
     contextPorts: BugbotContextPorts;
-    gitCommitPort: GitCommitPort;
+    gitCommitPort: BugbotGitMutationPort;
 }
