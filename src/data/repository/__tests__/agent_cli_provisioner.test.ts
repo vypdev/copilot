@@ -1,11 +1,14 @@
 import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { execFileSync } from 'node:child_process';
 import {
     AgentCliProvisioner,
     agentExecutableExists,
     type AgentCliProvisioningSystem,
 } from '../agent_cli_provisioner';
+
+jest.mock('node:child_process', () => ({ execFileSync: jest.fn() }));
 
 function provisioningSystem(
     executableAvailable: boolean | readonly boolean[] = false,
@@ -20,6 +23,10 @@ function provisioningSystem(
 }
 
 describe('AgentCliProvisioner', () => {
+    beforeEach(() => {
+        (execFileSync as unknown as jest.Mock).mockReset();
+    });
+
     it('resolves bare executables through PATH and rejects missing path selections', () => {
         const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-cli-path-test-'));
         const executable = join(directory, 'codex');
@@ -35,7 +42,7 @@ describe('AgentCliProvisioner', () => {
         }
     });
 
-    it('accepts a preinstalled exact-manifest Codex CLI', () => {
+    it('accepts a preinstalled Codex CLI without replacing an operator-owned runtime', () => {
         const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-cli-test-'));
         const executable = join(directory, 'codex');
         try {
@@ -47,36 +54,77 @@ describe('AgentCliProvisioner', () => {
         }
     });
 
-    it('repairs a preinstalled non-manifest Codex version when the workflow executable is blank', () => {
+    it('uses system npm and version commands for a forced pinned installation', () => {
+        const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-cli-default-system-'));
+        const executable = join(directory, 'codex');
+        try {
+            writeFileSync(executable, '#!/bin/sh\nexit 0\n');
+            chmodSync(executable, 0o755);
+            (execFileSync as unknown as jest.Mock).mockImplementation((command: string, args: string[]) => {
+                if (command === 'npm') return Buffer.alloc(0);
+                if (command === 'codex' && args[0] === '--version') return 'codex-cli 0.153.4\n';
+                throw new Error(`Unexpected command: ${command}`);
+            });
+
+            new AgentCliProvisioner().provision('codex', {
+                PATH: directory,
+                AGENT_PROVISIONING: 'always',
+            });
+
+            expect(execFileSync).toHaveBeenCalledWith(
+                'npm',
+                ['install', '--global', '@openai/codex@0.153.4'],
+                { stdio: 'inherit' },
+            );
+            expect(execFileSync).toHaveBeenCalledWith(
+                'codex',
+                ['--version'],
+                expect.objectContaining({ encoding: 'utf8', timeout: 15_000 }),
+            );
+        } finally {
+            rmSync(directory, { recursive: true, force: true });
+        }
+    });
+
+    it('accepts a preinstalled non-manifest Codex version without reinstalling it', () => {
         const system = provisioningSystem(true, 'codex-cli 0.154.0');
-        system.readVersion
-            .mockReturnValueOnce('codex-cli 0.154.0')
-            .mockReturnValueOnce('codex-cli 0.153.4');
 
         expect(() => new AgentCliProvisioner(system).provision({
             provider: 'codex',
             executable: '   ',
         }, {})).not.toThrow();
-        expect(system.installPackage).toHaveBeenCalledWith('@openai/codex', '0.153.4');
-        expect(system.readVersion).toHaveBeenCalledTimes(2);
+        expect(system.installPackage).not.toHaveBeenCalled();
+        expect(system.readVersion).not.toHaveBeenCalled();
     });
 
-    it('rejects a non-manifest version when provisioning is disabled', () => {
+    it('accepts an available operator runtime when provisioning is disabled', () => {
         const system = provisioningSystem(true, 'codex-cli 0.154.0');
 
         expect(() => new AgentCliProvisioner(system).provision('codex', {
             AGENT_PROVISIONING: 'disabled',
-        })).toThrow('version mismatch');
+        })).not.toThrow();
         expect(system.installPackage).not.toHaveBeenCalled();
+        expect(system.readVersion).not.toHaveBeenCalled();
     });
 
-    it('does not replace an explicit executable when its version mismatches', () => {
+    it('accepts but never replaces an available explicit executable', () => {
         const system = provisioningSystem(true, 'codex-cli 0.154.0');
 
         expect(() => new AgentCliProvisioner(system).provision({
             provider: 'codex',
             executable: '/controlled/codex',
-        }, {})).toThrow('version mismatch');
+        }, { AGENT_PROVISIONING: 'always' })).not.toThrow();
+        expect(system.installPackage).not.toHaveBeenCalled();
+        expect(system.readVersion).not.toHaveBeenCalled();
+    });
+
+    it('never installs a missing explicit executable', () => {
+        const system = provisioningSystem(false);
+
+        expect(() => new AgentCliProvisioner(system).provision({
+            provider: 'codex',
+            executable: '/controlled/codex',
+        }, {})).toThrow('explicit executables are never installed or replaced');
         expect(system.installPackage).not.toHaveBeenCalled();
     });
 
@@ -104,13 +152,14 @@ describe('AgentCliProvisioner', () => {
     it('uses the process environment when no explicit environment is supplied', () => {
         const system = provisioningSystem(true);
         new AgentCliProvisioner(system).provision('codex');
-        expect(system.readVersion).toHaveBeenCalledWith('codex', process.env);
+        expect(system.executableExists).toHaveBeenCalledWith('codex', process.env);
+        expect(system.readVersion).not.toHaveBeenCalled();
     });
 
     it.each([
         ['codex', '@openai/codex', '0.153.4', 'codex-cli 0.153.4'],
         ['opencode', 'opencode-ai', '1.18.3', '1.18.3'],
-    ] as const)('provisions missing %s from its manifest version', (provider, packageName, version, output) => {
+    ] as const)('provisions missing %s from its pinned installation', (provider, packageName, version, output) => {
         const system = provisioningSystem([false, true], output);
         new AgentCliProvisioner(system).provision(provider, { PATH: '' });
         expect(system.installPackage).toHaveBeenCalledWith(packageName, version);
@@ -123,7 +172,7 @@ describe('AgentCliProvisioner', () => {
         expect(system.readVersion).toHaveBeenCalledTimes(1);
     });
 
-    it('requires the exact Cursor runtime to be preinstalled', () => {
+    it('requires Cursor to be preinstalled because it has no reviewed installer', () => {
         const system = provisioningSystem(false);
         expect(() => new AgentCliProvisioner(system).provision('cursor', {})).toThrow('must be preinstalled');
         expect(system.installPackage).not.toHaveBeenCalled();
@@ -136,9 +185,14 @@ describe('AgentCliProvisioner', () => {
         })).toThrow('not available on PATH');
     });
 
-    it('normalizes non-Error version failures without hiding their cause', () => {
-        const system = provisioningSystem(true);
+    it('normalizes non-Error post-install version failures without hiding their cause', () => {
+        const system = provisioningSystem([false, true]);
         system.readVersion.mockImplementation(() => { throw 'unparseable'; });
         expect(() => new AgentCliProvisioner(system).provision('codex', {})).toThrow('unparseable');
+    });
+
+    it('rejects a pinned package when its installed CLI reports another version', () => {
+        const system = provisioningSystem([false, true], 'codex-cli 0.154.0');
+        expect(() => new AgentCliProvisioner(system).provision('codex', {})).toThrow('installed CLI version mismatch');
     });
 });

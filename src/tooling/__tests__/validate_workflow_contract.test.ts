@@ -11,6 +11,7 @@ interface ContractModule {
   assertCopilotActionInputs(file: string, workflow: Record<string, unknown>): void;
   assertNoJobLevelSecrets(file: string, workflow: Record<string, unknown>): void;
   assertAgentWorkflowPermissions(file: string, workflow: Record<string, unknown>): void;
+  assertAgentInstallationPrerequisites(file: string, workflow: Record<string, unknown>): void;
   assertLightweightBranchSyncWorkflow(file: string, workflow: Record<string, unknown>): void;
   MIN_QUEUE_JOB_TIMEOUT_MINUTES: number;
   DEPLOYMENT_VALIDATION_TIMEOUT_MINUTES: number;
@@ -33,6 +34,7 @@ const {
   assertCopilotActionInputs,
   assertNoJobLevelSecrets,
   assertAgentWorkflowPermissions,
+  assertAgentInstallationPrerequisites,
   assertLightweightBranchSyncWorkflow,
   MIN_QUEUE_JOB_TIMEOUT_MINUTES,
   DEPLOYMENT_VALIDATION_TIMEOUT_MINUTES,
@@ -586,6 +588,29 @@ describe('workflow contract validator', () => {
     delete action.with['planner-provider'];
 
     expect(() => validateWorkflow(file, workflow)).toThrow('missing agent inputs: planner-provider');
+  });
+
+  it('requires Node.js 24 before every workflow path that may install a pinned agent CLI', () => {
+    for (const directory of ['.github/workflows', 'setup/workflows']) {
+      for (const fileName of [
+        'copilot_commit.yml',
+        'copilot_issue.yml',
+        'copilot_issue_comment.yml',
+        'copilot_pull_request.yml',
+        'copilot_pull_request_comment.yml',
+      ]) {
+        const file = path.join(process.cwd(), directory, fileName);
+        const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+        expect(() => assertAgentInstallationPrerequisites(file, workflow)).not.toThrow();
+      }
+    }
+
+    const file = path.join(process.cwd(), 'setup/workflows/copilot_issue_comment.yml');
+    const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
+    workflow.jobs['copilot-issues'].steps = workflow.jobs['copilot-issues'].steps.filter(
+      (step: { uses?: string }) => step.uses !== 'actions/setup-node@v7',
+    );
+    expect(() => assertAgentInstallationPrerequisites(file, workflow)).toThrow('must set up Node.js 24');
   });
 
   it('rejects Secrets exposed to every step in a job', () => {

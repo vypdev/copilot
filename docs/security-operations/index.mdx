@@ -12,7 +12,7 @@ This area covers the controls around credentials, trust boundaries, CLI provisio
     Protect credentials, runners, forks, and write permissions.
   </Card>
   <Card title="Provisioning" icon="download" href="/security-operations/operations/provisioning">
-    Install only the selected pinned CLI runtime.
+    Reuse the operator runtime or install only the selected pinned package.
   </Card>
   <Card title="Verification" icon="check-circle" href="/security-operations/operations/verification">
     Prove binary, configuration, and credential readiness.
@@ -30,7 +30,7 @@ Provisioning, authentication, policy, parsing, timeout, and verification failure
 
 <Steps>
   <Step title="Secure the trust boundary">Review event type, checkout source, runner, and permissions.</Step>
-  <Step title="Provision one pinned runtime">Install only the selected provider and verify its version.</Step>
+  <Step title="Prepare one runtime">Reuse the operator runtime or install and verify the selected pinned package.</Step>
   <Step title="Run read-only verification">Confirm command, credential reference, model policy, and bounded output.</Step>
   <Step title="Enable writes deliberately">Grant write permissions only after the controlled path passes.</Step>
 </Steps>

@@ -5,19 +5,18 @@ description: Pinned installation and verification of the selected agent CLI.
 # CLI provisioning
 
 When running in GitHub Actions, the Action provisions and verifies only the
-selected runtime. `AGENT_PROVISIONING=auto` reuses a preinstalled executable only
-after exact-version validation. If the default Codex or OpenCode executable is
-missing or reports another version, the Action installs the manifest-owned
-version through the runner's system `npm` and validates it again. An explicit
-executable is never replaced. Cursor must be
-preinstalled at the exact manifest version because its public installer cannot
-guarantee an immutable historical version. The Action never uses `npx`, Yarn,
+selected runtime. `AGENT_PROVISIONING=auto` reuses any available operator-owned
+executable without replacing it. If the default Codex or OpenCode executable is
+missing, the Action installs the manifest-owned package through the runner's
+system `npm` and validates that new installation exactly. An explicit executable
+is never installed or replaced. Cursor must be preinstalled because Copilot has
+no reviewed automatic installer for it. The Action never uses `npx`, Yarn,
 Bun, a floating tag, or an unpinned installer.
 
 | Runtime | Provisioning source | Required pin |
 | --- | --- | --- |
 | OpenCode | `opencode-ai@1.18.3` through runner `npm` | Manifest `1.18.3` |
 | Codex | `@openai/codex@0.153.4` through runner `npm` | Manifest `codex-cli 0.153.4` |
-| Cursor | Controlled runner image | Manifest `2026.09.10-fd3934a` |
+| Cursor | Controlled runner image | No automatic installation |
 
 Provisioning failure is terminal. The Action MUST NOT install another runtime as a fallback.

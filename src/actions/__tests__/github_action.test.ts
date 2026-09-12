@@ -134,6 +134,25 @@ describe('runGitHubAction', () => {
     expect(mockStoreInvoke).not.toHaveBeenCalled();
   });
 
+  it('discards an unaddressed comment before project, AI, runtime, or result work', async () => {
+    github.context.eventName = 'issue_comment';
+    github.context.payload = {
+      action: 'created',
+      issue: { number: 42 },
+      comment: { id: 101, body: 'Automated coverage report' },
+    };
+
+    await runGitHubAction();
+
+    expect(mockExecutionAdmissionInvoke).toHaveBeenCalledTimes(1);
+    expect(projectCompositionSpy).not.toHaveBeenCalled();
+    expect(executionBuilderSpy).not.toHaveBeenCalled();
+    expect(agentProvisioningSpy).not.toHaveBeenCalled();
+    expect(mockIsActorAllowedToModifyFiles).not.toHaveBeenCalled();
+    expect(mockMainRun).not.toHaveBeenCalled();
+    expect(finishActionSpy).not.toHaveBeenCalled();
+  });
+
   it('passes a valid single action through admission and the normal lifecycle', async () => {
     (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
       if (key === INPUT_KEYS.SINGLE_ACTION) return ACTIONS.CREATE_TAG;

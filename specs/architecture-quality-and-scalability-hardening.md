@@ -58,7 +58,7 @@ Implementation ledger:
 | P0-B | implemented | workflow-contract, state-fence, handler, adapter, architecture, package, and coverage gates catalogued in `deployment-concurrency-and-state-fencing.md` | controlled live serialization evidence |
 | P1-A | implemented | canonical-selection, bounded-read, partial-coverage, eligibility, adapter, UX, documentation, and coverage evidence catalogued in `bugbot-context-selection-and-budgeting.md` | controlled GitHub UX evidence before first rollout |
 | P1-B | implemented | immutable questionnaire, raw terminal split, stable/skipped doctor report, query-only composition, narrow remote adapters, docs, and coverage gates | controlled GitHub permission-path evidence before first rollout |
-| P1-C | implemented | exhaustive provider plans, exact runtime manifest/preflight, admitted-only process adapter, clean command-text removal, workflows/docs/catalog, and automated contract evidence | controlled provider sandbox smoke before first rollout |
+| P1-C | implemented | exhaustive provider plans, operator-owned runtime admission, pinned-install verification, admitted-only process adapter, clean command-text removal, workflows/docs/catalog, and automated contract evidence | controlled provider sandbox smoke before first rollout |
 | P2 | implementing | P2-A setup and P2-B Bugbot analysis-context clean cuts implemented; exact aggregate inventory reduced from 140 to 125 | P2-C through P2-G and final 16-file audit evidence |
 
 The fixed safety rule is that a refactor MUST preserve observable product

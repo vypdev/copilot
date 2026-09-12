@@ -17,6 +17,11 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Set up Node.js 24 for pinned agent installation
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+
       - name: Verify selected CLI binary and headless contract
         shell: bash
         env:
@@ -49,16 +54,22 @@ jobs:
             esac
             executable="${executables[$index]:-${AGENT_EXECUTABLE:-$expected_executable}}"
             [[ "${executable##*/}" == "$expected_executable" ]] || { echo "Invalid $provider executable basename." >&2; exit 1; }
+            installed=false
             if ! command -v "$executable" >/dev/null 2>&1; then
               [[ "$executable" == "$expected_executable" ]] || { echo "Configured executable is missing: $executable" >&2; exit 1; }
               case "$provider" in
                 codex) npm install --global '@openai/codex@0.153.4' ;;
                 opencode) npm install --global 'opencode-ai@1.18.3' ;;
-                cursor) echo 'Cursor Agent 2026.09.10-fd3934a must be preinstalled exactly.' >&2; exit 1 ;;
+                cursor) echo 'Cursor Agent must be preinstalled; no reviewed automatic installer is available.' >&2; exit 1 ;;
               esac
+              installed=true
             fi
             actual_version="$($executable --version | head -n 1)"
-            [[ "$actual_version" == "$expected_version" ]] || { echo "$provider version mismatch: expected $expected_version, received $actual_version" >&2; exit 1; }
+            [[ -n "${actual_version// }" ]] || { echo "$provider returned empty version output" >&2; exit 1; }
+            if [[ "$installed" == true ]]; then
+              [[ "$actual_version" == "$expected_version" ]] || { echo "$provider installed version mismatch: expected $expected_version, received $actual_version" >&2; exit 1; }
+            fi
+            "$executable" --help >/dev/null
             [[ " $checked " == *" $provider "* ]] || checked="$checked $provider"
           done
 

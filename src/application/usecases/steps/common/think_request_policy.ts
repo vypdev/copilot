@@ -1,6 +1,7 @@
 import type { Execution } from '../../../../data/model/execution';
 import { parseCopilotCommand, type ParsedCopilotCommand } from '../../../../domain/copilot_command';
-import { containsBotMention, extractMentionQuestion, getThinkCommentBody } from './think_input_policy';
+import { containsBotMention } from '../../../../domain/copilot_comment_request';
+import { extractMentionQuestion, getThinkCommentBody } from './think_input_policy';
 import { sanitizeUserCommentForPrompt } from '../commit/bugbot/sanitize_user_comment_for_prompt';
 
 export type ThinkRequestDecision =

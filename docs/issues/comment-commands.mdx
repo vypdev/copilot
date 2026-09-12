@@ -7,6 +7,11 @@ description: Use @vypbot from issues and pull requests for help, analysis, plann
 
 Copilot can act as a project assistant directly from an issue or pull-request comment. With the default workflow PAT, the bot user is `@vypbot`; if your installation uses another account, replace that mention with the configured PAT user.
 
+A comment must begin with `/copilot` or contain the exact bot mention. All
+other comments—including documentation, coverage, and other automated
+reports—are inert and exit before project lookup, AI configuration, translation,
+or agent runtime preparation.
+
 ## Fast start
 
 Comment this on an issue or PR:
@@ -56,6 +61,10 @@ Mention the bot and describe the outcome you want:
 ```
 
 The first three are read-only requests. The last one may be classified as a general implementation request. Natural-language file changes require an authorized actor and an available branch; the action runs the configured verification commands before committing and pushing.
+
+Language detection and translation apply only after this same explicit
+command-or-mention boundary. Copilot does not passively translate ordinary
+conversation or machine-authored status comments.
 
 ## Authorization and safety
 

@@ -119,13 +119,12 @@ Never place tokens in `with`, command arguments, prompts, repository files, or l
 
 ## Provisioning
 
-The Action verifies the selected CLI against the immutable runtime manifest and,
-by default, reuses a preinstalled executable only when its version matches.
-When the default Codex or OpenCode executable is absent or mismatched, `auto`
-installs the exact manifest version and revalidates it. Explicit executable
-paths are never replaced. Cursor must be preinstalled because its public
-installer cannot reproduce an exact historical version. The only provisioning
-control is:
+The Action records the selected CLI's non-empty runtime identity and, by
+default, reuses any available operator-owned executable without replacing it.
+When the default Codex or OpenCode executable is absent, `auto` installs the
+exact pinned package and verifies that new installation. Explicit executable
+paths are never installed or replaced. Cursor must be preinstalled because no
+reviewed automatic installer exists. The only provisioning control is:
 
 ```text
 AGENT_PROVISIONING=auto|always|disabled
@@ -143,6 +142,7 @@ The run fails before the agent starts when any of the following is invalid:
 - executable selection;
 - required CLI executable;
 - required credential reference;
-- exact manifest version.
+- non-empty runtime identity;
+- exact post-install identity for a package installed by Copilot.
 
 This behavior is intentional: a run must never silently use another provider, another model, a repository-local default, or an unverified credential.

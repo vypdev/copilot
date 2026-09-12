@@ -23,6 +23,7 @@ const DEPLOYMENT_CONCURRENCY_GROUP = 'copilot-deployment-${{ github.repository_i
 const DEPLOYMENT_CONTINUATION_CONCURRENCY_GROUP = 'copilot-deployment-${{ github.repository_id }}-${{ needs.resolve-operation.outputs.issue }}';
 const DISTRIBUTED_COPILOT_ACTION = 'vypdev/copilot@v3';
 const CHECKOUT_ACTION = 'actions/checkout@v5';
+const SETUP_NODE_ACTION = 'actions/setup-node@v7';
 const BUGBOT_BRANCH_CONCURRENCY_GROUP = 'copilot-bugbot-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}';
 const BUGBOT_CONCURRENCY_JOBS = Object.freeze({
   'copilot_commit.yml': 'copilot-commits',
@@ -192,6 +193,24 @@ function assertAgentInputs(file, workflow) {
       if (missing.length > 0) {
         throw new Error(`${relativeFile} job ${jobId} step ${stepIndex + 1} is missing agent inputs: ${missing.join(', ')}.`);
       }
+    }
+  }
+}
+
+function assertAgentInstallationPrerequisites(file, workflow) {
+  const manifestFile = path.basename(file);
+  if (!WORKFLOW_AGENT_ROLES[manifestFile] && manifestFile !== 'agent-cli-provisioning.yml') return;
+  const relativeFile = relativeWorkflow(file);
+  for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
+    const steps = job.steps ?? [];
+    const targetIndex = manifestFile === 'agent-cli-provisioning.yml'
+      ? steps.findIndex(step => step?.name === 'Verify selected CLI binary and headless contract')
+      : steps.findIndex(isCopilotAction);
+    if (targetIndex < 0) continue;
+    const setupIndex = steps.findIndex(step => step?.uses === SETUP_NODE_ACTION
+      && step?.with?.['node-version'] === '24.x');
+    if (setupIndex < 0 || setupIndex >= targetIndex) {
+      throw new Error(`${relativeFile} job ${jobId} must set up Node.js 24 before pinned agent installation can run.`);
     }
   }
 }
@@ -807,6 +826,7 @@ function validateWorkflow(file, workflow) {
   assertRunner(file, workflow);
   assertSequentialMutationWorkflow(file, workflow);
   assertAgentInputs(file, workflow);
+  assertAgentInstallationPrerequisites(file, workflow);
   assertNoJobLevelSecrets(file, workflow);
   assertAgentWorkflowPermissions(file, workflow);
   assertLightweightBranchSyncWorkflow(file, workflow);
@@ -856,6 +876,7 @@ module.exports = {
   assertMajorActionReferences,
   assertCopilotActionInputs,
   assertAgentInputs,
+  assertAgentInstallationPrerequisites,
   assertNoJobLevelSecrets,
   assertAgentWorkflowPermissions,
   assertLightweightBranchSyncWorkflow,

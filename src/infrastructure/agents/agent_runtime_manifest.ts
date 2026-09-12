@@ -3,8 +3,11 @@ import type { AgentProvider } from '../../domain/agent';
 
 export interface AgentRuntimeManifestEntry {
     readonly executable: string;
-    readonly version: string;
-    readonly package?: string;
+    readonly reviewedVersion: string;
+    readonly installation?: {
+        readonly package: string;
+        readonly version: string;
+    };
 }
 
 export interface AgentRuntimeManifest {
@@ -26,11 +29,18 @@ export function normalizeAgentRuntimeVersion(output: string): string {
     return output.trim().split(/\r?\n/, 1)[0].trim();
 }
 
-export function assertAgentRuntimeVersion(provider: AgentProvider, output: string): string {
+export function readAgentRuntimeVersion(provider: AgentProvider, output: string): string {
     const actual = normalizeAgentRuntimeVersion(output);
-    const expected = getAgentRuntimeManifestEntry(provider).version;
+    if (!actual) throw new Error(`${provider} CLI returned empty version output.`);
+    return actual;
+}
+
+/** Exact matching applies only to a package installed by Copilot itself. */
+export function assertInstalledAgentRuntimeVersion(provider: AgentProvider, output: string): string {
+    const actual = readAgentRuntimeVersion(provider, output);
+    const expected = getAgentRuntimeManifestEntry(provider).reviewedVersion;
     if (actual !== expected) {
-        throw new Error(`${provider} CLI version mismatch: expected ${expected}, received ${actual || 'unparseable output'}.`);
+        throw new Error(`${provider} installed CLI version mismatch: expected ${expected}, received ${actual}.`);
     }
     return actual;
 }

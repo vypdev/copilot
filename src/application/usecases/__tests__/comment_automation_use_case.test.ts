@@ -303,9 +303,8 @@ describe("runCommentAutomation", () => {
     expect(intent.invoke).not.toHaveBeenCalled();
   });
 
-  it("returns language results without intent detection when no bot login or mention is available", async () => {
-    const languageResult = successfulResult('language');
-    const language = { invoke: jest.fn().mockResolvedValue([languageResult]) };
+  it("returns an inert result without provider work when the comment does not address Copilot", async () => {
+    const language = { invoke: jest.fn() };
     const intent = { invoke: jest.fn() };
     const results = await runCommentAutomation(
       { owner: 'o', repo: 'r', actor: 'alice', tokens: { token: 't' } } as Execution,
@@ -323,8 +322,12 @@ describe("runCommentAutomation", () => {
       {} as never,
     );
 
-    expect(results).toEqual([languageResult]);
-    expect(language.invoke).toHaveBeenCalledTimes(1);
+    expect(results).toEqual([expect.objectContaining({
+      id: 'CommentAutomation',
+      success: true,
+      executed: false,
+    })]);
+    expect(language.invoke).not.toHaveBeenCalled();
     expect(intent.invoke).not.toHaveBeenCalled();
   });
 

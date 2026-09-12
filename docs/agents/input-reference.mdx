@@ -25,7 +25,7 @@ The qualified model is `<agent-model-provider>/<agent-model>`; the default is `o
 | --- | --- | --- |
 | `AGENT_ALLOWED_MODEL_PROVIDERS` | `openai` | Comma-separated provider allowlist |
 | `AGENT_ALLOWED_MODELS` | `openai/gpt-5.6-luna` | Exact qualified-model allowlist |
-| `AGENT_PROVISIONING` | `auto` | `auto`, `always`, or `disabled`; versions remain manifest-owned |
+| `AGENT_PROVISIONING` | `auto` | `auto`, `always`, or `disabled`; only Copilot-owned installations are manifest-pinned |
 
 Allowlists authorize a selection; they do not select runtime, model, executable, or credential.
 
@@ -39,15 +39,19 @@ Allowlists authorize a selection; they do not select runtime, model, executable,
 
 Values must be supplied through the runner's secret/environment mechanism and scoped to the action step. Never put them in `with`, prompts, repository files, or logs.
 
-## Exact runtime manifest
+## Reviewed runtime and pinned installation manifest
 
-| Runtime | Executable | Accepted version |
+| Runtime | Executable | Reviewed identity / pinned installation |
 | --- | --- | --- |
-| OpenCode | `opencode` | `1.18.3` |
-| Codex | `codex` | `codex-cli 0.153.4` |
-| Cursor | `agent` | `2026.09.10-fd3934a` |
+| OpenCode | `opencode` | `1.18.3` / `opencode-ai@1.18.3` |
+| Codex | `codex` | `codex-cli 0.153.4` / `@openai/codex@0.153.4` |
+| Cursor | `agent` | `2026.09.10-fd3934a` / no automatic installer |
 
-Codex and OpenCode may be provisioned at their manifest versions. Cursor must already be installed at the exact version because its public installer cannot guarantee an immutable historical version. Repository variables cannot override this manifest.
+An available operator-owned runtime is recorded and never replaced merely
+because its version differs from the reviewed baseline. Missing default Codex
+and OpenCode executables may be installed only from their exact pinned packages,
+and the new installation is verified exactly. Cursor must already be installed.
+Repository variables cannot override the installation manifest.
 
 ## Configuration ownership
 
@@ -55,7 +59,7 @@ Codex and OpenCode may be provisioned at their manifest versions. Cursor must al
 - `setup/workflows/*.yml` maps repository Variables.
 - The input builder resolves structured values and precedence.
 - The exhaustive provider dispatcher owns argv and authority.
-- The execution planner owns executable/version/workspace/artifact preflight.
+- The execution planner owns executable/runtime-identity/workspace/artifact preflight.
 - The generic process adapter consumes only an admitted plan.
 
 A contract change must update these surfaces, tests, the SDD, and catalog evidence together.

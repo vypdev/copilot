@@ -14,7 +14,8 @@ The Action fails closed. It MUST stop rather than silently selecting another run
 | Invalid model provider | Configuration | Stop before CLI execution |
 | Provider not allowlisted | Authorization | Stop before CLI execution |
 | Qualified model not allowlisted | Authorization | Stop before CLI execution |
-| Version differs from exact manifest | Preflight | Stop before agent process |
+| Preinstalled runtime returns empty identity | Preflight | Stop before agent process |
+| Copilot-installed runtime differs from pinned manifest | Provisioning | Stop before agent process |
 | Missing executable | Provisioning | Stop before agent request |
 | Missing credential reference | Authentication preflight | Stop before agent request |
 | Executable owner/permissions invalid | Preflight | Stop before agent request |

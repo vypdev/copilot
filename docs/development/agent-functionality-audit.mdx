@@ -17,12 +17,18 @@ This page is the maintained acceptance contract for Copilot's agent surface. An 
 | PR description | PR lifecycle or `/copilot description` | `planner` | Sanitized Markdown | Managed append block by default; explicit replace mode only |
 | Think, explain, diagnose, analyze, and conversational commands | Authorized issue/PR comment or CLI | `planner`, `findings`, or `reviewer` by command | Schema-validated answer | Sanitized comment |
 | Test plan | `/copilot test-plan` | `tester` | Schema-validated answer | Sanitized comment |
-| Translation | Issue or PR comment | `findings` | Schema-validated language decision and translation | Idempotent comment update |
+| Translation | Explicitly addressed issue or PR comment | `findings` | Schema-validated language decision and translation | Idempotent comment update |
 | Bugbot detection | Push, PR, `/copilot review`, `/copilot recheck`, single action, or CLI | `findings` or `reviewer` | Bounded findings schema | Review/comments plus persisted finding lifecycle |
 | Bugbot autofix | Explicit `/copilot fix` or authorized intent | `fixer` | Workspace edits | Exact-path commit and token-scoped push after verification |
 | General implementation | Explicit `/copilot implement`, authorized intent, or CLI | `fixer` | Workspace edits | Exact-path commit and token-scoped push after verification |
 
-Metadata commands are parsed before any model call. `ai-members-only` gates every model-backed event and comment route; normal non-AI lifecycle automation remains available. File mutation requires an authorized actor, a clean workspace, the expected branch, a bounded exact-path change set, sensitive-path rejection, isolated verification commands, and a second postflight check before commit.
+Metadata commands are parsed before any model call. A comment without a
+`/copilot` prefix or exact bot mention exits before project, AI, translation,
+runtime, or publication work. `ai-members-only` gates every model-backed event
+and addressed-comment route; normal non-AI lifecycle automation remains
+available. File mutation requires an authorized actor, a clean workspace, the
+expected branch, a bounded exact-path change set, sensitive-path rejection,
+isolated verification commands, and a second postflight check before commit.
 
 ## Runtime matrix
 

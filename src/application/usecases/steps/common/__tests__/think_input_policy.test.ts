@@ -1,4 +1,5 @@
-import { containsBotMention, extractMentionQuestion, getThinkCommentBody } from '../think_input_policy';
+import { containsBotMention } from '../../../../../domain/copilot_comment_request';
+import { extractMentionQuestion, getThinkCommentBody } from '../think_input_policy';
 
 describe('think input policy', () => {
     it('selects issue comments before pull request review comments', () => {

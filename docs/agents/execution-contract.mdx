@@ -14,7 +14,7 @@ effort = agent-effort (optional)
 executable = agent-executable or the runtime manifest basename
 ```
 
-The selection is invalid when a required value is empty, malformed, outside an allowlist, inconsistent with the runtime, or not supported by the exact runtime manifest. Callers cannot provide command text, subcommands, flags, environment prefixes, wrapper scripts, response files, or raw argv. There is no compatibility path for those shapes.
+The selection is invalid when a required value is empty, malformed, outside an allowlist, or inconsistent with the runtime. Callers cannot provide command text, subcommands, flags, environment prefixes, wrapper scripts, response files, or raw argv. There is no compatibility path for those shapes.
 
 Every lifecycle role may override the selection independently with `planner-*`, `findings-*`, `reviewer-*`, `fixer-*`, or `tester-*`. Empty fields inherit the common selection. Inactive roles are neither authenticated nor provisioned.
 
@@ -27,7 +27,7 @@ Every lifecycle role may override the selection independently with `planner-*`, 
 | `tester` | Test-plan commands | Read-only |
 | language capability | Comment translation and language analysis | Read-only |
 
-The runtime creates one complete `AgentExecutionPlan`. A compile-time exhaustive dispatcher calls an independent policy for Codex, OpenCode, or Cursor. The policy reconstructs all argv and default-deny provider configuration. Preflight then verifies the canonical repository root, executable ownership and permissions, exact CLI version, managed artifact hashes, hard limits, and secret-safe environment before `spawn` is possible.
+The runtime creates one complete `AgentExecutionPlan`. A compile-time exhaustive dispatcher calls an independent policy for Codex, OpenCode, or Cursor. The policy reconstructs all argv and default-deny provider configuration. Preflight then verifies the canonical repository root, executable ownership and permissions, non-empty CLI identity, managed artifact hashes, hard limits, and secret-safe environment before `spawn` is possible.
 
 All roles deny agent-tool network, approval escalation, MCP, plugins, subagents, session persistence, Git credentials, and ambient repository/user provider configuration. Only `fixer` receives workspace write access; trusted Copilot code remains responsible for validation, commit, push, publication, and GitHub mutation.
 
@@ -40,4 +40,4 @@ count, and semantic result category. Prompts, response content, model names,
 argv, environment values, paths, raw stderr, and user identity are excluded by
 the observer contract.
 
-The exact supported manifest is Codex `codex-cli 0.153.4`, OpenCode `1.18.3`, and Cursor Agent `2026.09.10-fd3934a`. A different or unparseable version stops before the model process starts. See [Agent input reference](/agents/input-reference) and [Agent failure policy](/agents/failure-policy).
+The reviewed runtime baseline is Codex `codex-cli 0.153.4`, OpenCode `1.18.3`, and Cursor Agent `2026.09.10-fd3934a`. A preinstalled operator runtime may report another non-empty version and is never silently replaced; an incompatible command surface fails terminally with no provider fallback. See [Agent input reference](/agents/input-reference) and [Agent failure policy](/agents/failure-policy).

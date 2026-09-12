@@ -321,8 +321,8 @@ and roles:
 | `copilot_pull_request.yml` | Runs on PR events: links PR to issue/project, reviewers, AI description, etc. |
 | `copilot_commit.yml` | Runs the issue-centric push pipeline (all branches except main/develop by default): commit notice, size/progress, and Bugbot. |
 | `copilot_branch_sync.yml` | Lightweight push observer on all branches: detects parent/working drift and maintains a synchronization notice without loading Bugbot or an agent. |
-| `copilot_issue_comment.yml` | Runs on issue comment: e.g. Think action (answer questions). |
-| `copilot_pull_request_comment.yml` | Runs on PR review comment: e.g. translation checks. |
+| `copilot_issue_comment.yml` | Runs on explicitly addressed issue comments: e.g. Think action (answer questions). |
+| `copilot_pull_request_comment.yml` | Runs on explicitly addressed PR review comments, including translation checks. |
 | `release_workflow.yml` | **Manual** (`workflow_dispatch`) with internal `prepare` and `publish` modes: prepares a release from its frozen development cut, promotes it to production, then publishes only the accepted production commit and starts reconciliation. Filename must match `release-workflow`. |
 | `hotfix_workflow.yml` | **Manual** (`workflow_dispatch`) with internal `prepare` and `publish` modes: prepares a hotfix from the selected production tag, promotes it, then publishes and reconciles the accepted production commit. Filename must match `hotfix-workflow`. |
 | `copilot_deployment_orchestration.yml` | Runs on marked `pull_request: closed` events: verifies the operation identity, repository, branches, and SHAs, then resumes publication or final reconciliation without polling inside the original runner. |
@@ -348,7 +348,7 @@ clearly marked deployment extension point. This repository's own files under
 package.
 
 The `agent-cli-provisioning.yml` workflow checks the selected runtime binaries,
-versions, and non-interactive help commands without making a paid model request. Runtime
+reported identities, and non-interactive help commands without making a paid model request. Runtime
 installation itself validates the pinned provisioning inputs. The `copilot_credential_health.yml` workflow is
 read-only with respect to repository configuration: it executes provider-specific
 health checks and reports only whether each requested credential is usable. GitHub

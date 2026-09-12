@@ -9,13 +9,13 @@ import { getAgentRuntimeManifestEntry } from '../agent_runtime_manifest';
 function system(provider: AgentProvider, workspace = process.cwd()): AgentExecutionPlanningSystem {
     return {
         resolveExecutable: jest.fn(() => process.execPath),
-        readVersion: jest.fn(() => getAgentRuntimeManifestEntry(provider).version),
+        readVersion: jest.fn(() => getAgentRuntimeManifestEntry(provider).reviewedVersion),
         resolveWorkspace: jest.fn(() => workspace),
     };
 }
 
 describe('AgentExecutionPlanner', () => {
-    it('uses the default system for canonical workspace, PATH, executable, and exact version preflight', () => {
+    it('uses the default system for canonical workspace, PATH, executable, and runtime identity preflight', () => {
         const directory = mkdtempSync(join(tmpdir(), 'copilot-agent-default-system-'));
         const executable = join(directory, 'codex');
         writeFileSync(executable, '#!/bin/sh\nprintf "codex-cli 0.153.4\\n"\n');
@@ -59,7 +59,7 @@ describe('AgentExecutionPlanner', () => {
         })).toThrow('canonical repository root');
     });
 
-    it.each(['codex', 'opencode', 'cursor'] as const)('admits a complete %s plan only after exact preflight', (provider) => {
+    it.each(['codex', 'opencode', 'cursor'] as const)('admits a complete %s plan after runtime identity preflight', (provider) => {
         const planningSystem = system(provider);
         const plan = new AgentExecutionPlanner(planningSystem).prepare({
             configuration: { provider, modelProvider: provider === 'cursor' ? 'cursor' : 'openai', model: 'model' },
@@ -73,7 +73,7 @@ describe('AgentExecutionPlanner', () => {
                 timeoutMs: 10_000, maxPromptBytes: 524_288, maxOutputBytes: 4_194_304,
             });
             expect(plan.executable).toBe(process.execPath);
-            expect(plan.runtimeContract.version).toBe(getAgentRuntimeManifestEntry(provider).version);
+            expect(plan.runtimeContract.version).toBe(getAgentRuntimeManifestEntry(provider).reviewedVersion);
             expect(plan.environment).not.toHaveProperty('GITHUB_TOKEN');
             expect(plan.environment.GIT_TERMINAL_PROMPT).toBe('0');
             expect(plan.artifacts.length).toBeGreaterThan(0);
@@ -107,12 +107,25 @@ describe('AgentExecutionPlanner', () => {
         })).toThrow('prompt exceeded');
     });
 
-    it('rejects an exact-version mismatch before creating managed artifacts', () => {
+    it('accepts an operator-owned non-manifest version and records its identity', () => {
         const planningSystem = system('codex');
         planningSystem.readVersion = jest.fn(() => 'codex-cli 0.154.0');
+        const plan = new AgentExecutionPlanner(planningSystem).prepare({
+            configuration: { provider: 'codex', model: 'model' }, capability: 'findings', prompt: 'prompt', timeoutMs: 1_000,
+        });
+        try {
+            expect(plan.runtimeContract.version).toBe('codex-cli 0.154.0');
+        } finally {
+            rmSync(plan.runtimeDirectory, { recursive: true, force: true });
+        }
+    });
+
+    it('rejects empty runtime identity before creating managed artifacts', () => {
+        const planningSystem = system('codex');
+        planningSystem.readVersion = jest.fn(() => '  \n');
         expect(() => new AgentExecutionPlanner(planningSystem).prepare({
             configuration: { provider: 'codex', model: 'model' }, capability: 'findings', prompt: 'prompt', timeoutMs: 1_000,
-        })).toThrow('version mismatch');
+        })).toThrow('empty version output');
     });
 
     it('rejects ambient project configuration that could broaden provider authority', () => {

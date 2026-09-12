@@ -15,17 +15,18 @@ Copilot invokes Cursor non-interactively:
 agent -p --output-format text --sandbox enabled --model <model> [--mode ask|--force] <prompt>
 ```
 
-Cursor must be preinstalled on the controlled runner and report the exact
-manifest version:
+Cursor must be preinstalled on the controlled runner. The current reviewed
+known-good identity is:
 
 ```text
 2026.09.10-fd3934a
 CURSOR_API_KEY
 ```
 
-Automatic installation cannot guarantee this immutable historical build and is
-therefore unsupported. Unofficial npm packages, shell fallbacks, and unverified
-downloads are not supported.
+Copilot records any non-empty operator-owned runtime identity without replacing
+the executable. Automatic installation is unsupported because no reviewed,
+reproducible package recipe exists. Unofficial npm packages, shell fallbacks,
+and unverified downloads are not supported.
 
 ## Configuration
 

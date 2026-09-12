@@ -2,7 +2,7 @@ import type { Execution } from '../../data/model/execution';
 import { Result } from '../../data/model/result';
 import { logError, logInfo } from '../ports/logging_ports';
 import type { AuthenticatedUserPort } from '../ports/authenticated_user_ports';
-import { containsBotMention } from './steps/common/think_input_policy';
+import { isCopilotCommentRequest } from '../../domain/copilot_comment_request';
 import type { ActorAuthorizationPort } from '../ports/actor_authorization_ports';
 import type { CommentAutomationOptions } from './comment_automation_contracts';
 import { parseCopilotCommand } from '../../domain/copilot_command';
@@ -24,6 +24,10 @@ export async function runCommentAutomation(
   let languageResults: Result[] = [];
   try {
     const command = parseCopilotCommand(options.userComment);
+    if (!isCopilotCommentRequest(options.userComment, param.tokenUser ?? '')) {
+      logInfo('Skipping comment automation because the comment does not address Copilot.');
+      return [new Result({ id: options.taskId, success: true, executed: false })];
+    }
     if (command.kind === 'invalid') {
       return [invalidCommentCommandResult(options.taskId, command.reason)];
     }
@@ -51,10 +55,6 @@ export async function runCommentAutomation(
       return runBranchSyncCommand(param, options, [], actorAuthorizationPort);
     }
     languageResults = await options.languageUseCase.invoke(param);
-    if (!containsBotMention(options.userComment, param.tokenUser ?? '')) {
-      logInfo('Skipping natural-language intent detection because the bot was not mentioned.');
-      return languageResults;
-    }
     return await runNaturalLanguageCommentAutomation(param, options, actorAuthorizationPort, languageResults, {
       authenticatedUserPort,
     });

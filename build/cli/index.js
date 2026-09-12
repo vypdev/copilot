@@ -55656,7 +55656,7 @@ function buildSetupWarnings(configuration) {
         warnings.push('Merge queue mode fails closed unless every required producer is verified automatically or covered by an exact reviewed attestation.');
     }
     if (configuration.ai.provisioningMode === 'always') {
-        warnings.push('Always-provision mode requires pinned CLI versions or a Cursor installer checksum in repository Variables.');
+        warnings.push('Always-provision mode reinstalls only default Codex/OpenCode runtimes from pinned manifest packages; explicit executables are never replaced and Cursor must be preinstalled.');
     }
     if (configuration.features.inactiveIssueClosure !== false) {
         warnings.push('Inactive issue closure is enabled; waiting issues are closed after the configured inactivity threshold and can be reopened with a new comment.');
@@ -55665,7 +55665,7 @@ function buildSetupWarnings(configuration) {
         warnings.push('Project IDs must be accessible to the PAT and use the expected project column names.');
     }
     if ((0, setup_configuration_defaults_1.setupAgentTasksForFeatures)(configuration).some(task => configuration.agents[task].provider === 'cursor')) {
-        warnings.push('Cursor is an experimental runtime in Copilot and requires a verified installer checksum plus CURSOR_API_KEY.');
+        warnings.push('Cursor is an experimental runtime in Copilot and requires a compatible preinstalled CLI plus CURSOR_API_KEY; Copilot has no automatic Cursor installer.');
     }
     if ((0, setup_configuration_storage_policy_1.usesOrganizationStorage)(configuration)) {
         warnings.push('Organization-level Secrets and Variables require organization permissions; selected access is the safest default and repository values take precedence.');
@@ -59987,7 +59987,7 @@ exports.resolveCommentAutomationDecision = resolveCommentAutomationDecision;
 const logging_ports_1 = __nccwpck_require__(6152);
 const bugbot_fix_intent_payload_1 = __nccwpck_require__(25734);
 const comment_automation_route_policy_1 = __nccwpck_require__(47058);
-const think_input_policy_1 = __nccwpck_require__(59687);
+const copilot_comment_request_1 = __nccwpck_require__(86819);
 const copilot_command_1 = __nccwpck_require__(11771);
 async function resolveCommentAutomationDecision(param, options, actorAuthorizationPort) {
     (0, logging_ports_1.logInfo)("Running bugbot fix intent detection (before Think).");
@@ -59996,7 +59996,7 @@ async function resolveCommentAutomationDecision(param, options, actorAuthorizati
     const parsedCommand = (0, copilot_command_1.parseCopilotCommand)(options.userComment);
     const explicitMutationCommand = parsedCommand.kind === 'command'
         && (parsedCommand.command.name === 'fix' || parsedCommand.command.name === 'implement');
-    const route = (0, comment_automation_route_policy_1.resolveCommentAutomationRoute)(intentPayload, await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token), (0, think_input_policy_1.containsBotMention)(options.userComment, param.tokenUser ?? ''), explicitMutationCommand);
+    const route = (0, comment_automation_route_policy_1.resolveCommentAutomationRoute)(intentPayload, await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token), (0, copilot_comment_request_1.containsBotMention)(options.userComment, param.tokenUser ?? ''), explicitMutationCommand);
     logIntent(intentPayload);
     return { intentResults, intentPayload, route };
 }
@@ -60068,7 +60068,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCommentAutomation = runCommentAutomation;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
-const think_input_policy_1 = __nccwpck_require__(59687);
+const copilot_comment_request_1 = __nccwpck_require__(86819);
 const copilot_command_1 = __nccwpck_require__(11771);
 const comment_automation_command_workflow_1 = __nccwpck_require__(63134);
 const comment_automation_natural_language_workflow_1 = __nccwpck_require__(10554);
@@ -60080,6 +60080,10 @@ async function runCommentAutomation(param, options, actorAuthorizationPort, auth
     let languageResults = [];
     try {
         const command = (0, copilot_command_1.parseCopilotCommand)(options.userComment);
+        if (!(0, copilot_comment_request_1.isCopilotCommentRequest)(options.userComment, param.tokenUser ?? '')) {
+            (0, logging_ports_1.logInfo)('Skipping comment automation because the comment does not address Copilot.');
+            return [new result_1.Result({ id: options.taskId, success: true, executed: false })];
+        }
         if (command.kind === 'invalid') {
             return [(0, comment_automation_command_workflow_1.invalidCommentCommandResult)(options.taskId, command.reason)];
         }
@@ -60103,10 +60107,6 @@ async function runCommentAutomation(param, options, actorAuthorizationPort, auth
             return (0, branch_sync_comment_command_1.runBranchSyncCommand)(param, options, [], actorAuthorizationPort);
         }
         languageResults = await options.languageUseCase.invoke(param);
-        if (!(0, think_input_policy_1.containsBotMention)(options.userComment, param.tokenUser ?? '')) {
-            (0, logging_ports_1.logInfo)('Skipping natural-language intent detection because the bot was not mentioned.');
-            return languageResults;
-        }
         return await (0, comment_automation_natural_language_workflow_1.runNaturalLanguageCommentAutomation)(param, options, actorAuthorizationPort, languageResults, {
             authenticatedUserPort,
         });
@@ -67119,7 +67119,6 @@ async function queryThinkAnswer(param, prompt, repository, agentTask) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getThinkCommentBody = getThinkCommentBody;
 exports.extractMentionQuestion = extractMentionQuestion;
-exports.containsBotMention = containsBotMention;
 function getThinkCommentBody(source) {
     if (source.isIssueComment)
         return source.issueCommentBody ?? '';
@@ -67130,14 +67129,6 @@ function getThinkCommentBody(source) {
 function extractMentionQuestion(commentBody, tokenUser) {
     const escapedUsername = tokenUser.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return commentBody.replace(new RegExp(`@${escapedUsername}`, 'gi'), '').trim();
-}
-/** Matches GitHub usernames case-insensitively without matching a larger username. */
-function containsBotMention(commentBody, tokenUser) {
-    const normalizedUser = tokenUser.trim().replace(/^@/u, '');
-    if (!normalizedUser)
-        return false;
-    const escapedUsername = normalizedUser.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return new RegExp(`(^|[^A-Za-z0-9_-])@${escapedUsername}(?=$|[^A-Za-z0-9_-])`, 'iu').test(commentBody);
 }
 
 
@@ -67151,6 +67142,7 @@ function containsBotMention(commentBody, tokenUser) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveThinkRequest = resolveThinkRequest;
 const copilot_command_1 = __nccwpck_require__(11771);
+const copilot_comment_request_1 = __nccwpck_require__(86819);
 const think_input_policy_1 = __nccwpck_require__(59687);
 const sanitize_user_comment_for_prompt_1 = __nccwpck_require__(59828);
 /** Resolves the comment input and destination without performing I/O. */
@@ -67169,7 +67161,7 @@ function resolveThinkRequest(param) {
     if (command.kind === 'none') {
         if (!param.tokenUser?.trim())
             return { kind: 'skip', reason: 'missing-token' };
-        if (!(0, think_input_policy_1.containsBotMention)(commentBody, param.tokenUser))
+        if (!(0, copilot_comment_request_1.containsBotMention)(commentBody, param.tokenUser))
             return { kind: 'skip', reason: 'not-mentioned' };
     }
     const question = command.kind === 'command'
@@ -81056,6 +81048,35 @@ function parseCopilotCommand(raw) {
 
 /***/ }),
 
+/***/ 86819:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.containsBotMention = containsBotMention;
+exports.isCopilotCommentRequest = isCopilotCommentRequest;
+const copilot_command_1 = __nccwpck_require__(11771);
+/** Matches GitHub usernames case-insensitively without matching a larger username. */
+function containsBotMention(commentBody, tokenUser) {
+    const normalizedUser = tokenUser.trim().replace(/^@/u, '');
+    if (!normalizedUser)
+        return false;
+    const escapedUsername = normalizedUser.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`(^|[^A-Za-z0-9_-])@${escapedUsername}(?=$|[^A-Za-z0-9_-])`, 'iu').test(commentBody);
+}
+/**
+ * Comment automation is opt-in: a bounded command prefix or an exact bot
+ * mention is required. Unaddressed human and machine comments are inert.
+ */
+function isCopilotCommentRequest(commentBody, botLogin) {
+    return (0, copilot_command_1.parseCopilotCommand)(commentBody).kind !== 'none'
+        || containsBotMention(commentBody, botLogin);
+}
+
+
+/***/ }),
+
 /***/ 72418:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -82164,7 +82185,7 @@ class AgentExecutionPlanner {
             const executable = this.system.resolveExecutable(requestedExecutable, sourceEnvironment);
             validateExecutableFile(executable);
             const safeEnvironment = (0, agent_authentication_1.buildAgentCliEnvironment)(request.configuration.provider, sourceEnvironment, request.configuration.modelProvider);
-            const version = (0, agent_runtime_manifest_1.assertAgentRuntimeVersion)(request.configuration.provider, this.system.readVersion(executable, safeEnvironment));
+            const version = (0, agent_runtime_manifest_1.readAgentRuntimeVersion)(request.configuration.provider, this.system.readVersion(executable, safeEnvironment));
             runtimeDirectory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-agent-runtime-'));
             const gitConfigPath = (0, node_path_1.join)(runtimeDirectory, 'gitconfig');
             const providerPolicy = (0, agent_execution_policy_dispatcher_1.buildProviderExecutionPolicy)({
@@ -82311,7 +82332,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getAgentRuntimeManifest = getAgentRuntimeManifest;
 exports.getAgentRuntimeManifestEntry = getAgentRuntimeManifestEntry;
 exports.normalizeAgentRuntimeVersion = normalizeAgentRuntimeVersion;
-exports.assertAgentRuntimeVersion = assertAgentRuntimeVersion;
+exports.readAgentRuntimeVersion = readAgentRuntimeVersion;
+exports.assertInstalledAgentRuntimeVersion = assertInstalledAgentRuntimeVersion;
 const agent_runtime_manifest_json_1 = __importDefault(__nccwpck_require__(61685));
 const manifest = agent_runtime_manifest_json_1.default;
 function getAgentRuntimeManifest() {
@@ -82323,11 +82345,18 @@ function getAgentRuntimeManifestEntry(provider) {
 function normalizeAgentRuntimeVersion(output) {
     return output.trim().split(/\r?\n/, 1)[0].trim();
 }
-function assertAgentRuntimeVersion(provider, output) {
+function readAgentRuntimeVersion(provider, output) {
     const actual = normalizeAgentRuntimeVersion(output);
-    const expected = getAgentRuntimeManifestEntry(provider).version;
+    if (!actual)
+        throw new Error(`${provider} CLI returned empty version output.`);
+    return actual;
+}
+/** Exact matching applies only to a package installed by Copilot itself. */
+function assertInstalledAgentRuntimeVersion(provider, output) {
+    const actual = readAgentRuntimeVersion(provider, output);
+    const expected = getAgentRuntimeManifestEntry(provider).reviewedVersion;
     if (actual !== expected) {
-        throw new Error(`${provider} CLI version mismatch: expected ${expected}, received ${actual || 'unparseable output'}.`);
+        throw new Error(`${provider} installed CLI version mismatch: expected ${expected}, received ${actual}.`);
     }
     return actual;
 }
@@ -98033,7 +98062,7 @@ module.exports = JSON.parse('{"single":{"topLeft":"┌","top":"─","topRight":"
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"revision":"2026-09-12.p1-c.1","providers":{"codex":{"executable":"codex","version":"codex-cli 0.153.4","package":"@openai/codex"},"opencode":{"executable":"opencode","version":"1.18.3","package":"opencode-ai"},"cursor":{"executable":"agent","version":"2026.09.10-fd3934a"}}}');
+module.exports = JSON.parse('{"revision":"2026-09-12.p1-c.2","providers":{"codex":{"executable":"codex","reviewedVersion":"codex-cli 0.153.4","installation":{"package":"@openai/codex","version":"0.153.4"}},"opencode":{"executable":"opencode","reviewedVersion":"1.18.3","installation":{"package":"opencode-ai","version":"1.18.3"}},"cursor":{"executable":"agent","reviewedVersion":"2026.09.10-fd3934a"}}}');
 
 /***/ })
 

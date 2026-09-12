@@ -353,10 +353,10 @@
     {
       "id": "comment-automation",
       "title": "Comment automation and authorization",
-      "status": "as-built-baseline",
-      "scope": "Route explicit commands and mentioned natural language while protecting repository mutations",
+      "status": "implemented",
+      "scope": "Admit only explicit commands or exact mentions, then route them while protecting repository mutations",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-11",
+      "lastVerified": "2026-09-12",
       "specs": [
         "specs/comment-automation-and-authorization.md"
       ],
@@ -365,18 +365,25 @@
         ".github/workflows/copilot_pull_request_comment.yml"
       ],
       "entrypoints": [
+        "src/actions/github_action.ts",
         "src/application/usecases/issue_comment_use_case.ts",
         "src/application/usecases/pull_request_review_comment_use_case.ts"
       ],
       "code": [
+        "src/domain/copilot_comment_request.ts",
         "src/domain/copilot_command.ts",
+        "src/application/policies/agent_task_activation_policy.ts",
         "src/application/usecases/comment_automation_use_case.ts",
         "src/application/usecases/comment_automation_route_policy.ts",
         "src/application/usecases/comment_automation_command_workflow.ts",
         "src/data/repository/organization/actor_authorization_repository.ts"
       ],
       "tests": [
+        "src/actions/__tests__/github_action.test.ts",
+        "src/domain/__tests__/copilot_comment_request.test.ts",
         "src/domain/__tests__/copilot_command.test.ts",
+        "src/application/policies/__tests__/agent_task_activation_policy.test.ts",
+        "src/application/usecases/__tests__/comment_automation_use_case.test.ts",
         "src/application/usecases/__tests__/issue_comment_use_case.test.ts",
         "src/application/usecases/__tests__/pull_request_review_comment_use_case.test.ts",
         "src/data/repository/organization/__tests__/actor_authorization_repository.test.ts"
@@ -529,8 +536,11 @@
       ],
       "workflows": [
         "setup/workflows/agent-cli-provisioning.yml",
+        ".github/workflows/copilot_commit.yml",
+        ".github/workflows/copilot_issue.yml",
         ".github/workflows/copilot_pull_request.yml",
-        ".github/workflows/copilot_issue_comment.yml"
+        ".github/workflows/copilot_issue_comment.yml",
+        ".github/workflows/copilot_pull_request_comment.yml"
       ],
       "entrypoints": [
         "src/actions/agent_configuration_builder.ts",
@@ -541,6 +551,7 @@
         "src/domain/agent_execution_plan.ts",
         "src/application/policies/agent_task_activation_policy.ts",
         "src/application/policies/agent_configuration_validation_policy.ts",
+        "src/application/policies/setup_configuration_plan.ts",
         "src/application/policies/agent_execution/agent_execution_policy_dispatcher.ts",
         "src/application/policies/agent_execution/strict_output_schema_policy.ts",
         "src/application/policies/agent_response_schemas.ts",
@@ -549,12 +560,14 @@
         "src/infrastructure/agents/agent_runtime_manifest.ts",
         "src/infrastructure/agents/agent-runtime-manifest.json",
         "src/data/repository/agent_cli_provisioner.ts",
-        "src/data/repository/agent_cli_execution.ts"
+        "src/data/repository/agent_cli_execution.ts",
+        "scripts/validate-workflow-contract.cjs"
       ],
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",
         "src/actions/__tests__/github_action_runtime.test.ts",
         "src/application/policies/__tests__/agent_task_activation_policy.test.ts",
+        "src/application/policies/__tests__/setup_configuration_policy.test.ts",
         "src/data/repository/__tests__/agent_cli_client.test.ts",
         "src/data/repository/__tests__/agent_cli_provisioner.test.ts",
         "src/application/policies/__tests__/agent_execution_plan_policy.test.ts",
@@ -562,16 +575,25 @@
         "src/application/policies/__tests__/strict_output_schema_policy.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/schema.test.ts",
         "src/infrastructure/agents/__tests__/agent_execution_planner.test.ts",
-        "src/infrastructure/agents/__tests__/agent_runtime_manifest.test.ts"
+        "src/infrastructure/agents/__tests__/agent_runtime_manifest.test.ts",
+        "src/tooling/__tests__/validate_workflow_contract.test.ts"
       ],
       "documentation": [
+        "docs/configuration-checklist.mdx",
+        "docs/agents/cli-configuration.mdx",
+        "docs/agents/codex-openai.mdx",
+        "docs/agents/cursor.mdx",
         "docs/agents/execution-contract.mdx",
         "docs/agents/runtime-selection.mdx",
         "docs/agents/model-selection.mdx",
         "docs/agents/model-allowlists.mdx",
         "docs/agents/failure-policy.mdx",
+        "docs/agents/input-reference.mdx",
+        "docs/agents/opencode.mdx",
+        "docs/security-operations/operations/cli-runners.mdx",
         "docs/security-operations/operations/cli-provisioning.mdx",
-        "docs/security-operations/operations/provisioning.mdx"
+        "docs/security-operations/operations/provisioning.mdx",
+        "docs/security-operations/operations/version-pinning.mdx"
       ]
     },
     {
