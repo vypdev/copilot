@@ -237,10 +237,13 @@ export function renderDeploymentJobSummary(
     `| ${messages.previousPhase} | ${messages.resultingPhase} | ${messages.retryable} |`, "|---|---|---|",
     `| ${inline(previousPhase ?? operation.phase)} | ${inline(operation.phase)} | ${operation.lastFailure?.retryable ? messages.yes : messages.no} |`, "",
     `- Operation: ${inline(operation.operationId)}`,
+    `- State: version ${operation.stateVersion}, revision ${operation.revision}`,
+    `- Admission scope: repository + launcher issue #${context.issue}`,
     `- ${messages.origin}: ${inline(`${operation.originBranch}@${shortSha(operation.originSha)}`)}`,
     `- ${messages.preparedSource}: ${inline(`${operation.sourceBranch}@${shortSha(operation.sourceSha)}`)}`,
     `- ${messages.productionFact}: ${inline(operation.productionSha ? `${operation.productionBranch}@${shortSha(operation.productionSha)}` : "pending")}`,
     `- ${messages.publication}: ${operation.publicationVerified ? messages.alreadyPublished : messages.notPublished}`,
+    `- Publication receipt: ${operation.publicationReceipt ? inline(`${operation.publicationReceipt.tag}@${shortSha(operation.publicationReceipt.productionSha)}`) : "absent"}`,
     `- ${messages.createdReused}: ${safeText(operations.join(", ") || "none")}`, "",
   ];
   if (operation.phase === "blocked") {

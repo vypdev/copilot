@@ -19,7 +19,7 @@ module.exports = {
     }
   },
   coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'text-summary', 'lcov'],
+  coverageReporters: ['text', 'text-summary', 'lcov', 'json-summary'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   moduleNameMapper: {
     // @actions/github v8 exposes an ESM Octokit dependency. The published

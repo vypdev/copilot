@@ -1,7 +1,10 @@
-import { DeploymentStateRepository } from "../deployment_state_repository";
+import { deploymentStateFence } from "../../../../domain/deployment_state_fence";
 import type { DeploymentOperationSnapshot } from "../../../../domain/deployment_operation";
+import { DeploymentStateRepositoryFactory } from "../deployment_state_repository";
 
-const operation = {
+const operation = (overrides: Partial<DeploymentOperationSnapshot> = {}): DeploymentOperationSnapshot => ({
+  stateVersion: 1,
+  revision: 7,
   operationId: "operation-12345678",
   kind: "release",
   version: "3.4.0",
@@ -29,46 +32,112 @@ const operation = {
   publicationVerified: false,
   reconciliationTargets: [],
   lastFailure: null,
-} as DeploymentOperationSnapshot;
+  ...overrides,
+});
+
+const publicationReceipt = {
+  tag: "v3.4.0",
+  productionSha: "c".repeat(40),
+  operationId: "operation-12345678",
+  releaseUrl: "https://github.com/owner/repo/releases/tag/v3.4.0",
+};
 
 const start = "<!-- copilot-configuration-start";
 const end = "copilot-configuration-end -->";
+const binding = { owner: "owner", repository: "repo", issue: 355, token: "pat" };
 
-function harness(payload?: Record<string, unknown>) {
-  const description = payload ? `Issue\n${start}\n${JSON.stringify(payload)}\n${end}` : "Issue";
-  const issues = {
-    getDescription: jest.fn().mockResolvedValue(description),
-    updateDescription: jest.fn(),
-  };
-  return { repository: new DeploymentStateRepository(issues), issues };
+function descriptionFor(payload?: unknown): string {
+  return payload === undefined ? "Issue" : `Issue\n${start}\n${JSON.stringify(payload)}\n${end}`;
 }
 
-const query = { owner: "owner", repository: "repo", issue: 355, token: "pat" };
+function harness(payload?: unknown, descriptionOverride?: string) {
+  let description = descriptionOverride ?? descriptionFor(payload);
+  const issues = {
+    getDescription: jest.fn(async () => description),
+    updateDescription: jest.fn(async (_owner, _repository, _issue, updated: string) => {
+      description = updated;
+    }),
+  };
+  const repository = new DeploymentStateRepositoryFactory(issues).bind(binding);
+  return { repository, issues, description: () => description };
+}
+
+function state(deploymentOrchestration: DeploymentOperationSnapshot) {
+  return {
+    branchType: "release",
+    releaseBranch: "release/3.4.0",
+    deploymentOrchestration,
+  };
+}
 
 describe("DeploymentStateRepository", () => {
-  it("returns no operation when the issue has no configuration block", async () => {
-    await expect(harness().repository.load(query)).resolves.toBeUndefined();
+  it("returns absent when the issue has no configuration block", async () => {
+    await expect(harness().repository.load()).resolves.toEqual({ kind: "absent" });
   });
 
-  it("loads a strict durable operation through the schema-v3 model", async () => {
-    await expect(harness({ schemaVersion: 3, branchType: "release", deploymentOrchestration: operation }).repository.load(query))
-      .resolves.toEqual(operation);
+  it("loads only the current version-1 deployment state", async () => {
+    const current = operation();
+    await expect(harness({ schemaVersion: 3, branchType: "release", deploymentOrchestration: current }).repository.load())
+      .resolves.toEqual({ kind: "current", operation: current });
   });
 
-  it("persists operation state in the existing hidden configuration block", async () => {
-    const value = harness({ schemaVersion: 3, branchType: "release", parentBranch: "develop" });
-    await value.repository.save({ ...query, state: { branchType: "release", releaseBranch: "release/3.4.0", deploymentOrchestration: operation } });
-    const updated = value.issues.updateDescription.mock.calls[0][3] as string;
-    expect(updated).toContain('"schemaVersion": 3');
-    expect(updated).toContain('"operationId": "operation-12345678"');
-    expect(updated).toContain('"parentBranch": "develop"');
+  it.each([
+    ["invalid JSON", undefined, `Issue\n${start}\n{bad\n${end}`, "invalid"],
+    ["unversioned deployment", { schemaVersion: 3, branchType: "release", deploymentOrchestration: { operationId: "operation-12345678" } }, undefined, "invalid"],
+    ["future deployment", { schemaVersion: 3, branchType: "release", deploymentOrchestration: { ...operation(), stateVersion: 2 } }, undefined, "unsupported"],
+    ["old configuration", { schemaVersion: 2, branchType: "release", deploymentOrchestration: operation() }, undefined, "unsupported"],
+  ])("classifies %s without translating it", async (_name, payload, raw, kind) => {
+    await expect(harness(payload, raw).repository.load()).resolves.toEqual(expect.objectContaining({ kind }));
   });
 
-  it("adds a missing configuration block for a launcher issue", async () => {
+  it("persists the first operation at revision one", async () => {
     const value = harness();
-    await value.repository.save({ ...query, state: { branchType: "release", deploymentOrchestration: operation } });
-    expect(value.issues.updateDescription).toHaveBeenCalledWith(
-      "owner", "repo", 355, expect.stringContaining(start), "pat",
-    );
+    const proposed = operation({ revision: 1, phase: "preparing" });
+    await expect(value.repository.save({ expected: { kind: "absent" }, state: state(proposed) }))
+      .resolves.toEqual({ kind: "saved", operation: proposed });
+    expect(value.description()).toContain('"stateVersion": 1');
+    expect(value.description()).toContain('"revision": 1');
+  });
+
+  it("persists exactly one monotonic successor while preserving unrelated configuration", async () => {
+    const current = operation();
+    const value = harness({ schemaVersion: 3, branchType: "release", parentBranch: "develop", deploymentOrchestration: current });
+    const proposed = operation({ revision: 8, phase: "published", productionSha: "c".repeat(40), publicationVerified: true, publicationReceipt });
+    await expect(value.repository.save({
+      expected: { kind: "current", fence: deploymentStateFence(current) },
+      state: state(proposed),
+    })).resolves.toEqual({ kind: "saved", operation: proposed });
+    expect(value.description()).toContain('"parentBranch": "develop"');
+  });
+
+  it("returns already-applied without rewriting a completed save", async () => {
+    const proposed = operation({ revision: 8, phase: "published", productionSha: "c".repeat(40), publicationVerified: true, publicationReceipt });
+    const value = harness({ schemaVersion: 3, branchType: "release", deploymentOrchestration: proposed });
+    await expect(value.repository.save({
+      expected: { kind: "current", fence: deploymentStateFence(operation()) },
+      state: state(proposed),
+    })).resolves.toEqual({ kind: "already-applied", operation: proposed });
+    expect(value.issues.updateDescription).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["stale", operation({ revision: 9 }), { kind: "current", fence: deploymentStateFence(operation()) }],
+    ["conflict", operation({ operationId: "operation-conflict" }), { kind: "current", fence: deploymentStateFence(operation()) }],
+  ] as const)("returns %s and performs no write", async (kind, durable, expected) => {
+    const value = harness({ schemaVersion: 3, branchType: "release", deploymentOrchestration: durable });
+    await expect(value.repository.save({
+      expected,
+      state: state(operation({ revision: 8, phase: "published" })),
+    })).resolves.toEqual(expect.objectContaining({ kind }));
+    expect(value.issues.updateDescription).not.toHaveBeenCalled();
+  });
+
+  it("returns missing when an expected operation disappeared", async () => {
+    const value = harness({ schemaVersion: 3, branchType: "release" });
+    await expect(value.repository.save({
+      expected: { kind: "current", fence: deploymentStateFence(operation()) },
+      state: state(operation({ revision: 8, phase: "published" })),
+    })).resolves.toEqual({ kind: "missing" });
+    expect(value.issues.updateDescription).not.toHaveBeenCalled();
   });
 });

@@ -151,7 +151,6 @@ markers; this shared layer does not itself deduplicate GitHub deliveries.
 | Input | Type | Recommended default | Allowed values | Scope/persistence |
 |---|---|---|---|---|
 | `debug` | boolean | `false` | `true`, `false` | per run |
-| `queue-gate-only` | boolean | `false` | workflow-owned boolean | per run; not user workflow logic |
 | `token` | secret | required PAT | valid GitHub token | per run; never persisted in markers |
 | `ai-members-only` | boolean | `false` | `true`, `false` | workflow/repository variable |
 | `bugbot-fail-on-unresolved` | boolean | `false` | `true`, `false` | per run |

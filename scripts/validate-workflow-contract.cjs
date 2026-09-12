@@ -10,15 +10,17 @@ const workflowDirectories = [
   path.join(repositoryRoot, 'setup', 'workflows'),
 ];
 const QUEUE_WAIT_MINUTES = 90;
-const QUEUE_GATE_TIMEOUT_MINUTES = 120;
+const DEPLOYMENT_VALIDATION_TIMEOUT_MINUTES = 5;
 const PREPARE_VERSION_TIMEOUT_MINUTES = 15;
 const PREPARE_COMPILED_TIMEOUT_MINUTES = 30;
 const TAG_TIMEOUT_MINUTES = 10;
 const NPM_PUBLISH_TIMEOUT_MINUTES = 20;
 const FINALIZE_RELEASE_TIMEOUT_MINUTES = 15;
 const FAILURE_REPORT_TIMEOUT_MINUTES = 5;
-const MIN_QUEUE_JOB_TIMEOUT_MINUTES = QUEUE_GATE_TIMEOUT_MINUTES;
-const FAILURE_REPORT_CONDITION = "${{ failure() && inputs.issue != '-1' }}";
+const MIN_QUEUE_JOB_TIMEOUT_MINUTES = 120;
+const FAILURE_REPORT_CONDITION = "${{ failure() && needs.validate.result == 'success' }}";
+const DEPLOYMENT_CONCURRENCY_GROUP = 'copilot-deployment-${{ github.repository_id }}-${{ inputs.issue }}';
+const DEPLOYMENT_CONTINUATION_CONCURRENCY_GROUP = 'copilot-deployment-${{ github.repository_id }}-${{ needs.resolve-operation.outputs.issue }}';
 const DISTRIBUTED_COPILOT_ACTION = 'vypdev/copilot@v3';
 const CHECKOUT_ACTION = 'actions/checkout@v5';
 const BUGBOT_BRANCH_CONCURRENCY_GROUP = 'copilot-bugbot-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}';
@@ -44,8 +46,6 @@ const QUEUE_WORKFLOW_MANIFEST = Object.freeze([
   ['copilot_pull_request.yml', 'Copilot - Pull Request', 'copilot-pull-requests'],
   ['copilot_pull_request_comment.yml', 'Copilot - Pull Request Comment', 'copilot-pull-requests'],
   ['copilot_close_inactive_issues.yml', 'Copilot - Close Inactive Issues', 'copilot-inactive-issues'],
-  ['hotfix_workflow.yml', 'Task - Hotfix', 'queue-gate'],
-  ['release_workflow.yml', 'Task - Release', 'queue-gate'],
 ].map(([file, workflowName, jobId]) => ({ file, workflowName, jobId })));
 
 const MUTATION_WORKFLOW_MANIFEST = Object.freeze([
@@ -97,10 +97,6 @@ function relativeWorkflow(file) {
 function isCopilotAction(step) {
   return typeof step?.uses === 'string'
     && (step.uses === './' || /(?:^|\/)copilot@/.test(step.uses));
-}
-
-function isQueueGateAction(step) {
-  return isCopilotAction(step) && step.with?.['queue-gate-only'] === 'true';
 }
 
 function shouldPersistCheckoutCredentials(relativeFile, jobId) {
@@ -191,7 +187,7 @@ function assertAgentInputs(file, workflow) {
   ];
   for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
     for (const [stepIndex, step] of (job.steps ?? []).entries()) {
-      if (jobId === 'queue-gate' || !isCopilotAction(step) || isQueueGateAction(step)) continue;
+      if (!isCopilotAction(step)) continue;
       const missing = requiredAgentInputs.filter(input => !(input in (step.with ?? {})));
       if (missing.length > 0) {
         throw new Error(`${relativeFile} job ${jobId} step ${stepIndex + 1} is missing agent inputs: ${missing.join(', ')}.`);
@@ -323,51 +319,6 @@ function assertDirectEventTriggers(file, workflow) {
   }
 }
 
-function assertQueueGateJob(file, workflow, expectedUses) {
-  const relativeFile = relativeWorkflow(file);
-  const queueGate = workflow.jobs?.['queue-gate'];
-  if (!queueGate) throw new Error(`${relativeFile} must define queue-gate.`);
-  assertExactTimeout(relativeFile, 'queue-gate', queueGate, QUEUE_GATE_TIMEOUT_MINUTES);
-  const permissions = queueGate.permissions ?? {};
-  const permissionKeys = Object.keys(permissions).sort();
-  if (permissionKeys.join(',') !== 'actions,contents'
-    || permissions.actions !== 'read'
-    || permissions.contents !== 'read') {
-    throw new Error(`${relativeFile} queue-gate must have only actions: read and contents: read permissions.`);
-  }
-  if (queueGate.env !== undefined || Object.prototype.hasOwnProperty.call(queueGate, 'continue-on-error')) {
-    throw new Error(`${relativeFile} queue-gate must not define bypass or agent environment.`);
-  }
-  assertNoUnsafeCondition(relativeFile, 'queue-gate', queueGate);
-
-  const steps = queueGate.steps ?? [];
-  if (steps.length !== 2 || steps.some(step => step.run !== undefined)) {
-    throw new Error(`${relativeFile} queue-gate may contain only a safe checkout and one gate action.`);
-  }
-  const checkout = steps[0];
-  if (typeof checkout?.uses !== 'string' || !/^actions\/checkout@/.test(checkout.uses)
-    || checkout.with?.['persist-credentials'] !== false
-    || Object.keys(checkout.with ?? {}).some(key => key !== 'persist-credentials')) {
-    throw new Error(`${relativeFile} queue-gate checkout must set persist-credentials: false.`);
-  }
-  const action = steps[1];
-  if (action?.uses !== expectedUses || !isQueueGateAction(action)) {
-    throw new Error(`${relativeFile} queue-gate must invoke ${expectedUses} with queue-gate-only: 'true'.`);
-  }
-  if (Object.prototype.hasOwnProperty.call(action, 'continue-on-error')) {
-    throw new Error(`${relativeFile} queue-gate action must not define continue-on-error.`);
-  }
-  const actionInputs = action.with ?? {};
-  if (actionInputs.token !== '${{ github.token }}'
-    || Object.keys(actionInputs).some(key => key !== 'queue-gate-only' && key !== 'token')) {
-    throw new Error(`${relativeFile} queue-gate must pass only queue-gate-only and github.token.`);
-  }
-  const gateText = JSON.stringify(queueGate);
-  if (/\b(secrets\.|PAT|API_KEY|AGENT_|CODEX_|OPENCODE_|CURSOR_|ANTHROPIC_|OPENROUTER_)/i.test(gateText)) {
-    throw new Error(`${relativeFile} queue-gate must not contain PAT, provider secrets, or agent environment.`);
-  }
-}
-
 function assertExactNeeds(relativeFile, jobId, job, expected) {
   const actual = needsFor(job);
   if (actual.length !== expected.length || actual.some((value, index) => value !== expected[index])) {
@@ -466,13 +417,13 @@ function assertFinalizeReleaseJob(relativeFile, job) {
   }
 }
 
-function assertTransitiveQueueGateAncestry(file, workflow, gateJobId, allowedFailureJobs = new Set()) {
+function assertTransitiveValidationAncestry(file, workflow, validationJobId, allowedFailureJobs = new Set()) {
   const relativeFile = relativeWorkflow(file);
   const jobs = workflow.jobs ?? {};
   const ancestry = new Map();
   const visiting = new Set();
   const reachesGate = (jobId) => {
-    if (jobId === gateJobId) return true;
+    if (jobId === validationJobId) return true;
     if (ancestry.has(jobId)) return ancestry.get(jobId);
     if (visiting.has(jobId)) throw new Error(`${relativeFile} has a cycle in job needs.`);
     const job = jobs[jobId];
@@ -486,8 +437,8 @@ function assertTransitiveQueueGateAncestry(file, workflow, gateJobId, allowedFai
 
   for (const [jobId, job] of Object.entries(jobs)) {
     if (!allowedFailureJobs.has(jobId)) assertNoUnsafeCondition(relativeFile, jobId, job);
-    if (jobId !== gateJobId && !reachesGate(jobId)) {
-      throw new Error(`${relativeFile} job ${jobId} is not a transitive descendant of ${gateJobId}.`);
+    if (jobId !== validationJobId && !reachesGate(jobId)) {
+      throw new Error(`${relativeFile} job ${jobId} is not a transitive descendant of ${validationJobId}.`);
     }
   }
 }
@@ -586,26 +537,24 @@ function assertMutationWorkflow(file, workflow) {
   const setup = relativeFile.startsWith('setup/workflows/');
   const finalJob = manifest.file === 'release_workflow.yml' ? 'finalize-release' : 'finalize-hotfix';
   const expectedJobs = setup
-    ? ['queue-gate', 'prepare-version-files', 'promote', 'publish', 'report-failure']
-    : ['queue-gate', 'prepare-version-files', 'prepare-compiled-files', 'promote', 'tag', 'publish-npm', finalJob, 'report-failure'];
+    ? ['validate', 'prepare-version-files', 'promote', 'publish', 'report-failure']
+    : ['validate', 'prepare-version-files', 'prepare-compiled-files', 'promote', 'tag', 'publish-npm', finalJob, 'report-failure'];
   const actualJobs = Object.keys(workflow.jobs ?? {});
   if (actualJobs.length !== expectedJobs.length || expectedJobs.some(jobId => !actualJobs.includes(jobId))) {
-    throw new Error(`${relativeFile} must define the exact gate-first job graph.`);
+    throw new Error(`${relativeFile} must define the exact validation-first job graph.`);
   }
-  assertNoConcurrency(relativeFile, workflow);
-  assertQueueGateJob(file, workflow, setup ? DISTRIBUTED_COPILOT_ACTION : './');
-  assertExactTimeout(relativeFile, 'queue-gate', workflow.jobs['queue-gate'], QUEUE_GATE_TIMEOUT_MINUTES);
-  assertExactNeeds(relativeFile, 'queue-gate', workflow.jobs['queue-gate'], []);
-  assertExactNeeds(relativeFile, 'prepare-version-files', workflow.jobs['prepare-version-files'], ['queue-gate']);
+  assertDeploymentWorkflowConcurrency(relativeFile, workflow);
+  assertDeploymentValidationJob(relativeFile, workflow);
+  assertExactNeeds(relativeFile, 'prepare-version-files', workflow.jobs['prepare-version-files'], ['validate']);
   if (setup) {
     assertExactTimeout(relativeFile, 'prepare-version-files', workflow.jobs['prepare-version-files'], 30);
     assertExactNeeds(relativeFile, 'promote', workflow.jobs.promote, ['prepare-version-files']);
-    assertExactNeeds(relativeFile, 'publish', workflow.jobs.publish, ['queue-gate']);
+    assertExactNeeds(relativeFile, 'publish', workflow.jobs.publish, ['validate']);
     assertPhaseConditions(relativeFile, workflow.jobs, 'publish');
     assertFailureReportingJob(
       relativeFile,
       workflow.jobs['report-failure'],
-      ['queue-gate', 'prepare-version-files', 'promote', 'publish'],
+      ['validate', 'prepare-version-files', 'promote', 'publish'],
       manifest.file.startsWith('release') ? 'release' : 'hotfix',
     );
   } else {
@@ -614,19 +563,69 @@ function assertMutationWorkflow(file, workflow) {
     assertExactTimeout(relativeFile, 'tag', workflow.jobs.tag, TAG_TIMEOUT_MINUTES);
     assertExactNeeds(relativeFile, 'prepare-compiled-files', workflow.jobs['prepare-compiled-files'], ['prepare-version-files']);
     assertExactNeeds(relativeFile, 'promote', workflow.jobs.promote, ['prepare-compiled-files']);
-    assertExactNeeds(relativeFile, 'tag', workflow.jobs.tag, ['queue-gate']);
+    assertExactNeeds(relativeFile, 'tag', workflow.jobs.tag, ['validate']);
     assertNpmPublishJob(relativeFile, workflow.jobs['publish-npm']);
     assertPublishedFinalizeJob(relativeFile, workflow.jobs[finalJob], finalJob);
     assertPhaseConditions(relativeFile, workflow.jobs, finalJob);
     assertFailureReportingJob(
       relativeFile,
       workflow.jobs['report-failure'],
-      ['queue-gate', 'prepare-version-files', 'prepare-compiled-files', 'promote', 'tag', 'publish-npm', finalJob],
+      ['validate', 'prepare-version-files', 'prepare-compiled-files', 'promote', 'tag', 'publish-npm', finalJob],
       manifest.file.startsWith('release') ? 'release' : 'hotfix',
     );
   }
-  assertTransitiveQueueGateAncestry(file, workflow, 'queue-gate', new Set(['report-failure']));
+  assertTransitiveValidationAncestry(file, workflow, 'validate', new Set(['report-failure']));
   return true;
+}
+
+function assertDeploymentWorkflowConcurrency(relativeFile, workflow) {
+  const concurrency = workflow.concurrency ?? {};
+  if (concurrency.group !== DEPLOYMENT_CONCURRENCY_GROUP
+    || concurrency['cancel-in-progress'] !== false
+    || concurrency.queue !== 'max'
+    || Object.keys(concurrency).sort().join(',') !== 'cancel-in-progress,group,queue') {
+    throw new Error(`${relativeFile} must use the exact issue-scoped deployment concurrency group with queue: max.`);
+  }
+  const issue = workflow.on?.workflow_dispatch?.inputs?.issue;
+  if (issue?.required !== true || Object.prototype.hasOwnProperty.call(issue ?? {}, 'default')) {
+    throw new Error(`${relativeFile} launcher issue must be required and have no default.`);
+  }
+  for (const [jobId, job] of Object.entries(workflow.jobs ?? {})) {
+    if (job.concurrency !== undefined) {
+      throw new Error(`${relativeFile} job ${jobId} must rely on the workflow deployment mutex.`);
+    }
+  }
+}
+
+function assertDeploymentValidationJob(relativeFile, workflow) {
+  const job = workflow.jobs?.validate;
+  if (!job) throw new Error(`${relativeFile} must define validate before every mutation job.`);
+  assertExactTimeout(relativeFile, 'validate', job, DEPLOYMENT_VALIDATION_TIMEOUT_MINUTES);
+  assertExactNeeds(relativeFile, 'validate', job, []);
+  if (Object.keys(job.permissions ?? {}).length !== 0) {
+    throw new Error(`${relativeFile} validate must have no repository permissions.`);
+  }
+  if (job.env !== undefined || Object.prototype.hasOwnProperty.call(job, 'continue-on-error')) {
+    throw new Error(`${relativeFile} validate must not receive job credentials or bypass failures.`);
+  }
+  const steps = job.steps ?? [];
+  const validationStep = steps[0] ?? {};
+  const stepInputs = validationStep.with ?? {};
+  const stepEnvironment = validationStep.env ?? {};
+  const script = String(stepInputs.script ?? '');
+  if (steps.length !== 1
+    || validationStep.uses !== 'actions/github-script@v9'
+    || Object.keys(stepEnvironment).sort().join(',') !== 'CHANGELOG,ISSUE,MODE,OPERATION_ID,TITLE,VERSION'
+    || Object.keys(stepInputs).sort().join(',') !== 'github-token,script'
+    || stepInputs['github-token'] !== ''
+    || Object.entries(stepEnvironment).some(([key, value]) => /token|secret|pat/i.test(key)
+      || /secrets\.|github\.token/i.test(String(value)))
+    || !script.includes('Number.isSafeInteger(issue)')
+    || !script.includes("mode === 'prepare'")
+    || !script.includes("mode === 'publish'")
+    || !script.includes('Operation ID must be empty in prepare mode.')) {
+    throw new Error(`${relativeFile} validate must enforce bounded cross-field inputs without credentials.`);
+  }
 }
 
 function assertPhaseConditions(relativeFile, jobs, finalJob) {
@@ -678,22 +677,47 @@ function assertDeploymentContinuationWorkflow(file, workflow) {
   if (workflow.on?.pull_request?.types?.join(',') !== 'closed' || workflow.on?.pull_request_target) {
     throw new Error(`${relativeFile} must use only pull_request: closed as its wake-up event.`);
   }
-  const job = workflow.jobs?.continue;
-  if (!job
-    || !String(job.if ?? '').includes('github.event.pull_request.head.repo.full_name == github.repository')
-    || !String(job.if ?? '').includes('<!-- copilot-deployment ')) {
-    throw new Error(`${relativeFile} must gate execution on a same-repository managed deployment marker.`);
+  if (workflow.concurrency !== undefined || Object.keys(workflow.jobs ?? {}).sort().join(',') !== 'mutate,resolve-operation') {
+    throw new Error(`${relativeFile} must separate read-only resolution from the serialized mutation job.`);
   }
-  const checkout = (job.steps ?? []).find(step => step.uses === CHECKOUT_ACTION);
+  const resolver = workflow.jobs['resolve-operation'];
+  const mutation = workflow.jobs.mutate;
+  if (!String(resolver?.if ?? '').includes('github.event.pull_request.head.repo.full_name == github.repository')
+    || !String(resolver?.if ?? '').includes('<!-- copilot-deployment ')) {
+    throw new Error(`${relativeFile} must gate resolution on a same-repository managed deployment marker.`);
+  }
+  const resolverPermissions = resolver.permissions ?? {};
+  if (JSON.stringify(resolverPermissions) !== JSON.stringify({ contents: 'read', issues: 'read', 'pull-requests': 'read' })
+    || /\b(secrets\.|PAT)\b/i.test(JSON.stringify(resolver))) {
+    throw new Error(`${relativeFile} resolver must be read-only and credential-free.`);
+  }
+  const resolverScript = String(resolver.steps?.[0]?.with?.script ?? '');
+  if (resolver.steps?.length !== 1
+    || resolver.steps[0]?.uses !== 'actions/github-script@v9'
+    || !resolverScript.includes('github.rest.issues.get')
+    || !resolverScript.includes('state?.stateVersion !== 1')
+    || !resolverScript.includes('Number.isSafeInteger(state?.revision)')
+    || resolver.outputs?.issue !== '${{ steps.identity.outputs.issue }}') {
+    throw new Error(`${relativeFile} resolver must prove marker ownership against versioned durable state.`);
+  }
+  if (needsFor(mutation).join(',') !== 'resolve-operation'
+    || mutation.if !== "${{ needs.resolve-operation.result == 'success' }}"
+    || mutation.concurrency?.group !== DEPLOYMENT_CONTINUATION_CONCURRENCY_GROUP
+    || mutation.concurrency?.['cancel-in-progress'] !== false
+    || mutation.concurrency?.queue !== 'max') {
+    throw new Error(`${relativeFile} mutation must use the exact resolved issue deployment mutex with queue: max.`);
+  }
+  const checkout = (mutation.steps ?? []).find(step => step.uses === CHECKOUT_ACTION);
   if (checkout?.with?.ref !== '${{ github.event.pull_request.base.ref }}'
     || checkout?.with?.['persist-credentials'] !== false) {
     throw new Error(`${relativeFile} must checkout the trusted PR base without persisted credentials.`);
   }
-  const continuation = (job.steps ?? []).find(step => isCopilotAction(step) && step.with?.['single-action'] === 'continue_deployment_action');
+  const continuation = (mutation.steps ?? []).find(step => isCopilotAction(step) && step.with?.['single-action'] === 'continue_deployment_action');
   if (!continuation
     || continuation.with?.token !== '${{ secrets.PAT }}'
     || continuation.with?.['merge-queue-check-attestations'] !== "${{ vars.MERGE_QUEUE_CHECK_ATTESTATIONS || '[]' }}"
-    || continuation.with?.['single-action-operation-id'] !== '${{ steps.identity.outputs.operation-id }}') {
+    || continuation.with?.['single-action-issue'] !== '${{ needs.resolve-operation.outputs.issue }}'
+    || continuation.with?.['single-action-operation-id'] !== '${{ needs.resolve-operation.outputs.operation-id }}') {
     throw new Error(`${relativeFile} must invoke continuation with the PAT and live merge-queue attestations so managed events can recurse safely.`);
   }
 }
@@ -786,6 +810,7 @@ function validateWorkflow(file, workflow) {
   assertNoJobLevelSecrets(file, workflow);
   assertAgentWorkflowPermissions(file, workflow);
   assertLightweightBranchSyncWorkflow(file, workflow);
+  assertMutationWorkflow(file, workflow);
   assertDeploymentContinuationWorkflow(file, workflow);
   assertMergeQueueWorkflowSupport(file, workflow);
   assertQueueWorkflow(file, workflow);
@@ -816,7 +841,7 @@ if (require.main === module) main();
 module.exports = {
   QUEUE_WAIT_MINUTES,
   MIN_QUEUE_JOB_TIMEOUT_MINUTES,
-  QUEUE_GATE_TIMEOUT_MINUTES,
+  DEPLOYMENT_VALIDATION_TIMEOUT_MINUTES,
   PREPARE_VERSION_TIMEOUT_MINUTES,
   PREPARE_COMPILED_TIMEOUT_MINUTES,
   TAG_TIMEOUT_MINUTES,
@@ -841,13 +866,12 @@ module.exports = {
   assertQueueBudget,
   assertExactTimeout,
   assertTagPermissions,
-  assertQueueGateJob,
   assertQueueWorkflow,
   assertIncrementalRangeFetch,
   assertRunner,
   assertSequentialMutationWorkflow,
   assertDeploymentContinuationWorkflow,
   assertMergeQueueWorkflowSupport,
-  assertTransitiveQueueGateAncestry,
+  assertTransitiveValidationAncestry,
   validateWorkflow,
 };

@@ -26,7 +26,15 @@ function baseParam(overrides: Record<string, unknown> = {}): Execution {
     owner: 'owner',
     repo: 'repo',
     tokens: { token: 'token' },
-    singleAction: { version: '1.2.3' },
+    singleAction: { version: '1.2.3', operationId: 'operation-12345678' },
+    currentConfiguration: {
+      deploymentOrchestration: {
+        operationId: 'operation-12345678',
+        version: '1.2.3',
+        phase: 'publishing',
+        productionSha: 'a'.repeat(40),
+      },
+    },
     ...overrides,
   } as unknown as Execution;
 }
@@ -36,21 +44,21 @@ describe('PublishGithubActionUseCase', () => {
 
   beforeEach(() => {
     useCase = new PublishGithubActionUseCase({ updateTag: mockUpdateTag } as any, { updateRelease: mockUpdateRelease } as any);
-    mockUpdateTag.mockResolvedValue(undefined);
+    mockUpdateTag.mockReset().mockResolvedValue(undefined);
     mockUpdateRelease.mockReset();
   });
 
   it('returns failure when version is empty', async () => {
-    const param = baseParam({ singleAction: { version: '' } });
+    const param = baseParam({ singleAction: { version: '', operationId: 'operation-12345678' } });
     const results = await useCase.invoke(param);
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
-    expect(results[0].errors.map((error) => error.message)).toContain(`${INPUT_KEYS.SINGLE_ACTION_VERSION} is not set.`);
+    expect(results[0].errors[0].message).toContain(INPUT_KEYS.SINGLE_ACTION_VERSION);
   });
 
   it('calls updateTag with v{version} and major segment, then updateRelease', async () => {
     mockUpdateRelease.mockResolvedValue(12345);
-    const param = baseParam({ singleAction: { version: '1.2.3' } });
+    const param = baseParam({ singleAction: { version: '1.2.3', operationId: 'operation-12345678' } });
     await useCase.invoke(param);
     expect(mockUpdateTag).toHaveBeenCalledWith('owner', 'repo', 'v1.2.3', 'v1', 'token');
     expect(mockUpdateRelease).toHaveBeenCalledWith('owner', 'repo', 'v1.2.3', 'v1', 'token');
@@ -79,5 +87,11 @@ describe('PublishGithubActionUseCase', () => {
     const param = baseParam();
     const results = await useCase.invoke(param);
     expect(results[0].success).toBe(false);
+  });
+
+  it('rejects the removed standalone publication path', async () => {
+    const results = await useCase.invoke(baseParam({ currentConfiguration: {} }));
+    expect(results[0].success).toBe(false);
+    expect(mockUpdateTag).not.toHaveBeenCalled();
   });
 });

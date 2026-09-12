@@ -55,17 +55,6 @@ jest.mock('../../infrastructure/composition/actor_authorization_composition_root
   })),
 }));
 
-const mockWaitForPreviousWorkflowRuns = jest.fn();
-jest.mock('../main_run_lifecycle', () => ({
-  WORKFLOW_QUEUE_FAILURE_MESSAGE: 'Workflow queue check failed; sequential execution was not bypassed.',
-  WorkflowQueueFailureError: class WorkflowQueueFailureError extends Error {
-    constructor() {
-      super('Workflow queue check failed; sequential execution was not bypassed.');
-    }
-  },
-  waitForPreviousWorkflowRuns: (...args: unknown[]) => mockWaitForPreviousWorkflowRuns(...args),
-}));
-
 const mockProvision = jest.fn();
 jest.mock('../../data/repository/agent_cli_provisioner', () => ({
   AgentCliProvisioner: jest.fn().mockImplementation(() => ({ provision: mockProvision })),
@@ -103,7 +92,6 @@ describe('runGitHubAction', () => {
     mockMainRun.mockResolvedValue([]);
     mockPublishInvoke.mockResolvedValue([]);
     mockStoreInvoke.mockResolvedValue([]);
-    mockWaitForPreviousWorkflowRuns.mockResolvedValue(undefined);
     mockExecutionAdmissionInvoke.mockResolvedValue({ decision: 'execute', tokenUser: 'token-user' });
     mockIsActorAllowedToModifyFiles.mockResolvedValue(true);
     github.context.eventName = 'workflow_dispatch';
@@ -139,7 +127,6 @@ describe('runGitHubAction', () => {
     expect(projectCompositionSpy).not.toHaveBeenCalled();
     expect(executionBuilderSpy).not.toHaveBeenCalled();
     expect(agentProvisioningSpy).not.toHaveBeenCalled();
-    expect(mockWaitForPreviousWorkflowRuns).not.toHaveBeenCalled();
     expect(mockMainRun).not.toHaveBeenCalled();
     expect(finishActionSpy).not.toHaveBeenCalled();
     expect(mockGetProjectDetail).not.toHaveBeenCalled();
@@ -227,52 +214,6 @@ describe('runGitHubAction', () => {
     expect(mockMainRun).not.toHaveBeenCalled();
     expect(finishActionSpy).not.toHaveBeenCalled();
   });
-
-  it('admits a queue-gate-only run before project composition or execution construction', async () => {
-    (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
-      if (key === INPUT_KEYS.QUEUE_GATE_ONLY) return 'true';
-      if (opts?.required && key === INPUT_KEYS.TOKEN) return 'github-token';
-      return '';
-    });
-
-    await runGitHubAction();
-
-    expect(mockWaitForPreviousWorkflowRuns).toHaveBeenCalledWith(
-      'github-token',
-      { owner: 'test-owner', repo: 'test-repo' },
-    );
-    expect(mockExecutionAdmissionInvoke).not.toHaveBeenCalled();
-    expect(mockMainRun).not.toHaveBeenCalled();
-    expect(projectCompositionSpy).not.toHaveBeenCalled();
-    expect(executionBuilderSpy).not.toHaveBeenCalled();
-    expect(agentProvisioningSpy).not.toHaveBeenCalled();
-    expect(finishActionSpy).not.toHaveBeenCalled();
-    expect(mockGetProjectDetail).not.toHaveBeenCalled();
-    expect(mockPublishInvoke).not.toHaveBeenCalled();
-    expect(mockStoreInvoke).not.toHaveBeenCalled();
-  });
-
-  it('fails a queue-gate-only run closed with the canonical sanitized error', async () => {
-    mockWaitForPreviousWorkflowRuns.mockRejectedValue(new Error('provider response body and token should not escape'));
-    (core.getInput as jest.Mock).mockImplementation((key: string, opts?: { required?: boolean }) => {
-      if (key === INPUT_KEYS.QUEUE_GATE_ONLY) return 'true';
-      if (opts?.required && key === INPUT_KEYS.TOKEN) return 'github-token';
-      return '';
-    });
-
-    await expect(runGitHubAction()).rejects.toThrow(
-      'Workflow queue check failed; sequential execution was not bypassed.',
-    );
-    expect(mockMainRun).not.toHaveBeenCalled();
-    expect(projectCompositionSpy).not.toHaveBeenCalled();
-    expect(executionBuilderSpy).not.toHaveBeenCalled();
-    expect(agentProvisioningSpy).not.toHaveBeenCalled();
-    expect(finishActionSpy).not.toHaveBeenCalled();
-    expect(mockGetProjectDetail).not.toHaveBeenCalled();
-    expect(mockPublishInvoke).not.toHaveBeenCalled();
-    expect(mockStoreInvoke).not.toHaveBeenCalled();
-  });
-
 
   it('calls finishWithResults (PublishResult and StoreConfiguration) after mainRun', async () => {
     await runGitHubAction();

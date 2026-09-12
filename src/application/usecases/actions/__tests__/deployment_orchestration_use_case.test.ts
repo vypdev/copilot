@@ -4,6 +4,10 @@ import type { Execution } from "../../../../data/model/execution";
 import { DeploymentOrchestrationUseCase } from "../deployment_orchestration_use_case";
 import { DEFAULT_COPILOT_LIFECYCLE_LABELS } from "../../../../domain/copilot_lifecycle";
 import type { TargetMergeCapabilities } from "../../../policies/deployment_plan_policy";
+import {
+  decideDeploymentStateSave,
+  readDeploymentOperationState,
+} from "../../../../domain/deployment_state_fence";
 
 const sourceSha = "a".repeat(40);
 const originSha = "b".repeat(40);
@@ -21,6 +25,8 @@ const capabilities = (overrides: Partial<TargetMergeCapabilities> = {}): TargetM
 });
 
 const operation = (phase: DeploymentPhase, overrides: Partial<DeploymentOperationSnapshot> = {}): DeploymentOperationSnapshot => ({
+  stateVersion: 1,
+  revision: 1,
   operationId: "operation-12345678",
   kind: "release",
   version: "3.4.0",
@@ -49,6 +55,14 @@ const operation = (phase: DeploymentPhase, overrides: Partial<DeploymentOperatio
   tag: "v3.4.0",
   publicationWorkflow: "release_workflow.yml",
   publicationVerified: ["published", "reconciliation_pending", "completed"].includes(phase),
+  publicationReceipt: ["published", "reconciliation_pending", "completed"].includes(phase)
+    ? {
+        tag: "v3.4.0",
+        productionSha,
+        operationId: "operation-12345678",
+        releaseUrl: "https://github.com/owner/repo/releases/tag/v3.4.0",
+      }
+    : undefined,
   reconciliationTargets: [],
   lastFailure: null,
   ...overrides,
@@ -63,6 +77,7 @@ const pr = (overrides: Record<string, unknown> = {}) => ({
   baseBranch: "master",
   state: "open" as const,
   merged: false,
+  autoMergeEnabled: false,
   mergeCommitSha: undefined,
   repositoryFullName: "owner/repo",
   ...overrides,
@@ -115,12 +130,12 @@ function harness() {
     findManagedPullRequests: jest.fn().mockResolvedValue([]),
     createManagedPullRequest: jest.fn().mockResolvedValue(pr()),
     getPullRequest: jest.fn().mockResolvedValue(pr()),
-    getTargetCapabilities: jest.fn().mockResolvedValue(capabilities()),
     enableAutoMerge: jest.fn(),
     isPullRequestQueued: jest.fn().mockResolvedValue(false),
     enqueuePullRequest: jest.fn(),
     mergePullRequest: jest.fn(),
   };
+  const targetRules = { getTargetCapabilities: jest.fn().mockResolvedValue(capabilities()) };
   const git = {
     getBranchSha: jest.fn().mockImplementation(async (_owner, _repo, branch) => {
       if (branch === "release/3.4.0") return sourceSha;
@@ -142,23 +157,55 @@ function harness() {
     updateDashboard: jest.fn(),
     publishMilestone: jest.fn(),
   };
-  const state = {
-    load: jest.fn(async () => durableState),
-    save: jest.fn(async ({ state: persisted }) => { durableState = persisted.deploymentOrchestration; }),
+  const publication = {
+    inspect: jest.fn().mockResolvedValue({
+      kind: "verified",
+      receipt: {
+        tag: "v3.4.0",
+        productionSha,
+        operationId: "operation-12345678",
+        releaseUrl: "https://github.com/owner/repo/releases/tag/v3.4.0",
+      },
+    }),
   };
+  const state = {
+    load: jest.fn(async () => readDeploymentOperationState(durableState)),
+    save: jest.fn(async ({ expected, state: persisted }) => {
+      const proposed = persisted.deploymentOrchestration;
+      const decision = decideDeploymentStateSave(readDeploymentOperationState(durableState), expected, proposed);
+      if (decision.kind !== "write") return decision;
+      durableState = proposed;
+      return { kind: "saved" as const, operation: proposed };
+    }),
+  };
+  const stateFactory = { bind: jest.fn(() => state) };
   const labels = { getLabels: jest.fn().mockResolvedValue(["release", "deploy"]), setLabels: jest.fn() };
   const issues = { closeIssue: jest.fn().mockResolvedValue(true), addComment: jest.fn() };
   const useCase = new DeploymentOrchestrationUseCase({
     pullRequests,
+    targetRules,
     git,
     continuation,
     presentation,
-    state,
+    publication,
+    state: stateFactory,
     labels,
     issues,
     operationId: () => "operation-12345678",
   });
-  return { useCase, pullRequests, git, continuation, presentation, state, labels, issues };
+  return {
+    useCase,
+    pullRequests,
+    targetRules,
+    git,
+    continuation,
+    presentation,
+    publication,
+    state,
+    stateFactory,
+    labels,
+    issues,
+  };
 }
 
 describe("DeploymentOrchestrationUseCase", () => {
@@ -183,25 +230,40 @@ describe("DeploymentOrchestrationUseCase", () => {
   it("persists the operation before requesting native auto-merge", async () => {
     const value = harness();
     const order: string[] = [];
-    value.state.save.mockImplementation(async ({ state }) => { durableState = state.deploymentOrchestration; order.push("persist"); });
+    const save = value.state.save.getMockImplementation()!;
+    value.state.save.mockImplementation(async (command) => {
+      const outcome = await save(command);
+      order.push("persist");
+      return outcome;
+    });
     value.pullRequests.enableAutoMerge.mockImplementation(async () => { order.push("merge"); });
     await value.useCase.invoke(execution("prepare"));
     expect(order.indexOf("persist")).toBeLessThan(order.indexOf("merge"));
   });
 
+  it("does not request auto-merge again when the provider already confirms it", async () => {
+    const value = harness();
+    value.pullRequests.createManagedPullRequest.mockResolvedValue(pr({ autoMergeEnabled: true }));
+    await value.useCase.invoke(execution("prepare"));
+    expect(value.pullRequests.enableAutoMerge).not.toHaveBeenCalled();
+  });
+
   it("merges immediately only after persisting identity when GitHub reports every requirement satisfied", async () => {
     const value = harness();
-    value.pullRequests.getTargetCapabilities.mockResolvedValue(capabilities({ immediatelyMergeable: true }));
+    value.targetRules.getTargetCapabilities.mockResolvedValue(capabilities({ immediatelyMergeable: true }));
     await value.useCase.invoke(execution("prepare"));
     expect(value.pullRequests.mergePullRequest).toHaveBeenCalledWith("owner", "repo", 40, "pat");
     expect(value.pullRequests.enableAutoMerge).not.toHaveBeenCalled();
   });
 
-  it("stops before side effects when durable state changed concurrently", async () => {
+  it("no-ops before side effects when a newer durable revision wins the save fence", async () => {
     const value = harness();
-    value.state.load.mockResolvedValue(operation("completed", { operationId: "another-12345678" }));
+    value.state.save.mockResolvedValue({
+      kind: "stale",
+      operation: operation("promotion_pr_pending", { revision: 2 }),
+    });
     const result = await value.useCase.invoke(execution("prepare"));
-    expect(result[0].success).toBe(false);
+    expect(result[0].success).toBe(true);
     expect(value.pullRequests.createManagedPullRequest).not.toHaveBeenCalled();
   });
 
@@ -234,7 +296,7 @@ describe("DeploymentOrchestrationUseCase", () => {
 
   it("fails closed before creating a PR when a required merge-queue producer is incompatible", async () => {
     const value = harness();
-    value.pullRequests.getTargetCapabilities.mockResolvedValue(capabilities({
+    value.targetRules.getTargetCapabilities.mockResolvedValue(capabilities({
       mergeQueueRequired: true,
       mergeQueueProducers: [{
         kind: "check",
@@ -256,7 +318,7 @@ describe("DeploymentOrchestrationUseCase", () => {
 
   it("allows an exact attestation for an unknown external check and enqueues with the verified head SHA", async () => {
     const value = harness();
-    value.pullRequests.getTargetCapabilities.mockResolvedValue(capabilities({
+    value.targetRules.getTargetCapabilities.mockResolvedValue(capabilities({
       mergeQueueRequired: true,
       mergeQueueProducers: [{
         kind: "check",
@@ -280,7 +342,7 @@ describe("DeploymentOrchestrationUseCase", () => {
 
   it("revalidates the policy immediately before enqueue and blocks if it changed", async () => {
     const value = harness();
-    value.pullRequests.getTargetCapabilities
+    value.targetRules.getTargetCapabilities
       .mockResolvedValueOnce(capabilities({ mergeQueueRequired: true }))
       .mockResolvedValueOnce(capabilities({
         mergeQueueRequired: true,
@@ -302,7 +364,7 @@ describe("DeploymentOrchestrationUseCase", () => {
 
   it("does not enqueue a PR twice when GitHub already reports queue membership", async () => {
     const value = harness();
-    value.pullRequests.getTargetCapabilities.mockResolvedValue(capabilities({ mergeQueueRequired: true }));
+    value.targetRules.getTargetCapabilities.mockResolvedValue(capabilities({ mergeQueueRequired: true }));
     value.pullRequests.isPullRequestQueued.mockResolvedValue(true);
     const result = await value.useCase.invoke(execution("prepare"));
     expect(result[0].success).toBe(true);
@@ -312,7 +374,7 @@ describe("DeploymentOrchestrationUseCase", () => {
 
   it("recovers an ambiguous enqueue without issuing a second mutation once membership is authoritative", async () => {
     const value = harness();
-    value.pullRequests.getTargetCapabilities.mockResolvedValue(capabilities({ mergeQueueRequired: true }));
+    value.targetRules.getTargetCapabilities.mockResolvedValue(capabilities({ mergeQueueRequired: true }));
     value.pullRequests.enqueuePullRequest.mockRejectedValueOnce(
       new Error("enqueue response lost github_pat_abcdefghijklmnopqrstuvwxyz123456"),
     );
@@ -329,7 +391,7 @@ describe("DeploymentOrchestrationUseCase", () => {
 
   it("keeps create-only as the explicit human-owned path for unknown producers", async () => {
     const value = harness();
-    value.pullRequests.getTargetCapabilities.mockResolvedValue(capabilities({
+    value.targetRules.getTargetCapabilities.mockResolvedValue(capabilities({
       mergeQueueRequired: true,
       mergeQueueProducers: [{
         kind: "check", name: "External CI", integrationId: 999, support: "unknown", reason: "External producer.",
@@ -346,7 +408,7 @@ describe("DeploymentOrchestrationUseCase", () => {
 
   it("localizes merge-queue recovery for a Spanish launcher issue", async () => {
     const value = harness();
-    value.pullRequests.getTargetCapabilities.mockResolvedValue(capabilities({
+    value.targetRules.getTargetCapabilities.mockResolvedValue(capabilities({
       mergeQueueRequired: true,
       mergeQueueProducers: [{
         kind: "check", name: "CI Check", integrationId: 15368, support: "unsupported", reason: "Falta merge_group.",
@@ -361,7 +423,7 @@ describe("DeploymentOrchestrationUseCase", () => {
 
   it("blocks automatic mutation when the effective target policy cannot be observed", async () => {
     const value = harness();
-    value.pullRequests.getTargetCapabilities.mockResolvedValue(capabilities({
+    value.targetRules.getTargetCapabilities.mockResolvedValue(capabilities({
       mergeQueueObservationProblems: [{ area: "effective-rules", message: "GitHub returned 403." }],
     }));
     const input = execution("prepare");
@@ -439,9 +501,32 @@ describe("DeploymentOrchestrationUseCase", () => {
     expect(input.currentConfiguration.deploymentOrchestration).toEqual(expect.objectContaining({ phase: "reconciliation_pending", publicationVerified: true }));
   });
 
+  it("blocks retryably when the serialized workflow cannot prove a publication effect", async () => {
+    const value = harness();
+    value.publication.inspect.mockResolvedValue({ kind: "absent", effect: "release" });
+    const input = execution("published", operation("publishing"));
+    const result = await value.useCase.invoke(input);
+    expect(result[0].success).toBe(false);
+    expect(input.currentConfiguration.deploymentOrchestration).toEqual(expect.objectContaining({
+      phase: "blocked",
+      publicationVerified: false,
+      lastFailure: expect.objectContaining({ category: "publication", retryable: true }),
+    }));
+  });
+
+  it("fails closed when a publication receipt conflicts with the durable identity", async () => {
+    const value = harness();
+    value.publication.inspect.mockResolvedValue({ kind: "conflict", reason: "Tag points to a different SHA." });
+    const input = execution("published", operation("publishing"));
+    const result = await value.useCase.invoke(input);
+    expect(result[0].success).toBe(false);
+    expect(input.currentConfiguration.deploymentOrchestration?.lastFailure)
+      .toEqual(expect.objectContaining({ retryable: false }));
+  });
+
   it("preserves successful publication when reconciliation queue readiness blocks", async () => {
     const value = harness();
-    value.pullRequests.getTargetCapabilities.mockResolvedValue(capabilities({
+    value.targetRules.getTargetCapabilities.mockResolvedValue(capabilities({
       mergeQueueRequired: true,
       mergeQueueProducers: [{
         kind: "check", name: "CI Check", integrationId: 15368, support: "unsupported", reason: "Development lacks merge_group.",
@@ -552,7 +637,7 @@ describe("DeploymentOrchestrationUseCase", () => {
 
   it("creates a unique sync branch for a strict advanced target", async () => {
     const value = harness();
-    value.pullRequests.getTargetCapabilities.mockResolvedValue(capabilities({ requiresStrictStatusChecks: true }));
+    value.targetRules.getTargetCapabilities.mockResolvedValue(capabilities({ requiresStrictStatusChecks: true }));
     value.git.isCommitReachable.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
     value.pullRequests.createManagedPullRequest.mockResolvedValue(pr({ number: 41, body: '<!-- copilot-deployment operation-id="operation-12345678" phase="reconciliation" issue="355" -->', headBranch: "sync/release-3.4.0-to-develop-operatio", headSha: "e".repeat(40), baseBranch: "develop" }));
     await value.useCase.invoke(execution("published", operation("publishing")));
@@ -562,7 +647,7 @@ describe("DeploymentOrchestrationUseCase", () => {
 
   it("blocks explicit direct reconciliation instead of merging development back into production", async () => {
     const value = harness();
-    value.pullRequests.getTargetCapabilities.mockResolvedValue(capabilities({ requiresStrictStatusChecks: true }));
+    value.targetRules.getTargetCapabilities.mockResolvedValue(capabilities({ requiresStrictStatusChecks: true }));
     value.git.isCommitReachable.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
     const input = execution("published", operation("publishing", { backmergeMode: "direct" }));
     const result = await value.useCase.invoke(input);
@@ -591,7 +676,7 @@ describe("DeploymentOrchestrationUseCase", () => {
     input.pullRequest = { number: 41 } as never;
     await value.useCase.invoke(input);
     expect(input.currentConfiguration.deploymentOrchestration?.phase).toBe("completed");
-    expect(value.git.deleteBranch).toHaveBeenCalledWith("owner", "repo", "release/3.4.0", "pat");
+    expect(value.git.deleteBranch).toHaveBeenCalledWith("owner", "repo", "release/3.4.0", sourceSha, "pat");
     expect(value.issues.closeIssue).toHaveBeenCalled();
   });
 
@@ -653,6 +738,7 @@ describe("DeploymentOrchestrationUseCase", () => {
         sourceBranch: "master",
         sourceSha: productionSha,
         syncBranch: "sync/release-3.4.0",
+        syncSha: sourceSha,
         pullRequest: 41,
         status: "pending",
       }],
@@ -697,6 +783,12 @@ describe("DeploymentOrchestrationUseCase", () => {
     const value = harness();
     const input = execution("published", operation("blocked", {
       publicationVerified: true,
+      publicationReceipt: {
+        tag: "v3.4.0",
+        productionSha,
+        operationId: "operation-12345678",
+        releaseUrl: "https://github.com/owner/repo/releases/tag/v3.4.0",
+      },
       reconciliationTargets: [{ targetBranch: "develop", sourceBranch: "master", sourceSha: productionSha, pullRequest: 41, status: "completed" }],
       lastFailure: { category: "cleanup", message: "temporary cleanup failure", retryable: true, previousPhase: "reconciliation_pending" },
     }));
@@ -704,7 +796,7 @@ describe("DeploymentOrchestrationUseCase", () => {
     expect(result[0].success).toBe(true);
     expect(input.currentConfiguration.deploymentOrchestration?.phase).toBe("completed");
     expect(value.pullRequests.createManagedPullRequest).not.toHaveBeenCalled();
-    expect(value.git.deleteBranch).toHaveBeenCalledWith("owner", "repo", "release/3.4.0", "pat");
+    expect(value.git.deleteBranch).toHaveBeenCalledWith("owner", "repo", "release/3.4.0", sourceSha, "pat");
   });
 
   it("publishes bounded milestone identities only in milestone mode", async () => {

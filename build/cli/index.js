@@ -50597,7 +50597,7 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const logger_adapter_1 = __nccwpck_require__(72762);
 const agent_activity_policy_1 = __nccwpck_require__(15375);
 const main_run_lifecycle_1 = __nccwpck_require__(916);
-async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, lifecycleStateUseCase, agentActivityUseCase) {
+async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, compositionSurface, lifecycleStateUseCase, agentActivityUseCase) {
     (0, logging_ports_1.configureApplicationLogger)((0, logger_adapter_1.createLoggerAdapter)());
     (0, logging_ports_1.setGlobalLoggerDebug)(execution.debug, execution.inputs === undefined);
     const repository = (0, repository_context_1.requireRepositoryCoordinates)({
@@ -50615,7 +50615,7 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, l
     await (0, execution_setup_composition_root_1.createSetupExecutionUseCase)(latestTagQueryPort).invoke(execution);
     (0, logger_1.clearAccumulatedLogs)();
     (0, logger_1.logDebugInfo)(`Setup done. Issue number: ${execution.issueNumber}, isSingleAction: ${execution.isSingleAction}, isIssue: ${execution.isIssue}, isPullRequest: ${execution.isPullRequest}, isPush: ${execution.isPush}`);
-    const routeHandlers = (0, main_run_route_composition_root_1.createMainRunRouteCompositionRoot)(projectBoardCommandPort);
+    const routeHandlers = (0, main_run_route_composition_root_1.createMainRunRouteCompositionRoot)(projectBoardCommandPort, compositionSurface);
     if (execution.runnedByToken) {
         return runTrackedRoute(execution, 'single-action', () => (0, main_run_lifecycle_1.runTokenExecution)(execution, routeHandlers), undefined, agentActivityUseCase);
     }
@@ -51125,14 +51125,18 @@ const local_action_execution_1 = __nccwpck_require__(47047);
 const repository_context_1 = __nccwpck_require__(78958);
 const agent_activity_composition_root_1 = __nccwpck_require__(94253);
 const application_error_context_1 = __nccwpck_require__(4034);
+const input_keys_1 = __nccwpck_require__(88539);
+const local_single_action_policy_1 = __nccwpck_require__(99190);
 async function runLocalAction(additionalParams, options = {}) {
     return (0, application_error_context_1.runAtApplicationErrorBoundary)(async () => {
+        const requestedAction = additionalParams[input_keys_1.INPUT_KEYS.SINGLE_ACTION];
+        (0, local_single_action_policy_1.assertLocalSingleActionAllowed)(requestedAction);
         const repository = (0, repository_context_1.requireRepositoryCoordinates)(additionalParams?.repo);
         const normalizedParams = { ...(additionalParams ?? {}), repo: repository };
         const composition = (0, local_action_composition_root_1.createLocalActionCompositionRoot)();
         const configuration = await (0, local_action_configuration_1.buildLocalActionConfiguration)(normalizedParams, composition.projectBoard.query);
         const execution = (0, local_action_execution_1.buildLocalActionExecution)(configuration, normalizedParams);
-        const results = await (0, common_action_1.mainRun)(execution, composition.projectBoard.command, composition.latestTagQuery, undefined, (0, agent_activity_composition_root_1.createSynchronizeAgentActivityUseCase)());
+        const results = await (0, common_action_1.mainRun)(execution, composition.projectBoard.command, composition.latestTagQuery, 'local', undefined, (0, agent_activity_composition_root_1.createSynchronizeAgentActivityUseCase)());
         if (options.render !== false)
             (0, local_action_output_1.renderLocalActionResults)(results);
         return results;
@@ -51916,7 +51920,6 @@ exports.INPUT_KEYS = {
     INACTIVITY_THRESHOLD_HOURS: 'inactivity-threshold-hours',
     // Tokens
     TOKEN: 'token',
-    QUEUE_GATE_ONLY: 'queue-gate-only',
     // Agent selection
     AGENT_PROVIDER: 'agent-provider',
     AGENT_MODEL_PROVIDER: 'agent-model-provider',
@@ -53908,12 +53911,12 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.validateDeploymentContinuation = validateDeploymentContinuation;
 /**
  * Rejects forged, stale, or out-of-order workflow continuations before a
- * publication-side mutation is attempted. Standalone publication commands
- * that do not belong to an orchestration operation are validated separately.
+ * publication-side mutation is attempted. There is intentionally no standalone
+ * or compatibility path: every publication command belongs to a durable operation.
  */
 function validateDeploymentContinuation(operation, expectedOperationId, allowedPhases, expectedVersion) {
     if (!operation)
-        return undefined;
+        return "A durable deployment operation is required for publication.";
     if (!expectedOperationId)
         return "single-action-operation-id is required for a durable deployment continuation.";
     if (expectedOperationId !== operation.operationId) {
@@ -53973,7 +53976,7 @@ function projectDeploymentLabels(current, operation, labels) {
 /***/ }),
 
 /***/ 8352:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
@@ -53987,11 +53990,14 @@ exports.reconciliationSource = reconciliationSource;
 exports.buildReconciliationTarget = buildReconciliationTarget;
 exports.buildReconciliationBranchName = buildReconciliationBranchName;
 exports.validateInitialDeploymentInput = validateInitialDeploymentInput;
+const deployment_operation_1 = __nccwpck_require__(92730);
 function buildInitialDeploymentOperation(input) {
     const strategy = input.kind === "release"
         ? input.configuration.releaseReconciliationStrategy
         : input.configuration.hotfixReconciliationStrategy;
     return {
+        stateVersion: deployment_operation_1.DEPLOYMENT_STATE_VERSION,
+        revision: 0,
         operationId: input.operationId,
         kind: input.kind,
         version: input.version,
@@ -54309,10 +54315,13 @@ function renderDeploymentJobSummary(operation, context, previousPhase, operation
         `| ${messages.previousPhase} | ${messages.resultingPhase} | ${messages.retryable} |`, "|---|---|---|",
         `| ${inline(previousPhase ?? operation.phase)} | ${inline(operation.phase)} | ${operation.lastFailure?.retryable ? messages.yes : messages.no} |`, "",
         `- Operation: ${inline(operation.operationId)}`,
+        `- State: version ${operation.stateVersion}, revision ${operation.revision}`,
+        `- Admission scope: repository + launcher issue #${context.issue}`,
         `- ${messages.origin}: ${inline(`${operation.originBranch}@${shortSha(operation.originSha)}`)}`,
         `- ${messages.preparedSource}: ${inline(`${operation.sourceBranch}@${shortSha(operation.sourceSha)}`)}`,
         `- ${messages.productionFact}: ${inline(operation.productionSha ? `${operation.productionBranch}@${shortSha(operation.productionSha)}` : "pending")}`,
         `- ${messages.publication}: ${operation.publicationVerified ? messages.alreadyPublished : messages.notPublished}`,
+        `- Publication receipt: ${operation.publicationReceipt ? inline(`${operation.publicationReceipt.tag}@${shortSha(operation.publicationReceipt.productionSha)}`) : "absent"}`,
         `- ${messages.createdReused}: ${safeText(operations.join(", ") || "none")}`, "",
     ];
     if (operation.phase === "blocked") {
@@ -54613,6 +54622,33 @@ function resolveMode(mode, commentId) {
     if (mode.length === 0)
         return commentId > 0 ? 'replace' : 'create';
     return mode === 'create' || mode === 'replace' || mode === 'append' ? mode : undefined;
+}
+
+
+/***/ }),
+
+/***/ 99190:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.assertLocalSingleActionAllowed = assertLocalSingleActionAllowed;
+const action_types_1 = __nccwpck_require__(19625);
+const application_error_1 = __nccwpck_require__(75999);
+const GITHUB_WORKFLOW_ONLY_ACTIONS = [
+    action_types_1.ACTIONS.CREATE_TAG,
+    action_types_1.ACTIONS.CREATE_RELEASE,
+    action_types_1.ACTIONS.PUBLISH_GITHUB_ACTION,
+    action_types_1.ACTIONS.PREPARE_DEPLOYMENT,
+    action_types_1.ACTIONS.CONTINUE_DEPLOYMENT,
+    action_types_1.ACTIONS.PUBLISHED_DEPLOYMENT,
+    action_types_1.ACTIONS.FAILED_DEPLOYMENT,
+];
+function assertLocalSingleActionAllowed(requestedAction) {
+    if (typeof requestedAction === "string" && GITHUB_WORKFLOW_ONLY_ACTIONS.includes(requestedAction)) {
+        throw new application_error_1.ApplicationError("workflow.invalid-event", "Deployment mutation is available only from the serialized GitHub workflows.");
+    }
 }
 
 
@@ -55822,6 +55858,384 @@ function toPullRequestReviewOperationError(error, operation, context) {
 
 /***/ }),
 
+/***/ 77658:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.DeploymentOrchestrationRuntime = exports.DEPLOYMENT_ORCHESTRATION_TASK_ID = void 0;
+exports.requireDeploymentOperation = requireDeploymentOperation;
+exports.deploymentKind = deploymentKind;
+exports.reconciliationTargetRole = reconciliationTargetRole;
+exports.replaceReconciliationTarget = replaceReconciliationTarget;
+exports.deploymentSuccess = deploymentSuccess;
+exports.blockedDeploymentResult = blockedDeploymentResult;
+exports.shouldRecordUnexpectedFailure = shouldRecordUnexpectedFailure;
+exports.semanticCleanupError = semanticCleanupError;
+const application_error_1 = __nccwpck_require__(75999);
+const deployment_plan_policy_1 = __nccwpck_require__(8352);
+const deployment_presentation_policy_1 = __nccwpck_require__(83221);
+const deployment_operation_1 = __nccwpck_require__(92730);
+const merge_queue_readiness_1 = __nccwpck_require__(12515);
+const result_1 = __nccwpck_require__(73817);
+const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+exports.DEPLOYMENT_ORCHESTRATION_TASK_ID = "DeploymentOrchestrationUseCase";
+class DeploymentOrchestrationRuntime {
+    constructor(dependencies, stateBoundary) {
+        this.dependencies = dependencies;
+        this.stateBoundary = stateBoundary;
+    }
+    async persist(context, operation) {
+        context.currentConfiguration.deploymentOrchestration = operation;
+        await this.stateBoundary.persist(context);
+    }
+    async block(context, operation, category, message, retryable, semanticError) {
+        const blocked = (0, deployment_operation_1.blockDeploymentOperation)(operation, category, message, retryable);
+        await this.persist(context, blocked);
+        await this.publishDashboard(context, blocked);
+        await this.publishMilestone(context, blocked, "reconciliation-blocked", `❌ Deployment blocked: ${blocked.lastFailure?.message}`);
+        return new result_1.Result({
+            id: exports.DEPLOYMENT_ORCHESTRATION_TASK_ID,
+            success: false,
+            executed: true,
+            steps: [message],
+            errors: [semanticError ?? new application_error_1.ApplicationError("workflow.failed", message, { retryable })],
+        });
+    }
+    async publishDashboard(context, operation) {
+        const marker = (0, deployment_presentation_policy_1.deploymentDashboardMarker)(operation.operationId, context.singleAction.issue);
+        const body = (0, deployment_presentation_policy_1.renderDeploymentDashboard)(operation, presentationContext(context));
+        const current = await this.dependencies.presentation.findDashboard(context.owner, context.repo, context.singleAction.issue, marker, context.tokens.token);
+        if (current) {
+            await this.dependencies.presentation.updateDashboard(context.owner, context.repo, context.singleAction.issue, current.id, body, context.tokens.token);
+            return;
+        }
+        await this.dependencies.presentation.createDashboard(context.owner, context.repo, context.singleAction.issue, body, context.tokens.token);
+    }
+    async publishMilestone(context, operation, name, body) {
+        if (operation.commentMode !== "milestones")
+            return;
+        const marker = `<!-- copilot-deployment-milestone operation-id="${operation.operationId}" name="${name}" -->`;
+        await this.dependencies.presentation.publishMilestone(context.owner, context.repo, context.singleAction.issue, marker, body, context.tokens.token);
+    }
+    async createOrReusePullRequest(context, operation, phase, target) {
+        const headBranch = target?.syncBranch ?? target?.sourceBranch ?? operation.sourceBranch;
+        const baseBranch = target?.targetBranch ?? operation.productionBranch;
+        const query = {
+            owner: context.owner,
+            repository: context.repo,
+            operationId: operation.operationId,
+            phase,
+            issue: context.singleAction.issue,
+            headBranch,
+            baseBranch,
+            token: context.tokens.token,
+        };
+        const existing = await this.dependencies.pullRequests.findManagedPullRequests(query);
+        if (existing.length > 1) {
+            throw new application_error_1.ApplicationError("provider.conflict", `Multiple managed ${phase} PRs match operation ${operation.operationId}.`);
+        }
+        if (existing[0])
+            return existing[0];
+        const presentation = presentationContext(context);
+        const content = phase === "promotion"
+            ? (0, deployment_presentation_policy_1.renderPromotionPullRequest)(operation, presentation)
+            : (0, deployment_presentation_policy_1.renderReconciliationPullRequest)(operation, requireTarget(target), presentation);
+        return await this.dependencies.pullRequests.createManagedPullRequest({ ...query, ...content });
+    }
+    async configureMergeBehavior(context, operation, pullRequest, category, targetRole) {
+        const inspection = await this.inspectMergeBehavior(context, operation, pullRequest.baseBranch, targetRole, pullRequest.headSha, pullRequest.number);
+        if (inspection.kind === "blocked") {
+            return {
+                kind: "blocked",
+                result: await this.block(context, operation, category, inspection.reason, true),
+            };
+        }
+        const managed = {
+            ...operation,
+            selectedPrMode: inspection.decision.mode,
+        };
+        await this.persist(context, managed);
+        await this.applyMergeBehavior(context, operation, pullRequest, inspection);
+        await this.publishDashboard(context, managed);
+        return { kind: "configured", operation: managed };
+    }
+    async inspectMergeBehavior(context, operation, targetBranch, targetRole, candidateHeadSha, pullRequest) {
+        const capabilities = await this.dependencies.targetRules.getTargetCapabilities(context.owner, context.repo, targetBranch, context.tokens.token, { candidateHeadSha, ...(pullRequest === undefined ? {} : { pullRequest }) });
+        const decision = (0, deployment_plan_policy_1.selectPullRequestMode)(operation.prMode, capabilities);
+        if (decision.kind === "unsupported") {
+            return this.unsupportedMergeBehavior(context, targetRole, targetBranch, capabilities, decision);
+        }
+        if (decision.mode === "merge-queue") {
+            const readiness = (0, merge_queue_readiness_1.evaluateMergeQueueReadiness)({
+                queueRequired: capabilities.mergeQueueRequired,
+                targetRole,
+                targetBranch,
+                producers: capabilities.mergeQueueProducers,
+                problems: capabilities.mergeQueueObservationProblems,
+                attestations: context.deployment.mergeQueueCheckAttestations,
+            });
+            if (readiness.verdict !== "ready") {
+                return {
+                    kind: "blocked",
+                    reason: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, context.locale.issue),
+                };
+            }
+        }
+        return { kind: "ready", capabilities, decision };
+    }
+    async cleanup(context, operation) {
+        const deleteSource = operation.cleanup === "all" || operation.cleanup === "source-only";
+        const deleteSync = operation.cleanup === "all" || operation.cleanup === "sync-only";
+        if (deleteSync)
+            await this.cleanupSyncBranches(context, operation);
+        if (deleteSource) {
+            await this.dependencies.git.deleteBranch(context.owner, context.repo, operation.sourceBranch, operation.sourceSha, context.tokens.token);
+        }
+    }
+    async recordUnexpectedFailure(context, error) {
+        const operation = context.currentConfiguration.deploymentOrchestration;
+        if (!operation || operation.phase === "completed" || operation.phase === "blocked")
+            return;
+        const message = (0, github_comment_publication_policy_1.sanitizePublishedError)(error instanceof Error ? error.message : String(error));
+        const category = failureCategory(operation);
+        const blocked = (0, deployment_operation_1.blockDeploymentOperation)(operation, category, message, true);
+        context.currentConfiguration.deploymentOrchestration = blocked;
+        try {
+            await this.stateBoundary.persist(context);
+            await this.publishDashboard(context, blocked);
+        }
+        catch {
+            // Preserve the original provider failure returned by the coordinator.
+        }
+    }
+    async applyMergeBehavior(context, operation, pullRequest, inspection) {
+        if (inspection.decision.mode === "auto-merge") {
+            await this.applyAutoMerge(context, operation, pullRequest, inspection.capabilities);
+            return;
+        }
+        if (inspection.decision.mode === "merge-queue") {
+            const queued = await this.dependencies.pullRequests.isPullRequestQueued(context.owner, context.repo, pullRequest.nodeId, context.tokens.token);
+            if (!queued) {
+                await this.dependencies.pullRequests.enqueuePullRequest(context.owner, context.repo, pullRequest.nodeId, pullRequest.headSha, context.tokens.token);
+            }
+        }
+    }
+    async applyAutoMerge(context, operation, pullRequest, capabilities) {
+        if (operation.prMode === "auto" && capabilities.immediatelyMergeable) {
+            await this.dependencies.pullRequests.mergePullRequest(context.owner, context.repo, pullRequest.number, context.tokens.token);
+            return;
+        }
+        if (!pullRequest.autoMergeEnabled) {
+            await this.dependencies.pullRequests.enableAutoMerge(context.owner, context.repo, pullRequest.nodeId, context.tokens.token);
+        }
+    }
+    unsupportedMergeBehavior(context, targetRole, targetBranch, capabilities, decision) {
+        if (capabilities.mergeQueueObservationProblems.length === 0) {
+            return { kind: "blocked", reason: decision.reason };
+        }
+        const readiness = (0, merge_queue_readiness_1.evaluateMergeQueueReadiness)({
+            queueRequired: true,
+            targetRole,
+            targetBranch,
+            producers: capabilities.mergeQueueProducers,
+            problems: capabilities.mergeQueueObservationProblems,
+            attestations: context.deployment.mergeQueueCheckAttestations,
+        });
+        return {
+            kind: "blocked",
+            reason: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, context.locale.issue),
+        };
+    }
+    async cleanupSyncBranches(context, operation) {
+        for (const target of operation.reconciliationTargets) {
+            if (!target.syncBranch)
+                continue;
+            if (!target.syncSha) {
+                throw new application_error_1.ApplicationError("workflow.stale", `Sync branch ${target.syncBranch} has no verified cleanup SHA.`);
+            }
+            await this.dependencies.git.deleteBranch(context.owner, context.repo, target.syncBranch, target.syncSha, context.tokens.token);
+        }
+    }
+}
+exports.DeploymentOrchestrationRuntime = DeploymentOrchestrationRuntime;
+function requireDeploymentOperation(context) {
+    const operation = context.currentConfiguration.deploymentOrchestration;
+    if (!operation)
+        throw new application_error_1.ApplicationError("workflow.stale", "No durable deployment operation exists.");
+    if (context.singleAction.operationId && context.singleAction.operationId !== operation.operationId) {
+        throw new application_error_1.ApplicationError("workflow.stale", `Operation ${context.singleAction.operationId} does not match durable operation ${operation.operationId}.`);
+    }
+    return operation;
+}
+function deploymentKind(context) {
+    if (context.labels.isRelease === context.labels.isHotfix) {
+        throw new application_error_1.ApplicationError("validation.invalid-input", "Exactly one release or hotfix label is required.");
+    }
+    return context.labels.isRelease ? "release" : "hotfix";
+}
+function reconciliationTargetRole(operation, targetBranch) {
+    if (targetBranch === operation.productionBranch)
+        return "production";
+    if (targetBranch === operation.developmentBranch)
+        return "development";
+    return "active-release";
+}
+function replaceReconciliationTarget(operation, index, target) {
+    return {
+        ...operation,
+        reconciliationTargets: operation.reconciliationTargets.map((current, currentIndex) => currentIndex === index ? target : current),
+    };
+}
+function deploymentSuccess(step) {
+    return new result_1.Result({
+        id: exports.DEPLOYMENT_ORCHESTRATION_TASK_ID,
+        success: true,
+        executed: true,
+        steps: [step],
+    });
+}
+function blockedDeploymentResult(operation, fallback) {
+    const message = operation.lastFailure?.message ?? fallback;
+    return new result_1.Result({
+        id: exports.DEPLOYMENT_ORCHESTRATION_TASK_ID,
+        success: false,
+        executed: true,
+        steps: [message],
+        errors: [new application_error_1.ApplicationError("workflow.failed", message, {
+                retryable: operation.lastFailure?.retryable ?? false,
+            })],
+    });
+}
+function shouldRecordUnexpectedFailure(error) {
+    return !(error instanceof application_error_1.ApplicationError
+        && ["workflow.stale", "workflow.invalid-event", "validation.invalid-input", "authorization.denied"]
+            .includes(error.code));
+}
+function semanticCleanupError(error) {
+    return (0, application_error_1.toApplicationError)(error, "workflow.failed", "Deployment cleanup failed.");
+}
+function presentationContext(context) {
+    return {
+        owner: context.owner,
+        repository: context.repo,
+        issue: context.singleAction.issue,
+        issueLocale: context.locale.issue,
+        pullRequestLocale: context.locale.pullRequest,
+        packageName: context.owner === "vypdev" && context.repo === "copilot" ? "@vypdev/copilot" : undefined,
+    };
+}
+function requireTarget(target) {
+    if (!target)
+        throw new application_error_1.ApplicationError("workflow.stale", "Reconciliation target is missing.");
+    return target;
+}
+function failureCategory(operation) {
+    if (operation.phase === "preparing" || operation.phase === "promotion_pr_pending")
+        return "promotion";
+    if (operation.phase === "promoted" || operation.phase === "publishing")
+        return "publication";
+    return "reconciliation";
+}
+
+
+/***/ }),
+
+/***/ 27827:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SupersededDeploymentInvocationError = exports.DeploymentStateBoundary = void 0;
+const deployment_state_fence_1 = __nccwpck_require__(72369);
+const deployment_lifecycle_policy_1 = __nccwpck_require__(54037);
+const application_error_1 = __nccwpck_require__(75999);
+class DeploymentStateBoundary {
+    constructor(state, labels) {
+        this.state = state;
+        this.labels = labels;
+        this.checkpoints = new WeakMap();
+        this.stores = new WeakMap();
+    }
+    async initialize(execution) {
+        const store = this.state.bind({
+            owner: execution.owner,
+            repository: execution.repo,
+            issue: execution.singleAction.issue,
+            token: execution.tokens.token,
+        });
+        this.stores.set(execution, store);
+        const loaded = await store.load();
+        if (loaded.kind === "absent") {
+            execution.currentConfiguration.deploymentOrchestration = undefined;
+            this.checkpoints.set(execution, { kind: "absent" });
+            return;
+        }
+        if (loaded.kind === "current") {
+            execution.currentConfiguration.deploymentOrchestration = loaded.operation;
+            this.checkpoints.set(execution, { kind: "current", fence: (0, deployment_state_fence_1.deploymentStateFence)(loaded.operation) });
+            return;
+        }
+        if (loaded.kind === "unsupported") {
+            throw new application_error_1.ApplicationError("configuration.unsupported", `Stored deployment state version ${String(loaded.stateVersion)} is unsupported. Start a fresh launcher issue.`);
+        }
+        throw new application_error_1.ApplicationError("configuration.invalid", `${loaded.reason} Start a fresh launcher issue.`);
+    }
+    async persist(execution) {
+        const operation = execution.currentConfiguration.deploymentOrchestration;
+        const expected = this.checkpoints.get(execution);
+        const store = this.stores.get(execution);
+        if (!operation || !expected || !store) {
+            throw new application_error_1.ApplicationError("workflow.invalid-event", "Deployment state boundary was not initialized.");
+        }
+        const revision = (0, deployment_state_fence_1.nextDeploymentRevision)(expected);
+        if (revision === undefined) {
+            throw new application_error_1.ApplicationError("configuration.invalid", "Deployment revision reached its safe integer limit.");
+        }
+        const proposed = { ...operation, stateVersion: 1, revision };
+        execution.currentConfiguration.deploymentOrchestration = proposed;
+        const outcome = await store.save({
+            expected,
+            state: { ...execution.currentConfiguration, deploymentOrchestration: proposed },
+        });
+        if (outcome.kind === "saved" || outcome.kind === "already-applied") {
+            execution.currentConfiguration.deploymentOrchestration = outcome.operation;
+            this.checkpoints.set(execution, { kind: "current", fence: (0, deployment_state_fence_1.deploymentStateFence)(outcome.operation) });
+            await this.projectLabels(execution, outcome.operation);
+            return;
+        }
+        if (outcome.kind === "stale")
+            throw new SupersededDeploymentInvocationError(outcome.operation);
+        if (outcome.kind === "conflict") {
+            throw new application_error_1.ApplicationError("provider.conflict", `Launcher issue is owned by deployment ${outcome.operation.operationId}.`);
+        }
+        if (outcome.kind === "missing") {
+            throw new application_error_1.ApplicationError("workflow.stale", "The expected deployment operation disappeared before it could be saved.");
+        }
+        throw new application_error_1.ApplicationError("configuration.invalid", outcome.reason);
+    }
+    async projectLabels(execution, operation) {
+        const labels = await this.labels.getLabels(execution.owner, execution.repo, execution.singleAction.issue, execution.tokens.token);
+        const next = (0, deployment_lifecycle_policy_1.projectDeploymentLabels)(labels, operation, execution.labels);
+        if (next.join("\0") !== labels.join("\0")) {
+            await this.labels.setLabels(execution.owner, execution.repo, execution.singleAction.issue, next, execution.tokens.token);
+        }
+    }
+}
+exports.DeploymentStateBoundary = DeploymentStateBoundary;
+class SupersededDeploymentInvocationError extends Error {
+    constructor(current) {
+        super(`Deployment invocation was superseded by revision ${current.revision}.`);
+        this.current = current;
+    }
+}
+exports.SupersededDeploymentInvocationError = SupersededDeploymentInvocationError;
+
+
+/***/ }),
+
 /***/ 41601:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -56185,10 +56599,12 @@ async function runCreateRelease(param, taskId, repositoryReleasePort) {
     const continuationError = (0, deployment_continuation_guard_1.validateDeploymentContinuation)(operation, param.singleAction.operationId, ["publishing"], param.singleAction.version);
     if (continuationError)
         return [failureResult(taskId, continuationError, 'workflow.stale')];
+    if (!operation?.productionSha)
+        return [failureResult(taskId, 'The deployment operation has no accepted production SHA.', 'workflow.stale')];
     const input = {
-        version: param.singleAction.version || operation?.version || '',
-        title: param.singleAction.title || operation?.title || '',
-        changelog: param.singleAction.changelog || operation?.changelog || '',
+        version: operation.version,
+        title: operation.title,
+        changelog: operation.changelog,
     };
     const validationError = (0, create_release_policy_1.validateReleaseInput)(input);
     if (validationError) {
@@ -56197,7 +56613,7 @@ async function runCreateRelease(param, taskId, repositoryReleasePort) {
     }
     const releaseVersion = (0, create_release_policy_1.versionForRelease)(input.version);
     try {
-        const releaseUrl = await repositoryReleasePort.createRelease(param.owner, param.repo, releaseVersion, input.title, input.changelog, param.tokens.token);
+        const releaseUrl = await repositoryReleasePort.createRelease(param.owner, param.repo, releaseVersion, input.title, input.changelog, operation.operationId, operation.productionSha, param.tokens.token);
         if (!releaseUrl) {
             (0, logging_ports_1.logWarn)(`CreateRelease: createRelease returned no URL for version ${releaseVersion}.`);
             return [failureResult(taskId, 'Failed to create release.', 'provider.contract-invalid')];
@@ -56303,6 +56719,614 @@ function noTagResult(taskId, tagName) {
 
 /***/ }),
 
+/***/ 28399:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AcceptPromotionHandler = void 0;
+const deployment_orchestration_runtime_1 = __nccwpck_require__(77658);
+class AcceptPromotionHandler {
+    constructor(runtime) {
+        this.runtime = runtime;
+    }
+    async invoke(context, operation, pullRequest) {
+        if (["promoted", "publishing", "published", "reconciliation_pending", "completed"].includes(operation.phase)) {
+            return (0, deployment_orchestration_runtime_1.deploymentSuccess)(`Duplicate promotion event for PR #${pullRequest.number} was ignored; operation is ${operation.phase}.`);
+        }
+        if (operation.phase !== "promotion_pr_pending" && operation.phase !== "preparing") {
+            return (0, deployment_orchestration_runtime_1.deploymentSuccess)(`Out-of-order promotion event was ignored while operation is ${operation.phase}.`);
+        }
+        if (!matchesPromotion(operation, pullRequest)) {
+            return await this.runtime.block(context, operation, "promotion", "Promotion PR branches or prepared SHA do not match durable state.", false);
+        }
+        const productionSha = pullRequest.mergeCommitSha;
+        if (!productionSha) {
+            return await this.runtime.block(context, operation, "promotion", "Merged promotion PR has no production merge SHA.", true);
+        }
+        if (!(await this.isAcceptedProductionReachable(context, operation, productionSha))) {
+            return await this.runtime.block(context, operation, "promotion", "GitHub does not confirm that the accepted production branch contains the promotion commit.", true);
+        }
+        const promoted = {
+            ...operation,
+            promotionPullRequest: pullRequest.number,
+            productionSha,
+            phase: "promoted",
+            lastFailure: null,
+        };
+        await this.runtime.persist(context, promoted);
+        const publishing = { ...promoted, phase: "publishing" };
+        await this.runtime.persist(context, publishing);
+        await this.runtime.publishDashboard(context, publishing);
+        await this.runtime.publishMilestone(context, publishing, "promotion-merged", `✅ Promotion PR #${pullRequest.number} merged. Publication is starting from production SHA \`${productionSha}\`.`);
+        await this.runtime.dependencies.continuation.dispatch(context.owner, context.repo, operation.publicationWorkflow, operation.productionBranch, operation.operationId, context.singleAction.issue, operation.version, context.tokens.token);
+        return (0, deployment_orchestration_runtime_1.deploymentSuccess)(`Promotion PR #${pullRequest.number} was verified; publication continuation was dispatched from ${operation.productionBranch}.`);
+    }
+    async isAcceptedProductionReachable(context, operation, productionSha) {
+        const [mergeReachable, sourceReachable] = await Promise.all([
+            this.runtime.dependencies.git.isCommitReachable(context.owner, context.repo, operation.productionBranch, productionSha, context.tokens.token),
+            this.runtime.dependencies.git.isCommitReachable(context.owner, context.repo, operation.productionBranch, operation.sourceSha, context.tokens.token),
+        ]);
+        return mergeReachable && sourceReachable;
+    }
+}
+exports.AcceptPromotionHandler = AcceptPromotionHandler;
+function matchesPromotion(operation, pullRequest) {
+    return pullRequest.headBranch === operation.sourceBranch
+        && pullRequest.baseBranch === operation.productionBranch
+        && pullRequest.headSha === operation.sourceSha;
+}
+
+
+/***/ }),
+
+/***/ 46361:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ConfirmPublicationHandler = void 0;
+const application_error_1 = __nccwpck_require__(75999);
+const deployment_plan_policy_1 = __nccwpck_require__(8352);
+const deployment_operation_1 = __nccwpck_require__(92730);
+const deployment_orchestration_runtime_1 = __nccwpck_require__(77658);
+class ConfirmPublicationHandler {
+    constructor(runtime, reconciliation) {
+        this.runtime = runtime;
+        this.reconciliation = reconciliation;
+    }
+    async invoke(context) {
+        const operation = await this.resumeRetryableBlock(context, (0, deployment_orchestration_runtime_1.requireDeploymentOperation)(context));
+        if (operation.phase === "reconciliation_pending" && operation.publicationVerified) {
+            return await this.reconciliation.plan(context, operation)
+                ?? (0, deployment_orchestration_runtime_1.deploymentSuccess)(`Publication for ${operation.tag} was already verified; reconciliation state was recovered.`);
+        }
+        if (operation.phase === "completed" && operation.publicationVerified) {
+            await this.runtime.publishDashboard(context, operation);
+            return (0, deployment_orchestration_runtime_1.deploymentSuccess)(`Publication for ${operation.tag} was already verified; duplicate notification ignored.`);
+        }
+        assertPublicationPhase(operation);
+        const productionSha = requireProductionSha(operation);
+        const publication = await this.runtime.dependencies.publication.inspect({
+            owner: context.owner,
+            repository: context.repo,
+            tag: operation.tag,
+            productionSha,
+            operationId: operation.operationId,
+            token: context.tokens.token,
+        });
+        if (publication.kind === "absent") {
+            return await this.runtime.block(context, operation, "publication", `The ${publication.effect} publication receipt is absent; rerun the serialized publication phase.`, true);
+        }
+        if (publication.kind === "conflict") {
+            return await this.runtime.block(context, operation, "publication", publication.reason, false);
+        }
+        const reachable = await this.runtime.dependencies.git.isCommitReachable(context.owner, context.repo, operation.productionBranch, productionSha, context.tokens.token);
+        if (!reachable) {
+            return await this.runtime.block(context, operation, "publication", "Published SHA is not reachable from the stored production branch.", false);
+        }
+        const published = {
+            ...operation,
+            phase: "published",
+            publicationVerified: true,
+            publicationReceipt: publication.receipt,
+            lastFailure: null,
+        };
+        await this.runtime.persist(context, published);
+        await this.runtime.publishMilestone(context, published, "publication-complete", `📦 ${published.tag} is published from accepted production SHA \`${published.productionSha}\`.`);
+        return await this.beginReconciliation(context, published);
+    }
+    async resumeRetryableBlock(context, operation) {
+        if (operation.phase !== "blocked" || !operation.lastFailure?.retryable)
+            return operation;
+        const resumed = (0, deployment_operation_1.resumeBlockedDeployment)(operation);
+        if (resumed.kind !== "advance")
+            return operation;
+        await this.runtime.persist(context, resumed.operation);
+        return resumed.operation;
+    }
+    async beginReconciliation(context, published) {
+        const activeReleases = published.kind === "hotfix"
+            ? (await this.runtime.dependencies.git.listBranches(context.owner, context.repo, context.branches.releaseTree, context.tokens.token)).filter((branch) => branch !== published.sourceBranch)
+            : [];
+        const decision = (0, deployment_plan_policy_1.selectReconciliationTargetBranches)(published, activeReleases);
+        if (decision.kind === "blocked") {
+            return await this.runtime.block(context, published, "reconciliation", decision.reason, false);
+        }
+        if (decision.kind === "manual") {
+            await this.runtime.publishDashboard(context, published);
+            return (0, deployment_orchestration_runtime_1.deploymentSuccess)(`${published.tag} is published. Manual reconciliation is configured, so the issue remains open.`);
+        }
+        const reconciling = {
+            ...published,
+            reconciliationTargets: decision.targetBranches.map((target) => (0, deployment_plan_policy_1.buildReconciliationTarget)(published, target, "direct")),
+            phase: "reconciliation_pending",
+        };
+        await this.runtime.persist(context, reconciling);
+        return await this.reconciliation.plan(context, reconciling)
+            ?? (0, deployment_orchestration_runtime_1.deploymentSuccess)(`${reconciling.tag} is published; development reconciliation is now managed by GitHub.`);
+    }
+}
+exports.ConfirmPublicationHandler = ConfirmPublicationHandler;
+function assertPublicationPhase(operation) {
+    if (["published", "publishing", "promoted"].includes(operation.phase))
+        return;
+    throw new application_error_1.ApplicationError("workflow.stale", `Publication cannot advance from phase ${operation.phase}.`);
+}
+function requireProductionSha(operation) {
+    if (!operation.productionSha) {
+        throw new application_error_1.ApplicationError("workflow.stale", "The accepted production SHA is missing.");
+    }
+    return operation.productionSha;
+}
+
+
+/***/ }),
+
+/***/ 85138:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ContinueDeploymentHandler = void 0;
+const application_error_1 = __nccwpck_require__(75999);
+const deployment_operation_1 = __nccwpck_require__(92730);
+const managed_pull_request_1 = __nccwpck_require__(95914);
+const deployment_orchestration_runtime_1 = __nccwpck_require__(77658);
+class ContinueDeploymentHandler {
+    constructor(runtime, acceptPromotion, reconciliation) {
+        this.runtime = runtime;
+        this.acceptPromotion = acceptPromotion;
+        this.reconciliation = reconciliation;
+    }
+    async invoke(context) {
+        let operation = (0, deployment_orchestration_runtime_1.requireDeploymentOperation)(context);
+        const pullRequest = await this.loadPullRequest(context);
+        const identity = (0, managed_pull_request_1.parseManagedPullRequestMarker)(pullRequest.body);
+        if (!identity
+            || identity.operationId !== operation.operationId
+            || identity.issue !== context.singleAction.issue) {
+            throw new application_error_1.ApplicationError("workflow.stale", `PR #${pullRequest.number} is not owned by deployment operation ${operation.operationId}.`);
+        }
+        const resumed = await this.resumeBlockedEvent(context, operation, pullRequest, identity.phase);
+        if (resumed.kind === "result")
+            return resumed.result;
+        operation = resumed.operation;
+        assertSameRepository(context, pullRequest);
+        if (pullRequest.state !== "closed") {
+            return (0, deployment_orchestration_runtime_1.deploymentSuccess)(`PR #${pullRequest.number} is still open; no transition was applied.`);
+        }
+        if (!pullRequest.merged) {
+            return await this.runtime.block(context, operation, identity.phase === "promotion" ? "promotion" : "reconciliation", `Managed ${identity.phase} PR #${pullRequest.number} was closed without merge.`, true);
+        }
+        return identity.phase === "promotion"
+            ? await this.acceptPromotion.invoke(context, operation, pullRequest)
+            : await this.reconciliation.accept(context, operation, pullRequest);
+    }
+    async loadPullRequest(context) {
+        if (context.pullRequest.number < 1) {
+            throw new application_error_1.ApplicationError("workflow.invalid-event", "The continuation event has no pull request number.");
+        }
+        return await this.runtime.dependencies.pullRequests.getPullRequest(context.owner, context.repo, context.pullRequest.number, context.tokens.token);
+    }
+    async resumeBlockedEvent(context, operation, pullRequest, phase) {
+        if (operation.phase !== "blocked")
+            return { kind: "resumed", operation };
+        if (!canResumeEvent(operation, phase)) {
+            await this.runtime.publishDashboard(context, operation);
+            return {
+                kind: "result",
+                result: (0, deployment_orchestration_runtime_1.deploymentSuccess)(`PR #${pullRequest.number} cannot resume the existing ${operation.lastFailure?.category ?? "deployment"} block; the original diagnosis was preserved.`),
+            };
+        }
+        const resumed = (0, deployment_operation_1.resumeBlockedDeployment)(operation);
+        if (resumed.kind !== "advance")
+            return { kind: "resumed", operation };
+        await this.runtime.persist(context, resumed.operation);
+        return { kind: "resumed", operation: resumed.operation };
+    }
+}
+exports.ContinueDeploymentHandler = ContinueDeploymentHandler;
+function canResumeEvent(operation, phase) {
+    if (operation.lastFailure?.retryable !== true)
+        return false;
+    const previousPhase = operation.lastFailure.previousPhase;
+    return phase === "promotion"
+        ? previousPhase === "preparing" || previousPhase === "promotion_pr_pending"
+        : previousPhase === "reconciliation_pending";
+}
+function assertSameRepository(context, pullRequest) {
+    if (pullRequest.repositoryFullName.toLowerCase() === `${context.owner}/${context.repo}`.toLowerCase())
+        return;
+    throw new application_error_1.ApplicationError("authorization.denied", "Cross-repository deployment continuation was rejected.");
+}
+
+
+/***/ }),
+
+/***/ 43877:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PreparePromotionHandler = void 0;
+const application_error_1 = __nccwpck_require__(75999);
+const deployment_plan_policy_1 = __nccwpck_require__(8352);
+const deployment_operation_1 = __nccwpck_require__(92730);
+const deployment_orchestration_runtime_1 = __nccwpck_require__(77658);
+class PreparePromotionHandler {
+    constructor(runtime, acceptPromotion) {
+        this.runtime = runtime;
+        this.acceptPromotion = acceptPromotion;
+    }
+    async invoke(context) {
+        const existing = context.currentConfiguration.deploymentOrchestration;
+        if (existing)
+            return await this.resume(context, existing);
+        const operation = await this.createOperation(context);
+        await this.runtime.persist(context, operation);
+        await this.runtime.publishDashboard(context, operation);
+        return await this.ensurePromotion(context, operation);
+    }
+    async resume(context, existing) {
+        if (existing.version !== context.singleAction.version) {
+            throw new application_error_1.ApplicationError("workflow.stale", `Issue already owns deployment operation ${existing.operationId} for version ${existing.version}.`);
+        }
+        if (isBlockedOutsidePreparation(existing)) {
+            await this.runtime.publishDashboard(context, existing);
+            return (0, deployment_orchestration_runtime_1.blockedDeploymentResult)(existing, "The prepare mode cannot resume this blocked deployment phase.");
+        }
+        const operation = await this.resumeBlockedPreparation(context, existing);
+        if (operation.phase === "preparing" || operation.phase === "promotion_pr_pending") {
+            const currentSourceSha = await this.runtime.dependencies.git.getBranchSha(context.owner, context.repo, operation.sourceBranch, context.tokens.token);
+            if (currentSourceSha !== operation.sourceSha) {
+                return await this.runtime.block(context, operation, "promotion", "The prepared source branch changed after its immutable SHA was stored.", false);
+            }
+            return await this.ensurePromotion(context, operation);
+        }
+        await this.runtime.publishDashboard(context, operation);
+        return (0, deployment_orchestration_runtime_1.deploymentSuccess)(`Deployment ${operation.operationId} is already ${operation.phase}; reused its durable state.`);
+    }
+    async resumeBlockedPreparation(context, operation) {
+        if (operation.phase !== "blocked")
+            return operation;
+        const resumed = (0, deployment_operation_1.resumeBlockedDeployment)(operation);
+        if (resumed.kind !== "advance")
+            return operation;
+        await this.runtime.persist(context, resumed.operation);
+        return resumed.operation;
+    }
+    async createOperation(context) {
+        const kind = (0, deployment_orchestration_runtime_1.deploymentKind)(context);
+        const sourceBranch = kind === "release"
+            ? context.currentConfiguration.releaseBranch
+            : context.currentConfiguration.hotfixBranch;
+        if (!sourceBranch) {
+            throw new application_error_1.ApplicationError("workflow.stale", `No prepared ${kind} branch is stored on the launcher issue.`);
+        }
+        const sourceSha = await this.runtime.dependencies.git.getBranchSha(context.owner, context.repo, sourceBranch, context.tokens.token);
+        const originBranch = selectOriginBranch(context, kind);
+        const persistedOrigin = kind === "release"
+            ? context.currentConfiguration.releaseOriginSha
+            : context.currentConfiguration.hotfixOriginSha;
+        const originSha = persistedOrigin ?? await this.runtime.dependencies.git.getMergeBaseSha(context.owner, context.repo, originBranch, sourceBranch, context.tokens.token);
+        const operation = (0, deployment_plan_policy_1.buildInitialDeploymentOperation)({
+            operationId: this.runtime.dependencies.operationId(),
+            kind,
+            version: context.singleAction.version,
+            title: context.singleAction.title,
+            changelog: context.singleAction.changelog,
+            sourceBranch,
+            sourceSha,
+            originBranch,
+            originSha,
+            productionBranch: context.branches.defaultBranch,
+            developmentBranch: context.branches.development,
+            configuration: context.deployment,
+            publicationWorkflow: kind === "release" ? context.workflows.release : context.workflows.hotfix,
+        });
+        validateOperation(context, operation);
+        persistOriginMetadata(context, operation);
+        return operation;
+    }
+    async ensurePromotion(context, operation) {
+        const preflight = await this.runtime.inspectMergeBehavior(context, operation, operation.productionBranch, "production", operation.sourceSha);
+        if (preflight.kind === "blocked") {
+            return await this.runtime.block(context, operation, "promotion", preflight.reason, true);
+        }
+        const promotion = await this.runtime.createOrReusePullRequest(context, operation, "promotion");
+        if (promotion.merged)
+            return await this.acceptPromotion.invoke(context, operation, promotion);
+        if (promotion.state === "closed") {
+            return await this.runtime.block(context, operation, "promotion", `Promotion PR #${promotion.number} was closed without merge.`, true);
+        }
+        if (promotion.headSha !== operation.sourceSha) {
+            return await this.runtime.block(context, operation, "promotion", `Promotion PR #${promotion.number} does not contain the persisted prepared SHA.`, false);
+        }
+        const pending = pendingPromotion(operation, promotion.number);
+        await this.runtime.persist(context, pending);
+        const configured = await this.runtime.configureMergeBehavior(context, pending, promotion, "promotion", "production");
+        if (configured.kind === "blocked")
+            return configured.result;
+        return (0, deployment_orchestration_runtime_1.deploymentSuccess)(configured.operation.selectedPrMode === "create-only"
+            ? `Promotion PR #${promotion.number} is ready for maintainer review; this runner does not wait.`
+            : `Promotion PR #${promotion.number} is managed by GitHub; this runner does not wait for checks.`);
+    }
+}
+exports.PreparePromotionHandler = PreparePromotionHandler;
+function isBlockedOutsidePreparation(operation) {
+    return operation.phase === "blocked"
+        && (!operation.lastFailure?.retryable
+            || !["preparing", "promotion_pr_pending"].includes(operation.lastFailure.previousPhase));
+}
+function selectOriginBranch(context, kind) {
+    return kind === "release"
+        ? context.currentConfiguration.releaseOriginBranch ?? context.branches.development
+        : context.currentConfiguration.hotfixOriginBranch
+            ?? context.currentConfiguration.parentBranch
+            ?? context.branches.defaultBranch;
+}
+function validateOperation(context, operation) {
+    const errors = (0, deployment_plan_policy_1.validateInitialDeploymentInput)({
+        operationId: operation.operationId,
+        kind: operation.kind,
+        version: operation.version,
+        title: operation.title,
+        changelog: operation.changelog,
+        sourceBranch: operation.sourceBranch,
+        sourceSha: operation.sourceSha,
+        originBranch: operation.originBranch,
+        originSha: operation.originSha,
+        productionBranch: operation.productionBranch,
+        developmentBranch: operation.developmentBranch,
+        configuration: context.deployment,
+        publicationWorkflow: operation.publicationWorkflow,
+    });
+    if (errors.length > 0) {
+        throw new application_error_1.ApplicationError("validation.invalid-input", errors.join(" "));
+    }
+}
+function persistOriginMetadata(context, operation) {
+    if (operation.kind === "release") {
+        context.currentConfiguration.releaseOriginBranch = operation.originBranch;
+        context.currentConfiguration.releaseOriginSha = operation.originSha;
+        return;
+    }
+    context.currentConfiguration.hotfixOriginSha = operation.originSha;
+}
+function pendingPromotion(operation, pullRequest) {
+    if (operation.phase === "promotion_pr_pending")
+        return { ...operation, promotionPullRequest: pullRequest };
+    const transition = (0, deployment_operation_1.transitionDeploymentOperation)({ ...operation, promotionPullRequest: pullRequest }, "preparing", "promotion_pr_pending");
+    if (transition.operation.phase !== "promotion_pr_pending") {
+        throw new application_error_1.ApplicationError("workflow.stale", `Cannot prepare promotion from ${operation.phase}.`);
+    }
+    return transition.operation;
+}
+
+
+/***/ }),
+
+/***/ 3344:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ReconciliationHandler = void 0;
+const deployment_plan_policy_1 = __nccwpck_require__(8352);
+const deployment_operation_1 = __nccwpck_require__(92730);
+const deployment_orchestration_runtime_1 = __nccwpck_require__(77658);
+class ReconciliationHandler {
+    constructor(runtime) {
+        this.runtime = runtime;
+    }
+    async accept(context, operation, pullRequest) {
+        if (operation.phase === "completed") {
+            return (0, deployment_orchestration_runtime_1.deploymentSuccess)(`Duplicate reconciliation event for PR #${pullRequest.number} was ignored.`);
+        }
+        if (operation.phase !== "reconciliation_pending") {
+            return (0, deployment_orchestration_runtime_1.deploymentSuccess)(`Out-of-order reconciliation event ignored while operation is ${operation.phase}.`);
+        }
+        const target = operation.reconciliationTargets.find((item) => item.pullRequest === pullRequest.number);
+        if (!target) {
+            return await this.runtime.block(context, operation, "reconciliation", `PR #${pullRequest.number} is not a configured reconciliation target.`, false);
+        }
+        if (pullRequest.baseBranch !== target.targetBranch
+            || pullRequest.headBranch !== (target.syncBranch ?? target.sourceBranch)) {
+            return await this.runtime.block(context, operation, "reconciliation", "Reconciliation PR branches do not match durable state.", false);
+        }
+        if (!(await this.isReconciliationReachable(context, target, pullRequest))) {
+            return await this.runtime.block(context, operation, "reconciliation", "The reconciliation merge is not reachable from its target branch.", true);
+        }
+        const sourceReachable = await this.runtime.dependencies.git.isCommitReachable(context.owner, context.repo, target.targetBranch, target.sourceSha, context.tokens.token);
+        if (!sourceReachable) {
+            return await this.runtime.block(context, operation, "reconciliation", "The reconciliation target does not contain the stored release SHA.", false);
+        }
+        const updated = (0, deployment_operation_1.completeReconciliationTarget)(operation, pullRequest.number);
+        await this.runtime.persist(context, updated);
+        if (!updated.reconciliationTargets.every((item) => item.status === "completed")) {
+            return await this.plan(context, updated)
+                ?? (0, deployment_orchestration_runtime_1.deploymentSuccess)(`Reconciliation PR #${pullRequest.number} completed; the next configured target is ready.`);
+        }
+        return await this.complete(context, updated, ` after reconciliation PR #${pullRequest.number}`);
+    }
+    async plan(context, operation) {
+        const index = operation.reconciliationTargets.findIndex((target) => target.status === "pending" && target.pullRequest === undefined);
+        if (index < 0)
+            return await this.finishOrPresent(context, operation);
+        let target = operation.reconciliationTargets[index];
+        const targetRole = (0, deployment_orchestration_runtime_1.reconciliationTargetRole)(operation, target.targetBranch);
+        const preflight = await this.runtime.inspectMergeBehavior(context, operation, target.targetBranch, targetRole, target.sourceSha);
+        if (preflight.kind === "blocked") {
+            return await this.runtime.block(context, operation, "reconciliation", preflight.reason, true);
+        }
+        const [targetSha, currentSourceSha] = await Promise.all([
+            this.runtime.dependencies.git.getBranchSha(context.owner, context.repo, target.targetBranch, context.tokens.token),
+            this.runtime.dependencies.git.getBranchSha(context.owner, context.repo, target.sourceBranch, context.tokens.token),
+        ]);
+        const directUpToDate = await this.runtime.dependencies.git.isCommitReachable(context.owner, context.repo, target.sourceBranch, targetSha, context.tokens.token).catch(() => false);
+        const mode = (0, deployment_plan_policy_1.selectBackmergeMode)(operation.backmergeMode, preflight.capabilities.requiresStrictStatusChecks, directUpToDate, currentSourceSha === target.sourceSha);
+        if (mode.kind === "unsupported") {
+            return await this.runtime.block(context, operation, "reconciliation", mode.reason, false);
+        }
+        if (mode.mode === "sync-branch") {
+            target = (0, deployment_plan_policy_1.buildReconciliationTarget)(operation, target.targetBranch, "sync-branch");
+            await this.prepareSyncBranch(context, target.syncBranch, targetSha, target.sourceSha);
+        }
+        const operationWithMode = (0, deployment_orchestration_runtime_1.replaceReconciliationTarget)(operation, index, target);
+        const pullRequest = await this.runtime.createOrReusePullRequest(context, operationWithMode, "reconciliation", target);
+        if (pullRequest.state === "closed" && !pullRequest.merged) {
+            return await this.runtime.block(context, operationWithMode, "reconciliation", `Reconciliation PR #${pullRequest.number} was closed without merge.`, true);
+        }
+        const verifiedTarget = await this.verifyPullRequestHead(context, operationWithMode, target, pullRequest);
+        if (verifiedTarget.kind === "blocked")
+            return verifiedTarget.result;
+        const withPullRequest = (0, deployment_orchestration_runtime_1.replaceReconciliationTarget)(operationWithMode, index, {
+            ...target,
+            ...(verifiedTarget.syncSha ? { syncSha: verifiedTarget.syncSha } : {}),
+            pullRequest: pullRequest.number,
+        });
+        await this.runtime.persist(context, withPullRequest);
+        if (pullRequest.merged)
+            return await this.accept(context, withPullRequest, pullRequest);
+        const configured = await this.runtime.configureMergeBehavior(context, withPullRequest, pullRequest, "reconciliation", targetRole);
+        if (configured.kind === "blocked")
+            return configured.result;
+        return undefined;
+    }
+    async complete(context, operation, completionContext = "") {
+        try {
+            await this.runtime.cleanup(context, operation);
+            if (operation.issueCompletion === "close") {
+                await this.runtime.dependencies.issues.closeIssue(context.owner, context.repo, context.singleAction.issue, context.tokens.token);
+            }
+        }
+        catch (error) {
+            const semanticError = (0, deployment_orchestration_runtime_1.semanticCleanupError)(error);
+            return await this.runtime.block(context, operation, "cleanup", semanticError.message, true, semanticError);
+        }
+        const completed = { ...operation, phase: "completed", lastFailure: null };
+        await this.runtime.persist(context, completed);
+        await this.runtime.publishDashboard(context, completed);
+        await this.runtime.publishMilestone(context, completed, "orchestration-complete", `✅ Deployment ${completed.tag} and every configured reconciliation target are complete.`);
+        return (0, deployment_orchestration_runtime_1.deploymentSuccess)(`Deployment ${completed.tag} completed${completionContext}.`);
+    }
+    async finishOrPresent(context, operation) {
+        if (operation.reconciliationTargets.length > 0
+            && operation.reconciliationTargets.every((target) => target.status === "completed")) {
+            return await this.complete(context, operation);
+        }
+        await this.runtime.publishDashboard(context, operation);
+        return undefined;
+    }
+    async prepareSyncBranch(context, syncBranch, targetSha, sourceSha) {
+        await this.runtime.dependencies.git.createOrVerifyBranch(context.owner, context.repo, syncBranch, targetSha, context.tokens.token);
+        await this.runtime.dependencies.git.mergeCommitIntoBranch(context.owner, context.repo, syncBranch, targetSha, context.tokens.token);
+        await this.runtime.dependencies.git.mergeCommitIntoBranch(context.owner, context.repo, syncBranch, sourceSha, context.tokens.token);
+    }
+    async verifyPullRequestHead(context, operation, target, pullRequest) {
+        if (!target.syncBranch) {
+            return pullRequest.headSha === target.sourceSha
+                ? { kind: "verified" }
+                : {
+                    kind: "blocked",
+                    result: await this.runtime.block(context, operation, "reconciliation", `Reconciliation PR #${pullRequest.number} source moved away from the stored release SHA.`, false),
+                };
+        }
+        const [syncHead, sourceIncluded] = await Promise.all([
+            this.runtime.dependencies.git.getBranchSha(context.owner, context.repo, target.syncBranch, context.tokens.token),
+            this.runtime.dependencies.git.isCommitReachable(context.owner, context.repo, target.syncBranch, target.sourceSha, context.tokens.token),
+        ]);
+        if (pullRequest.headSha === syncHead && sourceIncluded) {
+            return { kind: "verified", syncSha: syncHead };
+        }
+        return {
+            kind: "blocked",
+            result: await this.runtime.block(context, operation, "reconciliation", `Reconciliation PR #${pullRequest.number} does not contain the verified sync-branch state.`, false),
+        };
+    }
+    async isReconciliationReachable(context, target, pullRequest) {
+        return Boolean(pullRequest.mergeCommitSha)
+            && await this.runtime.dependencies.git.isCommitReachable(context.owner, context.repo, target.targetBranch, pullRequest.mergeCommitSha, context.tokens.token);
+    }
+}
+exports.ReconciliationHandler = ReconciliationHandler;
+
+
+/***/ }),
+
+/***/ 66571:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.RecordFailureHandler = void 0;
+const application_error_1 = __nccwpck_require__(75999);
+const result_1 = __nccwpck_require__(73817);
+const deployment_orchestration_runtime_1 = __nccwpck_require__(77658);
+class RecordFailureHandler {
+    constructor(runtime) {
+        this.runtime = runtime;
+    }
+    async invoke(context) {
+        const operation = (0, deployment_orchestration_runtime_1.requireDeploymentOperation)(context);
+        if (operation.phase === "completed") {
+            return (0, deployment_orchestration_runtime_1.deploymentSuccess)(`Deployment ${operation.operationId} is already complete; a stale failure report was ignored.`);
+        }
+        if (operation.phase === "blocked") {
+            await this.runtime.publishDashboard(context, operation);
+            return new result_1.Result({
+                id: deployment_orchestration_runtime_1.DEPLOYMENT_ORCHESTRATION_TASK_ID,
+                success: false,
+                executed: true,
+                steps: [`Deployment ${operation.operationId} remains blocked; its original failure classification was preserved.`],
+                errors: [new application_error_1.ApplicationError("workflow.failed", operation.lastFailure?.message ?? "Deployment remains blocked.", { retryable: operation.lastFailure?.retryable ?? false })],
+            });
+        }
+        const category = failureCategory(operation.phase, operation.lastFailure?.category);
+        const message = context.singleAction.message
+            || `The ${category} workflow failed. Review the linked workflow run before retrying.`;
+        return await this.runtime.block(context, operation, category, message, true);
+    }
+}
+exports.RecordFailureHandler = RecordFailureHandler;
+function failureCategory(phase, previous) {
+    if (phase === "preparing" || phase === "promotion_pr_pending")
+        return "promotion";
+    if (phase === "promoted" || phase === "publishing")
+        return "publication";
+    return previous ?? "reconciliation";
+}
+
+
+/***/ }),
+
 /***/ 36850:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -56310,651 +57334,68 @@ function noTagResult(taskId, tagName) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.DeploymentOrchestrationUseCase = void 0;
-const deployment_plan_policy_1 = __nccwpck_require__(8352);
-const merge_queue_readiness_1 = __nccwpck_require__(12515);
-const deployment_presentation_policy_1 = __nccwpck_require__(83221);
-const deployment_operation_1 = __nccwpck_require__(92730);
-const managed_pull_request_1 = __nccwpck_require__(95914);
-const result_1 = __nccwpck_require__(73817);
-const deployment_lifecycle_policy_1 = __nccwpck_require__(54037);
-const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const application_error_1 = __nccwpck_require__(75999);
-const TASK_ID = "DeploymentOrchestrationUseCase";
+const deployment_orchestration_runtime_1 = __nccwpck_require__(77658);
+const deployment_state_boundary_1 = __nccwpck_require__(27827);
+const result_1 = __nccwpck_require__(73817);
+const accept_promotion_handler_1 = __nccwpck_require__(28399);
+const confirm_publication_handler_1 = __nccwpck_require__(46361);
+const continue_deployment_handler_1 = __nccwpck_require__(85138);
+const prepare_promotion_handler_1 = __nccwpck_require__(43877);
+const reconciliation_handler_1 = __nccwpck_require__(3344);
+const record_failure_handler_1 = __nccwpck_require__(66571);
 class DeploymentOrchestrationUseCase {
     constructor(dependencies) {
-        this.dependencies = dependencies;
-        this.taskId = TASK_ID;
-        this.checkpoints = new WeakMap();
+        this.taskId = deployment_orchestration_runtime_1.DEPLOYMENT_ORCHESTRATION_TASK_ID;
+        this.stateBoundary = new deployment_state_boundary_1.DeploymentStateBoundary(dependencies.state, dependencies.labels);
+        this.runtime = new deployment_orchestration_runtime_1.DeploymentOrchestrationRuntime(dependencies, this.stateBoundary);
+        const acceptPromotion = new accept_promotion_handler_1.AcceptPromotionHandler(this.runtime);
+        const reconciliation = new reconciliation_handler_1.ReconciliationHandler(this.runtime);
+        this.preparePromotion = new prepare_promotion_handler_1.PreparePromotionHandler(this.runtime, acceptPromotion);
+        this.continueDeployment = new continue_deployment_handler_1.ContinueDeploymentHandler(this.runtime, acceptPromotion, reconciliation);
+        this.confirmPublication = new confirm_publication_handler_1.ConfirmPublicationHandler(this.runtime, reconciliation);
+        this.recordFailure = new record_failure_handler_1.RecordFailureHandler(this.runtime);
     }
-    async invoke(execution) {
-        const initial = execution.currentConfiguration.deploymentOrchestration;
-        this.checkpoints.set(execution, initial ? { operationId: initial.operationId, phase: initial.phase } : undefined);
+    async invoke(context) {
         try {
-            if (execution.singleAction.isPrepareDeploymentAction)
-                return [await this.prepare(execution)];
-            if (execution.singleAction.isContinueDeploymentAction)
-                return [await this.continue(execution)];
-            if (execution.singleAction.isPublishedDeploymentAction)
-                return [await this.published(execution)];
-            if (execution.singleAction.isFailedDeploymentAction)
-                return [await this.failed(execution)];
-            return [];
+            await this.stateBoundary.initialize(context);
+            const result = await this.invokeSelectedHandler(context);
+            return result ? [result] : [];
         }
         catch (error) {
-            await this.recordUnexpectedFailure(execution, error);
-            return [new result_1.Result({
-                    id: TASK_ID,
-                    success: false,
-                    executed: true,
-                    steps: ["Deployment orchestration is blocked. No unsafe transition was performed."],
-                    errors: [(0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Deployment orchestration failed.')],
-                })];
+            return await this.handleFailure(context, error);
         }
     }
-    async prepare(execution) {
-        const existing = execution.currentConfiguration.deploymentOrchestration;
-        if (existing) {
-            if (existing.version !== execution.singleAction.version) {
-                throw new application_error_1.ApplicationError('workflow.stale', `Issue already owns deployment operation ${existing.operationId} for version ${existing.version}.`);
-            }
-            if (existing.phase === "blocked"
-                && (!existing.lastFailure?.retryable
-                    || !["preparing", "promotion_pr_pending"].includes(existing.lastFailure.previousPhase))) {
-                await this.publishDashboard(execution, existing);
-                return blockedResult(existing, "The prepare mode cannot resume this blocked deployment phase.");
-            }
-            const resumed = existing.phase === "blocked" ? (0, deployment_operation_1.resumeBlockedDeployment)(existing) : undefined;
-            const current = resumed?.kind === "advance" ? resumed.operation : existing;
-            if (current !== existing) {
-                execution.currentConfiguration.deploymentOrchestration = current;
-                await this.persist(execution);
-            }
-            if (current.phase === "preparing" || current.phase === "promotion_pr_pending") {
-                const currentSourceSha = await this.dependencies.git.getBranchSha(execution.owner, execution.repo, current.sourceBranch, execution.tokens.token);
-                if (currentSourceSha !== current.sourceSha) {
-                    return await this.block(execution, current, "promotion", "The prepared source branch changed after its immutable SHA was stored.", false);
-                }
-                return await this.ensurePromotion(execution, current);
-            }
-            await this.publishDashboard(execution, current);
-            return success(`Deployment ${current.operationId} is already ${current.phase}; reused its durable state.`);
-        }
-        const kind = deploymentKind(execution);
-        const sourceBranch = kind === "release"
-            ? execution.currentConfiguration.releaseBranch
-            : execution.currentConfiguration.hotfixBranch;
-        if (!sourceBranch)
-            throw new application_error_1.ApplicationError('workflow.stale', `No prepared ${kind} branch is stored on the launcher issue.`);
-        const sourceSha = await this.dependencies.git.getBranchSha(execution.owner, execution.repo, sourceBranch, execution.tokens.token);
-        const originBranch = kind === "release"
-            ? execution.currentConfiguration.releaseOriginBranch ?? execution.branches.development
-            : execution.currentConfiguration.hotfixOriginBranch ?? execution.currentConfiguration.parentBranch ?? execution.branches.defaultBranch;
-        const persistedOrigin = kind === "release"
-            ? execution.currentConfiguration.releaseOriginSha
-            : execution.currentConfiguration.hotfixOriginSha;
-        const originSha = persistedOrigin ?? await this.dependencies.git.getMergeBaseSha(execution.owner, execution.repo, originBranch, sourceBranch, execution.tokens.token);
-        const operation = (0, deployment_plan_policy_1.buildInitialDeploymentOperation)({
-            operationId: this.dependencies.operationId(),
-            kind,
-            version: execution.singleAction.version,
-            title: execution.singleAction.title,
-            changelog: execution.singleAction.changelog,
-            sourceBranch,
-            sourceSha,
-            originBranch,
-            originSha,
-            productionBranch: execution.branches.defaultBranch,
-            developmentBranch: execution.branches.development,
-            configuration: execution.deployment,
-            publicationWorkflow: kind === "release" ? execution.workflows.release : execution.workflows.hotfix,
-        });
-        const errors = (0, deployment_plan_policy_1.validateInitialDeploymentInput)({
-            operationId: operation.operationId,
-            kind,
-            version: operation.version,
-            title: operation.title,
-            changelog: operation.changelog,
-            sourceBranch,
-            sourceSha,
-            originBranch,
-            originSha,
-            productionBranch: operation.productionBranch,
-            developmentBranch: operation.developmentBranch,
-            configuration: execution.deployment,
-            publicationWorkflow: operation.publicationWorkflow,
-        });
-        if (errors.length > 0)
-            throw new application_error_1.ApplicationError('validation.invalid-input', errors.join(" "));
-        execution.currentConfiguration.deploymentOrchestration = operation;
-        if (kind === "release") {
-            execution.currentConfiguration.releaseOriginBranch = originBranch;
-            execution.currentConfiguration.releaseOriginSha = originSha;
-        }
-        else {
-            execution.currentConfiguration.hotfixOriginSha = originSha;
-        }
-        await this.persist(execution);
-        await this.publishDashboard(execution, operation);
-        return await this.ensurePromotion(execution, operation);
-    }
-    async ensurePromotion(execution, operation) {
-        const preflight = await this.inspectMergeBehavior(execution, operation, operation.productionBranch, "production", operation.sourceSha);
-        if (preflight.kind === "blocked") {
-            return await this.block(execution, operation, "promotion", preflight.reason, true);
-        }
-        const promotion = await this.createOrReusePullRequest(execution, operation, "promotion");
-        if (promotion.merged)
-            return await this.advancePromotion(execution, operation, promotion);
-        if (promotion.state === "closed")
-            return await this.block(execution, operation, "promotion", `Promotion PR #${promotion.number} was closed without merge.`, true);
-        if (promotion.headSha !== operation.sourceSha) {
-            return await this.block(execution, operation, "promotion", `Promotion PR #${promotion.number} does not contain the persisted prepared SHA.`, false);
-        }
-        const pending = operation.phase === "promotion_pr_pending"
-            ? { ...operation, promotionPullRequest: promotion.number }
-            : (0, deployment_operation_1.transitionDeploymentOperation)({ ...operation, promotionPullRequest: promotion.number }, "preparing", "promotion_pr_pending").operation;
-        if (pending.phase !== "promotion_pr_pending")
-            throw new application_error_1.ApplicationError('workflow.stale', `Cannot prepare promotion from ${operation.phase}.`);
-        execution.currentConfiguration.deploymentOrchestration = pending;
-        await this.persist(execution);
-        const configured = await this.configureMergeBehavior(execution, pending, promotion, "promotion", "production");
-        if (configured.kind === "blocked")
-            return configured.result;
-        return success(configured.operation.selectedPrMode === "create-only"
-            ? `Promotion PR #${promotion.number} is ready for maintainer review; this runner does not wait.`
-            : `Promotion PR #${promotion.number} is managed by GitHub; this runner does not wait for checks.`);
-    }
-    async continue(execution) {
-        let operation = requireOperation(execution);
-        const pullRequestNumber = execution.pullRequest.number;
-        if (pullRequestNumber < 1)
-            throw new application_error_1.ApplicationError('workflow.invalid-event', "The continuation event has no pull request number.");
-        const pullRequest = await this.dependencies.pullRequests.getPullRequest(execution.owner, execution.repo, pullRequestNumber, execution.tokens.token);
-        const identity = (0, managed_pull_request_1.parseManagedPullRequestMarker)(pullRequest.body);
-        if (!identity || identity.operationId !== operation.operationId || identity.issue !== execution.singleAction.issue) {
-            throw new application_error_1.ApplicationError('workflow.stale', `PR #${pullRequest.number} is not owned by deployment operation ${operation.operationId}.`);
-        }
-        if (operation.phase === "blocked") {
-            const previousPhase = operation.lastFailure?.previousPhase;
-            const eventCanResume = operation.lastFailure?.retryable === true
-                && (identity.phase === "promotion"
-                    ? previousPhase === "preparing" || previousPhase === "promotion_pr_pending"
-                    : previousPhase === "reconciliation_pending");
-            if (!eventCanResume) {
-                await this.publishDashboard(execution, operation);
-                return success(`PR #${pullRequest.number} cannot resume the existing ${operation.lastFailure?.category ?? "deployment"} block; the original diagnosis was preserved.`);
-            }
-            const resumed = (0, deployment_operation_1.resumeBlockedDeployment)(operation);
-            if (resumed.kind === "advance") {
-                operation = resumed.operation;
-                execution.currentConfiguration.deploymentOrchestration = operation;
-                await this.persist(execution);
-            }
-        }
-        if (pullRequest.repositoryFullName.toLowerCase() !== `${execution.owner}/${execution.repo}`.toLowerCase()) {
-            throw new application_error_1.ApplicationError('authorization.denied', "Cross-repository deployment continuation was rejected.");
-        }
-        if (pullRequest.state !== "closed")
-            return success(`PR #${pullRequest.number} is still open; no transition was applied.`);
-        if (!pullRequest.merged) {
-            return await this.block(execution, operation, identity.phase === "promotion" ? "promotion" : "reconciliation", `Managed ${identity.phase} PR #${pullRequest.number} was closed without merge.`, true);
-        }
-        if (identity.phase === "promotion")
-            return await this.advancePromotion(execution, operation, pullRequest);
-        return await this.advanceReconciliation(execution, operation, pullRequest);
-    }
-    async advancePromotion(execution, operation, pullRequest) {
-        if (["promoted", "publishing", "published", "reconciliation_pending", "completed"].includes(operation.phase)) {
-            return success(`Duplicate promotion event for PR #${pullRequest.number} was ignored; operation is ${operation.phase}.`);
-        }
-        if (operation.phase !== "promotion_pr_pending" && operation.phase !== "preparing") {
-            return success(`Out-of-order promotion event was ignored while operation is ${operation.phase}.`);
-        }
-        if (pullRequest.headBranch !== operation.sourceBranch || pullRequest.baseBranch !== operation.productionBranch || pullRequest.headSha !== operation.sourceSha) {
-            return await this.block(execution, operation, "promotion", "Promotion PR branches or prepared SHA do not match durable state.", false);
-        }
-        const productionSha = pullRequest.mergeCommitSha;
-        if (!productionSha)
-            return await this.block(execution, operation, "promotion", "Merged promotion PR has no production merge SHA.", true);
-        const [mergeReachable, sourceReachable] = await Promise.all([
-            this.dependencies.git.isCommitReachable(execution.owner, execution.repo, operation.productionBranch, productionSha, execution.tokens.token),
-            this.dependencies.git.isCommitReachable(execution.owner, execution.repo, operation.productionBranch, operation.sourceSha, execution.tokens.token),
-        ]);
-        if (!mergeReachable || !sourceReachable) {
-            return await this.block(execution, operation, "promotion", "GitHub does not confirm that the accepted production branch contains the promotion commit.", true);
-        }
-        let promoted = { ...operation, promotionPullRequest: pullRequest.number, productionSha, phase: "promoted", lastFailure: null };
-        execution.currentConfiguration.deploymentOrchestration = promoted;
-        await this.persist(execution);
-        promoted = { ...promoted, phase: "publishing" };
-        execution.currentConfiguration.deploymentOrchestration = promoted;
-        await this.persist(execution);
-        await this.publishDashboard(execution, promoted);
-        await this.publishMilestone(execution, promoted, "promotion-merged", `✅ Promotion PR #${pullRequest.number} merged. Publication is starting from production SHA \`${productionSha}\`.`);
-        await this.dependencies.continuation.dispatch(execution.owner, execution.repo, operation.publicationWorkflow, operation.productionBranch, operation.operationId, execution.singleAction.issue, operation.version, execution.tokens.token);
-        return success(`Promotion PR #${pullRequest.number} was verified; publication continuation was dispatched from ${operation.productionBranch}.`);
-    }
-    async published(execution) {
-        let operation = requireOperation(execution);
-        if (operation.phase === "blocked" && operation.lastFailure?.retryable) {
-            const resumed = (0, deployment_operation_1.resumeBlockedDeployment)(operation);
-            if (resumed.kind === "advance") {
-                operation = resumed.operation;
-                execution.currentConfiguration.deploymentOrchestration = operation;
-                await this.persist(execution);
-            }
-        }
-        if (operation.phase === "reconciliation_pending" && operation.publicationVerified) {
-            return await this.ensureNextReconciliation(execution, operation)
-                ?? success(`Publication for ${operation.tag} was already verified; reconciliation state was recovered.`);
-        }
-        if (operation.phase === "completed" && operation.publicationVerified) {
-            await this.publishDashboard(execution, operation);
-            return success(`Publication for ${operation.tag} was already verified; duplicate notification ignored.`);
-        }
-        if (operation.phase !== "published" && operation.phase !== "publishing" && operation.phase !== "promoted") {
-            throw new application_error_1.ApplicationError('workflow.stale', `Publication cannot advance from phase ${operation.phase}.`);
-        }
-        if (!operation.productionSha)
-            throw new application_error_1.ApplicationError('workflow.stale', "The accepted production SHA is missing.");
-        const reachable = await this.dependencies.git.isCommitReachable(execution.owner, execution.repo, operation.productionBranch, operation.productionSha, execution.tokens.token);
-        if (!reachable)
-            return await this.block(execution, operation, "publication", "Published SHA is not reachable from the stored production branch.", false);
-        let published = { ...operation, phase: "published", publicationVerified: true, lastFailure: null };
-        execution.currentConfiguration.deploymentOrchestration = published;
-        await this.persist(execution);
-        await this.publishMilestone(execution, published, "publication-complete", `📦 ${published.tag} is published from accepted production SHA \`${published.productionSha}\`.`);
-        const activeReleases = operation.kind === "hotfix"
-            ? (await this.dependencies.git.listBranches(execution.owner, execution.repo, execution.branches.releaseTree, execution.tokens.token))
-                .filter((branch) => branch !== operation.sourceBranch)
-            : [];
-        const decision = (0, deployment_plan_policy_1.selectReconciliationTargetBranches)(published, activeReleases);
-        if (decision.kind === "blocked")
-            return await this.block(execution, published, "reconciliation", decision.reason, false);
-        if (decision.kind === "manual") {
-            await this.publishDashboard(execution, published);
-            return success(`${published.tag} is published. Manual reconciliation is configured, so the issue remains open.`);
-        }
-        published = {
-            ...published,
-            reconciliationTargets: decision.targetBranches.map((target) => (0, deployment_plan_policy_1.buildReconciliationTarget)(published, target, "direct")),
-            phase: "reconciliation_pending",
-        };
-        execution.currentConfiguration.deploymentOrchestration = published;
-        await this.persist(execution);
-        return await this.ensureNextReconciliation(execution, published)
-            ?? success(`${published.tag} is published; development reconciliation is now managed by GitHub.`);
-    }
-    async failed(execution) {
-        const operation = requireOperation(execution);
-        if (operation.phase === "completed")
-            return success(`Deployment ${operation.operationId} is already complete; a stale failure report was ignored.`);
-        if (operation.phase === "blocked") {
-            await this.publishDashboard(execution, operation);
-            return new result_1.Result({
-                id: TASK_ID,
-                success: false,
-                executed: true,
-                steps: [`Deployment ${operation.operationId} remains blocked; its original failure classification was preserved.`],
-                errors: [new application_error_1.ApplicationError('workflow.failed', operation.lastFailure?.message ?? "Deployment remains blocked.", {
-                        retryable: operation.lastFailure?.retryable ?? false,
-                    })],
-            });
-        }
-        const category = operation.phase === "preparing" || operation.phase === "promotion_pr_pending"
-            ? "promotion"
-            : operation.phase === "promoted" || operation.phase === "publishing"
-                ? "publication"
-                : operation.lastFailure?.category ?? "reconciliation";
-        const message = execution.singleAction.message || `The ${category} workflow failed. Review the linked workflow run before retrying.`;
-        return await this.block(execution, operation, category, message, true);
-    }
-    async advanceReconciliation(execution, operation, pullRequest) {
-        if (operation.phase === "completed")
-            return success(`Duplicate reconciliation event for PR #${pullRequest.number} was ignored.`);
-        if (operation.phase !== "reconciliation_pending")
-            return success(`Out-of-order reconciliation event ignored while operation is ${operation.phase}.`);
-        const target = operation.reconciliationTargets.find((item) => item.pullRequest === pullRequest.number);
-        if (!target)
-            return await this.block(execution, operation, "reconciliation", `PR #${pullRequest.number} is not a configured reconciliation target.`, false);
-        if (pullRequest.baseBranch !== target.targetBranch || pullRequest.headBranch !== (target.syncBranch ?? target.sourceBranch)) {
-            return await this.block(execution, operation, "reconciliation", "Reconciliation PR branches do not match durable state.", false);
-        }
-        const mergeSha = pullRequest.mergeCommitSha;
-        if (!mergeSha || !(await this.dependencies.git.isCommitReachable(execution.owner, execution.repo, target.targetBranch, mergeSha, execution.tokens.token))) {
-            return await this.block(execution, operation, "reconciliation", "The reconciliation merge is not reachable from its target branch.", true);
-        }
-        if (!(await this.dependencies.git.isCommitReachable(execution.owner, execution.repo, target.targetBranch, target.sourceSha, execution.tokens.token))) {
-            return await this.block(execution, operation, "reconciliation", "The reconciliation target does not contain the stored release SHA.", false);
-        }
-        const updated = (0, deployment_operation_1.completeReconciliationTarget)(operation, pullRequest.number);
-        execution.currentConfiguration.deploymentOrchestration = updated;
-        await this.persist(execution);
-        if (!updated.reconciliationTargets.every((item) => item.status === "completed")) {
-            return await this.ensureNextReconciliation(execution, updated)
-                ?? success(`Reconciliation PR #${pullRequest.number} completed; the next configured target is ready.`);
-        }
-        return await this.finalizeReconciliation(execution, updated, ` after reconciliation PR #${pullRequest.number}`);
-    }
-    async finalizeReconciliation(execution, operation, completionContext = "") {
-        try {
-            await this.cleanup(execution, operation);
-            if (operation.issueCompletion === "close") {
-                await this.dependencies.issues.closeIssue(execution.owner, execution.repo, execution.singleAction.issue, execution.tokens.token);
-            }
-        }
-        catch (error) {
-            const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Deployment cleanup failed.');
-            return await this.block(execution, operation, "cleanup", semanticError.message, true, semanticError);
-        }
-        const completed = { ...operation, phase: "completed", lastFailure: null };
-        execution.currentConfiguration.deploymentOrchestration = completed;
-        await this.persist(execution);
-        await this.publishDashboard(execution, completed);
-        await this.publishMilestone(execution, completed, "orchestration-complete", `✅ Deployment ${completed.tag} and every configured reconciliation target are complete.`);
-        return success(`Deployment ${completed.tag} completed${completionContext}.`);
-    }
-    async ensureNextReconciliation(execution, operation) {
-        const index = operation.reconciliationTargets.findIndex((target) => target.status === "pending" && target.pullRequest === undefined);
-        if (index < 0) {
-            if (operation.reconciliationTargets.length > 0
-                && operation.reconciliationTargets.every((target) => target.status === "completed")) {
-                return await this.finalizeReconciliation(execution, operation);
-            }
-            await this.publishDashboard(execution, operation);
-            return;
-        }
-        let target = operation.reconciliationTargets[index];
-        const targetRole = reconciliationTargetRole(operation, target.targetBranch);
-        const preflight = await this.inspectMergeBehavior(execution, operation, target.targetBranch, targetRole, target.sourceSha);
-        if (preflight.kind === "blocked") {
-            return await this.block(execution, operation, "reconciliation", preflight.reason, true);
-        }
-        const capabilities = preflight.capabilities;
-        const [targetSha, currentSourceSha] = await Promise.all([
-            this.dependencies.git.getBranchSha(execution.owner, execution.repo, target.targetBranch, execution.tokens.token),
-            this.dependencies.git.getBranchSha(execution.owner, execution.repo, target.sourceBranch, execution.tokens.token),
-        ]);
-        const directUpToDate = await this.dependencies.git.isCommitReachable(execution.owner, execution.repo, target.sourceBranch, targetSha, execution.tokens.token).catch(() => false);
-        const mode = (0, deployment_plan_policy_1.selectBackmergeMode)(operation.backmergeMode, capabilities.requiresStrictStatusChecks, directUpToDate, currentSourceSha === target.sourceSha);
-        if (mode.kind === "unsupported") {
-            return await this.block(execution, operation, "reconciliation", mode.reason, false);
-        }
-        if (mode.mode === "sync-branch") {
-            target = (0, deployment_plan_policy_1.buildReconciliationTarget)(operation, target.targetBranch, "sync-branch");
-            await this.dependencies.git.createOrVerifyBranch(execution.owner, execution.repo, target.syncBranch, targetSha, execution.tokens.token);
-            await this.dependencies.git.mergeCommitIntoBranch(execution.owner, execution.repo, target.syncBranch, targetSha, execution.tokens.token);
-            await this.dependencies.git.mergeCommitIntoBranch(execution.owner, execution.repo, target.syncBranch, target.sourceSha, execution.tokens.token);
-        }
-        const operationWithMode = replaceTarget(operation, index, target);
-        const pullRequest = await this.createOrReusePullRequest(execution, operationWithMode, "reconciliation", target);
-        if (pullRequest.state === "closed" && !pullRequest.merged) {
-            return await this.block(execution, operationWithMode, "reconciliation", `Reconciliation PR #${pullRequest.number} was closed without merge.`, true);
-        }
-        if (target.syncBranch) {
-            const [syncHead, sourceIncluded] = await Promise.all([
-                this.dependencies.git.getBranchSha(execution.owner, execution.repo, target.syncBranch, execution.tokens.token),
-                this.dependencies.git.isCommitReachable(execution.owner, execution.repo, target.syncBranch, target.sourceSha, execution.tokens.token),
-            ]);
-            if (pullRequest.headSha !== syncHead || !sourceIncluded) {
-                return await this.block(execution, operationWithMode, "reconciliation", `Reconciliation PR #${pullRequest.number} does not contain the verified sync-branch state.`, false);
-            }
-        }
-        else if (pullRequest.headSha !== target.sourceSha) {
-            return await this.block(execution, operationWithMode, "reconciliation", `Reconciliation PR #${pullRequest.number} source moved away from the stored release SHA.`, false);
-        }
-        const withPullRequest = replaceTarget(operationWithMode, index, { ...target, pullRequest: pullRequest.number });
-        execution.currentConfiguration.deploymentOrchestration = withPullRequest;
-        await this.persist(execution);
-        if (pullRequest.merged) {
-            return await this.advanceReconciliation(execution, withPullRequest, pullRequest);
-        }
-        const configured = await this.configureMergeBehavior(execution, withPullRequest, pullRequest, "reconciliation", targetRole);
-        if (configured.kind === "blocked")
-            return configured.result;
+    async invokeSelectedHandler(context) {
+        if (context.singleAction.isPrepareDeploymentAction)
+            return await this.preparePromotion.invoke(context);
+        if (context.singleAction.isContinueDeploymentAction)
+            return await this.continueDeployment.invoke(context);
+        if (context.singleAction.isPublishedDeploymentAction)
+            return await this.confirmPublication.invoke(context);
+        if (context.singleAction.isFailedDeploymentAction)
+            return await this.recordFailure.invoke(context);
         return undefined;
     }
-    async createOrReusePullRequest(execution, operation, phase, target) {
-        const headBranch = target?.syncBranch ?? target?.sourceBranch ?? operation.sourceBranch;
-        const baseBranch = target?.targetBranch ?? operation.productionBranch;
-        const query = {
-            owner: execution.owner,
-            repository: execution.repo,
-            operationId: operation.operationId,
-            phase,
-            issue: execution.singleAction.issue,
-            headBranch,
-            baseBranch,
-            token: execution.tokens.token,
-        };
-        const existing = await this.dependencies.pullRequests.findManagedPullRequests(query);
-        if (existing.length > 1)
-            throw new application_error_1.ApplicationError('provider.conflict', `Multiple managed ${phase} PRs match operation ${operation.operationId}.`);
-        if (existing[0])
-            return existing[0];
-        const context = presentationContext(execution);
-        const content = phase === "promotion"
-            ? (0, deployment_presentation_policy_1.renderPromotionPullRequest)(operation, context)
-            : (0, deployment_presentation_policy_1.renderReconciliationPullRequest)(operation, target, context);
-        return await this.dependencies.pullRequests.createManagedPullRequest({ ...query, ...content });
-    }
-    async configureMergeBehavior(execution, operation, pullRequest, category, targetRole) {
-        const inspection = await this.inspectMergeBehavior(execution, operation, pullRequest.baseBranch, targetRole, pullRequest.headSha, pullRequest.number);
-        if (inspection.kind === "blocked") {
-            return {
-                kind: "blocked",
-                result: await this.block(execution, operation, category, inspection.reason, true),
-            };
+    async handleFailure(context, error) {
+        if (error instanceof deployment_state_boundary_1.SupersededDeploymentInvocationError) {
+            context.currentConfiguration.deploymentOrchestration = error.current;
+            await this.runtime.publishDashboard(context, error.current).catch(() => undefined);
+            return [(0, deployment_orchestration_runtime_1.deploymentSuccess)(`Deployment invocation was superseded by revision ${error.current.revision}; no stale state was written.`)];
         }
-        const { capabilities, decision } = inspection;
-        const managed = { ...operation, selectedPrMode: decision.mode };
-        execution.currentConfiguration.deploymentOrchestration = managed;
-        await this.persist(execution);
-        if (decision.mode === "auto-merge") {
-            if (operation.prMode === "auto" && capabilities.immediatelyMergeable) {
-                await this.dependencies.pullRequests.mergePullRequest(execution.owner, execution.repo, pullRequest.number, execution.tokens.token);
-            }
-            else {
-                await this.dependencies.pullRequests.enableAutoMerge(execution.owner, execution.repo, pullRequest.nodeId, execution.tokens.token);
-            }
+        if ((0, deployment_orchestration_runtime_1.shouldRecordUnexpectedFailure)(error)) {
+            await this.runtime.recordUnexpectedFailure(context, error);
         }
-        else if (decision.mode === "merge-queue") {
-            const alreadyQueued = await this.dependencies.pullRequests.isPullRequestQueued(execution.owner, execution.repo, pullRequest.nodeId, execution.tokens.token);
-            if (!alreadyQueued) {
-                await this.dependencies.pullRequests.enqueuePullRequest(execution.owner, execution.repo, pullRequest.nodeId, pullRequest.headSha, execution.tokens.token);
-            }
-        }
-        await this.publishDashboard(execution, managed);
-        return { kind: "configured", operation: managed };
-    }
-    async inspectMergeBehavior(execution, operation, targetBranch, targetRole, candidateHeadSha, pullRequest) {
-        const capabilities = await this.dependencies.pullRequests.getTargetCapabilities(execution.owner, execution.repo, targetBranch, execution.tokens.token, { candidateHeadSha, ...(pullRequest === undefined ? {} : { pullRequest }) });
-        const decision = (0, deployment_plan_policy_1.selectPullRequestMode)(operation.prMode, capabilities);
-        if (decision.kind === "unsupported") {
-            if (capabilities.mergeQueueObservationProblems.length > 0) {
-                const readiness = (0, merge_queue_readiness_1.evaluateMergeQueueReadiness)({
-                    queueRequired: true,
-                    targetRole,
-                    targetBranch,
-                    producers: capabilities.mergeQueueProducers,
-                    problems: capabilities.mergeQueueObservationProblems,
-                    attestations: execution.deployment.mergeQueueCheckAttestations,
-                });
-                return { kind: "blocked", reason: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, execution.locale.issue) };
-            }
-            return { kind: "blocked", reason: decision.reason };
-        }
-        if (decision.mode === "merge-queue") {
-            const readiness = (0, merge_queue_readiness_1.evaluateMergeQueueReadiness)({
-                queueRequired: capabilities.mergeQueueRequired,
-                targetRole,
-                targetBranch,
-                producers: capabilities.mergeQueueProducers,
-                problems: capabilities.mergeQueueObservationProblems,
-                attestations: execution.deployment.mergeQueueCheckAttestations,
-            });
-            if (readiness.verdict !== "ready") {
-                return { kind: "blocked", reason: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, execution.locale.issue) };
-            }
-        }
-        return { kind: "ready", capabilities, decision };
-    }
-    async cleanup(execution, operation) {
-        const deleteSource = operation.cleanup === "all" || operation.cleanup === "source-only";
-        const deleteSync = operation.cleanup === "all" || operation.cleanup === "sync-only";
-        if (deleteSync) {
-            for (const target of operation.reconciliationTargets) {
-                if (target.syncBranch)
-                    await this.dependencies.git.deleteBranch(execution.owner, execution.repo, target.syncBranch, execution.tokens.token);
-            }
-        }
-        if (deleteSource)
-            await this.dependencies.git.deleteBranch(execution.owner, execution.repo, operation.sourceBranch, execution.tokens.token);
-    }
-    async projectDeploymentLabels(execution, operation) {
-        const labels = await this.dependencies.labels.getLabels(execution.owner, execution.repo, execution.singleAction.issue, execution.tokens.token);
-        const next = (0, deployment_lifecycle_policy_1.projectDeploymentLabels)(labels, operation, execution.labels);
-        if (next.join("\0") !== labels.join("\0")) {
-            await this.dependencies.labels.setLabels(execution.owner, execution.repo, execution.singleAction.issue, next, execution.tokens.token);
-        }
-    }
-    async block(execution, operation, category, message, retryable, semanticError) {
-        const blocked = (0, deployment_operation_1.blockDeploymentOperation)(operation, category, message, retryable);
-        execution.currentConfiguration.deploymentOrchestration = blocked;
-        await this.persist(execution);
-        await this.publishDashboard(execution, blocked);
-        await this.publishMilestone(execution, blocked, "reconciliation-blocked", `❌ Deployment blocked: ${blocked.lastFailure?.message}`);
-        return new result_1.Result({
-            id: TASK_ID,
-            success: false,
-            executed: true,
-            steps: [message],
-            errors: [semanticError ?? new application_error_1.ApplicationError('workflow.failed', message, { retryable })],
-        });
-    }
-    async persist(execution) {
-        const expected = this.checkpoints.get(execution);
-        const query = {
-            owner: execution.owner,
-            repository: execution.repo,
-            issue: execution.singleAction.issue,
-            token: execution.tokens.token,
-        };
-        const actual = await this.dependencies.state.load(query);
-        if (!sameCheckpoint(actual, expected)) {
-            throw new application_error_1.ApplicationError('workflow.stale', "Concurrent deployment state change detected; reload the launcher issue and retry.");
-        }
-        await this.dependencies.state.save({ ...query, state: execution.currentConfiguration });
-        const operation = execution.currentConfiguration.deploymentOrchestration;
-        this.checkpoints.set(execution, operation ? { operationId: operation.operationId, phase: operation.phase } : undefined);
-        if (operation)
-            await this.projectDeploymentLabels(execution, operation);
-    }
-    async publishDashboard(execution, operation) {
-        const marker = (0, deployment_presentation_policy_1.deploymentDashboardMarker)(operation.operationId, execution.singleAction.issue);
-        const body = (0, deployment_presentation_policy_1.renderDeploymentDashboard)(operation, presentationContext(execution));
-        const current = await this.dependencies.presentation.findDashboard(execution.owner, execution.repo, execution.singleAction.issue, marker, execution.tokens.token);
-        if (current)
-            await this.dependencies.presentation.updateDashboard(execution.owner, execution.repo, execution.singleAction.issue, current.id, body, execution.tokens.token);
-        else
-            await this.dependencies.presentation.createDashboard(execution.owner, execution.repo, execution.singleAction.issue, body, execution.tokens.token);
-    }
-    async publishMilestone(execution, operation, name, body) {
-        if (operation.commentMode !== "milestones")
-            return;
-        const marker = `<!-- copilot-deployment-milestone operation-id="${operation.operationId}" name="${name}" -->`;
-        await this.dependencies.presentation.publishMilestone(execution.owner, execution.repo, execution.singleAction.issue, marker, body, execution.tokens.token);
-    }
-    async recordUnexpectedFailure(execution, error) {
-        const operation = execution.currentConfiguration.deploymentOrchestration;
-        if (!operation || operation.phase === "completed" || operation.phase === "blocked")
-            return;
-        const message = (0, github_comment_publication_policy_1.sanitizePublishedError)(error instanceof Error ? error.message : String(error));
-        const category = operation.phase === "preparing" || operation.phase === "promotion_pr_pending"
-            ? "promotion"
-            : operation.phase === "promoted" || operation.phase === "publishing"
-                ? "publication"
-                : "reconciliation";
-        const blocked = (0, deployment_operation_1.blockDeploymentOperation)(operation, category, message, true);
-        execution.currentConfiguration.deploymentOrchestration = blocked;
-        try {
-            await this.persist(execution);
-            await this.publishDashboard(execution, blocked);
-        }
-        catch {
-            // Preserve the original provider failure returned by invoke.
-        }
+        return [new result_1.Result({
+                id: deployment_orchestration_runtime_1.DEPLOYMENT_ORCHESTRATION_TASK_ID,
+                success: false,
+                executed: true,
+                steps: ["Deployment orchestration is blocked. No unsafe transition was performed."],
+                errors: [(0, application_error_1.toApplicationError)(error, "workflow.failed", "Deployment orchestration failed.")],
+            })];
     }
 }
 exports.DeploymentOrchestrationUseCase = DeploymentOrchestrationUseCase;
-function requireOperation(execution) {
-    const operation = execution.currentConfiguration.deploymentOrchestration;
-    if (!operation)
-        throw new application_error_1.ApplicationError('workflow.invalid-event', "No durable deployment operation exists on the launcher issue.");
-    if (!execution.singleAction.operationId) {
-        throw new application_error_1.ApplicationError('validation.invalid-input', "single-action-operation-id is required for a durable deployment continuation.");
-    }
-    if (execution.singleAction.operationId && execution.singleAction.operationId !== operation.operationId) {
-        throw new application_error_1.ApplicationError('workflow.stale', `Deployment operation mismatch: expected ${operation.operationId}, received ${execution.singleAction.operationId}.`);
-    }
-    if ((execution.singleAction.isPublishedDeploymentAction || execution.singleAction.isFailedDeploymentAction)
-        && execution.singleAction.version !== operation.version) {
-        throw new application_error_1.ApplicationError('workflow.stale', `Deployment version mismatch: expected ${operation.version}, received ${execution.singleAction.version || "empty"}.`);
-    }
-    return operation;
-}
-function deploymentKind(execution) {
-    if (execution.currentConfiguration.hotfixBranch && !execution.currentConfiguration.releaseBranch)
-        return "hotfix";
-    if (execution.currentConfiguration.releaseBranch && !execution.currentConfiguration.hotfixBranch)
-        return "release";
-    if (execution.labels.isHotfix)
-        return "hotfix";
-    if (execution.labels.isRelease)
-        return "release";
-    throw new application_error_1.ApplicationError('validation.invalid-input', "The launcher issue does not identify exactly one release or hotfix source branch.");
-}
-function reconciliationTargetRole(operation, targetBranch) {
-    if (targetBranch === operation.productionBranch)
-        return "production";
-    if (targetBranch === operation.developmentBranch)
-        return "development";
-    return "active-release";
-}
-function presentationContext(execution) {
-    return {
-        owner: execution.owner,
-        repository: execution.repo,
-        issue: execution.singleAction.issue,
-        issueLocale: execution.locale.issue,
-        pullRequestLocale: execution.locale.pullRequest,
-        packageName: execution.owner === "vypdev" && execution.repo === "copilot" ? "@vypdev/copilot" : undefined,
-    };
-}
-function replaceTarget(operation, index, target) {
-    return {
-        ...operation,
-        reconciliationTargets: operation.reconciliationTargets.map((current, currentIndex) => currentIndex === index ? target : current),
-    };
-}
-function success(step) {
-    return new result_1.Result({ id: TASK_ID, success: true, executed: true, steps: [step] });
-}
-function blockedResult(operation, fallback) {
-    const message = operation.lastFailure?.message ?? fallback;
-    return new result_1.Result({
-        id: TASK_ID,
-        success: false,
-        executed: true,
-        steps: [message],
-        errors: [new application_error_1.ApplicationError('workflow.failed', message, { retryable: operation.lastFailure?.retryable ?? false })],
-    });
-}
-function sameCheckpoint(actual, expected) {
-    if (!actual || !expected)
-        return actual === undefined && expected === undefined;
-    return actual.operationId === expected.operationId && actual.phase === expected.phase;
-}
 
 
 /***/ }),
@@ -73373,38 +73814,311 @@ exports.DeploymentPresentationRepository = DeploymentPresentationRepository;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DeploymentStateRepository = void 0;
+exports.DeploymentStateRepositoryFactory = void 0;
+const deployment_state_fence_1 = __nccwpck_require__(72369);
 const config_1 = __nccwpck_require__(90450);
 const configuration_handler_1 = __nccwpck_require__(40188);
 const configuration_payload_policy_1 = __nccwpck_require__(58043);
-class DeploymentStateRepository {
+class DeploymentStateRepositoryFactory {
     constructor(issues) {
         this.issues = issues;
+    }
+    bind(binding) {
+        return new CredentialBoundDeploymentStateRepository(this.issues, binding);
+    }
+}
+exports.DeploymentStateRepositoryFactory = DeploymentStateRepositoryFactory;
+class CredentialBoundDeploymentStateRepository {
+    constructor(issues, binding) {
+        this.issues = issues;
+        this.binding = binding;
         this.block = new configuration_handler_1.ConfigurationHandler(issues);
     }
-    async load(query) {
-        const description = await this.issues.getDescription(query.owner, query.repository, query.issue, query.token);
-        const raw = this.block.getContent(description);
-        if (!raw)
-            return undefined;
-        return new config_1.Config((0, config_1.requireCurrentConfigurationPayload)(JSON.parse(raw))).deploymentOrchestration;
+    async load() {
+        const description = await this.getDescription();
+        return readStateFromDescription(this.block, description);
     }
     async save(command) {
-        const description = await this.issues.getDescription(command.owner, command.repository, command.issue, command.token);
+        const description = await this.getDescription();
+        const actual = readStateFromDescription(this.block, description);
+        const proposed = command.state.deploymentOrchestration;
+        const decision = (0, deployment_state_fence_1.decideDeploymentStateSave)(actual, command.expected, proposed);
+        if (decision.kind !== "write")
+            return decision;
         const stored = this.block.getContent(description);
         const payload = (0, configuration_payload_policy_1.buildConfigurationPayload)({ currentConfiguration: command.state }, stored);
         const updated = this.block.updateContent(description, payload);
-        if (updated === undefined)
-            throw new Error("Issue configuration markers are missing or inconsistent.");
-        await this.issues.updateDescription(command.owner, command.repository, command.issue, updated, command.token);
+        if (updated === undefined) {
+            return { kind: "invalid", reason: "Issue configuration markers are missing or inconsistent." };
+        }
+        await this.issues.updateDescription(this.binding.owner, this.binding.repository, this.binding.issue, updated, this.binding.token);
+        return { kind: "saved", operation: proposed };
+    }
+    async getDescription() {
+        return (await this.issues.getDescription(this.binding.owner, this.binding.repository, this.binding.issue, this.binding.token)) ?? "";
     }
 }
-exports.DeploymentStateRepository = DeploymentStateRepository;
+function readStateFromDescription(block, description) {
+    const raw = block.getContent(description);
+    if (raw === undefined)
+        return { kind: "absent" };
+    let payload;
+    try {
+        payload = JSON.parse(raw);
+    }
+    catch {
+        return { kind: "invalid", reason: "Issue configuration is not valid JSON." };
+    }
+    if (!isRecord(payload)) {
+        return { kind: "invalid", reason: "Issue configuration must be an object." };
+    }
+    if (payload.schemaVersion !== config_1.CONFIG_SCHEMA_VERSION) {
+        return {
+            kind: "unsupported",
+            stateVersion: `configuration-schema-${String(payload.schemaVersion)}`,
+        };
+    }
+    return (0, deployment_state_fence_1.readDeploymentOperationState)(payload.deploymentOrchestration);
+}
+function isRecord(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+}
 
 
 /***/ }),
 
-/***/ 22368:
+/***/ 85886:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GithubDeploymentGitRepository = void 0;
+const application_error_1 = __nccwpck_require__(75999);
+class GithubDeploymentGitRepository {
+    constructor(clientProvider) {
+        this.clientProvider = clientProvider;
+    }
+    async getBranchSha(owner, repository, branch, token) {
+        const { data } = await this.clientProvider.getClient(token).rest.git.getRef({
+            owner,
+            repo: repository,
+            ref: `heads/${branch}`,
+        });
+        return data.object.sha;
+    }
+    async getMergeBaseSha(owner, repository, base, head, token) {
+        const { data } = await this.clientProvider.getClient(token).rest.repos.compareCommits({
+            owner,
+            repo: repository,
+            base,
+            head,
+        });
+        const sha = data.merge_base_commit?.sha;
+        if (!sha)
+            throw new Error(`GitHub returned no merge base for ${base}...${head}.`);
+        return sha;
+    }
+    async isCommitReachable(owner, repository, branch, sha, token) {
+        const { data } = await this.clientProvider.getClient(token).rest.repos.compareCommits({
+            owner,
+            repo: repository,
+            base: sha,
+            head: branch,
+        });
+        return data.merge_base_commit?.sha === sha;
+    }
+    async createOrVerifyBranch(owner, repository, branch, sha, token) {
+        const client = this.clientProvider.getClient(token);
+        try {
+            const { data } = await client.rest.git.getRef({ owner, repo: repository, ref: `heads/${branch}` });
+            if (data.object.sha !== sha) {
+                const { data: comparison } = await client.rest.repos.compareCommits({
+                    owner,
+                    repo: repository,
+                    base: sha,
+                    head: branch,
+                });
+                if (comparison.merge_base_commit?.sha !== sha) {
+                    throw new Error(`Branch ${branch} already exists at a different SHA.`);
+                }
+            }
+        }
+        catch (error) {
+            if (!isNotFound(error))
+                throw error;
+            await client.rest.git.createRef({ owner, repo: repository, ref: `refs/heads/${branch}`, sha });
+        }
+    }
+    async mergeCommitIntoBranch(owner, repository, branch, sourceSha, token) {
+        const client = this.clientProvider.getClient(token);
+        const { data: comparison } = await client.rest.repos.compareCommits({
+            owner,
+            repo: repository,
+            base: sourceSha,
+            head: branch,
+        });
+        if (comparison.merge_base_commit?.sha === sourceSha) {
+            return await this.getBranchSha(owner, repository, branch, token);
+        }
+        const { data } = await client.rest.repos.merge({
+            owner,
+            repo: repository,
+            base: branch,
+            head: sourceSha,
+            commit_message: `chore(release): reconcile ${sourceSha.slice(0, 7)} into ${branch}`,
+        });
+        if (!data.merged || !data.sha)
+            throw new Error(data.message ?? `Could not reconcile ${sourceSha} into ${branch}.`);
+        return data.sha;
+    }
+    async deleteBranch(owner, repository, branch, expectedSha, token) {
+        const client = this.clientProvider.getClient(token);
+        try {
+            const { data } = await client.rest.git.getRef({ owner, repo: repository, ref: `heads/${branch}` });
+            if (data.object.sha !== expectedSha) {
+                throw new application_error_1.ApplicationError("provider.conflict", `Branch ${branch} moved to ${data.object.sha}; refusing cleanup expected at ${expectedSha}.`);
+            }
+            await client.rest.git.deleteRef({ owner, repo: repository, ref: `heads/${branch}` });
+        }
+        catch (error) {
+            if (!isNotFound(error))
+                throw error;
+        }
+    }
+    async listBranches(owner, repository, prefix, token) {
+        const client = this.clientProvider.getClient(token);
+        const branches = await client.paginate(client.rest.repos.listBranches, {
+            owner,
+            repo: repository,
+            per_page: 100,
+        });
+        return branches.map(({ name }) => name).filter((name) => name.startsWith(`${prefix}/`));
+    }
+}
+exports.GithubDeploymentGitRepository = GithubDeploymentGitRepository;
+function isNotFound(error) {
+    return typeof error === "object"
+        && error !== null
+        && "status" in error
+        && error.status === 404;
+}
+
+
+/***/ }),
+
+/***/ 96483:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.GithubManagedPullRequestRepository = void 0;
+const managed_pull_request_1 = __nccwpck_require__(95914);
+class GithubManagedPullRequestRepository {
+    constructor(clientProvider) {
+        this.clientProvider = clientProvider;
+    }
+    async findManagedPullRequests(query) {
+        const client = this.clientProvider.getClient(query.token);
+        const pullRequests = await client.paginate(client.rest.pulls.list, {
+            owner: query.owner,
+            repo: query.repository,
+            state: "all",
+            head: `${query.owner}:${query.headBranch}`,
+            base: query.baseBranch,
+            per_page: 100,
+        });
+        return pullRequests
+            .filter((pullRequest) => {
+            const marker = (0, managed_pull_request_1.parseManagedPullRequestMarker)(pullRequest.body);
+            return marker?.operationId === query.operationId
+                && marker.phase === query.phase
+                && marker.issue === query.issue;
+        })
+            .map((pullRequest) => mapPullRequest(pullRequest, query.owner, query.repository));
+    }
+    async createManagedPullRequest(command) {
+        const { data } = await this.clientProvider.getClient(command.token).rest.pulls.create({
+            owner: command.owner,
+            repo: command.repository,
+            head: command.headBranch,
+            base: command.baseBranch,
+            title: command.title,
+            body: command.body,
+            maintainer_can_modify: false,
+        });
+        return mapPullRequest(data, command.owner, command.repository);
+    }
+    async getPullRequest(owner, repository, pullRequest, token) {
+        const { data } = await this.clientProvider.getClient(token).rest.pulls.get({
+            owner,
+            repo: repository,
+            pull_number: pullRequest,
+        });
+        return mapPullRequest(data, owner, repository);
+    }
+    async enableAutoMerge(owner, repository, pullRequestNodeId, token) {
+        await this.clientProvider.getClient(token).graphql(`mutation EnableDeploymentAutoMerge($pullRequestId: ID!) {
+        enablePullRequestAutoMerge(input: {pullRequestId: $pullRequestId, mergeMethod: MERGE}) {
+          pullRequest { id }
+        }
+      }`, { pullRequestId: pullRequestNodeId, owner, repository });
+    }
+    async isPullRequestQueued(owner, repository, pullRequestNodeId, token) {
+        const response = await this.clientProvider.getClient(token).graphql(`query DeploymentPullRequestQueue($pullRequestId: ID!) {
+        node(id: $pullRequestId) {
+          ... on PullRequest { mergeQueueEntry { id } }
+        }
+      }`, { pullRequestId: pullRequestNodeId });
+        if (!response.node || !("mergeQueueEntry" in response.node)) {
+            throw new Error("GitHub returned no authoritative merge-queue membership for the pull request.");
+        }
+        return Boolean(response.node.mergeQueueEntry?.id);
+    }
+    async enqueuePullRequest(owner, repository, pullRequestNodeId, expectedHeadSha, token) {
+        const response = await this.clientProvider.getClient(token).graphql(`mutation EnqueueDeploymentPullRequest($pullRequestId: ID!, $expectedHeadOid: GitObjectID!) {
+        enqueuePullRequest(input: {pullRequestId: $pullRequestId, expectedHeadOid: $expectedHeadOid}) {
+          mergeQueueEntry { id }
+        }
+      }`, { pullRequestId: pullRequestNodeId, expectedHeadOid: expectedHeadSha, owner, repository });
+        if (!response.enqueuePullRequest?.mergeQueueEntry?.id) {
+            throw new Error("GitHub did not confirm that the pull request entered the merge queue.");
+        }
+    }
+    async mergePullRequest(owner, repository, pullRequest, token) {
+        const { data } = await this.clientProvider.getClient(token).rest.pulls.merge({
+            owner,
+            repo: repository,
+            pull_number: pullRequest,
+            merge_method: "merge",
+        });
+        if (!data.merged || !data.sha)
+            throw new Error(data.message ?? `Pull request #${pullRequest} was not merged.`);
+        return data.sha;
+    }
+}
+exports.GithubManagedPullRequestRepository = GithubManagedPullRequestRepository;
+function mapPullRequest(value, owner, repository) {
+    return {
+        number: value.number,
+        nodeId: value.node_id,
+        body: value.body ?? "",
+        headBranch: value.head.ref,
+        headSha: value.head.sha,
+        baseBranch: value.base.ref,
+        state: value.state === "closed" ? "closed" : "open",
+        merged: value.merged === true,
+        autoMergeEnabled: value.auto_merge !== null && value.auto_merge !== undefined,
+        mergeCommitSha: value.merge_commit_sha ?? undefined,
+        repositoryFullName: value.base.repo?.full_name ?? value.head.repo?.full_name ?? `${owner}/${repository}`,
+    };
+}
+
+
+/***/ }),
+
+/***/ 55527:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -73443,53 +74157,12 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.GithubDeploymentRepository = void 0;
+exports.GithubTargetMergeCapabilitiesInspector = void 0;
 const yaml = __importStar(__nccwpck_require__(783));
-const managed_pull_request_1 = __nccwpck_require__(95914);
 const sensitive_text_1 = __nccwpck_require__(47122);
-class GithubDeploymentRepository {
+class GithubTargetMergeCapabilitiesInspector {
     constructor(clientProvider) {
         this.clientProvider = clientProvider;
-    }
-    async findManagedPullRequests(query) {
-        const client = this.clientProvider.getClient(query.token);
-        const pullRequests = await client.paginate(client.rest.pulls.list, {
-            owner: query.owner,
-            repo: query.repository,
-            state: "all",
-            head: `${query.owner}:${query.headBranch}`,
-            base: query.baseBranch,
-            per_page: 100,
-        });
-        return pullRequests
-            .filter((pullRequest) => {
-            const marker = (0, managed_pull_request_1.parseManagedPullRequestMarker)(pullRequest.body);
-            return marker?.operationId === query.operationId
-                && marker.phase === query.phase
-                && marker.issue === query.issue;
-        })
-            .map((pullRequest) => mapPullRequest(pullRequest, query.owner, query.repository));
-    }
-    async createManagedPullRequest(command) {
-        const client = this.clientProvider.getClient(command.token);
-        const { data } = await client.rest.pulls.create({
-            owner: command.owner,
-            repo: command.repository,
-            head: command.headBranch,
-            base: command.baseBranch,
-            title: command.title,
-            body: command.body,
-            maintainer_can_modify: false,
-        });
-        return mapPullRequest(data, command.owner, command.repository);
-    }
-    async getPullRequest(owner, repository, pullRequest, token) {
-        const { data } = await this.clientProvider.getClient(token).rest.pulls.get({
-            owner,
-            repo: repository,
-            pull_number: pullRequest,
-        });
-        return mapPullRequest(data, owner, repository);
     }
     async getTargetCapabilities(owner, repository, targetBranch, token, options = {}) {
         const client = this.clientProvider.getClient(token);
@@ -73534,122 +74207,8 @@ class GithubDeploymentRepository {
             mergeQueueObservationProblems: [...problems, ...producerInspection.problems],
         };
     }
-    async enableAutoMerge(owner, repository, pullRequestNodeId, token) {
-        await this.clientProvider.getClient(token).graphql(`mutation EnableDeploymentAutoMerge($pullRequestId: ID!) {
-        enablePullRequestAutoMerge(input: {pullRequestId: $pullRequestId, mergeMethod: MERGE}) {
-          pullRequest { id }
-        }
-      }`, { pullRequestId: pullRequestNodeId, owner, repository });
-    }
-    async isPullRequestQueued(owner, repository, pullRequestNodeId, token) {
-        const response = await this.clientProvider.getClient(token).graphql(`query DeploymentPullRequestQueue($pullRequestId: ID!) {
-        node(id: $pullRequestId) {
-          ... on PullRequest { mergeQueueEntry { id } }
-        }
-      }`, { pullRequestId: pullRequestNodeId });
-        if (!response.node || !("mergeQueueEntry" in response.node)) {
-            throw new Error("GitHub returned no authoritative merge-queue membership for the pull request.");
-        }
-        return Boolean(response.node.mergeQueueEntry?.id);
-    }
-    async enqueuePullRequest(owner, repository, pullRequestNodeId, expectedHeadSha, token) {
-        const response = await this.clientProvider.getClient(token).graphql(`mutation EnqueueDeploymentPullRequest($pullRequestId: ID!, $expectedHeadOid: GitObjectID!) {
-        enqueuePullRequest(input: {pullRequestId: $pullRequestId, expectedHeadOid: $expectedHeadOid}) {
-          mergeQueueEntry { id }
-        }
-      }`, { pullRequestId: pullRequestNodeId, expectedHeadOid: expectedHeadSha, owner, repository });
-        if (!response.enqueuePullRequest?.mergeQueueEntry?.id) {
-            throw new Error("GitHub did not confirm that the pull request entered the merge queue.");
-        }
-    }
-    async mergePullRequest(owner, repository, pullRequest, token) {
-        const { data } = await this.clientProvider.getClient(token).rest.pulls.merge({
-            owner,
-            repo: repository,
-            pull_number: pullRequest,
-            merge_method: "merge",
-        });
-        if (!data.merged || !data.sha)
-            throw new Error(data.message ?? `Pull request #${pullRequest} was not merged.`);
-        return data.sha;
-    }
-    async getBranchSha(owner, repository, branch, token) {
-        const { data } = await this.clientProvider.getClient(token).rest.git.getRef({ owner, repo: repository, ref: `heads/${branch}` });
-        return data.object.sha;
-    }
-    async getMergeBaseSha(owner, repository, base, head, token) {
-        const { data } = await this.clientProvider.getClient(token).rest.repos.compareCommits({ owner, repo: repository, base, head });
-        const sha = data.merge_base_commit?.sha;
-        if (!sha)
-            throw new Error(`GitHub returned no merge base for ${base}...${head}.`);
-        return sha;
-    }
-    async isCommitReachable(owner, repository, branch, sha, token) {
-        const { data } = await this.clientProvider.getClient(token).rest.repos.compareCommits({ owner, repo: repository, base: sha, head: branch });
-        return data.merge_base_commit?.sha === sha;
-    }
-    async createOrVerifyBranch(owner, repository, branch, sha, token) {
-        const client = this.clientProvider.getClient(token);
-        try {
-            const { data } = await client.rest.git.getRef({ owner, repo: repository, ref: `heads/${branch}` });
-            if (data.object.sha !== sha) {
-                const { data: comparison } = await client.rest.repos.compareCommits({ owner, repo: repository, base: sha, head: branch });
-                if (comparison.merge_base_commit?.sha !== sha)
-                    throw new Error(`Branch ${branch} already exists at a different SHA.`);
-            }
-        }
-        catch (error) {
-            if (!isNotFound(error))
-                throw error;
-            await client.rest.git.createRef({ owner, repo: repository, ref: `refs/heads/${branch}`, sha });
-        }
-    }
-    async mergeCommitIntoBranch(owner, repository, branch, sourceSha, token) {
-        const client = this.clientProvider.getClient(token);
-        const { data: comparison } = await client.rest.repos.compareCommits({ owner, repo: repository, base: sourceSha, head: branch });
-        if (comparison.merge_base_commit?.sha === sourceSha)
-            return await this.getBranchSha(owner, repository, branch, token);
-        const { data } = await client.rest.repos.merge({
-            owner,
-            repo: repository,
-            base: branch,
-            head: sourceSha,
-            commit_message: `chore(release): reconcile ${sourceSha.slice(0, 7)} into ${branch}`,
-        });
-        if (!data.merged || !data.sha)
-            throw new Error(data.message ?? `Could not reconcile ${sourceSha} into ${branch}.`);
-        return data.sha;
-    }
-    async deleteBranch(owner, repository, branch, token) {
-        try {
-            await this.clientProvider.getClient(token).rest.git.deleteRef({ owner, repo: repository, ref: `heads/${branch}` });
-        }
-        catch (error) {
-            if (!isNotFound(error))
-                throw error;
-        }
-    }
-    async listBranches(owner, repository, prefix, token) {
-        const client = this.clientProvider.getClient(token);
-        const branches = await client.paginate(client.rest.repos.listBranches, { owner, repo: repository, per_page: 100 });
-        return branches.map(({ name }) => name).filter((name) => name.startsWith(`${prefix}/`));
-    }
 }
-exports.GithubDeploymentRepository = GithubDeploymentRepository;
-function mapPullRequest(value, owner, repository) {
-    return {
-        number: value.number,
-        nodeId: value.node_id,
-        body: value.body ?? "",
-        headBranch: value.head.ref,
-        headSha: value.head.sha,
-        baseBranch: value.base.ref,
-        state: value.state === "closed" ? "closed" : "open",
-        merged: value.merged === true,
-        mergeCommitSha: value.merge_commit_sha ?? undefined,
-        repositoryFullName: value.base.repo?.full_name ?? value.head.repo?.full_name ?? `${owner}/${repository}`,
-    };
-}
+exports.GithubTargetMergeCapabilitiesInspector = GithubTargetMergeCapabilitiesInspector;
 async function observeClassicProtection(client, owner, repository, branch) {
     try {
         const { data } = await client.rest.repos.getBranchProtection({ owner, repo: repository, branch });
@@ -73720,147 +74279,167 @@ async function observeClassicMergeQueue(client, owner, repository, branch) {
     }
 }
 function normalizeEffectiveRules(protection, rules) {
-    const checks = new Map();
-    const workflows = new Map();
-    const problems = [];
-    const recordInvalidRule = (kind, area = "effective-rules") => {
-        if (problems.some((problem) => problem.area === area && problem.message.includes(kind)))
+    return new EffectiveRulesNormalizer().normalize(protection, rules);
+}
+class EffectiveRulesNormalizer {
+    constructor() {
+        this.checks = new Map();
+        this.workflows = new Map();
+        this.problems = [];
+        this.mergeQueueRequired = false;
+        this.requiresStrictStatusChecks = false;
+    }
+    normalize(protection, rules) {
+        this.normalizeClassicProtection(protection?.required_status_checks);
+        for (const rule of rules)
+            this.normalizeEffectiveRule(rule);
+        return {
+            mergeQueueRequired: this.mergeQueueRequired,
+            requiresStrictStatusChecks: this.requiresStrictStatusChecks,
+            requiredChecks: [...this.checks.values()],
+            requiredWorkflows: [...this.workflows.values()],
+            problems: this.problems,
+        };
+    }
+    normalizeClassicProtection(value) {
+        if (value === undefined || value === null)
             return;
-        problems.push({
-            area,
-            message: `GitHub returned an invalid ${kind}, so readiness cannot be proven.`,
-        });
-    };
-    const addCheck = (context, integrationId, source) => {
+        if (!isRecord(value)) {
+            this.recordInvalid("required status check", "classic-protection");
+            return;
+        }
+        this.normalizeStrictFlag(value.strict, "classic-protection");
+        this.normalizeClassicChecks(value.checks);
+        this.normalizeClassicContexts(value.contexts);
+    }
+    normalizeClassicChecks(value) {
+        if (value === undefined)
+            return;
+        if (!Array.isArray(value)) {
+            this.recordInvalid("required status check", "classic-protection");
+            return;
+        }
+        for (const rawCheck of value) {
+            if (!isRecord(rawCheck)) {
+                this.recordInvalid("required status check", "classic-protection");
+                continue;
+            }
+            this.addCheck(rawCheck.context, rawCheck.app_id, "classic-protection");
+        }
+    }
+    normalizeClassicContexts(value) {
+        if (value === undefined)
+            return;
+        if (!Array.isArray(value)) {
+            this.recordInvalid("required status check", "classic-protection");
+            return;
+        }
+        for (const context of value) {
+            if (!this.hasCheckContext(context))
+                this.addCheck(context, "any", "classic-protection");
+        }
+    }
+    normalizeEffectiveRule(value) {
+        if (!isRecord(value) || typeof value.type !== "string" || value.type.length === 0) {
+            this.recordInvalid("effective rule entry");
+            return;
+        }
+        if (value.type === "merge_queue")
+            this.mergeQueueRequired = true;
+        if (value.type === "required_status_checks")
+            this.normalizeRequiredChecks(value.parameters);
+        if (value.type === "workflows")
+            this.normalizeRequiredWorkflows(value.parameters);
+    }
+    normalizeRequiredChecks(parameters) {
+        const values = isRecord(parameters) ? parameters : {};
+        this.normalizeStrictFlag(values.strict_required_status_checks_policy, "effective-rules");
+        const checks = values.required_status_checks;
+        if (!Array.isArray(checks)) {
+            this.recordInvalid("required status check");
+            return;
+        }
+        for (const rawCheck of checks) {
+            if (!isRecord(rawCheck)) {
+                this.recordInvalid("required status check");
+                continue;
+            }
+            this.addCheck(rawCheck.context, rawCheck.integration_id, "effective-rules");
+        }
+    }
+    normalizeRequiredWorkflows(parameters) {
+        const workflows = isRecord(parameters) ? parameters.workflows : undefined;
+        if (!Array.isArray(workflows)) {
+            this.recordInvalid("required workflow");
+            return;
+        }
+        for (const workflow of workflows)
+            this.addWorkflow(workflow);
+    }
+    addWorkflow(value) {
+        if (!isRecord(value) || !isValidRequiredWorkflow(value)) {
+            this.recordInvalid("required workflow");
+            return;
+        }
+        const workflow = {
+            path: value.path,
+            repositoryId: value.repository_id,
+            ...(typeof value.ref === "string" ? { ref: value.ref } : {}),
+            ...(typeof value.sha === "string" ? { sha: value.sha } : {}),
+        };
+        this.workflows.set(`${workflow.repositoryId}\0${workflow.path}\0${workflow.ref ?? ""}\0${workflow.sha ?? ""}`, workflow);
+    }
+    addCheck(context, integrationId, area) {
         if (typeof context !== "string" || !context.trim()) {
-            recordInvalidRule("required status check", source === "classic" ? "classic-protection" : "effective-rules");
+            this.recordInvalid("required status check", area);
             return;
         }
-        if (integrationId !== undefined
-            && integrationId !== null
-            && integrationId !== "any"
-            && (typeof integrationId !== "number" || !Number.isSafeInteger(integrationId) || integrationId <= 0)) {
-            recordInvalidRule("required status check", source === "classic" ? "classic-protection" : "effective-rules");
-        }
-        const normalizedId = typeof integrationId === "number" && Number.isSafeInteger(integrationId) && integrationId > 0
+        if (!isValidIntegrationId(integrationId))
+            this.recordInvalid("required status check", area);
+        const normalizedId = typeof integrationId === "number"
+            && Number.isSafeInteger(integrationId)
+            && integrationId > 0
             ? integrationId
             : "any";
         const check = { context: context.trim(), integrationId: normalizedId };
-        checks.set(`${check.context}\0${check.integrationId}`, check);
-    };
-    const classicStatusChecks = protection?.required_status_checks;
-    if (classicStatusChecks !== undefined && classicStatusChecks !== null
-        && (typeof classicStatusChecks !== "object" || Array.isArray(classicStatusChecks))) {
-        recordInvalidRule("required status check", "classic-protection");
+        this.checks.set(`${check.context}\0${check.integrationId}`, check);
     }
-    const classicChecks = classicStatusChecks && typeof classicStatusChecks === "object"
-        ? classicStatusChecks.checks
-        : undefined;
-    if (classicChecks !== undefined && !Array.isArray(classicChecks)) {
-        recordInvalidRule("required status check", "classic-protection");
-    }
-    for (const rawCheck of Array.isArray(classicChecks) ? classicChecks : []) {
-        if (!rawCheck || typeof rawCheck !== "object" || Array.isArray(rawCheck)) {
-            recordInvalidRule("required status check", "classic-protection");
-            continue;
-        }
-        const check = rawCheck;
-        addCheck(check.context, check.app_id, "classic");
-    }
-    const classicContexts = classicStatusChecks && typeof classicStatusChecks === "object"
-        ? classicStatusChecks.contexts
-        : undefined;
-    if (classicContexts !== undefined && !Array.isArray(classicContexts)) {
-        recordInvalidRule("required status check", "classic-protection");
-    }
-    for (const context of Array.isArray(classicContexts) ? classicContexts : []) {
-        if (![...checks.values()].some((check) => check.context === context))
-            addCheck(context, "any", "classic");
-    }
-    let strict = classicStatusChecks !== null
-        && typeof classicStatusChecks === "object"
-        && !Array.isArray(classicStatusChecks)
-        && classicStatusChecks.strict === true;
-    if (classicStatusChecks !== null
-        && typeof classicStatusChecks === "object"
-        && !Array.isArray(classicStatusChecks)
-        && classicStatusChecks.strict !== undefined
-        && typeof classicStatusChecks.strict !== "boolean") {
-        recordInvalidRule("required status check", "classic-protection");
-    }
-    let mergeQueueRequired = false;
-    for (const rawRule of rules) {
-        if (!rawRule || typeof rawRule !== "object" || Array.isArray(rawRule)) {
-            recordInvalidRule("effective rule entry");
-            continue;
-        }
-        const rule = rawRule;
-        if (typeof rule.type !== "string" || !rule.type) {
-            recordInvalidRule("effective rule entry");
-            continue;
-        }
-        if (rule.type === "merge_queue")
-            mergeQueueRequired = true;
-        if (rule.type === "required_status_checks") {
-            strict || (strict = rule.parameters?.strict_required_status_checks_policy === true);
-            if (rule.parameters?.strict_required_status_checks_policy !== undefined
-                && typeof rule.parameters.strict_required_status_checks_policy !== "boolean") {
-                recordInvalidRule("required status check");
-            }
-            const requiredChecks = rule.parameters?.required_status_checks;
-            if (!Array.isArray(requiredChecks)) {
-                recordInvalidRule("required status check");
-            }
-            else {
-                for (const rawCheck of requiredChecks) {
-                    if (!rawCheck || typeof rawCheck !== "object" || Array.isArray(rawCheck)) {
-                        recordInvalidRule("required status check");
-                        continue;
-                    }
-                    const check = rawCheck;
-                    addCheck(check.context, check.integration_id, "ruleset");
-                }
-            }
-        }
-        if (rule.type === "workflows") {
-            const requiredWorkflows = rule.parameters?.workflows;
-            if (!Array.isArray(requiredWorkflows)) {
-                recordInvalidRule("required workflow");
-                continue;
-            }
-            for (const rawWorkflow of requiredWorkflows) {
-                if (!rawWorkflow || typeof rawWorkflow !== "object" || Array.isArray(rawWorkflow)) {
-                    recordInvalidRule("required workflow");
-                    continue;
-                }
-                const workflow = rawWorkflow;
-                if (typeof workflow.path !== "string"
-                    || !workflow.path.trim()
-                    || typeof workflow.repository_id !== "number"
-                    || !Number.isSafeInteger(workflow.repository_id)
-                    || workflow.repository_id <= 0
-                    || (workflow.ref !== undefined && (typeof workflow.ref !== "string" || !workflow.ref.trim()))
-                    || (workflow.sha !== undefined && (typeof workflow.sha !== "string" || !/^[a-f0-9]{40}$/i.test(workflow.sha)))) {
-                    recordInvalidRule("required workflow");
-                    continue;
-                }
-                const normalized = {
-                    path: workflow.path,
-                    repositoryId: workflow.repository_id,
-                    ...(typeof workflow.ref === "string" ? { ref: workflow.ref } : {}),
-                    ...(typeof workflow.sha === "string" ? { sha: workflow.sha } : {}),
-                };
-                workflows.set(`${normalized.repositoryId}\0${normalized.path}\0${normalized.ref ?? ""}\0${normalized.sha ?? ""}`, normalized);
-            }
+    normalizeStrictFlag(value, area) {
+        if (value === true)
+            this.requiresStrictStatusChecks = true;
+        if (value !== undefined && typeof value !== "boolean") {
+            this.recordInvalid("required status check", area);
         }
     }
-    return {
-        mergeQueueRequired,
-        requiresStrictStatusChecks: strict,
-        requiredChecks: [...checks.values()],
-        requiredWorkflows: [...workflows.values()],
-        problems,
-    };
+    hasCheckContext(value) {
+        return [...this.checks.values()].some((check) => check.context === value);
+    }
+    recordInvalid(kind, area = "effective-rules") {
+        if (this.problems.some((problem) => problem.area === area && problem.message.includes(kind)))
+            return;
+        this.problems.push({
+            area,
+            message: `GitHub returned an invalid ${kind}, so readiness cannot be proven.`,
+        });
+    }
+}
+function isRecord(value) {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function isValidIntegrationId(value) {
+    return value === undefined
+        || value === null
+        || value === "any"
+        || (typeof value === "number" && Number.isSafeInteger(value) && value > 0);
+}
+function isValidRequiredWorkflow(value) {
+    return typeof value.path === "string"
+        && value.path.trim().length > 0
+        && typeof value.repository_id === "number"
+        && Number.isSafeInteger(value.repository_id)
+        && value.repository_id > 0
+        && (value.ref === undefined || (typeof value.ref === "string" && value.ref.trim().length > 0))
+        && (value.sha === undefined || (typeof value.sha === "string" && /^[a-f0-9]{40}$/i.test(value.sha)));
 }
 async function inspectMergeQueueProducers(client, owner, repository, repositoryId, targetBranch, candidateHeadSha, requiredChecks, requiredWorkflows) {
     let githubActionsAppId;
@@ -73968,29 +74547,44 @@ async function readRepositoryWorkflowSnapshot(client, owner, repository, ref) {
     const contracts = [];
     const parseFailures = [];
     for (const entry of entries) {
-        if (entry.type !== "blob"
-            || typeof entry.name !== "string"
-            || !/\.ya?ml$/i.test(entry.name)
-            || entry.object?.isBinary
-            || typeof entry.object?.text !== "string")
-            continue;
-        const actualBytes = new TextEncoder().encode(entry.object.text).byteLength;
-        if (typeof entry.object.byteSize !== "number"
-            || !Number.isSafeInteger(entry.object.byteSize)
-            || entry.object.byteSize < 0
-            || entry.object.byteSize > 1000000
-            || actualBytes > 1000000) {
-            parseFailures.push(entry.name);
-            continue;
-        }
-        try {
-            contracts.push(parseWorkflowContract(`.github/workflows/${entry.name}`, entry.object.text));
-        }
-        catch {
-            parseFailures.push(entry.name);
-        }
+        const observation = inspectWorkflowTreeEntry(entry);
+        if (observation.kind === "contract")
+            contracts.push(observation.contract);
+        if (observation.kind === "failure")
+            parseFailures.push(observation.name);
     }
     return { ref, contracts, parseFailures };
+}
+function inspectWorkflowTreeEntry(entry) {
+    if (!isInspectableWorkflowEntry(entry))
+        return { kind: "ignored" };
+    const actualBytes = new TextEncoder().encode(entry.object.text).byteLength;
+    if (!isValidWorkflowSize(entry.object.byteSize, actualBytes)) {
+        return { kind: "failure", name: entry.name };
+    }
+    try {
+        return {
+            kind: "contract",
+            contract: parseWorkflowContract(`.github/workflows/${entry.name}`, entry.object.text),
+        };
+    }
+    catch {
+        return { kind: "failure", name: entry.name };
+    }
+}
+function isInspectableWorkflowEntry(entry) {
+    return entry.type === "blob"
+        && typeof entry.name === "string"
+        && /\.ya?ml$/i.test(entry.name)
+        && entry.object?.isBinary !== true
+        && typeof entry.object?.text === "string";
+}
+function isValidWorkflowSize(size, actualBytes) {
+    return typeof size === "number"
+        && Number.isSafeInteger(size)
+        && size >= 0
+        && size <= 1000000
+        && actualBytes <= 1000000;
 }
 async function inspectRequiredWorkflow(client, owner, repository, repositoryId, targetBranch, workflow) {
     const name = `${workflow.path} (repository ${workflow.repositoryId})`;
@@ -74037,18 +74631,11 @@ async function inspectRequiredWorkflow(client, owner, repository, repositoryId, 
     }
 }
 function decodeWorkflowContent(data) {
-    if (!data || typeof data !== "object" || Array.isArray(data))
-        throw new Error("GitHub did not return one workflow file.");
-    const file = data;
-    if (file.encoding !== "base64" || typeof file.content !== "string")
-        throw new Error("Workflow content is unavailable.");
-    if (typeof file.size !== "number" || !Number.isSafeInteger(file.size) || file.size < 0) {
-        throw new Error("Workflow size metadata is unavailable.");
-    }
+    const file = requireEncodedWorkflowFile(data);
     if (file.size > 1000000)
         throw new Error("Workflow file exceeds the 1 MB inspection limit.");
     const encoded = file.content.replace(/\s/g, "");
-    if (encoded.length > 1400000 || encoded.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(encoded)) {
+    if (!isBoundedBase64(encoded)) {
         throw new Error("Workflow content is not valid bounded base64.");
     }
     const decoded = Buffer.from(encoded, "base64");
@@ -74056,8 +74643,27 @@ function decodeWorkflowContent(data) {
         throw new Error("Workflow file exceeds the 1 MB inspection limit.");
     if (decoded.byteLength !== file.size)
         throw new Error("Workflow size metadata does not match its content.");
+    return decodeUtf8(decoded);
+}
+function requireEncodedWorkflowFile(data) {
+    if (!isRecord(data))
+        throw new Error("GitHub did not return one workflow file.");
+    if (data.encoding !== "base64" || typeof data.content !== "string") {
+        throw new Error("Workflow content is unavailable.");
+    }
+    if (typeof data.size !== "number" || !Number.isSafeInteger(data.size) || data.size < 0) {
+        throw new Error("Workflow size metadata is unavailable.");
+    }
+    return { content: data.content, size: data.size };
+}
+function isBoundedBase64(value) {
+    return value.length <= 1400000
+        && value.length % 4 === 0
+        && /^[A-Za-z0-9+/]*={0,2}$/.test(value);
+}
+function decodeUtf8(value) {
     try {
-        return new TextDecoder("utf-8", { fatal: true }).decode(decoded);
+        return new TextDecoder("utf-8", { fatal: true }).decode(value);
     }
     catch {
         throw new Error("Workflow content is not valid UTF-8.");
@@ -74065,37 +74671,26 @@ function decodeWorkflowContent(data) {
 }
 function parseWorkflowContract(path, content) {
     const parsed = yaml.load(content, { schema: yaml.JSON_SCHEMA });
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+    if (!isRecord(parsed))
         throw new Error("Workflow YAML must be an object.");
-    const workflow = parsed;
-    const jobs = workflow.jobs && typeof workflow.jobs === "object" && !Array.isArray(workflow.jobs)
-        ? workflow.jobs
-        : {};
-    const jobNames = [];
-    for (const [jobId, value] of Object.entries(jobs)) {
-        if (!value || typeof value !== "object" || Array.isArray(value))
-            continue;
-        const job = value;
-        if (typeof job.uses === "string")
-            continue;
-        if (job.strategy
-            && typeof job.strategy === "object"
-            && !Array.isArray(job.strategy)
-            && "matrix" in job.strategy)
-            continue;
-        if (typeof job.name === "string") {
-            if (!job.name.includes("${{"))
-                jobNames.push(job.name);
-        }
-        else {
-            jobNames.push(jobId);
-        }
-    }
+    const jobs = isRecord(parsed.jobs) ? parsed.jobs : {};
+    const jobNames = Object.entries(jobs)
+        .map(([jobId, value]) => staticWorkflowJobName(jobId, value))
+        .filter((name) => name !== undefined);
     return {
         path,
         jobNames,
-        mergeGroupSupported: hasMergeGroupTrigger(workflow.on),
+        mergeGroupSupported: hasMergeGroupTrigger(parsed.on),
     };
+}
+function staticWorkflowJobName(jobId, value) {
+    if (!isRecord(value) || typeof value.uses === "string")
+        return undefined;
+    if (isRecord(value.strategy) && "matrix" in value.strategy)
+        return undefined;
+    if (typeof value.name !== "string")
+        return jobId;
+    return value.name.includes("${{") ? undefined : value.name;
 }
 function hasMergeGroupTrigger(value) {
     if (value === "merge_group")
@@ -77077,6 +77672,9 @@ const release_transition_policy_1 = __nccwpck_require__(27673);
 const release_tag_policy_1 = __nccwpck_require__(62748);
 const repository_release_query_1 = __nccwpck_require__(10766);
 const application_error_1 = __nccwpck_require__(75999);
+const github_error_policy_1 = __nccwpck_require__(58791);
+const repository_tag_query_1 = __nccwpck_require__(46772);
+const deployment_publication_1 = __nccwpck_require__(6912);
 class RepositoryReleasePublicationRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -77095,15 +77693,22 @@ class RepositoryReleasePublicationRepository {
             const targetRelease = (0, release_transition_policy_1.findTargetRelease)(releases, targetTag, (release) => release.tag_name);
             let targetReleaseId;
             if (targetRelease) {
-                await octokit.rest.repos.updateRelease({
+                const { data: currentTarget } = await octokit.rest.repos.getReleaseByTag({
                     owner,
                     repo: repository,
-                    release_id: targetRelease.id,
-                    name: sourceRelease.name,
-                    body: sourceRelease.body,
-                    draft: sourceRelease.draft,
-                    prerelease: sourceRelease.prerelease,
+                    tag: targetTag,
                 });
+                if (!sameReleaseContent(currentTarget, sourceRelease)) {
+                    await octokit.rest.repos.updateRelease({
+                        owner,
+                        repo: repository,
+                        release_id: targetRelease.id,
+                        name: sourceRelease.name,
+                        body: sourceRelease.body,
+                        draft: sourceRelease.draft,
+                        prerelease: sourceRelease.prerelease,
+                    });
+                }
                 targetReleaseId = targetRelease.id;
             }
             else {
@@ -77115,46 +77720,116 @@ class RepositoryReleasePublicationRepository {
                 });
                 targetReleaseId = newRelease.id;
             }
+            const { data: verifiedTarget } = await octokit.rest.repos.getReleaseByTag({
+                owner,
+                repo: repository,
+                tag: targetTag,
+            });
+            if (!sameReleaseContent(verifiedTarget, sourceRelease)) {
+                throw new Error(`Release alias '${targetTag}' was not verified against '${sourceTag}'.`);
+            }
             (0, logger_1.logInfo)(`Updated release for targetTag '${targetTag}'`);
             return (0, release_transition_policy_1.releaseIdAsString)(targetReleaseId);
         };
-        this.createRelease = async (owner, repository, version, title, changelog, token) => {
+        this.createRelease = async (owner, repository, version, title, changelog, operationId, productionSha, token) => {
+            const body = (0, deployment_publication_1.renderDeploymentReleaseBody)({ operationId, productionSha }, changelog);
+            const expectedName = (0, release_tag_policy_1.releaseName)(version, title);
+            const octokit = this.githubClient.getClient(token);
             try {
-                const octokit = this.githubClient.getClient(token);
                 try {
-                    const { data: release } = await octokit.rest.repos.createRelease({
-                        owner,
-                        repo: repository,
-                        tag_name: version,
-                        name: (0, release_tag_policy_1.releaseName)(version, title),
-                        body: changelog,
-                        draft: false,
-                        prerelease: false,
-                    });
-                    return release.html_url;
+                    const { data: existing } = await octokit.rest.repos.getReleaseByTag({ owner, repo: repository, tag: version });
+                    return verifiedReleaseUrl(existing, version, expectedName, body, operationId, productionSha);
                 }
                 catch (error) {
-                    if (!isAlreadyExists(error))
+                    if (!(0, github_error_policy_1.isGithubNotFound)(error))
                         throw error;
-                    const { data: existing } = await octokit.rest.repos.getReleaseByTag({
-                        owner,
-                        repo: repository,
-                        tag: version,
-                    });
-                    return existing.html_url;
                 }
+                try {
+                    await octokit.rest.repos.createRelease({
+                        owner, repo: repository, tag_name: version, name: expectedName, body, draft: false, prerelease: false,
+                    });
+                }
+                catch (error) {
+                    try {
+                        const { data: recovered } = await octokit.rest.repos.getReleaseByTag({ owner, repo: repository, tag: version });
+                        return verifiedReleaseUrl(recovered, version, expectedName, body, operationId, productionSha);
+                    }
+                    catch (inspectionError) {
+                        if (!(0, github_error_policy_1.isGithubNotFound)(inspectionError))
+                            throw inspectionError;
+                        throw error;
+                    }
+                }
+                const { data: created } = await octokit.rest.repos.getReleaseByTag({ owner, repo: repository, tag: version });
+                return verifiedReleaseUrl(created, version, expectedName, body, operationId, productionSha);
             }
             catch (error) {
                 (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to create the release.'));
                 throw error;
             }
         };
+        this.inspect = async (command) => {
+            const octokit = this.githubClient.getClient(command.token);
+            const tagSha = await (0, repository_tag_query_1.getRepositoryTagSha)(octokit, command.owner, command.repository, command.tag);
+            if (!tagSha)
+                return { kind: 'absent', effect: 'tag' };
+            if (tagSha.toLowerCase() !== command.productionSha.toLowerCase()) {
+                return { kind: 'conflict', reason: `Immutable tag ${command.tag} resolves to ${tagSha}, expected ${command.productionSha}.` };
+            }
+            try {
+                const { data: release } = await octokit.rest.repos.getReleaseByTag({
+                    owner: command.owner,
+                    repo: command.repository,
+                    tag: command.tag,
+                });
+                const marker = (0, deployment_publication_1.parseDeploymentPublicationMarker)(release.body);
+                if (release.tag_name !== undefined && release.tag_name !== command.tag) {
+                    return { kind: 'conflict', reason: `GitHub Release resolved a different tag than ${command.tag}.` };
+                }
+                if (!marker || marker.operationId !== command.operationId || marker.productionSha !== command.productionSha.toLowerCase()) {
+                    return { kind: 'conflict', reason: `GitHub Release ${command.tag} has no exact deployment publication receipt.` };
+                }
+                if (!release.html_url) {
+                    return { kind: 'conflict', reason: `GitHub Release ${command.tag} has no provider URL.` };
+                }
+                return {
+                    kind: 'verified',
+                    receipt: {
+                        tag: command.tag,
+                        productionSha: command.productionSha,
+                        operationId: command.operationId,
+                        releaseUrl: release.html_url,
+                    },
+                };
+            }
+            catch (error) {
+                if ((0, github_error_policy_1.isGithubNotFound)(error))
+                    return { kind: 'absent', effect: 'release' };
+                throw error;
+            }
+        };
     }
 }
 exports.RepositoryReleasePublicationRepository = RepositoryReleasePublicationRepository;
-function isAlreadyExists(error) {
-    return typeof error === 'object' && error !== null && 'status' in error
-        && error.status === 422;
+function sameReleaseContent(left, right) {
+    return left.name === right.name
+        && left.body === right.body
+        && left.draft === right.draft
+        && left.prerelease === right.prerelease;
+}
+function verifiedReleaseUrl(release, tag, expectedName, expectedBody, operationId, productionSha) {
+    const marker = (0, deployment_publication_1.parseDeploymentPublicationMarker)(release.body);
+    if ((release.tag_name !== undefined && release.tag_name !== tag)
+        || release.name !== expectedName
+        || release.body !== expectedBody
+        || release.draft
+        || release.prerelease
+        || marker?.operationId !== operationId
+        || marker?.productionSha !== productionSha.toLowerCase()
+        || !release.html_url) {
+        throw new application_error_1.ApplicationError('provider.conflict', `GitHub Release '${tag}' exists with conflicting publication content.`);
+    }
+    return release.html_url;
 }
 
 
@@ -77204,7 +77879,17 @@ async function findRepositoryTag(client, owner, repository, tag) {
     }
 }
 async function getRepositoryTagSha(client, owner, repository, tag) {
-    return (await findRepositoryTag(client, owner, repository, tag))?.object.sha;
+    const reference = await findRepositoryTag(client, owner, repository, tag);
+    if (!reference)
+        return undefined;
+    let object = reference.object;
+    for (let depth = 0; object.type === 'tag' && depth < 5; depth += 1) {
+        const response = await client.rest.git.getTag({ owner, repo: repository, tag_sha: object.sha });
+        object = response.data.object;
+    }
+    if (object.type === 'tag')
+        throw new Error(`Tag '${tag}' has an unsupported annotation depth.`);
+    return object.sha;
 }
 
 
@@ -77230,8 +77915,11 @@ class RepositoryTagRepository {
             if (!sourceTagSha) {
                 throw new Error(`The '${sourceTag}' tag does not exist in the remote repository.`);
             }
-            const foundTargetTag = await (0, repository_tag_query_1.findRepositoryTag)(octokit, owner, repository, targetTag);
-            if (foundTargetTag) {
+            const targetTagSha = await (0, repository_tag_query_1.getRepositoryTagSha)(octokit, owner, repository, targetTag);
+            if (targetTagSha === sourceTagSha) {
+                (0, logger_1.logDebugInfo)(`Tag '${targetTag}' already points to '${sourceTag}'.`);
+            }
+            else if (targetTagSha) {
                 (0, logger_1.logDebugInfo)(`Updating the '${targetTag}' tag to point to the '${sourceTag}' tag`);
                 await octokit.rest.git.updateRef({
                     owner,
@@ -77284,20 +77972,31 @@ class RepositoryTagRepository {
         };
         this.createOrVerifyTagAtSha = async (owner, repository, sha, tag, token) => {
             const octokit = this.githubClient.getClient(token);
-            const existingTag = await (0, repository_tag_query_1.findRepositoryTag)(octokit, owner, repository, tag);
-            if (existingTag) {
-                if (existingTag.object.sha !== sha) {
-                    throw new Error(`Immutable tag '${tag}' exists at ${existingTag.object.sha}, expected ${sha}.`);
+            const existingTagSha = await (0, repository_tag_query_1.getRepositoryTagSha)(octokit, owner, repository, tag);
+            if (existingTagSha) {
+                if (existingTagSha !== sha) {
+                    throw new application_error_1.ApplicationError('provider.conflict', `Immutable tag '${tag}' exists at ${existingTagSha}, expected ${sha}.`);
                 }
                 return sha;
             }
-            await octokit.rest.git.createRef({
-                owner,
-                repo: repository,
-                ref: `refs/tags/${tag}`,
-                sha,
-            });
-            return sha;
+            try {
+                await octokit.rest.git.createRef({
+                    owner,
+                    repo: repository,
+                    ref: `refs/tags/${tag}`,
+                    sha,
+                });
+            }
+            catch (error) {
+                const recovered = await (0, repository_tag_query_1.getRepositoryTagSha)(octokit, owner, repository, tag);
+                if (recovered === sha)
+                    return sha;
+                throw error;
+            }
+            const verified = await (0, repository_tag_query_1.getRepositoryTagSha)(octokit, owner, repository, tag);
+            if (verified !== sha)
+                throw new application_error_1.ApplicationError('provider.contract-invalid', `Creating immutable tag '${tag}' was not verified at ${sha}.`);
+            return verified;
         };
     }
 }
@@ -78865,7 +79564,7 @@ const merge_queue_readiness_1 = __nccwpck_require__(12515);
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DEPLOYMENT_PHASES = void 0;
+exports.DEPLOYMENT_STATE_VERSION = exports.DEPLOYMENT_PHASES = void 0;
 exports.transitionDeploymentOperation = transitionDeploymentOperation;
 exports.blockDeploymentOperation = blockDeploymentOperation;
 exports.resumeBlockedDeployment = resumeBlockedDeployment;
@@ -78883,6 +79582,7 @@ exports.DEPLOYMENT_PHASES = [
     "completed",
     "blocked",
 ];
+exports.DEPLOYMENT_STATE_VERSION = 1;
 const NORMAL_TRANSITIONS = {
     preparing: ["promotion_pr_pending"],
     promotion_pr_pending: ["promoted"],
@@ -78948,7 +79648,11 @@ function isDeploymentOperationSnapshot(value) {
     if (!value || typeof value !== "object" || Array.isArray(value))
         return false;
     const operation = value;
-    return typeof operation.operationId === "string"
+    return operation.stateVersion === exports.DEPLOYMENT_STATE_VERSION
+        && typeof operation.revision === "number"
+        && Number.isSafeInteger(operation.revision)
+        && operation.revision > 0
+        && typeof operation.operationId === "string"
         && /^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(operation.operationId)
         && (operation.kind === "release" || operation.kind === "hotfix")
         && typeof operation.version === "string" && /^[0-9]+\.[0-9]+\.[0-9]+$/.test(operation.version)
@@ -78978,9 +79682,24 @@ function isDeploymentOperationSnapshot(value) {
         && (operation.promotionPullRequest === undefined || isPositiveInteger(operation.promotionPullRequest))
         && (operation.productionSha === undefined || isFullSha(operation.productionSha))
         && typeof operation.publicationVerified === "boolean"
+        && isPublicationReceiptConsistent(operation)
         && Array.isArray(operation.reconciliationTargets)
         && operation.reconciliationTargets.every(isReconciliationTarget)
         && (operation.lastFailure === undefined || operation.lastFailure === null || isDeploymentFailure(operation.lastFailure));
+}
+function isPublicationReceiptConsistent(operation) {
+    const receipt = operation.publicationReceipt;
+    if (!receipt)
+        return operation.publicationVerified === false;
+    return operation.publicationVerified === true
+        && receipt.tag === operation.tag
+        && receipt.operationId === operation.operationId
+        && receipt.productionSha === operation.productionSha
+        && isFullSha(receipt.productionSha)
+        && typeof receipt.releaseUrl === "string"
+        && receipt.releaseUrl.length > 0
+        && receipt.releaseUrl.length <= 2000
+        && /^https:\/\//.test(receipt.releaseUrl);
 }
 function isFullSha(value) {
     return typeof value === "string" && /^[a-f0-9]{40}$/i.test(value);
@@ -79007,7 +79726,9 @@ function isReconciliationTarget(value) {
         && isSafePersistedRef(target.sourceBranch)
         && isFullSha(target.sourceSha)
         && (target.syncBranch === undefined || isSafePersistedRef(target.syncBranch))
+        && (target.syncSha === undefined || (target.syncBranch !== undefined && isFullSha(target.syncSha)))
         && (target.pullRequest === undefined || isPositiveInteger(target.pullRequest))
+        && !(target.syncBranch !== undefined && target.pullRequest !== undefined && target.syncSha === undefined)
         && ["pending", "completed", "blocked"].includes(target.status);
 }
 function isDeploymentFailure(value) {
@@ -79020,6 +79741,131 @@ function isDeploymentFailure(value) {
         && typeof failure.retryable === "boolean"
         && ["preparing", "promotion_pr_pending", "promoted", "publishing", "published", "reconciliation_pending", "completed"]
             .includes(failure.previousPhase);
+}
+
+
+/***/ }),
+
+/***/ 6912:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.renderDeploymentPublicationMarker = renderDeploymentPublicationMarker;
+exports.renderDeploymentReleaseBody = renderDeploymentReleaseBody;
+exports.parseDeploymentPublicationMarker = parseDeploymentPublicationMarker;
+const PUBLICATION_MARKER = /^<!-- copilot-deployment-publication operation-id="([A-Za-z0-9][A-Za-z0-9._-]{7,127})" production-sha="([a-f0-9]{40})" -->$/i;
+function renderDeploymentPublicationMarker(marker) {
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(marker.operationId)) {
+        throw new Error("Deployment publication operation ID is invalid.");
+    }
+    if (!/^[a-f0-9]{40}$/i.test(marker.productionSha)) {
+        throw new Error("Deployment publication SHA is invalid.");
+    }
+    return `<!-- copilot-deployment-publication operation-id="${marker.operationId}" production-sha="${marker.productionSha}" -->`;
+}
+function renderDeploymentReleaseBody(marker, changelog) {
+    return `${renderDeploymentPublicationMarker(marker)}\n${changelog}`;
+}
+function parseDeploymentPublicationMarker(body) {
+    if (typeof body !== "string" || body.length > 51000)
+        return undefined;
+    const firstLine = body.split("\n", 1)[0];
+    const match = PUBLICATION_MARKER.exec(firstLine);
+    return match ? { operationId: match[1], productionSha: match[2].toLowerCase() } : undefined;
+}
+
+
+/***/ }),
+
+/***/ 72369:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.readDeploymentOperationState = readDeploymentOperationState;
+exports.deploymentStateFence = deploymentStateFence;
+exports.nextDeploymentRevision = nextDeploymentRevision;
+exports.decideDeploymentStateSave = decideDeploymentStateSave;
+const deployment_operation_1 = __nccwpck_require__(92730);
+function readDeploymentOperationState(value) {
+    if (value === undefined || value === null)
+        return { kind: "absent" };
+    if (!isRecord(value))
+        return { kind: "invalid", reason: "Deployment state must be an object." };
+    if (!("stateVersion" in value)) {
+        return { kind: "invalid", reason: "Deployment stateVersion is required." };
+    }
+    if (value.stateVersion !== deployment_operation_1.DEPLOYMENT_STATE_VERSION) {
+        return { kind: "unsupported", stateVersion: value.stateVersion };
+    }
+    if (!(0, deployment_operation_1.isDeploymentOperationSnapshot)(value)) {
+        return { kind: "invalid", reason: "Deployment state version 1 is malformed or incomplete." };
+    }
+    return { kind: "current", operation: value };
+}
+function deploymentStateFence(operation) {
+    return {
+        operationId: operation.operationId,
+        phase: operation.phase,
+        revision: operation.revision,
+    };
+}
+function nextDeploymentRevision(expected) {
+    if (expected.kind === "absent")
+        return 1;
+    return expected.fence.revision < Number.MAX_SAFE_INTEGER
+        ? expected.fence.revision + 1
+        : undefined;
+}
+function decideDeploymentStateSave(actual, expected, proposed) {
+    const proposedRead = readDeploymentOperationState(proposed);
+    if (proposedRead.kind !== "current") {
+        return { kind: "invalid", reason: "Proposed deployment state is not a valid version-1 snapshot." };
+    }
+    const nextRevision = nextDeploymentRevision(expected);
+    if (nextRevision === undefined || proposed.revision !== nextRevision) {
+        return { kind: "invalid", reason: "Proposed deployment revision is not the exact monotonic successor." };
+    }
+    if (actual.kind === "invalid")
+        return actual;
+    if (actual.kind === "unsupported") {
+        return { kind: "invalid", reason: `Stored deployment state version ${String(actual.stateVersion)} is unsupported.` };
+    }
+    if (actual.kind === "absent") {
+        return expected.kind === "absent" ? { kind: "write" } : { kind: "missing" };
+    }
+    if (sameSemanticState(actual.operation, proposed)) {
+        return { kind: "already-applied", operation: actual.operation };
+    }
+    const expectedOperationId = expected.kind === "current" ? expected.fence.operationId : undefined;
+    if (actual.operation.operationId !== (expectedOperationId ?? proposed.operationId)) {
+        return { kind: "conflict", operation: actual.operation };
+    }
+    if (expected.kind === "absent") {
+        return { kind: "stale", operation: actual.operation };
+    }
+    if (actual.operation.revision !== expected.fence.revision
+        || actual.operation.phase !== expected.fence.phase) {
+        return { kind: "stale", operation: actual.operation };
+    }
+    return { kind: "write" };
+}
+function sameSemanticState(left, right) {
+    return canonicalJson(left) === canonicalJson(right);
+}
+function canonicalJson(value) {
+    if (Array.isArray(value))
+        return `[${value.map(canonicalJson).join(",")}]`;
+    if (isRecord(value)) {
+        return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(",")}}`;
+    }
+    return JSON.stringify(value) ?? "undefined";
+}
+function isRecord(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 
@@ -80529,7 +81375,9 @@ const branch_sync_workspace_adapter_1 = __nccwpck_require__(81849);
 const observe_branch_sync_use_case_1 = __nccwpck_require__(84542);
 const sync_branch_use_case_1 = __nccwpck_require__(392);
 const deployment_orchestration_use_case_1 = __nccwpck_require__(36850);
-const github_deployment_repository_1 = __nccwpck_require__(22368);
+const github_deployment_git_repository_1 = __nccwpck_require__(85886);
+const github_managed_pull_request_repository_1 = __nccwpck_require__(96483);
+const github_target_merge_capabilities_inspector_1 = __nccwpck_require__(55527);
 const deployment_continuation_repository_1 = __nccwpck_require__(77509);
 const deployment_presentation_repository_1 = __nccwpck_require__(91985);
 const deployment_state_repository_1 = __nccwpck_require__(3182);
@@ -80541,22 +81389,35 @@ function createDetectPotentialProblemsUseCase() {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();
     return new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.context, bugbot.publication, bugbot.resolution, bugbot.telemetry);
 }
-function createSingleActionUseCaseCompositionRoot() {
-    const repositoryTagPort = new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)());
-    const repositoryReleasePort = new repository_release_publication_repository_1.RepositoryReleasePublicationRepository((0, github_release_client_factory_1.createReleaseClient)());
+function createSingleActionUseCaseCompositionRoot(surface) {
     const issueDescriptionQueryPort = (0, issue_content_composition_root_1.createIssueContentCompositionRoot)();
-    const deploymentRepository = new github_deployment_repository_1.GithubDeploymentRepository(new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter());
-    const deploymentOrchestration = new deployment_orchestration_use_case_1.DeploymentOrchestrationUseCase({
-        pullRequests: deploymentRepository,
-        git: deploymentRepository,
+    const repositoryTagPort = surface === "github-workflow"
+        ? new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)())
+        : undefined;
+    const repositoryReleasePort = surface === "github-workflow"
+        ? new repository_release_publication_repository_1.RepositoryReleasePublicationRepository((0, github_release_client_factory_1.createReleaseClient)())
+        : undefined;
+    const deploymentOrchestration = surface === "github-workflow"
+        ? createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, repositoryReleasePort)
+        : undefined;
+    return new single_action_use_case_1.SingleActionUseCase(repositoryTagPort && repositoryReleasePort
+        ? new publish_github_action_use_case_1.PublishGithubActionUseCase(repositoryTagPort, repositoryReleasePort)
+        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase(repositoryReleasePort) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase(repositoryTagPort) : undefined, new think_use_case_1.ThinkUseCase(issueDescriptionQueryPort, (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), createDetectPotentialProblemsUseCase(), new recommend_steps_use_case_1.RecommendStepsUseCase(issueDescriptionQueryPort, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase(issueDescriptionQueryPort), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), issueDescriptionQueryPort), deploymentOrchestration);
+}
+function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publication) {
+    const deploymentClient = new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter();
+    return new deployment_orchestration_use_case_1.DeploymentOrchestrationUseCase({
+        pullRequests: new github_managed_pull_request_repository_1.GithubManagedPullRequestRepository(deploymentClient),
+        targetRules: new github_target_merge_capabilities_inspector_1.GithubTargetMergeCapabilitiesInspector(deploymentClient),
+        git: new github_deployment_git_repository_1.GithubDeploymentGitRepository(deploymentClient),
         continuation: new deployment_continuation_repository_1.DeploymentContinuationRepository(new workflow_dispatch_repository_1.WorkflowDispatchRepository((0, github_workflow_client_factory_1.createWorkflowDispatchClient)())),
         presentation: new deployment_presentation_repository_1.DeploymentPresentationRepository(issueDescriptionQueryPort),
-        state: new deployment_state_repository_1.DeploymentStateRepository(issueDescriptionQueryPort),
+        publication,
+        state: new deployment_state_repository_1.DeploymentStateRepositoryFactory(issueDescriptionQueryPort),
         labels: (0, issue_labels_composition_root_1.createIssueLabelRepository)(),
         issues: (0, issue_interaction_composition_root_1.createIssueClosureRepository)(),
         operationId: node_crypto_1.randomUUID,
     });
-    return new single_action_use_case_1.SingleActionUseCase(new publish_github_action_use_case_1.PublishGithubActionUseCase(repositoryTagPort, repositoryReleasePort), new create_release_use_case_1.CreateReleaseUseCase(repositoryReleasePort), new create_tag_use_case_1.CreateTagUseCase(repositoryTagPort), new think_use_case_1.ThinkUseCase(issueDescriptionQueryPort, (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), createDetectPotentialProblemsUseCase(), new recommend_steps_use_case_1.RecommendStepsUseCase(issueDescriptionQueryPort, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase(issueDescriptionQueryPort), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), issueDescriptionQueryPort), deploymentOrchestration);
 }
 function createIssueCommentUseCaseCompositionRoot() {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)();
@@ -80581,10 +81442,10 @@ function createPullRequestReviewCommentUseCaseCompositionRoot() {
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort) {
     return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, issue_interaction_composition_root_1.createIssueNotificationRepository)()), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase(projectBoardCommandPort, (0, issue_labels_composition_root_1.createIssueLabelRepository)(), new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)())), createDetectPotentialProblemsUseCase(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
 }
-function createMainRunRouteCompositionRoot(projectBoardCommandPort) {
+function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface) {
     // Composition is scoped to one main run. Each route is built only when it is
     // actually selected, while repeated calls in the same run reuse its graph.
-    const singleAction = lazy(() => createSingleActionUseCaseCompositionRoot());
+    const singleAction = lazy(() => createSingleActionUseCaseCompositionRoot(surface));
     const issueComment = lazy(() => createIssueCommentUseCaseCompositionRoot());
     const issue = lazy(() => (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)());
     const pullRequestReviewComment = lazy(() => createPullRequestReviewCommentUseCaseCompositionRoot());
@@ -80783,11 +81644,11 @@ const github_identity_client_factory_1 = __nccwpck_require__(93081);
 const setup_workspace_adapter_1 = __nccwpck_require__(5729);
 const setup_remote_credential_health_adapter_1 = __nccwpck_require__(1489);
 const octokit_credential_health_adapter_1 = __nccwpck_require__(41760);
-const github_deployment_repository_1 = __nccwpck_require__(22368);
+const github_target_merge_capabilities_inspector_1 = __nccwpck_require__(55527);
 const octokit_deployment_adapter_1 = __nccwpck_require__(46819);
 const merge_queue_readiness_use_case_1 = __nccwpck_require__(9890);
 function createSetupMergeQueueReadinessUseCase() {
-    return new merge_queue_readiness_use_case_1.SetupMergeQueueReadinessUseCase(new github_deployment_repository_1.GithubDeploymentRepository(new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter()));
+    return new merge_queue_readiness_use_case_1.SetupMergeQueueReadinessUseCase(new github_target_merge_capabilities_inspector_1.GithubTargetMergeCapabilitiesInspector(new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter()));
 }
 function createSetupDoctorUseCase(output) {
     const repositoryConfiguration = new repository_variables_repository_1.RepositoryVariablesRepository((0, github_identity_client_factory_1.createRepositoryVariablesClient)());

@@ -1167,12 +1167,11 @@ serialized mutation job. After admission, the use case reloads state and
 provider facts before every irreversible side effect. Duplicate invocations may
 repeat safe reads, but only the admitted current-phase invocation may mutate.
 
-The implementation verified at `2fec5c24` does not yet prove this guarantee: its
-test substitutes a changed phase between reads but does not run two
-simultaneously admitted invocations, and workflow groups are not yet shared by
-all operation paths. The P0-B
+The P0-B implementation in the 2026-09-12 worktree applies this contract to all
+three workflow routes and includes a deterministic simultaneous-writer test.
+Controlled live GitHub queue evidence remains outstanding. The P0-B
 [`deployment-concurrency-and-state-fencing.md`](./deployment-concurrency-and-state-fencing.md)
-contract owns the remediation and evidence.
+owns the detailed contract and remaining human evidence.
 
 Persisted orchestration and configuration readers accept only the current
 schema. Missing, malformed, or different-version state fails closed instead of
@@ -1554,20 +1553,21 @@ readability, cover at least the following scenarios.
 
 ### 23.1 Required concurrency hardening increment
 
-The original sequence is implemented except for the conformance gap documented
-in section 17.5. The exact contract is
+The concurrency/state-fencing increment is implemented; only its controlled
+live serialization evidence remains a human gate. The exact contract is
 [`deployment-concurrency-and-state-fencing.md`](./deployment-concurrency-and-state-fencing.md).
-Before further deployment feature work:
+The implementation:
 
-1. add failing cross-workflow group and deterministic simultaneous-invocation tests;
-2. add the trusted issue resolver and shared queued/non-canceling mutation group
+1. adds cross-workflow group and deterministic simultaneous-invocation tests;
+2. adds the trusted issue resolver and shared queued/non-canceling mutation group
    to active workflows and setup templates;
-3. add the sole initial state schema/revision, reject prior unversioned shapes,
-   and add pre-effect revalidation without a migration path;
-4. decompose phase handlers and provider rule normalization behind narrow contracts;
-5. update this SDD, traceability, operator recovery, bundles, catalog evidence,
-   and live queue evidence; and
-6. complete P0-B's 28-case non-double-counted budget and all program gates.
+3. defines the sole initial state schema/revision, rejects unversioned shapes,
+   and performs pre-effect revalidation without a migration path;
+4. decomposes phase handlers and provider rule normalization behind narrow contracts;
+5. updates this SDD, traceability, operator recovery, bundles, and catalog
+   evidence; and
+6. satisfies P0-B's automated test budget and repository gates. Controlled live
+   queue evidence remains explicitly pending.
 
 ## 24. Definition of done
 

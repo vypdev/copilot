@@ -6,13 +6,13 @@ import { createRepositoryVariablesClient } from './github_identity_client_factor
 import { SetupWorkspaceAdapter } from '../setup_workspace_adapter';
 import { SetupRemoteCredentialHealthAdapter } from '../setup_remote_credential_health_adapter';
 import { OctokitCredentialHealthClientAdapter } from '../github/octokit_credential_health_adapter';
-import { GithubDeploymentRepository } from '../../data/repository/deployment/github_deployment_repository';
+import { GithubTargetMergeCapabilitiesInspector } from '../../data/repository/deployment/github_target_merge_capabilities_inspector';
 import { OctokitDeploymentClientAdapter } from '../github/octokit_deployment_adapter';
 import { SetupMergeQueueReadinessUseCase } from '../../application/usecases/setup/merge_queue_readiness_use_case';
 
 export function createSetupMergeQueueReadinessUseCase(): SetupMergeQueueReadinessUseCase {
     return new SetupMergeQueueReadinessUseCase(
-        new GithubDeploymentRepository(new OctokitDeploymentClientAdapter()),
+        new GithubTargetMergeCapabilitiesInspector(new OctokitDeploymentClientAdapter()),
     );
 }
 

@@ -5,9 +5,9 @@ import type { ParamUseCase } from "./base/param_usecase";
 import { toApplicationError } from "../errors/application_error";
 
 export interface SingleActionWorkflowPorts {
-  publishGithubActionUseCase: ParamUseCase<Execution, Result[]>;
-  createReleaseUseCase: ParamUseCase<Execution, Result[]>;
-  createTagUseCase: ParamUseCase<Execution, Result[]>;
+  publishGithubActionUseCase?: ParamUseCase<Execution, Result[]>;
+  createReleaseUseCase?: ParamUseCase<Execution, Result[]>;
+  createTagUseCase?: ParamUseCase<Execution, Result[]>;
   thinkUseCase: ParamUseCase<Execution, Result[]>;
   initialSetupUseCase: ParamUseCase<Execution, Result[]>;
   checkProgressUseCase: ParamUseCase<Execution, Result[]>;

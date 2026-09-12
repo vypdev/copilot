@@ -1,4 +1,6 @@
-import { GithubDeploymentRepository } from "../github_deployment_repository";
+import { GithubDeploymentGitRepository } from "../github_deployment_git_repository";
+import { GithubManagedPullRequestRepository } from "../github_managed_pull_request_repository";
+import { GithubTargetMergeCapabilitiesInspector } from "../github_target_merge_capabilities_inspector";
 import type { GithubDeploymentClient, GithubDeploymentPullRequest } from "../../../../infrastructure/github/ports/github_deployment_provider_port";
 
 const pullRequest = (overrides: Partial<GithubDeploymentPullRequest> = {}): GithubDeploymentPullRequest => ({
@@ -44,7 +46,20 @@ function harness() {
   const request = jest.fn().mockResolvedValue({ data: [] });
   const paginate = jest.fn();
   const client = { request, graphql, paginate, rest: { apps, pulls, repos, git } } as unknown as GithubDeploymentClient;
-  return { repository: new GithubDeploymentRepository({ getClient: () => client }), client, apps, pulls, repos, git, request, graphql, paginate };
+  const clientProvider = { getClient: () => client };
+  return {
+    pullRequests: new GithubManagedPullRequestRepository(clientProvider),
+    targetRules: new GithubTargetMergeCapabilitiesInspector(clientProvider),
+    gitRepository: new GithubDeploymentGitRepository(clientProvider),
+    client,
+    apps,
+    pulls,
+    repos,
+    git,
+    request,
+    graphql,
+    paginate,
+  };
 }
 
 const workflowEntry = (content: string, name = "ci.yml") => ({
@@ -88,19 +103,19 @@ describe("GitHub deployment repository", () => {
       pullRequest(),
       pullRequest({ number: 41, body: '<!-- copilot-deployment operation-id="another-12345678" phase="promotion" issue="355" -->' }),
     ]);
-    await expect(value.repository.findManagedPullRequests(query)).resolves.toEqual([expect.objectContaining({ number: 40 })]);
+    await expect(value.pullRequests.findManagedPullRequests(query)).resolves.toEqual([expect.objectContaining({ number: 40 })]);
   });
 
   it("does not reuse a PR identified only by its branches", async () => {
     const value = harness();
     value.paginate.mockResolvedValue([pullRequest({ body: "same title and branches" })]);
-    await expect(value.repository.findManagedPullRequests(query)).resolves.toEqual([]);
+    await expect(value.pullRequests.findManagedPullRequests(query)).resolves.toEqual([]);
   });
 
   it("creates a same-repository managed PR without maintainer head mutation", async () => {
     const value = harness();
     value.pulls.create.mockResolvedValue({ data: pullRequest() });
-    await value.repository.createManagedPullRequest({ ...query, title: "release: promote", body: pullRequest().body! });
+    await value.pullRequests.createManagedPullRequest({ ...query, title: "release: promote", body: pullRequest().body! });
     expect(value.pulls.create).toHaveBeenCalledWith(expect.objectContaining({
       head: "release/3.4.0", base: "master", maintainer_can_modify: false,
     }));
@@ -109,14 +124,21 @@ describe("GitHub deployment repository", () => {
   it("maps authoritative merged PR state", async () => {
     const value = harness();
     value.pulls.get.mockResolvedValue({ data: pullRequest({ state: "closed", merged: true, merge_commit_sha: "c".repeat(40) }) });
-    await expect(value.repository.getPullRequest("owner", "repo", 40, "token"))
+    await expect(value.pullRequests.getPullRequest("owner", "repo", 40, "token"))
       .resolves.toEqual(expect.objectContaining({ state: "closed", merged: true, mergeCommitSha: "c".repeat(40) }));
+  });
+
+  it("maps the provider's auto-merge receipt", async () => {
+    const value = harness();
+    value.pulls.get.mockResolvedValue({ data: pullRequest({ auto_merge: {} }) });
+    await expect(value.pullRequests.getPullRequest("owner", "repo", 40, "token"))
+      .resolves.toEqual(expect.objectContaining({ autoMergeEnabled: true }));
   });
 
   it("reads auto-merge, queue and strict target capabilities", async () => {
     const value = harness();
     value.graphql.mockResolvedValue({ repository: { ref: { branchProtectionRule: { requiresMergeQueue: true } } } });
-    await expect(value.repository.getTargetCapabilities("owner", "repo", "master", "token"))
+    await expect(value.targetRules.getTargetCapabilities("owner", "repo", "master", "token"))
       .resolves.toEqual({
         autoMergeAllowed: true,
         mergeQueueRequired: true,
@@ -130,26 +152,26 @@ describe("GitHub deployment repository", () => {
   it("reports an immediately mergeable managed PR only when GitHub marks it clean", async () => {
     const value = harness();
     value.pulls.get.mockResolvedValue({ data: pullRequest({ mergeable: true, mergeable_state: "clean" }) });
-    await expect(value.repository.getTargetCapabilities("owner", "repo", "master", "token", { pullRequest: 40 }))
+    await expect(value.targetRules.getTargetCapabilities("owner", "repo", "master", "token", { pullRequest: 40 }))
       .resolves.toEqual(expect.objectContaining({ immediatelyMergeable: true }));
   });
 
   it("treats an unprotected branch as non-strict", async () => {
     const value = harness();
     value.repos.getBranchProtection.mockRejectedValue({ status: 404 });
-    await expect(value.repository.getTargetCapabilities("owner", "repo", "develop", "token"))
+    await expect(value.targetRules.getTargetCapabilities("owner", "repo", "develop", "token"))
       .resolves.toEqual(expect.objectContaining({ requiresStrictStatusChecks: false }));
   });
 
   it("enables merge-commit auto-merge through GraphQL", async () => {
     const value = harness();
-    await value.repository.enableAutoMerge("owner", "repo", "PR_node", "token");
+    await value.pullRequests.enableAutoMerge("owner", "repo", "PR_node", "token");
     expect(value.graphql).toHaveBeenCalledWith(expect.stringContaining("enablePullRequestAutoMerge"), expect.objectContaining({ pullRequestId: "PR_node" }));
   });
 
   it("enqueues a managed PR through GraphQL", async () => {
     const value = harness();
-    await value.repository.enqueuePullRequest("owner", "repo", "PR_node", "a".repeat(40), "token");
+    await value.pullRequests.enqueuePullRequest("owner", "repo", "PR_node", "a".repeat(40), "token");
     expect(value.graphql).toHaveBeenCalledWith(expect.stringContaining("expectedHeadOid"), expect.objectContaining({
       pullRequestId: "PR_node",
       expectedHeadOid: "a".repeat(40),
@@ -159,12 +181,12 @@ describe("GitHub deployment repository", () => {
   it("rejects partial queue-membership and enqueue responses", async () => {
     const membership = harness();
     membership.graphql.mockResolvedValue({ node: {} });
-    await expect(membership.repository.isPullRequestQueued("owner", "repo", "PR_node", "token"))
+    await expect(membership.pullRequests.isPullRequestQueued("owner", "repo", "PR_node", "token"))
       .rejects.toThrow("no authoritative merge-queue membership");
 
     const enqueue = harness();
     enqueue.graphql.mockResolvedValue({ enqueuePullRequest: {} });
-    await expect(enqueue.repository.enqueuePullRequest("owner", "repo", "PR_node", "a".repeat(40), "token"))
+    await expect(enqueue.pullRequests.enqueuePullRequest("owner", "repo", "PR_node", "a".repeat(40), "token"))
       .rejects.toThrow("did not confirm");
   });
 
@@ -175,7 +197,7 @@ describe("GitHub deployment repository", () => {
       { type: "merge_queue" },
       { type: "required_status_checks", parameters: { strict_required_status_checks_policy: true, required_status_checks: [] } },
     ] });
-    await expect(value.repository.getTargetCapabilities("owner", "repo", "master", "token"))
+    await expect(value.targetRules.getTargetCapabilities("owner", "repo", "master", "token"))
       .resolves.toEqual(expect.objectContaining({ mergeQueueRequired: true, requiresStrictStatusChecks: true }));
   });
 
@@ -194,7 +216,7 @@ describe("GitHub deployment repository", () => {
       }
       return { repository: { ref: { branchProtectionRule: { requiresMergeQueue: false } } } };
     });
-    const result = await value.repository.getTargetCapabilities("owner", "repo", "master", "token", {
+    const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token", {
       candidateHeadSha: "a".repeat(40),
     });
     expect(result.mergeQueueProducers).toEqual([
@@ -217,7 +239,7 @@ describe("GitHub deployment repository", () => {
     value.graphql.mockImplementation((graphqlQuery: string) => graphqlQuery.includes("DeploymentWorkflowContracts")
       ? { repository: { object: { entries: [workflowEntry("jobs:\n  check:\n    name: CI Check\n    runs-on: ubuntu-latest\n")] } } }
       : { repository: { ref: { branchProtectionRule: { requiresMergeQueue: false } } } });
-    await expect(value.repository.getTargetCapabilities("owner", "repo", "master", "token"))
+    await expect(value.targetRules.getTargetCapabilities("owner", "repo", "master", "token"))
       .resolves.toEqual(expect.objectContaining({
         mergeQueueProducers: [expect.objectContaining({ name: "CI Check", support: "unsupported" })],
       }));
@@ -231,7 +253,7 @@ describe("GitHub deployment repository", () => {
         required_status_checks: [{ context: "External CI", integration_id: 999 }],
       } },
     ] });
-    await expect(value.repository.getTargetCapabilities("owner", "repo", "master", "token"))
+    await expect(value.targetRules.getTargetCapabilities("owner", "repo", "master", "token"))
       .resolves.toEqual(expect.objectContaining({
         mergeQueueProducers: [expect.objectContaining({ name: "External CI", integrationId: 999, support: "unknown" })],
       }));
@@ -240,7 +262,7 @@ describe("GitHub deployment repository", () => {
   it("records an observation problem when effective rules cannot be read", async () => {
     const value = harness();
     value.request.mockRejectedValue({ status: 403, message: "Forbidden github_pat_abcdefghijklmnopqrstuvwxyz123456" });
-    const result = await value.repository.getTargetCapabilities("owner", "repo", "master", "token");
+    const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueObservationProblems).toEqual([
       expect.objectContaining({ area: "effective-rules", message: expect.stringContaining("Forbidden") }),
     ]);
@@ -256,7 +278,7 @@ describe("GitHub deployment repository", () => {
     ]) {
       const value = harness();
       value.request.mockResolvedValue(response);
-      const result = await value.repository.getTargetCapabilities("owner", "repo", "master", "token");
+      const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
       expect(result.mergeQueueObservationProblems).toEqual([
         expect.objectContaining({ area: "effective-rules" }),
       ]);
@@ -276,7 +298,7 @@ describe("GitHub deployment repository", () => {
   ])("keeps malformed effective rule entries unknown: %p", async (rule) => {
     const value = harness();
     value.request.mockResolvedValue({ data: [rule] });
-    const result = await value.repository.getTargetCapabilities("owner", "repo", "master", "token");
+    const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueObservationProblems).toEqual(expect.arrayContaining([
       expect.objectContaining({ area: "effective-rules", message: expect.stringContaining("invalid") }),
     ]));
@@ -284,7 +306,7 @@ describe("GitHub deployment repository", () => {
 
   it("fails closed when the candidate head is not a full SHA", async () => {
     const value = harness();
-    const result = await value.repository.getTargetCapabilities("owner", "repo", "master", "token", {
+    const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token", {
       candidateHeadSha: "main",
     });
     expect(result.mergeQueueObservationProblems).toEqual([
@@ -299,7 +321,7 @@ describe("GitHub deployment repository", () => {
       sha: "b".repeat(40),
       repo: { full_name: "owner/repo" },
     } }) });
-    const result = await value.repository.getTargetCapabilities("owner", "repo", "master", "token", {
+    const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token", {
       pullRequest: 40,
       candidateHeadSha: "a".repeat(40),
     });
@@ -311,14 +333,14 @@ describe("GitHub deployment repository", () => {
   it("treats partial classic policy responses as unknown", async () => {
     const invalidProtection = harness();
     invalidProtection.repos.getBranchProtection.mockResolvedValue({ data: null });
-    const protectionResult = await invalidProtection.repository.getTargetCapabilities("owner", "repo", "master", "token");
+    const protectionResult = await invalidProtection.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(protectionResult.mergeQueueObservationProblems).toEqual(expect.arrayContaining([
       expect.objectContaining({ area: "classic-protection", message: expect.stringContaining("invalid classic") }),
     ]));
 
     const missingQueueRule = harness();
     missingQueueRule.graphql.mockResolvedValue({ repository: { ref: {} } });
-    const queueResult = await missingQueueRule.repository.getTargetCapabilities("owner", "repo", "master", "token");
+    const queueResult = await missingQueueRule.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(queueResult.mergeQueueObservationProblems).toEqual(expect.arrayContaining([
       expect.objectContaining({ area: "classic-protection", message: expect.stringContaining("omitted") }),
     ]));
@@ -327,7 +349,7 @@ describe("GitHub deployment repository", () => {
     malformedQueueRule.graphql.mockResolvedValue({ repository: { ref: {
       branchProtectionRule: { requiresMergeQueue: "yes" },
     } } });
-    const malformedQueueResult = await malformedQueueRule.repository.getTargetCapabilities("owner", "repo", "master", "token");
+    const malformedQueueResult = await malformedQueueRule.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(malformedQueueResult.mergeQueueObservationProblems).toEqual(expect.arrayContaining([
       expect.objectContaining({ area: "classic-protection", message: expect.stringContaining("invalid classic merge-queue") }),
     ]));
@@ -340,7 +362,7 @@ describe("GitHub deployment repository", () => {
       },
     } });
     malformedChecks.request.mockResolvedValue({ data: [{ type: "merge_queue" }] });
-    const malformedResult = await malformedChecks.repository.getTargetCapabilities("owner", "repo", "master", "token");
+    const malformedResult = await malformedChecks.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(malformedResult.mergeQueueObservationProblems).toEqual(expect.arrayContaining([
       expect.objectContaining({ area: "classic-protection", message: expect.stringContaining("invalid required status check") }),
     ]));
@@ -357,7 +379,7 @@ describe("GitHub deployment repository", () => {
       required_status_checks: requiredStatusChecks,
     } });
     value.request.mockResolvedValue({ data: [{ type: "merge_queue" }] });
-    const result = await value.repository.getTargetCapabilities("owner", "repo", "master", "token");
+    const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueObservationProblems).toEqual(expect.arrayContaining([
       expect.objectContaining({ area: "classic-protection", message: expect.stringContaining("invalid required status check") }),
     ]));
@@ -367,7 +389,7 @@ describe("GitHub deployment repository", () => {
     const value = harness();
     value.repos.getBranchProtection.mockRejectedValue({ status: 403, message: "Protection forbidden" });
     value.graphql.mockRejectedValue({ status: 502, message: "GraphQL unavailable" });
-    const result = await value.repository.getTargetCapabilities("owner", "repo", "master", "token");
+    const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueObservationProblems).toEqual(expect.arrayContaining([
       expect.objectContaining({ area: "classic-protection", message: expect.stringContaining("Protection forbidden") }),
       expect.objectContaining({ area: "classic-protection", message: expect.stringContaining("GraphQL unavailable") }),
@@ -380,7 +402,7 @@ describe("GitHub deployment repository", () => {
       required_status_checks: { strict: true, contexts: ["Legacy CI"] },
     } });
     value.request.mockResolvedValue({ data: [{ type: "merge_queue" }] });
-    const result = await value.repository.getTargetCapabilities("owner", "repo", "master", "token");
+    const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueProducers).toEqual([
       expect.objectContaining({ name: "Legacy CI", integrationId: "any", support: "unknown" }),
     ]);
@@ -396,7 +418,7 @@ describe("GitHub deployment repository", () => {
         required_status_checks: [{ context: "CI Check", integration_id: 15368 }],
       } },
     ] });
-    const result = await value.repository.getTargetCapabilities("owner", "repo", "master", "token");
+    const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueProducers).toEqual([
       expect.objectContaining({ support: "unknown", reason: expect.stringContaining("app lookup unavailable") }),
     ]);
@@ -413,7 +435,7 @@ describe("GitHub deployment repository", () => {
     value.graphql.mockImplementation((graphqlQuery: string) => graphqlQuery.includes("DeploymentWorkflowContracts")
       ? { repository: { object: null } }
       : { repository: { ref: { branchProtectionRule: { requiresMergeQueue: false } } } });
-    const result = await value.repository.getTargetCapabilities("owner", "repo", "master", "token");
+    const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueObservationProblems).toEqual([
       expect.objectContaining({ area: "workflow-contract", message: expect.stringContaining("no valid .github/workflows tree") }),
     ]);
@@ -431,7 +453,7 @@ describe("GitHub deployment repository", () => {
     value.graphql.mockImplementation((graphqlQuery: string) => graphqlQuery.includes("DeploymentWorkflowContracts")
       ? { repository: { object: { entries: Array.from({ length: 501 }, () => workflowEntry("jobs: {}")) } } }
       : { repository: { ref: { branchProtectionRule: { requiresMergeQueue: false } } } });
-    const result = await value.repository.getTargetCapabilities("owner", "repo", "master", "token");
+    const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueObservationProblems[0].message).toContain("more than 500 workflow entries");
   });
 
@@ -451,7 +473,7 @@ describe("GitHub deployment repository", () => {
         { name: "notes.txt", type: "blob", object: { text: "ignored", byteSize: 7, isBinary: false } },
       ] } } }
       : { repository: { ref: { branchProtectionRule: { requiresMergeQueue: false } } } });
-    const result = await value.repository.getTargetCapabilities("owner", "repo", "master", "token");
+    const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueProducers[0]).toEqual(expect.objectContaining({
       support: "unknown",
       reason: expect.stringContaining("2 workflow file(s) could not be parsed"),
@@ -470,7 +492,7 @@ describe("GitHub deployment repository", () => {
     value.graphql.mockImplementation((graphqlQuery: string) => graphqlQuery.includes("DeploymentWorkflowContracts")
       ? { repository: { object: { entries: [workflowEntry(content)] } } }
       : { repository: { ref: { branchProtectionRule: { requiresMergeQueue: false } } } });
-    await expect(value.repository.getTargetCapabilities("owner", "repo", "master", "token"))
+    await expect(value.targetRules.getTargetCapabilities("owner", "repo", "master", "token"))
       .resolves.toEqual(expect.objectContaining({
         mergeQueueProducers: [expect.objectContaining({ name: "ci-check", support: "supported" })],
       }));
@@ -493,7 +515,7 @@ describe("GitHub deployment repository", () => {
     value.graphql.mockImplementation((graphqlQuery: string) => graphqlQuery.includes("DeploymentWorkflowContracts")
       ? { repository: { object: { entries: [workflowEntry(content)] } } }
       : { repository: { ref: { branchProtectionRule: { requiresMergeQueue: false } } } });
-    const result = await value.repository.getTargetCapabilities("owner", "repo", "master", "token");
+    const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueProducers[0]).toEqual(expect.objectContaining({ support: "supported" }));
   });
 
@@ -519,7 +541,7 @@ describe("GitHub deployment repository", () => {
     value.graphql.mockImplementation((graphqlQuery: string) => graphqlQuery.includes("DeploymentWorkflowContracts")
       ? { repository: { object: { entries: [workflowEntry(content)] } } }
       : { repository: { ref: { branchProtectionRule: { requiresMergeQueue: false } } } });
-    const result = await value.repository.getTargetCapabilities("owner", "repo", "master", "token");
+    const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueProducers[0]).toEqual(expect.objectContaining({
       support: "unknown",
       reason: expect.stringContaining("No exact static workflow job"),
@@ -541,7 +563,7 @@ describe("GitHub deployment repository", () => {
     value.graphql.mockImplementation((graphqlQuery: string) => graphqlQuery.includes("DeploymentWorkflowContracts")
       ? { repository: { object: { entries: [workflowEntry(content)] } } }
       : { repository: { ref: { branchProtectionRule: { requiresMergeQueue: false } } } });
-    const result = await value.repository.getTargetCapabilities("owner", "repo", "master", "token");
+    const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueProducers[0]).toEqual(expect.objectContaining({ support: "unknown" }));
   });
 
@@ -554,7 +576,7 @@ describe("GitHub deployment repository", () => {
       ] } },
     ] });
     value.repos.getContent.mockResolvedValue({ data: workflowContent(supportedWorkflow) });
-    await expect(value.repository.getTargetCapabilities("owner", "repo", "master", "token"))
+    await expect(value.targetRules.getTargetCapabilities("owner", "repo", "master", "token"))
       .resolves.toEqual(expect.objectContaining({
         mergeQueueProducers: [expect.objectContaining({
           kind: "workflow",
@@ -578,7 +600,7 @@ describe("GitHub deployment repository", () => {
       ] } },
     ] });
     value.repos.getContent.mockResolvedValue({ data: content });
-    const result = await value.repository.getTargetCapabilities("owner", "repo", "master", "token");
+    const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueProducers[0]).toEqual(expect.objectContaining({
       support: "unknown",
       reason: expect.stringContaining(reason),
@@ -594,7 +616,7 @@ describe("GitHub deployment repository", () => {
         { path: ".github/workflows/invalid-id.yml", repository_id: -1 },
       ] } },
     ] });
-    await expect(value.repository.getTargetCapabilities("owner", "repo", "master", "token"))
+    await expect(value.targetRules.getTargetCapabilities("owner", "repo", "master", "token"))
       .resolves.toEqual(expect.objectContaining({
         mergeQueueProducers: [],
         mergeQueueObservationProblems: [expect.objectContaining({
@@ -613,7 +635,7 @@ describe("GitHub deployment repository", () => {
         { context: "CI Check", integration_id: -1 },
       ] } },
     ] });
-    const result = await value.repository.getTargetCapabilities("owner", "repo", "master", "token");
+    const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueObservationProblems).toEqual([
       expect.objectContaining({ area: "effective-rules", message: expect.stringContaining("invalid required status check") }),
     ]);
@@ -630,7 +652,7 @@ describe("GitHub deployment repository", () => {
       ] }
       : { data: { full_name: "shared/policies" } });
     value.repos.getContent.mockResolvedValue({ data: workflowContent(supportedWorkflow) });
-    const result = await value.repository.getTargetCapabilities("owner", "repo", "master", "token");
+    const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueProducers[0]).toEqual(expect.objectContaining({ support: "supported" }));
     expect(value.repos.getContent).toHaveBeenCalledWith(expect.objectContaining({
       owner: "shared", repo: "policies", ref: "b".repeat(40),
@@ -648,7 +670,7 @@ describe("GitHub deployment repository", () => {
         { type: "workflows", parameters: { workflows: [{ path, repository_id: repositoryId }] } },
       ] }
       : { data: { full_name: "invalid/name/shape" } });
-    const result = await value.repository.getTargetCapabilities("owner", "repo", "master", "token");
+    const result = await value.targetRules.getTargetCapabilities("owner", "repo", "master", "token");
     expect(result.mergeQueueProducers[0]).toEqual(expect.objectContaining({
       support: "unknown", reason: expect.stringContaining(reason),
     }));
@@ -660,41 +682,41 @@ describe("GitHub deployment repository", () => {
   ])("reads merge queue membership idempotently", async (response, expected) => {
     const value = harness();
     value.graphql.mockResolvedValue(response);
-    await expect(value.repository.isPullRequestQueued("owner", "repo", "PR_node", "token")).resolves.toBe(expected);
+    await expect(value.pullRequests.isPullRequestQueued("owner", "repo", "PR_node", "token")).resolves.toBe(expected);
   });
 
   it("rejects a merge that GitHub did not perform", async () => {
     const value = harness();
     value.pulls.merge.mockResolvedValue({ data: { merged: false, message: "checks pending" } });
-    await expect(value.repository.mergePullRequest("owner", "repo", 40, "token")).rejects.toThrow("checks pending");
+    await expect(value.pullRequests.mergePullRequest("owner", "repo", 40, "token")).rejects.toThrow("checks pending");
   });
 
   it("returns the merge SHA after GitHub performs the merge", async () => {
     const value = harness();
     value.pulls.merge.mockResolvedValue({ data: { merged: true, sha: "c".repeat(40) } });
-    await expect(value.repository.mergePullRequest("owner", "repo", 40, "token")).resolves.toBe("c".repeat(40));
+    await expect(value.pullRequests.mergePullRequest("owner", "repo", 40, "token")).resolves.toBe("c".repeat(40));
   });
 
   it("returns an exact merge base and rejects a missing one", async () => {
     const value = harness();
     value.repos.compareCommits.mockResolvedValueOnce({ data: { merge_base_commit: { sha: "a".repeat(40) } } });
-    await expect(value.repository.getMergeBaseSha("owner", "repo", "master", "release/3.4.0", "token"))
+    await expect(value.gitRepository.getMergeBaseSha("owner", "repo", "master", "release/3.4.0", "token"))
       .resolves.toBe("a".repeat(40));
     value.repos.compareCommits.mockResolvedValueOnce({ data: {} });
-    await expect(value.repository.getMergeBaseSha("owner", "repo", "master", "release/3.4.0", "token"))
+    await expect(value.gitRepository.getMergeBaseSha("owner", "repo", "master", "release/3.4.0", "token"))
       .rejects.toThrow("no merge base");
   });
 
   it("verifies reachability from the merge base", async () => {
     const value = harness();
     value.repos.compareCommits.mockResolvedValue({ data: { merge_base_commit: { sha: "a".repeat(40) } } });
-    await expect(value.repository.isCommitReachable("owner", "repo", "master", "a".repeat(40), "token")).resolves.toBe(true);
+    await expect(value.gitRepository.isCommitReachable("owner", "repo", "master", "a".repeat(40), "token")).resolves.toBe(true);
   });
 
   it("creates a missing reconciliation ref at an exact SHA", async () => {
     const value = harness();
     value.git.getRef.mockRejectedValue({ status: 404 });
-    await value.repository.createOrVerifyBranch("owner", "repo", "sync/release", "a".repeat(40), "token");
+    await value.gitRepository.createOrVerifyBranch("owner", "repo", "sync/release", "a".repeat(40), "token");
     expect(value.git.createRef).toHaveBeenCalledWith({ owner: "owner", repo: "repo", ref: "refs/heads/sync/release", sha: "a".repeat(40) });
   });
 
@@ -702,7 +724,7 @@ describe("GitHub deployment repository", () => {
     const value = harness();
     value.git.getRef.mockResolvedValue({ data: { object: { sha: "b".repeat(40) } } });
     value.repos.compareCommits.mockResolvedValue({ data: { merge_base_commit: { sha: "b".repeat(40) } } });
-    await expect(value.repository.createOrVerifyBranch("owner", "repo", "sync/release", "a".repeat(40), "token"))
+    await expect(value.gitRepository.createOrVerifyBranch("owner", "repo", "sync/release", "a".repeat(40), "token"))
       .rejects.toThrow("different SHA");
   });
 
@@ -710,7 +732,7 @@ describe("GitHub deployment repository", () => {
     const value = harness();
     value.repos.compareCommits.mockResolvedValue({ data: { merge_base_commit: { sha: "f".repeat(40) } } });
     value.repos.merge.mockResolvedValue({ data: { merged: true, sha: "c".repeat(40) } });
-    await expect(value.repository.mergeCommitIntoBranch("owner", "repo", "sync/release", "a".repeat(40), "token"))
+    await expect(value.gitRepository.mergeCommitIntoBranch("owner", "repo", "sync/release", "a".repeat(40), "token"))
       .resolves.toBe("c".repeat(40));
   });
 
@@ -718,7 +740,7 @@ describe("GitHub deployment repository", () => {
     const value = harness();
     value.git.getRef.mockResolvedValue({ data: { object: { sha: "e".repeat(40) } } });
     value.repos.compareCommits.mockResolvedValue({ data: { merge_base_commit: { sha: "a".repeat(40) } } });
-    await expect(value.repository.createOrVerifyBranch("owner", "repo", "sync/release", "a".repeat(40), "token")).resolves.toBeUndefined();
+    await expect(value.gitRepository.createOrVerifyBranch("owner", "repo", "sync/release", "a".repeat(40), "token")).resolves.toBeUndefined();
     expect(value.git.createRef).not.toHaveBeenCalled();
   });
 
@@ -726,20 +748,29 @@ describe("GitHub deployment repository", () => {
     const value = harness();
     value.repos.compareCommits.mockResolvedValue({ data: { merge_base_commit: { sha: "a".repeat(40) } } });
     value.git.getRef.mockResolvedValue({ data: { object: { sha: "e".repeat(40) } } });
-    await expect(value.repository.mergeCommitIntoBranch("owner", "repo", "sync/release", "a".repeat(40), "token"))
+    await expect(value.gitRepository.mergeCommitIntoBranch("owner", "repo", "sync/release", "a".repeat(40), "token"))
       .resolves.toBe("e".repeat(40));
     expect(value.repos.merge).not.toHaveBeenCalled();
   });
 
   it("deletes a branch idempotently when it is already absent", async () => {
     const value = harness();
-    value.git.deleteRef.mockRejectedValue({ status: 404 });
-    await expect(value.repository.deleteBranch("owner", "repo", "sync/release", "token")).resolves.toBeUndefined();
+    value.git.getRef.mockRejectedValue({ status: 404 });
+    await expect(value.gitRepository.deleteBranch("owner", "repo", "sync/release", "a".repeat(40), "token")).resolves.toBeUndefined();
+    expect(value.git.deleteRef).not.toHaveBeenCalled();
+  });
+
+  it("refuses to delete a branch that moved after its cleanup receipt", async () => {
+    const value = harness();
+    value.git.getRef.mockResolvedValue({ data: { object: { sha: "b".repeat(40) } } });
+    await expect(value.gitRepository.deleteBranch("owner", "repo", "sync/release", "a".repeat(40), "token"))
+      .rejects.toThrow("refusing cleanup");
+    expect(value.git.deleteRef).not.toHaveBeenCalled();
   });
 
   it("filters active branches by the configured tree", async () => {
     const value = harness();
     value.paginate.mockResolvedValue([{ name: "release/3.5.0" }, { name: "feature/x" }]);
-    await expect(value.repository.listBranches("owner", "repo", "release", "token")).resolves.toEqual(["release/3.5.0"]);
+    await expect(value.gitRepository.listBranches("owner", "repo", "release", "token")).resolves.toEqual(["release/3.5.0"]);
   });
 });

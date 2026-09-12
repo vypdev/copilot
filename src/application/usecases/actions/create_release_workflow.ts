@@ -14,10 +14,11 @@ export async function runCreateRelease(
     const operation = param.currentConfiguration.deploymentOrchestration;
     const continuationError = validateDeploymentContinuation(operation, param.singleAction.operationId, ["publishing"], param.singleAction.version);
     if (continuationError) return [failureResult(taskId, continuationError, 'workflow.stale')];
+    if (!operation?.productionSha) return [failureResult(taskId, 'The deployment operation has no accepted production SHA.', 'workflow.stale')];
     const input = {
-        version: param.singleAction.version || operation?.version || '',
-        title: param.singleAction.title || operation?.title || '',
-        changelog: param.singleAction.changelog || operation?.changelog || '',
+        version: operation.version,
+        title: operation.title,
+        changelog: operation.changelog,
     };
     const validationError = validateReleaseInput(input);
     if (validationError) {
@@ -33,6 +34,8 @@ export async function runCreateRelease(
             releaseVersion,
             input.title,
             input.changelog,
+            operation.operationId,
+            operation.productionSha,
             param.tokens.token,
         );
         if (!releaseUrl) {

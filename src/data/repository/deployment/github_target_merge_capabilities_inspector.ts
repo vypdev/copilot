@@ -1,11 +1,7 @@
 import * as yaml from "js-yaml";
 import type {
-  DeploymentGitPort,
-  ManagedPullRequestCreate,
-  ManagedPullRequestPort,
-  ManagedPullRequestQuery,
-  ManagedPullRequestRecord,
   TargetMergeInspectionOptions,
+  TargetMergePolicyInspectionPort,
 } from "../../../application/ports/deployment_orchestration_ports";
 import type { TargetMergeCapabilities } from "../../../application/policies/deployment_plan_policy";
 import type {
@@ -13,59 +9,12 @@ import type {
   MergeQueueProducerEvidence,
   MergeQueueProducerSupport,
 } from "../../../domain/merge_queue_readiness";
-import { parseManagedPullRequestMarker } from "../../../domain/managed_pull_request";
 import { redactSensitiveText } from "../../../domain/security/sensitive_text";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
-import type {
-  GithubDeploymentClient,
-  GithubDeploymentPullRequest,
-} from "../../../infrastructure/github/ports/github_deployment_provider_port";
+import type { GithubDeploymentClient } from "../../../infrastructure/github/ports/github_deployment_provider_port";
 
-export class GithubDeploymentRepository implements ManagedPullRequestPort, DeploymentGitPort {
+export class GithubTargetMergeCapabilitiesInspector implements TargetMergePolicyInspectionPort {
   constructor(private readonly clientProvider: GithubClientPort<GithubDeploymentClient>) {}
-
-  async findManagedPullRequests(query: ManagedPullRequestQuery): Promise<readonly ManagedPullRequestRecord[]> {
-    const client = this.clientProvider.getClient(query.token);
-    const pullRequests = await client.paginate(client.rest.pulls.list, {
-      owner: query.owner,
-      repo: query.repository,
-      state: "all",
-      head: `${query.owner}:${query.headBranch}`,
-      base: query.baseBranch,
-      per_page: 100,
-    });
-    return pullRequests
-      .filter((pullRequest) => {
-        const marker = parseManagedPullRequestMarker(pullRequest.body);
-        return marker?.operationId === query.operationId
-          && marker.phase === query.phase
-          && marker.issue === query.issue;
-      })
-      .map((pullRequest) => mapPullRequest(pullRequest, query.owner, query.repository));
-  }
-
-  async createManagedPullRequest(command: ManagedPullRequestCreate): Promise<ManagedPullRequestRecord> {
-    const client = this.clientProvider.getClient(command.token);
-    const { data } = await client.rest.pulls.create({
-      owner: command.owner,
-      repo: command.repository,
-      head: command.headBranch,
-      base: command.baseBranch,
-      title: command.title,
-      body: command.body,
-      maintainer_can_modify: false,
-    });
-    return mapPullRequest(data, command.owner, command.repository);
-  }
-
-  async getPullRequest(owner: string, repository: string, pullRequest: number, token: string): Promise<ManagedPullRequestRecord> {
-    const { data } = await this.clientProvider.getClient(token).rest.pulls.get({
-      owner,
-      repo: repository,
-      pull_number: pullRequest,
-    });
-    return mapPullRequest(data, owner, repository);
-  }
 
   async getTargetCapabilities(
     owner: string,
@@ -125,142 +74,6 @@ export class GithubDeploymentRepository implements ManagedPullRequestPort, Deplo
       mergeQueueObservationProblems: [...problems, ...producerInspection.problems],
     };
   }
-
-  async enableAutoMerge(owner: string, repository: string, pullRequestNodeId: string, token: string): Promise<void> {
-    await this.clientProvider.getClient(token).graphql(
-      `mutation EnableDeploymentAutoMerge($pullRequestId: ID!) {
-        enablePullRequestAutoMerge(input: {pullRequestId: $pullRequestId, mergeMethod: MERGE}) {
-          pullRequest { id }
-        }
-      }`,
-      { pullRequestId: pullRequestNodeId, owner, repository },
-    );
-  }
-
-  async isPullRequestQueued(owner: string, repository: string, pullRequestNodeId: string, token: string): Promise<boolean> {
-    const response = await this.clientProvider.getClient(token).graphql<{
-      node?: { mergeQueueEntry?: { id?: string } | null } | null;
-    }>(
-      `query DeploymentPullRequestQueue($pullRequestId: ID!) {
-        node(id: $pullRequestId) {
-          ... on PullRequest { mergeQueueEntry { id } }
-        }
-      }`,
-      { pullRequestId: pullRequestNodeId },
-    );
-    if (!response.node || !("mergeQueueEntry" in response.node)) {
-      throw new Error("GitHub returned no authoritative merge-queue membership for the pull request.");
-    }
-    return Boolean(response.node.mergeQueueEntry?.id);
-  }
-
-  async enqueuePullRequest(
-    owner: string,
-    repository: string,
-    pullRequestNodeId: string,
-    expectedHeadSha: string,
-    token: string,
-  ): Promise<void> {
-    const response = await this.clientProvider.getClient(token).graphql<{
-      enqueuePullRequest?: { mergeQueueEntry?: { id?: string } | null } | null;
-    }>(
-      `mutation EnqueueDeploymentPullRequest($pullRequestId: ID!, $expectedHeadOid: GitObjectID!) {
-        enqueuePullRequest(input: {pullRequestId: $pullRequestId, expectedHeadOid: $expectedHeadOid}) {
-          mergeQueueEntry { id }
-        }
-      }`,
-      { pullRequestId: pullRequestNodeId, expectedHeadOid: expectedHeadSha, owner, repository },
-    );
-    if (!response.enqueuePullRequest?.mergeQueueEntry?.id) {
-      throw new Error("GitHub did not confirm that the pull request entered the merge queue.");
-    }
-  }
-
-  async mergePullRequest(owner: string, repository: string, pullRequest: number, token: string): Promise<string> {
-    const { data } = await this.clientProvider.getClient(token).rest.pulls.merge({
-      owner,
-      repo: repository,
-      pull_number: pullRequest,
-      merge_method: "merge",
-    });
-    if (!data.merged || !data.sha) throw new Error(data.message ?? `Pull request #${pullRequest} was not merged.`);
-    return data.sha;
-  }
-
-  async getBranchSha(owner: string, repository: string, branch: string, token: string): Promise<string> {
-    const { data } = await this.clientProvider.getClient(token).rest.git.getRef({ owner, repo: repository, ref: `heads/${branch}` });
-    return data.object.sha;
-  }
-
-  async getMergeBaseSha(owner: string, repository: string, base: string, head: string, token: string): Promise<string> {
-    const { data } = await this.clientProvider.getClient(token).rest.repos.compareCommits({ owner, repo: repository, base, head });
-    const sha = data.merge_base_commit?.sha;
-    if (!sha) throw new Error(`GitHub returned no merge base for ${base}...${head}.`);
-    return sha;
-  }
-
-  async isCommitReachable(owner: string, repository: string, branch: string, sha: string, token: string): Promise<boolean> {
-    const { data } = await this.clientProvider.getClient(token).rest.repos.compareCommits({ owner, repo: repository, base: sha, head: branch });
-    return data.merge_base_commit?.sha === sha;
-  }
-
-  async createOrVerifyBranch(owner: string, repository: string, branch: string, sha: string, token: string): Promise<void> {
-    const client = this.clientProvider.getClient(token);
-    try {
-      const { data } = await client.rest.git.getRef({ owner, repo: repository, ref: `heads/${branch}` });
-      if (data.object.sha !== sha) {
-        const { data: comparison } = await client.rest.repos.compareCommits({ owner, repo: repository, base: sha, head: branch });
-        if (comparison.merge_base_commit?.sha !== sha) throw new Error(`Branch ${branch} already exists at a different SHA.`);
-      }
-    } catch (error) {
-      if (!isNotFound(error)) throw error;
-      await client.rest.git.createRef({ owner, repo: repository, ref: `refs/heads/${branch}`, sha });
-    }
-  }
-
-  async mergeCommitIntoBranch(owner: string, repository: string, branch: string, sourceSha: string, token: string): Promise<string> {
-    const client = this.clientProvider.getClient(token);
-    const { data: comparison } = await client.rest.repos.compareCommits({ owner, repo: repository, base: sourceSha, head: branch });
-    if (comparison.merge_base_commit?.sha === sourceSha) return await this.getBranchSha(owner, repository, branch, token);
-    const { data } = await client.rest.repos.merge({
-      owner,
-      repo: repository,
-      base: branch,
-      head: sourceSha,
-      commit_message: `chore(release): reconcile ${sourceSha.slice(0, 7)} into ${branch}`,
-    });
-    if (!data.merged || !data.sha) throw new Error(data.message ?? `Could not reconcile ${sourceSha} into ${branch}.`);
-    return data.sha;
-  }
-
-  async deleteBranch(owner: string, repository: string, branch: string, token: string): Promise<void> {
-    try {
-      await this.clientProvider.getClient(token).rest.git.deleteRef({ owner, repo: repository, ref: `heads/${branch}` });
-    } catch (error) {
-      if (!isNotFound(error)) throw error;
-    }
-  }
-
-  async listBranches(owner: string, repository: string, prefix: string, token: string): Promise<readonly string[]> {
-    const client = this.clientProvider.getClient(token);
-    const branches = await client.paginate(client.rest.repos.listBranches, { owner, repo: repository, per_page: 100 });
-    return branches.map(({ name }) => name).filter((name) => name.startsWith(`${prefix}/`));
-  }
-}
-
-function mapPullRequest(value: GithubDeploymentPullRequest, owner: string, repository: string): ManagedPullRequestRecord {
-  return {
-    number: value.number,
-    nodeId: value.node_id,
-    body: value.body ?? "",
-    headBranch: value.head.ref,
-    headSha: value.head.sha,
-    baseBranch: value.base.ref,
-    state: value.state === "closed" ? "closed" : "open",
-    merged: value.merged === true,
-    mergeCommitSha: value.merge_commit_sha ?? undefined,
-    repositoryFullName: value.base.repo?.full_name ?? value.head.repo?.full_name ?? `${owner}/${repository}`,
-  };
 }
 
 interface GithubBranchProtection {
@@ -319,6 +132,12 @@ interface WorkflowSnapshot {
   readonly ref: string;
   readonly contracts: readonly WorkflowContract[];
   readonly parseFailures: readonly string[];
+}
+
+interface GithubWorkflowTreeEntry {
+  readonly name?: string;
+  readonly type?: string;
+  readonly object?: { readonly text?: string | null; readonly byteSize?: number; readonly isBinary?: boolean };
 }
 
 async function observeClassicProtection(
@@ -411,149 +230,181 @@ function normalizeEffectiveRules(
   protection: GithubBranchProtection | undefined,
   rules: readonly GithubEffectiveRule[],
 ): NormalizedEffectiveRules {
-  const checks = new Map<string, RequiredCheck>();
-  const workflows = new Map<string, RequiredWorkflow>();
-  const problems: MergeQueueObservationProblem[] = [];
-  const recordInvalidRule = (
-    kind: "effective rule entry" | "required status check" | "required workflow",
-    area: "classic-protection" | "effective-rules" = "effective-rules",
-  ) => {
-    if (problems.some((problem) => problem.area === area && problem.message.includes(kind))) return;
-    problems.push({
+  return new EffectiveRulesNormalizer().normalize(protection, rules);
+}
+
+type InvalidRuleKind = "effective rule entry" | "required status check" | "required workflow";
+type RuleProblemArea = "classic-protection" | "effective-rules";
+
+class EffectiveRulesNormalizer {
+  private readonly checks = new Map<string, RequiredCheck>();
+  private readonly workflows = new Map<string, RequiredWorkflow>();
+  private readonly problems: MergeQueueObservationProblem[] = [];
+  private mergeQueueRequired = false;
+  private requiresStrictStatusChecks = false;
+
+  normalize(
+    protection: GithubBranchProtection | undefined,
+    rules: readonly GithubEffectiveRule[],
+  ): NormalizedEffectiveRules {
+    this.normalizeClassicProtection(protection?.required_status_checks);
+    for (const rule of rules as readonly unknown[]) this.normalizeEffectiveRule(rule);
+    return {
+      mergeQueueRequired: this.mergeQueueRequired,
+      requiresStrictStatusChecks: this.requiresStrictStatusChecks,
+      requiredChecks: [...this.checks.values()],
+      requiredWorkflows: [...this.workflows.values()],
+      problems: this.problems,
+    };
+  }
+
+  private normalizeClassicProtection(value: unknown): void {
+    if (value === undefined || value === null) return;
+    if (!isRecord(value)) {
+      this.recordInvalid("required status check", "classic-protection");
+      return;
+    }
+    this.normalizeStrictFlag(value.strict, "classic-protection");
+    this.normalizeClassicChecks(value.checks);
+    this.normalizeClassicContexts(value.contexts);
+  }
+
+  private normalizeClassicChecks(value: unknown): void {
+    if (value === undefined) return;
+    if (!Array.isArray(value)) {
+      this.recordInvalid("required status check", "classic-protection");
+      return;
+    }
+    for (const rawCheck of value) {
+      if (!isRecord(rawCheck)) {
+        this.recordInvalid("required status check", "classic-protection");
+        continue;
+      }
+      this.addCheck(rawCheck.context, rawCheck.app_id, "classic-protection");
+    }
+  }
+
+  private normalizeClassicContexts(value: unknown): void {
+    if (value === undefined) return;
+    if (!Array.isArray(value)) {
+      this.recordInvalid("required status check", "classic-protection");
+      return;
+    }
+    for (const context of value) {
+      if (!this.hasCheckContext(context)) this.addCheck(context, "any", "classic-protection");
+    }
+  }
+
+  private normalizeEffectiveRule(value: unknown): void {
+    if (!isRecord(value) || typeof value.type !== "string" || value.type.length === 0) {
+      this.recordInvalid("effective rule entry");
+      return;
+    }
+    if (value.type === "merge_queue") this.mergeQueueRequired = true;
+    if (value.type === "required_status_checks") this.normalizeRequiredChecks(value.parameters);
+    if (value.type === "workflows") this.normalizeRequiredWorkflows(value.parameters);
+  }
+
+  private normalizeRequiredChecks(parameters: unknown): void {
+    const values = isRecord(parameters) ? parameters : {};
+    this.normalizeStrictFlag(values.strict_required_status_checks_policy, "effective-rules");
+    const checks = values.required_status_checks;
+    if (!Array.isArray(checks)) {
+      this.recordInvalid("required status check");
+      return;
+    }
+    for (const rawCheck of checks) {
+      if (!isRecord(rawCheck)) {
+        this.recordInvalid("required status check");
+        continue;
+      }
+      this.addCheck(rawCheck.context, rawCheck.integration_id, "effective-rules");
+    }
+  }
+
+  private normalizeRequiredWorkflows(parameters: unknown): void {
+    const workflows = isRecord(parameters) ? parameters.workflows : undefined;
+    if (!Array.isArray(workflows)) {
+      this.recordInvalid("required workflow");
+      return;
+    }
+    for (const workflow of workflows) this.addWorkflow(workflow);
+  }
+
+  private addWorkflow(value: unknown): void {
+    if (!isRecord(value) || !isValidRequiredWorkflow(value)) {
+      this.recordInvalid("required workflow");
+      return;
+    }
+    const workflow: RequiredWorkflow = {
+      path: value.path,
+      repositoryId: value.repository_id,
+      ...(typeof value.ref === "string" ? { ref: value.ref } : {}),
+      ...(typeof value.sha === "string" ? { sha: value.sha } : {}),
+    };
+    this.workflows.set(
+      `${workflow.repositoryId}\0${workflow.path}\0${workflow.ref ?? ""}\0${workflow.sha ?? ""}`,
+      workflow,
+    );
+  }
+
+  private addCheck(context: unknown, integrationId: unknown, area: RuleProblemArea): void {
+    if (typeof context !== "string" || !context.trim()) {
+      this.recordInvalid("required status check", area);
+      return;
+    }
+    if (!isValidIntegrationId(integrationId)) this.recordInvalid("required status check", area);
+    const normalizedId = typeof integrationId === "number"
+      && Number.isSafeInteger(integrationId)
+      && integrationId > 0
+      ? integrationId
+      : "any";
+    const check: RequiredCheck = { context: context.trim(), integrationId: normalizedId };
+    this.checks.set(`${check.context}\0${check.integrationId}`, check);
+  }
+
+  private normalizeStrictFlag(value: unknown, area: RuleProblemArea): void {
+    if (value === true) this.requiresStrictStatusChecks = true;
+    if (value !== undefined && typeof value !== "boolean") {
+      this.recordInvalid("required status check", area);
+    }
+  }
+
+  private hasCheckContext(value: unknown): boolean {
+    return [...this.checks.values()].some((check) => check.context === value);
+  }
+
+  private recordInvalid(kind: InvalidRuleKind, area: RuleProblemArea = "effective-rules"): void {
+    if (this.problems.some((problem) => problem.area === area && problem.message.includes(kind))) return;
+    this.problems.push({
       area,
       message: `GitHub returned an invalid ${kind}, so readiness cannot be proven.`,
     });
-  };
-  const addCheck = (context: unknown, integrationId: unknown, source: "classic" | "ruleset") => {
-    if (typeof context !== "string" || !context.trim()) {
-      recordInvalidRule("required status check", source === "classic" ? "classic-protection" : "effective-rules");
-      return;
-    }
-    if (integrationId !== undefined
-      && integrationId !== null
-      && integrationId !== "any"
-      && (typeof integrationId !== "number" || !Number.isSafeInteger(integrationId) || integrationId <= 0)) {
-      recordInvalidRule("required status check", source === "classic" ? "classic-protection" : "effective-rules");
-    }
-    const normalizedId = typeof integrationId === "number" && Number.isSafeInteger(integrationId) && integrationId > 0
-      ? integrationId
-      : "any";
-    const check = { context: context.trim(), integrationId: normalizedId } as const;
-    checks.set(`${check.context}\0${check.integrationId}`, check);
-  };
-  const classicStatusChecks = protection?.required_status_checks;
-  if (classicStatusChecks !== undefined && classicStatusChecks !== null
-    && (typeof classicStatusChecks !== "object" || Array.isArray(classicStatusChecks))) {
-    recordInvalidRule("required status check", "classic-protection");
   }
-  const classicChecks: unknown = classicStatusChecks && typeof classicStatusChecks === "object"
-    ? classicStatusChecks.checks
-    : undefined;
-  if (classicChecks !== undefined && !Array.isArray(classicChecks)) {
-    recordInvalidRule("required status check", "classic-protection");
-  }
-  for (const rawCheck of Array.isArray(classicChecks) ? classicChecks : []) {
-    if (!rawCheck || typeof rawCheck !== "object" || Array.isArray(rawCheck)) {
-      recordInvalidRule("required status check", "classic-protection");
-      continue;
-    }
-    const check = rawCheck as { context?: unknown; app_id?: unknown };
-    addCheck(check.context, check.app_id, "classic");
-  }
-  const classicContexts: unknown = classicStatusChecks && typeof classicStatusChecks === "object"
-    ? classicStatusChecks.contexts
-    : undefined;
-  if (classicContexts !== undefined && !Array.isArray(classicContexts)) {
-    recordInvalidRule("required status check", "classic-protection");
-  }
-  for (const context of Array.isArray(classicContexts) ? classicContexts : []) {
-    if (![...checks.values()].some((check) => check.context === context)) addCheck(context, "any", "classic");
-  }
-  let strict = classicStatusChecks !== null
-    && typeof classicStatusChecks === "object"
-    && !Array.isArray(classicStatusChecks)
-    && classicStatusChecks.strict === true;
-  if (classicStatusChecks !== null
-    && typeof classicStatusChecks === "object"
-    && !Array.isArray(classicStatusChecks)
-    && classicStatusChecks.strict !== undefined
-    && typeof classicStatusChecks.strict !== "boolean") {
-    recordInvalidRule("required status check", "classic-protection");
-  }
-  let mergeQueueRequired = false;
-  for (const rawRule of rules as readonly unknown[]) {
-    if (!rawRule || typeof rawRule !== "object" || Array.isArray(rawRule)) {
-      recordInvalidRule("effective rule entry");
-      continue;
-    }
-    const rule = rawRule as GithubEffectiveRule;
-    if (typeof rule.type !== "string" || !rule.type) {
-      recordInvalidRule("effective rule entry");
-      continue;
-    }
-    if (rule.type === "merge_queue") mergeQueueRequired = true;
-    if (rule.type === "required_status_checks") {
-      strict ||= rule.parameters?.strict_required_status_checks_policy === true;
-      if (rule.parameters?.strict_required_status_checks_policy !== undefined
-        && typeof rule.parameters.strict_required_status_checks_policy !== "boolean") {
-        recordInvalidRule("required status check");
-      }
-      const requiredChecks: unknown = rule.parameters?.required_status_checks;
-      if (!Array.isArray(requiredChecks)) {
-        recordInvalidRule("required status check");
-      } else {
-        for (const rawCheck of requiredChecks) {
-          if (!rawCheck || typeof rawCheck !== "object" || Array.isArray(rawCheck)) {
-            recordInvalidRule("required status check");
-            continue;
-          }
-          const check = rawCheck as { context?: unknown; integration_id?: unknown };
-          addCheck(check.context, check.integration_id, "ruleset");
-        }
-      }
-    }
-    if (rule.type === "workflows") {
-      const requiredWorkflows: unknown = rule.parameters?.workflows;
-      if (!Array.isArray(requiredWorkflows)) {
-        recordInvalidRule("required workflow");
-        continue;
-      }
-      for (const rawWorkflow of requiredWorkflows) {
-        if (!rawWorkflow || typeof rawWorkflow !== "object" || Array.isArray(rawWorkflow)) {
-          recordInvalidRule("required workflow");
-          continue;
-        }
-        const workflow = rawWorkflow as Record<string, unknown>;
-        if (typeof workflow.path !== "string"
-          || !workflow.path.trim()
-          || typeof workflow.repository_id !== "number"
-          || !Number.isSafeInteger(workflow.repository_id)
-          || workflow.repository_id <= 0
-          || (workflow.ref !== undefined && (typeof workflow.ref !== "string" || !workflow.ref.trim()))
-          || (workflow.sha !== undefined && (typeof workflow.sha !== "string" || !/^[a-f0-9]{40}$/i.test(workflow.sha)))) {
-          recordInvalidRule("required workflow");
-          continue;
-        }
-        const normalized = {
-          path: workflow.path,
-          repositoryId: workflow.repository_id,
-          ...(typeof workflow.ref === "string" ? { ref: workflow.ref } : {}),
-          ...(typeof workflow.sha === "string" ? { sha: workflow.sha } : {}),
-        };
-        workflows.set(
-          `${normalized.repositoryId}\0${normalized.path}\0${normalized.ref ?? ""}\0${normalized.sha ?? ""}`,
-          normalized,
-        );
-      }
-    }
-  }
-  return {
-    mergeQueueRequired,
-    requiresStrictStatusChecks: strict,
-    requiredChecks: [...checks.values()],
-    requiredWorkflows: [...workflows.values()],
-    problems,
-  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isValidIntegrationId(value: unknown): boolean {
+  return value === undefined
+    || value === null
+    || value === "any"
+    || (typeof value === "number" && Number.isSafeInteger(value) && value > 0);
+}
+
+function isValidRequiredWorkflow(value: Record<string, unknown>): value is Record<string, unknown> & {
+  readonly path: string;
+  readonly repository_id: number;
+} {
+  return typeof value.path === "string"
+    && value.path.trim().length > 0
+    && typeof value.repository_id === "number"
+    && Number.isSafeInteger(value.repository_id)
+    && value.repository_id > 0
+    && (value.ref === undefined || (typeof value.ref === "string" && value.ref.trim().length > 0))
+    && (value.sha === undefined || (typeof value.sha === "string" && /^[a-f0-9]{40}$/i.test(value.sha)));
 }
 
 async function inspectMergeQueueProducers(
@@ -667,11 +518,7 @@ async function readRepositoryWorkflowSnapshot(
   const response = await client.graphql<{
     repository?: {
       object?: {
-        entries?: readonly {
-          name?: string;
-          type?: string;
-          object?: { text?: string | null; byteSize?: number; isBinary?: boolean };
-        }[];
+        entries?: readonly GithubWorkflowTreeEntry[];
       } | null;
     };
   }>(
@@ -698,27 +545,50 @@ async function readRepositoryWorkflowSnapshot(
   const contracts: WorkflowContract[] = [];
   const parseFailures: string[] = [];
   for (const entry of entries) {
-    if (entry.type !== "blob"
-      || typeof entry.name !== "string"
-      || !/\.ya?ml$/i.test(entry.name)
-      || entry.object?.isBinary
-      || typeof entry.object?.text !== "string") continue;
-    const actualBytes = new TextEncoder().encode(entry.object.text).byteLength;
-    if (typeof entry.object.byteSize !== "number"
-      || !Number.isSafeInteger(entry.object.byteSize)
-      || entry.object.byteSize < 0
-      || entry.object.byteSize > 1_000_000
-      || actualBytes > 1_000_000) {
-      parseFailures.push(entry.name);
-      continue;
-    }
-    try {
-      contracts.push(parseWorkflowContract(`.github/workflows/${entry.name}`, entry.object.text));
-    } catch {
-      parseFailures.push(entry.name);
-    }
+    const observation = inspectWorkflowTreeEntry(entry);
+    if (observation.kind === "contract") contracts.push(observation.contract);
+    if (observation.kind === "failure") parseFailures.push(observation.name);
   }
   return { ref, contracts, parseFailures };
+}
+
+function inspectWorkflowTreeEntry(entry: GithubWorkflowTreeEntry):
+  | { readonly kind: "ignored" }
+  | { readonly kind: "failure"; readonly name: string }
+  | { readonly kind: "contract"; readonly contract: WorkflowContract } {
+  if (!isInspectableWorkflowEntry(entry)) return { kind: "ignored" };
+  const actualBytes = new TextEncoder().encode(entry.object.text).byteLength;
+  if (!isValidWorkflowSize(entry.object.byteSize, actualBytes)) {
+    return { kind: "failure", name: entry.name };
+  }
+  try {
+    return {
+      kind: "contract",
+      contract: parseWorkflowContract(`.github/workflows/${entry.name}`, entry.object.text),
+    };
+  } catch {
+    return { kind: "failure", name: entry.name };
+  }
+}
+
+function isInspectableWorkflowEntry(entry: GithubWorkflowTreeEntry): entry is {
+  readonly name: string;
+  readonly type: "blob";
+  readonly object: { readonly text: string; readonly byteSize?: number; readonly isBinary?: false };
+} {
+  return entry.type === "blob"
+    && typeof entry.name === "string"
+    && /\.ya?ml$/i.test(entry.name)
+    && entry.object?.isBinary !== true
+    && typeof entry.object?.text === "string";
+}
+
+function isValidWorkflowSize(size: unknown, actualBytes: number): boolean {
+  return typeof size === "number"
+    && Number.isSafeInteger(size)
+    && size >= 0
+    && size <= 1_000_000
+    && actualBytes <= 1_000_000;
 }
 
 async function inspectRequiredWorkflow(
@@ -774,22 +644,38 @@ async function inspectRequiredWorkflow(
 }
 
 function decodeWorkflowContent(data: unknown): string {
-  if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("GitHub did not return one workflow file.");
-  const file = data as { content?: unknown; encoding?: unknown; size?: unknown };
-  if (file.encoding !== "base64" || typeof file.content !== "string") throw new Error("Workflow content is unavailable.");
-  if (typeof file.size !== "number" || !Number.isSafeInteger(file.size) || file.size < 0) {
-    throw new Error("Workflow size metadata is unavailable.");
-  }
+  const file = requireEncodedWorkflowFile(data);
   if (file.size > 1_000_000) throw new Error("Workflow file exceeds the 1 MB inspection limit.");
   const encoded = file.content.replace(/\s/g, "");
-  if (encoded.length > 1_400_000 || encoded.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(encoded)) {
+  if (!isBoundedBase64(encoded)) {
     throw new Error("Workflow content is not valid bounded base64.");
   }
   const decoded = Buffer.from(encoded, "base64");
   if (decoded.byteLength > 1_000_000) throw new Error("Workflow file exceeds the 1 MB inspection limit.");
   if (decoded.byteLength !== file.size) throw new Error("Workflow size metadata does not match its content.");
+  return decodeUtf8(decoded);
+}
+
+function requireEncodedWorkflowFile(data: unknown): { readonly content: string; readonly size: number } {
+  if (!isRecord(data)) throw new Error("GitHub did not return one workflow file.");
+  if (data.encoding !== "base64" || typeof data.content !== "string") {
+    throw new Error("Workflow content is unavailable.");
+  }
+  if (typeof data.size !== "number" || !Number.isSafeInteger(data.size) || data.size < 0) {
+    throw new Error("Workflow size metadata is unavailable.");
+  }
+  return { content: data.content, size: data.size };
+}
+
+function isBoundedBase64(value: string): boolean {
+  return value.length <= 1_400_000
+    && value.length % 4 === 0
+    && /^[A-Za-z0-9+/]*={0,2}$/.test(value);
+}
+
+function decodeUtf8(value: Uint8Array): string {
   try {
-    return new TextDecoder("utf-8", { fatal: true }).decode(decoded);
+    return new TextDecoder("utf-8", { fatal: true }).decode(value);
   } catch {
     throw new Error("Workflow content is not valid UTF-8.");
   }
@@ -797,31 +683,23 @@ function decodeWorkflowContent(data: unknown): string {
 
 function parseWorkflowContract(path: string, content: string): WorkflowContract {
   const parsed = yaml.load(content, { schema: yaml.JSON_SCHEMA });
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Workflow YAML must be an object.");
-  const workflow = parsed as Record<string, unknown>;
-  const jobs = workflow.jobs && typeof workflow.jobs === "object" && !Array.isArray(workflow.jobs)
-    ? workflow.jobs as Record<string, unknown>
-    : {};
-  const jobNames: string[] = [];
-  for (const [jobId, value] of Object.entries(jobs)) {
-    if (!value || typeof value !== "object" || Array.isArray(value)) continue;
-    const job = value as Record<string, unknown>;
-    if (typeof job.uses === "string") continue;
-    if (job.strategy
-      && typeof job.strategy === "object"
-      && !Array.isArray(job.strategy)
-      && "matrix" in job.strategy) continue;
-    if (typeof job.name === "string") {
-      if (!job.name.includes("${{")) jobNames.push(job.name);
-    } else {
-      jobNames.push(jobId);
-    }
-  }
+  if (!isRecord(parsed)) throw new Error("Workflow YAML must be an object.");
+  const jobs = isRecord(parsed.jobs) ? parsed.jobs : {};
+  const jobNames = Object.entries(jobs)
+    .map(([jobId, value]) => staticWorkflowJobName(jobId, value))
+    .filter((name): name is string => name !== undefined);
   return {
     path,
     jobNames,
-    mergeGroupSupported: hasMergeGroupTrigger(workflow.on),
+    mergeGroupSupported: hasMergeGroupTrigger(parsed.on),
   };
+}
+
+function staticWorkflowJobName(jobId: string, value: unknown): string | undefined {
+  if (!isRecord(value) || typeof value.uses === "string") return undefined;
+  if (isRecord(value.strategy) && "matrix" in value.strategy) return undefined;
+  if (typeof value.name !== "string") return jobId;
+  return value.name.includes("${{") ? undefined : value.name;
 }
 
 function hasMergeGroupTrigger(value: unknown): boolean {

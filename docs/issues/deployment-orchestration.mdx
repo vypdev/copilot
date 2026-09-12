@@ -99,6 +99,42 @@ already be present when a managed promotion PR closes.
 The immutable facts are visible in one issue control-center comment. Duplicate
 events and retries update that comment instead of creating another operation.
 
+## Serialization, durable revisions, and safe retries
+
+All release, hotfix, and managed-PR mutation routes for the same launcher issue
+share one repository-and-issue concurrency group. The workflows retain every
+waiting run and never cancel an in-progress deployment owner. A credential-free
+validation job rejects an invalid issue, mode, version, operation ID, title, or
+changelog before a job receives write permission.
+
+The launcher issue stores only deployment state version 1. The first snapshot is
+revision 1; every accepted state change increments it by exactly one and saves
+against the previously read operation ID, phase, and revision. A stale delivery
+is a successful no-op. A missing, malformed, unversioned, future, or conflicting
+snapshot fails closed and is not converted or rewritten.
+
+There is deliberately no legacy or standalone deployment-publication path.
+`create_tag`, `create_release`, `publish_github_action`, and all orchestration
+continuations run only inside the serialized GitHub workflow for a durable
+operation. Local action execution rejects these commands before composing any
+deployment credential or mutation adapter.
+
+Retries inspect provider receipts before repeating effects:
+
+- managed PRs use an exact operation/issue/phase marker and frozen head SHA;
+- auto-merge and merge queue operations are skipped when GitHub already
+  confirms the intended state;
+- version tags must resolve, including through annotated tags, to the accepted
+  production SHA;
+- the GitHub Release carries an exact hidden operation-and-production-SHA marker;
+- this repository's npm step verifies the registry version and `gitHead` before
+  publication is confirmed; and
+- cleanup deletes only an operation-owned branch still at its recorded SHA.
+
+If a tag or release is absent, retry the current serialized publication phase.
+If it exists with a different SHA or marker, do not retry: the control center
+keeps the conflicting facts visible for maintainer intervention.
+
 ## Hotfix lifecycle
 
 A hotfix follows the same production-first route with one important origin

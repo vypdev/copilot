@@ -28,31 +28,56 @@ on:
       issue:
         description: 'Launcher issue'
         required: true
-        default: '-1'
+
+concurrency:
+  group: copilot-deployment-${{ github.repository_id }}-${{ inputs.issue }}
+  cancel-in-progress: false
+  queue: max
 
 jobs:
-  queue-gate:
-    name: Wait for previous mutation workflows
+  validate:
+    name: Validate deployment command
     runs-on: [self-hosted, codex]
-    timeout-minutes: 120
-    permissions:
-      actions: read
-      contents: read
+    timeout-minutes: 5
+    permissions: {}
     steps:
-      - uses: actions/checkout@v5
+      - name: Validate bounded orchestration inputs
+        uses: actions/github-script@v9
+        env:
+          MODE: ${{ inputs.mode }}
+          OPERATION_ID: ${{ inputs.operation-id }}
+          VERSION: ${{ inputs.version }}
+          ISSUE: ${{ inputs.issue }}
+          TITLE: ${{ inputs.title }}
+          CHANGELOG: ${{ inputs.changelog }}
         with:
-          persist-credentials: false
-      - name: Admit workflow to mutation queue
-        uses: ./
-        with:
-          queue-gate-only: 'true'
-          token: ${{ github.token }}
+          github-token: ''
+          script: |
+            const mode = process.env.MODE;
+            const operationId = process.env.OPERATION_ID || '';
+            const version = process.env.VERSION || '';
+            const issueText = process.env.ISSUE || '';
+            const issue = Number(issueText);
+            const title = process.env.TITLE || '';
+            const changelog = process.env.CHANGELOG || '';
+            const errors = [];
+            if (!/^[1-9][0-9]*$/.test(issueText) || !Number.isSafeInteger(issue) || issue < 1) errors.push('Issue must be a positive safe integer.');
+            if (!/^[0-9]+\.[0-9]+\.[0-9]+$/.test(version)) errors.push('Version must use MAJOR.MINOR.PATCH.');
+            if (mode === 'prepare') {
+              if (operationId) errors.push('Operation ID must be empty in prepare mode.');
+              if (!title || title.length > 1000) errors.push('Title must contain 1-1000 characters.');
+              if (!changelog || changelog.length > 50000) errors.push('Changelog must contain 1-50000 characters.');
+            } else if (mode === 'publish') {
+              if (!/^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(operationId)) errors.push('Operation ID is invalid.');
+              if (title || changelog) errors.push('Title and changelog must be empty in publish mode.');
+            } else errors.push('Mode must be prepare or publish.');
+            if (errors.length) core.setFailed(errors.join(' '));
 
   prepare-version-files:
     name: Prepare files for hotfix
     if: ${{ inputs.mode == 'prepare' }}
     runs-on: [self-hosted, codex]
-    needs: queue-gate
+    needs: validate
     timeout-minutes: 15
     permissions:
       contents: write
@@ -69,19 +94,6 @@ jobs:
           standalone: false
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Validate preparation inputs
-        env:
-          VERSION: ${{ inputs.version }}
-          ISSUE: ${{ inputs.issue }}
-          TITLE: ${{ inputs.title }}
-          CHANGELOG: ${{ inputs.changelog }}
-        run: |
-          err=0
-          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Version must use MAJOR.MINOR.PATCH."; err=1; }
-          [[ "$ISSUE" =~ ^[1-9][0-9]*$ ]] || { echo "::error::Issue must be a positive number."; err=1; }
-          [[ -n "$TITLE" && ${#TITLE} -le 1000 ]] || { echo "::error::Title must contain 1-1000 characters."; err=1; }
-          [[ -n "$CHANGELOG" && ${#CHANGELOG} -le 50000 ]] || { echo "::error::Changelog must contain 1-50000 characters."; err=1; }
-          [[ $err -eq 0 ]] || exit 1
       - name: Update version
         uses: actions/github-script@v9
         env:
@@ -188,7 +200,7 @@ jobs:
     name: Create or verify production tag
     if: ${{ inputs.mode == 'publish' }}
     runs-on: [self-hosted, codex]
-    needs: queue-gate
+    needs: validate
     timeout-minutes: 10
     permissions:
       contents: write
@@ -329,8 +341,8 @@ jobs:
     name: Report orchestration failure
     runs-on: [self-hosted, codex]
     timeout-minutes: 5
-    needs: [queue-gate, prepare-version-files, prepare-compiled-files, promote, tag, publish-npm, finalize-hotfix]
-    if: ${{ failure() && inputs.issue != '-1' }}
+    needs: [validate, prepare-version-files, prepare-compiled-files, promote, tag, publish-npm, finalize-hotfix]
+    if: ${{ failure() && needs.validate.result == 'success' }}
     permissions:
       contents: read
       issues: write

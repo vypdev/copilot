@@ -58,10 +58,12 @@ import { BranchSyncWorkspaceAdapter } from "../branch_sync_workspace_adapter";
 import { ObserveBranchSyncUseCase } from "../../application/usecases/actions/observe_branch_sync_use_case";
 import { SyncBranchUseCase } from "../../application/usecases/branch_sync/sync_branch_use_case";
 import { DeploymentOrchestrationUseCase } from "../../application/usecases/actions/deployment_orchestration_use_case";
-import { GithubDeploymentRepository } from "../../data/repository/deployment/github_deployment_repository";
+import { GithubDeploymentGitRepository } from "../../data/repository/deployment/github_deployment_git_repository";
+import { GithubManagedPullRequestRepository } from "../../data/repository/deployment/github_managed_pull_request_repository";
+import { GithubTargetMergeCapabilitiesInspector } from "../../data/repository/deployment/github_target_merge_capabilities_inspector";
 import { DeploymentContinuationRepository } from "../../data/repository/deployment/deployment_continuation_repository";
 import { DeploymentPresentationRepository } from "../../data/repository/deployment/deployment_presentation_repository";
-import { DeploymentStateRepository } from "../../data/repository/deployment/deployment_state_repository";
+import { DeploymentStateRepositoryFactory } from "../../data/repository/deployment/deployment_state_repository";
 import { OctokitDeploymentClientAdapter } from "../github/octokit_deployment_adapter";
 import { WorkflowDispatchRepository } from "../../data/repository/workflow/workflow_dispatch_repository";
 import { createWorkflowDispatchClient } from "./github_workflow_client_factory";
@@ -78,29 +80,27 @@ function createDetectPotentialProblemsUseCase(): DetectPotentialProblemsUseCase 
   );
 }
 
-export function createSingleActionUseCaseCompositionRoot(): SingleActionUseCase {
-  const repositoryTagPort = new RepositoryTagRepository(createReleaseClient());
-  const repositoryReleasePort = new RepositoryReleasePublicationRepository(
-    createReleaseClient(),
-  );
+export type MainRunCompositionSurface = "github-workflow" | "local";
+
+export function createSingleActionUseCaseCompositionRoot(
+  surface: MainRunCompositionSurface,
+): SingleActionUseCase {
   const issueDescriptionQueryPort = createIssueContentCompositionRoot();
-  const deploymentRepository = new GithubDeploymentRepository(new OctokitDeploymentClientAdapter());
-  const deploymentOrchestration = new DeploymentOrchestrationUseCase({
-    pullRequests: deploymentRepository,
-    git: deploymentRepository,
-    continuation: new DeploymentContinuationRepository(
-      new WorkflowDispatchRepository(createWorkflowDispatchClient()),
-    ),
-    presentation: new DeploymentPresentationRepository(issueDescriptionQueryPort),
-    state: new DeploymentStateRepository(issueDescriptionQueryPort),
-    labels: createIssueLabelRepository(),
-    issues: createIssueClosureRepository(),
-    operationId: randomUUID,
-  });
+  const repositoryTagPort = surface === "github-workflow"
+    ? new RepositoryTagRepository(createReleaseClient())
+    : undefined;
+  const repositoryReleasePort = surface === "github-workflow"
+    ? new RepositoryReleasePublicationRepository(createReleaseClient())
+    : undefined;
+  const deploymentOrchestration = surface === "github-workflow"
+    ? createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, repositoryReleasePort!)
+    : undefined;
   return new SingleActionUseCase(
-    new PublishGithubActionUseCase(repositoryTagPort, repositoryReleasePort),
-    new CreateReleaseUseCase(repositoryReleasePort),
-    new CreateTagUseCase(repositoryTagPort),
+    repositoryTagPort && repositoryReleasePort
+      ? new PublishGithubActionUseCase(repositoryTagPort, repositoryReleasePort)
+      : undefined,
+    repositoryReleasePort ? new CreateReleaseUseCase(repositoryReleasePort) : undefined,
+    repositoryTagPort ? new CreateTagUseCase(repositoryTagPort) : undefined,
     new ThinkUseCase(
       issueDescriptionQueryPort,
       createIssueNotificationRepository(),
@@ -123,6 +123,27 @@ export function createSingleActionUseCaseCompositionRoot(): SingleActionUseCase 
     ),
     deploymentOrchestration,
   );
+}
+
+function createDeploymentOrchestrationUseCase(
+  issueDescriptionQueryPort: ReturnType<typeof createIssueContentCompositionRoot>,
+  publication: RepositoryReleasePublicationRepository,
+): DeploymentOrchestrationUseCase {
+  const deploymentClient = new OctokitDeploymentClientAdapter();
+  return new DeploymentOrchestrationUseCase({
+    pullRequests: new GithubManagedPullRequestRepository(deploymentClient),
+    targetRules: new GithubTargetMergeCapabilitiesInspector(deploymentClient),
+    git: new GithubDeploymentGitRepository(deploymentClient),
+    continuation: new DeploymentContinuationRepository(
+      new WorkflowDispatchRepository(createWorkflowDispatchClient()),
+    ),
+    presentation: new DeploymentPresentationRepository(issueDescriptionQueryPort),
+    publication,
+    state: new DeploymentStateRepositoryFactory(issueDescriptionQueryPort),
+    labels: createIssueLabelRepository(),
+    issues: createIssueClosureRepository(),
+    operationId: randomUUID,
+  });
 }
 
 export function createIssueCommentUseCaseCompositionRoot(): IssueCommentUseCase {
@@ -238,10 +259,11 @@ export function createCommitUseCaseCompositionRoot(
 
 export function createMainRunRouteCompositionRoot(
   projectBoardCommandPort: ProjectBoardCommandPort,
+  surface: MainRunCompositionSurface,
 ): MainRunRouteHandlers {
   // Composition is scoped to one main run. Each route is built only when it is
   // actually selected, while repeated calls in the same run reuse its graph.
-  const singleAction = lazy(() => createSingleActionUseCaseCompositionRoot());
+  const singleAction = lazy(() => createSingleActionUseCaseCompositionRoot(surface));
   const issueComment = lazy(() => createIssueCommentUseCaseCompositionRoot());
   const issue = lazy(() => createIssueUseCaseCompositionRoot());
   const pullRequestReviewComment = lazy(() => createPullRequestReviewCommentUseCaseCompositionRoot());

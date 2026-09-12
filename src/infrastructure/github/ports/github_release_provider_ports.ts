@@ -1,7 +1,8 @@
 export interface GithubReleaseClient {
     rest: {
         git: {
-            getRef(parameters: Record<string, unknown>): Promise<{ data: { object: { sha: string } } }>;
+            getRef(parameters: Record<string, unknown>): Promise<{ data: { object: { sha: string; type?: string } } }>;
+            getTag(parameters: Record<string, unknown>): Promise<{ data: { object: { sha: string; type?: string } } }>;
             updateRef(parameters: Record<string, unknown>): Promise<unknown>;
             createRef(parameters: Record<string, unknown>): Promise<unknown>;
         };

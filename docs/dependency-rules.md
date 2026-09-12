@@ -149,6 +149,20 @@ roots. The local action lifecycle now uses
 `local_action_composition_root.ts`, which owns the shared Project Board scope and
 the Git tag-query adapter.
 
+Deployment command composition is a GitHub-workflow-only boundary. The local
+surface rejects orchestration and publication commands before main-run
+composition, and the shared route root leaves deployment state, PR, Git,
+publication, and release/tag command ports unconstructed for that surface.
+There is no compatibility or legacy mutation route.
+
+Deployment orchestration selects one of four fixed entry-mode handlers for
+prepare, continuation, publication confirmation, or failure recording. Those
+handlers receive `DeploymentOrchestrationContext`, never the complete
+`Execution` aggregate. Managed PR mutation, target-rule/merge-queue inspection,
+and Git refs/ancestry are separate application ports and concrete adapters; the
+former broad deployment repository no longer exists. ESLint enforces a maximum
+cyclomatic complexity of 15 for every target-rule normalization function.
+
 Issue and pull-request orchestration use cases receive their executable steps as
 explicit application contracts. Their concrete step instances are assembled in
 the corresponding infrastructure composition roots; application orchestration
@@ -188,6 +202,8 @@ PullRequestReviewThreadCommandPort
 ProjectBoardCommandPort
 OrganizationMembersPort
 RepositoryReleasePublicationPort
+DeploymentStateStorePort
+DeploymentPublicationReceiptPort
 ```
 
 When one adapter implements several operations, application callers still

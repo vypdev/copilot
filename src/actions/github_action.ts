@@ -11,7 +11,6 @@ import { isEnabledInput } from './input_boolean_policy';
 import { buildGithubActionExecution, readGithubActionSingleAction } from './github_action_execution';
 import { buildGithubActionEventInputs } from './github_event_inputs';
 import { mainRun } from './common_action';
-import { waitForPreviousWorkflowRuns, WorkflowQueueFailureError, WORKFLOW_QUEUE_FAILURE_MESSAGE } from './main_run_lifecycle';
 import { INPUT_KEYS } from '../application/contracts/input_keys';
 import { logDebugInfo, logError, logInfo } from '../utils/logger';
 import { createGithubExecutionAdmissionUseCase } from '../infrastructure/composition/github_execution_admission_composition_root';
@@ -27,11 +26,6 @@ import { toApplicationError } from '../application/errors/application_error';
 import { renderApplicationErrorText } from '../application/policies/application_error_presentation_policy';
 
 export async function runGitHubAction(): Promise<void> {
-    if (isEnabledInput(getGithubActionInput(INPUT_KEYS.QUEUE_GATE_ONLY))) {
-        await runQueueGateOnly();
-        return;
-    }
-
     const eventInputs = buildGithubActionEventInputs({
         payload: github.context.payload as Record<string, unknown>,
         eventName: github.context.eventName,
@@ -99,6 +93,7 @@ export async function runGitHubAction(): Promise<void> {
         execution,
         projectBoard.command,
         new GitCliRepository(token),
+        'github-workflow',
         createSynchronizeLifecycleStateUseCase(),
         createSynchronizeAgentActivityUseCase(),
     );
@@ -111,22 +106,6 @@ export async function runGitHubAction(): Promise<void> {
         createCopilotEvidenceCompositionRoot(),
         createGithubActionSummaryCompositionRoot(),
     );
-}
-
-async function runQueueGateOnly(): Promise<void> {
-    try {
-        const eventInputs = buildGithubActionEventInputs({
-            payload: github.context.payload as Record<string, unknown>,
-            eventName: github.context.eventName,
-            actor: github.context.actor,
-            repo: github.context.repo,
-        });
-        const token = getGithubActionInput(INPUT_KEYS.TOKEN, { required: true });
-        await waitForPreviousWorkflowRuns(token, eventInputs.repo);
-    } catch {
-        logError(WORKFLOW_QUEUE_FAILURE_MESSAGE);
-        throw new WorkflowQueueFailureError();
-    }
 }
 
 /**

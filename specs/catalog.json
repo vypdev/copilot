@@ -27,13 +27,36 @@
       "code": [
         "src/domain/deployment_configuration.ts",
         "src/domain/deployment_operation.ts",
+        "src/domain/deployment_state_fence.ts",
+        "src/domain/deployment_publication.ts",
         "src/application/policies/deployment_lifecycle_policy.ts",
         "src/application/policies/deployment_plan_policy.ts",
+        "src/application/services/deployment_orchestration_dependencies.ts",
+        "src/application/services/deployment_orchestration_runtime.ts",
+        "src/application/services/deployment_state_boundary.ts",
+        "src/application/usecases/actions/deployment_handlers/accept_promotion_handler.ts",
+        "src/application/usecases/actions/deployment_handlers/confirm_publication_handler.ts",
+        "src/application/usecases/actions/deployment_handlers/continue_deployment_handler.ts",
+        "src/application/usecases/actions/deployment_handlers/prepare_promotion_handler.ts",
+        "src/application/usecases/actions/deployment_handlers/reconciliation_handler.ts",
+        "src/application/usecases/actions/deployment_handlers/record_failure_handler.ts",
+        "src/data/repository/deployment/github_deployment_git_repository.ts",
+        "src/data/repository/deployment/github_managed_pull_request_repository.ts",
+        "src/data/repository/deployment/github_target_merge_capabilities_inspector.ts",
+        "src/data/repository/deployment/deployment_state_repository.ts",
+        "src/data/repository/release/repository_release_publication_repository.ts",
         "src/infrastructure/github/octokit_deployment_adapter.ts"
       ],
       "tests": [
         "src/domain/__tests__/deployment_operation.test.ts",
-        "src/application/usecases/actions/__tests__/deployment_orchestration_use_case.test.ts"
+        "src/domain/__tests__/deployment_state_fence.test.ts",
+        "src/domain/__tests__/deployment_publication.test.ts",
+        "src/application/services/__tests__/deployment_state_boundary.test.ts",
+        "src/application/usecases/actions/__tests__/deployment_orchestration_use_case.test.ts",
+        "src/application/usecases/actions/__tests__/deployment_phase_handlers.test.ts",
+        "src/data/repository/deployment/__tests__/github_deployment_adapters.test.ts",
+        "src/application/__tests__/architecture_boundaries.test.ts",
+        "src/tooling/__tests__/validate_workflow_contract.test.ts"
       ],
       "documentation": [
         "docs/issues/deployment-orchestration.mdx",
@@ -63,12 +86,14 @@
       ],
       "code": [
         "src/domain/merge_queue_readiness.ts",
+        "src/data/repository/deployment/github_target_merge_capabilities_inspector.ts",
         "src/infrastructure/github/octokit_checks_adapters.ts",
         "scripts/validate-workflow-contract.cjs"
       ],
       "tests": [
         "src/domain/__tests__/merge_queue_readiness.test.ts",
         "src/application/usecases/setup/__tests__/merge_queue_readiness_use_case.test.ts",
+        "src/data/repository/deployment/__tests__/github_deployment_adapters.test.ts",
         "src/tooling/__tests__/validate_workflow_contract.test.ts"
       ],
       "documentation": [

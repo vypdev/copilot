@@ -6,7 +6,16 @@ export interface RepositoryTagPort {
 
 export interface RepositoryReleasePublicationPort {
     updateRelease(owner: string, repository: string, sourceTag: string, targetTag: string, token: string): Promise<string | undefined>;
-    createRelease(owner: string, repository: string, version: string, title: string, changelog: string, token: string): Promise<string | undefined>;
+    createRelease(
+        owner: string,
+        repository: string,
+        version: string,
+        title: string,
+        changelog: string,
+        operationId: string,
+        productionSha: string,
+        token: string,
+    ): Promise<string | undefined>;
 }
 
 export interface RepositoryDefaultBranchPort {

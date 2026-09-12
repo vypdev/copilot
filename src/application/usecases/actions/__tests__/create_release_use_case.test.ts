@@ -27,10 +27,18 @@ function baseParam(overrides: Record<string, unknown> = {}): Execution {
     tokens: { token: 'token' },
     singleAction: {
       version: '1.0.0',
-      title: 'Release title',
-      changelog: '- Fix bug',
+      operationId: 'operation-12345678',
     },
-    currentConfiguration: {},
+    currentConfiguration: {
+      deploymentOrchestration: {
+        operationId: 'operation-12345678',
+        version: '1.0.0',
+        title: 'Release title',
+        changelog: '- Fix bug',
+        phase: 'publishing',
+        productionSha: 'a'.repeat(40),
+      },
+    },
     ...overrides,
   } as unknown as Execution;
 }
@@ -44,30 +52,37 @@ describe('CreateReleaseUseCase', () => {
   });
 
   it('returns failure when version is empty', async () => {
-    const param = baseParam({ singleAction: { version: '', title: 't', changelog: 'c' } });
+    const param = baseParam({ singleAction: { version: '', operationId: 'operation-12345678' } });
     const results = await useCase.invoke(param);
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
     expect(results[0].errors?.some((e) => String(e).includes(INPUT_KEYS.SINGLE_ACTION_VERSION))).toBe(true);
   });
 
-  it('returns failure when title is empty', async () => {
-    const param = baseParam({ singleAction: { version: '1.0.0', title: '', changelog: 'c' } });
+  it('returns failure when the durable title is empty', async () => {
+    const param = baseParam({ currentConfiguration: { deploymentOrchestration: {
+      operationId: 'operation-12345678', version: '1.0.0', title: '', changelog: 'c', phase: 'publishing', productionSha: 'a'.repeat(40),
+    } } });
     const results = await useCase.invoke(param);
     expect(results.length).toBeGreaterThanOrEqual(1);
     expect(results.some((r) => r.errors?.some((e) => String(e).includes(`${INPUT_KEYS.SINGLE_ACTION_TITLE} is not set.`)))).toBe(true);
   });
 
-  it('returns failure when changelog is empty', async () => {
-    const param = baseParam({ singleAction: { version: '1.0.0', title: 't', changelog: '' } });
+  it('returns failure when the durable changelog is empty', async () => {
+    const param = baseParam({ currentConfiguration: { deploymentOrchestration: {
+      operationId: 'operation-12345678', version: '1.0.0', title: 't', changelog: '', phase: 'publishing', productionSha: 'a'.repeat(40),
+    } } });
     const results = await useCase.invoke(param);
     expect(results.length).toBeGreaterThanOrEqual(1);
     expect(results.some((r) => r.errors?.some((e) => String(e).includes(`${INPUT_KEYS.SINGLE_ACTION_CHANGELOG} is not set.`)))).toBe(true);
   });
 
-  it('returns failure when version format is invalid', async () => {
+  it('returns failure when the durable version format is invalid', async () => {
     const param = baseParam({
-      singleAction: { version: 'abc', title: 'Release', changelog: '- Fix' },
+      singleAction: { version: 'abc', operationId: 'operation-12345678' },
+      currentConfiguration: { deploymentOrchestration: {
+        operationId: 'operation-12345678', version: 'abc', title: 'Release', changelog: '- Fix', phase: 'publishing', productionSha: 'a'.repeat(40),
+      } },
     });
     const results = await useCase.invoke(param);
     expect(results).toHaveLength(1);
@@ -76,19 +91,12 @@ describe('CreateReleaseUseCase', () => {
     expect(mockCreateRelease).not.toHaveBeenCalled();
   });
 
-  it('accepts version with leading v and produces tag v1.0.0 (no double v)', async () => {
-    mockCreateRelease.mockResolvedValue('https://github.com/owner/repo/releases/tag/v1.0.0');
-    const param = baseParam({ singleAction: { version: 'v1.0.0', title: 'Release', changelog: '- Fix' } });
+  it('rejects publication without a durable operation instead of keeping a standalone path', async () => {
+    const param = baseParam({ currentConfiguration: {} });
     const results = await useCase.invoke(param);
-    expect(results[0].success).toBe(true);
-    expect(mockCreateRelease).toHaveBeenCalledWith(
-      'owner',
-      'repo',
-      'v1.0.0',
-      'Release',
-      '- Fix',
-      'token'
-    );
+    expect(results[0].success).toBe(false);
+    expect(results[0].errors[0].message).toContain('durable deployment operation');
+    expect(mockCreateRelease).not.toHaveBeenCalled();
   });
 
   it('returns success with release URL when createRelease succeeds', async () => {
@@ -105,6 +113,8 @@ describe('CreateReleaseUseCase', () => {
       'v1.0.0',
       'Release title',
       '- Fix bug',
+      'operation-12345678',
+      'a'.repeat(40),
       'token'
     );
   });

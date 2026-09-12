@@ -134,12 +134,14 @@ const runMain = (execution: Execution) => productionMainRun(
   execution,
   projectBoardCommandPort,
   latestTagQueryPort,
+  'github-workflow',
 );
 
 const runMainWithActivity = (execution: Execution) => productionMainRun(
   execution,
   projectBoardCommandPort,
   latestTagQueryPort,
+  'github-workflow',
   undefined,
   {
     start: mockAgentActivityStart,
@@ -188,7 +190,7 @@ describe('mainRun', () => {
     expect(createSetupExecutionUseCase).toHaveBeenCalledWith(latestTagQueryPort);
     expect(mockSetupExecutionInvoke).toHaveBeenCalledWith(execution);
     expect(logger.clearAccumulatedLogs).toHaveBeenCalledTimes(1);
-    expect(createMainRunRouteCompositionRoot).toHaveBeenCalledWith(projectBoardCommandPort);
+    expect(createMainRunRouteCompositionRoot).toHaveBeenCalledWith(projectBoardCommandPort, 'github-workflow');
   });
 
   it('rejects an execution without repository context before calling use cases', async () => {

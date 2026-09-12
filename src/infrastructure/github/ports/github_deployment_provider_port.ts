@@ -4,6 +4,7 @@ export interface GithubDeploymentPullRequest {
   body?: string | null;
   state?: string;
   merged?: boolean;
+  auto_merge?: object | null;
   mergeable?: boolean | null;
   mergeable_state?: string;
   merge_commit_sha?: string | null;

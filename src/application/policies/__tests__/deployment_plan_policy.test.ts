@@ -24,6 +24,8 @@ const capabilities = (overrides: Partial<TargetMergeCapabilities> = {}): TargetM
   ...overrides,
 });
 const operation = (overrides: Partial<DeploymentOperationSnapshot> = {}): DeploymentOperationSnapshot => ({
+  stateVersion: 1,
+  revision: 1,
   operationId: "operation-12345678",
   kind: "release",
   version: "3.4.0",
@@ -50,6 +52,12 @@ const operation = (overrides: Partial<DeploymentOperationSnapshot> = {}): Deploy
   publicationWorkflow: "release_workflow.yml",
   productionSha: sha("c"),
   publicationVerified: true,
+  publicationReceipt: {
+    tag: "v3.4.0",
+    productionSha: sha("c"),
+    operationId: "operation-12345678",
+    releaseUrl: "https://github.com/owner/repo/releases/tag/v3.4.0",
+  },
   reconciliationTargets: [],
   lastFailure: null,
   ...overrides,

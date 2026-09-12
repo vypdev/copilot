@@ -2,8 +2,8 @@ import type { DeploymentOperationSnapshot, DeploymentPhase } from "../../domain/
 
 /**
  * Rejects forged, stale, or out-of-order workflow continuations before a
- * publication-side mutation is attempted. Standalone publication commands
- * that do not belong to an orchestration operation are validated separately.
+ * publication-side mutation is attempted. There is intentionally no standalone
+ * or compatibility path: every publication command belongs to a durable operation.
  */
 export function validateDeploymentContinuation(
   operation: DeploymentOperationSnapshot | undefined,
@@ -11,7 +11,7 @@ export function validateDeploymentContinuation(
   allowedPhases: readonly DeploymentPhase[],
   expectedVersion?: string,
 ): string | undefined {
-  if (!operation) return undefined;
+  if (!operation) return "A durable deployment operation is required for publication.";
   if (!expectedOperationId) return "single-action-operation-id is required for a durable deployment continuation.";
   if (expectedOperationId !== operation.operationId) {
     return `Deployment operation mismatch: expected ${operation.operationId}, received ${expectedOperationId}.`;

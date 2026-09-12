@@ -9,6 +9,8 @@ import {
 } from "../deployment_operation";
 
 const operation = (phase: DeploymentPhase = "preparing", overrides: Partial<DeploymentOperationSnapshot> = {}): DeploymentOperationSnapshot => ({
+  stateVersion: 1,
+  revision: 1,
   operationId: "operation-12345678",
   kind: "release",
   version: "3.4.0",
@@ -130,11 +132,31 @@ describe("deployment operation state machine", () => {
     expect(isDeploymentOperationSnapshot(operation())).toBe(true);
   });
 
+  it("requires an exact provider receipt when publication is verified", () => {
+    expect(isDeploymentOperationSnapshot(operation("published", {
+      productionSha: "c".repeat(40),
+      publicationVerified: true,
+    }))).toBe(false);
+    expect(isDeploymentOperationSnapshot(operation("published", {
+      productionSha: "c".repeat(40),
+      publicationVerified: true,
+      publicationReceipt: {
+        tag: "v3.4.0",
+        productionSha: "c".repeat(40),
+        operationId: "operation-12345678",
+        releaseUrl: "https://github.com/owner/repo/releases/tag/v3.4.0",
+      },
+    }))).toBe(true);
+  });
+
   it.each([
     null,
     [],
     {},
     { ...operation(), operationId: 123 },
+    { ...operation(), stateVersion: 2 },
+    { ...operation(), revision: 0 },
+    { ...operation(), revision: Number.MAX_SAFE_INTEGER + 1 },
     { ...operation(), phase: "unknown" },
     { ...operation(), publicationWorkflow: undefined },
     { ...operation(), reconciliationTargets: {} },

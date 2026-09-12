@@ -95,9 +95,9 @@ When you set `single-action` (and the inputs required by that action), Copilot r
 | **`recommend_steps_action`** | `single-action-issue` | Uses the configured agent to recommend implementation steps from the issue description; posts a comment on the issue. |
 | **`think_action`** | — | Uses the configured agent for deep code analysis and change proposals (reasoning over the codebase). No issue required. |
 | **`initial_setup`** | — | Performs initial setup: creates labels, issue types, verifies access. If the repo has no version tags, creates default tag `v1.0.0` so release/hotfix issues get a base version. No issue required. |
-| **`create_release`** | `single-action-version`, `single-action-title`, `single-action-changelog` | Creates a GitHub release with the given version, title, and changelog. |
+| **`create_release`** | Internal: issue, operation ID, version | Creates or verifies the GitHub Release and its exact durable operation/SHA receipt. Supplied workflows only. |
 | **`create_tag`** | `single-action-version`, `single-action-issue`, and `single-action-operation-id` | Creates or verifies immutable `v<version>` at the accepted production SHA of the matching durable deployment operation. |
-| **`publish_github_action`** | `single-action-version` | Publishes or updates the GitHub Action: creates/updates the major version tag (for example, `v3` from a `v3.x.y` release). Requires `create_tag` to have been run first. |
+| **`publish_github_action`** | Internal: issue, operation ID, version | Updates the major Action tag/release alias from the verified version tag. This repository's supplied workflow only. |
 | **`close_inactive_issues_action`** | `inactivity-threshold-hours` (optional) | Scans waiting issues and closes those inactive for the configured threshold; no issue number is required. |
 | **`publish_issue_comment`** | `single-action-issue`, `single-action-message`; optionally `single-action-comment-id` and `single-action-comment-mode` | Creates a Markdown comment, or replaces/appends to a specific comment on the issue. |
 | **`check_branch_sync_action`** | — | Internal lightweight push observer used by `copilot_branch_sync.yml`; compares related parent/working branches and updates the issue notice without an agent. |
@@ -106,7 +106,11 @@ When you set `single-action` (and the inputs required by that action), Copilot r
 | **`published_deployment_action`** | Internal: issue, operation ID, version | Records verified publication and creates configured reconciliation PRs. Supplied workflows only. |
 | **`failed_deployment_action`** | Internal: issue, operation ID, version/message | Persists a retryable publication failure without discarding completed facts. Supplied workflows only. |
 
-Single actions that **throw an error** if the last step fails: `publish_github_action`, `create_release`, `close_inactive_issues_action`, `publish_issue_comment`, and the five workflow-owned deployment actions: `create_tag`, `prepare_deployment_action`, `continue_deployment_action`, `published_deployment_action`, and `failed_deployment_action`. Workflow-owned actions must not be invoked manually.
+Single actions that **throw an error** if the last step fails include the seven
+workflow-owned deployment/publication actions: `create_tag`, `create_release`,
+`publish_github_action`, `prepare_deployment_action`,
+`continue_deployment_action`, `published_deployment_action`, and
+`failed_deployment_action`. They must not be invoked manually.
 
 ---
 
@@ -146,21 +150,15 @@ Codex is the default runtime for the repository's AI feature paths. OpenCode and
 
 GitHub's native [concurrency](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#concurrency) can cancel in-progress runs when a new one starts (`cancel-in-progress: true`) and can retain only one pending run. That behavior is appropriate for replaceable code-review revisions: `copilot_commit.yml` and `copilot_pull_request.yml` use the exact shared key `copilot-bugbot-${{ github.repository }}-${{ github.event.pull_request.head.ref || github.ref_name }}`. Application-level head guards still prevent an older run from updating a newer PR, and the next run repairs any durable half-transition discovered after cancellation.
 
-For non-replaceable issue, comment, deployment, release, and hotfix mutations, Copilot adds an application-level queue per workflow: every started run waits for earlier active runs of that same workflow, so intermediate events are not discarded by a native concurrency group. Runs triggered by the PAT owner that would only re-trigger the normal pipeline complete before entering this queue.
+For non-replaceable issue and comment mutations, Copilot adds an application-level queue per workflow: every started run waits for earlier active runs of that same workflow, so intermediate events are not discarded by a native concurrency group. Runs triggered by the PAT owner that would only re-trigger the normal pipeline complete before entering this queue.
 
-Release and hotfix workflows use a separate first `queue-gate` job. That job invokes
-the Action with the internal `queue-gate-only` mode and only the ephemeral
-`${{ github.token }}` read permissions; it admits the run and exits before project
-composition, agent provisioning, setup, or mutation work. The version-preparation and
-publication jobs depend on that gate transitively, so a failed or skipped admission
-cannot start a write-capable descendant. The setup templates use `vypdev/copilot@v3`
-for this gate and therefore require a published v3 bundle that supports
-`queue-gate-only`.
-
-This workflow-level gate is distinct from the ordinary Action-level queue wait: the
-latter runs inside a fully constructed Action execution for general Copilot mutation
-triggers, while the former is intentionally control-plane-only and must not construct
-an execution or publish results.
+Release and hotfix workflows instead use one native, issue-scoped deployment mutex:
+`copilot-deployment-${{ github.repository_id }}-${{ inputs.issue }}` with
+`cancel-in-progress: false` and `queue: max`. A permissionless validation job runs
+first and every write-capable job is its transitive descendant. Managed pull-request
+continuations resolve and verify the durable operation using read-only permissions,
+then enter that same issue-scoped mutex before obtaining mutation permissions. There
+is no alternate queue-only Action mode or direct/local deployment mutation path.
 
 ### How it works
 

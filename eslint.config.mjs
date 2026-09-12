@@ -42,6 +42,12 @@ export default defineConfig(
       'no-console': 'off',
     },
   },
+  {
+    files: ['src/data/repository/deployment/github_target_merge_capabilities_inspector.ts'],
+    rules: {
+      complexity: ['error', 15],
+    },
+  },
   // Tests: allow any, unused vars, and require() for mocks/isolation
   {
     files: ['src/**/*.test.ts', 'src/**/__tests__/**/*.ts'],

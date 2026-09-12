@@ -10,9 +10,9 @@ export class SingleActionUseCase implements ParamUseCase<Execution, Result[]> {
   taskId: string = "SingleActionUseCase";
 
   constructor(
-    private readonly publishGithubActionUseCase: ParamUseCase<Execution, Result[]>,
-    private readonly createReleaseUseCase: ParamUseCase<Execution, Result[]>,
-    private readonly createTagUseCase: ParamUseCase<Execution, Result[]>,
+    private readonly publishGithubActionUseCase: ParamUseCase<Execution, Result[]> | undefined,
+    private readonly createReleaseUseCase: ParamUseCase<Execution, Result[]> | undefined,
+    private readonly createTagUseCase: ParamUseCase<Execution, Result[]> | undefined,
     private readonly thinkUseCase: ParamUseCase<Execution, Result[]>,
     private readonly initialSetupUseCase: ParamUseCase<Execution, Result[]>,
     private readonly checkProgressUseCase: ParamUseCase<Execution, Result[]>,

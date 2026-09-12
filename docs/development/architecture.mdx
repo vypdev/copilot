@@ -176,18 +176,17 @@ filesystem dependency. `DeploymentOrchestrationUseCase` receives the narrow
 `DeploymentOrchestrationContext`; the `Execution` aggregate is structurally
 projected by the single-action boundary.
 
-Application ports expose managed-PR identity, target capabilities, exact commit
-reachability, trusted reconciliation refs, workflow continuation, durable issue
-state and presentation operations, effective target-policy inspection, and
-authoritative merge-queue membership. The GitHub deployment repository combines classic protection with
-all effective rulesets, maps required producer identities, and parses bounded
-workflow YAML. Pure readiness policy owns `ready`, `unknown`, and `unsupported`
-decisions plus exact attestation matching. Runtime, setup, and doctor share that
-policy; entrypoints never supply an optimistic static capability boolean.
-`GithubDeploymentRepository` maps REST and
-GraphQL provider facts. `DeploymentStateRepository` owns the strict schema-v3
-hidden issue block. The composition root is
-the only place that binds these repositories and the Octokit adapter.
+Application ports keep managed-PR mutation, target-rule inspection, Git
+refs/ancestry, workflow continuation, durable issue state, publication receipts,
+and presentation as separate capabilities. `GithubManagedPullRequestRepository`
+maps PR and merge-queue membership, `GithubTargetMergeCapabilitiesInspector`
+combines classic protection with effective rulesets and bounded workflow YAML,
+and `GithubDeploymentGitRepository` owns refs and ancestry. Pure readiness policy
+owns `ready`, `unknown`, and `unsupported` decisions plus exact attestation
+matching. Runtime, setup, and doctor share that policy; entrypoints never supply
+an optimistic static capability boolean. `DeploymentStateRepository` owns the
+strict schema-v3 hidden issue block. The composition root is the only place that
+binds these repositories and the Octokit adapter.
 
 Durable transitions compare the operation ID and expected stored phase before
 each write. PR and publication side effects use deterministic markers, exact

@@ -1,6 +1,6 @@
 # Architecture Quality and Scalability Hardening
 
-- Status: Proposed — ready for implementation
+- Status: In implementation — P0-A complete; P0-B automated scope complete
 - Date: 2026-09-11
 - Last updated: 2026-09-12
 - Catalog capability ID: `architecture-quality-hardening`
@@ -49,6 +49,17 @@ clean cutovers, provider contracts, and acceptance evidence:
 | P1-A | [`bugbot-context-selection-and-budgeting.md`](./bugbot-context-selection-and-budgeting.md) |
 | P1-B | [`setup-doctor-architecture-hardening.md`](./setup-doctor-architecture-hardening.md) |
 | P1-C | [`agent-execution-policy-hardening.md`](./agent-execution-policy-hardening.md) |
+
+Implementation ledger:
+
+| Priority | State | Delivery evidence | Remaining gate |
+|---|---|---|---|
+| P0-A | complete | commit `759f418d`; semantic-boundary and architecture suites catalogued in `execution-error-and-context-hardening.md` | none |
+| P0-B | implemented | workflow-contract, state-fence, handler, adapter, architecture, package, and coverage gates catalogued in `deployment-concurrency-and-state-fencing.md` | controlled live serialization evidence |
+| P1-A | next | implementation contract ready | implementation and acceptance evidence |
+| P1-B | queued | implementation contract ready | implementation and acceptance evidence |
+| P1-C | queued | implementation contract ready | implementation and acceptance evidence |
+| P2 | queued | implementation contract ready | implementation and final audit evidence |
 
 The fixed safety rule is that a refactor MUST preserve observable product
 behavior unless this SDD and the capability-owning SDD explicitly define the
@@ -696,8 +707,8 @@ the same pull request.
 |---|---|---|---|
 | P0-A semantic errors | application error policy, adapter mappers, result/publication/log boundaries | mapping, AST boundary, redaction, publication tests | architecture, troubleshooting |
 | P0-A no-growth ratchet | context projector and import allowlist | architecture dependency tests | dependency rules |
-| P0-B exclusive mutation | resolver workflow, shared group, phase handlers, state repository | YAML contracts, deterministic race/replay tests | deployment orchestration/recovery |
-| P0-B decomposition | transition/rules policies and narrow adapters | pure policy, port, architecture tests | release SDD, architecture |
+| P0-B exclusive mutation | resolver workflow, exact shared group, `DeploymentStateBoundary`, phase handlers | `validate_workflow_contract.test.ts`, `deployment_state_boundary.test.ts`, `deployment_state_fence.test.ts`, `deployment_phase_handlers.test.ts` | `deployment-concurrency-and-state-fencing.md`, deployment orchestration guide |
+| P0-B decomposition | four entry-mode handlers, two phase collaborators, separate managed-PR/Git/target-rule adapters | `architecture_boundaries.test.ts`, `github_deployment_adapters.test.ts`, ESLint complexity gate, handler coverage validator | release SDD/traceability, architecture and dependency rules |
 | P1-A bounded context | canonical PR policy, exact query adapter, context loader | 10,000-candidate, request-budget, ambiguity tests | Bugbot detection/failure |
 | P1-B setup/doctor | questionnaire/report policies, terminal and GitHub adapters | state, no-write, order, masking tests | setup/CLI/provisioning |
 | P1-C provider policy | exhaustive dispatcher and provider plans | cross-provider security matrix, controlled smoke | agent execution/failure |

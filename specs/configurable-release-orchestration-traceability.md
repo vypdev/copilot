@@ -24,6 +24,14 @@ owns the exact P0-B implementation contract, while
 owns cross-priority sequencing. Rows below distinguish replay evidence already
 present from the pending exclusive-admission proof.
 
+The 2026-09-12 P0-B implementation replaces all three mutation admissions with
+the exact repository-ID/launcher-issue group, removes the release/hotfix polling
+gate, introduces sole version-1 monotonic state and explicit save outcomes, and
+adds deterministic simultaneous-writer evidence. Publication now requires exact
+tag and GitHub Release receipts, and local composition has no deployment or
+publication command adapters. Controlled live queue evidence remains a human
+gate and is not inferred from deterministic tests.
+
 ## Test-budget ledger
 
 The feature floor is allocated without double-counting cases:
@@ -32,8 +40,8 @@ The feature floor is allocated without double-counting cases:
 |---|---:|---|
 | Domain/configuration/planning | 18 | First 18 distinct rows in `deployment_configuration.test.ts`; additional planning cases are surplus. |
 | State/idempotent orchestration | 18 | First 18 cases in `deployment_orchestration_use_case.test.ts`; domain transition cases are surplus. |
-| GitHub/repository adapters | 12 | First 12 cases in `github_deployment_repository.test.ts`; state, release, and tag adapter cases are surplus. |
-| Workflow/setup contracts | 8 | Gate-first DAG, continuation, merge-group, operation identity, OIDC, PAT, polling, and failure-projection cases in `validate_workflow_contract.test.ts`. |
+| GitHub/repository adapters | 12 | First 12 cases in `github_deployment_adapters.test.ts`; state, release, and tag adapter cases are surplus. |
+| Workflow/setup contracts | 8 | Validation-first DAG, shared issue mutex, continuation resolver, operation identity, OIDC, PAT, npm receipt, and failure-projection cases in `validate_workflow_contract.test.ts`. |
 | UI/localization/sanitization | 10 | First 10 cases in `deployment_presentation_policy.test.ts`; lifecycle and Job Summary cases are surplus. |
 | Integration/replay/security | 6 | Stale-state simulation, forged marker, cross-repository event, duplicate event, cancellation recovery, and cleanup replay cases in `deployment_orchestration_use_case.test.ts`; simultaneous exclusive admission remains a P0-B delta. |
 | **Total assigned** | **72** | The implementation adds substantially more cases than the non-overlapping floor. |

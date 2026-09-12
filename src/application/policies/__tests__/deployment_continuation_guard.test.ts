@@ -8,8 +8,8 @@ const operation = {
 } as DeploymentOperationSnapshot;
 
 describe("validateDeploymentContinuation", () => {
-  it("allows standalone publication actions when no orchestration operation exists", () => {
-    expect(validateDeploymentContinuation(undefined, "", ["publishing"], "")).toBeUndefined();
+  it("rejects publication when no durable orchestration operation exists", () => {
+    expect(validateDeploymentContinuation(undefined, "", ["publishing"], "")).toContain("durable deployment operation");
   });
 
   it("accepts the matching operation only in an allowed phase", () => {

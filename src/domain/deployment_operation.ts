@@ -29,6 +29,7 @@ export const DEPLOYMENT_PHASES = [
   "completed",
   "blocked",
 ] as const;
+export const DEPLOYMENT_STATE_VERSION = 1 as const;
 export type DeploymentPhase = (typeof DEPLOYMENT_PHASES)[number];
 export type DeploymentKind = "release" | "hotfix";
 export type ManagedPullRequestPhase = "promotion" | "reconciliation";
@@ -46,11 +47,21 @@ export interface ReconciliationTargetState {
   readonly sourceBranch: string;
   readonly sourceSha: string;
   readonly syncBranch?: string;
+  readonly syncSha?: string;
   readonly pullRequest?: number;
   readonly status: ReconciliationTargetStatus;
 }
 
+export interface DeploymentPublicationReceipt {
+  readonly tag: string;
+  readonly productionSha: string;
+  readonly operationId: string;
+  readonly releaseUrl: string;
+}
+
 export interface DeploymentOperationSnapshot {
+  readonly stateVersion: typeof DEPLOYMENT_STATE_VERSION;
+  readonly revision: number;
   readonly operationId: string;
   readonly kind: DeploymentKind;
   readonly version: string;
@@ -79,6 +90,7 @@ export interface DeploymentOperationSnapshot {
   readonly tag: string;
   readonly publicationWorkflow: string;
   readonly publicationVerified: boolean;
+  readonly publicationReceipt?: DeploymentPublicationReceipt;
   readonly reconciliationTargets: readonly ReconciliationTargetState[];
   readonly lastFailure?: DeploymentFailure | null;
 }
@@ -171,7 +183,11 @@ export function sanitizeDeploymentMessage(value: string): string {
 export function isDeploymentOperationSnapshot(value: unknown): value is DeploymentOperationSnapshot {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const operation = value as Partial<DeploymentOperationSnapshot>;
-  return typeof operation.operationId === "string"
+  return operation.stateVersion === DEPLOYMENT_STATE_VERSION
+    && typeof operation.revision === "number"
+    && Number.isSafeInteger(operation.revision)
+    && operation.revision > 0
+    && typeof operation.operationId === "string"
     && /^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(operation.operationId)
     && (operation.kind === "release" || operation.kind === "hotfix")
     && typeof operation.version === "string" && /^[0-9]+\.[0-9]+\.[0-9]+$/.test(operation.version)
@@ -201,9 +217,24 @@ export function isDeploymentOperationSnapshot(value: unknown): value is Deployme
     && (operation.promotionPullRequest === undefined || isPositiveInteger(operation.promotionPullRequest))
     && (operation.productionSha === undefined || isFullSha(operation.productionSha))
     && typeof operation.publicationVerified === "boolean"
+    && isPublicationReceiptConsistent(operation)
     && Array.isArray(operation.reconciliationTargets)
     && operation.reconciliationTargets.every(isReconciliationTarget)
     && (operation.lastFailure === undefined || operation.lastFailure === null || isDeploymentFailure(operation.lastFailure));
+}
+
+function isPublicationReceiptConsistent(operation: Partial<DeploymentOperationSnapshot>): boolean {
+  const receipt = operation.publicationReceipt;
+  if (!receipt) return operation.publicationVerified === false;
+  return operation.publicationVerified === true
+    && receipt.tag === operation.tag
+    && receipt.operationId === operation.operationId
+    && receipt.productionSha === operation.productionSha
+    && isFullSha(receipt.productionSha)
+    && typeof receipt.releaseUrl === "string"
+    && receipt.releaseUrl.length > 0
+    && receipt.releaseUrl.length <= 2_000
+    && /^https:\/\//.test(receipt.releaseUrl);
 }
 
 function isFullSha(value: unknown): value is string {
@@ -234,7 +265,9 @@ function isReconciliationTarget(value: unknown): value is ReconciliationTargetSt
     && isSafePersistedRef(target.sourceBranch)
     && isFullSha(target.sourceSha)
     && (target.syncBranch === undefined || isSafePersistedRef(target.syncBranch))
+    && (target.syncSha === undefined || (target.syncBranch !== undefined && isFullSha(target.syncSha)))
     && (target.pullRequest === undefined || isPositiveInteger(target.pullRequest))
+    && !(target.syncBranch !== undefined && target.pullRequest !== undefined && target.syncSha === undefined)
     && ["pending", "completed", "blocked"].includes(target.status as ReconciliationTargetStatus);
 }
 

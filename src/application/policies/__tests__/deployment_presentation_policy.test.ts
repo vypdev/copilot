@@ -9,6 +9,8 @@ import {
 } from "../deployment_presentation_policy";
 
 const operation = (phase: DeploymentPhase = "promotion_pr_pending", overrides: Partial<DeploymentOperationSnapshot> = {}): DeploymentOperationSnapshot => ({
+  stateVersion: 1,
+  revision: 1,
   operationId: "operation-12345678",
   kind: "release",
   version: "3.4.0",
@@ -69,6 +71,24 @@ describe("deployment presentation policy", () => {
     expect(body).toContain("```mermaid");
     expect(body).toContain("prepared -> production PR -> accepted -> published -> reconciled -> complete");
     expect(body).not.toContain("release/3.4.0 -->");
+  });
+
+  it("shows the durable fence and publication receipt status in the Job Summary", () => {
+    const receipt = {
+      tag: "v3.4.0",
+      productionSha: "c".repeat(40),
+      operationId: "operation-12345678",
+      releaseUrl: "https://github.com/vypdev/copilot/releases/tag/v3.4.0",
+    };
+    const summary = renderDeploymentJobSummary(operation("published", {
+      productionSha: receipt.productionSha,
+      publicationVerified: true,
+      publicationReceipt: receipt,
+    }), context);
+    expect(summary).toContain("State: version 1, revision 1");
+    expect(summary).toContain("repository + launcher issue #355");
+    expect(summary).toContain("Publication receipt: `v3.4.0");
+    expect(summary).toContain("ccccccc`");
   });
 
   it("removes the diagram in compact mode", () => {

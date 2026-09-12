@@ -1,10 +1,10 @@
 # Deployment Concurrency and State Fencing
 
-- Status: Proposed — ready for implementation
+- Status: Implemented — controlled live evidence pending
 - Date: 2026-09-11
 - Last updated: 2026-09-12
 - Catalog capability ID: `release-orchestration`
-- Last verified: 2026-09-11 at `2fec5c24a80135dd0611d3bc37e7dc3a8ab1b41a`
+- Last verified: 2026-09-12 in the P0-B implementation worktree
 - Owners: Copilot maintainers and release operators
 - Scope: establish one cross-workflow deployment mutex, monotonic durable state,
   idempotent side effects, and focused phase/adaptor ownership for release and
@@ -37,25 +37,24 @@ managed PR close -> resolve /
 
 ### 2.1 Problem
 
-The current application loads and compares a deployment checkpoint before
-saving issue state, but two invocations can both compare successfully before
-either writes. The release/hotfix workflows use a generic polling queue gate,
-while the managed-PR workflow groups by PR number rather than launcher issue.
-Those mechanisms do not prove exclusive ownership of one deployment operation.
+The previous application loaded and compared a deployment checkpoint before
+saving issue state, so two invocations could both compare successfully before
+either wrote. Release/hotfix workflows used a generic polling queue gate, while
+the managed-PR workflow grouped by PR number rather than launcher issue. Those
+mechanisms did not prove exclusive ownership of one deployment operation.
 
 ### 2.2 Current behavior
 
-1. Release and hotfix workflow inputs accept a launcher `issue`, defaulting to
-   `-1`, and begin with a `queue-gate` job.
-2. Managed PR continuation uses a workflow-level group containing repository
-   full name and PR number.
-3. `DeploymentStateStorePort.save` returns `void`; the use case performs
-   load/compare/write with an in-memory checkpoint containing operation and phase
-   but no revision.
-4. Local action composition can dispatch the deployment single action without a
-   workflow concurrency guarantee.
-5. One large use case and one broad GitHub repository adapter own phase policy,
-   state, rules, PRs, Git, publication, and presentation concerns.
+1. Release and hotfix require a positive launcher `issue`, validate without
+   permissions, and enter the shared issue-scoped deployment mutex.
+2. Managed PR continuation proves repository, PR, issue, operation, schema, and
+   revision identity read-only before entering that same mutex.
+3. The state boundary persists state version 1 using an exact monotonic revision
+   fence and explicit stale/conflict outcomes.
+4. Local/direct deployment and publication commands are rejected; no legacy or
+   compatibility route is retained.
+5. Four fixed entry-mode handlers, focused phase collaborators, and separate PR,
+   target-rule, and Git adapters own orchestration behavior.
 
 ### 2.3 Evidence
 
@@ -128,7 +127,7 @@ receipt` is provider evidence that an irreversible action already completed.
 
 ## 5. Current versus proposed product journey
 
-| Stage | Current | Proposed | User/operator effect |
+| Stage | Prior baseline | Implemented | User/operator effect |
 |---|---|---|---|
 | Admission | generic queue or PR-specific group | one issue-scoped group | one mutation owner |
 | State | operation+phase compare | versioned revision fence | stale writes cannot win |
@@ -174,7 +173,7 @@ Their `issue` input remains required but loses the `-1` default. A first
 validation job checks positive safe integer, operation ID/mode requirements,
 version, title, and changelog. All later jobs require it; no write permission,
 checkout credential, OIDC token, or secret is available before validation.
-The obsolete `queue-gate` job is removed from release and hotfix workflows.
+No auxiliary admission job or alternate Action mode exists in release and hotfix workflows.
 
 Managed-PR continuation has two jobs:
 
@@ -203,7 +202,7 @@ The only supported `deploymentOrchestration` state shape is:
 
 ```text
 stateVersion: 1
-revision: non-negative safe integer
+revision: positive safe integer
 operationId: immutable validated identifier
 phase: existing DeploymentPhase
 ...versioned operation facts defined by this SDD
@@ -271,12 +270,13 @@ timeout is `unverifiable`, not automatically absent.
 
 ### 6.6 Phase ownership and state machine
 
-The coordinator validates the mode, selects one handler, and sequences common
-fence/presentation behavior. Handlers are fixed compile-time collaborators:
-`preparePromotion`, `acceptPromotion`, `beginPublication`, `confirmPublication`,
-`planReconciliation`, `acceptReconciliation`, `completeOperation`, and
-`recordFailure`. Each handler receives `DeploymentOperationContext`, semantic
-ports, and current snapshot; none receives `Execution`.
+The coordinator validates the mode and selects exactly one of four fixed
+entry-mode handlers: `preparePromotion`, `continueDeployment`,
+`confirmPublication`, or `recordFailure`. They delegate only to fixed
+compile-time `acceptPromotion` and reconciliation collaborators; there is no
+registry, fallback handler, or runtime extension point. Every handler receives
+`DeploymentOrchestrationContext`, semantic ports, and the current snapshot;
+none receives `Execution`.
 
 Existing phases and valid transitions remain. Duplicate next-phase events are
 no-op success; earlier revision/phase events are stale no-op; skipped transitions
@@ -325,7 +325,8 @@ merge-queue, and producer normalization are separate pure policies.
    composition and prohibit `Execution` in phase handlers.
 3. Only the three catalogued workflows may compose deployment command ports.
 4. No pure provider-normalization function exceeds cyclomatic complexity 15;
-   any change above it fails CI rather than accepting an undocumented waiver.
+   the ESLint file-level gate fails CI above it rather than accepting an
+   undocumented waiver.
 5. State schema fixtures cover absent, current v1, missing/unversioned,
    malformed, and future versions; only current v1 is accepted.
 
@@ -428,9 +429,11 @@ This SDD owns at least **28 distinct cases**.
 | **Total** | **28** | no double counting |
 
 Transition/fence/idempotency policies require 100% enumerated branch coverage.
-Changed orchestration modules require 95% lines/statements and 90%
-branches/functions; repository thresholds remain 90/90/88/82. Tests use
-deterministic barriers and provider fakes, never sleeps or live publication.
+The six entry-mode and phase-handler modules, measured as one fixed handler
+boundary, require 95% lines/statements and 90% branches/functions; a dedicated
+post-coverage validator enforces that budget after Jest. Other changed modules
+remain subject to repository thresholds of 90/90/88/82. Tests use deterministic
+barriers and provider fakes, never sleeps or live publication.
 Workflow tests parse YAML and expression ASTs.
 
 Human evidence: one controlled release/managed-PR pair must visibly share a
@@ -488,16 +491,16 @@ normal flow appears before internals.
 
 ## 19. Definition of Done
 
-- [ ] All supported mutation paths use the exact shared group with `queue: max`.
-- [ ] No write authority exists before validation/admission or in local composition.
-- [ ] Sole version-1 state, unsupported-shape rejection, revision fences, and all outcomes pass.
-- [ ] Every irreversible effect implements its ledger proof and unknown-outcome behavior.
-- [ ] Deterministic simultaneous, stale, replay, cancellation, and recovery tests converge.
-- [ ] Phase handlers and narrow adapters meet architecture/complexity thresholds.
-- [ ] At least 28 distinct cases and all repository gates pass.
-- [ ] Active/setup workflows, SDDs, traceability, docs, bundles, catalog, and UI agree.
+- [x] All supported mutation paths use the exact shared group with `queue: max`.
+- [x] No write authority exists before validation/admission or in local composition.
+- [x] Sole version-1 state, unsupported-shape rejection, revision fences, and all outcomes pass.
+- [x] Every irreversible effect implements its ledger proof and unknown-outcome behavior.
+- [x] Deterministic simultaneous, stale, replay, cancellation, and recovery tests converge.
+- [x] Phase handlers and narrow adapters meet architecture/complexity thresholds.
+- [x] At least 28 distinct cases and all repository gates pass.
+- [x] Active/setup workflows, SDDs, traceability, docs, bundles, catalog, and UI agree.
 - [ ] Controlled live serialization evidence is attached.
-- [ ] No readiness-blocking decision, temporary waiver, or alternate writer remains.
+- [x] No readiness-blocking decision, temporary waiver, or alternate writer remains.
 
 ## 20. References and decisions
 

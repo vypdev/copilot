@@ -17,12 +17,16 @@ import { requireRepositoryCoordinates } from './repository_context';
 import { createSynchronizeAgentActivityUseCase } from '../infrastructure/composition/agent_activity_composition_root';
 import type { Result } from '../data/model/result';
 import { runAtApplicationErrorBoundary } from '../application/errors/application_error_context';
+import { INPUT_KEYS } from '../application/contracts/input_keys';
+import { assertLocalSingleActionAllowed } from '../application/policies/local_single_action_policy';
 
 export async function runLocalAction(
     additionalParams: Record<string, unknown>,
     options: { render?: boolean } = {},
 ): Promise<Result[]> {
     return runAtApplicationErrorBoundary(async () => {
+        const requestedAction = additionalParams[INPUT_KEYS.SINGLE_ACTION];
+        assertLocalSingleActionAllowed(requestedAction);
         const repository = requireRepositoryCoordinates(additionalParams?.repo);
         const normalizedParams = { ...(additionalParams ?? {}), repo: repository };
         const composition = createLocalActionCompositionRoot();
@@ -34,6 +38,7 @@ export async function runLocalAction(
             execution,
             composition.projectBoard.command,
             composition.latestTagQuery,
+            'local',
             undefined,
             createSynchronizeAgentActivityUseCase(),
         );
