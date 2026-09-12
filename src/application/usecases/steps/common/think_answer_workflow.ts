@@ -1,36 +1,41 @@
-import type { Execution } from '../../../../data/model/execution';
 import { Result } from '../../../../data/model/result';
 import { AGENT_PLAN } from '../../../../application/policies/agent_task_policy';
 import { THINK_RESPONSE_SCHEMA } from '../../../../application/policies/agent_response_schemas';
 import type { FindingsQueryPort } from '../../../ports/agent_findings_ports';
-import type { IssueDescriptionQueryPort } from '../../../ports/issue_description_ports';
-import type { IssueNotificationPort } from '../../../ports/issue_lifecycle_ports';
+import type { BoundIssueDescriptionQueryPort } from '../../../ports/issue_description_ports';
+import type { BoundIssueNotificationPort } from '../../../ports/issue_lifecycle_ports';
 import { getThinkPrompt } from '../../../../prompts';
 import { logDebugInfo, logError, logInfo } from '../../../ports/logging_ports';
 import { PROJECT_CONTEXT_INSTRUCTION } from '../../../../utils/project_context_instruction';
 import { extractStructuredAnswer } from './agent_answer_policy';
 import type { ThinkRequestDecision } from './think_request_policy';
 import { sanitizeAgentMarkdown } from '../../../../application/policies/github_comment_publication_policy';
-import type { AgentTask } from '../../../../domain/agent';
 import { ApplicationError } from '../../../errors/application_error';
+import type { AgentConfiguration } from '../../../../data/model/agent';
+import type { AgentTask } from '../../../../domain/agent';
 
 export interface ThinkAnswerDependencies {
-    issueDescriptionQueryPort: IssueDescriptionQueryPort;
-    issueNotificationPort: IssueNotificationPort;
+    issueDescriptionQueryPort: BoundIssueDescriptionQueryPort;
+    issueNotificationPort: BoundIssueNotificationPort;
     aiRepository: FindingsQueryPort;
 }
 
 type ReadyThinkRequest = Extract<ThinkRequestDecision, { kind: 'ready' }>;
 
+export interface ThinkAnswerContext {
+    readonly request: ReadyThinkRequest;
+    readonly tokenUser?: string;
+    readonly agentTask: AgentTask;
+    readonly agentConfiguration: Readonly<AgentConfiguration>;
+}
+
 export async function runThinkAnswerWorkflow(
-    param: Execution,
+    param: ThinkAnswerContext,
     taskId: string,
     request: ReadyThinkRequest,
     dependencies: ThinkAnswerDependencies,
-    agentTask: AgentTask,
 ): Promise<Result[]> {
     const issueDescription = await loadIssueDescription(
-        param,
         request.issueNumberForContext,
         dependencies.issueDescriptionQueryPort,
     );
@@ -44,7 +49,7 @@ export async function runThinkAnswerWorkflow(
         contextBlock,
         question: request.question,
     });
-    const answer = sanitizeAgentMarkdown(await queryThinkAnswer(param, prompt, dependencies.aiRepository, agentTask));
+    const answer = sanitizeAgentMarkdown(await queryThinkAnswer(param, prompt, dependencies.aiRepository));
     if (!answer) {
         logError('Configured agent returned no answer for Think.');
         return [
@@ -69,11 +74,8 @@ export async function runThinkAnswerWorkflow(
     }
 
     await dependencies.issueNotificationPort.addComment(
-        param.owner,
-        param.repo,
         request.destinationNumber,
         answer,
-        param.tokens.token,
     );
     logInfo(
         `Think response posted to ${request.destinationType} #${request.destinationNumber}.`,
@@ -82,29 +84,24 @@ export async function runThinkAnswerWorkflow(
 }
 
 async function loadIssueDescription(
-    param: Execution,
     issueNumber: number,
-    repository: IssueDescriptionQueryPort,
+    repository: BoundIssueDescriptionQueryPort,
 ): Promise<string> {
     if (issueNumber <= 0) return '';
     const description = await repository.getDescription(
-        param.owner,
-        param.repo,
         issueNumber,
-        param.tokens.token,
     );
     return description?.trim() ?? '';
 }
 
 async function queryThinkAnswer(
-    param: Execution,
+    param: ThinkAnswerContext,
     prompt: string,
     repository: FindingsQueryPort,
-    agentTask: AgentTask,
 ): Promise<string> {
     logDebugInfo(`Think: calling configured agent (prompt length=${prompt.length}).`);
     const response = await repository.query({
-        configuration: param.ai.getAgentConfiguration(agentTask),
+        configuration: param.agentConfiguration,
         agentId: AGENT_PLAN,
         prompt,
         options: {

@@ -1,21 +1,5 @@
 import { CONFIG_SCHEMA_VERSION } from '../../data/model/config';
-
-export interface ConfigurationPayloadContext {
-    readonly currentConfiguration: {
-        readonly branchType: string;
-        readonly releaseBranch?: string;
-        readonly workingBranch?: string;
-        readonly parentBranch?: string;
-        readonly hotfixOriginBranch?: string;
-        readonly hotfixBranch?: string;
-        readonly releaseOriginBranch?: string;
-        readonly releaseOriginSha?: string;
-        readonly hotfixOriginSha?: string;
-        readonly deploymentOrchestration?: unknown;
-        readonly branchConfiguration?: unknown;
-        readonly recommendationState?: unknown;
-    };
-}
+import type { ConfigurationPayloadContext } from '../../application/ports/configuration_store_ports';
 
 export function buildConfigurationPayload(execution: ConfigurationPayloadContext, storedRaw: string | undefined): string {
     const current = execution.currentConfiguration;

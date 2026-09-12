@@ -1,4 +1,5 @@
 import { UpdateTitleUseCase } from '../update_title_use_case';
+import { projectUpdateTitleContext, type UpdateTitleContextSource } from '../update_title_workflow';
 
 jest.mock('../../../../../utils/logger', () => ({
   logInfo: jest.fn(),
@@ -23,23 +24,31 @@ function baseParam(overrides: Record<string, unknown> = {}) {
     hotfix: { active: false, version: null },
     labels: {},
     ...overrides,
-  } as unknown as Parameters<UpdateTitleUseCase['invoke']>[0];
+  } as unknown as UpdateTitleContextSource;
 }
 
 describe('UpdateTitleUseCase', () => {
   let useCase: UpdateTitleUseCase;
 
   beforeEach(() => {
-    useCase = new UpdateTitleUseCase({ getTitle: mockGetTitle, updateTitleIssueFormat: mockUpdateTitleIssueFormat, updateTitlePullRequestFormat: mockUpdateTitlePullRequestFormat });
+    useCase = new UpdateTitleUseCase({
+      getTitle: mockGetTitle,
+      updateIssueTitle: mockUpdateTitleIssueFormat,
+      updatePullRequestTitle: mockUpdateTitlePullRequestFormat,
+    });
     mockGetTitle.mockReset();
     mockUpdateTitleIssueFormat.mockReset();
     mockUpdateTitlePullRequestFormat.mockReset();
   });
 
+  function invoke(param: UpdateTitleContextSource) {
+    return useCase.invoke(projectUpdateTitleContext(param));
+  }
+
   it('returns empty result when neither issue nor pull request', async () => {
     const param = baseParam({ isIssue: false, isPullRequest: false });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results).toHaveLength(0);
     expect(mockGetTitle).not.toHaveBeenCalled();
@@ -48,7 +57,7 @@ describe('UpdateTitleUseCase', () => {
   it('returns success executed false when isIssue but emojiLabeledTitle is false', async () => {
     const param = baseParam({ isIssue: true, emoji: { emojiLabeledTitle: false, branchManagementEmoji: '' } });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(true);
@@ -59,7 +68,7 @@ describe('UpdateTitleUseCase', () => {
   it('returns success executed false when isPullRequest but emojiLabeledTitle is false', async () => {
     const param = baseParam({ isPullRequest: true, emoji: { emojiLabeledTitle: false, branchManagementEmoji: '' } });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(true);
@@ -75,7 +84,7 @@ describe('UpdateTitleUseCase', () => {
       release: { active: true, version: '1.0.0' },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(true);
@@ -92,7 +101,7 @@ describe('UpdateTitleUseCase', () => {
       emoji: { emojiLabeledTitle: true, branchManagementEmoji: '' },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results[0].success).toBe(true);
     expect(results[0].executed).toBe(false);
@@ -107,21 +116,17 @@ describe('UpdateTitleUseCase', () => {
       issue: { number: 1, title: 'Fallback title', branchManagementAlways: false },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results[0].success).toBe(true);
     expect(results[0].executed).toBe(true);
-    expect(mockUpdateTitleIssueFormat).toHaveBeenCalledWith(
-      'o',
-      'r',
-      '',
-      'Fallback title',
-      1,
-      false,
-      '',
-      {},
-      't'
-    );
+    expect(mockUpdateTitleIssueFormat).toHaveBeenCalledWith(expect.objectContaining({
+      version: '',
+      currentTitle: 'Fallback title',
+      issueNumber: 1,
+      branchManagementAlways: false,
+      branchManagementEmoji: '',
+    }));
   });
 
   it('returns failure when isPullRequest, emojiLabeledTitle, but getTitle returns undefined', async () => {
@@ -131,7 +136,7 @@ describe('UpdateTitleUseCase', () => {
       emoji: { emojiLabeledTitle: true, branchManagementEmoji: '' },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results[0].success).toBe(false);
     expect(results[0].steps).toContain('Tried to update title, but there was a problem.');
@@ -144,7 +149,7 @@ describe('UpdateTitleUseCase', () => {
       emoji: { emojiLabeledTitle: true, branchManagementEmoji: '' },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results[0].success).toBe(false);
   });
@@ -159,21 +164,17 @@ describe('UpdateTitleUseCase', () => {
       hotfix: { active: true, version: '1.2.1' },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results[0].success).toBe(true);
     expect(results[0].executed).toBe(true);
-    expect(mockUpdateTitleIssueFormat).toHaveBeenCalledWith(
-      'o',
-      'r',
-      '1.2.1',
-      expect.any(String),
-      1,
-      false,
-      '',
-      {},
-      't'
-    );
+    expect(mockUpdateTitleIssueFormat).toHaveBeenCalledWith(expect.objectContaining({
+      version: '1.2.1',
+      currentTitle: expect.any(String),
+      issueNumber: 1,
+      branchManagementAlways: false,
+      branchManagementEmoji: '',
+    }));
   });
 
   it('passes empty version when release active but version undefined to avoid Unknown Version loop', async () => {
@@ -185,19 +186,15 @@ describe('UpdateTitleUseCase', () => {
       release: { active: true, version: undefined },
     });
 
-    await useCase.invoke(param);
+    await invoke(param);
 
-    expect(mockUpdateTitleIssueFormat).toHaveBeenCalledWith(
-      'o',
-      'r',
-      '',
-      'My Release',
-      1,
-      false,
-      '',
-      {},
-      't'
-    );
+    expect(mockUpdateTitleIssueFormat).toHaveBeenCalledWith(expect.objectContaining({
+      version: '',
+      currentTitle: 'My Release',
+      issueNumber: 1,
+      branchManagementAlways: false,
+      branchManagementEmoji: '',
+    }));
   });
 
   it('returns success with new title when isPullRequest and updateTitlePullRequestFormat returns title', async () => {
@@ -210,24 +207,18 @@ describe('UpdateTitleUseCase', () => {
       issueNumber: 1,
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(true);
     expect(results[0].executed).toBe(true);
     expect(results[0].steps?.some((s) => s.includes('Old PR title') && s.includes('feat: PR title'))).toBe(true);
-    expect(mockUpdateTitlePullRequestFormat).toHaveBeenCalledWith(
-      'o',
-      'r',
-      'Old PR title',
-      'Issue Title',
-      1,
-      5,
-      false,
-      '',
-      {},
-      't'
-    );
+    expect(mockUpdateTitlePullRequestFormat).toHaveBeenCalledWith(expect.objectContaining({
+      pullRequestTitle: 'Old PR title',
+      issueTitle: 'Issue Title',
+      issueNumber: 1,
+      pullRequestNumber: 5,
+    }));
   });
 
   it('returns success executed false when isPullRequest and updateTitlePullRequestFormat returns null', async () => {
@@ -240,7 +231,7 @@ describe('UpdateTitleUseCase', () => {
       issueNumber: 1,
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results[0].success).toBe(true);
     expect(results[0].executed).toBe(false);

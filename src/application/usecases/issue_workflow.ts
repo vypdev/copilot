@@ -6,12 +6,22 @@ import type { IssueWorkflowSteps } from "./issue_workflow_steps";
 import { buildCopilotWelcomeResult, COPILOT_WELCOME_MARKER } from '../policies/copilot_interaction_policy';
 import type { ActorAuthorizationPort } from '../ports/actor_authorization_ports';
 import { ApplicationError } from '../errors/application_error';
+import type { CheckPermissionsContext } from './steps/common/check_permissions_workflow';
+import type { UpdateTitleContext } from './steps/common/update_title_workflow';
+import type { ProjectContentLinkContext } from './steps/common/project_content_link_workflow';
+
+export interface IssueSharedStepContexts {
+  readonly permissions: CheckPermissionsContext;
+  readonly title: UpdateTitleContext;
+  readonly projectLink: ProjectContentLinkContext;
+}
 
 export interface IssueWorkflowPorts {
   recommendStepsUseCase: ParamUseCase<Execution, Result[]>;
   answerIssueHelpUseCase: ParamUseCase<Execution, Result[]>;
   workflowSteps: IssueWorkflowSteps;
   actorAuthorizationPort?: ActorAuthorizationPort;
+  sharedContexts: IssueSharedStepContexts;
 }
 
 /** Coordinates issue lifecycle steps in their required sequential order. */
@@ -21,7 +31,7 @@ export async function runIssueWorkflow(
   ports: IssueWorkflowPorts,
 ): Promise<Result[]> {
   const results: Result[] = [];
-  const permissionResult = await ports.workflowSteps.checkPermissions.invoke(param);
+  const permissionResult = await ports.workflowSteps.checkPermissions.invoke(ports.sharedContexts.permissions);
   const lastAction = permissionResult[permissionResult.length - 1];
   if (!lastAction) {
     const permissionError = new ApplicationError('provider.contract-invalid', "Permission check returned no result.");
@@ -47,21 +57,16 @@ export async function runIssueWorkflow(
     results.push(...(await ports.workflowSteps.removeIssueBranches.invoke(param)));
   }
 
-  const regularSteps: Array<ParamUseCase<Execution, Result[]>> = [
-    ports.workflowSteps.assignMemberToIssue,
-    ports.workflowSteps.updateTitle,
-    ports.workflowSteps.updateIssueType,
-    ports.workflowSteps.linkIssueProject,
-    ports.workflowSteps.checkPriorityIssueSize,
-    param.isBranched
-      ? ports.workflowSteps.prepareBranches
-      : ports.workflowSteps.removeIssueBranches,
-    ports.workflowSteps.removeNotNeededBranches,
-    ports.workflowSteps.deployAdded,
-  ];
-  for (const step of regularSteps) {
-    results.push(...(await step.invoke(param)));
-  }
+  results.push(...(await ports.workflowSteps.assignMemberToIssue.invoke(param)));
+  results.push(...(await ports.workflowSteps.updateTitle.invoke(ports.sharedContexts.title)));
+  results.push(...(await ports.workflowSteps.updateIssueType.invoke(param)));
+  results.push(...(await ports.workflowSteps.linkIssueProject.invoke(ports.sharedContexts.projectLink)));
+  results.push(...(await ports.workflowSteps.checkPriorityIssueSize.invoke(param)));
+  results.push(...(await (param.isBranched
+    ? ports.workflowSteps.prepareBranches
+    : ports.workflowSteps.removeIssueBranches).invoke(param)));
+  results.push(...(await ports.workflowSteps.removeNotNeededBranches.invoke(param)));
+  results.push(...(await ports.workflowSteps.deployAdded.invoke(param)));
 
   const membersOnly = param.ai.getAiMembersOnly();
   const agentAllowed = !membersOnly || Boolean(ports.actorAuthorizationPort && await ports.actorAuthorizationPort.isActorAllowedToModifyFiles(

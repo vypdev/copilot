@@ -1,4 +1,4 @@
-import { Execution } from "../../data/model/execution";
+import type { ExecutionConfigurationQuery } from '../../application/ports/execution_configuration_ports';
 import { logError } from "../../utils/logger";
 import { IssueContentInterface } from "./base/issue_content_interface";
 import { toApplicationError } from '../../application/errors/application_error';
@@ -12,18 +12,18 @@ export class MarkdownContentHotfixHandler extends IssueContentInterface {
         return true;
     }
 
-    update = async (execution: Execution, content: string) => {
+    update = async (query: ExecutionConfigurationQuery, content: string) => {
         try {
-            return await this.internalUpdate(execution, content)
+            return await this.internalUpdate(query, content)
         } catch (error) {
             logError(toApplicationError(error, 'provider.unavailable', 'Unable to update issue content.'));
             return undefined;
         }
     }
 
-    get = async (execution: Execution): Promise<string | undefined> => {
+    get = async (query: ExecutionConfigurationQuery): Promise<string | undefined> => {
         try {
-            const content = await this.internalGetter(execution)
+            const content = await this.internalGetter(query)
             if (content === undefined) {
                 return undefined;
             }

@@ -1,5 +1,6 @@
 import { ThinkUseCase } from '../think_use_case';
 import { Ai } from '../../../../../data/model/ai';
+import { projectThinkContext, type ThinkContextSource } from '../think_workflow';
 
 jest.mock('../../../../../utils/logger', () => ({
   logInfo: jest.fn(),
@@ -31,7 +32,7 @@ function baseParam(overrides: Record<string, unknown> = {}) {
     singleAction: { isThinkAction: false },
     commit: { branch: 'main' },
     ...overrides,
-  } as unknown as Parameters<ThinkUseCase['invoke']>[0];
+  } as unknown as ThinkContextSource & { readonly labels: { readonly isQuestion: boolean; readonly isHelp: boolean } };
 }
 
 describe('ThinkUseCase', () => {
@@ -40,7 +41,7 @@ describe('ThinkUseCase', () => {
   beforeEach(() => {
     useCase = new ThinkUseCase(
       { getDescription: mockGetDescription },
-      { addComment: mockAddComment, openIssue: jest.fn() },
+      { addComment: mockAddComment },
       { query: (request: { configuration: unknown; agentId: string; prompt: string; options?: unknown }) => mockAskAgent(request.configuration, request.agentId, request.prompt, request.options) },
     );
     mockAskAgent.mockReset();
@@ -49,10 +50,14 @@ describe('ThinkUseCase', () => {
     mockGetDescription.mockResolvedValue(undefined);
   });
 
+  function invoke(param: ThinkContextSource) {
+    return useCase.invoke(projectThinkContext(param));
+  }
+
   it('returns success executed false when comment body is empty', async () => {
     const param = baseParam({ issue: { ...baseParam().issue, commentBody: '' } });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(true);
@@ -67,10 +72,58 @@ describe('ThinkUseCase', () => {
       issue: { ...baseParam().issue, commentBody: '@bot what is 2+2?' },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results[0].success).toBe(true);
     expect(results[0].executed).toBe(false);
+    expect(mockAskAgent).not.toHaveBeenCalled();
+  });
+
+  it('executes an explicit command without requiring a bot username', async () => {
+    mockAskAgent.mockResolvedValue({ answer: 'Plan ready.' });
+    mockAddComment.mockResolvedValue(undefined);
+    const param = baseParam({
+      tokenUser: '',
+      issue: { ...baseParam().issue, commentBody: '/copilot plan the rollout' },
+    });
+
+    const context = projectThinkContext(param);
+    const results = await useCase.invoke(context);
+
+    expect(context).toMatchObject({
+      request: { kind: 'ready', command: { name: 'plan', arguments: ['the', 'rollout'] } },
+      agentTask: 'planner',
+    });
+    expect('tokenUser' in context).toBe(false);
+    expect(mockAskAgent).toHaveBeenCalledTimes(1);
+    expect(results[0]).toMatchObject({ success: true, executed: true });
+  });
+
+  it('skips an invalid explicit command before invoking the agent', async () => {
+    const results = await invoke(baseParam({
+      issue: { ...baseParam().issue, commentBody: '/copilot unknown' },
+    }));
+
+    expect(results[0]).toMatchObject({ success: true, executed: false });
+    expect(mockAskAgent).not.toHaveBeenCalled();
+    expect(mockAddComment).not.toHaveBeenCalled();
+  });
+
+  it('returns a contract error for a ready context without selected agent configuration', async () => {
+    const results = await useCase.invoke({
+      request: {
+        kind: 'ready',
+        commentBody: '/copilot plan rollout',
+        question: 'Plan rollout',
+        issueNumberForContext: 1,
+        destinationNumber: 1,
+        destinationType: 'issue',
+      },
+      agentTask: 'planner',
+    } as never);
+
+    expect(results[0].success).toBe(false);
+    expect(results[0].errors.map((error) => error.code)).toContain('provider.contract-invalid');
     expect(mockAskAgent).not.toHaveBeenCalled();
   });
 
@@ -79,7 +132,7 @@ describe('ThinkUseCase', () => {
       issue: { ...baseParam().issue, commentBody: 'hello world' },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(true);
@@ -94,7 +147,7 @@ describe('ThinkUseCase', () => {
       issue: { ...baseParam().issue, commentBody: 'how do I configure the webhook?' },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(mockAskAgent).not.toHaveBeenCalled();
     expect(mockAddComment).not.toHaveBeenCalled();
@@ -108,7 +161,7 @@ describe('ThinkUseCase', () => {
       issue: { ...baseParam().issue, commentBody: 'I need help with deployment' },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(mockAskAgent).not.toHaveBeenCalled();
     expect(mockAddComment).not.toHaveBeenCalled();
@@ -125,11 +178,11 @@ describe('ThinkUseCase', () => {
       issue: { ...baseParam().issue, commentBody: '@bot how do I configure the webhook?' },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(mockAskAgent).toHaveBeenCalledTimes(1);
     expect(mockAskAgent.mock.calls[0][2]).toContain('how do I configure the webhook?');
-    expect(mockAddComment).toHaveBeenCalledWith('o', 'r', 1, 'Here is the answer.', 't');
+    expect(mockAddComment).toHaveBeenCalledWith(1, 'Here is the answer.');
     expect(results[0].success).toBe(true);
     expect(results[0].executed).toBe(true);
   });
@@ -140,7 +193,7 @@ describe('ThinkUseCase', () => {
       issue: { ...baseParam().issue, commentBody: '@bot hi' },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
@@ -154,7 +207,7 @@ describe('ThinkUseCase', () => {
       issue: { ...baseParam().issue, commentBody: '@bot hi' },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results[0].success).toBe(false);
     expect(results[0].errors.map((error) => error.message)).toContain('Configured agent returned no answer.');
@@ -165,7 +218,7 @@ describe('ThinkUseCase', () => {
       issue: { ...baseParam().issue, commentBody: '@bot   ' },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results[0].success).toBe(true);
     expect(results[0].executed).toBe(false);
@@ -180,11 +233,11 @@ describe('ThinkUseCase', () => {
       issue: { ...baseParam().issue, commentBody: '@bot what is 2+2?' },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
-    expect(mockGetDescription).toHaveBeenCalledWith('o', 'r', 1, 't');
+    expect(mockGetDescription).toHaveBeenCalledWith(1);
     expect(mockAskAgent).toHaveBeenCalledTimes(1);
-    expect(mockAddComment).toHaveBeenCalledWith('o', 'r', 1, '4', 't');
+    expect(mockAddComment).toHaveBeenCalledWith(1, '4');
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(true);
     expect(results[0].executed).toBe(true);
@@ -199,7 +252,7 @@ describe('ThinkUseCase', () => {
       issue: { ...baseParam().issue, commentBody: '@bot. what is 2+2?' },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(mockAskAgent).toHaveBeenCalledTimes(1);
     const prompt = mockAskAgent.mock.calls[0][2];
@@ -217,9 +270,9 @@ describe('ThinkUseCase', () => {
       issue: { ...baseParam().issue, commentBody: '@bot how should I start?', number: 42 },
     });
 
-    await useCase.invoke(param);
+    await invoke(param);
 
-    expect(mockGetDescription).toHaveBeenCalledWith('o', 'r', 42, 't');
+    expect(mockGetDescription).toHaveBeenCalledWith(42);
     const prompt = mockAskAgent.mock.calls[0][2];
     expect(prompt).toContain('Context (issue #42 description):');
     expect(prompt).toContain('Implement login feature for the app.');
@@ -241,9 +294,9 @@ describe('ThinkUseCase', () => {
       issueNumber: 123,
     });
 
-    await useCase.invoke(param);
+    await invoke(param);
 
-    expect(mockGetDescription).toHaveBeenCalledWith('o', 'r', 123, 't');
+    expect(mockGetDescription).toHaveBeenCalledWith(123);
     const prompt = mockAskAgent.mock.calls[0][2];
     expect(prompt).toContain('Context (issue #123 description):');
     expect(prompt).toContain('Original issue description.');
@@ -255,7 +308,7 @@ describe('ThinkUseCase', () => {
       issue: { ...baseParam().issue, commentBody: '@bot hello' },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(mockAskAgent).toHaveBeenCalledTimes(1);
     expect(mockAddComment).not.toHaveBeenCalled();
@@ -270,7 +323,7 @@ describe('ThinkUseCase', () => {
       issue: { ...baseParam().issue, commentBody: '@bot hello' },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(mockAskAgent).toHaveBeenCalledTimes(1);
     expect(mockAddComment).not.toHaveBeenCalled();
@@ -290,9 +343,9 @@ describe('ThinkUseCase', () => {
       },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
-    expect(mockAddComment).toHaveBeenCalledWith('o', 'r', 7, 'Reply', 't');
+    expect(mockAddComment).toHaveBeenCalledWith(7, 'Reply');
     expect(results[0].success).toBe(true);
     expect(results[0].executed).toBe(true);
   });
@@ -304,7 +357,7 @@ describe('ThinkUseCase', () => {
       issue: { ...baseParam().issue, commentBody: '@bot hi' },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
@@ -318,7 +371,7 @@ describe('ThinkUseCase', () => {
       issue: { ...baseParam().issue, commentBody: '@bot hi', number: 0 },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);

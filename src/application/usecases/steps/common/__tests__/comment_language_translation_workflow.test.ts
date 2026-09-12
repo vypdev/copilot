@@ -11,9 +11,6 @@ describe('CommentLanguageTranslationWorkflow', () => {
             locale: 'Spanish',
             issueNumber: 1,
             commentId: 2,
-            owner: 'owner',
-            repo: 'repo',
-            token: 'token',
             configuration: undefined,
         });
         expect(results[0].executed).toBe(false);
@@ -34,15 +31,12 @@ describe('CommentLanguageTranslationWorkflow', () => {
             locale: 'English',
             issueNumber: 1,
             commentId: 2,
-            owner: 'owner',
-            repo: 'repo',
-            token: 'token',
             configuration: undefined,
         });
 
         expect(results).toEqual([]);
         expect(updateComment).toHaveBeenCalledTimes(1);
-        const updatedBody = updateComment.mock.calls[0][4] as string;
+        const updatedBody = updateComment.mock.calls[0][2] as string;
         expect(updatedBody).toContain('Original comment (untrusted content)');
         expect(updatedBody).toContain('&lt;');
         expect(updatedBody).toContain('copilot:translated-comment:v2');
@@ -62,9 +56,6 @@ describe('CommentLanguageTranslationWorkflow', () => {
             locale: 'English',
             issueNumber: 1,
             commentId: 2,
-            owner: 'owner',
-            repo: 'repo',
-            token: 'token',
             configuration: undefined,
         });
 

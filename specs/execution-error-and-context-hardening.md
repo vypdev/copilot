@@ -1,6 +1,6 @@
 # Semantic Errors and Capability Contexts
 
-- Status: In implementation — P0-A and P2-A through P2-C complete; remaining P2 context slices queued
+- Status: In implementation — P0-A and P2-A through P2-D complete; remaining P2 context slices queued
 - Date: 2026-09-11
 - Last updated: 2026-09-12
 - Catalog capability ID: `execution-lifecycle`
@@ -317,7 +317,7 @@ context contract and the aggregate baseline decreases in the same change.
 | Slice | Direct-cut scope | Required exit evidence | Minimum cases |
 |---|---|---|---:|
 | P2-C | Bugbot context I/O, freshness, publication, resolution, autofix, and learned-rule mutation | credentials bound in SCM/Git ports; zero Bugbot leaf imports; race/replay/publication parity | 10 |
-| P2-D | shared comment analysis: Think, permissions, translation, title, result publication, configuration, and project linking | route-projected contexts; no token/config/model method bags; issue/PR/comment parity | 8 |
+| P2-D | shared comment analysis: Think, permissions, translation, title, result publication, configuration, and project linking | complete; route-projected contexts, bound provider ports, issue/PR/comment parity, ceiling 75 | 8 |
 | P2-E | issue and pull-request workflow steps plus description handlers | separate issue/PR contexts; credential-bound provider commands; zero `steps/issue` and `steps/pull_request` imports | 8 |
 | P2-F | push and single-action capabilities, including progress, release/tag, inactivity, branch sync, and remaining commit steps | capability-specific commands/queries; no leaf aggregate input; dispatch parity | 8 |
 | P2-G | final route/public boundary audit | exact justified 16-file allowlist, alias-bypass negative fixture, clean Graphify/RepoWise audit | 1 |
@@ -369,6 +369,46 @@ context directly; the complete Bugbot review, intent, autofix, commit,
 dismissal, reconciliation, and lifecycle suites pass; the AST boundary suite
 finds zero production Bugbot leaf imports; and the exact aggregate inventory is
 104.
+
+#### 6.5.5 P2-D shared comment-analysis and publication cut
+
+P2-D projects one immutable `CommentAutomationContext` at the issue-comment or
+PR-review-comment route. It contains the actor, trusted bot login, addressed
+comment, members-only fact, translated-comment request, Think request and
+selected specialist, status snapshot, and the already narrow Bugbot operation
+facts. The projection copies nested agent configuration and status data; no
+token, provider client, mutable `Ai` instance, or configuration getter survives
+the boundary. `/copilot review` derives a new frozen review context with bounded
+command overrides instead of mutating shared AI configuration.
+
+The reusable permissions, translation, Think, title, result-publication,
+configuration-persistence, and project-linking workflows each receive their own
+readonly fact record. Issue and pull-request routes project the same semantic
+contracts. Repository coordinates and credentials are captured once by
+`shared_capability_port_binding.ts`; the resulting organization, description,
+notification, comment-update, title, and project-content ports expose only
+operation facts. Configuration description handlers now consume an explicit
+`ExecutionConfigurationQuery` plus `ConfigurationPersistenceContext`; generic
+route inference was deleted with its obsolete number policy.
+
+Result publication snapshots steps, reminders, semantic error presentations,
+and image lists before I/O. A publication failure is returned as a new semantic
+`Result` for the completion boundary to append; the frozen publication context
+is never mutated. Configuration persistence similarly resolves its target,
+deep-copies nested persisted values, and freezes the payload before handing it
+to storage.
+
+This is a direct greenfield cut. The removed aggregate signatures, generic
+target inference, raw-token calls, and configuration mutation path have no
+overload, union fallback, deprecated export, or compatibility adapter. The
+eight-case projection ledger in
+`src/application/usecases/steps/common/__tests__/shared_capability_context_projection.test.ts`
+covers permission isolation, issue/PR translation parity, Think selection,
+whole-comment projection, issue/PR title parity, project-link parity,
+publication snapshots, and configuration target/deep-freeze behavior. Route,
+workflow, publication, and manager suites provide additional parity evidence.
+The exact checked-in aggregate inventory is 75, down from 104, and the production
+dependency graph remains acyclic.
 
 ### 6.6 State machine
 
@@ -521,7 +561,7 @@ the remaining rows are mandatory floors for their clean-cut slices.
 | credentials bound behind semantic setup ports | 1 | `src/infrastructure/composition/__tests__/execution_setup_composition_root.test.ts` |
 | immutable Bugbot selection/review projections, credential exclusion, copy/freeze, trigger identities, incomplete input | 6 | `src/application/usecases/steps/commit/bugbot/__tests__/bugbot_review_operation_context.test.ts` |
 | P2-C Bugbot bound-I/O and mutation cut | 10 | reserved for P2-C |
-| P2-D shared comment-analysis cut | 8 | reserved for P2-D |
+| P2-D shared comment-analysis cut | 8 | `src/application/usecases/steps/common/__tests__/shared_capability_context_projection.test.ts` |
 | P2-E issue/pull-request cut | 8 | reserved for P2-E |
 | P2-F push/single-action cut | 8 | reserved for P2-F |
 | final exact 16-file allowlist and indirect-alias audit | 1 | reserved for P2-G closure |
@@ -541,6 +581,12 @@ parity evidence and do not inflate this floor.
 statements plus 90% branches and functions independently for every executable
 module in the P2-A setup path. The broader setup characterization suite remains
 parity evidence and does not inflate this case ledger.
+
+`scripts/validate-shared-capability-context-coverage.cjs` enforces the same
+95% lines/statements and 90% branches/functions thresholds over the aggregate
+P2-D comment-analysis, shared-capability, publication, persistence, and binding
+path. Every owned module must remain present in the coverage report, so deleting
+or silently dropping a path from instrumentation fails the gate.
 
 Manual evidence: review one narrow terminal failure, one GitHub annotation/Job
 Summary, and the generated final API reference/change notice.
@@ -584,6 +630,7 @@ failure contract instead of redefining it.
 | clean public API | package boundary | positive/negative TypeScript API fixtures | API reference/change notice |
 | narrow contexts | `setup_execution_boundary.ts`, `SetupExecutionContext`, and capability use cases | setup boundary, issue-resolution, branch-resolution, composition, characterization, and per-file coverage gates | architecture |
 | P2-C bound Bugbot I/O | route context projectors, bound SCM/Git composition, Bugbot workflows | P2-C projection, binding, freshness, publication, replay, API and AST cases | Bugbot architecture, programmatic API, permissions |
+| P2-D shared comment analysis | comment route projectors, shared semantic ports, configuration/publication boundaries | eight-case immutable projection ledger, route parity suites, exact 75-file ratchet, cycle test | architecture, dependency rules, comment automation |
 | shrinking allowlist | AST architecture check | fixture plus final inventory | dependency rules |
 
 ## 18. Implementation sequence

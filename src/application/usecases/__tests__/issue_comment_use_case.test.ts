@@ -19,6 +19,7 @@ const mockMarkFindingsResolved = jest.fn();
 jest.mock(
   "../steps/issue_comment/check_issue_comment_language_use_case",
   () => ({
+    ...jest.requireActual("../steps/issue_comment/check_issue_comment_language_use_case"),
     CheckIssueCommentLanguageUseCase: jest.fn().mockImplementation(() => ({
       invoke: mockCheckLanguageInvoke,
     })),
@@ -150,15 +151,6 @@ describe("IssueCommentUseCase", () => {
       { taskId: "BugbotAutofixUseCase", invoke: mockAutofixInvoke },
       { taskId: "DoUserRequestUseCase", invoke: mockDoUserRequestInvoke },
       { isActorAllowedToModifyFiles: mockIsActorAllowedToModifyFiles },
-      {
-        execute: jest.fn(),
-        fetch: jest.fn(),
-        configureAuthor: jest.fn(),
-        stageAll: jest.fn(),
-        stagePaths: jest.fn(),
-        commit: jest.fn(),
-        push: jest.fn(),
-      },
       {
         execute: jest.fn(),
         getAuthenticatedUserDetails: jest.fn(),

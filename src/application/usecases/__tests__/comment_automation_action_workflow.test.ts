@@ -1,5 +1,4 @@
 import { runCommentAutomationAction } from '../comment_automation_action_workflow';
-import { Ai } from '../../../data/model/ai';
 import { Result } from '../../../data/model/result';
 
 const mockCommitAutofix = jest.fn();
@@ -10,36 +9,19 @@ jest.mock('../steps/commit/bugbot/commit_autofix_and_resolve_workflow', () => ({
 function options(overrides: Record<string, unknown> = {}) {
   return {
     taskId: 'CommentAutomation',
-    userComment: '@vypbot analyze this',
     ...overrides,
   } as never;
 }
 
 function execution(publicationMode: 'publish' | 'dry-run' = 'publish') {
   return {
-    owner: 'org',
-    repo: 'repo',
-    issueNumber: 7,
-    isPullRequest: false,
-    eventName: 'issue_comment',
-    tokenUser: 'bot',
-    commit: { branch: 'feature/review' },
-    currentConfiguration: { parentBranch: 'develop' },
-    branches: { development: 'develop' },
-    pullRequest: { number: -1, head: '', action: '' },
-    ai: new Ai(
-      '',
-      'model',
-      false,
-      [],
-      false,
-      'low',
-      20,
-      [],
-      undefined,
-      undefined,
-      { publicationMode },
-    ),
+    userComment: '@vypbot analyze this',
+    bugbot: {
+      publicationMode,
+      review: {},
+      autofix: {},
+      commit: {},
+    },
   } as never;
 }
 
@@ -51,7 +33,6 @@ describe('runCommentAutomationAction', () => {
       options(),
       'review',
       undefined,
-      {} as never,
     );
 
     expect(results[0]).toMatchObject({
@@ -67,7 +48,6 @@ describe('runCommentAutomationAction', () => {
       options(),
       'think',
       undefined,
-      {} as never,
     )).resolves.toEqual([]);
   });
 
@@ -80,7 +60,6 @@ describe('runCommentAutomationAction', () => {
       options({ autofixUseCase: autofix, reviewPotentialProblemsUseCase: review }),
       'autofix',
       { targetFindingIds: ['finding-1'] } as never,
-      {} as never,
     );
 
     expect(mockCommitAutofix).toHaveBeenCalledTimes(1);
@@ -95,7 +74,6 @@ describe('runCommentAutomationAction', () => {
       options({ autofixUseCase: autofix }),
       'autofix',
       { targetFindingIds: ['finding-1'] } as never,
-      {} as never,
     );
 
     expect(autofix.invoke).not.toHaveBeenCalled();

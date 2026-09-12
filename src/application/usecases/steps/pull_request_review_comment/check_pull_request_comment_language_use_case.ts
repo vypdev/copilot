@@ -1,9 +1,28 @@
-import { Execution } from '../../../../data/model/execution';
 import { Result } from '../../../../data/model/result';
 import { ParamUseCase } from '../../base/param_usecase';
-import { CommentLanguageTranslationWorkflow } from '../common/comment_language_translation_workflow';
+import {
+    CommentLanguageTranslationWorkflow,
+    projectCommentLanguageRequest,
+    type CommentLanguageRequest,
+} from '../common/comment_language_translation_workflow';
 
-export class CheckPullRequestCommentLanguageUseCase implements ParamUseCase<Execution, Result[]> {
+export interface PullRequestCommentLanguageSource {
+    readonly pullRequest: { readonly commentBody: string; readonly number: number; readonly commentId: number };
+    readonly locale: { readonly pullRequest: string };
+    readonly ai: { getAgentConfiguration(task: 'findings'): CommentLanguageRequest['configuration'] };
+}
+
+export function projectPullRequestCommentLanguageRequest(source: PullRequestCommentLanguageSource): CommentLanguageRequest {
+    return projectCommentLanguageRequest({
+        commentBody: source.pullRequest.commentBody,
+        locale: source.locale.pullRequest,
+        issueNumber: source.pullRequest.number,
+        commentId: source.pullRequest.commentId,
+        configuration: source.ai.getAgentConfiguration('findings'),
+    });
+}
+
+export class CheckPullRequestCommentLanguageUseCase implements ParamUseCase<CommentLanguageRequest, Result[]> {
     taskId = 'CheckPullRequestCommentLanguageUseCase';
     private readonly workflow: CommentLanguageTranslationWorkflow;
 
@@ -11,17 +30,10 @@ export class CheckPullRequestCommentLanguageUseCase implements ParamUseCase<Exec
         this.workflow = workflow;
     }
 
-    invoke(param: Execution): Promise<Result[]> {
+    invoke(param: CommentLanguageRequest): Promise<Result[]> {
         return this.workflow.invoke({
+            ...param,
             taskId: this.taskId,
-            commentBody: param.pullRequest.commentBody,
-            locale: param.locale.pullRequest,
-            issueNumber: param.pullRequest.number,
-            commentId: param.pullRequest.commentId,
-            owner: param.owner,
-            repo: param.repo,
-            token: param.tokens.token,
-            configuration: param.ai.getAgentConfiguration('findings'),
         });
     }
 }

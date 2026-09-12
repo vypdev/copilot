@@ -1,41 +1,35 @@
-import type { Execution } from "../../data/model/execution";
 import type { Result } from "../../data/model/result";
-import type { ActorAuthorizationPort } from "../ports/actor_authorization_ports";
+import type { BoundActorAuthorizationPort } from "../ports/actor_authorization_ports";
 import { logInfo } from "../ports/logging_ports";
 import { getBugbotFixIntentPayload } from "./steps/commit/bugbot/bugbot_fix_intent_payload";
 import { resolveCommentAutomationRoute, type CommentAutomationRoute } from "./comment_automation_route_policy";
 import type { BugbotFixIntentPayload } from "./steps/commit/bugbot/bugbot_fix_intent_payload";
 import type { CommentAutomationOptions } from "./comment_automation_contracts";
+import type { CommentAutomationContext } from './comment_automation_context';
 import { containsBotMention } from '../../domain/copilot_comment_request';
 import { parseCopilotCommand } from '../../domain/copilot_command';
-import { projectBugbotFixIntentContext } from './steps/commit/bugbot/bugbot_review_operation_context';
 
 export interface CommentAutomationDecision {
-  intentResults: Result[];
-  intentPayload: BugbotFixIntentPayload | undefined;
-  route: CommentAutomationRoute;
+  readonly intentResults: readonly Result[];
+  readonly intentPayload: BugbotFixIntentPayload | undefined;
+  readonly route: CommentAutomationRoute;
 }
 
 export async function resolveCommentAutomationDecision(
-  param: Execution,
+  param: CommentAutomationContext,
   options: CommentAutomationOptions,
-  actorAuthorizationPort: ActorAuthorizationPort,
+  actorAuthorizationPort: BoundActorAuthorizationPort,
 ): Promise<CommentAutomationDecision> {
   logInfo("Running bugbot fix intent detection (before Think).");
-  const intentResults = await options.intentUseCase.invoke(projectBugbotFixIntentContext(param));
+  const intentResults = await options.intentUseCase.invoke(param.bugbot.fixIntent);
   const intentPayload = getBugbotFixIntentPayload(intentResults);
-  const parsedCommand = parseCopilotCommand(options.userComment);
+  const parsedCommand = parseCopilotCommand(param.userComment);
   const explicitMutationCommand = parsedCommand.kind === 'command'
     && (parsedCommand.command.name === 'fix' || parsedCommand.command.name === 'implement');
   const route = resolveCommentAutomationRoute(
     intentPayload,
-    await actorAuthorizationPort.isActorAllowedToModifyFiles(
-      param.owner,
-      param.repo,
-      param.actor,
-      param.tokens.token,
-    ),
-    containsBotMention(options.userComment, param.tokenUser ?? ''),
+    await actorAuthorizationPort.isActorAllowedToModifyFiles(param.actor),
+    containsBotMention(param.userComment, param.trustedBotLogin),
     explicitMutationCommand,
   );
 

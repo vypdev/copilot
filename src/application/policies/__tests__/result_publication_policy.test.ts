@@ -8,6 +8,8 @@ import {
   resolveResultPublicationPresentation,
 } from '../result_publication_policy';
 import { ApplicationError } from '../../errors/application_error';
+import { buildApplicationErrorPresentation } from '../application_error_presentation_policy';
+import type { ResultPublicationRecord } from '../result_publication_contracts';
 
 const images = {
   issueAutomaticActions: ['issue-auto'],
@@ -25,6 +27,17 @@ const images = {
   pullRequestDocsGifs: [],
   pullRequestChoreGifs: [],
 } as unknown as Images;
+
+function publicationRecord(result: Result): ResultPublicationRecord {
+  return {
+    id: result.id,
+    executed: result.executed,
+    steps: result.steps,
+    reminders: result.reminders,
+    errors: result.errors.map(buildApplicationErrorPresentation),
+    stepFormat: result.stepFormat,
+  };
+}
 
 describe('result publication policy', () => {
   it('resolves publication targets in lifecycle precedence order', () => {
@@ -104,7 +117,7 @@ describe('result publication policy', () => {
       new Result({ id: 'plain', steps: ['first', '  '], reminders: ['remember'] }),
       new Result({ id: 'markdown', stepFormat: 'markdown', steps: ['## Heading\n\n1. second'] }),
       new Result({ id: 'error', errors: [new ApplicationError('workflow.failed', 'failure')] }),
-    ]);
+    ].map(publicationRecord));
 
     expect(sections.content).toBe('1. first\n\n## Heading\n\n1. second\n');
     expect(sections.footer).toContain('1. remember');
@@ -124,7 +137,7 @@ describe('result publication policy', () => {
         reminders: ['@maintainer /close'],
         errors: [new ApplicationError('workflow.failed', 'token=should-not-become-a-control')],
       }),
-    ]);
+    ].map(publicationRecord));
 
     expect(sections.content).toContain('&lt;!-- hidden --&gt;');
     expect(sections.content).toContain('@\u200b octocat'.replace(' ', ''));
@@ -135,7 +148,7 @@ describe('result publication policy', () => {
   it('redacts credential-like values from infrastructure errors before publication', () => {
     const sections = renderResultSections([
       new Result({ errors: [new ApplicationError('provider.unavailable', 'GitHub rejected token=gho_secret-value')] }),
-    ]);
+    ].map(publicationRecord));
 
     expect(sections.errors).toContain('token=[redacted]');
     expect(sections.errors).not.toContain('gho_secret-value');
@@ -144,7 +157,7 @@ describe('result publication policy', () => {
   it('omits empty reminders but still presents semantic recovery details for an empty message', () => {
     const sections = renderResultSections([
       new Result({ reminders: ['   '], errors: [new ApplicationError('workflow.failed', '\n')] }),
-    ]);
+    ].map(publicationRecord));
 
     expect(sections.footer).toBe('');
     expect(sections.errors).toContain('**Cause (`workflow.failed`):**');

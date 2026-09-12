@@ -7,6 +7,8 @@ import type { PullRequestWorkflowSteps } from "./pull_request_workflow_steps";
 import { runPullRequestWorkflow } from "./pull_request_workflow";
 import type { ActorAuthorizationPort } from '../ports/actor_authorization_ports';
 import type { BugbotReviewOperationContext } from './steps/commit/bugbot/bugbot_review_operation_context';
+import { projectUpdateTitleContext } from './steps/common/update_title_workflow';
+import { projectPullRequestContentLinkContext } from './steps/common/project_content_link_workflow';
 
 export class PullRequestUseCase implements ParamUseCase<Execution, Result[]> {
   taskId: string = "PullRequestUseCase";
@@ -25,6 +27,10 @@ export class PullRequestUseCase implements ParamUseCase<Execution, Result[]> {
       reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
       workflowSteps: this.workflowSteps,
       actorAuthorizationPort: this.actorAuthorizationPort,
+      sharedContexts: {
+        title: projectUpdateTitleContext(param),
+        projectLink: projectPullRequestContentLinkContext(param),
+      },
     });
   }
 }

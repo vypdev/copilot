@@ -1,6 +1,6 @@
 import { ConfigurationHandler } from '../configuration_handler';
-import type { Execution } from '../../../data/model/execution';
 import type { ExecutionConfigurationQuery } from '../../../application/ports/execution_configuration_ports';
+import type { ConfigurationPersistenceContext } from '../../../application/ports/configuration_store_ports';
 
 jest.mock('../../../utils/logger', () => ({
   logError: jest.fn(),
@@ -17,17 +17,8 @@ function descriptionWithConfig(configJson: string): string {
   return `body\n${CONFIG_START}\n${configJson}\n${CONFIG_END}\ntail`;
 }
 
-function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
+function persistenceContext(overrides: Record<string, unknown> = {}): ConfigurationPersistenceContext {
   return {
-    owner: 'o',
-    repo: 'r',
-    tokens: { token: 't' },
-    isIssue: true,
-    isPullRequest: false,
-    isPush: false,
-    isSingleAction: false,
-    issue: { number: 1 },
-    pullRequest: { number: 0 },
     issueNumber: 1,
     currentConfiguration: {
       branchType: 'feature',
@@ -39,7 +30,7 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
       branchConfiguration: undefined,
     },
     ...overrides,
-  } as unknown as Execution;
+  } as ConfigurationPersistenceContext;
 }
 
 function configurationQuery(): ExecutionConfigurationQuery {
@@ -94,8 +85,8 @@ describe('ConfigurationHandler', () => {
       mockGetDescription.mockResolvedValue('no block');
       mockUpdateDescription.mockResolvedValue(undefined);
 
-      const execution = minimalExecution();
-      await handler.update(execution);
+      const context = persistenceContext();
+      await handler.update(configurationQuery(), context);
 
       expect(mockUpdateDescription).toHaveBeenCalled();
       const updatedDesc = mockUpdateDescription.mock.calls[0][3];
@@ -113,14 +104,14 @@ describe('ConfigurationHandler', () => {
       mockGetDescription.mockResolvedValue(descriptionWithConfig(storedJson));
       mockUpdateDescription.mockResolvedValue(undefined);
 
-      const execution = minimalExecution({
+      const context = persistenceContext({
         currentConfiguration: {
           parentBranch: undefined,
           branchConfiguration: undefined,
         },
       });
 
-      await handler.update(execution);
+      await handler.update(configurationQuery(), context);
 
       expect(mockUpdateDescription).toHaveBeenCalled();
       const fullDesc = mockUpdateDescription.mock.calls[0][3];
@@ -141,7 +132,7 @@ describe('ConfigurationHandler', () => {
       mockGetDescription.mockResolvedValue(descriptionWithConfig(storedJson));
       mockUpdateDescription.mockResolvedValue(undefined);
 
-      const execution = minimalExecution({
+      const context = persistenceContext({
         currentConfiguration: {
           branchType: 'bugfix',
           workingBranch: undefined,  // as in a PR edited event (never assigned in setup())
@@ -152,7 +143,7 @@ describe('ConfigurationHandler', () => {
         },
       });
 
-      await handler.update(execution);
+      await handler.update(configurationQuery(), context);
 
       const fullDesc = mockUpdateDescription.mock.calls[0][3];
       const parsed = JSON.parse(handler.getContent(fullDesc)!.trim());
@@ -171,13 +162,13 @@ describe('ConfigurationHandler', () => {
       mockGetDescription.mockResolvedValue(descriptionWithConfig(storedJson));
       mockUpdateDescription.mockResolvedValue(undefined);
 
-      const execution = minimalExecution({
+      const context = persistenceContext({
         currentConfiguration: {
           parentBranch: 'develop',
         },
       });
 
-      await handler.update(execution);
+      await handler.update(configurationQuery(), context);
 
       const fullDesc = mockUpdateDescription.mock.calls[0][3];
       const parsed = JSON.parse(handler.getContent(fullDesc)!.trim());
@@ -194,7 +185,7 @@ describe('ConfigurationHandler', () => {
         recommendation: '1. Add tests',
       };
 
-      await handler.update(minimalExecution({
+      await handler.update(configurationQuery(), persistenceContext({
         currentConfiguration: {
           branchType: 'feature',
           recommendationState,
@@ -212,10 +203,10 @@ describe('ConfigurationHandler', () => {
       const mangledDesc = `body\n${CONFIG_START}\n{"x":1}\nno end tag here`;
       mockGetDescription.mockResolvedValue(mangledDesc);
 
-      const execution = minimalExecution();
+      const context = persistenceContext();
 
       // A malformed hidden block must fail closed instead of silently losing state.
-      await expect(handler.update(execution)).rejects.toThrow('Issue content markers are missing or inconsistent.');
+      await expect(handler.update(configurationQuery(), context)).rejects.toThrow('Issue content markers are missing or inconsistent.');
       const { logError } = require('../../../utils/logger');
       expect(logError).toHaveBeenCalledWith(expect.stringContaining('problem with open-close tags'));
     });
@@ -224,14 +215,14 @@ describe('ConfigurationHandler', () => {
       mockGetDescription.mockResolvedValue(descriptionWithConfig('invalid { json'));
       mockUpdateDescription.mockResolvedValue(undefined);
 
-      const execution = minimalExecution({
+      const context = persistenceContext({
         currentConfiguration: {
           branchType: 'feature',
           workingBranch: 'feat/new',
         },
       });
 
-      await handler.update(execution);
+      await handler.update(configurationQuery(), context);
 
       expect(mockUpdateDescription).toHaveBeenCalled();
       const fullDesc = mockUpdateDescription.mock.calls[0][3];
@@ -243,23 +234,23 @@ describe('ConfigurationHandler', () => {
       mockGetDescription.mockResolvedValue(descriptionWithConfig('  '));
       mockUpdateDescription.mockResolvedValue(undefined);
 
-      const execution = minimalExecution({
+      const context = persistenceContext({
         currentConfiguration: {
           branchType: 'feature',
         },
       });
 
-      await handler.update(execution);
+      await handler.update(configurationQuery(), context);
 
       expect(mockUpdateDescription).toHaveBeenCalled();
       expect(mockUpdateDescription.mock.calls[0][3]).toContain('"branchType": "feature"');
     });
 
     it('propagates update errors to the persistence use case', async () => {
-      const execution = minimalExecution();
-      (execution as { currentConfiguration?: unknown }).currentConfiguration = undefined;
+      const context = persistenceContext();
+      (context as { currentConfiguration?: unknown }).currentConfiguration = undefined;
 
-      await expect(handler.update(execution)).rejects.toThrow();
+      await expect(handler.update(configurationQuery(), context)).rejects.toThrow();
     });
   });
 

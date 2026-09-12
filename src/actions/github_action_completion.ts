@@ -6,6 +6,8 @@ import { isRecommendationState } from '../data/model/recommendation_state';
 import type { ConfigurationStorePort } from '../application/ports/configuration_store_ports';
 import { PublishResultUseCase } from '../application/usecases/steps/common/publish_resume_use_case';
 import { StoreConfigurationUseCase } from '../application/usecases/steps/common/store_configuration_use_case';
+import { projectPublishResultContext } from '../application/usecases/steps/common/publish_resume_workflow';
+import { projectConfigurationPersistenceContext } from '../application/usecases/steps/common/store_configuration_use_case';
 
 import { logInfo } from '../utils/logger';
 import { createLogReportAdapter } from '../infrastructure/logging/logger_adapter';
@@ -35,7 +37,11 @@ export async function finishGithubAction(
     const dryRun = results.some((result) => getResultPayload(result.payload)?.dryRun === true);
     const ownsDeploymentPresentation = execution.singleAction.isDeploymentOrchestrationAction;
     if (!dryRun && !execution.singleAction.isPublishIssueCommentAction && !ownsDeploymentPresentation) {
-        await new PublishResultUseCase(issueNotificationPort, createLogReportAdapter()).invoke(execution);
+        const publicationFailure = await new PublishResultUseCase(
+            issueNotificationPort,
+            createLogReportAdapter(),
+        ).invoke(projectPublishResultContext(execution));
+        if (publicationFailure) results.push(publicationFailure);
     } else if (execution.singleAction.isPublishIssueCommentAction || ownsDeploymentPresentation) {
         logInfo('Generic result publication skipped: this single action owns its user-facing presentation.');
     } else {
@@ -43,8 +49,13 @@ export async function finishGithubAction(
     }
     commitPublishedRecommendationState(execution, results);
     if (!dryRun && shouldPersistConfiguration(execution)) {
-        await new StoreConfigurationUseCase(configurationStorePort).invoke(execution);
-        logInfo('Configuration stored. Finishing.');
+        const configuration = projectConfigurationPersistenceContext(execution);
+        if (configuration) {
+            await new StoreConfigurationUseCase(configurationStorePort).invoke(configuration);
+            logInfo('Configuration stored. Finishing.');
+        } else {
+            logInfo('Configuration persistence skipped: no valid issue target was resolved.');
+        }
     } else {
         logInfo('Configuration persistence skipped: this single action does not modify execution configuration.');
     }

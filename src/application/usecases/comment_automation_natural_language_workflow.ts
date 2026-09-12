@@ -1,17 +1,16 @@
-import type { Execution } from '../../data/model/execution';
 import type { Result } from '../../data/model/result';
-import type { ActorAuthorizationPort } from '../ports/actor_authorization_ports';
+import type { BoundActorAuthorizationPort } from '../ports/actor_authorization_ports';
 import type { CommentAutomationOptions } from './comment_automation_contracts';
+import type { CommentAutomationContext } from './comment_automation_context';
 import { resolveCommentAutomationDecision } from './comment_automation_decision_workflow';
 import { completeCommentAutomation } from './comment_automation_completion_workflow';
 
 /** Runs the natural-language comment pipeline after deterministic commands are excluded. */
 export async function runNaturalLanguageCommentAutomation(
-    param: Execution,
+    param: CommentAutomationContext,
     options: CommentAutomationOptions,
-    actorAuthorizationPort: ActorAuthorizationPort,
+    actorAuthorizationPort: BoundActorAuthorizationPort,
     languageResults: readonly Result[],
-    ports: Record<string, never>,
 ): Promise<Result[]> {
     const decision = await resolveCommentAutomationDecision(
         param,
@@ -21,6 +20,6 @@ export async function runNaturalLanguageCommentAutomation(
     return [
         ...languageResults,
         ...decision.intentResults,
-        ...(await completeCommentAutomation(param, options, decision, ports)),
+        ...(await completeCommentAutomation(param, options, decision)),
     ];
 }

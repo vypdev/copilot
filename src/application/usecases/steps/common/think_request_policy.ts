@@ -1,4 +1,3 @@
-import type { Execution } from '../../../../data/model/execution';
 import { parseCopilotCommand, type ParsedCopilotCommand } from '../../../../domain/copilot_command';
 import { containsBotMention } from '../../../../domain/copilot_comment_request';
 import { extractMentionQuestion, getThinkCommentBody } from './think_input_policy';
@@ -16,9 +15,24 @@ export type ThinkRequestDecision =
         command?: ParsedCopilotCommand;
     };
 
+export interface ThinkRequestSource {
+    readonly issue: {
+        readonly commentBody: string;
+        readonly isIssueComment: boolean;
+        readonly number: number;
+    };
+    readonly pullRequest: {
+        readonly commentBody: string;
+        readonly isPullRequestReviewComment: boolean;
+        readonly number: number;
+    };
+    readonly issueNumber: number;
+    readonly tokenUser?: string;
+}
+
 /** Resolves the comment input and destination without performing I/O. */
 export function resolveThinkRequest(
-    param: Pick<Execution, 'issue' | 'pullRequest' | 'issueNumber' | 'tokenUser'>,
+    param: ThinkRequestSource,
 ): ThinkRequestDecision {
     const commentBody = getThinkCommentBody({
         issueCommentBody: param.issue.commentBody,

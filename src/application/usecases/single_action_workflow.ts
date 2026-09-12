@@ -5,12 +5,13 @@ import type { ParamUseCase } from "./base/param_usecase";
 import { toApplicationError } from "../errors/application_error";
 import type { BugbotReviewOperationContext } from './steps/commit/bugbot/bugbot_review_operation_context';
 import { projectBugbotReviewOperationContext } from './steps/commit/bugbot/bugbot_review_operation_context';
+import { projectThinkContext, type ThinkContext } from './steps/common/think_workflow';
 
 export interface SingleActionWorkflowPorts {
   publishGithubActionUseCase?: ParamUseCase<Execution, Result[]>;
   createReleaseUseCase?: ParamUseCase<Execution, Result[]>;
   createTagUseCase?: ParamUseCase<Execution, Result[]>;
-  thinkUseCase: ParamUseCase<Execution, Result[]>;
+  thinkUseCase: ParamUseCase<ThinkContext, Result[]>;
   initialSetupUseCase: ParamUseCase<Execution, Result[]>;
   checkProgressUseCase: ParamUseCase<Execution, Result[]>;
   detectPotentialProblemsUseCase: ParamUseCase<BugbotReviewOperationContext, Result[]>;
@@ -43,11 +44,17 @@ export async function runSingleActionWorkflow(
       return singleActionFailure(param, taskId, error);
     }
   }
+  if (param.singleAction.isThinkAction) {
+    try {
+      return await ports.thinkUseCase.invoke(projectThinkContext(param));
+    } catch (error) {
+      return singleActionFailure(param, taskId, error);
+    }
+  }
   const action = [
     { active: param.singleAction.isPublishGithubAction, useCase: ports.publishGithubActionUseCase },
     { active: param.singleAction.isCreateReleaseAction, useCase: ports.createReleaseUseCase },
     { active: param.singleAction.isCreateTagAction, useCase: ports.createTagUseCase },
-    { active: param.singleAction.isThinkAction, useCase: ports.thinkUseCase },
     { active: param.singleAction.isInitialSetupAction, useCase: ports.initialSetupUseCase },
     { active: param.singleAction.isCheckProgressAction, useCase: ports.checkProgressUseCase },
     { active: param.singleAction.isRecommendStepsAction, useCase: ports.recommendStepsUseCase },

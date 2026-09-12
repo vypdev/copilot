@@ -68,7 +68,7 @@ export function buildCopilotStatusSnapshot(execution: CopilotStatusExecutionCont
         ?.map(result => getResultPayload(result.payload)?.findingStates)
         .find(isFindingStateCounts);
 
-    return {
+    return Object.freeze({
         owner: execution.owner,
         repository: execution.repo,
         event: execution.eventName || 'unknown',
@@ -85,15 +85,14 @@ export function buildCopilotStatusSnapshot(execution: CopilotStatusExecutionCont
         ...(execution.commit?.branch ? { branch: execution.commit.branch } : {}),
         ...(lifecycle ? { lifecycle } : {}),
         ...(waitingFor ? { waitingFor } : {}),
-        issueLabels,
-        pullRequestLabels,
-        ...(findingStates ? { activeFindings: findingStates } : {}),
+        issueLabels: Object.freeze(issueLabels),
+        pullRequestLabels: Object.freeze(pullRequestLabels),
+        ...(findingStates ? { activeFindings: Object.freeze({ ...findingStates }) } : {}),
         pullRequestDescriptionMode: execution.ai.getPullRequestDescriptionMode(),
-    };
+    });
 }
 
-export function buildCopilotStatusResult(execution: CopilotStatusExecutionContext, taskId: string): Result {
-    const snapshot = buildCopilotStatusSnapshot(execution);
+export function buildCopilotStatusResult(snapshot: CopilotStatusSnapshot, taskId: string): Result {
     return new Result({
         id: `${taskId}.Status`,
         success: true,

@@ -1,40 +1,29 @@
 import { Result } from "../../data/model/result";
-import type { Execution } from "../../data/model/execution";
-import type { BugbotGitMutationPort } from "../ports/bugbot_git_ports";
 import type { CommentAutomationOptions } from "./comment_automation_contracts";
+import type { CommentAutomationContext } from './comment_automation_context';
 import type { BugbotFixIntentPayload } from "./steps/commit/bugbot/bugbot_fix_intent_payload";
 import { commitAutofixAndResolveFindings } from "./steps/commit/bugbot/commit_autofix_and_resolve_workflow";
 import { commitUserRequestIfSuccessful } from "./steps/commit/bugbot/commit_user_request_workflow";
 import { logInfo } from "../ports/logging_ports";
 import { ApplicationError, toApplicationError } from "../errors/application_error";
-import {
-  projectBugbotAutofixOperationContext,
-  projectBugbotCommitContext,
-  projectBugbotReviewOperationContext,
-} from './steps/commit/bugbot/bugbot_review_operation_context';
 
 export type CommentAutomationAction = "autofix" | "do-user-request" | "review" | "think";
 
-export interface CommentAutomationActionPorts {
-  bugbotGitMutationPort: BugbotGitMutationPort;
-}
-
 /** Runs the selected mutating action and returns any result records it produces. */
 export async function runCommentAutomationAction(
-  param: Execution,
+  param: CommentAutomationContext,
   options: CommentAutomationOptions,
   route: CommentAutomationAction,
   intentPayload: BugbotFixIntentPayload | undefined,
-  ports: CommentAutomationActionPorts,
 ): Promise<Result[]> {
   if (route === "review") return runReviewAction(param, options);
-  if (route === "autofix") return runAutofixAction(param, options, intentPayload, ports);
-  if (route === "do-user-request") return runDoUserRequestAction(param, options, intentPayload, ports);
+  if (route === "autofix") return runAutofixAction(param, options, intentPayload);
+  if (route === "do-user-request") return runDoUserRequestAction(param, options, intentPayload);
   return [];
 }
 
 async function runReviewAction(
-  param: Execution,
+  param: CommentAutomationContext,
   options: CommentAutomationOptions,
 ): Promise<Result[]> {
   if (!options.reviewPotentialProblemsUseCase) {
@@ -46,17 +35,16 @@ async function runReviewAction(
     })];
   }
   logInfo("Running natural-language read-only review.");
-  return options.reviewPotentialProblemsUseCase.invoke(projectBugbotReviewOperationContext(param));
+  return options.reviewPotentialProblemsUseCase.invoke(param.bugbot.review);
 }
 
 async function runAutofixAction(
-  param: Execution,
+  param: CommentAutomationContext,
   options: CommentAutomationOptions,
   intentPayload: BugbotFixIntentPayload | undefined,
-  ports: CommentAutomationActionPorts,
 ): Promise<Result[]> {
   if (!intentPayload) return [];
-  if (param.ai.getBugbotReviewConfiguration().publicationMode === 'dry-run') {
+  if (param.bugbot.publicationMode === 'dry-run') {
     return [new Result({
       id: `${options.taskId}.Autofix`,
       success: true,
@@ -67,17 +55,17 @@ async function runAutofixAction(
   }
   logInfo("Running bugbot autofix.");
   const autofixResults = await options.autofixUseCase.invoke({
-    operation: projectBugbotAutofixOperationContext(param),
+    operation: param.bugbot.autofix,
     targetFindingIds: intentPayload.targetFindingIds,
-    userComment: options.userComment,
+    userComment: param.userComment,
     context: intentPayload.context,
     branchOverride: intentPayload.branchOverride,
   });
   const resolutionErrors = await commitAutofixAndResolveFindings(
-    projectBugbotCommitContext(param),
+    param.bugbot.commit,
     intentPayload,
     autofixResults,
-    ports.bugbotGitMutationPort,
+    options.bugbotGitMutationPort,
   );
   if (resolutionErrors.length > 0) {
     autofixResults.push(
@@ -100,30 +88,28 @@ async function runAutofixAction(
   if (autofixResults.at(-1)?.success && options.reviewPotentialProblemsUseCase) {
     logInfo('Running an independent post-autofix review because bot-authored push workflows are intentionally discarded.');
     autofixResults.push(...await options.reviewPotentialProblemsUseCase.invoke(
-      projectBugbotReviewOperationContext(param),
+      param.bugbot.review,
     ));
   }
   return autofixResults;
 }
 
 async function runDoUserRequestAction(
-  param: Execution,
+  param: CommentAutomationContext,
   options: CommentAutomationOptions,
   intentPayload: BugbotFixIntentPayload | undefined,
-  ports: CommentAutomationActionPorts,
 ): Promise<Result[]> {
   if (!intentPayload) return [];
   logInfo("Running do user request.");
   const doResults = await options.doUserRequestUseCase.invoke({
-    execution: param,
-    userComment: intentPayload.requestText?.trim() || options.userComment,
+    userComment: intentPayload.requestText?.trim() || param.userComment,
     branchOverride: intentPayload.branchOverride,
   });
   const commitResults = await commitUserRequestIfSuccessful(
-    projectBugbotCommitContext(param),
+    param.bugbot.commit,
     intentPayload.branchOverride,
     doResults,
-    ports.bugbotGitMutationPort,
+    options.bugbotGitMutationPort,
   );
   return [...doResults, ...commitResults];
 }

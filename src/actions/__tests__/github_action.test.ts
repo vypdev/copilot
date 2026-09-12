@@ -66,6 +66,7 @@ jest.mock('../../application/usecases/steps/common/publish_resume_use_case', () 
   PublishResultUseCase: jest.fn().mockImplementation(() => ({ invoke: mockPublishInvoke })),
 }));
 jest.mock('../../application/usecases/steps/common/store_configuration_use_case', () => ({
+  ...jest.requireActual('../../application/usecases/steps/common/store_configuration_use_case'),
   StoreConfigurationUseCase: jest.fn().mockImplementation(() => ({ invoke: mockStoreInvoke })),
 }));
 
@@ -90,7 +91,7 @@ describe('runGitHubAction', () => {
     });
     mockGetProjectDetail.mockResolvedValue({ id: 'p1', title: 'Board', url: 'https://example.com' });
     mockMainRun.mockResolvedValue([]);
-    mockPublishInvoke.mockResolvedValue([]);
+    mockPublishInvoke.mockResolvedValue(undefined);
     mockStoreInvoke.mockResolvedValue([]);
     mockExecutionAdmissionInvoke.mockResolvedValue({ decision: 'execute', tokenUser: 'token-user' });
     mockIsActorAllowedToModifyFiles.mockResolvedValue(true);
@@ -234,11 +235,11 @@ describe('runGitHubAction', () => {
     expect(finishActionSpy).not.toHaveBeenCalled();
   });
 
-  it('calls finishWithResults (PublishResult and StoreConfiguration) after mainRun', async () => {
+  it('publishes results but skips configuration persistence when no issue target exists', async () => {
     await runGitHubAction();
 
     expect(mockPublishInvoke).toHaveBeenCalledTimes(1);
-    expect(mockStoreInvoke).toHaveBeenCalledTimes(1);
+    expect(mockStoreInvoke).not.toHaveBeenCalled();
   });
 
   it('uses INPUT_VARS_JSON when set for getInput', async () => {

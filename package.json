@@ -53,7 +53,7 @@
     "smoke:npm-package": "node scripts/smoke-test-npm-package.cjs",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage && node scripts/validate-deployment-handler-coverage.cjs && node scripts/validate-bugbot-context-coverage.cjs && node scripts/validate-agent-execution-coverage.cjs && node scripts/validate-setup-execution-coverage.cjs",
+    "test:coverage": "jest --coverage && node scripts/validate-deployment-handler-coverage.cjs && node scripts/validate-bugbot-context-coverage.cjs && node scripts/validate-agent-execution-coverage.cjs && node scripts/validate-setup-execution-coverage.cjs && node scripts/validate-shared-capability-context-coverage.cjs",
     "eval:bugbot": "jest src/tooling/__tests__/bugbot_quality_eval.test.ts src/tooling/__tests__/bugbot_benchmark.test.ts --runInBand",
     "typecheck": "tsc --noEmit",
     "metrics:architecture": "node scripts/collect-architecture-metrics.cjs",

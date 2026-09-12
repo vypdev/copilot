@@ -7,12 +7,20 @@ import { ApplicationError } from '../errors/application_error';
 import type { ActorAuthorizationPort } from '../ports/actor_authorization_ports';
 import type { BugbotReviewOperationContext } from './steps/commit/bugbot/bugbot_review_operation_context';
 import { projectBugbotReviewOperationContext } from './steps/commit/bugbot/bugbot_review_operation_context';
+import type { UpdateTitleContext } from './steps/common/update_title_workflow';
+import type { ProjectContentLinkContext } from './steps/common/project_content_link_workflow';
+
+export interface PullRequestSharedStepContexts {
+  readonly title: UpdateTitleContext;
+  readonly projectLink: ProjectContentLinkContext;
+}
 
 export interface PullRequestWorkflowPorts {
   updatePullRequestDescriptionUseCase: ParamUseCase<Execution, Result[]>;
   reviewPotentialProblemsUseCase?: ParamUseCase<BugbotReviewOperationContext, Result[]>;
   workflowSteps: PullRequestWorkflowSteps;
   actorAuthorizationPort?: ActorAuthorizationPort;
+  sharedContexts: PullRequestSharedStepContexts;
 }
 
 /** Coordinates pull-request lifecycle actions while preserving their sequential order. */
@@ -25,16 +33,16 @@ export async function runPullRequestWorkflow(
     logPullRequestState(param);
     const agentAllowed = await canUseAgent(param, ports.actorAuthorizationPort);
     if (param.pullRequest.isOpened) {
-      const steps: Array<ParamUseCase<Execution, Result[]>> = [
-        ports.workflowSteps.updateTitle,
-        ports.workflowSteps.assignMemberToIssue,
-        ports.workflowSteps.assignReviewersToIssue,
-        ports.workflowSteps.linkPullRequestProject,
+      const remainingSteps: Array<ParamUseCase<Execution, Result[]>> = [
         ports.workflowSteps.linkPullRequestIssue,
         ports.workflowSteps.syncSizeAndProgressLabels,
         ports.workflowSteps.checkPriorityPullRequestSize,
       ];
-      const results = await runSteps(param, steps);
+      const results = await ports.workflowSteps.updateTitle.invoke(ports.sharedContexts.title);
+      results.push(...(await ports.workflowSteps.assignMemberToIssue.invoke(param)));
+      results.push(...(await ports.workflowSteps.assignReviewersToIssue.invoke(param)));
+      results.push(...(await ports.workflowSteps.linkPullRequestProject.invoke(ports.sharedContexts.projectLink)));
+      results.push(...(await runSteps(param, remainingSteps)));
       if (agentAllowed && shouldUpdatePullRequestDescriptionAutomatically(param)) {
         results.push(...(await ports.updatePullRequestDescriptionUseCase.invoke(param)));
       }
@@ -51,7 +59,7 @@ export async function runPullRequestWorkflow(
     }
 
     if (param.pullRequest.action === 'edited') {
-      return ports.workflowSteps.updateTitle.invoke(param);
+      return ports.workflowSteps.updateTitle.invoke(ports.sharedContexts.title);
     }
 
     if (param.pullRequest.isClosed && param.pullRequest.isMerged) {

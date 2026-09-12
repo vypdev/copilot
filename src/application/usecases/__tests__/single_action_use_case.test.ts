@@ -64,6 +64,10 @@ function minimalExecution(singleAction: {
 }): Execution {
   return {
     ai: new Ai('', 'model', false, [], false, 'low', 20),
+    issueNumber: 12,
+    tokenUser: 'bot',
+    issue: { commentBody: '@bot what next', isIssueComment: true, number: 12 },
+    pullRequest: { commentBody: '', isPullRequestReviewComment: false, number: -1 },
     singleAction: {
       validSingleAction: singleAction.validSingleAction,
       currentSingleAction: singleAction.currentSingleAction,
@@ -137,7 +141,10 @@ describe('SingleActionUseCase', () => {
 
     const results = await useCase.invoke(param);
 
-    expect(mockThinkInvoke).toHaveBeenCalledWith(param);
+    expect(mockThinkInvoke).toHaveBeenCalledWith(expect.objectContaining({
+      request: expect.objectContaining({ kind: 'ready', destinationNumber: 12 }),
+      agentTask: 'planner',
+    }));
     expect(results).toEqual([r]);
   });
 

@@ -1,4 +1,4 @@
-import { CheckIssueCommentLanguageUseCase } from '../check_issue_comment_language_use_case';
+import { CheckIssueCommentLanguageUseCase, projectIssueCommentLanguageRequest } from '../check_issue_comment_language_use_case';
 import { CommentLanguageTranslationWorkflow } from '../../common/comment_language_translation_workflow';
 
 jest.mock('../../../../../utils/logger', () => ({
@@ -12,7 +12,7 @@ const mockAskAgent = jest.fn();
 const mockUpdateComment = jest.fn();
 
 function baseParam(overrides: Record<string, unknown> = {}) {
-  return {
+  return projectIssueCommentLanguageRequest({
     owner: 'o',
     repo: 'r',
     issue: { number: 1, commentId: 42, commentBody: 'Hello world' },
@@ -20,7 +20,7 @@ function baseParam(overrides: Record<string, unknown> = {}) {
     locale: { issue: 'Spanish' },
     ai: { getAgentConfiguration: () => ({ provider: 'opencode', model: 'model' }) },
     ...overrides,
-  } as unknown as Parameters<CheckIssueCommentLanguageUseCase['invoke']>[0];
+  } as never);
 }
 
 describe('CheckIssueCommentLanguageUseCase', () => {
@@ -90,12 +90,9 @@ describe('CheckIssueCommentLanguageUseCase', () => {
     expect(translatePrompt).toContain('Spanish');
     expect(translatePrompt).toContain('Hello world');
     expect(mockUpdateComment).toHaveBeenCalledWith(
-      'o',
-      'r',
       1,
       42,
-      expect.stringContaining('Texto traducido'),
-      't'
+      expect.stringContaining('Texto traducido')
     );
     expect(results.length).toBeGreaterThanOrEqual(0);
   });
@@ -156,12 +153,9 @@ describe('CheckIssueCommentLanguageUseCase', () => {
 
     expect(mockAskAgent).toHaveBeenCalledTimes(2);
     expect(mockUpdateComment).toHaveBeenCalledWith(
-      'o',
-      'r',
       1,
       42,
-      expect.stringContaining('Hola'),
-      't'
+      expect.stringContaining('Hola')
     );
     expect(results.length).toBeGreaterThanOrEqual(0);
   });

@@ -1,6 +1,6 @@
 import type { ResultPublicationContext, ResultPublicationPresentation } from './result_publication_contracts';
 
-type ImageSelector = (images: string[]) => string | undefined;
+type ImageSelector = (images: readonly string[]) => string | undefined;
 
 export function selectResultPublicationPresentation(
     context: ResultPublicationContext,
@@ -32,6 +32,6 @@ function selectPullRequestPresentation(context: ResultPublicationContext, select
     return presentation('🪄 Automatic Actions', context.images.pullRequestAutomaticActions, selectImage);
 }
 
-function presentation(title: string, images: string[], selectImage: ImageSelector): ResultPublicationPresentation {
+function presentation(title: string, images: readonly string[], selectImage: ImageSelector): ResultPublicationPresentation {
     return { title, image: selectImage(images) };
 }

@@ -56475,7 +56475,7 @@ function buildCopilotStatusSnapshot(execution) {
     const findingStates = execution.currentConfiguration?.results
         ?.map(result => (0, result_1.getResultPayload)(result.payload)?.findingStates)
         .find(isFindingStateCounts);
-    return {
+    return Object.freeze({
         owner: execution.owner,
         repository: execution.repo,
         event: execution.eventName || 'unknown',
@@ -56492,14 +56492,13 @@ function buildCopilotStatusSnapshot(execution) {
         ...(execution.commit?.branch ? { branch: execution.commit.branch } : {}),
         ...(lifecycle ? { lifecycle } : {}),
         ...(waitingFor ? { waitingFor } : {}),
-        issueLabels,
-        pullRequestLabels,
-        ...(findingStates ? { activeFindings: findingStates } : {}),
+        issueLabels: Object.freeze(issueLabels),
+        pullRequestLabels: Object.freeze(pullRequestLabels),
+        ...(findingStates ? { activeFindings: Object.freeze({ ...findingStates }) } : {}),
         pullRequestDescriptionMode: execution.ai.getPullRequestDescriptionMode(),
-    };
+    });
 }
-function buildCopilotStatusResult(execution, taskId) {
-    const snapshot = buildCopilotStatusSnapshot(execution);
+function buildCopilotStatusResult(snapshot, taskId) {
     return new result_1.Result({
         id: `${taskId}.Status`,
         success: true,
@@ -59401,16 +59400,16 @@ const result_1 = __nccwpck_require__(73817);
 const branch_sync_command_1 = __nccwpck_require__(51114);
 const application_error_1 = __nccwpck_require__(75999);
 /** Authorizes and runs an explicit or natural-language branch synchronization request. */
-async function runBranchSyncCommand(execution, options, args, authorization) {
+async function runBranchSyncCommand(context, options, args, authorization) {
     const parsed = (0, branch_sync_command_1.parseBranchSyncCommandArguments)(args);
     if (!parsed.valid)
         return [invalid(options.taskId, parsed.reason)];
     if (!options.syncBranchUseCase)
         return [unavailable(options.taskId)];
-    const allowed = await authorization.isActorAllowedToModifyFiles(execution.owner, execution.repo, execution.actor, execution.tokens.token);
+    const allowed = await authorization.isActorAllowedToModifyFiles(context.actor);
     if (!allowed)
         return [unauthorized(options.taskId)];
-    return options.syncBranchUseCase.invoke({ execution, options: parsed.options });
+    return options.syncBranchUseCase.invoke(parsed.options);
 }
 function invalid(taskId, reason) {
     return new result_1.Result({ id: taskId, success: false, executed: false, errors: [new application_error_1.ApplicationError('validation.invalid-input', reason)] });
@@ -59692,15 +59691,14 @@ const commit_autofix_and_resolve_workflow_1 = __nccwpck_require__(93455);
 const commit_user_request_workflow_1 = __nccwpck_require__(43393);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
-const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
 /** Runs the selected mutating action and returns any result records it produces. */
-async function runCommentAutomationAction(param, options, route, intentPayload, ports) {
+async function runCommentAutomationAction(param, options, route, intentPayload) {
     if (route === "review")
         return runReviewAction(param, options);
     if (route === "autofix")
-        return runAutofixAction(param, options, intentPayload, ports);
+        return runAutofixAction(param, options, intentPayload);
     if (route === "do-user-request")
-        return runDoUserRequestAction(param, options, intentPayload, ports);
+        return runDoUserRequestAction(param, options, intentPayload);
     return [];
 }
 async function runReviewAction(param, options) {
@@ -59713,12 +59711,12 @@ async function runReviewAction(param, options) {
             })];
     }
     (0, logging_ports_1.logInfo)("Running natural-language read-only review.");
-    return options.reviewPotentialProblemsUseCase.invoke((0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param));
+    return options.reviewPotentialProblemsUseCase.invoke(param.bugbot.review);
 }
-async function runAutofixAction(param, options, intentPayload, ports) {
+async function runAutofixAction(param, options, intentPayload) {
     if (!intentPayload)
         return [];
-    if (param.ai.getBugbotReviewConfiguration().publicationMode === 'dry-run') {
+    if (param.bugbot.publicationMode === 'dry-run') {
         return [new result_1.Result({
                 id: `${options.taskId}.Autofix`,
                 success: true,
@@ -59729,13 +59727,13 @@ async function runAutofixAction(param, options, intentPayload, ports) {
     }
     (0, logging_ports_1.logInfo)("Running bugbot autofix.");
     const autofixResults = await options.autofixUseCase.invoke({
-        operation: (0, bugbot_review_operation_context_1.projectBugbotAutofixOperationContext)(param),
+        operation: param.bugbot.autofix,
         targetFindingIds: intentPayload.targetFindingIds,
-        userComment: options.userComment,
+        userComment: param.userComment,
         context: intentPayload.context,
         branchOverride: intentPayload.branchOverride,
     });
-    const resolutionErrors = await (0, commit_autofix_and_resolve_workflow_1.commitAutofixAndResolveFindings)((0, bugbot_review_operation_context_1.projectBugbotCommitContext)(param), intentPayload, autofixResults, ports.bugbotGitMutationPort);
+    const resolutionErrors = await (0, commit_autofix_and_resolve_workflow_1.commitAutofixAndResolveFindings)(param.bugbot.commit, intentPayload, autofixResults, options.bugbotGitMutationPort);
     if (resolutionErrors.length > 0) {
         autofixResults.push(new result_1.Result({
             id: `${options.taskId}.AutofixPostflight`,
@@ -59750,20 +59748,19 @@ async function runAutofixAction(param, options, intentPayload, ports) {
     }
     if (autofixResults.at(-1)?.success && options.reviewPotentialProblemsUseCase) {
         (0, logging_ports_1.logInfo)('Running an independent post-autofix review because bot-authored push workflows are intentionally discarded.');
-        autofixResults.push(...await options.reviewPotentialProblemsUseCase.invoke((0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param)));
+        autofixResults.push(...await options.reviewPotentialProblemsUseCase.invoke(param.bugbot.review));
     }
     return autofixResults;
 }
-async function runDoUserRequestAction(param, options, intentPayload, ports) {
+async function runDoUserRequestAction(param, options, intentPayload) {
     if (!intentPayload)
         return [];
     (0, logging_ports_1.logInfo)("Running do user request.");
     const doResults = await options.doUserRequestUseCase.invoke({
-        execution: param,
-        userComment: intentPayload.requestText?.trim() || options.userComment,
+        userComment: intentPayload.requestText?.trim() || param.userComment,
         branchOverride: intentPayload.branchOverride,
     });
-    const commitResults = await (0, commit_user_request_workflow_1.commitUserRequestIfSuccessful)((0, bugbot_review_operation_context_1.projectBugbotCommitContext)(param), intentPayload.branchOverride, doResults, ports.bugbotGitMutationPort);
+    const commitResults = await (0, commit_user_request_workflow_1.commitUserRequestIfSuccessful)(param.bugbot.commit, intentPayload.branchOverride, doResults, options.bugbotGitMutationPort);
     return [...doResults, ...commitResults];
 }
 
@@ -59793,7 +59790,7 @@ async function runExplicitCommentCommand(param, options, command, actorAuthoriza
     if (command.name === 'help')
         return runHelpCommand(param, options);
     if (command.name === 'status')
-        return [(0, status_command_policy_1.buildCopilotStatusResult)(param, options.taskId)];
+        return [(0, status_command_policy_1.buildCopilotStatusResult)(param.status, options.taskId)];
     if (command.name === 'dismiss')
         return runDismissCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'remember')
@@ -59810,7 +59807,7 @@ async function runExplicitCommentCommand(param, options, command, actorAuthoriza
     return runThinkCommand(param, options, command);
 }
 async function runRememberCommand(param, options, command, actorAuthorizationPort) {
-    const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token);
+    const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.actor);
     if (!allowed || !options.rememberBugbotRuleUseCase) {
         return [new result_1.Result({
                 id: `${options.taskId}.Remember`,
@@ -59821,7 +59818,7 @@ async function runRememberCommand(param, options, command, actorAuthorizationPor
     }
     let mutation;
     try {
-        mutation = await (0, workspace_mutation_guard_1.prepareWorkspaceMutation)(options.gitCommitPort, {
+        mutation = await (0, workspace_mutation_guard_1.prepareWorkspaceMutation)(options.bugbotGitMutationPort, {
             operation: 'Remember Bugbot rule',
         });
     }
@@ -59832,7 +59829,7 @@ async function runRememberCommand(param, options, command, actorAuthorizationPor
     if (!results.some((result) => result.executed))
         return results;
     try {
-        const { workspacePaths } = await (0, workspace_mutation_guard_1.finalizeWorkspaceMutation)(options.gitCommitPort, mutation.workspacePathsBefore, 'Remember Bugbot rule');
+        const { workspacePaths } = await (0, workspace_mutation_guard_1.finalizeWorkspaceMutation)(options.bugbotGitMutationPort, mutation.workspacePathsBefore, 'Remember Bugbot rule');
         if (workspacePaths.length !== 1 || workspacePaths[0] !== LEARNED_BUGBOT_RULE_PATH) {
             return [...results, rememberFailure(new application_error_1.ApplicationError('agent.policy-rejected', `Remember Bugbot rule refused unexpected workspace paths: ${workspacePaths.join(', ')}`))];
         }
@@ -59843,7 +59840,7 @@ async function runRememberCommand(param, options, command, actorAuthorizationPor
     catch (error) {
         return [...results, rememberFailure(error)];
     }
-    const commitResults = await (0, commit_user_request_workflow_1.commitUserRequestIfSuccessful)((0, bugbot_review_operation_context_1.projectBugbotCommitContext)(param), undefined, results, options.bugbotGitMutationPort);
+    const commitResults = await (0, commit_user_request_workflow_1.commitUserRequestIfSuccessful)(param.bugbot.commit, undefined, results, options.bugbotGitMutationPort);
     return [...results, ...commitResults];
 }
 function rememberFailure(error) {
@@ -59860,7 +59857,7 @@ function runHelpCommand(param, options) {
             success: true,
             executed: true,
             stepFormat: 'markdown',
-            steps: [(0, copilot_interaction_policy_1.buildCopilotHelpMessage)(param.tokenUser)],
+            steps: [(0, copilot_interaction_policy_1.buildCopilotHelpMessage)(param.trustedBotLogin)],
         })];
 }
 async function runDescriptionCommand(param, options, actorAuthorizationPort) {
@@ -59872,7 +59869,7 @@ async function runDescriptionCommand(param, options, actorAuthorizationPort) {
                 errors: [new application_error_1.ApplicationError('configuration.unsupported', 'Explicit pull-request description command is not available in this composition.')],
             })];
     }
-    const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token);
+    const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.actor);
     if (!allowed) {
         return [new result_1.Result({
                 id: `${options.taskId}.Description`,
@@ -59881,10 +59878,10 @@ async function runDescriptionCommand(param, options, actorAuthorizationPort) {
                 steps: ['Explicit pull-request description command skipped because the actor is not authorized to modify it.'],
             })];
     }
-    return options.updatePullRequestDescriptionUseCase.invokeExplicit(param);
+    return options.updatePullRequestDescriptionUseCase.invoke();
 }
 async function runDismissCommand(param, options, command, actorAuthorizationPort) {
-    const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token);
+    const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.actor);
     if (!allowed || !options.dismissBugbotFindingsUseCase) {
         return [new result_1.Result({
                 id: options.taskId,
@@ -59894,7 +59891,7 @@ async function runDismissCommand(param, options, command, actorAuthorizationPort
             })];
     }
     return options.dismissBugbotFindingsUseCase.invoke({
-        operation: (0, bugbot_review_operation_context_1.projectBugbotContextSelectionContext)(param),
+        operation: param.bugbot.fixIntent,
         findingIds: command.arguments,
     });
 }
@@ -59918,13 +59915,13 @@ async function runReviewCommand(param, options, command) {
         }));
         return results;
     }
-    const invokeReview = () => options.reviewPotentialProblemsUseCase.invoke((0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param));
-    const reviewResults = await param.ai.withBugbotReviewConfiguration(parsedOptions.overrides, invokeReview);
+    const invokeReview = () => options.reviewPotentialProblemsUseCase.invoke((0, bugbot_review_operation_context_1.withBugbotReviewOverrides)(param.bugbot.review, parsedOptions.overrides));
+    const reviewResults = await invokeReview();
     results.push(...reviewResults);
     return results;
 }
 function runThinkCommand(param, options, command) {
-    return options.thinkUseCase.invoke(param).then(results => [
+    return options.thinkUseCase.invoke(param.think).then(results => [
         new result_1.Result({
             id: `${options.taskId}.ExplicitCommand`,
             success: true,
@@ -59957,23 +59954,62 @@ exports.completeCommentAutomation = completeCommentAutomation;
 const bugbot_fix_intent_payload_1 = __nccwpck_require__(25734);
 const logging_ports_1 = __nccwpck_require__(6152);
 const comment_automation_action_workflow_1 = __nccwpck_require__(42442);
-async function completeCommentAutomation(param, options, decision, ports) {
+async function completeCommentAutomation(param, options, decision) {
     logUnauthorizedActionSkip(decision);
     if (decision.route === 'think') {
         (0, logging_ports_1.logInfo)('Skipping bugbot autofix (no fix request, no targets, or no context).');
         (0, logging_ports_1.logInfo)('Running ThinkUseCase (no file-modifying action ran).');
-        return options.thinkUseCase.invoke(param);
+        return options.thinkUseCase.invoke(param.think);
     }
-    return (0, comment_automation_action_workflow_1.runCommentAutomationAction)(param, options, decision.route, decision.intentPayload, {
-        ...ports,
-        bugbotGitMutationPort: options.bugbotGitMutationPort,
-    });
+    return (0, comment_automation_action_workflow_1.runCommentAutomationAction)(param, options, decision.route, decision.intentPayload);
 }
 function logUnauthorizedActionSkip(decision) {
     const payload = decision.intentPayload;
     if (decision.route === 'think' && payload && ((0, bugbot_fix_intent_payload_1.canRunBugbotAutofix)(payload) || (0, bugbot_fix_intent_payload_1.canRunDoUserRequest)(payload))) {
         (0, logging_ports_1.logInfo)('Skipping file-modifying use cases: user is not an org member or repo owner.');
     }
+}
+
+
+/***/ }),
+
+/***/ 37055:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.projectCommentAutomationContext = projectCommentAutomationContext;
+const status_command_policy_1 = __nccwpck_require__(3449);
+const comment_language_translation_workflow_1 = __nccwpck_require__(72770);
+const think_workflow_1 = __nccwpck_require__(36450);
+const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
+function projectCommentAutomationContext(source, language, userComment) {
+    const review = (0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(source);
+    return Object.freeze({
+        actor: source.actor,
+        trustedBotLogin: source.tokenUser?.trim() ?? '',
+        userComment,
+        membersOnly: source.ai.getAiMembersOnly(),
+        language: (0, comment_language_translation_workflow_1.projectCommentLanguageRequest)({
+            commentBody: language.commentBody,
+            locale: language.locale,
+            issueNumber: language.issueNumber,
+            commentId: language.commentId,
+            configuration: language.configuration === undefined
+                ? undefined
+                : { ...language.configuration },
+        }),
+        think: (0, think_workflow_1.projectThinkContext)(source),
+        status: (0, status_command_policy_1.buildCopilotStatusSnapshot)(source),
+        bugbot: Object.freeze({
+            fixIntent: (0, bugbot_review_operation_context_1.projectBugbotFixIntentContext)(source),
+            review,
+            autofix: (0, bugbot_review_operation_context_1.projectBugbotAutofixOperationContext)(source),
+            commit: (0, bugbot_review_operation_context_1.projectBugbotCommitContext)(source),
+            publicationMode: review.analysis.reviewConfiguration.publicationMode,
+        }),
+    });
 }
 
 
@@ -59991,15 +60027,14 @@ const bugbot_fix_intent_payload_1 = __nccwpck_require__(25734);
 const comment_automation_route_policy_1 = __nccwpck_require__(47058);
 const copilot_comment_request_1 = __nccwpck_require__(86819);
 const copilot_command_1 = __nccwpck_require__(11771);
-const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
 async function resolveCommentAutomationDecision(param, options, actorAuthorizationPort) {
     (0, logging_ports_1.logInfo)("Running bugbot fix intent detection (before Think).");
-    const intentResults = await options.intentUseCase.invoke((0, bugbot_review_operation_context_1.projectBugbotFixIntentContext)(param));
+    const intentResults = await options.intentUseCase.invoke(param.bugbot.fixIntent);
     const intentPayload = (0, bugbot_fix_intent_payload_1.getBugbotFixIntentPayload)(intentResults);
-    const parsedCommand = (0, copilot_command_1.parseCopilotCommand)(options.userComment);
+    const parsedCommand = (0, copilot_command_1.parseCopilotCommand)(param.userComment);
     const explicitMutationCommand = parsedCommand.kind === 'command'
         && (parsedCommand.command.name === 'fix' || parsedCommand.command.name === 'implement');
-    const route = (0, comment_automation_route_policy_1.resolveCommentAutomationRoute)(intentPayload, await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token), (0, copilot_comment_request_1.containsBotMention)(options.userComment, param.tokenUser ?? ''), explicitMutationCommand);
+    const route = (0, comment_automation_route_policy_1.resolveCommentAutomationRoute)(intentPayload, await actorAuthorizationPort.isActorAllowedToModifyFiles(param.actor), (0, copilot_comment_request_1.containsBotMention)(param.userComment, param.trustedBotLogin), explicitMutationCommand);
     logIntent(intentPayload);
     return { intentResults, intentPayload, route };
 }
@@ -60025,12 +60060,12 @@ exports.runNaturalLanguageCommentAutomation = runNaturalLanguageCommentAutomatio
 const comment_automation_decision_workflow_1 = __nccwpck_require__(46175);
 const comment_automation_completion_workflow_1 = __nccwpck_require__(46187);
 /** Runs the natural-language comment pipeline after deterministic commands are excluded. */
-async function runNaturalLanguageCommentAutomation(param, options, actorAuthorizationPort, languageResults, ports) {
+async function runNaturalLanguageCommentAutomation(param, options, actorAuthorizationPort, languageResults) {
     const decision = await (0, comment_automation_decision_workflow_1.resolveCommentAutomationDecision)(param, options, actorAuthorizationPort);
     return [
         ...languageResults,
         ...decision.intentResults,
-        ...(await (0, comment_automation_completion_workflow_1.completeCommentAutomation)(param, options, decision, ports)),
+        ...(await (0, comment_automation_completion_workflow_1.completeCommentAutomation)(param, options, decision)),
     ];
 }
 
@@ -60082,8 +60117,8 @@ async function runCommentAutomation(param, options, actorAuthorizationPort) {
     (0, logging_ports_1.logInfo)(`${options.taskId} started.`);
     let languageResults = [];
     try {
-        const command = (0, copilot_command_1.parseCopilotCommand)(options.userComment);
-        if (!(0, copilot_comment_request_1.isCopilotCommentRequest)(options.userComment, param.tokenUser ?? '')) {
+        const command = (0, copilot_command_1.parseCopilotCommand)(param.userComment);
+        if (!(0, copilot_comment_request_1.isCopilotCommentRequest)(param.userComment, param.trustedBotLogin)) {
             (0, logging_ports_1.logInfo)('Skipping comment automation because the comment does not address Copilot.');
             return [new result_1.Result({ id: options.taskId, success: true, executed: false })];
         }
@@ -60092,7 +60127,7 @@ async function runCommentAutomation(param, options, actorAuthorizationPort) {
         }
         const isPublicMetadataCommand = command.kind === 'command'
             && (command.command.name === 'help' || command.command.name === 'status');
-        if (!isPublicMetadataCommand && param.ai.getAiMembersOnly() && !await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token)) {
+        if (!isPublicMetadataCommand && param.membersOnly && !await actorAuthorizationPort.isActorAllowedToModifyFiles(param.actor)) {
             (0, logging_ports_1.logInfo)('Skipping agent automation because ai-members-only is enabled and the actor is not authorized.');
             return [new result_1.Result({ id: options.taskId, success: true, executed: false })];
         }
@@ -60102,13 +60137,13 @@ async function runCommentAutomation(param, options, actorAuthorizationPort) {
                 return explicitResults;
             // Explicit fix/implement commands are already mention-gated by their
             // deterministic prefix and still flow through structured intent parsing.
-            return (0, comment_automation_natural_language_workflow_1.runNaturalLanguageCommentAutomation)(param, options, actorAuthorizationPort, [], {});
+            return (0, comment_automation_natural_language_workflow_1.runNaturalLanguageCommentAutomation)(param, options, actorAuthorizationPort, []);
         }
-        if ((0, branch_sync_command_1.isNaturalLanguageBranchSyncRequest)(options.userComment, param.tokenUser ?? '')) {
+        if ((0, branch_sync_command_1.isNaturalLanguageBranchSyncRequest)(param.userComment, param.trustedBotLogin)) {
             return (0, branch_sync_comment_command_1.runBranchSyncCommand)(param, options, [], actorAuthorizationPort);
         }
-        languageResults = await options.languageUseCase.invoke(param);
-        return await (0, comment_automation_natural_language_workflow_1.runNaturalLanguageCommentAutomation)(param, options, actorAuthorizationPort, languageResults, {});
+        languageResults = await options.languageUseCase.invoke(param.language);
+        return await (0, comment_automation_natural_language_workflow_1.runNaturalLanguageCommentAutomation)(param, options, actorAuthorizationPort, languageResults);
     }
     catch (cause) {
         const semanticError = new application_error_1.ApplicationError('workflow.failed', "Comment automation failed.", { cause });
@@ -60607,15 +60642,16 @@ function positiveIssueNumberOrUndefined(value) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueCommentUseCase = void 0;
 const comment_automation_use_case_1 = __nccwpck_require__(9661);
+const check_issue_comment_language_use_case_1 = __nccwpck_require__(93152);
+const comment_automation_context_1 = __nccwpck_require__(37055);
 class IssueCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, gitCommitPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
         this.autofixUseCase = autofixUseCase;
         this.doUserRequestUseCase = doUserRequestUseCase;
         this.actorAuthorizationPort = actorAuthorizationPort;
-        this.gitCommitPort = gitCommitPort;
         this.bugbotGitMutationPort = bugbotGitMutationPort;
         this.dismissBugbotFindingsUseCase = dismissBugbotFindingsUseCase;
         this.reviewPotentialProblemsUseCase = reviewPotentialProblemsUseCase;
@@ -60625,22 +60661,29 @@ class IssueCommentUseCase {
         this.taskId = "IssueCommentUseCase";
     }
     async invoke(param) {
-        return (0, comment_automation_use_case_1.runCommentAutomation)(param, {
+        const context = (0, comment_automation_context_1.projectCommentAutomationContext)(param, (0, check_issue_comment_language_use_case_1.projectIssueCommentLanguageRequest)(param), param.issue.commentBody ?? '');
+        return (0, comment_automation_use_case_1.runCommentAutomation)(context, {
             taskId: this.taskId,
             languageUseCase: this.languageUseCase,
             intentUseCase: this.intentUseCase,
             thinkUseCase: this.thinkUseCase,
             autofixUseCase: this.autofixUseCase,
-            doUserRequestUseCase: this.doUserRequestUseCase,
-            userComment: param.issue.commentBody ?? "",
-            gitCommitPort: this.gitCommitPort,
+            doUserRequestUseCase: {
+                invoke: (request) => this.doUserRequestUseCase.invoke({ execution: param, ...request }),
+            },
             bugbotGitMutationPort: this.bugbotGitMutationPort,
             dismissBugbotFindingsUseCase: this.dismissBugbotFindingsUseCase,
             reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
-            updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase,
+            updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase
+                ? { invoke: () => this.updatePullRequestDescriptionUseCase.invokeExplicit(param) }
+                : undefined,
             rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
-            syncBranchUseCase: this.syncBranchUseCase,
-        }, this.actorAuthorizationPort);
+            syncBranchUseCase: this.syncBranchUseCase
+                ? { invoke: (options) => this.syncBranchUseCase.invoke({ execution: param, options }) }
+                : undefined,
+        }, {
+            isActorAllowedToModifyFiles: (actor) => this.actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, actor, param.tokens.token),
+        });
     }
 }
 exports.IssueCommentUseCase = IssueCommentUseCase;
@@ -60658,6 +60701,9 @@ exports.IssueUseCase = void 0;
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const issue_workflow_1 = __nccwpck_require__(661);
+const check_permissions_workflow_1 = __nccwpck_require__(17102);
+const update_title_workflow_1 = __nccwpck_require__(50029);
+const project_content_link_workflow_1 = __nccwpck_require__(89064);
 class IssueUseCase {
     constructor(recommendStepsUseCase, answerIssueHelpUseCase, workflowSteps, actorAuthorizationPort) {
         this.recommendStepsUseCase = recommendStepsUseCase;
@@ -60673,6 +60719,11 @@ class IssueUseCase {
             answerIssueHelpUseCase: this.answerIssueHelpUseCase,
             workflowSteps: this.workflowSteps,
             actorAuthorizationPort: this.actorAuthorizationPort,
+            sharedContexts: {
+                permissions: (0, check_permissions_workflow_1.projectCheckPermissionsContext)(param),
+                title: (0, update_title_workflow_1.projectUpdateTitleContext)(param),
+                projectLink: (0, project_content_link_workflow_1.projectIssueContentLinkContext)(param),
+            },
         });
     }
 }
@@ -60695,7 +60746,7 @@ const application_error_1 = __nccwpck_require__(75999);
 /** Coordinates issue lifecycle steps in their required sequential order. */
 async function runIssueWorkflow(param, taskId, ports) {
     const results = [];
-    const permissionResult = await ports.workflowSteps.checkPermissions.invoke(param);
+    const permissionResult = await ports.workflowSteps.checkPermissions.invoke(ports.sharedContexts.permissions);
     const lastAction = permissionResult[permissionResult.length - 1];
     if (!lastAction) {
         const permissionError = new application_error_1.ApplicationError('provider.contract-invalid', "Permission check returned no result.");
@@ -60718,21 +60769,16 @@ async function runIssueWorkflow(param, taskId, ports) {
     if (param.cleanIssueBranches) {
         results.push(...(await ports.workflowSteps.removeIssueBranches.invoke(param)));
     }
-    const regularSteps = [
-        ports.workflowSteps.assignMemberToIssue,
-        ports.workflowSteps.updateTitle,
-        ports.workflowSteps.updateIssueType,
-        ports.workflowSteps.linkIssueProject,
-        ports.workflowSteps.checkPriorityIssueSize,
-        param.isBranched
-            ? ports.workflowSteps.prepareBranches
-            : ports.workflowSteps.removeIssueBranches,
-        ports.workflowSteps.removeNotNeededBranches,
-        ports.workflowSteps.deployAdded,
-    ];
-    for (const step of regularSteps) {
-        results.push(...(await step.invoke(param)));
-    }
+    results.push(...(await ports.workflowSteps.assignMemberToIssue.invoke(param)));
+    results.push(...(await ports.workflowSteps.updateTitle.invoke(ports.sharedContexts.title)));
+    results.push(...(await ports.workflowSteps.updateIssueType.invoke(param)));
+    results.push(...(await ports.workflowSteps.linkIssueProject.invoke(ports.sharedContexts.projectLink)));
+    results.push(...(await ports.workflowSteps.checkPriorityIssueSize.invoke(param)));
+    results.push(...(await (param.isBranched
+        ? ports.workflowSteps.prepareBranches
+        : ports.workflowSteps.removeIssueBranches).invoke(param)));
+    results.push(...(await ports.workflowSteps.removeNotNeededBranches.invoke(param)));
+    results.push(...(await ports.workflowSteps.deployAdded.invoke(param)));
     const membersOnly = param.ai.getAiMembersOnly();
     const agentAllowed = !membersOnly || Boolean(ports.actorAuthorizationPort && await ports.actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token));
     const recommendation = agentAllowed ? resolveIssueRecommendation(param, ports) : undefined;
@@ -60776,15 +60822,16 @@ function resolveIssueRecommendation(param, ports) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestReviewCommentUseCase = void 0;
 const comment_automation_use_case_1 = __nccwpck_require__(9661);
+const check_pull_request_comment_language_use_case_1 = __nccwpck_require__(21729);
+const comment_automation_context_1 = __nccwpck_require__(37055);
 class PullRequestReviewCommentUseCase {
-    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, gitCommitPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase) {
+    constructor(languageUseCase, intentUseCase, thinkUseCase, autofixUseCase, doUserRequestUseCase, actorAuthorizationPort, bugbotGitMutationPort, dismissBugbotFindingsUseCase, reviewPotentialProblemsUseCase, updatePullRequestDescriptionUseCase, rememberBugbotRuleUseCase, syncBranchUseCase) {
         this.languageUseCase = languageUseCase;
         this.intentUseCase = intentUseCase;
         this.thinkUseCase = thinkUseCase;
         this.autofixUseCase = autofixUseCase;
         this.doUserRequestUseCase = doUserRequestUseCase;
         this.actorAuthorizationPort = actorAuthorizationPort;
-        this.gitCommitPort = gitCommitPort;
         this.bugbotGitMutationPort = bugbotGitMutationPort;
         this.dismissBugbotFindingsUseCase = dismissBugbotFindingsUseCase;
         this.reviewPotentialProblemsUseCase = reviewPotentialProblemsUseCase;
@@ -60794,22 +60841,29 @@ class PullRequestReviewCommentUseCase {
         this.taskId = "PullRequestReviewCommentUseCase";
     }
     async invoke(param) {
-        return (0, comment_automation_use_case_1.runCommentAutomation)(param, {
+        const context = (0, comment_automation_context_1.projectCommentAutomationContext)(param, (0, check_pull_request_comment_language_use_case_1.projectPullRequestCommentLanguageRequest)(param), param.pullRequest.commentBody ?? '');
+        return (0, comment_automation_use_case_1.runCommentAutomation)(context, {
             taskId: this.taskId,
             languageUseCase: this.languageUseCase,
             intentUseCase: this.intentUseCase,
             thinkUseCase: this.thinkUseCase,
             autofixUseCase: this.autofixUseCase,
-            doUserRequestUseCase: this.doUserRequestUseCase,
-            userComment: param.pullRequest.commentBody ?? "",
-            gitCommitPort: this.gitCommitPort,
+            doUserRequestUseCase: {
+                invoke: (request) => this.doUserRequestUseCase.invoke({ execution: param, ...request }),
+            },
             bugbotGitMutationPort: this.bugbotGitMutationPort,
             dismissBugbotFindingsUseCase: this.dismissBugbotFindingsUseCase,
             reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
-            updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase,
+            updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase
+                ? { invoke: () => this.updatePullRequestDescriptionUseCase.invokeExplicit(param) }
+                : undefined,
             rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
-            syncBranchUseCase: this.syncBranchUseCase,
-        }, this.actorAuthorizationPort);
+            syncBranchUseCase: this.syncBranchUseCase
+                ? { invoke: (options) => this.syncBranchUseCase.invoke({ execution: param, options }) }
+                : undefined,
+        }, {
+            isActorAllowedToModifyFiles: (actor) => this.actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, actor, param.tokens.token),
+        });
     }
 }
 exports.PullRequestReviewCommentUseCase = PullRequestReviewCommentUseCase;
@@ -60827,6 +60881,8 @@ exports.PullRequestUseCase = void 0;
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const pull_request_workflow_1 = __nccwpck_require__(95238);
+const update_title_workflow_1 = __nccwpck_require__(50029);
+const project_content_link_workflow_1 = __nccwpck_require__(89064);
 class PullRequestUseCase {
     constructor(updatePullRequestDescriptionUseCase, workflowSteps, reviewPotentialProblemsUseCase, actorAuthorizationPort) {
         this.updatePullRequestDescriptionUseCase = updatePullRequestDescriptionUseCase;
@@ -60842,6 +60898,10 @@ class PullRequestUseCase {
             reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
             workflowSteps: this.workflowSteps,
             actorAuthorizationPort: this.actorAuthorizationPort,
+            sharedContexts: {
+                title: (0, update_title_workflow_1.projectUpdateTitleContext)(param),
+                projectLink: (0, project_content_link_workflow_1.projectPullRequestContentLinkContext)(param),
+            },
         });
     }
 }
@@ -60867,16 +60927,16 @@ async function runPullRequestWorkflow(param, taskId, ports) {
         logPullRequestState(param);
         const agentAllowed = await canUseAgent(param, ports.actorAuthorizationPort);
         if (param.pullRequest.isOpened) {
-            const steps = [
-                ports.workflowSteps.updateTitle,
-                ports.workflowSteps.assignMemberToIssue,
-                ports.workflowSteps.assignReviewersToIssue,
-                ports.workflowSteps.linkPullRequestProject,
+            const remainingSteps = [
                 ports.workflowSteps.linkPullRequestIssue,
                 ports.workflowSteps.syncSizeAndProgressLabels,
                 ports.workflowSteps.checkPriorityPullRequestSize,
             ];
-            const results = await runSteps(param, steps);
+            const results = await ports.workflowSteps.updateTitle.invoke(ports.sharedContexts.title);
+            results.push(...(await ports.workflowSteps.assignMemberToIssue.invoke(param)));
+            results.push(...(await ports.workflowSteps.assignReviewersToIssue.invoke(param)));
+            results.push(...(await ports.workflowSteps.linkPullRequestProject.invoke(ports.sharedContexts.projectLink)));
+            results.push(...(await runSteps(param, remainingSteps)));
             if (agentAllowed && shouldUpdatePullRequestDescriptionAutomatically(param)) {
                 results.push(...(await ports.updatePullRequestDescriptionUseCase.invoke(param)));
             }
@@ -60893,7 +60953,7 @@ async function runPullRequestWorkflow(param, taskId, ports) {
             return results;
         }
         if (param.pullRequest.action === 'edited') {
-            return ports.workflowSteps.updateTitle.invoke(param);
+            return ports.workflowSteps.updateTitle.invoke(ports.sharedContexts.title);
         }
         if (param.pullRequest.isClosed && param.pullRequest.isMerged) {
             return ports.workflowSteps.closeIssueAfterMerging.invoke(param);
@@ -61810,6 +61870,7 @@ const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
 const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
+const think_workflow_1 = __nccwpck_require__(36450);
 async function runSingleActionWorkflow(param, taskId, ports) {
     if (!param.singleAction.validSingleAction) {
         (0, logging_ports_1.logDebugInfo)(`Single action is not valid: ${param.singleAction.currentSingleAction}. Skipping.`);
@@ -61824,11 +61885,18 @@ async function runSingleActionWorkflow(param, taskId, ports) {
             return singleActionFailure(param, taskId, error);
         }
     }
+    if (param.singleAction.isThinkAction) {
+        try {
+            return await ports.thinkUseCase.invoke((0, think_workflow_1.projectThinkContext)(param));
+        }
+        catch (error) {
+            return singleActionFailure(param, taskId, error);
+        }
+    }
     const action = [
         { active: param.singleAction.isPublishGithubAction, useCase: ports.publishGithubActionUseCase },
         { active: param.singleAction.isCreateReleaseAction, useCase: ports.createReleaseUseCase },
         { active: param.singleAction.isCreateTagAction, useCase: ports.createTagUseCase },
-        { active: param.singleAction.isThinkAction, useCase: ports.thinkUseCase },
         { active: param.singleAction.isInitialSetupAction, useCase: ports.initialSetupUseCase },
         { active: param.singleAction.isCheckProgressAction, useCase: ports.checkProgressUseCase },
         { active: param.singleAction.isRecommendStepsAction, useCase: ports.recommendStepsUseCase },
@@ -62635,6 +62703,7 @@ async function hasNewerBugbotRevision(context, ports) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectBugbotContextSelectionContext = projectBugbotContextSelectionContext;
 exports.projectBugbotReviewOperationContext = projectBugbotReviewOperationContext;
+exports.withBugbotReviewOverrides = withBugbotReviewOverrides;
 exports.projectBugbotFixIntentContext = projectBugbotFixIntentContext;
 exports.projectBugbotAutofixOperationContext = projectBugbotAutofixOperationContext;
 exports.projectBugbotCommitContext = projectBugbotCommitContext;
@@ -62660,6 +62729,20 @@ function projectBugbotReviewOperationContext(source) {
             minimumSeverity: source.ai.getBugbotMinSeverity(),
             commentLimit: source.ai.getBugbotCommentLimit(),
             reviewConfiguration: Object.freeze({ ...analysisReviewConfiguration }),
+        }),
+    });
+}
+/** Applies one explicit command's bounded review overrides without mutating shared configuration. */
+function withBugbotReviewOverrides(context, overrides) {
+    return Object.freeze({
+        ...context,
+        analysis: Object.freeze({
+            ...context.analysis,
+            agentConfiguration: Object.freeze({ ...context.analysis.agentConfiguration }),
+            reviewConfiguration: Object.freeze({
+                ...context.analysis.reviewConfiguration,
+                ...overrides,
+            }),
         }),
     });
 }
@@ -66466,19 +66549,32 @@ exports.CheckPermissionsUseCase = CheckPermissionsUseCase;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.projectCheckPermissionsContext = projectCheckPermissionsContext;
 exports.runCheckPermissionsWorkflow = runCheckPermissionsWorkflow;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
+function projectCheckPermissionsContext(source) {
+    const issueTarget = source.isIssue;
+    return Object.freeze({
+        target: Object.freeze({
+            type: issueTarget ? "issue" : "pull request",
+            opened: issueTarget ? source.issue.opened : source.pullRequest.opened,
+            creator: issueTarget ? source.issue.creator : source.pullRequest.creator,
+        }),
+        mandatoryBranchRequired: source.labels.isMandatoryBranchedLabel,
+        currentLabels: Object.freeze([...source.labels.currentIssueLabels]),
+    });
+}
 async function runCheckPermissionsWorkflow(param, taskId, ports) {
     const inactiveResult = buildInactiveResult(param, taskId);
     if (inactiveResult)
         return [inactiveResult];
     try {
-        const currentProjectMembers = await ports.organizationMembersPort.getAllMembers(param.owner, param.tokens.token);
-        const creator = getCreator(param);
+        const currentProjectMembers = await ports.organizationMembersPort.getAllMembers();
+        const creator = param.target.creator;
         const creatorIsTeamMember = creator.length > 0 && currentProjectMembers.includes(creator);
-        if (!param.labels.isMandatoryBranchedLabel) {
+        if (!param.mandatoryBranchRequired) {
             (0, logging_ports_1.logDebugInfo)("Skipping permission enforcement because a mandatory branch is not required.");
             return [new result_1.Result({ id: taskId, success: true, executed: true })];
         }
@@ -66486,7 +66582,7 @@ async function runCheckPermissionsWorkflow(param, taskId, ports) {
         if (creatorIsTeamMember) {
             return [new result_1.Result({ id: taskId, success: true, executed: true })];
         }
-        const labels = param.labels.currentIssueLabels.join(",");
+        const labels = param.currentLabels.join(",");
         (0, logging_ports_1.logWarn)(`CheckPermissions: @${creator} not authorized to create [${labels}] issues.`);
         return [
             new result_1.Result({
@@ -66511,15 +66607,10 @@ async function runCheckPermissionsWorkflow(param, taskId, ports) {
         ];
     }
 }
-function getCreator(param) {
-    return param.isIssue ? param.issue.creator : param.pullRequest.creator;
-}
 function buildInactiveResult(param, taskId) {
-    const isClosedIssue = param.isIssue && !param.issue.opened;
-    const isClosedPullRequest = param.isPullRequest && !param.pullRequest.opened;
-    if (!isClosedIssue && !isClosedPullRequest)
+    if (param.target.opened)
         return undefined;
-    (0, logging_ports_1.logDebugInfo)(`Skipping permission checking. ${param.isIssue ? "Issue" : "Pull request"} state is not 'opened'.`);
+    (0, logging_ports_1.logDebugInfo)(`Skipping permission checking. ${param.target.type === "issue" ? "Issue" : "Pull request"} state is not 'opened'.`);
     return new result_1.Result({ id: taskId, success: true, executed: false });
 }
 
@@ -66533,6 +66624,7 @@ function buildInactiveResult(param, taskId) {
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CommentLanguageTranslationWorkflow = exports.TRANSLATED_COMMENT_MARKER = void 0;
+exports.projectCommentLanguageRequest = projectCommentLanguageRequest;
 const result_1 = __nccwpck_require__(73817);
 const agent_task_policy_1 = __nccwpck_require__(85712);
 const agent_response_schemas_1 = __nccwpck_require__(25603);
@@ -66542,6 +66634,17 @@ const task_emoji_1 = __nccwpck_require__(46103);
 const comment_translation_policy_1 = __nccwpck_require__(27150);
 var comment_translation_policy_2 = __nccwpck_require__(27150);
 Object.defineProperty(exports, "TRANSLATED_COMMENT_MARKER", ({ enumerable: true, get: function () { return comment_translation_policy_2.TRANSLATED_COMMENT_MARKER; } }));
+function projectCommentLanguageRequest(source) {
+    return Object.freeze({
+        commentBody: source.commentBody,
+        locale: source.locale,
+        issueNumber: source.issueNumber,
+        commentId: source.commentId,
+        configuration: source.configuration === undefined
+            ? undefined
+            : Object.freeze({ ...source.configuration }),
+    });
+}
 class CommentLanguageTranslationWorkflow {
     constructor(commentRepository, languageQueryPort) {
         this.commentRepository = commentRepository;
@@ -66584,7 +66687,7 @@ class CommentLanguageTranslationWorkflow {
             (0, logging_ports_1.logInfo)(`Translation output was rejected; skipping comment update.${reason ? ` Reason: ${reason}` : ' The configured agent may have failed or returned an invalid response.'}`);
             return [new result_1.Result({ id: context.taskId, success: true, executed: false })];
         }
-        await this.commentRepository.updateComment(context.owner, context.repo, context.issueNumber, context.commentId, publication.commentBody, context.token);
+        await this.commentRepository.updateComment(context.issueNumber, context.commentId, publication.commentBody);
         return [];
     }
     stringProperty(value, property) {
@@ -66966,68 +67069,91 @@ function isPositiveIssueNumber(value) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.projectIssueContentLinkContext = projectIssueContentLinkContext;
+exports.projectPullRequestContentLinkContext = projectPullRequestContentLinkContext;
 exports.runProjectContentLinkWorkflow = runProjectContentLinkWorkflow;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const application_error_1 = __nccwpck_require__(75999);
+function projectIssueContentLinkContext(source) {
+    return projectContext(source, 'issue', source.issue.number, source.project.getProjectColumnIssueCreated());
+}
+function projectPullRequestContentLinkContext(source) {
+    return projectContext(source, 'pull request', source.pullRequest.number, source.project.getProjectColumnPullRequestCreated(), source.pullRequest.id);
+}
 /** Links issue-like content to each configured project and moves it after propagation. */
-async function runProjectContentLinkWorkflow(param, dependencies) {
-    (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(dependencies.taskId)} Executing ${dependencies.taskId}.`);
-    const projects = param.project.getProjects();
-    if (projects.length === 0) {
-        (0, logging_ports_1.logDebugInfo)(`Link${capitalize(dependencies.contentType)}: no projects configured; skipping.`);
+async function runProjectContentLinkWorkflow(param, taskId, port, waitForPropagation) {
+    (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(taskId)} Executing ${taskId}.`);
+    if (param.projects.length === 0) {
+        (0, logging_ports_1.logDebugInfo)(`Link${capitalize(param.contentType)}: no projects configured; skipping.`);
         return [];
     }
     try {
-        const contentId = await dependencies.resolveContentId();
+        const contentId = param.contentId ?? await port.resolveIssueContentId(param.contentNumber);
         const results = [];
-        for (const project of projects) {
-            const linked = await dependencies.projectBoardLinkPort.linkContentId(project, contentId, param.tokens.token);
+        for (const project of param.projects) {
+            const linked = await port.linkContentId(project, contentId);
             if (!linked) {
-                (0, logging_ports_1.logDebugInfo)(`Link${capitalize(dependencies.contentType)}: ${dependencies.contentType} already linked to project "${project.title}" or link failed.`);
+                (0, logging_ports_1.logDebugInfo)(`Link${capitalize(param.contentType)}: ${param.contentType} already linked to project "${project.title}" or link failed.`);
                 continue;
             }
-            await dependencies.eventualConsistencyDelayPort.wait(10000);
-            const moved = await dependencies.projectBoardCommandPort.moveIssueToColumn(project, param.owner, param.repo, dependencies.contentType === 'issue' ? param.issue.number : param.pullRequest.number, dependencies.columnName, param.tokens.token);
+            await waitForPropagation();
+            const moved = await port.moveContent(project, param.contentNumber, param.columnName);
             if (moved) {
                 results.push(new result_1.Result({
-                    id: dependencies.taskId,
+                    id: taskId,
                     success: true,
                     executed: true,
                     steps: [
-                        `The ${dependencies.contentType} was linked to [**${project.title}**](${project.url}) and moved to the column \`${dependencies.columnName}\`.`,
+                        `The ${param.contentType} was linked to [**${project.title}**](${project.url}) and moved to the column \`${param.columnName}\`.`,
                     ],
                 }));
             }
             else {
-                (0, logging_ports_1.logWarn)(`Link${capitalize(dependencies.contentType)}: linked ${dependencies.contentType} to project "${project.title}" but move to column "${dependencies.columnName}" failed.`);
-                results.push(moveFailureResult(dependencies, project));
+                (0, logging_ports_1.logWarn)(`Link${capitalize(param.contentType)}: linked ${param.contentType} to project "${project.title}" but move to column "${param.columnName}" failed.`);
+                results.push(moveFailureResult(param, taskId, project));
             }
         }
         return results;
     }
     catch (error) {
-        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to link the ${dependencies.contentType} to the project.`);
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to link the ${param.contentType} to the project.`);
         (0, logging_ports_1.logError)(semanticError);
         return [new result_1.Result({
-                id: dependencies.taskId,
+                id: taskId,
                 success: false,
                 executed: true,
-                steps: [`Tried to link ${dependencies.contentType} to project, but there was a problem.`],
+                steps: [`Tried to link ${param.contentType} to project, but there was a problem.`],
                 errors: [semanticError],
             })];
     }
 }
-function moveFailureResult(dependencies, project) {
-    if (dependencies.contentType === 'issue') {
-        return new result_1.Result({ id: dependencies.taskId, success: true, executed: false, steps: [] });
+function projectContext(source, contentType, contentNumber, columnName, contentId) {
+    return Object.freeze({
+        contentType,
+        contentNumber,
+        ...(contentId ? { contentId } : {}),
+        columnName,
+        projects: Object.freeze(source.project.getProjects().map((project) => Object.freeze({
+            id: project.id,
+            title: project.title,
+            type: project.type,
+            owner: project.owner,
+            url: project.url,
+            number: project.number,
+        }))),
+    });
+}
+function moveFailureResult(context, taskId, project) {
+    if (context.contentType === 'issue') {
+        return new result_1.Result({ id: taskId, success: true, executed: false, steps: [] });
     }
     return new result_1.Result({
-        id: dependencies.taskId,
+        id: taskId,
         success: false,
         executed: true,
-        steps: [`The ${dependencies.contentType} was linked to [**${project.title}**](${project.url}) but there was an error moving it to the column \`${dependencies.columnName}\`.`],
+        steps: [`The ${context.contentType} was linked to [**${project.title}**](${project.url}) but there was an error moving it to the column \`${context.columnName}\`.`],
     });
 }
 function capitalize(value) {
@@ -67053,8 +67179,8 @@ const project_context_instruction_1 = __nccwpck_require__(63907);
 const agent_answer_policy_1 = __nccwpck_require__(72063);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const application_error_1 = __nccwpck_require__(75999);
-async function runThinkAnswerWorkflow(param, taskId, request, dependencies, agentTask) {
-    const issueDescription = await loadIssueDescription(param, request.issueNumberForContext, dependencies.issueDescriptionQueryPort);
+async function runThinkAnswerWorkflow(param, taskId, request, dependencies) {
+    const issueDescription = await loadIssueDescription(request.issueNumberForContext, dependencies.issueDescriptionQueryPort);
     const contextBlock = issueDescription
         ? `\n\nContext (issue #${request.issueNumberForContext} description):\n${issueDescription}\n\n`
         : '\n\n';
@@ -67064,7 +67190,7 @@ async function runThinkAnswerWorkflow(param, taskId, request, dependencies, agen
         contextBlock,
         question: request.question,
     });
-    const answer = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(await queryThinkAnswer(param, prompt, dependencies.aiRepository, agentTask));
+    const answer = (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(await queryThinkAnswer(param, prompt, dependencies.aiRepository));
     if (!answer) {
         (0, logging_ports_1.logError)('Configured agent returned no answer for Think.');
         return [
@@ -67087,20 +67213,20 @@ async function runThinkAnswerWorkflow(param, taskId, request, dependencies, agen
             }),
         ];
     }
-    await dependencies.issueNotificationPort.addComment(param.owner, param.repo, request.destinationNumber, answer, param.tokens.token);
+    await dependencies.issueNotificationPort.addComment(request.destinationNumber, answer);
     (0, logging_ports_1.logInfo)(`Think response posted to ${request.destinationType} #${request.destinationNumber}.`);
     return [new result_1.Result({ id: taskId, success: true, executed: true })];
 }
-async function loadIssueDescription(param, issueNumber, repository) {
+async function loadIssueDescription(issueNumber, repository) {
     if (issueNumber <= 0)
         return '';
-    const description = await repository.getDescription(param.owner, param.repo, issueNumber, param.tokens.token);
+    const description = await repository.getDescription(issueNumber);
     return description?.trim() ?? '';
 }
-async function queryThinkAnswer(param, prompt, repository, agentTask) {
+async function queryThinkAnswer(param, prompt, repository) {
     (0, logging_ports_1.logDebugInfo)(`Think: calling configured agent (prompt length=${prompt.length}).`);
     const response = await repository.query({
-        configuration: param.ai.getAgentConfiguration(agentTask),
+        configuration: param.agentConfiguration,
         agentId: agent_task_policy_1.AGENT_PLAN,
         prompt,
         options: {
@@ -67230,6 +67356,7 @@ exports.ThinkUseCase = ThinkUseCase;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.projectThinkContext = projectThinkContext;
 exports.runThinkWorkflow = runThinkWorkflow;
 const agent_1 = __nccwpck_require__(79937);
 const result_1 = __nccwpck_require__(73817);
@@ -67238,16 +67365,38 @@ const think_request_policy_1 = __nccwpck_require__(23995);
 const think_answer_workflow_1 = __nccwpck_require__(40558);
 const agent_task_policy_1 = __nccwpck_require__(85712);
 const application_error_1 = __nccwpck_require__(75999);
+function projectThinkContext(source) {
+    const request = (0, think_request_policy_1.resolveThinkRequest)(source);
+    const tokenUser = source.tokenUser?.trim();
+    if (request.kind === 'skip') {
+        return Object.freeze({ request: Object.freeze({ ...request }), ...(tokenUser ? { tokenUser } : {}) });
+    }
+    const agentTask = (0, agent_task_policy_1.resolveThinkAgentTask)(request.command?.name, request.destinationType);
+    return Object.freeze({
+        request: Object.freeze({
+            ...request,
+            ...(request.command ? { command: Object.freeze({
+                    ...request.command,
+                    arguments: Object.freeze([...request.command.arguments]),
+                }) } : {}),
+        }),
+        ...(tokenUser ? { tokenUser } : {}),
+        agentTask,
+        agentConfiguration: Object.freeze({ ...source.ai.getAgentConfiguration(agentTask) }),
+    });
+}
 async function runThinkWorkflow(param, taskId, dependencies) {
     (0, logging_ports_1.logInfo)('Think: processing comment (AI Q&A).');
     try {
-        const request = (0, think_request_policy_1.resolveThinkRequest)(param);
+        const request = param.request;
         if (request.kind === 'skip') {
             logSkipReason(request.reason, param.tokenUser);
             return skipped(taskId);
         }
-        const agentTask = (0, agent_task_policy_1.resolveThinkAgentTask)(request.command?.name, request.destinationType);
-        if (!(0, agent_1.isAgentConfigurationReady)(param.ai.getAgentConfiguration(agentTask))) {
+        if (!('agentConfiguration' in param)) {
+            throw new application_error_1.ApplicationError('provider.contract-invalid', 'Ready Think context is missing its selected agent configuration.');
+        }
+        if (!(0, agent_1.isAgentConfigurationReady)(param.agentConfiguration)) {
             return [
                 new result_1.Result({
                     id: taskId,
@@ -67257,7 +67406,7 @@ async function runThinkWorkflow(param, taskId, dependencies) {
                 }),
             ];
         }
-        return await (0, think_answer_workflow_1.runThinkAnswerWorkflow)(param, taskId, request, dependencies, agentTask);
+        return await (0, think_answer_workflow_1.runThinkAnswerWorkflow)(param, taskId, request, dependencies);
     }
     catch (error) {
         const semanticError = (0, application_error_1.toApplicationError)(error, 'agent.failed', 'Error in ThinkUseCase: unable to complete the request.');
@@ -67308,9 +67457,9 @@ class UpdateTitleUseCase {
     async invoke(param) {
         (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         try {
-            if (param.isIssue)
+            if (param.kind === 'issue')
                 return await (0, update_title_workflow_1.runIssueTitleUpdate)(param, this.taskId, this.issueRepository);
-            if (param.isPullRequest)
+            if (param.kind === 'pull-request')
                 return await (0, update_title_workflow_1.runPullRequestTitleUpdate)(param, this.taskId, this.issueRepository);
             return [];
         }
@@ -67330,31 +67479,73 @@ exports.UpdateTitleUseCase = UpdateTitleUseCase;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.projectUpdateTitleContext = projectUpdateTitleContext;
 exports.runIssueTitleUpdate = runIssueTitleUpdate;
 exports.runPullRequestTitleUpdate = runPullRequestTitleUpdate;
 exports.titleUpdateFailure = titleUpdateFailure;
 const result_1 = __nccwpck_require__(73817);
 const application_error_1 = __nccwpck_require__(75999);
+function projectUpdateTitleContext(source) {
+    if (source.isIssue) {
+        return Object.freeze({
+            kind: 'issue',
+            enabled: source.emoji.emojiLabeledTitle,
+            issueNumber: source.issue.number,
+            fallbackTitle: source.issue.title,
+            version: source.release.active
+                ? source.release.version ?? ''
+                : source.hotfix.active
+                    ? source.hotfix.version ?? ''
+                    : '',
+            branchManagementAlways: source.issue.branchManagementAlways,
+            branchManagementEmoji: source.emoji.branchManagementEmoji,
+            labelFacts: projectTitleLabelFacts(source.labels),
+        });
+    }
+    if (source.isPullRequest) {
+        return Object.freeze({
+            kind: 'pull-request',
+            enabled: source.emoji.emojiLabeledTitle,
+            issueNumber: source.issueNumber,
+            pullRequestNumber: source.pullRequest.number,
+            pullRequestTitle: source.pullRequest.title,
+            labelFacts: projectTitleLabelFacts(source.labels),
+        });
+    }
+    return Object.freeze({ kind: 'unsupported' });
+}
 async function runIssueTitleUpdate(param, taskId, issueRepository) {
-    if (!param.emoji.emojiLabeledTitle)
+    if (!param.enabled)
         return [skippedResult(taskId)];
-    const currentTitle = await issueRepository.getTitle(param.owner, param.repo, param.issue.number, param.tokens.token) ?? param.issue.title;
-    const version = param.release.active ? param.release.version ?? '' : param.hotfix.active ? param.hotfix.version ?? '' : '';
-    const title = await issueRepository.updateTitleIssueFormat(param.owner, param.repo, version, currentTitle, param.issue.number, param.issue.branchManagementAlways, param.emoji.branchManagementEmoji, param.labels, param.tokens.token);
+    const currentTitle = await issueRepository.getTitle(param.issueNumber) ?? param.fallbackTitle;
+    const title = await issueRepository.updateIssueTitle({
+        version: param.version,
+        currentTitle,
+        issueNumber: param.issueNumber,
+        branchManagementAlways: param.branchManagementAlways,
+        branchManagementEmoji: param.branchManagementEmoji,
+        labelFacts: param.labelFacts,
+    });
     return title
         ? [updatedResult(taskId, `The issue's title was updated from \`${currentTitle}\` to \`${title}\`.`)]
         : [skippedResult(taskId)];
 }
 async function runPullRequestTitleUpdate(param, taskId, issueRepository) {
-    if (!param.emoji.emojiLabeledTitle)
+    if (!param.enabled)
         return [skippedResult(taskId)];
-    const issueTitle = await issueRepository.getTitle(param.owner, param.repo, param.issueNumber, param.tokens.token);
+    const issueTitle = await issueRepository.getTitle(param.issueNumber);
     if (issueTitle === undefined) {
         return [new result_1.Result({ id: taskId, success: false, executed: true, steps: ['Tried to update title, but there was a problem.'] })];
     }
-    const title = await issueRepository.updateTitlePullRequestFormat(param.owner, param.repo, param.pullRequest.title, issueTitle, param.issueNumber, param.pullRequest.number, false, '', param.labels, param.tokens.token);
+    const title = await issueRepository.updatePullRequestTitle({
+        pullRequestTitle: param.pullRequestTitle,
+        issueTitle,
+        issueNumber: param.issueNumber,
+        pullRequestNumber: param.pullRequestNumber,
+        labelFacts: param.labelFacts,
+    });
     return title
-        ? [updatedResult(taskId, `The pull request's title was updated from \`${param.pullRequest.title}\` to \`${title}\`.`)]
+        ? [updatedResult(taskId, `The pull request's title was updated from \`${param.pullRequestTitle}\` to \`${title}\`.`)]
         : [skippedResult(taskId)];
 }
 function titleUpdateFailure(taskId, error) {
@@ -67364,6 +67555,23 @@ function titleUpdateFailure(taskId, error) {
         executed: true,
         steps: ['Tried to update title, but there was a problem.'],
         errors: [(0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to update the title.')],
+    });
+}
+function projectTitleLabelFacts(labels) {
+    return Object.freeze({
+        isHotfix: labels.isHotfix,
+        isRelease: labels.isRelease,
+        isBugfix: labels.isBugfix,
+        isBug: labels.isBug,
+        isFeature: labels.isFeature,
+        isEnhancement: labels.isEnhancement,
+        isDocs: labels.isDocs,
+        isDocumentation: labels.isDocumentation,
+        isChore: labels.isChore,
+        isMaintenance: labels.isMaintenance,
+        isHelp: labels.isHelp,
+        isQuestion: labels.isQuestion,
+        containsBranchedLabel: labels.containsBranchedLabel,
     });
 }
 function updatedResult(taskId, step) {
@@ -68003,23 +68211,13 @@ exports.LinkIssueProjectUseCase = void 0;
 const project_content_link_workflow_1 = __nccwpck_require__(89064);
 /** Application boundary for linking issues to configured ProjectV2 boards. */
 class LinkIssueProjectUseCase {
-    constructor(issueRepository, projectCommandRepository, projectLinkRepository, eventualConsistencyDelayPort) {
-        this.issueRepository = issueRepository;
-        this.projectCommandRepository = projectCommandRepository;
-        this.projectLinkRepository = projectLinkRepository;
+    constructor(projectContentPort, eventualConsistencyDelayPort) {
+        this.projectContentPort = projectContentPort;
         this.eventualConsistencyDelayPort = eventualConsistencyDelayPort;
         this.taskId = 'LinkIssueProjectUseCase';
     }
     async invoke(param) {
-        return await (0, project_content_link_workflow_1.runProjectContentLinkWorkflow)(param, {
-            projectBoardCommandPort: this.projectCommandRepository,
-            projectBoardLinkPort: this.projectLinkRepository,
-            eventualConsistencyDelayPort: this.eventualConsistencyDelayPort,
-            resolveContentId: () => this.issueRepository.getId(param.owner, param.repo, param.issue.number, param.tokens.token),
-            contentType: 'issue',
-            columnName: param.project.getProjectColumnIssueCreated(),
-            taskId: this.taskId,
-        });
+        return (0, project_content_link_workflow_1.runProjectContentLinkWorkflow)(param, this.taskId, this.projectContentPort, () => this.eventualConsistencyDelayPort.wait(10000));
     }
 }
 exports.LinkIssueProjectUseCase = LinkIssueProjectUseCase;
@@ -68722,12 +68920,23 @@ exports.UpdateIssueTypeUseCase = UpdateIssueTypeUseCase;
 /***/ }),
 
 /***/ 93152:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CheckIssueCommentLanguageUseCase = void 0;
+exports.projectIssueCommentLanguageRequest = projectIssueCommentLanguageRequest;
+const comment_language_translation_workflow_1 = __nccwpck_require__(72770);
+function projectIssueCommentLanguageRequest(source) {
+    return (0, comment_language_translation_workflow_1.projectCommentLanguageRequest)({
+        commentBody: source.issue.commentBody,
+        locale: source.locale.issue,
+        issueNumber: source.issue.number,
+        commentId: source.issue.commentId,
+        configuration: source.ai.getAgentConfiguration('findings'),
+    });
+}
 class CheckIssueCommentLanguageUseCase {
     constructor(workflow) {
         this.taskId = 'CheckIssueCommentLanguageUseCase';
@@ -68735,15 +68944,8 @@ class CheckIssueCommentLanguageUseCase {
     }
     invoke(param) {
         return this.workflow.invoke({
+            ...param,
             taskId: this.taskId,
-            commentBody: param.issue.commentBody,
-            locale: param.locale.issue,
-            issueNumber: param.issue.number,
-            commentId: param.issue.commentId,
-            owner: param.owner,
-            repo: param.repo,
-            token: param.tokens.token,
-            configuration: param.ai.getAgentConfiguration('findings'),
         });
     }
 }
@@ -68886,22 +69088,13 @@ exports.LinkPullRequestProjectUseCase = void 0;
 const project_content_link_workflow_1 = __nccwpck_require__(89064);
 /** Application boundary for linking pull requests to configured ProjectV2 boards. */
 class LinkPullRequestProjectUseCase {
-    constructor(projectBoardCommandPort, projectBoardLinkPort, eventualConsistencyDelayPort) {
-        this.projectBoardCommandPort = projectBoardCommandPort;
-        this.projectBoardLinkPort = projectBoardLinkPort;
+    constructor(projectContentPort, eventualConsistencyDelayPort) {
+        this.projectContentPort = projectContentPort;
         this.eventualConsistencyDelayPort = eventualConsistencyDelayPort;
         this.taskId = 'LinkPullRequestProjectUseCase';
     }
     async invoke(param) {
-        return await (0, project_content_link_workflow_1.runProjectContentLinkWorkflow)(param, {
-            projectBoardCommandPort: this.projectBoardCommandPort,
-            projectBoardLinkPort: this.projectBoardLinkPort,
-            eventualConsistencyDelayPort: this.eventualConsistencyDelayPort,
-            resolveContentId: async () => param.pullRequest.id,
-            contentType: 'pull request',
-            columnName: param.project.getProjectColumnPullRequestCreated(),
-            taskId: this.taskId,
-        });
+        return (0, project_content_link_workflow_1.runProjectContentLinkWorkflow)(param, this.taskId, this.projectContentPort, () => this.eventualConsistencyDelayPort.wait(10000));
     }
 }
 exports.LinkPullRequestProjectUseCase = LinkPullRequestProjectUseCase;
@@ -69182,12 +69375,23 @@ function newResult(taskId, success, executed, steps) {
 /***/ }),
 
 /***/ 21729:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CheckPullRequestCommentLanguageUseCase = void 0;
+exports.projectPullRequestCommentLanguageRequest = projectPullRequestCommentLanguageRequest;
+const comment_language_translation_workflow_1 = __nccwpck_require__(72770);
+function projectPullRequestCommentLanguageRequest(source) {
+    return (0, comment_language_translation_workflow_1.projectCommentLanguageRequest)({
+        commentBody: source.pullRequest.commentBody,
+        locale: source.locale.pullRequest,
+        issueNumber: source.pullRequest.number,
+        commentId: source.pullRequest.commentId,
+        configuration: source.ai.getAgentConfiguration('findings'),
+    });
+}
 class CheckPullRequestCommentLanguageUseCase {
     constructor(workflow) {
         this.taskId = 'CheckPullRequestCommentLanguageUseCase';
@@ -69195,15 +69399,8 @@ class CheckPullRequestCommentLanguageUseCase {
     }
     invoke(param) {
         return this.workflow.invoke({
+            ...param,
             taskId: this.taskId,
-            commentBody: param.pullRequest.commentBody,
-            locale: param.locale.pullRequest,
-            issueNumber: param.pullRequest.number,
-            commentId: param.pullRequest.commentId,
-            owner: param.owner,
-            repo: param.repo,
-            token: param.tokens.token,
-            configuration: param.ai.getAgentConfiguration('findings'),
         });
     }
 }
@@ -83417,7 +83614,8 @@ const issue_use_case_composition_1 = __nccwpck_require__(21239);
 const organization_members_composition_root_1 = __nccwpck_require__(50603);
 const project_board_composition_root_1 = __nccwpck_require__(37194);
 const actor_authorization_composition_root_1 = __nccwpck_require__(233);
-function createIssueUseCaseCompositionRoot() {
+const shared_capability_port_binding_1 = __nccwpck_require__(47399);
+function createIssueUseCaseCompositionRoot(binding) {
     const issueMetadata = new issue_metadata_repository_1.IssueMetadataRepository((0, github_issue_client_factory_1.createIssueMetadataClient)(), (0, github_project_client_factory_1.createGraphqlTransportClient)());
     const issueContent = new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
     const issueLifecycle = new issue_lifecycle_repository_1.IssueLifecycleRepository((0, github_issue_client_factory_1.createIssueLifecycleClient)());
@@ -83434,14 +83632,16 @@ function createIssueUseCaseCompositionRoot() {
     const issueClosure = new issue_closure_repository_1.IssueClosureRepository(issueLifecycle, issueContent);
     const issueTypeAssignment = new issue_type_assignment_repository_1.IssueTypeAssignmentRepository((owner, repository, issueNumber, token) => issueMetadata.getId(owner, repository, issueNumber, token), (0, github_project_client_factory_1.createGraphqlTransportClient)());
     const moveIssueToInProgress = new move_issue_to_in_progress_1.MoveIssueToInProgressUseCase(projectBoard.command);
+    const issueTitle = new issue_title_repository_1.IssueTitleRepository((0, github_issue_client_factory_1.createIssueTitleClient)(), issueMetadata);
+    const projectContent = (0, shared_capability_port_binding_1.bindProjectContent)(issueMetadata, projectBoard.command, projectBoard.link, binding);
     const workflowSteps = {
-        checkPermissions: new check_permissions_use_case_1.CheckPermissionsUseCase(organizationMembers),
+        checkPermissions: new check_permissions_use_case_1.CheckPermissionsUseCase((0, shared_capability_port_binding_1.bindOrganizationMembers)(organizationMembers, binding)),
         closeNotAllowedIssue: new close_not_allowed_issue_use_case_1.CloseNotAllowedIssueUseCase(issueClosure),
         removeIssueBranches: new remove_issue_branches_use_case_1.RemoveIssueBranchesUseCase(branchLifecycle),
         assignMemberToIssue: new assign_members_to_issue_use_case_1.AssignMemberToIssueUseCase(issueAssignee, organizationMembers),
-        updateTitle: new update_title_use_case_1.UpdateTitleUseCase(new issue_title_repository_1.IssueTitleRepository((0, github_issue_client_factory_1.createIssueTitleClient)(), issueMetadata)),
+        updateTitle: new update_title_use_case_1.UpdateTitleUseCase((0, shared_capability_port_binding_1.bindIssueTitle)(issueTitle, binding)),
         updateIssueType: new update_issue_type_use_case_1.UpdateIssueTypeUseCase(issueTypeAssignment),
-        linkIssueProject: new link_issue_project_use_case_1.LinkIssueProjectUseCase(issueMetadata, projectBoard.command, projectBoard.link, eventualConsistencyDelay),
+        linkIssueProject: new link_issue_project_use_case_1.LinkIssueProjectUseCase(projectContent, eventualConsistencyDelay),
         checkPriorityIssueSize: new check_priority_issue_size_use_case_1.CheckPriorityIssueSizeUseCase(projectBoard.command),
         prepareBranches: new prepare_branches_use_case_1.PrepareBranchesUseCase(branchLifecycle, branchName, gitCli, gitCli, linkedBranch, branchPropagationDelay, moveIssueToInProgress),
         removeNotNeededBranches: new remove_not_needed_branches_use_case_1.RemoveNotNeededBranchesUseCase(branchLifecycle, branchName),
@@ -83549,6 +83749,7 @@ const octokit_deployment_adapter_1 = __nccwpck_require__(46819);
 const workflow_dispatch_repository_1 = __nccwpck_require__(29509);
 const github_workflow_client_factory_1 = __nccwpck_require__(29839);
 const node_crypto_1 = __nccwpck_require__(6005);
+const shared_capability_port_binding_1 = __nccwpck_require__(47399);
 function createDetectPotentialProblemsUseCase(binding) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
     return new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase((0, agent_capability_composition_root_1.createFindingsQueryPort)(), bugbot.scm, bugbot.telemetry);
@@ -83566,7 +83767,7 @@ function createSingleActionUseCaseCompositionRoot(surface, binding) {
         : undefined;
     return new single_action_use_case_1.SingleActionUseCase(repositoryTagPort && repositoryReleasePort
         ? new publish_github_action_use_case_1.PublishGithubActionUseCase(repositoryTagPort, repositoryReleasePort)
-        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase(repositoryReleasePort) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase(repositoryTagPort) : undefined, new think_use_case_1.ThinkUseCase(issueDescriptionQueryPort, (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase(issueDescriptionQueryPort, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase(issueDescriptionQueryPort), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), issueDescriptionQueryPort), deploymentOrchestration);
+        : undefined, repositoryReleasePort ? new create_release_use_case_1.CreateReleaseUseCase(repositoryReleasePort) : undefined, repositoryTagPort ? new create_tag_use_case_1.CreateTagUseCase(repositoryTagPort) : undefined, new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)(issueDescriptionQueryPort, binding), (0, shared_capability_port_binding_1.bindIssueNotification)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding), (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, initial_setup_composition_root_1.createInitialSetupCompositionRoot)(), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), createDetectPotentialProblemsUseCase(binding), new recommend_steps_use_case_1.RecommendStepsUseCase(issueDescriptionQueryPort, (0, agent_capability_composition_root_1.createFindingsQueryPort)()), (0, issue_inactivity_composition_root_1.createCloseInactiveIssuesUseCase)(), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), new publish_issue_comment_use_case_1.PublishIssueCommentUseCase(issueDescriptionQueryPort), new observe_branch_sync_use_case_1.ObserveBranchSyncUseCase(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)()), issueDescriptionQueryPort), deploymentOrchestration);
 }
 function createDeploymentOrchestrationUseCase(issueDescriptionQueryPort, publication) {
     const deploymentClient = new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter();
@@ -83593,7 +83794,7 @@ function createIssueCommentUseCaseCompositionRoot(binding) {
     const bugbotGit = new bound_bugbot_git_mutation_adapter_1.BoundBugbotGitMutationAdapter(gitCommit, authenticatedUser, binding.token);
     const pullRequestDescription = new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), (0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
     const branchSync = new sync_branch_use_case_1.SyncBranchUseCase(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new branch_sync_workspace_adapter_1.BranchSyncWorkspaceAdapter(gitCommit), fixer, (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), gitCommit);
-    return new issue_comment_use_case_1.IssueCommentUseCase(new check_issue_comment_language_use_case_1.CheckIssueCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(findings, bugbot.scm.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.scm.context, bugbotGit), new user_request_use_case_1.DoUserRequestUseCase(fixer, gitCommit), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), gitCommit, bugbotGit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.scm.context, resolutionPorts: bugbot.scm.resolution }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync);
+    return new issue_comment_use_case_1.IssueCommentUseCase(new check_issue_comment_language_use_case_1.CheckIssueCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.scm.publication.issueComments, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(findings, bugbot.scm.context), new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), binding), (0, shared_capability_port_binding_1.bindIssueNotification)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.scm.context, bugbotGit), new user_request_use_case_1.DoUserRequestUseCase(fixer, gitCommit), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), bugbotGit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.scm.context, resolutionPorts: bugbot.scm.resolution }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync);
 }
 function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
@@ -83605,7 +83806,7 @@ function createPullRequestReviewCommentUseCaseCompositionRoot(binding) {
     const bugbotGit = new bound_bugbot_git_mutation_adapter_1.BoundBugbotGitMutationAdapter(gitCommit, authenticatedUser, binding.token);
     const pullRequestDescription = new update_pull_request_description_use_case_1.UpdatePullRequestDescriptionUseCase(new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), (0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, organization_members_composition_root_1.createOrganizationMembersCompositionRoot)(), (0, agent_capability_composition_root_1.createFindingsQueryPort)());
     const branchSync = new sync_branch_use_case_1.SyncBranchUseCase(new branch_dependency_repository_1.BranchDependencyRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new branch_sync_workspace_adapter_1.BranchSyncWorkspaceAdapter(gitCommit), fixer, (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), gitCommit);
-    return new pull_request_review_comment_use_case_1.PullRequestReviewCommentUseCase(new check_pull_request_comment_language_use_case_1.CheckPullRequestCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.issue, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(findings, bugbot.scm.context), new think_use_case_1.ThinkUseCase((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), (0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.scm.context, bugbotGit), new user_request_use_case_1.DoUserRequestUseCase(fixer, gitCommit), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), gitCommit, bugbotGit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.scm.context, resolutionPorts: bugbot.scm.resolution }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync);
+    return new pull_request_review_comment_use_case_1.PullRequestReviewCommentUseCase(new check_pull_request_comment_language_use_case_1.CheckPullRequestCommentLanguageUseCase(new comment_language_translation_workflow_1.CommentLanguageTranslationWorkflow(bugbot.scm.publication.issueComments, language)), new detect_bugbot_fix_intent_use_case_1.DetectBugbotFixIntentUseCase(findings, bugbot.scm.context), new think_use_case_1.ThinkUseCase((0, shared_capability_port_binding_1.bindIssueDescriptionQuery)((0, issue_content_composition_root_1.createIssueContentCompositionRoot)(), binding), (0, shared_capability_port_binding_1.bindIssueNotification)((0, issue_interaction_composition_root_1.createIssueNotificationRepository)(), binding), findings), new bugbot_autofix_use_case_1.BugbotAutofixUseCase(fixer, bugbot.scm.context, bugbotGit), new user_request_use_case_1.DoUserRequestUseCase(fixer, gitCommit), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)(), bugbotGit, new dismiss_bugbot_findings_use_case_1.DismissBugbotFindingsUseCase({ contextPorts: bugbot.scm.context, resolutionPorts: bugbot.scm.resolution }), new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry), pullRequestDescription, new remember_bugbot_rule_use_case_1.RememberBugbotRuleUseCase(bugbot.rules), branchSync);
 }
 function createCommitUseCaseCompositionRoot(projectBoardCommandPort, binding) {
     return new commit_use_case_1.CommitUseCase(new notify_new_commit_on_issue_use_case_1.NotifyNewCommitOnIssueUseCase((0, issue_interaction_composition_root_1.createIssueNotificationRepository)()), new check_changes_issue_size_use_case_1.CheckChangesIssueSizeUseCase(projectBoardCommandPort, (0, issue_labels_composition_root_1.createIssueLabelRepository)(), new pull_request_lifecycle_repository_1.PullRequestLifecycleRepository((0, github_pull_request_client_factory_1.createPullRequestLifecycleClient)()), new branch_compare_repository_1.BranchCompareRepository((0, github_branch_client_factory_1.createBranchComparisonClient)())), createDetectPotentialProblemsUseCase(binding), (0, check_progress_composition_root_1.createCheckProgressCompositionRoot)(), (0, actor_authorization_composition_root_1.createActorAuthorizationRepository)());
@@ -83615,22 +83816,18 @@ function createMainRunRouteCompositionRoot(projectBoardCommandPort, surface) {
     // actually selected, while repeated calls in the same run reuse its graph.
     const singleAction = lazyWith((execution) => createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution)));
     const issueComment = lazyWith((execution) => createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution)));
-    const issue = lazy(() => (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)());
+    const issue = lazyWith((execution) => (0, issue_use_case_composition_root_1.createIssueUseCaseCompositionRoot)(bugbotBinding(execution)));
     const pullRequestReviewComment = lazyWith((execution) => createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution)));
     const pullRequest = lazyWith((execution) => (0, pull_request_use_case_composition_root_1.createPullRequestUseCaseCompositionRoot)(bugbotBinding(execution)));
     const push = lazyWith((execution) => createCommitUseCaseCompositionRoot(projectBoardCommandPort, bugbotBinding(execution)));
     return {
         "single-action": async (execution) => singleAction(execution).invoke(execution),
         "issue-comment": async (execution) => issueComment(execution).invoke(execution),
-        issue: async (execution) => issue().invoke(execution),
+        issue: async (execution) => issue(execution).invoke(execution),
         "pull-request-review-comment": async (execution) => pullRequestReviewComment(execution).invoke(execution),
         "pull-request": async (execution) => pullRequest(execution).invoke(execution),
         push: async (execution) => push(execution).invoke(execution),
     };
-}
-function lazy(factory) {
-    let value;
-    return () => value ?? (value = factory());
 }
 function lazyWith(factory) {
     let value;
@@ -83753,6 +83950,7 @@ const timer_delay_adapter_1 = __nccwpck_require__(71942);
 const detect_potential_problems_use_case_1 = __nccwpck_require__(6287);
 const bugbot_composition_root_1 = __nccwpck_require__(67395);
 const actor_authorization_composition_root_1 = __nccwpck_require__(233);
+const shared_capability_port_binding_1 = __nccwpck_require__(47399);
 function createPullRequestUseCaseCompositionRoot(binding) {
     const issueLifecycle = new issue_lifecycle_repository_1.IssueLifecycleRepository((0, github_issue_client_factory_1.createIssueLifecycleClient)());
     const issueContent = new issue_content_repository_1.IssueContentRepository((0, github_issue_client_factory_1.createIssueContentClient)());
@@ -83762,16 +83960,17 @@ function createPullRequestUseCaseCompositionRoot(binding) {
     const projectBoard = (0, project_board_composition_root_1.createProjectBoardCompositionRoot)();
     const bugbot = (0, bugbot_composition_root_1.createBugbotCompositionRoot)(binding);
     const issueTitle = new issue_title_repository_1.IssueTitleRepository((0, github_issue_client_factory_1.createIssueTitleClient)(), issueMetadata);
+    const projectContent = (0, shared_capability_port_binding_1.bindProjectContent)(issueMetadata, projectBoard.command, projectBoard.link, binding);
     const issueClosure = new issue_closure_repository_1.IssueClosureRepository(issueLifecycle, issueContent);
     const issueAssignee = new issue_assignment_repository_1.IssueAssignmentRepository((0, github_issue_client_factory_1.createIssueAssignmentClient)());
     const pullRequestLabels = new issue_label_repository_1.IssueLabelRepository((0, github_issue_client_factory_1.createIssueLabelsClient)());
     const pullRequestReviewer = (0, pull_request_reviewer_composition_root_1.createPullRequestReviewerCompositionRoot)();
     const eventualConsistencyDelay = new timer_delay_adapter_1.TimerDelayAdapter();
     const workflowSteps = {
-        updateTitle: new update_title_use_case_1.UpdateTitleUseCase(issueTitle),
+        updateTitle: new update_title_use_case_1.UpdateTitleUseCase((0, shared_capability_port_binding_1.bindIssueTitle)(issueTitle, binding)),
         assignMemberToIssue: new assign_members_to_issue_use_case_1.AssignMemberToIssueUseCase(issueAssignee, organizationMembers),
         assignReviewersToIssue: new assign_reviewers_to_issue_use_case_1.AssignReviewersToIssueUseCase(issueAssignee, pullRequestReviewer, organizationMembers),
-        linkPullRequestProject: new link_pull_request_project_use_case_1.LinkPullRequestProjectUseCase(projectBoard.command, projectBoard.link, eventualConsistencyDelay),
+        linkPullRequestProject: new link_pull_request_project_use_case_1.LinkPullRequestProjectUseCase(projectContent, eventualConsistencyDelay),
         linkPullRequestIssue: new link_pull_request_issue_use_case_1.LinkPullRequestIssueUseCase(pullRequestLifecycle, eventualConsistencyDelay),
         syncSizeAndProgressLabels: new sync_size_and_progress_labels_from_issue_to_pr_use_case_1.SyncSizeAndProgressLabelsFromIssueToPrUseCase(pullRequestLabels),
         checkPriorityPullRequestSize: new check_priority_pull_request_size_use_case_1.CheckPriorityPullRequestSizeUseCase(projectBoard.command),
@@ -83838,6 +84037,60 @@ function createSetupDoctorUseCase() {
         remoteHealth: new setup_remote_credential_health_adapter_1.SetupRemoteCredentialHealthQueryAdapter(new octokit_credential_health_adapter_1.OctokitCredentialHealthClientAdapter()),
         mergeQueueReadiness: createSetupMergeQueueReadinessUseCase(),
     });
+}
+
+
+/***/ }),
+
+/***/ 47399:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.bindOrganizationMembers = bindOrganizationMembers;
+exports.bindIssueDescriptionQuery = bindIssueDescriptionQuery;
+exports.bindIssueNotification = bindIssueNotification;
+exports.bindIssueCommentUpdate = bindIssueCommentUpdate;
+exports.bindIssueTitle = bindIssueTitle;
+exports.bindProjectContent = bindProjectContent;
+const project_detail_1 = __nccwpck_require__(33428);
+function bindOrganizationMembers(port, binding) {
+    return {
+        getAllMembers: () => port.getAllMembers(binding.owner, binding.token),
+    };
+}
+function bindIssueDescriptionQuery(port, binding) {
+    return {
+        getDescription: (issueNumber) => port.getDescription(binding.owner, binding.repository, issueNumber, binding.token),
+    };
+}
+function bindIssueNotification(port, binding) {
+    return {
+        addComment: (issueNumber, comment) => port.addComment(binding.owner, binding.repository, issueNumber, comment, binding.token),
+    };
+}
+function bindIssueCommentUpdate(port, binding) {
+    return {
+        updateComment: (issueNumber, commentId, comment) => port.updateComment(binding.owner, binding.repository, issueNumber, commentId, comment, binding.token),
+    };
+}
+function bindIssueTitle(port, binding) {
+    return {
+        getTitle: (issueNumber) => port.getTitle(binding.owner, binding.repository, issueNumber, binding.token),
+        updateIssueTitle: (input) => port.updateTitleIssueFormat(binding.owner, binding.repository, input.version, input.currentTitle, input.issueNumber, input.branchManagementAlways, input.branchManagementEmoji, input.labelFacts, binding.token),
+        updatePullRequestTitle: (input) => port.updateTitlePullRequestFormat(binding.owner, binding.repository, input.pullRequestTitle, input.issueTitle, input.issueNumber, input.pullRequestNumber, false, '', input.labelFacts, binding.token),
+    };
+}
+function bindProjectContent(identity, commands, links, binding) {
+    return {
+        resolveIssueContentId: (issueNumber) => identity.getId(binding.owner, binding.repository, issueNumber, binding.token),
+        linkContentId: (project, contentId) => links.linkContentId(toProjectDetail(project), contentId, binding.token),
+        moveContent: (project, contentNumber, columnName) => commands.moveIssueToColumn(toProjectDetail(project), binding.owner, binding.repository, contentNumber, columnName, binding.token),
+    };
+}
+function toProjectDetail(project) {
+    return new project_detail_1.ProjectDetail({ ...project });
 }
 
 
@@ -85318,18 +85571,14 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueContentInterface = void 0;
 const logger_1 = __nccwpck_require__(91151);
 const content_interface_1 = __nccwpck_require__(92540);
-const issue_content_number_policy_1 = __nccwpck_require__(45545);
 const application_error_1 = __nccwpck_require__(75999);
 class IssueContentInterface extends content_interface_1.ContentInterface {
     constructor(issueDescriptionPort) {
         super();
         this.issueDescriptionPort = issueDescriptionPort;
-        this.internalGetter = async (execution) => {
+        this.internalGetter = async (query) => {
             try {
-                const number = (0, issue_content_number_policy_1.resolveReadContentNumber)(execution);
-                if (number === undefined)
-                    return undefined;
-                const description = await this.issueDescriptionPort.getDescription(execution.owner, execution.repo, number, execution.tokens.token);
+                const description = await this.issueDescriptionPort.getDescription(query.owner, query.repository, query.issueNumber, query.token);
                 return this.getContent(description);
             }
             catch (error) {
@@ -85337,17 +85586,14 @@ class IssueContentInterface extends content_interface_1.ContentInterface {
                 throw error;
             }
         };
-        this.internalUpdate = async (execution, content) => {
+        this.internalUpdate = async (query, content) => {
             try {
-                const number = (0, issue_content_number_policy_1.resolveWriteContentNumber)(execution);
-                if (number === undefined)
-                    return undefined;
-                const description = await this.issueDescriptionPort.getDescription(execution.owner, execution.repo, number, execution.tokens.token);
+                const description = await this.issueDescriptionPort.getDescription(query.owner, query.repository, query.issueNumber, query.token);
                 const updated = this.updateContent(description, content);
                 if (updated === undefined) {
                     throw new Error('Issue content markers are missing or inconsistent.');
                 }
-                await this.issueDescriptionPort.updateDescription(execution.owner, execution.repo, number, updated, execution.tokens.token);
+                await this.issueDescriptionPort.updateDescription(query.owner, query.repository, query.issueNumber, updated, query.token);
                 return updated;
             }
             catch (error) {
@@ -85358,39 +85604,6 @@ class IssueContentInterface extends content_interface_1.ContentInterface {
     }
 }
 exports.IssueContentInterface = IssueContentInterface;
-
-
-/***/ }),
-
-/***/ 45545:
-/***/ ((__unused_webpack_module, exports) => {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.resolveReadContentNumber = resolveReadContentNumber;
-exports.resolveWriteContentNumber = resolveWriteContentNumber;
-function resolveReadContentNumber(execution) {
-    if (execution.isSingleAction || execution.isPush)
-        return execution.issueNumber;
-    if (execution.isIssue)
-        return execution.issue.number;
-    if (execution.isPullRequest)
-        return execution.pullRequest.number;
-    return undefined;
-}
-function resolveWriteContentNumber(execution) {
-    if (execution.isSingleAction) {
-        if (execution.isIssue)
-            return execution.issue.number;
-        if (execution.isPullRequest)
-            return execution.pullRequest.number;
-        if (execution.isPush)
-            return execution.issueNumber;
-        return execution.singleAction.issue;
-    }
-    return resolveReadContentNumber(execution);
-}
 
 
 /***/ }),
@@ -85410,9 +85623,9 @@ const application_error_1 = __nccwpck_require__(75999);
 class ConfigurationHandler extends issue_content_interface_1.IssueContentInterface {
     constructor() {
         super(...arguments);
-        this.update = async (execution) => {
-            const storedRaw = await this.internalGetter(execution);
-            return await this.internalUpdate(execution, (0, configuration_payload_policy_1.buildConfigurationPayload)(execution, storedRaw));
+        this.update = async (query, context) => {
+            const storedRaw = await this.internalGetter(query);
+            return this.internalUpdate(query, (0, configuration_payload_policy_1.buildConfigurationPayload)(context, storedRaw));
         };
         this.get = async (query) => {
             try {

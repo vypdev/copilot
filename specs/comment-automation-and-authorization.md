@@ -56,6 +56,9 @@ modify the wrong branch.
 9. Comment-triggered file mutation requires a PR review-comment event with its
    authoritative branch, or an explicitly branch-scoped execution. An
    `issue_comment` never scans open PRs or selects a first matching branch.
+10. Issue and PR comment routes project one frozen, credential-free
+    `CommentAutomationContext`; shared workflows receive only capability facts
+    and repository-bound semantic ports.
 
 ### 2.3 Evidence and contract classification
 
@@ -202,6 +205,17 @@ flowchart LR
 Application and architecture tests MUST prevent provider types from entering
 parsers/use-case contracts and keep presentation separate from mutation policy.
 
+The issue-comment and PR-review-comment coordinators are the only aggregate
+boundaries. They project the addressed comment, translation request, Think
+request and selected specialist, status snapshot, and Bugbot facts into one
+deeply readonly `CommentAutomationContext`. Permissions, translation, Think,
+title, publication, configuration, and project-link leaves consume smaller
+records. Repository identity and credentials are captured in composition and
+exposed through bound semantic ports; none of these records contains a token,
+provider client, `Ai` instance, or configuration getter. Command-specific review
+overrides create a new frozen context and cannot mutate the run-wide AI model.
+There is no legacy aggregate overload or compatibility route.
+
 ## 9. UI/UX and content contract
 
 ```markdown
@@ -308,6 +322,7 @@ English/non-English requests.
 | authorization | authorization port/adapter | repository tests | permissions |
 | guarded mutation | workspace/git workflows | mutation tests | autofix/do request |
 | safe output | result policies | publication tests | failure scenarios |
+| narrow comment context | issue/PR route projectors and bound ports | P2-D eight-case projection ledger plus route parity suites | architecture and dependency rules |
 
 ## 18. Maintenance sequence
 

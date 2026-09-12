@@ -1,10 +1,8 @@
-import type { Result } from '../../data/model/result';
 import { hasVisibleCommentContent } from '../../domain/comment_content_policy';
-import type { ResultPublicationSections } from './result_publication_contracts';
+import type { ResultPublicationRecord, ResultPublicationSections } from './result_publication_contracts';
 import { sanitizeAgentMarkdown, sanitizePublishedError } from './github_comment_publication_policy';
-import { buildApplicationErrorPresentation } from './application_error_presentation_policy';
 
-export function renderResultSections(results: ReadonlyArray<Result>): ResultPublicationSections {
+export function renderResultSections(results: readonly ResultPublicationRecord[]): ResultPublicationSections {
     const renderedSteps: string[] = [];
     const reminders: string[] = [];
     const errors: string[] = [];
@@ -29,8 +27,7 @@ export function renderResultSections(results: ReadonlyArray<Result>): ResultPubl
     };
 }
 
-function renderPublishedApplicationError(error: Result['errors'][number]): string {
-    const view = buildApplicationErrorPresentation(error);
+function renderPublishedApplicationError(view: ResultPublicationRecord['errors'][number]): string {
     return [
         `**Impact:** ${sanitizePublishedError(view.impact)}`,
         `   **Cause (\`${view.code}\`):** ${sanitizePublishedError(view.cause)}`,
@@ -40,7 +37,7 @@ function renderPublishedApplicationError(error: Result['errors'][number]): strin
     ].join('\n');
 }
 
-function appendSteps(renderedSteps: string[], result: Result, stepIndex: number): number {
+function appendSteps(renderedSteps: string[], result: ResultPublicationRecord, stepIndex: number): number {
     for (const step of result.steps) {
         if (!step.trim()) continue;
         const safeStep = sanitizeAgentMarkdown(step);
