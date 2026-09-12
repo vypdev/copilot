@@ -5863,7 +5863,7 @@ const review_configuration_1 = __nccwpck_require__(3994);
 /** Provider-neutral programmatic entry point. Consumers supply agent and SCM adapters. */
 class BugbotReviewService {
     constructor(agent, scm) {
-        this.repository = scm.repository;
+        this.repository = snapshotRepositoryBinding(scm);
         this.useCase = new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(agent, scm, scm.telemetry);
     }
     async review(request) {
@@ -5878,6 +5878,12 @@ class BugbotReviewService {
     }
 }
 exports.BugbotReviewService = BugbotReviewService;
+function snapshotRepositoryBinding(scm) {
+    return Object.freeze({
+        owner: requireText(scm?.repository?.owner, 'Bound repository owner', 100),
+        name: requireText(scm?.repository?.name, 'Bound repository name', 100),
+    });
+}
 function buildReviewOperationContext(request, binding) {
     if (!request || typeof request !== 'object') {
         throw new application_error_1.ApplicationError('validation.invalid-input', 'Bugbot review request is missing or invalid.');

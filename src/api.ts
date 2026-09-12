@@ -62,7 +62,7 @@ export class BugbotReviewService {
     private readonly repository: BugbotScmGateway['repository'];
 
     constructor(agent: FindingsQueryPort, scm: BugbotScmGateway) {
-        this.repository = scm.repository;
+        this.repository = snapshotRepositoryBinding(scm);
         this.useCase = new DetectPotentialProblemsUseCase(
             agent,
             scm,
@@ -81,6 +81,13 @@ export class BugbotReviewService {
             }
         });
     }
+}
+
+function snapshotRepositoryBinding(scm: BugbotScmGateway): BugbotScmGateway['repository'] {
+    return Object.freeze({
+        owner: requireText(scm?.repository?.owner, 'Bound repository owner', 100),
+        name: requireText(scm?.repository?.name, 'Bound repository name', 100),
+    });
 }
 
 function buildReviewOperationContext(

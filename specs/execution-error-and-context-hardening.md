@@ -350,6 +350,10 @@ is the single source of repository identity. The public request contains no
 repository duplicate or `credential`, and the service no longer constructs an
 internal `Execution`. This is the sole public shape: no overload, unbound
 gateway, credential fallback, aggregate builder, or deprecated alias remains.
+At construction, the service MUST validate, copy, and freeze the gateway's
+owner/name pair rather than retain the caller-owned object. A later gateway
+mutation MUST NOT change review facts or desynchronize them from the SCM
+capabilities that were bound for the original repository.
 
 The final reconciliation snapshot keeps its two remote-head guards, concurrent
 surface reads, conservative projection, bounded presentation writes, and
@@ -528,7 +532,9 @@ exclusion cases; two bound SCM read/publication/resolution cases; two final
 snapshot and partial-write/replay cases; two bound Git autofix/commit cases;
 one public API direct-context and removed-credential negative case; and one AST
 case proving zero Bugbot leaf imports plus absence of token-bearing leaf
-contracts. Existing lifecycle, publication, resolution, and autofix suites are
+contracts. The public API case also mutates the caller-owned gateway identity
+after construction and proves the frozen snapshot remains authoritative.
+Existing lifecycle, publication, resolution, and autofix suites are
 parity evidence and do not inflate this floor.
 
 `scripts/validate-setup-execution-coverage.cjs` enforces at least 95% lines and
@@ -565,6 +571,9 @@ failure contract instead of redefining it.
    command port and not a token or mutable flag in the context.
 9. Given every final allowlist entry, an architecture review classifies it as an
    entrypoint, route coordinator, or aggregate definition.
+10. Given a bound gateway whose caller-owned identity is mutated after service
+    construction, reviews continue using the validated frozen identity that
+    matches the originally bound SCM capabilities.
 
 ## 17. Requirements traceability
 

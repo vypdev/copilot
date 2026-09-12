@@ -65,5 +65,11 @@ constructing the service; review workflows
 receive only capability methods. Internal orchestration and authority remain
 package-owned.
 
+Construction validates, copies, and freezes the gateway's `{ owner, name }`
+identity. Mutating the caller-owned gateway object later cannot redirect a
+review or desynchronize its operation context from the already-bound SCM
+methods. An incomplete identity fails immediately with a semantic validation
+error.
+
 See [Application error reference](/security-operations/operations/error-reference)
 for the stable code meanings and operator actions.

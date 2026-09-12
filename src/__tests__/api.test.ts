@@ -26,10 +26,11 @@ type ReviewRequestKeysAreExact = Assert<Equal<
 describe('Bugbot public API', () => {
   it('accepts only the request contract and emits request-scoped telemetry', async () => {
     const publish = jest.fn().mockResolvedValue(undefined);
+    const repository = { owner: 'acme', name: 'portable-project' };
     const service = new BugbotReviewService(
       { query: jest.fn() },
       {
-        repository: { owner: 'acme', name: 'portable-project' },
+        repository,
         telemetry: { publish },
       } as unknown as BugbotScmGateway,
     );
@@ -42,6 +43,8 @@ describe('Bugbot public API', () => {
         traceRules: true,
       },
     };
+    repository.owner = 'mutated-owner';
+    repository.name = 'mutated-project';
 
     await expect(service.review(request)).resolves.toEqual([]);
 
@@ -55,6 +58,9 @@ describe('Bugbot public API', () => {
       target: { kind: 'branch', branch: 'feature/review' },
       configuration: expect.objectContaining({ publicationMode: 'dry-run' }),
     }));
+    expect(Object.isFrozen(
+      (service as unknown as { repository: object }).repository,
+    )).toBe(true);
   });
 
   it('rejects malformed public input with a semantic error', async () => {
@@ -76,19 +82,18 @@ describe('Bugbot public API', () => {
     });
   });
 
-  it('rejects a gateway that does not declare its bound repository identity', async () => {
-    const service = new BugbotReviewService(
+  it.each([
+    [undefined, 'Bound repository owner is missing or invalid.'],
+    [{}, 'Bound repository owner is missing or invalid.'],
+    [{ repository: { owner: 'acme' } }, 'Bound repository name is missing or invalid.'],
+  ])('rejects a gateway without a complete bound repository identity', (gateway, message) => {
+    expect(() => new BugbotReviewService(
       { query: jest.fn() },
-      {} as BugbotScmGateway,
-    );
-
-    await expect(service.review({
-      target: { kind: 'branch', branch: 'feature/review' },
-      agent: { provider: 'codex', model: 'model' },
-    })).rejects.toMatchObject({
+      gateway as BugbotScmGateway,
+    )).toThrow(expect.objectContaining({
       code: 'validation.invalid-input',
-      message: 'Bound repository owner is missing or invalid.',
-    });
+      message,
+    }));
   });
 
   it('rejects JavaScript-only configuration shapes without exposing their values', async () => {
