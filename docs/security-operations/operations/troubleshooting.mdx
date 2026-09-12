@@ -8,6 +8,19 @@ description: Common issues and solutions when using Copilot
 This guide helps you resolve common issues you might encounter while using Copilot. Expand the section that matches your problem.
 
 <AccordionGroup>
+  <Accordion title="Setup is cancelled or doctor shows skipped checks" icon="circle-exclamation">
+    **Setup cancellation:** `Ctrl-C` or end-of-input intentionally exits 130 and
+    applies no local or GitHub writes. Declining the final plan exits 0 and also
+    writes nothing. Rerun the forward-only questionnaire or edit the non-secret
+    setup config; `--yes` cannot fill a missing token or credential.
+
+    **Doctor `skipped`:** a named dependency prevented that probe from running;
+    it is not a pass. If setup-PAT validation fails, use the local workflow and
+    configuration findings immediately, then repair the PAT scope and rerun to
+    unlock remote checks. Doctor exits non-zero only when at least one check is
+    `fail`; warnings and skipped checks still require reviewing their actions.
+  </Accordion>
+
   <Accordion title="Branch creation fails" icon="code-branch">
     **Symptoms:**
     - Error messages during branch creation

@@ -7,7 +7,7 @@ import type {
 import type {
     SetupCredentialPromptPort,
     SetupCredentialValidationPort,
-    SetupRepositorySecretsPort,
+    SetupRepositorySecretNamesQueryPort,
     SetupRemoteCredentialHealthPort,
 } from '../../ports/setup_wizard_ports';
 import { ApplicationError } from '../../errors/application_error';
@@ -34,7 +34,7 @@ export class SetupCredentialsUseCase {
     constructor(
         private readonly prompt: SetupCredentialPromptPort,
         private readonly validation: SetupCredentialValidationPort,
-        private readonly secrets?: SetupRepositorySecretsPort,
+        private readonly secrets?: SetupRepositorySecretNamesQueryPort,
         private readonly remoteHealth?: SetupRemoteCredentialHealthPort,
     ) {}
 

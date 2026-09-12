@@ -219,7 +219,8 @@
         "src/application/usecases/actions/deployment_orchestration_use_case.ts",
         "src/application/usecases/steps/commit/bugbot/load_bugbot_context_use_case.ts",
         "src/application/usecases/setup/doctor_use_case.ts",
-        "src/cli/setup_prompt_adapter.ts",
+        "src/application/policies/setup_questionnaire_policy.ts",
+        "src/cli/setup_terminal_driver.ts",
         "src/data/repository/agent_execution_policy.ts"
       ],
       "tests": [
@@ -231,7 +232,7 @@
         "src/application/usecases/actions/__tests__/deployment_orchestration_use_case.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/load_bugbot_context_use_case.test.ts",
         "src/application/usecases/setup/__tests__/doctor_use_case.test.ts",
-        "src/cli/__tests__/setup_prompt_adapter.test.ts",
+        "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
         "src/data/repository/__tests__/agent_execution_policy.test.ts"
       ],
       "documentation": [
@@ -245,10 +246,10 @@
     {
       "id": "setup-and-doctor",
       "title": "Setup, configuration, credentials, and doctor",
-      "status": "as-built-baseline",
+      "status": "implemented",
       "scope": "Plan, validate, provision, and audit a repository installation without exposing credentials",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-11",
+      "lastVerified": "2026-09-12",
       "specs": [
         "specs/setup-configuration-credentials-and-doctor.md",
         "specs/setup-doctor-architecture-hardening.md"
@@ -263,20 +264,40 @@
       ],
       "code": [
         "src/domain/setup.ts",
+        "src/domain/setup_questionnaire.ts",
+        "src/application/ports/setup_terminal_ports.ts",
+        "src/application/policies/setup_questionnaire_policy.ts",
+        "src/application/policies/setup_doctor_report_policy.ts",
         "src/application/usecases/setup/setup_wizard_use_case.ts",
+        "src/application/usecases/setup/setup_questionnaire_controller.ts",
         "src/application/usecases/setup/setup_credentials_use_case.ts",
         "src/application/usecases/setup/doctor_use_case.ts",
         "src/application/policies/setup_configuration_validation.ts",
-        "src/infrastructure/setup_workspace_adapter.ts"
+        "src/infrastructure/setup_workspace_adapter.ts",
+        "src/data/repository/repository_variables_repository.ts",
+        "src/infrastructure/setup_remote_credential_health_adapter.ts",
+        "src/cli/setup_terminal_driver.ts",
+        "src/cli/setup_question_renderer.ts",
+        "src/cli/setup_plan_presenter.ts",
+        "src/cli/setup_doctor_presenter.ts"
       ],
       "tests": [
+        "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
+        "src/application/policies/__tests__/setup_doctor_report_policy.test.ts",
+        "src/application/usecases/setup/__tests__/setup_questionnaire_controller.test.ts",
         "src/application/usecases/setup/__tests__/setup_wizard_use_case.test.ts",
         "src/application/usecases/setup/__tests__/setup_credentials_use_case.test.ts",
         "src/application/usecases/setup/__tests__/doctor_use_case.test.ts",
-        "src/infrastructure/__tests__/setup_workspace_adapter.test.ts"
+        "src/infrastructure/__tests__/setup_workspace_adapter.test.ts",
+        "src/infrastructure/__tests__/setup_remote_credential_health_adapter.test.ts",
+        "src/data/repository/__tests__/repository_variables_repository.test.ts",
+        "src/cli/__tests__/setup_presenters.test.ts",
+        "src/cli/__tests__/setup_terminal_driver.test.ts",
+        "src/architecture/__tests__/setup_doctor_boundaries.test.ts"
       ],
       "documentation": [
         "docs/how-to-use.mdx",
+        "docs/configuration.mdx",
         "docs/configuration-checklist.mdx",
         "docs/security-operations/operations/provisioning.mdx",
         "docs/security-operations/security/credentials.mdx",

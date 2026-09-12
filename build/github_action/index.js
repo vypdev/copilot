@@ -68951,6 +68951,82 @@ function queueTimeoutError() {
 
 /***/ }),
 
+/***/ 81853:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ERRORS = void 0;
+exports.ERRORS = {
+    GIT_REPOSITORY_NOT_FOUND: '❌ Git repository not found',
+};
+
+
+/***/ }),
+
+/***/ 21307:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.cleanCliArg = cleanCliArg;
+exports.getGitInfo = getGitInfo;
+exports.getCurrentBranch = getCurrentBranch;
+exports.isInsideGitRepo = isInsideGitRepo;
+exports.isGitRepositoryRoot = isGitRepositoryRoot;
+const child_process_1 = __nccwpck_require__(32081);
+const node_fs_1 = __nccwpck_require__(87561);
+const cli_errors_1 = __nccwpck_require__(81853);
+function cleanCliArg(value) {
+    if (value == null)
+        return '';
+    const stringValue = String(value);
+    return stringValue.startsWith('=') ? stringValue.substring(1) : stringValue;
+}
+function getGitInfo() {
+    try {
+        const remoteUrl = (0, child_process_1.execSync)('git config --get remote.origin.url').toString().trim();
+        const match = remoteUrl.match(/github\.com[/:]([^/]+)\/([^/]+)(?:\.git)?$/);
+        if (!match)
+            return { error: cli_errors_1.ERRORS.GIT_REPOSITORY_NOT_FOUND };
+        return { owner: match[1], repo: match[2].replace('.git', '') };
+    }
+    catch {
+        return { error: cli_errors_1.ERRORS.GIT_REPOSITORY_NOT_FOUND };
+    }
+}
+function getCurrentBranch() {
+    try {
+        return (0, child_process_1.execSync)('git rev-parse --abbrev-ref HEAD').toString().trim() || 'main';
+    }
+    catch {
+        return 'main';
+    }
+}
+function isInsideGitRepo(cwd) {
+    try {
+        (0, child_process_1.execSync)('git rev-parse --is-inside-work-tree', { cwd, stdio: 'pipe' });
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+function isGitRepositoryRoot(cwd) {
+    try {
+        const root = (0, child_process_1.execSync)('git rev-parse --show-toplevel', { cwd, stdio: 'pipe' }).toString().trim();
+        return (0, node_fs_1.realpathSync)(root) === (0, node_fs_1.realpathSync)(cwd);
+    }
+    catch {
+        return false;
+    }
+}
+
+
+/***/ }),
+
 /***/ 19625:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -77588,11 +77664,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.RepositoryVariablesRepository = void 0;
+exports.RepositorySecretsCommandRepository = exports.RepositoryVariablesCommandRepository = exports.SetupRemoteConfigurationQueryRepository = exports.RepositoryVariablesQueryRepository = exports.RepositorySecretNamesQueryRepository = void 0;
 exports.encryptSecret = encryptSecret;
 const tweetnacl_1 = __importDefault(__nccwpck_require__(24258));
 const node_crypto_1 = __nccwpck_require__(6005);
-class RepositoryVariablesRepository {
+class GithubActionsResourceTransport {
     constructor(githubClient) {
         this.githubClient = githubClient;
     }
@@ -77814,7 +77890,62 @@ class RepositoryVariablesRepository {
         }
     }
 }
-exports.RepositoryVariablesRepository = RepositoryVariablesRepository;
+/** Read-only repository Secret metadata boundary. Secret values are never available. */
+class RepositorySecretNamesQueryRepository {
+    constructor(githubClient) {
+        this.transport = new GithubActionsResourceTransport(githubClient);
+    }
+    list(owner, repository, token) {
+        return this.transport.list(owner, repository, token);
+    }
+}
+exports.RepositorySecretNamesQueryRepository = RepositorySecretNamesQueryRepository;
+/** Read-only repository Variable metadata boundary. */
+class RepositoryVariablesQueryRepository {
+    constructor(githubClient) {
+        this.transport = new GithubActionsResourceTransport(githubClient);
+    }
+    listVariables(owner, repository, token) {
+        return this.transport.listVariables(owner, repository, token);
+    }
+}
+exports.RepositoryVariablesQueryRepository = RepositoryVariablesQueryRepository;
+/** Read-only aggregate of GitHub Actions resource facts used by setup and doctor policy. */
+class SetupRemoteConfigurationQueryRepository {
+    constructor(githubClient) {
+        this.transport = new GithubActionsResourceTransport(githubClient);
+    }
+    inspect(owner, repository, token) {
+        return this.transport.inspect(owner, repository, token);
+    }
+}
+exports.SetupRemoteConfigurationQueryRepository = SetupRemoteConfigurationQueryRepository;
+/** Variable mutation boundary used only by setup application. */
+class RepositoryVariablesCommandRepository {
+    constructor(githubClient) {
+        this.transport = new GithubActionsResourceTransport(githubClient);
+    }
+    upsert(owner, repository, token, variables) {
+        return this.transport.upsert(owner, repository, token, variables);
+    }
+    upsertScopedVariables(owner, repository, token, target, variables) {
+        return this.transport.upsertScopedVariables(owner, repository, token, target, variables);
+    }
+}
+exports.RepositoryVariablesCommandRepository = RepositoryVariablesCommandRepository;
+/** Secret mutation boundary used only by setup application. */
+class RepositorySecretsCommandRepository {
+    constructor(githubClient) {
+        this.transport = new GithubActionsResourceTransport(githubClient);
+    }
+    upsertSecrets(owner, repository, token, credentials) {
+        return this.transport.upsertSecrets(owner, repository, token, credentials);
+    }
+    upsertScopedSecrets(owner, repository, token, target, credentials) {
+        return this.transport.upsertScopedSecrets(owner, repository, token, target, credentials);
+    }
+}
+exports.RepositorySecretsCommandRepository = RepositorySecretsCommandRepository;
 async function listCollection(client, method, parameters, key) {
     if (client.paginate)
         return client.paginate(method, parameters);
@@ -80485,8 +80616,8 @@ const repository_variables_repository_1 = __nccwpck_require__(28493);
 const github_identity_client_factory_2 = __nccwpck_require__(93081);
 function createInitialSetupCompositionRoot() {
     const labelProvisioning = new issue_label_provisioning_repository_1.IssueLabelProvisioningRepository((0, github_issue_client_factory_1.createIssueLabelProvisioningClient)());
-    const repositoryConfiguration = new repository_variables_repository_1.RepositoryVariablesRepository((0, github_identity_client_factory_2.createRepositoryVariablesClient)());
-    return (0, initial_setup_use_case_composition_1.composeInitialSetupUseCase)(new authenticated_user_repository_1.AuthenticatedUserRepository((0, github_identity_client_factory_1.createAuthenticatedUserClient)()), labelProvisioning, new issue_type_repository_1.IssueTypeRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new git_cli_repository_1.GitCliRepository(), new repository_default_branch_repository_1.RepositoryDefaultBranchRepository((0, github_release_client_factory_1.createReleaseClient)()), new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)()), new setup_workspace_adapter_1.SetupWorkspaceAdapter(), repositoryConfiguration, repositoryConfiguration, repositoryConfiguration);
+    const githubResourceClient = (0, github_identity_client_factory_2.createRepositoryVariablesClient)();
+    return (0, initial_setup_use_case_composition_1.composeInitialSetupUseCase)(new authenticated_user_repository_1.AuthenticatedUserRepository((0, github_identity_client_factory_1.createAuthenticatedUserClient)()), labelProvisioning, new issue_type_repository_1.IssueTypeRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new git_cli_repository_1.GitCliRepository(), new repository_default_branch_repository_1.RepositoryDefaultBranchRepository((0, github_release_client_factory_1.createReleaseClient)()), new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)()), new setup_workspace_adapter_1.SetupWorkspaceMutationAdapter(), new repository_variables_repository_1.RepositoryVariablesCommandRepository(githubResourceClient), new repository_variables_repository_1.RepositorySecretsCommandRepository(githubResourceClient), new repository_variables_repository_1.SetupRemoteConfigurationQueryRepository(githubResourceClient));
 }
 
 
@@ -81789,9 +81920,10 @@ exports.LoggerWorkflowPollingObserverAdapter = LoggerWorkflowPollingObserverAdap
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.SetupWorkspaceAdapter = void 0;
+exports.SetupReconcileWorkspaceAdapter = exports.SetupDoctorWorkspaceQueryAdapter = exports.SetupWorkspaceMutationAdapter = void 0;
 const setup_files_1 = __nccwpck_require__(59126);
-class SetupWorkspaceAdapter {
+const cli_context_1 = __nccwpck_require__(21307);
+class SetupWorkspaceMutationAdapter {
     prepare(selection) {
         const workspace = process.cwd();
         (0, setup_files_1.ensureGitHubDirs)(workspace);
@@ -81807,11 +81939,37 @@ class SetupWorkspaceAdapter {
             ? (0, setup_files_1.hasValidSetupToken)(process.cwd())
             : (0, setup_files_1.hasValidSetupToken)(process.cwd(), tokenOverride);
     }
+}
+exports.SetupWorkspaceMutationAdapter = SetupWorkspaceMutationAdapter;
+class SetupDoctorWorkspaceQueryAdapter {
+    isRepositoryRoot() {
+        return (0, cli_context_1.isGitRepositoryRoot)(process.cwd());
+    }
     compareWorkflows(features) {
         return (0, setup_files_1.compareSetupWorkflows)(process.cwd(), features);
     }
 }
-exports.SetupWorkspaceAdapter = SetupWorkspaceAdapter;
+exports.SetupDoctorWorkspaceQueryAdapter = SetupDoctorWorkspaceQueryAdapter;
+/** Reconcile intentionally combines local comparison and approved local writes. */
+class SetupReconcileWorkspaceAdapter {
+    constructor() {
+        this.mutation = new SetupWorkspaceMutationAdapter();
+        this.query = new SetupDoctorWorkspaceQueryAdapter();
+    }
+    prepare(selection) {
+        return this.mutation.prepare(selection);
+    }
+    hasValidToken(tokenOverride) {
+        return this.mutation.hasValidToken(tokenOverride);
+    }
+    isRepositoryRoot() {
+        return this.query.isRepositoryRoot();
+    }
+    compareWorkflows(features) {
+        return this.query.compareWorkflows(features);
+    }
+}
+exports.SetupReconcileWorkspaceAdapter = SetupReconcileWorkspaceAdapter;
 
 
 /***/ }),

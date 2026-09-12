@@ -117,7 +117,9 @@ The complete command reference, including every supported option, is in [Workflo
     # or: copilot setup --token your_setup_pat
     ```
 
-    The wizard shows a reviewable plan and asks for confirmation. Use `copilot setup --dry-run` to inspect it without a token or changes.
+    The wizard shows a reviewable plan and asks for confirmation. Its forward-only questionnaire keeps defaults and every answer immutable; cancel and rerun if you need to revise an earlier stage. `Ctrl-C` or end-of-input exits 130 with no writes, while declining the final plan exits 0 with no writes. Use `copilot setup --dry-run` to inspect the plan without a token or changes.
+
+    In automation, `--non-interactive` creates no terminal. `--yes` approves only the final plan: it does not supply a missing setup PAT, workflow credential, provider credential, target, or organization prerequisite.
 
     `copilot setup` will:
     - Create `.github/`, `.github/workflows/`, and `.github/ISSUE_TEMPLATE/` if they do not exist.

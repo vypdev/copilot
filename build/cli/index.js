@@ -54922,6 +54922,50 @@ function calculateReviewersStillNeeded(desiredCount, currentCount, confirmedCoun
 
 /***/ }),
 
+/***/ 85881:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.cloneSetupConfiguration = cloneSetupConfiguration;
+const setup_configuration_defaults_1 = __nccwpck_require__(23381);
+/** Returns a reference-isolated configuration snapshot without serializing it. */
+function cloneSetupConfiguration(configuration) {
+    const agents = Object.fromEntries(setup_configuration_defaults_1.SETUP_AGENT_TASKS.map((task) => [
+        task,
+        { ...configuration.agents[task] },
+    ]));
+    return {
+        ...configuration,
+        features: { ...configuration.features },
+        agents,
+        repository: {
+            ...configuration.repository,
+            mergeQueueCheckAttestations: configuration.repository.mergeQueueCheckAttestations.map((attestation) => ({
+                ...attestation,
+                targets: [...attestation.targets],
+            })),
+        },
+        ai: { ...configuration.ai },
+        projects: { ...configuration.projects },
+        actionInputs: { ...configuration.actionInputs },
+        storage: {
+            secrets: {
+                ...configuration.storage.secrets,
+                overrides: { ...configuration.storage.secrets.overrides },
+            },
+            variables: {
+                ...configuration.storage.variables,
+                overrides: { ...configuration.storage.variables.overrides },
+            },
+        },
+    };
+}
+
+
+/***/ }),
+
 /***/ 23381:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -55688,6 +55732,396 @@ class CredentialRequirementCollection {
 function uniqueDefined(current, next) {
     const values = new Set([...(current ?? []), ...(next ? [next] : [])]);
     return values.size > 0 ? [...values] : undefined;
+}
+
+
+/***/ }),
+
+/***/ 67615:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildDoctorReport = buildDoctorReport;
+exports.doctorCheck = doctorCheck;
+exports.skippedDoctorCheck = skippedDoctorCheck;
+exports.normalizedDoctorPathId = normalizedDoctorPathId;
+const EMPTY_TOTALS = {
+    pass: 0,
+    warn: 0,
+    fail: 0,
+    skipped: 0,
+};
+function buildDoctorReport(checks) {
+    const totals = checks.reduce((result, check) => ({ ...result, [check.status]: result[check.status] + 1 }), { ...EMPTY_TOTALS });
+    return {
+        checks: [...checks],
+        healthy: totals.fail === 0,
+        totals,
+    };
+}
+function doctorCheck(input) {
+    if (!/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(input.id)) {
+        throw new Error(`Invalid doctor check id: ${input.id}.`);
+    }
+    return {
+        id: input.id,
+        status: input.status,
+        summary: input.summary,
+        ...(input.action ? { action: input.action } : {}),
+        evidence: { ...(input.evidence ?? {}) },
+        blockedBy: [...(input.blockedBy ?? [])],
+    };
+}
+function skippedDoctorCheck(id, blockedBy, summary, action) {
+    return doctorCheck({ id, status: 'skipped', summary, blockedBy, ...(action ? { action } : {}) });
+}
+function normalizedDoctorPathId(path) {
+    const normalized = path
+        .normalize('NFKC')
+        .replace(/\\/g, '/')
+        .replace(/^\.\/?/, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 120);
+    return normalized || 'unknown';
+}
+
+
+/***/ }),
+
+/***/ 6009:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.createSetupQuestionnaire = createSetupQuestionnaire;
+exports.createSetupReviewState = createSetupReviewState;
+exports.transitionSetupQuestionnaire = transitionSetupQuestionnaire;
+exports.enterSetupConfirmation = enterSetupConfirmation;
+exports.finishSetupQuestionnaire = finishSetupQuestionnaire;
+exports.setupQuestionnaireStateLabel = setupQuestionnaireStateLabel;
+const setup_configuration_clone_policy_1 = __nccwpck_require__(85881);
+const setup_configuration_defaults_1 = __nccwpck_require__(23381);
+const AGENT_PROVIDERS = ['codex', 'opencode', 'cursor'];
+const MODEL_PROVIDERS = ['openai', 'anthropic', 'google', 'openrouter', 'opencode', 'local'];
+function createSetupQuestionnaire(configuration, context = {}) {
+    const draft = (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(configuration);
+    const question = questions(draft, false, context)[0];
+    return { stateId: question.stateId, draft, question, terminal: 'collecting', configureIndependently: false };
+}
+function createSetupReviewState(configuration) {
+    return {
+        stateId: 'review',
+        draft: (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(configuration),
+        terminal: 'review',
+        configureIndependently: false,
+    };
+}
+function transitionSetupQuestionnaire(state, event, context = {}) {
+    if (state.terminal !== 'collecting' || !state.question)
+        return state;
+    if (event.kind === 'cancel' || event.kind === 'end-of-input') {
+        return {
+            stateId: 'cancelled',
+            draft: (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(state.draft),
+            terminal: 'cancelled',
+            configureIndependently: state.configureIndependently,
+        };
+    }
+    const parsed = parseAnswer(state.question, event.value);
+    if ('error' in parsed) {
+        return {
+            ...state,
+            draft: (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(state.draft),
+            validation: parsed.error,
+        };
+    }
+    const configureIndependently = state.question.id === 'agents.configureIndependently'
+        ? Boolean(parsed.value)
+        : state.configureIndependently;
+    const draft = applyAnswer(state.draft, state.question, parsed.value);
+    const nextQuestions = questions(draft, configureIndependently, context);
+    const nextIndex = nextQuestions.findIndex((question) => question.id === state.question?.id);
+    const next = nextQuestions[nextIndex + 1];
+    return next
+        ? {
+            stateId: next.stateId,
+            draft,
+            question: next,
+            terminal: 'collecting',
+            configureIndependently,
+        }
+        : { stateId: 'review', draft, terminal: 'review', configureIndependently };
+}
+function enterSetupConfirmation(state) {
+    if (state.terminal !== 'review')
+        throw new Error('Setup confirmation requires a reviewed questionnaire.');
+    return { ...state, stateId: 'confirmation', terminal: 'confirmation', draft: (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(state.draft) };
+}
+function finishSetupQuestionnaire(state, approved) {
+    if (state.terminal !== 'confirmation')
+        throw new Error('Setup can finish only from confirmation.');
+    return {
+        stateId: approved ? 'completed' : 'cancelled',
+        draft: (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(state.draft),
+        terminal: approved ? 'completed' : 'cancelled',
+        configureIndependently: state.configureIndependently,
+    };
+}
+function setupQuestionnaireStateLabel(stateId) {
+    return ({
+        capabilities: 'Capabilities',
+        'agent-runtime': 'Agent runtimes',
+        'agent-model-defaults': 'Default agent model',
+        'agent-role-overrides': 'Per-role agent models',
+        repository: 'Repository behavior',
+        deployment: 'Release and hotfix orchestration',
+        bugbot: 'Bugbot and AI',
+        projects: 'Projects',
+        provisioning: 'Provisioning',
+        storage: 'GitHub Actions resource storage',
+        review: 'Review',
+        confirmation: 'Confirmation',
+        completed: 'Completed',
+        cancelled: 'Cancelled',
+    })[stateId];
+}
+function questions(draft, independently, context) {
+    return definitions().filter((definition) => definition.applies?.(draft, independently, context) ?? true)
+        .map((definition) => toQuestion(definition, draft, context));
+}
+function definitions() {
+    return [
+        ...Object.entries(setup_configuration_defaults_1.SETUP_FEATURE_DESCRIPTIONS).map(([feature, label]) => ({
+            stateId: 'capabilities', id: `features.${feature}`, label, kind: 'boolean',
+        })),
+        ...setup_configuration_defaults_1.SETUP_AGENT_TASKS.map((task) => ({
+            stateId: 'agent-runtime', id: `agents.${task}.provider`, label: `${formatTask(task)} runtime`, kind: 'choice', choices: AGENT_PROVIDERS,
+        })),
+        { stateId: 'agent-model-defaults', id: 'agents.findings.modelProvider', label: 'Model provider for all tasks', kind: 'choice', choices: MODEL_PROVIDERS },
+        { stateId: 'agent-model-defaults', id: 'agents.findings.model', label: 'Model name for all tasks', kind: 'text' },
+        { stateId: 'agent-model-defaults', id: 'agents.findings.effort', label: 'Reasoning effort for all tasks (empty uses provider default)', kind: 'text' },
+        { stateId: 'agent-model-defaults', id: 'agents.configureIndependently', label: 'Configure model provider, model, and effort independently for every task?', kind: 'boolean', read: () => false },
+        ...setup_configuration_defaults_1.SETUP_AGENT_TASKS.filter((task) => task !== 'findings').flatMap((task) => agentOverrideQuestions(task)),
+        ...repositoryQuestions(),
+        ...deploymentQuestions(),
+        ...bugbotQuestions(),
+        { stateId: 'projects', id: 'projects.ids', label: 'GitHub Project IDs (comma-separated, empty skips integration)', kind: 'text' },
+        ...['issueCreatedColumn', 'pullRequestCreatedColumn', 'issueInProgressColumn', 'pullRequestInProgressColumn'].map((field) => ({
+            stateId: 'projects', id: `projects.${field}`, label: projectLabel(field), kind: 'text', applies: (config) => Boolean(config.projects.ids.trim()),
+        })),
+        { stateId: 'provisioning', id: 'createInitialTag', label: 'Create v1.0.0 when no version tag exists?', kind: 'boolean' },
+        { stateId: 'provisioning', id: 'manageRepositoryVariables', label: 'Create/update GitHub Actions Variables?', kind: 'boolean' },
+        { stateId: 'provisioning', id: 'manageRepositorySecrets', label: 'Validate and provision required GitHub Actions Secrets?', kind: 'boolean' },
+        ...storageQuestions('variables'),
+        ...storageQuestions('secrets'),
+    ];
+}
+function agentOverrideQuestions(task) {
+    const applies = (_draft, independently) => independently;
+    return [
+        { stateId: 'agent-role-overrides', id: `agents.${task}.modelProvider`, label: `${formatTask(task)} model provider`, kind: 'choice', choices: MODEL_PROVIDERS, applies },
+        { stateId: 'agent-role-overrides', id: `agents.${task}.model`, label: `${formatTask(task)} model`, kind: 'text', applies },
+        { stateId: 'agent-role-overrides', id: `agents.${task}.effort`, label: `${formatTask(task)} effort (empty uses provider default)`, kind: 'text', applies },
+    ];
+}
+function repositoryQuestions() {
+    return [
+        ['mainBranch', 'Production branch', 'text'],
+        ['developmentBranch', 'Development branch', 'text'],
+        ['featureTree', 'Feature branch prefix', 'text'],
+        ['bugfixTree', 'Bugfix branch prefix', 'text'],
+        ['hotfixTree', 'Hotfix branch prefix', 'text'],
+        ['releaseTree', 'Release branch prefix', 'text'],
+        ['docsTree', 'Documentation branch prefix', 'text'],
+        ['choreTree', 'Chore branch prefix', 'text'],
+        ['branchManagementAlways', 'Create/manage branches without the branched label?', 'boolean'],
+        ['reopenIssueOnPush', 'Reopen closed issues when a related branch receives a push?', 'boolean'],
+        ['desiredAssigneesCount', 'Desired issue assignees (0 disables automatic assignment)', 'number'],
+        ['desiredReviewersCount', 'Desired pull-request reviewers (0 disables automatic assignment)', 'number'],
+        ['inactivityThresholdHours', 'Hours without activity before closing a waiting issue', 'number'],
+        ['issueLocale', 'Issue comment locale', 'text'],
+        ['pullRequestLocale', 'Pull-request comment locale', 'text'],
+        ['commitPrefixTransforms', 'Commit prefix transforms', 'text'],
+    ].map(([field, label, kind]) => ({ stateId: 'repository', id: `repository.${field}`, label, kind }));
+}
+function deploymentQuestions() {
+    return [
+        choice('releaseReconciliationStrategy', 'Release reconciliation strategy', ['production-lineage', 'canonical-gitflow', 'manual']),
+        choice('hotfixReconciliationStrategy', 'Hotfix reconciliation strategy', ['production-lineage', 'canonical-gitflow', 'manual']),
+        choice('reconciliationPullRequestMode', 'Managed reconciliation PR mode', ['auto', 'auto-merge', 'merge-queue', 'create-only']),
+        choice('reconciliationBackmergeMode', 'Reconciliation back-merge mode', ['auto', 'direct', 'sync-branch']),
+        choice('hotfixActiveReleasePolicy', 'Hotfix target while a release is active', ['prefer-release', 'development', 'both']),
+        { stateId: 'deployment', id: 'repository.reconciliationTree', label: 'Reconciliation branch prefix', kind: 'text' },
+        choice('reconciliationCleanup', 'Branch cleanup after reconciliation', ['all', 'source-only', 'sync-only', 'none']),
+        choice('reconciliationIssueCompletion', 'Launcher issue behavior after reconciliation', ['close', 'keep-open']),
+        choice('orchestrationPresentationMode', 'Release control-center detail', ['guided', 'compact', 'quiet']),
+        { stateId: 'deployment', id: 'repository.orchestrationDiagrams', label: 'Show accessible Mermaid release diagrams?', kind: 'boolean' },
+        choice('orchestrationCommentMode', 'Release lifecycle comment mode', ['update', 'milestones']),
+    ];
+}
+function bugbotQuestions() {
+    return [
+        { stateId: 'bugbot', id: 'ai.pullRequestDescriptionMode', label: 'Pull-request description mode', kind: 'choice', choices: ['replace', 'append', 'preserve', 'disabled'] },
+        { stateId: 'bugbot', id: 'ai.ignoreFiles', label: 'AI ignore file patterns (comma-separated)', kind: 'text' },
+        { stateId: 'bugbot', id: 'ai.membersOnly', label: 'Restrict AI processing to repository members?', kind: 'boolean' },
+        { stateId: 'bugbot', id: 'ai.includeReasoning', label: 'Include concise provider explanation metadata?', kind: 'boolean' },
+        { stateId: 'bugbot', id: 'ai.bugbotSeverity', label: 'Minimum Bugbot severity to publish', kind: 'choice', choices: ['info', 'low', 'medium', 'high'] },
+        { stateId: 'bugbot', id: 'ai.bugbotCommentLimit', label: 'Maximum Bugbot comments per run', kind: 'number' },
+        { stateId: 'bugbot', id: 'ai.bugbotFixVerifyCommands', label: 'Bugbot autofix verification commands (comma-separated)', kind: 'text' },
+        { stateId: 'bugbot', id: 'ai.bugbotDryRun', label: 'Run Bugbot in analysis-only dry-run mode?', kind: 'boolean' },
+        { stateId: 'bugbot', id: 'ai.bugbotEffort', label: 'Bugbot review effort', kind: 'choice', choices: ['smart', 'low', 'default', 'high'] },
+        { stateId: 'bugbot', id: 'ai.bugbotReviewDrafts', label: 'Review draft pull requests?', kind: 'boolean' },
+        { stateId: 'bugbot', id: 'ai.bugbotTraceRules', label: 'Include applied rule sources in review summaries?', kind: 'boolean' },
+        { stateId: 'bugbot', id: 'ai.bugbotSuggestedChanges', label: 'Publish safe inline suggested changes?', kind: 'boolean' },
+        { stateId: 'bugbot', id: 'ai.bugbotTelemetry', label: 'Emit content-free Bugbot telemetry?', kind: 'boolean' },
+        { stateId: 'bugbot', id: 'ai.bugbotFailOnUnresolved', label: 'Fail the workflow check while findings remain unresolved?', kind: 'boolean' },
+        { stateId: 'bugbot', id: 'ai.bugbotOrganizationRules', label: 'Organization Bugbot rules (newline-separated)', kind: 'text' },
+        { stateId: 'bugbot', id: 'ai.provisioningMode', label: 'Agent CLI provisioning mode', kind: 'choice', choices: ['auto', 'always', 'disabled'] },
+    ];
+}
+function storageQuestions(kind) {
+    const label = kind === 'variables' ? 'Variables' : 'Secrets';
+    return [
+        {
+            stateId: 'storage', id: `storage.${kind}.defaultScope`, label: `Default ${label} scope`, kind: 'choice', choices: ['repository', 'organization'],
+            applies: (draft) => managesResource(draft, kind),
+        },
+        {
+            stateId: 'storage', id: `storage.${kind}.organizationVisibility`, label: `Organization ${label} visibility`, kind: 'choice', choices: ['selected', 'private', 'all'],
+            applies: (draft) => managesResource(draft, kind) && storageNeedsOrganization(draft.storage[kind]),
+        },
+        {
+            stateId: 'storage', id: `storage.${kind}.preserveExisting`, label: `Preserve effective existing ${label}?`, kind: 'boolean',
+            applies: (draft) => managesResource(draft, kind),
+        },
+        {
+            stateId: 'storage', id: `storage.${kind}.overrides`, label: `Inherited ${label} to override at repository scope (comma-separated)`, kind: 'scope-overrides',
+            applies: (draft, _independent, context) => managesResource(draft, kind) && inheritedNames(kind, draft, context).length > 0,
+        },
+    ];
+}
+function choice(field, label, choices) {
+    return { stateId: 'deployment', id: `repository.${field}`, label, kind: 'choice', choices };
+}
+function toQuestion(definition, draft, context) {
+    const allowedNames = definition.kind === 'scope-overrides'
+        ? inheritedNames(definition.id.includes('.variables.') ? 'variables' : 'secrets', draft, context)
+        : undefined;
+    return {
+        stateId: definition.stateId,
+        id: definition.id,
+        label: definition.label,
+        kind: definition.kind,
+        defaultValue: definition.read?.(draft) ?? readPath(draft, definition.id, allowedNames),
+        ...(definition.choices ? { choices: definition.choices } : {}),
+        ...(allowedNames ? { allowedNames } : {}),
+    };
+}
+function readPath(configuration, path, allowedNames) {
+    const value = path.split('.').reduce((current, key) => current[key], configuration);
+    if (path.endsWith('.overrides')) {
+        const overrides = value;
+        return allowedNames.filter((name) => overrides?.[name] === 'repository').join(',');
+    }
+    return value;
+}
+function parseAnswer(question, raw) {
+    const input = raw.normalize('NFKC').trim();
+    if (!input && question.kind !== 'scope-overrides')
+        return { value: question.defaultValue };
+    if (question.kind === 'text')
+        return { value: input };
+    if (question.kind === 'number') {
+        const number = Number(input);
+        return Number.isSafeInteger(number) && number >= 0
+            ? { value: number }
+            : { error: 'Enter a non-negative whole number.' };
+    }
+    if (question.kind === 'boolean') {
+        if (['y', 'yes', 'true', '1'].includes(input.toLowerCase()))
+            return { value: true };
+        if (['n', 'no', 'false', '0'].includes(input.toLowerCase()))
+            return { value: false };
+        return { error: 'Enter yes or no.' };
+    }
+    if (question.kind === 'choice') {
+        const numeric = Number(input) - 1;
+        const choice = Number.isInteger(numeric) && question.choices?.[numeric]
+            ? question.choices[numeric]
+            : question.choices?.find((candidate) => candidate.toLowerCase() === input.toLowerCase());
+        return choice ? { value: choice } : { error: 'Select one of the listed options.' };
+    }
+    const scopeInput = input || String(question.defaultValue);
+    const requested = (scopeInput.toLowerCase() === 'none' ? '' : scopeInput)
+        .split(',')
+        .map((name) => name.trim())
+        .filter(Boolean);
+    const unknown = requested.filter((name) => !question.allowedNames?.includes(name));
+    if (unknown.length > 0)
+        return { error: `Unknown inherited resource name(s): ${unknown.join(', ')}.` };
+    return { value: Object.fromEntries(requested.map((name) => [name, 'repository'])) };
+}
+function applyAnswer(configuration, question, value) {
+    const draft = (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(configuration);
+    if (question.id === 'agents.configureIndependently')
+        return draft;
+    if (['agents.findings.modelProvider', 'agents.findings.model', 'agents.findings.effort'].includes(question.id)) {
+        const field = question.id.split('.')[2];
+        for (const task of setup_configuration_defaults_1.SETUP_AGENT_TASKS)
+            draft.agents[task] = { ...draft.agents[task], [field]: value };
+        return draft;
+    }
+    const parts = question.id.split('.');
+    let target = draft;
+    for (const part of parts.slice(0, -1))
+        target = target[part];
+    target[parts.at(-1)] = question.kind === 'scope-overrides'
+        ? replaceInheritedOverrides(target[parts.at(-1)], question.allowedNames, value)
+        : value;
+    return draft;
+}
+function inheritedNames(kind, draft, context) {
+    const remote = context.remote;
+    if (!remote || draft.storage[kind].defaultScope !== 'repository')
+        return [];
+    const organization = kind === 'secrets'
+        ? remote.organizationSecrets
+        : remote.organizationVariables.map((variable) => variable.name);
+    const repository = new Set(kind === 'secrets'
+        ? remote.repositorySecrets
+        : remote.repositoryVariables.map((variable) => variable.name));
+    const configuredNames = kind === 'secrets' ? context.secretNames : context.variableNames;
+    const configured = new Set(configuredNames ?? organization);
+    return organization.filter((name) => configured.has(name) && !repository.has(name)).sort();
+}
+function replaceInheritedOverrides(current, inherited, requested) {
+    const inheritedNames = new Set(inherited);
+    return {
+        ...Object.fromEntries(Object.entries(current).filter(([name]) => !inheritedNames.has(name))),
+        ...requested,
+    };
+}
+function storageNeedsOrganization(policy) {
+    return policy.defaultScope === 'organization' || Object.values(policy.overrides).includes('organization');
+}
+function managesResource(configuration, kind) {
+    return kind === 'variables' ? configuration.manageRepositoryVariables : configuration.manageRepositorySecrets;
+}
+function formatTask(task) {
+    return task.charAt(0).toUpperCase() + task.slice(1);
+}
+function projectLabel(field) {
+    return {
+        issueCreatedColumn: 'Project column for new issues',
+        pullRequestCreatedColumn: 'Project column for new pull requests',
+        issueInProgressColumn: 'Project column for issues in progress',
+        pullRequestInProgressColumn: 'Project column for pull requests in progress',
+    }[field];
 }
 
 
@@ -60101,151 +60535,306 @@ function logPullRequestState(param) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupDoctorUseCase = void 0;
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
+const setup_doctor_report_policy_1 = __nccwpck_require__(67615);
+const bounded_concurrency_policy_1 = __nccwpck_require__(35596);
 class SetupDoctorUseCase {
-    constructor(validation, secrets, variables, workspace, output, remoteHealth, remoteConfigurationReader, mergeQueueReadiness) {
-        this.validation = validation;
-        this.secrets = secrets;
-        this.variables = variables;
-        this.workspace = workspace;
-        this.output = output;
-        this.remoteHealth = remoteHealth;
-        this.remoteConfigurationReader = remoteConfigurationReader;
-        this.mergeQueueReadiness = mergeQueueReadiness;
+    constructor(dependencies) {
+        this.dependencies = dependencies;
     }
     async execute(request) {
-        const checks = [];
-        const pat = await this.validation.validateSetupPat(request.owner, request.repository, request.setupToken);
-        checks.push({ area: 'Setup PAT', status: pat.status === 'valid' ? 'pass' : 'fail', message: pat.message });
-        if (pat.status !== 'valid') {
-            this.output.showDoctorChecks(checks);
-            return false;
+        const configurationErrors = (0, setup_configuration_policy_1.validateSetupConfiguration)(request.configuration);
+        const checks = [
+            configurationCheck(configurationErrors),
+            repositoryRootCheck(this.dependencies.workspace),
+            ...workflowChecks(request.configuration, configurationErrors, this.dependencies.workspace),
+        ];
+        const pat = await this.validatePat(request);
+        checks.push(pat);
+        if (pat.status !== 'pass') {
+            checks.push(...skippedRemoteChecks(request.configuration, pat.id));
+            return (0, setup_doctor_report_policy_1.buildDoctorReport)(checks);
         }
-        if (this.mergeQueueReadiness) {
-            checks.push(...await this.mergeQueueReadiness.inspect({
-                owner: request.owner,
-                repository: request.repository,
-                token: request.setupToken,
-                configuration: request.configuration,
-            }));
-        }
-        const comparisons = this.workspace.compareWorkflows?.(request.configuration.features) ?? [];
-        for (const comparison of comparisons) {
-            checks.push({
-                area: `Workflow ${comparison.file}`,
-                status: comparison.status === 'unchanged' ? 'pass' : 'fail',
-                message: comparison.status === 'unchanged' ? 'Matches the installed setup template.' : `Local workflow is ${comparison.status}.`,
-            });
-        }
-        let remoteConfiguration;
-        if (this.remoteConfigurationReader) {
-            try {
-                remoteConfiguration = await this.remoteConfigurationReader.inspect(request.owner, request.repository, request.setupToken);
-            }
-            catch (error) {
-                const message = `Could not inspect GitHub Actions resource scopes: ${error instanceof Error ? error.message : String(error)}`;
-                checks.push({
-                    area: 'GitHub Actions scopes',
-                    status: (0, setup_configuration_policy_1.usesOrganizationStorage)(request.configuration) ? 'fail' : 'warn',
-                    message,
-                });
-            }
-        }
-        const requiredVariables = (0, setup_configuration_policy_1.buildSetupRepositoryVariables)(request.configuration);
-        const remoteVariables = remoteConfiguration?.repositoryVariables
-            ?? await this.variables.listVariables(request.owner, request.repository, request.setupToken);
-        const remoteVariableMap = new Map(remoteVariables.map(variable => [variable.name, { value: variable.value, source: 'repository' }]));
-        if (remoteConfiguration) {
-            for (const variable of remoteConfiguration.organizationVariables) {
-                if (!remoteVariableMap.has(variable.name)) {
-                    remoteVariableMap.set(variable.name, { value: variable.value, source: 'organization' });
+        const remote = await (0, bounded_concurrency_policy_1.runWithConcurrencyLimit)([
+            async () => {
+                try {
+                    return {
+                        kind: 'configuration',
+                        value: await this.dependencies.remoteConfiguration.inspect(request.owner, request.repository, request.setupToken),
+                    };
                 }
-            }
+                catch {
+                    return { kind: 'configuration-error' };
+                }
+            },
+            async () => {
+                if (configurationErrors.length > 0) {
+                    return {
+                        kind: 'merge-queue',
+                        value: [(0, setup_doctor_report_policy_1.skippedDoctorCheck)('github.merge-queue', ['configuration.valid'], 'Merge-queue readiness was not inspected because setup configuration is invalid.', 'Fix the reported configuration errors, then run doctor again.')],
+                    };
+                }
+                try {
+                    return {
+                        kind: 'merge-queue',
+                        value: await this.dependencies.mergeQueueReadiness.inspect({
+                            owner: request.owner,
+                            repository: request.repository,
+                            token: request.setupToken,
+                            configuration: request.configuration,
+                        }),
+                    };
+                }
+                catch {
+                    return { kind: 'merge-queue-error' };
+                }
+            },
+        ], 4);
+        const remoteConfiguration = remote.find((result) => result.kind === 'configuration')?.value;
+        const mergeQueueChecks = remote.find((result) => result.kind === 'merge-queue')?.value ?? [(0, setup_doctor_report_policy_1.doctorCheck)({
+                id: 'github.merge-queue',
+                status: 'fail',
+                summary: 'Merge-queue readiness could not be inspected.',
+                action: 'Check branch policy access and run doctor again.',
+            })];
+        if (!remoteConfiguration) {
+            checks.push(remoteScopeFailure(request.configuration));
+            checks.push(...mergeQueueChecks, ...skippedResourceChecks(request.configuration, 'github.resource-scopes'));
+            return (0, setup_doctor_report_policy_1.buildDoctorReport)(checks);
         }
-        for (const variable of requiredVariables) {
-            const remoteVariable = remoteVariableMap.get(variable.name);
-            const value = remoteVariable?.value;
-            const state = (0, setup_configuration_policy_1.setupResourceExists)(remoteConfiguration, 'variable', variable.name);
-            const policy = (0, setup_configuration_policy_1.getSetupResourceStoragePolicy)(request.configuration, 'variable');
-            const preserveExisting = state.effective !== undefined
-                && state.effective !== (0, setup_configuration_policy_1.resolveSetupResourceScope)(policy, variable.name)
-                && !Object.prototype.hasOwnProperty.call(policy.overrides, variable.name)
-                && policy.preserveExisting;
-            const sourceMessage = remoteVariable?.source === 'organization'
-                ? ' Variable is inherited from the organization scope.'
-                : remoteVariable
-                    ? ' Variable is configured at repository scope.'
-                    : '';
-            const matches = value === variable.value;
-            checks.push({
-                area: `Variable ${variable.name}`,
-                status: value === undefined ? 'fail' : matches ? 'pass' : preserveExisting ? 'warn' : 'fail',
-                message: value === undefined
-                    ? 'Variable is missing.'
-                    : matches
-                        ? `Variable is configured.${sourceMessage}`
-                        : preserveExisting
-                            ? `Variable differs from the selected setup configuration but is preserved at ${remoteVariable?.source} scope.`
-                            : 'Variable exists but differs from the selected setup configuration.',
+        checks.push(resourceScopeCheck(request.configuration, remoteConfiguration));
+        checks.push(...mergeQueueChecks);
+        checks.push(...variableChecks(request.configuration, remoteConfiguration));
+        checks.push(secretNamesCheck(remoteConfiguration));
+        checks.push(...await this.credentialChecks(request, remoteConfiguration));
+        return (0, setup_doctor_report_policy_1.buildDoctorReport)(checks);
+    }
+    async validatePat(request) {
+        try {
+            const result = await this.dependencies.validation.validateSetupPat(request.owner, request.repository, request.setupToken);
+            return (0, setup_doctor_report_policy_1.doctorCheck)({
+                id: 'credentials.setup-pat',
+                status: result.status === 'valid' ? 'pass' : 'fail',
+                summary: result.message,
+                ...(result.status === 'valid' ? {} : { action: 'Replace the setup PAT and run doctor again.' }),
+                evidence: {
+                    credential: 'SETUP_PAT',
+                    ...(result.account ? { account: result.account } : {}),
+                },
             });
         }
-        const repositorySecretNames = remoteConfiguration?.repositorySecrets
-            ?? await this.secrets.list(request.owner, request.repository, request.setupToken);
-        const remoteSecrets = new Set(repositorySecretNames);
-        if (remoteConfiguration) {
-            for (const secret of remoteConfiguration.organizationSecrets)
-                remoteSecrets.add(secret);
+        catch {
+            return (0, setup_doctor_report_policy_1.doctorCheck)({
+                id: 'credentials.setup-pat',
+                status: 'fail',
+                summary: 'The setup PAT could not be validated.',
+                action: 'Check the setup PAT and network access, then run doctor again.',
+                evidence: { credential: 'SETUP_PAT' },
+            });
         }
+    }
+    async credentialChecks(request, remote) {
         const requirements = (0, setup_configuration_policy_1.buildSetupCredentialRequirements)(request.configuration);
-        const remoteHealth = this.remoteHealth
-            ? await this.remoteHealth.validateExisting(request.owner, request.repository, request.setupToken, request.configuration.repository.mainBranch, requirements.filter(requirement => remoteSecrets.has(requirement.name)))
-            : undefined;
-        const remoteHealthByName = new Map((remoteHealth ?? []).map(check => [check.name, check]));
-        const reportedGroups = new Set();
-        for (const requirement of requirements) {
-            const alternativeGroup = requirement.alternativeGroups?.[0];
-            if (alternativeGroup) {
-                if (reportedGroups.has(alternativeGroup))
-                    continue;
-                reportedGroups.add(alternativeGroup);
-                const groupRequirements = requirements.filter(candidate => candidate.alternativeGroups?.includes(alternativeGroup));
-                const available = groupRequirements.filter(candidate => remoteSecrets.has(candidate.name));
-                const runnerAuthenticationAllowed = groupRequirements.some(candidate => candidate.runnerAuthenticationGroups?.includes(alternativeGroup));
-                const healthy = available.some(candidate => remoteHealthByName.get(candidate.name)?.status === 'valid');
-                const invalid = available.length > 0 && available.every(candidate => remoteHealthByName.get(candidate.name)?.status === 'invalid');
-                checks.push({
-                    area: `Secrets ${groupRequirements.map(candidate => candidate.name).join(' or ')}`,
-                    status: available.length === 0
-                        ? runnerAuthenticationAllowed ? 'warn' : 'fail'
-                        : healthy ? 'pass' : invalid ? 'fail' : 'warn',
-                    message: available.length === 0
-                        ? runnerAuthenticationAllowed
-                            ? 'No fallback Secret is configured; the target runner must pass the Codex login preflight.'
-                            : 'At least one alternative credential is missing.'
-                        : healthy
-                            ? 'At least one alternative credential is valid.'
-                            : invalid
-                                ? 'All available alternative credentials are invalid.'
-                                : 'At least one alternative credential is present, but its remote health is unavailable.',
-                });
-                continue;
+        const remoteSecrets = new Set([...remote.repositorySecrets, ...remote.organizationSecrets]);
+        const present = requirements.filter((requirement) => remoteSecrets.has(requirement.name));
+        let health;
+        if (present.length > 0) {
+            try {
+                health = await this.dependencies.remoteHealth.validateExisting(request.owner, request.repository, request.setupToken, request.configuration.repository.mainBranch, present);
             }
-            if (!remoteSecrets.has(requirement.name)) {
-                checks.push({ area: `Secret ${requirement.name}`, status: 'fail', message: 'Secret is missing.' });
-            }
-            else {
-                const health = remoteHealthByName.get(requirement.name);
-                checks.push({
-                    area: `Secret ${requirement.name}`,
-                    status: health?.status === 'valid' ? 'pass' : health?.status === 'invalid' ? 'fail' : 'warn',
-                    message: health?.message ?? 'Secret is present, but the remote credential health workflow is unavailable.',
-                });
+            catch {
+                health = undefined;
             }
         }
-        this.output.showDoctorChecks(checks);
-        return checks.every(check => check.status !== 'fail');
+        return buildCredentialChecks(requirements, remoteSecrets, health);
     }
 }
 exports.SetupDoctorUseCase = SetupDoctorUseCase;
+function configurationCheck(errors) {
+    return (0, setup_doctor_report_policy_1.doctorCheck)({
+        id: 'configuration.valid',
+        status: errors.length === 0 ? 'pass' : 'fail',
+        summary: errors.length === 0
+            ? 'Setup configuration is valid.'
+            : `Setup configuration has ${errors.length} validation error(s).`,
+        ...(errors.length === 0 ? {} : { action: 'Fix the setup configuration and run doctor again.' }),
+        evidence: { errorCount: errors.length },
+    });
+}
+function repositoryRootCheck(workspace) {
+    try {
+        const valid = workspace.isRepositoryRoot();
+        return (0, setup_doctor_report_policy_1.doctorCheck)({
+            id: 'workspace.repository-root',
+            status: valid ? 'pass' : 'fail',
+            summary: valid ? 'Current directory is the repository root.' : 'Current directory is not the repository root.',
+            ...(valid ? {} : { action: 'Run doctor from the root of the target Git repository.' }),
+        });
+    }
+    catch {
+        return (0, setup_doctor_report_policy_1.doctorCheck)({
+            id: 'workspace.repository-root',
+            status: 'fail',
+            summary: 'Repository root could not be verified.',
+            action: 'Run doctor from the root of the target Git repository.',
+        });
+    }
+}
+function workflowChecks(configuration, configurationErrors, workspace) {
+    if (configurationErrors.length > 0) {
+        return [(0, setup_doctor_report_policy_1.skippedDoctorCheck)('workflow.comparison', ['configuration.valid'], 'Workflow comparison was skipped because setup configuration is invalid.', 'Fix setup configuration, then run doctor again.')];
+    }
+    try {
+        return [...workspace.compareWorkflows(configuration.features)]
+            .sort((left, right) => left.destination.localeCompare(right.destination))
+            .map((comparison) => (0, setup_doctor_report_policy_1.doctorCheck)({
+            id: `workflow.${(0, setup_doctor_report_policy_1.normalizedDoctorPathId)(comparison.destination)}`,
+            status: comparison.status === 'unchanged' ? 'pass' : 'fail',
+            summary: comparison.status === 'unchanged'
+                ? 'Matches the installed setup template.'
+                : `Local workflow is ${comparison.status}.`,
+            ...(comparison.status === 'unchanged' ? {} : { action: 'Run setup to repair this managed workflow.' }),
+            evidence: { path: comparison.destination, state: comparison.status },
+        }));
+    }
+    catch {
+        return [(0, setup_doctor_report_policy_1.doctorCheck)({
+                id: 'workflow.comparison',
+                status: 'fail',
+                summary: 'Managed workflows could not be compared.',
+                action: 'Check local workflow files and run doctor again.',
+            })];
+    }
+}
+function remoteScopeFailure(configuration) {
+    return (0, setup_doctor_report_policy_1.doctorCheck)({
+        id: 'github.resource-scopes',
+        status: (0, setup_configuration_policy_1.usesOrganizationStorage)(configuration) ? 'fail' : 'warn',
+        summary: 'GitHub Actions resource scopes could not be inspected.',
+        action: 'Check setup PAT access to repository and organization Actions metadata, then retry.',
+    });
+}
+function resourceScopeCheck(configuration, remote) {
+    const unavailable = remote.organizationAccess === 'unavailable'
+        || remote.organizationSecretsAccess === 'unavailable'
+        || remote.organizationVariablesAccess === 'unavailable';
+    const required = (0, setup_configuration_policy_1.usesOrganizationStorage)(configuration);
+    const status = unavailable ? (required ? 'fail' : 'warn') : 'pass';
+    return (0, setup_doctor_report_policy_1.doctorCheck)({
+        id: 'github.resource-scopes',
+        status,
+        summary: status === 'pass'
+            ? 'GitHub Actions resource scopes are readable.'
+            : 'Some organization-level GitHub Actions resource scopes are unavailable.',
+        ...(status === 'pass' ? {} : { action: 'Grant the setup PAT the required organization Actions metadata access.' }),
+        evidence: {
+            ownerType: remote.ownerType,
+            repositoryVisibility: remote.repositoryVisibility,
+            organizationAccess: remote.organizationAccess,
+        },
+    });
+}
+function variableChecks(configuration, remote) {
+    const remoteVariables = new Map();
+    for (const variable of remote.organizationVariables)
+        remoteVariables.set(variable.name, { value: variable.value, source: 'organization' });
+    for (const variable of remote.repositoryVariables)
+        remoteVariables.set(variable.name, { value: variable.value, source: 'repository' });
+    return (0, setup_configuration_policy_1.buildSetupRepositoryVariables)(configuration).map((variable) => {
+        const observed = remoteVariables.get(variable.name);
+        const state = (0, setup_configuration_policy_1.setupResourceExists)(remote, 'variable', variable.name);
+        const policy = (0, setup_configuration_policy_1.getSetupResourceStoragePolicy)(configuration, 'variable');
+        const preserveExisting = state.effective !== undefined
+            && state.effective !== (0, setup_configuration_policy_1.resolveSetupResourceScope)(policy, variable.name)
+            && !Object.prototype.hasOwnProperty.call(policy.overrides, variable.name)
+            && policy.preserveExisting;
+        const matches = observed?.value === variable.value;
+        const status = !observed ? 'fail' : matches ? 'pass' : preserveExisting ? 'warn' : 'fail';
+        return (0, setup_doctor_report_policy_1.doctorCheck)({
+            id: `github.variables.${(0, setup_doctor_report_policy_1.normalizedDoctorPathId)(variable.name)}`,
+            status,
+            summary: !observed
+                ? 'Variable is missing.'
+                : matches
+                    ? `Variable is configured at ${observed.source} scope.`
+                    : preserveExisting
+                        ? `Variable differs but is intentionally preserved at ${observed.source} scope.`
+                        : 'Variable differs from the expected setup configuration.',
+            ...(status === 'pass' || status === 'warn' ? {} : { action: 'Run setup to reconcile this Variable.' }),
+            evidence: { name: variable.name, present: observed !== undefined, matches, ...(observed ? { scope: observed.source } : {}) },
+        });
+    });
+}
+function secretNamesCheck(remote) {
+    return (0, setup_doctor_report_policy_1.doctorCheck)({
+        id: 'github.secret-names',
+        status: 'pass',
+        summary: 'GitHub Actions Secret metadata is readable.',
+        evidence: {
+            repositorySecretCount: remote.repositorySecrets.length,
+            organizationSecretCount: remote.organizationSecrets.length,
+        },
+    });
+}
+function buildCredentialChecks(requirements, remoteSecrets, health) {
+    const healthByName = new Map((health ?? []).map((check) => [check.name, check]));
+    const reportedGroups = new Set();
+    const checks = [];
+    for (const requirement of requirements) {
+        const group = requirement.alternativeGroups?.[0];
+        if (group) {
+            if (reportedGroups.has(group))
+                continue;
+            reportedGroups.add(group);
+            const groupRequirements = requirements.filter((candidate) => candidate.alternativeGroups?.includes(group));
+            const available = groupRequirements.filter((candidate) => remoteSecrets.has(candidate.name));
+            const runnerAllowed = groupRequirements.some((candidate) => candidate.runnerAuthenticationGroups?.includes(group));
+            const healthy = available.some((candidate) => healthByName.get(candidate.name)?.status === 'valid');
+            const invalid = available.length > 0 && available.every((candidate) => healthByName.get(candidate.name)?.status === 'invalid');
+            const status = available.length === 0 ? (runnerAllowed ? 'warn' : 'fail') : healthy ? 'pass' : invalid ? 'fail' : 'warn';
+            checks.push((0, setup_doctor_report_policy_1.doctorCheck)({
+                id: `credential.${(0, setup_doctor_report_policy_1.normalizedDoctorPathId)(group)}`,
+                status,
+                summary: available.length === 0
+                    ? runnerAllowed
+                        ? 'No fallback Secret is configured; runner authentication must satisfy this group.'
+                        : 'No alternative credential is present.'
+                    : healthy
+                        ? 'At least one alternative credential is healthy.'
+                        : invalid
+                            ? 'Every available alternative credential is invalid.'
+                            : 'An alternative credential is present, but remote health is unavailable.',
+                ...(status === 'pass' ? {} : { action: 'Configure and validate one credential for this requirement group.' }),
+                evidence: { group, availableCount: available.length, runnerAuthenticationAllowed: runnerAllowed },
+            }));
+            continue;
+        }
+        const present = remoteSecrets.has(requirement.name);
+        const check = healthByName.get(requirement.name);
+        const status = !present ? 'fail' : check?.status === 'valid' ? 'pass' : check?.status === 'invalid' ? 'fail' : 'warn';
+        checks.push((0, setup_doctor_report_policy_1.doctorCheck)({
+            id: `credential.${(0, setup_doctor_report_policy_1.normalizedDoctorPathId)(requirement.name)}`,
+            status,
+            summary: !present ? 'Required Secret is missing.' : check?.message ?? 'Secret is present, but remote health is unavailable.',
+            ...(status === 'pass' ? {} : { action: `Configure or replace ${requirement.name}, then rerun credential health.` }),
+            evidence: { name: requirement.name, present },
+        }));
+    }
+    return checks;
+}
+function skippedRemoteChecks(configuration, blocker) {
+    return [
+        (0, setup_doctor_report_policy_1.skippedDoctorCheck)('github.resource-scopes', [blocker], 'Resource-scope inspection requires a valid setup PAT.', 'Replace the setup PAT.'),
+        (0, setup_doctor_report_policy_1.skippedDoctorCheck)('github.merge-queue', [blocker], 'Merge-queue inspection requires a valid setup PAT.', 'Replace the setup PAT.'),
+        ...skippedResourceChecks(configuration, blocker),
+    ];
+}
+function skippedResourceChecks(configuration, blocker) {
+    return [
+        (0, setup_doctor_report_policy_1.skippedDoctorCheck)('github.variables', [blocker], 'Variable checks could not run.', 'Resolve the blocking check and rerun doctor.'),
+        (0, setup_doctor_report_policy_1.skippedDoctorCheck)('github.secret-names', [blocker], 'Secret metadata checks could not run.', 'Resolve the blocking check and rerun doctor.'),
+        ...(0, setup_configuration_policy_1.buildSetupCredentialRequirements)(configuration).map((requirement) => (0, setup_doctor_report_policy_1.skippedDoctorCheck)(`credential.${(0, setup_doctor_report_policy_1.normalizedDoctorPathId)(requirement.alternativeGroups?.[0] ?? requirement.name)}`, [blocker], 'Credential health could not run.', 'Resolve the blocking check and rerun doctor.')).filter((check, index, all) => all.findIndex((candidate) => candidate.id === check.id) === index),
+    ];
+}
 
 
 /***/ }),
@@ -60256,9 +60845,11 @@ exports.SetupDoctorUseCase = SetupDoctorUseCase;
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.SetupCredentialsUseCase = exports.SetupWizardUseCase = void 0;
+exports.SetupCredentialsUseCase = exports.SetupQuestionnaireController = exports.SetupWizardUseCase = void 0;
 var setup_wizard_use_case_1 = __nccwpck_require__(43433);
 Object.defineProperty(exports, "SetupWizardUseCase", ({ enumerable: true, get: function () { return setup_wizard_use_case_1.SetupWizardUseCase; } }));
+var setup_questionnaire_controller_1 = __nccwpck_require__(41644);
+Object.defineProperty(exports, "SetupQuestionnaireController", ({ enumerable: true, get: function () { return setup_questionnaire_controller_1.SetupQuestionnaireController; } }));
 var setup_credentials_use_case_1 = __nccwpck_require__(67438);
 Object.defineProperty(exports, "SetupCredentialsUseCase", ({ enumerable: true, get: function () { return setup_credentials_use_case_1.SetupCredentialsUseCase; } }));
 
@@ -60275,6 +60866,7 @@ exports.SetupMergeQueueReadinessUseCase = void 0;
 const deployment_plan_policy_1 = __nccwpck_require__(8352);
 const merge_queue_readiness_1 = __nccwpck_require__(12515);
 const sensitive_text_1 = __nccwpck_require__(47122);
+const setup_doctor_report_policy_1 = __nccwpck_require__(67615);
 class SetupMergeQueueReadinessUseCase {
     constructor(targets) {
         this.targets = targets;
@@ -60290,7 +60882,7 @@ class SetupMergeQueueReadinessUseCase {
         ]);
         const observedCheckIdentities = new Set();
         const targetChecks = await Promise.all(targets.map(async (target) => {
-            const area = `Merge queue readiness · ${target.role} (${target.branch})`;
+            const id = `github.merge-queue.${target.role}`;
             try {
                 const capabilities = await this.targets.getTargetCapabilities(request.owner, request.repository, target.branch, request.token);
                 const decision = (0, deployment_plan_policy_1.selectPullRequestMode)(configuredMode, capabilities);
@@ -60301,7 +60893,13 @@ class SetupMergeQueueReadinessUseCase {
                 }
                 if (decision.kind === "unsupported") {
                     if (capabilities.mergeQueueObservationProblems.length === 0) {
-                        return [{ area, status: "fail", message: decision.reason }];
+                        return [(0, setup_doctor_report_policy_1.doctorCheck)({
+                                id,
+                                status: "fail",
+                                summary: decision.reason,
+                                action: "Configure a supported merge-queue producer or choose another reconciliation mode.",
+                                evidence: { targetRole: target.role, targetBranch: target.branch },
+                            })];
                     }
                     const readiness = (0, merge_queue_readiness_1.evaluateMergeQueueReadiness)({
                         queueRequired: true,
@@ -60311,20 +60909,23 @@ class SetupMergeQueueReadinessUseCase {
                         problems: capabilities.mergeQueueObservationProblems,
                         attestations: request.configuration.repository.mergeQueueCheckAttestations,
                     });
-                    return [{
-                            area,
+                    return [(0, setup_doctor_report_policy_1.doctorCheck)({
+                            id,
                             status: "fail",
-                            message: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, request.configuration.repository.issueLocale),
-                        }, ...producerChecks(readiness.producers, target.role, spanish)];
+                            summary: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, request.configuration.repository.issueLocale),
+                            action: "Repair or attest every required merge-queue producer.",
+                            evidence: { targetRole: target.role, targetBranch: target.branch },
+                        }), ...producerChecks(readiness.producers, target.role, spanish)];
                 }
                 if (decision.mode !== "merge-queue") {
-                    return [{
-                            area,
+                    return [(0, setup_doctor_report_policy_1.doctorCheck)({
+                            id,
                             status: "pass",
-                            message: spanish
+                            summary: spanish
                                 ? `El modo seleccionado es ${decision.mode}; este destino no necesita evidencia de productores de merge queue.`
                                 : `Selected mode is ${decision.mode}; merge-queue producer evidence is not required for this target.`,
-                        }];
+                            evidence: { targetRole: target.role, targetBranch: target.branch, selectedMode: decision.mode },
+                        })];
                 }
                 const readiness = (0, merge_queue_readiness_1.evaluateMergeQueueReadiness)({
                     queueRequired: capabilities.mergeQueueRequired,
@@ -60335,49 +60936,57 @@ class SetupMergeQueueReadinessUseCase {
                     attestations: request.configuration.repository.mergeQueueCheckAttestations,
                 });
                 if (readiness.verdict !== "ready") {
-                    return [{
-                            area,
+                    return [(0, setup_doctor_report_policy_1.doctorCheck)({
+                            id,
                             status: "fail",
-                            message: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, request.configuration.repository.issueLocale),
-                        }, ...producerChecks(readiness.producers, target.role, spanish)];
+                            summary: (0, deployment_plan_policy_1.mergeQueueReadinessFailureMessage)(readiness, request.configuration.repository.issueLocale),
+                            action: "Repair or attest every required merge-queue producer.",
+                            evidence: { targetRole: target.role, targetBranch: target.branch },
+                        }), ...producerChecks(readiness.producers, target.role, spanish)];
                 }
                 const verified = readiness.producers.filter((producer) => producer.verdict === "verified").length;
                 const attested = readiness.producers.filter((producer) => producer.verdict === "attested").length;
-                return [{
-                        area,
+                return [(0, setup_doctor_report_policy_1.doctorCheck)({
+                        id,
                         status: "pass",
-                        message: spanish
+                        summary: spanish
                             ? `Listo. ${verified} productor(es) requerido(s) verificados automáticamente y ${attested} cubiertos por atestación exacta.`
                             : `Ready. ${verified} required producer(s) verified automatically and ${attested} covered by exact attestation.`,
-                    }, ...producerChecks(readiness.producers, target.role, spanish)];
+                        evidence: { targetRole: target.role, targetBranch: target.branch, verified, attested },
+                    }), ...producerChecks(readiness.producers, target.role, spanish)];
             }
             catch (error) {
-                return [{
-                        area,
+                return [(0, setup_doctor_report_policy_1.doctorCheck)({
+                        id,
                         status: "fail",
-                        message: `Target policy could not be inspected: ${safeError(error)}`,
-                    }];
+                        summary: `Target policy could not be inspected: ${safeError(error)}`,
+                        action: "Check the setup PAT permissions and target branch policy, then retry.",
+                        evidence: { targetRole: target.role, targetBranch: target.branch },
+                    })];
             }
         }));
         const checks = targetChecks.flat();
         if (request.configuration.features.hotfix !== false && configuredMode !== "create-only") {
-            checks.push({
-                area: "Merge queue readiness · active release",
+            checks.push((0, setup_doctor_report_policy_1.doctorCheck)({
+                id: "github.merge-queue.active-release",
                 status: "warn",
-                message: spanish
+                summary: spanish
                     ? "Las ramas de release activas se descubren dinámicamente y se revalidan antes de crear una rama o PR de reconciliación de hotfix."
                     : "Active release branches are discovered dynamically and are revalidated before a hotfix reconciliation branch or PR is created.",
-            });
+                evidence: { dynamicTarget: true },
+            }));
         }
         for (const attestation of request.configuration.repository.mergeQueueCheckAttestations) {
             if (!observedCheckIdentities.has(`${attestation.context}\0${attestation.integrationId}`)) {
-                checks.push({
-                    area: `Merge queue attestation · ${attestation.context}`,
+                checks.push((0, setup_doctor_report_policy_1.doctorCheck)({
+                    id: `github.merge-queue.attestation.${(0, setup_doctor_report_policy_1.normalizedDoctorPathId)(`${attestation.context}-${attestation.integrationId}`)}`,
                     status: "warn",
-                    message: spanish
+                    summary: spanish
                         ? "Esta atestación exacta no coincide con ningún check requerido observado en producción o desarrollo."
                         : "This exact attestation does not match a required check observed on production or development.",
-                });
+                    action: "Remove the stale attestation or correct its exact check identity.",
+                    evidence: { context: attestation.context, integrationId: String(attestation.integrationId) },
+                }));
             }
         }
         return checks;
@@ -60385,10 +60994,14 @@ class SetupMergeQueueReadinessUseCase {
 }
 exports.SetupMergeQueueReadinessUseCase = SetupMergeQueueReadinessUseCase;
 function producerChecks(producers, role, spanish) {
-    return producers.map((producer) => ({
-        area: `Required producer · ${role} · ${producer.name}`,
+    return producers.map((producer) => (0, setup_doctor_report_policy_1.doctorCheck)({
+        id: `github.merge-queue.${role}.producer.${(0, setup_doctor_report_policy_1.normalizedDoctorPathId)(`${producer.name}-${producer.integrationId ?? 'workflow'}`)}`,
         status: producer.verdict === "verified" || producer.verdict === "attested" ? "pass" : "fail",
-        message: `${producer.verdict}: ${safeError(producer.reason)}${spanish && producer.verdict === "attested" ? " (atestación exacta revisada)" : ""}`,
+        summary: `${producer.verdict}: ${safeError(producer.reason)}${spanish && producer.verdict === "attested" ? " (atestación exacta revisada)" : ""}`,
+        ...(producer.verdict === "verified" || producer.verdict === "attested"
+            ? {}
+            : { action: "Configure or exactly attest this required producer." }),
+        evidence: { targetRole: role, producer: producer.name, verdict: producer.verdict },
     }));
 }
 function uniqueTargets(targets) {
@@ -60564,6 +61177,50 @@ function isAcceptedCredentialCheck(requirement, check) {
 
 /***/ }),
 
+/***/ 41644:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupQuestionnaireController = void 0;
+const setup_questionnaire_policy_1 = __nccwpck_require__(6009);
+const application_error_1 = __nccwpck_require__(75999);
+class SetupQuestionnaireController {
+    constructor(terminal, renderer) {
+        this.terminal = terminal;
+        this.renderer = renderer;
+    }
+    async collect(initial, context) {
+        if (!this.terminal.isInteractive()) {
+            throw new application_error_1.ApplicationError('configuration.invalid', 'Interactive setup requires an interactive terminal. Use --non-interactive with explicit configuration.');
+        }
+        this.renderer.showIntroduction();
+        let state = initial;
+        let visibleState;
+        while (state.terminal === 'collecting' && state.question) {
+            if (visibleState !== state.stateId) {
+                this.renderer.showState(state.stateId);
+                visibleState = state.stateId;
+            }
+            if (state.validation)
+                this.renderer.showValidation(state.validation);
+            const input = await this.terminal.readText(this.renderer.renderPrompt(state.question));
+            state = (0, setup_questionnaire_policy_1.transitionSetupQuestionnaire)(state, toEvent(input), context);
+        }
+        if (state.terminal === 'cancelled')
+            this.renderer.showCancelled();
+        return state;
+    }
+}
+exports.SetupQuestionnaireController = SetupQuestionnaireController;
+function toEvent(input) {
+    return input.kind === 'value' ? { kind: 'answer', value: input.value } : input;
+}
+
+
+/***/ }),
+
 /***/ 43433:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -60573,45 +61230,47 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.SetupWizardUseCase = void 0;
 const application_error_1 = __nccwpck_require__(75999);
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
+const setup_questionnaire_policy_1 = __nccwpck_require__(6009);
+const setup_configuration_clone_policy_1 = __nccwpck_require__(85881);
 class SetupWizardUseCase {
-    constructor(prompt, remoteConfigurationReader, storagePrompt, mergeQueueReadiness) {
-        this.prompt = prompt;
-        this.remoteConfigurationReader = remoteConfigurationReader;
-        this.storagePrompt = storagePrompt;
-        this.mergeQueueReadiness = mergeQueueReadiness;
+    constructor(dependencies) {
+        this.dependencies = dependencies;
     }
-    async collect(request = {}) {
-        this.lastRemoteConfiguration = undefined;
+    async execute(request) {
         const defaults = (0, setup_configuration_policy_1.mergeSetupConfiguration)((0, setup_configuration_policy_1.createDefaultSetupConfiguration)(), {
             ...request.overrides,
             ...(request.skipRepositoryVariables ? { manageRepositoryVariables: false } : {}),
             ...(request.skipRepositorySecrets ? { manageRepositorySecrets: false } : {}),
         });
-        const collected = await this.prompt.collect(defaults);
-        let configuration = {
-            ...collected,
-            ...(request.skipRepositoryVariables ? { manageRepositoryVariables: false } : {}),
-            ...(request.skipRepositorySecrets ? { manageRepositorySecrets: false } : {}),
+        const remoteConfiguration = request.remoteTarget && this.dependencies.remoteConfiguration
+            ? await this.dependencies.remoteConfiguration.inspect(request.remoteTarget.owner, request.remoteTarget.repository, request.remoteTarget.token)
+            : undefined;
+        const context = {
+            ...(remoteConfiguration ? { remote: remoteConfiguration } : {}),
+            variableNames: (0, setup_configuration_policy_1.buildSetupRepositoryVariables)(defaults).map((variable) => variable.name),
+            secretNames: (0, setup_configuration_policy_1.buildSetupCredentialRequirements)(defaults).map((requirement) => requirement.name),
         };
-        if (request.remoteTarget && this.remoteConfigurationReader && this.storagePrompt) {
-            const remote = await this.remoteConfigurationReader.inspect(request.remoteTarget.owner, request.remoteTarget.repository, request.remoteTarget.token);
-            this.lastRemoteConfiguration = remote;
-            const storage = await this.storagePrompt.chooseStorage((0, setup_configuration_policy_1.getSetupStorageConfiguration)(configuration), remote, (0, setup_configuration_policy_1.buildSetupRepositoryVariables)(configuration), (0, setup_configuration_policy_1.buildSetupCredentialRequirements)(configuration), {
-                secrets: configuration.manageRepositorySecrets,
-                variables: configuration.manageRepositoryVariables,
-            });
-            configuration = { ...configuration, storage };
-            const remoteErrors = (0, setup_configuration_policy_1.validateSetupStorageAgainstRemote)(configuration, remote);
-            if (remoteErrors.length > 0) {
-                throw new application_error_1.ApplicationError('configuration.invalid', `Invalid remote storage configuration:\n${remoteErrors.map(error => `- ${error}`).join('\n')}`);
-            }
+        const questionnaire = request.mode === 'interactive'
+            ? await this.collectInteractive(defaults, context)
+            : (0, setup_questionnaire_policy_1.createSetupReviewState)(defaults);
+        if (questionnaire.terminal === 'cancelled') {
+            return {
+                status: 'cancelled',
+                reason: 'questionnaire-cancelled',
+                exitCode: 130,
+                ...(remoteConfiguration ? { remoteConfiguration } : {}),
+            };
         }
+        const configuration = (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(questionnaire.draft);
         const validationErrors = (0, setup_configuration_policy_1.validateSetupConfiguration)(configuration);
-        if (validationErrors.length > 0) {
-            throw new application_error_1.ApplicationError('configuration.invalid', `Invalid setup configuration:\n${validationErrors.map(error => `- ${error}`).join('\n')}`);
+        if (remoteConfiguration) {
+            validationErrors.push(...(0, setup_configuration_policy_1.validateSetupStorageAgainstRemote)(configuration, remoteConfiguration));
         }
-        const readiness = request.remoteTarget && this.mergeQueueReadiness
-            ? await this.mergeQueueReadiness.inspect({
+        if (validationErrors.length > 0) {
+            throw new application_error_1.ApplicationError('configuration.invalid', `Invalid setup configuration:\n${validationErrors.map((error) => `- ${error}`).join('\n')}`);
+        }
+        const readiness = request.remoteTarget && this.dependencies.mergeQueueReadiness
+            ? await this.dependencies.mergeQueueReadiness.inspect({
                 owner: request.remoteTarget.owner,
                 repository: request.remoteTarget.repository,
                 token: request.remoteTarget.token,
@@ -60619,19 +61278,31 @@ class SetupWizardUseCase {
             })
             : [];
         const plan = (0, setup_configuration_policy_1.buildSetupPlan)(configuration, readiness);
-        this.prompt.showPlan(plan);
-        if (!(await this.prompt.confirm(plan)))
-            return undefined;
-        return configuration;
+        this.dependencies.planPresenter.present(plan);
+        const confirmation = (0, setup_questionnaire_policy_1.enterSetupConfirmation)(questionnaire);
+        const decision = await this.dependencies.confirmation.confirm(plan);
+        const completed = (0, setup_questionnaire_policy_1.finishSetupQuestionnaire)(confirmation, decision.kind === 'approved');
+        if (completed.terminal === 'cancelled') {
+            return {
+                status: 'cancelled',
+                reason: decision.kind === 'cancelled' ? 'confirmation-cancelled' : 'confirmation-declined',
+                exitCode: decision.kind === 'cancelled' ? 130 : 0,
+                ...(remoteConfiguration ? { remoteConfiguration } : {}),
+            };
+        }
+        return {
+            status: 'completed',
+            exitCode: 0,
+            configuration: (0, setup_configuration_clone_policy_1.cloneSetupConfiguration)(completed.draft),
+            plan,
+            ...(remoteConfiguration ? { remoteConfiguration } : {}),
+        };
     }
-    plan(configuration) {
-        return (0, setup_configuration_policy_1.buildSetupPlan)(configuration);
-    }
-    remoteConfiguration() {
-        return this.lastRemoteConfiguration;
-    }
-    close() {
-        this.prompt.close();
+    collectInteractive(defaults, context) {
+        if (!this.dependencies.collector) {
+            throw new application_error_1.ApplicationError('configuration.invalid', 'Interactive setup requires a questionnaire collector.');
+        }
+        return this.dependencies.collector.collect((0, setup_questionnaire_policy_1.createSetupQuestionnaire)(defaults, context), context);
     }
 }
 exports.SetupWizardUseCase = SetupWizardUseCase;
@@ -68855,11 +69526,13 @@ exports.registerDoctorCommand = registerDoctorCommand;
 const cli_context_1 = __nccwpck_require__(21307);
 const setup_files_1 = __nccwpck_require__(59126);
 const logger_1 = __nccwpck_require__(91151);
-const setup_prompt_adapter_1 = __nccwpck_require__(82703);
 const setup_doctor_composition_root_1 = __nccwpck_require__(56360);
 const setup_config_file_1 = __nccwpck_require__(11196);
 const setup_configuration_policy_1 = __nccwpck_require__(56637);
 const application_error_1 = __nccwpck_require__(75999);
+const setup_doctor_presenter_1 = __nccwpck_require__(6296);
+const setup_terminal_driver_1 = __nccwpck_require__(5462);
+const setup_credential_prompt_adapter_1 = __nccwpck_require__(93232);
 function registerDoctorCommand(program) {
     program
         .command('doctor')
@@ -68868,8 +69541,12 @@ function registerDoctorCommand(program) {
         .option('--config <path>', 'YAML or JSON setup configuration used as the expected contract')
         .option('--non-interactive', 'Do not prompt; use --token or PERSONAL_ACCESS_TOKEN', false)
         .action(async (options) => {
-        const prompt = new setup_prompt_adapter_1.SetupPromptAdapter({ interactive: !options.nonInteractive });
+        const terminal = options.nonInteractive ? undefined : (0, setup_terminal_driver_1.createInteractiveTerminalDriver)();
+        const credentialPrompt = new setup_credential_prompt_adapter_1.SetupCredentialPromptAdapter(terminal, {});
         try {
+            if (!options.nonInteractive && !terminal) {
+                throw new Error('Interactive doctor requires a terminal. Use --non-interactive with --token.');
+            }
             const cwd = process.cwd();
             if (!(0, cli_context_1.isInsideGitRepo)(cwd))
                 throw new Error('Run "copilot doctor" from the root of a git repository.');
@@ -68878,27 +69555,33 @@ function registerDoctorCommand(program) {
                 throw new Error(gitInfo.error);
             let token = (0, setup_files_1.getSetupToken)(cwd, options.token);
             if (!token && !options.nonInteractive)
-                token = await prompt.requestSetupPat();
+                token = await credentialPrompt.requestSetupPat();
             if (!token)
                 throw new Error('A setup PAT is required. Use --token or PERSONAL_ACCESS_TOKEN. No .env file is supported.');
             const overrides = options.config ? (0, setup_config_file_1.loadSetupConfigurationOverrides)(options.config) : {};
             const expected = (0, setup_configuration_policy_1.mergeSetupConfiguration)((0, setup_configuration_policy_1.createDefaultSetupConfiguration)(), overrides);
             (0, logger_1.logInfo)(`🩺 Checking Copilot configuration for ${gitInfo.owner}/${gitInfo.repo}...`);
-            const healthy = await (0, setup_doctor_composition_root_1.createSetupDoctorUseCase)(prompt).execute({
+            const report = await (0, setup_doctor_composition_root_1.createSetupDoctorUseCase)().execute({
                 owner: gitInfo.owner,
                 repository: gitInfo.repo,
                 setupToken: token,
                 configuration: expected,
             });
-            if (!healthy)
+            new setup_doctor_presenter_1.SetupDoctorPresenter().present(report);
+            if (!report.healthy)
                 process.exitCode = 1;
         }
         catch (error) {
+            if (error instanceof setup_credential_prompt_adapter_1.SetupTerminalCancelledError) {
+                (0, logger_1.logInfo)('Doctor cancelled. No repository configuration was changed.');
+                process.exitCode = 130;
+                return;
+            }
             (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Doctor failed.'));
             process.exitCode = 1;
         }
         finally {
-            prompt.close();
+            terminal?.close();
         }
     });
 }
@@ -69039,7 +69722,7 @@ function registerReconcileCommand(program) {
         .option('--json', 'Print a machine-readable reconciliation report')
         .action((options) => runReconcileCommand(options));
 }
-function runReconcileCommand(options, workspace = new setup_workspace_adapter_1.SetupWorkspaceAdapter()) {
+function runReconcileCommand(options, workspace = new setup_workspace_adapter_1.SetupReconcileWorkspaceAdapter()) {
     const cwd = process.cwd();
     if (!(0, cli_context_1.isInsideGitRepo)(cwd))
         throw new Error('Run "copilot reconcile" from the root of a git repository.');
@@ -69048,7 +69731,7 @@ function runReconcileCommand(options, workspace = new setup_workspace_adapter_1.
         throw new Error(gitInfo.error);
     const overrides = options.config ? (0, setup_config_file_1.loadSetupConfigurationOverrides)(options.config) : {};
     const configuration = (0, setup_configuration_policy_1.mergeSetupConfiguration)((0, setup_configuration_policy_1.createDefaultSetupConfiguration)(), overrides);
-    const comparisons = [...(workspace.compareWorkflows?.(configuration.features) ?? [])];
+    const comparisons = [...workspace.compareWorkflows(configuration.features)];
     const drift = comparisons.filter(comparison => comparison.status !== 'unchanged');
     const report = {
         repository: `${gitInfo.owner}/${gitInfo.repo}`,
@@ -69098,43 +69781,10 @@ function runReconcileCommand(options, workspace = new setup_workspace_adapter_1.
 /***/ }),
 
 /***/ 32139:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.registerSetupCommand = registerSetupCommand;
 const local_action_1 = __nccwpck_require__(76102);
@@ -69150,6 +69800,12 @@ const setup_credentials_composition_root_1 = __nccwpck_require__(69084);
 const setup_doctor_composition_root_1 = __nccwpck_require__(56360);
 const setup_workspace_adapter_1 = __nccwpck_require__(5729);
 const application_error_1 = __nccwpck_require__(75999);
+const setup_terminal_driver_1 = __nccwpck_require__(5462);
+const setup_question_renderer_1 = __nccwpck_require__(89481);
+const setup_plan_presenter_1 = __nccwpck_require__(33441);
+const setup_confirmation_adapter_1 = __nccwpck_require__(5502);
+const setup_credential_prompt_adapter_1 = __nccwpck_require__(93232);
+const setup_workflow_update_prompt_adapter_1 = __nccwpck_require__(84473);
 function registerSetupCommand(program) {
     program
         .command('setup')
@@ -69174,17 +69830,19 @@ function registerSetupCommand(program) {
         .option('--workflow-pat <token>', 'Workflow PAT for the bot account (prefer the hidden interactive prompt)')
         .option('--secret <name=value>', 'Secret value for non-interactive setup; repeat for each API key', collectSecret, {})
         .action(async (options) => {
-        const { SetupPromptAdapter } = await Promise.resolve().then(() => __importStar(__nccwpck_require__(82703)));
-        const prompt = new SetupPromptAdapter({
-            interactive: !options.nonInteractive,
-            assumeYes: Boolean(options.yes || options.nonInteractive || options.dryRun),
-            credentialValues: {
-                ...(options.workflowPat ? { PAT: options.workflowPat } : {}),
-                ...options.secret,
-            },
+        const terminal = options.nonInteractive ? undefined : (0, setup_terminal_driver_1.createInteractiveTerminalDriver)();
+        const credentialPrompt = new setup_credential_prompt_adapter_1.SetupCredentialPromptAdapter(terminal, {
+            ...(options.workflowPat ? { PAT: options.workflowPat } : {}),
+            ...options.secret,
         });
+        const workflowPrompt = new setup_workflow_update_prompt_adapter_1.SetupWorkflowUpdatePromptAdapter(terminal);
         const cwd = process.cwd();
         try {
+            if (!options.nonInteractive && !terminal) {
+                (0, logger_1.logError)('Interactive setup requires a terminal. Use --non-interactive with explicit configuration.');
+                process.exitCode = 1;
+                return;
+            }
             (0, logger_1.logInfo)('🔍 Checking we are inside a git repository...');
             if (!(0, cli_context_1.isInsideGitRepo)(cwd)) {
                 (0, logger_1.logError)('❌ Not a git repository. Run "copilot setup" from the root of a git repo.');
@@ -69202,7 +69860,7 @@ function registerSetupCommand(program) {
             (0, logger_1.logInfo)(`📦 Repository: ${gitInfo.owner}/${gitInfo.repo}`);
             let token = (0, setup_files_1.getSetupToken)(cwd, options.token);
             if (!token && !options.nonInteractive && !options.dryRun)
-                token = await prompt.requestSetupPat();
+                token = await credentialPrompt.requestSetupPat();
             if (!token && !options.dryRun) {
                 (0, logger_1.logError)('🛑 Setup requires PERSONAL_ACCESS_TOKEN with a valid token.');
                 (0, logger_1.logInfo)('   You can:');
@@ -69212,23 +69870,37 @@ function registerSetupCommand(program) {
                 return;
             }
             (0, logger_1.logInfo)(options.dryRun ? '🧭 Building a dry-run setup plan...' : '🧭 Building your setup plan...');
-            const remoteConfigurationReader = typeof setup_credentials_composition_root_1.createSetupRemoteConfigurationReadPort === 'function'
-                ? (0, setup_credentials_composition_root_1.createSetupRemoteConfigurationReadPort)()
-                : undefined;
-            const wizard = new setup_1.SetupWizardUseCase(prompt, remoteConfigurationReader, prompt, (0, setup_doctor_composition_root_1.createSetupMergeQueueReadinessUseCase)());
+            const remoteConfigurationReader = (0, setup_credentials_composition_root_1.createSetupRemoteConfigurationReadPort)();
+            const wizard = new setup_1.SetupWizardUseCase({
+                ...(terminal ? {
+                    collector: new setup_1.SetupQuestionnaireController(terminal, new setup_question_renderer_1.ConsoleSetupQuestionRenderer()),
+                } : {}),
+                planPresenter: new setup_plan_presenter_1.ConsoleSetupPlanPresenter(),
+                confirmation: options.dryRun
+                    ? new setup_confirmation_adapter_1.DryRunSetupPlanConfirmation()
+                    : new setup_confirmation_adapter_1.SetupPlanConfirmationAdapter(terminal, Boolean(options.yes)),
+                remoteConfiguration: remoteConfigurationReader,
+                mergeQueueReadiness: (0, setup_doctor_composition_root_1.createSetupMergeQueueReadinessUseCase)(),
+            });
             const overrides = loadSetupOverrides(options);
-            const configuration = await wizard.collect({
+            const result = await wizard.execute({
+                mode: options.nonInteractive ? 'non-interactive' : 'interactive',
                 overrides,
                 skipRepositoryVariables: Boolean(options.skipVariables),
                 skipRepositorySecrets: Boolean(options.skipSecrets),
                 ...(token ? { remoteTarget: { owner: gitInfo.owner, repository: gitInfo.repo, token } } : {}),
             });
-            if (!configuration) {
-                (0, logger_1.logInfo)('⏭️  Setup cancelled. No changes were applied.');
+            if (result.status === 'cancelled') {
+                if (result.reason !== 'questionnaire-cancelled') {
+                    (0, logger_1.logInfo)('⏭️  Setup cancelled. No changes were applied.');
+                }
+                if (result.exitCode !== 0)
+                    process.exitCode = result.exitCode;
                 return;
             }
-            const workflowComparisons = new setup_workspace_adapter_1.SetupWorkspaceAdapter().compareWorkflows(configuration.features);
-            const updateWorkflows = await prompt.confirmWorkflowUpdates(workflowComparisons, Boolean(options.updateWorkflows));
+            const { configuration, remoteConfiguration } = result;
+            const workflowComparisons = new setup_workspace_adapter_1.SetupDoctorWorkspaceQueryAdapter().compareWorkflows(configuration.features);
+            const updateWorkflows = await workflowPrompt.confirmWorkflowUpdates(workflowComparisons, Boolean(options.updateWorkflows));
             const approvedWorkflowFiles = updateWorkflows
                 ? workflowComparisons.filter(comparison => comparison.status === 'changed').map(comparison => comparison.file)
                 : [];
@@ -69236,27 +69908,32 @@ function registerSetupCommand(program) {
                 (0, logger_1.logInfo)('✅ Dry run complete. No files or GitHub resources were changed.');
                 return;
             }
-            const credentials = await (0, setup_credentials_composition_root_1.createSetupCredentialsUseCase)(prompt).collect({
+            const credentials = await (0, setup_credentials_composition_root_1.createSetupCredentialsUseCase)(credentialPrompt).collect({
                 owner: gitInfo.owner,
                 repository: gitInfo.repo,
                 setupToken: token ?? '',
                 requirements: (0, setup_configuration_policy_1.buildSetupCredentialRequirements)(configuration),
                 manageSecrets: !options.skipSecrets && configuration.manageRepositorySecrets,
                 ref: configuration.repository.mainBranch,
-                remoteConfiguration: wizard.remoteConfiguration(),
+                remoteConfiguration,
             });
             (0, logger_1.logInfo)('⚙️  Applying the approved setup plan...');
-            const params = (0, setup_policy_1.buildSetupParams)(options, gitInfo, token ?? '', configuration, credentials.collection, approvedWorkflowFiles, wizard.remoteConfiguration());
+            const params = (0, setup_policy_1.buildSetupParams)(options, gitInfo, token ?? '', configuration, credentials.collection, approvedWorkflowFiles, remoteConfiguration);
             if (!params)
                 return;
             await (0, local_action_1.runLocalAction)(params);
         }
         catch (error) {
+            if (error instanceof setup_credential_prompt_adapter_1.SetupTerminalCancelledError) {
+                (0, logger_1.logInfo)('Setup cancelled. No changes were applied.');
+                process.exitCode = 130;
+                return;
+            }
             (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Setup failed.'));
             process.exitCode = 1;
         }
         finally {
-            prompt.close();
+            terminal?.close();
         }
     });
 }
@@ -69763,325 +70440,253 @@ function containsCredentialMaterial(value, insideStorage = false) {
 
 /***/ }),
 
-/***/ 82703:
+/***/ 5502:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.SetupPromptAdapter = void 0;
-const promises_1 = __nccwpck_require__(32887);
-const node_process_1 = __nccwpck_require__(97742);
-const setup_configuration_policy_1 = __nccwpck_require__(56637);
+exports.DryRunSetupPlanConfirmation = exports.SetupPlanConfirmationAdapter = void 0;
 const setup_prompt_rendering_1 = __nccwpck_require__(83434);
-const AGENT_PROVIDERS = ['codex', 'opencode', 'cursor'];
-const MODEL_PROVIDERS = ['openai', 'anthropic', 'google', 'openrouter', 'opencode', 'local'];
-class SetupPromptAdapter {
-    constructor(options = {}) {
-        this.interactive = Boolean((options.interactive ?? Boolean(node_process_1.stdin.isTTY && node_process_1.stdout.isTTY))
-            && node_process_1.stdin.isTTY
-            && node_process_1.stdout.isTTY
-            && !process.env.JEST_WORKER_ID);
-        this.assumeYes = options.assumeYes ?? false;
-        this.credentialValues = options.credentialValues ?? {};
-        this.readline = this.interactive ? (0, promises_1.createInterface)({ input: node_process_1.stdin, output: node_process_1.stdout }) : undefined;
-    }
-    async collect(defaults) {
-        if (!this.readline)
-            return defaults;
-        console.log((0, setup_prompt_rendering_1.renderBox)('This wizard configures repository workflows, GitHub Variables, GitHub Secrets, AI agents, and operational defaults.\n\nThe setup PAT is an operator credential used only during this command. It is different from the workflow PAT that the bot account uses at runtime.', 'Copilot Setup'));
-        console.log((0, setup_prompt_rendering_1.color)('\n1. Choose the capabilities to install\n', 36));
-        for (const [feature, description] of Object.entries(setup_configuration_policy_1.SETUP_FEATURE_DESCRIPTIONS)) {
-            defaults.features[feature] = await this.askBoolean(description, defaults.features[feature] !== false);
-        }
-        console.log((0, setup_prompt_rendering_1.color)('\n2. Choose one of the three supported agent runtimes for each task\n', 36));
-        for (const task of setup_configuration_policy_1.SETUP_AGENT_TASKS) {
-            defaults.agents[task].provider = await this.askChoice(`${(0, setup_prompt_rendering_1.formatTask)(task)} runtime`, [...AGENT_PROVIDERS], defaults.agents[task].provider);
-        }
-        const modelProvider = await this.askChoice('Model provider for all tasks', [...MODEL_PROVIDERS], defaults.agents.findings.modelProvider);
-        const model = await this.askText('Model name for all tasks', defaults.agents.findings.model);
-        const effort = await this.askText('Reasoning effort for all tasks (leave empty for provider default)', defaults.agents.findings.effort ?? '');
-        for (const task of setup_configuration_policy_1.SETUP_AGENT_TASKS) {
-            defaults.agents[task].modelProvider = modelProvider;
-            defaults.agents[task].model = model;
-            defaults.agents[task].effort = effort;
-        }
-        if (await this.askBoolean('Configure model provider, model, and effort independently for every task?', false)) {
-            for (const task of setup_configuration_policy_1.SETUP_AGENT_TASKS) {
-                defaults.agents[task].modelProvider = await this.askText(`${(0, setup_prompt_rendering_1.formatTask)(task)} model provider`, defaults.agents[task].modelProvider);
-                defaults.agents[task].model = await this.askText(`${(0, setup_prompt_rendering_1.formatTask)(task)} model`, defaults.agents[task].model);
-                defaults.agents[task].effort = await this.askText(`${(0, setup_prompt_rendering_1.formatTask)(task)} effort (empty for default)`, defaults.agents[task].effort ?? '');
-            }
-        }
-        console.log((0, setup_prompt_rendering_1.color)('\n3. Configure repository behavior\n', 36));
-        const repository = defaults.repository;
-        repository.mainBranch = await this.askText('Production branch', repository.mainBranch);
-        repository.developmentBranch = await this.askText('Development branch', repository.developmentBranch);
-        repository.featureTree = await this.askText('Feature branch prefix', repository.featureTree);
-        repository.bugfixTree = await this.askText('Bugfix branch prefix', repository.bugfixTree);
-        repository.hotfixTree = await this.askText('Hotfix branch prefix', repository.hotfixTree);
-        repository.releaseTree = await this.askText('Release branch prefix', repository.releaseTree);
-        repository.docsTree = await this.askText('Documentation branch prefix', repository.docsTree);
-        repository.choreTree = await this.askText('Chore branch prefix', repository.choreTree);
-        repository.branchManagementAlways = await this.askBoolean('Create/manage branches without requiring the branched label?', repository.branchManagementAlways);
-        repository.reopenIssueOnPush = await this.askBoolean('Reopen closed issues when a related branch receives a push?', repository.reopenIssueOnPush);
-        repository.desiredAssigneesCount = await this.askNumber('Desired issue assignees (0 disables automatic assignment)', repository.desiredAssigneesCount);
-        repository.desiredReviewersCount = await this.askNumber('Desired pull-request reviewers (0 disables automatic assignment)', repository.desiredReviewersCount);
-        repository.inactivityThresholdHours = await this.askNumber('Hours without activity before closing a waiting issue', repository.inactivityThresholdHours);
-        repository.issueLocale = await this.askText('Issue comment locale', repository.issueLocale);
-        repository.pullRequestLocale = await this.askText('Pull-request comment locale', repository.pullRequestLocale);
-        repository.commitPrefixTransforms = await this.askText('Commit prefix transforms', repository.commitPrefixTransforms);
-        repository.releaseReconciliationStrategy = await this.askChoice('Release reconciliation strategy', ['production-lineage', 'canonical-gitflow', 'manual'], repository.releaseReconciliationStrategy);
-        repository.hotfixReconciliationStrategy = await this.askChoice('Hotfix reconciliation strategy', ['production-lineage', 'canonical-gitflow', 'manual'], repository.hotfixReconciliationStrategy);
-        repository.reconciliationPullRequestMode = await this.askChoice('Managed reconciliation PR mode', ['auto', 'auto-merge', 'merge-queue', 'create-only'], repository.reconciliationPullRequestMode);
-        repository.reconciliationBackmergeMode = await this.askChoice('Reconciliation back-merge mode', ['auto', 'direct', 'sync-branch'], repository.reconciliationBackmergeMode);
-        repository.hotfixActiveReleasePolicy = await this.askChoice('Hotfix target while a release is active', ['prefer-release', 'development', 'both'], repository.hotfixActiveReleasePolicy);
-        repository.reconciliationTree = await this.askText('Reconciliation branch prefix', repository.reconciliationTree);
-        repository.reconciliationCleanup = await this.askChoice('Branch cleanup after reconciliation', ['all', 'source-only', 'sync-only', 'none'], repository.reconciliationCleanup);
-        repository.reconciliationIssueCompletion = await this.askChoice('Launcher issue behavior after reconciliation', ['close', 'keep-open'], repository.reconciliationIssueCompletion);
-        repository.orchestrationPresentationMode = await this.askChoice('Release control-center detail', ['guided', 'compact', 'quiet'], repository.orchestrationPresentationMode);
-        repository.orchestrationDiagrams = await this.askBoolean('Show accessible Mermaid release diagrams?', repository.orchestrationDiagrams);
-        repository.orchestrationCommentMode = await this.askChoice('Release lifecycle comment mode', ['update', 'milestones'], repository.orchestrationCommentMode);
-        console.log((0, setup_prompt_rendering_1.color)('\n4. Configure AI, projects, and release safety\n', 36));
-        const ai = defaults.ai;
-        ai.pullRequestDescriptionMode = await this.askChoice('Pull-request description mode', ['replace', 'append', 'preserve', 'disabled'], ai.pullRequestDescriptionMode);
-        ai.ignoreFiles = await this.askText('AI ignore file patterns (comma-separated)', ai.ignoreFiles);
-        ai.membersOnly = await this.askBoolean('Restrict AI processing to repository members?', ai.membersOnly);
-        ai.includeReasoning = await this.askBoolean('Include concise provider explanation metadata when available?', ai.includeReasoning);
-        ai.bugbotSeverity = await this.askChoice('Minimum Bugbot severity to publish', ['info', 'low', 'medium', 'high'], ai.bugbotSeverity);
-        ai.bugbotCommentLimit = await this.askNumber('Maximum Bugbot comments per run', ai.bugbotCommentLimit);
-        ai.bugbotFixVerifyCommands = await this.askText('Bugbot autofix verification commands (comma-separated, empty is allowed)', ai.bugbotFixVerifyCommands);
-        ai.bugbotDryRun = await this.askBoolean('Run Bugbot in analysis-only dry-run mode?', ai.bugbotDryRun);
-        ai.bugbotEffort = await this.askChoice('Bugbot review effort', ['smart', 'low', 'default', 'high'], ai.bugbotEffort);
-        ai.bugbotReviewDrafts = await this.askBoolean('Review draft pull requests?', ai.bugbotReviewDrafts);
-        ai.bugbotTraceRules = await this.askBoolean('Include applied rule sources in review summaries?', ai.bugbotTraceRules);
-        ai.bugbotSuggestedChanges = await this.askBoolean('Publish safe inline suggested changes?', ai.bugbotSuggestedChanges);
-        ai.bugbotTelemetry = await this.askBoolean('Emit content-free Bugbot telemetry?', ai.bugbotTelemetry);
-        ai.bugbotFailOnUnresolved = await this.askBoolean('Fail the workflow check while Bugbot findings remain unresolved?', ai.bugbotFailOnUnresolved ?? false);
-        ai.bugbotOrganizationRules = await this.askText('Organization Bugbot rules (newline-separated, empty is allowed)', ai.bugbotOrganizationRules);
-        ai.provisioningMode = await this.askChoice('Agent CLI provisioning mode', ['auto', 'always', 'disabled'], ai.provisioningMode);
-        defaults.projects.ids = await this.askText('GitHub Project IDs (comma-separated, empty to skip Projects integration)', defaults.projects.ids);
-        if (defaults.projects.ids.trim()) {
-            defaults.projects.issueCreatedColumn = await this.askText('Project column for new issues', defaults.projects.issueCreatedColumn);
-            defaults.projects.pullRequestCreatedColumn = await this.askText('Project column for new pull requests', defaults.projects.pullRequestCreatedColumn);
-            defaults.projects.issueInProgressColumn = await this.askText('Project column for issues in progress', defaults.projects.issueInProgressColumn);
-            defaults.projects.pullRequestInProgressColumn = await this.askText('Project column for pull requests in progress', defaults.projects.pullRequestInProgressColumn);
-        }
-        defaults.createInitialTag = await this.askBoolean('Create v1.0.0 when the repository has no version tags?', defaults.createInitialTag);
-        defaults.manageRepositoryVariables = await this.askBoolean('Create/update the non-sensitive GitHub Repository Variables used by the workflows?', defaults.manageRepositoryVariables);
-        defaults.manageRepositorySecrets = await this.askBoolean('Validate and provision the GitHub Secrets required by the selected workflows?', defaults.manageRepositorySecrets);
-        return defaults;
-    }
-    async chooseStorage(defaults, remote, variables, requirements, managed = { secrets: true, variables: true }) {
-        if (!this.readline)
-            return defaults;
-        console.log((0, setup_prompt_rendering_1.color)('\n5. Review GitHub Actions resource scopes\n', 36));
-        console.log((0, setup_prompt_rendering_1.renderBox)((0, setup_prompt_rendering_1.renderRemoteConfiguration)(remote, variables, requirements), 'Existing GitHub Actions resources', 33));
-        const secrets = managed.secrets
-            ? await this.chooseStoragePolicy('secrets', defaults.secrets, remote, requirements.map(requirement => requirement.name))
-            : defaults.secrets;
-        const configuredVariables = variables.map(variable => variable.name);
-        const variableNames = configuredVariables.length > 0 ? configuredVariables : [];
-        const variablesPolicy = managed.variables
-            ? await this.chooseStoragePolicy('variables', defaults.variables, remote, variableNames)
-            : defaults.variables;
-        return { secrets, variables: variablesPolicy };
-    }
-    showPlan(plan) {
-        const enabledFeatures = Object.entries(plan.configuration.features)
-            .filter(([, enabled]) => enabled)
-            .map(([feature]) => `  ${(0, setup_prompt_rendering_1.color)('✓', 32)} ${setup_configuration_policy_1.SETUP_FEATURE_DESCRIPTIONS[feature] ?? feature}`)
-            .join('\n');
-        const agents = setup_configuration_policy_1.SETUP_AGENT_TASKS
-            .map(task => `  ${(0, setup_prompt_rendering_1.formatTask)(task)}: ${plan.configuration.agents[task].provider} / ${plan.configuration.agents[task].modelProvider}/${plan.configuration.agents[task].model}`)
-            .join('\n');
-        const content = [
-            (0, setup_prompt_rendering_1.color)('Capabilities', 36), enabledFeatures || '  (none)', '',
-            (0, setup_prompt_rendering_1.color)('Agent routing', 36), agents, '',
-            (0, setup_prompt_rendering_1.color)('Repository changes', 36),
-            `  Files selected: ${plan.selectedFiles.length}`,
-            `  Variables to upsert: ${plan.configuration.manageRepositoryVariables ? plan.variables.length : 0}`,
-            `  Secret options to validate/provision: ${plan.configuration.manageRepositorySecrets ? plan.credentialRequirements.length : 0}`,
-            `  Variable storage: ${plan.configuration.storage.variables.defaultScope} scope${plan.configuration.storage.variables.defaultScope === 'organization' ? ` (${plan.configuration.storage.variables.organizationVisibility})` : ''}`,
-            `  Secret storage: ${plan.configuration.storage.secrets.defaultScope} scope${plan.configuration.storage.secrets.defaultScope === 'organization' ? ` (${plan.configuration.storage.secrets.organizationVisibility})` : ''}`,
-            `  Labels and issue types: always checked by Copilot setup`,
-            `  Initial tag: ${plan.configuration.createInitialTag ? 'v1.0.0 when no version tag exists' : 'disabled'}`, '',
-            ...(plan.mergeQueueReadiness.length > 0 ? [
-                (0, setup_prompt_rendering_1.color)('Merge queue readiness', 36),
-                ...plan.mergeQueueReadiness.map(check => `  ${(0, setup_prompt_rendering_1.doctorIcon)(check.status)} ${check.area}: ${check.message}`),
-                '',
-            ] : []),
-            (0, setup_prompt_rendering_1.color)('Strictly required Secrets', 33), `  ${plan.requiredSecrets.join(', ') || '(none)'}`,
-            ...(plan.warnings.length > 0 ? ['', (0, setup_prompt_rendering_1.color)('Important notes', 33), ...plan.warnings.map(warning => `  ⚠ ${warning}`)] : []),
-        ].join('\n');
-        console.log((0, setup_prompt_rendering_1.renderBox)(content, 'Setup Plan', 32));
+class SetupPlanConfirmationAdapter {
+    constructor(terminal, assumeYes) {
+        this.terminal = terminal;
+        this.assumeYes = assumeYes;
     }
     async confirm(plan) {
-        if (this.assumeYes || !this.readline)
-            return true;
-        return this.askBoolean(`Apply this setup plan to ${plan.configuration.manageRepositoryVariables ? 'the repository and GitHub Variables' : 'the repository'}?`, false);
+        if (this.assumeYes)
+            return { kind: 'approved' };
+        if (!this.terminal)
+            return { kind: 'declined' };
+        const target = plan.configuration.manageRepositoryVariables
+            ? 'the repository and GitHub Variables'
+            : 'the repository';
+        while (true) {
+            const result = await this.terminal.readText(`Apply this setup plan to ${target}? ${(0, setup_prompt_rendering_1.color)('[N]', 90)}: `);
+            if (result.kind !== 'value')
+                return { kind: 'cancelled' };
+            const value = result.value.normalize('NFKC').trim().toLowerCase();
+            if (!value || ['n', 'no', 'false', '0'].includes(value))
+                return { kind: 'declined' };
+            if (['y', 'yes', 'true', '1'].includes(value))
+                return { kind: 'approved' };
+            console.log((0, setup_prompt_rendering_1.color)('Enter yes or no.', 33));
+        }
+    }
+}
+exports.SetupPlanConfirmationAdapter = SetupPlanConfirmationAdapter;
+class DryRunSetupPlanConfirmation {
+    async confirm(_plan) {
+        return { kind: 'approved' };
+    }
+}
+exports.DryRunSetupPlanConfirmation = DryRunSetupPlanConfirmation;
+
+
+/***/ }),
+
+/***/ 93232:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupCredentialPromptAdapter = exports.SetupTerminalCancelledError = void 0;
+const setup_prompt_rendering_1 = __nccwpck_require__(83434);
+class SetupTerminalCancelledError extends Error {
+    constructor() {
+        super('Setup input was cancelled.');
+        this.name = 'SetupTerminalCancelledError';
+    }
+}
+exports.SetupTerminalCancelledError = SetupTerminalCancelledError;
+class SetupCredentialPromptAdapter {
+    constructor(terminal, credentialValues) {
+        this.terminal = terminal;
+        this.credentialValues = credentialValues;
     }
     async requestSetupPat() {
-        if (!this.readline)
+        if (!this.terminal)
             return undefined;
-        console.log((0, setup_prompt_rendering_1.renderBox)('Enter a GitHub setup PAT. It is used in memory for this run only and is never stored in the repository, a .env file, or a GitHub Secret.\n\nRecommended fine-grained permissions for the selected setup features:\n  Repository: Metadata read, Contents read, Issues write, Actions read/write, Variables write, Secrets read/write, Workflows read/write; Administration read when release/hotfix setup or doctor inspects classic branch protection.\n  Organization: Issue Types write and Projects read/write only when selected; Members read when member-only checks are enabled.\n  Contents write and Workflows write are needed only when changing workflow files through the GitHub API.\n\nThe workflow PAT is a different bot-account token and is requested separately.', 'Setup PAT', 33));
-        return this.askSecret('Setup PAT');
+        console.log((0, setup_prompt_rendering_1.renderBox)('Enter a GitHub setup PAT. It is used in memory for this run only and is never stored. The workflow PAT is a different bot-account token and is requested separately.', 'Setup PAT', 33));
+        return this.readSecret('Setup PAT');
     }
     explainCredentialSeparation(requirements) {
-        if (!this.readline)
+        if (!this.terminal)
             return;
-        console.log((0, setup_prompt_rendering_1.renderBox)('The workflow PAT is not the setup PAT. The workflow PAT belongs to the bot account, is stored remotely as the PAT Secret, and is used by GitHub Actions to work on issues and pull requests. Existing Secrets are never readable through GitHub; Copilot can only validate them through the repository health workflow.', 'Workflow credentials', 33));
-        console.log(`Credential options: ${requirements.map(requirement => requirement.name).join(', ')}`);
+        console.log((0, setup_prompt_rendering_1.renderBox)('The workflow PAT is not the setup PAT. Runtime credentials are stored remotely as GitHub Actions Secrets. GitHub never reveals existing Secret values; health is checked through the repository workflow.', 'Workflow credentials', 33));
+        console.log(`Credential options: ${requirements.map((requirement) => requirement.name).join(', ')}`);
     }
-    async requestWorkflowPat(requirement, current) {
+    requestWorkflowPat(requirement, current) {
         return this.requestSecretForRequirement(requirement, current, 'workflow PAT owned by the bot account');
     }
-    async requestApiKey(requirement, current) {
+    requestApiKey(requirement, current) {
         return this.requestSecretForRequirement(requirement, current, `${requirement.provider ?? 'provider'} API key`);
     }
     async chooseExistingCredential(requirement, check) {
         if (this.credentialValues[requirement.name]?.trim())
             return 'replace';
-        if (!this.readline)
+        if (!this.terminal)
             return 'keep';
         console.log(`Existing ${requirement.name}: ${check.status}. ${check.message}`);
-        return this.askChoice(`How should Copilot handle the existing ${requirement.name}?`, ['keep', 'replace', 'skip'], check.status === 'valid' ? 'keep' : 'replace');
+        return this.readChoice(`How should Copilot handle the existing ${requirement.name}?`, ['keep', 'replace', 'skip'], check.status === 'valid' ? 'keep' : 'replace');
     }
     showCredentialChecks(checks) {
         if (checks.length === 0)
             return;
-        console.log((0, setup_prompt_rendering_1.renderBox)(checks.map(check => `  ${(0, setup_prompt_rendering_1.statusIcon)(check.status)} ${check.name}: ${check.status} — ${check.message}`).join('\n'), 'Credential validation', checks.some(check => check.status === 'invalid') ? 31 : 32));
-    }
-    showDoctorChecks(checks) {
-        const content = checks.map(check => `  ${(0, setup_prompt_rendering_1.doctorIcon)(check.status)} ${check.area}: ${check.message}`).join('\n');
-        console.log((0, setup_prompt_rendering_1.renderBox)(content || '  No checks were available.', 'Copilot Doctor', checks.some(check => check.status === 'fail') ? 31 : 32));
-    }
-    async confirmWorkflowUpdates(comparisons, forcedByFlag) {
-        const changed = comparisons.filter(comparison => comparison.status === 'changed' || comparison.status === 'unmanaged');
-        if (changed.length === 0)
-            return false;
-        if (!this.readline)
-            return forcedByFlag;
-        console.log((0, setup_prompt_rendering_1.renderBox)(changed.map(comparison => `  ${comparison.status === 'changed' ? '↻' : '⚠'} ${comparison.destination} (${comparison.status})`).join('\n'), 'Existing workflows detected', 33));
-        if (forcedByFlag) {
-            console.log('The --update-workflows flag was provided; these setup-managed workflows are eligible for update.');
-            return true;
-        }
-        return this.askBoolean('Update the detected workflows with the configuration selected in this setup?', false);
-    }
-    close() {
-        this.readline?.close();
-    }
-    async askText(question, defaultValue) {
-        const answer = await this.readline.question(`${question} ${(0, setup_prompt_rendering_1.color)(`[${defaultValue || 'none'}]`, 90)}: `);
-        return answer.trim() || defaultValue;
+        console.log((0, setup_prompt_rendering_1.renderBox)(checks.map((check) => `  ${(0, setup_prompt_rendering_1.statusIcon)(check.status)} ${check.name}: ${check.status} — ${check.message}`).join('\n'), 'Credential validation', checks.some((check) => check.status === 'invalid') ? 31 : 32));
     }
     async requestSecretForRequirement(requirement, current, label) {
         const supplied = this.credentialValues[requirement.name]?.trim();
         if (supplied)
             return { name: requirement.name, value: supplied };
-        if (!this.readline)
+        if (!this.terminal)
             return undefined;
-        if (current) {
+        if (current)
             console.log(`${requirement.name}: ${current.status} (${current.message})`);
-        }
-        const value = await this.askSecret(`${requirement.name} — ${label}`);
+        const value = await this.readSecret(`${requirement.name} — ${label}`);
         return value ? { name: requirement.name, value } : undefined;
     }
-    async askSecret(question) {
-        const input = node_process_1.stdin;
-        if (!input.isTTY || !input.setRawMode) {
-            return (await this.readline.question(`${question}: `)).trim();
-        }
-        node_process_1.stdout.write(`${question}: `);
-        input.setRawMode(true);
-        input.resume();
-        return await new Promise((resolve, reject) => {
-            let value = '';
-            const onData = (chunk) => {
-                const text = chunk.toString();
-                for (const character of text) {
-                    if (character === '\u0003') {
-                        cleanup();
-                        reject(new Error('Input cancelled.'));
-                    }
-                    else if (character === '\r' || character === '\n') {
-                        cleanup();
-                        node_process_1.stdout.write('\n');
-                        resolve(value.trim());
-                    }
-                    else if (character === '\u007f') {
-                        value = value.slice(0, -1);
-                    }
-                    else {
-                        value += character;
-                    }
-                }
-            };
-            const cleanup = () => {
-                input.off('data', onData);
-                input.setRawMode?.(false);
-                input.pause();
-            };
-            input.on('data', onData);
-        });
+    async readSecret(label) {
+        const result = await this.terminal.readSecret(label);
+        if (result.kind !== 'value')
+            throw new SetupTerminalCancelledError();
+        return result.value.trim();
     }
-    async askNumber(question, defaultValue) {
+    async readChoice(label, choices, defaultValue) {
         while (true) {
-            const value = await this.askText(question, String(defaultValue));
-            const parsed = Number(value);
-            if (Number.isInteger(parsed) && parsed >= 0)
-                return parsed;
-            console.log((0, setup_prompt_rendering_1.color)('Please enter a non-negative whole number.', 33));
-        }
-    }
-    async askBoolean(question, defaultValue) {
-        const answer = await this.readline.question(`${question} ${(0, setup_prompt_rendering_1.color)(`[${defaultValue ? 'Y' : 'N'}]`, 90)}: `);
-        const normalized = answer.trim().toLowerCase();
-        if (!normalized)
-            return defaultValue;
-        return ['y', 'yes', 'true'].includes(normalized);
-    }
-    async askChoice(question, choices, defaultValue) {
-        console.log(question);
-        choices.forEach((choice, index) => console.log(`  ${index + 1}) ${choice}${choice === defaultValue ? (0, setup_prompt_rendering_1.color)(' (default)', 90) : ''}`));
-        while (true) {
-            const answer = await this.readline.question(`Select 1-${choices.length} ${(0, setup_prompt_rendering_1.color)(`[${choices.indexOf(defaultValue) + 1}]`, 90)}: `);
-            if (!answer.trim())
+            const lines = choices.map((choice, index) => `  ${index + 1}) ${choice}${choice === defaultValue ? (0, setup_prompt_rendering_1.color)(' (default)', 90) : ''}`);
+            const result = await this.terminal.readText([
+                label,
+                ...lines,
+                `Select 1-${choices.length} ${(0, setup_prompt_rendering_1.color)(`[${choices.indexOf(defaultValue) + 1}]`, 90)}: `,
+            ].join('\n'));
+            if (result.kind !== 'value')
+                throw new SetupTerminalCancelledError();
+            if (!result.value.trim())
                 return defaultValue;
-            const index = Number(answer) - 1;
+            const index = Number(result.value) - 1;
             if (Number.isInteger(index) && choices[index])
                 return choices[index];
-            console.log((0, setup_prompt_rendering_1.color)('Please select one of the listed options.', 33));
+            console.log((0, setup_prompt_rendering_1.color)('Select one of the listed options.', 33));
         }
-    }
-    async chooseStoragePolicy(kind, defaults, remote, names) {
-        const label = kind === 'secrets' ? 'Secrets' : 'Variables';
-        const defaultScope = await this.askChoice(`Where should new GitHub Actions ${label} be stored?`, ['repository', 'organization'], defaults.defaultScope);
-        const organizationVisibility = (defaultScope === 'organization' || Object.values(defaults.overrides).includes('organization'))
-            ? await this.askChoice(`How should organization ${label} be shared?`, ['selected', 'private', 'all'], defaults.organizationVisibility)
-            : defaults.organizationVisibility;
-        const preserveExisting = await this.askBoolean(`Preserve existing effective ${label} instead of creating a shadowing override?`, defaults.preserveExisting);
-        const organizationNames = kind === 'secrets'
-            ? remote.organizationSecrets
-            : remote.organizationVariables.map(variable => variable.name);
-        const repositoryNames = kind === 'secrets'
-            ? remote.repositorySecrets
-            : remote.repositoryVariables.map(variable => variable.name);
-        const inherited = names.filter(name => organizationNames.includes(name) && !repositoryNames.includes(name));
-        let overrides = { ...defaults.overrides };
-        if (inherited.length > 0 && defaultScope === 'repository') {
-            const overrideInput = await this.askText(`Organization ${label} available to this repository: ${inherited.join(', ')}. Repository override names (comma-separated, empty to inherit all)`, '');
-            const requested = new Set(overrideInput.split(',').map(name => name.trim()).filter(Boolean));
-            overrides = {
-                ...overrides,
-                ...Object.fromEntries(inherited.filter(name => requested.has(name)).map(name => [name, 'repository'])),
-            };
-        }
-        return { defaultScope, organizationVisibility, preserveExisting, overrides };
     }
 }
-exports.SetupPromptAdapter = SetupPromptAdapter;
+exports.SetupCredentialPromptAdapter = SetupCredentialPromptAdapter;
+
+
+/***/ }),
+
+/***/ 6296:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupDoctorPresenter = void 0;
+exports.renderDoctorReport = renderDoctorReport;
+exports.doctorCheckLabel = doctorCheckLabel;
+const setup_prompt_rendering_1 = __nccwpck_require__(83434);
+class SetupDoctorPresenter {
+    present(report) {
+        console.log(renderDoctorReport(report));
+    }
+}
+exports.SetupDoctorPresenter = SetupDoctorPresenter;
+function renderDoctorReport(report) {
+    const partial = report.totals.skipped > 0 || report.totals.warn > 0;
+    const title = partial ? 'Copilot Doctor — partial diagnosis' : 'Copilot Doctor';
+    const checks = report.checks.flatMap((check) => renderCheck(check));
+    const summary = `Checks: ${report.totals.pass} pass, ${report.totals.warn} warn, ${report.totals.fail} fail, ${report.totals.skipped} skipped.`;
+    const mutation = 'No repository configuration was changed.';
+    return (0, setup_prompt_rendering_1.renderBox)([...checks, '', summary, mutation].join('\n'), title, report.healthy ? 32 : 31);
+}
+function renderCheck(check) {
+    const status = check.status === 'skipped' ? 'SKIP' : check.status.toUpperCase();
+    const lines = [`  ${(0, setup_prompt_rendering_1.doctorIcon)(check.status)} ${status.padEnd(4)} ${doctorCheckLabel(check.id)} — ${check.summary}`];
+    if (check.blockedBy.length > 0)
+        lines.push(`         Blocked by: ${check.blockedBy.join(', ')}`);
+    if (check.action)
+        lines.push(`         Action: ${check.action}`);
+    return lines;
+}
+function doctorCheckLabel(id) {
+    if (id === 'configuration.valid')
+        return 'Configuration';
+    if (id === 'workspace.repository-root')
+        return 'Repository root';
+    if (id === 'credentials.setup-pat')
+        return 'Setup PAT';
+    if (id === 'github.resource-scopes')
+        return 'GitHub Actions scopes';
+    if (id === 'github.secret-names')
+        return 'Repository Secrets';
+    if (id === 'github.variables')
+        return 'Repository Variables';
+    if (id === 'github.merge-queue')
+        return 'Merge queue';
+    if (id.startsWith('workflow.'))
+        return `Workflow ${id.slice('workflow.'.length)}`;
+    if (id.startsWith('github.variables.'))
+        return `Variable ${id.slice('github.variables.'.length).toUpperCase().replace(/-/g, '_')}`;
+    if (id.startsWith('credential.'))
+        return `Credential ${id.slice('credential.'.length).toUpperCase().replace(/-/g, '_')}`;
+    if (id.startsWith('github.merge-queue.'))
+        return `Merge queue ${id.slice('github.merge-queue.'.length)}`;
+    return id;
+}
+
+
+/***/ }),
+
+/***/ 33441:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ConsoleSetupPlanPresenter = void 0;
+exports.renderSetupPlan = renderSetupPlan;
+const setup_configuration_policy_1 = __nccwpck_require__(56637);
+const setup_prompt_rendering_1 = __nccwpck_require__(83434);
+class ConsoleSetupPlanPresenter {
+    present(plan) {
+        console.log(renderSetupPlan(plan));
+    }
+}
+exports.ConsoleSetupPlanPresenter = ConsoleSetupPlanPresenter;
+function renderSetupPlan(plan) {
+    const enabledFeatures = Object.entries(plan.configuration.features)
+        .filter(([, enabled]) => enabled)
+        .map(([feature]) => `  ${(0, setup_prompt_rendering_1.color)('✓', 32)} ${setup_configuration_policy_1.SETUP_FEATURE_DESCRIPTIONS[feature] ?? feature}`)
+        .join('\n');
+    const agents = setup_configuration_policy_1.SETUP_AGENT_TASKS
+        .map((task) => `  ${(0, setup_prompt_rendering_1.formatTask)(task)}: ${plan.configuration.agents[task].provider} / ${plan.configuration.agents[task].modelProvider}/${plan.configuration.agents[task].model}`)
+        .join('\n');
+    const content = [
+        (0, setup_prompt_rendering_1.color)('Capabilities', 36), enabledFeatures || '  (none)', '',
+        (0, setup_prompt_rendering_1.color)('Agent routing', 36), agents, '',
+        (0, setup_prompt_rendering_1.color)('Repository changes', 36),
+        `  Files selected: ${plan.selectedFiles.length}`,
+        `  Variables to upsert: ${plan.configuration.manageRepositoryVariables ? plan.variables.length : 0}`,
+        `  Secret options to validate/provision: ${plan.configuration.manageRepositorySecrets ? plan.credentialRequirements.length : 0}`,
+        `  Variable storage: ${storageLabel(plan.configuration.storage.variables)}`,
+        `  Secret storage: ${storageLabel(plan.configuration.storage.secrets)}`,
+        '  Labels and issue types: always checked by Copilot setup',
+        `  Initial tag: ${plan.configuration.createInitialTag ? 'v1.0.0 when no version tag exists' : 'disabled'}`, '',
+        ...(plan.mergeQueueReadiness.length > 0 ? [
+            (0, setup_prompt_rendering_1.color)('Merge queue readiness', 36),
+            ...plan.mergeQueueReadiness.map((check) => `  ${(0, setup_prompt_rendering_1.doctorIcon)(check.status)} ${check.id}: ${check.summary}`),
+            '',
+        ] : []),
+        (0, setup_prompt_rendering_1.color)('Strictly required Secrets', 33), `  ${plan.requiredSecrets.join(', ') || '(none)'}`,
+        ...(plan.warnings.length > 0 ? ['', (0, setup_prompt_rendering_1.color)('Important notes', 33), ...plan.warnings.map((warning) => `  ⚠ ${warning}`)] : []),
+    ].join('\n');
+    return (0, setup_prompt_rendering_1.renderBox)(content, 'Setup Plan', 32);
+}
+function storageLabel(policy) {
+    return `${policy.defaultScope} scope${policy.defaultScope === 'organization' ? ` (${policy.organizationVisibility})` : ''}`;
+}
 
 
 /***/ }),
@@ -70111,18 +70716,20 @@ function statusIcon(status) {
     return '✗';
 }
 function doctorIcon(status) {
-    return status === 'pass' ? '✓' : status === 'warn' ? '⚠' : '✗';
+    return status === 'pass' ? '✓' : status === 'warn' ? '⚠' : status === 'skipped' ? '–' : '✗';
 }
 function formatTask(task) {
     return task.charAt(0).toUpperCase() + task.slice(1);
 }
 function color(value, code) {
-    if (!node_process_1.stdout.isTTY)
+    if (!node_process_1.stdout.isTTY || process.env.NO_COLOR !== undefined)
         return value;
     return `\u001b[${code}m${value}\u001b[0m`;
 }
-function renderBox(content, title, borderCode = 36) {
-    const lines = [` ${title} `, ...content.split('\n').map(line => ` ${line}`)];
+function renderBox(content, title, borderCode = 36, maximumWidth = node_process_1.stdout.columns ?? 120) {
+    const contentWidth = Math.max(20, Math.min(120, maximumWidth) - 4);
+    const wrapped = content.split('\n').flatMap((line) => wrapLine(line, contentWidth));
+    const lines = [` ${title} `, ...wrapped.map(line => ` ${line}`)];
     const width = Math.max(...lines.map(line => stripAnsi(line).length)) + 1;
     const border = color(`╭${'─'.repeat(width)}╮`, borderCode);
     const bottom = color(`╰${'─'.repeat(width)}╯`, borderCode);
@@ -70131,6 +70738,27 @@ function renderBox(content, title, borderCode = 36) {
         ...lines.map(line => `${color('│', borderCode)}${line}${' '.repeat(Math.max(0, width - stripAnsi(line).length))}${color('│', borderCode)}`),
         bottom,
     ].join('\n');
+}
+function wrapLine(line, maximumWidth) {
+    if (stripAnsi(line).length <= maximumWidth)
+        return [line];
+    const indent = line.match(/^\s*/)?.[0] ?? '';
+    const words = line.trim().split(/\s+/);
+    const lines = [];
+    let current = indent;
+    for (const word of words) {
+        const candidate = current.trim() ? `${current} ${word}` : `${indent}${word}`;
+        if (stripAnsi(candidate).length <= maximumWidth) {
+            current = candidate;
+            continue;
+        }
+        if (current.trim())
+            lines.push(current);
+        current = `${indent}${word}`;
+    }
+    if (current.trim() || lines.length === 0)
+        lines.push(current);
+    return lines;
 }
 function renderRemoteConfiguration(remote, variables, requirements) {
     const lines = [
@@ -70155,6 +70783,210 @@ function stripAnsi(value) {
 
 /***/ }),
 
+/***/ 89481:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ConsoleSetupQuestionRenderer = void 0;
+const setup_prompt_rendering_1 = __nccwpck_require__(83434);
+const setup_questionnaire_policy_1 = __nccwpck_require__(6009);
+class ConsoleSetupQuestionRenderer {
+    showIntroduction() {
+        console.log((0, setup_prompt_rendering_1.renderBox)('This wizard configures repository workflows, GitHub Actions resources, AI agents, and operational defaults.\n\nThe setup PAT is used in memory only. Runtime credentials are collected separately after the plan is approved.', 'Copilot Setup'));
+    }
+    showState(stateId) {
+        console.log((0, setup_prompt_rendering_1.color)(`\n${(0, setup_questionnaire_policy_1.setupQuestionnaireStateLabel)(stateId)}\n`, 36));
+    }
+    renderPrompt(question) {
+        const fallback = formatDefault(question.defaultValue);
+        if (question.kind === 'choice') {
+            const choices = question.choices ?? [];
+            const lines = choices.map((choice, index) => `  ${index + 1}) ${choice}${choice === question.defaultValue ? (0, setup_prompt_rendering_1.color)(' (default)', 90) : ''}`);
+            return [question.label, ...lines, `Select 1-${choices.length} ${(0, setup_prompt_rendering_1.color)(`[${choices.indexOf(String(question.defaultValue)) + 1}]`, 90)}: `].join('\n');
+        }
+        if (question.kind === 'scope-overrides' && question.allowedNames?.length) {
+            return `${question.label}\n  Available: ${question.allowedNames.join(', ')}; enter "none" to inherit all\n  ${(0, setup_prompt_rendering_1.color)(`[${fallback}]`, 90)}: `;
+        }
+        return `${question.label} ${(0, setup_prompt_rendering_1.color)(`[${fallback}]`, 90)}: `;
+    }
+    showValidation(message) {
+        console.log((0, setup_prompt_rendering_1.color)(message, 33));
+    }
+    showCancelled() {
+        console.log('Setup cancelled. No changes were applied.');
+    }
+}
+exports.ConsoleSetupQuestionRenderer = ConsoleSetupQuestionRenderer;
+function formatDefault(value) {
+    if (typeof value === 'boolean')
+        return value ? 'Y' : 'N';
+    return String(value) || 'none';
+}
+
+
+/***/ }),
+
+/***/ 5462:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.NodeTerminalDriver = void 0;
+exports.interactiveTerminalAvailable = interactiveTerminalAvailable;
+exports.createInteractiveTerminalDriver = createInteractiveTerminalDriver;
+const promises_1 = __nccwpck_require__(32887);
+const node_process_1 = __nccwpck_require__(97742);
+function interactiveTerminalAvailable() {
+    return Boolean(node_process_1.stdin.isTTY && node_process_1.stdout.isTTY && !process.env.JEST_WORKER_ID);
+}
+function createInteractiveTerminalDriver() {
+    return interactiveTerminalAvailable() ? new NodeTerminalDriver() : undefined;
+}
+class NodeTerminalDriver {
+    constructor() {
+        this.closed = false;
+        if (!interactiveTerminalAvailable()) {
+            throw new Error('An interactive terminal is required.');
+        }
+        this.readline = (0, promises_1.createInterface)({ input: node_process_1.stdin, output: node_process_1.stdout });
+    }
+    isInteractive() {
+        return !this.closed;
+    }
+    async readText(prompt) {
+        if (this.closed)
+            return { kind: 'end-of-input' };
+        const abort = new AbortController();
+        let interrupted = false;
+        let ended = false;
+        const onInterrupt = () => {
+            interrupted = true;
+            abort.abort();
+        };
+        const onClose = () => {
+            ended = true;
+            abort.abort();
+        };
+        this.readline.once('SIGINT', onInterrupt);
+        this.readline.once('close', onClose);
+        try {
+            return { kind: 'value', value: await this.readline.question(prompt, { signal: abort.signal }) };
+        }
+        catch (error) {
+            if (interrupted)
+                return { kind: 'cancel' };
+            if (ended || this.closed || isAbortError(error))
+                return { kind: 'end-of-input' };
+            throw error;
+        }
+        finally {
+            this.readline.off('SIGINT', onInterrupt);
+            this.readline.off('close', onClose);
+        }
+    }
+    async readSecret(prompt) {
+        if (this.closed)
+            return { kind: 'end-of-input' };
+        const input = node_process_1.stdin;
+        if (!input.setRawMode)
+            return this.readText(`${prompt}: `);
+        node_process_1.stdout.write(`${prompt}: `);
+        input.setRawMode(true);
+        input.resume();
+        return new Promise((resolve) => {
+            let value = '';
+            let settled = false;
+            const finish = (result) => {
+                if (settled)
+                    return;
+                settled = true;
+                input.off('data', onData);
+                input.off('end', onEnd);
+                input.setRawMode?.(false);
+                input.pause();
+                if (result.kind === 'value')
+                    node_process_1.stdout.write('\n');
+                resolve(result);
+            };
+            const onEnd = () => finish({ kind: 'end-of-input' });
+            const onData = (chunk) => {
+                for (const character of chunk.toString()) {
+                    if (character === '\u0003')
+                        finish({ kind: 'cancel' });
+                    else if (character === '\u0004')
+                        finish({ kind: 'end-of-input' });
+                    else if (character === '\r' || character === '\n')
+                        finish({ kind: 'value', value: value.trim() });
+                    else if (character === '\u007f')
+                        value = value.slice(0, -1);
+                    else
+                        value += character;
+                }
+            };
+            input.on('data', onData);
+            input.once('end', onEnd);
+        });
+    }
+    close() {
+        if (this.closed)
+            return;
+        this.closed = true;
+        this.readline.close();
+    }
+}
+exports.NodeTerminalDriver = NodeTerminalDriver;
+function isAbortError(error) {
+    return Boolean(error && typeof error === 'object' && 'name' in error && error.name === 'AbortError');
+}
+
+
+/***/ }),
+
+/***/ 84473:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SetupWorkflowUpdatePromptAdapter = void 0;
+const setup_prompt_rendering_1 = __nccwpck_require__(83434);
+const setup_credential_prompt_adapter_1 = __nccwpck_require__(93232);
+class SetupWorkflowUpdatePromptAdapter {
+    constructor(terminal) {
+        this.terminal = terminal;
+    }
+    async confirmWorkflowUpdates(comparisons, forcedByFlag) {
+        const changed = comparisons.filter((comparison) => comparison.status === 'changed' || comparison.status === 'unmanaged');
+        if (changed.length === 0)
+            return false;
+        if (!this.terminal)
+            return forcedByFlag;
+        console.log((0, setup_prompt_rendering_1.renderBox)(changed.map((comparison) => `  ${comparison.status === 'changed' ? '↻' : '⚠'} ${comparison.destination} (${comparison.status})`).join('\n'), 'Existing workflows detected', 33));
+        if (forcedByFlag) {
+            console.log('The --update-workflows flag makes these setup-managed workflows eligible for update.');
+            return true;
+        }
+        while (true) {
+            const result = await this.terminal.readText(`Update the detected workflows with this setup? ${(0, setup_prompt_rendering_1.color)('[N]', 90)}: `);
+            if (result.kind !== 'value')
+                throw new setup_credential_prompt_adapter_1.SetupTerminalCancelledError();
+            const value = result.value.normalize('NFKC').trim().toLowerCase();
+            if (!value || ['n', 'no', 'false', '0'].includes(value))
+                return false;
+            if (['y', 'yes', 'true', '1'].includes(value))
+                return true;
+            console.log((0, setup_prompt_rendering_1.color)('Enter yes or no.', 33));
+        }
+    }
+}
+exports.SetupWorkflowUpdatePromptAdapter = SetupWorkflowUpdatePromptAdapter;
+
+
+/***/ }),
+
 /***/ 21307:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -70165,7 +70997,9 @@ exports.cleanCliArg = cleanCliArg;
 exports.getGitInfo = getGitInfo;
 exports.getCurrentBranch = getCurrentBranch;
 exports.isInsideGitRepo = isInsideGitRepo;
+exports.isGitRepositoryRoot = isGitRepositoryRoot;
 const child_process_1 = __nccwpck_require__(32081);
+const node_fs_1 = __nccwpck_require__(87561);
 const cli_errors_1 = __nccwpck_require__(81853);
 function cleanCliArg(value) {
     if (value == null)
@@ -70197,6 +71031,15 @@ function isInsideGitRepo(cwd) {
     try {
         (0, child_process_1.execSync)('git rev-parse --is-inside-work-tree', { cwd, stdio: 'pipe' });
         return true;
+    }
+    catch {
+        return false;
+    }
+}
+function isGitRepositoryRoot(cwd) {
+    try {
+        const root = (0, child_process_1.execSync)('git rev-parse --show-toplevel', { cwd, stdio: 'pipe' }).toString().trim();
+        return (0, node_fs_1.realpathSync)(root) === (0, node_fs_1.realpathSync)(cwd);
     }
     catch {
         return false;
@@ -78684,11 +79527,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.RepositoryVariablesRepository = void 0;
+exports.RepositorySecretsCommandRepository = exports.RepositoryVariablesCommandRepository = exports.SetupRemoteConfigurationQueryRepository = exports.RepositoryVariablesQueryRepository = exports.RepositorySecretNamesQueryRepository = void 0;
 exports.encryptSecret = encryptSecret;
 const tweetnacl_1 = __importDefault(__nccwpck_require__(24258));
 const node_crypto_1 = __nccwpck_require__(6005);
-class RepositoryVariablesRepository {
+class GithubActionsResourceTransport {
     constructor(githubClient) {
         this.githubClient = githubClient;
     }
@@ -78910,7 +79753,62 @@ class RepositoryVariablesRepository {
         }
     }
 }
-exports.RepositoryVariablesRepository = RepositoryVariablesRepository;
+/** Read-only repository Secret metadata boundary. Secret values are never available. */
+class RepositorySecretNamesQueryRepository {
+    constructor(githubClient) {
+        this.transport = new GithubActionsResourceTransport(githubClient);
+    }
+    list(owner, repository, token) {
+        return this.transport.list(owner, repository, token);
+    }
+}
+exports.RepositorySecretNamesQueryRepository = RepositorySecretNamesQueryRepository;
+/** Read-only repository Variable metadata boundary. */
+class RepositoryVariablesQueryRepository {
+    constructor(githubClient) {
+        this.transport = new GithubActionsResourceTransport(githubClient);
+    }
+    listVariables(owner, repository, token) {
+        return this.transport.listVariables(owner, repository, token);
+    }
+}
+exports.RepositoryVariablesQueryRepository = RepositoryVariablesQueryRepository;
+/** Read-only aggregate of GitHub Actions resource facts used by setup and doctor policy. */
+class SetupRemoteConfigurationQueryRepository {
+    constructor(githubClient) {
+        this.transport = new GithubActionsResourceTransport(githubClient);
+    }
+    inspect(owner, repository, token) {
+        return this.transport.inspect(owner, repository, token);
+    }
+}
+exports.SetupRemoteConfigurationQueryRepository = SetupRemoteConfigurationQueryRepository;
+/** Variable mutation boundary used only by setup application. */
+class RepositoryVariablesCommandRepository {
+    constructor(githubClient) {
+        this.transport = new GithubActionsResourceTransport(githubClient);
+    }
+    upsert(owner, repository, token, variables) {
+        return this.transport.upsert(owner, repository, token, variables);
+    }
+    upsertScopedVariables(owner, repository, token, target, variables) {
+        return this.transport.upsertScopedVariables(owner, repository, token, target, variables);
+    }
+}
+exports.RepositoryVariablesCommandRepository = RepositoryVariablesCommandRepository;
+/** Secret mutation boundary used only by setup application. */
+class RepositorySecretsCommandRepository {
+    constructor(githubClient) {
+        this.transport = new GithubActionsResourceTransport(githubClient);
+    }
+    upsertSecrets(owner, repository, token, credentials) {
+        return this.transport.upsertSecrets(owner, repository, token, credentials);
+    }
+    upsertScopedSecrets(owner, repository, token, target, credentials) {
+        return this.transport.upsertScopedSecrets(owner, repository, token, target, credentials);
+    }
+}
+exports.RepositorySecretsCommandRepository = RepositorySecretsCommandRepository;
 async function listCollection(client, method, parameters, key) {
     if (client.paginate)
         return client.paginate(method, parameters);
@@ -81812,8 +82710,8 @@ const repository_variables_repository_1 = __nccwpck_require__(28493);
 const github_identity_client_factory_2 = __nccwpck_require__(93081);
 function createInitialSetupCompositionRoot() {
     const labelProvisioning = new issue_label_provisioning_repository_1.IssueLabelProvisioningRepository((0, github_issue_client_factory_1.createIssueLabelProvisioningClient)());
-    const repositoryConfiguration = new repository_variables_repository_1.RepositoryVariablesRepository((0, github_identity_client_factory_2.createRepositoryVariablesClient)());
-    return (0, initial_setup_use_case_composition_1.composeInitialSetupUseCase)(new authenticated_user_repository_1.AuthenticatedUserRepository((0, github_identity_client_factory_1.createAuthenticatedUserClient)()), labelProvisioning, new issue_type_repository_1.IssueTypeRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new git_cli_repository_1.GitCliRepository(), new repository_default_branch_repository_1.RepositoryDefaultBranchRepository((0, github_release_client_factory_1.createReleaseClient)()), new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)()), new setup_workspace_adapter_1.SetupWorkspaceAdapter(), repositoryConfiguration, repositoryConfiguration, repositoryConfiguration);
+    const githubResourceClient = (0, github_identity_client_factory_2.createRepositoryVariablesClient)();
+    return (0, initial_setup_use_case_composition_1.composeInitialSetupUseCase)(new authenticated_user_repository_1.AuthenticatedUserRepository((0, github_identity_client_factory_1.createAuthenticatedUserClient)()), labelProvisioning, new issue_type_repository_1.IssueTypeRepository((0, github_project_client_factory_1.createGraphqlTransportClient)()), new git_cli_repository_1.GitCliRepository(), new repository_default_branch_repository_1.RepositoryDefaultBranchRepository((0, github_release_client_factory_1.createReleaseClient)()), new repository_tag_repository_1.RepositoryTagRepository((0, github_release_client_factory_1.createReleaseClient)()), new setup_workspace_adapter_1.SetupWorkspaceMutationAdapter(), new repository_variables_repository_1.RepositoryVariablesCommandRepository(githubResourceClient), new repository_variables_repository_1.RepositorySecretsCommandRepository(githubResourceClient), new repository_variables_repository_1.SetupRemoteConfigurationQueryRepository(githubResourceClient));
 }
 
 
@@ -82350,11 +83248,11 @@ const github_identity_client_factory_1 = __nccwpck_require__(93081);
 const setup_remote_credential_health_adapter_1 = __nccwpck_require__(1489);
 const octokit_credential_health_adapter_1 = __nccwpck_require__(41760);
 function createSetupCredentialsUseCase(prompt) {
-    const repositoryConfiguration = new repository_variables_repository_1.RepositoryVariablesRepository((0, github_identity_client_factory_1.createRepositoryVariablesClient)());
-    return new setup_credentials_use_case_1.SetupCredentialsUseCase(prompt, new setup_credential_validation_adapter_1.SetupCredentialValidationAdapter(), repositoryConfiguration, new setup_remote_credential_health_adapter_1.SetupRemoteCredentialHealthAdapter(new octokit_credential_health_adapter_1.OctokitCredentialHealthClientAdapter(), { bootstrapWhenMissing: true }));
+    const secretNames = new repository_variables_repository_1.RepositorySecretNamesQueryRepository((0, github_identity_client_factory_1.createRepositoryVariablesClient)());
+    return new setup_credentials_use_case_1.SetupCredentialsUseCase(prompt, new setup_credential_validation_adapter_1.SetupCredentialValidationAdapter(), secretNames, new setup_remote_credential_health_adapter_1.SetupRemoteCredentialHealthBootstrapAdapter(new octokit_credential_health_adapter_1.OctokitCredentialHealthClientAdapter()));
 }
 function createSetupRemoteConfigurationReadPort() {
-    return new repository_variables_repository_1.RepositoryVariablesRepository((0, github_identity_client_factory_1.createRepositoryVariablesClient)());
+    return new repository_variables_repository_1.SetupRemoteConfigurationQueryRepository((0, github_identity_client_factory_1.createRepositoryVariablesClient)());
 }
 
 
@@ -82381,9 +83279,15 @@ const merge_queue_readiness_use_case_1 = __nccwpck_require__(9890);
 function createSetupMergeQueueReadinessUseCase() {
     return new merge_queue_readiness_use_case_1.SetupMergeQueueReadinessUseCase(new github_target_merge_capabilities_inspector_1.GithubTargetMergeCapabilitiesInspector(new octokit_deployment_adapter_1.OctokitDeploymentClientAdapter()));
 }
-function createSetupDoctorUseCase(output) {
-    const repositoryConfiguration = new repository_variables_repository_1.RepositoryVariablesRepository((0, github_identity_client_factory_1.createRepositoryVariablesClient)());
-    return new doctor_use_case_1.SetupDoctorUseCase(new setup_credential_validation_adapter_1.SetupCredentialValidationAdapter(), repositoryConfiguration, repositoryConfiguration, new setup_workspace_adapter_1.SetupWorkspaceAdapter(), output, new setup_remote_credential_health_adapter_1.SetupRemoteCredentialHealthAdapter(new octokit_credential_health_adapter_1.OctokitCredentialHealthClientAdapter()), repositoryConfiguration, createSetupMergeQueueReadinessUseCase());
+function createSetupDoctorUseCase() {
+    const repositoryConfiguration = new repository_variables_repository_1.SetupRemoteConfigurationQueryRepository((0, github_identity_client_factory_1.createRepositoryVariablesClient)());
+    return new doctor_use_case_1.SetupDoctorUseCase({
+        validation: new setup_credential_validation_adapter_1.SetupCredentialValidationAdapter(),
+        workspace: new setup_workspace_adapter_1.SetupDoctorWorkspaceQueryAdapter(),
+        remoteConfiguration: repositoryConfiguration,
+        remoteHealth: new setup_remote_credential_health_adapter_1.SetupRemoteCredentialHealthQueryAdapter(new octokit_credential_health_adapter_1.OctokitCredentialHealthClientAdapter()),
+        mergeQueueReadiness: createSetupMergeQueueReadinessUseCase(),
+    });
 }
 
 
@@ -83307,7 +84211,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.SetupRemoteCredentialHealthAdapter = void 0;
+exports.SetupRemoteCredentialHealthBootstrapAdapter = exports.SetupRemoteCredentialHealthQueryAdapter = void 0;
 const node_fs_1 = __nccwpck_require__(87561);
 const path = __importStar(__nccwpck_require__(49411));
 const WORKFLOW_ID = 'copilot_credential_health.yml';
@@ -83331,14 +84235,31 @@ const JOB_BY_SECRET = {
     OPENCODE_API_KEY: 'Verify OPENCODE_API_KEY',
     CODEX_API_KEY: 'Verify CODEX_API_KEY',
 };
-/** Dispatches the repository-owned health workflow; it cannot read or mutate Secret values. */
-class SetupRemoteCredentialHealthAdapter {
+/** Doctor boundary: dispatches and reads an existing health workflow; it has no repository mutation client. */
+class SetupRemoteCredentialHealthQueryAdapter {
     constructor(githubClient, options = {}) {
         this.githubClient = githubClient;
-        this.waitMs = options.waitMs ?? 120000;
-        this.pollMs = options.pollMs ?? 2000;
-        this.sleep = options.sleep ?? (milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds)));
-        this.bootstrapWhenMissing = options.bootstrapWhenMissing ?? false;
+        this.options = resolveOptions(options);
+    }
+    async validateExisting(owner, repository, token, ref, requirements) {
+        const client = this.githubClient.getClient(token);
+        try {
+            await client.rest.actions.getWorkflow({ owner, repo: repository, workflow_id: WORKFLOW_ID });
+        }
+        catch (error) {
+            if (isNotFound(error))
+                return undefined;
+            throw error;
+        }
+        return executeHealthWorkflow(client, owner, repository, ref, requirements, this.options);
+    }
+}
+exports.SetupRemoteCredentialHealthQueryAdapter = SetupRemoteCredentialHealthQueryAdapter;
+/** Setup-only boundary: may install and then remove the health workflow around one validation run. */
+class SetupRemoteCredentialHealthBootstrapAdapter {
+    constructor(githubClient, options = {}) {
+        this.githubClient = githubClient;
+        this.options = resolveOptions(options);
         this.workflowContent = options.workflowContent ?? readHealthWorkflow();
     }
     async validateExisting(owner, repository, token, ref, requirements) {
@@ -83348,34 +84269,13 @@ class SetupRemoteCredentialHealthAdapter {
             await client.rest.actions.getWorkflow({ owner, repo: repository, workflow_id: WORKFLOW_ID });
         }
         catch (error) {
-            if (isNotFound(error) && this.bootstrapWhenMissing) {
-                await this.bootstrapWorkflow(client, owner, repository, ref);
-                temporaryWorkflow = true;
-            }
-            else if (isNotFound(error))
-                return undefined;
-            else
+            if (!isNotFound(error))
                 throw error;
+            await this.bootstrapWorkflow(client, owner, repository, ref);
+            temporaryWorkflow = true;
         }
-        const inputs = {};
-        for (const requirement of requirements) {
-            const input = INPUT_BY_SECRET[requirement.name];
-            if (input)
-                inputs[input] = 'true';
-        }
-        const startedAt = Date.now();
         try {
-            await client.rest.actions.createWorkflowDispatch({ owner, repo: repository, workflow_id: WORKFLOW_ID, ref, inputs });
-            const run = await this.findRun(client, owner, repository, startedAt);
-            if (!run)
-                return requirements.map(requirement => ({ name: requirement.name, status: 'unverifiable', message: 'Credential health workflow did not produce a run before timeout.' }));
-            const jobs = await client.rest.actions.listJobsForWorkflowRun({ owner, repo: repository, run_id: run.id, per_page: 100 });
-            const jobsByName = new Map(jobs.data.jobs.map(job => [job.name, job]));
-            return requirements.map(requirement => ({
-                name: requirement.name,
-                status: healthStatus(requirement, jobsByName),
-                message: healthMessage(requirement, jobsByName),
-            }));
+            return await executeHealthWorkflow(client, owner, repository, ref, requirements, this.options);
         }
         finally {
             if (temporaryWorkflow)
@@ -83395,7 +84295,12 @@ class SetupRemoteCredentialHealthAdapter {
         });
     }
     async removeTemporaryWorkflow(client, owner, repository, ref) {
-        const content = await client.repos.getContent({ owner, repo: repository, path: `.github/workflows/${WORKFLOW_ID}`, ref });
+        const content = await client.repos.getContent({
+            owner,
+            repo: repository,
+            path: `.github/workflows/${WORKFLOW_ID}`,
+            ref,
+        });
         if (!content.data.sha)
             throw new Error('Could not resolve the temporary health workflow revision for cleanup.');
         await client.repos.deleteFile({
@@ -83407,25 +84312,72 @@ class SetupRemoteCredentialHealthAdapter {
             branch: ref,
         });
     }
-    async findRun(client, owner, repository, startedAt) {
-        const deadline = Date.now() + this.waitMs;
-        while (Date.now() <= deadline) {
-            const response = await client.rest.actions.listWorkflowRuns({ owner, repo: repository, workflow_id: WORKFLOW_ID, event: 'workflow_dispatch', per_page: 10 });
-            const run = response.data.workflow_runs.find(candidate => !candidate.created_at || new Date(candidate.created_at).getTime() >= startedAt - 5000);
-            if (run) {
-                while (run.status && run.status !== 'completed' && Date.now() <= deadline) {
-                    await this.sleep(this.pollMs);
-                    const latest = await client.rest.actions.getWorkflowRun({ owner, repo: repository, run_id: run.id });
-                    Object.assign(run, latest.data);
-                }
-                return run;
-            }
-            await this.sleep(this.pollMs);
-        }
-        return undefined;
-    }
 }
-exports.SetupRemoteCredentialHealthAdapter = SetupRemoteCredentialHealthAdapter;
+exports.SetupRemoteCredentialHealthBootstrapAdapter = SetupRemoteCredentialHealthBootstrapAdapter;
+async function executeHealthWorkflow(client, owner, repository, ref, requirements, options) {
+    const inputs = {};
+    for (const requirement of requirements) {
+        const input = INPUT_BY_SECRET[requirement.name];
+        if (input)
+            inputs[input] = 'true';
+    }
+    const startedAt = Date.now();
+    await client.rest.actions.createWorkflowDispatch({
+        owner,
+        repo: repository,
+        workflow_id: WORKFLOW_ID,
+        ref,
+        inputs,
+    });
+    const run = await findRun(client, owner, repository, startedAt, options);
+    if (!run) {
+        return requirements.map((requirement) => ({
+            name: requirement.name,
+            status: 'unverifiable',
+            message: 'Credential health workflow did not produce a run before timeout.',
+        }));
+    }
+    const jobs = await client.rest.actions.listJobsForWorkflowRun({
+        owner,
+        repo: repository,
+        run_id: run.id,
+        per_page: 100,
+    });
+    const jobsByName = new Map(jobs.data.jobs.map((job) => [job.name, job]));
+    return requirements.map((requirement) => ({
+        name: requirement.name,
+        status: healthStatus(requirement, jobsByName),
+        message: healthMessage(requirement, jobsByName),
+    }));
+}
+async function findRun(client, owner, repository, startedAt, options) {
+    const deadline = Date.now() + options.waitMs;
+    let firstAttempt = true;
+    while (firstAttempt || Date.now() <= deadline) {
+        firstAttempt = false;
+        const response = await client.rest.actions.listWorkflowRuns({
+            owner,
+            repo: repository,
+            workflow_id: WORKFLOW_ID,
+            event: 'workflow_dispatch',
+            per_page: 10,
+        });
+        const run = response.data.workflow_runs.find((candidate) => !candidate.created_at || new Date(candidate.created_at).getTime() >= startedAt - 5000);
+        if (run) {
+            while (run.status && run.status !== 'completed' && Date.now() <= deadline) {
+                await options.sleep(options.pollMs);
+                Object.assign(run, (await client.rest.actions.getWorkflowRun({
+                    owner,
+                    repo: repository,
+                    run_id: run.id,
+                })).data);
+            }
+            return run;
+        }
+        await options.sleep(options.pollMs);
+    }
+    return undefined;
+}
 function healthStatus(requirement, jobs) {
     if (!INPUT_BY_SECRET[requirement.name])
         return 'unverifiable';
@@ -83445,6 +84397,13 @@ function healthMessage(requirement, jobs) {
         : job.conclusion
             ? `Remote credential health check failed (${job.conclusion}).`
             : 'Remote credential health check is still incomplete.';
+}
+function resolveOptions(options) {
+    return {
+        waitMs: options.waitMs ?? 120000,
+        pollMs: options.pollMs ?? 2000,
+        sleep: options.sleep ?? ((milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds))),
+    };
 }
 function isNotFound(error) {
     return Boolean(error && typeof error === 'object' && 'status' in error && error.status === 404);
@@ -83467,9 +84426,10 @@ function readHealthWorkflow() {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.SetupWorkspaceAdapter = void 0;
+exports.SetupReconcileWorkspaceAdapter = exports.SetupDoctorWorkspaceQueryAdapter = exports.SetupWorkspaceMutationAdapter = void 0;
 const setup_files_1 = __nccwpck_require__(59126);
-class SetupWorkspaceAdapter {
+const cli_context_1 = __nccwpck_require__(21307);
+class SetupWorkspaceMutationAdapter {
     prepare(selection) {
         const workspace = process.cwd();
         (0, setup_files_1.ensureGitHubDirs)(workspace);
@@ -83485,11 +84445,37 @@ class SetupWorkspaceAdapter {
             ? (0, setup_files_1.hasValidSetupToken)(process.cwd())
             : (0, setup_files_1.hasValidSetupToken)(process.cwd(), tokenOverride);
     }
+}
+exports.SetupWorkspaceMutationAdapter = SetupWorkspaceMutationAdapter;
+class SetupDoctorWorkspaceQueryAdapter {
+    isRepositoryRoot() {
+        return (0, cli_context_1.isGitRepositoryRoot)(process.cwd());
+    }
     compareWorkflows(features) {
         return (0, setup_files_1.compareSetupWorkflows)(process.cwd(), features);
     }
 }
-exports.SetupWorkspaceAdapter = SetupWorkspaceAdapter;
+exports.SetupDoctorWorkspaceQueryAdapter = SetupDoctorWorkspaceQueryAdapter;
+/** Reconcile intentionally combines local comparison and approved local writes. */
+class SetupReconcileWorkspaceAdapter {
+    constructor() {
+        this.mutation = new SetupWorkspaceMutationAdapter();
+        this.query = new SetupDoctorWorkspaceQueryAdapter();
+    }
+    prepare(selection) {
+        return this.mutation.prepare(selection);
+    }
+    hasValidToken(tokenOverride) {
+        return this.mutation.hasValidToken(tokenOverride);
+    }
+    isRepositoryRoot() {
+        return this.query.isRepositoryRoot();
+    }
+    compareWorkflows(features) {
+        return this.query.compareWorkflows(features);
+    }
+}
+exports.SetupReconcileWorkspaceAdapter = SetupReconcileWorkspaceAdapter;
 
 
 /***/ }),

@@ -1,6 +1,6 @@
 # Architecture Quality and Scalability Hardening
 
-- Status: In implementation — P0-A complete; P0-B automated scope complete
+- Status: In implementation — P0-A complete; P0-B, P1-A, and P1-B automated scope complete
 - Date: 2026-09-11
 - Last updated: 2026-09-12
 - Catalog capability ID: `architecture-quality-hardening`
@@ -57,7 +57,7 @@ Implementation ledger:
 | P0-A | complete | commit `759f418d`; semantic-boundary and architecture suites catalogued in `execution-error-and-context-hardening.md` | none |
 | P0-B | implemented | workflow-contract, state-fence, handler, adapter, architecture, package, and coverage gates catalogued in `deployment-concurrency-and-state-fencing.md` | controlled live serialization evidence |
 | P1-A | implemented | canonical-selection, bounded-read, partial-coverage, eligibility, adapter, UX, documentation, and coverage evidence catalogued in `bugbot-context-selection-and-budgeting.md` | controlled GitHub UX evidence before first rollout |
-| P1-B | queued | implementation contract ready | implementation and acceptance evidence |
+| P1-B | implemented | immutable questionnaire, raw terminal split, stable/skipped doctor report, query-only composition, narrow remote adapters, docs, and coverage gates | controlled GitHub permission-path evidence before first rollout |
 | P1-C | queued | implementation contract ready | implementation and acceptance evidence |
 | P2 | queued | implementation contract ready | implementation and final audit evidence |
 
@@ -752,7 +752,7 @@ Follow `deployment-concurrency-and-state-fencing.md` for every slice:
 1. P1-A (`bugbot-context-selection-and-budgeting.md`): characterization;
    atomic port replacement; canonical selection/exact query; bounded loader;
    failure UX/docs; large-repository verification.
-2. P1-B (`setup-doctor-architecture-hardening.md`): questionnaire/report
+2. P1-B (`setup-doctor-architecture-hardening.md`, implemented): questionnaire/report
    policies; terminal driver/thin adapters; named
    doctor check plan; remote adapter split; CLI/manual UX evidence.
 3. P1-C (`agent-execution-policy-hardening.md`): provider policy
@@ -786,8 +786,8 @@ package validation when bundles change, and `graphify update .` after code chang
       semantic taxonomy is exhaustive and publicly safe.
 - [x] Bugbot provider-call count is constant with repository PR count and all
       ambiguity/partial states are explicit.
-- [ ] Setup/doctor and provider policies meet their coverage, authority, and
-      complexity bounds without registries or facade shims.
+- [ ] Provider policies meet their coverage, authority, and complexity bounds
+      without registries or facade shims; setup/doctor is complete.
 - [ ] Leaf use cases have zero direct `Execution` imports; remaining boundary
       entries are justified and protected by a non-growing allowlist.
 - [ ] No legacy/deprecated API, compatibility adapter, dual schema reader/writer,

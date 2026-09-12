@@ -24,12 +24,22 @@ labels, and the composition root wires the adapters. The use case revalidates
 each issue immediately before mutation so the periodic scan remains best-effort
 and fail-closed for changed candidates.
 
-Setup follows the same boundary: credential collection, workflow comparison,
-approval, and doctor decisions live in application use cases and semantic ports.
-GitHub Secret encryption, workflow dispatch, provider metadata requests, and the
-temporary health-workflow bootstrap are infrastructure adapters. Secret values
-never enter setup override files, Variables, logs, or the generated workflow
-templates.
+Setup follows the same boundary. A pure immutable questionnaire policy owns
+question order, conditional states, validation, and fresh configuration
+snapshots. A controller drives that policy through a raw terminal driver whose
+only responsibilities are interactivity, text input, masked secret input, and
+idempotent close. Separate render, plan presentation, and confirmation ports own
+user-facing output; `--non-interactive` never constructs the terminal.
+
+Credential collection, workflow comparison, approval, and doctor decisions live
+in application use cases and semantic ports. GitHub Secret encryption, workflow
+dispatch, provider metadata requests, and setup-only temporary health-workflow
+bootstrap are infrastructure adapters. Remote Variables and Secrets expose
+separate query and command adapters instead of a broad resource facade. Doctor
+receives query ports only, schedules independent probes with a fixed maximum of
+four, and restores declared order in its stable `pass|warn|fail|skipped` report.
+Secret values never enter questionnaire state, setup override files, Variables,
+plans, logs, reports, or generated workflow templates.
 
 The setup policy is intentionally split by responsibility:
 
@@ -37,9 +47,16 @@ The setup policy is intentionally split by responsibility:
 - `setup_configuration_validation.ts` owns structural and semantic validation.
 - `setup_configuration_storage_policy.ts` owns repository/organization scope
   resolution and effective-resource preservation.
+- `setup_configuration_clone_policy.ts` owns reference-isolated configuration copies.
+- `setup_questionnaire_policy.ts` owns setup states, questions, transitions, and answers.
 - `setup_configuration_plan.ts` owns the reviewable provisioning plan.
+- `setup_doctor_report_policy.ts` owns stable check validation and aggregation.
 - `setup_resource_provisioning.ts` owns grouping and port calls for Variables
   and Secrets.
+
+There are no installed users or persisted setup state to migrate, so this is a
+greenfield contract: no legacy prompt facade, compatibility overload, dual
+reader/writer, deprecated result, or transitional state alias is retained.
 
 The runtime `Execution` aggregate is projected once at
 `initial_setup_request.ts`; the setup workflow consumes only the repository,

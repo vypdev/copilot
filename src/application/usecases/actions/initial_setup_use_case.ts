@@ -10,8 +10,8 @@ import { runInitialSetupWorkflow } from './initial_setup_workflow';
 import { createInitialSetupRequest } from './initial_setup_request';
 import type {
     SetupRemoteConfigurationReadPort,
-    SetupRepositorySecretsPort,
-    SetupRepositoryVariablesPort,
+    SetupRepositorySecretsCommandPort,
+    SetupRepositoryVariablesCommandPort,
 } from '../../ports/setup_wizard_ports';
 
 /** Application boundary for provisioning a repository for Copilot automation. */
@@ -26,8 +26,8 @@ export class InitialSetupUseCase implements ParamUseCase<Execution, Result[]> {
         private readonly repositoryDefaultBranchPort: RepositoryDefaultBranchPort,
         private readonly repositoryTagPort: RepositoryTagPort,
         private readonly setupWorkspacePort: SetupWorkspacePort,
-        private readonly setupRepositoryVariablesPort?: SetupRepositoryVariablesPort,
-        private readonly setupRepositorySecretsPort?: SetupRepositorySecretsPort,
+        private readonly setupRepositoryVariablesPort?: SetupRepositoryVariablesCommandPort,
+        private readonly setupRepositorySecretsPort?: SetupRepositorySecretsCommandPort,
         private readonly setupRemoteConfigurationReadPort?: SetupRemoteConfigurationReadPort,
     ) {}
 

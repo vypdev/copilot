@@ -1,4 +1,7 @@
-import { SetupRemoteCredentialHealthAdapter } from '../setup_remote_credential_health_adapter';
+import {
+    SetupRemoteCredentialHealthBootstrapAdapter,
+    SetupRemoteCredentialHealthQueryAdapter,
+} from '../setup_remote_credential_health_adapter';
 
 const requirements = [{ name: 'PAT', kind: 'workflowPat' as const, description: 'workflow PAT' }, { name: 'OPENAI_API_KEY', kind: 'apiKey' as const, description: 'OpenAI' }];
 
@@ -23,10 +26,10 @@ function client(overrides: Record<string, unknown> = {}) {
     };
 }
 
-describe('SetupRemoteCredentialHealthAdapter', () => {
+describe('setup remote credential health adapters', () => {
     it('dispatches the health workflow and maps a successful run to valid checks', async () => {
         const github = client();
-        const adapter = new SetupRemoteCredentialHealthAdapter({ getClient: jest.fn(() => github) }, { waitMs: 0, pollMs: 0 });
+        const adapter = new SetupRemoteCredentialHealthQueryAdapter({ getClient: jest.fn(() => github) }, { waitMs: 0, pollMs: 0 });
         const checks = await adapter.validateExisting('owner', 'repo', 'token', 'main', requirements);
 
         expect(checks).toEqual([
@@ -45,7 +48,7 @@ describe('SetupRemoteCredentialHealthAdapter', () => {
             ] } }),
         });
         const requirement = { name: 'CODEX_API_KEY', kind: 'apiKey' as const, description: 'Codex API key' };
-        const checks = await new SetupRemoteCredentialHealthAdapter(
+        const checks = await new SetupRemoteCredentialHealthQueryAdapter(
             { getClient: jest.fn(() => github) },
             { waitMs: 0, pollMs: 0 },
         ).validateExisting('owner', 'repo', 'token', 'main', [requirement]);
@@ -61,7 +64,7 @@ describe('SetupRemoteCredentialHealthAdapter', () => {
     it('returns undefined when the health workflow has not been installed', async () => {
         const error = Object.assign(new Error('not found'), { status: 404 });
         const github = client({ getWorkflow: jest.fn().mockRejectedValue(error) });
-        const checks = await new SetupRemoteCredentialHealthAdapter({ getClient: jest.fn(() => github) }).validateExisting('owner', 'repo', 'token', 'main', requirements);
+        const checks = await new SetupRemoteCredentialHealthQueryAdapter({ getClient: jest.fn(() => github) }).validateExisting('owner', 'repo', 'token', 'main', requirements);
         expect(checks).toBeUndefined();
         expect(github.rest.actions.createWorkflowDispatch).not.toHaveBeenCalled();
     });
@@ -74,7 +77,7 @@ describe('SetupRemoteCredentialHealthAdapter', () => {
                 { name: 'Verify OPENAI_API_KEY', status: 'completed', conclusion: 'failure' },
             ] } }),
         });
-        const checks = await new SetupRemoteCredentialHealthAdapter({ getClient: jest.fn(() => github) }, { waitMs: 0 }).validateExisting('owner', 'repo', 'token', 'main', requirements);
+        const checks = await new SetupRemoteCredentialHealthQueryAdapter({ getClient: jest.fn(() => github) }, { waitMs: 0 }).validateExisting('owner', 'repo', 'token', 'main', requirements);
         expect(checks).toEqual([
             { name: 'PAT', status: 'valid', message: 'Remote credential health check passed.' },
             { name: 'OPENAI_API_KEY', status: 'invalid', message: 'Remote credential health check failed (failure).' },
@@ -87,14 +90,14 @@ describe('SetupRemoteCredentialHealthAdapter', () => {
             getWorkflowRun: jest.fn().mockResolvedValue({ data: { id: 3, status: 'completed', conclusion: 'success' } }),
         });
         const sleep = jest.fn().mockResolvedValue(undefined);
-        const checks = await new SetupRemoteCredentialHealthAdapter({ getClient: jest.fn(() => github) }, { waitMs: 100, pollMs: 0, sleep }).validateExisting('owner', 'repo', 'token', 'main', requirements);
+        const checks = await new SetupRemoteCredentialHealthQueryAdapter({ getClient: jest.fn(() => github) }, { waitMs: 100, pollMs: 0, sleep }).validateExisting('owner', 'repo', 'token', 'main', requirements);
         expect(checks?.[0].status).toBe('valid');
         expect(sleep).toHaveBeenCalled();
     });
 
     it('reports an unverifiable result when GitHub does not return a run', async () => {
         const github = client({ listWorkflowRuns: jest.fn().mockResolvedValue({ data: { workflow_runs: [] } }) });
-        const checks = await new SetupRemoteCredentialHealthAdapter({ getClient: jest.fn(() => github) }, { waitMs: 0, pollMs: 0 }).validateExisting('owner', 'repo', 'token', 'main', requirements);
+        const checks = await new SetupRemoteCredentialHealthQueryAdapter({ getClient: jest.fn(() => github) }, { waitMs: 0, pollMs: 0 }).validateExisting('owner', 'repo', 'token', 'main', requirements);
         expect(checks?.every(check => check.status === 'unverifiable')).toBe(true);
     });
 
@@ -102,7 +105,7 @@ describe('SetupRemoteCredentialHealthAdapter', () => {
         const github = client({
             listJobsForWorkflowRun: jest.fn().mockResolvedValue({ data: { jobs: [] } }),
         });
-        const checks = await new SetupRemoteCredentialHealthAdapter({ getClient: jest.fn(() => github) }, { waitMs: 0 }).validateExisting(
+        const checks = await new SetupRemoteCredentialHealthQueryAdapter({ getClient: jest.fn(() => github) }, { waitMs: 0 }).validateExisting(
             'owner', 'repo', 'token', 'main', [...requirements, { name: 'MISTRAL_API_KEY', kind: 'apiKey' as const, description: 'Mistral' }],
         );
         expect(checks?.find(check => check.name === 'MISTRAL_API_KEY')).toEqual({
@@ -114,8 +117,8 @@ describe('SetupRemoteCredentialHealthAdapter', () => {
         const error = Object.assign(new Error('not found'), { status: 404 });
         const github = client({ getWorkflow: jest.fn().mockRejectedValue(error) });
         github.repos.getContent.mockResolvedValue({ data: { sha: 'temporary-sha' } });
-        const checks = await new SetupRemoteCredentialHealthAdapter({ getClient: jest.fn(() => github) }, {
-            bootstrapWhenMissing: true, workflowContent: 'name: health', waitMs: 0, pollMs: 0,
+        const checks = await new SetupRemoteCredentialHealthBootstrapAdapter({ getClient: jest.fn(() => github) }, {
+            workflowContent: 'name: health', waitMs: 0, pollMs: 0,
         }).validateExisting('owner', 'repo', 'token', 'main', requirements);
         expect(checks?.every(check => check.status === 'valid')).toBe(true);
         expect(github.repos.createOrUpdateFileContents).toHaveBeenCalledWith(expect.objectContaining({ branch: 'main' }));

@@ -37,10 +37,10 @@ describe('setup configuration policy', () => {
 
     it('preserves live merge queue checks in the setup presentation plan', () => {
         const plan = buildSetupPlan(createDefaultSetupConfiguration(), [
-            { area: 'Merge queue readiness · production (master)', status: 'pass', message: 'Ready.' },
+            { id: 'github.merge-queue.production', status: 'pass', summary: 'Ready.', evidence: {}, blockedBy: [] },
         ]);
         expect(plan.mergeQueueReadiness).toEqual([
-            { area: 'Merge queue readiness · production (master)', status: 'pass', message: 'Ready.' },
+            { id: 'github.merge-queue.production', status: 'pass', summary: 'Ready.', evidence: {}, blockedBy: [] },
         ]);
     });
 

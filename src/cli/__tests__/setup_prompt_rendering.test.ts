@@ -22,6 +22,7 @@ describe('setup prompt rendering', () => {
         ['pass', '✓'],
         ['warn', '⚠'],
         ['fail', '✗'],
+        ['skipped', '–'],
     ] as const)('maps doctor status %s to %s', (status, expected) => {
         expect(doctorIcon(status)).toBe(expected);
     });
@@ -39,6 +40,18 @@ describe('setup prompt rendering', () => {
         expect(rendered).toContain('first');
         expect(rendered).toContain('second');
         expect(rendered.split('\n')[0]).toMatch(/^╭─+╮$/);
+    });
+
+    it('wraps readable output to a requested narrow terminal width', () => {
+        const rendered = renderBox(
+            'A long setup diagnostic sentence that must remain readable in a narrow terminal.',
+            'Setup',
+            32,
+            40,
+        );
+
+        expect(rendered.split('\n').every((line) => line.length <= 40)).toBe(true);
+        expect(rendered).toContain('diagnostic sentence');
     });
 
     it('renders remote metadata without exposing credential values', () => {

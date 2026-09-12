@@ -1,4 +1,4 @@
-export interface GithubCredentialHealthClient {
+export interface GithubCredentialHealthQueryClient {
     rest: {
         actions: {
             createWorkflowDispatch(parameters: Record<string, unknown>): Promise<unknown>;
@@ -8,6 +8,9 @@ export interface GithubCredentialHealthClient {
             getWorkflow(parameters: Record<string, unknown>): Promise<unknown>;
         };
     };
+}
+
+export interface GithubCredentialHealthClient extends GithubCredentialHealthQueryClient {
     repos: {
         get(parameters: Record<string, unknown>): Promise<{ data: { default_branch?: string } }>;
         getContent(parameters: Record<string, unknown>): Promise<{ data: { sha?: string } }>;

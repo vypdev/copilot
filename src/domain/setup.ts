@@ -198,11 +198,21 @@ export interface SetupWorkflowComparison {
     status: 'missing' | 'unchanged' | 'changed' | 'unmanaged';
 }
 
-export type DoctorCheckStatus = 'pass' | 'warn' | 'fail';
+export type DoctorCheckStatus = 'pass' | 'warn' | 'fail' | 'skipped';
 export interface DoctorCheck {
-    area: string;
+    /** Stable machine-readable identity; presentation labels are derived separately. */
+    id: string;
     status: DoctorCheckStatus;
-    message: string;
+    summary: string;
+    action?: string;
+    evidence: Readonly<Record<string, string | number | boolean>>;
+    blockedBy: readonly string[];
+}
+
+export interface DoctorReport {
+    checks: readonly DoctorCheck[];
+    healthy: boolean;
+    totals: Readonly<Record<DoctorCheckStatus, number>>;
 }
 
 export interface SetupVariable {

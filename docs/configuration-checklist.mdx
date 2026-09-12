@@ -32,6 +32,16 @@ description: Required checks before enabling Copilot automation.
 - [ ] Smoke tests are recorded without printing credentials.
 - [ ] Rollback refs and previous CLI versions are known.
 
+## Setup and diagnosis
+
+- [ ] Unattended setup uses `--non-interactive --yes` plus every required external credential; `--yes` is treated only as plan approval.
+- [ ] Cancellation (`Ctrl-C` or EOF) has been observed to exit 130 with no writes; declining the final plan exits 0 with no writes.
+- [ ] Setup review lists Secret names only and no secret value appears in config, plan, logs, errors, reports, fixtures, or backups.
+- [ ] `copilot doctor` reports stable check IDs with `pass`, `warn`, `fail`, or dependency-blocked `skipped` and exits non-zero only for `fail`.
+- [ ] Invalid setup-PAT diagnosis still returns independent local checks; remote dependants identify their blocking check.
+- [ ] Doctor is wired only to query ports. Temporary credential-health workflow bootstrap remains setup-only.
+- [ ] No legacy setup prompt adapter, compatibility result, dual reader/writer, state alias, or transitional flag is present.
+
 ## Release and hotfix orchestration
 
 - [ ] `copilot_deployment_orchestration.yml` and every enabled publishing workflow (`release_workflow.yml` and/or `hotfix_workflow.yml`) are committed on the repository's default branch before an operation starts; this project enables both.

@@ -1,10 +1,10 @@
 # Setup and Doctor Architecture Hardening
 
-- Status: Proposed — ready for implementation
+- Status: Implemented — automated gates complete; controlled live GitHub permission-path evidence remains external
 - Date: 2026-09-11
 - Last updated: 2026-09-12
 - Catalog capability ID: `setup-and-doctor`
-- Last verified: 2026-09-11 at `2fec5c24a80135dd0611d3bc37e7dc3a8ab1b41a`
+- Last verified: 2026-09-12 in the P1-B implementation worktree
 - Owners: Copilot maintainers and setup operators
 - Scope: separate setup decisions from terminal mechanics, execute doctor as a
   deterministic read-only check graph, and split remote resource responsibilities
@@ -42,7 +42,7 @@ method that stops after PAT failure and mixes remote probes with report policy.
 These shapes make cancellation, partial diagnosis, ordering, and read-only
 authority difficult to verify independently.
 
-### 2.2 Current behavior
+### 2.2 Previous behavior
 
 1. `SetupPromptAdapter.collect` mutates the supplied nested defaults in place.
 2. Interactive question dependencies and order are encoded as imperative console
@@ -58,8 +58,9 @@ authority difficult to verify independently.
 
 ### 2.3 Evidence
 
-- Code: `src/cli/setup_prompt_adapter.ts`, setup rendering, setup wizard/doctor
-  use cases, setup ports, composition roots, and `src/domain/setup.ts`.
+- Code: setup questionnaire/report policies and controllers, raw terminal and
+  presenter adapters, setup wizard/doctor use cases, narrow setup ports,
+  query/command adapters, composition roots, and setup domain types.
 - Tests: catalogued setup wizard, credentials, doctor, and workspace adapter tests.
 - Product surfaces: `copilot setup`, `copilot doctor`, setup plans, credential
   reports, workflow comparisons, and documentation.
@@ -68,8 +69,12 @@ authority difficult to verify independently.
 
 ### 2.4 Retrospective classification
 
-Not applicable. This is prospective; the catalogued setup/doctor SDD is the
-as-built baseline.
+The previous broad terminal and remote adapters were incidental architecture,
+not a compatibility contract. They were removed in a greenfield cutover because
+there are no installed users or persisted product state to migrate. Automated
+evidence now covers immutable transitions, cancellation, non-interactive I/O,
+stable/skipped doctor checks, bounded concurrency, read-only composition,
+terminal rendering, and secret-safe presentation.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -121,7 +126,7 @@ as pass.
 
 ## 5. Current versus proposed product journey
 
-| Stage | Current | Proposed | User/operator effect |
+| Stage | Previous | Implemented | User/operator effect |
 |---|---|---|---|
 | Questions | terminal code owns decisions | pure state machine emits question | consistent validation |
 | Draft | defaults mutated in place | fresh immutable snapshots | no hidden cross-run state |
@@ -470,14 +475,14 @@ required inputs, exit codes, skipped semantics, read-only guarantee, and recover
 
 ## 19. Definition of Done
 
-- [ ] Setup defaults/drafts/results are immutable and reference-isolated.
-- [ ] Every state/question/check ID and transition is documented and tested.
-- [ ] All cancel/non-interactive paths prove no write and correct exit code.
-- [ ] Doctor runs the fixed DAG, max concurrency four, stable order, and skipped semantics.
-- [ ] Doctor composition exposes only read ports; secret safety tests pass.
-- [ ] At least 24 distinct cases and all coverage/architecture gates pass.
-- [ ] CLI UX, docs, config schema, active/setup assets, SDD, and catalog agree.
-- [ ] No open decision, legacy state/result, compatibility adapter, in-place
+- [x] Setup defaults/drafts/results are immutable and reference-isolated.
+- [x] Every state/question/check ID and transition is documented and tested.
+- [x] All cancel/non-interactive paths prove no write and correct exit code.
+- [x] Doctor runs the fixed DAG, max concurrency four, stable order, and skipped semantics.
+- [x] Doctor composition exposes only read ports; secret safety tests pass.
+- [x] At least 24 distinct cases and all coverage/architecture gates pass.
+- [x] CLI UX, docs, config schema, active/setup assets, SDD, and catalog agree.
+- [x] No open decision, legacy state/result, compatibility adapter, in-place
       mutation, broad adapter, or service registry remains.
 
 ## 20. References and decisions

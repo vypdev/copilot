@@ -14,5 +14,10 @@ export interface SetupWorkspaceSelection {
 export interface SetupWorkspacePort {
     prepare(selection?: SetupWorkspaceSelection): SetupWorkspaceResult;
     hasValidToken(tokenOverride?: string): boolean;
-    compareWorkflows?(features?: SetupFeatures): readonly SetupWorkflowComparison[];
+}
+
+/** Read-only local facts used by doctor; it exposes no workspace mutation. */
+export interface SetupDoctorWorkspaceQueryPort {
+    isRepositoryRoot(): boolean;
+    compareWorkflows(features?: SetupFeatures): readonly SetupWorkflowComparison[];
 }
