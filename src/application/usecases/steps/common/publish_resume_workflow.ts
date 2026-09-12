@@ -143,9 +143,9 @@ function shouldRenderImage(
     image: string | undefined,
 ): image is string {
     if (!image) return false;
-    if (context.isIssue) return context.images.imagesOnIssue;
-    if (context.isPullRequest) return context.images.imagesOnPullRequest;
-    return false;
+    return context.isIssue
+        ? context.images.imagesOnIssue
+        : context.images.imagesOnPullRequest;
 }
 
 function projectResult(result: Result): ResultPublicationRecord {
