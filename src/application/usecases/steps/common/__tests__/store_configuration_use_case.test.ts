@@ -38,6 +38,8 @@ describe('StoreConfigurationUseCase', () => {
     [{ isSingleAction: true, isPullRequest: true, pullRequest: { number: 2 } }, 2],
     [{ isSingleAction: true, isPush: true, issueNumber: 3 }, 3],
     [{ isSingleAction: true, singleAction: { issue: 4 } }, 4],
+    [{ isSingleAction: true, singleAction: { issue: 0 } }, undefined],
+    [{ isPush: true, issueNumber: 5 }, 5],
     [{ isPush: true, issueNumber: 0 }, undefined],
     [{}, undefined],
   ])('resolves a persistence target before storage: %j', (route, expected) => {

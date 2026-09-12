@@ -177,6 +177,24 @@ describe('UpdateTitleUseCase', () => {
     }));
   });
 
+  it('uses an empty version when hotfix is active without a resolved version', async () => {
+    mockGetTitle.mockResolvedValue('Hotfix title');
+    mockUpdateTitleIssueFormat.mockResolvedValue('🔥🐛 - Hotfix title');
+    const param = baseParam({
+      isIssue: true,
+      emoji: { emojiLabeledTitle: true, branchManagementEmoji: '' },
+      release: { active: false, version: null },
+      hotfix: { active: true, version: undefined },
+    });
+
+    await invoke(param);
+
+    expect(mockUpdateTitleIssueFormat).toHaveBeenCalledWith(expect.objectContaining({
+      version: '',
+      currentTitle: 'Hotfix title',
+    }));
+  });
+
   it('passes empty version when release active but version undefined to avoid Unknown Version loop', async () => {
     mockGetTitle.mockResolvedValue('My Release');
     mockUpdateTitleIssueFormat.mockResolvedValue('🚀 - My Release');

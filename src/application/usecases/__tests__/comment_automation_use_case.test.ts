@@ -314,6 +314,44 @@ describe("runCommentAutomation", () => {
     expect(think.invoke).not.toHaveBeenCalled();
   });
 
+  it('returns the projected status without invoking language or intent agents', async () => {
+    const language = { invoke: jest.fn() };
+    const intent = { invoke: jest.fn() };
+    const think = { invoke: jest.fn() };
+
+    const results = await runCommentAutomation(
+      {
+        owner: 'o',
+        repo: 'r',
+        actor: 'actor',
+        tokenUser: 'vypbot',
+        tokens: { token: 't' },
+      } as Execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: language as never,
+        intentUseCase: intent as never,
+        thinkUseCase: think as never,
+        autofixUseCase: {} as never,
+        doUserRequestUseCase: {} as never,
+        userComment: '/copilot status',
+        bugbotGitMutationPort: {} as never,
+      },
+      {} as never,
+      {} as never,
+    );
+
+    expect(results[0]).toMatchObject({
+      id: 'CommentAutomation.Status',
+      success: true,
+      executed: true,
+      stepFormat: 'markdown',
+    });
+    expect(language.invoke).not.toHaveBeenCalled();
+    expect(intent.invoke).not.toHaveBeenCalled();
+    expect(think.invoke).not.toHaveBeenCalled();
+  });
+
   it.each([
     ['/copilot sync-branch --from release/3', 'release/3'],
   ])('routes authorized branch synchronization directly: %s', async (userComment, parentOverride) => {

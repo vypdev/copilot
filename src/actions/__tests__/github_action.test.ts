@@ -62,12 +62,16 @@ jest.mock('../../data/repository/agent_cli_provisioner', () => ({
 
 const mockPublishInvoke = jest.fn();
 const mockStoreInvoke = jest.fn();
+const mockConfigurationUpdate = jest.fn();
 jest.mock('../../application/usecases/steps/common/publish_resume_use_case', () => ({
   PublishResultUseCase: jest.fn().mockImplementation(() => ({ invoke: mockPublishInvoke })),
 }));
 jest.mock('../../application/usecases/steps/common/store_configuration_use_case', () => ({
   ...jest.requireActual('../../application/usecases/steps/common/store_configuration_use_case'),
   StoreConfigurationUseCase: jest.fn().mockImplementation(() => ({ invoke: mockStoreInvoke })),
+}));
+jest.mock('../../manager/description/configuration_handler', () => ({
+  ConfigurationHandler: jest.fn().mockImplementation(() => ({ update: mockConfigurationUpdate })),
 }));
 
 const mockGetProjectDetail = jest.fn();
@@ -93,6 +97,7 @@ describe('runGitHubAction', () => {
     mockMainRun.mockResolvedValue([]);
     mockPublishInvoke.mockResolvedValue(undefined);
     mockStoreInvoke.mockResolvedValue([]);
+    mockConfigurationUpdate.mockResolvedValue(undefined);
     mockExecutionAdmissionInvoke.mockResolvedValue({ decision: 'execute', tokenUser: 'token-user' });
     mockIsActorAllowedToModifyFiles.mockResolvedValue(true);
     github.context.eventName = 'workflow_dispatch';
@@ -240,6 +245,21 @@ describe('runGitHubAction', () => {
 
     expect(mockPublishInvoke).toHaveBeenCalledTimes(1);
     expect(mockStoreInvoke).not.toHaveBeenCalled();
+  });
+
+  it('binds the repository identity before configuration persistence', async () => {
+    await runGitHubAction();
+    const configurationStore = finishActionSpy.mock.calls[0][3];
+    const context = { issueNumber: 42, currentConfiguration: { branchType: 'feature' } };
+
+    await configurationStore.update(context);
+
+    expect(mockConfigurationUpdate).toHaveBeenCalledWith({
+      owner: 'test-owner',
+      repository: 'test-repo',
+      token: 'fake-token',
+      issueNumber: 42,
+    }, context);
   });
 
   it('uses INPUT_VARS_JSON when set for getInput', async () => {

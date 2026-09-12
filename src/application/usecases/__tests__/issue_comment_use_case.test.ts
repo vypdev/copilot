@@ -540,4 +540,54 @@ describe("IssueCommentUseCase", () => {
     expect(mockDoUserRequestInvoke).not.toHaveBeenCalled();
     expect(mockThinkInvoke).toHaveBeenCalledTimes(1);
   });
+
+  it("binds optional description and branch-sync capabilities to the route execution", async () => {
+    const mockUpdateDescription = jest.fn().mockResolvedValue([new Result({
+      id: "description",
+      success: true,
+      executed: true,
+    })]);
+    const mockSyncBranch = jest.fn().mockResolvedValue([new Result({
+      id: "sync",
+      success: true,
+      executed: true,
+    })]);
+    const routedUseCase = new IssueCommentUseCase(
+      { invoke: mockCheckLanguageInvoke } as never,
+      { invoke: mockDetectIntentInvoke } as never,
+      { invoke: mockThinkInvoke } as never,
+      { invoke: mockAutofixInvoke } as never,
+      { invoke: mockDoUserRequestInvoke } as never,
+      { isActorAllowedToModifyFiles: mockIsActorAllowedToModifyFiles },
+      {} as never,
+      undefined,
+      undefined,
+      { invokeExplicit: mockUpdateDescription } as never,
+      undefined,
+      { invoke: mockSyncBranch } as never,
+    );
+    const descriptionExecution = baseExecution({
+      actor: "alice",
+      issue: { ...baseExecution().issue, commentBody: "/copilot description" } as never,
+    });
+    const syncExecution = baseExecution({
+      actor: "alice",
+      issue: { ...baseExecution().issue, commentBody: "/copilot sync-branch --from develop" } as never,
+    });
+    const missingBodyExecution = baseExecution({
+      issue: { ...baseExecution().issue, commentBody: undefined } as never,
+    });
+
+    await routedUseCase.invoke(descriptionExecution);
+    await routedUseCase.invoke(syncExecution);
+    await routedUseCase.invoke(missingBodyExecution);
+
+    expect(mockUpdateDescription).toHaveBeenCalledTimes(1);
+    expect(mockUpdateDescription).toHaveBeenCalledWith(descriptionExecution);
+    expect(mockSyncBranch).toHaveBeenCalledTimes(1);
+    expect(mockSyncBranch).toHaveBeenCalledWith({
+      execution: syncExecution,
+      options: { dryRun: false, useAgent: true, parentOverride: "develop" },
+    });
+  });
 });
