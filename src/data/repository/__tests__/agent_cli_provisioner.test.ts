@@ -47,13 +47,16 @@ describe('AgentCliProvisioner', () => {
         }
     });
 
-    it('repairs a preinstalled non-manifest Codex version in auto mode', () => {
+    it('repairs a preinstalled non-manifest Codex version when the workflow executable is blank', () => {
         const system = provisioningSystem(true, 'codex-cli 0.154.0');
         system.readVersion
             .mockReturnValueOnce('codex-cli 0.154.0')
             .mockReturnValueOnce('codex-cli 0.153.4');
 
-        expect(() => new AgentCliProvisioner(system).provision('codex', {})).not.toThrow();
+        expect(() => new AgentCliProvisioner(system).provision({
+            provider: 'codex',
+            executable: '   ',
+        }, {})).not.toThrow();
         expect(system.installPackage).toHaveBeenCalledWith('@openai/codex', '0.153.4');
         expect(system.readVersion).toHaveBeenCalledTimes(2);
     });

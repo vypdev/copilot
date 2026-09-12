@@ -70,7 +70,7 @@ export class AgentCliProvisioner {
 
     provision(target: AgentCliProvisioningTarget, environment: AgentCliProvisioningEnvironment = process.env): void {
         const provider = typeof target === 'string' ? target : target.provider;
-        const selectedExecutable = typeof target === 'string' ? undefined : target.executable?.trim();
+        const selectedExecutable = typeof target === 'string' ? undefined : target.executable?.trim() || undefined;
         const executable = typeof target === 'string'
             ? DEFAULT_AGENT_EXECUTABLES[provider]
             : selectedExecutable || DEFAULT_AGENT_EXECUTABLES[provider];
