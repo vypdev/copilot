@@ -47,9 +47,33 @@ describe('AgentCliProvisioner', () => {
         }
     });
 
-    it('rejects a preinstalled non-manifest version', () => {
+    it('repairs a preinstalled non-manifest Codex version in auto mode', () => {
         const system = provisioningSystem(true, 'codex-cli 0.154.0');
-        expect(() => new AgentCliProvisioner(system).provision('codex', {})).toThrow('version mismatch');
+        system.readVersion
+            .mockReturnValueOnce('codex-cli 0.154.0')
+            .mockReturnValueOnce('codex-cli 0.153.4');
+
+        expect(() => new AgentCliProvisioner(system).provision('codex', {})).not.toThrow();
+        expect(system.installPackage).toHaveBeenCalledWith('@openai/codex', '0.153.4');
+        expect(system.readVersion).toHaveBeenCalledTimes(2);
+    });
+
+    it('rejects a non-manifest version when provisioning is disabled', () => {
+        const system = provisioningSystem(true, 'codex-cli 0.154.0');
+
+        expect(() => new AgentCliProvisioner(system).provision('codex', {
+            AGENT_PROVISIONING: 'disabled',
+        })).toThrow('version mismatch');
+        expect(system.installPackage).not.toHaveBeenCalled();
+    });
+
+    it('does not replace an explicit executable when its version mismatches', () => {
+        const system = provisioningSystem(true, 'codex-cli 0.154.0');
+
+        expect(() => new AgentCliProvisioner(system).provision({
+            provider: 'codex',
+            executable: '/controlled/codex',
+        }, {})).toThrow('version mismatch');
         expect(system.installPackage).not.toHaveBeenCalled();
     });
 

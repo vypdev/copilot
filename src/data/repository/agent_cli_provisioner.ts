@@ -70,17 +70,24 @@ export class AgentCliProvisioner {
 
     provision(target: AgentCliProvisioningTarget, environment: AgentCliProvisioningEnvironment = process.env): void {
         const provider = typeof target === 'string' ? target : target.provider;
+        const selectedExecutable = typeof target === 'string' ? undefined : target.executable?.trim();
         const executable = typeof target === 'string'
             ? DEFAULT_AGENT_EXECUTABLES[provider]
-            : target.executable?.trim() || DEFAULT_AGENT_EXECUTABLES[provider];
+            : selectedExecutable || DEFAULT_AGENT_EXECUTABLES[provider];
         const mode = resolveAgentProvisioningMode(environment.AGENT_PROVISIONING);
 
         if (this.provisionedExecutables.has(executable)) return;
         const executableAvailable = this.system.executableExists(executable, environment);
         if (executableAvailable && mode !== 'always') {
-            this.assertVersion(executable, provider, environment);
-            this.provisionedExecutables.add(executable);
-            return;
+            try {
+                this.assertVersion(executable, provider, environment);
+                this.provisionedExecutables.add(executable);
+                return;
+            } catch (error) {
+                if (mode === 'disabled' || !canRepairManifestExecutable(provider, selectedExecutable)) {
+                    throw error;
+                }
+            }
         }
         if (mode === 'disabled') {
             throw provisioningDisabledError(provider, executable);
@@ -123,4 +130,9 @@ export class AgentCliProvisioner {
 
 function manifestSemver(provider: 'codex' | 'opencode'): string {
     return getAgentRuntimeManifestEntry(provider).version.replace(/^codex-cli\s+/, '');
+}
+
+function canRepairManifestExecutable(provider: AgentProvider, selectedExecutable: string | undefined): provider is 'codex' | 'opencode' {
+    return provider !== 'cursor'
+        && (selectedExecutable === undefined || selectedExecutable === DEFAULT_AGENT_EXECUTABLES[provider]);
 }

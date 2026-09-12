@@ -304,11 +304,15 @@ verified versions:
 | OpenCode | `1.18.3` | readonly/fixer permissions, no bash/web/task/plugin, config isolation, JSON |
 | Cursor | `2026.09.10-fd3934a` | readonly/fixer path boundary, network deny, no shell/MCP/plugin/subagent, noninteractive completion |
 
-Any different/unparseable version fails preflight. Upgrades require one PR that
-updates the exact version, provider fixture snapshots, official-source links,
-all automated contract/smoke tests, target-runner provisioning, and a reviewed human
-smoke. The provisioning workflow installs the manifest version or validates an
-already installed exact match; it never silently upgrades.
+No different or unparseable version is ever admitted to execution. In the
+recommended `auto` mode, a mismatched default Codex or OpenCode executable is
+replaced with the exact manifest package and revalidated before use. A mismatch
+remains terminal when provisioning is `disabled`, the executable is an explicit
+path, the provider is Cursor, installation fails, or post-install validation is
+still not exact. Upgrades require one PR that updates the exact version,
+provider fixture snapshots, official-source links, all automated contract/smoke
+tests, target-runner provisioning, and a reviewed human smoke. Provisioning
+never selects a floating or unreviewed version.
 
 ### 6.8 State machine
 
@@ -448,7 +452,7 @@ count separately only when authority/argv differs.
 | Plan/executable pure policy | 4 | exhaustive roles/providers, removed/unknown inputs |
 | State/process lifecycle | 2 | timeout/cancel/cleanup and no-spawn rejection |
 | Application dispatch | 3 | complete plan, semantic failure, structured output |
-| Provider adapters | 4 | Codex/OpenCode/Cursor config plus version manifest |
+| Provider adapters | 4 | Codex/OpenCode/Cursor config, exact manifest, auto mismatch repair, and fail-closed alternatives |
 | Workflow/setup contracts | 2 | provisioning pin and doctor configuration parity |
 | UX/sanitization | 1 | rejection/partial view without sensitive fields |
 | Integration/security | 2 | effective sandbox matrix and env/credential isolation |
@@ -480,7 +484,9 @@ recovery, and upgrade process. Examples are generated/tested from golden plans.
 2. Every 3-provider x 6-role plan has expected workspace authority and fixed limits.
 3. Removed command-text fields, caller argv, arguments in `agent-executable`, and unknown
    execution inputs are rejected; managed argv is deterministic and uses `shell:false`.
-4. A non-manifest version or mismatched artifact hash prevents spawn with one action.
+4. A non-manifest default Codex/OpenCode runtime in `auto` is replaced with the
+   exact manifest package and revalidated; disabled, explicit-executable,
+   Cursor, install, post-install mismatch, or artifact-hash failures prevent spawn.
 5. Read roles cannot write; fixer writes only workspace; all roles lack Git mutation.
 6. Agent child tools cannot reach the network, use MCP/plugins/subagents, escalate,
    or read a model/GitHub/cloud credential.

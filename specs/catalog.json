@@ -538,8 +538,10 @@
       ],
       "tests": [
         "src/actions/__tests__/agent_configuration_builder.test.ts",
+        "src/actions/__tests__/github_action_runtime.test.ts",
         "src/application/policies/__tests__/agent_task_activation_policy.test.ts",
         "src/data/repository/__tests__/agent_cli_client.test.ts",
+        "src/data/repository/__tests__/agent_cli_provisioner.test.ts",
         "src/application/policies/__tests__/agent_execution_plan_policy.test.ts",
         "src/infrastructure/agents/__tests__/agent_execution_planner.test.ts",
         "src/infrastructure/agents/__tests__/agent_runtime_manifest.test.ts"
@@ -549,7 +551,9 @@
         "docs/agents/runtime-selection.mdx",
         "docs/agents/model-selection.mdx",
         "docs/agents/model-allowlists.mdx",
-        "docs/agents/failure-policy.mdx"
+        "docs/agents/failure-policy.mdx",
+        "docs/security-operations/operations/cli-provisioning.mdx",
+        "docs/security-operations/operations/provisioning.mdx"
       ]
     },
     {

@@ -2,6 +2,7 @@ import type { AgentTask, AgentTaskConfiguration } from '../data/model/agent';
 import { AgentCliProvisioner } from '../data/repository/agent_cli_provisioner';
 import { runAgentAuthenticationPreflight } from '../data/repository/agent_authentication_preflight';
 import { logInfo, logDebugInfo } from '../utils/logger';
+import { ApplicationError } from '../application/errors/application_error';
 
 /** Validates and, when requested by the runtime, provisions the selected agent CLIs. */
 export function prepareGithubAgentRuntime(
@@ -12,7 +13,10 @@ export function prepareGithubAgentRuntime(
     for (const [task, configuration] of configurations) {
         const preflight = runAgentAuthenticationPreflight(configuration);
         if (preflight.check.status === 'missing' && preflight.shouldFail) {
-            throw new Error(`${task} agent authentication failed: ${preflight.check.message}`);
+            throw new ApplicationError(
+                'authorization.credential-invalid',
+                `Authentication is unavailable for the active ${task} agent role using ${configuration.provider}.`,
+            );
         }
         if (preflight.check.status === 'missing' && preflight.mode === 'warn') {
             logInfo(`Warning: ${task} agent authentication could not be preflighted: ${preflight.check.message}`);
@@ -22,7 +26,15 @@ export function prepareGithubAgentRuntime(
     if (process.env.GITHUB_ACTIONS === 'true') {
         const provisioner = new AgentCliProvisioner();
         for (const configuration of uniqueAgentConfigurations(configurations)) {
-            provisioner.provision(configuration);
+            try {
+                provisioner.provision(configuration);
+            } catch (cause) {
+                throw new ApplicationError(
+                    'configuration.unsupported',
+                    `The ${configuration.provider} runtime could not satisfy the exact manifest provisioning contract.`,
+                    { cause },
+                );
+            }
         }
     }
 

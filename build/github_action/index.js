@@ -51704,13 +51704,14 @@ exports.prepareGithubAgentRuntime = prepareGithubAgentRuntime;
 const agent_cli_provisioner_1 = __nccwpck_require__(3115);
 const agent_authentication_preflight_1 = __nccwpck_require__(67766);
 const logger_1 = __nccwpck_require__(91151);
+const application_error_1 = __nccwpck_require__(75999);
 /** Validates and, when requested by the runtime, provisions the selected agent CLIs. */
 function prepareGithubAgentRuntime(agentTasks, activeTasks) {
     const configurations = selectedAgentTasks(agentTasks, activeTasks);
     for (const [task, configuration] of configurations) {
         const preflight = (0, agent_authentication_preflight_1.runAgentAuthenticationPreflight)(configuration);
         if (preflight.check.status === 'missing' && preflight.shouldFail) {
-            throw new Error(`${task} agent authentication failed: ${preflight.check.message}`);
+            throw new application_error_1.ApplicationError('authorization.credential-invalid', `Authentication is unavailable for the active ${task} agent role using ${configuration.provider}.`);
         }
         if (preflight.check.status === 'missing' && preflight.mode === 'warn') {
             (0, logger_1.logInfo)(`Warning: ${task} agent authentication could not be preflighted: ${preflight.check.message}`);
@@ -51719,7 +51720,12 @@ function prepareGithubAgentRuntime(agentTasks, activeTasks) {
     if (process.env.GITHUB_ACTIONS === 'true') {
         const provisioner = new agent_cli_provisioner_1.AgentCliProvisioner();
         for (const configuration of uniqueAgentConfigurations(configurations)) {
-            provisioner.provision(configuration);
+            try {
+                provisioner.provision(configuration);
+            }
+            catch (cause) {
+                throw new application_error_1.ApplicationError('configuration.unsupported', `The ${configuration.provider} runtime could not satisfy the exact manifest provisioning contract.`, { cause });
+            }
         }
     }
     (0, logger_1.logDebugInfo)(configurations.length === 0
@@ -71733,17 +71739,25 @@ class AgentCliProvisioner {
     }
     provision(target, environment = process.env) {
         const provider = typeof target === 'string' ? target : target.provider;
+        const selectedExecutable = typeof target === 'string' ? undefined : target.executable?.trim();
         const executable = typeof target === 'string'
             ? agent_cli_provisioning_policy_1.DEFAULT_AGENT_EXECUTABLES[provider]
-            : target.executable?.trim() || agent_cli_provisioning_policy_1.DEFAULT_AGENT_EXECUTABLES[provider];
+            : selectedExecutable || agent_cli_provisioning_policy_1.DEFAULT_AGENT_EXECUTABLES[provider];
         const mode = (0, agent_cli_provisioning_policy_1.resolveAgentProvisioningMode)(environment.AGENT_PROVISIONING);
         if (this.provisionedExecutables.has(executable))
             return;
         const executableAvailable = this.system.executableExists(executable, environment);
         if (executableAvailable && mode !== 'always') {
-            this.assertVersion(executable, provider, environment);
-            this.provisionedExecutables.add(executable);
-            return;
+            try {
+                this.assertVersion(executable, provider, environment);
+                this.provisionedExecutables.add(executable);
+                return;
+            }
+            catch (error) {
+                if (mode === 'disabled' || !canRepairManifestExecutable(provider, selectedExecutable)) {
+                    throw error;
+                }
+            }
         }
         if (mode === 'disabled') {
             throw (0, agent_cli_provisioning_policy_1.provisioningDisabledError)(provider, executable);
@@ -71780,6 +71794,10 @@ class AgentCliProvisioner {
 exports.AgentCliProvisioner = AgentCliProvisioner;
 function manifestSemver(provider) {
     return (0, agent_runtime_manifest_1.getAgentRuntimeManifestEntry)(provider).version.replace(/^codex-cli\s+/, '');
+}
+function canRepairManifestExecutable(provider, selectedExecutable) {
+    return provider !== 'cursor'
+        && (selectedExecutable === undefined || selectedExecutable === agent_cli_provisioning_policy_1.DEFAULT_AGENT_EXECUTABLES[provider]);
 }
 
 

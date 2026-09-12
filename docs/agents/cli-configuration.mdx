@@ -121,9 +121,11 @@ Never place tokens in `with`, command arguments, prompts, repository files, or l
 
 The Action verifies the selected CLI against the immutable runtime manifest and,
 by default, reuses a preinstalled executable only when its version matches.
-Codex and OpenCode can be installed at the manifest version; Cursor must be
-preinstalled because its public installer cannot reproduce an exact historical
-version. The only provisioning control is:
+When the default Codex or OpenCode executable is absent or mismatched, `auto`
+installs the exact manifest version and revalidates it. Explicit executable
+paths are never replaced. Cursor must be preinstalled because its public
+installer cannot reproduce an exact historical version. The only provisioning
+control is:
 
 ```text
 AGENT_PROVISIONING=auto|always|disabled

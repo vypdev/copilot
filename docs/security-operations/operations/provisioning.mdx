@@ -6,8 +6,10 @@ description: Pinned installation and verification of the selected agent CLI.
 
 When running in GitHub Actions, the Action provisions and verifies only the
 selected runtime. `AGENT_PROVISIONING=auto` reuses a preinstalled executable only
-after exact-version validation. If absent, Codex and OpenCode are installed with
-the manifest-owned version through the runner's system `npm`. Cursor must be
+after exact-version validation. If the default Codex or OpenCode executable is
+missing or reports another version, the Action installs the manifest-owned
+version through the runner's system `npm` and validates it again. An explicit
+executable is never replaced. Cursor must be
 preinstalled at the exact manifest version because its public installer cannot
 guarantee an immutable historical version. The Action never uses `npx`, Yarn,
 Bun, a floating tag, or an unpinned installer.

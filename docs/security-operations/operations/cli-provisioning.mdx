@@ -26,10 +26,13 @@ Cursor Agent: 2026.09.10-fd3934a
 AGENT_PROVISIONING=auto
 ```
 
-The selected provider is provisioned only when needed. Set `always` to reinstall
-Codex/OpenCode at the manifest version or `disabled` to require the runner image.
-Local and prebuilt runners are accepted only when `--version` exactly matches.
-Repository Variables cannot replace, widen, or float the manifest version.
+The selected provider is provisioned only when needed. In the recommended
+`auto` mode, a missing or version-mismatched default Codex/OpenCode executable
+is installed from the exact manifest package and then revalidated. Explicit
+executable paths are never replaced. Set `always` to reinstall Codex/OpenCode at
+the manifest version or `disabled` to require the runner image. Local and
+prebuilt runtimes are admitted only when `--version` exactly matches. Repository
+Variables cannot replace, widen, or float the manifest version.
 
 ## Approved installation methods
 
