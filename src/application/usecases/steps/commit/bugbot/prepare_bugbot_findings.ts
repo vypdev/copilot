@@ -5,7 +5,7 @@ export type { BugbotResponse, PreparedBugbotFindings } from './prepare_bugbot_fi
 
 export function prepareBugbotFindings(
     response: unknown,
-    ignorePatterns: string[],
+    ignorePatterns: readonly string[],
     minSeverityValue: string | undefined,
     maxComments: number,
 ): PreparedBugbotFindings | undefined {

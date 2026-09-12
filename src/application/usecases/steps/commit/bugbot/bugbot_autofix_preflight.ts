@@ -7,6 +7,7 @@ import { isExistingFindingFullyResolved } from '../../../../../domain/bugbot/fin
 import { buildBugbotFixPrompt } from './build_bugbot_fix_prompt';
 import { loadBugbotContext } from './load_bugbot_context_use_case';
 import { projectBugbotContextRequest } from './bugbot_context_request';
+import { projectBugbotContextSelectionContext } from './bugbot_review_operation_context';
 import { logDebugInfo, logError } from '../../../../ports/logging_ports';
 import { prepareWorkspaceMutation } from '../workspace_mutation_guard';
 import { ApplicationError, toApplicationError } from '../../../../errors/application_error';
@@ -35,10 +36,10 @@ export async function prepareBugbotAutofix(
     let context: BugbotContext;
     try {
         context = await loadBugbotContext(
-            projectBugbotContextRequest(execution, {
+            projectBugbotContextRequest(projectBugbotContextSelectionContext(execution), {
                 ...(targetBranch ? { branchOverride: targetBranch } : {}),
                 ...(canonicalHint ? { pullRequestNumberOverride: canonicalHint.number } : {}),
-                pullRequestRequired: true,
+                exactHeadPullRequestRequired: true,
             }),
             contextPorts.loader.bind({
                 owner: execution.owner,

@@ -1,6 +1,6 @@
 # Semantic Errors and Capability Contexts
 
-- Status: In implementation — P0-A and P2-A complete; remaining P2 context slices queued
+- Status: In implementation — P0-A, P2-A, and P2-B complete; remaining P2 context slices queued
 - Date: 2026-09-11
 - Last updated: 2026-09-12
 - Catalog capability ID: `execution-lifecycle`
@@ -277,6 +277,56 @@ resolver, and three description readers have zero `Execution` imports; the
 credential-bound composition test and 11-case P2-A ledger pass; per-file
 coverage meets the fixed threshold; and the exact aggregate inventory is 130.
 
+#### 6.5.2 P2-B Bugbot analysis-context cutover
+
+The second P2 slice projects two nested immutable contracts. The
+`BugbotContextSelectionContext` contains only repository identity, target,
+trigger, ignore patterns, and organization rules for canonical context
+selection. The detection boundary extends those facts into a
+`BugbotReviewOperationContext` with locale, selected-agent, severity, comment
+limit, and bounded review configuration. Selection-only workflows MUST use the
+narrower contract and cannot request analysis-only configuration. Neither
+contract contains the SCM token, an `Ai` instance, mutable event objects,
+provider clients, or callbacks. Nested configuration and arrays are copied and
+frozen so a later mutation of `Execution` cannot change an in-flight operation.
+
+`bugbot_context_request.ts`, `build_bugbot_prompt.ts`,
+`query_bugbot_findings.ts`, `analyze_bugbot_revision_use_case.ts`, and
+`bugbot_review_telemetry.ts` consume that context or a still narrower value and
+have zero `Execution` imports. `queryBugbotFindings` receives the selected
+readonly agent configuration, not the whole review context. Context loading and
+SCM mutations remain in the explicit orchestration boundary until P2-C binds
+credentials into semantic ports; P2-B does not introduce an interim token field
+or a second aggregate-shaped signature.
+
+P2-B is a direct cutover. All callers project the new context explicitly; no
+overload, `Pick<Execution>`, alias, delegating shim, optional legacy field, or
+fallback reader is permitted. Its checked-in aggregate ceiling is exactly 125.
+Six dedicated projection cases cover exact PR facts, the narrow selection
+boundary, credential exclusion, copy/freeze behavior, branch defaults,
+workflow/check head identity, and an incomplete PR source. Strengthened
+context-request, prompt, telemetry, autofix, dismiss, and intent suites remain
+parity evidence without inflating the six-case P2-B budget.
+
+#### 6.5.3 Remaining P2 clean-cut slices
+
+The remaining work proceeds in these bounded capability cuts. A slice is not
+mergeable until every named production consumer in its scope has one final
+context contract and the aggregate baseline decreases in the same change.
+
+| Slice | Direct-cut scope | Required exit evidence | Minimum cases |
+|---|---|---|---:|
+| P2-C | Bugbot context I/O, freshness, publication, resolution, autofix, and learned-rule mutation | credentials bound in SCM/Git ports; zero Bugbot leaf imports; race/replay/publication parity | 10 |
+| P2-D | shared comment analysis: Think, permissions, translation, title, result publication, configuration, and project linking | route-projected contexts; no token/config/model method bags; issue/PR/comment parity | 8 |
+| P2-E | issue and pull-request workflow steps plus description handlers | separate issue/PR contexts; credential-bound provider commands; zero `steps/issue` and `steps/pull_request` imports | 8 |
+| P2-F | push and single-action capabilities, including progress, release/tag, inactivity, branch sync, and remaining commit steps | capability-specific commands/queries; no leaf aggregate input; dispatch parity | 8 |
+| P2-G | final route/public boundary audit | exact justified 16-file allowlist, alias-bypass negative fixture, clean Graphify/RepoWise audit | 1 |
+
+P2-C through P2-F MUST delete the superseded signature in the same slice. They
+MUST NOT preserve it with overloads, union parameters, compatibility factories,
+dual readers/writers, feature flags, or deprecated exports. P2-G may reduce the
+16-file boundary list further, but it may not add an entry.
+
 ### 6.6 State machine
 
 | State | Entered when | User-visible meaning | Allowed next states | Recovery/owner |
@@ -398,7 +448,7 @@ is permitted in production.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **34 distinct cases**: P0-A 22 and P2 12.
+This SDD owns at least **74 distinct cases**: P0-A 22 and P2 52.
 
 | Area | Minimum cases | Required risks |
 |---|---:|---|
@@ -406,9 +456,9 @@ This SDD owns at least **34 distinct cases**: P0-A 22 and P2 12.
 | Provider/application mapping | 6 | HTTP/process matrix, conflict refinement, unknown |
 | Result/public API cutover | 5 | request-only API, readonly semantic result, removed-export negative fixtures |
 | Presentation/security | 4 | all states, sanitization, UUID, exit codes |
-| Context projection | 6 | copy/freeze, credentials absent, characterization |
-| Architecture/cutover | 6 | exact allowlist, alias bypass, no-growth, zero leaves, no dual contract |
-| **Total** | **34** | no double counting |
+| Context projection | 30 | copy/freeze, credentials absent, per-capability characterization and route projection |
+| Architecture/cutover | 22 | exact allowlist, alias bypass, no-growth, zero leaves, no dual contract, composition binding |
+| **Total** | **74** | no double counting |
 
 The taxonomy, retry metadata, serializer, and import-classification policies
 require 100% enumerated branch coverage. Changed orchestration modules require
@@ -417,8 +467,8 @@ require 100% enumerated branch coverage. Changed orchestration modules require
 fixed UUID factories, mutation attempts, API compile fixtures, and AST fixtures;
 they never log or snapshot a real secret/raw exception.
 
-P2 uses this non-overlapping 12-case ledger. P2-A supplies 11 cases now; the
-final exact-allowlist audit remains reserved for P2 closure.
+P2 uses this non-overlapping 52-case ledger. P2-A and P2-B supply 17 cases now;
+the remaining rows are mandatory floors for their clean-cut slices.
 
 | P2 evidence | Cases | Automated owner |
 |---|---:|---|
@@ -426,8 +476,13 @@ final exact-allowlist audit remains reserved for P2 closure.
 | immutable event/single-action issue resolution | 3 | `src/application/usecases/execution/__tests__/execution_issue_number_policy.test.ts` |
 | explicit release/hotfix query and empty-payload outcomes | 3 | `src/application/usecases/execution/__tests__/execution_branch_version_resolver.test.ts` |
 | credentials bound behind semantic setup ports | 1 | `src/infrastructure/composition/__tests__/execution_setup_composition_root.test.ts` |
-| final exact 16-file allowlist and indirect-alias audit | 1 | reserved for P2 closure |
-| **Total** | **12** | no double counting |
+| immutable Bugbot selection/review projections, credential exclusion, copy/freeze, trigger identities, incomplete input | 6 | `src/application/usecases/steps/commit/bugbot/__tests__/bugbot_review_operation_context.test.ts` |
+| P2-C Bugbot bound-I/O and mutation cut | 10 | reserved for P2-C |
+| P2-D shared comment-analysis cut | 8 | reserved for P2-D |
+| P2-E issue/pull-request cut | 8 | reserved for P2-E |
+| P2-F push/single-action cut | 8 | reserved for P2-F |
+| final exact 16-file allowlist and indirect-alias audit | 1 | reserved for P2-G closure |
+| **Total** | **52** | no double counting |
 
 `scripts/validate-setup-execution-coverage.cjs` enforces at least 95% lines and
 statements plus 90% branches and functions independently for every executable
@@ -481,9 +536,11 @@ failure contract instead of redefining it.
 2. Change `Result` directly and replace the 26 known raw-result sites by
    capability; install the no-growth AST baseline immediately.
 3. Replace the public Bugbot API and remove broad exports in the same slice.
-4. Replace P0-B/P1 capability inputs with contexts as those priorities land.
-5. Replace all remaining leaf inputs, enforce the final 16-file allowlist, and
-   publish the final API reference/change notice.
+4. Replace P0-B/P1 capability inputs through P2-A setup and P2-B Bugbot analysis.
+5. Complete P2-C Bugbot bound I/O, P2-D shared comment analysis, P2-E issue/PR,
+   and P2-F push/single-action as direct capability cuts.
+6. Run P2-G, enforce the final 16-file allowlist, and publish the final API
+   reference/change notice.
 
 ## 19. Definition of Done
 

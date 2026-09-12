@@ -92,6 +92,14 @@ grow or move to new files. The final target keeps the aggregate only at route
 and entrypoint boundaries; leaf use cases receive freshly copied, readonly
 capability contexts.
 
+The P2-B Bugbot boundary first copies repository, target, trigger, ignore, and
+organization-rule facts into a frozen `BugbotContextSelectionContext`. Only the
+detection route extends it with locale, selected-agent, severity, limits, and
+bounded review configuration as `BugbotReviewOperationContext`. Both contracts
+exclude the SCM token, mutable `Ai` model, event objects, and provider clients;
+selection-only workflows cannot request analysis configuration. Provider I/O
+remains in the coordinator until its credential-bound P2-C cut.
+
 Configuration embedded in issue or pull-request content is versioned. Readers
 accept only the current schema and fail closed on missing, malformed, or
 different-version payloads. Writers emit only current, known fields, so stale

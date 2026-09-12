@@ -2,13 +2,15 @@ import { execFileSync } from 'node:child_process';
 import { accessSync, constants } from 'node:fs';
 import { delimiter, isAbsolute, join } from 'node:path';
 import type { AgentConfiguration, AgentProvider } from '../model/agent';
-import { getAgentRuntimeManifestEntry } from '../../infrastructure/agents/agent_runtime_manifest';
+import {
+    assertInstalledAgentRuntimeVersion,
+    getAgentRuntimeManifestEntry,
+} from '../../infrastructure/agents/agent_runtime_manifest';
 import {
     DEFAULT_AGENT_EXECUTABLES,
     provisioningDisabledError,
     resolveAgentProvisioningMode,
 } from './agent_cli_provisioning_policy';
-import { assertAgentRuntimeVersion } from '../../infrastructure/agents/agent_runtime_manifest';
 
 export type AgentCliProvisioningEnvironment = NodeJS.ProcessEnv;
 
@@ -78,36 +80,33 @@ export class AgentCliProvisioner {
 
         if (this.provisionedExecutables.has(executable)) return;
         const executableAvailable = this.system.executableExists(executable, environment);
-        if (executableAvailable && mode !== 'always') {
-            try {
-                this.assertVersion(executable, provider, environment);
-                this.provisionedExecutables.add(executable);
-                return;
-            } catch (error) {
-                if (mode === 'disabled' || !canRepairManifestExecutable(provider, selectedExecutable)) {
-                    throw error;
-                }
+        if (selectedExecutable !== undefined) {
+            if (!executableAvailable) {
+                throw new Error(`The explicitly selected ${provider} executable "${executable}" is not available; explicit executables are never installed or replaced.`);
             }
+            this.provisionedExecutables.add(executable);
+            return;
+        }
+        if (executableAvailable && mode !== 'always') {
+            this.provisionedExecutables.add(executable);
+            return;
         }
         if (mode === 'disabled') {
             throw provisioningDisabledError(provider, executable);
         }
 
-        this.installProvider(provider, environment);
+        this.installProvider(provider);
         this.assertInstalled(executable, provider, environment);
-        this.assertVersion(executable, provider, environment);
+        this.assertInstalledVersion(executable, provider, environment);
         this.provisionedExecutables.add(executable);
     }
 
-    private installProvider(provider: AgentProvider, _environment: NodeJS.ProcessEnv): void {
-        const installers: Record<AgentProvider, () => void> = {
-            codex: () => this.system.installPackage('@openai/codex', manifestSemver('codex')),
-            opencode: () => this.system.installPackage('opencode-ai', manifestSemver('opencode')),
-            cursor: () => {
-                throw new Error(`Cursor ${getAgentRuntimeManifestEntry('cursor').version} must be preinstalled; automatic installation cannot guarantee the manifest version.`);
-            },
-        };
-        installers[provider]();
+    private installProvider(provider: AgentProvider): void {
+        const installation = getAgentRuntimeManifestEntry(provider).installation;
+        if (!installation) {
+            throw new Error(`The ${provider} CLI must be preinstalled because Copilot has no reviewed automatic installer for it.`);
+        }
+        this.system.installPackage(installation.package, installation.version);
     }
 
     private assertInstalled(executable: string, provider: AgentProvider, environment: NodeJS.ProcessEnv): void {
@@ -116,23 +115,14 @@ export class AgentCliProvisioner {
         }
     }
 
-    private assertVersion(executable: string, provider: AgentProvider, environment: NodeJS.ProcessEnv): void {
+    private assertInstalledVersion(executable: string, provider: AgentProvider, environment: NodeJS.ProcessEnv): void {
         try {
-            assertAgentRuntimeVersion(provider, this.system.readVersion(executable, environment));
+            assertInstalledAgentRuntimeVersion(provider, this.system.readVersion(executable, environment));
         } catch (error) {
             throw Object.assign(
-                new Error(`The ${provider} CLI failed exact-version preflight: ${error instanceof Error ? error.message : String(error)}`),
+                new Error(`The Copilot-installed ${provider} CLI failed pinned-version verification: ${error instanceof Error ? error.message : String(error)}`),
                 { cause: error },
             );
         }
     }
-}
-
-function manifestSemver(provider: 'codex' | 'opencode'): string {
-    return getAgentRuntimeManifestEntry(provider).version.replace(/^codex-cli\s+/, '');
-}
-
-function canRepairManifestExecutable(provider: AgentProvider, selectedExecutable: string | undefined): provider is 'codex' | 'opencode' {
-    return provider !== 'cursor'
-        && (selectedExecutable === undefined || selectedExecutable === DEFAULT_AGENT_EXECUTABLES[provider]);
 }

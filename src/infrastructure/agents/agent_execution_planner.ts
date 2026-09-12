@@ -26,7 +26,7 @@ import {
 import { AgentCliError } from '../../data/repository/agent_cli_contracts';
 import { validateAgentExecutableSelection } from '../../application/policies/agent_executable_policy';
 import { buildAgentCliEnvironment } from '../../data/repository/agent_authentication';
-import { assertAgentRuntimeVersion, getAgentRuntimeManifest, getAgentRuntimeManifestEntry } from './agent_runtime_manifest';
+import { getAgentRuntimeManifest, getAgentRuntimeManifestEntry, readAgentRuntimeVersion } from './agent_runtime_manifest';
 
 export interface AgentExecutionPlanningRequest {
     readonly configuration: AgentConfiguration;
@@ -93,7 +93,7 @@ export class AgentExecutionPlanner {
                 sourceEnvironment,
                 request.configuration.modelProvider,
             );
-            const version = assertAgentRuntimeVersion(
+            const version = readAgentRuntimeVersion(
                 request.configuration.provider,
                 this.system.readVersion(executable, safeEnvironment),
             );

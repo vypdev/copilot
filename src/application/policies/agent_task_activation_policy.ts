@@ -3,7 +3,7 @@ import { ACTIONS } from '../../data/model/action_types';
 import type { SingleAction } from '../../data/model/single_action';
 import type { GithubActionEventInputs } from '../../actions/github_event_inputs';
 import { parseCopilotCommand } from '../../domain/copilot_command';
-import { containsBotMention } from '../usecases/steps/common/think_input_policy';
+import { containsBotMention, isCopilotCommentRequest } from '../../domain/copilot_comment_request';
 import { isNaturalLanguageBranchSyncRequest, parseBranchSyncCommandArguments } from '../../domain/branch_sync_command';
 
 const COMMENT_TASKS: readonly AgentTask[] = ['findings', 'fixer', 'planner', 'reviewer', 'tester'];
@@ -51,6 +51,7 @@ export function activeAgentTasks(
 
 function activeCommentTasks(event: GithubActionEventInputs, botLogin: string): AgentTask[] {
     const body = commentBody(event);
+    if (!isCopilotCommentRequest(body, botLogin)) return [];
     const command = parseCopilotCommand(body);
     if (command.kind === 'invalid') return [];
     if (command.kind === 'command') {
@@ -81,10 +82,16 @@ function activeCommentTasks(event: GithubActionEventInputs, botLogin: string): A
         }
     }
     if (isNaturalLanguageBranchSyncRequest(body, botLogin)) return ['fixer'];
-    if (!body || !containsBotMention(body, botLogin)) return ['findings'];
+    if (!containsBotMention(body, botLogin)) return [];
     return isPullRequestComment(event)
         ? COMMENT_TASKS.filter(task => task !== 'tester')
         : ['findings', 'fixer', 'planner'];
+}
+
+/** Discards passive comment traffic before project, AI, and runtime composition. */
+export function isUnaddressedCommentEvent(event: GithubActionEventInputs, botLogin: string): boolean {
+    if (!['issue_comment', 'pull_request_review_comment'].includes(event.eventName)) return false;
+    return !isCopilotCommentRequest(commentBody(event), botLogin);
 }
 
 function branchSyncAgentTasks(args: readonly string[]): AgentTask[] {

@@ -25,6 +25,11 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
+      - name: Set up Node.js 24 for pinned agent installation
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+
       - name: Fetch push review range
         if: github.event.after != '0000000000000000000000000000000000000000'
         env:

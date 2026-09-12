@@ -13,8 +13,7 @@ const target: BugbotReviewTarget = {
   headOwner: "acme",
   headRef: "feature/42",
   expectedHeadSha: "a".repeat(40),
-  eventPullRequestNumber: 12,
-  pullRequestRequired: true,
+  pullRequestSelection: { kind: "event", number: 12 },
 };
 
 const candidate = (overrides: Partial<BugbotPullRequestIdentity> = {}): BugbotPullRequestIdentity => ({

@@ -31,7 +31,7 @@ export function prepareGithubAgentRuntime(
             } catch (cause) {
                 throw new ApplicationError(
                     'configuration.unsupported',
-                    `The ${configuration.provider} runtime could not satisfy the exact manifest provisioning contract.`,
+                    `The ${configuration.provider} runtime is unavailable and could not satisfy the selected provisioning mode.`,
                     { cause },
                 );
             }

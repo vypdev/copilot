@@ -1,6 +1,6 @@
 ---
 title: Agent CLI provisioning
-description: Provision pinned OpenCode, Codex, and Cursor CLI runtimes for Copilot AI features.
+description: Reuse operator runtimes or provision pinned OpenCode and Codex CLI packages for Copilot AI features.
 ---
 
 # Agent CLI provisioning
@@ -15,9 +15,10 @@ The Action executes external provider-specific CLIs. It does not embed agent SDK
 | Codex | `codex` | `codex exec --strict-config --ignore-user-config --ignore-rules --ephemeral --sandbox mode --model model ... -` | `OPENAI_API_KEY`, `CODEX_API_KEY`, or controlled local session |
 | Cursor | `agent` | `agent -p --output-format text --sandbox enabled --model model [--mode ask\|--force] <prompt>` | `CURSOR_API_KEY` |
 
-## Manifest-owned versions
+## Runtime ownership and installation manifest
 
-The immutable manifest owns every accepted version:
+The manifest records reviewed known-good runtime identities and the exact
+package recipe Copilot may install:
 
 ```text
 Codex CLI: codex-cli 0.153.4
@@ -26,13 +27,15 @@ Cursor Agent: 2026.09.10-fd3934a
 AGENT_PROVISIONING=auto
 ```
 
-The selected provider is provisioned only when needed. In the recommended
-`auto` mode, a missing or version-mismatched default Codex/OpenCode executable
-is installed from the exact manifest package and then revalidated. Explicit
-executable paths are never replaced. Set `always` to reinstall Codex/OpenCode at
-the manifest version or `disabled` to require the runner image. Local and
-prebuilt runtimes are admitted only when `--version` exactly matches. Repository
-Variables cannot replace, widen, or float the manifest version.
+The selected provider is prepared only when needed. In the recommended `auto`
+mode, an available default executable is operator-owned: Copilot records its
+non-empty `--version` identity and does not reinstall it. A missing default
+Codex/OpenCode executable is installed from the exact pinned package and the
+new installation must report the reviewed identity. Set `always` to reinstall a
+default Codex/OpenCode executable from the pinned package, or `disabled` to
+require the runner image. Any explicitly selected executable is operator-owned
+in every mode and is never installed or replaced. Repository Variables cannot
+replace, widen, or float the installation recipe.
 
 ## Approved installation methods
 
@@ -43,9 +46,9 @@ npm install --global "@openai/codex@0.153.4"
 npm install --global "opencode-ai@1.18.3"
 ```
 
-Cursor automatic installation is unsupported because the public installer does
-not select an immutable historical build. Bake the exact manifest version into a
-controlled runner image; do not substitute an unofficial npm package.
+Cursor automatic installation is unsupported because there is no reviewed,
+reproducible package recipe. Preinstall a compatible Cursor Agent on the
+controlled runner; do not substitute an unofficial npm package.
 
 Do not use `npx`, Yarn, Bun, floating `@latest`, unverified shell downloads, or secrets in command-line arguments.
 
@@ -94,9 +97,9 @@ The verifier never prints secret values. It checks executable availability, head
 
 For Codex authentication modes and account restrictions, see [Codex authentication and compliance](/security-operations/security/authentication-compliance). For the configuration contract, see [Agent CLI configuration](/agents/cli-configuration).
 
-## Verified development manifest
+## Reviewed development baseline
 
-The runtime manifest accepts exactly:
+The current known-good smoke baseline is:
 
 ```text
 Codex CLI: codex-cli 0.153.4
@@ -104,5 +107,8 @@ OpenCode: 1.18.3
 Cursor Agent: 2026.09.10-fd3934a
 ```
 
-An upgrade is a reviewed code change to the manifest, provider fixtures,
-provisioning, automated checks, documentation, and authenticated smoke evidence.
+Changing a pinned installation is a reviewed code change to the manifest,
+provider fixtures, provisioning, automated checks, documentation, and
+authenticated smoke evidence. A newer operator-owned runtime is not silently
+downgraded; verify its fixed command surface with the safe checks above before
+production use.

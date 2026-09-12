@@ -55656,7 +55656,7 @@ function buildSetupWarnings(configuration) {
         warnings.push('Merge queue mode fails closed unless every required producer is verified automatically or covered by an exact reviewed attestation.');
     }
     if (configuration.ai.provisioningMode === 'always') {
-        warnings.push('Always-provision mode requires pinned CLI versions or a Cursor installer checksum in repository Variables.');
+        warnings.push('Always-provision mode reinstalls only default Codex/OpenCode runtimes from pinned manifest packages; explicit executables are never replaced and Cursor must be preinstalled.');
     }
     if (configuration.features.inactiveIssueClosure !== false) {
         warnings.push('Inactive issue closure is enabled; waiting issues are closed after the configured inactivity threshold and can be reopened with a new comment.');
@@ -55665,7 +55665,7 @@ function buildSetupWarnings(configuration) {
         warnings.push('Project IDs must be accessible to the PAT and use the expected project column names.');
     }
     if ((0, setup_configuration_defaults_1.setupAgentTasksForFeatures)(configuration).some(task => configuration.agents[task].provider === 'cursor')) {
-        warnings.push('Cursor is an experimental runtime in Copilot and requires a verified installer checksum plus CURSOR_API_KEY.');
+        warnings.push('Cursor is an experimental runtime in Copilot and requires a compatible preinstalled CLI plus CURSOR_API_KEY; Copilot has no automatic Cursor installer.');
     }
     if ((0, setup_configuration_storage_policy_1.usesOrganizationStorage)(configuration)) {
         warnings.push('Organization-level Secrets and Variables require organization permissions; selected access is the safest default and repository values take precedence.');
@@ -59987,7 +59987,7 @@ exports.resolveCommentAutomationDecision = resolveCommentAutomationDecision;
 const logging_ports_1 = __nccwpck_require__(6152);
 const bugbot_fix_intent_payload_1 = __nccwpck_require__(25734);
 const comment_automation_route_policy_1 = __nccwpck_require__(47058);
-const think_input_policy_1 = __nccwpck_require__(59687);
+const copilot_comment_request_1 = __nccwpck_require__(86819);
 const copilot_command_1 = __nccwpck_require__(11771);
 async function resolveCommentAutomationDecision(param, options, actorAuthorizationPort) {
     (0, logging_ports_1.logInfo)("Running bugbot fix intent detection (before Think).");
@@ -59996,7 +59996,7 @@ async function resolveCommentAutomationDecision(param, options, actorAuthorizati
     const parsedCommand = (0, copilot_command_1.parseCopilotCommand)(options.userComment);
     const explicitMutationCommand = parsedCommand.kind === 'command'
         && (parsedCommand.command.name === 'fix' || parsedCommand.command.name === 'implement');
-    const route = (0, comment_automation_route_policy_1.resolveCommentAutomationRoute)(intentPayload, await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token), (0, think_input_policy_1.containsBotMention)(options.userComment, param.tokenUser ?? ''), explicitMutationCommand);
+    const route = (0, comment_automation_route_policy_1.resolveCommentAutomationRoute)(intentPayload, await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token), (0, copilot_comment_request_1.containsBotMention)(options.userComment, param.tokenUser ?? ''), explicitMutationCommand);
     logIntent(intentPayload);
     return { intentResults, intentPayload, route };
 }
@@ -60068,7 +60068,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCommentAutomation = runCommentAutomation;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
-const think_input_policy_1 = __nccwpck_require__(59687);
+const copilot_comment_request_1 = __nccwpck_require__(86819);
 const copilot_command_1 = __nccwpck_require__(11771);
 const comment_automation_command_workflow_1 = __nccwpck_require__(63134);
 const comment_automation_natural_language_workflow_1 = __nccwpck_require__(10554);
@@ -60080,6 +60080,10 @@ async function runCommentAutomation(param, options, actorAuthorizationPort, auth
     let languageResults = [];
     try {
         const command = (0, copilot_command_1.parseCopilotCommand)(options.userComment);
+        if (!(0, copilot_comment_request_1.isCopilotCommentRequest)(options.userComment, param.tokenUser ?? '')) {
+            (0, logging_ports_1.logInfo)('Skipping comment automation because the comment does not address Copilot.');
+            return [new result_1.Result({ id: options.taskId, success: true, executed: false })];
+        }
         if (command.kind === 'invalid') {
             return [(0, comment_automation_command_workflow_1.invalidCommentCommandResult)(options.taskId, command.reason)];
         }
@@ -60103,10 +60107,6 @@ async function runCommentAutomation(param, options, actorAuthorizationPort, auth
             return (0, branch_sync_comment_command_1.runBranchSyncCommand)(param, options, [], actorAuthorizationPort);
         }
         languageResults = await options.languageUseCase.invoke(param);
-        if (!(0, think_input_policy_1.containsBotMention)(options.userComment, param.tokenUser ?? '')) {
-            (0, logging_ports_1.logInfo)('Skipping natural-language intent detection because the bot was not mentioned.');
-            return languageResults;
-        }
         return await (0, comment_automation_natural_language_workflow_1.runNaturalLanguageCommentAutomation)(param, options, actorAuthorizationPort, languageResults, {
             authenticatedUserPort,
         });
@@ -61861,7 +61861,7 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const limit_comments_1 = __nccwpck_require__(31643);
 const finding_1 = __nccwpck_require__(31011);
 const build_bugbot_prompt_1 = __nccwpck_require__(52483);
-const apply_detected_findings_1 = __nccwpck_require__(20793);
+const prepare_bugbot_findings_1 = __nccwpck_require__(85016);
 const query_bugbot_findings_1 = __nccwpck_require__(13059);
 const bugbot_resolution_eligibility_policy_1 = __nccwpck_require__(89189);
 /** Pure analysis phase: query, validate, normalize, deduplicate and reconcile; never mutates the SCM. */
@@ -61870,10 +61870,10 @@ async function analyzeBugbotRevision(execution, context, dependencies) {
     dependencies.telemetry.observeContext(context, prompt);
     (0, logging_ports_1.logInfo)('Detecting potential problems via configured agent using canonical change context...');
     const startedAt = Date.now();
-    const agentResponse = await dependencies.telemetry.measure('analysis', () => (0, query_bugbot_findings_1.queryBugbotFindings)(dependencies.agent, execution, prompt));
+    const agentResponse = await dependencies.telemetry.measure('analysis', () => (0, query_bugbot_findings_1.queryBugbotFindings)(dependencies.agent, execution.analysis.agentConfiguration, prompt));
     dependencies.telemetry.observeResponse(agentResponse);
     (0, logging_ports_1.logInfo)(`Bugbot reviewer completed in ${Date.now() - startedAt}ms.`);
-    const raw = await dependencies.telemetry.measure('normalization', () => (0, apply_detected_findings_1.prepareDetectedFindings)(execution, agentResponse));
+    const raw = await dependencies.telemetry.measure('normalization', () => (0, prepare_bugbot_findings_1.prepareBugbotFindings)(agentResponse, execution.ignorePatterns, execution.analysis.minimumSeverity, execution.analysis.commentLimit));
     if (!raw)
         return undefined;
     const prepared = suppressDismissedFindings(execution, context, raw);
@@ -61887,7 +61887,7 @@ function suppressDismissedFindings(execution, context, prepared) {
         const existing = (0, finding_1.findExistingFindingInfo)(context.existingByFindingId, finding);
         return existing?.issue?.resolution !== 'dismissed' && existing?.pullRequest?.resolution !== 'dismissed';
     });
-    const limited = (0, limit_comments_1.applyCommentLimit)(activeFindings, execution.ai.getBugbotCommentLimit());
+    const limited = (0, limit_comments_1.applyCommentLimit)(activeFindings, execution.analysis.commentLimit);
     return { ...prepared, ...limited, activeFindings };
 }
 
@@ -61900,15 +61900,10 @@ function suppressDismissedFindings(execution, context, prepared) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.prepareDetectedFindings = prepareDetectedFindings;
 exports.applyDetectedFindings = applyDetectedFindings;
-const prepare_bugbot_findings_1 = __nccwpck_require__(85016);
 const mark_findings_resolved_use_case_1 = __nccwpck_require__(96963);
 const publish_findings_use_case_1 = __nccwpck_require__(88442);
 const pull_request_review_errors_1 = __nccwpck_require__(46445);
-function prepareDetectedFindings(execution, response) {
-    return (0, prepare_bugbot_findings_1.prepareBugbotFindings)(response, execution.ai.getAiIgnoreFiles(), execution.ai.getBugbotMinSeverity(), execution.ai.getBugbotCommentLimit());
-}
 async function applyDetectedFindings(execution, context, prepared, publicationPorts, resolutionPorts) {
     try {
         await (0, publish_findings_use_case_1.publishFindings)({
@@ -62027,6 +62022,7 @@ const finding_1 = __nccwpck_require__(31011);
 const build_bugbot_fix_prompt_1 = __nccwpck_require__(89819);
 const load_bugbot_context_use_case_1 = __nccwpck_require__(4050);
 const bugbot_context_request_1 = __nccwpck_require__(98299);
+const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
 const logging_ports_1 = __nccwpck_require__(6152);
 const workspace_mutation_guard_1 = __nccwpck_require__(24243);
 const application_error_1 = __nccwpck_require__(75999);
@@ -62037,10 +62033,10 @@ async function prepareBugbotAutofix(execution, targetFindingIds, userComment, pr
         || (!execution.commit.branch?.trim() ? canonicalHint?.headRef : undefined);
     let context;
     try {
-        context = await (0, load_bugbot_context_use_case_1.loadBugbotContext)((0, bugbot_context_request_1.projectBugbotContextRequest)(execution, {
+        context = await (0, load_bugbot_context_use_case_1.loadBugbotContext)((0, bugbot_context_request_1.projectBugbotContextRequest)((0, bugbot_review_operation_context_1.projectBugbotContextSelectionContext)(execution), {
             ...(targetBranch ? { branchOverride: targetBranch } : {}),
             ...(canonicalHint ? { pullRequestNumberOverride: canonicalHint.number } : {}),
-            pullRequestRequired: true,
+            exactHeadPullRequestRequired: true,
         }), contextPorts.loader.bind({
             owner: execution.owner,
             repository: execution.repo,
@@ -62190,35 +62186,33 @@ function newResultFailure(semanticError) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.projectBugbotContextRequest = projectBugbotContextRequest;
 const positive_integer_policy_1 = __nccwpck_require__(19879);
-const bugbot_review_freshness_1 = __nccwpck_require__(14307);
-function projectBugbotContextRequest(execution, options) {
-    const issueNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(options?.issueNumberOverride ?? execution.issueNumber);
-    const eventPullRequestNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(options?.pullRequestNumberOverride ?? (execution.isPullRequest ? execution.pullRequest.number : undefined));
+function projectBugbotContextRequest(context, options) {
+    const issueNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(options?.issueNumberOverride ?? context.target.issueNumber);
+    const pullRequestNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(options?.pullRequestNumberOverride
+        ?? (context.target.isPullRequest ? context.target.pullRequestNumber : undefined));
     const headRef = (options?.branchOverride
-        ?? (execution.isPullRequest ? execution.pullRequest.head : execution.commit.branch)
+        ?? context.target.headBranch
         ?? "").trim();
-    const repositoryId = (0, positive_integer_policy_1.parsePositiveSafeInteger)(execution.inputs?.repository?.id);
-    const eventHeadOwner = execution.inputs?.pull_request?.head?.repo?.owner?.login?.trim();
     const target = {
         repository: {
-            owner: execution.owner,
-            name: execution.repo,
-            ...(repositoryId ? { id: repositoryId } : {}),
+            owner: context.repository.owner,
+            name: context.repository.name,
+            ...(context.repository.id ? { id: context.repository.id } : {}),
         },
-        triggerKind: execution.eventName || "unknown",
+        triggerKind: context.trigger.kind,
         ...(issueNumber ? { issueNumber } : {}),
-        headOwner: eventHeadOwner || execution.owner,
+        headOwner: context.trigger.headOwner,
         headRef,
-        ...((0, bugbot_review_freshness_1.expectedBugbotHeadSha)(execution) ? { expectedHeadSha: (0, bugbot_review_freshness_1.expectedBugbotHeadSha)(execution) } : {}),
-        ...(eventPullRequestNumber ? { eventPullRequestNumber } : {}),
-        pullRequestRequired: options?.pullRequestRequired ?? eventPullRequestNumber !== undefined,
+        ...(context.trigger.expectedHeadSha ? { expectedHeadSha: context.trigger.expectedHeadSha } : {}),
+        pullRequestSelection: context.target.isPullRequest || pullRequestNumber !== undefined
+            ? { kind: 'event', ...(pullRequestNumber ? { number: pullRequestNumber } : {}) }
+            : { kind: 'exact-head', required: options?.exactHeadPullRequestRequired ?? false },
     };
-    const configuration = execution.ai.getBugbotReviewConfiguration();
     return {
         target,
-        ...(execution.tokenUser?.trim() ? { trustedAuthorLogin: execution.tokenUser.trim() } : {}),
-        ignorePatterns: execution.ai.getAiIgnoreFiles(),
-        organizationRules: configuration.organizationRules,
+        ...(context.trustedAuthorLogin ? { trustedAuthorLogin: context.trustedAuthorLogin } : {}),
+        ignorePatterns: context.ignorePatterns,
+        organizationRules: context.organizationRules,
     };
 }
 
@@ -62648,6 +62642,95 @@ async function hasNewerBugbotRevision(execution, context, ports) {
 
 /***/ }),
 
+/***/ 16660:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.projectBugbotContextSelectionContext = projectBugbotContextSelectionContext;
+exports.projectBugbotReviewOperationContext = projectBugbotReviewOperationContext;
+const positive_integer_policy_1 = __nccwpck_require__(19879);
+/** Copies only the non-secret facts required to select canonical Bugbot context. */
+function projectBugbotContextSelectionContext(source) {
+    const reviewConfiguration = source.ai.getBugbotReviewConfiguration();
+    return projectSelectionFacts(source, reviewConfiguration.organizationRules);
+}
+/** Copies only non-secret review facts out of the mutable route aggregate. */
+function projectBugbotReviewOperationContext(source) {
+    const reviewConfiguration = source.ai.getBugbotReviewConfiguration();
+    const { organizationRules, ...analysisReviewConfiguration } = reviewConfiguration;
+    const selection = projectSelectionFacts(source, organizationRules);
+    const agentConfiguration = source.ai.getAgentConfiguration(source.isPullRequest ? 'reviewer' : 'findings');
+    return Object.freeze({
+        ...selection,
+        locale: Object.freeze({
+            pullRequest: source.locale?.pullRequest ?? 'en-US',
+        }),
+        analysis: Object.freeze({
+            agentConfiguration: Object.freeze({ ...agentConfiguration }),
+            minimumSeverity: source.ai.getBugbotMinSeverity(),
+            commentLimit: source.ai.getBugbotCommentLimit(),
+            reviewConfiguration: Object.freeze({ ...analysisReviewConfiguration }),
+        }),
+    });
+}
+function projectSelectionFacts(source, organizationRules) {
+    const repositoryId = (0, positive_integer_policy_1.parsePositiveSafeInteger)(source.inputs?.repository?.id);
+    const trustedAuthorLogin = source.tokenUser?.trim();
+    const commitBranch = source.commit?.branch?.trim() ?? '';
+    const headBranch = source.isPullRequest
+        ? source.pullRequest?.head?.trim() ?? ''
+        : commitBranch;
+    const expectedHeadSha = normalizeExpectedHeadSha(source.eventName, source.inputs);
+    const headOwner = source.inputs?.pull_request?.head?.repo?.owner?.login?.trim();
+    return Object.freeze({
+        repository: Object.freeze({
+            owner: source.owner,
+            name: source.repo,
+            ...(repositoryId ? { id: repositoryId } : {}),
+        }),
+        target: Object.freeze({
+            issueNumber: source.issueNumber,
+            isPullRequest: source.isPullRequest,
+            pullRequestNumber: source.pullRequest?.number ?? -1,
+            headBranch,
+            commitBranch,
+            baseBranch: source.currentConfiguration?.parentBranch
+                ?? source.branches?.development
+                ?? 'develop',
+            pullRequestAction: source.pullRequest?.action ?? '',
+            draft: source.inputs?.pull_request?.draft === true,
+        }),
+        trigger: Object.freeze({
+            kind: source.eventName || 'unknown',
+            ...(typeof source.inputs?.before === 'string' ? { before: source.inputs.before } : {}),
+            ...(typeof source.inputs?.after === 'string' ? { after: source.inputs.after } : {}),
+            ...(expectedHeadSha ? { expectedHeadSha } : {}),
+            headOwner: headOwner || source.owner,
+        }),
+        ...(trustedAuthorLogin ? { trustedAuthorLogin } : {}),
+        ignorePatterns: Object.freeze([...source.ai.getAiIgnoreFiles()]),
+        organizationRules: Object.freeze([...organizationRules]),
+    });
+}
+function normalizeExpectedHeadSha(eventName, inputs) {
+    // Comment-triggered reviews intentionally target the latest remote head.
+    const candidate = eventName === 'pull_request'
+        ? inputs?.pull_request?.head?.sha
+        : eventName === 'workflow_run'
+            ? inputs?.workflow_run?.head_sha
+            : eventName === 'check_suite'
+                ? inputs?.check_suite?.head_sha
+                : undefined;
+    return typeof candidate === 'string' && /^[0-9a-f]{7,64}$/iu.test(candidate.trim())
+        ? candidate.trim().toLowerCase()
+        : undefined;
+}
+
+
+/***/ }),
+
 /***/ 25011:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
@@ -62778,38 +62861,38 @@ class BugbotReviewTelemetry {
         ].includes(source.source));
         const selectionCandidates = this.context?.coverage.sources
             .find((source) => source.source === 'selection')?.itemsFetched;
-        const repositoryId = this.execution.inputs?.repository?.id;
+        const repositoryId = this.execution.repository.id;
         const startedAtEpoch = Date.parse(this.startedAt);
         const reviewId = [
-            this.execution.owner || 'unknown',
-            this.execution.repo || 'unknown',
+            this.execution.repository.owner || 'unknown',
+            this.execution.repository.name || 'unknown',
             canonicalPullRequestNumber !== undefined
                 ? `pr-${canonicalPullRequestNumber}`
-                : this.execution.pullRequest?.number > 0
-                    ? `pr-${this.execution.pullRequest.number}`
+                : this.execution.target.pullRequestNumber > 0
+                    ? `pr-${this.execution.target.pullRequestNumber}`
                     : 'branch',
             headSha?.slice(0, 12) || String(Number.isFinite(startedAtEpoch) ? startedAtEpoch : this.startedAtMs),
         ].join(':');
-        const agent = this.execution.ai.getAgentConfiguration(this.execution.isPullRequest ? 'reviewer' : 'findings');
+        const agent = this.execution.analysis.agentConfiguration;
         const findingStates = this.projection?.counts ?? (this.context && this.prepared
             ? (0, bugbot_finding_status_policy_1.projectBugbotFindingStatuses)(this.context.existingByFindingId, this.prepared.activeFindings ?? this.prepared.toPublish, this.prepared.resolvedFindingIds, this.prepared.resolvedFindingResolutions).counts
             : undefined);
         return {
             schemaVersion: 1,
             reviewId,
-            repository: `${this.execution.owner}/${this.execution.repo}`,
+            repository: `${this.execution.repository.owner}/${this.execution.repository.name}`,
             ...(Number.isSafeInteger(repositoryId) && Number(repositoryId) > 0
                 ? { repositoryId: Number(repositoryId) }
                 : {}),
-            triggerKind: sanitizeMetricName(this.execution.eventName || 'unknown'),
+            triggerKind: sanitizeMetricName(this.execution.trigger.kind),
             ...(canonicalPullRequestNumber !== undefined
                 ? { pullRequestNumber: canonicalPullRequestNumber }
-                : this.execution.pullRequest?.number > 0
-                    ? { pullRequestNumber: this.execution.pullRequest.number }
+                : this.execution.target.pullRequestNumber > 0
+                    ? { pullRequestNumber: this.execution.target.pullRequestNumber }
                     : {}),
             ...(headSha ? { headSha } : {}),
-            publicationMode: this.execution.ai.getBugbotReviewConfiguration().publicationMode,
-            configuredEffort: this.execution.ai.getBugbotReviewConfiguration().effort,
+            publicationMode: this.execution.analysis.reviewConfiguration.publicationMode,
+            configuredEffort: this.execution.analysis.reviewConfiguration.effort,
             ...(agent?.provider ? { agentProvider: agent.provider } : {}),
             ...(agent?.model ? { agentModel: agent.model } : {}),
             startedAt: this.startedAt,
@@ -63017,10 +63100,10 @@ const file_ignore_1 = __nccwpck_require__(10304);
 const MAX_IGNORE_BLOCK_LENGTH = 2000;
 const GIT_OBJECT_ID = /^[0-9a-f]{7,64}$/i;
 function buildBugbotPrompt(param, context) {
-    const headBranch = param.pullRequest?.head?.trim() || param.commit?.branch || 'unknown';
-    const baseBranch = param.currentConfiguration.parentBranch ?? param.branches.development ?? 'develop';
+    const headBranch = param.target.headBranch || 'unknown';
+    const baseBranch = param.target.baseBranch;
     const previousBlock = context.previousFindingsBlock;
-    const ignorePatterns = param.ai.getAiIgnoreFiles();
+    const ignorePatterns = param.ignorePatterns;
     const ignoreBlock = ignorePatterns.length > 0
         ? (() => {
             const raw = ignorePatterns.join(", ");
@@ -63032,7 +63115,7 @@ function buildBugbotPrompt(param, context) {
         : "";
     const changes = (context.prContext?.changes ?? [])
         .filter((change) => !(0, file_ignore_1.fileMatchesIgnorePatterns)(change.filename, ignorePatterns));
-    const configuredEffort = param.ai.getBugbotReviewConfiguration().effort;
+    const configuredEffort = param.analysis.reviewConfiguration.effort;
     const resolvedEffort = (0, review_configuration_1.resolveBugbotReviewEffort)(configuredEffort, {
         files: changes.length,
         additions: changes.reduce((sum, change) => sum + change.additions, 0),
@@ -63041,11 +63124,11 @@ function buildBugbotPrompt(param, context) {
     });
     return (0, prompts_1.getBugbotPrompt)({
         projectContextInstruction: project_context_instruction_1.PROJECT_CONTEXT_INSTRUCTION,
-        owner: param.owner,
-        repo: param.repo,
+        owner: param.repository.owner,
+        repo: param.repository.name,
         headBranch,
         baseBranch,
-        issueNumber: String(param.issueNumber),
+        issueNumber: String(param.target.issueNumber),
         changeScopeInstruction: buildChangeScopeInstruction(param, headBranch, baseBranch, (context.reviewDiffBlock ?? '').trim().length > 0),
         ignoreBlock,
         coverageBlock: buildCoverageBlock(context),
@@ -63078,11 +63161,11 @@ function buildCoverageBlock(context) {
     ].join('\n');
 }
 function buildChangeScopeInstruction(param, headBranch, baseBranch, hasCanonicalPullRequestDiff) {
-    const before = normalizedObjectId(param.inputs?.before);
-    const after = normalizedObjectId(param.inputs?.after);
-    const eventName = param.eventName || param.inputs?.eventName;
-    const isIncrementalPullRequestUpdate = param.inputs?.eventName === 'pull_request'
-        && param.pullRequest.action === 'synchronize'
+    const before = normalizedObjectId(param.trigger.before);
+    const after = normalizedObjectId(param.trigger.after);
+    const eventName = param.trigger.kind;
+    const isIncrementalPullRequestUpdate = eventName === 'pull_request'
+        && param.target.pullRequestAction === 'synchronize'
         && before !== undefined
         && after !== undefined
         && before !== after;
@@ -63475,6 +63558,7 @@ const copilot_command_1 = __nccwpck_require__(11771);
 const build_bugbot_fix_intent_prompt_1 = __nccwpck_require__(18799);
 const load_bugbot_context_use_case_1 = __nccwpck_require__(4050);
 const bugbot_context_request_1 = __nccwpck_require__(98299);
+const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
 const schema_1 = __nccwpck_require__(16808);
 const detect_bugbot_fix_intent_policy_1 = __nccwpck_require__(14796);
 const TASK_ID = "DetectBugbotFixIntentUseCase";
@@ -63504,7 +63588,7 @@ async function runDetectBugbotFixIntentWorkflow(param, ports) {
             ...(param.pullRequest.number > 0 ? { pullRequestNumberOverride: param.pullRequest.number } : {}),
         }
         : undefined;
-    const context = await (0, load_bugbot_context_use_case_1.loadBugbotContext)((0, bugbot_context_request_1.projectBugbotContextRequest)(param, contextOptions), ports.contextPorts.loader.bind({
+    const context = await (0, load_bugbot_context_use_case_1.loadBugbotContext)((0, bugbot_context_request_1.projectBugbotContextRequest)((0, bugbot_review_operation_context_1.projectBugbotContextSelectionContext)(param), contextOptions), ports.contextPorts.loader.bind({
         owner: param.owner,
         repository: param.repo,
         token: param.tokens.token,
@@ -63631,6 +63715,7 @@ const mark_findings_resolved_workflow_1 = __nccwpck_require__(65916);
 const bugbot_finding_marker_policy_1 = __nccwpck_require__(98024);
 const logging_ports_1 = __nccwpck_require__(6152);
 const application_error_1 = __nccwpck_require__(75999);
+const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
 /** Dismisses only findings present in the current persisted Bugbot context. */
 class DismissBugbotFindingsUseCase {
     constructor(dependencies) {
@@ -63683,6 +63768,7 @@ class DismissBugbotFindingsUseCase {
 }
 exports.DismissBugbotFindingsUseCase = DismissBugbotFindingsUseCase;
 async function loadDismissContext(execution, ports) {
+    const reviewContext = (0, bugbot_review_operation_context_1.projectBugbotContextSelectionContext)(execution);
     const reader = ports.loader.bind({
         owner: execution.owner,
         repository: execution.repo,
@@ -63690,12 +63776,12 @@ async function loadDismissContext(execution, ports) {
     });
     const branch = execution.commit.branch?.trim() || execution.pullRequest?.head?.trim();
     if (branch) {
-        return (0, load_bugbot_context_use_case_1.loadBugbotContext)((0, bugbot_context_request_1.projectBugbotContextRequest)(execution, {
+        return (0, load_bugbot_context_use_case_1.loadBugbotContext)((0, bugbot_context_request_1.projectBugbotContextRequest)(reviewContext, {
             branchOverride: branch,
             ...(execution.pullRequest?.number > 0 ? { pullRequestNumberOverride: execution.pullRequest.number } : {}),
         }), reader);
     }
-    return (0, load_bugbot_context_use_case_1.loadBugbotContext)((0, bugbot_context_request_1.projectBugbotContextRequest)(execution), reader);
+    return (0, load_bugbot_context_use_case_1.loadBugbotContext)((0, bugbot_context_request_1.projectBugbotContextRequest)(reviewContext), reader);
 }
 
 
@@ -63878,7 +63964,7 @@ const bugbot_review_rules_1 = __nccwpck_require__(25011);
 async function loadBugbotContext(request, ports) {
     const selection = await selectCanonicalPullRequest(request, ports);
     const canonicalPullRequest = requireUsableSelection(request, selection);
-    const selectionCoverage = (0, context_1.completeBugbotSourceCoverage)("selection", selection.kind === "canonical" ? 1 : selection.kind === "ambiguous" ? 2 : 0, request.target.headRef || request.target.eventPullRequestNumber ? 1 : 0);
+    const selectionCoverage = (0, context_1.completeBugbotSourceCoverage)("selection", selection.kind === "canonical" ? 1 : selection.kind === "ambiguous" ? 2 : 0, selectionPageCount(request));
     const tasks = [];
     if (request.target.issueNumber !== undefined) {
         tasks.push(async () => {
@@ -63976,9 +64062,11 @@ async function loadBugbotContext(request, ports) {
     };
 }
 async function selectCanonicalPullRequest(request, ports) {
-    const eventNumber = request.target.eventPullRequestNumber;
-    if (eventNumber !== undefined) {
-        const candidate = await ports.getPullRequest(eventNumber);
+    const policy = request.target.pullRequestSelection;
+    if (policy.kind === 'event') {
+        if (policy.number === undefined)
+            return { kind: 'none' };
+        const candidate = await ports.getPullRequest(policy.number);
         return (0, context_1.selectCanonicalBugbotPullRequest)(request.target, [candidate], "event");
     }
     if (!request.target.headRef)
@@ -63995,10 +64083,17 @@ function requireUsableSelection(request, selection) {
     if (selection.kind === "stale") {
         throw new application_error_1.ApplicationError("workflow.stale", `${selection.reason} Review was not started.`);
     }
-    if (request.target.pullRequestRequired) {
+    const policy = request.target.pullRequestSelection;
+    if (policy.kind === 'event' || policy.required) {
         throw new application_error_1.ApplicationError("workflow.stale", "No verified pull request matches the review target.");
     }
     return null;
+}
+function selectionPageCount(request) {
+    const policy = request.target.pullRequestSelection;
+    return policy.kind === 'event'
+        ? Number(policy.number !== undefined)
+        : Number(Boolean(request.target.headRef));
 }
 function sourceValue(sources, kind, fallback) {
     return sources.find((source) => source.kind === kind)?.value ?? fallback;
@@ -64725,9 +64820,9 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.queryBugbotFindings = queryBugbotFindings;
 const agent_task_policy_1 = __nccwpck_require__(85712);
 const schema_1 = __nccwpck_require__(16808);
-async function queryBugbotFindings(repository, execution, prompt) {
+async function queryBugbotFindings(repository, configuration, prompt) {
     return repository.query({
-        configuration: execution.ai.getAgentConfiguration(execution.isPullRequest ? 'reviewer' : 'findings'),
+        configuration,
         agentId: agent_task_policy_1.AGENT_PLAN,
         prompt,
         options: {
@@ -65726,14 +65821,16 @@ const analyze_bugbot_revision_use_case_1 = __nccwpck_require__(4658);
 const bugbot_review_freshness_1 = __nccwpck_require__(14307);
 const reconcile_bugbot_review_state_use_case_1 = __nccwpck_require__(57515);
 const application_error_1 = __nccwpck_require__(75999);
+const bugbot_review_operation_context_1 = __nccwpck_require__(16660);
 const TASK_ID = 'DetectPotentialProblemsUseCase';
 /** Coordinates Bugbot context, analysis and finding publication behind application ports. */
 async function runDetectPotentialProblemsWorkflow(param, dependencies) {
     const workflowStartedAt = Date.now();
-    const telemetry = new bugbot_review_telemetry_1.BugbotReviewTelemetry(param);
+    const reviewContext = (0, bugbot_review_operation_context_1.projectBugbotReviewOperationContext)(param);
+    const telemetry = new bugbot_review_telemetry_1.BugbotReviewTelemetry(reviewContext);
     const publishTelemetry = async (outcome, category) => {
         const snapshot = telemetry.snapshot(outcome, category);
-        if (param.ai.getBugbotReviewConfiguration().telemetry) {
+        if (reviewContext.analysis.reviewConfiguration.telemetry) {
             try {
                 await dependencies.telemetryPort?.publish(snapshot);
             }
@@ -65753,35 +65850,35 @@ async function runDetectPotentialProblemsWorkflow(param, dependencies) {
     };
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(TASK_ID)} Executing ${TASK_ID}.`);
     try {
-        if (shouldSkipDetection(param)) {
+        if (shouldSkipDetection(reviewContext)) {
             await publishTelemetry('skipped', 'admission');
             return [];
         }
-        if (param.isPullRequest && param.inputs?.pull_request?.draft === true
-            && !param.ai.getBugbotReviewConfiguration().reviewDrafts) {
+        if (reviewContext.target.isPullRequest && reviewContext.target.draft
+            && !reviewContext.analysis.reviewConfiguration.reviewDrafts) {
             return await complete(skippedDraftResult(), 'skipped');
         }
-        const contextOptions = resolveContextOptions(param);
+        const contextOptions = resolveContextOptions(reviewContext);
         if (contextOptions === null) {
             (0, logging_ports_1.logDebugInfo)('No branch or pull request target available for potential-problems detection.');
             await publishTelemetry('skipped', 'missing_context');
             return [];
         }
-        const contextRequest = (0, bugbot_context_request_1.projectBugbotContextRequest)(param, contextOptions);
+        const contextRequest = (0, bugbot_context_request_1.projectBugbotContextRequest)(reviewContext, contextOptions);
         const contextReader = dependencies.contextPorts.loader.bind({
             owner: param.owner,
             repository: param.repo,
             token: param.tokens.token,
         });
         const context = await telemetry.measure('context', () => (0, load_bugbot_context_use_case_1.loadBugbotContext)(contextRequest, contextReader));
-        const eventHeadSha = (0, bugbot_review_freshness_1.expectedBugbotHeadSha)(param);
+        const eventHeadSha = reviewContext.trigger.expectedHeadSha;
         if ((0, bugbot_review_freshness_1.isLoadedBugbotRevisionSuperseded)(context, eventHeadSha)) {
             return await complete(supersededResult(context.prContext?.prHeadSha, eventHeadSha), 'superseded');
         }
-        const prepared = await (0, analyze_bugbot_revision_use_case_1.analyzeBugbotRevision)(param, context, { agent: dependencies.aiRepository, telemetry });
+        const prepared = await (0, analyze_bugbot_revision_use_case_1.analyzeBugbotRevision)(reviewContext, context, { agent: dependencies.aiRepository, telemetry });
         if (prepared === undefined) {
             const analysisError = new application_error_1.ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.');
-            const presentation = param.ai.getBugbotReviewConfiguration().publicationMode === 'publish'
+            const presentation = reviewContext.analysis.reviewConfiguration.publicationMode === 'publish'
                 ? await telemetry.measure('projection', () => reconcileReviewState({
                     execution: param,
                     loadedContext: context,
@@ -65798,7 +65895,7 @@ async function runDetectPotentialProblemsWorkflow(param, dependencies) {
         if (await telemetry.measure('freshness', () => (0, bugbot_review_freshness_1.hasNewerBugbotRevision)(param, context, dependencies.contextPorts))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
-        if (param.ai.getBugbotReviewConfiguration().publicationMode === 'dry-run') {
+        if (reviewContext.analysis.reviewConfiguration.publicationMode === 'dry-run') {
             return await complete(dryRunResult(prepared, context), 'dry-run');
         }
         const resolutionErrors = await telemetry.measure('publication', () => (0, apply_detected_findings_1.applyDetectedFindings)(param, context, prepared, dependencies.publicationPorts, dependencies.resolutionPorts));
@@ -65881,26 +65978,27 @@ function supersededResult(loadedHeadSha, expectedHeadSha) {
     });
 }
 function resolveContextOptions(param) {
-    if (param.isPullRequest) {
+    if (param.target.isPullRequest) {
         return {
-            branchOverride: param.pullRequest.head,
-            issueNumberOverride: param.issueNumber,
-            pullRequestNumberOverride: param.pullRequest.number,
+            branchOverride: param.target.headBranch,
+            issueNumberOverride: param.target.issueNumber,
+            pullRequestNumberOverride: param.target.pullRequestNumber,
         };
     }
-    if (param.commit.branch?.trim())
+    if (param.target.commitBranch)
         return undefined;
-    if (['issues', 'issue_comment'].includes(param.eventName) && param.issueNumber > 0) {
+    if (['issues', 'issue_comment'].includes(param.trigger.kind) && param.target.issueNumber > 0) {
         return undefined;
     }
     return null;
 }
 function shouldSkipDetection(param) {
-    if (!(0, agent_1.isAgentConfigurationReady)(param.ai.getAgentConfiguration(param.isPullRequest ? 'reviewer' : 'findings'))) {
+    if (!(0, agent_1.isAgentConfigurationReady)(param.analysis.agentConfiguration)) {
         (0, logging_ports_1.logDebugInfo)('Agent not configured; skipping potential problems detection.');
         return true;
     }
-    if (param.issueNumber === -1 && (!param.isPullRequest || param.pullRequest.number <= 0)) {
+    if (param.target.issueNumber === -1
+        && (!param.target.isPullRequest || param.target.pullRequestNumber <= 0)) {
         (0, logging_ports_1.logDebugInfo)('No issue or pull request number for this execution; skipping potential problems detection.');
         return true;
     }
@@ -67031,7 +67129,6 @@ async function queryThinkAnswer(param, prompt, repository, agentTask) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getThinkCommentBody = getThinkCommentBody;
 exports.extractMentionQuestion = extractMentionQuestion;
-exports.containsBotMention = containsBotMention;
 function getThinkCommentBody(source) {
     if (source.isIssueComment)
         return source.issueCommentBody ?? '';
@@ -67042,14 +67139,6 @@ function getThinkCommentBody(source) {
 function extractMentionQuestion(commentBody, tokenUser) {
     const escapedUsername = tokenUser.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     return commentBody.replace(new RegExp(`@${escapedUsername}`, 'gi'), '').trim();
-}
-/** Matches GitHub usernames case-insensitively without matching a larger username. */
-function containsBotMention(commentBody, tokenUser) {
-    const normalizedUser = tokenUser.trim().replace(/^@/u, '');
-    if (!normalizedUser)
-        return false;
-    const escapedUsername = normalizedUser.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return new RegExp(`(^|[^A-Za-z0-9_-])@${escapedUsername}(?=$|[^A-Za-z0-9_-])`, 'iu').test(commentBody);
 }
 
 
@@ -67063,6 +67152,7 @@ function containsBotMention(commentBody, tokenUser) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveThinkRequest = resolveThinkRequest;
 const copilot_command_1 = __nccwpck_require__(11771);
+const copilot_comment_request_1 = __nccwpck_require__(86819);
 const think_input_policy_1 = __nccwpck_require__(59687);
 const sanitize_user_comment_for_prompt_1 = __nccwpck_require__(59828);
 /** Resolves the comment input and destination without performing I/O. */
@@ -67081,7 +67171,7 @@ function resolveThinkRequest(param) {
     if (command.kind === 'none') {
         if (!param.tokenUser?.trim())
             return { kind: 'skip', reason: 'missing-token' };
-        if (!(0, think_input_policy_1.containsBotMention)(commentBody, param.tokenUser))
+        if (!(0, copilot_comment_request_1.containsBotMention)(commentBody, param.tokenUser))
             return { kind: 'skip', reason: 'not-mentioned' };
     }
     const question = command.kind === 'command'
@@ -80968,6 +81058,35 @@ function parseCopilotCommand(raw) {
 
 /***/ }),
 
+/***/ 86819:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.containsBotMention = containsBotMention;
+exports.isCopilotCommentRequest = isCopilotCommentRequest;
+const copilot_command_1 = __nccwpck_require__(11771);
+/** Matches GitHub usernames case-insensitively without matching a larger username. */
+function containsBotMention(commentBody, tokenUser) {
+    const normalizedUser = tokenUser.trim().replace(/^@/u, '');
+    if (!normalizedUser)
+        return false;
+    const escapedUsername = normalizedUser.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`(^|[^A-Za-z0-9_-])@${escapedUsername}(?=$|[^A-Za-z0-9_-])`, 'iu').test(commentBody);
+}
+/**
+ * Comment automation is opt-in: a bounded command prefix or an exact bot
+ * mention is required. Unaddressed human and machine comments are inert.
+ */
+function isCopilotCommentRequest(commentBody, botLogin) {
+    return (0, copilot_command_1.parseCopilotCommand)(commentBody).kind !== 'none'
+        || containsBotMention(commentBody, botLogin);
+}
+
+
+/***/ }),
+
 /***/ 72418:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -82076,7 +82195,7 @@ class AgentExecutionPlanner {
             const executable = this.system.resolveExecutable(requestedExecutable, sourceEnvironment);
             validateExecutableFile(executable);
             const safeEnvironment = (0, agent_authentication_1.buildAgentCliEnvironment)(request.configuration.provider, sourceEnvironment, request.configuration.modelProvider);
-            const version = (0, agent_runtime_manifest_1.assertAgentRuntimeVersion)(request.configuration.provider, this.system.readVersion(executable, safeEnvironment));
+            const version = (0, agent_runtime_manifest_1.readAgentRuntimeVersion)(request.configuration.provider, this.system.readVersion(executable, safeEnvironment));
             runtimeDirectory = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'copilot-agent-runtime-'));
             const gitConfigPath = (0, node_path_1.join)(runtimeDirectory, 'gitconfig');
             const providerPolicy = (0, agent_execution_policy_dispatcher_1.buildProviderExecutionPolicy)({
@@ -82223,7 +82342,8 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getAgentRuntimeManifest = getAgentRuntimeManifest;
 exports.getAgentRuntimeManifestEntry = getAgentRuntimeManifestEntry;
 exports.normalizeAgentRuntimeVersion = normalizeAgentRuntimeVersion;
-exports.assertAgentRuntimeVersion = assertAgentRuntimeVersion;
+exports.readAgentRuntimeVersion = readAgentRuntimeVersion;
+exports.assertInstalledAgentRuntimeVersion = assertInstalledAgentRuntimeVersion;
 const agent_runtime_manifest_json_1 = __importDefault(__nccwpck_require__(61685));
 const manifest = agent_runtime_manifest_json_1.default;
 function getAgentRuntimeManifest() {
@@ -82235,11 +82355,18 @@ function getAgentRuntimeManifestEntry(provider) {
 function normalizeAgentRuntimeVersion(output) {
     return output.trim().split(/\r?\n/, 1)[0].trim();
 }
-function assertAgentRuntimeVersion(provider, output) {
+function readAgentRuntimeVersion(provider, output) {
     const actual = normalizeAgentRuntimeVersion(output);
-    const expected = getAgentRuntimeManifestEntry(provider).version;
+    if (!actual)
+        throw new Error(`${provider} CLI returned empty version output.`);
+    return actual;
+}
+/** Exact matching applies only to a package installed by Copilot itself. */
+function assertInstalledAgentRuntimeVersion(provider, output) {
+    const actual = readAgentRuntimeVersion(provider, output);
+    const expected = getAgentRuntimeManifestEntry(provider).reviewedVersion;
     if (actual !== expected) {
-        throw new Error(`${provider} CLI version mismatch: expected ${expected}, received ${actual || 'unparseable output'}.`);
+        throw new Error(`${provider} installed CLI version mismatch: expected ${expected}, received ${actual}.`);
     }
     return actual;
 }
@@ -97945,7 +98072,7 @@ module.exports = JSON.parse('{"single":{"topLeft":"┌","top":"─","topRight":"
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"revision":"2026-09-12.p1-c.1","providers":{"codex":{"executable":"codex","version":"codex-cli 0.153.4","package":"@openai/codex"},"opencode":{"executable":"opencode","version":"1.18.3","package":"opencode-ai"},"cursor":{"executable":"agent","version":"2026.09.10-fd3934a"}}}');
+module.exports = JSON.parse('{"revision":"2026-09-12.p1-c.2","providers":{"codex":{"executable":"codex","reviewedVersion":"codex-cli 0.153.4","installation":{"package":"@openai/codex","version":"0.153.4"}},"opencode":{"executable":"opencode","reviewedVersion":"1.18.3","installation":{"package":"opencode-ai","version":"1.18.3"}},"cursor":{"executable":"agent","reviewedVersion":"2026.09.10-fd3934a"}}}');
 
 /***/ })
 

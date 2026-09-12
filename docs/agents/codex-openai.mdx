@@ -44,10 +44,10 @@ Copilot never prints, copies, or serializes token values. With no exported crede
 
 ## Provisioning
 
-GitHub Actions provisioning uses an exact-version installed-first policy. A
-preinitialized `codex` executable is accepted only when it reports
-`codex-cli 0.153.4`. If the default executable is missing or reports another
-version, `auto` installs the exact manifest package and validates it again:
+GitHub Actions provisioning treats a preinitialized `codex` executable as
+operator-owned: its non-empty version identity is recorded and the Action does
+not replace it. If the default executable is missing, `auto` installs the exact
+manifest package and validates that new installation:
 
 ```text
 @openai/codex@0.153.4

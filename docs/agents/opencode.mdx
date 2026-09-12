@@ -40,7 +40,9 @@ OpenCode supports many providers and local models. That flexibility does not cha
 
 ## Runtime and provisioning
 
-The Action provisions only the selected runtime. OpenCode is pinned by the reviewed runtime manifest and installed as:
+The Action prepares only the selected runtime. An available `opencode`
+executable is operator-owned and is not replaced. When the default executable is
+missing, Copilot uses the reviewed pinned installation:
 
 ```bash
 npm install --global "opencode-ai@1.18.3"
@@ -57,7 +59,8 @@ See [Agent CLI provisioning](/security-operations/operations/cli-provisioning) a
 
 ## OpenCode behavior controlled by Copilot
 
-- The exact supported version is `1.18.3`; every other version is rejected before execution.
+- The reviewed known-good version and pinned installation are `1.18.3`;
+  compatible operator-owned versions are recorded and run through the same fixed command contract.
 - `--pure`, the managed role, JSON event output, model, and optional `--variant` are reconstructed by policy.
 - The isolated config has wildcard default deny. It allows read/glob/grep/list, allows edit only for `fixer`, and denies bash, LSP, web, tasks, skills, questions, external directories, plugins, MCP, subagent depth, and session sharing.
 - The config directory and contents are ephemeral and hashed; repository OpenCode configuration is rejected.

@@ -47,6 +47,10 @@ flow. An issue-only comment has no inferred PR or branch; its review remains
 issue-only unless the event itself supplies an authoritative PR target. These
 commands do not invoke autofix and do not modify files.
 
+PR events never fall back to a head-branch search. A missing, malformed, stale,
+or mismatched event PR identity stops before analysis, even if another open PR
+has the same head owner and branch.
+
 Explicit reviews accept bounded per-run options, for example `/copilot review effort=high dry-run=true trace-rules=true suggested-changes=false`. Unknown keys and values are rejected rather than silently inferred.
 
 You can run Bugbot detection **without pushing**:

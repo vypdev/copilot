@@ -49,8 +49,7 @@ function request(
       headOwner: 'acme',
       headRef: 'feature/42',
       expectedHeadSha: sha,
-      eventPullRequestNumber: 50,
-      pullRequestRequired: true,
+      pullRequestSelection: { kind: 'event', number: 50 },
       ...target,
     },
     trustedAuthorLogin: 'bugbot',
@@ -115,7 +114,7 @@ describe('loadBugbotContext', () => {
   it('selects one exact-head PR when no event candidate exists', async () => {
     const reader = ports();
     const context = await loadBugbotContext(
-      request({ eventPullRequestNumber: undefined }),
+      request({ pullRequestSelection: { kind: 'exact-head', required: false } }),
       reader,
     );
 
@@ -133,7 +132,7 @@ describe('loadBugbotContext', () => {
     });
 
     await expect(loadBugbotContext(
-      request({ eventPullRequestNumber: undefined }),
+      request({ pullRequestSelection: { kind: 'exact-head', required: false } }),
       reader,
     )).rejects.toMatchObject({ code: 'provider.conflict' });
     expect(reader.listIssueComments).not.toHaveBeenCalled();
@@ -153,9 +152,22 @@ describe('loadBugbotContext', () => {
   it('rejects a PR-required target when the exact query has no match', async () => {
     const reader = ports({ findOpenPullRequestsByExactHead: jest.fn().mockResolvedValue([]) });
     await expect(loadBugbotContext(
-      request({ eventPullRequestNumber: undefined }),
+      request({ pullRequestSelection: { kind: 'exact-head', required: true } }),
       reader,
     )).rejects.toMatchObject({ code: 'workflow.stale' });
+  });
+
+  it('rejects a malformed event PR before any identity lookup or head fallback', async () => {
+    const reader = ports();
+
+    await expect(loadBugbotContext(
+      request({ pullRequestSelection: { kind: 'event' } }),
+      reader,
+    )).rejects.toMatchObject({ code: 'workflow.stale' });
+
+    expect(reader.getPullRequest).not.toHaveBeenCalled();
+    expect(reader.findOpenPullRequestsByExactHead).not.toHaveBeenCalled();
+    expect(reader.listIssueComments).not.toHaveBeenCalled();
   });
 
   it('loads issue-only context without invoking any PR detail port', async () => {
@@ -169,8 +181,7 @@ describe('loadBugbotContext', () => {
       triggerKind: 'issue_comment',
       headRef: '',
       expectedHeadSha: undefined,
-      eventPullRequestNumber: undefined,
-      pullRequestRequired: false,
+      pullRequestSelection: { kind: 'exact-head', required: false },
     }), reader);
 
     expect(context.canonicalPullRequest).toBeNull();

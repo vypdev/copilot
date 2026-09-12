@@ -49,7 +49,7 @@ export function normalizeBugbotResponse(response: unknown): {
 
 export function prepareFindings(
     findings: BugbotFinding[],
-    ignorePatterns: string[],
+    ignorePatterns: readonly string[],
     minSeverityValue: string | undefined,
     maxComments: number,
 ): ApplyLimitResult & { activeFindings: readonly BugbotFinding[] } {

@@ -220,7 +220,7 @@ function buildSetupWarnings(configuration: SetupConfiguration): string[] {
         warnings.push('Merge queue mode fails closed unless every required producer is verified automatically or covered by an exact reviewed attestation.');
     }
     if (configuration.ai.provisioningMode === 'always') {
-        warnings.push('Always-provision mode requires pinned CLI versions or a Cursor installer checksum in repository Variables.');
+        warnings.push('Always-provision mode reinstalls only default Codex/OpenCode runtimes from pinned manifest packages; explicit executables are never replaced and Cursor must be preinstalled.');
     }
     if (configuration.features.inactiveIssueClosure !== false) {
         warnings.push('Inactive issue closure is enabled; waiting issues are closed after the configured inactivity threshold and can be reopened with a new comment.');
@@ -229,7 +229,7 @@ function buildSetupWarnings(configuration: SetupConfiguration): string[] {
         warnings.push('Project IDs must be accessible to the PAT and use the expected project column names.');
     }
     if (setupAgentTasksForFeatures(configuration).some(task => configuration.agents[task].provider === 'cursor')) {
-        warnings.push('Cursor is an experimental runtime in Copilot and requires a verified installer checksum plus CURSOR_API_KEY.');
+        warnings.push('Cursor is an experimental runtime in Copilot and requires a compatible preinstalled CLI plus CURSOR_API_KEY; Copilot has no automatic Cursor installer.');
     }
     if (usesOrganizationStorage(configuration)) {
         warnings.push('Organization-level Secrets and Variables require organization permissions; selected access is the safest default and repository values take precedence.');

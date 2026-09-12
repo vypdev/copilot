@@ -19,7 +19,7 @@ import { createCopilotEvidenceCompositionRoot } from '../infrastructure/composit
 import { createGithubActionSummaryCompositionRoot } from '../infrastructure/composition/github_action_summary_composition_root';
 import { createSynchronizeAgentActivityUseCase } from '../infrastructure/composition/agent_activity_composition_root';
 import { readGithubActionAiInputs } from './github_action_ai_inputs';
-import { activeAgentTasks } from '../application/policies/agent_task_activation_policy';
+import { activeAgentTasks, isUnaddressedCommentEvent } from '../application/policies/agent_task_activation_policy';
 import { createActorAuthorizationRepository } from '../infrastructure/composition/actor_authorization_composition_root';
 import { runAtApplicationErrorBoundary } from '../application/errors/application_error_context';
 import { toApplicationError } from '../application/errors/application_error';
@@ -48,6 +48,10 @@ export async function runGitHubAction(): Promise<void> {
     });
     if (admission.decision === 'discard') {
         logInfo('GitHub Action: event actor matches the PAT user. Skipping normal pipeline before queue and mutation work.');
+        return;
+    }
+    if (isUnaddressedCommentEvent(eventInputs, admission.tokenUser)) {
+        logInfo('GitHub Action: comment does not address Copilot. Skipping before project, AI, and agent runtime work.');
         return;
     }
 

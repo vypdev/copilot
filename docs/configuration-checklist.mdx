@@ -26,8 +26,9 @@ description: Required checks before enabling Copilot automation.
 
 ## Operations
 
-- [ ] The selected CLI is preinstalled and verified, or its fallback version/checksum is pinned.
-- [ ] Cursor installer checksum is configured when Cursor is selected.
+- [ ] The selected CLI is preinstalled and verified, or its Copilot-owned installation package is pinned.
+- [ ] Node.js 24 is set up before any workflow step that may install a pinned Codex or OpenCode package.
+- [ ] Cursor is preinstalled when selected; no automatic Cursor installer is configured.
 - [ ] Provisioning and help checks pass.
 - [ ] Smoke tests are recorded without printing credentials.
 - [ ] Rollback refs and previous CLI versions are known.

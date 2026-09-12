@@ -19,6 +19,11 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
+      - name: Set up Node.js 24 for pinned agent installation
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+
       - uses: vypdev/copilot@v3
         with:
           ai-ignore-files: ${{ vars.AI_IGNORE_FILES || 'build/*' }}

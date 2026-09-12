@@ -1,17 +1,18 @@
 ---
-title: Version pinning
-description: Pin agent CLI versions and installer integrity inputs for reproducible execution.
+title: Installation version pinning
+description: Pin Copilot-owned agent CLI installations while preserving operator-owned runtimes.
 ---
 
 # Version pinning
 
-Every runtime must have a deliberate version policy. A missing version is not an invitation to install the latest package implicitly.
+Every runtime must have a deliberate ownership and installation policy. A
+missing executable is not an invitation to install the latest package implicitly.
 
-| Runtime | Accepted version | Installation boundary | Verification |
+| Runtime | Reviewed baseline | Installation boundary | Verification |
 | --- | --- | --- | --- |
-| Codex | `codex-cli 0.153.4` | Runner `npm` global install | Exact CLI version output |
-| OpenCode | `1.18.3` | Runner `npm` global install | Exact CLI version output |
-| Cursor | `2026.09.10-fd3934a` | Controlled runner image | Exact CLI version output |
+| Codex | `codex-cli 0.153.4` | Runner `npm` global install | Exact after Copilot install; otherwise identity + smoke |
+| OpenCode | `1.18.3` | Runner `npm` global install | Exact after Copilot install; otherwise identity + smoke |
+| Cursor | `2026.09.10-fd3934a` | Controlled runner image | Non-empty runtime identity and safe smoke |
 
 The Copilot CLI is distributed as `@vypdev/copilot` and exposes the `copilot` executable. Pin it for reproducible local tooling:
 
@@ -23,11 +24,12 @@ copilot --version
 
 ## Rules
 
-1. Pin the version in the reviewed source-controlled runtime manifest.
+1. Pin every Copilot-owned package installation in the reviewed source-controlled runtime manifest.
 2. Provision only the selected runtime.
-3. Verify the installed version before invoking the agent.
-4. For Cursor, require the exact preinstalled build; automatic installation is unsupported.
-5. Treat missing, malformed, or mismatched values as terminal failures.
-6. Record the effective version and manifest revision in sanitized logs without credentials.
+3. Verify a Copilot-installed package exactly before invoking the agent.
+4. Reuse an available operator-owned runtime without silently replacing or downgrading it.
+5. For Cursor, require a preinstalled compatible build; automatic installation is unsupported.
+6. Treat missing or empty runtime identity and post-install mismatches as terminal failures.
+7. Record the effective version and manifest revision in sanitized logs without credentials.
 
 See [Provisioning](/security-operations/operations/provisioning) and [Upgrade and rollback](/security-operations/operations/upgrade-rollback) for the lifecycle procedure.

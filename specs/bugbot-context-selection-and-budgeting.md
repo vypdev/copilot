@@ -146,8 +146,11 @@ context plus coverage facts that constrain analysis and publication.
 
 The route projects a `BugbotReviewTarget` containing repository owner/name,
 numeric ID when the event supplies it, trigger kind, optional positive issue
-number, normalized head owner and ref, expected full head SHA, and optional event
-PR number. It contains no token; context ports are auth-bound in composition.
+number, normalized head owner and ref, expected full head SHA, and a discriminated
+PR selection policy. `event` selection carries the authoritative PR number when
+valid and never permits head fallback; `exact-head` selection carries an explicit
+required/optional decision. It contains no token; context ports are auth-bound
+in composition.
 
 PR-required triggers are pull-request events, PR review comments, explicit review
 commands on a PR, and autofix. Issue/commit analysis MAY be issue-only only when
@@ -160,13 +163,15 @@ sole initial contract; there is no first-matching-PR fallback.
 
 ### 6.2 Canonical selection policy
 
-1. If an event PR number exists, call `getPullRequest(number)` once. Accept only
+1. An event-PR target always selects `event` mode. If its positive number is
+   missing, abort before any event or exact-head provider lookup. Otherwise call
+   `getPullRequest(number)` once. Accept only
    an open PR whose base repository owner/name and, when available, numeric ID
    equal the target, whose head repository owner and ref exactly match the target,
    and whose current head SHA equals the expected SHA.
    Closed, cross-repository, fork-owner mismatch, or stale SHA is `stale/invalid`,
    not a fallback to branch search.
-2. Without event PR, call `findOpenPullRequestsByExactHead` with encoded
+2. Only `exact-head` mode may call `findOpenPullRequestsByExactHead` with encoded
    `head=<owner>:<ref>`, `state=open`, and `per_page=2`. The port returns full
    candidate records, not numbers.
 3. Zero candidates yields `none`; one candidate is canonical only after the same
@@ -388,7 +393,7 @@ and catalog evidence in the implementation slice.
 1. Ten thousand unrelated open PRs cause no per-candidate detail read and do not
    change the fixed call count.
 2. A verified event PR wins only when repository, owner/ref, state, and SHA match.
-3. An event mismatch aborts instead of falling back to another branch PR.
+3. A missing or mismatched event identity aborts without an exact-head lookup.
 4. Exact head zero/one/two results yield none/canonical/ambiguous deterministically.
 5. Only the canonical PR is used for comments, threads, diff, publication,
    freshness, and resolution.

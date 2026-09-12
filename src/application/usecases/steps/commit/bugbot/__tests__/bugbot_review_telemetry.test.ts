@@ -1,16 +1,49 @@
 import { BugbotReviewTelemetry } from '../bugbot_review_telemetry';
-import type { Execution } from '../../../../../../data/model/execution';
-import { Ai } from '../../../../../../data/model/ai';
 import { buildBugbotReviewProjection } from '../../../../../../domain/bugbot/review_projection';
+import { DEFAULT_BUGBOT_REVIEW_CONFIGURATION } from '../../../../../../domain/bugbot/review_configuration';
+import type { BugbotReviewOperationContext } from '../bugbot_review_operation_context';
+
+function operationContext(overrides: Partial<BugbotReviewOperationContext> = {}): BugbotReviewOperationContext {
+    return {
+        repository: { owner: 'org', name: 'repo' },
+        target: {
+            issueNumber: 1,
+            isPullRequest: true,
+            pullRequestNumber: 7,
+            headBranch: 'feature',
+            commitBranch: 'feature',
+            baseBranch: 'develop',
+            pullRequestAction: 'synchronize',
+            draft: false,
+        },
+        trigger: { kind: 'pull_request', headOwner: 'org' },
+        ignorePatterns: [],
+        organizationRules: [],
+        locale: { pullRequest: 'en-US' },
+        analysis: {
+            agentConfiguration: { provider: 'codex', model: 'model' },
+            minimumSeverity: 'low',
+            commentLimit: 20,
+            reviewConfiguration: DEFAULT_BUGBOT_REVIEW_CONFIGURATION,
+        },
+        ...overrides,
+    };
+}
 
 describe('Bugbot review telemetry', () => {
     it('records aggregate metadata without storing prompt or response contents', async () => {
         let now = 1_000;
-        const telemetry = new BugbotReviewTelemetry({
-            owner: 'org', repo: 'repo', pullRequest: { number: 7 },
-            eventName: 'pull_request', inputs: { repository: { id: 99 } },
-            ai: new Ai('', 'model', false, [], false, 'low', 20, [], undefined, undefined, { publicationMode: 'dry-run', effort: 'smart' }),
-        } as unknown as Execution, { now: () => now, isoNow: () => '2026-01-01T00:00:00.000Z' });
+        const telemetry = new BugbotReviewTelemetry(operationContext({
+            repository: { owner: 'org', name: 'repo', id: 99 },
+            analysis: {
+                ...operationContext().analysis,
+                reviewConfiguration: {
+                    ...DEFAULT_BUGBOT_REVIEW_CONFIGURATION,
+                    publicationMode: 'dry-run',
+                    effort: 'smart',
+                },
+            },
+        }), { now: () => now, isoNow: () => '2026-01-01T00:00:00.000Z' });
         await telemetry.measure('analysis', async () => { now += 25; });
         telemetry.observeContext({
             canonicalPullRequest: {
@@ -55,10 +88,7 @@ describe('Bugbot review telemetry', () => {
     });
 
     it('uses the final provider-verified projection instead of intended mutation state', () => {
-        const telemetry = new BugbotReviewTelemetry({
-            owner: 'org', repo: 'repo', pullRequest: { number: 7 },
-            ai: new Ai('', 'model', false, [], false, 'low', 20),
-        } as unknown as Execution);
+        const telemetry = new BugbotReviewTelemetry(operationContext());
         telemetry.observeContext({
             existingByFindingId: {},
             canonicalPullRequest: null,

@@ -38,7 +38,7 @@ export async function loadBugbotContext(
   const selectionCoverage = completeBugbotSourceCoverage(
     "selection",
     selection.kind === "canonical" ? 1 : selection.kind === "ambiguous" ? 2 : 0,
-    request.target.headRef || request.target.eventPullRequestNumber ? 1 : 0,
+    selectionPageCount(request),
   );
   const tasks: Array<() => Promise<LoadedSource>> = [];
   if (request.target.issueNumber !== undefined) {
@@ -162,9 +162,10 @@ async function selectCanonicalPullRequest(
   request: BugbotContextRequest,
   ports: BoundBugbotContextReadPorts,
 ): Promise<BugbotCanonicalPullRequestSelection> {
-  const eventNumber = request.target.eventPullRequestNumber;
-  if (eventNumber !== undefined) {
-    const candidate = await ports.getPullRequest(eventNumber);
+  const policy = request.target.pullRequestSelection;
+  if (policy.kind === 'event') {
+    if (policy.number === undefined) return { kind: 'none' };
+    const candidate = await ports.getPullRequest(policy.number);
     return selectCanonicalBugbotPullRequest(request.target, [candidate], "event");
   }
   if (!request.target.headRef) return { kind: "none" };
@@ -189,10 +190,18 @@ function requireUsableSelection(
   if (selection.kind === "stale") {
     throw new ApplicationError("workflow.stale", `${selection.reason} Review was not started.`);
   }
-  if (request.target.pullRequestRequired) {
+  const policy = request.target.pullRequestSelection;
+  if (policy.kind === 'event' || policy.required) {
     throw new ApplicationError("workflow.stale", "No verified pull request matches the review target.");
   }
   return null;
+}
+
+function selectionPageCount(request: BugbotContextRequest): number {
+  const policy = request.target.pullRequestSelection;
+  return policy.kind === 'event'
+    ? Number(policy.number !== undefined)
+    : Number(Boolean(request.target.headRef));
 }
 
 function sourceValue(

@@ -1,9 +1,9 @@
 import type { BugbotReviewOutcome, BugbotReviewTelemetrySnapshot } from '../../../../ports/bugbot_telemetry_ports';
-import type { Execution } from '../../../../../data/model/execution';
 import type { BugbotContext } from './types';
 import type { PreparedBugbotFindings } from './prepare_bugbot_findings';
 import { projectBugbotFindingStatuses } from '../../../../policies/bugbot_finding_status_policy';
 import type { BugbotReviewProjection } from '../../../../../domain/bugbot/review_projection';
+import type { BugbotReviewOperationContext } from './bugbot_review_operation_context';
 
 export interface BugbotReviewTelemetryClock {
     now(): number;
@@ -26,7 +26,7 @@ export class BugbotReviewTelemetry {
     private projection?: BugbotReviewProjection;
 
     constructor(
-        private readonly execution: Execution,
+        private readonly execution: BugbotReviewOperationContext,
         private readonly clock: BugbotReviewTelemetryClock = systemClock,
     ) {
         this.startedAtMs = clock.now();
@@ -87,19 +87,19 @@ export class BugbotReviewTelemetry {
             ].includes(source.source));
         const selectionCandidates = this.context?.coverage.sources
             .find((source) => source.source === 'selection')?.itemsFetched;
-        const repositoryId = this.execution.inputs?.repository?.id;
+        const repositoryId = this.execution.repository.id;
         const startedAtEpoch = Date.parse(this.startedAt);
         const reviewId = [
-            this.execution.owner || 'unknown',
-            this.execution.repo || 'unknown',
+            this.execution.repository.owner || 'unknown',
+            this.execution.repository.name || 'unknown',
             canonicalPullRequestNumber !== undefined
                 ? `pr-${canonicalPullRequestNumber}`
-                : this.execution.pullRequest?.number > 0
-                    ? `pr-${this.execution.pullRequest.number}`
+                : this.execution.target.pullRequestNumber > 0
+                    ? `pr-${this.execution.target.pullRequestNumber}`
                     : 'branch',
             headSha?.slice(0, 12) || String(Number.isFinite(startedAtEpoch) ? startedAtEpoch : this.startedAtMs),
         ].join(':');
-        const agent = this.execution.ai.getAgentConfiguration(this.execution.isPullRequest ? 'reviewer' : 'findings');
+        const agent = this.execution.analysis.agentConfiguration;
         const findingStates = this.projection?.counts ?? (this.context && this.prepared
             ? projectBugbotFindingStatuses(
                 this.context.existingByFindingId,
@@ -111,19 +111,19 @@ export class BugbotReviewTelemetry {
         return {
             schemaVersion: 1,
             reviewId,
-            repository: `${this.execution.owner}/${this.execution.repo}`,
+            repository: `${this.execution.repository.owner}/${this.execution.repository.name}`,
             ...(Number.isSafeInteger(repositoryId) && Number(repositoryId) > 0
                 ? { repositoryId: Number(repositoryId) }
                 : {}),
-            triggerKind: sanitizeMetricName(this.execution.eventName || 'unknown'),
+            triggerKind: sanitizeMetricName(this.execution.trigger.kind),
             ...(canonicalPullRequestNumber !== undefined
                 ? { pullRequestNumber: canonicalPullRequestNumber }
-                : this.execution.pullRequest?.number > 0
-                    ? { pullRequestNumber: this.execution.pullRequest.number }
+                : this.execution.target.pullRequestNumber > 0
+                    ? { pullRequestNumber: this.execution.target.pullRequestNumber }
                     : {}),
             ...(headSha ? { headSha } : {}),
-            publicationMode: this.execution.ai.getBugbotReviewConfiguration().publicationMode,
-            configuredEffort: this.execution.ai.getBugbotReviewConfiguration().effort,
+            publicationMode: this.execution.analysis.reviewConfiguration.publicationMode,
+            configuredEffort: this.execution.analysis.reviewConfiguration.effort,
             ...(agent?.provider ? { agentProvider: agent.provider } : {}),
             ...(agent?.model ? { agentModel: agent.model } : {}),
             startedAt: this.startedAt,

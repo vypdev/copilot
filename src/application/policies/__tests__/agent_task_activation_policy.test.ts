@@ -60,8 +60,8 @@ describe('activeAgentTasks', () => {
             .toEqual([]);
     });
 
-    it('uses findings only for translation and all reachable roles for mentioned natural language', () => {
-        expect(activeAgentTasks(event('issue_comment', 'translate this'), noSingleAction(), 'vypbot')).toEqual(['findings']);
+    it('keeps passive comments inert and selects all reachable roles for mentioned natural language', () => {
+        expect(activeAgentTasks(event('issue_comment', 'automated coverage report'), noSingleAction(), 'vypbot')).toEqual([]);
         expect(activeAgentTasks(event('issue_comment', '@vypbot please review and fix this'), noSingleAction(), 'vypbot'))
             .toEqual(['findings', 'fixer', 'planner']);
         expect(activeAgentTasks(event('issue_comment', "@vypbot update the issue's branch"), noSingleAction(), 'vypbot'))
@@ -95,7 +95,7 @@ describe('activeAgentTasks', () => {
     it('handles malformed event payloads without provisioning extra agents', () => {
         expect(activeAgentTasks(event('issues', '', { action: 42 }), noSingleAction())).toEqual([]);
         expect(activeAgentTasks(event('issue_comment', '', { comment: null }), noSingleAction(), 'vypbot'))
-            .toEqual(['findings']);
+            .toEqual([]);
         expect(activeAgentTasks(event('unknown'), noSingleAction())).toEqual([]);
     });
 });

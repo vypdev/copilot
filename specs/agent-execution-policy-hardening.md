@@ -95,8 +95,9 @@ runtime SDD.
 `Provider control plane` is the CLI's required connection to its model service.
 `Agent tool egress` is network initiated by model-selected tools/commands and is
 denied. A `managed artifact` is an ephemeral config/schema/sandbox file created
-from trusted code and verified by hash. `Runtime manifest` is the exact
-provider version and smoke evidence accepted by the runtime.
+from trusted code and verified by hash. `Runtime manifest` records each reviewed
+provider identity and the exact package recipe used only when Copilot installs
+a missing supported runtime.
 
 ## 4. Goals, non-goals, and fixed invariants
 
@@ -105,7 +106,7 @@ provider version and smoke evidence accepted by the runtime.
 1. Make provider/capability omission and every unknown value terminal before spawn.
 2. Express full authority as a typed semantic plan, not mutated argv.
 3. Keep provider policies independent and exhaustively dispatched.
-4. Prove exact CLI version and managed-config behavior.
+4. Prove runtime identity, exact Copilot-installed package version, and managed-config behavior.
 5. Preserve structured output, cancellation, timeout, and bounded process behavior.
 
 ### 4.2 Non-goals
@@ -121,7 +122,7 @@ provider version and smoke evidence accepted by the runtime.
 
 ### 4.3 Fixed product and safety invariants
 
-1. No process starts until plan, exact version, artifact hashes, workspace path,
+1. No process starts until plan, non-empty runtime identity, artifact hashes, workspace path,
    model tuple, and role are valid.
 2. Read roles cannot write workspace; fixer cannot write outside workspace.
 3. Agent-selected tools have default-deny network, no web/MCP/plugin/subagent,
@@ -143,7 +144,7 @@ provider version and smoke evidence accepted by the runtime.
 | Command | validate and append to string | no command input; policy builds argv | no flag bypass |
 | Config | mixed user/project/provider state | ephemeral managed artifacts | reproducible authority |
 | Spawn | optional environment | provider-specific allowlist | no credential leakage |
-| Upgrade | latest/ambient CLI may run | exact manifest + smoke | reviewed runtime support |
+| Upgrade | replace ambient CLI silently | operator-owned runtime + reviewed install pin | explicit ownership |
 | Output | process string then local parse | bounded events/final output + schema | stable contract |
 
 ```mermaid
@@ -155,13 +156,13 @@ flowchart LR
     C --> P[AgentExecutionPlan]
     O --> P
     U --> P
-    P --> V[Version/config/workspace preflight]
+    P --> V[Identity/config/workspace preflight]
     V --> S[Process adapter]
     S --> X[Local schema and size validation]
 ```
 
 Text equivalent: a complete role request goes through exactly one provider
-policy; the resulting plan passes version/config/workspace preflight; only then
+policy; the resulting plan passes identity/config/workspace preflight; only then
 does the process adapter spawn and validate bounded output.
 
 ## 6. Functional behavior and state model
@@ -291,7 +292,7 @@ writes, while fixer allows workspace write. A managed `sandbox.json` uses
 and `networkPolicy: {default: "deny", allow: [], deny: []}`. Authority-bearing
 project Cursor files (`cli.json`, `sandbox.json`, `mcp.json`, and `hooks.json`)
 are rejected rather than merged. Repository rules may guide the task but cannot
-widen the managed permission/sandbox boundary; exact-version smoke proves that
+widen the managed permission/sandbox boundary; controlled runtime smoke proves that
 ambient/user files cannot broaden it.
 
 If Cursor cannot prove isolated config, child-network denial, read/write mode,
@@ -300,24 +301,27 @@ role is `configuration.unsupported`; it never degrades to a less safe mode.
 
 ### 6.7 Runtime manifest and preflight
 
-`src/infrastructure/agents/agent-runtime-manifest.json` starts with exact
-verified versions:
+`src/infrastructure/agents/agent-runtime-manifest.json` starts with reviewed
+known-good identities and reproducible installation recipes:
 
-| Provider | Accepted version | Required smoke |
+| Provider | Reviewed identity / pinned installation | Required smoke |
 |---|---|---|
-| Codex | `codex-cli 0.153.4` | read/write boundary, network deny, approval deny, no MCP/plugin/subagent, schema |
-| OpenCode | `1.18.3` | readonly/fixer permissions, no bash/web/task/plugin, config isolation, JSON |
-| Cursor | `2026.09.10-fd3934a` | readonly/fixer path boundary, network deny, no shell/MCP/plugin/subagent, noninteractive completion |
+| Codex | `codex-cli 0.153.4` / `@openai/codex@0.153.4` | read/write boundary, network deny, approval deny, no MCP/plugin/subagent, schema |
+| OpenCode | `1.18.3` / `opencode-ai@1.18.3` | readonly/fixer permissions, no bash/web/task/plugin, config isolation, JSON |
+| Cursor | `2026.09.10-fd3934a` / no automatic installer | readonly/fixer path boundary, network deny, no shell/MCP/plugin/subagent, noninteractive completion |
 
-No different or unparseable version is ever admitted to execution. In the
-recommended `auto` mode, a mismatched default Codex or OpenCode executable is
-replaced with the exact manifest package and revalidated before use. A mismatch
-remains terminal when provisioning is `disabled`, the executable is an explicit
-path, the provider is Cursor, installation fails, or post-install validation is
-still not exact. Upgrades require one PR that updates the exact version,
-provider fixture snapshots, official-source links, all automated contract/smoke
-tests, target-runner provisioning, and a reviewed human smoke. Provisioning
-never selects a floating or unreviewed version.
+An available operator-owned executable is never replaced and any non-empty
+reported version is recorded in the admitted plan. The fixed provider argv is
+still fail-closed: an incompatible runtime exits terminally and no fallback is
+attempted. In `auto`, only a missing default Codex or OpenCode executable is
+installed; `always` forces that same pinned installation. An explicit executable
+is operator-owned in every mode. A Copilot-installed package must report the
+reviewed identity exactly after installation. Cursor must be preinstalled
+because no reviewed automatic installer exists. Installation upgrades require
+one PR that updates the exact package recipe, provider fixture snapshots,
+official-source links, automated contract/smoke tests, target-runner
+provisioning, and reviewed human smoke. Provisioning never selects a floating
+or unreviewed package version.
 
 ### 6.8 State machine
 
@@ -325,7 +329,7 @@ never selects a floating or unreviewed version.
 |---|---|---|---|---|
 | unresolved | role/config collected | validating agent | planned/rejected | configuration policy |
 | planned | provider policy succeeded | checking runtime | admitted/rejected | preflight |
-| admitted | version/artifacts/workspace verified | agent running | completed/failed/cancelled | process adapter |
+| admitted | identity/artifacts/workspace verified | agent running | completed/failed/cancelled | process adapter |
 | completed | bounded output valid | result available | terminal | caller |
 | rejected | plan/preflight invalid | process not started | unresolved after config change | setup/operator |
 | failed | admitted process/schema failed | no trusted output | admitted on bounded retry | caller |
@@ -337,7 +341,7 @@ Existing provider/model/effort and per-role override precedence remains.
 `agent-command` is invalid and has no replacement that accepts arguments;
 `agent-executable` may select only the validated binary described above. The
 recommended default remains Codex. OpenCode and Cursor are explicit alternatives
-and require exact manifest support in target-runner provisioning and preflight.
+and require a compatible operator-owned runtime or a supported pinned installation.
 
 Sandbox, write role, network, approvals, environment, config directory,
 permissions, plugins/MCP/subagents, session persistence, process limits, output
@@ -373,7 +377,7 @@ cannot accept raw command/provider/capability fields.
 5. Adversarial configuration tests reject the removed command field, executable
    arguments/wrappers, and every unknown or duplicate structured selection.
 6. Integration smokes execute safe read/write/network/shell/plugin/subagent
-   probes against exact versions with no live repository/provider mutation.
+   probes against reviewed and compatible operator-owned versions with no live repository/provider mutation.
 
 ## 9. UI/UX and content contract
 
@@ -381,8 +385,8 @@ cannot accept raw command/provider/capability fields.
 Agent did not start
 
 Impact: No model request or repository change was made.
-Cause: Cursor Agent 2026.09.12 is not in Copilot's verified runtime manifest.
-Action: install 2026.09.10-fd3934a or upgrade Copilot with reviewed support for the newer version.
+Cause: Cursor Agent 2026.09.12 did not satisfy the fixed headless execution contract.
+Action: validate the operator runtime with the documented safe smoke or install the reviewed 2026.09.10-fd3934a baseline.
 Retained state: Existing files and finding state were preserved.
 Reference: 6f173f89-96a3-4fc8-b90e-4f8f48e0e319
 ```
@@ -399,7 +403,7 @@ GitHub UI. Existing locale/fallback and narrow Markdown rules apply.
 | Failure/partial state | User impact | Retained facts | Automatic retry | Required action | Cleanup |
 |---|---|---|---|---|---|
 | invalid tuple/command | no spawn | prior workflow state | no | correct config | remove temp plan if any |
-| unsupported version/platform | no spawn | prior state | no | install manifest version/update Copilot | none |
+| incompatible runtime/platform | no trusted result | prior state | no | install reviewed runtime/update Copilot | none |
 | artifact/hash/preflight failure | no spawn | prior state | no | repair runner/config | remove ephemeral dir |
 | timeout/cancel | process group stops | no trusted output | owning bounded policy/new event | retry if relevant | TERM/KILL + exact temp cleanup |
 | output limit/schema failure | output rejected | prior state | no blind parse | fix provider/prompt/schema | discard output |
@@ -430,15 +434,16 @@ duration, output byte count, failure category, retryability, and semantic code.
 They never contain model/prompt/output content, argv, environment values, raw
 stderr, executable/workspace/artifact paths, or user identity. Setup doctor
 reports structured configuration and credential readiness. The target-runner
-provisioning check reports supported, missing, or version-mismatched CLIs with
-one action; execution preflight repeats the exact-version check before spawn.
+provisioning check reports available/missing CLIs, their runtime identity, and
+pinned-install verification failures with one action; execution preflight repeats
+runtime identity and fixed-plan checks before spawn.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
 1. Product compatibility/migration is not applicable because there are no
    installed users. The prior command-text shape was removed in the initial implementation;
    no parser, warning period, deprecated field, alias, or dual adapter is built.
-2. Land the final plan, provider policies, exact runtime manifest, provisioning,
+2. Land the final plan, provider policies, reviewed-runtime/pinned-install manifest, provisioning,
    setup-doctor parity, managed artifacts, workflows, setup assets, schema, and
    docs atomically.
 3. After merge, process adapters accept only `AgentExecutionPlan`; every removed
@@ -458,7 +463,7 @@ count separately only when authority/argv differs.
 | Plan/executable pure policy | 4 | exhaustive roles/providers, removed/unknown inputs |
 | State/process lifecycle | 2 | timeout/cancel/cleanup and no-spawn rejection |
 | Application dispatch | 3 | complete plan, semantic failure, structured output |
-| Provider adapters | 6 | Codex/OpenCode/Cursor config, strict native schema acceptance/rejection, exact manifest, auto mismatch repair, and fail-closed alternatives |
+| Provider adapters | 6 | Codex/OpenCode/Cursor config, strict native schema acceptance/rejection, operator ownership, pinned install verification, and fail-closed alternatives |
 | Workflow/setup contracts | 2 | provisioning pin and doctor configuration parity |
 | UX/sanitization | 1 | rejection/partial view without sensitive fields |
 | Integration/security | 2 | effective sandbox matrix and env/credential isolation |
@@ -468,10 +473,11 @@ All provider plan, role authority, executable, and runtime-manifest policies req
 100% enumerated branch coverage. Changed process/provider modules require 95%
 lines/statements and 90% branches/functions; repository thresholds remain
 90/90/88/82. Tests use fake executables/processes, temp workspaces, controlled
-network endpoints, fixed version output, and schema fixtures; no production
+network endpoints, controlled version output, and schema fixtures; no production
 provider/account/repository mutation.
 
-Human smoke: all three exact versions x one readonly role x fixer on a disposable
+Human smoke: all three reviewed versions plus one compatible newer preinstalled
+runtime x one readonly role x fixer on a disposable
 fixture, verifying denied outside read/write, denied tool egress, no prompt, no
 session persistence, structured output, cancellation, and trusted post-agent
 verification. Attach sanitized evidence to the upgrade/implementation PR.
@@ -481,7 +487,7 @@ verification. Attach sanitized evidence to the upgrade/implementation PR.
 Update all `docs/agents/*` runtime, command, input, model, execution, failure, and
 provider pages; setup/provisioning/doctor docs; security operations; architecture;
 and the release change notice. Provider pages link current official CLI/security
-references, state exact supported version, managed authority, unsupported
+references, state reviewed identity and pinned installation recipe, managed authority, unsupported
 recovery, and upgrade process. Examples are generated/tested from golden plans.
 
 ## 16. Acceptance scenarios
@@ -490,9 +496,10 @@ recovery, and upgrade process. Examples are generated/tested from golden plans.
 2. Every 3-provider x 6-role plan has expected workspace authority and fixed limits.
 3. Removed command-text fields, caller argv, arguments in `agent-executable`, and unknown
    execution inputs are rejected; managed argv is deterministic and uses `shell:false`.
-4. A non-manifest default Codex/OpenCode runtime in `auto` is replaced with the
-   exact manifest package and revalidated; disabled, explicit-executable,
-   Cursor, install, post-install mismatch, or artifact-hash failures prevent spawn.
+4. An available operator-owned runtime is recorded and never replaced. A missing
+   default Codex/OpenCode runtime in `auto` is installed from the exact pinned
+   package and revalidated; a missing disabled/explicit/Cursor runtime, install
+   failure, post-install mismatch, or artifact-hash failure prevents spawn.
 5. Read roles cannot write; fixer writes only workspace; all roles lack Git mutation.
 6. Agent child tools cannot reach the network, use MCP/plugins/subagents, escalate,
    or read a model/GitHub/cloud credential.
@@ -503,7 +510,8 @@ recovery, and upgrade process. Examples are generated/tested from golden plans.
 8. Timeout/cancel terminates the process group, discards output, and cleans only
    its owned temp directory.
 9. Ambient/project/user config cannot broaden effective authority in smoke fixtures.
-10. Target-runner provisioning and execution preflight agree on exact versions;
+10. Target-runner provisioning and execution preflight agree on runtime ownership,
+    pinned installation, and reported identity;
     doctor agrees with the structured provider/model/credential configuration.
 11. Negative fixtures prove removed command shapes are invalid and no parser,
     alias, deprecated field, or compatibility adapter ships.
@@ -515,7 +523,7 @@ recovery, and upgrade process. Examples are generated/tested from golden plans.
 | complete fail-closed plan | role policy/dispatcher | exhaustive/type/no-spawn tests | execution contract |
 | provider isolation | three plan policies/artifacts | golden and effective smoke matrix | provider pages |
 | executable selection | configuration policy/preflight | invalid-path and removed-input fixtures | CLI/configuration reference |
-| runtime support | manifest/preflight/provisioning | exact-version/hash tests | setup/runtime pages |
+| runtime support | manifest/preflight/provisioning | ownership/pinned-install/hash tests | setup/runtime pages |
 | process/output safety | process adapter/strict-schema policy/output validator | env, timeout, native-schema preflight, size, returned-schema tests | failure/security docs |
 | safe UX/observability | semantic mapper/presenter | redaction/view tests | troubleshooting |
 
@@ -523,7 +531,7 @@ recovery, and upgrade process. Examples are generated/tested from golden plans.
 
 1. Define plan, role authority, executable selection, and exhaustive dispatcher tests.
 2. Implement three independent policies and golden managed artifacts.
-3. Add exact runtime manifest, version/hash preflight, target-runner provisioning,
+3. Add reviewed-runtime/pinned-install manifest, identity/hash preflight, target-runner provisioning,
    and setup-doctor configuration parity.
 4. Change the process adapter to consume only plans; add effective sandbox/env/
    lifecycle smokes.
@@ -556,7 +564,8 @@ recovery, and upgrade process. Examples are generated/tested from golden plans.
 - [Cursor CLI](https://cursor.com/docs/cli/overview),
   [configuration](https://cursor.com/docs/cli/reference/configuration), and
   [sandbox reference](https://cursor.com/docs/reference/sandbox).
-- Decision: exact versions are safer than optimistic ranges; each upgrade carries
-  its own official-source and executable smoke evidence.
+- Decision: exact package versions are required for Copilot-owned installations;
+  available operator-owned runtimes are recorded without replacement and must
+  satisfy the fixed command contract at execution.
 - Decision: agents edit/analyze; trusted Copilot code verifies, commits, pushes,
   publishes, and calls GitHub.

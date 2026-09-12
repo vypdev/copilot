@@ -40,12 +40,16 @@ agents running for read-only tasks.
 ### 2.2 Current behavior
 
 1. `agent-*` supplies the common tuple; role-specific fields inherit only when blank.
-2. Supported runtimes are exact-manifest Codex, OpenCode, and Cursor builds.
-3. Provider/model formats, executable selection, exact runtime support, and configured allowlists are validated.
+2. The manifest records a reviewed runtime identity for Codex, OpenCode, and
+   Cursor, plus reproducible package installation only where supported.
+3. Provider/model formats, executable selection, non-empty runtime identity,
+   fixed provider command shape, and configured allowlists are validated.
 4. Event/command policy calculates active roles before runtime preparation.
 5. `ai-members-only` may prevent all requested agent runtime preparation for an unauthorized actor.
-6. Provisioning mode (`auto`, `always`, `disabled`) installs only manifest-owned
-   Codex/OpenCode versions; Cursor requires the exact preinstalled manifest build.
+6. Provisioning mode (`auto`, `always`, `disabled`) reuses any available
+   operator-owned runtime. Missing default Codex/OpenCode runtimes use only the
+   pinned manifest installation; explicit executables are never replaced and
+   Cursor has no automatic installer.
 7. An exhaustive dispatcher selects one independent provider policy, and a
    preflight planner produces the complete admitted execution plan.
 8. A generic process adapter consumes only admitted plans; OpenCode JSON events
@@ -54,12 +58,13 @@ agents running for read-only tasks.
 ### 2.3 Evidence and contract classification
 
 - Observed behavior: agent domain, configuration/activation policies, execution
-  planner, runtime manifest, CLI provisioner/process adapter, setup workflows,
+  planner, reviewed-runtime and pinned-install manifest, CLI provisioner/process adapter, setup workflows,
   architecture/security tests, and agent docs.
 - Intentional contract: complete tuple, no implicit fallback, active-role-only
   preparation, semantic ports, local schema validation, and credential isolation.
-- Known debt and limitations: provider CLI flags and authentication may change
-  externally; manifest upgrades require reviewed fixtures and controlled live
+- Known debt and limitations: an operator-owned provider CLI may change its
+  command surface externally; incompatible flags fail terminally at execution.
+  Installation-manifest upgrades require reviewed fixtures and controlled live
   smoke evidence; credential checks remain environment-specific; cost estimates
   are not product guarantees.
 - Unknown rationale: current default model choice is operational configuration,
@@ -115,6 +120,7 @@ not merely configured.
 | Selection | provider implies model | independent qualified model | explicit behavior |
 | Roles | one runtime eagerly prepared | only active role tuples | lower cost/risk |
 | Invocation | caller supplies command text | provider policy builds argv | injection resistance |
+| Runtime ownership | replace a newer runner CLI | reuse it and record identity | no global mutation |
 | Failure | silent fallback | terminal named error | auditability |
 | Output | trust provider JSON | local schema/size check | consistent contract |
 
@@ -127,15 +133,19 @@ No legacy behavior is supported; the hardened runtime is the only contract.
 1. Determine active roles from event/command/single action.
 2. Merge common tuple with complete role overrides and validate.
 3. Enforce model-provider/model allowlists and provisioning policy.
-4. Verify CLI and credential/login readiness.
-5. Invoke the generic process adapter with the admitted role plan.
-6. Bound/parse/validate output and return semantic result.
+4. Reuse an operator runtime, or install and exactly verify the pinned package
+   only when the supported default executable is missing/forced.
+5. Verify CLI identity and credential/login readiness.
+6. Invoke the generic process adapter with the admitted role plan.
+7. Bound/parse/validate output and return semantic result.
 
 ### 6.2 Alternative paths
 
 - Different active roles in one workflow may use different runtimes/models.
 - Existing Codex login may satisfy an explicit credential alternative.
-- `auto` provisions only missing active runtimes; `always` reinstalls Codex/OpenCode at the exact manifest version.
+- `auto` provisions only missing active default runtimes; `always` reinstalls
+  default Codex/OpenCode from the pinned package. An explicit executable is
+  operator-owned in every mode.
 - Optional effort maps to Codex reasoning, OpenCode variant, or provider-neutral context for Cursor.
 
 ### 6.3 State model
@@ -162,14 +172,14 @@ not treat a partial installer as authenticated success.
 | `agent-model-provider` | `openai` | validated identifier + allowlist | repository/run |
 | `agent-model` | `gpt-5.6-luna` | validated unqualified model + allowlist | repository/run |
 | `agent-effort` | empty | validated provider-supported value | repository/run |
-| `agent-executable` | manifest basename | exact basename or absolute path to it | repository/run |
+| `agent-executable` | reviewed basename | exact basename or absolute path to it | repository/run |
 | `<role>-*` | inherit common tuple | same bounds | repository/run |
 | `AGENT_PROVISIONING` | `auto` | auto/always/disabled | runner/repository |
 | allowlists | setup-derived exact values | comma-separated exact providers/models | workflow environment |
 
 Model values MUST not repeat provider prefixes. A meaningful alternative is
 OpenCode with an explicitly qualified allowed provider/model. Cursor requires
-the documented credential and exact preinstalled manifest version. No-fallback, local schema,
+the documented credential and a preinstalled runtime. No-fallback, local schema,
 active-role-only, credential isolation, and permission modes are not configurable.
 
 ## 8. Clean Architecture design
@@ -180,7 +190,7 @@ active-role-only, credential isolation, and permission modes are not configurabl
 | Policies | activation, inheritance, runtime support, validation | CLI invocation |
 | Application ports | findings/fixer/language capability requests | provider DTO/flags |
 | Data adapters | provider-neutral capability and generic process lifecycle | workflow routing/provider authority |
-| Infrastructure planning | executable/version/artifact preflight | product role decisions |
+| Infrastructure planning | executable/runtime-identity/artifact preflight | product role decisions |
 | Entrypoints/setup | inputs and composition | provider-specific branching beyond adapters |
 
 ```mermaid
@@ -217,7 +227,7 @@ stable categories before public presentation.
 | Failure | Impact | Retained facts | Retry | Action | Cleanup |
 |---|---|---|---|---|---|
 | invalid tuple/allowlist | no process | config | yes | correct exact value | none |
-| provisioning | CLI unavailable/partial | install logs only | yes | pin/fix runner | remove temp install per adapter |
+| provisioning | CLI unavailable/partial | install logs only | yes | provide runtime/fix pinned install | remove temp install per adapter |
 | auth preflight | no query | credential name only | yes | login/add secret | none |
 | process timeout/exit | capability fails | bounded diagnostics | yes | inspect provider/quota | terminate child |
 | schema/size invalid | no trusted result | raw output not published | yes | fix prompt/provider | discard output |
@@ -248,7 +258,7 @@ There is no legacy provider alias or silent model fallback. Blank role fields
 inherit common fields; invalid explicit values fail. A new provider/model is
 rolled out by updating domain types, runtime-support/allowlist policy, provider plan,
 setup/workflows, credentials, docs, tests, and controlled smoke evidence.
-Rollback restores the prior tuple/version; provider-created external effects are
+Rollback restores the prior tuple/installation pin; provider-created external effects are
 handled under that provider's policy.
 
 ## 14. Testing strategy and numeric budget
@@ -258,7 +268,7 @@ handled under that provider's policy.
 | Activation/config/runtime support | 30 | event roles, inheritance, formats, allowlists |
 | Provision/auth/execution state | 24 | modes, retries, timeout, partial install |
 | Provider plans/error mapping | 24 | argv/stdin/env/effort/output per provider |
-| Workflow/setup contracts | 16 | secrets, exact manifest versions, active inputs |
+| Workflow/setup contracts | 16 | secrets, pinned installations, Node prerequisite, active inputs |
 | UX/sanitization | 12 | phase/errors/redaction/narrow output |
 | Integration/security/cutover | 18 | role→provider, injection, credentials, new provider |
 | **Total** | **124** | no double counting |
@@ -289,6 +299,8 @@ errors and credential masking.
 7. Invalid/oversized structured output is rejected locally and not published.
 8. Runtime failure does not invoke a second provider/model.
 9. Adding a provider cannot pass without an exhaustive plan policy, security, workflow, docs, and smoke evidence.
+10. A non-empty operator-owned runtime version is recorded and executed without
+    replacement; exact version matching applies only after Copilot installs a package.
 
 ## 17. Requirements traceability
 
@@ -296,7 +308,7 @@ errors and credential masking.
 |---|---|---|---|
 | active roles | activation policy | activation tests | execution contract |
 | tuple/allowlist | config policies | builder/policy tests | model selection |
-| provisioning/auth | provisioner/preflight adapters | repository/infra tests | provisioning/credentials |
+| provisioning/auth | provisioner/preflight adapters | ownership/install/infra tests | provisioning/credentials |
 | semantic execution | capability adapter/provider plans | policy and process tests | runtime/CLI commands |
 | local validation/security | parsers/schema/environment | security tests | failure/trust docs |
 
@@ -315,7 +327,8 @@ errors and credential masking.
 - [ ] Credentials, executable selection, output, read/write authority, and no-fallback rules pass security review.
 - [ ] All five UI states and setup/action/CLI surfaces are accessible and redacted.
 - [ ] Provider smoke evidence and rollback instructions exist.
-- [ ] Documentation and catalog reflect exact current defaults/allowlists.
+- [ ] Documentation and catalog reflect current defaults, allowlists, reviewed
+  runtime identities, and pinned installation recipes.
 
 ## 20. References and decisions
 

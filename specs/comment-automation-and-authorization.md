@@ -1,7 +1,8 @@
 # Comment Automation and Authorization
 
-- Status: As-built baseline
+- Status: Implemented
 - Date: 2026-09-11
+- Last updated: 2026-09-12
 - Owners: Copilot maintainers
 - Scope: parsing and routing issue/PR comments to read-only or mutation-capable use cases
 - Related issues/PRs: Bugbot and branch synchronization SDDs
@@ -16,6 +17,9 @@ metadata and read-only help remain broadly available; file or finding-state
 mutations require organization membership, repository ownership, or collaborator
 write authority. Ambiguous, unauthorized, or incomplete mutation requests fall
 back to a read-only answer or explicit no-op, never an inferred broad edit.
+Comments that contain neither an explicit command nor an exact mention are
+discarded before project lookup, AI configuration, translation, or runtime
+preparation, regardless of whether their author is a human or machine account.
 
 ```text
 comment -> bounded parser -> explicit command OR mentioned intent
@@ -41,13 +45,15 @@ modify the wrong branch.
    and review commands invoke their assigned agent role.
 4. `fix`, `implement`, `remember`, `dismiss`, `description`, and `sync-branch`
    apply command-specific authorization and availability checks.
-5. Non-command prose needs an exact bot mention before intent can route to
-   review or file mutation. A bounded natural-language branch-sync phrase has a
-   dedicated deterministic detector.
+5. Non-command prose needs an exact bot mention before any comment automation,
+   including translation, can run. A bounded natural-language branch-sync
+   phrase has a dedicated deterministic detector.
 6. Unauthorized file-modifying intent routes to read-only Think or a visible no-op.
 7. Successful workspace mutations pass preflight, path checks, verification,
    authenticated commit, and push before publication.
-8. Comment-triggered file mutation requires a PR review-comment event with its
+8. Unaddressed comments are successful no-ops before project/provider reads, so
+   documentation, coverage, and other machine-authored reports cannot activate agents.
+9. Comment-triggered file mutation requires a PR review-comment event with its
    authoritative branch, or an explicitly branch-scoped execution. An
    `issue_comment` never scans open PRs or selects a first matching branch.
 
@@ -57,8 +63,8 @@ modify the wrong branch.
   actor authorization repository, comment use cases, and comment docs.
 - Intentional contract: explicit commands first, exact mention boundary,
   capability-specific roles, mutation authorization, and safe fallback.
-- Known debt and limitations: natural-language intent depends on a configured
-  agent and can be unavailable; localization of deterministic system errors is
+- Known debt and limitations: natural-language intent and addressed-comment
+  translation depend on a configured agent and can be unavailable; localization of deterministic system errors is
   incomplete; live comment UX evidence is not stored.
 - Unknown rationale: the historic command vocabulary is accepted as current
   product language, not evidence that every original name is optimal.
@@ -86,6 +92,7 @@ a mention.
 1. Every accepted comment MUST resolve to a bounded, explainable route.
 2. File/finding mutations MUST require fresh provider authorization.
 3. Invalid or unauthorized commands MUST expose a useful safe result.
+4. Unaddressed comments MUST NOT activate project, AI, runtime, or publication work.
 
 ### 4.2 Non-goals
 
@@ -100,36 +107,41 @@ a mention.
 3. Unmentioned prose cannot trigger general file mutation.
 4. Agent output cannot commit or push directly; trusted runner code owns it.
 5. Issue-only and general PR-conversation comments cannot infer a write target.
+6. Comment author account type is not an authorization signal; explicit addressing
+   is the machine-neutral admission boundary.
 
 ## 5. Current versus proposed product journey
 
 | Stage | Unsafe/unclear alternative | As-built contract | Effect |
 |---|---|---|---|
-| Intent | model parses everything | command parser first | auditability |
+| Admission | every comment activates AI | command or exact mention required | no passive machine loops |
+| Intent | model parses addressed prose | command parser first | auditability |
 | Mention | substring match | exact username boundary | no accidental trigger |
 | Authority | prompt assertion | GitHub membership/permission | least privilege |
 | Mutation | agent controls git | guarded runner commit/push | constrained blast radius |
 | Failure | silence | result/no-op with reason | clear next action |
 
-No behavior change is proposed.
+This is a greenfield contract change. Passive translation of unaddressed comments
+is removed outright; there is no compatibility flag or legacy route.
 
 ## 6. Functional behavior and state model
 
 ### 6.1 Happy path
 
-1. Parse a valid command or detect an exact mention.
-2. Resolve only the agent roles reachable by that route.
-3. Check authorization for state/file mutations.
-4. Execute read-only or guarded mutation use case.
-5. Publish one bounded result and relevant lifecycle state.
+1. Discard the event unless it starts with the command prefix or contains an exact mention.
+2. Parse a valid command or detect an exact mention.
+3. Resolve only the agent roles reachable by that route.
+4. Check authorization for state/file mutations.
+5. Execute read-only or guarded mutation use case.
+6. Publish one bounded result and relevant lifecycle state.
 
 ### 6.2 Alternative paths
 
 - `/copilot help` and `/copilot status` do not require mutation authority.
 - `/copilot analyze|review|findings|recheck` use read-only Bugbot.
 - `/copilot sync-branch --dry-run` prepares and aborts without push or agent.
-- A plain comment without a bot mention may receive language handling but not
-  natural-language mutation intent.
+- A plain comment without a bot mention receives no language, intent, project,
+  runtime, or publication handling.
 - An issue or general PR-conversation comment may ask for an answer or read-only
   review, but `fix`/`implement` requires the intended PR review thread or an
   explicitly branch-scoped execution.
@@ -161,7 +173,8 @@ mutation preflight; already pushed commits are not repeated blindly.
 | role provider/model/effort/command | common agent tuple | validated role tuple | Variables/inputs |
 
 The command prefix, supported command names, 2,000-character/20-argument bounds,
-required arguments, authorization rules, mention boundary, and git ownership are
+required arguments, command-or-mention admission boundary, authorization rules,
+mention boundary, and git ownership are
 not configurable. New commands require compatibility docs and parser tests.
 
 ## 8. Clean Architecture design
@@ -177,7 +190,8 @@ not configurable. New commands require compatibility docs and parser tests.
 
 ```mermaid
 flowchart LR
-  C[Untrusted comment] --> P[Command/mention policy]
+  C[Untrusted comment] --> P[Command/mention admission]
+  P -->|unaddressed| I[Successful inert exit]
   P --> A[Authorization use case]
   A --> R[Read-only route]
   A --> M[Guarded mutation route]
@@ -200,7 +214,7 @@ Complete: **Request applied and pushed as `abc1234`.** A fresh review will verif
 
 Help MUST enumerate exact commands and side effects. Mutation responses state
 branch, verification, commit/push, and whether independent review remains.
-Notification budget is one generic result per run plus feature-owned stable
+Notification budget is one generic result per addressed run plus feature-owned stable
 status where applicable. Text accompanies icons; English fallback is required;
 untrusted mentions, Markdown, markers, and URLs are sanitized.
 
@@ -229,14 +243,17 @@ raw provider errors are redacted.
 Logs record parser route, authorization outcome, active roles, mutation phase,
 verification count, and sanitized failure. Results identify explicit command
 and review overrides. GitHub comments, commit SHA, finding/status links, Job
-Summary, and lifecycle/activity labels are correlated. Unauthorized/no-op paths
-are visible without being reported as workflow failures unless configuration is invalid.
+Summary, and lifecycle/activity labels are correlated. Unauthorized no-ops are
+visible without being reported as workflow failures. Unaddressed comments emit
+only a bounded internal log and exit successfully before result publication or
+provider/runtime reads.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
+There are no installed users, so no legacy passive-comment behavior is retained.
 Existing command names remain stable. New names MUST not reinterpret previously
-ordinary comments as mutations without migration review. Natural-language
-classification may evolve only behind the same fixed authorization boundary.
+ordinary comments as mutations without an explicit SDD change. Natural-language
+classification may evolve only behind the same fixed admission and authorization boundaries.
 Rollback of code edits uses normal Git history; Copilot never resets a remote
 branch. Finding dismissal and learned rules require explicit follow-up commands.
 
@@ -247,7 +264,7 @@ branch. Finding dismissal and learned rules require explicit follow-up commands.
 | Parser/mention/route policy | 24 | limits, vocabulary, precedence, collisions |
 | Workflow/idempotency/races | 18 | fallback, duplicate, branch/push race |
 | Authorization/adapters | 14 | org/personal permissions, API errors |
-| Workflow/config contracts | 8 | events, permissions, active roles |
+| Workflow/config contracts | 8 | events, permissions, active roles, inert passive comments |
 | UX/localization/sanitization | 14 | help/errors/links/mentions/Markdown |
 | Integration/security/migration | 14 | comment→commit/review, prompt injection |
 | **Total** | **92** | no double counting |
@@ -279,13 +296,15 @@ English/non-English requests.
 9. Untrusted comment text cannot inject shell, marker, mention, or secret output.
 10. An issue-only or general PR-conversation mutation request performs no
     workspace operation and never scans open PRs for a branch.
+11. An unaddressed human or machine comment exits before project lookup, AI
+    configuration, runtime provisioning, translation, or publication.
 
 ## 17. Requirements traceability
 
 | Requirement | Owner | Evidence | Documentation |
 |---|---|---|---|
 | bounded grammar | command domain | command tests | comment commands |
-| safe routing | route/workflow policies | use-case tests | how Bugbot works |
+| safe routing/admission | request/route/workflow policies | entrypoint and use-case tests | comment commands |
 | authorization | authorization port/adapter | repository tests | permissions |
 | guarded mutation | workspace/git workflows | mutation tests | autofix/do request |
 | safe output | result policies | publication tests | failure scenarios |

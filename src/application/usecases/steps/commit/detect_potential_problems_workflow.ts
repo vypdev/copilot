@@ -20,13 +20,17 @@ import type { BugbotContext } from './bugbot/types';
 import type { BugbotReviewOutcome, BugbotTelemetryPort } from '../../../ports/bugbot_telemetry_ports';
 import { BugbotReviewTelemetry } from './bugbot/bugbot_review_telemetry';
 import { analyzeBugbotRevision } from './bugbot/analyze_bugbot_revision_use_case';
-import { expectedBugbotHeadSha, hasNewerBugbotRevision, isLoadedBugbotRevisionSuperseded } from './bugbot/bugbot_review_freshness';
+import { hasNewerBugbotRevision, isLoadedBugbotRevisionSuperseded } from './bugbot/bugbot_review_freshness';
 import {
     reconcileBugbotReviewState,
     type BugbotPresentationReport,
 } from './bugbot/reconcile_bugbot_review_state_use_case';
 import type { BugbotFinding } from '../../../../domain/bugbot/finding';
 import { ApplicationError } from '../../../errors/application_error';
+import {
+    projectBugbotReviewOperationContext,
+    type BugbotReviewOperationContext,
+} from './bugbot/bugbot_review_operation_context';
 
 export interface DetectPotentialProblemsWorkflowDependencies {
     aiRepository: FindingsQueryPort;
@@ -44,10 +48,11 @@ export async function runDetectPotentialProblemsWorkflow(
     dependencies: DetectPotentialProblemsWorkflowDependencies,
 ): Promise<Result[]> {
     const workflowStartedAt = Date.now();
-    const telemetry = new BugbotReviewTelemetry(param);
+    const reviewContext = projectBugbotReviewOperationContext(param);
+    const telemetry = new BugbotReviewTelemetry(reviewContext);
     const publishTelemetry = async (outcome: BugbotReviewOutcome, category?: string) => {
         const snapshot = telemetry.snapshot(outcome, category);
-        if (param.ai.getBugbotReviewConfiguration().telemetry) {
+        if (reviewContext.analysis.reviewConfiguration.telemetry) {
             try {
                 await dependencies.telemetryPort?.publish(snapshot);
             } catch {
@@ -66,36 +71,36 @@ export async function runDetectPotentialProblemsWorkflow(
     };
     logInfo(`${getTaskEmoji(TASK_ID)} Executing ${TASK_ID}.`);
     try {
-        if (shouldSkipDetection(param)) {
+        if (shouldSkipDetection(reviewContext)) {
             await publishTelemetry('skipped', 'admission');
             return [];
         }
-        if (param.isPullRequest && param.inputs?.pull_request?.draft === true
-            && !param.ai.getBugbotReviewConfiguration().reviewDrafts) {
+        if (reviewContext.target.isPullRequest && reviewContext.target.draft
+            && !reviewContext.analysis.reviewConfiguration.reviewDrafts) {
             return await complete(skippedDraftResult(), 'skipped');
         }
 
-        const contextOptions = resolveContextOptions(param);
+        const contextOptions = resolveContextOptions(reviewContext);
         if (contextOptions === null) {
             logDebugInfo('No branch or pull request target available for potential-problems detection.');
             await publishTelemetry('skipped', 'missing_context');
             return [];
         }
-        const contextRequest = projectBugbotContextRequest(param, contextOptions);
+        const contextRequest = projectBugbotContextRequest(reviewContext, contextOptions);
         const contextReader = dependencies.contextPorts.loader.bind({
             owner: param.owner,
             repository: param.repo,
             token: param.tokens.token,
         });
         const context = await telemetry.measure('context', () => loadBugbotContext(contextRequest, contextReader));
-        const eventHeadSha = expectedBugbotHeadSha(param);
+        const eventHeadSha = reviewContext.trigger.expectedHeadSha;
         if (isLoadedBugbotRevisionSuperseded(context, eventHeadSha)) {
             return await complete(supersededResult(context.prContext?.prHeadSha, eventHeadSha), 'superseded');
         }
-        const prepared = await analyzeBugbotRevision(param, context, { agent: dependencies.aiRepository, telemetry });
+        const prepared = await analyzeBugbotRevision(reviewContext, context, { agent: dependencies.aiRepository, telemetry });
         if (prepared === undefined) {
             const analysisError = new ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.');
-            const presentation = param.ai.getBugbotReviewConfiguration().publicationMode === 'publish'
+            const presentation = reviewContext.analysis.reviewConfiguration.publicationMode === 'publish'
                 ? await telemetry.measure('projection', () => reconcileReviewState({
                     execution: param,
                     loadedContext: context,
@@ -111,7 +116,7 @@ export async function runDetectPotentialProblemsWorkflow(
         if (await telemetry.measure('freshness', () => hasNewerBugbotRevision(param, context, dependencies.contextPorts))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
-        if (param.ai.getBugbotReviewConfiguration().publicationMode === 'dry-run') {
+        if (reviewContext.analysis.reviewConfiguration.publicationMode === 'dry-run') {
             return await complete(dryRunResult(prepared, context), 'dry-run');
         }
         const resolutionErrors = await telemetry.measure('publication', () => applyDetectedFindings(
@@ -214,27 +219,28 @@ function supersededResult(loadedHeadSha?: string, expectedHeadSha?: string): Res
     });
 }
 
-function resolveContextOptions(param: Execution): LoadBugbotContextOptions | undefined | null {
-    if (param.isPullRequest) {
+function resolveContextOptions(param: BugbotReviewOperationContext): LoadBugbotContextOptions | undefined | null {
+    if (param.target.isPullRequest) {
         return {
-            branchOverride: param.pullRequest.head,
-            issueNumberOverride: param.issueNumber,
-            pullRequestNumberOverride: param.pullRequest.number,
+            branchOverride: param.target.headBranch,
+            issueNumberOverride: param.target.issueNumber,
+            pullRequestNumberOverride: param.target.pullRequestNumber,
         };
     }
-    if (param.commit.branch?.trim()) return undefined;
-    if (['issues', 'issue_comment'].includes(param.eventName) && param.issueNumber > 0) {
+    if (param.target.commitBranch) return undefined;
+    if (['issues', 'issue_comment'].includes(param.trigger.kind) && param.target.issueNumber > 0) {
         return undefined;
     }
     return null;
 }
 
-function shouldSkipDetection(param: Execution): boolean {
-    if (!isAgentConfigurationReady(param.ai.getAgentConfiguration(param.isPullRequest ? 'reviewer' : 'findings'))) {
+function shouldSkipDetection(param: BugbotReviewOperationContext): boolean {
+    if (!isAgentConfigurationReady(param.analysis.agentConfiguration)) {
         logDebugInfo('Agent not configured; skipping potential problems detection.');
         return true;
     }
-    if (param.issueNumber === -1 && (!param.isPullRequest || param.pullRequest.number <= 0)) {
+    if (param.target.issueNumber === -1
+        && (!param.target.isPullRequest || param.target.pullRequestNumber <= 0)) {
         logDebugInfo('No issue or pull request number for this execution; skipping potential problems detection.');
         return true;
     }
