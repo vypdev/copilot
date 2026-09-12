@@ -178,6 +178,21 @@ describe("Bugbot port boundaries", () => {
       ),
       'utf8',
     );
+    const operationContextSource = readFileSync(
+      join(
+        portsDirectory,
+        '../usecases/steps/commit/bugbot/bugbot_review_operation_context.ts',
+      ),
+      'utf8',
+    );
+    const selectionOnlySources = [
+      'bugbot_autofix_preflight.ts',
+      'detect_bugbot_fix_intent_workflow.ts',
+      'dismiss_bugbot_findings_use_case.ts',
+    ].map((file) => readFileSync(
+      join(portsDirectory, `../usecases/steps/commit/bugbot/${file}`),
+      'utf8',
+    ));
     const pullRequestReadPortSource = readFileSync(
       join(portsDirectory, 'bugbot_pull_request_read_ports.ts'),
       'utf8',
@@ -188,7 +203,14 @@ describe("Bugbot port boundaries", () => {
     expect(loaderSource).not.toContain('openPrNumbers');
     expect(loaderSource).not.toContain('getOpenPullRequestNumbersByHeadBranch');
     expect(loaderSource).not.toContain('Promise.all');
-    expect(requestSource).toContain("import type { Execution }");
+    expect(requestSource).not.toMatch(/\bExecution\b/u);
+    expect(requestSource).toContain('BugbotContextSelectionContext');
+    expect(operationContextSource).not.toContain('data/model/execution');
+    expect(operationContextSource).not.toMatch(/readonly\s+tokens?\s*:/u);
+    for (const source of selectionOnlySources) {
+      expect(source).toContain('projectBugbotContextSelectionContext');
+      expect(source).not.toContain('projectBugbotReviewOperationContext');
+    }
     expect(pullRequestReadPortSource).not.toContain('getOpenPullRequestNumbersByHeadBranch');
   });
 });

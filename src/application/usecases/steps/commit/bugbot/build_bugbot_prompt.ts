@@ -8,19 +8,19 @@
 
 import { getBugbotPrompt } from "../../../../../prompts";
 import { PROJECT_CONTEXT_INSTRUCTION } from "../../../../../utils/project_context_instruction";
-import type { Execution } from "../../../../../data/model/execution";
 import type { BugbotContext } from "./types";
 import { resolveBugbotReviewEffort } from '../../../../../domain/bugbot/review_configuration';
 import { fileMatchesIgnorePatterns } from './file_ignore';
+import type { BugbotReviewOperationContext } from './bugbot_review_operation_context';
 
 const MAX_IGNORE_BLOCK_LENGTH = 2000;
 const GIT_OBJECT_ID = /^[0-9a-f]{7,64}$/i;
 
-export function buildBugbotPrompt(param: Execution, context: BugbotContext): string {
-    const headBranch = param.pullRequest?.head?.trim() || param.commit?.branch || 'unknown';
-    const baseBranch = param.currentConfiguration.parentBranch ?? param.branches.development ?? 'develop';
+export function buildBugbotPrompt(param: BugbotReviewOperationContext, context: BugbotContext): string {
+    const headBranch = param.target.headBranch || 'unknown';
+    const baseBranch = param.target.baseBranch;
     const previousBlock = context.previousFindingsBlock;
-    const ignorePatterns = param.ai.getAiIgnoreFiles();
+    const ignorePatterns = param.ignorePatterns;
     const ignoreBlock =
         ignorePatterns.length > 0
             ? (() => {
@@ -34,7 +34,7 @@ export function buildBugbotPrompt(param: Execution, context: BugbotContext): str
             : "";
     const changes = (context.prContext?.changes ?? [])
         .filter((change) => !fileMatchesIgnorePatterns(change.filename, ignorePatterns));
-    const configuredEffort = param.ai.getBugbotReviewConfiguration().effort;
+    const configuredEffort = param.analysis.reviewConfiguration.effort;
     const resolvedEffort = resolveBugbotReviewEffort(configuredEffort, {
         files: changes.length,
         additions: changes.reduce((sum, change) => sum + change.additions, 0),
@@ -44,11 +44,11 @@ export function buildBugbotPrompt(param: Execution, context: BugbotContext): str
 
     return getBugbotPrompt({
         projectContextInstruction: PROJECT_CONTEXT_INSTRUCTION,
-        owner: param.owner,
-        repo: param.repo,
+        owner: param.repository.owner,
+        repo: param.repository.name,
         headBranch,
         baseBranch,
-        issueNumber: String(param.issueNumber),
+        issueNumber: String(param.target.issueNumber),
         changeScopeInstruction: buildChangeScopeInstruction(
             param,
             headBranch,
@@ -88,16 +88,16 @@ function buildCoverageBlock(context: BugbotContext): string {
 }
 
 function buildChangeScopeInstruction(
-    param: Execution,
+    param: BugbotReviewOperationContext,
     headBranch: string,
     baseBranch: string,
     hasCanonicalPullRequestDiff: boolean,
 ): string {
-    const before = normalizedObjectId(param.inputs?.before);
-    const after = normalizedObjectId(param.inputs?.after);
-    const eventName = param.eventName || param.inputs?.eventName;
-    const isIncrementalPullRequestUpdate = param.inputs?.eventName === 'pull_request'
-        && param.pullRequest.action === 'synchronize'
+    const before = normalizedObjectId(param.trigger.before);
+    const after = normalizedObjectId(param.trigger.after);
+    const eventName = param.trigger.kind;
+    const isIncrementalPullRequestUpdate = eventName === 'pull_request'
+        && param.target.pullRequestAction === 'synchronize'
         && before !== undefined
         && after !== undefined
         && before !== after;

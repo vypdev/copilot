@@ -19,6 +19,7 @@ const purePolicies = [
 ];
 const changedPath = [
   ...purePolicies,
+  'src/application/usecases/steps/commit/bugbot/bugbot_review_operation_context.ts',
   'src/application/usecases/steps/commit/bugbot/bugbot_context_request.ts',
   'src/application/usecases/steps/commit/bugbot/load_bugbot_context_use_case.ts',
   'src/application/usecases/steps/commit/bugbot/bugbot_review_telemetry.ts',

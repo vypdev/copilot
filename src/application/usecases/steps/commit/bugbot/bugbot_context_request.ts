@@ -1,7 +1,6 @@
-import type { Execution } from "../../../../../data/model/execution";
 import type { BugbotReviewTarget } from "../../../../../domain/bugbot/context";
 import { parsePositiveSafeInteger } from "../../../../../domain/positive_integer_policy";
-import { expectedBugbotHeadSha } from "./bugbot_review_freshness";
+import type { BugbotContextSelectionContext } from './bugbot_review_operation_context';
 
 export interface LoadBugbotContextOptions {
   readonly branchOverride?: string;
@@ -18,39 +17,37 @@ export interface BugbotContextRequest {
 }
 
 export function projectBugbotContextRequest(
-  execution: Execution,
+  context: BugbotContextSelectionContext,
   options?: LoadBugbotContextOptions,
 ): BugbotContextRequest {
-  const issueNumber = parsePositiveSafeInteger(options?.issueNumberOverride ?? execution.issueNumber);
+  const issueNumber = parsePositiveSafeInteger(options?.issueNumberOverride ?? context.target.issueNumber);
   const eventPullRequestNumber = parsePositiveSafeInteger(
-    options?.pullRequestNumberOverride ?? (execution.isPullRequest ? execution.pullRequest.number : undefined),
+    options?.pullRequestNumberOverride
+      ?? (context.target.isPullRequest ? context.target.pullRequestNumber : undefined),
   );
   const headRef = (
     options?.branchOverride
-    ?? (execution.isPullRequest ? execution.pullRequest.head : execution.commit.branch)
+    ?? context.target.headBranch
     ?? ""
   ).trim();
-  const repositoryId = parsePositiveSafeInteger(execution.inputs?.repository?.id);
-  const eventHeadOwner = execution.inputs?.pull_request?.head?.repo?.owner?.login?.trim();
   const target: BugbotReviewTarget = {
     repository: {
-      owner: execution.owner,
-      name: execution.repo,
-      ...(repositoryId ? { id: repositoryId } : {}),
+      owner: context.repository.owner,
+      name: context.repository.name,
+      ...(context.repository.id ? { id: context.repository.id } : {}),
     },
-    triggerKind: execution.eventName || "unknown",
+    triggerKind: context.trigger.kind,
     ...(issueNumber ? { issueNumber } : {}),
-    headOwner: eventHeadOwner || execution.owner,
+    headOwner: context.trigger.headOwner,
     headRef,
-    ...(expectedBugbotHeadSha(execution) ? { expectedHeadSha: expectedBugbotHeadSha(execution) } : {}),
+    ...(context.trigger.expectedHeadSha ? { expectedHeadSha: context.trigger.expectedHeadSha } : {}),
     ...(eventPullRequestNumber ? { eventPullRequestNumber } : {}),
     pullRequestRequired: options?.pullRequestRequired ?? eventPullRequestNumber !== undefined,
   };
-  const configuration = execution.ai.getBugbotReviewConfiguration();
   return {
     target,
-    ...(execution.tokenUser?.trim() ? { trustedAuthorLogin: execution.tokenUser.trim() } : {}),
-    ignorePatterns: execution.ai.getAiIgnoreFiles(),
-    organizationRules: configuration.organizationRules,
+    ...(context.trustedAuthorLogin ? { trustedAuthorLogin: context.trustedAuthorLogin } : {}),
+    ignorePatterns: context.ignorePatterns,
+    organizationRules: context.organizationRules,
   };
 }

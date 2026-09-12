@@ -13,6 +13,7 @@ import {
   projectBugbotContextRequest,
   type LoadBugbotContextOptions,
 } from "./bugbot_context_request";
+import { projectBugbotContextSelectionContext } from './bugbot_review_operation_context';
 import { BUGBOT_FIX_INTENT_RESPONSE_SCHEMA } from "./schema";
 import {
   buildUnresolvedFindingSummaries,
@@ -64,7 +65,7 @@ export async function runDetectBugbotFixIntentWorkflow(
       }
     : undefined;
   const context = await loadBugbotContext(
-    projectBugbotContextRequest(param, contextOptions),
+    projectBugbotContextRequest(projectBugbotContextSelectionContext(param), contextOptions),
     ports.contextPorts.loader.bind({
       owner: param.owner,
       repository: param.repo,

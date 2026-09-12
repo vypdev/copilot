@@ -9,6 +9,7 @@ import { normalizeFindingIdForMarker } from '../../../../policies/bugbot_finding
 import { logError } from '../../../../ports/logging_ports';
 import type { BugbotFindingResolution } from '../../../../../domain/bugbot/finding';
 import { toApplicationError } from '../../../../errors/application_error';
+import { projectBugbotContextSelectionContext } from './bugbot_review_operation_context';
 
 export interface DismissBugbotFindingsParam {
     execution: Execution;
@@ -79,6 +80,7 @@ async function loadDismissContext(
     execution: Execution,
     ports: BugbotContextPorts,
 ) {
+    const reviewContext = projectBugbotContextSelectionContext(execution);
     const reader = ports.loader.bind({
         owner: execution.owner,
         repository: execution.repo,
@@ -86,10 +88,10 @@ async function loadDismissContext(
     });
     const branch = execution.commit.branch?.trim() || execution.pullRequest?.head?.trim();
     if (branch) {
-        return loadBugbotContext(projectBugbotContextRequest(execution, {
+        return loadBugbotContext(projectBugbotContextRequest(reviewContext, {
             branchOverride: branch,
             ...(execution.pullRequest?.number > 0 ? { pullRequestNumberOverride: execution.pullRequest.number } : {}),
         }), reader);
     }
-    return loadBugbotContext(projectBugbotContextRequest(execution), reader);
+    return loadBugbotContext(projectBugbotContextRequest(reviewContext), reader);
 }

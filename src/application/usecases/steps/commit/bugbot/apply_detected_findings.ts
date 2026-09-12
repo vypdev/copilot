@@ -2,25 +2,10 @@ import type { Execution } from "../../../../../data/model/execution";
 import type { BugbotFindingPublicationPorts } from "../../../../../application/ports/bugbot_finding_publication_ports";
 import type { BugbotFindingResolutionPorts } from "../../../../../application/ports/bugbot_finding_resolution_ports";
 import type { BugbotContext } from "./types";
-import {
-  prepareBugbotFindings,
-  type PreparedBugbotFindings,
-} from "./prepare_bugbot_findings";
+import type { PreparedBugbotFindings } from "./prepare_bugbot_findings";
 import { markFindingsResolved } from "./mark_findings_resolved_use_case";
 import { publishFindings } from "./publish_findings_use_case";
 import { PullRequestReviewOperationError } from "../../../../../application/ports/pull_request_review_errors";
-
-export function prepareDetectedFindings(
-  execution: Execution,
-  response: unknown,
-): PreparedBugbotFindings | undefined {
-  return prepareBugbotFindings(
-    response,
-    execution.ai.getAiIgnoreFiles(),
-    execution.ai.getBugbotMinSeverity(),
-    execution.ai.getBugbotCommentLimit(),
-  );
-}
 
 export async function applyDetectedFindings(
   execution: Execution,

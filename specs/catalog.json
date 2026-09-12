@@ -172,6 +172,7 @@
         "src/application/policies/application_error_presentation_policy.ts",
         "src/application/policies/github_execution_admission_policy.ts",
         "src/application/policies/workflow_queue_policy.ts",
+        "src/application/usecases/steps/commit/bugbot/bugbot_review_operation_context.ts",
         "src/application/policies/result_publication_policy.ts"
       ],
       "tests": [
@@ -182,6 +183,7 @@
         "src/application/policies/__tests__/application_error_presentation_policy.test.ts",
         "src/architecture/__tests__/execution_import_ratchet.test.ts",
         "src/architecture/__tests__/raw_error_logging_boundaries.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_review_operation_context.test.ts",
         "src/application/usecases/execution/__tests__/resolve_github_execution_admission_use_case.test.ts",
         "src/application/usecases/workflow/__tests__/wait_for_previous_workflow_runs_use_case.test.ts"
       ],
@@ -222,6 +224,7 @@
         "src/data/model/execution.ts",
         "src/application/usecases/actions/deployment_orchestration_use_case.ts",
         "src/application/usecases/steps/commit/bugbot/load_bugbot_context_use_case.ts",
+        "src/application/usecases/steps/commit/bugbot/bugbot_review_operation_context.ts",
         "src/application/usecases/setup/doctor_use_case.ts",
         "src/application/policies/setup_questionnaire_policy.ts",
         "src/cli/setup_terminal_driver.ts",
@@ -235,6 +238,7 @@
         "src/architecture/__tests__/raw_error_logging_boundaries.test.ts",
         "src/application/usecases/actions/__tests__/deployment_orchestration_use_case.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/load_bugbot_context_use_case.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_review_operation_context.test.ts",
         "src/application/usecases/setup/__tests__/doctor_use_case.test.ts",
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
         "src/application/policies/__tests__/agent_execution_plan_policy.test.ts"

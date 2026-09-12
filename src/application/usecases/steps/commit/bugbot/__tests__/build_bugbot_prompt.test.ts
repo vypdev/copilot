@@ -2,26 +2,42 @@
  * Unit tests for buildBugbotPrompt (detect potential problems prompt).
  */
 
-import type { Execution } from "../../../../../../data/model/execution";
-import { Ai } from "../../../../../../data/model/ai";
+import { DEFAULT_BUGBOT_REVIEW_CONFIGURATION } from '../../../../../../domain/bugbot/review_configuration';
 import type { BugbotContext } from "../types";
 import { buildBugbotPrompt } from "../build_bugbot_prompt";
+import type { BugbotReviewOperationContext } from '../bugbot_review_operation_context';
 
-function mockExecution(overrides: Partial<Execution> = {}): Execution {
+function mockExecution(overrides: {
+    target?: Partial<BugbotReviewOperationContext['target']>;
+    trigger?: Partial<BugbotReviewOperationContext['trigger']>;
+    analysis?: Partial<BugbotReviewOperationContext['analysis']>;
+    ignorePatterns?: readonly string[];
+} = {}): BugbotReviewOperationContext {
     return {
-        owner: "o",
-        repo: "r",
-        issueNumber: 42,
-        commit: { branch: "feature/42-branch" },
-        currentConfiguration: { parentBranch: "develop" },
-        branches: { development: "develop" },
-        ai: new Ai("", "model", false, [], false, "low", 20),
-        ...overrides,
-    } as unknown as Execution;
-}
-
-function aiWithIgnoreFiles(patterns: string[]): Ai {
-    return new Ai("", "model", false, patterns, false, "low", 20);
+        repository: { owner: 'o', name: 'r' },
+        target: {
+            issueNumber: 42,
+            isPullRequest: false,
+            pullRequestNumber: -1,
+            headBranch: 'feature/42-branch',
+            commitBranch: 'feature/42-branch',
+            baseBranch: 'develop',
+            pullRequestAction: '',
+            draft: false,
+            ...overrides.target,
+        },
+        trigger: { kind: 'unknown', headOwner: 'o', ...overrides.trigger },
+        ignorePatterns: overrides.ignorePatterns ?? [],
+        organizationRules: [],
+        locale: { pullRequest: 'en-US' },
+        analysis: {
+            agentConfiguration: { provider: 'codex', model: 'model' },
+            minimumSeverity: 'low',
+            commentLimit: 20,
+            reviewConfiguration: DEFAULT_BUGBOT_REVIEW_CONFIGURATION,
+            ...overrides.analysis,
+        },
+    };
 }
 
 function mockContext(overrides: Partial<BugbotContext> = {}): BugbotContext {
@@ -53,7 +69,7 @@ describe("buildBugbotPrompt", () => {
 
     it("includes ignore patterns when getAiIgnoreFiles returns patterns", () => {
         const prompt = buildBugbotPrompt(
-            mockExecution({ ai: aiWithIgnoreFiles(["*.test.ts", "build/*"]) }),
+            mockExecution({ ignorePatterns: ["*.test.ts", "build/*"] }),
             mockContext()
         );
         expect(prompt).toContain("Files to ignore");
@@ -64,7 +80,7 @@ describe("buildBugbotPrompt", () => {
     it("truncates ignore block when total length exceeds limit", () => {
         const longPatterns = Array.from({ length: 100 }, (_, i) => `pattern-${i}-${"x".repeat(50)}`);
         const prompt = buildBugbotPrompt(
-            mockExecution({ ai: aiWithIgnoreFiles(longPatterns) }),
+            mockExecution({ ignorePatterns: longPatterns }),
             mockContext()
         );
         expect(prompt).toContain("Files to ignore");
@@ -74,7 +90,7 @@ describe("buildBugbotPrompt", () => {
 
     it("omits ignore block when getAiIgnoreFiles returns empty", () => {
         const prompt = buildBugbotPrompt(
-            mockExecution({ ai: aiWithIgnoreFiles([]) }),
+            mockExecution({ ignorePatterns: [] }),
             mockContext()
         );
         expect(prompt).not.toContain("Files to ignore");
@@ -82,10 +98,7 @@ describe("buildBugbotPrompt", () => {
 
     it("uses branches.development as base branch when parentBranch is undefined", () => {
         const prompt = buildBugbotPrompt(
-            mockExecution({
-                currentConfiguration: {},
-                branches: { development: "main" },
-            } as unknown as Partial<Execution>),
+            mockExecution({ target: { baseBranch: 'main' } }),
             mockContext()
         );
         expect(prompt).toContain("- Base branch: main");
@@ -93,9 +106,8 @@ describe("buildBugbotPrompt", () => {
 
     it('uses the actual pull-request head branch instead of the synthetic Actions ref', () => {
         const prompt = buildBugbotPrompt(mockExecution({
-            commit: { branch: 'refs/pull/42/merge' },
-            pullRequest: { head: 'feature/42-real-head' },
-        } as unknown as Partial<Execution>), mockContext());
+            target: { headBranch: 'feature/42-real-head', commitBranch: 'refs/pull/42/merge' },
+        }), mockContext());
         expect(prompt).toContain('feature/42-real-head');
         expect(prompt).not.toContain('refs/pull/42/merge');
     });
@@ -104,9 +116,9 @@ describe("buildBugbotPrompt", () => {
         const before = 'a'.repeat(40);
         const after = 'b'.repeat(40);
         const prompt = buildBugbotPrompt(mockExecution({
-            inputs: { eventName: 'pull_request', action: 'synchronize', before, after },
-            pullRequest: { action: 'synchronize', head: 'feature/42-real-head' },
-        } as unknown as Partial<Execution>), mockContext());
+            target: { pullRequestAction: 'synchronize', headBranch: 'feature/42-real-head' },
+            trigger: { kind: 'pull_request', before, after },
+        }), mockContext());
 
         expect(prompt).toContain(`exact local commit range \`${before}..${after}\``);
         expect(prompt).toContain('use the canonical full PR diff instead of failing');
@@ -116,9 +128,9 @@ describe("buildBugbotPrompt", () => {
 
     it('falls back to a full branch review when synchronize SHAs are unavailable or unsafe', () => {
         const prompt = buildBugbotPrompt(mockExecution({
-            inputs: { eventName: 'pull_request', action: 'synchronize', before: '$(unsafe)', after: 'b'.repeat(40) },
-            pullRequest: { action: 'synchronize', head: 'feature/42-real-head' },
-        } as unknown as Partial<Execution>), mockContext());
+            target: { pullRequestAction: 'synchronize', headBranch: 'feature/42-real-head' },
+            trigger: { kind: 'pull_request', before: '$(unsafe)', after: 'b'.repeat(40) },
+        }), mockContext());
 
         expect(prompt).toContain('No canonical pull-request diff is available');
         expect(prompt).not.toContain('$(unsafe)');
@@ -128,9 +140,8 @@ describe("buildBugbotPrompt", () => {
         const before = 'a'.repeat(40);
         const after = 'b'.repeat(40);
         const prompt = buildBugbotPrompt(mockExecution({
-            eventName: 'push',
-            inputs: { eventName: 'push', before, after },
-        } as unknown as Partial<Execution>), mockContext());
+            trigger: { kind: 'push', before, after },
+        }), mockContext());
 
         expect(prompt).toContain('push update without requiring a pull request');
         expect(prompt).toContain(`exact local commit range \`${before}..${after}\``);
@@ -141,9 +152,8 @@ describe("buildBugbotPrompt", () => {
 
     it('falls back to local branch history for a new branch push with an all-zero before SHA', () => {
         const prompt = buildBugbotPrompt(mockExecution({
-            eventName: 'push',
-            inputs: { eventName: 'push', before: '0'.repeat(40), after: 'b'.repeat(40) },
-        } as unknown as Partial<Execution>), mockContext());
+            trigger: { kind: 'push', before: '0'.repeat(40), after: 'b'.repeat(40) },
+        }), mockContext());
 
         expect(prompt).toContain('No canonical pull-request diff is available');
         expect(prompt).toContain('current commit against its parent');
@@ -152,20 +162,16 @@ describe("buildBugbotPrompt", () => {
 
     it('uses the canonical GitHub diff for a full pull-request review', () => {
         const prompt = buildBugbotPrompt(mockExecution({
-            eventName: 'pull_request',
-            inputs: { eventName: 'pull_request', action: 'opened' },
-            pullRequest: { action: 'opened', head: 'feature/42-real-head' },
-        } as unknown as Partial<Execution>), mockContext({ reviewDiffBlock: 'canonical diff' }));
+            target: { pullRequestAction: 'opened', headBranch: 'feature/42-real-head' },
+            trigger: { kind: 'pull_request' },
+        }), mockContext({ reviewDiffBlock: 'canonical diff' }));
 
         expect(prompt).toContain('Review the canonical pull-request diff for "feature/42-real-head" compared to "develop"');
     });
 
     it("uses develop when parentBranch and branches.development are missing", () => {
         const prompt = buildBugbotPrompt(
-            mockExecution({
-                currentConfiguration: {},
-                branches: {},
-            } as unknown as Partial<Execution>),
+            mockExecution({ target: { baseBranch: 'develop' } }),
             mockContext()
         );
         expect(prompt).toContain("- Base branch: develop");

@@ -248,8 +248,10 @@ fails CI. Once context projection is complete, this baseline is
 replaced by the exact route-boundary allowlist documented in the governing SDD.
 The P2-A setup cut and exact-inventory correction reduced that ratchet from 140
 to 130 consumers: six setup imports were removed and four already-stale entries
-were deleted. Every merged P2 slice must lower the checked-in maximum by the
-imports it removes.
+were deleted. P2-B then moved five Bugbot analysis leaves to nested immutable,
+credential-free `BugbotContextSelectionContext` and
+`BugbotReviewOperationContext` contracts, reducing the ceiling to 125.
+Every merged P2 slice must lower the checked-in maximum by the imports it removes.
 
 The package subpath `@vypdev/copilot/bugbot` exposes one review operation,
 `review(BugbotReviewRequest)`. It does not export the internal `Execution` or

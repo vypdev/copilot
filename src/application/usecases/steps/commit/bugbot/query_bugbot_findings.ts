@@ -1,15 +1,15 @@
-import type { Execution } from '../../../../../data/model/execution';
+import type { AgentConfiguration } from '../../../../../domain/agent';
 import type { FindingsQueryPort } from '../../../../ports/agent_findings_ports';
 import { AGENT_PLAN } from '../../../../../application/policies/agent_task_policy';
 import { BUGBOT_RESPONSE_SCHEMA } from './schema';
 
 export async function queryBugbotFindings(
     repository: FindingsQueryPort,
-    execution: Execution,
+    configuration: Readonly<AgentConfiguration>,
     prompt: string,
 ): Promise<unknown> {
     return repository.query({
-        configuration: execution.ai.getAgentConfiguration(execution.isPullRequest ? 'reviewer' : 'findings'),
+        configuration,
         agentId: AGENT_PLAN,
         prompt,
         options: {
