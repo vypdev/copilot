@@ -27,8 +27,13 @@ export interface BugbotReviewTarget {
     readonly headOwner: string;
     readonly headRef: string;
     readonly expectedHeadSha?: string;
-    readonly eventPullRequestNumber?: number;
-    readonly pullRequestRequired: boolean;
+    readonly pullRequestSelection: {
+        readonly kind: "event";
+        readonly number?: number;
+    } | {
+        readonly kind: "exact-head";
+        readonly required: boolean;
+    };
 }
 export interface BugbotPullRequestIdentity {
     readonly number: number;

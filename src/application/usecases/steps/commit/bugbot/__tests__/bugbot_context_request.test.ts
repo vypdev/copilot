@@ -46,8 +46,7 @@ describe('Bugbot context request projection', () => {
         headOwner: 'fork-owner',
         headRef: 'feature/pr',
         expectedHeadSha: 'a'.repeat(40),
-        eventPullRequestNumber: 12,
-        pullRequestRequired: true,
+        pullRequestSelection: { kind: 'event', number: 12 },
       },
       trustedAuthorLogin: 'bugbot',
       ignorePatterns: ['dist/*'],
@@ -65,10 +64,9 @@ describe('Bugbot context request projection', () => {
         headBranch: 'feature/pr',
       },
       trigger: { kind: 'pull_request', headOwner: 'acme' },
-    }), { pullRequestRequired: false });
+    }), { exactHeadPullRequestRequired: false });
 
-    expect(request.target).not.toHaveProperty('eventPullRequestNumber');
-    expect(request.target.pullRequestRequired).toBe(true);
+    expect(request.target.pullRequestSelection).toEqual({ kind: 'event' });
   });
 
   it('applies explicit options and omits invalid optional identities', () => {
@@ -85,7 +83,7 @@ describe('Bugbot context request projection', () => {
       branchOverride: '  explicit/head  ',
       issueNumberOverride: 0,
       pullRequestNumberOverride: 0,
-      pullRequestRequired: false,
+      exactHeadPullRequestRequired: false,
     });
 
     expect(request.target).toEqual({
@@ -93,7 +91,7 @@ describe('Bugbot context request projection', () => {
       triggerKind: 'unknown',
       headOwner: 'acme',
       headRef: 'explicit/head',
-      pullRequestRequired: false,
+      pullRequestSelection: { kind: 'exact-head', required: false },
     });
     expect(request).not.toHaveProperty('trustedAuthorLogin');
   });

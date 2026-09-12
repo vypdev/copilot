@@ -6,7 +6,7 @@ export interface LoadBugbotContextOptions {
   readonly branchOverride?: string;
   readonly issueNumberOverride?: number;
   readonly pullRequestNumberOverride?: number;
-  readonly pullRequestRequired?: boolean;
+  readonly exactHeadPullRequestRequired?: boolean;
 }
 
 export interface BugbotContextRequest {
@@ -21,7 +21,7 @@ export function projectBugbotContextRequest(
   options?: LoadBugbotContextOptions,
 ): BugbotContextRequest {
   const issueNumber = parsePositiveSafeInteger(options?.issueNumberOverride ?? context.target.issueNumber);
-  const eventPullRequestNumber = parsePositiveSafeInteger(
+  const pullRequestNumber = parsePositiveSafeInteger(
     options?.pullRequestNumberOverride
       ?? (context.target.isPullRequest ? context.target.pullRequestNumber : undefined),
   );
@@ -41,9 +41,9 @@ export function projectBugbotContextRequest(
     headOwner: context.trigger.headOwner,
     headRef,
     ...(context.trigger.expectedHeadSha ? { expectedHeadSha: context.trigger.expectedHeadSha } : {}),
-    ...(eventPullRequestNumber ? { eventPullRequestNumber } : {}),
-    pullRequestRequired: context.target.isPullRequest
-      || (options?.pullRequestRequired ?? eventPullRequestNumber !== undefined),
+    pullRequestSelection: context.target.isPullRequest || pullRequestNumber !== undefined
+      ? { kind: 'event', ...(pullRequestNumber ? { number: pullRequestNumber } : {}) }
+      : { kind: 'exact-head', required: options?.exactHeadPullRequestRequired ?? false },
   };
   return {
     target,

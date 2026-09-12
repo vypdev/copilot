@@ -39,7 +39,7 @@ export async function prepareBugbotAutofix(
             projectBugbotContextRequest(projectBugbotContextSelectionContext(execution), {
                 ...(targetBranch ? { branchOverride: targetBranch } : {}),
                 ...(canonicalHint ? { pullRequestNumberOverride: canonicalHint.number } : {}),
-                pullRequestRequired: true,
+                exactHeadPullRequestRequired: true,
             }),
             contextPorts.loader.bind({
                 owner: execution.owner,

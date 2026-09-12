@@ -131,7 +131,10 @@ describe("DetectBugbotFixIntentUseCase", () => {
         expect(results[0].success).toBe(true);
         expect(mockLoadBugbotContext).toHaveBeenCalledWith(
             expect.objectContaining({
-                target: expect.objectContaining({ headRef: 'feature/no-linked-issue', eventPullRequestNumber: 50 }),
+                target: expect.objectContaining({
+                    headRef: 'feature/no-linked-issue',
+                    pullRequestSelection: { kind: 'event', number: 50 },
+                }),
             }),
             expect.anything(),
         );
@@ -156,7 +159,12 @@ describe("DetectBugbotFixIntentUseCase", () => {
 
         expect(results).toHaveLength(1);
         expect(mockLoadBugbotContext).toHaveBeenCalledWith(
-            expect.objectContaining({ target: expect.objectContaining({ headRef: '', pullRequestRequired: false }) }),
+            expect.objectContaining({
+                target: expect.objectContaining({
+                    headRef: '',
+                    pullRequestSelection: { kind: 'exact-head', required: false },
+                }),
+            }),
             expect.anything(),
         );
     });
@@ -168,7 +176,12 @@ describe("DetectBugbotFixIntentUseCase", () => {
         await useCase.invoke(baseExecution({ commit: { branch: "" } } as Partial<Execution>));
 
         expect(mockLoadBugbotContext).toHaveBeenCalledWith(
-            expect.objectContaining({ target: expect.objectContaining({ headRef: '', pullRequestRequired: false }) }),
+            expect.objectContaining({
+                target: expect.objectContaining({
+                    headRef: '',
+                    pullRequestSelection: { kind: 'exact-head', required: false },
+                }),
+            }),
             expect.anything(),
         );
     });

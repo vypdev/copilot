@@ -31,7 +31,7 @@ description: Diagnose terminal failures across detection, publication, autofix, 
     Bugbot reports an ambiguous target and performs no model call or finding mutation. It never guesses by pull-request age, number, or provider order. Close the obsolete PR or run the review from the intended pull-request event so that exact identity can be verified.
   </Accordion>
   <Accordion title="The pull-request event identity is stale" icon="git-commit">
-    Bugbot verifies the event PR's open state, base repository, head owner/ref, and head SHA. Any mismatch stops the run without falling back to a branch search. Start a new review for the current PR revision.
+    Bugbot requires a positive event PR number, then verifies the PR's open state, base repository, head owner/ref, and head SHA. A missing, malformed, or mismatched identity stops the run without falling back to a branch search. Start a new review for the current PR revision.
   </Accordion>
   <Accordion title="The PR received a newer commit during reconciliation" icon="git-commit">
     Bugbot checks the PR head immediately before and after collecting the final snapshot. If either head differs from the analyzed commit, it discards the snapshot and performs no review/status writes. The newer workflow run owns the next projection; use `/copilot recheck` only if no newer run is active.

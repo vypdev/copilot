@@ -1237,7 +1237,7 @@ exports.projectBugbotContextRequest = projectBugbotContextRequest;
 const positive_integer_policy_1 = __nccwpck_require__(9879);
 function projectBugbotContextRequest(context, options) {
     const issueNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(options?.issueNumberOverride ?? context.target.issueNumber);
-    const eventPullRequestNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(options?.pullRequestNumberOverride
+    const pullRequestNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(options?.pullRequestNumberOverride
         ?? (context.target.isPullRequest ? context.target.pullRequestNumber : undefined));
     const headRef = (options?.branchOverride
         ?? context.target.headBranch
@@ -1253,9 +1253,9 @@ function projectBugbotContextRequest(context, options) {
         headOwner: context.trigger.headOwner,
         headRef,
         ...(context.trigger.expectedHeadSha ? { expectedHeadSha: context.trigger.expectedHeadSha } : {}),
-        ...(eventPullRequestNumber ? { eventPullRequestNumber } : {}),
-        pullRequestRequired: context.target.isPullRequest
-            || (options?.pullRequestRequired ?? eventPullRequestNumber !== undefined),
+        pullRequestSelection: context.target.isPullRequest || pullRequestNumber !== undefined
+            ? { kind: 'event', ...(pullRequestNumber ? { number: pullRequestNumber } : {}) }
+            : { kind: 'exact-head', required: options?.exactHeadPullRequestRequired ?? false },
     };
     return {
         target,
@@ -2273,7 +2273,7 @@ const bugbot_review_rules_1 = __nccwpck_require__(5011);
 async function loadBugbotContext(request, ports) {
     const selection = await selectCanonicalPullRequest(request, ports);
     const canonicalPullRequest = requireUsableSelection(request, selection);
-    const selectionCoverage = (0, context_1.completeBugbotSourceCoverage)("selection", selection.kind === "canonical" ? 1 : selection.kind === "ambiguous" ? 2 : 0, request.target.headRef || request.target.eventPullRequestNumber ? 1 : 0);
+    const selectionCoverage = (0, context_1.completeBugbotSourceCoverage)("selection", selection.kind === "canonical" ? 1 : selection.kind === "ambiguous" ? 2 : 0, selectionPageCount(request));
     const tasks = [];
     if (request.target.issueNumber !== undefined) {
         tasks.push(async () => {
@@ -2371,9 +2371,11 @@ async function loadBugbotContext(request, ports) {
     };
 }
 async function selectCanonicalPullRequest(request, ports) {
-    const eventNumber = request.target.eventPullRequestNumber;
-    if (eventNumber !== undefined) {
-        const candidate = await ports.getPullRequest(eventNumber);
+    const policy = request.target.pullRequestSelection;
+    if (policy.kind === 'event') {
+        if (policy.number === undefined)
+            return { kind: 'none' };
+        const candidate = await ports.getPullRequest(policy.number);
         return (0, context_1.selectCanonicalBugbotPullRequest)(request.target, [candidate], "event");
     }
     if (!request.target.headRef)
@@ -2390,10 +2392,17 @@ function requireUsableSelection(request, selection) {
     if (selection.kind === "stale") {
         throw new application_error_1.ApplicationError("workflow.stale", `${selection.reason} Review was not started.`);
     }
-    if (request.target.pullRequestRequired) {
+    const policy = request.target.pullRequestSelection;
+    if (policy.kind === 'event' || policy.required) {
         throw new application_error_1.ApplicationError("workflow.stale", "No verified pull request matches the review target.");
     }
     return null;
+}
+function selectionPageCount(request) {
+    const policy = request.target.pullRequestSelection;
+    return policy.kind === 'event'
+        ? Number(policy.number !== undefined)
+        : Number(Boolean(request.target.headRef));
 }
 function sourceValue(sources, kind, fallback) {
     return sources.find((source) => source.kind === kind)?.value ?? fallback;
