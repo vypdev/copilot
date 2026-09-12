@@ -5,6 +5,7 @@ import type { LatestTagQueryPort } from '../application/ports/branch_tag_ports';
 import { clearAccumulatedLogs, logDebugInfo, logInfo } from '../utils/logger';
 import { resolveMainRunRoute } from './main_run_route';
 import { createSetupExecutionUseCase } from '../infrastructure/composition/execution_setup_composition_root';
+import { applySetupExecutionResult, projectSetupExecutionContext } from './setup_execution_boundary';
 import {
     createMainRunRouteCompositionRoot,
     type MainRunCompositionSurface,
@@ -48,7 +49,12 @@ export async function mainRun(
         await waitForPreviousWorkflowRuns(execution.tokens.token, repository);
     }
 
-    await createSetupExecutionUseCase(latestTagQueryPort).invoke(execution);
+    const setupExecution = createSetupExecutionUseCase(latestTagQueryPort, {
+        owner: repository.owner,
+        repository: repository.repo,
+        token: execution.tokens.token,
+    });
+    applySetupExecutionResult(execution, await setupExecution.invoke(projectSetupExecutionContext(execution)));
     clearAccumulatedLogs();
 
     logDebugInfo(`Setup done. Issue number: ${execution.issueNumber}, isSingleAction: ${execution.isSingleAction}, isIssue: ${execution.isIssue}, isPullRequest: ${execution.isPullRequest}, isPush: ${execution.isPush}`);

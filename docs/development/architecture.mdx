@@ -78,6 +78,14 @@ never serialized or logged, and cannot enter `Result.errors`. CLI output,
 GitHub comments, Job Summaries, and Check failures project the same semantic
 view.
 
+The main-run setup path follows that rule end to end. Its action boundary copies
+and freezes a `SetupExecutionContext`, setup returns a discriminated result, and
+only the boundary applies resolved identity, labels, versions, and configuration
+fields. The composition root captures repository coordinates and credentials in
+the concrete adapters, so setup contexts and their nested version-description
+queries contain neither tokens nor provider clients. There is no aggregate
+overload or compatibility adapter for the removed setup signatures.
+
 An AST architecture ratchet resolves the real `Execution` class symbol through
 renamed imports and type aliases. Its checked-in baseline may shrink but cannot
 grow or move to new files. The final target keeps the aggregate only at route

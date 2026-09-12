@@ -50590,6 +50590,7 @@ exports.mainRun = mainRun;
 const logger_1 = __nccwpck_require__(91151);
 const main_run_route_1 = __nccwpck_require__(8466);
 const execution_setup_composition_root_1 = __nccwpck_require__(83965);
+const setup_execution_boundary_1 = __nccwpck_require__(45805);
 const main_run_route_composition_root_1 = __nccwpck_require__(4706);
 const repository_context_1 = __nccwpck_require__(78958);
 const logging_ports_1 = __nccwpck_require__(6152);
@@ -50611,7 +50612,12 @@ async function mainRun(execution, projectBoardCommandPort, latestTagQueryPort, c
         // failure notification must remain runnable when that queue gate fails.
         await (0, main_run_lifecycle_1.waitForPreviousWorkflowRuns)(execution.tokens.token, repository);
     }
-    await (0, execution_setup_composition_root_1.createSetupExecutionUseCase)(latestTagQueryPort).invoke(execution);
+    const setupExecution = (0, execution_setup_composition_root_1.createSetupExecutionUseCase)(latestTagQueryPort, {
+        owner: repository.owner,
+        repository: repository.repo,
+        token: execution.tokens.token,
+    });
+    (0, setup_execution_boundary_1.applySetupExecutionResult)(execution, await setupExecution.invoke((0, setup_execution_boundary_1.projectSetupExecutionContext)(execution)));
     (0, logger_1.clearAccumulatedLogs)();
     (0, logger_1.logDebugInfo)(`Setup done. Issue number: ${execution.issueNumber}, isSingleAction: ${execution.isSingleAction}, isIssue: ${execution.isIssue}, isPullRequest: ${execution.isPullRequest}, isPush: ${execution.isPush}`);
     const routeHandlers = (0, main_run_route_composition_root_1.createMainRunRouteCompositionRoot)(projectBoardCommandPort, compositionSurface);
@@ -52231,6 +52237,126 @@ function requireRepositoryCoordinates(value) {
         throw new Error('Repository context requires a non-empty owner and repository.');
     }
     return { owner, repo };
+}
+
+
+/***/ }),
+
+/***/ 45805:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.projectSetupExecutionContext = projectSetupExecutionContext;
+exports.applySetupExecutionResult = applySetupExecutionResult;
+const input_keys_1 = __nccwpck_require__(88539);
+function projectSetupExecutionContext(source) {
+    const configuredIssue = readConfiguredIssue(source.inputs);
+    return Object.freeze({
+        debug: source.debug,
+        local: source.inputs === undefined,
+        tokenUser: source.tokenUser,
+        issueNumber: source.issueNumber,
+        eventName: source.eventName,
+        configuredSingleActionIssue: configuredIssue,
+        isSingleAction: source.isSingleAction,
+        isIssue: source.isIssue,
+        isPullRequest: source.isPullRequest,
+        isPush: source.isPush,
+        issue: Object.freeze({ number: source.issue.number }),
+        pullRequest: Object.freeze({
+            number: source.pullRequest.number,
+            head: source.pullRequest.head,
+            base: source.pullRequest.base,
+        }),
+        commit: Object.freeze({ branch: source.commit.branch }),
+        singleAction: Object.freeze({
+            issue: source.singleAction.issue,
+            currentAction: source.singleAction.currentSingleAction,
+            isIssue: source.singleAction.isIssue,
+            isPullRequest: source.singleAction.isPullRequest,
+            isPush: source.singleAction.isPush,
+        }),
+        branches: Object.freeze({
+            featureTree: source.branches.featureTree,
+            bugfixTree: source.branches.bugfixTree,
+            hotfixTree: source.branches.hotfixTree,
+            releaseTree: source.branches.releaseTree,
+            docsTree: source.branches.docsTree,
+            choreTree: source.branches.choreTree,
+        }),
+        labelNames: Object.freeze({
+            feature: source.labels.feature,
+            enhancement: source.labels.enhancement,
+            bugfix: source.labels.bugfix,
+            bug: source.labels.bug,
+            hotfix: source.labels.hotfix,
+            release: source.labels.release,
+            docs: source.labels.docs,
+            documentation: source.labels.documentation,
+            chore: source.labels.chore,
+            maintenance: source.labels.maintenance,
+        }),
+        currentPullRequestLabels: Object.freeze([...source.labels.currentPullRequestLabels]),
+        release: Object.freeze({
+            active: source.release.active,
+            type: source.release.type,
+            version: source.release.version,
+            branch: source.release.branch,
+        }),
+        hotfix: Object.freeze({
+            active: source.hotfix.active,
+            baseVersion: source.hotfix.baseVersion,
+            version: source.hotfix.version,
+            baseBranch: source.hotfix.baseBranch,
+            branch: source.hotfix.branch,
+        }),
+    });
+}
+function applySetupExecutionResult(target, result) {
+    target.tokenUser = result.tokenUser;
+    if (result.issueResolution.issueNumber !== undefined) {
+        target.issueNumber = result.issueResolution.issueNumber;
+    }
+    target.singleAction.issue = result.issueResolution.singleAction.issue;
+    target.singleAction.isIssue = result.issueResolution.singleAction.isIssue;
+    target.singleAction.isPullRequest = result.issueResolution.singleAction.isPullRequest;
+    target.singleAction.isPush = result.issueResolution.singleAction.isPush;
+    if (result.status === 'issue-unresolved')
+        return;
+    applySetupState(target, result.state);
+    if (result.status === 'configured')
+        target.currentConfiguration.branchType = result.branchType;
+}
+function applySetupState(target, state) {
+    target.previousConfiguration = state.previousConfiguration;
+    target.labels.currentIssueLabels = [...state.currentIssueLabels];
+    target.labels.currentPullRequestLabels = [...state.currentPullRequestLabels];
+    target.release.active = state.release.active;
+    target.release.type = state.release.type;
+    target.release.version = state.release.version;
+    target.release.branch = state.release.branch;
+    target.hotfix.active = state.hotfix.active;
+    target.hotfix.baseVersion = state.hotfix.baseVersion;
+    target.hotfix.version = state.hotfix.version;
+    target.hotfix.baseBranch = state.hotfix.baseBranch;
+    target.hotfix.branch = state.hotfix.branch;
+    target.currentConfiguration.deploymentOrchestration = state.configuration.deploymentOrchestration;
+    target.currentConfiguration.releaseOriginBranch = state.configuration.releaseOriginBranch;
+    target.currentConfiguration.releaseOriginSha = state.configuration.releaseOriginSha;
+    target.currentConfiguration.hotfixOriginSha = state.configuration.hotfixOriginSha;
+    target.currentConfiguration.parentBranch = state.configuration.parentBranch;
+    target.currentConfiguration.workingBranch = state.configuration.workingBranch;
+    target.currentConfiguration.releaseBranch = state.configuration.releaseBranch;
+    target.currentConfiguration.hotfixOriginBranch = state.configuration.hotfixOriginBranch;
+    target.currentConfiguration.hotfixBranch = state.configuration.hotfixBranch;
+}
+function readConfiguredIssue(inputs) {
+    if (typeof inputs !== 'object' || inputs === null)
+        return undefined;
+    const value = inputs[input_keys_1.INPUT_KEYS.SINGLE_ACTION_ISSUE];
+    return typeof value === 'string' || typeof value === 'number' ? value : undefined;
 }
 
 
@@ -60791,53 +60917,92 @@ class ExecutionBranchVersionResolver {
         this.getReleaseType = getReleaseType;
         this.getHotfixVersion = getHotfixVersion;
     }
-    async resolve(execution) {
-        if (execution.release.active && execution.release.version === undefined) {
-            return this.resolveRelease(execution);
+    async resolve(context) {
+        if (context.release.active && context.release.version === undefined) {
+            return this.resolveRelease(context);
         }
-        if (execution.hotfix.active && execution.hotfix.version === undefined) {
-            return this.resolveHotfix(execution);
+        if (context.hotfix.active && context.hotfix.version === undefined) {
+            return this.resolveHotfix(context);
         }
-        return true;
+        return unchanged(context);
     }
-    async resolveRelease(execution) {
-        const versionInfo = (await this.getReleaseVersion.invoke(execution)).at(-1);
+    async resolveRelease(context) {
+        const query = { issueNumber: context.issueNumber };
+        const versionInfo = (await this.getReleaseVersion.invoke(query)).at(-1);
+        let type = context.release.type;
+        let version = context.release.version;
         if (versionInfo?.executed && versionInfo.success) {
-            execution.release.version = (0, version_resolution_result_policy_1.releaseResolutionFromPayload)((0, result_1.getResultPayload)(versionInfo.payload) ?? {}).version;
+            version = (0, version_resolution_result_policy_1.releaseResolutionFromPayload)((0, result_1.getResultPayload)(versionInfo.payload) ?? {}).version;
         }
         else {
-            const typeInfo = (await this.getReleaseType.invoke(execution)).at(-1);
+            const typeInfo = (await this.getReleaseType.invoke(query)).at(-1);
             if (typeInfo?.executed && typeInfo.success) {
-                execution.release.type = (0, version_resolution_result_policy_1.releaseResolutionFromPayload)((0, result_1.getResultPayload)(typeInfo.payload) ?? {}).type;
-                if ((0, version_resolution_outcome_policy_1.shouldAbortReleaseResolution)(execution.release.type))
-                    return false;
-                execution.release.version = (0, version_resolution_policy_1.nextReleaseVersion)(await this.latestTagQueryPort.getLatestTag(), execution.release.type);
+                type = (0, version_resolution_result_policy_1.releaseResolutionFromPayload)((0, result_1.getResultPayload)(typeInfo.payload) ?? {}).type;
+                if ((0, version_resolution_outcome_policy_1.shouldAbortReleaseResolution)(type)) {
+                    return {
+                        completed: false,
+                        release: { ...context.release, type },
+                        hotfix: { ...context.hotfix },
+                        configuration: { ...context.configuration },
+                    };
+                }
+                version = (0, version_resolution_policy_1.nextReleaseVersion)(await this.latestTagQueryPort.getLatestTag(), type);
             }
         }
-        execution.release.branch = (0, version_resolution_application_policy_1.applyReleaseResolution)(execution.branches.releaseTree, execution.release.version).branch;
-        return true;
+        return {
+            completed: true,
+            release: {
+                ...context.release,
+                type,
+                version,
+                branch: (0, version_resolution_application_policy_1.applyReleaseResolution)(context.branches.releaseTree, version).branch,
+            },
+            hotfix: { ...context.hotfix },
+            configuration: { ...context.configuration },
+        };
     }
-    async resolveHotfix(execution) {
-        const versionInfo = (await this.getHotfixVersion.invoke(execution)).at(-1);
+    async resolveHotfix(context) {
+        const versionInfo = (await this.getHotfixVersion.invoke({ issueNumber: context.issueNumber })).at(-1);
+        let baseVersion;
+        let version;
         if (versionInfo?.executed && versionInfo.success) {
             const resolution = (0, version_resolution_result_policy_1.hotfixResolutionFromPayload)((0, result_1.getResultPayload)(versionInfo.payload) ?? {});
-            execution.hotfix.baseVersion = resolution.baseVersion;
-            execution.hotfix.version = resolution.version;
+            baseVersion = resolution.baseVersion;
+            version = resolution.version;
         }
         else {
             const nextVersion = (0, version_resolution_policy_1.nextHotfixVersion)(await this.latestTagQueryPort.getLatestTag());
-            execution.hotfix.baseVersion = nextVersion.baseVersion;
-            execution.hotfix.version = nextVersion.version;
+            baseVersion = nextVersion.baseVersion;
+            version = nextVersion.version;
         }
-        const state = (0, version_resolution_application_policy_1.applyHotfixResolution)(execution.branches.hotfixTree, execution.hotfix.baseVersion, execution.hotfix.version);
-        execution.hotfix.branch = state.branch;
-        execution.currentConfiguration.hotfixBranch = state.branch;
-        execution.hotfix.baseBranch = state.baseBranch;
-        execution.currentConfiguration.hotfixOriginBranch = state.baseBranch;
-        return true;
+        const state = (0, version_resolution_application_policy_1.applyHotfixResolution)(context.branches.hotfixTree, baseVersion, version);
+        return {
+            completed: true,
+            release: { ...context.release },
+            hotfix: {
+                ...context.hotfix,
+                baseVersion,
+                version,
+                branch: state.branch,
+                baseBranch: state.baseBranch,
+            },
+            configuration: {
+                ...context.configuration,
+                hotfixBranch: state.branch,
+                hotfixOriginBranch: state.baseBranch,
+            },
+        };
     }
 }
 exports.ExecutionBranchVersionResolver = ExecutionBranchVersionResolver;
+function unchanged(context) {
+    return {
+        completed: true,
+        release: { ...context.release },
+        hotfix: { ...context.hotfix },
+        configuration: { ...context.configuration },
+    };
+}
 
 
 /***/ }),
@@ -60850,79 +61015,91 @@ exports.ExecutionBranchVersionResolver = ExecutionBranchVersionResolver;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveEventIssueNumber = resolveEventIssueNumber;
 exports.resolveSingleActionIssueNumber = resolveSingleActionIssueNumber;
-const input_keys_1 = __nccwpck_require__(88539);
 const positive_integer_policy_1 = __nccwpck_require__(19879);
 const title_utils_1 = __nccwpck_require__(46267);
-function resolveEventIssueNumber(execution) {
-    if (execution.isIssue)
-        return positiveIssueNumberOrUndefined(execution.issue.number);
-    if (execution.isPullRequest) {
-        if (['check_suite', 'workflow_run'].includes(String(execution.inputs?.eventName ?? ''))) {
-            return positiveIssueNumberOrUndefined(execution.pullRequest.number);
+function resolveEventIssueNumber(context) {
+    let issueNumber;
+    if (context.isIssue)
+        issueNumber = positiveIssueNumberOrUndefined(context.issue.number);
+    else if (context.isPullRequest) {
+        if (['check_suite', 'workflow_run'].includes(context.eventName)) {
+            issueNumber = positiveIssueNumberOrUndefined(context.pullRequest.number);
         }
-        return positiveIssueNumberOrUndefined((0, title_utils_1.extractIssueNumberFromBranch)(execution.pullRequest.head))
-            ?? positiveIssueNumberOrUndefined(execution.pullRequest.number);
+        else {
+            issueNumber = positiveIssueNumberOrUndefined((0, title_utils_1.extractIssueNumberFromBranch)(context.pullRequest.head))
+                ?? positiveIssueNumberOrUndefined(context.pullRequest.number);
+        }
     }
-    if (execution.isPush)
-        return positiveIssueNumberOrUndefined((0, title_utils_1.extractIssueNumberFromPush)(execution.commit.branch));
-    return positiveIssueNumberOrUndefined(execution.issueNumber);
+    else if (context.isPush)
+        issueNumber = positiveIssueNumberOrUndefined((0, title_utils_1.extractIssueNumberFromPush)(context.commit.branch));
+    else
+        issueNumber = positiveIssueNumberOrUndefined(context.issueNumber);
+    return { issueNumber, singleAction: currentSingleAction(context) };
 }
-async function resolveSingleActionIssueNumber(execution, issueRepository) {
-    const configuredIssue = execution.inputs?.[input_keys_1.INPUT_KEYS.SINGLE_ACTION_ISSUE];
-    if (configuredIssue !== undefined && configuredIssue !== null && String(configuredIssue).trim() !== '') {
+async function resolveSingleActionIssueNumber(context, issueRepository) {
+    const configuredIssue = context.configuredSingleActionIssue;
+    if (configuredIssue !== undefined && String(configuredIssue).trim() !== '') {
         const issueNumber = (0, positive_integer_policy_1.parsePositiveSafeInteger)(configuredIssue);
-        return issueNumber === undefined ? undefined : setIssueNumber(execution, issueNumber);
+        return resolution(context, issueNumber);
     }
-    if (execution.isIssue) {
-        const issueNumber = positiveIssueNumberOrUndefined(execution.issue.number);
-        return issueNumber === undefined ? undefined : setIssueNumber(execution, issueNumber, 'issue');
+    if (context.isIssue) {
+        return resolution(context, positiveIssueNumberOrUndefined(context.issue.number), 'issue');
     }
-    if (execution.isPullRequest)
-        return setResolvedIssueNumber(execution, (0, title_utils_1.extractIssueNumberFromBranch)(execution.pullRequest.head), 'pullRequest');
-    if (execution.isPush)
-        return setResolvedIssueNumber(execution, (0, title_utils_1.extractIssueNumberFromPush)(execution.commit.branch), 'push');
+    if (context.isPullRequest)
+        return resolution(context, positiveIssueNumberOrUndefined((0, title_utils_1.extractIssueNumberFromBranch)(context.pullRequest.head)), 'pullRequest');
+    if (context.isPush)
+        return resolution(context, positiveIssueNumberOrUndefined((0, title_utils_1.extractIssueNumberFromPush)(context.commit.branch)), 'push');
     // SingleAction uses zero as its explicit domain value for actions that do
     // not need an issue. Do not query GitHub with that sentinel.
-    if (execution.singleAction.issue === 0)
-        return undefined;
-    return resolveConfiguredSingleAction(execution, issueRepository);
+    if (context.singleAction.issue === 0)
+        return resolution(context, undefined);
+    return resolveConfiguredSingleAction(context, issueRepository);
 }
-async function resolveConfiguredSingleAction(execution, issueRepository) {
-    const issueNumber = execution.singleAction.issue;
-    if (!positiveIssueNumberOrUndefined(issueNumber))
-        return undefined;
-    const isPullRequest = await issueRepository.isPullRequest(execution.owner, execution.repo, issueNumber, execution.tokens.token);
-    const isIssue = await issueRepository.isIssue(execution.owner, execution.repo, issueNumber, execution.tokens.token);
-    execution.singleAction.isPullRequest = isPullRequest;
-    execution.singleAction.isIssue = isIssue;
+async function resolveConfiguredSingleAction(context, issueRepository) {
+    const issueNumber = positiveIssueNumberOrUndefined(context.singleAction.issue);
+    if (issueNumber === undefined)
+        return resolution(context, undefined);
+    const isPullRequest = await issueRepository.isPullRequest(issueNumber);
+    const isIssue = await issueRepository.isIssue(issueNumber);
+    const singleAction = { ...currentSingleAction(context), isPullRequest, isIssue };
     if (isIssue)
-        return setIssueNumber(execution, issueNumber);
+        return { issueNumber, singleAction: { ...singleAction, issue: issueNumber } };
     if (!isPullRequest)
-        return undefined;
-    const head = await issueRepository.getHeadBranch(execution.owner, execution.repo, issueNumber, execution.tokens.token);
-    return head === undefined
+        return { issueNumber: undefined, singleAction };
+    const head = await issueRepository.getHeadBranch(issueNumber);
+    const resolvedIssueNumber = head === undefined
         ? undefined
-        : setResolvedIssueNumber(execution, (0, title_utils_1.extractIssueNumberFromBranch)(head));
+        : positiveIssueNumberOrUndefined((0, title_utils_1.extractIssueNumberFromBranch)(head));
+    return {
+        issueNumber: resolvedIssueNumber,
+        singleAction: resolvedIssueNumber === undefined
+            ? singleAction
+            : { ...singleAction, issue: resolvedIssueNumber },
+    };
 }
-function setResolvedIssueNumber(execution, issueNumber, actionType) {
-    const resolvedIssueNumber = positiveIssueNumberOrUndefined(issueNumber);
-    return resolvedIssueNumber === undefined
-        ? undefined
-        : setIssueNumber(execution, resolvedIssueNumber, actionType);
+function resolution(context, issueNumber, actionType) {
+    const singleAction = currentSingleAction(context);
+    if (actionType === 'issue')
+        singleAction.isIssue = true;
+    if (actionType === 'pullRequest')
+        singleAction.isPullRequest = true;
+    if (actionType === 'push')
+        singleAction.isPush = true;
+    return {
+        issueNumber,
+        singleAction: issueNumber === undefined ? singleAction : { ...singleAction, issue: issueNumber },
+    };
 }
 function positiveIssueNumberOrUndefined(value) {
     return (0, positive_integer_policy_1.parsePositiveSafeInteger)(value);
 }
-function setIssueNumber(execution, issueNumber, actionType) {
-    if (actionType === 'issue')
-        execution.singleAction.isIssue = true;
-    if (actionType === 'pullRequest')
-        execution.singleAction.isPullRequest = true;
-    if (actionType === 'push')
-        execution.singleAction.isPush = true;
-    execution.issueNumber = issueNumber;
-    execution.singleAction.issue = issueNumber;
-    return issueNumber;
+function currentSingleAction(context) {
+    return {
+        issue: context.singleAction.issue,
+        isIssue: context.singleAction.isIssue,
+        isPullRequest: context.singleAction.isPullRequest,
+        isPush: context.singleAction.isPush,
+    };
 }
 
 
@@ -60936,13 +61113,10 @@ function setIssueNumber(execution, issueNumber, actionType) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.resolveExecutionIssueNumber = resolveExecutionIssueNumber;
 const execution_issue_number_policy_1 = __nccwpck_require__(63436);
-async function resolveExecutionIssueNumber(execution, issueRepository) {
-    const resolvedIssueNumber = execution.isSingleAction
-        ? await (0, execution_issue_number_policy_1.resolveSingleActionIssueNumber)(execution, issueRepository)
-        : (0, execution_issue_number_policy_1.resolveEventIssueNumber)(execution);
-    if (resolvedIssueNumber !== undefined)
-        execution.issueNumber = resolvedIssueNumber;
-    return resolvedIssueNumber;
+async function resolveExecutionIssueNumber(context, issueRepository) {
+    return context.isSingleAction
+        ? (0, execution_issue_number_policy_1.resolveSingleActionIssueNumber)(context, issueRepository)
+        : (0, execution_issue_number_policy_1.resolveEventIssueNumber)(context);
 }
 
 
@@ -60999,8 +61173,8 @@ class SetupExecutionUseCase {
         this.branchVersionResolver = branchVersionResolver;
         this.taskId = 'SetupExecutionUseCase';
     }
-    invoke(execution) {
-        return (0, setup_execution_workflow_1.runSetupExecution)(execution, {
+    invoke(context) {
+        return (0, setup_execution_workflow_1.runSetupExecution)(context, {
             issueSetupPort: this.issueSetupPort,
             organizationSetupPort: this.organizationSetupPort,
             configurationPort: this.configurationPort,
@@ -61023,86 +61197,142 @@ exports.runSetupExecution = runSetupExecution;
 const application_error_1 = __nccwpck_require__(75999);
 const initial_labels_policy_1 = __nccwpck_require__(50293);
 const previous_branch_state_policy_1 = __nccwpck_require__(43630);
+const label_branch_policy_1 = __nccwpck_require__(53318);
 const logging_ports_1 = __nccwpck_require__(6152);
 const resolve_execution_issue_number_1 = __nccwpck_require__(90972);
-async function runSetupExecution(execution, dependencies) {
-    (0, logging_ports_1.setGlobalLoggerDebug)(execution.debug, execution.inputs === undefined);
-    await loadTokenUser(execution, dependencies.organizationSetupPort);
-    if (await (0, resolve_execution_issue_number_1.resolveExecutionIssueNumber)(execution, dependencies.issueSetupPort) === undefined)
-        return;
-    execution.previousConfiguration = await loadPreviousConfiguration(execution, dependencies.configurationPort);
-    execution.currentConfiguration.deploymentOrchestration = execution.previousConfiguration?.deploymentOrchestration;
-    execution.currentConfiguration.releaseOriginBranch = execution.previousConfiguration?.releaseOriginBranch;
-    execution.currentConfiguration.releaseOriginSha = execution.previousConfiguration?.releaseOriginSha;
-    execution.currentConfiguration.hotfixOriginSha = execution.previousConfiguration?.hotfixOriginSha;
-    await loadIssueLabels(execution, dependencies.issueSetupPort);
-    execution.release.active = execution.labels.isRelease;
-    execution.hotfix.active = execution.labels.isHotfix;
-    restoreBranchState(execution);
-    if (execution.isIssue && !execution.isSingleAction) {
-        if (!await dependencies.branchVersionResolver.resolve(execution))
-            return;
+async function runSetupExecution(context, dependencies) {
+    (0, logging_ports_1.setGlobalLoggerDebug)(context.debug, context.local);
+    const tokenUser = await loadTokenUser(context, dependencies.organizationSetupPort);
+    const issueResolution = await (0, resolve_execution_issue_number_1.resolveExecutionIssueNumber)(context, dependencies.issueSetupPort);
+    if (issueResolution.issueNumber === undefined) {
+        return { status: 'issue-unresolved', tokenUser, issueResolution };
     }
-    if (execution.isPullRequest && !execution.isSingleAction)
-        await loadPullRequestContext(execution, dependencies.issueSetupPort);
-    execution.currentConfiguration.branchType = execution.issueType;
+    const previousConfiguration = await loadPreviousConfiguration(context, issueResolution.issueNumber, dependencies.configurationPort);
+    const currentIssueLabels = await loadIssueLabels(context, issueResolution.issueNumber, dependencies.issueSetupPort);
+    let release = {
+        ...context.release,
+        active: currentIssueLabels.includes(context.labelNames.release),
+    };
+    let hotfix = {
+        ...context.hotfix,
+        active: currentIssueLabels.includes(context.labelNames.hotfix),
+    };
+    const restored = (0, previous_branch_state_policy_1.restorePreviousBranchState)(previousConfiguration, release.active ? 'release' : hotfix.active ? 'hotfix' : 'default', context.branches.releaseTree, context.branches.hotfixTree);
+    release = {
+        ...release,
+        version: restored.releaseVersion,
+        branch: restored.releaseBranch,
+    };
+    hotfix = {
+        ...hotfix,
+        baseVersion: restored.hotfixBaseVersion,
+        baseBranch: restored.hotfixBaseBranch,
+        version: restored.hotfixVersion,
+        branch: restored.hotfixBranch,
+    };
+    let configuration = {
+        deploymentOrchestration: previousConfiguration?.deploymentOrchestration,
+        releaseOriginBranch: previousConfiguration?.releaseOriginBranch,
+        releaseOriginSha: previousConfiguration?.releaseOriginSha,
+        hotfixOriginSha: previousConfiguration?.hotfixOriginSha,
+        parentBranch: restored.parentBranch,
+        workingBranch: restored.workingBranch,
+        releaseBranch: restored.releaseBranch,
+        hotfixOriginBranch: restored.hotfixBaseBranch,
+        hotfixBranch: restored.hotfixBranch,
+    };
+    let currentPullRequestLabels = [...context.currentPullRequestLabels];
+    if (context.isIssue && !context.isSingleAction) {
+        const resolution = await dependencies.branchVersionResolver.resolve({
+            issueNumber: issueResolution.issueNumber,
+            release,
+            hotfix,
+            branches: {
+                releaseTree: context.branches.releaseTree,
+                hotfixTree: context.branches.hotfixTree,
+            },
+            configuration,
+        });
+        release = resolution.release;
+        hotfix = resolution.hotfix;
+        configuration = resolution.configuration;
+        if (!resolution.completed) {
+            return {
+                status: 'version-unresolved',
+                tokenUser,
+                issueResolution,
+                state: setupState(previousConfiguration, currentIssueLabels, currentPullRequestLabels, release, hotfix, configuration),
+            };
+        }
+    }
+    if (context.isPullRequest && !context.isSingleAction) {
+        currentPullRequestLabels = await dependencies.issueSetupPort.getLabels(context.pullRequest.number);
+        release = {
+            ...release,
+            active: context.pullRequest.base.includes(`${context.branches.releaseTree}/`),
+        };
+        hotfix = {
+            ...hotfix,
+            active: context.pullRequest.base.includes(`${context.branches.hotfixTree}/`),
+        };
+        configuration = {
+            ...configuration,
+            parentBranch: configuration.parentBranch ?? context.pullRequest.base,
+        };
+    }
+    return {
+        status: 'configured',
+        tokenUser,
+        issueResolution,
+        branchType: resolveIssueType(context, currentIssueLabels),
+        state: setupState(previousConfiguration, currentIssueLabels, currentPullRequestLabels, release, hotfix, configuration),
+    };
 }
-async function loadTokenUser(execution, organizationSetupPort) {
-    if (execution.tokenUser !== undefined)
-        return;
-    execution.tokenUser = await organizationSetupPort.getUserFromToken(execution.tokens.token);
-    if (!execution.tokenUser)
+async function loadTokenUser(context, organizationSetupPort) {
+    if (context.tokenUser !== undefined)
+        return context.tokenUser;
+    const tokenUser = await organizationSetupPort.getTokenUser();
+    if (!tokenUser) {
         throw new application_error_1.ApplicationError('authorization.credential-invalid', 'Failed to get user from token.');
+    }
+    return tokenUser;
 }
-async function loadPreviousConfiguration(execution, configurationPort) {
-    const issueNumber = configurationIssueNumber(execution);
-    return issueNumber === undefined ? undefined : configurationPort.get({
-        owner: execution.owner,
-        repository: execution.repo,
-        issueNumber,
-        token: execution.tokens.token,
-    });
+async function loadPreviousConfiguration(context, resolvedIssueNumber, configurationPort) {
+    const issueNumber = configurationIssueNumber(context, resolvedIssueNumber);
+    return issueNumber === undefined ? undefined : configurationPort.get(issueNumber);
 }
-async function loadIssueLabels(execution, issueSetupPort) {
+async function loadIssueLabels(context, issueNumber, issueSetupPort) {
     try {
-        execution.labels.currentIssueLabels = await issueSetupPort.getLabels(execution.owner, execution.repo, execution.issueNumber, execution.tokens.token);
+        return await issueSetupPort.getLabels(issueNumber);
     }
     catch (error) {
-        if (!(0, initial_labels_policy_1.shouldSkipInitialLabelsFetch)(execution.isSingleAction, execution.singleAction.currentSingleAction))
+        if (!(0, initial_labels_policy_1.shouldSkipInitialLabelsFetch)(context.isSingleAction, context.singleAction.currentAction))
             throw error;
         (0, logging_ports_1.logDebugInfo)('Skipping initial labels fetch for setup action.');
-        execution.labels.currentIssueLabels = [];
+        return [];
     }
 }
-async function loadPullRequestContext(execution, issueSetupPort) {
-    var _a;
-    execution.labels.currentPullRequestLabels = await issueSetupPort.getLabels(execution.owner, execution.repo, execution.pullRequest.number, execution.tokens.token);
-    execution.release.active = execution.pullRequest.base.includes(`${execution.branches.releaseTree}/`);
-    execution.hotfix.active = execution.pullRequest.base.includes(`${execution.branches.hotfixTree}/`);
-    (_a = execution.currentConfiguration).parentBranch ?? (_a.parentBranch = execution.pullRequest.base);
-}
-function restoreBranchState(execution) {
-    const state = (0, previous_branch_state_policy_1.restorePreviousBranchState)(execution.previousConfiguration, execution.release.active ? 'release' : execution.hotfix.active ? 'hotfix' : 'default', execution.branches.releaseTree, execution.branches.hotfixTree);
-    execution.release.version = state.releaseVersion;
-    execution.release.branch = state.releaseBranch;
-    execution.hotfix.baseVersion = state.hotfixBaseVersion;
-    execution.hotfix.baseBranch = state.hotfixBaseBranch;
-    execution.hotfix.version = state.hotfixVersion;
-    execution.hotfix.branch = state.hotfixBranch;
-    execution.currentConfiguration.parentBranch = state.parentBranch;
-    execution.currentConfiguration.workingBranch = state.workingBranch;
-    execution.currentConfiguration.releaseBranch = state.releaseBranch;
-    execution.currentConfiguration.hotfixOriginBranch = state.hotfixBaseBranch;
-    execution.currentConfiguration.hotfixBranch = state.hotfixBranch;
-}
-function configurationIssueNumber(execution) {
-    if (execution.isSingleAction || execution.isPush)
-        return positiveIssueNumberOrUndefined(execution.issueNumber);
-    if (execution.isIssue)
-        return positiveIssueNumberOrUndefined(execution.issue.number);
-    if (execution.isPullRequest)
-        return positiveIssueNumberOrUndefined(execution.pullRequest.number);
+function configurationIssueNumber(context, resolvedIssueNumber) {
+    if (context.isSingleAction || context.isPush)
+        return positiveIssueNumberOrUndefined(resolvedIssueNumber);
+    if (context.isIssue)
+        return positiveIssueNumberOrUndefined(context.issue.number);
+    if (context.isPullRequest)
+        return positiveIssueNumberOrUndefined(context.pullRequest.number);
     return undefined;
+}
+function resolveIssueType(context, currentIssueLabels) {
+    return (0, label_branch_policy_1.typesForIssue)({ branches: context.branches }, [...currentIssueLabels], context.labelNames.feature, context.labelNames.enhancement, context.labelNames.bugfix, context.labelNames.bug, context.labelNames.hotfix, context.labelNames.release, context.labelNames.docs, context.labelNames.documentation, context.labelNames.chore, context.labelNames.maintenance);
+}
+function setupState(previousConfiguration, currentIssueLabels, currentPullRequestLabels, release, hotfix, configuration) {
+    return {
+        previousConfiguration,
+        currentIssueLabels: [...currentIssueLabels],
+        currentPullRequestLabels: [...currentPullRequestLabels],
+        release: { ...release },
+        hotfix: { ...hotfix },
+        configuration: { ...configuration },
+    };
 }
 function positiveIssueNumberOrUndefined(value) {
     return value > 0 && Number.isSafeInteger(value) ? value : undefined;
@@ -66344,17 +66574,7 @@ class GetHotfixVersionUseCase {
         (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         try {
-            let number = -1;
-            if (param.isSingleAction) {
-                number = param.singleAction.issue;
-            }
-            else if (param.isIssue) {
-                number = param.issue.number;
-            }
-            else if (param.isPullRequest) {
-                number = param.pullRequest.number;
-            }
-            else {
+            if (!isPositiveIssueNumber(param.issueNumber)) {
                 result.push(new result_1.Result({
                     id: this.taskId,
                     success: false,
@@ -66363,7 +66583,7 @@ class GetHotfixVersionUseCase {
                 }));
                 return result;
             }
-            const description = await this.issueRepository.getDescription(param.owner, param.repo, number, param.tokens.token);
+            const description = await this.issueRepository.getDescription(param.issueNumber);
             if (description === undefined) {
                 result.push(new result_1.Result({
                     id: this.taskId,
@@ -66418,6 +66638,9 @@ class GetHotfixVersionUseCase {
     }
 }
 exports.GetHotfixVersionUseCase = GetHotfixVersionUseCase;
+function isPositiveIssueNumber(value) {
+    return Number.isSafeInteger(value) && value > 0;
+}
 
 
 /***/ }),
@@ -66443,17 +66666,7 @@ class GetReleaseTypeUseCase {
         (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         try {
-            let number = -1;
-            if (param.isSingleAction) {
-                number = param.singleAction.issue;
-            }
-            else if (param.isIssue) {
-                number = param.issue.number;
-            }
-            else if (param.isPullRequest) {
-                number = param.pullRequest.number;
-            }
-            else {
+            if (!isPositiveIssueNumber(param.issueNumber)) {
                 result.push(new result_1.Result({
                     id: this.taskId,
                     success: false,
@@ -66462,7 +66675,7 @@ class GetReleaseTypeUseCase {
                 }));
                 return result;
             }
-            const description = await this.issueRepository.getDescription(param.owner, param.repo, number, param.tokens.token);
+            const description = await this.issueRepository.getDescription(param.issueNumber);
             if (description === undefined) {
                 result.push(new result_1.Result({
                     id: this.taskId,
@@ -66506,6 +66719,9 @@ class GetReleaseTypeUseCase {
     }
 }
 exports.GetReleaseTypeUseCase = GetReleaseTypeUseCase;
+function isPositiveIssueNumber(value) {
+    return Number.isSafeInteger(value) && value > 0;
+}
 
 
 /***/ }),
@@ -66531,17 +66747,7 @@ class GetReleaseVersionUseCase {
         (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(this.taskId)} Executing ${this.taskId}.`);
         const result = [];
         try {
-            let number = -1;
-            if (param.isSingleAction) {
-                number = param.singleAction.issue;
-            }
-            else if (param.isIssue) {
-                number = param.issue.number;
-            }
-            else if (param.isPullRequest) {
-                number = param.pullRequest.number;
-            }
-            else {
+            if (!isPositiveIssueNumber(param.issueNumber)) {
                 result.push(new result_1.Result({
                     id: this.taskId,
                     success: false,
@@ -66550,9 +66756,9 @@ class GetReleaseVersionUseCase {
                 }));
                 return result;
             }
-            const description = await this.issueRepository.getDescription(param.owner, param.repo, number, param.tokens.token);
+            const description = await this.issueRepository.getDescription(param.issueNumber);
             if (description === undefined) {
-                (0, logging_ports_1.logDebugInfo)(`GetReleaseVersion: no description for issue/PR ${number}.`);
+                (0, logging_ports_1.logDebugInfo)(`GetReleaseVersion: no description for issue ${param.issueNumber}.`);
                 result.push(new result_1.Result({
                     id: this.taskId,
                     success: false,
@@ -66563,7 +66769,7 @@ class GetReleaseVersionUseCase {
             }
             const releaseVersion = (0, content_utils_1.extractVersion)('Release Version', description);
             if (releaseVersion === undefined) {
-                (0, logging_ports_1.logDebugInfo)(`GetReleaseVersion: no "Release Version" found in description (issue/PR ${number}).`);
+                (0, logging_ports_1.logDebugInfo)(`GetReleaseVersion: no "Release Version" found in description (issue ${param.issueNumber}).`);
                 result.push(new result_1.Result({
                     id: this.taskId,
                     success: false,
@@ -66595,6 +66801,9 @@ class GetReleaseVersionUseCase {
     }
 }
 exports.GetReleaseVersionUseCase = GetReleaseVersionUseCase;
+function isPositiveIssueNumber(value) {
+    return Number.isSafeInteger(value) && value > 0;
+}
 
 
 /***/ }),
@@ -80421,12 +80630,32 @@ const get_release_version_use_case_1 = __nccwpck_require__(70587);
 const configuration_handler_1 = __nccwpck_require__(40188);
 const authenticated_user_composition_root_1 = __nccwpck_require__(33885);
 const execution_issue_setup_composition_root_1 = __nccwpck_require__(98313);
-function createSetupExecutionUseCase(latestTagQueryPort) {
-    const issueSetupPort = (0, execution_issue_setup_composition_root_1.createExecutionIssueSetupCompositionRoot)();
+function createSetupExecutionUseCase(latestTagQueryPort, credentials) {
+    const rawIssueSetupPort = (0, execution_issue_setup_composition_root_1.createExecutionIssueSetupCompositionRoot)();
+    const rawOrganizationSetupPort = (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)();
+    const configurationHandler = new configuration_handler_1.ConfigurationHandler(rawIssueSetupPort);
+    const issueSetupPort = {
+        isPullRequest: (issueNumber) => rawIssueSetupPort.isPullRequest(credentials.owner, credentials.repository, issueNumber, credentials.token),
+        isIssue: (issueNumber) => rawIssueSetupPort.isIssue(credentials.owner, credentials.repository, issueNumber, credentials.token),
+        getHeadBranch: (issueNumber) => rawIssueSetupPort.getHeadBranch(credentials.owner, credentials.repository, issueNumber, credentials.token),
+        getLabels: (issueNumber) => rawIssueSetupPort.getLabels(credentials.owner, credentials.repository, issueNumber, credentials.token),
+        getDescription: (issueNumber) => rawIssueSetupPort.getDescription(credentials.owner, credentials.repository, issueNumber, credentials.token),
+    };
+    const organizationSetupPort = {
+        getTokenUser: () => rawOrganizationSetupPort.getUserFromToken(credentials.token),
+    };
+    const configurationPort = {
+        get: (issueNumber) => configurationHandler.get({
+            owner: credentials.owner,
+            repository: credentials.repository,
+            issueNumber,
+            token: credentials.token,
+        }),
+    };
     const releaseVersion = new get_release_version_use_case_1.GetReleaseVersionUseCase(issueSetupPort);
     const releaseType = new get_release_type_use_case_1.GetReleaseTypeUseCase(issueSetupPort);
     const hotfixVersion = new get_hotfix_version_use_case_1.GetHotfixVersionUseCase(issueSetupPort);
-    return new setup_execution_use_case_1.SetupExecutionUseCase(issueSetupPort, (0, authenticated_user_composition_root_1.createAuthenticatedUserCompositionRoot)(), new configuration_handler_1.ConfigurationHandler(issueSetupPort), new execution_branch_version_resolver_1.ExecutionBranchVersionResolver(latestTagQueryPort, releaseVersion, releaseType, hotfixVersion));
+    return new setup_execution_use_case_1.SetupExecutionUseCase(issueSetupPort, organizationSetupPort, configurationPort, new execution_branch_version_resolver_1.ExecutionBranchVersionResolver(latestTagQueryPort, releaseVersion, releaseType, hotfixVersion));
 }
 
 

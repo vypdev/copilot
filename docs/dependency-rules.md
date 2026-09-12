@@ -40,6 +40,15 @@ model. A Tarjan-based production architecture test rejects static, re-export,
 side-effect, `require()` and dynamic-import cycles. The current productive graph
 contains no directed dependency cycle.
 
+The runtime setup capability now receives a deeply readonly
+`SetupExecutionContext` and returns a discriminated `SetupExecutionResult`.
+Issue resolution, release/hotfix description readers, and branch-version
+resolution no longer receive or mutate `Execution`. Repository coordinates and
+the token are bound once by `execution_setup_composition_root.ts`; the semantic
+ports exposed to application code accept only operation facts such as an issue
+number. The action boundary is the sole owner of applying the explicit result
+back to the runtime aggregate.
+
 Pure domain/model policies may import:
 
 - standard TypeScript types;
@@ -230,12 +239,17 @@ logging contract accepts only text already known to be safe or the allowlisted
 public error record, and an AST check rejects caught values passed to any
 production logger unless they first cross `toApplicationError`.
 
-The checked-in `src/architecture/execution_import_baseline.json` is a
-non-growing migration ratchet. The compiler-based test resolves the `Execution`
+The checked-in `src/architecture/execution_import_baseline.json` is the exact,
+shrinking migration inventory. The compiler-based test resolves the `Execution`
 symbol, so type-only imports, renamed imports, `Pick<Execution>`, and local type
-aliases count as dependencies. Removing an entry is allowed; adding or moving a
-consumer fails CI. Once context projection is complete, this baseline is
+aliases count as dependencies. Every removal must shrink the checked-in list and
+maximum in the same change; adding, moving, or silently omitting a consumer
+fails CI. Once context projection is complete, this baseline is
 replaced by the exact route-boundary allowlist documented in the governing SDD.
+The P2-A setup cut and exact-inventory correction reduced that ratchet from 140
+to 130 consumers: six setup imports were removed and four already-stale entries
+were deleted. Every merged P2 slice must lower the checked-in maximum by the
+imports it removes.
 
 The package subpath `@vypdev/copilot/bugbot` exposes one review operation,
 `review(BugbotReviewRequest)`. It does not export the internal `Execution` or

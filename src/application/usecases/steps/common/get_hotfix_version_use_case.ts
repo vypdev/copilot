@@ -1,31 +1,24 @@
-import { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
-import type { IssueDescriptionQueryPort } from "../../../../application/ports/issue_description_ports";
 import { extractVersion } from "../../../../utils/content_utils";
 import { logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
 import { toApplicationError } from "../../../errors/application_error";
+import type { SetupIssueQueryPort } from '../../../ports/setup_execution_ports';
+import type { VersionDescriptionContext } from '../../execution/setup_execution_contracts';
 
-export class GetHotfixVersionUseCase implements ParamUseCase<Execution, Result[]> {
+export class GetHotfixVersionUseCase implements ParamUseCase<VersionDescriptionContext, Result[]> {
     taskId: string = 'GetHotfixVersionUseCase';
     
-    constructor(private readonly issueRepository: IssueDescriptionQueryPort) {}
+    constructor(private readonly issueRepository: Pick<SetupIssueQueryPort, 'getDescription'>) {}
 
-    async invoke(param: Execution): Promise<Result[]> {
+    async invoke(param: VersionDescriptionContext): Promise<Result[]> {
         logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`);
 
         const result: Result[] = [];
 
         try {
-            let number = -1
-            if (param.isSingleAction) {
-                number = param.singleAction.issue;
-            } else if (param.isIssue) {
-                number = param.issue.number;
-            } else if (param.isPullRequest) {
-                number = param.pullRequest.number;
-            } else {
+            if (!isPositiveIssueNumber(param.issueNumber)) {
                 result.push(
                     new Result({
                         id: this.taskId,
@@ -37,12 +30,7 @@ export class GetHotfixVersionUseCase implements ParamUseCase<Execution, Result[]
                 return result;
             }
 
-            const description = await this.issueRepository.getDescription(
-                param.owner,
-                param.repo,
-                number,
-                param.tokens.token,
-            )
+            const description = await this.issueRepository.getDescription(param.issueNumber)
 
             if (description === undefined) {
                 result.push(
@@ -108,4 +96,8 @@ export class GetHotfixVersionUseCase implements ParamUseCase<Execution, Result[]
 
         return result;
     }
+}
+
+function isPositiveIssueNumber(value: number): boolean {
+    return Number.isSafeInteger(value) && value > 0;
 }

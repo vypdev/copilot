@@ -1,10 +1,10 @@
 # Semantic Errors and Capability Contexts
 
-- Status: Proposed — ready for implementation
+- Status: In implementation — P0-A and P2-A complete; remaining P2 context slices queued
 - Date: 2026-09-11
 - Last updated: 2026-09-12
 - Catalog capability ID: `execution-lifecycle`
-- Last verified: 2026-09-11 at `2fec5c24a80135dd0611d3bc37e7dc3a8ab1b41a`
+- Last verified: 2026-09-12 at `ddc7e683`
 - Owners: Copilot maintainers
 - Scope: make application failures typed and safe, stop growth of the shared
   `Execution` aggregate, and replace every leaf use-case input with a narrow immutable
@@ -252,6 +252,31 @@ src/data/model/execution.ts
 context. The AST check resolves imports and type aliases, so `Pick<Execution>`,
 re-exports, renamed imports, or type-only indirection do not bypass it.
 
+#### 6.5.1 P2-A setup-context cutover
+
+The first P2 slice removes `Execution` from the complete setup capability, not
+only from its top-level class. `common_action.ts` projects a fresh,
+`SetupExecutionContext` plain record and applies the returned
+`SetupExecutionResult`; setup use cases, issue-number policy, branch-version
+resolution, and release/hotfix description readers receive only their named
+immutable inputs.
+
+Repository coordinates and the token are passed once to the setup composition
+root. Composition binds them into semantic ports whose methods accept only the
+operation facts (`issueNumber`); credentials never enter a capability context.
+The setup result is discriminated so an unresolved issue or unresolved release
+version cannot accidentally apply fields belonging to the completed path.
+
+P2-A is a direct cutover. It removes the aggregate-shaped signatures and generic
+issue/PR/single-action dispatch from version readers in the same change. No
+alias, overload, adapter for the removed shape, optional legacy field, or
+dual-write path is permitted.
+
+Implementation evidence: the setup capability, issue resolution, branch-version
+resolver, and three description readers have zero `Execution` imports; the
+credential-bound composition test and 11-case P2-A ledger pass; per-file
+coverage meets the fixed threshold; and the exact aggregate inventory is 130.
+
 ### 6.6 State machine
 
 | State | Entered when | User-visible meaning | Allowed next states | Recovery/owner |
@@ -392,6 +417,23 @@ require 100% enumerated branch coverage. Changed orchestration modules require
 fixed UUID factories, mutation attempts, API compile fixtures, and AST fixtures;
 they never log or snapshot a real secret/raw exception.
 
+P2 uses this non-overlapping 12-case ledger. P2-A supplies 11 cases now; the
+final exact-allowlist audit remains reserved for P2 closure.
+
+| P2 evidence | Cases | Automated owner |
+|---|---:|---|
+| deep-copy/freeze, credential exclusion, partial and completed result application | 4 | `src/actions/__tests__/setup_execution_boundary.test.ts` |
+| immutable event/single-action issue resolution | 3 | `src/application/usecases/execution/__tests__/execution_issue_number_policy.test.ts` |
+| explicit release/hotfix query and empty-payload outcomes | 3 | `src/application/usecases/execution/__tests__/execution_branch_version_resolver.test.ts` |
+| credentials bound behind semantic setup ports | 1 | `src/infrastructure/composition/__tests__/execution_setup_composition_root.test.ts` |
+| final exact 16-file allowlist and indirect-alias audit | 1 | reserved for P2 closure |
+| **Total** | **12** | no double counting |
+
+`scripts/validate-setup-execution-coverage.cjs` enforces at least 95% lines and
+statements plus 90% branches and functions independently for every executable
+module in the P2-A setup path. The broader setup characterization suite remains
+parity evidence and does not inflate this case ledger.
+
 Manual evidence: review one narrow terminal failure, one GitHub annotation/Job
 Summary, and the generated final API reference/change notice.
 
@@ -429,7 +471,7 @@ failure contract instead of redefining it.
 | closed safe errors | code metadata, mapper, semantic `Result` | taxonomy/mapping/redaction tests | troubleshooting/error reference |
 | correlation and UI | entrypoint factory, presenter | UUID and view tests | operations |
 | clean public API | package boundary | positive/negative TypeScript API fixtures | API reference/change notice |
-| narrow contexts | projectors and capability use cases | characterization/mutation tests | architecture |
+| narrow contexts | `setup_execution_boundary.ts`, `SetupExecutionContext`, and capability use cases | setup boundary, issue-resolution, branch-resolution, composition, characterization, and per-file coverage gates | architecture |
 | shrinking allowlist | AST architecture check | fixture plus final inventory | dependency rules |
 
 ## 18. Implementation sequence

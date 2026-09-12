@@ -1,104 +1,232 @@
-import type { ExecutionConfigurationPort } from '../../ports/execution_configuration_ports';
 import { ApplicationError } from '../../errors/application_error';
-import type { ExecutionIssueSetupPort, ExecutionOrganizationSetupPort } from '../../ports/execution_setup_ports';
-import type { Execution } from '../../../data/model/execution';
+import type {
+    SetupConfigurationQueryPort,
+    SetupIssueQueryPort,
+    SetupOrganizationQueryPort,
+} from '../../ports/setup_execution_ports';
 import { shouldSkipInitialLabelsFetch } from '../../../data/model/initial_labels_policy';
 import { restorePreviousBranchState } from '../../../data/model/previous_branch_state_policy';
+import { typesForIssue } from '../../../data/model/label_branch_policy';
 import { logDebugInfo, setGlobalLoggerDebug } from '../../ports/logging_ports';
 import type { ExecutionBranchVersionResolution } from './execution_branch_version_resolver';
 import { resolveExecutionIssueNumber } from './resolve_execution_issue_number';
+import type {
+    SetupConfigurationPatch,
+    SetupExecutionContext,
+    SetupExecutionResult,
+    SetupExecutionState,
+    SetupHotfixState,
+    SetupReleaseState,
+} from './setup_execution_contracts';
 
 export interface SetupExecutionDependencies {
-    issueSetupPort: ExecutionIssueSetupPort;
-    organizationSetupPort: ExecutionOrganizationSetupPort;
-    configurationPort: ExecutionConfigurationPort;
-    branchVersionResolver: ExecutionBranchVersionResolution;
+    readonly issueSetupPort: SetupIssueQueryPort;
+    readonly organizationSetupPort: SetupOrganizationQueryPort;
+    readonly configurationPort: SetupConfigurationQueryPort;
+    readonly branchVersionResolver: ExecutionBranchVersionResolution;
 }
 
-export async function runSetupExecution(execution: Execution, dependencies: SetupExecutionDependencies): Promise<void> {
-    setGlobalLoggerDebug(execution.debug, execution.inputs === undefined);
-    await loadTokenUser(execution, dependencies.organizationSetupPort);
-    if (await resolveExecutionIssueNumber(execution, dependencies.issueSetupPort) === undefined) return;
-
-    execution.previousConfiguration = await loadPreviousConfiguration(execution, dependencies.configurationPort);
-    execution.currentConfiguration.deploymentOrchestration = execution.previousConfiguration?.deploymentOrchestration;
-    execution.currentConfiguration.releaseOriginBranch = execution.previousConfiguration?.releaseOriginBranch;
-    execution.currentConfiguration.releaseOriginSha = execution.previousConfiguration?.releaseOriginSha;
-    execution.currentConfiguration.hotfixOriginSha = execution.previousConfiguration?.hotfixOriginSha;
-    await loadIssueLabels(execution, dependencies.issueSetupPort);
-    execution.release.active = execution.labels.isRelease;
-    execution.hotfix.active = execution.labels.isHotfix;
-    restoreBranchState(execution);
-
-    if (execution.isIssue && !execution.isSingleAction) {
-        if (!await dependencies.branchVersionResolver.resolve(execution)) return;
+export async function runSetupExecution(
+    context: SetupExecutionContext,
+    dependencies: SetupExecutionDependencies,
+): Promise<SetupExecutionResult> {
+    setGlobalLoggerDebug(context.debug, context.local);
+    const tokenUser = await loadTokenUser(context, dependencies.organizationSetupPort);
+    const issueResolution = await resolveExecutionIssueNumber(context, dependencies.issueSetupPort);
+    if (issueResolution.issueNumber === undefined) {
+        return { status: 'issue-unresolved', tokenUser, issueResolution };
     }
-    if (execution.isPullRequest && !execution.isSingleAction) await loadPullRequestContext(execution, dependencies.issueSetupPort);
-    execution.currentConfiguration.branchType = execution.issueType;
+
+    const previousConfiguration = await loadPreviousConfiguration(
+        context,
+        issueResolution.issueNumber,
+        dependencies.configurationPort,
+    );
+    const currentIssueLabels = await loadIssueLabels(
+        context,
+        issueResolution.issueNumber,
+        dependencies.issueSetupPort,
+    );
+    let release: SetupReleaseState = {
+        ...context.release,
+        active: currentIssueLabels.includes(context.labelNames.release),
+    };
+    let hotfix: SetupHotfixState = {
+        ...context.hotfix,
+        active: currentIssueLabels.includes(context.labelNames.hotfix),
+    };
+    const restored = restorePreviousBranchState(
+        previousConfiguration,
+        release.active ? 'release' : hotfix.active ? 'hotfix' : 'default',
+        context.branches.releaseTree,
+        context.branches.hotfixTree,
+    );
+    release = {
+        ...release,
+        version: restored.releaseVersion,
+        branch: restored.releaseBranch,
+    };
+    hotfix = {
+        ...hotfix,
+        baseVersion: restored.hotfixBaseVersion,
+        baseBranch: restored.hotfixBaseBranch,
+        version: restored.hotfixVersion,
+        branch: restored.hotfixBranch,
+    };
+    let configuration: SetupConfigurationPatch = {
+        deploymentOrchestration: previousConfiguration?.deploymentOrchestration,
+        releaseOriginBranch: previousConfiguration?.releaseOriginBranch,
+        releaseOriginSha: previousConfiguration?.releaseOriginSha,
+        hotfixOriginSha: previousConfiguration?.hotfixOriginSha,
+        parentBranch: restored.parentBranch,
+        workingBranch: restored.workingBranch,
+        releaseBranch: restored.releaseBranch,
+        hotfixOriginBranch: restored.hotfixBaseBranch,
+        hotfixBranch: restored.hotfixBranch,
+    };
+    let currentPullRequestLabels = [...context.currentPullRequestLabels];
+
+    if (context.isIssue && !context.isSingleAction) {
+        const resolution = await dependencies.branchVersionResolver.resolve({
+            issueNumber: issueResolution.issueNumber,
+            release,
+            hotfix,
+            branches: {
+                releaseTree: context.branches.releaseTree,
+                hotfixTree: context.branches.hotfixTree,
+            },
+            configuration,
+        });
+        release = resolution.release;
+        hotfix = resolution.hotfix;
+        configuration = resolution.configuration;
+        if (!resolution.completed) {
+            return {
+                status: 'version-unresolved',
+                tokenUser,
+                issueResolution,
+                state: setupState(
+                    previousConfiguration,
+                    currentIssueLabels,
+                    currentPullRequestLabels,
+                    release,
+                    hotfix,
+                    configuration,
+                ),
+            };
+        }
+    }
+
+    if (context.isPullRequest && !context.isSingleAction) {
+        currentPullRequestLabels = await dependencies.issueSetupPort.getLabels(context.pullRequest.number);
+        release = {
+            ...release,
+            active: context.pullRequest.base.includes(`${context.branches.releaseTree}/`),
+        };
+        hotfix = {
+            ...hotfix,
+            active: context.pullRequest.base.includes(`${context.branches.hotfixTree}/`),
+        };
+        configuration = {
+            ...configuration,
+            parentBranch: configuration.parentBranch ?? context.pullRequest.base,
+        };
+    }
+
+    return {
+        status: 'configured',
+        tokenUser,
+        issueResolution,
+        branchType: resolveIssueType(context, currentIssueLabels),
+        state: setupState(
+            previousConfiguration,
+            currentIssueLabels,
+            currentPullRequestLabels,
+            release,
+            hotfix,
+            configuration,
+        ),
+    };
 }
 
-async function loadTokenUser(execution: Execution, organizationSetupPort: ExecutionOrganizationSetupPort): Promise<void> {
-    if (execution.tokenUser !== undefined) return;
-    execution.tokenUser = await organizationSetupPort.getUserFromToken(execution.tokens.token);
-    if (!execution.tokenUser) throw new ApplicationError('authorization.credential-invalid', 'Failed to get user from token.');
+async function loadTokenUser(
+    context: SetupExecutionContext,
+    organizationSetupPort: SetupOrganizationQueryPort,
+): Promise<string> {
+    if (context.tokenUser !== undefined) return context.tokenUser;
+    const tokenUser = await organizationSetupPort.getTokenUser();
+    if (!tokenUser) {
+        throw new ApplicationError('authorization.credential-invalid', 'Failed to get user from token.');
+    }
+    return tokenUser;
 }
 
-async function loadPreviousConfiguration(execution: Execution, configurationPort: ExecutionConfigurationPort) {
-    const issueNumber = configurationIssueNumber(execution);
-    return issueNumber === undefined ? undefined : configurationPort.get({
-        owner: execution.owner,
-        repository: execution.repo,
-        issueNumber,
-        token: execution.tokens.token,
-    });
+async function loadPreviousConfiguration(
+    context: SetupExecutionContext,
+    resolvedIssueNumber: number,
+    configurationPort: SetupConfigurationQueryPort,
+) {
+    const issueNumber = configurationIssueNumber(context, resolvedIssueNumber);
+    return issueNumber === undefined ? undefined : configurationPort.get(issueNumber);
 }
 
-async function loadIssueLabels(execution: Execution, issueSetupPort: ExecutionIssueSetupPort): Promise<void> {
+async function loadIssueLabels(
+    context: SetupExecutionContext,
+    issueNumber: number,
+    issueSetupPort: SetupIssueQueryPort,
+): Promise<string[]> {
     try {
-        execution.labels.currentIssueLabels = await issueSetupPort.getLabels(
-            execution.owner, execution.repo, execution.issueNumber, execution.tokens.token,
-        );
+        return await issueSetupPort.getLabels(issueNumber);
     } catch (error) {
-        if (!shouldSkipInitialLabelsFetch(execution.isSingleAction, execution.singleAction.currentSingleAction)) throw error;
+        if (!shouldSkipInitialLabelsFetch(context.isSingleAction, context.singleAction.currentAction)) throw error;
         logDebugInfo('Skipping initial labels fetch for setup action.');
-        execution.labels.currentIssueLabels = [];
+        return [];
     }
 }
 
-async function loadPullRequestContext(execution: Execution, issueSetupPort: ExecutionIssueSetupPort): Promise<void> {
-    execution.labels.currentPullRequestLabels = await issueSetupPort.getLabels(
-        execution.owner, execution.repo, execution.pullRequest.number, execution.tokens.token,
-    );
-    execution.release.active = execution.pullRequest.base.includes(`${execution.branches.releaseTree}/`);
-    execution.hotfix.active = execution.pullRequest.base.includes(`${execution.branches.hotfixTree}/`);
-    execution.currentConfiguration.parentBranch ??= execution.pullRequest.base;
-}
-
-function restoreBranchState(execution: Execution): void {
-    const state = restorePreviousBranchState(
-        execution.previousConfiguration,
-        execution.release.active ? 'release' : execution.hotfix.active ? 'hotfix' : 'default',
-        execution.branches.releaseTree,
-        execution.branches.hotfixTree,
-    );
-    execution.release.version = state.releaseVersion;
-    execution.release.branch = state.releaseBranch;
-    execution.hotfix.baseVersion = state.hotfixBaseVersion;
-    execution.hotfix.baseBranch = state.hotfixBaseBranch;
-    execution.hotfix.version = state.hotfixVersion;
-    execution.hotfix.branch = state.hotfixBranch;
-    execution.currentConfiguration.parentBranch = state.parentBranch;
-    execution.currentConfiguration.workingBranch = state.workingBranch;
-    execution.currentConfiguration.releaseBranch = state.releaseBranch;
-    execution.currentConfiguration.hotfixOriginBranch = state.hotfixBaseBranch;
-    execution.currentConfiguration.hotfixBranch = state.hotfixBranch;
-}
-
-function configurationIssueNumber(execution: Execution): number | undefined {
-    if (execution.isSingleAction || execution.isPush) return positiveIssueNumberOrUndefined(execution.issueNumber);
-    if (execution.isIssue) return positiveIssueNumberOrUndefined(execution.issue.number);
-    if (execution.isPullRequest) return positiveIssueNumberOrUndefined(execution.pullRequest.number);
+function configurationIssueNumber(
+    context: SetupExecutionContext,
+    resolvedIssueNumber: number,
+): number | undefined {
+    if (context.isSingleAction || context.isPush) return positiveIssueNumberOrUndefined(resolvedIssueNumber);
+    if (context.isIssue) return positiveIssueNumberOrUndefined(context.issue.number);
+    if (context.isPullRequest) return positiveIssueNumberOrUndefined(context.pullRequest.number);
     return undefined;
+}
+
+function resolveIssueType(context: SetupExecutionContext, currentIssueLabels: readonly string[]): string {
+    return typesForIssue(
+        { branches: context.branches },
+        [...currentIssueLabels],
+        context.labelNames.feature,
+        context.labelNames.enhancement,
+        context.labelNames.bugfix,
+        context.labelNames.bug,
+        context.labelNames.hotfix,
+        context.labelNames.release,
+        context.labelNames.docs,
+        context.labelNames.documentation,
+        context.labelNames.chore,
+        context.labelNames.maintenance,
+    );
+}
+
+function setupState(
+    previousConfiguration: SetupExecutionState['previousConfiguration'],
+    currentIssueLabels: readonly string[],
+    currentPullRequestLabels: readonly string[],
+    release: SetupReleaseState,
+    hotfix: SetupHotfixState,
+    configuration: SetupConfigurationPatch,
+): SetupExecutionState {
+    return {
+        previousConfiguration,
+        currentIssueLabels: [...currentIssueLabels],
+        currentPullRequestLabels: [...currentPullRequestLabels],
+        release: { ...release },
+        hotfix: { ...hotfix },
+        configuration: { ...configuration },
+    };
 }
 
 function positiveIssueNumberOrUndefined(value: number): number | undefined {

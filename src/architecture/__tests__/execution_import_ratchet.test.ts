@@ -46,7 +46,7 @@ describe('Execution import ratchet', () => {
         expect(baseline.maximum).toBe(baseline.files.length);
     });
 
-    it('allows Execution consumers to disappear but never to grow or move', () => {
+    it('matches the exact shrinking inventory so consumers cannot grow, move, or disappear silently', () => {
         if (!executionSymbol || !executionSource) {
             throw new Error('Could not resolve the Execution model symbol.');
         }
@@ -69,10 +69,7 @@ describe('Execution import ratchet', () => {
             })
             .map(source => repositoryPath(repositoryRoot, source.fileName))
             .sort();
-        const baselineFiles = new Set(baseline.files);
-        const additions = currentConsumers.filter(file => !baselineFiles.has(file));
-
-        expect(additions).toEqual([]);
-        expect(currentConsumers.length).toBeLessThanOrEqual(baseline.maximum);
+        expect(currentConsumers).toEqual(baseline.files);
+        expect(currentConsumers).toHaveLength(baseline.maximum);
     });
 });

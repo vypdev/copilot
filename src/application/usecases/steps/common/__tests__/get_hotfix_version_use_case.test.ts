@@ -21,17 +21,7 @@ describe('GetHotfixVersionUseCase', () => {
     mockGetDescription.mockResolvedValue(
       'Issue body\n### Base Version 1.2.0\n### Hotfix Version 1.2.1\nMore text'
     );
-    const param = {
-      isSingleAction: true,
-      isIssue: false,
-      isPullRequest: false,
-      singleAction: { issue: 42 },
-      issue: { number: 0 },
-      pullRequest: { number: 0 },
-      owner: 'owner',
-      repo: 'repo',
-      tokens: { token: 'token' },
-    } as unknown as Parameters<GetHotfixVersionUseCase['invoke']>[0];
+    const param = { issueNumber: 42 };
 
     const results = await useCase.invoke(param);
 
@@ -39,20 +29,12 @@ describe('GetHotfixVersionUseCase', () => {
     expect(results[0].success).toBe(true);
     expect(getResultPayload(results[0].payload)?.baseVersion).toBe('1.2.0');
     expect(getResultPayload(results[0].payload)?.hotfixVersion).toBe('1.2.1');
-    expect(mockGetDescription).toHaveBeenCalledWith('owner', 'repo', 42, 'token');
+    expect(mockGetDescription).toHaveBeenCalledWith(42);
   });
 
   it('returns failure when description is undefined', async () => {
     mockGetDescription.mockResolvedValue(undefined);
-    const param = {
-      isSingleAction: true,
-      isIssue: false,
-      isPullRequest: false,
-      singleAction: { issue: 1 },
-      owner: 'o',
-      repo: 'r',
-      tokens: { token: 't' },
-    } as unknown as Parameters<GetHotfixVersionUseCase['invoke']>[0];
+    const param = { issueNumber: 1 };
 
     const results = await useCase.invoke(param);
 
@@ -61,17 +43,7 @@ describe('GetHotfixVersionUseCase', () => {
   });
 
   it('returns failure when issue number cannot be determined', async () => {
-    const param = {
-      isSingleAction: false,
-      isIssue: false,
-      isPullRequest: false,
-      singleAction: { issue: 0 },
-      issue: { number: -1 },
-      pullRequest: { number: 0 },
-      owner: 'o',
-      repo: 'r',
-      tokens: { token: 't' },
-    } as unknown as Parameters<GetHotfixVersionUseCase['invoke']>[0];
+    const param = { issueNumber: -1 };
 
     const results = await useCase.invoke(param);
 
@@ -82,13 +54,7 @@ describe('GetHotfixVersionUseCase', () => {
 
   it('returns failure when Base Version is missing in description', async () => {
     mockGetDescription.mockResolvedValue('Only ### Hotfix Version 1.0.1 here');
-    const param = {
-      isSingleAction: true,
-      singleAction: { issue: 1 },
-      owner: 'o',
-      repo: 'r',
-      tokens: { token: 't' },
-    } as unknown as Parameters<GetHotfixVersionUseCase['invoke']>[0];
+    const param = { issueNumber: 1 };
 
     const results = await useCase.invoke(param);
 
@@ -98,13 +64,7 @@ describe('GetHotfixVersionUseCase', () => {
 
   it('returns failure when Hotfix Version is missing in description', async () => {
     mockGetDescription.mockResolvedValue('Only ### Base Version 1.0.0 here');
-    const param = {
-      isSingleAction: true,
-      singleAction: { issue: 1 },
-      owner: 'o',
-      repo: 'r',
-      tokens: { token: 't' },
-    } as unknown as Parameters<GetHotfixVersionUseCase['invoke']>[0];
+    const param = { issueNumber: 1 };
 
     const results = await useCase.invoke(param);
 
@@ -112,53 +72,29 @@ describe('GetHotfixVersionUseCase', () => {
     expect(results[0].steps?.some((s) => s.includes('hotfix version'))).toBe(true);
   });
 
-  it('uses issue.number when isIssue true', async () => {
+  it('queries the explicit issue number', async () => {
     mockGetDescription.mockResolvedValue('### Base Version 1.0.0\n### Hotfix Version 1.0.1');
-    const param = {
-      isSingleAction: false,
-      isIssue: true,
-      isPullRequest: false,
-      issue: { number: 100 },
-      pullRequest: { number: 0 },
-      owner: 'o',
-      repo: 'r',
-      tokens: { token: 't' },
-    } as unknown as Parameters<GetHotfixVersionUseCase['invoke']>[0];
+    const param = { issueNumber: 100 };
 
     const results = await useCase.invoke(param);
 
     expect(results[0].success).toBe(true);
-    expect(mockGetDescription).toHaveBeenCalledWith('o', 'r', 100, 't');
+    expect(mockGetDescription).toHaveBeenCalledWith(100);
   });
 
-  it('uses pullRequest.number when isPullRequest true', async () => {
+  it('does not need event-type dispatch to query another issue', async () => {
     mockGetDescription.mockResolvedValue('### Base Version 2.0.0\n### Hotfix Version 2.0.1');
-    const param = {
-      isSingleAction: false,
-      isIssue: false,
-      isPullRequest: true,
-      issue: { number: 0 },
-      pullRequest: { number: 50 },
-      owner: 'o',
-      repo: 'r',
-      tokens: { token: 't' },
-    } as unknown as Parameters<GetHotfixVersionUseCase['invoke']>[0];
+    const param = { issueNumber: 50 };
 
     const results = await useCase.invoke(param);
 
     expect(results[0].success).toBe(true);
-    expect(mockGetDescription).toHaveBeenCalledWith('o', 'r', 50, 't');
+    expect(mockGetDescription).toHaveBeenCalledWith(50);
   });
 
   it('returns failure on catch when getDescription throws', async () => {
     mockGetDescription.mockRejectedValue(new Error('Network error'));
-    const param = {
-      isSingleAction: true,
-      singleAction: { issue: 1 },
-      owner: 'o',
-      repo: 'r',
-      tokens: { token: 't' },
-    } as unknown as Parameters<GetHotfixVersionUseCase['invoke']>[0];
+    const param = { issueNumber: 1 };
 
     const results = await useCase.invoke(param);
 

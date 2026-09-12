@@ -44,6 +44,26 @@ const mockWaitForPreviousWorkflowRunsInvoke = jest.fn();
 const mockAgentActivityStart = jest.fn();
 const mockAgentActivityFinish = jest.fn();
 
+function unresolvedSetupResult(context: {
+  tokenUser?: string;
+  issueNumber: number;
+  singleAction: { issue: number; isIssue: boolean; isPullRequest: boolean; isPush: boolean };
+}) {
+  return {
+    status: 'issue-unresolved',
+    tokenUser: context.tokenUser ?? 'user',
+    issueResolution: {
+      issueNumber: context.issueNumber,
+      singleAction: {
+        issue: context.singleAction.issue,
+        isIssue: context.singleAction.isIssue,
+        isPullRequest: context.singleAction.isPullRequest,
+        isPush: context.singleAction.isPush,
+      },
+    },
+  };
+}
+
 jest.mock('../../infrastructure/composition/main_run_route_composition_root', () => ({
   createMainRunRouteCompositionRoot: jest.fn().mockImplementation(() => ({
     'single-action': mockSingleActionInvoke,
@@ -103,12 +123,20 @@ const logger = require('../../utils/logger');
 
 function mockExecution(overrides: Record<string, unknown> = {}): Execution {
   const base = {
+    debug: false,
+    inputs: {},
+    eventName: '',
     setup: jest.fn().mockResolvedValue(undefined),
     welcome: undefined,
     runnedByToken: false,
     tokenUser: 'user',
     isSingleAction: false,
     singleAction: {
+      issue: 42,
+      currentSingleAction: '',
+      isIssue: false,
+      isPullRequest: false,
+      isPush: false,
       validSingleAction: false,
       isSingleActionWithoutIssue: false,
       enabledSingleAction: false,
@@ -118,13 +146,41 @@ function mockExecution(overrides: Record<string, unknown> = {}): Execution {
     repo: 'repo',
     tokens: { token: 'token' },
     isIssue: false,
-    issue: { isIssueComment: false, isIssue: false },
+    issue: { number: 42, isIssueComment: false, isIssue: false },
     isPullRequest: false,
-    pullRequest: { isPullRequestReviewComment: false, isPullRequest: false },
+    pullRequest: {
+      number: 42,
+      head: 'feature/42-work',
+      base: 'develop',
+      isPullRequestReviewComment: false,
+      isPullRequest: false,
+    },
+    commit: { branch: '' },
+    branches: {
+      featureTree: 'feature',
+      bugfixTree: 'bugfix',
+      hotfixTree: 'hotfix',
+      releaseTree: 'release',
+      docsTree: 'docs',
+      choreTree: 'chore',
+    },
+    labels: {
+      feature: 'feature', enhancement: 'enhancement', bugfix: 'bugfix', bug: 'bug',
+      hotfix: 'hotfix', release: 'release', docs: 'docs', documentation: 'documentation',
+      chore: 'chore', maintenance: 'maintenance', currentPullRequestLabels: [],
+    },
+    release: { active: false },
+    hotfix: { active: false },
+    currentConfiguration: {},
     isPush: false,
-    ...overrides,
   };
-  return base as unknown as Execution;
+  return {
+    ...base,
+    ...overrides,
+    singleAction: { ...base.singleAction, ...(overrides.singleAction as object | undefined) },
+    issue: { ...base.issue, ...(overrides.issue as object | undefined) },
+    pullRequest: { ...base.pullRequest, ...(overrides.pullRequest as object | undefined) },
+  } as unknown as Execution;
 }
 
 const latestTagQueryPort = {} as LatestTagQueryPort;
@@ -172,7 +228,7 @@ describe('mainRun', () => {
     mockPullRequestReviewCommentInvoke.mockResolvedValue([]);
     mockPullRequestInvoke.mockResolvedValue([]);
     mockCommitInvoke.mockResolvedValue([]);
-    mockSetupExecutionInvoke.mockResolvedValue(undefined);
+    mockSetupExecutionInvoke.mockImplementation(async (context) => unresolvedSetupResult(context));
     mockAgentActivityStart.mockResolvedValue(undefined);
     mockAgentActivityFinish.mockResolvedValue(undefined);
   });
@@ -187,8 +243,17 @@ describe('mainRun', () => {
   it('delegates setup to the composed use case and clears accumulated logs', async () => {
     const execution = mockExecution();
     await runMain(execution);
-    expect(createSetupExecutionUseCase).toHaveBeenCalledWith(latestTagQueryPort);
-    expect(mockSetupExecutionInvoke).toHaveBeenCalledWith(execution);
+    expect(createSetupExecutionUseCase).toHaveBeenCalledWith(latestTagQueryPort, {
+      owner: 'org',
+      repository: 'repo',
+      token: 'token',
+    });
+    const context = mockSetupExecutionInvoke.mock.calls[0][0];
+    expect(context).toMatchObject({ issueNumber: 42, tokenUser: 'user' });
+    expect(context).not.toHaveProperty('tokens');
+    expect(context).not.toHaveProperty('owner');
+    expect(Object.isFrozen(context)).toBe(true);
+    expect(Object.isFrozen(context.branches)).toBe(true);
     expect(logger.clearAccumulatedLogs).toHaveBeenCalledTimes(1);
     expect(createMainRunRouteCompositionRoot).toHaveBeenCalledWith(projectBoardCommandPort, 'github-workflow');
   });
@@ -235,7 +300,7 @@ describe('mainRun', () => {
     await runMain(execution);
 
     expect(createWaitForPreviousWorkflowRunsUseCase).not.toHaveBeenCalled();
-    expect(mockSetupExecutionInvoke).toHaveBeenCalledWith(execution);
+    expect(mockSetupExecutionInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 42 }));
     expect(mockSingleActionInvoke).toHaveBeenCalledWith(execution);
   });
 
@@ -247,8 +312,9 @@ describe('mainRun', () => {
     mockWaitForPreviousWorkflowRunsInvoke.mockImplementation(async () => {
       order.push('wait');
     });
-    mockSetupExecutionInvoke.mockImplementation(async () => {
+    mockSetupExecutionInvoke.mockImplementation(async (context) => {
       order.push('setup');
+      return unresolvedSetupResult(context);
     });
 
     await runMain(mockExecution({ welcome: undefined }));
