@@ -368,6 +368,21 @@ describe("DetectPotentialProblemsUseCase", () => {
     expect(mockAskAgent).not.toHaveBeenCalled();
   });
 
+  it('skips draft pull requests when draft reviews are disabled', async () => {
+    const results = await invokeUseCase(useCase, baseParam({
+      issueNumber: -1,
+      isPullRequest: true,
+      eventName: 'pull_request',
+      pullRequest: { number: 17, head: 'feature/draft', action: 'opened' },
+      inputs: { pull_request: { draft: true, head: { sha: 'a'.repeat(40) } } },
+    }));
+
+    expect(results[0]).toEqual(expect.objectContaining({ success: true, executed: false }));
+    expect(results[0].payload).toEqual(expect.objectContaining({ skipped: 'draft' }));
+    expect(mockListIssueComments).not.toHaveBeenCalled();
+    expect(mockAskAgent).not.toHaveBeenCalled();
+  });
+
   it('runs issue-only analysis without inferring a pull request branch', async () => {
     mockFindExactHeadCandidateNumbers.mockResolvedValue([]);
     mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });

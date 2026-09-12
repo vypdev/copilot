@@ -1,6 +1,9 @@
 import { Ai } from '../../../../../../data/model/ai';
 import {
+    projectBugbotAutofixOperationContext,
+    projectBugbotCommitContext,
     projectBugbotContextSelectionContext,
+    projectBugbotFixIntentContext,
     projectBugbotReviewOperationContext,
     type BugbotReviewOperationSource,
 } from '../bugbot_review_operation_context';
@@ -150,6 +153,49 @@ describe('Bugbot review operation context', () => {
         expect(context.target.headBranch).toBe('');
         expect(context.target.pullRequestNumber).toBe(-1);
         expect(context.target.pullRequestAction).toBe('');
+    });
+
+    it('fails closed when JavaScript adapters return missing optional arrays and comment text', () => {
+        const input = source();
+        const defensiveAi = {
+            getAiIgnoreFiles: () => undefined,
+            getBugbotReviewConfiguration: () => ({ organizationRules: null }),
+            getAgentConfiguration: () => ({ provider: 'codex', model: 'model' }),
+            getBugbotFixVerifyCommands: () => undefined,
+        } as never;
+
+        const selection = projectBugbotContextSelectionContext({ ...input, ai: defensiveAi });
+        const pullRequestIntent = projectBugbotFixIntentContext({
+            ...input,
+            issue: {},
+            pullRequest: {
+                ...input.pullRequest,
+                isPullRequestReviewComment: true,
+            },
+            ai: defensiveAi,
+        });
+        const issueIntent = projectBugbotFixIntentContext({
+            ...input,
+            issue: { isIssueComment: true },
+            pullRequest: {
+                ...input.pullRequest,
+                isPullRequestReviewComment: false,
+            },
+            ai: defensiveAi,
+        });
+        const autofix = projectBugbotAutofixOperationContext({ ...input, ai: defensiveAi });
+        const commit = projectBugbotCommitContext({
+            issueNumber: 42,
+            commit: {},
+            ai: defensiveAi,
+        });
+
+        expect(selection.ignorePatterns).toEqual([]);
+        expect(selection.organizationRules).toEqual([]);
+        expect(pullRequestIntent.comment.body).toBe('');
+        expect(issueIntent.comment.body).toBe('');
+        expect(autofix.verifyCommands).toEqual([]);
+        expect(commit).toEqual({ issueNumber: 42, branch: '', verifyCommands: [] });
     });
 
 });

@@ -82,6 +82,50 @@ describe('Bugbot public API', () => {
     });
   });
 
+  it('projects complete pull-request facts through the request-only API', async () => {
+    const service = new BugbotReviewService(
+      { query: jest.fn() },
+      { repository: { owner: 'acme', name: 'repo' } } as BugbotScmGateway,
+    );
+
+    await expect(service.review({
+      target: {
+        kind: 'pull-request',
+        number: 17,
+        head: 'feature/review',
+        base: 'master',
+        linkedIssueNumber: 9,
+        action: 'opened',
+        expectedHeadSha: 'a'.repeat(40),
+        before: 'b'.repeat(40),
+        draft: true,
+      },
+      agent: { provider: 'codex', model: '' },
+      authenticatedUser: 'vypbot',
+    })).resolves.toEqual([]);
+  });
+
+  it('projects pull-request defaults and branch after identity', async () => {
+    const service = new BugbotReviewService(
+      { query: jest.fn() },
+      { repository: { owner: 'acme', name: 'repo' } } as BugbotScmGateway,
+    );
+    const agent = { provider: 'codex' as const, model: '' };
+
+    await expect(service.review({
+      target: { kind: 'pull-request', number: 18, head: 'feature/defaults' },
+      agent,
+    })).resolves.toEqual([]);
+    await expect(service.review({
+      target: {
+        kind: 'branch',
+        branch: 'feature/after',
+        after: 'c'.repeat(40),
+      },
+      agent,
+    })).resolves.toEqual([]);
+  });
+
   it.each([
     [undefined, 'Bound repository owner is missing or invalid.'],
     [{}, 'Bound repository owner is missing or invalid.'],

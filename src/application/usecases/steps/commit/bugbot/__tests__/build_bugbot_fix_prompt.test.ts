@@ -91,6 +91,29 @@ describe("buildBugbotFixPrompt", () => {
         expect(prompt).toContain("Pull request number: 5");
     });
 
+    it.each([
+        ['commit branch', 'feature/from-commit', 'feature/from-commit'],
+        ['unknown branch', '', 'unknown'],
+    ])('uses the %s fallback without a canonical PR', (_case, commitBranch, expectedBranch) => {
+        const operation = mockOperation({
+            target: {
+                ...mockOperation().target,
+                headBranch: '',
+                commitBranch,
+            },
+        });
+        const prompt = buildBugbotFixPrompt(
+            operation,
+            mockContext({ canonicalPullRequest: null }),
+            ['find-1'],
+            'fix it',
+            [],
+        );
+
+        expect(prompt).toContain(expectedBranch);
+        expect(prompt).not.toContain('Pull request number:');
+    });
+
     it("asks to run verify when verifyCommands is empty", () => {
         const prompt = buildBugbotFixPrompt(mockOperation(), mockContext(), ["find-1"], "fix", []);
         expect(prompt).toContain("Run any standard project checks");

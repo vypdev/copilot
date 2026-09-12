@@ -165,6 +165,35 @@ describe("BugbotAutofixUseCase", () => {
         expect(mockCopilotMessage).toHaveBeenCalledTimes(1);
     });
 
+    it('checks out the canonical PR head when the operation has no commit branch', async () => {
+        const ctx = contextWithFindings(['f1']);
+        const source = baseExecution();
+        Object.assign(source, { commit: {} });
+        let statusCount = 0;
+        mockLoadBugbotContext.mockResolvedValue(ctx);
+        mockCopilotMessage.mockResolvedValue({ text: 'Done.', sessionId: 's1' });
+        mockExec.mockImplementation(
+            async (command: string, args: string[], options?: { listeners?: { stdout?: (data: Buffer) => void } }) => {
+                if (command === 'git' && args[0] === 'status') {
+                    statusCount += 1;
+                    options?.listeners?.stdout?.(Buffer.from(statusCount < 4 ? '' : ' M src/fix.ts\n'));
+                }
+                return 0;
+            },
+        );
+
+        const results = await useCase.invoke({
+            operation: projectBugbotAutofixOperationContext(source),
+            targetFindingIds: ['f1'],
+            userComment: 'fix it',
+            context: ctx,
+        });
+
+        expect(mockExec).toHaveBeenCalledWith('git', ['fetch', 'origin', 'feature/42-foo']);
+        expect(mockExec).toHaveBeenCalledWith('git', ['checkout', 'feature/42-foo']);
+        expect(results[0].success).toBe(true);
+    });
+
     it('stops before workspace inspection when canonical context revalidation fails', async () => {
         mockLoadBugbotContext.mockRejectedValue(new Error('stale pull request'));
 
