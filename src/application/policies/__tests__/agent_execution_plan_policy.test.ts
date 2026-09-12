@@ -18,7 +18,7 @@ function build(provider: AgentProvider, capability: AgentCapability, structured 
         capability,
         workspace: '/workspace',
         runtimeDirectory: '/runtime',
-        ...(structured ? { outputSchema: { type: 'object', properties: {}, additionalProperties: false } } : {}),
+        ...(structured ? { outputSchema: { type: 'object', properties: {}, required: [], additionalProperties: false } } : {}),
     });
 }
 
@@ -48,6 +48,20 @@ describe('provider execution plan policy', () => {
         expect(policy.argv.at(-1)).toBe('-');
         expect(policy.output).toBe('native-and-local-json-schema');
         expect(policy.artifacts).toHaveLength(1);
+    });
+
+    it('rejects a loose native Codex schema before starting the provider', () => {
+        const base = { capability: 'findings' as const, workspace: '/workspace', runtimeDirectory: '/runtime' };
+        expect(() => buildCodexExecutionPolicy({
+            ...base,
+            configuration: { provider: 'codex', model: 'model' },
+            outputSchema: {
+                type: 'object',
+                properties: { optional: { type: 'string' } },
+                required: [],
+                additionalProperties: false,
+            },
+        })).toThrow('must require every property');
     });
 
     it('builds OpenCode default-deny permissions with fixer-only edit authority', () => {

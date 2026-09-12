@@ -27,11 +27,11 @@ export function buildPreviousFindingsContext(
 `;
   const suffix = `
 **Your task 2:** For each finding above, analyze the current code and decide:
-- If the problem **still exists** (same code or same issue present): do **not** include its id in \`resolved_finding_ids\`.
-- If the problem **no longer applies** (e.g. that code was removed or refactored away): include its id in \`resolved_finding_ids\`.
-- If the problem **has been fixed** (code was changed and the issue is resolved): include its id in \`resolved_finding_ids\`.
+- If the problem **still exists** (same code or same issue present): do **not** include it in \`resolved_findings\`.
+- If the problem **no longer applies** (e.g. that code was removed or refactored away): include \`{ "id": "<exact id>", "resolution": "obsolete" }\` in \`resolved_findings\`.
+- If the problem **has been fixed** (code was changed and the issue is resolved): include \`{ "id": "<exact id>", "resolution": "fixed" }\` in \`resolved_findings\`.
 
-Return in \`resolved_finding_ids\` only the ids from the list above that are now fixed or no longer apply. Use the exact id shown in each "Finding id" line.`;
+Return in \`resolved_findings\` only entries from the list above that are now fixed or obsolete. Use each exact id shown in the "Finding id" line.`;
   const omissionNoticeBudget = 256;
   const findingsBudget = Math.max(
     0,
@@ -68,7 +68,7 @@ function selectWithinBudget(
 }
 
 function formatFinding(finding: PreviousBugbotFinding): string {
-  return `---\n**Finding id (use this exact id in resolved_finding_ids if resolved/no longer applies):** \`${finding.id.replace(/`/g, '\\`')}\`\n\n**Full comment as posted (including metadata at the end):**\n${renderUntrustedField(finding.fullBody, `github.previous-finding.${finding.id}`, MAX_FINDING_BODY_LENGTH)}\n`;
+  return `---\n**Finding id (use this exact id in resolved_findings if fixed/obsolete):** \`${finding.id.replace(/`/g, '\\`')}\`\n\n**Full comment as posted (including metadata at the end):**\n${renderUntrustedField(finding.fullBody, `github.previous-finding.${finding.id}`, MAX_FINDING_BODY_LENGTH)}\n`;
 }
 
 function compareNewestFirst(left: PreviousBugbotFinding, right: PreviousBugbotFinding): number {

@@ -244,7 +244,12 @@ explicit model/provider/effort, and terminal `-`. Managed configuration sets
 `approval_policy="never"`; the accepted CLI version does not expose an
 equivalent `exec` flag.
 Structured roles also receive a managed `--output-schema` file and always undergo
-local validation.
+local validation. Before Codex can start, the provider policy validates that the
+schema uses the strict native subset: the root is an object, every object lists
+all properties as required, every object denies additional properties, and every
+array defines its item schema. Optional values are represented by a required
+nullable field, never by omitting the property. An incompatible schema is a
+local planning error and cannot reach the provider.
 
 Controlled configuration sets web search disabled, multi-agent disabled,
 skill dependency installation disabled, history persistence none, workspace
@@ -410,8 +415,9 @@ GitHub UI. Existing locale/fallback and narrow Markdown rules apply.
    spawn, and deleted after the process exits.
 4. Workspace and executable use canonical real paths with symlink/ownership/
    permission checks; no writable executable or wrapper is accepted.
-5. Structured output is untrusted until size, encoding, JSON/schema, and domain
-   validation pass.
+5. A structured-output contract is untrusted until its native schema passes the
+   strict preflight and returned bytes pass size, encoding, JSON/schema, and
+   domain validation.
 6. No approval prompt is possible in CI; a requested escalation is rejection,
    not timeout/fallback.
 
@@ -444,7 +450,7 @@ one action; execution preflight repeats the exact-version check before spawn.
 
 ## 14. Testing strategy and numeric budget
 
-This SDD owns at least **18 distinct cases**; parameterized provider/role rows
+This SDD owns at least **20 distinct cases**; parameterized provider/role rows
 count separately only when authority/argv differs.
 
 | Area | Minimum cases | Required risks |
@@ -452,11 +458,11 @@ count separately only when authority/argv differs.
 | Plan/executable pure policy | 4 | exhaustive roles/providers, removed/unknown inputs |
 | State/process lifecycle | 2 | timeout/cancel/cleanup and no-spawn rejection |
 | Application dispatch | 3 | complete plan, semantic failure, structured output |
-| Provider adapters | 4 | Codex/OpenCode/Cursor config, exact manifest, auto mismatch repair, and fail-closed alternatives |
+| Provider adapters | 6 | Codex/OpenCode/Cursor config, strict native schema acceptance/rejection, exact manifest, auto mismatch repair, and fail-closed alternatives |
 | Workflow/setup contracts | 2 | provisioning pin and doctor configuration parity |
 | UX/sanitization | 1 | rejection/partial view without sensitive fields |
 | Integration/security | 2 | effective sandbox matrix and env/credential isolation |
-| **Total** | **18** | no double counting |
+| **Total** | **20** | no double counting |
 
 All provider plan, role authority, executable, and runtime-manifest policies require
 100% enumerated branch coverage. Changed process/provider modules require 95%
@@ -490,7 +496,10 @@ recovery, and upgrade process. Examples are generated/tested from golden plans.
 5. Read roles cannot write; fixer writes only workspace; all roles lack Git mutation.
 6. Agent child tools cannot reach the network, use MCP/plugins/subagents, escalate,
    or read a model/GitHub/cloud credential.
-7. Codex native schema and every provider's local schema reject invalid output.
+7. A Codex schema that omits a property from `required`, permits additional
+   properties, or leaves an array item undefined is rejected locally before
+   spawn; a strict schema reaches native enforcement, and every provider's local
+   schema rejects invalid returned output.
 8. Timeout/cancel terminates the process group, discards output, and cleans only
    its owned temp directory.
 9. Ambient/project/user config cannot broaden effective authority in smoke fixtures.
@@ -507,7 +516,7 @@ recovery, and upgrade process. Examples are generated/tested from golden plans.
 | provider isolation | three plan policies/artifacts | golden and effective smoke matrix | provider pages |
 | executable selection | configuration policy/preflight | invalid-path and removed-input fixtures | CLI/configuration reference |
 | runtime support | manifest/preflight/provisioning | exact-version/hash tests | setup/runtime pages |
-| process/output safety | process adapter/schema validator | env, timeout, size, schema tests | failure/security docs |
+| process/output safety | process adapter/strict-schema policy/output validator | env, timeout, native-schema preflight, size, returned-schema tests | failure/security docs |
 | safe UX/observability | semantic mapper/presenter | redaction/view tests | troubleshooting |
 
 ## 18. Implementation sequence

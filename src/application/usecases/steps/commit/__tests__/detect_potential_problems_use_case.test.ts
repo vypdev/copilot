@@ -1,7 +1,7 @@
 /**
  * Unit tests for DetectPotentialProblemsUseCase (bugbot on push).
  * Covers: skip when OpenCode/issue missing, prompt with/without previous findings,
- * new findings (add/update issue and PR comments), resolved_finding_ids, errors.
+ * new findings (add/update issue and PR comments), resolved_findings, errors.
  */
 
 import { DetectPotentialProblemsUseCase } from "../detect_potential_problems_use_case";
@@ -272,7 +272,7 @@ describe("DetectPotentialProblemsUseCase", () => {
 
   it('runs issue-only analysis without inferring a pull request branch', async () => {
     mockFindExactHeadCandidateNumbers.mockResolvedValue([]);
-    mockAskAgent.mockResolvedValue({ findings: [], resolved_finding_ids: [] });
+    mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
     const param = baseParam({
       eventName: 'issue_comment',
       commit: { branch: '' },
@@ -319,8 +319,8 @@ describe("DetectPotentialProblemsUseCase", () => {
     expect(mockAddComment).not.toHaveBeenCalled();
   });
 
-  it('returns success with "no new findings, no resolved" when findings and resolved_finding_ids are empty', async () => {
-    mockAskAgent.mockResolvedValue({ findings: [], resolved_finding_ids: [] });
+  it('returns success with "no new findings, no resolved" when findings and resolved_findings are empty', async () => {
+    mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
 
     const results = await useCase.invoke(baseParam());
 
@@ -340,7 +340,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       omittedItems: 1,
       limitReached: true,
     };
-    mockAskAgent.mockResolvedValue({ findings: [], resolved_finding_ids: [] });
+    mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
 
     const [result] = await useCase.invoke(baseParam());
 
@@ -353,7 +353,7 @@ describe("DetectPotentialProblemsUseCase", () => {
   });
 
   it("calls listIssueComments and askAgent with repo context and no previous block when no comments", async () => {
-    mockAskAgent.mockResolvedValue({ findings: [], resolved_finding_ids: [] });
+    mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
 
     await useCase.invoke(baseParam());
 
@@ -527,7 +527,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     expect(mockAddComment).not.toHaveBeenCalled();
   });
 
-  it("when previous unresolved finding exists, prompt includes it and resolved_finding_ids marks it resolved", async () => {
+  it("when a previous unresolved finding exists, resolved_findings marks it fixed", async () => {
     mockListIssueComments.mockResolvedValue([
       {
         id: 888,
@@ -537,7 +537,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     ]);
     mockAskAgent.mockResolvedValue({
       findings: [],
-      resolved_finding_ids: ["old-bug-id"],
+      resolved_findings: [{ id: "old-bug-id", resolution: "fixed" }],
     });
 
     await useCase.invoke(baseParam());
@@ -566,7 +566,7 @@ describe("DetectPotentialProblemsUseCase", () => {
         user: { login: 'bot' },
       },
     ]);
-    mockAskAgent.mockResolvedValue({ findings: [], resolved_finding_ids: [] });
+    mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
 
     const results = await useCase.invoke(baseParam());
 
@@ -575,7 +575,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     }));
   });
 
-  it("when OpenCode returns resolved_finding_ids, updates PR review comment to resolved", async () => {
+  it("when the agent returns resolved_findings, updates the PR review comment to resolved", async () => {
     mockListIssueComments.mockResolvedValue([]);
     mockFindExactHeadCandidateNumbers.mockResolvedValue([50]);
     mockListPullRequestReviewComments.mockResolvedValue([
@@ -590,7 +590,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     ]);
     mockAskAgent.mockResolvedValue({
       findings: [],
-      resolved_finding_ids: ["pr-finding"],
+      resolved_findings: [{ id: "pr-finding", resolution: "fixed" }],
     });
 
     await useCase.invoke(baseParam());
@@ -632,7 +632,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     ]);
     mockAskAgent.mockResolvedValue({
       findings: [],
-      resolved_finding_ids: ["pr-finding"],
+      resolved_findings: [{ id: "pr-finding", resolution: "fixed" }],
     });
     mockResolvePullRequestReviewThread.mockRejectedValue(
       new Error("provider rejected secret-token"),
@@ -657,7 +657,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     expect(JSON.stringify(logError.mock.calls)).not.toContain("secret-token");
   });
 
-  it("does not mark as resolved when finding id is not in resolved_finding_ids", async () => {
+  it("does not mark as resolved when a finding id is absent from resolved_findings", async () => {
     mockListIssueComments.mockResolvedValue([
       {
         id: 666,
@@ -667,7 +667,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     ]);
     mockAskAgent.mockResolvedValue({
       findings: [],
-      resolved_finding_ids: [], // not including unfixed-id
+      resolved_findings: [], // does not include unfixed-id
     });
 
     await useCase.invoke(baseParam());
@@ -837,7 +837,7 @@ describe("DetectPotentialProblemsUseCase", () => {
   it("step message includes both findings count and resolved count when both present", async () => {
     mockAskAgent.mockResolvedValue({
       findings: [{ id: "new-1", title: "New", description: "D" }],
-      resolved_finding_ids: ["old-1"],
+      resolved_findings: [{ id: "old-1", resolution: "fixed" }],
     });
     mockListIssueComments.mockResolvedValue([
       {
@@ -951,7 +951,7 @@ describe("DetectPotentialProblemsUseCase", () => {
   });
 
   it("uses branches.development when currentConfiguration.parentBranch is undefined", async () => {
-    mockAskAgent.mockResolvedValue({ findings: [], resolved_finding_ids: [] });
+    mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
     const param = baseParam({
       currentConfiguration: { parentBranch: undefined },
       branches: { development: "main" },
@@ -971,7 +971,7 @@ describe("DetectPotentialProblemsUseCase", () => {
         user: { login: "bot" },
       },
     ]);
-    mockAskAgent.mockResolvedValue({ findings: [], resolved_finding_ids: [] });
+    mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
 
     await useCase.invoke(baseParam());
 
@@ -1001,7 +1001,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     ]);
     mockAskAgent.mockResolvedValue({
       findings: [],
-      resolved_finding_ids: ["done-id"], // OpenCode says resolved again
+      resolved_findings: [{ id: "done-id", resolution: "fixed" }],
     });
 
     await useCase.invoke(baseParam());
@@ -1020,7 +1020,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       ]);
       mockAskAgent.mockResolvedValue({
         findings: [],
-        resolved_finding_ids: ["spacey-id"],
+        resolved_findings: [{ id: "spacey-id", resolution: "fixed" }],
       });
 
       await useCase.invoke(baseParam());
@@ -1068,7 +1068,7 @@ describe("DetectPotentialProblemsUseCase", () => {
         ]);
       mockAskAgent.mockResolvedValue({
         findings: [],
-        resolved_finding_ids: ["pr-spacey-id"],
+        resolved_findings: [{ id: "pr-spacey-id", resolution: "fixed" }],
       });
 
       await useCase.invoke(baseParam());
@@ -1089,7 +1089,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       ]);
       mockAskAgent.mockResolvedValue({
         findings: [],
-        resolved_finding_ids: [findingId],
+        resolved_findings: [{ id: findingId, resolution: "fixed" }],
       });
 
       await useCase.invoke(baseParam());
@@ -1147,7 +1147,7 @@ describe("DetectPotentialProblemsUseCase", () => {
             severity: "high",
           },
         ],
-        resolved_finding_ids: [],
+        resolved_findings: [],
       });
 
       await useCase.invoke(param);
@@ -1174,7 +1174,7 @@ describe("DetectPotentialProblemsUseCase", () => {
             file: "/etc/passwd",
           },
         ],
-        resolved_finding_ids: [],
+        resolved_findings: [],
       });
 
       await useCase.invoke(baseParam());
@@ -1212,7 +1212,7 @@ describe("DetectPotentialProblemsUseCase", () => {
             file: "src/app/bar.ts",
           },
         ],
-        resolved_finding_ids: [],
+        resolved_findings: [],
       });
 
       await useCase.invoke(param);
@@ -1230,7 +1230,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       }));
       mockAskAgent.mockResolvedValue({
         findings: manyFindings,
-        resolved_finding_ids: [],
+        resolved_findings: [],
       });
 
       await useCase.invoke(baseParam());
@@ -1268,7 +1268,7 @@ describe("DetectPotentialProblemsUseCase", () => {
             line: 5,
           },
         ],
-        resolved_finding_ids: [],
+        resolved_findings: [],
       });
 
       await useCase.invoke(baseParam());

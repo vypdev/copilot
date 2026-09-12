@@ -47,7 +47,7 @@ describe("buildBugbotPrompt", () => {
         expect(prompt).toContain("feature/42-branch");
         expect(prompt).toContain("develop");
         expect(prompt).toContain("findings");
-        expect(prompt).toContain("resolved_finding_ids");
+        expect(prompt).toContain("resolved_findings");
         expect(prompt).toContain('Context coverage:** complete');
     });
 

@@ -122,11 +122,15 @@
         "src/domain/bugbot/review_state.ts",
         "src/domain/bugbot/review_projection.ts",
         "src/application/policies/bugbot_reconciliation_policy.ts",
+        "src/application/usecases/steps/commit/bugbot/schema.ts",
+        "src/application/usecases/steps/commit/bugbot/prepare_bugbot_findings_policy.ts",
         "src/application/usecases/steps/commit/bugbot/synchronize_bugbot_review_presentation_use_case.ts"
       ],
       "tests": [
         "src/domain/bugbot/__tests__/review_state.test.ts",
         "src/domain/bugbot/__tests__/review_projection.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/schema.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/prepare_bugbot_findings.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/reconcile_bugbot_review_state_integration.test.ts"
       ],
       "documentation": [
@@ -406,6 +410,8 @@
         "src/domain/bugbot/review_configuration.ts",
         "src/application/policies/bounded_concurrency_policy.ts",
         "src/application/policies/bugbot_resolution_eligibility_policy.ts",
+        "src/application/usecases/steps/commit/bugbot/schema.ts",
+        "src/application/usecases/steps/commit/bugbot/prepare_bugbot_findings_policy.ts",
         "src/application/usecases/steps/commit/bugbot/load_bugbot_context_use_case.ts",
         "src/application/usecases/steps/commit/bugbot/bugbot_previous_findings_context.ts",
         "src/application/usecases/steps/commit/bugbot/publish_findings_use_case.ts",
@@ -417,6 +423,8 @@
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/load_bugbot_context_use_case.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/schema.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/prepare_bugbot_findings.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_review_context.test.ts",
         "src/domain/bugbot/__tests__/context.test.ts",
         "src/data/repository/issue/__tests__/bugbot_issue_comment_query_repository.test.ts",
@@ -530,6 +538,9 @@
         "src/application/policies/agent_task_activation_policy.ts",
         "src/application/policies/agent_configuration_validation_policy.ts",
         "src/application/policies/agent_execution/agent_execution_policy_dispatcher.ts",
+        "src/application/policies/agent_execution/strict_output_schema_policy.ts",
+        "src/application/policies/agent_response_schemas.ts",
+        "src/application/usecases/actions/progress_response.ts",
         "src/infrastructure/agents/agent_execution_planner.ts",
         "src/infrastructure/agents/agent_runtime_manifest.ts",
         "src/infrastructure/agents/agent-runtime-manifest.json",
@@ -543,6 +554,9 @@
         "src/data/repository/__tests__/agent_cli_client.test.ts",
         "src/data/repository/__tests__/agent_cli_provisioner.test.ts",
         "src/application/policies/__tests__/agent_execution_plan_policy.test.ts",
+        "src/application/policies/__tests__/agent_response_schemas.test.ts",
+        "src/application/policies/__tests__/strict_output_schema_policy.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/schema.test.ts",
         "src/infrastructure/agents/__tests__/agent_execution_planner.test.ts",
         "src/infrastructure/agents/__tests__/agent_runtime_manifest.test.ts"
       ],

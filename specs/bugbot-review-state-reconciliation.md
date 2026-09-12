@@ -221,8 +221,11 @@ Terms:
 2. Only content authored by the authenticated configured bot identity and
    carrying a valid marker may be adopted or mutated.
 3. The bot MUST never mark a finding resolved merely because it is absent from
-   a model response. The existing validated `resolved_finding_ids` contract
-   remains mandatory.
+   a model response. The strict validated `resolved_findings` contract remains
+   mandatory: each entry contains an exact retained finding `id` and an explicit
+   `fixed` or `obsolete` resolution. The removed id-list/reason-map fields are
+   invalid and have no legacy reader or translation path. Conflicting
+   classifications for one id make that id ineligible for resolution.
 4. Active publication MUST complete before any unrelated finding is marked
    resolved.
 5. The comment marker MUST be updated before the corresponding native thread
@@ -939,10 +942,10 @@ counted across rows.
 | Domain lifecycle, transition planning, and projection | 26 | every state, resolver precedence, fixed/obsolete/dismissed/reopened, per-destination projection, conservative cross-destination fold, mismatches, aggregate counts, deterministic digests |
 | Application ordering, idempotency, replay, cancellation, and races | 34 | active-before-resolution, mutation head guards, double snapshot head guard, read-after-write, per-surface completeness, missing durable evidence, resolved omission, duplicate same-head, newer-head supersession, partial mutations, retry convergence, PR close/reopen |
 | Adapters and provider error mapping | 18 | pagination, parent review id/URL, resolver identity, create/update review, status-card upsert, 401/403/404/409/422, malformed response, rate limit |
-| Workflow, composition, public API, and schema contracts | 8 | shared concurrency key, bot guard, permissions, trigger contract, composition wiring, API declarations, package exports |
+| Workflow, composition, public API, and schema contracts | 9 | shared concurrency key, bot guard, permissions, trigger contract, strict finding/resolution schema, composition wiring, API declarations, package exports |
 | UI/UX, localization, accessibility, links, and sanitization | 16 | pending, active, clean, failed, partial, superseded, historical snapshot, en/es/fallback, narrow content, markers, mentions, unsafe Markdown |
 | Integration, security, migration, and live-shaped replay | 12 | PR #358 replay, new PR lifecycle, multiple reviews, overflow/unanchored, manual resolve/unresolve, identity rotation, duplicate card repair, dry-run/fork trust |
-| **Total** | **114** | No double counting |
+| **Total** | **115** | No double counting |
 
 Coverage requirements:
 
@@ -1073,6 +1076,9 @@ examples should reuse the same fixtures as presentation tests where practical.
     remains truthful and the next run repairs the discovered drift.
 17. Given duplicate same-head workflows, then shared workflow concurrency and
     application idempotency prevent duplicate reviews/comments.
+18. Given a response that omits a required nullable finding property or uses a
+    removed resolution field, then strict native/local validation rejects the
+    whole response and no finding lifecycle mutation runs.
 18. Given malformed or ambiguous bot-owned state, then the projection is
     unknown, no unsafe mutation occurs, and the Check fails with recovery
     guidance.

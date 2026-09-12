@@ -106,7 +106,8 @@ page.
    selection policy.
 2. A PR-specific trigger without a verified canonical PR performs no model call,
    publication, resolution, or autofix.
-3. Omitted findings are never eligible for `resolved_finding_ids`.
+3. Omitted findings are never eligible for `resolved_findings`; each eligible
+   resolution must carry an exact retained id plus `fixed` or `obsolete`.
 4. Partial diff/context cannot yield a whole-review `clean` state.
 5. At most two independent provider detail requests are in flight.
 6. Query values and retained content remain sanitized and bounded.

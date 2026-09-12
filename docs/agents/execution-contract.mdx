@@ -31,7 +31,7 @@ The runtime creates one complete `AgentExecutionPlan`. A compile-time exhaustive
 
 All roles deny agent-tool network, approval escalation, MCP, plugins, subagents, session persistence, Git credentials, and ambient repository/user provider configuration. Only `fixer` receives workspace write access; trusted Copilot code remains responsible for validation, commit, push, publication, and GitHub mutation.
 
-The hard maxima are 15 minutes, 512 KiB of prompt bytes, and 4 MiB of combined process output. Structured tasks declare a JSON Schema. Copilot validates structured responses locally and also passes a compatible managed schema to Codex. Invalid, oversized, or prose-wrapped JSON is rejected.
+The hard maxima are 15 minutes, 512 KiB of prompt bytes, and 4 MiB of combined process output. Structured tasks declare a JSON Schema. Before Codex starts, Copilot requires a closed object schema in which every property is required, optional values are nullable, nested objects reject additional properties, and arrays define their items. Copilot then validates the returned response locally as well. An incompatible contract, invalid or oversized output, and prose-wrapped JSON are rejected; removed response shapes have no legacy conversion path.
 
 Each invocation emits bounded lifecycle observations for plan start, admitted
 preflight, and terminal execution. They include only provider, capability,

@@ -4,10 +4,12 @@ import {
     type ProviderExecutionPolicy,
     type ProviderExecutionPolicyInput,
 } from './provider_execution_policy';
+import { assertStrictOutputSchema } from './strict_output_schema_policy';
 
 export function buildCodexExecutionPolicy(input: ProviderExecutionPolicyInput): ProviderExecutionPolicy {
     const { configuration } = input;
     if (configuration.provider !== 'codex') throw new Error('Codex policy requires Codex configuration.');
+    if (input.outputSchema) assertStrictOutputSchema(input.outputSchema);
     const workspaceMode = workspaceModeForCapability(input.capability);
     const outputSchemaPath = input.outputSchema
         ? managedArtifactPath(input.runtimeDirectory, 'response.schema.json')

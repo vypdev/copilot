@@ -25,7 +25,7 @@ describe('getBugbotPrompt', () => {
         expect(prompt).toContain('(No previous findings.)');
         expect(prompt).toContain('Context coverage');
         expect(prompt).toContain('findings');
-        expect(prompt).toContain('resolved_finding_ids');
+        expect(prompt).toContain('resolved_findings');
         expect(prompt).not.toContain('{{');
     });
 });

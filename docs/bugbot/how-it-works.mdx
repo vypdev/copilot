@@ -59,19 +59,25 @@ This page describes the **internal flow** of Bugbot: how detection runs, how the
 
 3. **Build prompt:** The action builds a prompt for the configured agent's analysis role with repository context, hierarchical repository rules, the canonical diff, human discussion, optional ignore patterns (`ai-ignore-files`), and **previously reported findings**. PR `synchronize` and push events with valid Git object ids use the exact `before..after` range. Initial or reopened PR reviews use the canonical PR diff; when no canonical diff exists, on-demand and fallback reviews derive a bounded branch/base or current-commit scope from the read-only checkout. The agent is asked to:
    - **Task 1:** Return only actionable, changed-code defects with a causal explanation, evidence, category, severity, confidence, exact file/line or range, and a practical fix. Findings below 0.70 confidence, style comments, and speculative concerns are excluded.
-   - **Task 2:** Return **resolved_finding_ids**: which of the previous findings are now fixed or no longer apply.
+   - **Task 2:** Return **resolved_findings**: exact retained finding ids paired with `fixed` or `obsolete`. The array is empty when nothing was resolved.
 
 4. **Filter and limit:** The response is validated again locally even when the CLI claims schema support. Secrets are redacted before publication. Unsafe paths, malformed identities, unsupported enum values, low-confidence items, ignored files, and findings below `bugbot-severity` are rejected. Distinct root causes on the same line are retained; semantic duplicates are removed. Findings are ranked by severity and confidence before `bugbot-comment-limit` is applied.
 
 5. **Publish active findings:** The PR head SHA is checked before analysis and again immediately before publication. Superseded runs exit successfully without publishing or resolving anything. For issue-only work, each finding is added or updated as an issue comment. For a PR, Bugbot creates **one historical review snapshot** with child line/range or file-level comments; it does not add a duplicate finding comment in the PR conversation. Existing findings are updated in place and overflow remains in the snapshot while still contributing to current aggregate counts. When reopening a finding, the open marker is stored before the native thread is reopened, so an interrupted run cannot falsely claim a completed transition.
 
-6. **Mark resolved:** For each existing finding whose id is in
-   `resolved_finding_ids`, the action first verifies that the finding was among
-   the retained previous findings for this run. Omitted history is never
+6. **Mark resolved:** For each existing finding represented by an exact
+   `{ id, resolution }` entry in `resolved_findings`, the action first verifies
+   that the finding was among the retained previous findings for this run.
+   Omitted history is never
    resolution-eligible. It then **updates** the stored finding marker with
    `resolved: true` and its reason and **resolves the PR review thread** when
    applicable. Resolution runs only after active publication succeeds. A retry
    discovers and repairs either half of an interrupted transition.
+
+   This is a strict initial contract: every response includes both top-level
+   arrays and every finding field, using `null` for unavailable optional values.
+   Removed resolution keys are rejected; there is no legacy conversion path.
+   If one id receives conflicting lifecycle classifications, it is not resolved.
 
 7. **Re-read and project:** After mutations, Bugbot verifies the PR head, re-reads linked-issue findings, reviews, child comments, native thread facts, and the PR conversation concurrently, and then verifies the head again. If the head changed while those reads were in flight, the whole snapshot is discarded as superseded. Each surface records whether its read was verified, failed, or not applicable, and each non-clean issue and PR destination must be observed independently; one visible or clean destination cannot hide another that is open, unverifiable, or missing. Pure lifecycle, provider-projection, and reconciliation-plan policies derive `open`, `reopened`, `fixed`, `obsolete`, `dismissed`, `verification-required`, or `unknown`. A dedicated presentation use case then updates at most 20 affected historical review blocks per run with bounded concurrency, upserts the oldest trusted **Bugbot status** card, and feeds the Result, lifecycle labels, Job Summary, Check Run, and telemetry. Missing or malformed owned evidence fails closed; it is never presented as clean. User-facing PR, commit, run, review, and finding links come only from authenticated provider adapters. Finding links are accepted only when they belong to the same HTTPS server and repository, including GitHub Enterprise installations.
 

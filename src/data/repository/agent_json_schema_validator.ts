@@ -13,12 +13,22 @@ export function assertAgentResponseSchema(value: unknown, schema: JsonSchema, pa
 }
 
 function assertType(value: unknown, expected: unknown, path: string): void {
-    if (typeof expected !== 'string') return;
-    const valid = expected === 'object' ? isObject(value)
-        : expected === 'array' ? Array.isArray(value)
-            : expected === 'integer' ? typeof value === 'number' && Number.isInteger(value)
-                : typeof value === expected;
-    if (!valid) throw new Error(`Agent response schema violation at ${path}: expected ${expected}.`);
+    const expectedTypes = typeof expected === 'string'
+        ? [expected]
+        : Array.isArray(expected)
+            ? expected.filter((candidate): candidate is string => typeof candidate === 'string')
+            : [];
+    if (expectedTypes.length === 0) return;
+    const valid = expectedTypes.some(type => matchesType(value, type));
+    if (!valid) throw new Error(`Agent response schema violation at ${path}: expected ${expectedTypes.join(' or ')}.`);
+}
+
+function matchesType(value: unknown, expected: string): boolean {
+    if (expected === 'null') return value === null;
+    if (expected === 'object') return isObject(value);
+    if (expected === 'array') return Array.isArray(value);
+    if (expected === 'integer') return typeof value === 'number' && Number.isInteger(value);
+    return typeof value === expected;
 }
 
 function validateString(value: string, schema: JsonSchema, path: string): void {
