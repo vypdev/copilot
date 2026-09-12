@@ -4,6 +4,7 @@ import { logDebugInfo, logError, logInfo } from "../../../utils/logger";
 import { tagReference, tagReferencePath } from "../release_tag_policy";
 import type { RepositoryTagPort } from "../../../application/ports/repository_release_ports";
 import { findRepositoryTag, getRepositoryTagSha } from './repository_tag_query';
+import { toApplicationError } from '../../../application/errors/application_error';
 
 export class RepositoryTagRepository implements RepositoryTagPort {
     constructor(private readonly githubClient: GithubClientPort<GithubReleaseClient>) {}
@@ -74,7 +75,7 @@ export class RepositoryTagRepository implements RepositoryTagPort {
             logInfo(`Created tag '${tag}' in repository ${owner}/${repository} from branch '${branch}'`);
             return ref.object.sha;
         } catch (error) {
-            logError(`Error creating tag '${tag}': ${JSON.stringify(error, null, 2)}`);
+            logError(toApplicationError(error, 'provider.unavailable', `Unable to create tag '${tag}'.`));
             throw error;
         }
     };

@@ -1,6 +1,7 @@
 import type { GithubClientPort } from '../../../infrastructure/github/ports/github_client_provider_port';
 import type { GithubIssueTitleClient } from '../../../infrastructure/github/ports/github_issue_provider_ports';
 import { logDebugInfo, logError } from '../../../utils/logger';
+import { toApplicationError } from '../../../application/errors/application_error';
 
 export async function updateIssueTitle(
     client: GithubClientPort<GithubIssueTitleClient>,
@@ -21,7 +22,7 @@ export async function withTitleUpdateLogging(update: () => Promise<string | unde
     try {
         return await update();
     } catch (error) {
-        logError(`Failed to check or update issue title: ${error}`);
+        logError(toApplicationError(error, 'provider.unavailable', 'Unable to check or update the issue title.'));
         throw error;
     }
 }

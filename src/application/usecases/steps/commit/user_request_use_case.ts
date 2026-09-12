@@ -16,6 +16,7 @@ import { PROJECT_CONTEXT_INSTRUCTION } from "../../../../utils/project_context_i
 import { sanitizeUserCommentForPrompt } from "./bugbot/sanitize_user_comment_for_prompt";
 import type { GitCommitPort } from '../../../ports/git_ports';
 import { finalizeWorkspaceMutation, prepareWorkspaceMutation } from './workspace_mutation_guard';
+import { ApplicationError, toApplicationError } from '../../../errors/application_error';
 
 const TASK_ID = "DoUserRequestUseCase";
 
@@ -59,7 +60,7 @@ export class DoUserRequestUseCase implements ParamUseCase<DoUserRequestParam, Re
                 token: execution.tokens.token,
             });
         } catch (error) {
-            return [failure(error instanceof Error ? error.message : String(error))];
+            return [failure(error)];
         }
 
         const baseBranch =
@@ -90,7 +91,7 @@ export class DoUserRequestUseCase implements ParamUseCase<DoUserRequestParam, Re
                     id: this.taskId,
                     success: false,
                     executed: true,
-                    errors: ["Configured build agent returned no response."],
+                    errors: [new ApplicationError('agent.failed', "Configured build agent returned no response.")],
                 })
             );
             return results;
@@ -104,7 +105,7 @@ export class DoUserRequestUseCase implements ParamUseCase<DoUserRequestParam, Re
                 'User-request implementation',
             ));
         } catch (error) {
-            return [failure(error instanceof Error ? error.message : String(error))];
+            return [failure(error)];
         }
 
         results.push(new Result({
@@ -122,12 +123,13 @@ export class DoUserRequestUseCase implements ParamUseCase<DoUserRequestParam, Re
     }
 }
 
-function failure(message: string): Result {
-    logError(message);
+function failure(error: unknown): Result {
+    const semanticError = toApplicationError(error, 'workflow.failed', 'User-request implementation failed.');
+    logError(semanticError);
     return new Result({
         id: TASK_ID,
         success: false,
         executed: true,
-        errors: [message],
+        errors: [semanticError],
     });
 }

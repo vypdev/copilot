@@ -47,6 +47,7 @@ import { Result } from "../../../data/model/result";
 import type { ParamUseCase } from "../base/param_usecase";
 import { projectDeploymentLabels } from "../../policies/deployment_lifecycle_policy";
 import { sanitizePublishedError } from "../../policies/github_comment_publication_policy";
+import { ApplicationError, toApplicationError } from "../../errors/application_error";
 
 export interface DeploymentOrchestrationDependencies {
   readonly pullRequests: ManagedPullRequestPort;
@@ -83,7 +84,7 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
         success: false,
         executed: true,
         steps: ["Deployment orchestration is blocked. No unsafe transition was performed."],
-        errors: [error],
+        errors: [toApplicationError(error, 'workflow.failed', 'Deployment orchestration failed.')],
       })];
     }
   }
@@ -92,7 +93,7 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
     const existing = execution.currentConfiguration.deploymentOrchestration;
     if (existing) {
       if (existing.version !== execution.singleAction.version) {
-        throw new Error(`Issue already owns deployment operation ${existing.operationId} for version ${existing.version}.`);
+        throw new ApplicationError('workflow.stale', `Issue already owns deployment operation ${existing.operationId} for version ${existing.version}.`);
       }
       if (existing.phase === "blocked"
           && (!existing.lastFailure?.retryable
@@ -123,7 +124,7 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
     const sourceBranch = kind === "release"
       ? execution.currentConfiguration.releaseBranch
       : execution.currentConfiguration.hotfixBranch;
-    if (!sourceBranch) throw new Error(`No prepared ${kind} branch is stored on the launcher issue.`);
+    if (!sourceBranch) throw new ApplicationError('workflow.stale', `No prepared ${kind} branch is stored on the launcher issue.`);
     const sourceSha = await this.dependencies.git.getBranchSha(
       execution.owner, execution.repo, sourceBranch, execution.tokens.token,
     );
@@ -166,7 +167,7 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
       configuration: execution.deployment,
       publicationWorkflow: operation.publicationWorkflow,
     });
-    if (errors.length > 0) throw new Error(errors.join(" "));
+    if (errors.length > 0) throw new ApplicationError('validation.invalid-input', errors.join(" "));
     execution.currentConfiguration.deploymentOrchestration = operation;
     if (kind === "release") {
       execution.currentConfiguration.releaseOriginBranch = originBranch;
@@ -204,7 +205,7 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
           "preparing",
           "promotion_pr_pending",
         ).operation;
-    if (pending.phase !== "promotion_pr_pending") throw new Error(`Cannot prepare promotion from ${operation.phase}.`);
+    if (pending.phase !== "promotion_pr_pending") throw new ApplicationError('workflow.stale', `Cannot prepare promotion from ${operation.phase}.`);
     execution.currentConfiguration.deploymentOrchestration = pending;
     await this.persist(execution);
     const configured = await this.configureMergeBehavior(execution, pending, promotion, "promotion", "production");
@@ -217,13 +218,13 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
   private async continue(execution: DeploymentOrchestrationContext): Promise<Result> {
     let operation = requireOperation(execution);
     const pullRequestNumber = execution.pullRequest.number;
-    if (pullRequestNumber < 1) throw new Error("The continuation event has no pull request number.");
+    if (pullRequestNumber < 1) throw new ApplicationError('workflow.invalid-event', "The continuation event has no pull request number.");
     const pullRequest = await this.dependencies.pullRequests.getPullRequest(
       execution.owner, execution.repo, pullRequestNumber, execution.tokens.token,
     );
     const identity = parseManagedPullRequestMarker(pullRequest.body);
     if (!identity || identity.operationId !== operation.operationId || identity.issue !== execution.singleAction.issue) {
-      throw new Error(`PR #${pullRequest.number} is not owned by deployment operation ${operation.operationId}.`);
+      throw new ApplicationError('workflow.stale', `PR #${pullRequest.number} is not owned by deployment operation ${operation.operationId}.`);
     }
     if (operation.phase === "blocked") {
       const previousPhase = operation.lastFailure?.previousPhase;
@@ -243,7 +244,7 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
       }
     }
     if (pullRequest.repositoryFullName.toLowerCase() !== `${execution.owner}/${execution.repo}`.toLowerCase()) {
-      throw new Error("Cross-repository deployment continuation was rejected.");
+      throw new ApplicationError('authorization.denied', "Cross-repository deployment continuation was rejected.");
     }
     if (pullRequest.state !== "closed") return success(`PR #${pullRequest.number} is still open; no transition was applied.`);
     if (!pullRequest.merged) {
@@ -316,9 +317,9 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
       return success(`Publication for ${operation.tag} was already verified; duplicate notification ignored.`);
     }
     if (operation.phase !== "published" && operation.phase !== "publishing" && operation.phase !== "promoted") {
-      throw new Error(`Publication cannot advance from phase ${operation.phase}.`);
+      throw new ApplicationError('workflow.stale', `Publication cannot advance from phase ${operation.phase}.`);
     }
-    if (!operation.productionSha) throw new Error("The accepted production SHA is missing.");
+    if (!operation.productionSha) throw new ApplicationError('workflow.stale', "The accepted production SHA is missing.");
     const reachable = await this.dependencies.git.isCommitReachable(
       execution.owner, execution.repo, operation.productionBranch, operation.productionSha, execution.tokens.token,
     );
@@ -359,7 +360,9 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
         success: false,
         executed: true,
         steps: [`Deployment ${operation.operationId} remains blocked; its original failure classification was preserved.`],
-        errors: [new Error(operation.lastFailure?.message ?? "Deployment remains blocked.")],
+        errors: [new ApplicationError('workflow.failed', operation.lastFailure?.message ?? "Deployment remains blocked.", {
+          retryable: operation.lastFailure?.retryable ?? false,
+        })],
       });
     }
     const category = operation.phase === "preparing" || operation.phase === "promotion_pr_pending"
@@ -411,8 +414,8 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
         await this.dependencies.issues.closeIssue(execution.owner, execution.repo, execution.singleAction.issue, execution.tokens.token);
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return await this.block(execution, operation, "cleanup", message, true);
+      const semanticError = toApplicationError(error, 'workflow.failed', 'Deployment cleanup failed.');
+      return await this.block(execution, operation, "cleanup", semanticError.message, true, semanticError);
     }
     const completed: DeploymentOperationSnapshot = { ...operation, phase: "completed", lastFailure: null };
     execution.currentConfiguration.deploymentOrchestration = completed;
@@ -519,7 +522,7 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
       token: execution.tokens.token,
     } as const;
     const existing = await this.dependencies.pullRequests.findManagedPullRequests(query);
-    if (existing.length > 1) throw new Error(`Multiple managed ${phase} PRs match operation ${operation.operationId}.`);
+    if (existing.length > 1) throw new ApplicationError('provider.conflict', `Multiple managed ${phase} PRs match operation ${operation.operationId}.`);
     if (existing[0]) return existing[0];
     const context = presentationContext(execution);
     const content = phase === "promotion"
@@ -667,13 +670,20 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
     category: "promotion" | "publication" | "reconciliation" | "cleanup",
     message: string,
     retryable: boolean,
+    semanticError?: ApplicationError,
   ): Promise<Result> {
     const blocked = blockDeploymentOperation(operation, category, message, retryable);
     execution.currentConfiguration.deploymentOrchestration = blocked;
     await this.persist(execution);
     await this.publishDashboard(execution, blocked);
     await this.publishMilestone(execution, blocked, "reconciliation-blocked", `❌ Deployment blocked: ${blocked.lastFailure?.message}`);
-    return new Result({ id: TASK_ID, success: false, executed: true, steps: [message], errors: [new Error(message)] });
+    return new Result({
+      id: TASK_ID,
+      success: false,
+      executed: true,
+      steps: [message],
+      errors: [semanticError ?? new ApplicationError('workflow.failed', message, { retryable })],
+    });
   }
 
   private async persist(execution: DeploymentOrchestrationContext): Promise<void> {
@@ -686,7 +696,7 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
     };
     const actual = await this.dependencies.state.load(query);
     if (!sameCheckpoint(actual, expected)) {
-      throw new Error("Concurrent deployment state change detected; reload the launcher issue and retry.");
+      throw new ApplicationError('workflow.stale', "Concurrent deployment state change detected; reload the launcher issue and retry.");
     }
     await this.dependencies.state.save({ ...query, state: execution.currentConfiguration });
     const operation = execution.currentConfiguration.deploymentOrchestration;
@@ -734,16 +744,16 @@ export class DeploymentOrchestrationUseCase implements ParamUseCase<DeploymentOr
 
 function requireOperation(execution: DeploymentOrchestrationContext): DeploymentOperationSnapshot {
   const operation = execution.currentConfiguration.deploymentOrchestration;
-  if (!operation) throw new Error("No durable deployment operation exists on the launcher issue.");
+  if (!operation) throw new ApplicationError('workflow.invalid-event', "No durable deployment operation exists on the launcher issue.");
   if (!execution.singleAction.operationId) {
-    throw new Error("single-action-operation-id is required for a durable deployment continuation.");
+    throw new ApplicationError('validation.invalid-input', "single-action-operation-id is required for a durable deployment continuation.");
   }
   if (execution.singleAction.operationId && execution.singleAction.operationId !== operation.operationId) {
-    throw new Error(`Deployment operation mismatch: expected ${operation.operationId}, received ${execution.singleAction.operationId}.`);
+    throw new ApplicationError('workflow.stale', `Deployment operation mismatch: expected ${operation.operationId}, received ${execution.singleAction.operationId}.`);
   }
   if ((execution.singleAction.isPublishedDeploymentAction || execution.singleAction.isFailedDeploymentAction)
       && execution.singleAction.version !== operation.version) {
-    throw new Error(`Deployment version mismatch: expected ${operation.version}, received ${execution.singleAction.version || "empty"}.`);
+    throw new ApplicationError('workflow.stale', `Deployment version mismatch: expected ${operation.version}, received ${execution.singleAction.version || "empty"}.`);
   }
   return operation;
 }
@@ -753,7 +763,7 @@ function deploymentKind(execution: DeploymentOrchestrationContext): "release" | 
   if (execution.currentConfiguration.releaseBranch && !execution.currentConfiguration.hotfixBranch) return "release";
   if (execution.labels.isHotfix) return "hotfix";
   if (execution.labels.isRelease) return "release";
-  throw new Error("The launcher issue does not identify exactly one release or hotfix source branch.");
+  throw new ApplicationError('validation.invalid-input', "The launcher issue does not identify exactly one release or hotfix source branch.");
 }
 
 function reconciliationTargetRole(
@@ -789,7 +799,13 @@ function success(step: string): Result {
 
 function blockedResult(operation: DeploymentOperationSnapshot, fallback: string): Result {
   const message = operation.lastFailure?.message ?? fallback;
-  return new Result({ id: TASK_ID, success: false, executed: true, steps: [message], errors: [new Error(message)] });
+  return new Result({
+    id: TASK_ID,
+    success: false,
+    executed: true,
+    steps: [message],
+    errors: [new ApplicationError('workflow.failed', message, { retryable: operation.lastFailure?.retryable ?? false })],
+  });
 }
 
 function sameCheckpoint(

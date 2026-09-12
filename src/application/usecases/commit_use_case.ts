@@ -5,6 +5,7 @@ import { getTaskEmoji } from "../../utils/task_emoji";
 import { ParamUseCase } from "./base/param_usecase";
 import { CheckProgressUseCase } from "./actions/check_progress_use_case";
 import type { ActorAuthorizationPort } from "../ports/actor_authorization_ports";
+import { toApplicationError } from "../errors/application_error";
 
 export class CommitUseCase implements ParamUseCase<Execution, Result[]> {
     taskId: string = 'CommitUseCase';
@@ -47,7 +48,8 @@ export class CommitUseCase implements ParamUseCase<Execution, Result[]> {
                 logInfo('Skipping push agent analysis because ai-members-only is enabled and the actor is not authorized.');
             }
         } catch (error) {
-            logError(error);
+            const semanticError = toApplicationError(error, 'workflow.failed', 'Commit processing failed.');
+            logError(semanticError);
             results.push(
                 new Result({
                     id: this.taskId,
@@ -56,7 +58,7 @@ export class CommitUseCase implements ParamUseCase<Execution, Result[]> {
                     steps: [
                         `Error processing the commits.`,
                     ],
-                    errors: [error],
+                    errors: [semanticError],
                 })
             )
         }

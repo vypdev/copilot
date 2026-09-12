@@ -40,7 +40,7 @@ export async function runSetupExecution(execution: Execution, dependencies: Setu
 async function loadTokenUser(execution: Execution, organizationSetupPort: ExecutionOrganizationSetupPort): Promise<void> {
     if (execution.tokenUser !== undefined) return;
     execution.tokenUser = await organizationSetupPort.getUserFromToken(execution.tokens.token);
-    if (!execution.tokenUser) throw new ApplicationError('Failed to get user from token', 'authorization');
+    if (!execution.tokenUser) throw new ApplicationError('authorization.credential-invalid', 'Failed to get user from token.');
 }
 
 async function loadPreviousConfiguration(execution: Execution, configurationPort: ExecutionConfigurationPort) {

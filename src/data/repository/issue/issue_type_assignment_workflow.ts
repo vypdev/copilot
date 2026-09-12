@@ -3,6 +3,7 @@ import type { Labels } from "../../model/labels";
 import type { IssueTypes } from "../../model/issue_types";
 import type { GithubGraphqlTransportClient } from "../../../infrastructure/github/ports/github_graphql_transport_port";
 import { selectIssueType } from "./issue_type_assignment_policy";
+import { toApplicationError } from '../../../application/errors/application_error';
 
 type GetIssueId = (owner: string, repository: string, issueNumber: number, token: string) => Promise<string>;
 
@@ -86,7 +87,7 @@ async function createIssueType(
     });
     return result.createIssueType.issueType.id;
   } catch (error) {
-    logError(`Failed to create issue type "${name}": ${error}`);
+    logError(toApplicationError(error, 'provider.unavailable', `Unable to create issue type "${name}".`));
     logDebugInfo("Falling back to using labels for issue type classification");
     throw new IssueTypeCreationSkippedError();
   }

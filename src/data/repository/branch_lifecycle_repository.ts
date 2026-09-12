@@ -3,6 +3,7 @@ import type { GithubBranchClient } from '../../infrastructure/github/ports/githu
 import type { GithubClientPort } from '../../infrastructure/github/ports/github_client_provider_port';
 import { logDebugInfo, logError } from '../../utils/logger';
 import { requireArrayPage } from './github/github_pagination_policy';
+import { toApplicationError } from '../../application/errors/application_error';
 
 export class BranchLifecycleRepository implements BranchLifecyclePort {
     constructor(private readonly branchClient: GithubClientPort<GithubBranchClient>) {}
@@ -17,7 +18,7 @@ export class BranchLifecycleRepository implements BranchLifecyclePort {
             logDebugInfo(`Successfully deleted branch: ${branch}`);
             return true;
         } catch (error) {
-            logError(`Error processing branch ${branch}: ${error}`);
+            logError(toApplicationError(error, 'provider.unavailable', `Unable to delete branch ${branch}.`));
             throw error;
         }
     };

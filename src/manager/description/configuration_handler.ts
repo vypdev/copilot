@@ -4,6 +4,7 @@ import type { ExecutionConfigurationQuery } from "../../application/ports/execut
 import { logError } from "../../utils/logger";
 import { IssueContentInterface } from "./base/issue_content_interface";
 import { buildConfigurationPayload } from './configuration_payload_policy';
+import { toApplicationError } from '../../application/errors/application_error';
 
 
 export class ConfigurationHandler extends IssueContentInterface {
@@ -35,7 +36,7 @@ export class ConfigurationHandler extends IssueContentInterface {
             const branchConfig = requireCurrentConfigurationPayload(JSON.parse(config));
             return new Config(branchConfig);
         } catch (error) {
-            logError(`Error reading issue configuration: ${error}`);
+            logError(toApplicationError(error, 'configuration.invalid', 'Unable to read issue configuration.'));
             throw error;
         }
     }

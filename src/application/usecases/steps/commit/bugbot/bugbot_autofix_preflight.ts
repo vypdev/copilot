@@ -8,6 +8,7 @@ import { buildBugbotFixPrompt } from './build_bugbot_fix_prompt';
 import { loadBugbotContext } from './load_bugbot_context_use_case';
 import { logDebugInfo, logError } from '../../../../ports/logging_ports';
 import { prepareWorkspaceMutation } from '../workspace_mutation_guard';
+import { ApplicationError, toApplicationError } from '../../../../errors/application_error';
 
 export type BugbotAutofixPreflight = {
     context: BugbotContext;
@@ -34,9 +35,9 @@ export async function prepareBugbotAutofix(
             token: execution.tokens.token,
         });
     } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        logError(message);
-        return [failure(message)];
+        const semanticError = toApplicationError(error, 'workflow.failed', 'Bugbot autofix preflight failed.');
+        logError(semanticError);
+        return [failure(semanticError)];
     }
     const context = providedContext ?? await loadBugbotContext(execution, branchOverride ? { branchOverride } : undefined, contextPorts);
     const idsToFix = selectUnresolvedFindingIds(context, targetFindingIds);
@@ -63,6 +64,6 @@ function selectUnresolvedFindingIds(context: BugbotContext, targetFindingIds: st
     return targetFindingIds.filter(id => validIds.has(id));
 }
 
-function failure(message: string): Result {
-    return new Result({ id: 'BugbotAutofixUseCase', success: false, executed: true, errors: [message] });
+function failure(semanticError: ApplicationError): Result {
+    return new Result({ id: 'BugbotAutofixUseCase', success: false, executed: true, errors: [semanticError] });
 }

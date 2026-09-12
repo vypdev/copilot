@@ -6,6 +6,7 @@ import { SizeThresholds } from '../model/size_thresholds';
 import { classifyChangeSize } from './branch_change_size_policy';
 import type { SizeCategoryResult } from './branch_change_size_policy';
 import type { BranchSyncComparisonPort } from '../../application/ports/branch_sync_ports';
+import { toApplicationError } from '../../application/errors/application_error';
 
 export interface BranchComparisonFile {
     filename: string;
@@ -100,7 +101,7 @@ export class BranchCompareRepository implements BranchSyncComparisonPort {
             }),
         };
         } catch (error) {
-            logError(`Error comparing branches: ${error}`);
+            logError(toApplicationError(error, 'provider.unavailable', 'Unable to compare branches.'));
             throw error;
         }
     };
@@ -129,7 +130,7 @@ export class BranchCompareRepository implements BranchSyncComparisonPort {
                 totalCommits: headBranchChanges.totalCommits,
             }, sizeThresholds, labels);
         } catch (error) {
-            logError(`Error comparing branches: ${error}`);
+            logError(toApplicationError(error, 'provider.unavailable', 'Unable to compare branches.'));
             throw error;
         }
     };

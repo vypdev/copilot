@@ -7,10 +7,11 @@
       "status": "implemented",
       "scope": "Release and hotfix promotion, publication, reconciliation, and durable recovery",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-11",
+      "lastVerified": "2026-09-12",
       "specs": [
         "specs/configurable-release-orchestration.md",
-        "specs/configurable-release-orchestration-traceability.md"
+        "specs/configurable-release-orchestration-traceability.md",
+        "specs/deployment-concurrency-and-state-fencing.md"
       ],
       "workflows": [
         ".github/workflows/release_workflow.yml",
@@ -115,9 +116,10 @@
       "status": "as-built-baseline",
       "scope": "Shared GitHub Action lifecycle from event admission through durable user-facing results",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-11",
+      "lastVerified": "2026-09-12",
       "specs": [
-        "specs/execution-admission-queue-and-publication.md"
+        "specs/execution-admission-queue-and-publication.md",
+        "specs/execution-error-and-context-hardening.md"
       ],
       "workflows": [
         ".github/workflows/copilot_issue.yml",
@@ -134,20 +136,85 @@
         "src/actions/main_run_lifecycle.ts",
         "src/actions/main_run_route.ts",
         "src/actions/github_action_completion.ts",
+        "src/api.ts",
+        "src/data/model/application_error.ts",
+        "src/application/errors/application_error.ts",
+        "src/application/errors/application_error_context.ts",
+        "src/application/policies/application_error_presentation_policy.ts",
         "src/application/policies/github_execution_admission_policy.ts",
         "src/application/policies/workflow_queue_policy.ts",
         "src/application/policies/result_publication_policy.ts"
       ],
       "tests": [
+        "src/__tests__/api.test.ts",
         "src/actions/__tests__/github_action.test.ts",
         "src/actions/__tests__/github_action_completion.test.ts",
+        "src/application/errors/__tests__/application_error.test.ts",
+        "src/application/policies/__tests__/application_error_presentation_policy.test.ts",
+        "src/architecture/__tests__/execution_import_ratchet.test.ts",
+        "src/architecture/__tests__/raw_error_logging_boundaries.test.ts",
         "src/application/usecases/execution/__tests__/resolve_github_execution_admission_use_case.test.ts",
         "src/application/usecases/workflow/__tests__/wait_for_previous_workflow_runs_use_case.test.ts"
       ],
       "documentation": [
         "docs/overview.mdx",
+        "docs/bugbot/programmatic-api.mdx",
+        "docs/security-operations/operations/error-reference.mdx",
         "docs/security-operations/operations/troubleshooting.mdx",
         "docs/development/architecture.mdx"
+      ]
+    },
+    {
+      "id": "architecture-quality-hardening",
+      "title": "Architecture quality and scalability hardening",
+      "status": "proposed",
+      "scope": "Close verified concurrency, error-contract, context-coupling, fan-out, setup/doctor, and provider-policy risks in dependency order",
+      "owner": "Copilot maintainers",
+      "lastVerified": "2026-09-12",
+      "specs": [
+        "specs/architecture-quality-and-scalability-hardening.md"
+      ],
+      "workflows": [
+        ".github/workflows/release_workflow.yml",
+        ".github/workflows/hotfix_workflow.yml",
+        ".github/workflows/copilot_deployment_orchestration.yml"
+      ],
+      "entrypoints": [
+        "src/actions/github_action.ts",
+        "src/cli/commands/setup.ts",
+        "src/cli/commands/doctor.ts"
+      ],
+      "code": [
+        "src/application/errors/application_error.ts",
+        "src/application/errors/application_error_context.ts",
+        "src/application/policies/application_error_presentation_policy.ts",
+        "src/architecture/execution_import_baseline.json",
+        "src/api.ts",
+        "src/data/model/execution.ts",
+        "src/application/usecases/actions/deployment_orchestration_use_case.ts",
+        "src/application/usecases/steps/commit/bugbot/load_bugbot_context_use_case.ts",
+        "src/application/usecases/setup/doctor_use_case.ts",
+        "src/cli/setup_prompt_adapter.ts",
+        "src/data/repository/agent_execution_policy.ts"
+      ],
+      "tests": [
+        "src/__tests__/api.test.ts",
+        "src/application/errors/__tests__/application_error.test.ts",
+        "src/application/policies/__tests__/application_error_presentation_policy.test.ts",
+        "src/architecture/__tests__/execution_import_ratchet.test.ts",
+        "src/architecture/__tests__/raw_error_logging_boundaries.test.ts",
+        "src/application/usecases/actions/__tests__/deployment_orchestration_use_case.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/load_bugbot_context_use_case.test.ts",
+        "src/application/usecases/setup/__tests__/doctor_use_case.test.ts",
+        "src/cli/__tests__/setup_prompt_adapter.test.ts",
+        "src/data/repository/__tests__/agent_execution_policy.test.ts"
+      ],
+      "documentation": [
+        "docs/dependency-rules.md",
+        "docs/development/architecture.mdx",
+        "docs/bugbot/programmatic-api.mdx",
+        "docs/security-operations/operations/error-reference.mdx",
+        "docs/security-operations/operations/troubleshooting.mdx"
       ]
     },
     {
@@ -158,7 +225,8 @@
       "owner": "Copilot maintainers",
       "lastVerified": "2026-09-11",
       "specs": [
-        "specs/setup-configuration-credentials-and-doctor.md"
+        "specs/setup-configuration-credentials-and-doctor.md",
+        "specs/setup-doctor-architecture-hardening.md"
       ],
       "workflows": [
         "setup/workflows/agent-cli-provisioning.yml",
@@ -273,7 +341,8 @@
       "owner": "Copilot maintainers",
       "lastVerified": "2026-09-11",
       "specs": [
-        "specs/bugbot-analysis-publication-and-autofix.md"
+        "specs/bugbot-analysis-publication-and-autofix.md",
+        "specs/bugbot-context-selection-and-budgeting.md"
       ],
       "workflows": [
         ".github/workflows/copilot_commit.yml",
@@ -384,7 +453,8 @@
       "owner": "Copilot maintainers",
       "lastVerified": "2026-09-11",
       "specs": [
-        "specs/agent-runtime-provider-and-model-routing.md"
+        "specs/agent-runtime-provider-and-model-routing.md",
+        "specs/agent-execution-policy-hardening.md"
       ],
       "workflows": [
         "setup/workflows/agent-cli-provisioning.yml",

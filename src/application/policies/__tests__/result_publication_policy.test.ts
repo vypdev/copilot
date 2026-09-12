@@ -7,6 +7,7 @@ import {
   resolveResultPublicationIssueNumber,
   resolveResultPublicationPresentation,
 } from '../result_publication_policy';
+import { ApplicationError } from '../../errors/application_error';
 
 const images = {
   issueAutomaticActions: ['issue-auto'],
@@ -102,12 +103,16 @@ describe('result publication policy', () => {
     const sections = renderResultSections([
       new Result({ id: 'plain', steps: ['first', '  '], reminders: ['remember'] }),
       new Result({ id: 'markdown', stepFormat: 'markdown', steps: ['## Heading\n\n1. second'] }),
-      new Result({ id: 'error', errors: [new Error('failure')] }),
+      new Result({ id: 'error', errors: [new ApplicationError('workflow.failed', 'failure')] }),
     ]);
 
     expect(sections.content).toBe('1. first\n\n## Heading\n\n1. second\n');
     expect(sections.footer).toContain('1. remember');
-    expect(sections.errors).toContain('1.\n```\nfailure\n```');
+    expect(sections.errors).toContain('**Impact:** The workflow could not complete the requested operation.');
+    expect(sections.errors).toContain('**Cause (`workflow.failed`):** failure');
+    expect(sections.errors).toContain('**Action:** Inspect the current state and retry the failed step.');
+    expect(sections.errors).toContain('**Retained state:** Existing persisted state');
+    expect(sections.errors).toMatch(/\*\*Reference:\*\* `[0-9a-f-]{36}`/);
   });
 
   it('neutralizes agent-controlled GitHub semantics before publication', () => {
@@ -117,7 +122,7 @@ describe('result publication policy', () => {
         stepFormat: 'markdown',
         steps: ['<!-- hidden -->\n@octocat\n/fix --force'],
         reminders: ['@maintainer /close'],
-        errors: [new Error('token=should-not-become-a-control')],
+        errors: [new ApplicationError('workflow.failed', 'token=should-not-become-a-control')],
       }),
     ]);
 
@@ -129,20 +134,21 @@ describe('result publication policy', () => {
 
   it('redacts credential-like values from infrastructure errors before publication', () => {
     const sections = renderResultSections([
-      new Result({ errors: [new Error('GitHub rejected token=gho_secret-value')] }),
+      new Result({ errors: [new ApplicationError('provider.unavailable', 'GitHub rejected token=gho_secret-value')] }),
     ]);
 
     expect(sections.errors).toContain('token=[redacted]');
     expect(sections.errors).not.toContain('gho_secret-value');
   });
 
-  it('does not create sections from whitespace-only reminders or errors', () => {
+  it('omits empty reminders but still presents semantic recovery details for an empty message', () => {
     const sections = renderResultSections([
-      new Result({ reminders: ['   '], errors: [new Error('\n')] }),
+      new Result({ reminders: ['   '], errors: [new ApplicationError('workflow.failed', '\n')] }),
     ]);
 
     expect(sections.footer).toBe('');
-    expect(sections.errors).toBe('');
+    expect(sections.errors).toContain('**Cause (`workflow.failed`):**');
+    expect(sections.errors).toContain('**Action:**');
   });
 
   it('builds debug content only when enabled and populated', () => {

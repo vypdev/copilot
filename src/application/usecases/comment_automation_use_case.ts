@@ -59,14 +59,14 @@ export async function runCommentAutomation(
       authenticatedUserPort,
     });
   } catch (cause) {
-    const error = new ApplicationError("Comment automation failed.", 'workflow', { cause });
-    logError(error);
+    const semanticError = new ApplicationError('workflow.failed', "Comment automation failed.", { cause });
+    logError(semanticError);
     return [...languageResults, new Result({
         id: options.taskId,
         success: false,
         executed: true,
-        steps: [error.message],
-        errors: [error],
+        steps: [semanticError.message],
+        errors: [semanticError],
       })];
   }
 }

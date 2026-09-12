@@ -12,6 +12,7 @@ import * as actionCompletion from '../github_action_completion';
 import { runGitHubAction, runGitHubActionEntry } from '../github_action';
 import { ACTIONS } from '../../data/model/action_types';
 import { INPUT_KEYS } from '../../application/contracts/input_keys';
+import { ApplicationError } from '../../application/errors/application_error';
 
 jest.mock('@actions/github', () => ({
   context: {
@@ -304,13 +305,13 @@ describe('runGitHubAction', () => {
       return '';
     });
     mockMainRun.mockResolvedValue([
-      new Result({ id: 'a', success: false, executed: true, errors: ['First error'] }),
+      new Result({ id: 'a', success: false, executed: true, errors: [new ApplicationError('workflow.failed', 'First error')] }),
     ]);
 
     await runGitHubAction();
 
     expect(mockPublishInvoke).toHaveBeenCalled();
-    expect(core.setFailed).toHaveBeenCalledWith('First error');
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Cause (workflow.failed): First error'));
   });
 
   it('calls logError when INPUT_VARS_JSON is invalid JSON', async () => {
@@ -320,7 +321,10 @@ describe('runGitHubAction', () => {
 
     await runGitHubAction();
 
-    expect(logError).toHaveBeenCalledWith(expect.stringContaining('INPUT_VARS_JSON'));
+    expect(logError).toHaveBeenCalledWith(expect.objectContaining({
+      code: 'configuration.invalid',
+      message: expect.stringContaining('INPUT_VARS_JSON'),
+    }));
     process.env.INPUT_VARS_JSON = orig;
   });
 });
@@ -349,6 +353,7 @@ describe('runGitHubActionEntry', () => {
   it('converts an unhandled rejection into an action failure without forcing process exit', async () => {
     await runGitHubActionEntry(jest.fn().mockRejectedValue(new Error('entry failed')));
 
-    expect(core.setFailed).toHaveBeenCalledWith('entry failed');
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Cause (workflow.failed): GitHub Action execution failed.'));
+    expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('entry failed'));
   });
 });

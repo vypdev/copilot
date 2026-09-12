@@ -4,7 +4,8 @@
 - Date: 2026-09-11
 - Owners: Copilot maintainers
 - Scope: bounded change analysis, finding identity/publication, authorized autofix, and independent verification
-- Related issues/PRs: Bugbot review-state reconciliation SDD
+- Related issues/PRs: Bugbot review-state reconciliation SDD; architecture
+  quality and scalability hardening SDD
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none for the baseline
 
@@ -58,9 +59,16 @@ comments can also disagree after partial mutations.
   and fail-closed unknown state.
 - Known debt and limitations: model quality is probabilistic; provider APIs can
   make surfaces temporarily unverifiable; comment update budget limits how many
-  historical blocks are refreshed per run; controlled live quality evidence is external.
+  historical blocks are refreshed per run; context loading fans out comments
+  and thread-state requests across every selected open PR before primarily using
+  the first PR; controlled live quality evidence is external.
 - Unknown rationale: earlier prompt wording is not treated as a permanent public contract.
-- Proposed improvements: new model/evaluation policies require benchmark-backed proposals.
+- Proposed improvements: canonical single-PR selection and bounded context
+  loading are specified in
+  [`bugbot-context-selection-and-budgeting.md`](./bugbot-context-selection-and-budgeting.md),
+  under the shared gates in
+  [`architecture-quality-and-scalability-hardening.md`](./architecture-quality-and-scalability-hardening.md).
+  New model/evaluation policies require benchmark-backed proposals.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -73,7 +81,7 @@ comments can also disagree after partial mutations.
 | GitHub | own reviews/threads/checks | adapters | provider facts |
 
 A “review snapshot” is immutable history. A “status card” is the current
-aggregate projection. Finding identity uses compatible provider ID, location
+aggregate projection. Finding identity uses stable provider ID, location
 fingerprint, then unambiguous semantic fingerprint. `unknown` means evidence was
 not verified; it is not clean.
 
@@ -234,12 +242,13 @@ superseded branch review runs; head guards and idempotent writes protect races.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
-Current markers support local identity and compatibility checks before provider
-ID reuse. Old/malformed/unowned evidence cannot silently become clean. New
-identity schema must read or explicitly migrate current markers. Dry run and
-non-blocking unresolved default enable controlled rollout. Rollback disables
-workflow/config inputs; published history remains and incorrect mutations are
-reverted through Git, not deleted invisibly.
+Current code contains marker identity checks, but there are no installed users
+or real persisted findings to preserve. Hardening therefore replaces marker and
+context contracts atomically: removed shapes are invalid, with no compatibility
+reader, translation, migration, or deprecation window. Dry run and non-blocking
+unresolved default enable controlled first use. After real publication, rollback
+must preserve visible history and incorrect mutations are reverted through Git,
+not deleted invisibly.
 
 ## 14. Testing strategy and numeric budget
 
@@ -250,7 +259,7 @@ reverted through Git, not deleted invisibly.
 | Use cases/autofix | 28 | context, publish, verify, commit, re-review |
 | Provider/workflow contracts | 22 | diffs, reviews, threads, checks, ranges |
 | UX/localization/sanitization | 20 | status/finding/overflow/links/Markdown |
-| Integration/security/migration | 20 | E2E lifecycle, injection, credentials, markers |
+| Integration/security/cutover | 20 | E2E lifecycle, injection, credentials, sole marker schema |
 | **Total** | **156** | no double counting |
 
 Global thresholds remain; new pure Bugbot policies SHOULD reach 95% branch
@@ -303,7 +312,7 @@ screen reader, and controlled live model samples.
 ## 19. Definition of Done
 
 - [ ] The 156-case budget, coverage, quality eval, and architecture gates pass.
-- [ ] Stale, replay, partial, unknown, dismissal, and migration cases converge safely.
+- [ ] Stale, replay, partial, unknown, dismissal, and unsupported-schema cases converge safely.
 - [ ] Autofix authority, paths, verification, git, and fresh review are proven.
 - [ ] All five UI states, anchors, links, accessibility, localization, and noise pass.
 - [ ] Workflows, docs, reconciliation SDD, and catalog agree.
@@ -313,6 +322,9 @@ screen reader, and controlled live model samples.
 
 - Primary sources: catalogued Bugbot code, workflows, tests, docs, and evals.
 - Related SDD: `bugbot-review-state-reconciliation.md`.
+- Planned hardening: `bugbot-context-selection-and-budgeting.md` owns canonical
+  PR selection and the provider-request budget; the architecture hardening SDD
+  owns shared sequencing and verification gates.
 - Decision: independent evidence, not fixer assertion, owns resolution.
 - Rejected: guessed anchors, model-only validation, provider-ID-only identity.
 - Follow-up: model-specific quality tuning remains benchmark-governed.

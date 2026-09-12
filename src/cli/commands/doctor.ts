@@ -6,6 +6,7 @@ import { SetupPromptAdapter } from '../setup_prompt_adapter';
 import { createSetupDoctorUseCase } from '../../infrastructure/composition/setup_doctor_composition_root';
 import { loadSetupConfigurationOverrides } from '../setup_config_file';
 import { createDefaultSetupConfiguration, mergeSetupConfiguration } from '../../application/policies/setup_configuration_policy';
+import { toApplicationError } from '../../application/errors/application_error';
 
 export function registerDoctorCommand(program: Command): void {
     program
@@ -35,7 +36,7 @@ export function registerDoctorCommand(program: Command): void {
                 });
                 if (!healthy) process.exitCode = 1;
             } catch (error) {
-                logError(`Doctor failed: ${error instanceof Error ? error.message : String(error)}`);
+                logError(toApplicationError(error, 'workflow.failed', 'Doctor failed.'));
                 process.exitCode = 1;
             } finally {
                 prompt.close();

@@ -4,7 +4,8 @@
 - Date: 2026-09-11
 - Owners: Copilot maintainers
 - Scope: resolve, validate, provision, authenticate, authorize, and execute provider-neutral agent roles
-- Related issues/PRs: comment automation, Bugbot, setup, and PR lifecycle SDDs
+- Related issues/PRs: comment automation, Bugbot, setup, PR lifecycle, and
+  architecture quality and scalability hardening SDDs
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none for the baseline
 
@@ -36,7 +37,7 @@ agents running for read-only tasks.
 
 1. `agent-*` supplies the common tuple; role-specific fields inherit only when blank.
 2. Supported runtimes are `codex`, `opencode`, and experimental `cursor`.
-3. Provider/model formats, compatibility, command tokens, and configured allowlists are validated.
+3. Provider/model formats, runtime support, command tokens, and configured allowlists are validated.
 4. Event/command policy calculates active roles before runtime preparation.
 5. `ai-members-only` may prevent all requested agent runtime preparation for an unauthorized actor.
 6. Provisioning mode (`auto`, `always`, `disabled`) and pinned/checksummed
@@ -53,12 +54,19 @@ agents running for read-only tasks.
 - Intentional contract: complete tuple, no implicit fallback, active-role-only
   preparation, semantic ports, local schema validation, and credential isolation.
 - Known debt and limitations: Cursor remains experimental; provider CLI flags
-  and authentication may change externally; live credential/provisioning checks
-  remain environment-specific; cost estimates are not product guarantees.
+  and authentication may change externally; one central execution policy owns
+  security-sensitive branching for every provider; live
+  credential/provisioning checks remain environment-specific; cost estimates
+  are not product guarantees.
 - Unknown rationale: current default model choice is operational configuration,
   not a permanent architecture decision.
-- Proposed improvements: adding a provider requires a separate compatibility,
-  security, docs, and smoke-test change.
+- Proposed improvements: provider-specific pure execution policies and an
+  exhaustive compile-time dispatcher are specified in
+  [`agent-execution-policy-hardening.md`](./agent-execution-policy-hardening.md),
+  under the shared gates in
+  [`architecture-quality-and-scalability-hardening.md`](./architecture-quality-and-scalability-hardening.md).
+  Adding a provider still requires a separate runtime-support, security, docs,
+  and smoke-test change.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -90,7 +98,7 @@ not merely configured.
 
 ### 4.3 Fixed product/safety invariants
 
-1. Missing/malformed/incompatible tuple or disallowed model fails before execution.
+1. Missing/malformed/unsupported tuple or disallowed model fails before execution.
 2. Command overrides cannot contain unsafe shell structure or secret values.
 3. Read-only roles cannot receive write/network/approval authority beyond their adapter contract.
 4. Agent processes never receive GitHub git credentials.
@@ -98,7 +106,7 @@ not merely configured.
 
 ## 5. Current versus proposed product journey
 
-| Stage | Legacy/unsafe shape | As-built contract | Effect |
+| Stage | Rejected/unsafe shape | As-built contract | Effect |
 |---|---|---|---|
 | Selection | provider implies model | independent qualified model | explicit behavior |
 | Roles | one runtime eagerly prepared | only active role tuples | lower cost/risk |
@@ -165,7 +173,7 @@ active-role-only, credential isolation, and permission modes are not configurabl
 | Boundary | Owns | Must not own/import |
 |---|---|---|
 | Domain | provider/role/config tuple | process/env |
-| Policies | activation, inheritance, compatibility, validation | CLI invocation |
+| Policies | activation, inheritance, runtime support, validation | CLI invocation |
 | Application ports | findings/fixer/language capability requests | provider DTO/flags |
 | Data adapters | provider-neutral capability to CLI client | workflow routing |
 | Infrastructure ports/adapters | executable/process/auth/provisioning | product role policy |
@@ -233,7 +241,7 @@ that require smoke evidence.
 
 There is no legacy provider alias or silent model fallback. Blank role fields
 inherit common fields; invalid explicit values fail. A new provider/model is
-rolled out by updating domain types, compatibility/allowlist policy, adapter,
+rolled out by updating domain types, runtime-support/allowlist policy, adapter,
 setup/workflows, credentials, docs, tests, and controlled smoke evidence.
 Rollback restores the prior tuple/version; provider-created external effects are
 handled under that provider's policy.
@@ -242,12 +250,12 @@ handled under that provider's policy.
 
 | Area | Minimum cases | Risks |
 |---|---:|---|
-| Activation/config/compatibility | 30 | event roles, inheritance, formats, allowlists |
+| Activation/config/runtime support | 30 | event roles, inheritance, formats, allowlists |
 | Provision/auth/execution state | 24 | modes, retries, timeout, partial install |
 | Provider adapters/error mapping | 24 | argv/stdin/env/effort/output per provider |
 | Workflow/setup contracts | 16 | secrets, pins, checksums, active inputs |
 | UX/sanitization | 12 | phase/errors/redaction/narrow output |
-| Integration/security/migration | 18 | role→provider, injection, credentials, new provider |
+| Integration/security/cutover | 18 | role→provider, injection, credentials, new provider |
 | **Total** | **124** | no double counting |
 
 Global thresholds remain; activation/configuration/command policies SHOULD reach
@@ -289,7 +297,7 @@ errors and credential masking.
 
 ## 18. Maintenance sequence
 
-1. Update role/config/compatibility contracts and exhaustive tests.
+1. Update role/config/runtime-support contracts and exhaustive tests.
 2. Update semantic ports/use cases and activation cases.
 3. Update provider/provision/auth adapters and fake executable tests.
 4. Update setup/workflows/docs/catalog and smoke matrix.
@@ -308,6 +316,9 @@ errors and credential masking.
 
 - Primary sources: catalogued agent code, workflows, tests, and docs.
 - Related SDDs: setup; comment automation; Bugbot; PR lifecycle.
+- Planned hardening: `agent-execution-policy-hardening.md` owns provider-policy
+  isolation and its cross-provider security contract; the architecture
+  hardening SDD owns shared sequencing and verification gates.
 - Decision: semantic role ports and explicit complete tuples; no fallback.
 - Rejected: eager provisioning, shell-string assembly, provider DTOs in use cases.
 - Follow-up: automatic model selection is outside this baseline.

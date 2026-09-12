@@ -4,6 +4,7 @@ import type { RepositoryReleasePublicationPort } from '../../ports/repository_re
 import { logError, logWarn } from '../../ports/logging_ports';
 import { validateReleaseInput, versionForRelease } from './create_release_policy';
 import { validateDeploymentContinuation } from '../../policies/deployment_continuation_guard';
+import { ApplicationError, toApplicationError } from '../../errors/application_error';
 
 export async function runCreateRelease(
     param: Execution,
@@ -12,7 +13,7 @@ export async function runCreateRelease(
 ): Promise<Result[]> {
     const operation = param.currentConfiguration.deploymentOrchestration;
     const continuationError = validateDeploymentContinuation(operation, param.singleAction.operationId, ["publishing"], param.singleAction.version);
-    if (continuationError) return [failureResult(taskId, continuationError)];
+    if (continuationError) return [failureResult(taskId, continuationError, 'workflow.stale')];
     const input = {
         version: param.singleAction.version || operation?.version || '',
         title: param.singleAction.title || operation?.title || '',
@@ -21,7 +22,7 @@ export async function runCreateRelease(
     const validationError = validateReleaseInput(input);
     if (validationError) {
         logError(validationError);
-        return [failureResult(taskId, validationError)];
+        return [failureResult(taskId, validationError, 'validation.invalid-input')];
     }
 
     const releaseVersion = versionForRelease(input.version);
@@ -36,7 +37,7 @@ export async function runCreateRelease(
         );
         if (!releaseUrl) {
             logWarn(`CreateRelease: createRelease returned no URL for version ${releaseVersion}.`);
-            return [failureResult(taskId, 'Failed to create release.')];
+            return [failureResult(taskId, 'Failed to create release.', 'provider.contract-invalid')];
         }
         return [new Result({
             id: taskId,
@@ -45,17 +46,18 @@ export async function runCreateRelease(
             steps: [`Created release \`${releaseUrl}\`.`],
         })];
     } catch (error) {
-        logError(`Error executing ${taskId}: ${error}`);
+        const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to create the release.');
+        logError(semanticError);
         return [new Result({
             id: taskId,
             success: false,
             executed: true,
             steps: ['Failed to create release.'],
-            errors: [error],
+            errors: [semanticError],
         })];
     }
 }
 
-function failureResult(taskId: string, error: string): Result {
-    return new Result({ id: taskId, success: false, executed: true, errors: [error] });
+function failureResult(taskId: string, message: string, code: ConstructorParameters<typeof ApplicationError>[0]): Result {
+    return new Result({ id: taskId, success: false, executed: true, errors: [new ApplicationError(code, message)] });
 }

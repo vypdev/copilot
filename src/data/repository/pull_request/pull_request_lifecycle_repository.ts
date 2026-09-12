@@ -6,6 +6,7 @@ import type {
     GithubPullRequestLifecycleClient,
     GithubPullRequestSummary,
 } from "../../../infrastructure/github/ports/github_pull_request_provider_ports";
+import { toApplicationError } from '../../../application/errors/application_error';
 
 export class PullRequestLifecycleRepository implements PullRequestHeadShaPort {
     constructor(private readonly githubClient: GithubClientPort<GithubPullRequestLifecycleClient>) {}
@@ -28,7 +29,7 @@ export class PullRequestLifecycleRepository implements PullRequestHeadShaPort {
             logDebugInfo(`Found ${numbers.length} open PR(s) for head branch "${headBranch}": ${numbers.join(', ') || 'none'}`);
             return numbers;
         } catch (error) {
-            logError(`Error listing PRs for branch ${headBranch}: ${error}`);
+            logError(toApplicationError(error, 'provider.unavailable', `Unable to list pull requests for branch ${headBranch}.`));
             throw error;
         }
     };
@@ -62,7 +63,7 @@ export class PullRequestLifecycleRepository implements PullRequestHeadShaPort {
             logDebugInfo(`No open PR referencing issue #${issueNumber} found.`);
             return undefined;
         } catch (error) {
-            logError(`Error getting head branch for issue #${issueNumber}: ${error}`);
+            logError(toApplicationError(error, 'provider.unavailable', `Unable to find a pull request branch for issue #${issueNumber}.`));
             throw error;
         }
     };

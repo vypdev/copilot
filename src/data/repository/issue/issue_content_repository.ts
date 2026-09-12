@@ -4,6 +4,7 @@ import { logDebugInfo, logError } from "../../../utils/logger";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type { GithubIssueContentClient } from "../../../infrastructure/github/ports/github_issue_provider_ports";
 import { requireArrayPage } from "../github/github_pagination_policy";
+import { toApplicationError } from '../../../application/errors/application_error';
 
 export interface IssueComment {
     id: number;
@@ -29,7 +30,7 @@ export class IssueContentRepository {
                 body: description,
             });
         } catch (error) {
-            logError(`Error updating issue description: ${error}`);
+            logError(toApplicationError(error, 'provider.unavailable', 'Unable to update the issue description.'));
             throw error;
         }
     };
@@ -52,7 +53,7 @@ export class IssueContentRepository {
             });
             return issue.body ?? '';
         } catch (error) {
-            logError(`Error reading issue #${issueNumber} description: ${error}`);
+            logError(toApplicationError(error, 'provider.unavailable', `Unable to read issue #${issueNumber} description.`));
             throw error;
         }
     };

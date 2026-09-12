@@ -13,6 +13,7 @@ import { createSetupCredentialsUseCase, createSetupRemoteConfigurationReadPort }
 import { createSetupMergeQueueReadinessUseCase } from '../../infrastructure/composition/setup_doctor_composition_root';
 import { SetupWorkspaceAdapter } from '../../infrastructure/setup_workspace_adapter';
 import type { SetupResourceScope } from '../../domain/setup';
+import { toApplicationError } from '../../application/errors/application_error';
 
 export function registerSetupCommand(program: Command): void {
   program
@@ -121,7 +122,7 @@ export function registerSetupCommand(program: Command): void {
         if (!params) return;
         await runLocalAction(params);
       } catch (error) {
-        logError(`Setup failed: ${error instanceof Error ? error.message : String(error)}`);
+        logError(toApplicationError(error, 'workflow.failed', 'Setup failed.'));
         process.exitCode = 1;
       } finally {
         prompt.close();

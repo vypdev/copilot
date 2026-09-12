@@ -5,6 +5,7 @@ import { extractVersion } from "../../../../utils/content_utils";
 import { logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
+import { toApplicationError } from "../../../errors/application_error";
 
 export class GetHotfixVersionUseCase implements ParamUseCase<Execution, Result[]> {
     taskId: string = 'GetHotfixVersionUseCase';
@@ -92,14 +93,15 @@ export class GetHotfixVersionUseCase implements ParamUseCase<Execution, Result[]
                 })
             );
         } catch (error) {
-            logError(error);
+            const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to read the hotfix version.');
+            logError(semanticError);
             result.push(
                 new Result({
                     id: this.taskId,
                     success: false,
                     executed: true,
                     steps: [`Tried to check action permissions.`],
-                    errors: [error],
+                    errors: [semanticError],
                 })
             );
         }

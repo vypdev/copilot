@@ -41,13 +41,13 @@ export class SetupCredentialsUseCase {
     async collect(request: SetupCredentialsRequest): Promise<SetupCredentialsResult> {
         const setupCheck = await this.validation.validateSetupPat(request.owner, request.repository, request.setupToken);
         if (setupCheck.status !== 'valid') {
-            throw new ApplicationError(`Setup PAT validation failed: ${setupCheck.message}`, 'authorization');
+            throw new ApplicationError('authorization.credential-invalid', `Setup PAT validation failed: ${setupCheck.message}`);
         }
         if (!request.manageSecrets) {
             this.prompt.showCredentialChecks([setupCheck]);
             return { collection: { apiKeys: [] }, checks: [setupCheck], existingSecretNames: [] };
         }
-        if (!this.secrets) throw new ApplicationError('Repository Secret provisioning is not available in this installation.', 'configuration');
+        if (!this.secrets) throw new ApplicationError('configuration.unsupported', 'Repository Secret provisioning is not available in this installation.');
 
         const existingSecretNames = request.remoteConfiguration?.repositorySecrets
             ? [...request.remoteConfiguration.repositorySecrets]
@@ -92,7 +92,7 @@ export class SetupCredentialsUseCase {
                 checks.push(scopedCheck);
                 const decision = await this.prompt.chooseExistingCredential(requirement, scopedCheck);
                 if (remoteCheck.status === 'invalid' && decision !== 'replace' && !hasAlternative(requirement)) {
-                    throw new ApplicationError(`${requirement.name} is invalid and must be replaced before setup can continue.`, 'authorization');
+                    throw new ApplicationError('authorization.credential-invalid', `${requirement.name} is invalid and must be replaced before setup can continue.`);
                 }
                 if (decision === 'keep' && remoteCheck.status !== 'invalid') {
                     markRequirementSatisfied(requirement, satisfiedGroups);
@@ -113,7 +113,7 @@ export class SetupCredentialsUseCase {
                     }
                     : { name: requirement.name, status: 'missing', message: 'No value was provided.' });
                 if (hasAlternative(requirement)) continue;
-                throw new ApplicationError(`${requirement.name} is required by the selected workflows.`, 'configuration');
+                throw new ApplicationError('authorization.credential-invalid', `${requirement.name} is required by the selected workflows.`);
             }
             const check = requirement.kind === 'workflowPat'
                 ? await this.validation.validateSetupPat(request.owner, request.repository, value.value)
@@ -121,7 +121,7 @@ export class SetupCredentialsUseCase {
             checks.push({ ...check, name: requirement.name });
             if (!isAcceptedCredentialCheck(requirement, check)) {
                 if (hasAlternative(requirement)) continue;
-                throw new ApplicationError(`${requirement.name} validation failed: ${check.message}`, 'authorization');
+                throw new ApplicationError('authorization.credential-invalid', `${requirement.name} validation failed: ${check.message}`);
             }
             values.push(value);
             markRequirementSatisfied(requirement, satisfiedGroups);
@@ -134,7 +134,7 @@ export class SetupCredentialsUseCase {
                 .filter(requirement => requirement.alternativeGroups?.includes(unsatisfiedGroup))
                 .map(requirement => requirement.name)
                 .join(' or ');
-            throw new ApplicationError(`At least one of ${groupNames} is required by the selected workflows.`, 'configuration');
+            throw new ApplicationError('authorization.credential-invalid', `At least one of ${groupNames} is required by the selected workflows.`);
         }
         this.prompt.showCredentialChecks(checks);
         return {

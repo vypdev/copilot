@@ -10,6 +10,7 @@ import {
     resolveCreatorAssignment,
     selectConfirmedAssignees,
 } from '../../../policies/assignee_assignment_policy';
+import { toApplicationError } from '../../../errors/application_error';
 
 export interface AssignMembersWorkflowDependencies {
     issueRepository: IssueAssigneePort;
@@ -90,14 +91,15 @@ export async function runAssignMembersWorkflow(
         );
         return results;
     } catch (error) {
-        logError(error);
+        const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to assign members.');
+        logError(semanticError);
         results.push(
             new Result({
                 id: TASK_ID,
                 success: false,
                 executed: true,
                 steps: ['Tried to assign members to issue.'],
-                errors: [error],
+                errors: [semanticError],
             }),
         );
         return results;

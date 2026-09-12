@@ -13,6 +13,7 @@ import {
     selectEligibleReviewers,
     uniqueLogins,
 } from '../../../policies/reviewer_assignment_policy';
+import { toApplicationError } from '../../../errors/application_error';
 
 export interface AssignReviewersWorkflowDependencies {
     issueRepository: IssueAssigneePort;
@@ -35,14 +36,15 @@ export async function runAssignReviewersWorkflow(
         return await executeReviewerAssignment(param, dependencies, desiredReviewersCount, number);
     } catch (error) {
         const normalizedError = toPullRequestReviewOperationError(error, 'assign-reviewers');
-        logError(normalizedError);
+        const semanticError = toApplicationError(normalizedError, 'provider.unavailable', 'Unable to assign pull request reviewers.');
+        logError(semanticError);
         return [
             new Result({
                 id: TASK_ID,
                 success: false,
                 executed: true,
                 steps: ['Tried to assign reviewers to pull request.'],
-                errors: [normalizedError],
+                errors: [semanticError],
             }),
         ];
     }

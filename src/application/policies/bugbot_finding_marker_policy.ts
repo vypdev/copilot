@@ -42,12 +42,12 @@ function requireFindingIdForMarker(findingId: string): string {
   const safeId = normalizeFindingIdForMarker(findingId);
   if (safeId == null) {
     throw new ApplicationError(
+      'validation.invalid-input',
       findingId.trim().length === 0
         ? "Finding ID is empty after marker sanitization."
         : findingId.trim().length > MAX_FINDING_ID_LENGTH
           ? "Finding ID exceeds the maximum marker length."
           : "Finding ID contains marker-breaking characters.",
-      'validation',
     );
   }
   return safeId;
@@ -64,7 +64,7 @@ export function buildMarker(
   const safeFingerprint = fingerprint.match(/^fp-[a-f0-9]{8}$/)?.[0];
   const safeSemanticFingerprint = semanticFingerprint.match(/^sf-[a-f0-9]{8}$/)?.[0];
   if (!safeFingerprint || !safeSemanticFingerprint) {
-    throw new ApplicationError('Finding marker requires valid local and semantic fingerprints.', 'validation');
+    throw new ApplicationError('validation.invalid-input', 'Finding marker requires valid local and semantic fingerprints.');
   }
   const safeResolution = resolved && resolution && ['fixed', 'obsolete', 'dismissed'].includes(resolution)
     ? ` finding_resolution:"${resolution}"`
@@ -174,7 +174,7 @@ export function buildCommentBody(
     ? "\n\n---\n**Resolved** (no longer reported in latest analysis).\n"
     : "";
   if (!finding.fingerprint || !finding.semanticFingerprint) {
-    throw new ApplicationError('Prepared finding is missing its local identity.', 'validation');
+    throw new ApplicationError('validation.invalid-input', 'Prepared finding is missing its local identity.');
   }
   const marker = buildMarker(finding.id, resolved, finding.fingerprint, finding.semanticFingerprint, resolution);
   return `## ${safeTitle}

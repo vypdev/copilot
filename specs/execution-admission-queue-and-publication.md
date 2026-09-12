@@ -4,7 +4,8 @@
 - Date: 2026-09-11
 - Owners: Copilot maintainers
 - Scope: the shared GitHub Action lifecycle from an incoming event to visible results and persisted execution state
-- Related issues/PRs: none recorded; historic motivation not recoverable from repository evidence
+- Related issues/PRs: architecture quality and scalability hardening SDD;
+  historic motivation not recoverable from repository evidence
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none for the baseline; see known debt and limitations
 
@@ -56,12 +57,19 @@ create inconsistent authorization and failure behavior.
 - Intentional contract: early bot-loop admission, workflow-scoped serialization,
   single-route ownership, sanitized publication, and fail-closed errors.
 - Known debt and limitations: queue state is polled and bounded by a 90-minute
-  internal budget; optional Check Run publication is best-effort; no live UX
-  capture is stored in the repository.
+  internal budget; optional Check Run publication is best-effort; 26 production
+  application paths pass a caught `unknown` directly into `Result.errors`; 127
+  production application files import the shared `Execution` aggregate; no live
+  UX capture is stored in the repository.
 - Unknown rationale: why workflow-scoped polling was originally chosen instead
   of only GitHub concurrency is not established by current evidence.
-- Proposed improvements: changes to queue ownership or durable event processing
-  require a new proposal; they are not part of this baseline.
+- Proposed improvements: the semantic-error replacement and shrinking
+  `Execution`-context allowlist are specified in
+  [`execution-error-and-context-hardening.md`](./execution-error-and-context-hardening.md),
+  under the sequencing and cross-cutting gates in
+  [`architecture-quality-and-scalability-hardening.md`](./architecture-quality-and-scalability-hardening.md).
+  Changes to queue ownership or durable event processing beyond that proposal
+  require a separate design; they are not part of this baseline.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -228,11 +236,13 @@ Repeated unchanged state SHOULD not generate repeated discussion comments.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
-This document records current v3 behavior and introduces no migration. Existing
-in-flight issue markers remain readable. A future route, queue, or publication
-change MUST preserve old marker parsing or define an explicit migration and
-rollback; already completed provider mutations are never rolled back by hiding
-their evidence.
+This document records the repository behavior at the audit commit. There are no
+installed users or real in-flight markers to preserve. The linked hardening work
+therefore makes a clean cut: removed API/marker/result shapes are rejected and
+no compatibility parser, migration, deprecation window, or dual reader ships.
+After first real use, already completed provider mutations are never hidden or
+rewound; incompatible future state fails closed and recovery starts from
+inspectable provider facts.
 
 ## 14. Testing strategy and numeric budget
 
@@ -243,7 +253,7 @@ their evidence.
 | Adapters/error mapping | 8 | pagination, provider errors, timers |
 | Workflow/setup contracts | 8 | queue gate, permissions, timeouts |
 | Publication/UX/sanitization | 12 | targets, dry run, summary, errors, links |
-| Integration/security/migration | 8 | end-to-end routes, secrets, compatibility |
+| Integration/security/cutover | 8 | end-to-end routes, secrets, removed-shape rejection |
 | **Total** | **62** | no double counting |
 
 Repository thresholds (90% lines/statements, 88% functions, 82% branches)
@@ -305,5 +315,8 @@ light/dark, and screen-reader order.
 
 - Primary sources: catalogued code, workflows, tests, and documentation.
 - Related specs: release orchestration, merge-queue readiness, Bugbot reconciliation.
+- Planned hardening: `execution-error-and-context-hardening.md` owns the semantic
+  error boundary and `Execution` context replacement; the architecture hardening
+  SDD owns shared sequencing and verification gates.
 - Decision: retain one shared lifecycle and semantic ports; reject route logic in YAML.
 - Follow-up outside scope: durable event storage beyond issue configuration markers.

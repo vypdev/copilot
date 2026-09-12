@@ -4,6 +4,7 @@ import type { IssueTypes } from "../../model/issue_types";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type { GithubGraphqlTransportClient } from "../../../infrastructure/github/ports/github_graphql_transport_port";
 import { assignIssueType } from "./issue_type_assignment_workflow";
+import { toApplicationError } from '../../../application/errors/application_error';
 
 type GetIssueId = (owner: string, repository: string, issueNumber: number, token: string) => Promise<string>;
 
@@ -33,7 +34,7 @@ export class IssueTypeAssignmentRepository {
         token,
       );
     } catch (error) {
-      logError(`Failed to update issue type: ${error}`);
+      logError(toApplicationError(error, 'provider.unavailable', 'Unable to update the issue type.'));
       logDebugInfo("Continuing with issue processing despite issue type update failure");
       throw error;
     }

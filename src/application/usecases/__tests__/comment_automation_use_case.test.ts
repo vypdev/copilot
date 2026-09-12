@@ -109,8 +109,13 @@ describe("runCommentAutomation", () => {
     expect(results.at(-1)).toMatchObject({
       success: false,
       executed: true,
-      errors: [resolutionError],
+      errors: [expect.objectContaining({
+        name: 'ApplicationError',
+        code: 'workflow.failed',
+        message: 'Autofix postflight could not complete.',
+      })],
     });
+    expect(JSON.stringify(results.at(-1))).not.toContain(resolutionError.message);
   });
 
   it("returns a sanitized failure result when intent detection rejects", async () => {

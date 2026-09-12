@@ -50943,7 +50943,7 @@ function readDeploymentConfiguration(getInput, branches) {
         hotfixTree: branches.hotfixTree || "hotfix",
     }));
     if (errors.length > 0) {
-        throw new application_error_1.ApplicationError(`Invalid deployment configuration: ${errors.join(" ")}`, "validation");
+        throw new application_error_1.ApplicationError("configuration.invalid", `Invalid deployment configuration: ${errors.join(" ")}`);
     }
     return configuration;
 }
@@ -51042,6 +51042,9 @@ const agent_activity_composition_root_1 = __nccwpck_require__(94253);
 const github_action_ai_inputs_1 = __nccwpck_require__(27640);
 const agent_task_activation_policy_1 = __nccwpck_require__(46855);
 const actor_authorization_composition_root_1 = __nccwpck_require__(233);
+const application_error_context_1 = __nccwpck_require__(4034);
+const application_error_1 = __nccwpck_require__(75999);
+const application_error_presentation_policy_1 = __nccwpck_require__(95067);
 async function runGitHubAction() {
     if ((0, input_boolean_policy_1.isEnabledInput)((0, github_action_input_1.getGithubActionInput)(input_keys_1.INPUT_KEYS.QUEUE_GATE_ONLY))) {
         await runQueueGateOnly();
@@ -51122,13 +51125,16 @@ async function runQueueGateOnly() {
  * unresolved findings), so this boundary must let Node exit naturally.
  */
 async function runGitHubActionEntry(run = runGitHubAction) {
-    try {
-        await run();
-    }
-    catch (error) {
-        (0, logger_1.logError)(error);
-        core.setFailed(error instanceof Error ? error.message : String(error));
-    }
+    return (0, application_error_context_1.runAtApplicationErrorBoundary)(async () => {
+        try {
+            await run();
+        }
+        catch (cause) {
+            const semanticError = (0, application_error_1.toApplicationError)(cause, 'workflow.failed', 'GitHub Action execution failed.');
+            (0, logger_1.logError)(semanticError);
+            core.setFailed((0, application_error_presentation_policy_1.renderApplicationErrorText)(semanticError));
+        }
+    });
 }
 // Only auto-run when executed as the action entry (not when imported by tests)
 if (typeof process.env.JEST_WORKER_ID === 'undefined') {
@@ -51255,6 +51261,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.finishGithubAction = finishGithubAction;
 const core = __importStar(__nccwpck_require__(75855));
+const application_error_presentation_policy_1 = __nccwpck_require__(95067);
 const result_1 = __nccwpck_require__(73817);
 const recommendation_state_1 = __nccwpck_require__(68514);
 const publish_resume_use_case_1 = __nccwpck_require__(58684);
@@ -51264,6 +51271,7 @@ const logger_adapter_1 = __nccwpck_require__(72762);
 const action_summary_policy_1 = __nccwpck_require__(72995);
 const copilot_lifecycle_1 = __nccwpck_require__(72418);
 const copilot_evidence_policy_1 = __nccwpck_require__(47632);
+const application_error_1 = __nccwpck_require__(75999);
 const configuration_persistence_policy_1 = __nccwpck_require__(65388);
 const deployment_presentation_policy_1 = __nccwpck_require__(83221);
 async function finishGithubAction(execution, results, issueNotificationPort, configurationStorePort, evidencePort, summaryPort) {
@@ -51336,7 +51344,7 @@ async function writeActionSummary(execution, summaryPort) {
         await summaryPort.publish(summaryText);
     }
     catch (error) {
-        (0, logger_1.logInfo)(`Could not write GitHub Actions summary: ${error instanceof Error ? error.message : String(error)}`);
+        (0, logger_1.logInfo)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Could not write the GitHub Actions summary.').message);
     }
     return summaryText;
 }
@@ -51360,7 +51368,7 @@ async function publishCopilotEvidence(execution, results, summary, evidencePort)
         (0, logger_1.logInfo)(`Published ${evidence.name} Check Run for ${evidence.headSha}.`);
     }
     catch (error) {
-        (0, logger_1.logInfo)(`Could not publish optional GitHub Check Run: ${error instanceof Error ? error.message : String(error)}`);
+        (0, logger_1.logInfo)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Could not publish the optional GitHub Check Run.').message);
     }
 }
 function failActionForUnresolvedFindingsIfConfigured(execution, results, dryRun) {
@@ -51401,7 +51409,7 @@ function commitPublishedRecommendationState(execution, results) {
 function setFirstErrorIfExists(results) {
     for (const result of results) {
         if (result.errors && result.errors.length > 0) {
-            core.setFailed(result.errors[0].message);
+            core.setFailed((0, application_error_presentation_policy_1.renderApplicationErrorText)(result.errors[0]));
             return;
         }
     }
@@ -51569,6 +51577,7 @@ exports.getGithubActionInput = getGithubActionInput;
 const core = __importStar(__nccwpck_require__(75855));
 const action_input_source_1 = __nccwpck_require__(98143);
 const logger_1 = __nccwpck_require__(91151);
+const application_error_1 = __nccwpck_require__(75999);
 function getGithubActionInput(key, options) {
     try {
         const inputVarsJson = process.env.INPUT_VARS_JSON;
@@ -51578,7 +51587,7 @@ function getGithubActionInput(key, options) {
         }
     }
     catch (error) {
-        (0, logger_1.logError)(`Error parsing INPUT_VARS_JSON: ${JSON.stringify(error, null, 2)}`);
+        (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'configuration.invalid', 'Unable to parse INPUT_VARS_JSON.'));
     }
     return core.getInput(key, options);
 }
@@ -52073,6 +52082,8 @@ const logger_1 = __nccwpck_require__(91151);
 const main_run_dispatcher_1 = __nccwpck_require__(28586);
 const workflow_context_1 = __nccwpck_require__(55224);
 const workflow_queue_composition_root_1 = __nccwpck_require__(21598);
+const application_error_1 = __nccwpck_require__(75999);
+const application_error_presentation_policy_1 = __nccwpck_require__(95067);
 exports.WORKFLOW_QUEUE_FAILURE_MESSAGE = 'Workflow queue check failed; sequential execution was not bypassed.';
 /**
  * Keeps provider diagnostics out of the action's externally visible failure
@@ -52159,9 +52170,9 @@ async function runMainRoute(execution, route, routeHandlers) {
         return results;
     }
     catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        (0, logger_1.logError)(`Main run failed: ${message}`, error instanceof Error ? { stack: error.stack } : undefined);
-        core.setFailed(message);
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Main run failed.');
+        (0, logger_1.logError)(semanticError);
+        core.setFailed((0, application_error_presentation_policy_1.renderApplicationErrorText)(semanticError));
         return [];
     }
 }
@@ -52539,28 +52550,69 @@ exports.TITLE = 'Copilot';
 /***/ }),
 
 /***/ 75999:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ApplicationError = void 0;
+exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = void 0;
 exports.toApplicationError = toApplicationError;
-/** Semantic error contract: safe to publish, while the original cause stays available to diagnostics. */
-class ApplicationError extends Error {
-    constructor(message, kind = 'unknown', options = {}) {
-        super(message);
-        this.name = 'ApplicationError';
-        this.kind = kind;
-        this.retryable = options.retryable ?? false;
-        this.cause = options.cause;
+const application_error_1 = __nccwpck_require__(97790);
+const application_error_context_1 = __nccwpck_require__(4034);
+var application_error_2 = __nccwpck_require__(97790);
+Object.defineProperty(exports, "APPLICATION_ERROR_METADATA", ({ enumerable: true, get: function () { return application_error_2.APPLICATION_ERROR_METADATA; } }));
+/** Creates a semantic error and owns correlation identity outside the pure model. */
+class ApplicationError extends application_error_1.ApplicationError {
+    constructor(code, message, options = {}) {
+        super(code, message, {
+            ...options,
+            correlationId: options.correlationId
+                ?? (0, application_error_context_1.getApplicationErrorCorrelationId)()
+                ?? (0, application_error_context_1.createApplicationErrorCorrelationId)(),
+        });
     }
 }
 exports.ApplicationError = ApplicationError;
-function toApplicationError(error, message, kind = 'unknown', options = {}) {
+function toApplicationError(error, code, message, options = {}) {
     return error instanceof ApplicationError
         ? error
-        : new ApplicationError(message, kind, { ...options, cause: error });
+        : new ApplicationError(code, message, { ...options, cause: error });
+}
+
+
+/***/ }),
+
+/***/ 4034:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getApplicationErrorCorrelationId = getApplicationErrorCorrelationId;
+exports.createApplicationErrorCorrelationId = createApplicationErrorCorrelationId;
+exports.runWithApplicationErrorCorrelation = runWithApplicationErrorCorrelation;
+exports.runAtApplicationErrorBoundary = runAtApplicationErrorBoundary;
+const node_async_hooks_1 = __nccwpck_require__(92761);
+const node_crypto_1 = __nccwpck_require__(6005);
+const application_error_1 = __nccwpck_require__(97790);
+const applicationErrorCorrelation = new node_async_hooks_1.AsyncLocalStorage();
+function getApplicationErrorCorrelationId() {
+    return applicationErrorCorrelation.getStore();
+}
+function createApplicationErrorCorrelationId() {
+    return (0, node_crypto_1.randomUUID)();
+}
+function runWithApplicationErrorCorrelation(correlationId, operation) {
+    if (!(0, application_error_1.isApplicationErrorCorrelationId)(correlationId)) {
+        throw new TypeError('Application error correlation ID must be a lowercase UUID v4.');
+    }
+    return applicationErrorCorrelation.run(correlationId, operation);
+}
+/** Starts a boundary correlation only when the caller is not already nested in one. */
+function runAtApplicationErrorBoundary(operation) {
+    return getApplicationErrorCorrelationId() === undefined
+        ? runWithApplicationErrorCorrelation(createApplicationErrorCorrelationId(), operation)
+        : operation();
 }
 
 
@@ -52575,6 +52627,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.buildActionSummary = buildActionSummary;
 const result_1 = __nccwpck_require__(73817);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+const application_error_presentation_policy_1 = __nccwpck_require__(95067);
 /** Builds a bounded, publication-safe GitHub Actions Job Summary. */
 function buildActionSummary(context) {
     const failures = context.results.filter(result => !result.success && result.executed);
@@ -52690,7 +52743,16 @@ function renderResults(results) {
             .filter(step => step.trim())
             .map(step => `  - ${(0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(step, 1000)}`);
         const errors = result.errors
-            .map(error => `  - **Error:** ${(0, github_comment_publication_policy_1.sanitizePublishedError)(error.message)}`);
+            .flatMap((error) => {
+            const view = (0, application_error_presentation_policy_1.buildApplicationErrorPresentation)(error);
+            return [
+                `  - **Impact:** ${(0, github_comment_publication_policy_1.sanitizePublishedError)(view.impact)}`,
+                `    - **Cause (\`${view.code}\`):** ${(0, github_comment_publication_policy_1.sanitizePublishedError)(view.cause)}`,
+                `    - **Action:** ${(0, github_comment_publication_policy_1.sanitizePublishedError)(view.action)}`,
+                `    - **Retained state:** ${(0, github_comment_publication_policy_1.sanitizePublishedError)(view.retainedState)}`,
+                `    - **Reference:** \`${view.reference}\``,
+            ];
+        });
         return [`- ${icon} **${escapeTable(result.id || 'Unnamed result')}**`, ...details, ...errors].join('\n');
     }).join('\n');
 }
@@ -52826,11 +52888,11 @@ const application_error_1 = __nccwpck_require__(75999);
 function parseAgentCommand(command) {
     const trimmed = command.trim();
     if (!trimmed)
-        throw new application_error_1.ApplicationError('Agent CLI command must not be empty.', 'validation');
+        throw new application_error_1.ApplicationError('agent.policy-rejected', 'Agent CLI command must not be empty.');
     const parsed = shellQuote.parse(trimmed, {});
     const argv = parsed.filter((entry) => typeof entry === 'string');
     if (argv.length !== parsed.length || argv.length === 0) {
-        throw new application_error_1.ApplicationError('Agent CLI command contains unsupported shell syntax. Use an executable and literal arguments only.', 'validation');
+        throw new application_error_1.ApplicationError('agent.policy-rejected', 'Agent CLI command contains unsupported shell syntax. Use an executable and literal arguments only.');
     }
     return { executable: argv[0], args: argv.slice(1) };
 }
@@ -52880,7 +52942,7 @@ const agent_command_parser_1 = __nccwpck_require__(15044);
 function validateConfiguredAgentCommand(configuration) {
     const command = configuration.command?.trim();
     if (!command)
-        throw new application_error_1.ApplicationError(`CLI command is required for ${configuration.provider}.`, 'validation');
+        throw new application_error_1.ApplicationError('agent.policy-rejected', `CLI command is required for ${configuration.provider}.`);
     const { args } = (0, agent_command_parser_1.parseAgentCommand)(command);
     validateCommandShape(configuration, args);
     validateModelSelection(configuration, args);
@@ -52889,13 +52951,13 @@ function validateConfiguredAgentCommand(configuration) {
 }
 function validateCommandShape(configuration, args) {
     if (configuration.provider !== 'codex' && args.includes('-')) {
-        throw new application_error_1.ApplicationError(`${configuration.provider} command must not include the Codex stdin placeholder "-"; its prompt is passed as an argument.`, 'validation');
+        throw new application_error_1.ApplicationError('agent.policy-rejected', `${configuration.provider} command must not include the Codex stdin placeholder "-"; its prompt is passed as an argument.`);
     }
     if (configuration.provider === 'codex' && args.at(-1) !== '-') {
-        throw new application_error_1.ApplicationError('Codex command must end with the stdin placeholder "-".', 'validation');
+        throw new application_error_1.ApplicationError('agent.policy-rejected', 'Codex command must end with the stdin placeholder "-".');
     }
     if (!hasFlag(args, '--model') && !hasFlag(args, '-m')) {
-        throw new application_error_1.ApplicationError(`${configuration.provider} command must select the model explicitly with --model.`, 'validation');
+        throw new application_error_1.ApplicationError('agent.policy-rejected', `${configuration.provider} command must select the model explicitly with --model.`);
     }
 }
 function validateModelSelection(configuration, args) {
@@ -52904,18 +52966,18 @@ function validateModelSelection(configuration, args) {
         : configuration.model.trim();
     const configuredModel = flagValue(args, ['--model', '-m']);
     if (configuredModel !== expectedModel) {
-        throw new application_error_1.ApplicationError(`${configuration.provider} command must select configured model "${expectedModel}".`, 'validation');
+        throw new application_error_1.ApplicationError('agent.policy-rejected', `${configuration.provider} command must select configured model "${expectedModel}".`);
     }
 }
 function validateProviderConfiguration(configuration, args) {
     if (configuration.provider !== 'codex')
         return;
     if (!hasConfig(args, 'model_provider')) {
-        throw new application_error_1.ApplicationError('Codex command must select the model provider explicitly with --config model_provider=... .', 'validation');
+        throw new application_error_1.ApplicationError('agent.policy-rejected', 'Codex command must select the model provider explicitly with --config model_provider=... .');
     }
     const expectedProvider = configuration.modelProvider?.trim() || 'openai';
     if (configValue(args, 'model_provider') !== expectedProvider) {
-        throw new application_error_1.ApplicationError(`Codex command must select configured model provider "${expectedProvider}".`, 'validation');
+        throw new application_error_1.ApplicationError('agent.policy-rejected', `Codex command must select configured model provider "${expectedProvider}".`);
     }
 }
 function validateEffortSelection(configuration, args) {
@@ -52924,10 +52986,10 @@ function validateEffortSelection(configuration, args) {
         return;
     if (configuration.provider === 'codex') {
         if (!hasConfig(args, 'model_reasoning_effort')) {
-            throw new application_error_1.ApplicationError('Codex command must select effort explicitly with --config model_reasoning_effort=... .', 'validation');
+            throw new application_error_1.ApplicationError('agent.policy-rejected', 'Codex command must select effort explicitly with --config model_reasoning_effort=... .');
         }
         if (configValue(args, 'model_reasoning_effort') !== effort) {
-            throw new application_error_1.ApplicationError(`Codex command must select configured effort "${effort}".`, 'validation');
+            throw new application_error_1.ApplicationError('agent.policy-rejected', `Codex command must select configured effort "${effort}".`);
         }
         return;
     }
@@ -52939,10 +53001,10 @@ function validateEffortSelection(configuration, args) {
         return;
     }
     if (!hasFlag(args, '--variant')) {
-        throw new application_error_1.ApplicationError('OpenCode command must select effort explicitly with --variant ... .', 'validation');
+        throw new application_error_1.ApplicationError('agent.policy-rejected', 'OpenCode command must select effort explicitly with --variant ... .');
     }
     if (flagValue(args, ['--variant']) !== effort) {
-        throw new application_error_1.ApplicationError(`OpenCode command must select configured effort "${effort}".`, 'validation');
+        throw new application_error_1.ApplicationError('agent.policy-rejected', `OpenCode command must select configured effort "${effort}".`);
     }
 }
 function hasFlag(args, flag) {
@@ -53054,7 +53116,7 @@ exports.SUPPORTED_AGENT_PROVIDERS = ['opencode', 'cursor', 'codex'];
 function resolveAgentProvider(value) {
     if (exports.SUPPORTED_AGENT_PROVIDERS.includes(value))
         return value;
-    throw new application_error_1.ApplicationError(`Unsupported agent provider "${value}". Supported providers: ${exports.SUPPORTED_AGENT_PROVIDERS.join(', ')}.`, 'validation');
+    throw new application_error_1.ApplicationError('configuration.unsupported', `Unsupported agent provider "${value}". Supported providers: ${exports.SUPPORTED_AGENT_PROVIDERS.join(', ')}.`);
 }
 function resolveModelProvider(value, environment, agentProvider) {
     const provider = value?.trim().toLowerCase() || (agentProvider === 'cursor' ? 'cursor' : 'openai');
@@ -53064,16 +53126,16 @@ function resolveModelProvider(value, environment, agentProvider) {
 }
 function assertProviderModelCompatibility(agentProvider, modelProvider) {
     if (agentProvider === 'codex' && modelProvider !== 'openai') {
-        throw new application_error_1.ApplicationError(`Codex automation supports the "openai" model provider only; received "${modelProvider}".`, 'configuration');
+        throw new application_error_1.ApplicationError('configuration.unsupported', `Codex automation supports the "openai" model provider only; received "${modelProvider}".`);
     }
     if (agentProvider === 'cursor' && modelProvider !== 'cursor') {
-        throw new application_error_1.ApplicationError(`Cursor automation requires model provider "cursor"; received "${modelProvider}".`, 'configuration');
+        throw new application_error_1.ApplicationError('configuration.unsupported', `Cursor automation requires model provider "cursor"; received "${modelProvider}".`);
     }
 }
 function resolveModel(value) {
     const model = value.trim();
     if (!model)
-        throw new application_error_1.ApplicationError('Agent model must not be empty.', 'validation');
+        throw new application_error_1.ApplicationError('configuration.invalid', 'Agent model must not be empty.');
     assertIdentifier(model, 'Agent model must be a simple model identifier without whitespace or shell syntax.', /^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/);
     return model;
 }
@@ -53086,25 +53148,25 @@ function resolveEffort(value) {
 function assertModelAllowlisted(modelProvider, model, environment) {
     const allowedModels = parseAllowlist(environment.AGENT_ALLOWED_MODELS);
     if (allowedModels.length > 0 && !allowedModels.includes(`${modelProvider}/${model}`) && !allowedModels.includes(model)) {
-        throw new application_error_1.ApplicationError(`Agent model "${modelProvider}/${model}" is not allowlisted.`, 'authorization');
+        throw new application_error_1.ApplicationError('authorization.denied', `Agent model "${modelProvider}/${model}" is not allowlisted.`);
     }
 }
 function assertAllowlisted(name, value, environment) {
     const values = parseAllowlist(environment[name]);
     if (values.length > 0 && !values.includes(value))
-        throw new application_error_1.ApplicationError(`Agent model provider "${value}" is not allowlisted.`, 'authorization');
+        throw new application_error_1.ApplicationError('authorization.denied', `Agent model provider "${value}" is not allowlisted.`);
 }
 function parseAllowlist(raw) {
     if (!raw?.trim())
         return [];
     const values = raw.split(',').map(value => value.trim().toLowerCase()).filter(Boolean);
     if (values.length === 0)
-        throw new application_error_1.ApplicationError('Agent allowlist must contain at least one value.', 'configuration');
+        throw new application_error_1.ApplicationError('configuration.invalid', 'Agent allowlist must contain at least one value.');
     return values;
 }
 function assertIdentifier(value, message, pattern = /^[a-z0-9][a-z0-9_-]*$/i) {
     if (!pattern.test(value))
-        throw new application_error_1.ApplicationError(message, 'validation');
+        throw new application_error_1.ApplicationError('configuration.invalid', message);
 }
 
 
@@ -53302,6 +53364,39 @@ function resolveThinkAgentTask(commandName, destinationType) {
         default:
             return 'planner';
     }
+}
+
+
+/***/ }),
+
+/***/ 95067:
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.buildApplicationErrorPresentation = buildApplicationErrorPresentation;
+exports.renderApplicationErrorText = renderApplicationErrorText;
+/** Shared semantic view model for terminal, GitHub, and API presentation. */
+function buildApplicationErrorPresentation(error) {
+    return {
+        impact: error.impact,
+        cause: error.message,
+        code: error.code,
+        action: error.action,
+        retainedState: error.retainedState,
+        reference: error.correlationId,
+    };
+}
+function renderApplicationErrorText(error) {
+    const view = buildApplicationErrorPresentation(error);
+    return [
+        `Impact: ${view.impact}`,
+        `Cause (${view.code}): ${view.cause}`,
+        `Action: ${view.action}`,
+        `Retained state: ${view.retainedState}`,
+        `Reference: ${view.reference}`,
+    ].join('\n');
 }
 
 
@@ -53532,11 +53627,11 @@ function normalizeFindingIdForMarker(findingId) {
 function requireFindingIdForMarker(findingId) {
     const safeId = normalizeFindingIdForMarker(findingId);
     if (safeId == null) {
-        throw new application_error_1.ApplicationError(findingId.trim().length === 0
+        throw new application_error_1.ApplicationError('validation.invalid-input', findingId.trim().length === 0
             ? "Finding ID is empty after marker sanitization."
             : findingId.trim().length > exports.MAX_FINDING_ID_LENGTH
                 ? "Finding ID exceeds the maximum marker length."
-                : "Finding ID contains marker-breaking characters.", 'validation');
+                : "Finding ID contains marker-breaking characters.");
     }
     return safeId;
 }
@@ -53545,7 +53640,7 @@ function buildMarker(findingId, resolved, fingerprint, semanticFingerprint, reso
     const safeFingerprint = fingerprint.match(/^fp-[a-f0-9]{8}$/)?.[0];
     const safeSemanticFingerprint = semanticFingerprint.match(/^sf-[a-f0-9]{8}$/)?.[0];
     if (!safeFingerprint || !safeSemanticFingerprint) {
-        throw new application_error_1.ApplicationError('Finding marker requires valid local and semantic fingerprints.', 'validation');
+        throw new application_error_1.ApplicationError('validation.invalid-input', 'Finding marker requires valid local and semantic fingerprints.');
     }
     const safeResolution = resolved && resolution && ['fixed', 'obsolete', 'dismissed'].includes(resolution)
         ? ` finding_resolution:"${resolution}"`
@@ -53634,7 +53729,7 @@ function buildCommentBody(finding, resolved, resolution, options = {}) {
         ? "\n\n---\n**Resolved** (no longer reported in latest analysis).\n"
         : "";
     if (!finding.fingerprint || !finding.semanticFingerprint) {
-        throw new application_error_1.ApplicationError('Prepared finding is missing its local identity.', 'validation');
+        throw new application_error_1.ApplicationError('validation.invalid-input', 'Prepared finding is missing its local identity.');
     }
     const marker = buildMarker(finding.id, resolved, finding.fingerprint, finding.semanticFingerprint, resolution);
     return `## ${safeTitle}
@@ -55755,6 +55850,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.renderResultSections = renderResultSections;
 const comment_content_policy_1 = __nccwpck_require__(77454);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+const application_error_presentation_policy_1 = __nccwpck_require__(95067);
 function renderResultSections(results) {
     const renderedSteps = [];
     const reminders = [];
@@ -55766,16 +55862,26 @@ function renderResultSections(results) {
             .map(reminder => (0, github_comment_publication_policy_1.sanitizeAgentMarkdown)(reminder))
             .filter(comment_content_policy_1.hasVisibleCommentContent));
         errors.push(...result.errors
-            .map(error => (0, github_comment_publication_policy_1.sanitizePublishedError)(error.message))
+            .map(renderPublishedApplicationError)
             .filter(comment_content_policy_1.hasVisibleCommentContent));
     }
     return {
         content: renderedSteps.length > 0 ? `${renderedSteps.join('\n\n')}\n` : '',
         footer: reminders.length > 0 ? `\n## Reminder\n\n${reminders.map((reminder, index) => `${index + 1}. ${reminder}`).join('\n')}\n` : '',
         errors: errors.length > 0
-            ? `\n## Errors Found\n\n${errors.map((error, index) => `${index + 1}.\n\`\`\`\n${error}\n\`\`\`\n`).join('')}\n\nCheck your project configuration, if everything is okay consider [opening an issue](https://github.com/vypdev/copilot/issues/new/choose).\n`
+            ? `\n## Errors Found\n\n${errors.map((error, index) => `${index + 1}. ${error}\n`).join('\n')}\nCheck your project configuration, if everything is okay consider [opening an issue](https://github.com/vypdev/copilot/issues/new/choose).\n`
             : '',
     };
+}
+function renderPublishedApplicationError(error) {
+    const view = (0, application_error_presentation_policy_1.buildApplicationErrorPresentation)(error);
+    return [
+        `**Impact:** ${(0, github_comment_publication_policy_1.sanitizePublishedError)(view.impact)}`,
+        `   **Cause (\`${view.code}\`):** ${(0, github_comment_publication_policy_1.sanitizePublishedError)(view.cause)}`,
+        `   **Action:** ${(0, github_comment_publication_policy_1.sanitizePublishedError)(view.action)}`,
+        `   **Retained state:** ${(0, github_comment_publication_policy_1.sanitizePublishedError)(view.retainedState)}`,
+        `   **Reference:** \`${view.reference}\``,
+    ].join('\n');
 }
 function appendSteps(renderedSteps, result, stepIndex) {
     for (const step of result.steps) {
@@ -56896,6 +57002,7 @@ const task_emoji_1 = __nccwpck_require__(46103);
 const sync_progress_labels_to_open_pull_requests_1 = __nccwpck_require__(18277);
 const progress_summary_builder_1 = __nccwpck_require__(62721);
 const progress_analysis_workflow_1 = __nccwpck_require__(88729);
+const application_error_1 = __nccwpck_require__(75999);
 /** Publishes a completed progress assessment after the analysis workflow succeeds. */
 async function runCheckProgressWorkflow(param, taskId, dependencies) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(taskId)} Executing ${taskId}.`);
@@ -56913,15 +57020,14 @@ async function runCheckProgressWorkflow(param, taskId, dependencies) {
         return [buildProgressResult(taskId, issueNumber, branch, developmentBranch, progress, summary, reasoning, remaining)];
     }
     catch (error) {
-        (0, logging_ports_1.logError)(`Error in ${taskId}: ${JSON.stringify(error, null, 2)}`);
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', `Unable to complete ${taskId}.`);
+        (0, logging_ports_1.logError)(semanticError);
         return [
             new result_1.Result({
                 id: taskId,
                 success: false,
                 executed: true,
-                errors: [
-                    new Error(`Error in ${taskId}: ${error instanceof Error ? error.message : String(error)}`),
-                ],
+                errors: [semanticError],
             }),
         ];
     }
@@ -56934,7 +57040,7 @@ function buildZeroProgressResult(taskId, issueNumber, branch, developmentBranch,
         success: false,
         executed: true,
         steps: [`Progress for issue #${issueNumber}: 0%`, summary],
-        errors: [message],
+        errors: [new application_error_1.ApplicationError('agent.failed', message)],
         payload: { progress: 0, summary, reasoning: reasoning || undefined, issueNumber, branch, developmentBranch },
     });
 }
@@ -57015,6 +57121,7 @@ const result_1 = __nccwpck_require__(73817);
 const issue_inactivity_1 = __nccwpck_require__(38572);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
 const TASK_ID = 'CloseInactiveIssuesUseCase';
 const INACTIVITY_COMMENT = (thresholdHours) => `This issue was automatically closed due to inactivity while waiting for a response. No activity was detected for at least **${thresholdHours} hours**. Reopen it and add a comment if it still needs attention.`;
 /** Scans waiting issues and closes only candidates that remain inactive. */
@@ -57072,7 +57179,7 @@ async function runCloseInactiveIssuesWorkflow(param, dependencies) {
             catch (error) {
                 const message = `Unable to close issue #${candidate.number} after inactivity.`;
                 (0, logging_ports_1.logError)(message);
-                errors.push(`${message} ${safeErrorMessage(error)}`);
+                errors.push(new application_error_1.ApplicationError('provider.unavailable', `${message} ${safeErrorMessage(error)}`, { cause: error }));
             }
         }
         (0, logging_ports_1.logDebugInfo)(`${TASK_ID}: scanned=${candidates.length}, eligible=${eligibleCount}, closed=${closedCount}, skipped=${skippedCount}.`);
@@ -57098,7 +57205,7 @@ async function runCloseInactiveIssuesWorkflow(param, dependencies) {
                 success: false,
                 executed: true,
                 steps: [message],
-                errors: [`${message} ${safeErrorMessage(error)}`],
+                errors: [(0, application_error_1.toApplicationError)(error, 'provider.unavailable', `${message} ${safeErrorMessage(error)}`)],
             })];
     }
 }
@@ -57164,7 +57271,7 @@ function normalizeVersion(version) {
 function versionForRelease(version) {
     const normalized = normalizeVersion(version);
     if (normalized === undefined)
-        throw new application_error_1.ApplicationError('Cannot build a release version from invalid input.', 'validation');
+        throw new application_error_1.ApplicationError('validation.invalid-input', 'Cannot build a release version from invalid input.');
     return `v${normalized}`;
 }
 
@@ -57207,11 +57314,12 @@ const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const create_release_policy_1 = __nccwpck_require__(76549);
 const deployment_continuation_guard_1 = __nccwpck_require__(1779);
+const application_error_1 = __nccwpck_require__(75999);
 async function runCreateRelease(param, taskId, repositoryReleasePort) {
     const operation = param.currentConfiguration.deploymentOrchestration;
     const continuationError = (0, deployment_continuation_guard_1.validateDeploymentContinuation)(operation, param.singleAction.operationId, ["publishing"], param.singleAction.version);
     if (continuationError)
-        return [failureResult(taskId, continuationError)];
+        return [failureResult(taskId, continuationError, 'workflow.stale')];
     const input = {
         version: param.singleAction.version || operation?.version || '',
         title: param.singleAction.title || operation?.title || '',
@@ -57220,14 +57328,14 @@ async function runCreateRelease(param, taskId, repositoryReleasePort) {
     const validationError = (0, create_release_policy_1.validateReleaseInput)(input);
     if (validationError) {
         (0, logging_ports_1.logError)(validationError);
-        return [failureResult(taskId, validationError)];
+        return [failureResult(taskId, validationError, 'validation.invalid-input')];
     }
     const releaseVersion = (0, create_release_policy_1.versionForRelease)(input.version);
     try {
         const releaseUrl = await repositoryReleasePort.createRelease(param.owner, param.repo, releaseVersion, input.title, input.changelog, param.tokens.token);
         if (!releaseUrl) {
             (0, logging_ports_1.logWarn)(`CreateRelease: createRelease returned no URL for version ${releaseVersion}.`);
-            return [failureResult(taskId, 'Failed to create release.')];
+            return [failureResult(taskId, 'Failed to create release.', 'provider.contract-invalid')];
         }
         return [new result_1.Result({
                 id: taskId,
@@ -57237,18 +57345,19 @@ async function runCreateRelease(param, taskId, repositoryReleasePort) {
             })];
     }
     catch (error) {
-        (0, logging_ports_1.logError)(`Error executing ${taskId}: ${error}`);
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to create the release.');
+        (0, logging_ports_1.logError)(semanticError);
         return [new result_1.Result({
                 id: taskId,
                 success: false,
                 executed: true,
                 steps: ['Failed to create release.'],
-                errors: [error],
+                errors: [semanticError],
             })];
     }
 }
-function failureResult(taskId, error) {
-    return new result_1.Result({ id: taskId, success: false, executed: true, errors: [error] });
+function failureResult(taskId, message, code) {
+    return new result_1.Result({ id: taskId, success: false, executed: true, errors: [new application_error_1.ApplicationError(code, message)] });
 }
 
 
@@ -57289,6 +57398,7 @@ exports.runCreateTag = runCreateTag;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const deployment_continuation_guard_1 = __nccwpck_require__(1779);
+const application_error_1 = __nccwpck_require__(75999);
 async function runCreateTag(param, taskId, repositoryTagPort) {
     const validationFailure = validateTagInput(param, taskId);
     if (validationFailure)
@@ -57302,26 +57412,27 @@ async function runCreateTag(param, taskId, repositoryTagPort) {
             : noTagResult(taskId, tagName);
     }
     catch (error) {
-        (0, logging_ports_1.logError)(`Error executing ${taskId}: ${error}`);
-        return [new result_1.Result({ id: taskId, success: false, executed: true, steps: [`Failed to create tag ${tagName}.`], errors: [error] })];
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to create tag ${tagName}.`);
+        (0, logging_ports_1.logError)(semanticError);
+        return [new result_1.Result({ id: taskId, success: false, executed: true, steps: [`Failed to create tag ${tagName}.`], errors: [semanticError] })];
     }
 }
 function validateTagInput(param, taskId) {
     const operation = param.currentConfiguration.deploymentOrchestration;
     if (!operation) {
-        return new result_1.Result({ id: taskId, success: false, executed: true, errors: ['create_tag requires a durable deployment operation.'] });
+        return new result_1.Result({ id: taskId, success: false, executed: true, errors: [new application_error_1.ApplicationError('workflow.invalid-event', 'create_tag requires a durable deployment operation.')] });
     }
     const continuationError = (0, deployment_continuation_guard_1.validateDeploymentContinuation)(operation, param.singleAction.operationId, ["publishing"], param.singleAction.version);
     if (continuationError)
-        return new result_1.Result({ id: taskId, success: false, executed: true, errors: [continuationError] });
+        return new result_1.Result({ id: taskId, success: false, executed: true, errors: [new application_error_1.ApplicationError('workflow.stale', continuationError)] });
     if (!operation.productionSha) {
-        return new result_1.Result({ id: taskId, success: false, executed: true, errors: ['The deployment operation has no accepted production SHA.'] });
+        return new result_1.Result({ id: taskId, success: false, executed: true, errors: [new application_error_1.ApplicationError('workflow.stale', 'The deployment operation has no accepted production SHA.')] });
     }
     return undefined;
 }
 function noTagResult(taskId, tagName) {
     (0, logging_ports_1.logWarn)(`CreateTag: createTag returned no SHA for version ${tagName}.`);
-    return [new result_1.Result({ id: taskId, success: false, executed: true, errors: [`Failed to create tag ${tagName}.`] })];
+    return [new result_1.Result({ id: taskId, success: false, executed: true, errors: [new application_error_1.ApplicationError('provider.contract-invalid', `Failed to create tag ${tagName}.`)] })];
 }
 
 
@@ -57342,6 +57453,7 @@ const managed_pull_request_1 = __nccwpck_require__(95914);
 const result_1 = __nccwpck_require__(73817);
 const deployment_lifecycle_policy_1 = __nccwpck_require__(54037);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+const application_error_1 = __nccwpck_require__(75999);
 const TASK_ID = "DeploymentOrchestrationUseCase";
 class DeploymentOrchestrationUseCase {
     constructor(dependencies) {
@@ -57370,7 +57482,7 @@ class DeploymentOrchestrationUseCase {
                     success: false,
                     executed: true,
                     steps: ["Deployment orchestration is blocked. No unsafe transition was performed."],
-                    errors: [error],
+                    errors: [(0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Deployment orchestration failed.')],
                 })];
         }
     }
@@ -57378,7 +57490,7 @@ class DeploymentOrchestrationUseCase {
         const existing = execution.currentConfiguration.deploymentOrchestration;
         if (existing) {
             if (existing.version !== execution.singleAction.version) {
-                throw new Error(`Issue already owns deployment operation ${existing.operationId} for version ${existing.version}.`);
+                throw new application_error_1.ApplicationError('workflow.stale', `Issue already owns deployment operation ${existing.operationId} for version ${existing.version}.`);
             }
             if (existing.phase === "blocked"
                 && (!existing.lastFailure?.retryable
@@ -57407,7 +57519,7 @@ class DeploymentOrchestrationUseCase {
             ? execution.currentConfiguration.releaseBranch
             : execution.currentConfiguration.hotfixBranch;
         if (!sourceBranch)
-            throw new Error(`No prepared ${kind} branch is stored on the launcher issue.`);
+            throw new application_error_1.ApplicationError('workflow.stale', `No prepared ${kind} branch is stored on the launcher issue.`);
         const sourceSha = await this.dependencies.git.getBranchSha(execution.owner, execution.repo, sourceBranch, execution.tokens.token);
         const originBranch = kind === "release"
             ? execution.currentConfiguration.releaseOriginBranch ?? execution.branches.development
@@ -57447,7 +57559,7 @@ class DeploymentOrchestrationUseCase {
             publicationWorkflow: operation.publicationWorkflow,
         });
         if (errors.length > 0)
-            throw new Error(errors.join(" "));
+            throw new application_error_1.ApplicationError('validation.invalid-input', errors.join(" "));
         execution.currentConfiguration.deploymentOrchestration = operation;
         if (kind === "release") {
             execution.currentConfiguration.releaseOriginBranch = originBranch;
@@ -57477,7 +57589,7 @@ class DeploymentOrchestrationUseCase {
             ? { ...operation, promotionPullRequest: promotion.number }
             : (0, deployment_operation_1.transitionDeploymentOperation)({ ...operation, promotionPullRequest: promotion.number }, "preparing", "promotion_pr_pending").operation;
         if (pending.phase !== "promotion_pr_pending")
-            throw new Error(`Cannot prepare promotion from ${operation.phase}.`);
+            throw new application_error_1.ApplicationError('workflow.stale', `Cannot prepare promotion from ${operation.phase}.`);
         execution.currentConfiguration.deploymentOrchestration = pending;
         await this.persist(execution);
         const configured = await this.configureMergeBehavior(execution, pending, promotion, "promotion", "production");
@@ -57491,11 +57603,11 @@ class DeploymentOrchestrationUseCase {
         let operation = requireOperation(execution);
         const pullRequestNumber = execution.pullRequest.number;
         if (pullRequestNumber < 1)
-            throw new Error("The continuation event has no pull request number.");
+            throw new application_error_1.ApplicationError('workflow.invalid-event', "The continuation event has no pull request number.");
         const pullRequest = await this.dependencies.pullRequests.getPullRequest(execution.owner, execution.repo, pullRequestNumber, execution.tokens.token);
         const identity = (0, managed_pull_request_1.parseManagedPullRequestMarker)(pullRequest.body);
         if (!identity || identity.operationId !== operation.operationId || identity.issue !== execution.singleAction.issue) {
-            throw new Error(`PR #${pullRequest.number} is not owned by deployment operation ${operation.operationId}.`);
+            throw new application_error_1.ApplicationError('workflow.stale', `PR #${pullRequest.number} is not owned by deployment operation ${operation.operationId}.`);
         }
         if (operation.phase === "blocked") {
             const previousPhase = operation.lastFailure?.previousPhase;
@@ -57515,7 +57627,7 @@ class DeploymentOrchestrationUseCase {
             }
         }
         if (pullRequest.repositoryFullName.toLowerCase() !== `${execution.owner}/${execution.repo}`.toLowerCase()) {
-            throw new Error("Cross-repository deployment continuation was rejected.");
+            throw new application_error_1.ApplicationError('authorization.denied', "Cross-repository deployment continuation was rejected.");
         }
         if (pullRequest.state !== "closed")
             return success(`PR #${pullRequest.number} is still open; no transition was applied.`);
@@ -57576,10 +57688,10 @@ class DeploymentOrchestrationUseCase {
             return success(`Publication for ${operation.tag} was already verified; duplicate notification ignored.`);
         }
         if (operation.phase !== "published" && operation.phase !== "publishing" && operation.phase !== "promoted") {
-            throw new Error(`Publication cannot advance from phase ${operation.phase}.`);
+            throw new application_error_1.ApplicationError('workflow.stale', `Publication cannot advance from phase ${operation.phase}.`);
         }
         if (!operation.productionSha)
-            throw new Error("The accepted production SHA is missing.");
+            throw new application_error_1.ApplicationError('workflow.stale', "The accepted production SHA is missing.");
         const reachable = await this.dependencies.git.isCommitReachable(execution.owner, execution.repo, operation.productionBranch, operation.productionSha, execution.tokens.token);
         if (!reachable)
             return await this.block(execution, operation, "publication", "Published SHA is not reachable from the stored production branch.", false);
@@ -57619,7 +57731,9 @@ class DeploymentOrchestrationUseCase {
                 success: false,
                 executed: true,
                 steps: [`Deployment ${operation.operationId} remains blocked; its original failure classification was preserved.`],
-                errors: [new Error(operation.lastFailure?.message ?? "Deployment remains blocked.")],
+                errors: [new application_error_1.ApplicationError('workflow.failed', operation.lastFailure?.message ?? "Deployment remains blocked.", {
+                        retryable: operation.lastFailure?.retryable ?? false,
+                    })],
             });
         }
         const category = operation.phase === "preparing" || operation.phase === "promotion_pr_pending"
@@ -57665,8 +57779,8 @@ class DeploymentOrchestrationUseCase {
             }
         }
         catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            return await this.block(execution, operation, "cleanup", message, true);
+            const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Deployment cleanup failed.');
+            return await this.block(execution, operation, "cleanup", semanticError.message, true, semanticError);
         }
         const completed = { ...operation, phase: "completed", lastFailure: null };
         execution.currentConfiguration.deploymentOrchestration = completed;
@@ -57750,7 +57864,7 @@ class DeploymentOrchestrationUseCase {
         };
         const existing = await this.dependencies.pullRequests.findManagedPullRequests(query);
         if (existing.length > 1)
-            throw new Error(`Multiple managed ${phase} PRs match operation ${operation.operationId}.`);
+            throw new application_error_1.ApplicationError('provider.conflict', `Multiple managed ${phase} PRs match operation ${operation.operationId}.`);
         if (existing[0])
             return existing[0];
         const context = presentationContext(execution);
@@ -57839,13 +57953,19 @@ class DeploymentOrchestrationUseCase {
             await this.dependencies.labels.setLabels(execution.owner, execution.repo, execution.singleAction.issue, next, execution.tokens.token);
         }
     }
-    async block(execution, operation, category, message, retryable) {
+    async block(execution, operation, category, message, retryable, semanticError) {
         const blocked = (0, deployment_operation_1.blockDeploymentOperation)(operation, category, message, retryable);
         execution.currentConfiguration.deploymentOrchestration = blocked;
         await this.persist(execution);
         await this.publishDashboard(execution, blocked);
         await this.publishMilestone(execution, blocked, "reconciliation-blocked", `❌ Deployment blocked: ${blocked.lastFailure?.message}`);
-        return new result_1.Result({ id: TASK_ID, success: false, executed: true, steps: [message], errors: [new Error(message)] });
+        return new result_1.Result({
+            id: TASK_ID,
+            success: false,
+            executed: true,
+            steps: [message],
+            errors: [semanticError ?? new application_error_1.ApplicationError('workflow.failed', message, { retryable })],
+        });
     }
     async persist(execution) {
         const expected = this.checkpoints.get(execution);
@@ -57857,7 +57977,7 @@ class DeploymentOrchestrationUseCase {
         };
         const actual = await this.dependencies.state.load(query);
         if (!sameCheckpoint(actual, expected)) {
-            throw new Error("Concurrent deployment state change detected; reload the launcher issue and retry.");
+            throw new application_error_1.ApplicationError('workflow.stale', "Concurrent deployment state change detected; reload the launcher issue and retry.");
         }
         await this.dependencies.state.save({ ...query, state: execution.currentConfiguration });
         const operation = execution.currentConfiguration.deploymentOrchestration;
@@ -57905,16 +58025,16 @@ exports.DeploymentOrchestrationUseCase = DeploymentOrchestrationUseCase;
 function requireOperation(execution) {
     const operation = execution.currentConfiguration.deploymentOrchestration;
     if (!operation)
-        throw new Error("No durable deployment operation exists on the launcher issue.");
+        throw new application_error_1.ApplicationError('workflow.invalid-event', "No durable deployment operation exists on the launcher issue.");
     if (!execution.singleAction.operationId) {
-        throw new Error("single-action-operation-id is required for a durable deployment continuation.");
+        throw new application_error_1.ApplicationError('validation.invalid-input', "single-action-operation-id is required for a durable deployment continuation.");
     }
     if (execution.singleAction.operationId && execution.singleAction.operationId !== operation.operationId) {
-        throw new Error(`Deployment operation mismatch: expected ${operation.operationId}, received ${execution.singleAction.operationId}.`);
+        throw new application_error_1.ApplicationError('workflow.stale', `Deployment operation mismatch: expected ${operation.operationId}, received ${execution.singleAction.operationId}.`);
     }
     if ((execution.singleAction.isPublishedDeploymentAction || execution.singleAction.isFailedDeploymentAction)
         && execution.singleAction.version !== operation.version) {
-        throw new Error(`Deployment version mismatch: expected ${operation.version}, received ${execution.singleAction.version || "empty"}.`);
+        throw new application_error_1.ApplicationError('workflow.stale', `Deployment version mismatch: expected ${operation.version}, received ${execution.singleAction.version || "empty"}.`);
     }
     return operation;
 }
@@ -57927,7 +58047,7 @@ function deploymentKind(execution) {
         return "hotfix";
     if (execution.labels.isRelease)
         return "release";
-    throw new Error("The launcher issue does not identify exactly one release or hotfix source branch.");
+    throw new application_error_1.ApplicationError('validation.invalid-input', "The launcher issue does not identify exactly one release or hotfix source branch.");
 }
 function reconciliationTargetRole(operation, targetBranch) {
     if (targetBranch === operation.productionBranch)
@@ -57957,7 +58077,13 @@ function success(step) {
 }
 function blockedResult(operation, fallback) {
     const message = operation.lastFailure?.message ?? fallback;
-    return new result_1.Result({ id: TASK_ID, success: false, executed: true, steps: [message], errors: [new Error(message)] });
+    return new result_1.Result({
+        id: TASK_ID,
+        success: false,
+        executed: true,
+        steps: [message],
+        errors: [new application_error_1.ApplicationError('workflow.failed', message, { retryable: operation.lastFailure?.retryable ?? false })],
+    });
 }
 function sameCheckpoint(actual, expected) {
     if (!actual || !expected)
@@ -58088,6 +58214,7 @@ const version_policy_1 = __nccwpck_require__(8381);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const setup_resource_provisioning_1 = __nccwpck_require__(94894);
+const application_error_1 = __nccwpck_require__(75999);
 const TASK_ID = 'InitialSetupUseCase';
 /** Runs repository setup as an ordered application workflow with explicit port dependencies. */
 async function runInitialSetupWorkflow(request, dependencies) {
@@ -58098,7 +58225,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
         const setupConfiguration = request.setupConfiguration;
         if (!dependencies.setupWorkspacePort.hasValidToken(request.token)) {
             (0, logging_ports_1.logInfo)('  🛑 Setup requires the setup PAT provided for this command with a valid token.');
-            errors.push('A valid setup PAT must be provided to run setup. It is separate from the workflow PAT Secret.');
+            errors.push(new application_error_1.ApplicationError('authorization.credential-invalid', 'A valid setup PAT must be provided to run setup. It is separate from the workflow PAT Secret.'));
             return [buildResult(errors, steps)];
         }
         (0, logging_ports_1.logInfo)('📋 Ensuring .github and copying setup files...');
@@ -58118,12 +58245,14 @@ async function runInitialSetupWorkflow(request, dependencies) {
             return [buildResult(errors, steps)];
         }
         steps.push(`✅ GitHub access verified: ${githubAccess.user}`);
-        const remoteConfiguration = await (0, setup_resource_provisioning_1.resolveRemoteConfiguration)(request, dependencies, setupConfiguration, errors);
+        const remoteConfigurationErrors = [];
+        const remoteConfiguration = await (0, setup_resource_provisioning_1.resolveRemoteConfiguration)(request, dependencies, setupConfiguration, remoteConfigurationErrors);
+        errors.push(...fromMessages(remoteConfigurationErrors, 'provider.unavailable'));
         const secrets = await (0, setup_resource_provisioning_1.ensureRepositorySecrets)(request, dependencies, setupConfiguration, remoteConfiguration);
         if (secrets.step)
             steps.push(secrets.step);
         if (secrets.errors.length > 0)
-            errors.push(...secrets.errors);
+            errors.push(...fromMessages(secrets.errors, 'authorization.credential-invalid'));
         (0, logging_ports_1.logInfo)('🏷️  Checking configured and progress labels...');
         const labels = await ensureInitialLabels(request, dependencies.initialLabelProvisioningPort);
         if (!labels.completed) {
@@ -58136,7 +58265,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
         (0, logging_ports_1.logInfo)('📋 Checking issue types...');
         const issueTypes = await ensureIssueTypes(request, dependencies.issueTypeProvisioningPort);
         if (!issueTypes.success) {
-            errors.push(...issueTypes.errors);
+            errors.push(...fromMessages(issueTypes.errors, 'provider.unavailable'));
         }
         else {
             steps.push(`✅ Issue types checked: ${issueTypes.created} created, ${issueTypes.existing} already existed`);
@@ -58145,7 +58274,7 @@ async function runInitialSetupWorkflow(request, dependencies) {
         if (variables.step)
             steps.push(variables.step);
         if (variables.errors.length > 0)
-            errors.push(...variables.errors);
+            errors.push(...fromMessages(variables.errors, 'provider.unavailable'));
         const defaultVersion = await ensureDefaultVersion(request, dependencies, setupConfiguration);
         if (defaultVersion.step)
             steps.push(defaultVersion.step);
@@ -58154,8 +58283,9 @@ async function runInitialSetupWorkflow(request, dependencies) {
         return [buildResult(errors, steps)];
     }
     catch (error) {
-        (0, logging_ports_1.logError)(error);
-        errors.push(`Error running initial setup: ${error}`);
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Error running initial setup.');
+        (0, logging_ports_1.logError)(semanticError);
+        errors.push(semanticError);
         return [buildResult(errors, steps)];
     }
 }
@@ -58165,8 +58295,9 @@ async function verifyGitHubAccess(request, repository) {
         return { success: true, user, errors: [] };
     }
     catch (error) {
-        (0, logging_ports_1.logError)(`Error verifying GitHub access: ${error}`);
-        return { success: false, errors: [`Could not verify GitHub access: ${error}`] };
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'authorization.credential-invalid', 'Could not verify GitHub access.');
+        (0, logging_ports_1.logError)(semanticError);
+        return { success: false, errors: [semanticError] };
     }
 }
 async function ensureInitialLabels(request, repository) {
@@ -58175,9 +58306,9 @@ async function ensureInitialLabels(request, repository) {
         return { completed: true, ...summary };
     }
     catch (error) {
-        const message = `Error ensuring initial labels: ${error}`;
+        const message = 'Could not ensure the initial labels.';
         (0, logging_ports_1.logError)(message);
-        return { completed: false, error: message };
+        return { completed: false, error: (0, application_error_1.toApplicationError)(error, 'provider.unavailable', message) };
     }
 }
 async function ensureIssueTypes(request, repository) {
@@ -58191,8 +58322,9 @@ async function ensureIssueTypes(request, repository) {
         };
     }
     catch (error) {
-        (0, logging_ports_1.logError)(`Error ensuring issue types: ${error}`);
-        return { success: false, created: 0, existing: 0, errors: [`Error ensuring issue types: ${error}`] };
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Could not ensure issue types.');
+        (0, logging_ports_1.logError)(semanticError);
+        return { success: false, created: 0, existing: 0, errors: [semanticError.message] };
     }
 }
 async function ensureDefaultVersion(request, dependencies, setupConfiguration) {
@@ -58210,22 +58342,22 @@ async function ensureDefaultVersion(request, dependencies, setupConfiguration) {
         if (!defaultBranch) {
             const message = 'Could not get default branch to create initial version tag.';
             (0, logging_ports_1.logError)(message);
-            return { error: message };
+            return { error: new application_error_1.ApplicationError('provider.contract-invalid', message) };
         }
         const sha = await dependencies.repositoryTagPort.createTag(request.owner, request.repo, defaultBranch, version_policy_1.DEFAULT_INITIAL_TAG, request.token);
         return sha
             ? { step: `✅ Default version tag ${version_policy_1.DEFAULT_INITIAL_TAG} created on branch ${defaultBranch}. Run \`git fetch --tags\` to update local refs.` }
-            : { error: `Failed to create tag ${version_policy_1.DEFAULT_INITIAL_TAG} on ${request.owner}/${request.repo}` };
+            : { error: new application_error_1.ApplicationError('provider.contract-invalid', `Failed to create tag ${version_policy_1.DEFAULT_INITIAL_TAG}.`) };
     }
     catch (error) {
-        const message = `Error ensuring default version: ${error}`;
+        const message = 'Error ensuring default version.';
         (0, logging_ports_1.logError)(message);
-        return { error: message };
+        return { error: (0, application_error_1.toApplicationError)(error, 'provider.unavailable', message) };
     }
 }
 function appendLabelSummary(steps, errors, summary, labelType) {
     if (summary.errors.length > 0) {
-        errors.push(...summary.errors);
+        errors.push(...fromMessages(summary.errors, 'provider.unavailable'));
         (0, logging_ports_1.logError)(`Error checking labels: ${summary.errors}`);
     }
     else {
@@ -58241,6 +58373,9 @@ function buildResult(errors, steps) {
         errors: errors.length > 0 ? errors : undefined,
     });
 }
+function fromMessages(messages, code) {
+    return messages.map(message => new application_error_1.ApplicationError(code, message));
+}
 
 
 /***/ }),
@@ -58255,6 +58390,7 @@ exports.ObserveBranchSyncUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
 const branch_sync_notification_policy_1 = __nccwpck_require__(79895);
 const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
 const TASK_ID = "ObserveBranchSyncUseCase";
 /**
  * Cheap push-time observer. It only queries branch relationships/comparisons
@@ -58345,13 +58481,8 @@ function failure(message, cause) {
         success: false,
         executed: true,
         steps: [message],
-        errors: [withCause(message, cause)],
+        errors: [(0, application_error_1.toApplicationError)(cause, 'provider.unavailable', message)],
     });
-}
-function withCause(message, cause) {
-    const error = new Error(message);
-    error.cause = cause;
-    return error;
 }
 
 
@@ -58373,6 +58504,7 @@ const project_context_instruction_1 = __nccwpck_require__(63907);
 const find_issue_branch_1 = __nccwpck_require__(38575);
 const progress_prerequisite_policy_1 = __nccwpck_require__(31001);
 const progress_response_1 = __nccwpck_require__(64264);
+const application_error_1 = __nccwpck_require__(75999);
 /** Loads progress context and asks the configured agent for an assessment. */
 async function analyzeProgress(param, taskId, dependencies) {
     const issueNumber = param.issueNumber;
@@ -58380,19 +58512,19 @@ async function analyzeProgress(param, taskId, dependencies) {
     if (!agentReady) {
         const message = 'Missing required agent configuration. Provide a model and a valid CLI command.';
         (0, logging_ports_1.logError)(message);
-        return { kind: 'failure', result: failure(taskId, message) };
+        return { kind: 'failure', result: failure(taskId, message, 'configuration.invalid') };
     }
     if (issueNumber === -1) {
         const message = 'Issue number not found. Cannot check progress without an issue number.';
         (0, logging_ports_1.logError)(message);
-        return { kind: 'failure', result: failure(taskId, message) };
+        return { kind: 'failure', result: failure(taskId, message, 'validation.invalid-input') };
     }
     (0, logging_ports_1.logInfo)(`📋 Checking progress for issue #${issueNumber}`);
     const issueDescription = await dependencies.issueDescriptionQueryPort.getDescription(param.owner, param.repo, issueNumber, param.tokens.token);
     if (!issueDescription) {
         const message = `Could not retrieve issue description for issue #${issueNumber}`;
         (0, logging_ports_1.logError)(message);
-        return { kind: 'failure', result: failure(taskId, message) };
+        return { kind: 'failure', result: failure(taskId, message, 'provider.not-found') };
     }
     const branch = await (0, find_issue_branch_1.findIssueBranch)(param, dependencies.branchRepository);
     const prerequisiteError = (0, progress_prerequisite_policy_1.validateProgressPrerequisites)({
@@ -58407,7 +58539,7 @@ async function analyzeProgress(param, taskId, dependencies) {
             kind: 'failure',
             result: failure(taskId, branch
                 ? prerequisiteError
-                : `Could not find branch for issue #${issueNumber}. Please ensure a branch exists with pattern: feature/${issueNumber}-*, bugfix/${issueNumber}-*, docs/${issueNumber}-*, or chore/${issueNumber}-*`),
+                : `Could not find branch for issue #${issueNumber}. Please ensure a branch exists with pattern: feature/${issueNumber}-*, bugfix/${issueNumber}-*, docs/${issueNumber}-*, or chore/${issueNumber}-*`, 'provider.not-found'),
         };
     }
     const resolvedBranch = branch;
@@ -58441,12 +58573,12 @@ async function analyzeProgress(param, taskId, dependencies) {
         attemptResult,
     };
 }
-function failure(taskId, message) {
+function failure(taskId, message, code) {
     return new result_1.Result({
         id: taskId,
         success: false,
         executed: true,
-        errors: [message],
+        errors: [new application_error_1.ApplicationError(code, message)],
     });
 }
 
@@ -58580,6 +58712,7 @@ const result_1 = __nccwpck_require__(73817);
 const input_keys_1 = __nccwpck_require__(88539);
 const logging_ports_1 = __nccwpck_require__(6152);
 const deployment_continuation_guard_1 = __nccwpck_require__(1779);
+const application_error_1 = __nccwpck_require__(75999);
 async function runPublishGithubAction(param, taskId, repositoryTagPort, repositoryReleasePort) {
     const validationFailure = validateVersion(param, taskId);
     if (validationFailure)
@@ -58593,31 +58726,32 @@ async function runPublishGithubAction(param, taskId, repositoryTagPort, reposito
         return releaseId ? successResult(taskId, sourceTag, targetTag, releaseId) : failureResult(taskId, sourceTag, targetTag);
     }
     catch (error) {
-        (0, logging_ports_1.logError)(`Error executing ${taskId}: ${error}`);
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to update release ${targetTag} from ${sourceTag}.`);
+        (0, logging_ports_1.logError)(semanticError);
         return [new result_1.Result({
                 id: taskId,
                 success: false,
                 executed: true,
                 steps: [`Failed to update release \`${targetTag}\` from \`${sourceTag}\`.`],
-                errors: [error],
+                errors: [semanticError],
             })];
     }
 }
 function validateVersion(param, taskId) {
     const continuationError = (0, deployment_continuation_guard_1.validateDeploymentContinuation)(param.currentConfiguration?.deploymentOrchestration, param.singleAction.operationId, ["publishing"], param.singleAction.version);
     if (continuationError)
-        return new result_1.Result({ id: taskId, success: false, executed: true, errors: [continuationError] });
+        return new result_1.Result({ id: taskId, success: false, executed: true, errors: [new application_error_1.ApplicationError('workflow.stale', continuationError)] });
     if (param.singleAction.version.length > 0 || param.currentConfiguration?.deploymentOrchestration?.version)
         return undefined;
     (0, logging_ports_1.logError)('Version is not set.');
-    return new result_1.Result({ id: taskId, success: false, executed: true, errors: [`${input_keys_1.INPUT_KEYS.SINGLE_ACTION_VERSION} is not set.`] });
+    return new result_1.Result({ id: taskId, success: false, executed: true, errors: [new application_error_1.ApplicationError('validation.invalid-input', `${input_keys_1.INPUT_KEYS.SINGLE_ACTION_VERSION} is not set.`)] });
 }
 function successResult(taskId, sourceTag, targetTag, releaseId) {
     (0, logging_ports_1.logInfo)(`Updated release \`${targetTag}\` from \`${sourceTag}\`: ${releaseId}`);
     return [new result_1.Result({ id: taskId, success: true, executed: true, steps: [`Updated release \`${targetTag}\` from \`${sourceTag}\`.`] })];
 }
 function failureResult(taskId, sourceTag, targetTag) {
-    return [new result_1.Result({ id: taskId, success: false, executed: true, errors: [`Failed to update release \`${targetTag}\` from \`${sourceTag}\`.`] })];
+    return [new result_1.Result({ id: taskId, success: false, executed: true, errors: [new application_error_1.ApplicationError('provider.contract-invalid', `Failed to update release ${targetTag} from ${sourceTag}.`)] })];
 }
 
 
@@ -58660,10 +58794,16 @@ const result_1 = __nccwpck_require__(73817);
 const comment_watermark_1 = __nccwpck_require__(23623);
 const issue_comment_publication_policy_1 = __nccwpck_require__(61899);
 const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
 async function runPublishIssueComment(param, taskId, issueCommentPort) {
     const request = (0, issue_comment_publication_policy_1.resolveIssueCommentPublicationRequest)(param.singleAction);
     if (request instanceof Error) {
-        return [new result_1.Result({ id: taskId, success: false, executed: true, errors: [request] })];
+        return [new result_1.Result({
+                id: taskId,
+                success: false,
+                executed: true,
+                errors: [new application_error_1.ApplicationError('validation.invalid-input', request.message, { cause: request })],
+            })];
     }
     try {
         if (request.mode === 'create') {
@@ -58677,7 +58817,7 @@ async function runPublishIssueComment(param, taskId, issueCommentPort) {
                         id: taskId,
                         success: false,
                         executed: true,
-                        errors: [`Comment ${request.commentId} does not belong to issue ${param.singleAction.issue}.`],
+                        errors: [new application_error_1.ApplicationError('provider.not-found', `Comment ${request.commentId} does not belong to issue ${param.singleAction.issue}.`)],
                     })];
             }
             const message = request.mode === 'append'
@@ -58690,8 +58830,9 @@ async function runPublishIssueComment(param, taskId, issueCommentPort) {
         return [new result_1.Result({ id: taskId, success: true, executed: true })];
     }
     catch (error) {
-        (0, logging_ports_1.logError)(`Error executing ${taskId}: ${error}`);
-        return [new result_1.Result({ id: taskId, success: false, executed: true, errors: [error] })];
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to publish the issue comment.');
+        (0, logging_ports_1.logError)(semanticError);
+        return [new result_1.Result({ id: taskId, success: false, executed: true, errors: [semanticError] })];
     }
 }
 function appendCommentContent(previous, addition) {
@@ -58713,12 +58854,13 @@ const result_1 = __nccwpck_require__(73817);
 const recommendation_policy_1 = __nccwpck_require__(39410);
 const logging_ports_1 = __nccwpck_require__(6152);
 const copilot_interaction_policy_1 = __nccwpck_require__(90108);
+const application_error_1 = __nccwpck_require__(75999);
 function buildRecommendationResult(param, taskId, response, issueDescriptionFingerprint, previousRecommendation, issueNumber) {
     const steps = extractRecommendationText(response);
     if (!steps) {
-        const error = new Error('The configured agent returned no recommendation.');
-        (0, logging_ports_1.logError)(error);
-        return [new result_1.Result({ id: taskId, success: false, executed: true, errors: [error] })];
+        const semanticError = new application_error_1.ApplicationError('agent.failed', 'The configured agent returned no recommendation.');
+        (0, logging_ports_1.logError)(semanticError);
+        return [new result_1.Result({ id: taskId, success: false, executed: true, errors: [semanticError] })];
     }
     (0, logging_ports_1.logDebugInfo)(`RecommendSteps: agent response received. Steps length=${steps.length}.`);
     if (previousRecommendation && (0, recommendation_policy_1.isNoNewRecommendation)(steps))
@@ -58805,24 +58947,25 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const project_context_instruction_1 = __nccwpck_require__(63907);
 const task_emoji_1 = __nccwpck_require__(46103);
 const recommend_steps_result_policy_1 = __nccwpck_require__(65928);
+const application_error_1 = __nccwpck_require__(75999);
 /** Runs the recommendation policy and agent interaction for an issue. */
 async function runRecommendStepsWorkflow(param, taskId, dependencies) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(taskId)} Executing ${taskId}.`);
     try {
         const configuration = param.ai.getAgentConfiguration('planner');
         if (!(0, agent_1.isAgentConfigurationReady)(configuration)) {
-            return [failure(taskId, 'Missing agent CLI command and model.')];
+            return [failure(taskId, 'Missing agent CLI command and model.', 'configuration.invalid')];
         }
         const issueNumber = param.issueNumber;
         if (issueNumber === -1) {
-            return [failure(taskId, 'Issue number not found.')];
+            return [failure(taskId, 'Issue number not found.', 'validation.invalid-input')];
         }
         const rawIssueDescription = await dependencies.issueDescriptionQueryPort.getDescription(param.owner, param.repo, issueNumber, param.tokens.token);
         const issueDescription = rawIssueDescription === undefined
             ? undefined
             : (0, recommendation_policy_1.getVisibleIssueDescription)(rawIssueDescription);
         if (!issueDescription?.trim()) {
-            return [failure(taskId, `No description found for issue #${issueNumber}.`)];
+            return [failure(taskId, `No description found for issue #${issueNumber}.`, 'provider.not-found')];
         }
         const previousRecommendation = param.previousConfiguration?.recommendationState;
         const issueDescriptionFingerprint = (0, recommendation_policy_1.createIssueDescriptionFingerprint)(issueDescription);
@@ -58846,23 +58989,24 @@ async function runRecommendStepsWorkflow(param, taskId, dependencies) {
         return (0, recommend_steps_result_policy_1.buildRecommendationResult)(param, taskId, response, issueDescriptionFingerprint, previousRecommendation, issueNumber);
     }
     catch (error) {
-        (0, logging_ports_1.logError)(`Error in ${taskId}: ${error}`);
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'agent.failed', `Unable to complete ${taskId}.`);
+        (0, logging_ports_1.logError)(semanticError);
         return [
             new result_1.Result({
                 id: taskId,
                 success: false,
                 executed: true,
-                errors: [`Error in ${taskId}: ${error}`],
+                errors: [semanticError],
             }),
         ];
     }
 }
-function failure(taskId, message) {
+function failure(taskId, message, code) {
     return new result_1.Result({
         id: taskId,
         success: false,
         executed: true,
-        errors: [message],
+        errors: [new application_error_1.ApplicationError(code, message)],
     });
 }
 
@@ -59044,6 +59188,7 @@ exports.SynchronizeAgentActivityUseCase = void 0;
 const copilot_lifecycle_1 = __nccwpck_require__(72418);
 const agent_activity_label_policy_1 = __nccwpck_require__(79966);
 const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
 /**
  * Maintains the temporary agent-activity label around a complete route.
  * Cleanup is deliberately best-effort so a label outage never hides the
@@ -59084,7 +59229,8 @@ class SynchronizeAgentActivityUseCase {
         }
         catch (error) {
             const message = `${this.taskId}: unable to ${active ? 'add' : 'remove'} agent activity label.`;
-            (0, logging_ports_1.logError)(message, error instanceof Error ? { stack: error.stack } : undefined);
+            const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', message);
+            (0, logging_ports_1.logError)(semanticError);
         }
     }
 }
@@ -59127,6 +59273,7 @@ const copilot_lifecycle_1 = __nccwpck_require__(72418);
 const lifecycle_state_policy_1 = __nccwpck_require__(34026);
 const lifecycle_waiting_state_policy_1 = __nccwpck_require__(61736);
 const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
 const PULL_REQUEST_LIFECYCLE_EVENTS = [
     'pull_request',
     'pull_request_review',
@@ -59188,7 +59335,7 @@ class SynchronizeLifecycleStateUseCase {
         catch (error) {
             const message = `Unable to synchronize Copilot lifecycle state: ${error instanceof Error ? error.message : String(error)}`;
             (0, logging_ports_1.logError)(message);
-            return [new result_1.Result({ id: this.taskId, success: false, executed: true, errors: [message] })];
+            return [new result_1.Result({ id: this.taskId, success: false, executed: true, errors: [new application_error_1.ApplicationError('provider.unavailable', message, { cause: error })] })];
         }
     }
     async readExternalEvidence(execution) {
@@ -59278,6 +59425,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runBranchSyncCommand = runBranchSyncCommand;
 const result_1 = __nccwpck_require__(73817);
 const branch_sync_command_1 = __nccwpck_require__(51114);
+const application_error_1 = __nccwpck_require__(75999);
 /** Authorizes and runs an explicit or natural-language branch synchronization request. */
 async function runBranchSyncCommand(execution, options, args, authorization) {
     const parsed = (0, branch_sync_command_1.parseBranchSyncCommandArguments)(args);
@@ -59291,14 +59439,14 @@ async function runBranchSyncCommand(execution, options, args, authorization) {
     return options.syncBranchUseCase.invoke({ execution, options: parsed.options });
 }
 function invalid(taskId, reason) {
-    return new result_1.Result({ id: taskId, success: false, executed: false, errors: [reason] });
+    return new result_1.Result({ id: taskId, success: false, executed: false, errors: [new application_error_1.ApplicationError('validation.invalid-input', reason)] });
 }
 function unavailable(taskId) {
     return new result_1.Result({
         id: `${taskId}.BranchSync`,
         success: false,
         executed: false,
-        errors: ["Branch synchronization is not available in this composition."],
+        errors: [new application_error_1.ApplicationError('configuration.unsupported', "Branch synchronization is not available in this composition.")],
     });
 }
 function unauthorized(taskId) {
@@ -59327,6 +59475,7 @@ exports.failedBranchSyncResult = failedBranchSyncResult;
 const agent_1 = __nccwpck_require__(79937);
 const result_1 = __nccwpck_require__(73817);
 const workspace_changes_1 = __nccwpck_require__(93370);
+const application_error_1 = __nccwpck_require__(75999);
 exports.BRANCH_SYNC_TASK_ID = "SyncBranchUseCase";
 const MAX_AGENT_CONFLICT_PATHS = 20;
 function branchSyncConflictEligibilityError(preparation, useAgent, execution) {
@@ -59371,7 +59520,7 @@ function completedBranchSyncResult(input) {
     });
 }
 function unavailableBranchSyncResult(reason) {
-    return new result_1.Result({ id: exports.BRANCH_SYNC_TASK_ID, success: false, executed: false, errors: [reason] });
+    return new result_1.Result({ id: exports.BRANCH_SYNC_TASK_ID, success: false, executed: false, errors: [new application_error_1.ApplicationError('agent.policy-rejected', reason)] });
 }
 function failedBranchSyncResult(reason, cause) {
     return new result_1.Result({
@@ -59379,13 +59528,10 @@ function failedBranchSyncResult(reason, cause) {
         success: false,
         executed: true,
         steps: [reason],
-        errors: [cause === undefined ? reason : errorWithCause(reason, cause)],
+        errors: [cause === undefined
+                ? new application_error_1.ApplicationError('workflow.failed', reason)
+                : (0, application_error_1.toApplicationError)(cause, 'workflow.failed', reason)],
     });
-}
-function errorWithCause(message, cause) {
-    const error = new Error(message);
-    error.cause = cause;
-    return error;
 }
 
 
@@ -59546,6 +59692,7 @@ const result_1 = __nccwpck_require__(73817);
 const commit_autofix_and_resolve_workflow_1 = __nccwpck_require__(93455);
 const commit_user_request_workflow_1 = __nccwpck_require__(43393);
 const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
 /** Runs the selected mutating action and returns any result records it produces. */
 async function runCommentAutomationAction(param, options, route, intentPayload, ports) {
     if (route === "review")
@@ -59562,7 +59709,7 @@ async function runReviewAction(param, options) {
                 id: `${options.taskId}.Review`,
                 success: false,
                 executed: false,
-                errors: ["Read-only review is not available in this composition."],
+                errors: [new application_error_1.ApplicationError('configuration.unsupported', "Read-only review is not available in this composition.")],
             })];
     }
     (0, logging_ports_1.logInfo)("Running natural-language read-only review.");
@@ -59597,7 +59744,7 @@ async function runAutofixAction(param, options, intentPayload, ports) {
             steps: [
                 "Autofix postflight failed: commit/push or finding reconciliation did not complete.",
             ],
-            errors: resolutionErrors,
+            errors: resolutionErrors.map(error => (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Autofix postflight could not complete.')),
         }));
         return autofixResults;
     }
@@ -59638,6 +59785,7 @@ const review_command_1 = __nccwpck_require__(1811);
 const commit_user_request_workflow_1 = __nccwpck_require__(43393);
 const workspace_mutation_guard_1 = __nccwpck_require__(24243);
 const branch_sync_comment_command_1 = __nccwpck_require__(4643);
+const application_error_1 = __nccwpck_require__(75999);
 const LEARNED_BUGBOT_RULE_PATH = '.copilot/BUGBOT.learned.md';
 /** Executes deterministic /copilot commands without routing them through intent detection. */
 async function runExplicitCommentCommand(param, options, command, actorAuthorizationPort, authenticatedUserPort) {
@@ -59685,7 +59833,7 @@ async function runRememberCommand(param, options, command, actorAuthorizationPor
     try {
         const { workspacePaths } = await (0, workspace_mutation_guard_1.finalizeWorkspaceMutation)(options.gitCommitPort, mutation.workspacePathsBefore, 'Remember Bugbot rule');
         if (workspacePaths.length !== 1 || workspacePaths[0] !== LEARNED_BUGBOT_RULE_PATH) {
-            return [...results, rememberFailure(`Remember Bugbot rule refused unexpected workspace paths: ${workspacePaths.join(', ')}`)];
+            return [...results, rememberFailure(new application_error_1.ApplicationError('agent.policy-rejected', `Remember Bugbot rule refused unexpected workspace paths: ${workspacePaths.join(', ')}`))];
         }
         const last = results.at(-1);
         if (last)
@@ -59698,12 +59846,11 @@ async function runRememberCommand(param, options, command, actorAuthorizationPor
     return [...results, ...commitResults];
 }
 function rememberFailure(error) {
-    const message = error instanceof Error ? error.message : String(error);
     return new result_1.Result({
         id: 'CommentAutomation.Remember',
         success: false,
         executed: true,
-        errors: [message],
+        errors: [(0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Remembering the Bugbot rule failed.')],
     });
 }
 function runHelpCommand(param, options) {
@@ -59721,7 +59868,7 @@ async function runDescriptionCommand(param, options, actorAuthorizationPort) {
                 id: `${options.taskId}.Description`,
                 success: false,
                 executed: false,
-                errors: ['Explicit pull-request description command is not available in this composition.'],
+                errors: [new application_error_1.ApplicationError('configuration.unsupported', 'Explicit pull-request description command is not available in this composition.')],
             })];
     }
     const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token);
@@ -59766,7 +59913,7 @@ async function runReviewCommand(param, options, command) {
             id: `${options.taskId}.Review`,
             success: false,
             executed: true,
-            errors: ['Explicit review command is not available in this composition.'],
+            errors: [new application_error_1.ApplicationError('configuration.unsupported', 'Explicit review command is not available in this composition.')],
         }));
         return results;
     }
@@ -59792,7 +59939,7 @@ function invalidCommentCommandResult(taskId, reason) {
         id: taskId,
         success: false,
         executed: false,
-        errors: [reason],
+        errors: [new application_error_1.ApplicationError('validation.invalid-input', reason)],
     });
 }
 
@@ -59966,14 +60113,14 @@ async function runCommentAutomation(param, options, actorAuthorizationPort, auth
         });
     }
     catch (cause) {
-        const error = new application_error_1.ApplicationError("Comment automation failed.", 'workflow', { cause });
-        (0, logging_ports_1.logError)(error);
+        const semanticError = new application_error_1.ApplicationError('workflow.failed', "Comment automation failed.", { cause });
+        (0, logging_ports_1.logError)(semanticError);
         return [...languageResults, new result_1.Result({
                 id: options.taskId,
                 success: false,
                 executed: true,
-                steps: [error.message],
-                errors: [error],
+                steps: [semanticError.message],
+                errors: [semanticError],
             })];
     }
 }
@@ -59991,6 +60138,7 @@ exports.CommitUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
+const application_error_1 = __nccwpck_require__(75999);
 class CommitUseCase {
     constructor(notifyNewCommitUseCase, checkChangesIssueSizeUseCase, detectPotentialProblemsUseCase, checkProgressUseCase, actorAuthorizationPort) {
         this.notifyNewCommitUseCase = notifyNewCommitUseCase;
@@ -60024,7 +60172,8 @@ class CommitUseCase {
             }
         }
         catch (error) {
-            (0, logging_ports_1.logError)(error);
+            const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Commit processing failed.');
+            (0, logging_ports_1.logError)(semanticError);
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -60032,7 +60181,7 @@ class CommitUseCase {
                 steps: [
                     `Error processing the commits.`,
                 ],
-                errors: [error],
+                errors: [semanticError],
             }));
         }
         return results;
@@ -60236,7 +60385,7 @@ class ResolveGithubExecutionAdmissionUseCase {
     async invoke(request) {
         const tokenUser = await this.authenticatedUserPort.getUserFromToken(request.token);
         if (typeof tokenUser !== 'string' || tokenUser.trim().length === 0) {
-            throw new application_error_1.ApplicationError('Failed to get user from token', 'authorization');
+            throw new application_error_1.ApplicationError('authorization.credential-invalid', 'Failed to get user from token.');
         }
         return {
             tokenUser,
@@ -60323,7 +60472,7 @@ async function loadTokenUser(execution, organizationSetupPort) {
         return;
     execution.tokenUser = await organizationSetupPort.getUserFromToken(execution.tokens.token);
     if (!execution.tokenUser)
-        throw new application_error_1.ApplicationError('Failed to get user from token', 'authorization');
+        throw new application_error_1.ApplicationError('authorization.credential-invalid', 'Failed to get user from token.');
 }
 async function loadPreviousConfiguration(execution, configurationPort) {
     const issueNumber = configurationIssueNumber(execution);
@@ -60473,13 +60622,14 @@ exports.runIssueWorkflow = runIssueWorkflow;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const copilot_interaction_policy_1 = __nccwpck_require__(90108);
+const application_error_1 = __nccwpck_require__(75999);
 /** Coordinates issue lifecycle steps in their required sequential order. */
 async function runIssueWorkflow(param, taskId, ports) {
     const results = [];
     const permissionResult = await ports.workflowSteps.checkPermissions.invoke(param);
     const lastAction = permissionResult[permissionResult.length - 1];
     if (!lastAction) {
-        const permissionError = new Error("Permission check returned no result.");
+        const permissionError = new application_error_1.ApplicationError('provider.contract-invalid', "Permission check returned no result.");
         (0, logging_ports_1.logError)(`Unable to continue ${taskId}: ${permissionError.message}`);
         return [
             new result_1.Result({
@@ -60679,7 +60829,7 @@ async function runPullRequestWorkflow(param, taskId, ports) {
         }
     }
     catch (cause) {
-        const semanticError = new application_error_1.ApplicationError("Unable to process the pull request.", 'workflow', { cause });
+        const semanticError = new application_error_1.ApplicationError('workflow.failed', "Unable to process the pull request.", { cause });
         (0, logging_ports_1.logError)(semanticError);
         return [
             new result_1.Result({
@@ -60804,6 +60954,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runSingleActionWorkflow = runSingleActionWorkflow;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
 async function runSingleActionWorkflow(param, taskId, ports) {
     if (!param.singleAction.validSingleAction) {
         (0, logging_ports_1.logDebugInfo)(`Single action is not valid: ${param.singleAction.currentSingleAction}. Skipping.`);
@@ -60830,14 +60981,15 @@ async function runSingleActionWorkflow(param, taskId, ports) {
         return await action.useCase.invoke(param);
     }
     catch (error) {
-        (0, logging_ports_1.logError)(error);
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', `Single action ${param.singleAction.currentSingleAction} failed.`);
+        (0, logging_ports_1.logError)(semanticError);
         return [
             new result_1.Result({
                 id: taskId,
                 success: false,
                 executed: true,
                 steps: [`Error executing single action: ${param.singleAction.currentSingleAction}.`],
-                errors: [error],
+                errors: [semanticError],
             }),
         ];
     }
@@ -60986,19 +61138,20 @@ exports.finalizeBugbotAutofix = finalizeBugbotAutofix;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const workspace_mutation_guard_1 = __nccwpck_require__(24243);
+const application_error_1 = __nccwpck_require__(75999);
 async function finalizeBugbotAutofix(context, idsToFix, workspacePathsBefore, branchCheckedOut, responseText, gitCommitPort) {
     if (!responseText) {
         (0, logging_ports_1.logError)('Bugbot autofix: no response from configured build agent.');
-        return [failure('Configured build agent returned no response.')];
+        return [failure(new application_error_1.ApplicationError('agent.failed', 'Configured build agent returned no response.'))];
     }
     let workspacePaths;
     try {
         ({ workspacePaths } = await (0, workspace_mutation_guard_1.finalizeWorkspaceMutation)(gitCommitPort, workspacePathsBefore, 'Bugbot autofix'));
     }
     catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        (0, logging_ports_1.logError)(message);
-        return [failure(message)];
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Bugbot autofix postflight failed.');
+        (0, logging_ports_1.logError)(semanticError);
+        return [failure(semanticError)];
     }
     (0, logging_ports_1.logDebugInfo)(`BugbotAutofix: response length=${responseText.length}; safe paths=${workspacePaths.length}.`);
     return [new result_1.Result({
@@ -61009,8 +61162,8 @@ async function finalizeBugbotAutofix(context, idsToFix, workspacePathsBefore, br
             payload: { targetFindingIds: idsToFix, context, workspacePaths, branchCheckedOut },
         })];
 }
-function failure(message) {
-    return new result_1.Result({ id: 'BugbotAutofixUseCase', success: false, executed: true, errors: [message] });
+function failure(semanticError) {
+    return new result_1.Result({ id: 'BugbotAutofixUseCase', success: false, executed: true, errors: [semanticError] });
 }
 
 
@@ -61029,6 +61182,7 @@ const build_bugbot_fix_prompt_1 = __nccwpck_require__(89819);
 const load_bugbot_context_use_case_1 = __nccwpck_require__(4050);
 const logging_ports_1 = __nccwpck_require__(6152);
 const workspace_mutation_guard_1 = __nccwpck_require__(24243);
+const application_error_1 = __nccwpck_require__(75999);
 async function prepareBugbotAutofix(execution, targetFindingIds, userComment, providedContext, branchOverride, contextPorts, gitCommitPort) {
     let mutation;
     try {
@@ -61039,9 +61193,9 @@ async function prepareBugbotAutofix(execution, targetFindingIds, userComment, pr
         });
     }
     catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        (0, logging_ports_1.logError)(message);
-        return [failure(message)];
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Bugbot autofix preflight failed.');
+        (0, logging_ports_1.logError)(semanticError);
+        return [failure(semanticError)];
     }
     const context = providedContext ?? await (0, load_bugbot_context_use_case_1.loadBugbotContext)(execution, branchOverride ? { branchOverride } : undefined, contextPorts);
     const idsToFix = selectUnresolvedFindingIds(context, targetFindingIds);
@@ -61066,8 +61220,8 @@ function selectUnresolvedFindingIds(context, targetFindingIds) {
         .map(([id]) => id));
     return targetFindingIds.filter(id => validIds.has(id));
 }
-function failure(message) {
-    return new result_1.Result({ id: 'BugbotAutofixUseCase', success: false, executed: true, errors: [message] });
+function failure(semanticError) {
+    return new result_1.Result({ id: 'BugbotAutofixUseCase', success: false, executed: true, errors: [semanticError] });
 }
 
 
@@ -61115,6 +61269,7 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const bugbot_autofix_postflight_1 = __nccwpck_require__(79698);
 const bugbot_autofix_preflight_1 = __nccwpck_require__(67170);
+const application_error_1 = __nccwpck_require__(75999);
 const TASK_ID = 'BugbotAutofixUseCase';
 /** Coordinates preflight, agent execution and postflight workspace safety. */
 async function runBugbotAutofixWorkflow(param, dependencies) {
@@ -61140,13 +61295,18 @@ async function runBugbotAutofixWorkflow(param, dependencies) {
         return await (0, bugbot_autofix_postflight_1.finalizeBugbotAutofix)(preflight.context, preflight.idsToFix, preflight.workspacePathsBefore, preflight.branchCheckedOut, response?.text, dependencies.gitCommitPort);
     }
     catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        (0, logging_ports_1.logError)(`Bugbot autofix failed: ${message}`);
-        return [newResultFailure(`Bugbot autofix failed: ${message}`)];
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'agent.failed', 'Bugbot autofix failed.');
+        (0, logging_ports_1.logError)(semanticError);
+        return [newResultFailure(semanticError)];
     }
 }
-function newResultFailure(message) {
-    return new result_1.Result({ id: TASK_ID, success: false, executed: true, errors: [message] });
+function newResultFailure(semanticError) {
+    return new result_1.Result({
+        id: TASK_ID,
+        success: false,
+        executed: true,
+        errors: [semanticError],
+    });
 }
 
 
@@ -61960,6 +62120,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCommitAndPushWorkflow = runCommitAndPushWorkflow;
 const logging_ports_1 = __nccwpck_require__(6152);
 const commit_and_push_preflight_1 = __nccwpck_require__(49629);
+const application_error_1 = __nccwpck_require__(75999);
 async function runCommitAndPushWorkflow(execution, options, authenticatedUserPort, gitCommitPort) {
     const preflight = await (0, commit_and_push_preflight_1.runCommitAndPushPreflight)(execution, options, gitCommitPort);
     if (preflight.status === 'failure') {
@@ -61985,9 +62146,9 @@ async function runCommitAndPushWorkflow(execution, options, authenticatedUserPor
         return { success: true, committed: true };
     }
     catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        (0, logging_ports_1.logError)(`Commit or push failed: ${message}`);
-        return { success: false, committed: false, error: message };
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Commit or push failed.');
+        (0, logging_ports_1.logError)(semanticError);
+        return { success: false, committed: false, error: semanticError.message };
     }
 }
 
@@ -62102,6 +62263,7 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const bugbot_autofix_commit_1 = __nccwpck_require__(98158);
 const result_1 = __nccwpck_require__(73817);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+const application_error_1 = __nccwpck_require__(75999);
 async function commitUserRequestIfSuccessful(param, branchOverride, results, authenticatedUserPort, gitCommitPort) {
     if (!results.at(-1)?.success) {
         (0, logging_ports_1.logInfo)('Do user request did not succeed; skipping commit.');
@@ -62120,7 +62282,7 @@ async function commitUserRequestIfSuccessful(param, branchOverride, results, aut
                 id: 'DoUserRequestCommitAndPush',
                 success: false,
                 executed: true,
-                errors: [message],
+                errors: [new application_error_1.ApplicationError('provider.unavailable', message, { cause: commitResult.error })],
             })];
     }
     return [new result_1.Result({
@@ -62427,6 +62589,7 @@ const load_bugbot_context_use_case_1 = __nccwpck_require__(4050);
 const mark_findings_resolved_workflow_1 = __nccwpck_require__(65916);
 const bugbot_finding_marker_policy_1 = __nccwpck_require__(98024);
 const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
 /** Dismisses only findings present in the current persisted Bugbot context. */
 class DismissBugbotFindingsUseCase {
     constructor(dependencies) {
@@ -62462,13 +62625,18 @@ class DismissBugbotFindingsUseCase {
                     success: errors.length === 0,
                     executed: true,
                     steps: [`Dismissed ${dismissibleIds.size} Bugbot finding(s) by explicit user command.`],
-                    errors,
+                    errors: errors.map(error => (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'A Bugbot finding could not be dismissed.')),
                 })];
         }
         catch (error) {
             const message = `Unable to dismiss Bugbot findings: ${error instanceof Error ? error.message : String(error)}`;
             (0, logging_ports_1.logError)(message);
-            return [new result_1.Result({ id: this.taskId, success: false, executed: true, errors: [message] })];
+            return [new result_1.Result({
+                    id: this.taskId,
+                    success: false,
+                    executed: true,
+                    errors: [(0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to dismiss Bugbot findings.')],
+                })];
         }
     }
 }
@@ -62567,6 +62735,7 @@ function fileMatchesIgnorePatterns(filePath, ignorePatterns) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.checkoutBranch = checkoutBranch;
 const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
 const STASH_MESSAGE = "bugbot-autofix-before-checkout";
 async function hasUncommittedChanges(gitCommitPort) {
     let output = "";
@@ -62588,8 +62757,8 @@ async function checkoutBranch(branch, gitCommitPort, token) {
         return didStash ? restoreStashedChanges(gitCommitPort) : true;
     }
     catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        (0, logging_ports_1.logError)(`Failed to checkout branch ${branch}: ${msg}`);
+        const semanticError = (0, application_error_1.toApplicationError)(err, 'workflow.failed', `Failed to checkout branch ${branch}.`);
+        (0, logging_ports_1.logError)(semanticError);
         if (didStash)
             (0, logging_ports_1.logError)("Changes were stashed; run 'git stash pop' manually to restore them.");
         return false;
@@ -62609,8 +62778,8 @@ async function restoreStashedChanges(gitCommitPort) {
         return true;
     }
     catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        (0, logging_ports_1.logError)(`Failed to restore stashed changes after checkout: ${message}`);
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'Failed to restore stashed changes after checkout.');
+        (0, logging_ports_1.logError)(semanticError);
         (0, logging_ports_1.logError)("Changes remain stashed; run 'git stash pop' manually to restore them.");
         return false;
     }
@@ -62891,6 +63060,7 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const resolve_issue_finding_1 = __nccwpck_require__(35300);
 const resolve_pull_request_finding_1 = __nccwpck_require__(64567);
 const review_state_1 = __nccwpck_require__(79200);
+const application_error_1 = __nccwpck_require__(75999);
 async function markFindingsResolved(param) {
     const errors = [];
     for (const [findingId, existing] of Object.entries(param.context.existingByFindingId)) {
@@ -62967,11 +63137,14 @@ async function tryResolvePullRequestFinding(ports, execution, findingId, destina
     }
 }
 function addResolutionError(errors, destination) {
-    const error = destination === 'pull request'
+    const cause = destination === 'pull request'
         ? new pull_request_review_errors_1.PullRequestReviewOperationError('mark-resolved')
         : new Error('Unable to mark an issue finding as resolved.');
-    (0, logging_ports_1.logError)(error);
-    errors.push(error);
+    const semanticError = new application_error_1.ApplicationError('provider.unavailable', destination === 'pull request'
+        ? 'Unable to mark a pull request finding as resolved.'
+        : 'Unable to mark an issue finding as resolved.', { cause });
+    (0, logging_ports_1.logError)(semanticError);
+    errors.push(semanticError);
 }
 
 
@@ -63564,6 +63737,7 @@ function toSafeOperationMessage(error) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RememberBugbotRuleUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
+const application_error_1 = __nccwpck_require__(75999);
 /** Stores an explicitly approved, repository-versioned Bugbot rule. */
 class RememberBugbotRuleUseCase {
     constructor(rules) {
@@ -63588,7 +63762,7 @@ class RememberBugbotRuleUseCase {
                     id: this.taskId,
                     success: false,
                     executed: false,
-                    errors: [error instanceof Error ? error.message : 'Unable to remember the Bugbot rule.'],
+                    errors: [(0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to remember the Bugbot rule.')],
                 })];
         }
     }
@@ -64258,6 +64432,7 @@ exports.runCheckChangesIssueSize = runCheckChangesIssueSize;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const update_change_size_labels_1 = __nccwpck_require__(51200);
+const application_error_1 = __nccwpck_require__(75999);
 async function runCheckChangesIssueSize(param, taskId, dependencies) {
     try {
         const baseBranch = param.currentConfiguration.parentBranch ?? param.branches.development ?? 'develop';
@@ -64298,13 +64473,14 @@ async function runCheckChangesIssueSize(param, taskId, dependencies) {
             })];
     }
     catch (error) {
-        (0, logging_ports_1.logError)(`CheckChangesIssueSize: failed for issue #${param.issueNumber}.`, error instanceof Error ? { stack: error.stack } : undefined);
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to check the size of the changes.');
+        (0, logging_ports_1.logError)(semanticError);
         return [new result_1.Result({
                 id: taskId,
                 success: false,
                 executed: true,
                 steps: ['Tried to check the size of the changes, but there was a problem.'],
-                errors: [error?.toString() ?? 'Unknown error'],
+                errors: [semanticError],
             })];
     }
 }
@@ -64448,6 +64624,7 @@ const bugbot_review_telemetry_1 = __nccwpck_require__(46790);
 const analyze_bugbot_revision_use_case_1 = __nccwpck_require__(4658);
 const bugbot_review_freshness_1 = __nccwpck_require__(14307);
 const reconcile_bugbot_review_state_use_case_1 = __nccwpck_require__(57515);
+const application_error_1 = __nccwpck_require__(75999);
 const TASK_ID = 'DetectPotentialProblemsUseCase';
 /** Coordinates Bugbot context, analysis and finding publication behind application ports. */
 async function runDetectPotentialProblemsWorkflow(param, dependencies) {
@@ -64459,8 +64636,8 @@ async function runDetectPotentialProblemsWorkflow(param, dependencies) {
             try {
                 await dependencies.telemetryPort?.publish(snapshot);
             }
-            catch (error) {
-                (0, logging_ports_1.logInfo)(`Bugbot telemetry publication failed without affecting the review: ${error instanceof Error ? error.name : 'unknown'}.`);
+            catch {
+                (0, logging_ports_1.logInfo)('Bugbot telemetry publication failed without affecting the review.');
             }
         }
         return snapshot;
@@ -64496,7 +64673,7 @@ async function runDetectPotentialProblemsWorkflow(param, dependencies) {
         }
         const prepared = await (0, analyze_bugbot_revision_use_case_1.analyzeBugbotRevision)(param, context, { agent: dependencies.aiRepository, telemetry });
         if (prepared === undefined) {
-            const analysisError = new Error('The configured agent returned no potential-problem analysis.');
+            const analysisError = new application_error_1.ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.');
             const presentation = param.ai.getBugbotReviewConfiguration().publicationMode === 'publish'
                 ? await telemetry.measure('projection', () => reconcileReviewState({
                     execution: param,
@@ -64537,10 +64714,7 @@ async function runDetectPotentialProblemsWorkflow(param, dependencies) {
         return await complete(detectionResult(prepared, context, finalErrors, presentation), finalErrors.length === 0 ? (hasChanges ? 'completed' : 'no-findings') : 'failed');
     }
     catch (error) {
-        const normalizedError = error instanceof pull_request_review_errors_1.PullRequestReviewOperationError
-            ? error
-            : new Error('Unable to detect potential problems.');
-        const resultError = new Error(`Error in ${TASK_ID}: ${normalizedError.message}`);
+        const resultError = toBugbotApplicationError(error, `Error in ${TASK_ID}: Unable to detect potential problems.`);
         (0, logging_ports_1.logError)(resultError.message);
         const result = new result_1.Result({
             id: TASK_ID,
@@ -64624,7 +64798,7 @@ function noAnalysisResult(presentation) {
     (0, logging_ports_1.logDebugInfo)('DetectPotentialProblems: No response from configured agent.');
     const errors = presentation?.errors.length
         ? [...presentation.errors]
-        : [new Error('The configured agent returned no potential-problem analysis.')];
+        : [new application_error_1.ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.')];
     return new result_1.Result({
         id: TASK_ID,
         success: false,
@@ -64632,7 +64806,9 @@ function noAnalysisResult(presentation) {
         ...(presentation ? {
             steps: [`Bugbot analysis failed; the verified PR status was reconciled (${formatStateCounts(presentation.projection.counts)}).`],
         } : {}),
-        errors,
+        errors: errors.map(error => presentation
+            ? toBugbotPresentationError(error)
+            : toBugbotApplicationError(error, 'Bugbot review reconciliation failed.')),
         ...(presentation ? {
             payload: {
                 findingStates: presentation.projection.counts,
@@ -64667,7 +64843,9 @@ function detectionResult(prepared, context, resolutionErrors, presentation) {
         success: resolutionErrors.length === 0,
         executed: true,
         steps: [`Potential problems detection completed. ${stepParts.join('; ')}.`],
-        errors: [...resolutionErrors],
+        errors: resolutionErrors.map(error => presentation
+            ? toBugbotPresentationError(error)
+            : toBugbotApplicationError(error, 'Bugbot finding publication or reconciliation failed.')),
         payload: {
             findingStates: statusSummary.counts,
             ...(presentation ? {
@@ -64684,6 +64862,20 @@ function formatStateCounts(counts) {
         .filter(([, count]) => count > 0)
         .map(([state, count]) => `${state}=${count}`)
         .join(', ') || 'none';
+}
+function toBugbotApplicationError(error, fallbackMessage) {
+    if (error instanceof application_error_1.ApplicationError)
+        return error;
+    const message = error instanceof pull_request_review_errors_1.PullRequestReviewOperationError ? error.message : fallbackMessage;
+    return new application_error_1.ApplicationError('provider.unavailable', message, { cause: error });
+}
+function toBugbotPresentationError(error) {
+    if (error instanceof application_error_1.ApplicationError)
+        return error;
+    const message = error instanceof pull_request_review_errors_1.PullRequestReviewOperationError
+        ? error.message
+        : 'Bugbot finding presentation failed.';
+    return new application_error_1.ApplicationError('provider.unavailable', message, { cause: error });
 }
 async function reconcileReviewState(input) {
     const pullRequestNumber = input.loadedContext.openPrNumbers[0];
@@ -64763,6 +64955,7 @@ const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const execute_script_use_case_1 = __nccwpck_require__(65440);
 const commit_notification_content_policy_1 = __nccwpck_require__(90762);
+const application_error_1 = __nccwpck_require__(75999);
 async function runNotifyNewCommitOnIssueWorkflow(param, taskId, issueRepository) {
     const result = [];
     try {
@@ -64783,13 +64976,14 @@ async function runNotifyNewCommitOnIssueWorkflow(param, taskId, issueRepository)
         await issueRepository.addComment(param.owner, param.repo, param.issueNumber, body, param.tokens.token);
     }
     catch (error) {
-        (0, logging_ports_1.logError)(`NotifyNewCommitOnIssue: failed to notify issue #${param.issueNumber}.`, error instanceof Error ? { stack: error.stack } : undefined);
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to notify the issue about the new commit.');
+        (0, logging_ports_1.logError)(semanticError);
         result.push(new result_1.Result({
             id: taskId,
             success: false,
             executed: true,
             steps: ["Tried to notify the new commit on the issue, but there was a problem."],
-            errors: [error?.toString() ?? "Unknown error"],
+            errors: [semanticError],
         }));
     }
     return result;
@@ -64854,6 +65048,7 @@ const result_1 = __nccwpck_require__(73817);
 const project_context_instruction_1 = __nccwpck_require__(63907);
 const sanitize_user_comment_for_prompt_1 = __nccwpck_require__(59828);
 const workspace_mutation_guard_1 = __nccwpck_require__(24243);
+const application_error_1 = __nccwpck_require__(75999);
 const TASK_ID = "DoUserRequestUseCase";
 class DoUserRequestUseCase {
     constructor(aiRepository, gitCommitPort) {
@@ -64884,7 +65079,7 @@ class DoUserRequestUseCase {
             });
         }
         catch (error) {
-            return [failure(error instanceof Error ? error.message : String(error))];
+            return [failure(error)];
         }
         const baseBranch = execution.currentConfiguration.parentBranch ?? execution.branches.development ?? "develop";
         const prompt = (0, prompts_1.getUserRequestPrompt)({
@@ -64909,7 +65104,7 @@ class DoUserRequestUseCase {
                 id: this.taskId,
                 success: false,
                 executed: true,
-                errors: ["Configured build agent returned no response."],
+                errors: [new application_error_1.ApplicationError('agent.failed', "Configured build agent returned no response.")],
             }));
             return results;
         }
@@ -64918,7 +65113,7 @@ class DoUserRequestUseCase {
             ({ workspacePaths } = await (0, workspace_mutation_guard_1.finalizeWorkspaceMutation)(this.gitCommitPort, mutation.workspacePathsBefore, 'User-request implementation'));
         }
         catch (error) {
-            return [failure(error instanceof Error ? error.message : String(error))];
+            return [failure(error)];
         }
         results.push(new result_1.Result({
             id: this.taskId,
@@ -64935,13 +65130,14 @@ class DoUserRequestUseCase {
     }
 }
 exports.DoUserRequestUseCase = DoUserRequestUseCase;
-function failure(message) {
-    (0, logging_ports_1.logError)(message);
+function failure(error) {
+    const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', 'User-request implementation failed.');
+    (0, logging_ports_1.logError)(semanticError);
     return new result_1.Result({
         id: TASK_ID,
         success: false,
         executed: true,
-        errors: [message],
+        errors: [semanticError],
     });
 }
 
@@ -64965,17 +65161,17 @@ exports.MAX_AUTOMATED_CHANGED_PATHS = 100;
 async function prepareWorkspaceMutation(gitCommitPort, options) {
     const workspacePathsBefore = await inspectWorkspace(gitCommitPort, `before ${options.operation}`);
     if (workspacePathsBefore.length > 0) {
-        throw new application_error_1.ApplicationError(`${options.operation} refused: workspace is not clean before agent execution.`, 'validation');
+        throw new application_error_1.ApplicationError('agent.policy-rejected', `${options.operation} refused: workspace is not clean before agent execution.`);
     }
     let branchCheckedOut = false;
     if (options.branch?.trim()) {
         branchCheckedOut = await (0, git_branch_checkout_1.checkoutBranch)(options.branch, gitCommitPort, options.token);
         if (!branchCheckedOut) {
-            throw new application_error_1.ApplicationError(`${options.operation} refused: failed to checkout target branch ${options.branch}.`, 'provider');
+            throw new application_error_1.ApplicationError('provider.unavailable', `${options.operation} refused: failed to checkout target branch ${options.branch}.`);
         }
         const afterCheckout = await inspectWorkspace(gitCommitPort, `after ${options.operation} branch checkout`);
         if (afterCheckout.length > 0) {
-            throw new application_error_1.ApplicationError(`${options.operation} refused: branch checkout produced a dirty workspace.`, 'validation');
+            throw new application_error_1.ApplicationError('agent.policy-rejected', `${options.operation} refused: branch checkout produced a dirty workspace.`);
         }
     }
     return { workspacePathsBefore, branchCheckedOut };
@@ -64985,14 +65181,14 @@ async function finalizeWorkspaceMutation(gitCommitPort, before, operation) {
     const workspacePathsAfter = await inspectWorkspace(gitCommitPort, `after ${operation}`);
     const unsafePaths = workspacePathsAfter.filter(workspace_changes_1.isSensitiveWorkspacePath);
     if (unsafePaths.length > 0) {
-        throw new application_error_1.ApplicationError(`${operation} refused because sensitive files were modified: ${unsafePaths.join(', ')}`, 'validation');
+        throw new application_error_1.ApplicationError('agent.policy-rejected', `${operation} refused because sensitive files were modified: ${unsafePaths.join(', ')}`);
     }
     const workspacePaths = (0, workspace_changes_1.selectWorkspacePathsToCommit)([...before], workspacePathsAfter);
     if (workspacePaths.length === 0) {
-        throw new application_error_1.ApplicationError(`${operation} produced no safe workspace paths to commit.`, 'validation');
+        throw new application_error_1.ApplicationError('agent.policy-rejected', `${operation} produced no safe workspace paths to commit.`);
     }
     if (workspacePaths.length > exports.MAX_AUTOMATED_CHANGED_PATHS) {
-        throw new application_error_1.ApplicationError(`${operation} refused because it changed ${workspacePaths.length} paths; maximum is ${exports.MAX_AUTOMATED_CHANGED_PATHS}.`, 'validation');
+        throw new application_error_1.ApplicationError('agent.policy-rejected', `${operation} refused because it changed ${workspacePaths.length} paths; maximum is ${exports.MAX_AUTOMATED_CHANGED_PATHS}.`);
     }
     return { workspacePaths };
 }
@@ -65001,9 +65197,8 @@ async function inspectWorkspace(gitCommitPort, phase) {
         return await (0, workspace_changes_1.listWorkspacePaths)(gitCommitPort);
     }
     catch (error) {
-        throw new application_error_1.ApplicationError(`Unable to inspect workspace ${phase}.`, 'provider', {
+        throw new application_error_1.ApplicationError('provider.unavailable', `Unable to inspect workspace ${phase}.`, {
             cause: error,
-            retryable: true,
         });
     }
 }
@@ -65064,6 +65259,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.runCheckPermissionsWorkflow = runCheckPermissionsWorkflow;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
+const application_error_1 = __nccwpck_require__(75999);
 async function runCheckPermissionsWorkflow(param, taskId, ports) {
     const inactiveResult = buildInactiveResult(param, taskId);
     if (inactiveResult)
@@ -65092,14 +65288,15 @@ async function runCheckPermissionsWorkflow(param, taskId, ports) {
         ];
     }
     catch (error) {
-        (0, logging_ports_1.logError)("CheckPermissions: failed to get project members or check creator.", error instanceof Error ? { stack: error.stack } : undefined);
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to verify action permissions.');
+        (0, logging_ports_1.logError)(semanticError);
         return [
             new result_1.Result({
                 id: taskId,
                 success: false,
                 executed: true,
                 steps: ["Tried to check action permissions."],
-                errors: [error],
+                errors: [semanticError],
             }),
         ];
     }
@@ -65248,6 +65445,7 @@ const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const commit_prefix_transform_policy_1 = __nccwpck_require__(56334);
+const application_error_1 = __nccwpck_require__(75999);
 class CommitPrefixBuilderUseCase {
     constructor() {
         this.taskId = 'CommitPrefixBuilderUseCase';
@@ -65273,13 +65471,14 @@ class CommitPrefixBuilderUseCase {
             }));
         }
         catch (error) {
-            (0, logging_ports_1.logError)(error);
+            const semanticError = (0, application_error_1.toApplicationError)(error, 'unexpected', 'Unable to build the commit prefix.');
+            (0, logging_ports_1.logError)(semanticError);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
                 executed: true,
                 steps: [],
-                errors: [error],
+                errors: [semanticError],
             }));
         }
         return result;
@@ -65307,6 +65506,7 @@ const result_1 = __nccwpck_require__(73817);
 const content_utils_1 = __nccwpck_require__(92816);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
+const application_error_1 = __nccwpck_require__(75999);
 class GetHotfixVersionUseCase {
     constructor(issueRepository) {
         this.issueRepository = issueRepository;
@@ -65376,13 +65576,14 @@ class GetHotfixVersionUseCase {
             }));
         }
         catch (error) {
-            (0, logging_ports_1.logError)(error);
+            const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to read the hotfix version.');
+            (0, logging_ports_1.logError)(semanticError);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
                 executed: true,
                 steps: [`Tried to check action permissions.`],
-                errors: [error],
+                errors: [semanticError],
             }));
         }
         return result;
@@ -65404,6 +65605,7 @@ const result_1 = __nccwpck_require__(73817);
 const content_utils_1 = __nccwpck_require__(92816);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
+const application_error_1 = __nccwpck_require__(75999);
 class GetReleaseTypeUseCase {
     constructor(issueRepository) {
         this.issueRepository = issueRepository;
@@ -65462,13 +65664,14 @@ class GetReleaseTypeUseCase {
             }));
         }
         catch (error) {
-            (0, logging_ports_1.logError)(error);
+            const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to read the release type.');
+            (0, logging_ports_1.logError)(semanticError);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
                 executed: true,
                 steps: [`Tried to check action permissions.`],
-                errors: [error],
+                errors: [semanticError],
             }));
         }
         return result;
@@ -65490,6 +65693,7 @@ const result_1 = __nccwpck_require__(73817);
 const content_utils_1 = __nccwpck_require__(92816);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
+const application_error_1 = __nccwpck_require__(75999);
 class GetReleaseVersionUseCase {
     constructor(issueRepository) {
         this.issueRepository = issueRepository;
@@ -65549,13 +65753,14 @@ class GetReleaseVersionUseCase {
             }));
         }
         catch (error) {
-            (0, logging_ports_1.logError)(`GetReleaseVersion: failed to get version for issue/PR.`, error instanceof Error ? { stack: error.stack } : undefined);
+            const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to read the release version.');
+            (0, logging_ports_1.logError)(semanticError);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
                 executed: true,
                 steps: [`Tried to get the release version but there was a problem.`],
-                errors: [error],
+                errors: [semanticError],
             }));
         }
         return result;
@@ -65576,6 +65781,7 @@ exports.runProjectContentLinkWorkflow = runProjectContentLinkWorkflow;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
+const application_error_1 = __nccwpck_require__(75999);
 /** Links issue-like content to each configured project and moves it after propagation. */
 async function runProjectContentLinkWorkflow(param, dependencies) {
     (0, logging_ports_1.logInfo)(`${(0, task_emoji_1.getTaskEmoji)(dependencies.taskId)} Executing ${dependencies.taskId}.`);
@@ -65613,13 +65819,14 @@ async function runProjectContentLinkWorkflow(param, dependencies) {
         return results;
     }
     catch (error) {
-        (0, logging_ports_1.logError)(error);
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to link the ${dependencies.contentType} to the project.`);
+        (0, logging_ports_1.logError)(semanticError);
         return [new result_1.Result({
                 id: dependencies.taskId,
                 success: false,
                 executed: true,
                 steps: [`Tried to link ${dependencies.contentType} to project, but there was a problem.`],
-                errors: [error],
+                errors: [semanticError],
             })];
     }
 }
@@ -65678,6 +65885,7 @@ const result_1 = __nccwpck_require__(73817);
 const list_utils_1 = __nccwpck_require__(42277);
 const logging_ports_1 = __nccwpck_require__(6152);
 const result_publication_policy_1 = __nccwpck_require__(71512);
+const application_error_1 = __nccwpck_require__(75999);
 async function runPublishResume(param, taskId, issueNotificationPort, logReport) {
     try {
         if (isPullRequestReviewProjection(param))
@@ -65701,13 +65909,14 @@ async function runPublishResume(param, taskId, issueNotificationPort, logReport)
         await issueNotificationPort.addComment(param.owner, param.repo, issueNumber, buildResumeComment(param, sections, debugLogSection), param.tokens.token);
     }
     catch (error) {
-        (0, logging_ports_1.logError)(error);
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to publish the workflow summary.');
+        (0, logging_ports_1.logError)(semanticError);
         param.currentConfiguration.results.push(new result_1.Result({
             id: taskId,
             success: false,
             executed: true,
             steps: ['Tried to publish the resume, but there was a problem.'],
-            errors: [error],
+            errors: [semanticError],
         }));
     }
 }
@@ -65781,8 +65990,9 @@ class StoreConfigurationUseCase {
             await this.configurationStorePort.update(param);
         }
         catch (error) {
-            (0, logging_ports_1.logError)(`StoreConfiguration: failed to update configuration.`, error instanceof Error ? { stack: error.stack } : undefined);
-            throw new application_error_1.ApplicationError('Configuration persistence failed.', 'provider', { cause: error, retryable: true });
+            const semanticError = new application_error_1.ApplicationError('provider.unavailable', 'Configuration persistence failed.', { cause: error });
+            (0, logging_ports_1.logError)(semanticError);
+            throw semanticError;
         }
     }
 }
@@ -65806,6 +66016,7 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const project_context_instruction_1 = __nccwpck_require__(63907);
 const agent_answer_policy_1 = __nccwpck_require__(72063);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
+const application_error_1 = __nccwpck_require__(75999);
 async function runThinkAnswerWorkflow(param, taskId, request, dependencies, agentTask) {
     const issueDescription = await loadIssueDescription(param, request.issueNumberForContext, dependencies.issueDescriptionQueryPort);
     const contextBlock = issueDescription
@@ -65825,7 +66036,7 @@ async function runThinkAnswerWorkflow(param, taskId, request, dependencies, agen
                 id: taskId,
                 success: false,
                 executed: true,
-                errors: ['Configured agent returned no answer.'],
+                errors: [new application_error_1.ApplicationError('agent.failed', 'Configured agent returned no answer.')],
             }),
         ];
     }
@@ -65836,7 +66047,7 @@ async function runThinkAnswerWorkflow(param, taskId, request, dependencies, agen
                 id: taskId,
                 success: false,
                 executed: true,
-                errors: ['Issue or PR number not available.'],
+                errors: [new application_error_1.ApplicationError('validation.invalid-input', 'Issue or PR number not available.')],
             }),
         ];
     }
@@ -65998,6 +66209,7 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const think_request_policy_1 = __nccwpck_require__(23995);
 const think_answer_workflow_1 = __nccwpck_require__(40558);
 const agent_task_policy_1 = __nccwpck_require__(85712);
+const application_error_1 = __nccwpck_require__(75999);
 async function runThinkWorkflow(param, taskId, dependencies) {
     (0, logging_ports_1.logInfo)('Think: processing comment (AI Q&A).');
     try {
@@ -66013,20 +66225,21 @@ async function runThinkWorkflow(param, taskId, dependencies) {
                     id: taskId,
                     success: false,
                     executed: false,
-                    errors: ['Configured agent model or CLI command not found.'],
+                    errors: [new application_error_1.ApplicationError('configuration.invalid', 'Configured agent model or CLI command not found.')],
                 }),
             ];
         }
         return await (0, think_answer_workflow_1.runThinkAnswerWorkflow)(param, taskId, request, dependencies, agentTask);
     }
     catch (error) {
-        (0, logging_ports_1.logError)(`Error in ThinkUseCase: ${error}`);
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'agent.failed', 'Error in ThinkUseCase: unable to complete the request.');
+        (0, logging_ports_1.logError)(semanticError);
         return [
             new result_1.Result({
                 id: taskId,
                 success: false,
                 executed: false,
-                errors: [`Error in ThinkUseCase: ${error}`],
+                errors: [semanticError],
             }),
         ];
     }
@@ -66093,6 +66306,7 @@ exports.runIssueTitleUpdate = runIssueTitleUpdate;
 exports.runPullRequestTitleUpdate = runPullRequestTitleUpdate;
 exports.titleUpdateFailure = titleUpdateFailure;
 const result_1 = __nccwpck_require__(73817);
+const application_error_1 = __nccwpck_require__(75999);
 async function runIssueTitleUpdate(param, taskId, issueRepository) {
     if (!param.emoji.emojiLabeledTitle)
         return [skippedResult(taskId)];
@@ -66116,7 +66330,13 @@ async function runPullRequestTitleUpdate(param, taskId, issueRepository) {
         : [skippedResult(taskId)];
 }
 function titleUpdateFailure(taskId, error) {
-    return new result_1.Result({ id: taskId, success: false, executed: true, steps: ['Tried to update title, but there was a problem.'], errors: [error] });
+    return new result_1.Result({
+        id: taskId,
+        success: false,
+        executed: true,
+        steps: ['Tried to update title, but there was a problem.'],
+        errors: [(0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to update the title.')],
+    });
 }
 function updatedResult(taskId, step) {
     return new result_1.Result({ id: taskId, success: true, executed: true, steps: [step] });
@@ -66173,6 +66393,7 @@ const task_emoji_1 = __nccwpck_require__(46103);
 const agent_answer_policy_1 = __nccwpck_require__(72063);
 const github_comment_publication_policy_1 = __nccwpck_require__(72712);
 const copilot_interaction_policy_1 = __nccwpck_require__(90108);
+const application_error_1 = __nccwpck_require__(75999);
 const TASK_ID = 'AnswerIssueHelpUseCase';
 /** Posts one contextual answer for a newly opened question/help issue. */
 async function runAnswerIssueHelpWorkflow(param, dependencies) {
@@ -66216,12 +66437,13 @@ async function runAnswerIssueHelpWorkflow(param, dependencies) {
             })];
     }
     catch (error) {
-        (0, logging_ports_1.logError)(`Error in ${TASK_ID}: ${error}`);
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'workflow.failed', `Error in ${TASK_ID}: unable to answer the help issue.`);
+        (0, logging_ports_1.logError)(semanticError);
         return [new result_1.Result({
                 id: TASK_ID,
                 success: false,
                 executed: true,
-                errors: [`Error in ${TASK_ID}: ${error}`],
+                errors: [semanticError],
             })];
     }
 }
@@ -66251,7 +66473,7 @@ function noAnswerResult() {
         id: TASK_ID,
         success: false,
         executed: true,
-        errors: ['Configured agent returned no answer for initial help.'],
+        errors: [new application_error_1.ApplicationError('agent.failed', 'Configured agent returned no answer for initial help.')],
     });
 }
 function skipped() {
@@ -66299,6 +66521,7 @@ const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const assignee_assignment_policy_1 = __nccwpck_require__(85918);
+const application_error_1 = __nccwpck_require__(75999);
 const TASK_ID = 'AssignMemberToIssueUseCase';
 /** Assigns the creator and remaining project members according to the pure assignment policy. */
 async function runAssignMembersWorkflow(param, dependencies) {
@@ -66335,13 +66558,14 @@ async function runAssignMembersWorkflow(param, dependencies) {
         return results;
     }
     catch (error) {
-        (0, logging_ports_1.logError)(error);
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to assign members.');
+        (0, logging_ports_1.logError)(semanticError);
         results.push(new result_1.Result({
             id: TASK_ID,
             success: false,
             executed: true,
             steps: ['Tried to assign members to issue.'],
-            errors: [error],
+            errors: [semanticError],
         }));
         return results;
     }
@@ -66399,6 +66623,7 @@ const pull_request_review_errors_1 = __nccwpck_require__(46445);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const reviewer_assignment_policy_1 = __nccwpck_require__(88350);
+const application_error_1 = __nccwpck_require__(75999);
 const TASK_ID = 'AssignReviewersToIssueUseCase';
 /** Selects and requests reviewers without coupling the use-case boundary to GitHub. */
 async function runAssignReviewersWorkflow(param, dependencies) {
@@ -66410,14 +66635,15 @@ async function runAssignReviewersWorkflow(param, dependencies) {
     }
     catch (error) {
         const normalizedError = (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, 'assign-reviewers');
-        (0, logging_ports_1.logError)(normalizedError);
+        const semanticError = (0, application_error_1.toApplicationError)(normalizedError, 'provider.unavailable', 'Unable to assign pull request reviewers.');
+        (0, logging_ports_1.logError)(semanticError);
         return [
             new result_1.Result({
                 id: TASK_ID,
                 success: false,
                 executed: true,
                 steps: ['Tried to assign reviewers to pull request.'],
-                errors: [normalizedError],
+                errors: [semanticError],
             }),
         ];
     }
@@ -66534,6 +66760,7 @@ exports.CloseIssueAfterMergingUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
+const application_error_1 = __nccwpck_require__(75999);
 class CloseIssueAfterMergingUseCase {
     constructor(issueRepository) {
         this.issueRepository = issueRepository;
@@ -66575,7 +66802,8 @@ class CloseIssueAfterMergingUseCase {
             }
         }
         catch (error) {
-            (0, logging_ports_1.logError)(`CloseIssueAfterMerging: failed to close issue #${param.issueNumber}.`, error instanceof Error ? { stack: error.stack } : undefined);
+            const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to close issue #${param.issueNumber}.`);
+            (0, logging_ports_1.logError)(semanticError);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -66583,7 +66811,7 @@ class CloseIssueAfterMergingUseCase {
                 steps: [
                     `Tried to close issue #${param.issueNumber}, but there was a problem.`,
                 ],
-                errors: [error],
+                errors: [semanticError],
             }));
         }
         return result;
@@ -66604,6 +66832,7 @@ exports.CloseNotAllowedIssueUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
+const application_error_1 = __nccwpck_require__(75999);
 class CloseNotAllowedIssueUseCase {
     constructor(issueRepository) {
         this.issueRepository = issueRepository;
@@ -66636,7 +66865,8 @@ class CloseNotAllowedIssueUseCase {
             }
         }
         catch (error) {
-            (0, logging_ports_1.logError)(`CloseNotAllowedIssue: failed to close issue #${param.issueNumber}.`, error instanceof Error ? { stack: error.stack } : undefined);
+            const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to close the unauthorized issue.');
+            (0, logging_ports_1.logError)(semanticError);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -66644,7 +66874,7 @@ class CloseNotAllowedIssueUseCase {
                 steps: [
                     `Tried to close issue #${param.issueNumber}, but there was a problem.`,
                 ],
-                errors: [error],
+                errors: [semanticError],
             }));
         }
         return result;
@@ -66666,6 +66896,7 @@ const result_1 = __nccwpck_require__(73817);
 const content_utils_1 = __nccwpck_require__(92816);
 const logging_ports_1 = __nccwpck_require__(6152);
 const deploy_workflow_policy_1 = __nccwpck_require__(8428);
+const application_error_1 = __nccwpck_require__(75999);
 async function runDeployAddedWorkflow(param, taskId, branchWorkflowPort, moveIssueToInProgressUseCase) {
     const plan = (0, deploy_workflow_policy_1.resolveDeployWorkflowPlan)(param);
     if (!plan)
@@ -66691,14 +66922,15 @@ async function runDeployAddedWorkflow(param, taskId, branchWorkflowPort, moveIss
         return result;
     }
     catch (error) {
-        (0, logging_ports_1.logError)(error);
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to start the deployment workflow.');
+        (0, logging_ports_1.logError)(semanticError);
         return [
             new result_1.Result({
                 id: taskId,
                 success: false,
                 executed: true,
                 steps: ["Tried to work with workflows, but there was a problem."],
-                errors: [error?.toString() ?? "Unknown error"],
+                errors: [semanticError],
             }),
         ];
     }
@@ -66777,6 +67009,7 @@ exports.MoveIssueToInProgressUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
+const application_error_1 = __nccwpck_require__(75999);
 class MoveIssueToInProgressUseCase {
     constructor(projectRepository) {
         this.projectRepository = projectRepository;
@@ -66802,7 +67035,8 @@ class MoveIssueToInProgressUseCase {
             }
         }
         catch (error) {
-            (0, logging_ports_1.logError)(error);
+            const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to move the issue to the in-progress column.');
+            (0, logging_ports_1.logError)(semanticError);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -66810,9 +67044,7 @@ class MoveIssueToInProgressUseCase {
                 steps: [
                     `Tried to move the issue to \`${columnName}\`, but there was a problem.`,
                 ],
-                errors: [
-                    error?.toString() ?? 'Unknown error',
-                ],
+                errors: [semanticError],
             }));
         }
         return result;
@@ -66837,6 +67069,7 @@ const branch_preparation_strategy_1 = __nccwpck_require__(29988);
 const prepare_managed_branch_1 = __nccwpck_require__(29928);
 const prepare_hotfix_branch_1 = __nccwpck_require__(96318);
 const prepare_release_branch_1 = __nccwpck_require__(83059);
+const application_error_1 = __nccwpck_require__(75999);
 class PrepareBranchesUseCase {
     constructor(branchListQueryPort, branchNamePort, remoteBranchSyncPort, commitTagQueryPort, linkedBranchCommandPort, branchPropagationDelayPort, moveIssueToInProgressUseCase) {
         this.branchListQueryPort = branchListQueryPort;
@@ -66876,7 +67109,8 @@ class PrepareBranchesUseCase {
             return result;
         }
         catch (error) {
-            (0, logging_ports_1.logError)(`PrepareBranches: error preparing branches for issue #${param.issueNumber}.`, error instanceof Error ? { stack: error.stack } : undefined);
+            const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to prepare the issue branch.');
+            (0, logging_ports_1.logError)(semanticError);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -66884,7 +67118,7 @@ class PrepareBranchesUseCase {
                 steps: [
                     "Tried to prepare the branch for the issue, but there was a problem.",
                 ],
-                errors: [error instanceof Error ? error : new Error(String(error))],
+                errors: [semanticError],
             }));
             return result;
         }
@@ -67185,19 +67419,21 @@ exports.runPrioritySizeCheck = runPrioritySizeCheck;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const priority_label_policy_1 = __nccwpck_require__(16530);
+const application_error_1 = __nccwpck_require__(75999);
 async function runPrioritySizeCheck(param, taskId, contentNumber, projectRepository) {
     const typedParam = param;
     try {
         return await applyPriorityToProjects(typedParam, taskId, contentNumber, projectRepository);
     }
     catch (error) {
-        (0, logging_ports_1.logError)(error);
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to apply the issue priority to configured projects.');
+        (0, logging_ports_1.logError)(semanticError);
         return [new result_1.Result({
                 id: taskId,
                 success: false,
                 executed: true,
                 steps: ['Tried to check the priority of the issue, but there was a problem.'],
-                errors: [error?.toString() ?? 'Unknown error'],
+                errors: [semanticError],
             })];
     }
 }
@@ -67255,6 +67491,7 @@ const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const remove_issue_branches_policy_1 = __nccwpck_require__(57836);
+const application_error_1 = __nccwpck_require__(75999);
 /**
  * Remove any branch created for this issue
  */
@@ -67274,7 +67511,8 @@ class RemoveIssueBranchesUseCase {
             }
         }
         catch (error) {
-            (0, logging_ports_1.logError)(`RemoveIssueBranches: error removing branches for issue #${param.issueNumber}.`, error instanceof Error ? { stack: error.stack } : undefined);
+            const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to remove issue branches.');
+            (0, logging_ports_1.logError)(semanticError);
             results.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -67282,7 +67520,7 @@ class RemoveIssueBranchesUseCase {
                 steps: [
                     `Tried to remove issue branches, but there was a problem.`,
                 ],
-                errors: [error],
+                errors: [semanticError],
             }));
         }
         return results;
@@ -67327,6 +67565,7 @@ exports.RemoveNotNeededBranchesUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
+const application_error_1 = __nccwpck_require__(75999);
 class RemoveNotNeededBranchesUseCase {
     constructor(branchLifecyclePort, branchNamePort) {
         this.branchLifecyclePort = branchLifecyclePort;
@@ -67356,7 +67595,7 @@ class RemoveNotNeededBranchesUseCase {
                     success: false,
                     executed: true,
                     steps: ["Tried to remove not needed branches related to the issue, but there was a problem."],
-                    errors: [error],
+                    errors: [(0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to remove obsolete issue branches.')],
                 }),
             ];
         }
@@ -67421,6 +67660,7 @@ exports.UpdateIssueTypeUseCase = void 0;
 const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
+const application_error_1 = __nccwpck_require__(75999);
 class UpdateIssueTypeUseCase {
     constructor(issueRepository) {
         this.issueRepository = issueRepository;
@@ -67433,7 +67673,8 @@ class UpdateIssueTypeUseCase {
             await this.issueRepository.setIssueType(param.owner, param.repo, param.issueNumber, param.labels, param.issueTypes, param.tokens.token);
         }
         catch (error) {
-            (0, logging_ports_1.logError)(error);
+            const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to update the issue type.');
+            (0, logging_ports_1.logError)(semanticError);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
@@ -67441,7 +67682,7 @@ class UpdateIssueTypeUseCase {
                 steps: [
                     `Tried to update issue type, but there was a problem.`,
                 ],
-                errors: [error],
+                errors: [semanticError],
             }));
         }
         return result;
@@ -67519,6 +67760,7 @@ const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const link_pull_request_issue_workflow_1 = __nccwpck_require__(19033);
+const application_error_1 = __nccwpck_require__(75999);
 class LinkPullRequestIssueUseCase {
     constructor(pullRequestIssueLinkPort, eventualConsistencyDelayPort) {
         this.pullRequestIssueLinkPort = pullRequestIssueLinkPort;
@@ -67531,7 +67773,8 @@ class LinkPullRequestIssueUseCase {
             return await (0, link_pull_request_issue_workflow_1.runLinkPullRequestIssue)(param, this.taskId, this.pullRequestIssueLinkPort, this.eventualConsistencyDelayPort);
         }
         catch (error) {
-            (0, logging_ports_1.logError)(error);
+            const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to link the pull request to its issue.');
+            (0, logging_ports_1.logError)(semanticError);
             return [
                 new result_1.Result({
                     id: this.taskId,
@@ -67540,7 +67783,7 @@ class LinkPullRequestIssueUseCase {
                     steps: [
                         `Tried to link pull request to project, but there was a problem.`,
                     ],
-                    errors: [error],
+                    errors: [semanticError],
                 }),
             ];
         }
@@ -67649,6 +67892,7 @@ const result_1 = __nccwpck_require__(73817);
 const logging_ports_1 = __nccwpck_require__(6152);
 const task_emoji_1 = __nccwpck_require__(46103);
 const sync_size_and_progress_labels_policy_1 = __nccwpck_require__(65676);
+const application_error_1 = __nccwpck_require__(75999);
 /**
  * Copies size and progress labels from the linked issue to the PR.
  * Used when a PR is opened so it gets the same size/progress as the issue (corner case:
@@ -67698,13 +67942,14 @@ class SyncSizeAndProgressLabelsFromIssueToPrUseCase {
             }));
         }
         catch (error) {
-            (0, logging_ports_1.logError)(error);
+            const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to synchronize size and progress labels.');
+            (0, logging_ports_1.logError)(semanticError);
             result.push(new result_1.Result({
                 id: this.taskId,
                 success: false,
                 executed: true,
                 steps: [`Failed to sync size/progress labels from issue to PR.`],
-                errors: [error?.toString() ?? 'Unknown error'],
+                errors: [semanticError],
             }));
         }
         return result;
@@ -67856,15 +68101,15 @@ async function runUpdatePullRequestDescriptionWorkflow(param, taskId, dependenci
         return [new result_1.Result({ id: taskId, success: true, executed: true, steps: [] })];
     }
     catch (cause) {
-        const error = new application_error_1.ApplicationError('Unable to update pull request description.', 'workflow', { cause });
-        (0, logging_ports_1.logError)(error);
+        const semanticError = new application_error_1.ApplicationError('workflow.failed', 'Unable to update pull request description.', { cause });
+        (0, logging_ports_1.logError)(semanticError);
         return [
             new result_1.Result({
                 id: taskId,
                 success: false,
                 executed: true,
-                steps: [error.message],
-                errors: [error],
+                steps: [semanticError.message],
+                errors: [semanticError],
             }),
         ];
     }
@@ -67989,7 +68234,7 @@ class WaitForPreviousWorkflowRunsUseCase {
 }
 exports.WaitForPreviousWorkflowRunsUseCase = WaitForPreviousWorkflowRunsUseCase;
 function queueTimeoutError() {
-    return new application_error_1.ApplicationError('Timeout waiting for previous runs to finish.', 'workflow', { retryable: true });
+    return new application_error_1.ApplicationError('timeout', 'Timeout waiting for previous runs to finish.');
 }
 
 
@@ -68102,6 +68347,182 @@ class Ai {
     }
 }
 exports.Ai = Ai;
+
+
+/***/ }),
+
+/***/ 97790:
+/***/ (function(__unused_webpack_module, exports) {
+
+"use strict";
+
+var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (receiver, state, value, kind, f) {
+    if (kind === "m") throw new TypeError("Private method is not writable");
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
+    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
+};
+var _ApplicationError_cause;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = void 0;
+exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const PRESERVED_STATE = 'Existing persisted state and completed external effects were preserved.';
+const UNCHANGED_STATE = 'No new state or external effect was created.';
+exports.APPLICATION_ERROR_METADATA = {
+    'configuration.invalid': {
+        kind: 'configuration', retryable: false,
+        impact: 'The operation could not use the configured values.',
+        action: 'Correct the invalid configuration and retry.',
+        retainedState: UNCHANGED_STATE,
+    },
+    'configuration.unsupported': {
+        kind: 'configuration', retryable: false,
+        impact: 'The requested capability is not supported by this installation.',
+        action: 'Use a supported configuration or update the installation.',
+        retainedState: UNCHANGED_STATE,
+    },
+    'authorization.denied': {
+        kind: 'authorization', retryable: false,
+        impact: 'The operation could not access the required resource.',
+        action: 'Grant the documented permission and retry.',
+        retainedState: UNCHANGED_STATE,
+    },
+    'authorization.credential-invalid': {
+        kind: 'authorization', retryable: false,
+        impact: 'The operation could not authenticate with the required provider.',
+        action: 'Replace or configure the required credential and retry.',
+        retainedState: UNCHANGED_STATE,
+    },
+    'provider.not-found': {
+        kind: 'provider', retryable: false,
+        impact: 'A required provider resource was not found.',
+        action: 'Verify the target resource and retry the operation.',
+        retainedState: PRESERVED_STATE,
+    },
+    'provider.conflict': {
+        kind: 'provider', retryable: true,
+        impact: 'The provider rejected a conflicting current state.',
+        action: 'Reload the current state and retry if the operation is still required.',
+        retainedState: PRESERVED_STATE,
+    },
+    'provider.rate-limited': {
+        kind: 'provider', retryable: true,
+        impact: 'The provider temporarily limited the operation.',
+        action: 'Retry after the provider limit resets.',
+        retainedState: PRESERVED_STATE,
+    },
+    'provider.unavailable': {
+        kind: 'provider', retryable: true,
+        impact: 'The provider was temporarily unavailable.',
+        action: 'Retry when the provider is available.',
+        retainedState: PRESERVED_STATE,
+    },
+    'provider.contract-invalid': {
+        kind: 'provider', retryable: false,
+        impact: 'The provider response could not be safely interpreted.',
+        action: 'Review the provider integration before retrying.',
+        retainedState: PRESERVED_STATE,
+    },
+    'agent.policy-rejected': {
+        kind: 'agent', retryable: false,
+        impact: 'The configured agent was not started.',
+        action: 'Use an allowed agent configuration and retry.',
+        retainedState: UNCHANGED_STATE,
+    },
+    'agent.failed': {
+        kind: 'agent', retryable: true,
+        impact: 'The admitted agent did not produce a usable result.',
+        action: 'Inspect the sanitized agent status and retry if appropriate.',
+        retainedState: PRESERVED_STATE,
+    },
+    'validation.invalid-input': {
+        kind: 'validation', retryable: false,
+        impact: 'The operation did not accept the supplied input.',
+        action: 'Correct the input and retry.',
+        retainedState: UNCHANGED_STATE,
+    },
+    'workflow.invalid-event': {
+        kind: 'workflow', retryable: false,
+        impact: 'The event cannot start the requested workflow.',
+        action: 'Start the operation from a supported event or surface.',
+        retainedState: UNCHANGED_STATE,
+    },
+    'workflow.stale': {
+        kind: 'workflow', retryable: false,
+        impact: 'A newer state superseded this workflow invocation.',
+        action: 'Inspect the current state and start a fresh invocation only if needed.',
+        retainedState: PRESERVED_STATE,
+    },
+    'workflow.cancelled': {
+        kind: 'workflow', retryable: false,
+        impact: 'The workflow stopped before it completed.',
+        action: 'Start a new invocation if the operation is still required.',
+        retainedState: PRESERVED_STATE,
+    },
+    'workflow.failed': {
+        kind: 'workflow', retryable: true,
+        impact: 'The workflow could not complete the requested operation.',
+        action: 'Inspect the current state and retry the failed step.',
+        retainedState: PRESERVED_STATE,
+    },
+    timeout: {
+        kind: 'workflow', retryable: true,
+        impact: 'The operation exceeded its bounded execution time.',
+        action: 'Verify the current state before retrying.',
+        retainedState: PRESERVED_STATE,
+    },
+    unexpected: {
+        kind: 'unknown', retryable: false,
+        impact: 'The operation stopped because an unexpected failure was handled safely.',
+        action: 'Use the correlation ID to investigate before retrying.',
+        retainedState: PRESERVED_STATE,
+    },
+};
+const CORRELATION_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+function isApplicationErrorCorrelationId(value) {
+    return CORRELATION_ID_PATTERN.test(value);
+}
+/** Semantic error contract whose public fields are safe to serialize and present. */
+class ApplicationError extends Error {
+    constructor(code, message, options) {
+        super(message);
+        // The cause is intentionally debugger-only: no accessor or serializer may expose it.
+        // eslint-disable-next-line no-unused-private-class-members
+        _ApplicationError_cause.set(this, void 0);
+        const metadata = exports.APPLICATION_ERROR_METADATA[code];
+        const correlationId = options.correlationId;
+        if (!isApplicationErrorCorrelationId(correlationId)) {
+            throw new TypeError('Application error correlation ID must be a lowercase UUID v4.');
+        }
+        if (options.retryable === true && !metadata.retryable) {
+            throw new TypeError(`Retryability cannot be broadened for ${code}.`);
+        }
+        this.name = 'ApplicationError';
+        this.code = code;
+        this.kind = metadata.kind;
+        this.retryable = options.retryable ?? metadata.retryable;
+        this.impact = options.impact ?? metadata.impact;
+        this.action = options.action ?? metadata.action;
+        this.retainedState = options.retainedState ?? metadata.retainedState;
+        this.correlationId = correlationId;
+        __classPrivateFieldSet(this, _ApplicationError_cause, options.cause, "f");
+    }
+    toJSON() {
+        return {
+            name: 'ApplicationError',
+            message: this.message,
+            code: this.code,
+            kind: this.kind,
+            retryable: this.retryable,
+            impact: this.impact,
+            action: this.action,
+            retainedState: this.retainedState,
+            correlationId: this.correlationId,
+        };
+    }
+}
+exports.ApplicationError = ApplicationError;
+_ApplicationError_cause = new WeakMap();
 
 
 /***/ }),
@@ -69201,18 +69622,6 @@ exports.Release = Release;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Result = void 0;
 exports.getResultPayload = getResultPayload;
-function normalizeError(error) {
-    if (error instanceof Error)
-        return error;
-    if (typeof error === 'string')
-        return new Error(error);
-    try {
-        return new Error(JSON.stringify(error) ?? String(error));
-    }
-    catch {
-        return new Error(String(error));
-    }
-}
 function getResultPayload(payload) {
     return typeof payload === 'object' && payload !== null && !Array.isArray(payload)
         ? payload
@@ -69224,8 +69633,7 @@ class Result {
         this.success = data['success'] ?? false;
         this.executed = data['executed'] ?? false;
         this.steps = Array.isArray(data.steps) ? data.steps : [];
-        const rawErrors = Array.isArray(data.errors) ? data.errors : [];
-        this.errors = rawErrors.map(normalizeError);
+        this.errors = Array.isArray(data.errors) ? [...data.errors] : [];
         this.payload = data.payload;
         this.reminders = Array.isArray(data.reminders) ? data.reminders : [];
         this.stepFormat = data['stepFormat'] === 'markdown' ? 'markdown' : 'plain';
@@ -71289,6 +71697,7 @@ exports.createdLinkedBranchResult = createdLinkedBranchResult;
 exports.idempotentLinkedBranchResult = idempotentLinkedBranchResult;
 exports.linkedBranchFailureResult = linkedBranchFailureResult;
 const result_1 = __nccwpck_require__(73817);
+const application_error_1 = __nccwpck_require__(75999);
 const RESULT_ID = 'branch_repository';
 function missingLinkedBranchContextResult(branchName, issueNumber, ids) {
     return new result_1.Result({
@@ -71296,7 +71705,7 @@ function missingLinkedBranchContextResult(branchName, issueNumber, ids) {
         success: false,
         executed: true,
         steps: [`Error linking branch ${branchName} to issue: Repository not found.`],
-        errors: [new Error(`Missing repository context for issue #${issueNumber}: repository=${ids.repositoryId ?? 'unknown'}, issue=${ids.issueId ?? 'unknown'}, oid=${ids.branchOid ?? 'unknown'}.`)],
+        errors: [new application_error_1.ApplicationError('provider.contract-invalid', `The branch provider returned incomplete context for issue #${issueNumber}.`, { cause: ids })],
     });
 }
 function missingLinkedBranchResult(branchName) {
@@ -71328,7 +71737,7 @@ function linkedBranchFailureResult(error) {
         success: false,
         executed: true,
         steps: ['Tried to link branch to the issue, but there was a problem.'],
-        errors: [error instanceof Error ? error : new Error(String(error))],
+        errors: [(0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to link the branch to the issue.')],
     });
 }
 
@@ -71347,6 +71756,7 @@ const logger_1 = __nccwpck_require__(91151);
 const linked_branch_graphql_1 = __nccwpck_require__(50227);
 const linked_branch_policy_1 = __nccwpck_require__(53427);
 const linked_branch_result_policy_1 = __nccwpck_require__(95424);
+const application_error_1 = __nccwpck_require__(75999);
 async function runCreateLinkedBranch(client, owner, repo, baseBranchName, newBranchName, issueNumber, oid, token) {
     try {
         (0, logger_1.logDebugInfo)(`Creating linked branch ${newBranchName} from ${oid ?? baseBranchName}`);
@@ -71383,7 +71793,7 @@ async function runCreateLinkedBranch(client, owner, repo, baseBranchName, newBra
             (0, logger_1.logInfo)(`Linked branch ${newBranchName} already exists; treating the operation as idempotently complete.`);
             return [(0, linked_branch_result_policy_1.idempotentLinkedBranchResult)()];
         }
-        (0, logger_1.logError)(`Error Linking branch "${error}"`);
+        (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to link branch ${newBranchName}.`));
         return [(0, linked_branch_result_policy_1.linkedBranchFailureResult)(error)];
     }
 }
@@ -71449,6 +71859,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BranchCompareRepository = void 0;
 const logger_1 = __nccwpck_require__(91151);
 const branch_change_size_policy_1 = __nccwpck_require__(73891);
+const application_error_1 = __nccwpck_require__(75999);
 /**
  * Repository for comparing branches and computing size categories.
  * Isolated to allow unit tests with mocked Octokit and pure size logic.
@@ -71505,7 +71916,7 @@ class BranchCompareRepository {
                 };
             }
             catch (error) {
-                (0, logger_1.logError)(`Error comparing branches: ${error}`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to compare branches.'));
                 throw error;
             }
         };
@@ -71519,7 +71930,7 @@ class BranchCompareRepository {
                 }, sizeThresholds, labels);
             }
             catch (error) {
-                (0, logger_1.logError)(`Error comparing branches: ${error}`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to compare branches.'));
                 throw error;
             }
         };
@@ -71543,6 +71954,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.BranchLifecycleRepository = void 0;
 const logger_1 = __nccwpck_require__(91151);
 const github_pagination_policy_1 = __nccwpck_require__(44812);
+const application_error_1 = __nccwpck_require__(75999);
 class BranchLifecycleRepository {
     constructor(branchClient) {
         this.branchClient = branchClient;
@@ -71557,7 +71969,7 @@ class BranchLifecycleRepository {
                 return true;
             }
             catch (error) {
-                (0, logger_1.logError)(`Error processing branch ${branch}: ${error}`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to delete branch ${branch}.`));
                 throw error;
             }
         };
@@ -72729,6 +73141,7 @@ const exec = __importStar(__nccwpck_require__(18538));
 const logger_1 = __nccwpck_require__(91151);
 const version_policy_1 = __nccwpck_require__(8381);
 const git_authentication_environment_1 = __nccwpck_require__(16535);
+const application_error_1 = __nccwpck_require__(75999);
 /**
  * Repository for Git operations executed via CLI (exec).
  * Isolated to allow unit tests with mocked @actions/exec.
@@ -72745,7 +73158,7 @@ class GitCliRepository {
                 (0, logger_1.logDebugInfo)('Successfully fetched all remote branches.');
             }
             catch (error) {
-                (0, logger_1.logError)(`Error fetching remote branches: ${error}`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to fetch remote branches.'));
                 throw error;
             }
         };
@@ -72775,7 +73188,7 @@ class GitCliRepository {
                 }
             }
             catch (error) {
-                (0, logger_1.logError)(`Error fetching the latest tag: ${error}`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to fetch the latest tag.'));
                 throw error;
             }
         };
@@ -72809,7 +73222,7 @@ class GitCliRepository {
                 }
             }
             catch (error) {
-                (0, logger_1.logError)(`Error fetching the commit hash: ${error}`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to fetch the commit hash.'));
                 throw error;
             }
             return undefined;
@@ -72993,6 +73406,7 @@ exports.ExecutionIssueSetupRepository = ExecutionIssueSetupRepository;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueAssignmentRepository = void 0;
 const logger_1 = __nccwpck_require__(91151);
+const application_error_1 = __nccwpck_require__(75999);
 class IssueAssignmentRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -73003,7 +73417,7 @@ class IssueAssignmentRepository {
                 return (issue.assignees ?? []).map(assignee => assignee.login);
             }
             catch (error) {
-                (0, logger_1.logError)(`Error getting members of issue: ${error}.`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to get issue assignees.'));
                 throw error;
             }
         };
@@ -73020,7 +73434,7 @@ class IssueAssignmentRepository {
                 return (updatedIssue.assignees ?? []).map(assignee => assignee.login);
             }
             catch (error) {
-                (0, logger_1.logError)(`Error assigning members to issue: ${error}.`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to assign issue members.'));
                 throw error;
             }
         };
@@ -73062,6 +73476,7 @@ const comment_watermark_1 = __nccwpck_require__(23623);
 const comment_content_policy_1 = __nccwpck_require__(77454);
 const logger_1 = __nccwpck_require__(91151);
 const github_pagination_policy_1 = __nccwpck_require__(44812);
+const application_error_1 = __nccwpck_require__(75999);
 class IssueContentRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -73076,7 +73491,7 @@ class IssueContentRepository {
                 });
             }
             catch (error) {
-                (0, logger_1.logError)(`Error updating issue description: ${error}`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to update the issue description.'));
                 throw error;
             }
         };
@@ -73094,7 +73509,7 @@ class IssueContentRepository {
                 return issue.body ?? '';
             }
             catch (error) {
-                (0, logger_1.logError)(`Error reading issue #${issueNumber} description: ${error}`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to read issue #${issueNumber} description.`));
                 throw error;
             }
         };
@@ -73315,6 +73730,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueLabelRepository = void 0;
 const logger_1 = __nccwpck_require__(91151);
 const github_pagination_policy_1 = __nccwpck_require__(44812);
+const application_error_1 = __nccwpck_require__(75999);
 class IssueLabelRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -73336,7 +73752,7 @@ class IssueLabelRepository {
                     (0, logger_1.logDebugInfo)(`Issue #${issueNumber} not found or no access; returning empty labels.`);
                     return [];
                 }
-                (0, logger_1.logError)(`Error fetching labels for issue #${issueNumber}: ${error}`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to fetch labels for issue #${issueNumber}.`));
                 throw error;
             }
         };
@@ -73397,6 +73813,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueMetadataRepository = void 0;
 const logger_1 = __nccwpck_require__(91151);
 const milestone_1 = __nccwpck_require__(2016);
+const application_error_1 = __nccwpck_require__(75999);
 class IssueMetadataRepository {
     constructor(metadataClient, graphqlClient) {
         this.metadataClient = metadataClient;
@@ -73441,7 +73858,7 @@ class IssueMetadataRepository {
                 return issue.title;
             }
             catch (error) {
-                (0, logger_1.logError)(`Failed to fetch the issue title: ${error}`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to fetch the issue title.'));
                 throw error;
             }
         };
@@ -73601,6 +74018,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.updateIssueTitle = updateIssueTitle;
 exports.withTitleUpdateLogging = withTitleUpdateLogging;
 const logger_1 = __nccwpck_require__(91151);
+const application_error_1 = __nccwpck_require__(75999);
 async function updateIssueTitle(client, owner, repository, currentTitle, nextTitle, issueNumber, token) {
     if (nextTitle === currentTitle)
         return undefined;
@@ -73613,7 +74031,7 @@ async function withTitleUpdateLogging(update) {
         return await update();
     }
     catch (error) {
-        (0, logger_1.logError)(`Failed to check or update issue title: ${error}`);
+        (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to check or update the issue title.'));
         throw error;
     }
 }
@@ -73657,6 +74075,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.IssueTypeAssignmentRepository = void 0;
 const logger_1 = __nccwpck_require__(91151);
 const issue_type_assignment_workflow_1 = __nccwpck_require__(40102);
+const application_error_1 = __nccwpck_require__(75999);
 class IssueTypeAssignmentRepository {
     constructor(getIssueId, graphqlClient) {
         this.getIssueId = getIssueId;
@@ -73666,7 +74085,7 @@ class IssueTypeAssignmentRepository {
                 await (0, issue_type_assignment_workflow_1.assignIssueType)(this.getIssueId, this.graphqlClient.getClient(token), owner, repository, issueNumber, labels, issueTypes, token);
             }
             catch (error) {
-                (0, logger_1.logError)(`Failed to update issue type: ${error}`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to update the issue type.'));
                 (0, logger_1.logDebugInfo)("Continuing with issue processing despite issue type update failure");
                 throw error;
             }
@@ -73688,6 +74107,7 @@ exports.IssueTypeCreationSkippedError = void 0;
 exports.assignIssueType = assignIssueType;
 const logger_1 = __nccwpck_require__(91151);
 const issue_type_assignment_policy_1 = __nccwpck_require__(73610);
+const application_error_1 = __nccwpck_require__(75999);
 async function assignIssueType(getIssueId, client, owner, repository, issueNumber, labels, issueTypes, token) {
     const selected = (0, issue_type_assignment_policy_1.selectIssueType)(labels, issueTypes);
     (0, logger_1.logDebugInfo)(`Setting issue type for issue ${issueNumber} to ${selected.name}`);
@@ -73743,7 +74163,7 @@ async function createIssueType(client, ownerId, name, description, color) {
         return result.createIssueType.issueType.id;
     }
     catch (error) {
-        (0, logger_1.logError)(`Failed to create issue type "${name}": ${error}`);
+        (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to create issue type "${name}".`));
         (0, logger_1.logDebugInfo)("Falling back to using labels for issue type classification");
         throw new IssueTypeCreationSkippedError();
     }
@@ -73795,6 +74215,7 @@ exports.ensureIssueTypes = ensureIssueTypes;
 const logger_1 = __nccwpck_require__(91151);
 const issue_type_configuration_1 = __nccwpck_require__(62726);
 const issue_type_queries_1 = __nccwpck_require__(73192);
+const application_error_1 = __nccwpck_require__(75999);
 async function ensureIssueType(client, owner, name, description, color) {
     try {
         const existingTypes = await (0, issue_type_queries_1.listIssueTypes)(client, owner);
@@ -73805,7 +74226,7 @@ async function ensureIssueType(client, owner, name, description, color) {
         return { created: true, existed: false };
     }
     catch (error) {
-        (0, logger_1.logError)(`Error ensuring issue type "${name}": ${error}`);
+        (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to ensure issue type "${name}".`));
         throw error;
     }
 }
@@ -73830,9 +74251,9 @@ async function ensureConfiguredIssueTypeSafely(client, owner, configured) {
         return { kind: result.created ? 'created' : 'existing' };
     }
     catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        (0, logger_1.logError)(`Error ensuring issue type "${configured.name}": ${error}`);
-        return { kind: 'error', message: `Error creating Issue type "${configured.name}": ${message}` };
+        const semanticError = (0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to ensure issue type "${configured.name}".`);
+        (0, logger_1.logError)(semanticError);
+        return { kind: 'error', message: semanticError.message };
     }
 }
 function ensureConfiguredIssueType(client, owner, configured) {
@@ -74029,6 +74450,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ActorAuthorizationRepository = void 0;
 const logger_1 = __nccwpck_require__(91151);
 const actor_modification_policy_1 = __nccwpck_require__(34737);
+const application_error_1 = __nccwpck_require__(75999);
 class ActorAuthorizationRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -74045,7 +74467,7 @@ class ActorAuthorizationRepository {
                 return this.checkUserRepositoryPermission(octokit, owner, actor, repo);
             }
             catch (err) {
-                (0, logger_1.logDebugInfo)(`isActorAllowedToModifyFiles(${owner}, ${repo}, ${actor}): ${err instanceof Error ? err.message : String(err)}`);
+                (0, logger_1.logDebugInfo)((0, application_error_1.toApplicationError)(err, 'authorization.denied', 'Unable to verify actor authorization.').message);
                 return false;
             }
         };
@@ -74171,6 +74593,7 @@ exports.OrganizationMembersRepository = void 0;
 const logger_1 = __nccwpck_require__(91151);
 const project_members_policy_1 = __nccwpck_require__(41370);
 const organization_members_query_1 = __nccwpck_require__(84916);
+const application_error_1 = __nccwpck_require__(75999);
 class OrganizationMembersRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -74192,7 +74615,7 @@ class OrganizationMembersRepository {
                 return selectedMembers;
             }
             catch (error) {
-                (0, logger_1.logError)(`Error getting random members: ${error}.`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to select organization members.'));
                 throw error;
             }
         };
@@ -74207,7 +74630,7 @@ class OrganizationMembersRepository {
                 return (0, project_members_policy_1.collectOrganizationMembers)(teams, (teamSlug) => (0, organization_members_query_1.listOrganizationTeamMembers)(client, organization, teamSlug));
             }
             catch (error) {
-                (0, logger_1.logError)(`Error getting all members: ${error}.`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to list organization members.'));
                 throw error;
             }
         };
@@ -74256,6 +74679,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.getProjectBoardDetail = getProjectBoardDetail;
 const logger_1 = __nccwpck_require__(91151);
 const project_detail_1 = __nccwpck_require__(33428);
+const application_error_1 = __nccwpck_require__(75999);
 const errorMessage = (error) => error instanceof Error ? error.message : String(error);
 /** Reads a ProjectV2 without leaking GitHub's owner-specific GraphQL shape. */
 async function getProjectBoardDetail(ownerTypeClient, graphqlClient, projectId, owner, token) {
@@ -74306,7 +74730,7 @@ async function getProjectBoardDetail(ownerTypeClient, graphqlClient, projectId, 
         });
     }
     catch (error) {
-        (0, logger_1.logError)(`Error in getProjectDetail: ${errorMessage(error)}`);
+        (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to load the project details.'));
         throw error;
     }
 }
@@ -74758,6 +75182,7 @@ exports.PullRequestChangesRepository = void 0;
 const logger_1 = __nccwpck_require__(91151);
 const pull_request_review_errors_1 = __nccwpck_require__(46445);
 const github_pagination_policy_1 = __nccwpck_require__(44812);
+const application_error_1 = __nccwpck_require__(75999);
 class PullRequestChangesRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -74784,7 +75209,7 @@ class PullRequestChangesRepository {
                 return { changes, filesWithFirstDiffLine, filesWithDiffLocations };
             }
             catch (error) {
-                (0, logger_1.logError)(`Error getting pull request review diff snapshot: ${error}.`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to read the pull request review diff.'));
                 throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, 'list-files');
             }
         };
@@ -74803,7 +75228,7 @@ class PullRequestChangesRepository {
                 return data.head.sha;
             }
             catch (error) {
-                (0, logger_1.logError)(`Error getting PR head SHA: ${error}.`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to read the pull request head SHA.'));
                 throw (0, pull_request_review_errors_1.toPullRequestReviewOperationError)(error, "get-head-sha");
             }
         };
@@ -74890,6 +75315,7 @@ exports.PullRequestChangesRepository = PullRequestChangesRepository;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PullRequestLifecycleRepository = void 0;
 const logger_1 = __nccwpck_require__(91151);
+const application_error_1 = __nccwpck_require__(75999);
 class PullRequestLifecycleRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -74908,7 +75334,7 @@ class PullRequestLifecycleRepository {
                 return numbers;
             }
             catch (error) {
-                (0, logger_1.logError)(`Error listing PRs for branch ${headBranch}: ${error}`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to list pull requests for branch ${headBranch}.`));
                 throw error;
             }
         };
@@ -74937,7 +75363,7 @@ class PullRequestLifecycleRepository {
                 return undefined;
             }
             catch (error) {
-                (0, logger_1.logError)(`Error getting head branch for issue #${issueNumber}: ${error}`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to find a pull request branch for issue #${issueNumber}.`));
                 throw error;
             }
         };
@@ -75571,6 +75997,7 @@ exports.PullRequestReviewerRepository = PullRequestReviewerRepository;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.RepositoryDefaultBranchRepository = void 0;
 const logger_1 = __nccwpck_require__(91151);
+const application_error_1 = __nccwpck_require__(75999);
 class RepositoryDefaultBranchRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -75582,7 +76009,7 @@ class RepositoryDefaultBranchRepository {
                 return data.default_branch;
             }
             catch (error) {
-                (0, logger_1.logError)(`Error getting default branch for ${owner}/${repository}: ${error}`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to get the default branch for ${owner}/${repository}.`));
                 throw error;
             }
         };
@@ -75605,6 +76032,7 @@ const release_content_policy_1 = __nccwpck_require__(56818);
 const release_transition_policy_1 = __nccwpck_require__(27673);
 const release_tag_policy_1 = __nccwpck_require__(62748);
 const repository_release_query_1 = __nccwpck_require__(10766);
+const application_error_1 = __nccwpck_require__(75999);
 class RepositoryReleasePublicationRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -75673,7 +76101,7 @@ class RepositoryReleasePublicationRepository {
                 }
             }
             catch (error) {
-                (0, logger_1.logError)(`Error creating release: ${error}`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to create the release.'));
                 throw error;
             }
         };
@@ -75748,6 +76176,7 @@ exports.RepositoryTagRepository = void 0;
 const logger_1 = __nccwpck_require__(91151);
 const release_tag_policy_1 = __nccwpck_require__(62748);
 const repository_tag_query_1 = __nccwpck_require__(46772);
+const application_error_1 = __nccwpck_require__(75999);
 class RepositoryTagRepository {
     constructor(githubClient) {
         this.githubClient = githubClient;
@@ -75805,7 +76234,7 @@ class RepositoryTagRepository {
                 return ref.object.sha;
             }
             catch (error) {
-                (0, logger_1.logError)(`Error creating tag '${tag}': ${JSON.stringify(error, null, 2)}`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', `Unable to create tag '${tag}'.`));
                 throw error;
             }
         };
@@ -80015,6 +80444,7 @@ function prepareUntrustedCommandEnvironment(source = process.env) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ContentInterface = void 0;
 const logger_1 = __nccwpck_require__(91151);
+const application_error_1 = __nccwpck_require__(75999);
 class ContentInterface {
     constructor() {
         this.getContent = (description) => {
@@ -80029,7 +80459,7 @@ class ContentInterface {
                 return description.substring(indices.contentStart, indices.endIndex);
             }
             catch (error) {
-                (0, logger_1.logError)(`Error reading issue configuration: ${error}`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'configuration.invalid', 'Unable to read issue configuration.'));
                 throw error;
             }
         };
@@ -80065,7 +80495,7 @@ class ContentInterface {
                 return this._updateContent(description, content);
             }
             catch (error) {
-                (0, logger_1.logError)(`Error updating issue description: ${error}`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to update the issue description.'));
                 return undefined;
             }
         };
@@ -80113,6 +80543,7 @@ exports.IssueContentInterface = void 0;
 const logger_1 = __nccwpck_require__(91151);
 const content_interface_1 = __nccwpck_require__(92540);
 const issue_content_number_policy_1 = __nccwpck_require__(45545);
+const application_error_1 = __nccwpck_require__(75999);
 class IssueContentInterface extends content_interface_1.ContentInterface {
     constructor(issueDescriptionPort) {
         super();
@@ -80126,7 +80557,7 @@ class IssueContentInterface extends content_interface_1.ContentInterface {
                 return this.getContent(description);
             }
             catch (error) {
-                (0, logger_1.logError)(`Error reading issue content: ${error}`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to read issue content.'));
                 throw error;
             }
         };
@@ -80144,7 +80575,7 @@ class IssueContentInterface extends content_interface_1.ContentInterface {
                 return updated;
             }
             catch (error) {
-                (0, logger_1.logError)(`Error updating issue content: ${error}`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'provider.unavailable', 'Unable to update issue content.'));
                 throw error;
             }
         };
@@ -80199,6 +80630,7 @@ const config_1 = __nccwpck_require__(90450);
 const logger_1 = __nccwpck_require__(91151);
 const issue_content_interface_1 = __nccwpck_require__(60608);
 const configuration_payload_policy_1 = __nccwpck_require__(58043);
+const application_error_1 = __nccwpck_require__(75999);
 class ConfigurationHandler extends issue_content_interface_1.IssueContentInterface {
     constructor() {
         super(...arguments);
@@ -80217,7 +80649,7 @@ class ConfigurationHandler extends issue_content_interface_1.IssueContentInterfa
                 return new config_1.Config(branchConfig);
             }
             catch (error) {
-                (0, logger_1.logError)(`Error reading issue configuration: ${error}`);
+                (0, logger_1.logError)((0, application_error_1.toApplicationError)(error, 'configuration.invalid', 'Unable to read issue configuration.'));
                 throw error;
             }
         };
@@ -81122,8 +81554,7 @@ function getAccumulatedLogsAsText() {
     return accumulatedLogEntries
         .map((e) => {
         const prefix = `[${e.level.toUpperCase()}]`;
-        const meta = e.metadata?.stack ? `\n${String(e.metadata.stack)}` : '';
-        return `${prefix} ${e.message}${meta}`;
+        return `${prefix} ${e.message}`;
     })
         .join('\n');
 }
@@ -81161,13 +81592,25 @@ function logWarning(message) {
     logWarn(message);
 }
 function logError(message, metadata) {
-    const errorMessage = message instanceof Error ? message.message : String(message);
+    const errorMessage = typeof message === 'string' ? message : message.message;
     const sanitized = sanitizeLogMessage(errorMessage);
-    const metaWithStack = sanitizeMetadata({
-        ...metadata,
-        stack: message instanceof Error ? message.stack : undefined
-    });
-    emitLog({ level: 'error', message: sanitized, timestamp: Date.now(), metadata: metaWithStack }, console.error);
+    const safeMetadata = sanitizeMetadata(typeof message === 'string'
+        ? metadata
+        : {
+            ...metadata,
+            applicationError: {
+                name: message.name,
+                message: message.message,
+                code: message.code,
+                kind: message.kind,
+                retryable: message.retryable,
+                impact: message.impact,
+                action: message.action,
+                retainedState: message.retainedState,
+                correlationId: message.correlationId,
+            },
+        });
+    emitLog({ level: 'error', message: sanitized, timestamp: Date.now(), metadata: safeMetadata }, console.error);
 }
 function logDebugInfo(message, previousWasSingleLine = false, metadata) {
     if (loggerDebug) {

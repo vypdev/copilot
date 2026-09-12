@@ -5,6 +5,7 @@ import type { ProjectBoardLinkPort } from '../../../ports/project_board_link_por
 import type { EventualConsistencyDelayPort } from '../../../ports/eventual_consistency_ports';
 import { logDebugInfo, logError, logInfo, logWarn } from '../../../ports/logging_ports';
 import { getTaskEmoji } from '../../../../utils/task_emoji';
+import { toApplicationError } from '../../../errors/application_error';
 
 export type LinkedContentType = 'issue' | 'pull request';
 
@@ -73,13 +74,14 @@ export async function runProjectContentLinkWorkflow(
         }
         return results;
     } catch (error) {
-        logError(error);
+        const semanticError = toApplicationError(error, 'provider.unavailable', `Unable to link the ${dependencies.contentType} to the project.`);
+        logError(semanticError);
         return [new Result({
             id: dependencies.taskId,
             success: false,
             executed: true,
             steps: [`Tried to link ${dependencies.contentType} to project, but there was a problem.`],
-            errors: [error],
+            errors: [semanticError],
         })];
     }
 }

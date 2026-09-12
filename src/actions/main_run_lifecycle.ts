@@ -11,6 +11,8 @@ import type { RepositoryCoordinates } from './repository_context';
 import { resolveWorkflowIdentifier } from './workflow_context';
 import { createWaitForPreviousWorkflowRunsUseCase } from '../infrastructure/composition/workflow_queue_composition_root';
 import type { PreviousWorkflowRunsQuery } from '../application/ports/workflow_run_ports';
+import { toApplicationError } from '../application/errors/application_error';
+import { renderApplicationErrorText } from '../application/policies/application_error_presentation_policy';
 
 export const WORKFLOW_QUEUE_FAILURE_MESSAGE =
     'Workflow queue check failed; sequential execution was not bypassed.';
@@ -126,9 +128,9 @@ export async function runMainRoute(
         logInfo(`Main run finished. Results: ${results.length}, total steps: ${totalSteps}.`);
         return results;
     } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : String(error);
-        logError(`Main run failed: ${message}`, error instanceof Error ? { stack: error.stack } : undefined);
-        core.setFailed(message);
+        const semanticError = toApplicationError(error, 'workflow.failed', 'Main run failed.');
+        logError(semanticError);
+        core.setFailed(renderApplicationErrorText(semanticError));
         return [];
     }
 }

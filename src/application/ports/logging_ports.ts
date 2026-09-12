@@ -21,10 +21,10 @@ export interface ApplicationLoggingPort {
     ): void;
     logWarn(message: string, metadata?: Record<string, unknown>): void;
     logWarning(message: string): void;
-    logError(message: unknown, metadata?: Record<string, unknown>): void;
+    logError(message: ApplicationErrorLogValue, metadata?: Record<string, unknown>): void;
     logDebugInfo(message: string, previousWasSingleLine?: boolean, metadata?: Record<string, unknown>): void;
     logDebugWarning(message: string): void;
-    logDebugError(message: unknown): void;
+    logDebugError(message: ApplicationErrorLogValue): void;
     setGlobalLoggerDebug(debug: boolean, isRemote?: boolean): void;
 }
 
@@ -82,7 +82,7 @@ export function logWarning(message: string): void {
     activeLogger.logWarning(message);
 }
 
-export function logError(message: unknown, metadata?: Record<string, unknown>): void {
+export function logError(message: ApplicationErrorLogValue, metadata?: Record<string, unknown>): void {
     activeLogger.logError(message, metadata);
 }
 
@@ -94,10 +94,13 @@ export function logDebugWarning(message: string): void {
     activeLogger.logDebugWarning(message);
 }
 
-export function logDebugError(message: unknown): void {
+export function logDebugError(message: ApplicationErrorLogValue): void {
     activeLogger.logDebugError(message);
 }
 
 export function setGlobalLoggerDebug(debug: boolean, isRemote = false): void {
     activeLogger.setGlobalLoggerDebug(debug, isRemote);
 }
+import type { ApplicationErrorPublicRecord } from '../../data/model/application_error';
+
+export type ApplicationErrorLogValue = string | ApplicationErrorPublicRecord;

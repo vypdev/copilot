@@ -22,6 +22,7 @@ import {
     type BugbotPresentationReport,
 } from './bugbot/reconcile_bugbot_review_state_use_case';
 import type { BugbotFinding } from '../../../../domain/bugbot/finding';
+import { ApplicationError } from '../../../errors/application_error';
 
 export interface DetectPotentialProblemsWorkflowDependencies {
     aiRepository: FindingsQueryPort;
@@ -45,8 +46,8 @@ export async function runDetectPotentialProblemsWorkflow(
         if (param.ai.getBugbotReviewConfiguration().telemetry) {
             try {
                 await dependencies.telemetryPort?.publish(snapshot);
-            } catch (error) {
-                logInfo(`Bugbot telemetry publication failed without affecting the review: ${error instanceof Error ? error.name : 'unknown'}.`);
+            } catch {
+                logInfo('Bugbot telemetry publication failed without affecting the review.');
             }
         }
         return snapshot;
@@ -83,7 +84,7 @@ export async function runDetectPotentialProblemsWorkflow(
         }
         const prepared = await analyzeBugbotRevision(param, context, { agent: dependencies.aiRepository, telemetry });
         if (prepared === undefined) {
-            const analysisError = new Error('The configured agent returned no potential-problem analysis.');
+            const analysisError = new ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.');
             const presentation = param.ai.getBugbotReviewConfiguration().publicationMode === 'publish'
                 ? await telemetry.measure('projection', () => reconcileReviewState({
                     execution: param,
@@ -132,10 +133,10 @@ export async function runDetectPotentialProblemsWorkflow(
             finalErrors.length === 0 ? (hasChanges ? 'completed' : 'no-findings') : 'failed',
         );
     } catch (error) {
-        const normalizedError = error instanceof PullRequestReviewOperationError
-            ? error
-            : new Error('Unable to detect potential problems.');
-        const resultError = new Error(`Error in ${TASK_ID}: ${normalizedError.message}`);
+        const resultError = toBugbotApplicationError(
+            error,
+            `Error in ${TASK_ID}: Unable to detect potential problems.`,
+        );
         logError(resultError.message);
         const result = new Result({
             id: TASK_ID,
@@ -236,7 +237,7 @@ function noAnalysisResult(presentation?: BugbotPresentationReport): Result {
     logDebugInfo('DetectPotentialProblems: No response from configured agent.');
     const errors = presentation?.errors.length
         ? [...presentation.errors]
-        : [new Error('The configured agent returned no potential-problem analysis.')];
+        : [new ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.')];
     return new Result({
         id: TASK_ID,
         success: false,
@@ -244,7 +245,9 @@ function noAnalysisResult(presentation?: BugbotPresentationReport): Result {
         ...(presentation ? {
             steps: [`Bugbot analysis failed; the verified PR status was reconciled (${formatStateCounts(presentation.projection.counts)}).`],
         } : {}),
-        errors,
+        errors: errors.map(error => presentation
+            ? toBugbotPresentationError(error)
+            : toBugbotApplicationError(error, 'Bugbot review reconciliation failed.')),
         ...(presentation ? {
             payload: {
                 findingStates: presentation.projection.counts,
@@ -288,7 +291,12 @@ function detectionResult(
         success: resolutionErrors.length === 0,
         executed: true,
         steps: [`Potential problems detection completed. ${stepParts.join('; ')}.`],
-        errors: [...resolutionErrors],
+        errors: resolutionErrors.map(error => presentation
+            ? toBugbotPresentationError(error)
+            : toBugbotApplicationError(
+                error,
+                'Bugbot finding publication or reconciliation failed.',
+            )),
         payload: {
             findingStates: statusSummary.counts,
             ...(presentation ? {
@@ -306,6 +314,20 @@ function formatStateCounts(counts: Readonly<Record<string, number>>): string {
         .filter(([, count]) => count > 0)
         .map(([state, count]) => `${state}=${count}`)
         .join(', ') || 'none';
+}
+
+function toBugbotApplicationError(error: unknown, fallbackMessage: string): ApplicationError {
+    if (error instanceof ApplicationError) return error;
+    const message = error instanceof PullRequestReviewOperationError ? error.message : fallbackMessage;
+    return new ApplicationError('provider.unavailable', message, { cause: error });
+}
+
+function toBugbotPresentationError(error: Error): ApplicationError {
+    if (error instanceof ApplicationError) return error;
+    const message = error instanceof PullRequestReviewOperationError
+        ? error.message
+        : 'Bugbot finding presentation failed.';
+    return new ApplicationError('provider.unavailable', message, { cause: error });
 }
 
 async function reconcileReviewState(input: {

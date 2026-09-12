@@ -26,7 +26,7 @@ export class ResolveGithubExecutionAdmissionUseCase implements ParamUseCase<Gith
     async invoke(request: GithubExecutionAdmissionRequest): Promise<GithubExecutionAdmissionResult> {
         const tokenUser = await this.authenticatedUserPort.getUserFromToken(request.token);
         if (typeof tokenUser !== 'string' || tokenUser.trim().length === 0) {
-            throw new ApplicationError('Failed to get user from token', 'authorization');
+            throw new ApplicationError('authorization.credential-invalid', 'Failed to get user from token.');
         }
 
         return {

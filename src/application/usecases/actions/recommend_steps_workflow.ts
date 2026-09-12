@@ -13,6 +13,7 @@ import { logDebugInfo, logError, logInfo } from '../../ports/logging_ports';
 import { PROJECT_CONTEXT_INSTRUCTION } from '../../../utils/project_context_instruction';
 import { getTaskEmoji } from '../../../utils/task_emoji';
 import { buildRecommendationResult } from './recommend_steps_result_policy';
+import { ApplicationError, toApplicationError } from '../../errors/application_error';
 
 export interface RecommendStepsWorkflowDependencies {
     issueDescriptionQueryPort: IssueDescriptionQueryPort;
@@ -30,12 +31,12 @@ export async function runRecommendStepsWorkflow(
     try {
         const configuration = param.ai.getAgentConfiguration('planner');
         if (!isAgentConfigurationReady(configuration)) {
-            return [failure(taskId, 'Missing agent CLI command and model.')];
+            return [failure(taskId, 'Missing agent CLI command and model.', 'configuration.invalid')];
         }
 
         const issueNumber = param.issueNumber;
         if (issueNumber === -1) {
-            return [failure(taskId, 'Issue number not found.')];
+            return [failure(taskId, 'Issue number not found.', 'validation.invalid-input')];
         }
 
         const rawIssueDescription = await dependencies.issueDescriptionQueryPort.getDescription(
@@ -49,7 +50,7 @@ export async function runRecommendStepsWorkflow(
             : getVisibleIssueDescription(rawIssueDescription);
 
         if (!issueDescription?.trim()) {
-            return [failure(taskId, `No description found for issue #${issueNumber}.`)];
+            return [failure(taskId, `No description found for issue #${issueNumber}.`, 'provider.not-found')];
         }
 
         const previousRecommendation = param.previousConfiguration?.recommendationState;
@@ -77,23 +78,24 @@ export async function runRecommendStepsWorkflow(
         });
         return buildRecommendationResult(param, taskId, response, issueDescriptionFingerprint, previousRecommendation, issueNumber);
     } catch (error) {
-        logError(`Error in ${taskId}: ${error}`);
+        const semanticError = toApplicationError(error, 'agent.failed', `Unable to complete ${taskId}.`);
+        logError(semanticError);
         return [
             new Result({
                 id: taskId,
                 success: false,
                 executed: true,
-                errors: [`Error in ${taskId}: ${error}`],
+                errors: [semanticError],
             }),
         ];
     }
 }
 
-function failure(taskId: string, message: string): Result {
+function failure(taskId: string, message: string, code: ConstructorParameters<typeof ApplicationError>[0]): Result {
     return new Result({
         id: taskId,
         success: false,
         executed: true,
-        errors: [message],
+        errors: [new ApplicationError(code, message)],
     });
 }

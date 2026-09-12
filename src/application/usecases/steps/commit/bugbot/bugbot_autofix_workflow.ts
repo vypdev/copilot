@@ -5,6 +5,7 @@ import { getTaskEmoji } from '../../../../../utils/task_emoji';
 import { finalizeBugbotAutofix } from './bugbot_autofix_postflight';
 import { prepareBugbotAutofix } from './bugbot_autofix_preflight';
 import type { BugbotAutofixParam, BugbotAutofixWorkflowDependencies } from './bugbot_autofix_contracts';
+import { toApplicationError, type ApplicationError } from '../../../../errors/application_error';
 
 export type { BugbotAutofixParam, BugbotAutofixWorkflowDependencies } from './bugbot_autofix_contracts';
 
@@ -54,12 +55,17 @@ export async function runBugbotAutofixWorkflow(
             dependencies.gitCommitPort,
         );
     } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        logError(`Bugbot autofix failed: ${message}`);
-        return [newResultFailure(`Bugbot autofix failed: ${message}`)];
+        const semanticError = toApplicationError(error, 'agent.failed', 'Bugbot autofix failed.');
+        logError(semanticError);
+        return [newResultFailure(semanticError)];
     }
 }
 
-function newResultFailure(message: string): Result {
-    return new Result({ id: TASK_ID, success: false, executed: true, errors: [message] });
+function newResultFailure(semanticError: ApplicationError): Result {
+    return new Result({
+        id: TASK_ID,
+        success: false,
+        executed: true,
+        errors: [semanticError],
+    });
 }

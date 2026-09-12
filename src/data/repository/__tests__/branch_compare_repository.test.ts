@@ -163,7 +163,7 @@ describe('BranchCompareRepository', () => {
             mockCompareCommits.mockRejectedValue(new Error('API error'));
 
             await expect(repo.getChanges('o', 'r', 'h', 'b', 'token')).rejects.toThrow('API error');
-            expect(logError).toHaveBeenCalledWith(expect.stringContaining('Error comparing branches'));
+            expect(logError).toHaveBeenCalledWith(expect.objectContaining({ message: 'Unable to compare branches.' }));
         });
     });
 
@@ -288,7 +288,7 @@ describe('BranchCompareRepository', () => {
             await expect(
                 repo.getSizeCategoryAndReason('o', 'r', 'head', 'base', sizeThresholds, labels, 'token'),
             ).rejects.toThrow('compare failed');
-            expect(logError).toHaveBeenCalledWith(expect.stringContaining('Error comparing branches'));
+            expect(logError).toHaveBeenCalledWith(expect.objectContaining({ message: 'Unable to compare branches.' }));
         });
     });
 

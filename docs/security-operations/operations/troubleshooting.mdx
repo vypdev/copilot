@@ -102,6 +102,10 @@ This guide helps you resolve common issues you might encounter while using Copil
   </Accordion>
 
   <Accordion title="Common error messages" icon="circle-exclamation">
+    New failures include a stable code and **Reference** UUID. Follow the
+    displayed action first, then use the UUID to correlate the Job Summary and
+    sanitized logs. See the [Application error reference](/security-operations/operations/error-reference).
+
     **"Permission Denied"** — Check token permissions, verify repository access, and review security settings.
 
     **"Resource Not Found"** — Verify the resource exists, check access permissions, and validate URLs and paths.
@@ -133,5 +137,6 @@ This guide helps you resolve common issues you might encounter while using Copil
        - Detailed description
        - Steps to reproduce
        - Relevant logs and configurations
+       - The error Reference UUID (never a credential or raw provider response)
   </Accordion>
 </AccordionGroup>

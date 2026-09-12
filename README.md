@@ -91,6 +91,10 @@ for action-level examples.
 
 AI features use the configured agent runtime and qualified model; see the [Agents](https://docs.page/vypdev/copilot/agents) and [Security & Operations](https://docs.page/vypdev/copilot/security-operations) documentation. You can run progress and Bugbot locally through the [Single actions → Workflow & CLI](https://docs.page/vypdev/copilot/single-actions/workflow-and-cli) path.
 
+The programmatic Bugbot API is request-only: `review(BugbotReviewRequest)` is
+the sole review entrypoint, and internal runtime aggregates are not exported.
+See the [Programmatic API](https://docs.page/vypdev/copilot/bugbot/programmatic-api).
+
 ---
 
 ## Contributing

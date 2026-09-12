@@ -4,7 +4,8 @@
 - Date: 2026-09-11
 - Owners: Copilot maintainers
 - Scope: interactive/non-interactive installation planning, file and resource provisioning, credential validation, and read-only diagnosis
-- Related issues/PRs: merge-queue readiness SDD
+- Related issues/PRs: merge-queue readiness SDD; architecture quality and
+  scalability hardening SDD
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none for the baseline
 
@@ -50,12 +51,18 @@ but unusable, overwrite hand-maintained files, or expose credentials.
 - Intentional contract: preview/confirmation, separate credentials, bounded
   configuration, preserve-existing storage, backups, and read-only doctor.
 - Known debt and limitations: GitHub cannot reveal Secret values; health may be
-  `unverifiable`; remote organization access depends on PAT permissions; live
-  setup UX has no checked-in capture.
+  `unverifiable`; remote organization access depends on PAT permissions; one
+  terminal adapter implements five semantic ports with weak direct coverage;
+  doctor owns a high-complexity conditional check sequence; live setup UX has no
+  checked-in capture.
 - Unknown rationale: historic defaults predating the typed wizard are not
   assumed intentional unless represented by current policy and docs.
-- Proposed improvements: transactional rollback across local and GitHub writes
-  would require a separate design.
+- Proposed improvements: questionnaire/terminal separation, named doctor checks,
+  pure report policy, and narrow remote configuration adapters are specified in
+  [`setup-doctor-architecture-hardening.md`](./setup-doctor-architecture-hardening.md),
+  under the shared gates in
+  [`architecture-quality-and-scalability-hardening.md`](./architecture-quality-and-scalability-hardening.md).
+  Transactional rollback across local and GitHub writes requires a separate design.
 
 ## 3. Actors, surfaces, and terminology
 
@@ -239,7 +246,7 @@ workflow revision; successful remote writes are reported for manual reversal.
 | Credentials/provider adapters | 18 | valid/invalid/missing/unverifiable/groups |
 | Workflows/assets/schema | 14 | selection, parity, readiness, permissions |
 | Prompt/CLI UX/sanitization | 12 | masking, status order, non-interactive |
-| Integration/security/migration | 12 | backup, org scope, doctor, no `.env` |
+| Integration/security/cutover | 12 | backup, org scope, doctor, no `.env` |
 | **Total** | **98** | no double counting |
 
 Global coverage thresholds remain; new pure policies SHOULD reach 95% branch
@@ -288,7 +295,7 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 
 ## 19. Definition of Done
 
-- [ ] Every new option has default, bounds, precedence, persistence, migration, and security rules.
+- [ ] Every new option has default, bounds, precedence, persistence, retirement/rejection, and security rules.
 - [ ] The 98-case budget and coverage thresholds pass.
 - [ ] Setup cancel/retry/partial state and doctor read-only behavior pass.
 - [ ] Secrets are absent from plans, config, logs, errors, and backups.
@@ -299,6 +306,9 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 
 - Primary sources: catalogued setup code, tests, assets, and docs.
 - Related SDD: `merge-queue-readiness.md`.
+- Planned hardening: `setup-doctor-architecture-hardening.md` owns setup prompt,
+  doctor, and remote configuration adapter decomposition; the architecture
+  hardening SDD owns shared sequencing and verification gates.
 - Decision: one configuration policy serves setup, doctor, and workflow inputs.
 - Rejected: storing credentials in YAML/JSON or silently overwriting managed files.
 - Follow-up: cross-provider transactional rollback is outside this baseline.

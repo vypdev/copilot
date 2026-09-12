@@ -19,14 +19,18 @@ describe('RememberBugbotRuleUseCase', () => {
     });
 
     it.each([
-        [new Error('storage unavailable'), 'storage unavailable'],
-        ['failure', 'Unable to remember the Bugbot rule.'],
-    ])('returns a safe failure result when persistence rejects', async (error, message) => {
+        new Error('storage unavailable'),
+        'failure',
+    ])('returns a safe failure result when persistence rejects', async (error) => {
         const rules: BugbotLearnedRuleCommandPort = { rememberRule: jest.fn().mockRejectedValue(error) };
 
         const [result] = await new RememberBugbotRuleUseCase(rules).invoke({ execution, rule: 'Validate ownership' });
 
         expect(result).toEqual(expect.objectContaining({ success: false, executed: false }));
-        expect(result.errors[0]?.message).toBe(message);
+        expect(result.errors[0]).toMatchObject({
+            code: 'provider.unavailable',
+            message: 'Unable to remember the Bugbot rule.',
+        });
+        expect(JSON.stringify(result)).not.toContain(String(error));
     });
 });

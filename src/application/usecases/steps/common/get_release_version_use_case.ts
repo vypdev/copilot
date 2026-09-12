@@ -5,6 +5,7 @@ import { extractVersion } from "../../../../utils/content_utils";
 import { logDebugInfo, logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
+import { toApplicationError } from "../../../errors/application_error";
 
 export class GetReleaseVersionUseCase implements ParamUseCase<Execution, Result[]> {
     taskId: string = 'GetReleaseVersionUseCase';
@@ -81,14 +82,15 @@ export class GetReleaseVersionUseCase implements ParamUseCase<Execution, Result[
                 })
             );
         } catch (error) {
-            logError(`GetReleaseVersion: failed to get version for issue/PR.`, error instanceof Error ? { stack: (error as Error).stack } : undefined);
+            const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to read the release version.');
+            logError(semanticError);
             result.push(
                 new Result({
                     id: this.taskId,
                     success: false,
                     executed: true,
                     steps: [`Tried to get the release version but there was a problem.`],
-                    errors: [error],
+                    errors: [semanticError],
                 })
             );
         }

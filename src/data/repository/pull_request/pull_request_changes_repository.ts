@@ -8,6 +8,7 @@ import type {
     PullRequestReviewChange,
     PullRequestReviewDiffSnapshot,
 } from '../../../application/ports/bugbot_pull_request_read_ports';
+import { toApplicationError } from '../../../application/errors/application_error';
 
 export class PullRequestChangesRepository {
     constructor(private readonly githubClient: GithubClientPort<GithubPullRequestChangesClient>) {}
@@ -109,7 +110,7 @@ export class PullRequestChangesRepository {
             });
             return { changes, filesWithFirstDiffLine, filesWithDiffLocations };
         } catch (error) {
-            logError(`Error getting pull request review diff snapshot: ${error}.`);
+            logError(toApplicationError(error, 'provider.unavailable', 'Unable to read the pull request review diff.'));
             throw toPullRequestReviewOperationError(error, 'list-files');
         }
     };
@@ -133,7 +134,7 @@ export class PullRequestChangesRepository {
             }
             return data.head.sha;
         } catch (error) {
-            logError(`Error getting PR head SHA: ${error}.`);
+            logError(toApplicationError(error, 'provider.unavailable', 'Unable to read the pull request head SHA.'));
             throw toPullRequestReviewOperationError(error, "get-head-sha");
         }
     };

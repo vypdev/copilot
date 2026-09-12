@@ -1,5 +1,6 @@
 import * as core from '@actions/core';
 import type { Execution } from '../data/model/execution';
+import { renderApplicationErrorText } from '../application/policies/application_error_presentation_policy';
 import { getResultPayload, type Result } from '../data/model/result';
 import { isRecommendationState } from '../data/model/recommendation_state';
 import type { ConfigurationStorePort } from '../application/ports/configuration_store_ports';
@@ -13,6 +14,7 @@ import { lifecycleStateFromLabels } from '../domain/copilot_lifecycle';
 import type { CopilotEvidencePort } from '../application/ports/copilot_evidence_ports';
 import { buildCopilotEvidence } from '../application/policies/copilot_evidence_policy';
 import type { ActionSummaryPort } from '../application/ports/action_summary_ports';
+import { toApplicationError } from '../application/errors/application_error';
 import { shouldPersistConfiguration } from '../application/policies/configuration_persistence_policy';
 import { renderDeploymentJobSummary } from '../application/policies/deployment_presentation_policy';
 
@@ -93,7 +95,7 @@ async function writeActionSummary(execution: Execution, summaryPort?: ActionSumm
     try {
         await summaryPort.publish(summaryText);
     } catch (error) {
-        logInfo(`Could not write GitHub Actions summary: ${error instanceof Error ? error.message : String(error)}`);
+        logInfo(toApplicationError(error, 'provider.unavailable', 'Could not write the GitHub Actions summary.').message);
     }
     return summaryText;
 }
@@ -120,7 +122,7 @@ async function publishCopilotEvidence(
         await evidencePort.publish(evidence, execution.owner, execution.repo, evidenceToken);
         logInfo(`Published ${evidence.name} Check Run for ${evidence.headSha}.`);
     } catch (error) {
-        logInfo(`Could not publish optional GitHub Check Run: ${error instanceof Error ? error.message : String(error)}`);
+        logInfo(toApplicationError(error, 'provider.unavailable', 'Could not publish the optional GitHub Check Run.').message);
     }
 }
 
@@ -170,7 +172,7 @@ function commitPublishedRecommendationState(execution: Execution, results: Resul
 function setFirstErrorIfExists(results: Result[]): void {
     for (const result of results) {
         if (result.errors && result.errors.length > 0) {
-            core.setFailed(result.errors[0].message);
+            core.setFailed(renderApplicationErrorText(result.errors[0]));
             return;
         }
     }

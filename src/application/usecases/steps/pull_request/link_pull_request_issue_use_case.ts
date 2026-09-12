@@ -6,6 +6,7 @@ import { logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
 import { runLinkPullRequestIssue } from './link_pull_request_issue_workflow';
+import { toApplicationError } from '../../../errors/application_error';
 
 export class LinkPullRequestIssueUseCase implements ParamUseCase<Execution, Result[]> {
     taskId: string = 'LinkPullRequestIssueUseCase';
@@ -26,7 +27,8 @@ export class LinkPullRequestIssueUseCase implements ParamUseCase<Execution, Resu
                 this.eventualConsistencyDelayPort,
             );
         } catch (error) {
-            logError(error);
+            const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to link the pull request to its issue.');
+            logError(semanticError);
             return [
                 new Result({
                     id: this.taskId,
@@ -35,7 +37,7 @@ export class LinkPullRequestIssueUseCase implements ParamUseCase<Execution, Resu
                     steps: [
                         `Tried to link pull request to project, but there was a problem.`,
                     ],
-                    errors: [error],
+                    errors: [semanticError],
                 }),
             ];
         }

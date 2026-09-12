@@ -3,6 +3,7 @@ import type { IssueDescriptionCommandPort, IssueDescriptionQueryPort } from "../
 import { logError } from "../../../utils/logger";
 import { ContentInterface } from "./content_interface";
 import { resolveReadContentNumber, resolveWriteContentNumber } from './issue_content_number_policy';
+import { toApplicationError } from '../../../application/errors/application_error';
 
 export abstract class IssueContentInterface extends ContentInterface {
     constructor(protected readonly issueDescriptionPort: IssueDescriptionQueryPort & IssueDescriptionCommandPort) {
@@ -23,7 +24,7 @@ export abstract class IssueContentInterface extends ContentInterface {
 
             return this.getContent(description);
         } catch (error) {
-            logError(`Error reading issue content: ${error}`);
+            logError(toApplicationError(error, 'provider.unavailable', 'Unable to read issue content.'));
             throw error;
         }
     }
@@ -55,7 +56,7 @@ export abstract class IssueContentInterface extends ContentInterface {
 
             return updated;
         } catch (error) {
-            logError(`Error updating issue content: ${error}`);
+            logError(toApplicationError(error, 'provider.unavailable', 'Unable to update issue content.'));
             throw error;
         }
     }

@@ -4,6 +4,7 @@ import type { OrganizationMembersPort } from "../../../application/ports/organiz
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type { GithubOrganizationMembersClient } from "../../../infrastructure/github/ports/github_identity_provider_ports";
 import { listOrganizationTeamMembers, listOrganizationTeams } from "./organization_members_query";
+import { toApplicationError } from '../../../application/errors/application_error';
 
 export class OrganizationMembersRepository implements OrganizationMembersPort {
   constructor(private readonly githubClient: GithubClientPort<GithubOrganizationMembersClient>) {}
@@ -32,7 +33,7 @@ export class OrganizationMembersRepository implements OrganizationMembersPort {
       }
       return selectedMembers;
     } catch (error) {
-      logError(`Error getting random members: ${error}.`);
+      logError(toApplicationError(error, 'provider.unavailable', 'Unable to select organization members.'));
       throw error;
     }
   };
@@ -50,7 +51,7 @@ export class OrganizationMembersRepository implements OrganizationMembersPort {
         (teamSlug) => listOrganizationTeamMembers(client, organization, teamSlug),
       );
     } catch (error) {
-      logError(`Error getting all members: ${error}.`);
+      logError(toApplicationError(error, 'provider.unavailable', 'Unable to list organization members.'));
       throw error;
     }
   };

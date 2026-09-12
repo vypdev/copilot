@@ -1,6 +1,7 @@
 import type { Execution } from '../../../../data/model/execution';
 import { Result } from '../../../../data/model/result';
 import type { IssueTitlePort } from '../../../../application/ports/issue_title_ports';
+import { toApplicationError } from '../../../errors/application_error';
 
 export async function runIssueTitleUpdate(param: Execution, taskId: string, issueRepository: IssueTitlePort): Promise<Result[]> {
     if (!param.emoji.emojiLabeledTitle) return [skippedResult(taskId)];
@@ -31,7 +32,13 @@ export async function runPullRequestTitleUpdate(param: Execution, taskId: string
 }
 
 export function titleUpdateFailure(taskId: string, error: unknown): Result {
-    return new Result({ id: taskId, success: false, executed: true, steps: ['Tried to update title, but there was a problem.'], errors: [error] });
+    return new Result({
+        id: taskId,
+        success: false,
+        executed: true,
+        steps: ['Tried to update title, but there was a problem.'],
+        errors: [toApplicationError(error, 'provider.unavailable', 'Unable to update the title.')],
+    });
 }
 
 function updatedResult(taskId: string, step: string): Result {

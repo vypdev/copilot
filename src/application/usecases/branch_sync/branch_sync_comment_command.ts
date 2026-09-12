@@ -3,6 +3,7 @@ import { Result } from "../../../data/model/result";
 import { parseBranchSyncCommandArguments } from "../../../domain/branch_sync_command";
 import type { ActorAuthorizationPort } from "../../ports/actor_authorization_ports";
 import type { CommentAutomationOptions } from "../comment_automation_contracts";
+import { ApplicationError } from "../../errors/application_error";
 
 /** Authorizes and runs an explicit or natural-language branch synchronization request. */
 export async function runBranchSyncCommand(
@@ -26,7 +27,7 @@ export async function runBranchSyncCommand(
 }
 
 function invalid(taskId: string, reason: string): Result {
-  return new Result({ id: taskId, success: false, executed: false, errors: [reason] });
+  return new Result({ id: taskId, success: false, executed: false, errors: [new ApplicationError('validation.invalid-input', reason)] });
 }
 
 function unavailable(taskId: string): Result {
@@ -34,7 +35,7 @@ function unavailable(taskId: string): Result {
     id: `${taskId}.BranchSync`,
     success: false,
     executed: false,
-    errors: ["Branch synchronization is not available in this composition."],
+    errors: [new ApplicationError('configuration.unsupported', "Branch synchronization is not available in this composition.")],
   });
 }
 

@@ -503,7 +503,7 @@ describe("PrepareBranchesUseCase", () => {
     );
   });
 
-  it("maps non-Error collaborator failures without losing the cause", async () => {
+  it("maps non-Error collaborator failures without publishing the cause", async () => {
     mockGetListOfBranches.mockRejectedValue("inventory failed");
 
     const results = await useCase.invoke(baseParam());
@@ -511,15 +511,23 @@ describe("PrepareBranchesUseCase", () => {
     expect(results.at(-1)).toMatchObject({
       success: false,
       executed: true,
-      errors: [expect.objectContaining({ message: "inventory failed" })],
+      errors: [expect.objectContaining({
+        code: 'provider.unavailable',
+        message: 'Unable to prepare the issue branch.',
+      })],
     });
+    expect(JSON.stringify(results.at(-1))).not.toContain('inventory failed');
   });
 
-  it("preserves Error collaborator failures", async () => {
+  it("keeps Error collaborator failures private", async () => {
     mockFetchRemoteBranches.mockRejectedValue(new Error("sync failed"));
 
     const results = await useCase.invoke(baseParam());
 
-    expect(results.at(-1)?.errors[0]).toEqual(new Error("sync failed"));
+    expect(results.at(-1)?.errors[0]).toMatchObject({
+      code: 'provider.unavailable',
+      message: 'Unable to prepare the issue branch.',
+    });
+    expect(JSON.stringify(results.at(-1))).not.toContain('sync failed');
   });
 });

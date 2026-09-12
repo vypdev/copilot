@@ -14,6 +14,16 @@ The specification remains in live-validation state until AC-40 and the human
 portion of AC-46 have reviewed screenshots and the ten-second comprehension
 result from a real end-to-end operation.
 
+A 2026-09-11 architecture audit identified a separate concurrency conformance
+gap: the current state test simulates a changed phase but does not admit two
+simultaneous invocations, and not every mutation workflow shares one
+operation-scoped concurrency group.
+[`deployment-concurrency-and-state-fencing.md`](./deployment-concurrency-and-state-fencing.md)
+owns the exact P0-B implementation contract, while
+[`architecture-quality-and-scalability-hardening.md`](./architecture-quality-and-scalability-hardening.md)
+owns cross-priority sequencing. Rows below distinguish replay evidence already
+present from the pending exclusive-admission proof.
+
 ## Test-budget ledger
 
 The feature floor is allocated without double-counting cases:
@@ -25,7 +35,7 @@ The feature floor is allocated without double-counting cases:
 | GitHub/repository adapters | 12 | First 12 cases in `github_deployment_repository.test.ts`; state, release, and tag adapter cases are surplus. |
 | Workflow/setup contracts | 8 | Gate-first DAG, continuation, merge-group, operation identity, OIDC, PAT, polling, and failure-projection cases in `validate_workflow_contract.test.ts`. |
 | UI/localization/sanitization | 10 | First 10 cases in `deployment_presentation_policy.test.ts`; lifecycle and Job Summary cases are surplus. |
-| Integration/replay/security | 6 | Concurrent state, forged marker, cross-repository event, duplicate event, cancellation recovery, and cleanup replay cases in `deployment_orchestration_use_case.test.ts`. |
+| Integration/replay/security | 6 | Stale-state simulation, forged marker, cross-repository event, duplicate event, cancellation recovery, and cleanup replay cases in `deployment_orchestration_use_case.test.ts`; simultaneous exclusive admission remains a P0-B delta. |
 | **Total assigned** | **72** | The implementation adds substantially more cases than the non-overlapping floor. |
 
 Repository-wide coverage thresholds remain in `jest.config.js`; architecture,
@@ -48,7 +58,7 @@ separate gates.
 | 10 | Managed merged-PR wake-up and publication dispatch | orchestration and workflow tests | `/issues/deployment-orchestration` | Automated |
 | 11 | Closed-unmerged promotion blocks before publication | orchestration tests | recovery decision tree | Automated |
 | 12 | Closed-unmerged reconciliation blocks; cleanup is deferred | orchestration replay tests | recovery decision tree | Automated |
-| 13 | Phase-aware duplicate event no-ops | state and orchestration tests | recovery decision tree | Automated |
+| 13 | Phase-aware duplicate event no-ops | replay is automated; deterministic simultaneous admission and shared workflow serialization are pending under P0-B | recovery decision tree | **Hardening pending** |
 | 14 | Retryable publication block and immutable tag reuse | continuation-guard, tag, and workflow tests | recovery decision tree | Automated |
 | 15 | Registry detection skips an exact visible version and verifies its `gitHead` against production | parsed workflow contract tests | `/development/release-process` | Automated |
 | 16 | Conflicting immutable tag throws and is never moved | tag repository tests | recovery decision tree | Automated |
@@ -79,7 +89,7 @@ separate gates.
 | 41 | Persisted messages and rendered values sanitize mentions, commands, HTML/markers, headings, and Mermaid inputs | domain and presentation security tests | trust section | Automated |
 | 42 | Dedicated Job Summary distinguishes external wait from workflow failure | presentation and Action completion tests | What maintainers see | Automated |
 | 43 | Route/anchors registered; Action inputs and every single-action value verified; workflow catalog/examples parsed; embedded issue templates synchronized; high-risk defaults and prerequisites asserted | documentation and workflow validators | all linked pages | Automated |
-| 44 | Narrow context, provider-neutral ports, mutation-free presentation, acyclic graph | architecture and dependency-cycle tests | `/development/architecture` | Automated |
+| 44 | Narrow context, provider-neutral ports, mutation-free presentation, acyclic graph | provider/cycle boundaries are automated; deployment handler context closure is pending under P0-B/P2 | `/development/architecture` | **Hardening pending** |
 | 45 | Non-overlapping 72-case ledger plus repository coverage gate | this ledger and Jest coverage | `/development/testing` | Automated |
 | 46 | Ten-second comprehension: kind, phase, publication, transition, and action | semantic renderer assertions; final comprehension judgment belongs in PR review | What maintainers see | **Automated semantics + manual PR gate** |
 

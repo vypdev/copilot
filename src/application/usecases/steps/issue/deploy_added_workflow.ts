@@ -5,6 +5,7 @@ import { injectJsonAsMarkdownBlock } from "../../../../utils/content_utils";
 import { logError } from "../../../ports/logging_ports";
 import type { ParamUseCase } from "../../base/param_usecase";
 import { resolveDeployWorkflowPlan } from "../../../policies/deploy_workflow_policy";
+import { toApplicationError } from "../../../errors/application_error";
 
 export async function runDeployAddedWorkflow(
   param: Execution,
@@ -45,14 +46,15 @@ export async function runDeployAddedWorkflow(
     );
     return result;
   } catch (error) {
-    logError(error);
+    const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to start the deployment workflow.');
+    logError(semanticError);
     return [
       new Result({
         id: taskId,
         success: false,
         executed: true,
         steps: ["Tried to work with workflows, but there was a problem."],
-        errors: [error?.toString() ?? "Unknown error"],
+        errors: [semanticError],
       }),
     ];
   }

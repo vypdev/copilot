@@ -723,9 +723,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
     const errors = results[0].errors.map((error) => error.message).join("\n");
-    expect(errors).toContain(
-      "Failed to publish 1 of 1 pull request review comments.",
-    );
+    expect(errors).toContain("Bugbot finding presentation failed.");
     expect(errors).not.toContain("provider rejected");
     expect(errors).not.toContain("secret-token");
   });

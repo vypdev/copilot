@@ -15,6 +15,7 @@ import {
     PROGRESS_RESPONSE_SCHEMA,
     type ProgressAttemptResult,
 } from './progress_response';
+import { ApplicationError, type ApplicationErrorCode } from '../../errors/application_error';
 
 export interface ProgressAnalysisDependencies {
     issueDescriptionQueryPort: IssueDescriptionQueryPort;
@@ -45,12 +46,12 @@ export async function analyzeProgress(
     if (!agentReady) {
         const message = 'Missing required agent configuration. Provide a model and a valid CLI command.';
         logError(message);
-        return { kind: 'failure', result: failure(taskId, message) };
+        return { kind: 'failure', result: failure(taskId, message, 'configuration.invalid') };
     }
     if (issueNumber === -1) {
         const message = 'Issue number not found. Cannot check progress without an issue number.';
         logError(message);
-        return { kind: 'failure', result: failure(taskId, message) };
+        return { kind: 'failure', result: failure(taskId, message, 'validation.invalid-input') };
     }
 
     logInfo(`📋 Checking progress for issue #${issueNumber}`);
@@ -63,7 +64,7 @@ export async function analyzeProgress(
     if (!issueDescription) {
         const message = `Could not retrieve issue description for issue #${issueNumber}`;
         logError(message);
-        return { kind: 'failure', result: failure(taskId, message) };
+        return { kind: 'failure', result: failure(taskId, message, 'provider.not-found') };
     }
 
     const branch = await findIssueBranch(param, dependencies.branchRepository);
@@ -82,6 +83,7 @@ export async function analyzeProgress(
                 branch
                     ? prerequisiteError
                     : `Could not find branch for issue #${issueNumber}. Please ensure a branch exists with pattern: feature/${issueNumber}-*, bugfix/${issueNumber}-*, docs/${issueNumber}-*, or chore/${issueNumber}-*`,
+                'provider.not-found',
             ),
         };
     }
@@ -126,11 +128,11 @@ export async function analyzeProgress(
     };
 }
 
-function failure(taskId: string, message: string): Result {
+function failure(taskId: string, message: string, code: ApplicationErrorCode): Result {
     return new Result({
         id: taskId,
         success: false,
         executed: true,
-        errors: [message],
+        errors: [new ApplicationError(code, message)],
     });
 }

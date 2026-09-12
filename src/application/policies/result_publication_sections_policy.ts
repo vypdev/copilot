@@ -2,6 +2,7 @@ import type { Result } from '../../data/model/result';
 import { hasVisibleCommentContent } from '../../domain/comment_content_policy';
 import type { ResultPublicationSections } from './result_publication_contracts';
 import { sanitizeAgentMarkdown, sanitizePublishedError } from './github_comment_publication_policy';
+import { buildApplicationErrorPresentation } from './application_error_presentation_policy';
 
 export function renderResultSections(results: ReadonlyArray<Result>): ResultPublicationSections {
     const renderedSteps: string[] = [];
@@ -15,7 +16,7 @@ export function renderResultSections(results: ReadonlyArray<Result>): ResultPubl
             .map(reminder => sanitizeAgentMarkdown(reminder))
             .filter(hasVisibleCommentContent));
         errors.push(...result.errors
-            .map(error => sanitizePublishedError(error.message))
+            .map(renderPublishedApplicationError)
             .filter(hasVisibleCommentContent));
     }
 
@@ -23,9 +24,20 @@ export function renderResultSections(results: ReadonlyArray<Result>): ResultPubl
         content: renderedSteps.length > 0 ? `${renderedSteps.join('\n\n')}\n` : '',
         footer: reminders.length > 0 ? `\n## Reminder\n\n${reminders.map((reminder, index) => `${index + 1}. ${reminder}`).join('\n')}\n` : '',
         errors: errors.length > 0
-            ? `\n## Errors Found\n\n${errors.map((error, index) => `${index + 1}.\n\`\`\`\n${error}\n\`\`\`\n`).join('')}\n\nCheck your project configuration, if everything is okay consider [opening an issue](https://github.com/vypdev/copilot/issues/new/choose).\n`
+            ? `\n## Errors Found\n\n${errors.map((error, index) => `${index + 1}. ${error}\n`).join('\n')}\nCheck your project configuration, if everything is okay consider [opening an issue](https://github.com/vypdev/copilot/issues/new/choose).\n`
             : '',
     };
+}
+
+function renderPublishedApplicationError(error: Result['errors'][number]): string {
+    const view = buildApplicationErrorPresentation(error);
+    return [
+        `**Impact:** ${sanitizePublishedError(view.impact)}`,
+        `   **Cause (\`${view.code}\`):** ${sanitizePublishedError(view.cause)}`,
+        `   **Action:** ${sanitizePublishedError(view.action)}`,
+        `   **Retained state:** ${sanitizePublishedError(view.retainedState)}`,
+        `   **Reference:** \`${view.reference}\``,
+    ].join('\n');
 }
 
 function appendSteps(renderedSteps: string[], result: Result, stepIndex: number): number {

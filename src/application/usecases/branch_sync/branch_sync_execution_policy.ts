@@ -3,6 +3,7 @@ import type { Execution } from "../../../data/model/execution";
 import { Result } from "../../../data/model/result";
 import type { BranchMergePreparation } from "../../ports/branch_sync_ports";
 import { isSensitiveWorkspacePath } from "../steps/commit/bugbot/workspace_changes";
+import { ApplicationError, toApplicationError } from "../../errors/application_error";
 
 export const BRANCH_SYNC_TASK_ID = "SyncBranchUseCase";
 const MAX_AGENT_CONFLICT_PATHS = 20;
@@ -68,7 +69,7 @@ export function completedBranchSyncResult(input: {
 }
 
 export function unavailableBranchSyncResult(reason: string): Result {
-  return new Result({ id: BRANCH_SYNC_TASK_ID, success: false, executed: false, errors: [reason] });
+  return new Result({ id: BRANCH_SYNC_TASK_ID, success: false, executed: false, errors: [new ApplicationError('agent.policy-rejected', reason)] });
 }
 
 export function failedBranchSyncResult(reason: string, cause?: unknown): Result {
@@ -77,12 +78,8 @@ export function failedBranchSyncResult(reason: string, cause?: unknown): Result 
     success: false,
     executed: true,
     steps: [reason],
-    errors: [cause === undefined ? reason : errorWithCause(reason, cause)],
+    errors: [cause === undefined
+      ? new ApplicationError('workflow.failed', reason)
+      : toApplicationError(cause, 'workflow.failed', reason)],
   });
-}
-
-function errorWithCause(message: string, cause: unknown): Error {
-  const error = new Error(message);
-  (error as Error & { cause?: unknown }).cause = cause;
-  return error;
 }

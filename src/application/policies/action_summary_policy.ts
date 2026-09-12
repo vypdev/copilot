@@ -1,5 +1,6 @@
 import { getResultPayload, type Result } from '../../data/model/result';
 import { sanitizeAgentMarkdown, sanitizePublishedError } from './github_comment_publication_policy';
+import { buildApplicationErrorPresentation } from './application_error_presentation_policy';
 
 export interface ActionSummaryContext {
     readonly owner: string;
@@ -139,7 +140,16 @@ function renderResults(results: readonly Result[]): string {
             .filter(step => step.trim())
             .map(step => `  - ${sanitizeAgentMarkdown(step, 1_000)}`);
         const errors = result.errors
-            .map(error => `  - **Error:** ${sanitizePublishedError(error.message)}`);
+            .flatMap((error) => {
+                const view = buildApplicationErrorPresentation(error);
+                return [
+                    `  - **Impact:** ${sanitizePublishedError(view.impact)}`,
+                    `    - **Cause (\`${view.code}\`):** ${sanitizePublishedError(view.cause)}`,
+                    `    - **Action:** ${sanitizePublishedError(view.action)}`,
+                    `    - **Retained state:** ${sanitizePublishedError(view.retainedState)}`,
+                    `    - **Reference:** \`${view.reference}\``,
+                ];
+            });
         return [`- ${icon} **${escapeTable(result.id || 'Unnamed result')}**`, ...details, ...errors].join('\n');
     }).join('\n');
 }

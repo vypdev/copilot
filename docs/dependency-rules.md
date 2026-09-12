@@ -207,6 +207,24 @@ ports, enter `Result.errors`, or be interpolated into logs. Command outcomes
 remain observable through every productive caller; partial success must not be
 reported as unconditional success.
 
+`Result.errors` is exactly `readonly ApplicationError[]`. The error code fixes
+its category and default retryability; a caller may narrow a retryable error but
+cannot broaden a terminal one. Raw causes are private and disposable. The
+logging contract accepts only text already known to be safe or the allowlisted
+public error record, and an AST check rejects caught values passed to any
+production logger unless they first cross `toApplicationError`.
+
+The checked-in `src/architecture/execution_import_baseline.json` is a
+non-growing migration ratchet. The compiler-based test resolves the `Execution`
+symbol, so type-only imports, renamed imports, `Pick<Execution>`, and local type
+aliases count as dependencies. Removing an entry is allowed; adding or moving a
+consumer fails CI. Once context projection is complete, this baseline is
+replaced by the exact route-boundary allowlist documented in the governing SDD.
+
+The package subpath `@vypdev/copilot/bugbot` exposes one review operation,
+`review(BugbotReviewRequest)`. It does not export the internal `Execution` or
+`Ai` models and has no aggregate-based overload or compatibility surface.
+
 ## Forbidden abstractions
 
 Do not introduce:

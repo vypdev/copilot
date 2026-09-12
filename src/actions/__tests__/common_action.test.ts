@@ -484,17 +484,18 @@ describe('mainRun', () => {
 
     const results = await runMain(execution);
 
-    expect(core.setFailed).toHaveBeenCalledWith('Commit failed');
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Cause (workflow.failed): Main run failed.'));
     expect(results).toEqual([]);
   });
 
-  it('calls core.setFailed with String(error) when use case throws non-Error', async () => {
+  it('does not expose a non-Error thrown value in the action failure', async () => {
     const execution = mockExecution({ isPush: true });
     mockCommitInvoke.mockRejectedValue('plain string error');
 
     const results = await runMain(execution);
 
-    expect(core.setFailed).toHaveBeenCalledWith('plain string error');
+    expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Cause (workflow.failed): Main run failed.'));
+    expect(core.setFailed).not.toHaveBeenCalledWith(expect.stringContaining('plain string error'));
     expect(results).toEqual([]);
   });
 

@@ -12,6 +12,9 @@ import {
   logDebugWarning,
   logDebugError,
 } from '../logger';
+import { ApplicationError } from '../../application/errors/application_error';
+
+const CORRELATION_ID = '6f173f89-96a3-4fc8-b90e-4f8f48e0e319';
 
 describe('logger', () => {
   const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
@@ -106,19 +109,23 @@ describe('logger', () => {
       expect(consoleErrorSpy).toHaveBeenCalledWith('failed with output');
     });
 
-    it('logs Error message when given Error', () => {
-      logError(new Error('my error'));
+    it('logs the safe message when given a semantic application error', () => {
+      logError(new ApplicationError('unexpected', 'my error', { correlationId: CORRELATION_ID }));
       expect(consoleErrorSpy).toHaveBeenCalledWith('my error');
     });
 
-    it('logs JSON with stack when structured is on and message is Error', () => {
+    it('logs only allowlisted semantic fields when structured logging is enabled', () => {
       setStructuredLogging(true);
-      const err = new Error('e');
+      const err = new ApplicationError('provider.unavailable', 'e', {
+        correlationId: CORRELATION_ID,
+        cause: new Error('raw-provider-secret'),
+      });
       logError(err);
       const call = consoleErrorSpy.mock.calls[0][0] as string;
       expect(call).toMatch(/"level":"error"/);
       expect(call).toMatch(/"message":"e"/);
-      expect(call).toMatch(/stack/);
+      expect(call).toContain(`"correlationId":"${CORRELATION_ID}"`);
+      expect(call).not.toMatch(/stack|raw-provider-secret/);
     });
 
   it('redacts configured credentials from messages and metadata', () => {
@@ -135,7 +142,6 @@ describe('logger', () => {
       expect(entry.metadata).toEqual({
         apiKey: '[REDACTED]',
         nested: { token: '[REDACTED]' },
-        stack: undefined,
       });
 
       if (previous === undefined) delete process.env.OPENAI_API_KEY;
@@ -150,7 +156,7 @@ describe('logger', () => {
 
       const entry = getAccumulatedLogEntries()[0];
       expect(entry.message).toBe('[REDACTED]');
-      expect(entry.metadata).toEqual({ token: '[REDACTED]', stack: undefined });
+      expect(entry.metadata).toEqual({ token: '[REDACTED]' });
 
       if (previous === undefined) delete process.env.CUSTOM_PROVIDER_API_KEY;
       else process.env.CUSTOM_PROVIDER_API_KEY = previous;
@@ -246,13 +252,15 @@ describe('logger', () => {
       expect(getAccumulatedLogsAsText()).toBe('[INFO] hello\n[WARN] world');
     });
 
-    it('getAccumulatedLogsAsText includes stack for errors with stack', () => {
-      const err = new Error('fail');
-      err.stack = 'Error: fail\n  at foo.js:1:1';
+    it('getAccumulatedLogsAsText excludes private causes and stacks', () => {
+      const err = new ApplicationError('unexpected', 'fail', {
+        correlationId: CORRELATION_ID,
+        cause: new Error('private cause'),
+      });
       logError(err);
       const text = getAccumulatedLogsAsText();
       expect(text).toContain('[ERROR] fail');
-      expect(text).toContain('Error: fail');
+      expect(text).not.toMatch(/private cause|stack/);
     });
 
     it('clearAccumulatedLogs removes all entries', () => {

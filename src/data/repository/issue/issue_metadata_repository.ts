@@ -3,6 +3,7 @@ import { Milestone } from '../../model/milestone';
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type { GithubGraphqlTransportClient } from "../../../infrastructure/github/ports/github_graphql_transport_port";
 import type { GithubIssueMetadataClient } from "../../../infrastructure/github/ports/github_issue_provider_ports";
+import { toApplicationError } from '../../../application/errors/application_error';
 
 export class IssueMetadataRepository {
     constructor(
@@ -66,7 +67,7 @@ export class IssueMetadataRepository {
             });
             return issue.title;
         } catch (error) {
-            logError(`Failed to fetch the issue title: ${error}`);
+            logError(toApplicationError(error, 'provider.unavailable', 'Unable to fetch the issue title.'));
             throw error;
         }
     };

@@ -2,6 +2,7 @@ import type { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
 import type { OrganizationMembersPort } from "../../../ports/organization_members_ports";
 import { logDebugInfo, logError, logWarn } from "../../../ports/logging_ports";
+import { toApplicationError } from "../../../errors/application_error";
 
 export interface CheckPermissionsWorkflowPorts {
   organizationMembersPort: OrganizationMembersPort;
@@ -44,17 +45,15 @@ export async function runCheckPermissionsWorkflow(
       }),
     ];
   } catch (error) {
-    logError(
-      "CheckPermissions: failed to get project members or check creator.",
-      error instanceof Error ? { stack: error.stack } : undefined,
-    );
+    const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to verify action permissions.');
+    logError(semanticError);
     return [
       new Result({
         id: taskId,
         success: false,
         executed: true,
         steps: ["Tried to check action permissions."],
-        errors: [error],
+        errors: [semanticError],
       }),
     ];
   }

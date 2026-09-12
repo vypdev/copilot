@@ -1,6 +1,7 @@
 import { logDebugInfo, logError } from "../../../utils/logger";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type { GithubIssueAssignmentClient } from "../../../infrastructure/github/ports/github_issue_provider_ports";
+import { toApplicationError } from '../../../application/errors/application_error';
 
 export class IssueAssignmentRepository {
     constructor(private readonly githubClient: GithubClientPort<GithubIssueAssignmentClient>) {}
@@ -10,7 +11,7 @@ export class IssueAssignmentRepository {
             const { data: issue } = await octokit.rest.issues.get({ owner, repo: repository, issue_number: issueNumber });
             return (issue.assignees ?? []).map(assignee => assignee.login);
         } catch (error) {
-            logError(`Error getting members of issue: ${error}.`);
+            logError(toApplicationError(error, 'provider.unavailable', 'Unable to get issue assignees.'));
             throw error;
         }
     };
@@ -33,7 +34,7 @@ export class IssueAssignmentRepository {
             });
             return (updatedIssue.assignees ?? []).map(assignee => assignee.login);
         } catch (error) {
-            logError(`Error assigning members to issue: ${error}.`);
+            logError(toApplicationError(error, 'provider.unavailable', 'Unable to assign issue members.'));
             throw error;
         }
     };

@@ -22,6 +22,9 @@ import { createSynchronizeAgentActivityUseCase } from '../infrastructure/composi
 import { readGithubActionAiInputs } from './github_action_ai_inputs';
 import { activeAgentTasks } from '../application/policies/agent_task_activation_policy';
 import { createActorAuthorizationRepository } from '../infrastructure/composition/actor_authorization_composition_root';
+import { runAtApplicationErrorBoundary } from '../application/errors/application_error_context';
+import { toApplicationError } from '../application/errors/application_error';
+import { renderApplicationErrorText } from '../application/policies/application_error_presentation_policy';
 
 export async function runGitHubAction(): Promise<void> {
     if (isEnabledInput(getGithubActionInput(INPUT_KEYS.QUEUE_GATE_ONLY))) {
@@ -137,12 +140,15 @@ async function runQueueGateOnly(): Promise<void> {
 export async function runGitHubActionEntry(
     run: () => Promise<void> = runGitHubAction,
 ): Promise<void> {
-    try {
-        await run();
-    } catch (error: unknown) {
-        logError(error);
-        core.setFailed(error instanceof Error ? error.message : String(error));
-    }
+    return runAtApplicationErrorBoundary(async () => {
+        try {
+            await run();
+        } catch (cause: unknown) {
+            const semanticError = toApplicationError(cause, 'workflow.failed', 'GitHub Action execution failed.');
+            logError(semanticError);
+            core.setFailed(renderApplicationErrorText(semanticError));
+        }
+    });
 }
 
 // Only auto-run when executed as the action entry (not when imported by tests)

@@ -3,6 +3,7 @@ import type { IssueTypes } from "../../model/issue_types";
 import type { GithubGraphqlTransportClient } from "../../../infrastructure/github/ports/github_graphql_transport_port";
 import { configuredIssueTypes, type ConfiguredIssueType } from "./issue_type_configuration";
 import { createIssueType, listIssueTypes } from "./issue_type_queries";
+import { toApplicationError } from '../../../application/errors/application_error';
 
 export interface IssueTypeEnsureResult {
   created: boolean;
@@ -30,7 +31,7 @@ export async function ensureIssueType(
     await createIssueType(client, owner, name, description, color);
     return { created: true, existed: false };
   } catch (error) {
-    logError(`Error ensuring issue type "${name}": ${error}`);
+    logError(toApplicationError(error, 'provider.unavailable', `Unable to ensure issue type "${name}".`));
     throw error;
   }
 }
@@ -61,9 +62,9 @@ async function ensureConfiguredIssueTypeSafely(
     const result = await ensureConfiguredIssueType(client, owner, configured);
     return { kind: result.created ? 'created' : 'existing' };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    logError(`Error ensuring issue type "${configured.name}": ${error}`);
-    return { kind: 'error', message: `Error creating Issue type "${configured.name}": ${message}` };
+    const semanticError = toApplicationError(error, 'provider.unavailable', `Unable to ensure issue type "${configured.name}".`);
+    logError(semanticError);
+    return { kind: 'error', message: semanticError.message };
   }
 }
 

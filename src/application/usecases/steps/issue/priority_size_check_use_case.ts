@@ -4,6 +4,7 @@ import type { ProjectDetail } from '../../../../data/model/project_detail';
 import type { ProjectBoardCommandPort } from '../../../../application/ports/project_board_command_ports';
 import { logDebugInfo, logError } from '../../../ports/logging_ports';
 import { resolveGithubPriorityLabel } from './priority_label_policy';
+import { toApplicationError } from '../../../errors/application_error';
 
 interface PrioritySizeParam {
     labels: {
@@ -32,13 +33,14 @@ export async function runPrioritySizeCheck(
     try {
         return await applyPriorityToProjects(typedParam, taskId, contentNumber, projectRepository);
     } catch (error: unknown) {
-        logError(error);
+        const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to apply the issue priority to configured projects.');
+        logError(semanticError);
         return [new Result({
             id: taskId,
             success: false,
             executed: true,
             steps: ['Tried to check the priority of the issue, but there was a problem.'],
-            errors: [error?.toString() ?? 'Unknown error'],
+            errors: [semanticError],
         })];
     }
 }

@@ -7,6 +7,7 @@ import { markFindingsResolved } from './mark_findings_resolved_workflow';
 import { normalizeFindingIdForMarker } from '../../../../policies/bugbot_finding_marker_policy';
 import { logError } from '../../../../ports/logging_ports';
 import type { BugbotFindingResolution } from '../../../../../domain/bugbot/finding';
+import { toApplicationError } from '../../../../errors/application_error';
 
 export interface DismissBugbotFindingsParam {
     execution: Execution;
@@ -54,12 +55,21 @@ export class DismissBugbotFindingsUseCase {
                 success: errors.length === 0,
                 executed: true,
                 steps: [`Dismissed ${dismissibleIds.size} Bugbot finding(s) by explicit user command.`],
-                errors,
+                errors: errors.map(error => toApplicationError(
+                    error,
+                    'provider.unavailable',
+                    'A Bugbot finding could not be dismissed.',
+                )),
             })];
         } catch (error) {
             const message = `Unable to dismiss Bugbot findings: ${error instanceof Error ? error.message : String(error)}`;
             logError(message);
-            return [new Result({ id: this.taskId, success: false, executed: true, errors: [message] })];
+            return [new Result({
+                id: this.taskId,
+                success: false,
+                executed: true,
+                errors: [toApplicationError(error, 'provider.unavailable', 'Unable to dismiss Bugbot findings.')],
+            })];
         }
     }
 }

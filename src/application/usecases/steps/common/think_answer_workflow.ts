@@ -12,6 +12,7 @@ import { extractStructuredAnswer } from './agent_answer_policy';
 import type { ThinkRequestDecision } from './think_request_policy';
 import { sanitizeAgentMarkdown } from '../../../../application/policies/github_comment_publication_policy';
 import type { AgentTask } from '../../../../domain/agent';
+import { ApplicationError } from '../../../errors/application_error';
 
 export interface ThinkAnswerDependencies {
     issueDescriptionQueryPort: IssueDescriptionQueryPort;
@@ -51,7 +52,7 @@ export async function runThinkAnswerWorkflow(
                 id: taskId,
                 success: false,
                 executed: true,
-                errors: ['Configured agent returned no answer.'],
+                errors: [new ApplicationError('agent.failed', 'Configured agent returned no answer.')],
             }),
         ];
     }
@@ -62,7 +63,7 @@ export async function runThinkAnswerWorkflow(
                 id: taskId,
                 success: false,
                 executed: true,
-                errors: ['Issue or PR number not available.'],
+                errors: [new ApplicationError('validation.invalid-input', 'Issue or PR number not available.')],
             }),
         ];
     }

@@ -2,6 +2,7 @@ import type { Execution } from "../../data/model/execution";
 import { Result } from "../../data/model/result";
 import { logError, logDebugInfo } from "../ports/logging_ports";
 import type { ParamUseCase } from "./base/param_usecase";
+import { toApplicationError } from "../errors/application_error";
 
 export interface SingleActionWorkflowPorts {
   publishGithubActionUseCase: ParamUseCase<Execution, Result[]>;
@@ -51,14 +52,15 @@ export async function runSingleActionWorkflow(
   try {
     return await action.useCase.invoke(param);
   } catch (error) {
-    logError(error);
+    const semanticError = toApplicationError(error, 'workflow.failed', `Single action ${param.singleAction.currentSingleAction} failed.`);
+    logError(semanticError);
     return [
       new Result({
         id: taskId,
         success: false,
         executed: true,
         steps: [`Error executing single action: ${param.singleAction.currentSingleAction}.`],
-        errors: [error],
+        errors: [semanticError],
       }),
     ];
   }

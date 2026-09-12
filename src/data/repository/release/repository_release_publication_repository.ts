@@ -6,6 +6,7 @@ import { findTargetRelease, releaseIdAsString } from "../release_transition_poli
 import { releaseName } from "../release_tag_policy";
 import type { RepositoryReleasePublicationPort } from "../../../application/ports/repository_release_ports";
 import { listRepositoryReleases } from './repository_release_query';
+import { toApplicationError } from '../../../application/errors/application_error';
 
 export class RepositoryReleasePublicationRepository implements RepositoryReleasePublicationPort {
     constructor(private readonly githubClient: GithubClientPort<GithubReleaseClient>) {}
@@ -87,7 +88,7 @@ export class RepositoryReleasePublicationRepository implements RepositoryRelease
                 return existing.html_url;
             }
         } catch (error) {
-            logError(`Error creating release: ${error}`);
+            logError(toApplicationError(error, 'provider.unavailable', 'Unable to create the release.'));
             throw error;
         }
     };

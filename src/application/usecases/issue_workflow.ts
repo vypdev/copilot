@@ -5,6 +5,7 @@ import type { ParamUseCase } from "./base/param_usecase";
 import type { IssueWorkflowSteps } from "./issue_workflow_steps";
 import { buildCopilotWelcomeResult, COPILOT_WELCOME_MARKER } from '../policies/copilot_interaction_policy';
 import type { ActorAuthorizationPort } from '../ports/actor_authorization_ports';
+import { ApplicationError } from '../errors/application_error';
 
 export interface IssueWorkflowPorts {
   recommendStepsUseCase: ParamUseCase<Execution, Result[]>;
@@ -23,7 +24,7 @@ export async function runIssueWorkflow(
   const permissionResult = await ports.workflowSteps.checkPermissions.invoke(param);
   const lastAction = permissionResult[permissionResult.length - 1];
   if (!lastAction) {
-    const permissionError = new Error("Permission check returned no result.");
+    const permissionError = new ApplicationError('provider.contract-invalid', "Permission check returned no result.");
     logError(`Unable to continue ${taskId}: ${permissionError.message}`);
     return [
       new Result({

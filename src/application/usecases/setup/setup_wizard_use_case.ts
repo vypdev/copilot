@@ -76,16 +76,16 @@ export class SetupWizardUseCase {
             const remoteErrors = validateSetupStorageAgainstRemote(configuration, remote);
             if (remoteErrors.length > 0) {
                 throw new ApplicationError(
+                    'configuration.invalid',
                     `Invalid remote storage configuration:\n${remoteErrors.map(error => `- ${error}`).join('\n')}`,
-                    'authorization',
                 );
             }
         }
         const validationErrors = validateSetupConfiguration(configuration);
         if (validationErrors.length > 0) {
             throw new ApplicationError(
+                'configuration.invalid',
                 `Invalid setup configuration:\n${validationErrors.map(error => `- ${error}`).join('\n')}`,
-                'validation',
             );
         }
         const readiness = request.remoteTarget && this.mergeQueueReadiness

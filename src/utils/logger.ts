@@ -1,4 +1,5 @@
 import { redactSecretLikeValues } from './secret_redaction';
+import type { ApplicationErrorPublicRecord } from '../data/model/application_error';
 
 let loggerDebug = false;
 let loggerRemote = false;
@@ -96,8 +97,7 @@ export function getAccumulatedLogsAsText(): string {
     return accumulatedLogEntries
         .map((e) => {
             const prefix = `[${e.level.toUpperCase()}]`;
-            const meta = e.metadata?.stack ? `\n${String(e.metadata.stack)}` : '';
-            return `${prefix} ${e.message}${meta}`;
+            return `${prefix} ${e.message}`;
         })
         .join('\n');
 }
@@ -154,15 +154,27 @@ export function logWarning(message: string) {
     logWarn(message);
 }
 
-export function logError(message: unknown, metadata?: Record<string, unknown>) {
-    const errorMessage = message instanceof Error ? message.message : String(message);
+export function logError(message: string | ApplicationErrorPublicRecord, metadata?: Record<string, unknown>) {
+    const errorMessage = typeof message === 'string' ? message : message.message;
     const sanitized = sanitizeLogMessage(errorMessage);
-    const metaWithStack = sanitizeMetadata({
-        ...metadata,
-        stack: message instanceof Error ? message.stack : undefined
-    });
+    const safeMetadata = sanitizeMetadata(typeof message === 'string'
+        ? metadata
+        : {
+            ...metadata,
+            applicationError: {
+                name: message.name,
+                message: message.message,
+                code: message.code,
+                kind: message.kind,
+                retryable: message.retryable,
+                impact: message.impact,
+                action: message.action,
+                retainedState: message.retainedState,
+                correlationId: message.correlationId,
+            },
+        });
     emitLog(
-        { level: 'error', message: sanitized, timestamp: Date.now(), metadata: metaWithStack },
+        { level: 'error', message: sanitized, timestamp: Date.now(), metadata: safeMetadata },
         console.error,
     );
 }
@@ -185,7 +197,7 @@ export function logDebugWarning(message: string) {
     }
 }
 
-export function logDebugError(message: unknown) {
+export function logDebugError(message: string | ApplicationErrorPublicRecord) {
     if (loggerDebug) {
         logError(message);
     }

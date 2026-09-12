@@ -5,6 +5,7 @@ import type { Execution } from '../../../../../data/model/execution';
 import type { AuthenticatedUserPort } from '../../../../../application/ports/authenticated_user_ports';
 import type { GitCommitPort } from '../../../../../application/ports/git_ports';
 import { sanitizePublishedError } from '../../../../../application/policies/github_comment_publication_policy';
+import { ApplicationError } from '../../../../errors/application_error';
 
 export async function commitUserRequestIfSuccessful(
     param: Execution,
@@ -33,7 +34,7 @@ export async function commitUserRequestIfSuccessful(
             id: 'DoUserRequestCommitAndPush',
             success: false,
             executed: true,
-            errors: [message],
+            errors: [new ApplicationError('provider.unavailable', message, { cause: commitResult.error })],
         })];
     }
     return [new Result({

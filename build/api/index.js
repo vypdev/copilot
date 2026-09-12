@@ -3,27 +3,67 @@
 /******/ 	var __webpack_modules__ = ({
 
 /***/ 5999:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ApplicationError = void 0;
+exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = void 0;
 exports.toApplicationError = toApplicationError;
-/** Semantic error contract: safe to publish, while the original cause stays available to diagnostics. */
-class ApplicationError extends Error {
-    constructor(message, kind = 'unknown', options = {}) {
-        super(message);
-        this.name = 'ApplicationError';
-        this.kind = kind;
-        this.retryable = options.retryable ?? false;
-        this.cause = options.cause;
+const application_error_1 = __nccwpck_require__(7790);
+const application_error_context_1 = __nccwpck_require__(4034);
+var application_error_2 = __nccwpck_require__(7790);
+Object.defineProperty(exports, "APPLICATION_ERROR_METADATA", ({ enumerable: true, get: function () { return application_error_2.APPLICATION_ERROR_METADATA; } }));
+/** Creates a semantic error and owns correlation identity outside the pure model. */
+class ApplicationError extends application_error_1.ApplicationError {
+    constructor(code, message, options = {}) {
+        super(code, message, {
+            ...options,
+            correlationId: options.correlationId
+                ?? (0, application_error_context_1.getApplicationErrorCorrelationId)()
+                ?? (0, application_error_context_1.createApplicationErrorCorrelationId)(),
+        });
     }
 }
 exports.ApplicationError = ApplicationError;
-function toApplicationError(error, message, kind = 'unknown', options = {}) {
+function toApplicationError(error, code, message, options = {}) {
     return error instanceof ApplicationError
         ? error
-        : new ApplicationError(message, kind, { ...options, cause: error });
+        : new ApplicationError(code, message, { ...options, cause: error });
+}
+
+
+/***/ }),
+
+/***/ 4034:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getApplicationErrorCorrelationId = getApplicationErrorCorrelationId;
+exports.createApplicationErrorCorrelationId = createApplicationErrorCorrelationId;
+exports.runWithApplicationErrorCorrelation = runWithApplicationErrorCorrelation;
+exports.runAtApplicationErrorBoundary = runAtApplicationErrorBoundary;
+const node_async_hooks_1 = __nccwpck_require__(2761);
+const node_crypto_1 = __nccwpck_require__(6005);
+const application_error_1 = __nccwpck_require__(7790);
+const applicationErrorCorrelation = new node_async_hooks_1.AsyncLocalStorage();
+function getApplicationErrorCorrelationId() {
+    return applicationErrorCorrelation.getStore();
+}
+function createApplicationErrorCorrelationId() {
+    return (0, node_crypto_1.randomUUID)();
+}
+function runWithApplicationErrorCorrelation(correlationId, operation) {
+    if (!(0, application_error_1.isApplicationErrorCorrelationId)(correlationId)) {
+        throw new TypeError('Application error correlation ID must be a lowercase UUID v4.');
+    }
+    return applicationErrorCorrelation.run(correlationId, operation);
+}
+/** Starts a boundary correlation only when the caller is not already nested in one. */
+function runAtApplicationErrorBoundary(operation) {
+    return getApplicationErrorCorrelationId() === undefined
+        ? runWithApplicationErrorCorrelation(createApplicationErrorCorrelationId(), operation)
+        : operation();
 }
 
 
@@ -121,11 +161,11 @@ function normalizeFindingIdForMarker(findingId) {
 function requireFindingIdForMarker(findingId) {
     const safeId = normalizeFindingIdForMarker(findingId);
     if (safeId == null) {
-        throw new application_error_1.ApplicationError(findingId.trim().length === 0
+        throw new application_error_1.ApplicationError('validation.invalid-input', findingId.trim().length === 0
             ? "Finding ID is empty after marker sanitization."
             : findingId.trim().length > exports.MAX_FINDING_ID_LENGTH
                 ? "Finding ID exceeds the maximum marker length."
-                : "Finding ID contains marker-breaking characters.", 'validation');
+                : "Finding ID contains marker-breaking characters.");
     }
     return safeId;
 }
@@ -134,7 +174,7 @@ function buildMarker(findingId, resolved, fingerprint, semanticFingerprint, reso
     const safeFingerprint = fingerprint.match(/^fp-[a-f0-9]{8}$/)?.[0];
     const safeSemanticFingerprint = semanticFingerprint.match(/^sf-[a-f0-9]{8}$/)?.[0];
     if (!safeFingerprint || !safeSemanticFingerprint) {
-        throw new application_error_1.ApplicationError('Finding marker requires valid local and semantic fingerprints.', 'validation');
+        throw new application_error_1.ApplicationError('validation.invalid-input', 'Finding marker requires valid local and semantic fingerprints.');
     }
     const safeResolution = resolved && resolution && ['fixed', 'obsolete', 'dismissed'].includes(resolution)
         ? ` finding_resolution:"${resolution}"`
@@ -223,7 +263,7 @@ function buildCommentBody(finding, resolved, resolution, options = {}) {
         ? "\n\n---\n**Resolved** (no longer reported in latest analysis).\n"
         : "";
     if (!finding.fingerprint || !finding.semanticFingerprint) {
-        throw new application_error_1.ApplicationError('Prepared finding is missing its local identity.', 'validation');
+        throw new application_error_1.ApplicationError('validation.invalid-input', 'Prepared finding is missing its local identity.');
     }
     const marker = buildMarker(finding.id, resolved, finding.fingerprint, finding.semanticFingerprint, resolution);
     return `## ${safeTitle}
@@ -2135,6 +2175,7 @@ const logging_ports_1 = __nccwpck_require__(6152);
 const resolve_issue_finding_1 = __nccwpck_require__(5300);
 const resolve_pull_request_finding_1 = __nccwpck_require__(4567);
 const review_state_1 = __nccwpck_require__(9200);
+const application_error_1 = __nccwpck_require__(5999);
 async function markFindingsResolved(param) {
     const errors = [];
     for (const [findingId, existing] of Object.entries(param.context.existingByFindingId)) {
@@ -2211,11 +2252,14 @@ async function tryResolvePullRequestFinding(ports, execution, findingId, destina
     }
 }
 function addResolutionError(errors, destination) {
-    const error = destination === 'pull request'
+    const cause = destination === 'pull request'
         ? new pull_request_review_errors_1.PullRequestReviewOperationError('mark-resolved')
         : new Error('Unable to mark an issue finding as resolved.');
-    (0, logging_ports_1.logError)(error);
-    errors.push(error);
+    const semanticError = new application_error_1.ApplicationError('provider.unavailable', destination === 'pull request'
+        ? 'Unable to mark a pull request finding as resolved.'
+        : 'Unable to mark an issue finding as resolved.', { cause });
+    (0, logging_ports_1.logError)(semanticError);
+    errors.push(semanticError);
 }
 
 
@@ -3246,6 +3290,7 @@ const bugbot_review_telemetry_1 = __nccwpck_require__(6790);
 const analyze_bugbot_revision_use_case_1 = __nccwpck_require__(4658);
 const bugbot_review_freshness_1 = __nccwpck_require__(4307);
 const reconcile_bugbot_review_state_use_case_1 = __nccwpck_require__(7515);
+const application_error_1 = __nccwpck_require__(5999);
 const TASK_ID = 'DetectPotentialProblemsUseCase';
 /** Coordinates Bugbot context, analysis and finding publication behind application ports. */
 async function runDetectPotentialProblemsWorkflow(param, dependencies) {
@@ -3257,8 +3302,8 @@ async function runDetectPotentialProblemsWorkflow(param, dependencies) {
             try {
                 await dependencies.telemetryPort?.publish(snapshot);
             }
-            catch (error) {
-                (0, logging_ports_1.logInfo)(`Bugbot telemetry publication failed without affecting the review: ${error instanceof Error ? error.name : 'unknown'}.`);
+            catch {
+                (0, logging_ports_1.logInfo)('Bugbot telemetry publication failed without affecting the review.');
             }
         }
         return snapshot;
@@ -3294,7 +3339,7 @@ async function runDetectPotentialProblemsWorkflow(param, dependencies) {
         }
         const prepared = await (0, analyze_bugbot_revision_use_case_1.analyzeBugbotRevision)(param, context, { agent: dependencies.aiRepository, telemetry });
         if (prepared === undefined) {
-            const analysisError = new Error('The configured agent returned no potential-problem analysis.');
+            const analysisError = new application_error_1.ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.');
             const presentation = param.ai.getBugbotReviewConfiguration().publicationMode === 'publish'
                 ? await telemetry.measure('projection', () => reconcileReviewState({
                     execution: param,
@@ -3335,10 +3380,7 @@ async function runDetectPotentialProblemsWorkflow(param, dependencies) {
         return await complete(detectionResult(prepared, context, finalErrors, presentation), finalErrors.length === 0 ? (hasChanges ? 'completed' : 'no-findings') : 'failed');
     }
     catch (error) {
-        const normalizedError = error instanceof pull_request_review_errors_1.PullRequestReviewOperationError
-            ? error
-            : new Error('Unable to detect potential problems.');
-        const resultError = new Error(`Error in ${TASK_ID}: ${normalizedError.message}`);
+        const resultError = toBugbotApplicationError(error, `Error in ${TASK_ID}: Unable to detect potential problems.`);
         (0, logging_ports_1.logError)(resultError.message);
         const result = new result_1.Result({
             id: TASK_ID,
@@ -3422,7 +3464,7 @@ function noAnalysisResult(presentation) {
     (0, logging_ports_1.logDebugInfo)('DetectPotentialProblems: No response from configured agent.');
     const errors = presentation?.errors.length
         ? [...presentation.errors]
-        : [new Error('The configured agent returned no potential-problem analysis.')];
+        : [new application_error_1.ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.')];
     return new result_1.Result({
         id: TASK_ID,
         success: false,
@@ -3430,7 +3472,9 @@ function noAnalysisResult(presentation) {
         ...(presentation ? {
             steps: [`Bugbot analysis failed; the verified PR status was reconciled (${formatStateCounts(presentation.projection.counts)}).`],
         } : {}),
-        errors,
+        errors: errors.map(error => presentation
+            ? toBugbotPresentationError(error)
+            : toBugbotApplicationError(error, 'Bugbot review reconciliation failed.')),
         ...(presentation ? {
             payload: {
                 findingStates: presentation.projection.counts,
@@ -3465,7 +3509,9 @@ function detectionResult(prepared, context, resolutionErrors, presentation) {
         success: resolutionErrors.length === 0,
         executed: true,
         steps: [`Potential problems detection completed. ${stepParts.join('; ')}.`],
-        errors: [...resolutionErrors],
+        errors: resolutionErrors.map(error => presentation
+            ? toBugbotPresentationError(error)
+            : toBugbotApplicationError(error, 'Bugbot finding publication or reconciliation failed.')),
         payload: {
             findingStates: statusSummary.counts,
             ...(presentation ? {
@@ -3482,6 +3528,20 @@ function formatStateCounts(counts) {
         .filter(([, count]) => count > 0)
         .map(([state, count]) => `${state}=${count}`)
         .join(', ') || 'none';
+}
+function toBugbotApplicationError(error, fallbackMessage) {
+    if (error instanceof application_error_1.ApplicationError)
+        return error;
+    const message = error instanceof pull_request_review_errors_1.PullRequestReviewOperationError ? error.message : fallbackMessage;
+    return new application_error_1.ApplicationError('provider.unavailable', message, { cause: error });
+}
+function toBugbotPresentationError(error) {
+    if (error instanceof application_error_1.ApplicationError)
+        return error;
+    const message = error instanceof pull_request_review_errors_1.PullRequestReviewOperationError
+        ? error.message
+        : 'Bugbot finding presentation failed.';
+    return new application_error_1.ApplicationError('provider.unavailable', message, { cause: error });
 }
 async function reconcileReviewState(input) {
     const pullRequestNumber = input.loadedContext.openPrNumbers[0];
@@ -3605,316 +3665,177 @@ exports.Ai = Ai;
 
 /***/ }),
 
-/***/ 1934:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+/***/ 7790:
+/***/ (function(__unused_webpack_module, exports) {
 
 
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.BranchConfiguration = void 0;
-const model_input_1 = __nccwpck_require__(4637);
-class BranchConfiguration {
-    constructor(data) {
-        const input = (0, model_input_1.asModelInput)(data);
-        this.name = (0, model_input_1.readString)(input, 'name');
-        this.oid = (0, model_input_1.readString)(input, 'oid');
-        this.children = [];
-        if (Array.isArray(input['children'])) {
-            for (const child of input['children']) {
-                this.children.push(new BranchConfiguration(child));
-            }
-        }
-    }
-}
-exports.BranchConfiguration = BranchConfiguration;
-
-
-/***/ }),
-
-/***/ 7525:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Commit = void 0;
-class Commit {
-    constructor(inputs = undefined) {
-        this.inputs = undefined;
-        this.inputs = inputs;
-    }
-    get branchReference() {
-        const commits = this.inputs?.commits;
-        return (!Array.isArray(commits) ? commits?.ref : undefined) ?? this.inputs?.ref ?? '';
-    }
-    get branch() {
-        return this.branchReference.replace('refs/heads/', '');
-    }
-    get commits() {
-        return Array.isArray(this.inputs?.commits) ? this.inputs.commits : [];
-    }
-}
-exports.Commit = Commit;
-
-
-/***/ }),
-
-/***/ 450:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Config = exports.CONFIG_SCHEMA_VERSION = void 0;
-exports.requireCurrentConfigurationPayload = requireCurrentConfigurationPayload;
-const branch_configuration_1 = __nccwpck_require__(1934);
-const recommendation_state_1 = __nccwpck_require__(8514);
-const model_input_1 = __nccwpck_require__(4637);
-const deployment_operation_1 = __nccwpck_require__(2730);
-/** Version of the durable configuration contract stored in issue/PR content. */
-exports.CONFIG_SCHEMA_VERSION = 3;
-/** Accepts only the currently supported durable configuration contract. */
-function requireCurrentConfigurationPayload(value) {
-    const input = (0, model_input_1.asModelInput)(value);
-    if (input.schemaVersion !== exports.CONFIG_SCHEMA_VERSION) {
-        throw new Error(`Unsupported configuration schema. Expected ${exports.CONFIG_SCHEMA_VERSION}.`);
-    }
-    return input;
-}
-class Config {
-    constructor(data) {
-        this.results = [];
-        const input = (0, model_input_1.asModelInput)(data);
-        this.schemaVersion = exports.CONFIG_SCHEMA_VERSION;
-        this.branchType = (0, model_input_1.readString)(input, 'branchType');
-        this.hotfixOriginBranch = (0, model_input_1.readOptionalString)(input, 'hotfixOriginBranch');
-        this.hotfixBranch = (0, model_input_1.readOptionalString)(input, 'hotfixBranch');
-        this.releaseBranch = (0, model_input_1.readOptionalString)(input, 'releaseBranch');
-        this.releaseOriginBranch = (0, model_input_1.readOptionalString)(input, 'releaseOriginBranch');
-        this.releaseOriginSha = (0, model_input_1.readOptionalString)(input, 'releaseOriginSha');
-        this.hotfixOriginSha = (0, model_input_1.readOptionalString)(input, 'hotfixOriginSha');
-        this.parentBranch = (0, model_input_1.readOptionalString)(input, 'parentBranch');
-        this.workingBranch = (0, model_input_1.readOptionalString)(input, 'workingBranch');
-        if (input['branchConfiguration'] !== undefined && input['branchConfiguration'] !== null) {
-            this.branchConfiguration = new branch_configuration_1.BranchConfiguration(input['branchConfiguration']);
-        }
-        if ((0, recommendation_state_1.isRecommendationState)(input['recommendationState'])) {
-            this.recommendationState = input['recommendationState'];
-        }
-        if ((0, deployment_operation_1.isDeploymentOperationSnapshot)(input['deploymentOrchestration'])) {
-            this.deploymentOrchestration = input['deploymentOrchestration'];
-        }
-    }
-}
-exports.Config = Config;
-
-
-/***/ }),
-
-/***/ 1546:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Execution = void 0;
-const label_branch_policy_1 = __nccwpck_require__(3318);
-const commit_1 = __nccwpck_require__(7525);
-const config_1 = __nccwpck_require__(450);
-const github_user_policy_1 = __nccwpck_require__(4403);
-const issue_inactivity_1 = __nccwpck_require__(8572);
-const deployment_configuration_1 = __nccwpck_require__(2495);
-class Execution {
-    get eventName() {
-        return this.inputs?.eventName ?? '';
-    }
-    get actor() {
-        return this.inputs?.actor ?? '';
-    }
-    get isSingleAction() {
-        return this.singleAction.enabledSingleAction;
-    }
-    get isIssue() {
-        return this.issue.isIssue || this.issue.isIssueComment || this.singleAction.isIssue;
-    }
-    get isPullRequest() {
-        return this.pullRequest.isPullRequest || this.pullRequest.isPullRequestReviewComment || this.singleAction.isPullRequest;
-    }
-    get isPush() {
-        return this.eventName === 'push';
-    }
-    get repo() {
-        return this.inputs?.repo?.repo ?? '';
-    }
-    get owner() {
-        return this.inputs?.repo?.owner ?? '';
-    }
-    get isFeature() {
-        return this.issueType === this.branches.featureTree;
-    }
-    get isBugfix() {
-        return this.issueType === this.branches.bugfixTree;
-    }
-    get isDocs() {
-        return this.issueType === this.branches.docsTree;
-    }
-    get isChore() {
-        return this.issueType === this.branches.choreTree;
-    }
-    get isBranched() {
-        return this.issue.branchManagementAlways ||
-            this.labels.containsBranchedLabel ||
-            this.labels.isMandatoryBranchedLabel;
-    }
-    get issueNotBranched() {
-        return this.isIssue && !this.isBranched;
-    }
-    get managementBranch() {
-        return (0, label_branch_policy_1.branchesForManagement)(this, this.labels.currentIssueLabels, this.labels.feature, this.labels.enhancement, this.labels.bugfix, this.labels.bug, this.labels.hotfix, this.labels.release, this.labels.docs, this.labels.documentation, this.labels.chore, this.labels.maintenance);
-    }
-    get issueType() {
-        return (0, label_branch_policy_1.typesForIssue)(this, this.labels.currentIssueLabels, this.labels.feature, this.labels.enhancement, this.labels.bugfix, this.labels.bug, this.labels.hotfix, this.labels.release, this.labels.docs, this.labels.documentation, this.labels.chore, this.labels.maintenance);
-    }
-    get cleanIssueBranches() {
-        return this.isIssue
-            && this.previousConfiguration !== undefined
-            && this.previousConfiguration?.branchType != this.currentConfiguration.branchType;
-    }
-    get commit() {
-        return new commit_1.Commit(this.inputs);
-    }
-    get runnedByToken() {
-        return (0, github_user_policy_1.githubUsersMatch)(this.tokenUser ?? '', this.actor);
-    }
-    constructor(components) {
-        this.debug = false;
-        /**
-         * Every usage of this field should be checked.
-         * PRs with no issue ID in the head branch won't have it.
-         *
-         * master <- develop
-         */
-        this.issueNumber = -1;
-        this.commitPrefixBuilderParams = {};
-        this.debug = components.debug;
-        this.singleAction = components.singleAction;
-        this.commitPrefixBuilder = components.commitPrefixBuilder;
-        this.issue = components.issue;
-        this.pullRequest = components.pullRequest;
-        this.images = components.images;
-        this.tokens = components.tokens;
-        this.ai = components.ai;
-        this.emoji = components.emoji;
-        this.labels = components.labels;
-        this.issueTypes = components.issueTypes;
-        this.locale = components.locale;
-        this.sizeThresholds = components.sizeThresholds;
-        this.branches = components.branches;
-        this.release = components.release;
-        this.hotfix = components.hotfix;
-        this.project = components.projects;
-        this.workflows = components.workflows;
-        this.deployment = components.deployment ?? { ...deployment_configuration_1.DEFAULT_DEPLOYMENT_CONFIGURATION };
-        this.tokenUser = components.tokenUser;
-        this.inactivityThresholdHours = components.inactivityThresholdHours ?? issue_inactivity_1.DEFAULT_INACTIVITY_THRESHOLD_HOURS;
-        this.currentConfiguration = new config_1.Config({});
-        this.inputs = components.inputs;
-        this.welcome = components.welcome;
-    }
-}
-exports.Execution = Execution;
-
-
-/***/ }),
-
-/***/ 3318:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.typesForIssue = exports.branchesForManagement = void 0;
-const branchesForManagement = (params, labels, featureLabel, enhancementLabel, bugfixLabel, bugLabel, hotfixLabel, releaseLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel) => {
-    return resolveBranch(params, labels, {
-        feature: featureLabel,
-        enhancement: enhancementLabel,
-        bugfix: bugfixLabel,
-        bug: bugLabel,
-        hotfix: hotfixLabel,
-        release: releaseLabel,
-        docs: docsLabel,
-        documentation: documentationLabel,
-        chore: choreLabel,
-        maintenance: maintenanceLabel,
-    }, 'bugfixTree');
+var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (receiver, state, value, kind, f) {
+    if (kind === "m") throw new TypeError("Private method is not writable");
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
+    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
 };
-exports.branchesForManagement = branchesForManagement;
-const typesForIssue = (params, labels, featureLabel, enhancementLabel, bugfixLabel, bugLabel, hotfixLabel, releaseLabel, docsLabel, documentationLabel, choreLabel, maintenanceLabel) => {
-    return resolveBranch(params, labels, {
-        feature: featureLabel,
-        enhancement: enhancementLabel,
-        bugfix: bugfixLabel,
-        bug: bugLabel,
-        hotfix: hotfixLabel,
-        release: releaseLabel,
-        docs: docsLabel,
-        documentation: documentationLabel,
-        chore: choreLabel,
-        maintenance: maintenanceLabel,
-    }, 'hotfixTree');
+var _ApplicationError_cause;
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ApplicationError = exports.APPLICATION_ERROR_METADATA = void 0;
+exports.isApplicationErrorCorrelationId = isApplicationErrorCorrelationId;
+const PRESERVED_STATE = 'Existing persisted state and completed external effects were preserved.';
+const UNCHANGED_STATE = 'No new state or external effect was created.';
+exports.APPLICATION_ERROR_METADATA = {
+    'configuration.invalid': {
+        kind: 'configuration', retryable: false,
+        impact: 'The operation could not use the configured values.',
+        action: 'Correct the invalid configuration and retry.',
+        retainedState: UNCHANGED_STATE,
+    },
+    'configuration.unsupported': {
+        kind: 'configuration', retryable: false,
+        impact: 'The requested capability is not supported by this installation.',
+        action: 'Use a supported configuration or update the installation.',
+        retainedState: UNCHANGED_STATE,
+    },
+    'authorization.denied': {
+        kind: 'authorization', retryable: false,
+        impact: 'The operation could not access the required resource.',
+        action: 'Grant the documented permission and retry.',
+        retainedState: UNCHANGED_STATE,
+    },
+    'authorization.credential-invalid': {
+        kind: 'authorization', retryable: false,
+        impact: 'The operation could not authenticate with the required provider.',
+        action: 'Replace or configure the required credential and retry.',
+        retainedState: UNCHANGED_STATE,
+    },
+    'provider.not-found': {
+        kind: 'provider', retryable: false,
+        impact: 'A required provider resource was not found.',
+        action: 'Verify the target resource and retry the operation.',
+        retainedState: PRESERVED_STATE,
+    },
+    'provider.conflict': {
+        kind: 'provider', retryable: true,
+        impact: 'The provider rejected a conflicting current state.',
+        action: 'Reload the current state and retry if the operation is still required.',
+        retainedState: PRESERVED_STATE,
+    },
+    'provider.rate-limited': {
+        kind: 'provider', retryable: true,
+        impact: 'The provider temporarily limited the operation.',
+        action: 'Retry after the provider limit resets.',
+        retainedState: PRESERVED_STATE,
+    },
+    'provider.unavailable': {
+        kind: 'provider', retryable: true,
+        impact: 'The provider was temporarily unavailable.',
+        action: 'Retry when the provider is available.',
+        retainedState: PRESERVED_STATE,
+    },
+    'provider.contract-invalid': {
+        kind: 'provider', retryable: false,
+        impact: 'The provider response could not be safely interpreted.',
+        action: 'Review the provider integration before retrying.',
+        retainedState: PRESERVED_STATE,
+    },
+    'agent.policy-rejected': {
+        kind: 'agent', retryable: false,
+        impact: 'The configured agent was not started.',
+        action: 'Use an allowed agent configuration and retry.',
+        retainedState: UNCHANGED_STATE,
+    },
+    'agent.failed': {
+        kind: 'agent', retryable: true,
+        impact: 'The admitted agent did not produce a usable result.',
+        action: 'Inspect the sanitized agent status and retry if appropriate.',
+        retainedState: PRESERVED_STATE,
+    },
+    'validation.invalid-input': {
+        kind: 'validation', retryable: false,
+        impact: 'The operation did not accept the supplied input.',
+        action: 'Correct the input and retry.',
+        retainedState: UNCHANGED_STATE,
+    },
+    'workflow.invalid-event': {
+        kind: 'workflow', retryable: false,
+        impact: 'The event cannot start the requested workflow.',
+        action: 'Start the operation from a supported event or surface.',
+        retainedState: UNCHANGED_STATE,
+    },
+    'workflow.stale': {
+        kind: 'workflow', retryable: false,
+        impact: 'A newer state superseded this workflow invocation.',
+        action: 'Inspect the current state and start a fresh invocation only if needed.',
+        retainedState: PRESERVED_STATE,
+    },
+    'workflow.cancelled': {
+        kind: 'workflow', retryable: false,
+        impact: 'The workflow stopped before it completed.',
+        action: 'Start a new invocation if the operation is still required.',
+        retainedState: PRESERVED_STATE,
+    },
+    'workflow.failed': {
+        kind: 'workflow', retryable: true,
+        impact: 'The workflow could not complete the requested operation.',
+        action: 'Inspect the current state and retry the failed step.',
+        retainedState: PRESERVED_STATE,
+    },
+    timeout: {
+        kind: 'workflow', retryable: true,
+        impact: 'The operation exceeded its bounded execution time.',
+        action: 'Verify the current state before retrying.',
+        retainedState: PRESERVED_STATE,
+    },
+    unexpected: {
+        kind: 'unknown', retryable: false,
+        impact: 'The operation stopped because an unexpected failure was handled safely.',
+        action: 'Use the correlation ID to investigate before retrying.',
+        retainedState: PRESERVED_STATE,
+    },
 };
-exports.typesForIssue = typesForIssue;
-function resolveBranch(params, labels, names, hotfixBranch) {
-    const rules = [
-        { names: [names.hotfix], branch: hotfixBranch },
-        { names: [names.bugfix, names.bug], branch: 'bugfixTree' },
-        { names: [names.release], branch: 'releaseTree' },
-        { names: [names.docs, names.documentation], branch: 'docsTree' },
-        { names: [names.chore, names.maintenance], branch: 'choreTree' },
-        { names: [names.feature, names.enhancement], branch: 'featureTree' },
-    ];
-    const matchingRule = rules.find((rule) => rule.names.some((name) => labels.includes(name)));
-    return params.branches[matchingRule?.branch ?? 'featureTree'];
+const CORRELATION_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+function isApplicationErrorCorrelationId(value) {
+    return CORRELATION_ID_PATTERN.test(value);
 }
-
-
-/***/ }),
-
-/***/ 4637:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.asModelInput = asModelInput;
-exports.readString = readString;
-exports.readOptionalString = readOptionalString;
-function asModelInput(value) {
-    return value !== null && typeof value === 'object' && !Array.isArray(value)
-        ? value
-        : {};
+/** Semantic error contract whose public fields are safe to serialize and present. */
+class ApplicationError extends Error {
+    constructor(code, message, options) {
+        super(message);
+        // The cause is intentionally debugger-only: no accessor or serializer may expose it.
+        // eslint-disable-next-line no-unused-private-class-members
+        _ApplicationError_cause.set(this, void 0);
+        const metadata = exports.APPLICATION_ERROR_METADATA[code];
+        const correlationId = options.correlationId;
+        if (!isApplicationErrorCorrelationId(correlationId)) {
+            throw new TypeError('Application error correlation ID must be a lowercase UUID v4.');
+        }
+        if (options.retryable === true && !metadata.retryable) {
+            throw new TypeError(`Retryability cannot be broadened for ${code}.`);
+        }
+        this.name = 'ApplicationError';
+        this.code = code;
+        this.kind = metadata.kind;
+        this.retryable = options.retryable ?? metadata.retryable;
+        this.impact = options.impact ?? metadata.impact;
+        this.action = options.action ?? metadata.action;
+        this.retainedState = options.retainedState ?? metadata.retainedState;
+        this.correlationId = correlationId;
+        __classPrivateFieldSet(this, _ApplicationError_cause, options.cause, "f");
+    }
+    toJSON() {
+        return {
+            name: 'ApplicationError',
+            message: this.message,
+            code: this.code,
+            kind: this.kind,
+            retryable: this.retryable,
+            impact: this.impact,
+            action: this.action,
+            retainedState: this.retainedState,
+            correlationId: this.correlationId,
+        };
+    }
 }
-function readString(input, key, fallback = '') {
-    return typeof input[key] === 'string' ? input[key] : fallback;
-}
-function readOptionalString(input, key) {
-    return typeof input[key] === 'string' ? input[key] : undefined;
-}
-
-
-/***/ }),
-
-/***/ 8514:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.isRecommendationState = isRecommendationState;
-function isRecommendationState(value) {
-    if (typeof value !== 'object' || value === null)
-        return false;
-    const candidate = value;
-    return typeof candidate.issueDescriptionFingerprint === 'string'
-        && candidate.issueDescriptionFingerprint.length > 0
-        && typeof candidate.recommendationFingerprint === 'string'
-        && candidate.recommendationFingerprint.length > 0
-        && typeof candidate.recommendation === 'string'
-        && candidate.recommendation.length > 0;
-}
+exports.ApplicationError = ApplicationError;
+_ApplicationError_cause = new WeakMap();
 
 
 /***/ }),
@@ -3926,18 +3847,6 @@ function isRecommendationState(value) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.Result = void 0;
 exports.getResultPayload = getResultPayload;
-function normalizeError(error) {
-    if (error instanceof Error)
-        return error;
-    if (typeof error === 'string')
-        return new Error(error);
-    try {
-        return new Error(JSON.stringify(error) ?? String(error));
-    }
-    catch {
-        return new Error(String(error));
-    }
-}
 function getResultPayload(payload) {
     return typeof payload === 'object' && payload !== null && !Array.isArray(payload)
         ? payload
@@ -3949,8 +3858,7 @@ class Result {
         this.success = data['success'] ?? false;
         this.executed = data['executed'] ?? false;
         this.steps = Array.isArray(data.steps) ? data.steps : [];
-        const rawErrors = Array.isArray(data.errors) ? data.errors : [];
-        this.errors = rawErrors.map(normalizeError);
+        this.errors = Array.isArray(data.errors) ? [...data.errors] : [];
         this.payload = data.payload;
         this.reminders = Array.isArray(data.reminders) ? data.reminders : [];
         this.stepFormat = data['stepFormat'] === 'markdown' ? 'markdown' : 'plain';
@@ -4353,292 +4261,6 @@ function countActionableBugbotFindings(counts) {
 
 /***/ }),
 
-/***/ 2495:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DEFAULT_DEPLOYMENT_CONFIGURATION = exports.ORCHESTRATION_COMMENT_MODES = exports.ORCHESTRATION_PRESENTATION_MODES = exports.RECONCILIATION_ISSUE_COMPLETION_MODES = exports.RECONCILIATION_CLEANUP_MODES = exports.HOTFIX_ACTIVE_RELEASE_POLICIES = exports.RECONCILIATION_BACKMERGE_MODES = exports.RECONCILIATION_PR_MODES = exports.RECONCILIATION_STRATEGIES = void 0;
-exports.validateDeploymentConfiguration = validateDeploymentConfiguration;
-exports.isSafeBranchTree = isSafeBranchTree;
-exports.parseDeploymentEnum = parseDeploymentEnum;
-exports.RECONCILIATION_STRATEGIES = [
-    "production-lineage",
-    "canonical-gitflow",
-    "manual",
-];
-exports.RECONCILIATION_PR_MODES = [
-    "auto",
-    "auto-merge",
-    "merge-queue",
-    "create-only",
-];
-exports.RECONCILIATION_BACKMERGE_MODES = [
-    "auto",
-    "direct",
-    "sync-branch",
-];
-exports.HOTFIX_ACTIVE_RELEASE_POLICIES = [
-    "prefer-release",
-    "development",
-    "both",
-];
-exports.RECONCILIATION_CLEANUP_MODES = [
-    "all",
-    "source-only",
-    "sync-only",
-    "none",
-];
-exports.RECONCILIATION_ISSUE_COMPLETION_MODES = ["close", "keep-open"];
-exports.ORCHESTRATION_PRESENTATION_MODES = ["guided", "compact", "quiet"];
-exports.ORCHESTRATION_COMMENT_MODES = ["update", "milestones"];
-exports.DEFAULT_DEPLOYMENT_CONFIGURATION = {
-    releaseReconciliationStrategy: "production-lineage",
-    hotfixReconciliationStrategy: "production-lineage",
-    reconciliationPullRequestMode: "auto",
-    reconciliationBackmergeMode: "auto",
-    hotfixActiveReleasePolicy: "prefer-release",
-    reconciliationTree: "sync",
-    reconciliationCleanup: "all",
-    reconciliationIssueCompletion: "close",
-    orchestrationPresentationMode: "guided",
-    orchestrationDiagrams: true,
-    orchestrationCommentMode: "update",
-    mergeQueueCheckAttestations: [],
-};
-function validateDeploymentConfiguration(configuration, context) {
-    const errors = [];
-    for (const [name, value, allowed] of [
-        ["release reconciliation strategy", configuration.releaseReconciliationStrategy, exports.RECONCILIATION_STRATEGIES],
-        ["hotfix reconciliation strategy", configuration.hotfixReconciliationStrategy, exports.RECONCILIATION_STRATEGIES],
-        ["reconciliation PR mode", configuration.reconciliationPullRequestMode, exports.RECONCILIATION_PR_MODES],
-        ["reconciliation back-merge mode", configuration.reconciliationBackmergeMode, exports.RECONCILIATION_BACKMERGE_MODES],
-        ["hotfix active-release policy", configuration.hotfixActiveReleasePolicy, exports.HOTFIX_ACTIVE_RELEASE_POLICIES],
-        ["reconciliation cleanup", configuration.reconciliationCleanup, exports.RECONCILIATION_CLEANUP_MODES],
-        ["reconciliation issue completion", configuration.reconciliationIssueCompletion, exports.RECONCILIATION_ISSUE_COMPLETION_MODES],
-        ["orchestration presentation mode", configuration.orchestrationPresentationMode, exports.ORCHESTRATION_PRESENTATION_MODES],
-        ["orchestration comment mode", configuration.orchestrationCommentMode, exports.ORCHESTRATION_COMMENT_MODES],
-    ]) {
-        if (!allowed.includes(value)) {
-            errors.push(`The ${name} must be one of: ${allowed.join(", ")}.`);
-        }
-    }
-    if (typeof configuration.orchestrationDiagrams !== "boolean") {
-        errors.push("Orchestration diagrams must be a boolean.");
-    }
-    if (context.productionBranch === context.developmentBranch) {
-        errors.push("Production and development branches must be different.");
-    }
-    const protectedNames = new Set([context.productionBranch, context.developmentBranch]);
-    for (const [label, tree] of [
-        ["release", context.releaseTree],
-        ["hotfix", context.hotfixTree],
-        ["reconciliation", configuration.reconciliationTree],
-    ]) {
-        if (!isSafeBranchTree(tree)) {
-            errors.push(`The ${label} branch prefix must be a safe, non-empty Git ref segment.`);
-        }
-        else if (protectedNames.has(tree)) {
-            errors.push(`The ${label} branch prefix cannot equal a protected long-lived branch.`);
-        }
-    }
-    errors.push(...(0, merge_queue_readiness_1.normalizeMergeQueueCheckAttestations)(configuration.mergeQueueCheckAttestations).errors);
-    if ((configuration.releaseReconciliationStrategy === "manual"
-        || configuration.hotfixReconciliationStrategy === "manual")
-        && configuration.reconciliationIssueCompletion === "close") {
-        errors.push("Manual reconciliation cannot close the launcher issue automatically.");
-    }
-    return errors;
-}
-function isSafeBranchTree(value) {
-    const tree = value.trim();
-    return tree.length > 0
-        && tree.length <= 100
-        && !tree.startsWith("/")
-        && !tree.endsWith("/")
-        && !tree.includes("..")
-        && !tree.includes("@{")
-        && !/[~^:?*[\\\]\s]/.test(tree);
-}
-function parseDeploymentEnum(value, allowed, fallback) {
-    if (value === undefined || value === null || String(value).trim() === "") {
-        return { value: fallback, valid: true };
-    }
-    const normalized = String(value).trim();
-    return allowed.includes(normalized)
-        ? { value: normalized, valid: true }
-        : { value: fallback, valid: false };
-}
-const merge_queue_readiness_1 = __nccwpck_require__(2515);
-
-
-/***/ }),
-
-/***/ 2730:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.DEPLOYMENT_PHASES = void 0;
-exports.transitionDeploymentOperation = transitionDeploymentOperation;
-exports.blockDeploymentOperation = blockDeploymentOperation;
-exports.resumeBlockedDeployment = resumeBlockedDeployment;
-exports.completeReconciliationTarget = completeReconciliationTarget;
-exports.sanitizeDeploymentMessage = sanitizeDeploymentMessage;
-exports.isDeploymentOperationSnapshot = isDeploymentOperationSnapshot;
-const deployment_configuration_1 = __nccwpck_require__(2495);
-exports.DEPLOYMENT_PHASES = [
-    "preparing",
-    "promotion_pr_pending",
-    "promoted",
-    "publishing",
-    "published",
-    "reconciliation_pending",
-    "completed",
-    "blocked",
-];
-const NORMAL_TRANSITIONS = {
-    preparing: ["promotion_pr_pending"],
-    promotion_pr_pending: ["promoted"],
-    promoted: ["publishing"],
-    publishing: ["published"],
-    published: ["reconciliation_pending", "completed"],
-    reconciliation_pending: ["completed"],
-    completed: [],
-};
-function transitionDeploymentOperation(operation, expectedPhase, nextPhase) {
-    if (operation.phase === nextPhase) {
-        return { kind: "noop", operation, reason: `Operation is already ${nextPhase}.` };
-    }
-    if (operation.phase !== expectedPhase) {
-        return { kind: "noop", operation, reason: `Expected ${expectedPhase}, found ${operation.phase}.` };
-    }
-    if (nextPhase === "blocked") {
-        return { kind: "advance", operation: { ...operation, phase: nextPhase } };
-    }
-    if (expectedPhase === "blocked" || !NORMAL_TRANSITIONS[expectedPhase].includes(nextPhase)) {
-        return { kind: "invalid", operation, reason: `Transition ${expectedPhase} -> ${nextPhase} is not allowed.` };
-    }
-    return { kind: "advance", operation: { ...operation, phase: nextPhase, lastFailure: null } };
-}
-function blockDeploymentOperation(operation, category, message, retryable) {
-    if (operation.phase === "completed")
-        return operation;
-    const previousPhase = operation.phase === "blocked"
-        ? operation.lastFailure?.previousPhase ?? "preparing"
-        : operation.phase;
-    return {
-        ...operation,
-        phase: "blocked",
-        lastFailure: { category, message: sanitizeDeploymentMessage(message), retryable, previousPhase },
-    };
-}
-function resumeBlockedDeployment(operation) {
-    if (operation.phase !== "blocked" || !operation.lastFailure?.retryable) {
-        return { kind: "invalid", operation, reason: "Operation is not retryable from blocked state." };
-    }
-    return {
-        kind: "advance",
-        operation: { ...operation, phase: operation.lastFailure.previousPhase, lastFailure: null },
-    };
-}
-function completeReconciliationTarget(operation, pullRequest) {
-    const targets = operation.reconciliationTargets.map((target) => target.pullRequest === pullRequest ? { ...target, status: "completed" } : target);
-    return {
-        ...operation,
-        reconciliationTargets: targets,
-        lastFailure: null,
-    };
-}
-function sanitizeDeploymentMessage(value) {
-    return value
-        .replace(/::/g, "﹕﹕")
-        .replace(/@(?=[A-Za-z0-9_-])/g, "@\u200b")
-        .replace(/<!--/g, "&lt;!--")
-        .replace(/-->/g, "--&gt;")
-        .slice(0, 2000);
-}
-function isDeploymentOperationSnapshot(value) {
-    if (!value || typeof value !== "object" || Array.isArray(value))
-        return false;
-    const operation = value;
-    return typeof operation.operationId === "string"
-        && /^[A-Za-z0-9][A-Za-z0-9._-]{7,127}$/.test(operation.operationId)
-        && (operation.kind === "release" || operation.kind === "hotfix")
-        && typeof operation.version === "string" && /^[0-9]+\.[0-9]+\.[0-9]+$/.test(operation.version)
-        && typeof operation.title === "string" && operation.title.length <= 1000
-        && typeof operation.changelog === "string" && operation.changelog.length <= 50000
-        && exports.DEPLOYMENT_PHASES.includes(operation.phase)
-        && deployment_configuration_1.RECONCILIATION_STRATEGIES.includes(operation.strategy)
-        && deployment_configuration_1.RECONCILIATION_PR_MODES.includes(operation.prMode)
-        && (operation.selectedPrMode === undefined
-            || ["auto-merge", "merge-queue", "create-only"].includes(operation.selectedPrMode))
-        && deployment_configuration_1.RECONCILIATION_BACKMERGE_MODES.includes(operation.backmergeMode)
-        && deployment_configuration_1.HOTFIX_ACTIVE_RELEASE_POLICIES.includes(operation.hotfixActiveReleasePolicy)
-        && deployment_configuration_1.RECONCILIATION_CLEANUP_MODES.includes(operation.cleanup)
-        && deployment_configuration_1.RECONCILIATION_ISSUE_COMPLETION_MODES.includes(operation.issueCompletion)
-        && deployment_configuration_1.ORCHESTRATION_PRESENTATION_MODES.includes(operation.presentationMode)
-        && typeof operation.diagrams === "boolean"
-        && deployment_configuration_1.ORCHESTRATION_COMMENT_MODES.includes(operation.commentMode)
-        && isSafePersistedRef(operation.sourceBranch)
-        && isFullSha(operation.sourceSha)
-        && isSafePersistedRef(operation.originBranch)
-        && isFullSha(operation.originSha)
-        && isSafePersistedRef(operation.productionBranch)
-        && isSafePersistedRef(operation.developmentBranch)
-        && typeof operation.reconciliationTree === "string"
-        && typeof operation.tag === "string" && operation.tag === `v${operation.version}`
-        && typeof operation.publicationWorkflow === "string" && isSafeWorkflowName(operation.publicationWorkflow)
-        && (operation.promotionPullRequest === undefined || isPositiveInteger(operation.promotionPullRequest))
-        && (operation.productionSha === undefined || isFullSha(operation.productionSha))
-        && typeof operation.publicationVerified === "boolean"
-        && Array.isArray(operation.reconciliationTargets)
-        && operation.reconciliationTargets.every(isReconciliationTarget)
-        && (operation.lastFailure === undefined || operation.lastFailure === null || isDeploymentFailure(operation.lastFailure));
-}
-function isFullSha(value) {
-    return typeof value === "string" && /^[a-f0-9]{40}$/i.test(value);
-}
-function isPositiveInteger(value) {
-    return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
-}
-function isSafePersistedRef(value) {
-    return typeof value === "string"
-        && value.length > 0
-        && value.length <= 200
-        && !value.includes("..")
-        && !value.includes("@{")
-        && !/[\s~^:?*[\\\]]/.test(value);
-}
-function isSafeWorkflowName(value) {
-    return value.length <= 200 && !value.includes("..") && /^[A-Za-z0-9][A-Za-z0-9._/-]*\.ya?ml$/.test(value);
-}
-function isReconciliationTarget(value) {
-    if (!value || typeof value !== "object" || Array.isArray(value))
-        return false;
-    const target = value;
-    return isSafePersistedRef(target.targetBranch)
-        && isSafePersistedRef(target.sourceBranch)
-        && isFullSha(target.sourceSha)
-        && (target.syncBranch === undefined || isSafePersistedRef(target.syncBranch))
-        && (target.pullRequest === undefined || isPositiveInteger(target.pullRequest))
-        && ["pending", "completed", "blocked"].includes(target.status);
-}
-function isDeploymentFailure(value) {
-    if (!value || typeof value !== "object" || Array.isArray(value))
-        return false;
-    const failure = value;
-    return ["promotion", "publication", "reconciliation", "cleanup"].includes(failure.category)
-        && typeof failure.message === "string"
-        && failure.message.length <= 2000
-        && typeof failure.retryable === "boolean"
-        && ["preparing", "promotion_pr_pending", "promoted", "publishing", "published", "reconciliation_pending", "completed"]
-            .includes(failure.previousPhase);
-}
-
-
-/***/ }),
-
 /***/ 4403:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -4649,199 +4271,6 @@ function githubUsersMatch(left, right) {
     const normalizedLeft = left.trim().toLocaleLowerCase('en-US');
     const normalizedRight = right.trim().toLocaleLowerCase('en-US');
     return normalizedLeft.length > 0 && normalizedLeft === normalizedRight;
-}
-
-
-/***/ }),
-
-/***/ 8572:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.MAX_INACTIVITY_THRESHOLD_HOURS = exports.DEFAULT_INACTIVITY_THRESHOLD_HOURS = void 0;
-exports.evaluateIssueInactivity = evaluateIssueInactivity;
-/** Default inactivity window used by the scheduled issue-maintenance action. */
-exports.DEFAULT_INACTIVITY_THRESHOLD_HOURS = 168;
-/** Maximum supported window (one year) for a finite, operationally useful value. */
-exports.MAX_INACTIVITY_THRESHOLD_HOURS = 8760;
-/**
- * Decides whether an issue can be closed without depending on GitHub or time
- * APIs. GitHub's `updated_at` is treated as the last activity observed by the
- * provider; this includes comments and issue metadata changes.
- */
-function evaluateIssueInactivity(input) {
-    if (input.issue.isPullRequest)
-        return { kind: 'skip', reason: 'pull-request' };
-    if (!hasLabel(input.issue.labels, input.waitingLabels)) {
-        return { kind: 'skip', reason: 'not-waiting' };
-    }
-    if (hasLabel(input.issue.labels, [input.agentActivityLabel])) {
-        return { kind: 'skip', reason: 'agent-processing' };
-    }
-    if (!Number.isFinite(input.thresholdHours)
-        || input.thresholdHours <= 0
-        || input.thresholdHours > exports.MAX_INACTIVITY_THRESHOLD_HOURS) {
-        return { kind: 'skip', reason: 'invalid-threshold' };
-    }
-    const updatedAtMilliseconds = Date.parse(input.issue.updatedAt ?? '');
-    if (!Number.isFinite(updatedAtMilliseconds)) {
-        return { kind: 'skip', reason: 'missing-activity-timestamp' };
-    }
-    if (!Number.isFinite(input.nowMilliseconds) || updatedAtMilliseconds > input.nowMilliseconds) {
-        return { kind: 'skip', reason: 'future-activity' };
-    }
-    const inactiveForMilliseconds = input.nowMilliseconds - updatedAtMilliseconds;
-    const thresholdMilliseconds = input.thresholdHours * 60 * 60 * 1000;
-    return inactiveForMilliseconds >= thresholdMilliseconds
-        ? { kind: 'close', inactiveForMilliseconds }
-        : { kind: 'skip', reason: 'recent-activity' };
-}
-function hasLabel(labels, candidates) {
-    const normalizedLabels = new Set(labels.map(normalize));
-    return candidates.some(candidate => {
-        const normalizedCandidate = normalize(candidate);
-        return normalizedCandidate.length > 0 && normalizedLabels.has(normalizedCandidate);
-    });
-}
-function normalize(value) {
-    return value.trim().toLowerCase();
-}
-
-
-/***/ }),
-
-/***/ 2515:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.MAX_MERGE_QUEUE_ATTESTATIONS_BYTES = exports.MAX_MERGE_QUEUE_ATTESTATIONS = exports.MERGE_QUEUE_TARGET_ROLES = void 0;
-exports.parseMergeQueueCheckAttestations = parseMergeQueueCheckAttestations;
-exports.normalizeMergeQueueCheckAttestations = normalizeMergeQueueCheckAttestations;
-exports.evaluateMergeQueueReadiness = evaluateMergeQueueReadiness;
-exports.MERGE_QUEUE_TARGET_ROLES = ["production", "development", "active-release"];
-exports.MAX_MERGE_QUEUE_ATTESTATIONS = 50;
-exports.MAX_MERGE_QUEUE_ATTESTATIONS_BYTES = 16384;
-function parseMergeQueueCheckAttestations(value) {
-    if (value === undefined || value === null || String(value).trim() === "")
-        return { value: [], errors: [] };
-    const serialized = String(value);
-    if (new TextEncoder().encode(serialized).byteLength > exports.MAX_MERGE_QUEUE_ATTESTATIONS_BYTES) {
-        return { value: [], errors: [`merge-queue-check-attestations must be at most ${exports.MAX_MERGE_QUEUE_ATTESTATIONS_BYTES} bytes.`] };
-    }
-    let parsed;
-    try {
-        parsed = JSON.parse(serialized);
-    }
-    catch {
-        return { value: [], errors: ["merge-queue-check-attestations must be a valid JSON array."] };
-    }
-    return normalizeMergeQueueCheckAttestations(parsed);
-}
-function normalizeMergeQueueCheckAttestations(value) {
-    if (!Array.isArray(value))
-        return { value: [], errors: ["Merge queue check attestations must be an array."] };
-    let serialized;
-    try {
-        serialized = JSON.stringify(value);
-    }
-    catch {
-        return { value: [], errors: ["Merge queue check attestations must be serializable JSON data."] };
-    }
-    if (new TextEncoder().encode(serialized).byteLength > exports.MAX_MERGE_QUEUE_ATTESTATIONS_BYTES) {
-        return { value: [], errors: [`Merge queue check attestations must be at most ${exports.MAX_MERGE_QUEUE_ATTESTATIONS_BYTES} bytes.`] };
-    }
-    if (value.length > exports.MAX_MERGE_QUEUE_ATTESTATIONS) {
-        return { value: [], errors: [`Merge queue check attestations must contain at most ${exports.MAX_MERGE_QUEUE_ATTESTATIONS} entries.`] };
-    }
-    const attestations = [];
-    const errors = [];
-    const identities = new Set();
-    value.forEach((candidate, index) => {
-        const prefix = `Merge queue check attestation ${index + 1}`;
-        if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
-            errors.push(`${prefix} must be an object.`);
-            return;
-        }
-        const item = candidate;
-        const unexpected = Object.keys(item).filter((key) => !["context", "integrationId", "targets"].includes(key));
-        if (unexpected.length > 0)
-            errors.push(`${prefix} has unknown field(s): ${unexpected.join(", ")}.`);
-        const context = typeof item.context === "string" ? item.context.trim() : "";
-        if (!context || context.length > 255 || hasUnsafeControlCharacter(context)) {
-            errors.push(`${prefix} context must be a non-empty check name of at most 255 characters without control characters.`);
-        }
-        const integrationId = item.integrationId;
-        if (integrationId !== "any" && !(typeof integrationId === "number" && Number.isSafeInteger(integrationId) && integrationId > 0)) {
-            errors.push(`${prefix} integrationId must be a positive integer or "any".`);
-        }
-        const targets = Array.isArray(item.targets) ? item.targets : [];
-        const normalizedTargets = targets.filter((target) => typeof target === "string" && exports.MERGE_QUEUE_TARGET_ROLES.includes(target));
-        const targetsValid = targets.length >= 1
-            && targets.length <= exports.MERGE_QUEUE_TARGET_ROLES.length
-            && normalizedTargets.length === targets.length
-            && new Set(normalizedTargets).size === normalizedTargets.length;
-        if (!targetsValid) {
-            errors.push(`${prefix} targets must contain 1-${exports.MERGE_QUEUE_TARGET_ROLES.length} unique values from: ${exports.MERGE_QUEUE_TARGET_ROLES.join(", ")}.`);
-        }
-        const identityValid = context.length > 0
-            && context.length <= 255
-            && !hasUnsafeControlCharacter(context)
-            && (integrationId === "any"
-                || (typeof integrationId === "number" && Number.isSafeInteger(integrationId) && integrationId > 0));
-        if (identityValid) {
-            const identity = `${context}\0${integrationId}`;
-            if (identities.has(identity))
-                errors.push(`${prefix} duplicates check identity ${context}.`);
-            identities.add(identity);
-        }
-        if (unexpected.length === 0 && identityValid && targetsValid) {
-            attestations.push({ context, integrationId, targets: normalizedTargets });
-        }
-    });
-    return errors.length > 0 ? { value: [], errors } : { value: attestations, errors: [] };
-}
-function evaluateMergeQueueReadiness(input) {
-    if (!input.queueRequired) {
-        return {
-            verdict: "not_required",
-            targetRole: input.targetRole,
-            targetBranch: input.targetBranch,
-            producers: [],
-            problems: input.problems,
-        };
-    }
-    const producers = input.producers.map((producer) => {
-        if (producer.support === "supported")
-            return { ...producer, verdict: "verified" };
-        if (producer.support === "unsupported")
-            return { ...producer, verdict: "unsupported" };
-        const attested = producer.kind === "check"
-            && producer.integrationId !== undefined
-            && input.attestations.some((attestation) => attestation.context === producer.name
-                && attestation.integrationId === producer.integrationId
-                && attestation.targets.includes(input.targetRole));
-        return { ...producer, verdict: attested ? "attested" : "unknown" };
-    });
-    const verdict = producers.some((producer) => producer.verdict === "unsupported")
-        ? "unsupported"
-        : input.problems.length > 0 || producers.some((producer) => producer.verdict === "unknown")
-            ? "unknown"
-            : "ready";
-    return {
-        verdict,
-        targetRole: input.targetRole,
-        targetBranch: input.targetBranch,
-        producers,
-        problems: input.problems,
-    };
-}
-function hasUnsafeControlCharacter(value) {
-    return [...value].some((character) => {
-        const codePoint = character.codePointAt(0) ?? 0;
-        return codePoint <= 31 || codePoint === 127;
-    });
 }
 
 
@@ -6108,6 +5537,20 @@ function getTaskEmoji(taskId) {
 
 /***/ }),
 
+/***/ 2761:
+/***/ ((module) => {
+
+module.exports = require("node:async_hooks");
+
+/***/ }),
+
+/***/ 6005:
+/***/ ((module) => {
+
+module.exports = require("node:crypto");
+
+/***/ }),
+
 /***/ 3977:
 /***/ ((module) => {
 
@@ -6137,7 +5580,7 @@ module.exports = require("node:fs/promises");
 /******/ 		// Execute the module function
 /******/ 		var threw = true;
 /******/ 		try {
-/******/ 			__webpack_modules__[moduleId](module, module.exports, __nccwpck_require__);
+/******/ 			__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nccwpck_require__);
 /******/ 			threw = false;
 /******/ 		} finally {
 /******/ 			if(threw) delete __webpack_module_cache__[moduleId];
@@ -6159,18 +5602,209 @@ var __webpack_exports__ = {};
 var exports = __webpack_exports__;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Ai = exports.Execution = exports.buildBugbotReviewProjection = exports.isBugbotCleanState = exports.isBugbotActionableState = exports.countBugbotFindingStates = exports.countActionableBugbotFindings = exports.classifyBugbotFindingState = exports.BUGBOT_FINDING_STATES = exports.resolveBugbotReviewEffort = exports.normalizeBugbotReviewConfiguration = exports.buildFindingFingerprint = exports.buildSemanticFindingFingerprint = exports.parseBugbotTelemetry = exports.buildBugbotAnalytics = exports.loadBugbotPredictions = exports.loadBugbotBenchmark = exports.evaluateBugbotBenchmark = exports.evaluateBugbotQualityGate = exports.evaluateBugbotFindings = exports.BugbotReviewService = void 0;
+exports.ApplicationError = exports.buildBugbotReviewProjection = exports.isBugbotCleanState = exports.isBugbotActionableState = exports.countBugbotFindingStates = exports.countActionableBugbotFindings = exports.classifyBugbotFindingState = exports.BUGBOT_FINDING_STATES = exports.resolveBugbotReviewEffort = exports.normalizeBugbotReviewConfiguration = exports.buildFindingFingerprint = exports.buildSemanticFindingFingerprint = exports.parseBugbotTelemetry = exports.buildBugbotAnalytics = exports.loadBugbotPredictions = exports.loadBugbotBenchmark = exports.evaluateBugbotBenchmark = exports.evaluateBugbotQualityGate = exports.evaluateBugbotFindings = exports.BugbotReviewService = void 0;
+const ai_1 = __nccwpck_require__(7478);
 const detect_potential_problems_use_case_1 = __nccwpck_require__(6287);
+const application_error_1 = __nccwpck_require__(5999);
+const application_error_context_1 = __nccwpck_require__(4034);
 /** Provider-neutral programmatic entry point. Consumers supply agent and SCM adapters. */
 class BugbotReviewService {
     constructor(agent, scm) {
         this.useCase = new detect_potential_problems_use_case_1.DetectPotentialProblemsUseCase(agent, scm.context, scm.publication, scm.resolution, scm.telemetry);
     }
-    async review(execution, options = {}) {
-        return execution.ai.withBugbotReviewConfiguration(options, () => this.useCase.invoke(execution));
+    async review(request) {
+        return (0, application_error_context_1.runAtApplicationErrorBoundary)(async () => {
+            try {
+                return await this.useCase.invoke(buildReviewExecution(request));
+            }
+            catch (cause) {
+                throw (0, application_error_1.toApplicationError)(cause, 'unexpected', 'Bugbot review failed.');
+            }
+        });
     }
 }
 exports.BugbotReviewService = BugbotReviewService;
+function buildReviewExecution(request) {
+    if (!request || typeof request !== 'object') {
+        throw new application_error_1.ApplicationError('validation.invalid-input', 'Bugbot review request is missing or invalid.');
+    }
+    const owner = requireText(request.repository?.owner, 'Repository owner', 100);
+    const repository = requireText(request.repository?.name, 'Repository name', 100);
+    const token = requireText(request.credential?.token, 'SCM credential', 10000, 'authorization.credential-invalid');
+    const commentLimit = request.commentLimit ?? 20;
+    if (!Number.isSafeInteger(commentLimit) || commentLimit < 1 || commentLimit > 100) {
+        throw new application_error_1.ApplicationError('configuration.invalid', 'Bugbot comment limit must be an integer between 1 and 100.');
+    }
+    if (!['opencode', 'codex', 'cursor'].includes(request.agent?.provider)) {
+        throw new application_error_1.ApplicationError('configuration.unsupported', 'The requested agent provider is not supported.');
+    }
+    validateAgentConfiguration(request.agent);
+    const target = normalizeTarget(request.target);
+    const agent = { ...request.agent };
+    const ignoreFiles = normalizeIgnoreFiles(request.ignoreFiles);
+    const configuration = validateReviewConfiguration(request.configuration);
+    const minimumSeverity = request.minimumSeverity ?? 'low';
+    if (!['info', 'low', 'medium', 'high'].includes(minimumSeverity)) {
+        throw new application_error_1.ApplicationError('configuration.invalid', 'Bugbot minimum severity is invalid.');
+    }
+    const ai = new ai_1.Ai('', agent.model, false, ignoreFiles, false, minimumSeverity, commentLimit, [], { findings: agent, fixer: agent, reviewer: agent }, 'replace', configuration);
+    const isPullRequest = target.kind === 'pull-request';
+    const issueNumber = isPullRequest ? target.linkedIssueNumber ?? -1 : target.issueNumber ?? -1;
+    const branch = isPullRequest ? target.head : target.branch;
+    const eventName = isPullRequest ? 'pull_request' : 'push';
+    const action = isPullRequest ? target.action ?? 'synchronize' : '';
+    const inputs = {
+        eventName,
+        action,
+        repo: { owner, repo: repository },
+        ref: `refs/heads/${branch}`,
+        ...(target.before ? { before: target.before } : {}),
+        ...(!isPullRequest && target.after ? { after: target.after } : {}),
+        ...(isPullRequest ? {
+            pull_request: {
+                number: target.number,
+                draft: target.draft ?? false,
+                head: { ref: target.head, ...(target.expectedHeadSha ? { sha: target.expectedHeadSha } : {}) },
+                base: { ref: target.base ?? 'develop' },
+            },
+        } : {}),
+    };
+    // This is the only public-to-internal aggregate boundary. Every mutable
+    // input is copied, and the aggregate itself remains absent from the API.
+    return {
+        ai,
+        owner,
+        repo: repository,
+        issueNumber,
+        isPullRequest,
+        eventName,
+        inputs,
+        tokenUser: optionalText(request.authenticatedUser, 'Authenticated user', 255),
+        tokens: { token },
+        commit: { branch },
+        branches: { development: target.base ?? 'develop' },
+        currentConfiguration: { parentBranch: target.base },
+        pullRequest: isPullRequest
+            ? { number: target.number, head: target.head, action }
+            : { number: -1, head: '', action: '' },
+        locale: {
+            issue: optionalText(request.locale?.issue, 'Issue locale', 64) ?? 'en-US',
+            pullRequest: optionalText(request.locale?.pullRequest, 'Pull request locale', 64) ?? 'en-US',
+        },
+    };
+}
+function normalizeTarget(target) {
+    if (!target || !['pull-request', 'branch'].includes(target.kind)) {
+        throw new application_error_1.ApplicationError('validation.invalid-input', 'Bugbot review target must be a branch or pull request.');
+    }
+    if (target.kind === 'pull-request') {
+        if (!Number.isSafeInteger(target.number) || target.number < 1) {
+            throw new application_error_1.ApplicationError('validation.invalid-input', 'Pull request number must be a positive integer.');
+        }
+        validateOptionalPositiveInteger(target.linkedIssueNumber, 'Linked issue number');
+        if (target.action !== undefined && !['opened', 'reopened', 'synchronize'].includes(target.action)) {
+            throw new application_error_1.ApplicationError('validation.invalid-input', 'Pull request action is invalid.');
+        }
+        if (target.draft !== undefined && typeof target.draft !== 'boolean') {
+            throw new application_error_1.ApplicationError('validation.invalid-input', 'Pull request draft state is invalid.');
+        }
+        return {
+            ...target,
+            head: requireText(target.head, 'Pull request head branch', 255),
+            base: optionalText(target.base, 'Pull request base branch', 255),
+            expectedHeadSha: optionalObjectId(target.expectedHeadSha, 'Expected pull request head SHA'),
+            before: optionalObjectId(target.before, 'Pull request before SHA'),
+        };
+    }
+    validateOptionalPositiveInteger(target.issueNumber, 'Issue number');
+    return {
+        ...target,
+        branch: requireText(target.branch, 'Review branch', 255),
+        base: optionalText(target.base, 'Review base branch', 255),
+        before: optionalObjectId(target.before, 'Branch before SHA'),
+        after: optionalObjectId(target.after, 'Branch after SHA'),
+    };
+}
+function validateAgentConfiguration(agent) {
+    if (!agent || typeof agent !== 'object'
+        || typeof agent.model !== 'string'
+        || (agent.command !== undefined && typeof agent.command !== 'string')
+        || (agent.modelProvider !== undefined && typeof agent.modelProvider !== 'string')
+        || (agent.effort !== undefined && typeof agent.effort !== 'string')) {
+        throw new application_error_1.ApplicationError('configuration.invalid', 'Agent configuration is invalid.');
+    }
+    if (agent.model.length > 500 || (agent.command?.length ?? 0) > 20000
+        || (agent.modelProvider?.length ?? 0) > 100 || (agent.effort?.length ?? 0) > 100) {
+        throw new application_error_1.ApplicationError('configuration.invalid', 'Agent configuration exceeds the supported limits.');
+    }
+}
+function normalizeIgnoreFiles(value) {
+    if (value === undefined)
+        return [];
+    if (!Array.isArray(value) || value.length > 1000
+        || value.some(item => typeof item !== 'string' || item.length > 1024 || /[\r\n\0]/u.test(item))) {
+        throw new application_error_1.ApplicationError('configuration.invalid', 'Bugbot ignored file patterns are invalid.');
+    }
+    return [...value];
+}
+function validateReviewConfiguration(value) {
+    if (value === undefined)
+        return undefined;
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        throw new application_error_1.ApplicationError('configuration.invalid', 'Bugbot review configuration is invalid.');
+    }
+    const allowedKeys = new Set([
+        'publicationMode', 'effort', 'reviewDrafts', 'traceRules', 'suggestedChanges',
+        'telemetry', 'failOnUnresolved', 'organizationRules',
+    ]);
+    if (Object.keys(value).some(key => !allowedKeys.has(key))) {
+        throw new application_error_1.ApplicationError('configuration.invalid', 'Bugbot review configuration contains an unsupported field.');
+    }
+    if (value.publicationMode !== undefined && !['publish', 'dry-run'].includes(value.publicationMode)) {
+        throw new application_error_1.ApplicationError('configuration.invalid', 'Bugbot publication mode is invalid.');
+    }
+    if (value.effort !== undefined && !['low', 'default', 'high', 'smart'].includes(value.effort)) {
+        throw new application_error_1.ApplicationError('configuration.invalid', 'Bugbot review effort is invalid.');
+    }
+    const booleanKeys = [
+        'reviewDrafts', 'traceRules', 'suggestedChanges', 'telemetry', 'failOnUnresolved',
+    ];
+    if (booleanKeys.some(key => value[key] !== undefined && typeof value[key] !== 'boolean')) {
+        throw new application_error_1.ApplicationError('configuration.invalid', 'Bugbot review flags must be boolean values.');
+    }
+    if (value.organizationRules !== undefined
+        && (!Array.isArray(value.organizationRules)
+            || value.organizationRules.length > 100
+            || value.organizationRules.some(rule => typeof rule !== 'string' || rule.length > 2000))) {
+        throw new application_error_1.ApplicationError('configuration.invalid', 'Bugbot organization rules are invalid.');
+    }
+    return {
+        ...value,
+        organizationRules: value.organizationRules ? [...value.organizationRules] : undefined,
+    };
+}
+function validateOptionalPositiveInteger(value, field) {
+    if (value !== undefined && (!Number.isSafeInteger(value) || value < 1)) {
+        throw new application_error_1.ApplicationError('validation.invalid-input', `${field} must be a positive integer.`);
+    }
+}
+function optionalObjectId(value, field) {
+    const normalized = optionalText(value, field, 64);
+    if (normalized !== undefined && !/^[0-9a-f]{40}(?:[0-9a-f]{24})?$/u.test(normalized)) {
+        throw new application_error_1.ApplicationError('validation.invalid-input', `${field} is invalid.`);
+    }
+    return normalized;
+}
+function optionalText(value, field, maximum) {
+    return value === undefined ? undefined : requireText(value, field, maximum);
+}
+function requireText(value, field, maximum, code = 'validation.invalid-input') {
+    const normalized = typeof value === 'string' ? value.trim() : '';
+    if (!normalized || normalized.length > maximum || /[\r\n\0]/u.test(normalized)) {
+        throw new application_error_1.ApplicationError(code, `${field} is missing or invalid.`);
+    }
+    return normalized;
+}
 var bugbot_quality_eval_1 = __nccwpck_require__(5467);
 Object.defineProperty(exports, "evaluateBugbotFindings", ({ enumerable: true, get: function () { return bugbot_quality_eval_1.evaluateBugbotFindings; } }));
 Object.defineProperty(exports, "evaluateBugbotQualityGate", ({ enumerable: true, get: function () { return bugbot_quality_eval_1.evaluateBugbotQualityGate; } }));
@@ -6196,10 +5830,8 @@ Object.defineProperty(exports, "isBugbotActionableState", ({ enumerable: true, g
 Object.defineProperty(exports, "isBugbotCleanState", ({ enumerable: true, get: function () { return review_state_1.isBugbotCleanState; } }));
 var review_projection_1 = __nccwpck_require__(859);
 Object.defineProperty(exports, "buildBugbotReviewProjection", ({ enumerable: true, get: function () { return review_projection_1.buildBugbotReviewProjection; } }));
-var execution_1 = __nccwpck_require__(1546);
-Object.defineProperty(exports, "Execution", ({ enumerable: true, get: function () { return execution_1.Execution; } }));
-var ai_1 = __nccwpck_require__(7478);
-Object.defineProperty(exports, "Ai", ({ enumerable: true, get: function () { return ai_1.Ai; } }));
+var application_error_2 = __nccwpck_require__(5999);
+Object.defineProperty(exports, "ApplicationError", ({ enumerable: true, get: function () { return application_error_2.ApplicationError; } }));
 
 })();
 

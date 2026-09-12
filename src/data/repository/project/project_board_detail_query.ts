@@ -3,6 +3,7 @@ import type { GithubGraphqlTransportClient } from "../../../infrastructure/githu
 import type { GithubOwnerTypeClient } from "../../../infrastructure/github/ports/github_identity_provider_ports";
 import { logDebugInfo, logError } from "../../../utils/logger";
 import { ProjectDetail } from "../../model/project_detail";
+import { toApplicationError } from '../../../application/errors/application_error';
 
 interface ProjectNode {
   id: string;
@@ -73,7 +74,7 @@ export async function getProjectBoardDetail(
       number: projectNumber,
     });
   } catch (error: unknown) {
-    logError(`Error in getProjectDetail: ${errorMessage(error)}`);
+    logError(toApplicationError(error, 'provider.unavailable', 'Unable to load the project details.'));
     throw error;
   }
 }

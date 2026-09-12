@@ -15,6 +15,7 @@ import type {
 } from "../../ports/branch_sync_ports";
 import { logError, logInfo } from "../../ports/logging_ports";
 import type { ParamUseCase } from "../base/param_usecase";
+import { toApplicationError } from "../../errors/application_error";
 
 const TASK_ID = "ObserveBranchSyncUseCase";
 
@@ -160,12 +161,6 @@ function failure(message: string, cause: unknown): Result {
     success: false,
     executed: true,
     steps: [message],
-    errors: [withCause(message, cause)],
+    errors: [toApplicationError(cause, 'provider.unavailable', message)],
   });
-}
-
-function withCause(message: string, cause: unknown): Error {
-  const error = new Error(message);
-  (error as Error & { cause?: unknown }).cause = cause;
-  return error;
 }

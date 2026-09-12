@@ -1,12 +1,14 @@
 import chalk from 'chalk';
 import boxen from 'boxen';
 import { TITLE } from '../application/contracts/product_identity';
+import { renderApplicationErrorText } from '../application/policies/application_error_presentation_policy';
+import type { ApplicationError } from '../data/model/application_error';
 import { logInfo } from '../utils/logger';
 
 type LocalActionResult = {
     executed: boolean;
     steps: string[];
-    errors: Error[];
+    errors: readonly ApplicationError[];
     reminders: string[];
 };
 
@@ -22,7 +24,7 @@ export function renderLocalActionResults(results: LocalActionResult[]): void {
 
         const errorsContent = results
             .filter(result => result.errors.length > 0)
-            .map(result => chalk.gray(result.errors.map(error => error.message).join('\n'))).join('\n')
+            .map(result => chalk.gray(result.errors.map(renderApplicationErrorText).join('\n\n'))).join('\n')
 
         if (errorsContent.length > 0) {
             content +=  '\n' + chalk.red('Errors:') + '\n' + errorsContent

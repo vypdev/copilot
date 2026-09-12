@@ -54,8 +54,18 @@ reconciliation use cases receive narrow context contracts containing only the
 facts they need; they do not depend on the complete `Execution` aggregate.
 This keeps pure decisions independently testable and makes new event sources
 less likely to couple unrelated capabilities. Application failures use the
-typed `ApplicationError` contract with a category, retry hint, and diagnostic
-cause; the cause is never published as user-facing workflow output.
+closed `ApplicationError` contract: one of 18 semantic codes, a derived
+category and retry decision, impact, recommended action, retained-state
+summary, and request correlation UUID. A raw cause is ECMAScript-private,
+never serialized or logged, and cannot enter `Result.errors`. CLI output,
+GitHub comments, Job Summaries, and Check failures project the same semantic
+view.
+
+An AST architecture ratchet resolves the real `Execution` class symbol through
+renamed imports and type aliases. Its checked-in baseline may shrink but cannot
+grow or move to new files. The final target keeps the aggregate only at route
+and entrypoint boundaries; leaf use cases receive freshly copied, readonly
+capability contexts.
 
 Configuration embedded in issue or pull-request content is versioned. Readers
 accept only the current schema and fail closed on missing, malformed, or

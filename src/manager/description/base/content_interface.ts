@@ -1,4 +1,5 @@
 import { logError } from "../../../utils/logger";
+import { toApplicationError } from '../../../application/errors/application_error';
 
 export abstract class ContentInterface {
     abstract get id(): string
@@ -51,7 +52,7 @@ export abstract class ContentInterface {
 
             return description.substring(indices.contentStart, indices.endIndex);
         } catch (error) {
-            logError(`Error reading issue configuration: ${error}`);
+            logError(toApplicationError(error, 'configuration.invalid', 'Unable to read issue configuration.'));
             throw error;
         }
     }
@@ -93,7 +94,7 @@ export abstract class ContentInterface {
 
             return this._updateContent(description, content);
         } catch (error) {
-            logError(`Error updating issue description: ${error}`);
+            logError(toApplicationError(error, 'provider.unavailable', 'Unable to update the issue description.'));
             return undefined;
         }
     }

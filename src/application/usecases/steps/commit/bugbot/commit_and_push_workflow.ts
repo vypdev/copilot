@@ -3,6 +3,7 @@ import type { AuthenticatedUserPort } from '../../../../../application/ports/aut
 import type { Execution } from '../../../../../data/model/execution';
 import { logDebugInfo, logError, logInfo } from '../../../../ports/logging_ports';
 import { runCommitAndPushPreflight } from './commit_and_push_preflight';
+import { toApplicationError } from '../../../../errors/application_error';
 export interface CommitAndPushWorkflowResult {
     success: boolean;
     committed: boolean;
@@ -46,8 +47,8 @@ export async function runCommitAndPushWorkflow(
         logInfo(`Pushed commit to origin/${options.branch}.`);
         return { success: true, committed: true };
     } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        logError(`Commit or push failed: ${message}`);
-        return { success: false, committed: false, error: message };
+        const semanticError = toApplicationError(error, 'workflow.failed', 'Commit or push failed.');
+        logError(semanticError);
+        return { success: false, committed: false, error: semanticError.message };
     }
 }

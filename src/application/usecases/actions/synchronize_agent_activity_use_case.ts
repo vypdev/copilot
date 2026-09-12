@@ -3,6 +3,7 @@ import { activityLabel } from '../../../domain/copilot_lifecycle';
 import { replaceAgentActivityLabel } from '../../policies/agent_activity_label_policy';
 import type { IssueLabelsPort } from '../../ports/issue_management_ports';
 import { logDebugInfo, logError, logInfo } from '../../ports/logging_ports';
+import { toApplicationError } from '../../errors/application_error';
 
 /**
  * Maintains the temporary agent-activity label around a complete route.
@@ -57,7 +58,8 @@ export class SynchronizeAgentActivityUseCase {
             logInfo(`${active ? 'Added' : 'Removed'} Copilot agent activity label on target #${target.number}.`);
         } catch (error) {
             const message = `${this.taskId}: unable to ${active ? 'add' : 'remove'} agent activity label.`;
-            logError(message, error instanceof Error ? { stack: error.stack } : undefined);
+            const semanticError = toApplicationError(error, 'provider.unavailable', message);
+            logError(semanticError);
         }
     }
 }
