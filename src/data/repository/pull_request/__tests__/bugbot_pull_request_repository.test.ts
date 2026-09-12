@@ -11,10 +11,6 @@ import type {
 
 describe("BugbotPullRequestRepository capabilities", () => {
   it("delegates every operation to its independently injected capability", async () => {
-    const lifecycle: Pick<BugbotPullRequestReadPort, "getHeadBranchForIssue" | "getOpenPullRequestNumbersByHeadBranch"> = {
-      getHeadBranchForIssue: jest.fn().mockResolvedValue("feature/9"),
-      getOpenPullRequestNumbersByHeadBranch: jest.fn().mockResolvedValue([9]),
-    };
     const snapshot = {
       changes: [{ filename: "src/file.ts", status: "modified", additions: 1, deletions: 0, patch: "@@ -1 +1 @@" }],
       filesWithFirstDiffLine: [{ path: "src/file.ts", firstLine: 1 }],
@@ -44,24 +40,12 @@ describe("BugbotPullRequestRepository capabilities", () => {
       listPullRequestReviewThreadStates: jest.fn().mockResolvedValue({ PRRC_7: { resolved: false } }),
     };
     const repository = new BugbotPullRequestRepository(
-      lifecycle,
       changes,
       reviewQuery,
       reviewCommand,
       threadCommand,
     );
 
-    await expect(
-      repository.getHeadBranchForIssue("owner", "repo", 9, "token"),
-    ).resolves.toBe("feature/9");
-    await expect(
-      repository.getOpenPullRequestNumbersByHeadBranch(
-        "owner",
-        "repo",
-        "feature/9",
-        "token",
-      ),
-    ).resolves.toEqual([9]);
     await expect(
       repository.getPullRequestHeadSha("owner", "repo", 9, "token"),
     ).resolves.toBe("sha");
@@ -110,15 +94,6 @@ describe("BugbotPullRequestRepository capabilities", () => {
       "token",
     );
 
-    expect(lifecycle.getHeadBranchForIssue).toHaveBeenCalledWith(
-      "owner",
-      "repo",
-      9,
-      "token",
-    );
-    expect(
-      lifecycle.getOpenPullRequestNumbersByHeadBranch,
-    ).toHaveBeenCalledWith("owner", "repo", "feature/9", "token");
     expect(changes.getPullRequestHeadSha).toHaveBeenCalledWith(
       "owner",
       "repo",

@@ -24,9 +24,7 @@ class InMemoryReviewProvider {
     const comment = this.statusComments.find((item) => item.id === id);
     if (comment) comment.body = body;
   }
-  async getHeadBranchForIssue() { return 'feature/review'; }
   async getPullRequestReviewCommentBody() { return null; }
-  async getOpenPullRequestNumbersByHeadBranch() { return [7]; }
   async listPullRequestReviewComments() { return [...this.comments]; }
   async listPullRequestReviews() { return this.reviews.map((review) => ({ ...review })); }
   async getPullRequestHeadSha() { return this.headSha; }
@@ -92,6 +90,61 @@ class InMemoryReviewProvider {
   }
 }
 
+function contextPorts(provider: InMemoryReviewProvider) {
+  const bounded = <T>(source: import('../../../../../domain/bugbot/context').BugbotContextSource, value: T, items: number) => ({
+    value,
+    coverage: {
+      source,
+      status: 'complete' as const,
+      pagesFetched: items > 0 ? 1 : 0,
+      itemsFetched: items,
+      itemsRetained: items,
+      omittedItems: 0,
+      truncatedItems: 0,
+      limitReached: false,
+    },
+  });
+  const rules = { loadRules: async () => [] };
+  return {
+    loader: {
+      bind: () => ({
+        getPullRequest: async (number: number) => ({
+          number,
+          state: 'open' as const,
+          baseRepository: { owner: 'org', name: 'repo' },
+          headRepositoryOwner: 'org',
+          headRef: 'feature/review',
+          headSha: provider.headSha,
+        }),
+        findOpenPullRequestsByExactHead: async () => [],
+        listIssueComments: async (number: number) => {
+          const value = await provider.listIssueComments();
+          return bounded('issue-comments', value, value.length);
+        },
+        listPullRequestReviewComments: async (number: number) => {
+          const value = await provider.listPullRequestReviewComments();
+          return bounded('pull-request-comments', value, value.length);
+        },
+        listPullRequestReviewThreadStates: async (number: number) => {
+          const value = await provider.listPullRequestReviewThreadStates();
+          return bounded('review-threads', value, Object.keys(value).length);
+        },
+        getReviewDiffSnapshot: async (number: number) => {
+          const value = await provider.getReviewDiffSnapshot();
+          return bounded('diff', value, value.changes.length);
+        },
+        getPullRequestHeadSha: async () => provider.headSha,
+        loadRules: rules.loadRules,
+      }),
+    },
+    issue: provider,
+    pullRequest: provider,
+    reviewState: provider,
+    navigation: provider,
+    rules,
+  };
+}
+
 function execution(mode: 'publish' | 'dry-run' = 'publish'): Execution {
   return {
     owner: 'org', repo: 'repo', issueNumber: -1, tokenUser: 'bot', tokens: { token: 'token' },
@@ -118,7 +171,7 @@ describe('Bugbot review lifecycle E2E contract', () => {
     const telemetry: unknown[] = [];
     const useCase = new DetectPotentialProblemsUseCase(
       { query: jest.fn(async () => responses.shift()) },
-      { issue: provider, pullRequest: provider, reviewState: provider, navigation: provider, rules: { loadRules: async () => [] } },
+      contextPorts(provider),
       { issueComments: provider, pullRequestComments: provider, reviewState: provider },
       { issueComments: provider, pullRequestComments: provider },
       { publish: (snapshot) => { telemetry.push(snapshot); } },
@@ -143,7 +196,7 @@ describe('Bugbot review lifecycle E2E contract', () => {
     const provider = new InMemoryReviewProvider();
     const useCase = new DetectPotentialProblemsUseCase(
       { query: jest.fn(async () => ({ findings: [finding()] })) },
-      { issue: provider, pullRequest: provider, reviewState: provider, navigation: provider, rules: { loadRules: async () => [] } },
+      contextPorts(provider),
       { issueComments: provider, pullRequestComments: provider, reviewState: provider },
       { issueComments: provider, pullRequestComments: provider },
     );

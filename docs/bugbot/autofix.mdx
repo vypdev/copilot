@@ -41,16 +41,18 @@ For a natural-language comment, mention the configured bot user (for example,
 `@vypbot fix the authentication finding`). Explicit `/copilot fix <finding-id>`
 and `/copilot fix all` commands do not require a mention.
 
-**Important:** On **issue comments**, the action needs an **open pull request** that references the issue so it can determine which **branch** to checkout and push to. If there is no such PR, autofix is skipped (the action cannot push without a branch). See [Troubleshooting](/security-operations/operations/troubleshooting).
+**Important:** An issue-only comment does not infer a branch by scanning open
+pull requests. Request autofix from the intended PR review thread, or use an
+explicit branch-scoped CLI/workflow run. Without an authoritative PR/branch
+target, autofix stops before workspace mutation. See [Troubleshooting](/security-operations/operations/troubleshooting).
 
-### From the pull request
+### From a pull request review thread
 
-You can trigger autofix from the PR in two ways:
+Reply to the **review comment** that contains the finding. The action sends your
+reply plus the **parent comment** (the finding text) to the configured agent so
+it can match the finding and run the fix.
 
-1. **Reply in a review thread** — Reply to the **review comment** that contains the finding. The action sends your reply plus the **parent comment** (the finding text) to the configured agent so it can match the finding and run the fix.
-2. **Comment on the PR** — Add a **general comment** on the PR (e.g. “fix all” or “fix the one about X”). Same as on the issue: the configured agent gets the list of unresolved findings and your comment and returns target finding ids.
-
-In both cases, the action runs on the PR’s **head branch** (it already has the branch from the event), so no extra “resolve branch from issue” step is needed.
+The action runs on the PR’s **head branch**, which is supplied by the review-comment event and revalidated before any workspace mutation. A general comment in the PR conversation is an `issue_comment`, so it can request a review or answer but is not a write target. No “resolve branch from issue” fallback exists.
 
 For a read-only fresh review, comment `/copilot review`, `/copilot findings`,
 or `/copilot recheck`. These commands invoke the reviewer/detection route and
@@ -72,7 +74,8 @@ This avoids random contributors or external users pushing commits via comments. 
 
 ## Workflow permissions
 
-The action must be able to **commit and push** to the branch. Your workflow that runs on **`issue_comment`** or **`pull_request_review_comment`** must grant:
+The action must be able to **commit and push** to the authoritative branch. A
+workflow that runs autofix from **`pull_request_review_comment`** must grant:
 
 ```yaml
 permissions:
@@ -81,7 +84,7 @@ permissions:
 
 Without `contents: write`, the action cannot push. Detection (and posting findings) does not require this; only **autofix** and **do-user-request** do.
 
-Example: see [Examples → Issue comment workflow](/bugbot/examples#issue-comment-workflow-for-autofix).
+Example: see [Examples → Pull request review-thread workflow](/bugbot/examples#pull-request-review-thread-workflow-for-autofix).
 
 ---
 
@@ -114,7 +117,7 @@ This prevents a successful edit or test command from being mistaken for proof th
 
 ## Troubleshooting
 
-- **Bot didn’t run autofix:** Check that the selected agent CLI is configured, the comment is interpreted as a fix request (e.g. “fix it”, “fix all”), and there is at least one **unresolved** finding. On **issue comments**, ensure there is an **open PR** that references the issue so the action can resolve the branch. See [Troubleshooting](/security-operations/operations/troubleshooting).
+- **Bot didn’t run autofix:** Check that the selected agent CLI is configured, the comment is interpreted as a fix request (e.g. “fix it”, “fix all”), and there is at least one **unresolved** finding. The request must come from the intended PR review thread or another execution with an explicit branch target; issue-only comments never guess a branch. See [Troubleshooting](/security-operations/operations/troubleshooting).
 - **Commit not made:** Verify commands run after the fix; if any fails, no commit is made. If the configured agent didn’t change any files, there’s nothing to commit. If push failed (e.g. conflict or missing `contents: write`), check workflow permissions and token scope.
 
 ---

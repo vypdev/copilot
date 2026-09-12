@@ -14,6 +14,7 @@ import {
 } from "../../../../../domain/bugbot/finding_identity";
 import { buildMarker } from '../../../../policies/bugbot_finding_marker_policy';
 import type { BugbotFinding } from '../../../../../domain/bugbot/finding';
+import type { BugbotContextSource, BugbotSourceCoverage } from '../../../../../domain/bugbot/context';
 
 jest.mock("@actions/github", () => {
   const actual =
@@ -34,8 +35,7 @@ const mockListIssueComments = jest.fn();
 const mockAddComment = jest.fn();
 const mockUpdateComment = jest.fn();
 
-const mockGetOpenPullRequestNumbersByHeadBranch = jest.fn();
-const mockGetHeadBranchForIssue = jest.fn();
+const mockFindExactHeadCandidateNumbers = jest.fn();
 const mockListPullRequestReviewComments = jest.fn();
 const mockGetPullRequestHeadSha = jest.fn();
 const mockGetChangedFiles = jest.fn();
@@ -50,6 +50,20 @@ const mockListPullRequestReviews = jest.fn();
 const mockUpdatePullRequestReview = jest.fn();
 
 const mockAskAgent = jest.fn();
+let issueCoverageOverride: BugbotSourceCoverage | undefined;
+
+function completeCoverage(source: BugbotContextSource, items: number) {
+  return {
+    source,
+    status: 'complete' as const,
+    pagesFetched: items > 0 ? 1 : 0,
+    itemsFetched: items,
+    itemsRetained: items,
+    omittedItems: 0,
+    truncatedItems: 0,
+    limitReached: false,
+  };
+}
 
 function markerFor(finding: BugbotFinding, resolved = false): string {
   return buildMarker(
@@ -94,10 +108,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     };
     const rulesPort = { loadRules: jest.fn().mockResolvedValue([]) };
     const pullRequestPort = {
-      getHeadBranchForIssue: mockGetHeadBranchForIssue,
       getPullRequestReviewCommentBody: jest.fn(),
-      getOpenPullRequestNumbersByHeadBranch:
-        mockGetOpenPullRequestNumbersByHeadBranch,
       listPullRequestReviewComments: mockListPullRequestReviewComments,
       getPullRequestHeadSha: mockGetPullRequestHeadSha,
       getReviewDiffSnapshot: mockGetReviewDiffSnapshot,
@@ -123,6 +134,47 @@ describe("DetectPotentialProblemsUseCase", () => {
           ),
       },
       {
+        loader: {
+          bind: () => ({
+            getPullRequest: async (pullRequestNumber: number) => ({
+              number: pullRequestNumber,
+              state: 'open' as const,
+              baseRepository: { owner: 'owner', name: 'repo' },
+              headRepositoryOwner: 'owner',
+              headRef: 'feature/head',
+              headSha: await mockGetPullRequestHeadSha(pullRequestNumber),
+            }),
+            findOpenPullRequestsByExactHead: async (headOwner: string, headRef: string) => {
+              const numbers = await mockFindExactHeadCandidateNumbers(headRef);
+              return Promise.all(numbers.map(async (number: number) => ({
+                number,
+                state: 'open' as const,
+                baseRepository: { owner: 'owner', name: 'repo' },
+                headRepositoryOwner: headOwner,
+                headRef,
+                headSha: await mockGetPullRequestHeadSha(number),
+              })));
+            },
+            listIssueComments: async (issueNumber: number) => {
+              const value = await mockListIssueComments('owner', 'repo', issueNumber, 'token');
+              return { value, coverage: issueCoverageOverride ?? completeCoverage('issue-comments', value.length) };
+            },
+            listPullRequestReviewComments: async (pullRequestNumber: number) => {
+              const value = await mockListPullRequestReviewComments('owner', 'repo', pullRequestNumber, 'token');
+              return { value, coverage: completeCoverage('pull-request-comments', value.length) };
+            },
+            listPullRequestReviewThreadStates: async (pullRequestNumber: number) => {
+              const value = await pullRequestPort.listPullRequestReviewThreadStates('owner', 'repo', pullRequestNumber, 'token');
+              return { value, coverage: completeCoverage('review-threads', Object.keys(value).length) };
+            },
+            getReviewDiffSnapshot: async (pullRequestNumber: number) => {
+              const value = await mockGetReviewDiffSnapshot('owner', 'repo', pullRequestNumber, 'token');
+              return { value, coverage: completeCoverage('diff', value.changes.length) };
+            },
+            getPullRequestHeadSha: (pullRequestNumber: number) => mockGetPullRequestHeadSha('owner', 'repo', pullRequestNumber, 'token'),
+            loadRules: rulesPort.loadRules,
+          }),
+        },
         issue: issuePort,
         pullRequest: pullRequestPort,
         reviewState: { listPullRequestReviews: mockListPullRequestReviews },
@@ -140,8 +192,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     mockListIssueComments.mockReset();
     mockAddComment.mockReset();
     mockUpdateComment.mockReset();
-    mockGetOpenPullRequestNumbersByHeadBranch.mockReset();
-    mockGetHeadBranchForIssue.mockReset();
+    mockFindExactHeadCandidateNumbers.mockReset();
     mockListPullRequestReviewComments.mockReset();
     mockGetPullRequestHeadSha.mockReset();
     mockGetChangedFiles.mockReset();
@@ -164,13 +215,15 @@ describe("DetectPotentialProblemsUseCase", () => {
     mockListPullRequestReviews.mockReset().mockResolvedValue([]);
     mockUpdatePullRequestReview.mockReset().mockResolvedValue(undefined);
     mockAskAgent.mockReset();
+    issueCoverageOverride = undefined;
 
     mockListIssueComments.mockResolvedValue([]);
     mockListPullRequestReviewComments.mockResolvedValue([]);
-    mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([]);
+    mockFindExactHeadCandidateNumbers.mockResolvedValue([]);
     mockGetChangedFiles.mockResolvedValue([]);
     mockGetFilesWithFirstDiffLine.mockResolvedValue([]);
     mockGetFilesWithDiffLocations.mockResolvedValue([]);
+    mockGetPullRequestHeadSha.mockResolvedValue('a'.repeat(40));
   });
 
   it("returns empty results when the findings CLI is not configured", async () => {
@@ -217,9 +270,8 @@ describe("DetectPotentialProblemsUseCase", () => {
     expect(mockAskAgent).not.toHaveBeenCalled();
   });
 
-  it('resolves the linked branch for an issue comment without a checkout ref', async () => {
-    mockGetHeadBranchForIssue.mockResolvedValue('feature/42-from-issue');
-    mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([]);
+  it('runs issue-only analysis without inferring a pull request branch', async () => {
+    mockFindExactHeadCandidateNumbers.mockResolvedValue([]);
     mockAskAgent.mockResolvedValue({ findings: [], resolved_finding_ids: [] });
     const param = baseParam({
       eventName: 'issue_comment',
@@ -230,7 +282,6 @@ describe("DetectPotentialProblemsUseCase", () => {
     const results = await useCase.invoke(param);
 
     expect(results[0].success).toBe(true);
-    expect(mockGetHeadBranchForIssue).toHaveBeenCalledWith('owner', 'repo', 42, 'token');
     expect(mockAskAgent).toHaveBeenCalledTimes(1);
   });
 
@@ -279,6 +330,26 @@ describe("DetectPotentialProblemsUseCase", () => {
     expect(results[0].steps?.[0]).toContain("no new findings, no resolved");
     expect(mockAddComment).not.toHaveBeenCalled();
     expect(mockUpdateComment).not.toHaveBeenCalled();
+  });
+
+  it('completes bounded partial analysis without claiming the target is clean', async () => {
+    issueCoverageOverride = {
+      ...completeCoverage('issue-comments', 200),
+      status: 'partial',
+      pagesFetched: 2,
+      omittedItems: 1,
+      limitReached: true,
+    };
+    mockAskAgent.mockResolvedValue({ findings: [], resolved_finding_ids: [] });
+
+    const [result] = await useCase.invoke(baseParam());
+
+    expect(result.success).toBe(true);
+    expect(result.steps?.[0]).toContain('partial context coverage');
+    expect(result.payload).toEqual(expect.objectContaining({
+      contextCoverage: expect.objectContaining({ status: 'partial' }),
+      bugbotTelemetry: expect.objectContaining({ outcome: 'partial', contextCoverageStatus: 'partial' }),
+    }));
   });
 
   it("calls listIssueComments and askAgent with repo context and no previous block when no comments", async () => {
@@ -342,7 +413,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       line: 5,
     };
     mockAskAgent.mockResolvedValue({ findings: [finding] });
-    mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([100]);
+    mockFindExactHeadCandidateNumbers.mockResolvedValue([100]);
     mockGetPullRequestHeadSha.mockResolvedValue("abc123");
     mockGetChangedFiles.mockResolvedValue([
       { filename: "src/bar.ts", status: "modified" },
@@ -375,7 +446,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     );
   });
 
-  it("skips agent execution when the event revision is already superseded", async () => {
+  it("rejects an event PR whose provider head is already stale", async () => {
     const eventSha = "a".repeat(40);
     const currentSha = "b".repeat(40);
     mockGetPullRequestHeadSha.mockResolvedValue(currentSha);
@@ -393,8 +464,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       pullRequest: { number: 100, head: "feature/head", action: "synchronize" },
     }));
 
-    expect(results[0].success).toBe(true);
-    expect(results[0].payload).toEqual(expect.objectContaining({ superseded: true }));
+    expect(results[0].success).toBe(false);
     expect(mockAskAgent).not.toHaveBeenCalled();
     expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
   });
@@ -507,7 +577,7 @@ describe("DetectPotentialProblemsUseCase", () => {
 
   it("when OpenCode returns resolved_finding_ids, updates PR review comment to resolved", async () => {
     mockListIssueComments.mockResolvedValue([]);
-    mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([50]);
+    mockFindExactHeadCandidateNumbers.mockResolvedValue([50]);
     mockListPullRequestReviewComments.mockResolvedValue([
       {
         id: 777,
@@ -549,7 +619,7 @@ describe("DetectPotentialProblemsUseCase", () => {
   it("retains a resolved marker for retry when review-thread resolution fails", async () => {
     const { logError } = require("../../../../../utils/logger");
     mockListIssueComments.mockResolvedValue([]);
-    mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([50]);
+    mockFindExactHeadCandidateNumbers.mockResolvedValue([50]);
     mockListPullRequestReviewComments.mockResolvedValue([
       {
         id: 777,
@@ -582,9 +652,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       .flatMap((result) => result.errors)
       .map((error) => error.message)
       .join("\n");
-    expect(visibleErrors).toContain(
-      "Unable to mark a pull request finding as resolved.",
-    );
+    expect(visibleErrors).toContain("Bugbot finding presentation failed.");
     expect(visibleErrors).not.toContain("secret-token");
     expect(JSON.stringify(logError.mock.calls)).not.toContain("secret-token");
   });
@@ -642,10 +710,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       { getClient: jest.fn() } as never,
     );
     const pullRequestPort = {
-      getHeadBranchForIssue: jest.fn(),
       getPullRequestReviewCommentBody: jest.fn(),
-      getOpenPullRequestNumbersByHeadBranch:
-        mockGetOpenPullRequestNumbersByHeadBranch,
       listPullRequestReviewComments: mockListPullRequestReviewComments,
       getPullRequestHeadSha: mockGetPullRequestHeadSha,
       getReviewDiffSnapshot: mockGetReviewDiffSnapshot,
@@ -678,6 +743,47 @@ describe("DetectPotentialProblemsUseCase", () => {
           ),
       },
       {
+        loader: {
+          bind: () => ({
+            getPullRequest: async (pullRequestNumber: number) => ({
+              number: pullRequestNumber,
+              state: 'open' as const,
+              baseRepository: { owner: 'owner', name: 'repo' },
+              headRepositoryOwner: 'owner',
+              headRef: 'feature/head',
+              headSha: await mockGetPullRequestHeadSha(pullRequestNumber),
+            }),
+            findOpenPullRequestsByExactHead: async (headOwner: string, headRef: string) => {
+              const numbers = await mockFindExactHeadCandidateNumbers(headRef);
+              return Promise.all(numbers.map(async (number: number) => ({
+                number,
+                state: 'open' as const,
+                baseRepository: { owner: 'owner', name: 'repo' },
+                headRepositoryOwner: headOwner,
+                headRef,
+                headSha: await mockGetPullRequestHeadSha(number),
+              })));
+            },
+            listIssueComments: async (issueNumber: number) => {
+              const value = await mockListIssueComments('owner', 'repo', issueNumber, 'token');
+              return { value, coverage: completeCoverage('issue-comments', value.length) };
+            },
+            listPullRequestReviewComments: async (pullRequestNumber: number) => {
+              const value = await mockListPullRequestReviewComments('owner', 'repo', pullRequestNumber, 'token');
+              return { value, coverage: completeCoverage('pull-request-comments', value.length) };
+            },
+            listPullRequestReviewThreadStates: async (pullRequestNumber: number) => {
+              const value = await pullRequestPort.listPullRequestReviewThreadStates('owner', 'repo', pullRequestNumber, 'token');
+              return { value, coverage: completeCoverage('review-threads', Object.keys(value).length) };
+            },
+            getReviewDiffSnapshot: async (pullRequestNumber: number) => {
+              const value = await mockGetReviewDiffSnapshot('owner', 'repo', pullRequestNumber, 'token');
+              return { value, coverage: completeCoverage('diff', value.changes.length) };
+            },
+            getPullRequestHeadSha: (pullRequestNumber: number) => mockGetPullRequestHeadSha('owner', 'repo', pullRequestNumber, 'token'),
+            loadRules: rulesPort.loadRules,
+          }),
+        },
         issue: issuePort,
         pullRequest: pullRequestPort,
         reviewState: { listPullRequestReviews: mockListPullRequestReviews },
@@ -703,7 +809,7 @@ describe("DetectPotentialProblemsUseCase", () => {
         },
       ],
     });
-    mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([50]);
+    mockFindExactHeadCandidateNumbers.mockResolvedValue([50]);
     mockGetPullRequestHeadSha.mockResolvedValue("sha");
     mockGetChangedFiles.mockResolvedValue([
       { filename: "src/a.ts", status: "modified" },
@@ -750,7 +856,7 @@ describe("DetectPotentialProblemsUseCase", () => {
   });
 
   it("when there are no open PRs, does not call createReviewWithComments or getPullRequestHeadSha", async () => {
-    mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([]);
+    mockFindExactHeadCandidateNumbers.mockResolvedValue([]);
     mockAskAgent.mockResolvedValue({
       findings: [{ id: "f1", title: "T", description: "D" }],
     });
@@ -768,7 +874,7 @@ describe("DetectPotentialProblemsUseCase", () => {
         { id: "no-loc", title: "General issue", description: "No location." },
       ],
     });
-    mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([200]);
+    mockFindExactHeadCandidateNumbers.mockResolvedValue([200]);
     mockGetPullRequestHeadSha.mockResolvedValue("sha1");
     mockGetChangedFiles.mockResolvedValue([
       { filename: "lib/helper.ts", status: "modified" },
@@ -815,7 +921,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       line: 1,
     };
     mockListIssueComments.mockResolvedValue([]);
-    mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([60]);
+    mockFindExactHeadCandidateNumbers.mockResolvedValue([60]);
     mockListPullRequestReviewComments.mockResolvedValue([
       {
         id: 555,
@@ -938,7 +1044,7 @@ describe("DetectPotentialProblemsUseCase", () => {
 
     it("replaces marker in PR review comment when marker has extra whitespace", async () => {
       mockListIssueComments.mockResolvedValue([]);
-      mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([80]);
+      mockFindExactHeadCandidateNumbers.mockResolvedValue([80]);
       mockListPullRequestReviewComments
         .mockResolvedValueOnce([
           {

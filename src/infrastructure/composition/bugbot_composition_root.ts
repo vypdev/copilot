@@ -11,6 +11,7 @@ import type { BugbotFindingPublicationPorts } from "../../application/ports/bugb
 
 import { BugbotIssueRepository } from "../../data/repository/issue/bugbot_issue_repository";
 import { IssueContentRepository } from "../../data/repository/issue/issue_content_repository";
+import { BugbotIssueCommentQueryRepository } from '../../data/repository/issue/bugbot_issue_comment_query_repository';
 import { BugbotPullRequestRepository } from "../../data/repository/pull_request/bugbot_pull_request_repository";
 import { PullRequestChangesRepository } from "../../data/repository/pull_request/pull_request_changes_repository";
 import { PullRequestLifecycleRepository } from "../../data/repository/pull_request/pull_request_lifecycle_repository";
@@ -22,6 +23,7 @@ import { LoggerBugbotTelemetryAdapter } from '../logging/logger_bugbot_telemetry
 import type { BugbotTelemetryPort } from '../../application/ports/bugbot_telemetry_ports';
 import type { BugbotLearnedRuleCommandPort, BugbotRuleFileQueryPort } from '../../application/ports/bugbot_rule_ports';
 import { GithubBugbotReviewNavigationAdapter } from '../github/github_bugbot_review_navigation_adapter';
+import { BugbotContextPortFactory } from './bugbot_context_port_factory';
 
 export type BugbotCompositionRoot = {
   issue: BugbotIssueRepository;
@@ -35,11 +37,11 @@ export type BugbotCompositionRoot = {
 };
 
 export function createBugbotCompositionRoot(): BugbotCompositionRoot {
-  const issue = new BugbotIssueRepository(
-    new IssueContentRepository(createIssueContentClient()),
-  );
+  const issueContent = new IssueContentRepository(createIssueContentClient());
+  const issue = new BugbotIssueRepository(issueContent);
   const reviewCommentClient = createPullRequestReviewCommentClient();
   const graphqlClient = createGraphqlTransportClient();
+  const bugbotIssueComments = new BugbotIssueCommentQueryRepository(graphqlClient);
   const reviewQuery = new PullRequestReviewCommentQueryRepository(
     reviewCommentClient,
   );
@@ -51,19 +53,28 @@ export function createBugbotCompositionRoot(): BugbotCompositionRoot {
   const threadCommand = new PullRequestReviewThreadRepository(
     graphqlClient,
   );
+  const lifecycle = new PullRequestLifecycleRepository(createPullRequestLifecycleClient());
+  const changes = new PullRequestChangesRepository(createPullRequestChangesClient());
   const pullRequest = new BugbotPullRequestRepository(
-    new PullRequestLifecycleRepository(createPullRequestLifecycleClient()),
-    new PullRequestChangesRepository(createPullRequestChangesClient()),
+    changes,
     reviewQuery,
     reviewCommand,
     threadCommand,
   );
   const rules = new WorkspaceBugbotRulesRepository();
   const navigation = new GithubBugbotReviewNavigationAdapter();
+  const loader = new BugbotContextPortFactory(
+    bugbotIssueComments,
+    lifecycle,
+    changes,
+    reviewQuery,
+    threadCommand,
+    rules,
+  );
   return {
     issue,
     pullRequest,
-    context: { issue, pullRequest, reviewState: pullRequest, navigation, rules },
+    context: { loader, issue, pullRequest, reviewState: pullRequest, navigation, rules },
     resolution: { issueComments: issue, pullRequestComments: pullRequest },
     publication: { issueComments: issue, pullRequestComments: pullRequest, reviewState: pullRequest },
     telemetry: new LoggerBugbotTelemetryAdapter(),

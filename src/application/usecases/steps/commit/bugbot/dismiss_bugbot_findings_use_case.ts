@@ -3,6 +3,7 @@ import { Result } from '../../../../../data/model/result';
 import type { BugbotContextPorts } from '../../../../../application/ports/bugbot_context_ports';
 import type { BugbotFindingResolutionPorts } from '../../../../../application/ports/bugbot_finding_resolution_ports';
 import { loadBugbotContext } from './load_bugbot_context_use_case';
+import { projectBugbotContextRequest } from './bugbot_context_request';
 import { markFindingsResolved } from './mark_findings_resolved_workflow';
 import { normalizeFindingIdForMarker } from '../../../../policies/bugbot_finding_marker_policy';
 import { logError } from '../../../../ports/logging_ports';
@@ -78,19 +79,17 @@ async function loadDismissContext(
     execution: Execution,
     ports: BugbotContextPorts,
 ) {
+    const reader = ports.loader.bind({
+        owner: execution.owner,
+        repository: execution.repo,
+        token: execution.tokens.token,
+    });
     const branch = execution.commit.branch?.trim() || execution.pullRequest?.head?.trim();
     if (branch) {
-        return loadBugbotContext(execution, {
+        return loadBugbotContext(projectBugbotContextRequest(execution, {
             branchOverride: branch,
             ...(execution.pullRequest?.number > 0 ? { pullRequestNumberOverride: execution.pullRequest.number } : {}),
-        }, ports);
+        }), reader);
     }
-    if (execution.issueNumber <= 0) return loadBugbotContext(execution, undefined, ports);
-    const issueBranch = await ports.pullRequest.getHeadBranchForIssue(
-        execution.owner,
-        execution.repo,
-        execution.issueNumber,
-        execution.tokens.token,
-    );
-    return loadBugbotContext(execution, issueBranch ? { branchOverride: issueBranch } : undefined, ports);
+    return loadBugbotContext(projectBugbotContextRequest(execution), reader);
 }

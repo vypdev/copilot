@@ -63,7 +63,9 @@ The first three are read-only requests. The last one may be classified as a gene
 - File-modifying requests require the comment author to be an organization member for organization-owned repositories.
 - In personal repositories, the author must be the repository owner or a collaborator with `push`, `maintain`, or `admin` permission.
 - `/copilot dismiss` does not edit files, but it changes finding state and therefore uses the same authorization guard.
-- An issue comment that changes files also needs an open PR referencing the issue so the action has a branch to update. PR comments use the PR head branch.
+- File-changing commands require an authoritative PR review-thread branch or an
+  explicitly branch-scoped execution. Issue-only comments never scan open PRs
+  to guess a write target.
 - The workflow must grant `contents: write` for file-modifying actions. Verification failures prevent the commit.
 - Bot mentions are matched case-insensitively and with username boundaries, so `@vypbot-extra` does not accidentally trigger `@vypbot`.
 - Branch synchronization accepts `--dry-run`, `--no-agent`, and `--from <branch>` and applies additional Git-state, path, verification, and remote-race guards. See [Branch synchronization](/issues/branch-synchronization).

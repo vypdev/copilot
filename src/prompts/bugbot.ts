@@ -14,6 +14,7 @@ const TEMPLATE = `You are analyzing the latest code changes for potential bugs a
 - Base branch: {{baseBranch}}
 - Issue number: {{issueNumber}}
 {{ignoreBlock}}
+{{coverageBlock}}
 {{diffBlock}}
 {{reviewConversationBlock}}
 {{rulesBlock}}
@@ -49,6 +50,7 @@ export type BugbotParams = {
     changeScopeInstruction: string;
     ignoreBlock: string;
     previousBlock: string;
+    coverageBlock: string;
     diffBlock?: string;
     reviewConversationBlock?: string;
     rulesBlock?: string;

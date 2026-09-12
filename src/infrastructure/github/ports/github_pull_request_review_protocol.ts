@@ -42,6 +42,7 @@ export interface GithubReviewComment {
   user?: { login?: string | null } | null;
   pull_request_review_id?: number | null;
   html_url?: string | null;
+  created_at?: string | null;
 }
 
 export interface GithubPullRequestReview {

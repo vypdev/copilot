@@ -12,3 +12,10 @@ description: Minimum permissions and authorization rules for detection, autofix,
 | User-request changes | `contents: write` | Organization member; or repository owner / `push`, `maintain`, or `admin` collaborator in personal repositories |
 
 Detection SHOULD run read-only where possible. Write permissions MUST be granted only to the event-specific job that needs them. See [Trust boundaries](/security-operations/security/trust-boundaries).
+
+The read path uses one credential-bound adapter. Credentials never enter the
+context request, domain selection policy, prompt, coverage manifest, telemetry,
+or agent environment. GitHub metadata reads are bounded: one canonical
+selection, at most two pages each for comments and threads, and at most ten diff
+pages, with two concurrent detail reads. A read failure is terminal for that
+review and is never converted into an empty or clean result.

@@ -6,6 +6,7 @@ import type { BugbotContext } from './types';
 import { isExistingFindingFullyResolved } from '../../../../../domain/bugbot/finding';
 import { buildBugbotFixPrompt } from './build_bugbot_fix_prompt';
 import { loadBugbotContext } from './load_bugbot_context_use_case';
+import { projectBugbotContextRequest } from './bugbot_context_request';
 import { logDebugInfo, logError } from '../../../../ports/logging_ports';
 import { prepareWorkspaceMutation } from '../workspace_mutation_guard';
 import { ApplicationError, toApplicationError } from '../../../../errors/application_error';
@@ -27,23 +28,51 @@ export async function prepareBugbotAutofix(
     contextPorts: BugbotContextPorts,
     gitCommitPort: GitCommitPort,
 ): Promise<BugbotAutofixPreflight | Result[]> {
+    const canonicalHint = providedContext?.canonicalPullRequest;
+    const targetBranch = branchOverride?.trim() || canonicalHint?.headRef;
+    const checkoutBranch = branchOverride?.trim()
+        || (!execution.commit.branch?.trim() ? canonicalHint?.headRef : undefined);
+    let context: BugbotContext;
+    try {
+        context = await loadBugbotContext(
+            projectBugbotContextRequest(execution, {
+                ...(targetBranch ? { branchOverride: targetBranch } : {}),
+                ...(canonicalHint ? { pullRequestNumberOverride: canonicalHint.number } : {}),
+                pullRequestRequired: true,
+            }),
+            contextPorts.loader.bind({
+                owner: execution.owner,
+                repository: execution.repo,
+                token: execution.tokens.token,
+            }),
+        );
+        if (!context.canonicalPullRequest) {
+            throw new ApplicationError(
+                'workflow.stale',
+                'Bugbot autofix requires one verified canonical pull request.',
+            );
+        }
+    } catch (error) {
+        const semanticError = toApplicationError(error, 'workflow.failed', 'Bugbot autofix context validation failed.');
+        logError(semanticError);
+        return [failure(semanticError)];
+    }
+    const idsToFix = selectUnresolvedFindingIds(context, targetFindingIds);
+    if (idsToFix.length === 0) {
+        logDebugInfo('No valid unresolved target findings; skipping autofix.');
+        return [];
+    }
     let mutation;
     try {
         mutation = await prepareWorkspaceMutation(gitCommitPort, {
             operation: 'Bugbot autofix',
-            branch: branchOverride,
+            branch: checkoutBranch,
             token: execution.tokens.token,
         });
     } catch (error) {
         const semanticError = toApplicationError(error, 'workflow.failed', 'Bugbot autofix preflight failed.');
         logError(semanticError);
         return [failure(semanticError)];
-    }
-    const context = providedContext ?? await loadBugbotContext(execution, branchOverride ? { branchOverride } : undefined, contextPorts);
-    const idsToFix = selectUnresolvedFindingIds(context, targetFindingIds);
-    if (idsToFix.length === 0) {
-        logDebugInfo('No valid unresolved target findings; skipping autofix.');
-        return [];
     }
     const verifyCommands = execution.ai.getBugbotFixVerifyCommands();
     const prompt = buildBugbotFixPrompt(execution, context, idsToFix, userComment, verifyCommands);

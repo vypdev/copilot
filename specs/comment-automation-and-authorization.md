@@ -47,6 +47,9 @@ modify the wrong branch.
 6. Unauthorized file-modifying intent routes to read-only Think or a visible no-op.
 7. Successful workspace mutations pass preflight, path checks, verification,
    authenticated commit, and push before publication.
+8. Comment-triggered file mutation requires a PR review-comment event with its
+   authoritative branch, or an explicitly branch-scoped execution. An
+   `issue_comment` never scans open PRs or selects a first matching branch.
 
 ### 2.3 Evidence and contract classification
 
@@ -96,6 +99,7 @@ a mention.
 2. Prompt classification cannot override actor authorization.
 3. Unmentioned prose cannot trigger general file mutation.
 4. Agent output cannot commit or push directly; trusted runner code owns it.
+5. Issue-only and general PR-conversation comments cannot infer a write target.
 
 ## 5. Current versus proposed product journey
 
@@ -126,6 +130,9 @@ No behavior change is proposed.
 - `/copilot sync-branch --dry-run` prepares and aborts without push or agent.
 - A plain comment without a bot mention may receive language handling but not
   natural-language mutation intent.
+- An issue or general PR-conversation comment may ask for an answer or read-only
+  review, but `fix`/`implement` requires the intended PR review thread or an
+  explicitly branch-scoped execution.
 
 ### 6.3 State model
 
@@ -203,7 +210,7 @@ untrusted mentions, Markdown, markers, and URLs are sanitized.
 |---|---|---|---|---|---|
 | invalid syntax | no route | comment | yes | correct command | none |
 | denied actor | no mutation | authorization result | after access change | maintainer | none |
-| no branch/context | mutation skipped | issue/PR state | yes | link/open PR | none |
+| no authoritative branch/context | mutation skipped | issue/PR state | yes | use intended PR review thread or branch-scoped execution | none |
 | agent/verification | no commit | workspace aborted | yes | repair config/tests | abort changes |
 | push race | no stale push | remote heads | yes | rerun latest | abort local operation |
 | publication | work may be pushed | commit/result | yes | inspect run/commit | do not undo commit |
@@ -270,6 +277,8 @@ English/non-English requests.
 7. A verification or remote-head failure aborts without push and reports recovery.
 8. A duplicated delivery does not silently duplicate the mutation.
 9. Untrusted comment text cannot inject shell, marker, mention, or secret output.
+10. An issue-only or general PR-conversation mutation request performs no
+    workspace operation and never scans open PRs for a branch.
 
 ## 17. Requirements traceability
 

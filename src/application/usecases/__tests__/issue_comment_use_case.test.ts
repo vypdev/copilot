@@ -78,7 +78,10 @@ function mockContext(overrides: Partial<BugbotContext> = {}): BugbotContext {
   return {
     existingByFindingId: {},
     issueComments: [],
-    openPrNumbers: [],
+    canonicalPullRequest: null,
+    selectionReason: 'none',
+    coverage: { status: 'complete', sources: [] },
+    eligibleResolutionIds: new Set(),
     previousFindingsBlock: "",
     prContext: null,
     unresolvedFindingsWithBody: [],

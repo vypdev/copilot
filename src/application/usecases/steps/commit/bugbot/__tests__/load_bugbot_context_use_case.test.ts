@@ -1,424 +1,271 @@
-/**
- * Unit tests for loadBugbotContext: issue/PR comment parsing, open PRs, previousFindingsBlock, prContext.
- */
-
-import { loadBugbotContext as loadBugbotContextImpl, type LoadBugbotContextOptions } from "../load_bugbot_context_use_case";
-import type { Execution } from "../../../../../../data/model/execution";
-import { Ai } from "../../../../../../data/model/ai";
+import type { BoundBugbotContextReadPorts } from '../../../../../ports/bugbot_context_ports';
 import { buildMarker } from '../../../../../policies/bugbot_finding_marker_policy';
+import type {
+  BugbotContextSource,
+  BugbotPullRequestIdentity,
+  BugbotSourceCoverage,
+} from '../../../../../../domain/bugbot/context';
+import { loadBugbotContext } from '../load_bugbot_context_use_case';
+import type { BugbotContextRequest } from '../bugbot_context_request';
 
-jest.mock("../../../../../../utils/logger", () => ({
-    logDebugInfo: jest.fn(),
-}));
+jest.mock('../../../../../../utils/logger', () => ({ logDebugInfo: jest.fn() }));
 
-const mockListIssueComments = jest.fn();
-const mockGetOpenPullRequestNumbersByHeadBranch = jest.fn();
-const mockListPullRequestReviewComments = jest.fn();
-const mockGetPullRequestHeadSha = jest.fn();
-const mockGetChangedFiles = jest.fn();
-const mockGetFilesWithFirstDiffLine = jest.fn();
-const mockGetFilesWithDiffLocations = jest.fn();
-const mockGetReviewDiffSnapshot = jest.fn();
-const mockListPullRequestReviewThreadStates = jest.fn();
-const mockListPullRequestReviews = jest.fn();
-const mockLoadRules = jest.fn();
-const marker = (id: string, resolved: boolean) =>
-    buildMarker(id, resolved, 'fp-11111111', 'sf-11111111');
-
-
-
-import type { BugbotContextPorts } from "../../../../../../application/ports/bugbot_context_ports";
-
-const testPorts: BugbotContextPorts = {
-    issue: { listIssueComments: mockListIssueComments },
-    reviewState: { listPullRequestReviews: mockListPullRequestReviews },
-    navigation: { forPullRequest: jest.fn() },
-    rules: { loadRules: mockLoadRules },
-    pullRequest: {
-        getHeadBranchForIssue: jest.fn(),
-        getPullRequestReviewCommentBody: jest.fn(),
-        getOpenPullRequestNumbersByHeadBranch: mockGetOpenPullRequestNumbersByHeadBranch,
-        listPullRequestReviewComments: mockListPullRequestReviewComments,
-        getPullRequestHeadSha: mockGetPullRequestHeadSha,
-        getReviewDiffSnapshot: mockGetReviewDiffSnapshot,
-        listPullRequestReviewThreadStates: mockListPullRequestReviewThreadStates,
-    },
+const sha = 'a'.repeat(40);
+const identity: BugbotPullRequestIdentity = {
+  number: 50,
+  state: 'open',
+  baseRepository: { owner: 'acme', name: 'repo', id: 7 },
+  headRepositoryOwner: 'acme',
+  headRef: 'feature/42',
+  headSha: sha,
 };
 
-function loadBugbotContext(param: Execution, options?: LoadBugbotContextOptions) {
-    return loadBugbotContextImpl(param, options, testPorts);
+function coverage(
+  source: BugbotContextSource,
+  items: number = 0,
+  overrides: Partial<BugbotSourceCoverage> = {},
+): BugbotSourceCoverage {
+  return {
+    source,
+    status: 'complete',
+    pagesFetched: items > 0 ? 1 : 0,
+    itemsFetched: items,
+    itemsRetained: items,
+    omittedItems: 0,
+    truncatedItems: 0,
+    limitReached: false,
+    ...overrides,
+  };
 }
 
-function baseParam(overrides: Partial<Execution> = {}): Execution {
-    return {
-        owner: "o",
-        repo: "r",
-        issueNumber: 42,
-        tokens: { token: "t" },
-        tokenUser: "vypbot",
-        commit: { branch: "feature/42-foo" },
-        currentConfiguration: {},
-        branches: { development: "develop" },
-        ai: new Ai("", "model", false, [], false, "low", 20),
-        ...overrides,
-    } as unknown as Execution;
+function request(
+  target: Partial<BugbotContextRequest['target']> = {},
+): BugbotContextRequest {
+  return {
+    target: {
+      repository: { owner: 'acme', name: 'repo', id: 7 },
+      triggerKind: 'pull_request',
+      issueNumber: 42,
+      headOwner: 'acme',
+      headRef: 'feature/42',
+      expectedHeadSha: sha,
+      eventPullRequestNumber: 50,
+      pullRequestRequired: true,
+      ...target,
+    },
+    trustedAuthorLogin: 'bugbot',
+    ignorePatterns: [],
+    organizationRules: [],
+  };
 }
 
-describe("loadBugbotContext", () => {
-    beforeEach(() => {
-        mockListIssueComments.mockReset().mockResolvedValue([]);
-        mockGetOpenPullRequestNumbersByHeadBranch.mockReset().mockResolvedValue([]);
-        mockListPullRequestReviewComments.mockReset().mockResolvedValue([]);
-        mockGetPullRequestHeadSha.mockReset();
-        mockGetChangedFiles.mockReset();
-        mockGetFilesWithFirstDiffLine.mockReset();
-        mockGetFilesWithDiffLocations.mockReset().mockResolvedValue([]);
-        mockGetReviewDiffSnapshot.mockReset().mockImplementation(async (...args: unknown[]) => ({
-            changes: (await mockGetChangedFiles(...args)).map((change: { filename: string; status: string }) => ({
-                additions: 0,
-                deletions: 0,
-                patch: "",
-                ...change,
-            })),
-            filesWithFirstDiffLine: await mockGetFilesWithFirstDiffLine(...args),
-            filesWithDiffLocations: await mockGetFilesWithDiffLocations(...args),
-        }));
-        mockListPullRequestReviewThreadStates.mockReset().mockResolvedValue({});
-        mockListPullRequestReviews.mockReset().mockResolvedValue([]);
-        mockLoadRules.mockReset().mockResolvedValue([]);
+function ports(
+  overrides: Partial<BoundBugbotContextReadPorts> = {},
+): BoundBugbotContextReadPorts {
+  return {
+    getPullRequest: jest.fn().mockResolvedValue(identity),
+    findOpenPullRequestsByExactHead: jest.fn().mockResolvedValue([identity]),
+    listIssueComments: jest.fn().mockResolvedValue({
+      value: [],
+      coverage: coverage('issue-comments'),
+    }),
+    listPullRequestReviewComments: jest.fn().mockResolvedValue({
+      value: [],
+      coverage: coverage('pull-request-comments'),
+    }),
+    listPullRequestReviewThreadStates: jest.fn().mockResolvedValue({
+      value: {},
+      coverage: coverage('review-threads'),
+    }),
+    getReviewDiffSnapshot: jest.fn().mockResolvedValue({
+      value: {
+        changes: [{
+          filename: 'src/example.ts',
+          status: 'modified',
+          additions: 1,
+          deletions: 0,
+          patch: '@@ -1 +1 @@\n+fixed',
+        }],
+        filesWithFirstDiffLine: [{ path: 'src/example.ts', firstLine: 1 }],
+        filesWithDiffLocations: [{ path: 'src/example.ts', locations: [{ line: 1, side: 'RIGHT' }] }],
+      },
+      coverage: coverage('diff', 1),
+    }),
+    getPullRequestHeadSha: jest.fn().mockResolvedValue(sha),
+    loadRules: jest.fn().mockResolvedValue([]),
+    ...overrides,
+  };
+}
+
+describe('loadBugbotContext', () => {
+  it('verifies an event PR and loads details only for that canonical identity', async () => {
+    const reader = ports();
+    const context = await loadBugbotContext(request(), reader);
+
+    expect(context.canonicalPullRequest).toEqual(identity);
+    expect(context.selectionReason).toBe('event');
+    expect(context.prContext?.prHeadSha).toBe(sha);
+    expect(reader.getPullRequest).toHaveBeenCalledWith(50);
+    expect(reader.findOpenPullRequestsByExactHead).not.toHaveBeenCalled();
+    expect(reader.listPullRequestReviewComments).toHaveBeenCalledWith(50);
+    expect(reader.listPullRequestReviewThreadStates).toHaveBeenCalledWith(50);
+    expect(reader.getReviewDiffSnapshot).toHaveBeenCalledWith(50);
+  });
+
+  it('selects one exact-head PR when no event candidate exists', async () => {
+    const reader = ports();
+    const context = await loadBugbotContext(
+      request({ eventPullRequestNumber: undefined }),
+      reader,
+    );
+
+    expect(context.selectionReason).toBe('exact-head');
+    expect(reader.findOpenPullRequestsByExactHead).toHaveBeenCalledWith('acme', 'feature/42');
+    expect(reader.getPullRequest).not.toHaveBeenCalled();
+  });
+
+  it('rejects ambiguous exact-head selection before any detail read', async () => {
+    const reader = ports({
+      findOpenPullRequestsByExactHead: jest.fn().mockResolvedValue([
+        identity,
+        { ...identity, number: 51 },
+      ]),
     });
 
-    it("returns empty existingByFindingId and previousFindingsBlock when no issue comments", async () => {
-        const ctx = await loadBugbotContext(baseParam());
+    await expect(loadBugbotContext(
+      request({ eventPullRequestNumber: undefined }),
+      reader,
+    )).rejects.toMatchObject({ code: 'provider.conflict' });
+    expect(reader.listIssueComments).not.toHaveBeenCalled();
+    expect(reader.getReviewDiffSnapshot).not.toHaveBeenCalled();
+  });
 
-        expect(ctx.existingByFindingId).toEqual({});
-        expect(ctx.previousFindingsBlock).toBe("");
-        expect(ctx.unresolvedFindingsWithBody).toEqual([]);
+  it('rejects a stale event identity without falling back to head search', async () => {
+    const reader = ports({
+      getPullRequest: jest.fn().mockResolvedValue({ ...identity, headSha: 'b'.repeat(40) }),
     });
 
-    it("returns empty context and does not call APIs when head branch is empty (no branchOverride, empty commit.branch)", async () => {
-        const ctx = await loadBugbotContext(
-            baseParam({ commit: { branch: "" } } as unknown as Partial<Execution>)
-        );
+    await expect(loadBugbotContext(request(), reader)).rejects.toMatchObject({ code: 'workflow.stale' });
+    expect(reader.findOpenPullRequestsByExactHead).not.toHaveBeenCalled();
+    expect(reader.listIssueComments).not.toHaveBeenCalled();
+  });
 
-        expect(ctx.existingByFindingId).toEqual({});
-        expect(ctx.issueComments).toEqual([]);
-        expect(ctx.openPrNumbers).toEqual([]);
-        expect(ctx.previousFindingsBlock).toBe("");
-        expect(ctx.prContext).toBeNull();
-        expect(ctx.unresolvedFindingsWithBody).toEqual([]);
-        expect(mockGetOpenPullRequestNumbersByHeadBranch).not.toHaveBeenCalled();
-        expect(mockListIssueComments).not.toHaveBeenCalled();
+  it('rejects a PR-required target when the exact query has no match', async () => {
+    const reader = ports({ findOpenPullRequestsByExactHead: jest.fn().mockResolvedValue([]) });
+    await expect(loadBugbotContext(
+      request({ eventPullRequestNumber: undefined }),
+      reader,
+    )).rejects.toMatchObject({ code: 'workflow.stale' });
+  });
+
+  it('loads issue-only context without invoking any PR detail port', async () => {
+    const reader = ports({
+      listIssueComments: jest.fn().mockResolvedValue({
+        value: [{ id: 1, body: 'Human context', user: { login: 'alice' } }],
+        coverage: coverage('issue-comments', 1),
+      }),
     });
+    const context = await loadBugbotContext(request({
+      triggerKind: 'issue_comment',
+      headRef: '',
+      expectedHeadSha: undefined,
+      eventPullRequestNumber: undefined,
+      pullRequestRequired: false,
+    }), reader);
 
-    it("parses issue comments with markers and populates existingByFindingId", async () => {
-        mockListIssueComments.mockResolvedValue([
-            {
-                id: 100,
-                user: { login: "vypbot" },
-                body: `## Finding A\n\n${marker('id-a', false)}`,
-            },
-            {
-                id: 101,
-                user: { login: "vypbot" },
-                body: `## Finding B\n\n${marker('id-b', true)}`,
-            },
-        ]);
+    expect(context.canonicalPullRequest).toBeNull();
+    expect(context.reviewConversationBlock).toContain('Human context');
+    expect(reader.findOpenPullRequestsByExactHead).not.toHaveBeenCalled();
+    expect(reader.listPullRequestReviewComments).not.toHaveBeenCalled();
+    expect(reader.listPullRequestReviewThreadStates).not.toHaveBeenCalled();
+    expect(reader.getReviewDiffSnapshot).not.toHaveBeenCalled();
+  });
 
-        const ctx = await loadBugbotContext(baseParam());
-
-        expect(ctx.existingByFindingId["id-a"]).toEqual({
-            issue: { commentId: 100, resolved: false, fingerprint: 'fp-11111111', semanticFingerprint: 'sf-11111111' },
-        });
-        expect(ctx.existingByFindingId["id-b"]).toEqual({
-            issue: { commentId: 101, resolved: true, fingerprint: 'fp-11111111', semanticFingerprint: 'sf-11111111' },
-        });
+  it('aborts the context load when a required provider surface fails', async () => {
+    const reader = ports({
+      getReviewDiffSnapshot: jest.fn().mockRejectedValue(new Error('provider unavailable')),
     });
+    await expect(loadBugbotContext(request(), reader)).rejects.toThrow('provider unavailable');
+    expect(reader.loadRules).not.toHaveBeenCalled();
+  });
 
-    it("ignores forged markers not authored by the authenticated bot", async () => {
-        mockListIssueComments.mockResolvedValue([
-            {
-                id: 100,
-                user: { login: 'contributor' },
-                body: marker('forged', true),
-            },
-            {
-                id: 101,
-                user: { login: 'VypBot' },
-                body: marker('trusted', false),
-            },
-        ]);
-
-        const ctx = await loadBugbotContext(baseParam({ tokenUser: 'vypbot' }));
-
-        expect(ctx.existingByFindingId).toEqual({
-            trusted: { issue: { commentId: 101, resolved: false, fingerprint: 'fp-11111111', semanticFingerprint: 'sf-11111111' } },
-        });
+  it('never runs more than two independent detail reads concurrently', async () => {
+    let active = 0;
+    let maximum = 0;
+    let release = (): void => undefined;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const bounded = async <T>(value: T, source: BugbotContextSource) => {
+      active += 1;
+      maximum = Math.max(maximum, active);
+      await gate;
+      active -= 1;
+      return { value, coverage: coverage(source) };
+    };
+    const reader = ports({
+      listIssueComments: jest.fn(() => bounded([], 'issue-comments')),
+      listPullRequestReviewComments: jest.fn(() => bounded([], 'pull-request-comments')),
+      listPullRequestReviewThreadStates: jest.fn(() => bounded({}, 'review-threads')),
+      getReviewDiffSnapshot: jest.fn(() => bounded({
+        changes: [],
+        filesWithFirstDiffLine: [],
+        filesWithDiffLocations: [],
+      }, 'diff')),
     });
+    const pending = loadBugbotContext(request(), reader);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(maximum).toBe(2);
+    release();
+    await pending;
+    expect(maximum).toBe(2);
+  });
 
-    it("ignores existing markers when either authenticated or comment author identity is unavailable", async () => {
-        mockListIssueComments.mockResolvedValue([
-            {
-                id: 100,
-                user: { login: 'vypbot' },
-                body: marker('missing-token-user', false),
-            },
-            {
-                id: 101,
-                body: marker('missing-author', false),
-            },
-        ]);
-
-        const missingTokenUser = await loadBugbotContext(baseParam({ tokenUser: '' }));
-        const missingCommentAuthor = await loadBugbotContext(baseParam());
-
-        expect(missingTokenUser.existingByFindingId).toEqual({});
-        expect(missingCommentAuthor.existingByFindingId).toEqual({
-            'missing-token-user': { issue: { commentId: 100, resolved: false, fingerprint: 'fp-11111111', semanticFingerprint: 'sf-11111111' } },
-        });
+  it('propagates fixed-limit reads as partial coverage without treating them as failures', async () => {
+    const reader = ports({
+      getReviewDiffSnapshot: jest.fn().mockResolvedValue({
+        value: { changes: [], filesWithFirstDiffLine: [], filesWithDiffLocations: [] },
+        coverage: coverage('diff', 1_000, {
+          status: 'partial',
+          pagesFetched: 10,
+          limitReached: true,
+          providerLimitReached: true,
+        }),
+      }),
     });
+    const context = await loadBugbotContext(request(), reader);
+    expect(context.coverage.status).toBe('partial');
+    expect(context.coverage.sources).toContainEqual(expect.objectContaining({
+      source: 'diff',
+      status: 'partial',
+      limitReached: true,
+      providerLimitReached: true,
+    }));
+  });
 
-    it("updates existingByFindingId when same findingId appears in a later comment", async () => {
-        mockListIssueComments.mockResolvedValue([
-            {
-                id: 100,
-                user: { login: "vypbot" },
-                body: `## First\n\n${marker('id-a', false)}`,
-            },
-            {
-                id: 101,
-                user: { login: "vypbot" },
-                body: `## Second (same finding)\n\n${marker('id-a', true)}`,
-            },
-        ]);
-
-        const ctx = await loadBugbotContext(baseParam());
-
-        expect(ctx.existingByFindingId["id-a"]).toEqual({
-            issue: { commentId: 101, resolved: true, fingerprint: 'fp-11111111', semanticFingerprint: 'sf-11111111' },
-        });
+  it('makes only retained previous findings eligible for resolution', async () => {
+    const issueComments = Array.from({ length: 101 }, (_, index) => ({
+      id: index + 1,
+      body: `Finding ${index}\n${buildMarker(
+        `finding-${index}`,
+        false,
+        `fp-${String(index).padStart(8, '0')}`,
+        `sf-${String(index).padStart(8, '0')}`,
+      )}`,
+      user: { login: 'bugbot' },
+      createdAt: new Date(Date.UTC(2026, 0, 1, 0, index)).toISOString(),
+    }));
+    const reader = ports({
+      listIssueComments: jest.fn().mockResolvedValue({
+        value: issueComments,
+        coverage: coverage('issue-comments', issueComments.length),
+      }),
     });
+    const context = await loadBugbotContext(request(), reader);
 
-    it("includes only unresolved findings in previousFindingsBlock and unresolvedFindingsWithBody", async () => {
-        mockListIssueComments.mockResolvedValue([
-            {
-                id: 100,
-                user: { login: "vypbot" },
-                body: `## Open\n\n${marker('open-1', false)}`,
-            },
-            {
-                id: 101,
-                user: { login: "vypbot" },
-                body: `## Closed\n\n${marker('closed-1', true)}`,
-            },
-        ]);
-
-        const ctx = await loadBugbotContext(baseParam());
-
-        expect(ctx.previousFindingsBlock).toContain("open-1");
-        expect(ctx.previousFindingsBlock).not.toContain("closed-1");
-        expect(ctx.unresolvedFindingsWithBody).toHaveLength(1);
-        expect(ctx.unresolvedFindingsWithBody[0].id).toBe("open-1");
-    });
-
-    it("uses branchOverride for head branch when provided", async () => {
-        mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([50]);
-
-        await loadBugbotContext(
-            baseParam({ commit: { branch: "" } } as unknown as Partial<Execution>),
-            { branchOverride: "feature/42-from-pr" }
-        );
-
-        expect(mockGetOpenPullRequestNumbersByHeadBranch).toHaveBeenCalledWith(
-            "o",
-            "r",
-            "feature/42-from-pr",
-            "t"
-        );
-    });
-
-    it("uses an explicit pull request target without requiring an issue number", async () => {
-        mockGetPullRequestHeadSha.mockResolvedValue("pr-sha");
-        mockGetChangedFiles.mockResolvedValue([{ filename: "src/foo.ts", status: "modified" }]);
-        mockGetFilesWithFirstDiffLine.mockResolvedValue([{ path: "src/foo.ts", firstLine: 4 }]);
-
-        const ctx = await loadBugbotContext(
-            baseParam({
-                issueNumber: -1,
-                isPullRequest: true,
-                pullRequest: { head: "feature/no-issue", number: 50 },
-            } as unknown as Partial<Execution>),
-            { pullRequestNumberOverride: 50, issueNumberOverride: -1 },
-        );
-
-        expect(mockListIssueComments).not.toHaveBeenCalled();
-        expect(mockGetOpenPullRequestNumbersByHeadBranch).not.toHaveBeenCalled();
-        expect(ctx.openPrNumbers).toEqual([50]);
-        expect(ctx.prContext?.prHeadSha).toBe("pr-sha");
-    });
-
-    it("builds prContext when open PR exists and head sha is available", async () => {
-        mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([50]);
-        mockGetPullRequestHeadSha.mockResolvedValue("abc123");
-        mockGetChangedFiles.mockResolvedValue([
-            { filename: "src/foo.ts", status: "modified" },
-        ]);
-        mockGetFilesWithFirstDiffLine.mockResolvedValue([
-            { path: "src/foo.ts", firstLine: 10 },
-        ]);
-
-        const ctx = await loadBugbotContext(baseParam());
-
-        expect(ctx.openPrNumbers).toEqual([50]);
-        expect(ctx.prContext).not.toBeNull();
-        expect(ctx.prContext?.prHeadSha).toBe("abc123");
-        expect(ctx.prContext?.prFiles).toHaveLength(1);
-        expect(ctx.prContext?.prFiles[0].filename).toBe("src/foo.ts");
-        expect(ctx.prContext?.pathToFirstDiffLine["src/foo.ts"]).toBe(10);
-    });
-
-    it("leaves prContext null when no open PRs", async () => {
-        const ctx = await loadBugbotContext(baseParam());
-
-        expect(ctx.prContext).toBeNull();
-    });
-
-    it("merges PR review comment markers into existingByFindingId", async () => {
-        mockListIssueComments.mockResolvedValue([]);
-        mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([50]);
-        mockListPullRequestReviewComments.mockResolvedValue([
-            {
-                id: 200,
-                identity: "PRRC_pr_f1",
-                authorLogin: "vypbot",
-                body: `## PR finding\n\n${marker('pr-f1', false)}`,
-            },
-        ]);
-
-        const ctx = await loadBugbotContext(baseParam());
-
-        expect(ctx.existingByFindingId["pr-f1"]).toEqual({
-            pullRequest: {
-                commentIdentity: "PRRC_pr_f1",
-                pullRequestNumber: 50,
-                resolved: false,
-                fingerprint: 'fp-11111111',
-                semanticFingerprint: 'sf-11111111',
-            },
-        });
-    });
-
-    it("persists a manually resolved review thread as dismissed", async () => {
-        mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([50]);
-        mockListPullRequestReviewComments.mockResolvedValue([
-            {
-                id: 200,
-                identity: "PRRC_manual",
-                authorLogin: 'VypBot',
-                body: marker('manual', false),
-            },
-        ]);
-        mockListPullRequestReviewThreadStates.mockResolvedValue({
-            PRRC_manual: { resolved: true, resolvedByLogin: 'maintainer' },
-        });
-
-        const ctx = await loadBugbotContext(baseParam({ tokenUser: 'vypbot' }));
-
-        expect(ctx.existingByFindingId.manual?.pullRequest).toEqual(expect.objectContaining({
-            resolved: true,
-            resolution: 'dismissed',
-        }));
-        expect(ctx.previousFindingsBlock).not.toContain('manual');
-    });
-
-    it('does not infer dismissal when Bugbot itself resolved the native thread', async () => {
-        mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([50]);
-        mockListPullRequestReviewComments.mockResolvedValue([
-            {
-                id: 200,
-                identity: 'PRRC_partial',
-                authorLogin: 'vypbot',
-                body: marker('partial', false),
-            },
-        ]);
-        mockListPullRequestReviewThreadStates.mockResolvedValue({
-            PRRC_partial: { resolved: true, resolvedByLogin: 'vypbot[bot]' },
-        });
-        const ctx = await loadBugbotContext(baseParam({ tokenUser: 'vypbot' }));
-        expect(ctx.existingByFindingId.partial?.pullRequest).toEqual(
-            expect.objectContaining({
-                resolved: false,
-                verificationRequired: true,
-            }),
-        );
-        expect(ctx.previousFindingsBlock).toContain('partial');
-    });
-
-    it("truncates fullBody to 12000 chars when loading from issue comments and appends truncation indicator", async () => {
-        const longBody =
-            `## Finding\n\n${"x".repeat(15000)}\n\n${marker('long-1', false)}`;
-        mockListIssueComments.mockResolvedValue([
-            {
-                id: 100,
-                user: { login: "vypbot" },
-                body: longBody,
-            },
-        ]);
-
-        const ctx = await loadBugbotContext(baseParam());
-
-        expect(ctx.unresolvedFindingsWithBody).toHaveLength(1);
-        expect(ctx.unresolvedFindingsWithBody[0].id).toBe("long-1");
-        expect(ctx.unresolvedFindingsWithBody[0].fullBody).toContain("[... truncated for length ...]");
-        expect(ctx.unresolvedFindingsWithBody[0].fullBody.length).toBeLessThanOrEqual(12000);
-    });
-
-    it("keeps full mutation bodies and independent destination state after a partial resolution", async () => {
-        const longBody =
-            `## Finding\n\n${"x".repeat(15000)}\n\n${marker('partial-1', false)}`;
-        mockListIssueComments.mockResolvedValue([{ id: 100, user: { login: "vypbot" }, body: longBody }]);
-        mockGetOpenPullRequestNumbersByHeadBranch.mockResolvedValue([50]);
-        mockListPullRequestReviewComments.mockResolvedValue([
-            {
-                id: 200,
-                identity: "PRRC_partial_1",
-                authorLogin: "vypbot",
-                body: `## Finding\n\n${marker('partial-1', true)}`,
-            },
-        ]);
-
-        const ctx = await loadBugbotContext(baseParam());
-
-        expect(ctx.issueComments[0].body).toBe(longBody);
-        expect(ctx.existingByFindingId["partial-1"]).toEqual({
-            issue: { commentId: 100, resolved: false, fingerprint: 'fp-11111111', semanticFingerprint: 'sf-11111111' },
-            pullRequest: {
-                commentIdentity: "PRRC_partial_1",
-                pullRequestNumber: 50,
-                resolved: true,
-                fingerprint: 'fp-11111111',
-                semanticFingerprint: 'sf-11111111',
-            },
-        });
-        expect(ctx.previousFindingsBlock).toContain("partial-1");
-        expect(ctx.unresolvedFindingsWithBody[0].fullBody).toContain(
-            "[... truncated for length ...]",
-        );
-    });
-
-    it('bounds the previous-findings context sent to the agent', async () => {
-        mockListIssueComments.mockResolvedValue(
-            Array.from({ length: 120 }, (_, index) => ({
-                id: index + 1,
-                user: { login: "vypbot" },
-                body: `## Finding ${index}\n\n${'x'.repeat(700)}\n\n${marker(`finding-${index}`, false)}`,
-            })),
-        );
-
-        const ctx = await loadBugbotContext(baseParam());
-
-        expect(ctx.unresolvedFindingsWithBody.length).toBeLessThan(120);
-        expect(ctx.previousFindingsBlock.length).toBeLessThanOrEqual(48_000 + 500);
-        expect(ctx.previousFindingsBlock).toContain('older finding(s) were omitted');
-    });
+    expect(context.eligibleResolutionIds.size).toBe(100);
+    expect(context.eligibleResolutionIds.has('finding-0')).toBe(false);
+    expect(context.eligibleResolutionIds.has('finding-100')).toBe(true);
+    expect(context.coverage.status).toBe('partial');
+    expect(context.previousFindingsBlock).toContain('older finding(s) were omitted');
+  });
 });

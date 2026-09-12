@@ -11,6 +11,7 @@ import type {
     BugbotObservedFindingDestinations,
     BugbotProviderProjection,
 } from './bugbot_provider_projection_policy';
+import type { BugbotContextCoverage } from '../../domain/bugbot/context';
 
 /** Builds the deterministic, side-effect-free plan consumed by presentation. */
 export function buildBugbotReconciliationPlan(input: {
@@ -20,6 +21,7 @@ export function buildBugbotReconciliationPlan(input: {
     readonly activeFindings: readonly BugbotFinding[];
     readonly expectedPublishedFindings: readonly BugbotFinding[];
     readonly diagnostics?: readonly string[];
+    readonly coverage: BugbotContextCoverage;
 }): BugbotReconciliationPlan {
     const diagnostics = [...(input.diagnostics ?? [])];
     const projected = new Map(
@@ -80,7 +82,7 @@ export function buildBugbotReconciliationPlan(input: {
             title: finding.title,
         });
     }
-    return { findings: [...projected.values()], diagnostics };
+    return { findings: [...projected.values()], diagnostics, coverage: input.coverage };
 }
 
 /** Maps explicit snapshot completeness to bounded, provider-safe diagnostics. */

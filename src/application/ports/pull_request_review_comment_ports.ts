@@ -7,6 +7,7 @@ export type PullRequestReviewComment = {
   path?: string;
   line?: number;
   authorLogin?: string;
+  createdAt?: string;
   /** Opaque identity of the submitted review that owns this comment. */
   parentReviewIdentity?: string;
   /** Safe provider URL for user-facing navigation. */

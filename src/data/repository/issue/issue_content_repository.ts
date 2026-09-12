@@ -2,7 +2,10 @@ import { getCommentWatermark } from "../../../utils/comment_watermark";
 import { hasVisibleCommentContent } from '../../../domain/comment_content_policy';
 import { logDebugInfo, logError } from "../../../utils/logger";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
-import type { GithubIssueContentClient } from "../../../infrastructure/github/ports/github_issue_provider_ports";
+import type {
+    GithubIssueComment,
+    GithubIssueContentClient,
+} from "../../../infrastructure/github/ports/github_issue_provider_ports";
 import { requireArrayPage } from "../github/github_pagination_policy";
 import { toApplicationError } from '../../../application/errors/application_error';
 
@@ -10,6 +13,7 @@ export interface IssueComment {
     id: number;
     body: string | null;
     user?: { login?: string };
+    createdAt?: string;
 }
 
 export class IssueContentRepository {
@@ -140,15 +144,17 @@ export class IssueContentRepository {
             issue_number: issueNumber,
             per_page: 100,
         })) {
-            const page = requireArrayPage<IssueComment>(response.data, 'issue comments');
+            const page = requireArrayPage<GithubIssueComment>(response.data, 'issue comments');
             for (const comment of page) {
                 all.push({
                     id: comment.id,
                     body: comment.body ?? null,
                     user: comment.user as { login?: string } | undefined,
+                    ...(comment.created_at ? { createdAt: comment.created_at } : {}),
                 });
             }
         }
         return all;
     };
+
 }

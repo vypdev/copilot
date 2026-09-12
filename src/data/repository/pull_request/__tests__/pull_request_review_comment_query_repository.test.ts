@@ -193,4 +193,67 @@ describe("PullRequestReviewCommentQueryRepository", () => {
       ),
     ).rejects.toThrow("Unable to get the pull request review comment.");
   });
+
+  it('loads at most two newest review-comment pages with typed coverage', async () => {
+    const listReviewComments = jest.fn()
+      .mockResolvedValueOnce({ data: reviewComments(1, 100) })
+      .mockResolvedValueOnce({ data: reviewComments(101, 100) })
+      .mockResolvedValue({ data: reviewComments(201, 100) });
+    const repository = new PullRequestReviewCommentQueryRepository({
+      getClient: () => ({ rest: { pulls: { listReviewComments } } }),
+    } as never);
+
+    const result = await repository.listBugbotPullRequestReviewCommentsBounded(
+      'owner', 'repo', 21, 'token',
+    );
+
+    expect(listReviewComments).toHaveBeenCalledTimes(2);
+    expect(listReviewComments).toHaveBeenNthCalledWith(1, {
+      owner: 'owner',
+      repo: 'repo',
+      pull_number: 21,
+      per_page: 100,
+      page: 1,
+      direction: 'desc',
+      sort: 'created',
+    });
+    expect(result.items).toHaveLength(200);
+    expect(result.coverage).toEqual(expect.objectContaining({
+      source: 'pull-request-comments',
+      status: 'partial',
+      pagesFetched: 2,
+      limitReached: true,
+      providerLimitReached: true,
+    }));
+  });
+
+  it('stops bounded review-comment pagination on the first short page', async () => {
+    const listReviewComments = jest.fn().mockResolvedValue({ data: reviewComments(1, 1) });
+    const repository = new PullRequestReviewCommentQueryRepository({
+      getClient: () => ({ rest: { pulls: { listReviewComments } } }),
+    } as never);
+    const result = await repository.listBugbotPullRequestReviewCommentsBounded(
+      'owner', 'repo', 21, 'token',
+    );
+    expect(listReviewComments).toHaveBeenCalledTimes(1);
+    expect(result.coverage.status).toBe('complete');
+    expect(result.coverage.providerLimitReached).toBeUndefined();
+    expect(result.items[0]).toEqual(expect.objectContaining({
+      id: 1,
+      identity: 'node-1',
+      createdAt: expect.any(String),
+    }));
+  });
 });
+
+function reviewComments(startId: number, count: number) {
+  return Array.from({ length: count }, (_, index) => {
+    const id = startId + index;
+    return {
+      id,
+      node_id: `node-${id}`,
+      body: `comment-${id}`,
+      created_at: new Date(Date.UTC(2026, 0, 1, 0, id)).toISOString(),
+    };
+  });
+}

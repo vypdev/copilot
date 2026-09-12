@@ -12,6 +12,7 @@ import type {
   GithubReviewComment,
 } from "../../../infrastructure/github/ports/github_pull_request_review_protocol";
 import { requireArrayPage } from "../github/github_pagination_policy";
+import type { BugbotSourceCoverage } from "../../../domain/bugbot/context";
 
 function toReviewComment(
   comment: GithubReviewComment,
@@ -26,6 +27,7 @@ function toReviewComment(
     path: comment.path,
     line: comment.line ?? undefined,
     authorLogin: comment.user?.login ?? undefined,
+    ...(comment.created_at ? { createdAt: comment.created_at } : {}),
     ...(comment.pull_request_review_id != null
       ? { parentReviewIdentity: String(comment.pull_request_review_id) }
       : {}),
@@ -77,6 +79,52 @@ export class PullRequestReviewCommentQueryRepository implements PullRequestRevie
         comments.push(...page.map(toReviewComment));
       }
       return comments;
+    } catch (error) {
+      throw toPullRequestReviewOperationError(error, "list-comments");
+    }
+  }
+
+  async listBugbotPullRequestReviewCommentsBounded(
+    owner: string,
+    repository: string,
+    pullRequestNumber: number,
+    token: string,
+  ): Promise<{ readonly items: PullRequestReviewComment[]; readonly coverage: BugbotSourceCoverage }> {
+    try {
+      const client = this.githubClient.getClient(token);
+      const items: PullRequestReviewComment[] = [];
+      let pagesFetched = 0;
+      let limitReached = false;
+      for (let page = 1; page <= 2; page += 1) {
+        const response = await client.rest.pulls.listReviewComments({
+          owner,
+          repo: repository,
+          pull_number: pullRequestNumber,
+          per_page: 100,
+          page,
+          direction: "desc",
+          sort: "created",
+        });
+        const records = requireArrayPage<GithubReviewComment>(response.data, "pull request review comments");
+        pagesFetched += 1;
+        items.push(...records.map(toReviewComment));
+        if (records.length < 100) break;
+        if (page === 2) limitReached = true;
+      }
+      return {
+        items,
+        coverage: {
+          source: "pull-request-comments",
+          status: limitReached ? "partial" : "complete",
+          pagesFetched,
+          itemsFetched: items.length,
+          itemsRetained: items.length,
+          omittedItems: 0,
+          truncatedItems: 0,
+          limitReached,
+          ...(limitReached ? { providerLimitReached: true } : {}),
+        },
+      };
     } catch (error) {
       throw toPullRequestReviewOperationError(error, "list-comments");
     }

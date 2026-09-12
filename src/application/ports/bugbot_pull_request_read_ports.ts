@@ -23,12 +23,6 @@ export interface PullRequestReviewDiffSnapshot {
 }
 
 export interface BugbotPullRequestQueryPort {
-  getHeadBranchForIssue(
-    owner: string,
-    repository: string,
-    issueNumber: number,
-    token: string,
-  ): Promise<string | undefined>;
   getPullRequestReviewCommentBody(
     owner: string,
     repository: string,
@@ -39,12 +33,6 @@ export interface BugbotPullRequestQueryPort {
 }
 
 export interface BugbotPullRequestReadPort extends BugbotPullRequestQueryPort {
-  getOpenPullRequestNumbersByHeadBranch(
-    owner: string,
-    repository: string,
-    branch: string,
-    token: string,
-  ): Promise<number[]>;
   listPullRequestReviewComments(
     owner: string,
     repository: string,

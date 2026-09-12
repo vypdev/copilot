@@ -56,12 +56,35 @@ export function buildBugbotPrompt(param: Execution, context: BugbotContext): str
             (context.reviewDiffBlock ?? '').trim().length > 0,
         ),
         ignoreBlock,
+        coverageBlock: buildCoverageBlock(context),
         previousBlock,
         diffBlock: context.reviewDiffBlock,
         reviewConversationBlock: context.reviewConversationBlock,
         rulesBlock: context.reviewRulesBlock,
         effortBlock: `**Review effort:** ${resolvedEffort}. ${resolvedEffort === 'high' ? 'Perform deeper cross-file and adversarial analysis.' : resolvedEffort === 'low' ? 'Prioritize high-signal changed-code defects and avoid speculative breadth.' : 'Balance depth, latency, and false-positive control.'}`,
     });
+}
+
+function buildCoverageBlock(context: BugbotContext): string {
+    const limitedSources = context.coverage.sources
+        .filter((source) => source.status === 'partial')
+        .map((source) => {
+            const details = [
+                `retained=${source.itemsRetained}`,
+                ...(source.omittedItems > 0 ? [`omitted=${source.omittedItems}`] : []),
+                ...(source.truncatedItems > 0 ? [`truncated=${source.truncatedItems}`] : []),
+                ...(source.providerLimitReached ? ['provider page limit reached; additional older records are uncounted'] : []),
+            ];
+            return `- ${source.source}: ${details.join(', ')}`;
+        });
+    if (limitedSources.length === 0) {
+        return '**Context coverage:** complete within every fixed provider and prompt budget.';
+    }
+    return [
+        '**Context coverage:** partial.',
+        ...limitedSources,
+        'Analyze retained evidence, but do not claim that the whole pull request is clean. Only resolve prior finding ids explicitly included in the previous-findings section.',
+    ].join('\n');
 }
 
 function buildChangeScopeInstruction(

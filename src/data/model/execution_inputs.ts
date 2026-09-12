@@ -30,7 +30,11 @@ export interface EventPullRequestPayload {
     html_url?: string;
     body?: string | null;
     user?: EventUserPayload;
-    head?: { ref?: string; sha?: string };
+    head?: {
+        ref?: string;
+        sha?: string;
+        repo?: { owner?: { login?: string } };
+    };
     base?: { ref?: string };
     merged?: boolean;
     draft?: boolean;
@@ -80,6 +84,7 @@ export interface ExecutionInputs {
     after?: string;
     ref?: string;
     repo?: { owner?: string; repo?: string };
+    repository?: { id?: number; name?: string; owner?: { login?: string } };
     issue?: EventIssuePayload;
     label?: EventLabelPayload;
     pull_request?: EventPullRequestPayload;

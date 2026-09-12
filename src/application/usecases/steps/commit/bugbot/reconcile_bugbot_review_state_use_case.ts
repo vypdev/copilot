@@ -51,6 +51,7 @@ export async function reconcileBugbotReviewState(input: {
         analyzedHeadSha: input.target.analyzedHeadSha,
         verifiedHeadSha: snapshotResult.verifiedHeadSha,
         findings: [],
+        coverage: input.loadedContext.coverage,
         superseded: true,
       }),
       reviewUpdates: 0,
@@ -87,6 +88,7 @@ export async function reconcileBugbotReviewState(input: {
     expectedPublishedFindings:
       input.expectedPublishedFindings ?? input.activeFindings,
     diagnostics,
+    coverage: input.loadedContext.coverage,
   });
   return synchronizeBugbotReviewPresentation({
     target: input.target,

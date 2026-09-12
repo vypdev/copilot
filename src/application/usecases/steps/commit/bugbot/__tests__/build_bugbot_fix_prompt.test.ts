@@ -27,7 +27,17 @@ function mockContext(overrides: Partial<BugbotContext> = {}): BugbotContext {
         issueComments: [
             { id: 1, body: "## Null dereference\n\n**Location:** `src/foo.ts:10`\n\nDescription here." },
         ],
-        openPrNumbers: [5],
+        canonicalPullRequest: {
+            number: 5,
+            state: 'open',
+            baseRepository: { owner: 'test-owner', name: 'test-repo' },
+            headRepositoryOwner: 'test-owner',
+            headRef: 'feature/42-branch',
+            headSha: 'a'.repeat(40),
+        },
+        selectionReason: 'exact-head',
+        coverage: { status: 'complete', sources: [] },
+        eligibleResolutionIds: new Set(['find-1']),
         previousFindingsBlock: "",
         prContext: null,
         unresolvedFindingsWithBody: [
@@ -61,7 +71,7 @@ describe("buildBugbotFixPrompt", () => {
         expect(prompt).toContain('[BEGIN_UNTRUSTED_DATA origin=bugbot.autofix.finding.find-1');
     });
 
-    it("includes PR number when openPrNumbers is non-empty", () => {
+    it("includes the canonical PR number", () => {
         const prompt = buildBugbotFixPrompt(
             mockExecution(),
             mockContext(),

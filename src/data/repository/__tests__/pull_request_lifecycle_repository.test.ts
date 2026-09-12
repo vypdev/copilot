@@ -46,25 +46,76 @@ describe("PullRequestLifecycleRepository", () => {
             .rejects.toThrow("rate limited");
     });
 
-    it("finds an issue reference in the PR body or head branch with bounded matching", async () => {
-        mockList.mockResolvedValue({
-            data: [
-                { number: 1, body: "Resolves #1234", head: { ref: "feature/1234-fix" } },
-                { number: 2, body: "Resolves #123", head: { ref: "feature/123-other" } },
-            ],
-        });
-
+    it('uses one exact-head query capped at two canonical Bugbot candidates', async () => {
+        mockList.mockResolvedValue({ data: [
+            pullRequestIdentity(12),
+            pullRequestIdentity(13),
+            pullRequestIdentity(14),
+        ] });
         const repository = new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter());
-        await expect(repository.getHeadBranchForIssue("owner", "repo", 123, "token"))
-            .resolves.toBe("feature/123-other");
+
+        await expect(repository.findOpenBugbotPullRequestsByExactHead(
+            'owner', 'repo', 'fork-owner', 'feature/12', 'token',
+        )).resolves.toEqual([
+            expect.objectContaining({ number: 12, headRepositoryOwner: 'fork-owner', headRef: 'feature/12' }),
+            expect.objectContaining({ number: 13, headRepositoryOwner: 'fork-owner', headRef: 'feature/12' }),
+        ]);
+        expect(mockList).toHaveBeenCalledTimes(1);
+        expect(mockList).toHaveBeenCalledWith({
+            owner: 'owner',
+            repo: 'repo',
+            state: 'open',
+            head: 'fork-owner:feature/12',
+            per_page: 2,
+            page: 1,
+        });
     });
 
-    it("returns no branch when no open PR references the issue", async () => {
-        mockList.mockResolvedValue({ data: [{ number: 1, body: "Unrelated", head: { ref: "feature/999" } }] });
+    it('verifies a direct event pull request as a full canonical identity', async () => {
+        mockGet.mockResolvedValue({ data: pullRequestIdentity(12) });
+        const repository = new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter());
 
-        await expect(new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter()).getHeadBranchForIssue(
-            "owner", "repo", 123, "token",
-        )).resolves.toBeUndefined();
+        await expect(repository.getBugbotPullRequestIdentity(
+            'owner', 'repo', 12, 'token',
+        )).resolves.toEqual({
+            number: 12,
+            state: 'open',
+            baseRepository: { owner: 'owner', name: 'repo', id: 7 },
+            headRepositoryOwner: 'fork-owner',
+            headRef: 'feature/12',
+            headSha: 'a'.repeat(40),
+        });
+        expect(mockGet).toHaveBeenCalledWith({ owner: 'owner', repo: 'repo', pull_number: 12 });
+    });
+
+    it('rejects incomplete Bugbot identity records instead of guessing', async () => {
+        mockGet.mockResolvedValue({ data: { number: 12, state: 'open' } });
+        const repository = new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter());
+        await expect(repository.getBugbotPullRequestIdentity(
+            'owner', 'repo', 12, 'token',
+        )).rejects.toMatchObject({
+            code: 'provider.unavailable',
+            message: 'Unable to verify pull request #12.',
+        });
+    });
+
+    it('maps Bugbot identity and exact-head failures to sanitized provider errors', async () => {
+        const repository = new PullRequestLifecycleRepository(new OctokitPullRequestLifecycleClientAdapter());
+        mockGet.mockRejectedValueOnce(new Error('secret identity failure'));
+        await expect(repository.getBugbotPullRequestIdentity(
+            'owner', 'repo', 12, 'token',
+        )).rejects.toMatchObject({
+            code: 'provider.unavailable',
+            message: 'Unable to verify pull request #12.',
+        });
+
+        mockList.mockRejectedValueOnce(new Error('secret exact-head failure'));
+        await expect(repository.findOpenBugbotPullRequestsByExactHead(
+            'owner', 'repo', 'fork-owner', 'feature/12', 'token',
+        )).rejects.toMatchObject({
+            code: 'provider.unavailable',
+            message: 'Unable to resolve the exact pull request for fork-owner:feature/12.',
+        });
     });
 
     it("updates the base branch and description through the lifecycle client", async () => {
@@ -123,3 +174,18 @@ describe("PullRequestLifecycleRepository", () => {
         fetchMock.mockRestore();
     });
 });
+
+function pullRequestIdentity(number: number) {
+    return {
+        number,
+        state: 'open',
+        head: {
+            ref: 'feature/12',
+            sha: 'a'.repeat(40),
+            repo: { owner: { login: 'fork-owner' } },
+        },
+        base: {
+            repo: { id: 7, name: 'repo', owner: { login: 'owner' } },
+        },
+    };
+}

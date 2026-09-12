@@ -44,9 +44,14 @@ export function renderBugbotStatusCard(
     isBugbotActionableState(finding.state),
   );
   const unknown = projection.counts.unknown;
+  const partialCoverage = projection.coverage.status === 'partial';
   const shortHead = projection.verifiedHeadSha.slice(0, 7);
   const heading = language === 'es-ES' ? '## 🤖 Estado de Bugbot' : '## 🤖 Bugbot status';
-  const status = unknown > 0
+  const status = partialCoverage
+    ? language === 'es-ES'
+      ? `La revisión de \`${shortHead}\` tiene cobertura parcial; no puede declarar limpio el pull request completo.`
+      : `The review of \`${shortHead}\` has partial coverage and cannot declare the whole pull request clean.`
+    : unknown > 0
     ? language === 'es-ES'
       ? `${unknown} hallazgo(s) tienen un estado desconocido en \`${shortHead}\`.`
       : `${unknown} finding(s) have unknown state on \`${shortHead}\`.`
@@ -72,6 +77,7 @@ export function renderBugbotStatusCard(
         : 'Review the linked threads or comment `/copilot fix all`.';
   const stateHeading = language === 'es-ES' ? '### Estado actual' : '### Current state';
   const findingsHeading = language === 'es-ES' ? '### Hallazgos' : '### Findings';
+  const coverageHeading = language === 'es-ES' ? '### Cobertura' : '### Coverage';
   const stateColumn = language === 'es-ES' ? 'Estado' : 'State';
   const countColumn = language === 'es-ES' ? 'Cantidad' : 'Count';
   const rows = [
@@ -99,6 +105,12 @@ export function renderBugbotStatusCard(
       ? [`[${language === 'es-ES' ? 'Ejecución' : 'Workflow run'}](${links.runUrl})`]
       : []),
   ].join(' · ');
+  const coverageRows = projection.coverage.sources.map((source) => {
+    const omitted = source.omittedItems > 0 ? `, omitted=${source.omittedItems}` : '';
+    const truncated = source.truncatedItems > 0 ? `, truncated=${source.truncatedItems}` : '';
+    const capped = source.providerLimitReached ? ', provider page limit reached; additional older records are uncounted' : '';
+    return `- ${source.source}: ${source.status}; retained=${source.itemsRetained}${omitted}${truncated}${capped}`;
+  });
   const details = projection.errors.length === 0
     ? (language === 'es-ES' ? 'Ninguna operación pendiente.' : 'No pending operations.')
     : projection.errors
@@ -123,6 +135,12 @@ export function renderBugbotStatusCard(
     '',
     ...findingRows,
     '',
+    coverageHeading,
+    '',
+    ...(coverageRows.length > 0
+      ? coverageRows
+      : [language === 'es-ES' ? '- Cobertura completa; ningún límite alcanzado.' : '- Complete coverage; no limit reached.']),
+    '',
     navigation,
     '',
     '<details>',
@@ -143,6 +161,7 @@ export function renderBugbotReviewSnapshot(
     readonly analyzedHeadSha: string;
     readonly currentHeadSha: string;
     readonly projectionDigest: string;
+    readonly coverageStatus: 'complete' | 'partial';
     readonly findings: readonly BugbotProjectedFinding[];
     readonly locale: string;
     readonly statusUrl: string;
@@ -155,7 +174,11 @@ export function renderBugbotReviewSnapshot(
   const normalized = normalizeHistoricalSnapshot(originalBody ?? '', input.analyzedHeadSha, language);
   const actionable = input.findings.filter((finding) => isBugbotActionableState(finding.state)).length;
   const unknown = input.findings.filter((finding) => finding.state === 'unknown').length;
-  const status = unknown > 0
+  const status = input.coverageStatus === 'partial'
+    ? language === 'es-ES'
+      ? 'La cobertura global es parcial; este snapshot no demuestra que todos sus hallazgos estén resueltos.'
+      : 'Overall coverage is partial; this snapshot does not prove that all of its findings are resolved.'
+    : unknown > 0
     ? language === 'es-ES'
       ? `No se pudo verificar el estado de ${unknown} hallazgo(s) de este review.`
       : `The state of ${unknown} finding(s) from this review could not be verified.`
@@ -214,17 +237,6 @@ function normalizeHistoricalSnapshot(
   let body = originalBody
     .replace(new RegExp(`<!--\\s*${BUGBOT_REVIEW_MARKER_PREFIX}\\s+schema="1"[^>]*-->\\s*`, 'gu'), '')
     .replace(new RegExp(`${escapeRegExp(BUGBOT_REVIEW_STATUS_START)}[\\s\\S]*?${escapeRegExp(BUGBOT_REVIEW_STATUS_END)}\\s*`, 'gu'), '')
-    .trim();
-  body = body
-    .replace(/^## 🤖 Bugbot review\s*$/mu, locale === 'es-ES' ? '## 🤖 Snapshot del review de Bugbot' : '## 🤖 Bugbot review snapshot')
-    .replace(
-      /Bugbot found \*\*(\d+)\*\* active potential problem\(s\) in this revision\.[^\n]*/u,
-      (_match, count: string) =>
-        locale === 'es-ES'
-          ? `Bugbot reportó **${count}** problema(s) potencial(es) cuando se analizó el commit \`${analyzedHeadSha.slice(0, 7)}\`. Este snapshot es histórico; usa el bloque de estado superior para conocer el estado actual.`
-          : `Bugbot reported **${count}** potential problem(s) when commit \`${analyzedHeadSha.slice(0, 7)}\` was analyzed. This snapshot is historical; use the status block above for current state.`,
-    )
-    .replace(/^To request an automatic repair for all active findings,[^\n]*\n?/gmu, '')
     .trim();
   if (!/^## 🤖 (?:Bugbot review snapshot|Snapshot del review de Bugbot)$/mu.test(body)) {
     const heading = locale === 'es-ES' ? '## 🤖 Snapshot del review de Bugbot' : '## 🤖 Bugbot review snapshot';

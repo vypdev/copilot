@@ -361,10 +361,10 @@
     {
       "id": "bugbot-analysis-and-autofix",
       "title": "Bugbot analysis, finding publication, and autofix",
-      "status": "as-built-baseline",
-      "scope": "Analyze bounded change ranges, publish stable findings, and apply authorized verified fixes",
+      "status": "implemented",
+      "scope": "Select one canonical PR, analyze bounded evidence, publish stable findings, and apply authorized verified fixes",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-11",
+      "lastVerified": "2026-09-12",
       "specs": [
         "specs/bugbot-analysis-publication-and-autofix.md",
         "specs/bugbot-context-selection-and-budgeting.md"
@@ -379,15 +379,26 @@
         "src/application/usecases/steps/commit/bugbot/bugbot_autofix_use_case.ts"
       ],
       "code": [
+        "src/domain/bugbot/context.ts",
         "src/domain/bugbot/finding.ts",
         "src/domain/bugbot/finding_identity.ts",
         "src/domain/bugbot/review_configuration.ts",
+        "src/application/policies/bounded_concurrency_policy.ts",
+        "src/application/policies/bugbot_resolution_eligibility_policy.ts",
+        "src/application/usecases/steps/commit/bugbot/load_bugbot_context_use_case.ts",
+        "src/application/usecases/steps/commit/bugbot/bugbot_previous_findings_context.ts",
         "src/application/usecases/steps/commit/bugbot/publish_findings_use_case.ts",
         "src/application/usecases/steps/commit/workspace_mutation_guard.ts",
+        "src/data/repository/issue/bugbot_issue_comment_query_repository.ts",
+        "src/infrastructure/composition/bugbot_context_port_factory.ts",
         "src/infrastructure/composition/bugbot_composition_root.ts"
       ],
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/load_bugbot_context_use_case.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_review_context.test.ts",
+        "src/domain/bugbot/__tests__/context.test.ts",
+        "src/data/repository/issue/__tests__/bugbot_issue_comment_query_repository.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/publish_findings_use_case.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_autofix_use_case.test.ts",
         "src/domain/bugbot/__tests__/finding_identity.test.ts"
@@ -397,7 +408,9 @@
         "docs/bugbot/detection.mdx",
         "docs/bugbot/finding-publication.mdx",
         "docs/bugbot/autofix.mdx",
-        "docs/bugbot/failure-scenarios.mdx"
+        "docs/bugbot/failure-scenarios.mdx",
+        "docs/bugbot/quality-observability.mdx",
+        "docs/bugbot/permissions.mdx"
       ]
     },
     {

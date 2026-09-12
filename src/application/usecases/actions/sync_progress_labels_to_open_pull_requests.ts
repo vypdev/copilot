@@ -14,14 +14,14 @@ export async function syncProgressLabelsToOpenPullRequests(
 ): Promise<void> {
   const roundedProgress = Math.min(100, Math.max(0, Math.round(progress / 5) * 5));
   const newProgressLabel = `${roundedProgress}%`;
-  const openPrNumbers = await pullRequestRepository.getOpenPullRequestNumbersByHeadBranch(
+  const pullRequestNumbers = await pullRequestRepository.getOpenPullRequestNumbersByHeadBranch(
     owner,
     repo,
     branch,
     token,
   );
 
-  for (const prNumber of openPrNumbers) {
+  for (const prNumber of pullRequestNumbers) {
     const prLabels = await issueRepository.getLabels(owner, repo, prNumber, token);
     const withoutProgress = prLabels.filter((name) => !PROGRESS_LABEL_PATTERN.test(name));
     const nextLabels = withoutProgress.includes(newProgressLabel)

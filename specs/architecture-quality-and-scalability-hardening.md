@@ -56,7 +56,7 @@ Implementation ledger:
 |---|---|---|---|
 | P0-A | complete | commit `759f418d`; semantic-boundary and architecture suites catalogued in `execution-error-and-context-hardening.md` | none |
 | P0-B | implemented | workflow-contract, state-fence, handler, adapter, architecture, package, and coverage gates catalogued in `deployment-concurrency-and-state-fencing.md` | controlled live serialization evidence |
-| P1-A | next | implementation contract ready | implementation and acceptance evidence |
+| P1-A | implemented | canonical-selection, bounded-read, partial-coverage, eligibility, adapter, UX, documentation, and coverage evidence catalogued in `bugbot-context-selection-and-budgeting.md` | controlled GitHub UX evidence before first rollout |
 | P1-B | queued | implementation contract ready | implementation and acceptance evidence |
 | P1-C | queued | implementation contract ready | implementation and acceptance evidence |
 | P2 | queued | implementation contract ready | implementation and final audit evidence |
@@ -784,7 +784,7 @@ package validation when bundles change, and `graphify update .` after code chang
       stale, cancellation, replay, initial-state, and unsupported-state scenarios converge.
 - [ ] `Result.errors` and logs contain no raw provider failure or secret, and the
       semantic taxonomy is exhaustive and publicly safe.
-- [ ] Bugbot provider-call count is constant with repository PR count and all
+- [x] Bugbot provider-call count is constant with repository PR count and all
       ambiguity/partial states are explicit.
 - [ ] Setup/doctor and provider policies meet their coverage, authority, and
       complexity bounds without registries or facade shims.

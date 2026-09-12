@@ -29,12 +29,12 @@ export async function hasNewerBugbotRevision(
     context: BugbotContext,
     ports: BugbotContextPorts,
 ): Promise<boolean> {
-    if (!context.prContext || context.openPrNumbers.length === 0) return false;
-    const currentHead = await ports.pullRequest.getPullRequestHeadSha(
-        execution.owner,
-        execution.repo,
-        context.openPrNumbers[0],
-        execution.tokens.token,
-    );
+    if (!context.prContext || !context.canonicalPullRequest) return false;
+    const reader = ports.loader.bind({
+        owner: execution.owner,
+        repository: execution.repo,
+        token: execution.tokens.token,
+    });
+    const currentHead = await reader.getPullRequestHeadSha(context.canonicalPullRequest.number);
     return currentHead !== undefined && currentHead.toLowerCase() !== context.prContext.prHeadSha.toLowerCase();
 }

@@ -1,191 +1,243 @@
-/**
- * Loads all bugbot context from GitHub repositories and delegates comment parsing to a pure collaborator.
- */
-
-import type { Execution } from "../../../../../data/model/execution";
-import type { BugbotContextPorts } from "../../../../../application/ports/bugbot_context_ports";
-import type { BugbotPullRequestReadPort } from "../../../../../application/ports/bugbot_pull_request_read_ports";
-import type { PullRequestReviewComment } from "../../../../../application/ports/pull_request_review_comment_ports";
-import type { PullRequestReviewThreadState } from "../../../../../application/ports/pull_request_review_comment_ports";
-import type { BugbotContext } from "./types";
+import { ApplicationError } from "../../../../errors/application_error";
+import type { BoundBugbotContextReadPorts } from "../../../../ports/bugbot_context_ports";
+import type { PullRequestReviewComment } from "../../../../ports/pull_request_review_comment_ports";
+import { runWithConcurrencyLimit } from "../../../../policies/bounded_concurrency_policy";
 import {
-    buildPreviousFindingsBlock,
-    collectPreviousBugbotFindings,
-    limitPreviousBugbotFindings,
-    parseBugbotFindingComments,
-} from "./bugbot_finding_context";
+  completeBugbotSourceCoverage,
+  selectCanonicalBugbotPullRequest,
+  summarizeBugbotCoverage,
+  type BugbotCanonicalPullRequestSelection,
+  type BugbotPullRequestIdentity,
+  type BugbotSourceCoverage,
+} from "../../../../../domain/bugbot/context";
 import { logDebugInfo } from "../../../../ports/logging_ports";
-import { buildReviewConversationBlock, buildReviewDiffBlock } from './bugbot_review_context';
-import { fileMatchesIgnorePatterns } from './file_ignore';
-import { buildBugbotReviewRuleSet } from './bugbot_review_rules';
+import {
+  collectPreviousBugbotFindings,
+  parseBugbotFindingComments,
+  type BugbotComment,
+} from "./bugbot_finding_context";
+import { buildPreviousFindingsContext } from "./bugbot_previous_findings_context";
+import { buildReviewConversationContext, buildReviewDiffContext } from "./bugbot_review_context";
+import { fileMatchesIgnorePatterns } from "./file_ignore";
+import { buildBugbotReviewRuleSet } from "./bugbot_review_rules";
+import type { BugbotContextRequest } from "./bugbot_context_request";
+import type { BugbotContext, BugbotPrContext } from "./types";
 
-export interface LoadBugbotContextOptions {
-    /** When set (e.g. for issue_comment when commit.branch is empty), use this branch to find open PRs. */
-    branchOverride?: string;
-    /** Allows PR review to operate without an issue parsed from the branch name. */
-    issueNumberOverride?: number;
-    /** Uses the event PR directly instead of searching by branch. */
-    pullRequestNumberOverride?: number;
-}
-
-function emptyBugbotContext(): BugbotContext {
-    return {
-        existingByFindingId: {},
-        issueComments: [],
-        openPrNumbers: [],
-        previousFindingsBlock: "",
-        reviewDiffBlock: "",
-        reviewConversationBlock: "",
-        prContext: null,
-        unresolvedFindingsWithBody: [],
-        reviewRulesBlock: '',
-        reviewRuleSources: [],
-        omittedReviewRules: 0,
-    };
-}
-
-async function loadOpenPullRequestComments(
-    repository: BugbotPullRequestReadPort,
-    owner: string,
-    repo: string,
-    openPrNumbers: number[],
-    token: string
-): Promise<ReadonlyMap<number, PullRequestReviewComment[]>> {
-    const commentsByPullRequest = new Map<number, PullRequestReviewComment[]>();
-    await Promise.all(openPrNumbers.map(async (prNumber) => {
-        commentsByPullRequest.set(
-            prNumber,
-            await repository.listPullRequestReviewComments(owner, repo, prNumber, token)
-        );
-    }));
-    return commentsByPullRequest;
-}
-
-async function loadOpenPullRequestThreadStates(
-    repository: BugbotPullRequestReadPort,
-    owner: string,
-    repo: string,
-    openPrNumbers: number[],
-    token: string,
-): Promise<ReadonlyMap<number, Readonly<Record<string, PullRequestReviewThreadState>>>> {
-    const statesByPullRequest = new Map<number, Readonly<Record<string, PullRequestReviewThreadState>>>();
-    await Promise.all(openPrNumbers.map(async (prNumber) => {
-        statesByPullRequest.set(
-            prNumber,
-            await repository.listPullRequestReviewThreadStates(owner, repo, prNumber, token),
-        );
-    }));
-    return statesByPullRequest;
-}
-
-async function loadPullRequestContext(
-    repository: BugbotPullRequestReadPort,
-    owner: string,
-    repo: string,
-    openPrNumber: number | undefined,
-    token: string
-): Promise<BugbotContext["prContext"]> {
-    if (openPrNumber == null) return null;
-    const prHeadSha = await repository.getPullRequestHeadSha(owner, repo, openPrNumber, token);
-    if (!prHeadSha) return null;
-
-    const snapshot = await repository.getReviewDiffSnapshot(owner, repo, openPrNumber, token);
-    const prFiles = snapshot.changes.map(({ filename, status }) => ({ filename, status }));
-    const filesWithLines = snapshot.filesWithFirstDiffLine;
-    const filesWithLocations = snapshot.filesWithDiffLocations;
-    const pathToFirstDiffLine = Object.fromEntries(
-        filesWithLines.map(({ path, firstLine }) => [path, firstLine])
-    );
-    const pathToDiffLocations = Object.fromEntries(
-        filesWithLocations.map(({ path, locations }) => [path, locations])
-    );
-    return {
-        prHeadSha,
-        prFiles,
-        pathToFirstDiffLine,
-        pathToDiffLocations,
-        changes: snapshot.changes,
-    };
-}
+type LoadedSource =
+  | { readonly kind: "issue"; readonly value: BugbotComment[]; readonly coverage: BugbotSourceCoverage }
+  | { readonly kind: "comments"; readonly value: PullRequestReviewComment[]; readonly coverage: BugbotSourceCoverage }
+  | { readonly kind: "threads"; readonly value: Readonly<Record<string, import("../../../../ports/pull_request_review_comment_ports").PullRequestReviewThreadState>>; readonly coverage: BugbotSourceCoverage }
+  | { readonly kind: "diff"; readonly value: import("../../../../ports/bugbot_pull_request_read_ports").PullRequestReviewDiffSnapshot; readonly coverage: BugbotSourceCoverage };
 
 export async function loadBugbotContext(
-    param: Execution,
-    options: LoadBugbotContextOptions | undefined,
-    ports: BugbotContextPorts
+  request: BugbotContextRequest,
+  ports: BoundBugbotContextReadPorts,
 ): Promise<BugbotContext> {
-    const issueNumber = options?.issueNumberOverride ?? param.issueNumber;
-    const headBranch = (options?.branchOverride ?? (param.isPullRequest ? param.pullRequest.head : param.commit.branch))?.trim();
-    const token = param.tokens.token;
-    const owner = param.owner;
-    const repo = param.repo;
-
-    const openPrNumbers = options?.pullRequestNumberOverride != null && options.pullRequestNumberOverride > 0
-        ? [options.pullRequestNumberOverride]
-        : headBranch
-            ? await ports.pullRequest.getOpenPullRequestNumbersByHeadBranch(owner, repo, headBranch, token)
-            : [];
-
-    if (!headBranch && openPrNumbers.length === 0) {
-        logDebugInfo("LoadBugbotContext: no head branch or pull request target; returning empty context.");
-        return emptyBugbotContext();
-    }
-
-    const [issueComments, pullRequestComments, reviewThreadStates, prContext] = await Promise.all([
-        issueNumber > 0
-            ? ports.issue.listIssueComments(owner, repo, issueNumber, token)
-            : Promise.resolve([]),
-        loadOpenPullRequestComments(ports.pullRequest, owner, repo, openPrNumbers, token),
-        loadOpenPullRequestThreadStates(ports.pullRequest, owner, repo, openPrNumbers, token),
-        loadPullRequestContext(ports.pullRequest, owner, repo, openPrNumbers[0], token),
-    ]);
-    const parsedComments = parseBugbotFindingComments(
-        issueComments,
-        pullRequestComments,
-        param.tokenUser,
-        reviewThreadStates,
+  const selection = await selectCanonicalPullRequest(request, ports);
+  const canonicalPullRequest = requireUsableSelection(request, selection);
+  const selectionCoverage = completeBugbotSourceCoverage(
+    "selection",
+    selection.kind === "canonical" ? 1 : selection.kind === "ambiguous" ? 2 : 0,
+    request.target.headRef || request.target.eventPullRequestNumber ? 1 : 0,
+  );
+  const tasks: Array<() => Promise<LoadedSource>> = [];
+  if (request.target.issueNumber !== undefined) {
+    tasks.push(async () => {
+      const result = await ports.listIssueComments(request.target.issueNumber as number);
+      return { kind: "issue", value: [...result.value], coverage: result.coverage };
+    });
+  }
+  if (canonicalPullRequest) {
+    tasks.push(
+      async () => {
+        const result = await ports.listPullRequestReviewComments(canonicalPullRequest.number);
+        return { kind: "comments", value: [...result.value], coverage: result.coverage };
+      },
+      async () => {
+        const result = await ports.listPullRequestReviewThreadStates(canonicalPullRequest.number);
+        return { kind: "threads", value: result.value, coverage: result.coverage };
+      },
+      async () => {
+        const result = await ports.getReviewDiffSnapshot(canonicalPullRequest.number);
+        return { kind: "diff", value: result.value, coverage: result.coverage };
+      },
     );
-    const previousFindings = collectPreviousBugbotFindings(
-        parsedComments.issueComments,
-        parsedComments.existingByFindingId,
-        parsedComments.prFindingIdToBody
-    );
-    const boundedPreviousFindings = limitPreviousBugbotFindings(previousFindings);
-    const previousFindingsBlock = buildPreviousFindingsBlock(previousFindings);
-    const ignorePatterns = param.ai.getAiIgnoreFiles();
-    const reviewDiffBlock = buildReviewDiffBlock(prContext, ignorePatterns);
-    const reviewConversationBlock = buildReviewConversationBlock(
-        issueComments,
-        pullRequestComments,
-        param.tokenUser,
-    );
-    const unresolvedFindingsWithBody = boundedPreviousFindings.map((finding) => ({
-        id: finding.id,
-        fullBody: finding.fullBody,
-    }));
-    const repositoryRules = await ports.rules.loadRules(
-        prContext?.prFiles
-            .map((file) => file.filename)
-            .filter((file) => !fileMatchesIgnorePatterns(file, ignorePatterns)) ?? [],
-    );
-    const ruleSet = buildBugbotReviewRuleSet(
-        param.ai.getBugbotReviewConfiguration().organizationRules,
-        repositoryRules,
-    );
-
-    logDebugInfo(
-        `LoadBugbotContext: issue #${issueNumber}, branch ${headBranch}, open PRs=${openPrNumbers.length}, existing findings=${Object.keys(parsedComments.existingByFindingId).length}, unresolved with body=${unresolvedFindingsWithBody.length}, diff files=${prContext?.changes?.length ?? prContext?.prFiles.length ?? 0}, diff prompt chars=${reviewDiffBlock.length}, conversation chars=${reviewConversationBlock.length}.`
-    );
-    return {
-        existingByFindingId: parsedComments.existingByFindingId,
-        issueComments: parsedComments.issueComments,
-        openPrNumbers,
-        previousFindingsBlock,
-        reviewDiffBlock,
-        reviewConversationBlock,
-        prContext,
-        unresolvedFindingsWithBody,
-        reviewRulesBlock: ruleSet.promptBlock,
-        reviewRuleSources: [...ruleSet.sources],
-        omittedReviewRules: ruleSet.omitted,
-    };
+  }
+  const loaded = await runWithConcurrencyLimit(tasks, 2);
+  const issueComments = sourceValue(loaded, "issue", [] as BugbotComment[]);
+  const pullRequestComments = sourceValue(loaded, "comments", [] as PullRequestReviewComment[]);
+  const reviewThreadStates = sourceValue(loaded, "threads", {});
+  const diff = sourceValue(loaded, "diff", undefined);
+  const pullRequestCommentsByNumber = canonicalPullRequest
+    ? new Map([[canonicalPullRequest.number, pullRequestComments]])
+    : new Map<number, PullRequestReviewComment[]>();
+  const reviewThreadStatesByPullRequest = canonicalPullRequest
+    ? new Map([[canonicalPullRequest.number, reviewThreadStates]])
+    : new Map();
+  const parsedComments = parseBugbotFindingComments(
+    issueComments,
+    pullRequestCommentsByNumber,
+    request.trustedAuthorLogin,
+    reviewThreadStatesByPullRequest,
+  );
+  const previousFindings = collectPreviousBugbotFindings(
+    parsedComments.issueComments,
+    parsedComments.existingByFindingId,
+    parsedComments.prFindingIdToBody,
+  );
+  const previousContext = buildPreviousFindingsContext(previousFindings);
+  const prContext = canonicalPullRequest && diff ? toPrContext(canonicalPullRequest, diff) : null;
+  const diffContext = buildReviewDiffContext(prContext, request.ignorePatterns);
+  const conversationContext = buildReviewConversationContext(
+    issueComments,
+    pullRequestCommentsByNumber,
+    request.trustedAuthorLogin,
+  );
+  const repositoryRules = await ports.loadRules(
+    prContext?.prFiles
+      .map((file) => file.filename)
+      .filter((file) => !fileMatchesIgnorePatterns(file, request.ignorePatterns)) ?? [],
+  );
+  const ruleSet = buildBugbotReviewRuleSet(request.organizationRules, repositoryRules);
+  const coverage = summarizeBugbotCoverage([
+    selectionCoverage,
+    ...loaded.map((source) => source.kind === "diff"
+      ? {
+          ...source.coverage,
+          status: source.coverage.status === "partial" || diffContext.omitted > 0 || diffContext.truncated > 0
+            ? "partial" as const
+            : "complete" as const,
+          itemsRetained: diffContext.retained,
+          omittedItems: source.coverage.omittedItems + diffContext.omitted,
+          truncatedItems: source.coverage.truncatedItems + diffContext.truncated,
+          limitReached: source.coverage.limitReached || diffContext.omitted > 0 || diffContext.truncated > 0,
+        }
+      : source.coverage),
+    {
+      ...completeBugbotSourceCoverage("previous-findings", previousContext.selected.length),
+      status: previousContext.omitted > 0 ? "partial" : "complete",
+      omittedItems: previousContext.omitted,
+      limitReached: previousContext.omitted > 0,
+    },
+    {
+      ...completeBugbotSourceCoverage("human-conversation", conversationContext.retained),
+      status: conversationContext.omitted > 0 || conversationContext.truncated > 0 ? "partial" : "complete",
+      itemsFetched: conversationContext.retained + conversationContext.omitted,
+      omittedItems: conversationContext.omitted,
+      truncatedItems: conversationContext.truncated,
+      limitReached: conversationContext.omitted > 0 || conversationContext.truncated > 0,
+    },
+    {
+      ...completeBugbotSourceCoverage("rules", ruleSet.rules.length, ruleSet.rules.length > 0 ? 1 : 0),
+      status: ruleSet.omitted > 0 ? "partial" : "complete",
+      omittedItems: ruleSet.omitted,
+      limitReached: ruleSet.omitted > 0,
+    },
+  ]);
+  logDebugInfo(
+    `LoadBugbotContext: selection=${selection.kind}, coverage=${coverage.status}, existing findings=${Object.keys(parsedComments.existingByFindingId).length}, retained previous findings=${previousContext.selected.length}, diff files=${prContext?.changes?.length ?? 0}.`,
+  );
+  return {
+    existingByFindingId: parsedComments.existingByFindingId,
+    issueComments: parsedComments.issueComments,
+    canonicalPullRequest,
+    selectionReason: selection.kind === "canonical" ? selection.reason : "none",
+    coverage,
+    eligibleResolutionIds: new Set(previousContext.selected.map((finding) => finding.id)),
+    previousFindingsBlock: previousContext.block,
+    reviewDiffBlock: diffContext.block,
+    reviewConversationBlock: conversationContext.block,
+    prContext,
+    unresolvedFindingsWithBody: previousContext.selected.map((finding) => ({
+      id: finding.id,
+      fullBody: finding.fullBody,
+    })),
+    reviewRulesBlock: ruleSet.promptBlock,
+    reviewRuleSources: [...ruleSet.sources],
+    omittedReviewRules: ruleSet.omitted,
+  };
 }
+
+async function selectCanonicalPullRequest(
+  request: BugbotContextRequest,
+  ports: BoundBugbotContextReadPorts,
+): Promise<BugbotCanonicalPullRequestSelection> {
+  const eventNumber = request.target.eventPullRequestNumber;
+  if (eventNumber !== undefined) {
+    const candidate = await ports.getPullRequest(eventNumber);
+    return selectCanonicalBugbotPullRequest(request.target, [candidate], "event");
+  }
+  if (!request.target.headRef) return { kind: "none" };
+  const candidates = await ports.findOpenPullRequestsByExactHead(
+    request.target.headOwner,
+    request.target.headRef,
+  );
+  return selectCanonicalBugbotPullRequest(request.target, candidates, "exact-head");
+}
+
+function requireUsableSelection(
+  request: BugbotContextRequest,
+  selection: BugbotCanonicalPullRequestSelection,
+): BugbotPullRequestIdentity | null {
+  if (selection.kind === "canonical") return selection.pullRequest;
+  if (selection.kind === "ambiguous") {
+    throw new ApplicationError(
+      "provider.conflict",
+      `Two open pull requests match ${request.target.headOwner}:${request.target.headRef}; review was not started.`,
+    );
+  }
+  if (selection.kind === "stale") {
+    throw new ApplicationError("workflow.stale", `${selection.reason} Review was not started.`);
+  }
+  if (request.target.pullRequestRequired) {
+    throw new ApplicationError("workflow.stale", "No verified pull request matches the review target.");
+  }
+  return null;
+}
+
+function sourceValue(
+  sources: readonly LoadedSource[],
+  kind: "issue",
+  fallback: BugbotComment[],
+): BugbotComment[];
+function sourceValue(
+  sources: readonly LoadedSource[],
+  kind: "comments",
+  fallback: PullRequestReviewComment[],
+): PullRequestReviewComment[];
+function sourceValue(
+  sources: readonly LoadedSource[],
+  kind: "threads",
+  fallback: Readonly<Record<string, import("../../../../ports/pull_request_review_comment_ports").PullRequestReviewThreadState>>,
+): Readonly<Record<string, import("../../../../ports/pull_request_review_comment_ports").PullRequestReviewThreadState>>;
+function sourceValue(
+  sources: readonly LoadedSource[],
+  kind: "diff",
+  fallback: undefined,
+): import("../../../../ports/bugbot_pull_request_read_ports").PullRequestReviewDiffSnapshot | undefined;
+function sourceValue(
+  sources: readonly LoadedSource[],
+  kind: LoadedSource["kind"],
+  fallback: unknown,
+): unknown {
+  return sources.find((source) => source.kind === kind)?.value ?? fallback;
+}
+
+function toPrContext(
+  identity: BugbotPullRequestIdentity,
+  snapshot: import("../../../../ports/bugbot_pull_request_read_ports").PullRequestReviewDiffSnapshot,
+): BugbotPrContext {
+  return {
+    prHeadSha: identity.headSha,
+    prFiles: snapshot.changes.map(({ filename, status }) => ({ filename, status })),
+    pathToFirstDiffLine: Object.fromEntries(
+      snapshot.filesWithFirstDiffLine.map(({ path, firstLine }) => [path, firstLine]),
+    ),
+    pathToDiffLocations: Object.fromEntries(
+      snapshot.filesWithDiffLocations.map(({ path, locations }) => [path, locations]),
+    ),
+    changes: snapshot.changes,
+  };
+}
+
+export type { BugbotContextRequest, LoadBugbotContextOptions } from "./bugbot_context_request";

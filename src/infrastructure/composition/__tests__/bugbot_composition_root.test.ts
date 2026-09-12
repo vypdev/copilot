@@ -124,7 +124,6 @@ describe("createBugbotCompositionRoot", () => {
       graphqlClient,
     );
     expect(mockBugbotPullRequestRepository).toHaveBeenCalledWith(
-      lifecycle,
       changes,
       reviewQuery,
       reviewCommand,

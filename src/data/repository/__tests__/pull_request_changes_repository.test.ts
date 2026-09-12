@@ -7,7 +7,9 @@ jest.mock('../../../utils/logger', () => ({
 }));
 
 function createClient(pages: Array<Array<{ filename: string; status: string; additions: number; deletions: number; patch?: string }>>) {
-  const listFiles = jest.fn(async () => ({ data: pages[0] ?? [] }));
+  const listFiles = jest.fn(async (parameters: Record<string, unknown>) => ({
+    data: pages[Number(parameters.page ?? 1) - 1] ?? [],
+  }));
   const iterator = jest.fn(async function* () {
     for (const data of pages) yield { data };
   });
@@ -21,7 +23,7 @@ function createClient(pages: Array<Array<{ filename: string; status: string; add
     },
   } as unknown as GithubPullRequestChangesClient;
   const provider = { getClient: jest.fn(() => client) } as unknown as GithubClientPort<GithubPullRequestChangesClient>;
-  return { provider, iterator };
+  return { provider, iterator, listFiles };
 }
 
 describe('PullRequestChangesRepository', () => {
@@ -84,6 +86,49 @@ describe('PullRequestChangesRepository', () => {
         await expect(repository.getReviewDiffSnapshot('owner', 'repo', 7, 'token')).rejects.toThrow(
             'Unable to list pull request changed files.',
         );
+    });
+
+    it('caps Bugbot diff loading at ten pages and exposes partial coverage', async () => {
+        const pages = Array.from({ length: 11 }, (_, page) =>
+            Array.from({ length: 100 }, (_, index) => ({
+                filename: `src/${page}-${index}.ts`,
+                status: 'modified',
+                additions: 1,
+                deletions: 0,
+                patch: '@@ -1 +1 @@\n+change',
+            })),
+        );
+        const { provider, listFiles } = createClient(pages);
+        const repository = new PullRequestChangesRepository(provider);
+
+        const result = await repository.getBoundedBugbotReviewDiffSnapshot(
+            'owner', 'repo', 7, 'token',
+        );
+
+        expect(listFiles).toHaveBeenCalledTimes(10);
+        expect(listFiles).toHaveBeenLastCalledWith(expect.objectContaining({ page: 10, per_page: 100 }));
+        expect(result.snapshot.changes).toHaveLength(1_000);
+        expect(result.coverage).toEqual(expect.objectContaining({
+            source: 'diff',
+            status: 'partial',
+            pagesFetched: 10,
+            itemsRetained: 1_000,
+            limitReached: true,
+            providerLimitReached: true,
+        }));
+    });
+
+    it('stops Bugbot diff pagination after a short complete page', async () => {
+        const { provider, listFiles } = createClient([[
+            { filename: 'src/a.ts', status: 'added', additions: 1, deletions: 0, patch: '@@ -0 +1 @@\n+new' },
+        ]]);
+        const repository = new PullRequestChangesRepository(provider);
+        const result = await repository.getBoundedBugbotReviewDiffSnapshot(
+            'owner', 'repo', 7, 'token',
+        );
+        expect(listFiles).toHaveBeenCalledTimes(1);
+        expect(result.coverage.status).toBe('complete');
+        expect(result.coverage.providerLimitReached).toBeUndefined();
     });
 
     it('fails closed when a pull request has no head commit SHA', async () => {

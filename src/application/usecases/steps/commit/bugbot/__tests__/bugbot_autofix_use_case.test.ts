@@ -39,6 +39,8 @@ function baseExecution() {
         ai: {
             getAgentConfiguration: () => ({ provider: 'opencode', model: 'model', command: 'opencode run' }),
             getBugbotFixVerifyCommands: () => ["pnpm test"],
+            getBugbotReviewConfiguration: () => ({ organizationRules: [] }),
+            getAiIgnoreFiles: () => [],
         },
     } as unknown as Parameters<BugbotAutofixUseCase["invoke"]>[0]["execution"];
 }
@@ -58,7 +60,17 @@ function contextWithFindings(ids: string[]) {
     return {
         existingByFindingId,
         issueComments,
-        openPrNumbers: [] as number[],
+        canonicalPullRequest: {
+            number: 50,
+            state: 'open',
+            baseRepository: { owner: 'o', name: 'r' },
+            headRepositoryOwner: 'o',
+            headRef: 'feature/42-foo',
+            headSha: 'a'.repeat(40),
+        },
+        selectionReason: 'exact-head',
+        coverage: { status: 'complete', sources: [] },
+        eligibleResolutionIds: new Set(ids),
         previousFindingsBlock: "",
         prContext: null,
         unresolvedFindingsWithBody: ids.map((id) => ({ id, fullBody: `Body ${id}` })),
@@ -72,14 +84,13 @@ describe("BugbotAutofixUseCase", () => {
         useCase = new BugbotAutofixUseCase(
             { fix: (request: { configuration: unknown; prompt: string }) => mockCopilotMessage(request.configuration, request.prompt) },
             {
+                loader: { bind: jest.fn().mockReturnValue({}) },
                 issue: { listIssueComments: jest.fn() },
                 reviewState: { listPullRequestReviews: jest.fn().mockResolvedValue([]) },
                 navigation: { forPullRequest: jest.fn() },
                 rules: { loadRules: jest.fn().mockResolvedValue([]) },
                 pullRequest: {
-                    getHeadBranchForIssue: jest.fn(),
                     getPullRequestReviewCommentBody: jest.fn(),
-                    getOpenPullRequestNumbersByHeadBranch: jest.fn(),
                     listPullRequestReviewComments: jest.fn(),
                     getPullRequestHeadSha: jest.fn(),
                     getReviewDiffSnapshot: jest.fn().mockResolvedValue({
@@ -94,6 +105,7 @@ describe("BugbotAutofixUseCase", () => {
         );
         mockLoadBugbotContext.mockReset();
         mockCopilotMessage.mockReset();
+        mockExec.mockReset();
         workspaceInspectionCount = 0;
         mockExec.mockImplementation(
             async (_command: string, _args: string[], options?: { listeners?: { stdout?: (data: Buffer) => void } }) => {
@@ -135,8 +147,9 @@ describe("BugbotAutofixUseCase", () => {
         expect(mockCopilotMessage).not.toHaveBeenCalled();
     });
 
-    it("uses provided context when passed", async () => {
+    it("revalidates provided context before workspace mutation", async () => {
         const ctx = contextWithFindings(["f1"]);
+        mockLoadBugbotContext.mockResolvedValue(ctx);
         mockCopilotMessage.mockResolvedValue({ text: "Done.", sessionId: "s1" });
 
         await useCase.invoke({
@@ -146,7 +159,7 @@ describe("BugbotAutofixUseCase", () => {
             context: ctx,
         });
 
-        expect(mockLoadBugbotContext).not.toHaveBeenCalled();
+        expect(mockLoadBugbotContext).toHaveBeenCalledTimes(1);
         expect(mockCopilotMessage).toHaveBeenCalledTimes(1);
     });
 
@@ -165,8 +178,26 @@ describe("BugbotAutofixUseCase", () => {
         expect(mockCopilotMessage).toHaveBeenCalledTimes(1);
     });
 
+    it('stops before workspace inspection when canonical context revalidation fails', async () => {
+        mockLoadBugbotContext.mockRejectedValue(new Error('stale pull request'));
+
+        const results = await useCase.invoke({
+            execution: baseExecution(),
+            targetFindingIds: ['f1'],
+            userComment: 'fix it',
+            context: contextWithFindings(['f1']),
+        });
+
+        expect(results).toHaveLength(1);
+        expect(results[0]).toEqual(expect.objectContaining({ success: false, executed: true }));
+        expect(results[0].errors[0].message).toBe('Bugbot autofix context validation failed.');
+        expect(mockExec).not.toHaveBeenCalled();
+        expect(mockCopilotMessage).not.toHaveBeenCalled();
+    });
+
     it("filters to only valid unresolved target ids", async () => {
         const ctx = contextWithFindings(["f1", "f2"]);
+        mockLoadBugbotContext.mockResolvedValue(ctx);
         mockCopilotMessage.mockResolvedValue({ text: "Done.", sessionId: "s1" });
 
         const results = await useCase.invoke({
@@ -187,6 +218,7 @@ describe("BugbotAutofixUseCase", () => {
         const ctx = contextWithFindings(["f1", "f2"]);
         ctx.existingByFindingId["f1"]!.issue!.resolved = true;
         ctx.existingByFindingId["f2"]!.issue!.resolved = true;
+        mockLoadBugbotContext.mockResolvedValue(ctx);
 
         const results = await useCase.invoke({
             execution: baseExecution(),
@@ -201,6 +233,7 @@ describe("BugbotAutofixUseCase", () => {
 
     it("returns failure when copilotMessage returns no text", async () => {
         const ctx = contextWithFindings(["f1"]);
+        mockLoadBugbotContext.mockResolvedValue(ctx);
         mockCopilotMessage.mockResolvedValue(null);
 
         const results = await useCase.invoke({
@@ -217,6 +250,7 @@ describe("BugbotAutofixUseCase", () => {
 
     it("returns success and payload when copilotMessage returns text", async () => {
         const ctx = contextWithFindings(["f1"]);
+        mockLoadBugbotContext.mockResolvedValue(ctx);
         mockCopilotMessage.mockResolvedValue({ text: "Fixed.", sessionId: "s1" });
 
         const results = await useCase.invoke({
@@ -237,6 +271,8 @@ describe("BugbotAutofixUseCase", () => {
     });
 
     it("refuses to run when the workspace was already dirty", async () => {
+        const ctx = contextWithFindings(["f1"]);
+        mockLoadBugbotContext.mockResolvedValue(ctx);
         mockExec.mockImplementationOnce(
             async (_command: string, _args: string[], options?: { listeners?: { stdout?: (data: Buffer) => void } }) => {
                 options?.listeners?.stdout?.(Buffer.from(" M preexisting.ts\n"));
@@ -248,7 +284,7 @@ describe("BugbotAutofixUseCase", () => {
             execution: baseExecution(),
             targetFindingIds: ["f1"],
             userComment: "fix it",
-            context: contextWithFindings(["f1"]),
+            context: ctx,
         });
 
         expect(results).toHaveLength(1);
@@ -258,13 +294,15 @@ describe("BugbotAutofixUseCase", () => {
     });
 
     it("returns a controlled failure when the workspace cannot be inspected before the agent", async () => {
+        const ctx = contextWithFindings(["f1"]);
+        mockLoadBugbotContext.mockResolvedValue(ctx);
         mockExec.mockRejectedValueOnce("status unavailable");
 
         const results = await useCase.invoke({
             execution: baseExecution(),
             targetFindingIds: ["f1"],
             userComment: "fix it",
-            context: contextWithFindings(["f1"]),
+            context: ctx,
         });
 
         expect(results).toHaveLength(1);
@@ -274,6 +312,8 @@ describe("BugbotAutofixUseCase", () => {
     });
 
     it("refuses the autofix when OpenCode modifies a sensitive path", async () => {
+        const ctx = contextWithFindings(["f1"]);
+        mockLoadBugbotContext.mockResolvedValue(ctx);
         mockExec
             .mockImplementationOnce(
                 async (_command: string, _args: string[], options?: { listeners?: { stdout?: (data: Buffer) => void } }) => {
@@ -293,7 +333,7 @@ describe("BugbotAutofixUseCase", () => {
             execution: baseExecution(),
             targetFindingIds: ["f1"],
             userComment: "fix it",
-            context: contextWithFindings(["f1"]),
+            context: ctx,
         });
 
         expect(results).toHaveLength(1);
@@ -302,6 +342,8 @@ describe("BugbotAutofixUseCase", () => {
     });
 
     it("returns a controlled failure when the workspace cannot be inspected after the agent", async () => {
+        const ctx = contextWithFindings(["f1"]);
+        mockLoadBugbotContext.mockResolvedValue(ctx);
         mockExec
             .mockImplementationOnce(
                 async (_command: string, _args: string[], options?: { listeners?: { stdout?: (data: Buffer) => void } }) => {
@@ -316,7 +358,7 @@ describe("BugbotAutofixUseCase", () => {
             execution: baseExecution(),
             targetFindingIds: ["f1"],
             userComment: "fix it",
-            context: contextWithFindings(["f1"]),
+            context: ctx,
         });
 
         expect(results).toHaveLength(1);
@@ -325,6 +367,8 @@ describe("BugbotAutofixUseCase", () => {
     });
 
     it("refuses to report success when the agent changes no workspace paths", async () => {
+        const ctx = contextWithFindings(["f1"]);
+        mockLoadBugbotContext.mockResolvedValue(ctx);
         mockExec.mockImplementation(
             async (_command: string, _args: string[], options?: { listeners?: { stdout?: (data: Buffer) => void } }) => {
                 options?.listeners?.stdout?.(Buffer.from(""));
@@ -337,7 +381,7 @@ describe("BugbotAutofixUseCase", () => {
             execution: baseExecution(),
             targetFindingIds: ["f1"],
             userComment: "fix it",
-            context: contextWithFindings(["f1"]),
+            context: ctx,
         });
 
         expect(results).toHaveLength(1);

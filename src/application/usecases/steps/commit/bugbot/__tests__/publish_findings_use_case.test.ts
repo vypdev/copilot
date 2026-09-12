@@ -51,7 +51,17 @@ function baseContext(overrides: Partial<BugbotContext> = {}): BugbotContext {
     return {
         existingByFindingId: {},
         issueComments: [],
-        openPrNumbers: [],
+        canonicalPullRequest: {
+            number: 50,
+            state: 'open',
+            baseRepository: { owner: 'o', name: 'r' },
+            headRepositoryOwner: 'o',
+            headRef: 'feature/42',
+            headSha: 'a'.repeat(40),
+        },
+        selectionReason: 'exact-head',
+        coverage: { status: 'complete', sources: [] },
+        eligibleResolutionIds: new Set(),
         previousFindingsBlock: "",
         prContext: null,
         unresolvedFindingsWithBody: [],
@@ -93,7 +103,6 @@ describe("publishFindings", () => {
         await publishFindings({
             execution: { ...baseExecution, issueNumber: -1 } as typeof baseExecution,
             context: baseContext({
-                openPrNumbers: [50],
                 prContext: {
                     prHeadSha: "sha1",
                     prFiles: [{ filename: "src/foo.ts", status: "modified" }],
@@ -133,7 +142,6 @@ describe("publishFindings", () => {
         await publishFindings({
             execution: baseExecution,
             context: baseContext({
-                openPrNumbers: [50],
                 prContext: {
                     prHeadSha: "sha1",
                     prFiles: [{ filename: "src/foo.ts", status: "modified" }],
@@ -168,7 +176,6 @@ describe("publishFindings", () => {
         await publishFindings({
             execution,
             context: baseContext({
-                openPrNumbers: [50],
                 reviewRuleSources: [
                     'organization:1',
                     'path:src/.copilot/BUGBOT.md (truncated)',
@@ -199,7 +206,6 @@ describe("publishFindings", () => {
         await publishFindings({
             execution,
             context: baseContext({
-                openPrNumbers: [50],
                 prContext: {
                     prHeadSha: 'sha1',
                     prFiles: [{ filename: 'src/foo.ts', status: 'modified' }],
@@ -221,7 +227,6 @@ describe("publishFindings", () => {
         await publishFindings({
             execution,
             context: baseContext({
-                openPrNumbers: [50],
                 prContext: {
                     prHeadSha: 'sha1',
                     prFiles: [{ filename: 'src/foo.ts', status: 'modified' }],
@@ -239,7 +244,6 @@ describe("publishFindings", () => {
         await publishFindings({
             execution: baseExecution,
             context: baseContext({
-                openPrNumbers: [50],
                 prContext: {
                     prHeadSha: "sha1",
                     prFiles: [{ filename: "src/foo.ts", status: "modified" }],
@@ -273,7 +277,6 @@ describe("publishFindings", () => {
         await publishFindings({
             execution: baseExecution,
             context: baseContext({
-                openPrNumbers: [50],
                 prContext: {
                     prHeadSha: "sha1",
                     prFiles: [{ filename: "src/bar.ts", status: "modified" }],
@@ -303,7 +306,6 @@ describe("publishFindings", () => {
         await publishFindings({
             execution: baseExecution,
             context: baseContext({
-                openPrNumbers: [50],
                 prContext: {
                     prHeadSha: "sha1",
                     prFiles: [{ filename: "src/a.ts", status: "modified" }],
@@ -330,7 +332,6 @@ describe("publishFindings", () => {
         await publishFindings({
             execution: baseExecution,
             context: baseContext({
-                openPrNumbers: [50],
                 existingByFindingId: {
                     f1: {
                         pullRequest: {
@@ -365,7 +366,6 @@ describe("publishFindings", () => {
         await publishFindings({
             execution: baseExecution,
             context: baseContext({
-                openPrNumbers: [50],
                 existingByFindingId: {
                     f1: {
                         pullRequest: {
@@ -412,7 +412,6 @@ describe("publishFindings", () => {
                         },
                     },
                 },
-                openPrNumbers: [50],
                 prContext: {
                     prHeadSha: 'sha1',
                     prFiles: [{ filename: 'src/foo.ts', status: 'modified' }],
@@ -516,7 +515,6 @@ describe("publishFindings", () => {
         await publishFindings({
             execution: baseExecution,
             context: baseContext({
-                openPrNumbers: [50],
                 prContext: {
                     prHeadSha: "sha1",
                     prFiles: [{ filename: "src/b.ts", status: "modified" }],
@@ -541,7 +539,6 @@ describe("publishFindings", () => {
         await publishFindings({
             execution: baseExecution,
             context: baseContext({
-                openPrNumbers: [50],
                 existingByFindingId: {
                     f1: {
                         pullRequest: {
@@ -616,7 +613,6 @@ describe("publishFindings", () => {
         await publishFindings({
             execution: baseExecution,
             context: baseContext({
-                openPrNumbers: [50],
                 prContext: {
                     prHeadSha: "sha1",
                     prFiles: [{ filename: "src/only.ts", status: "modified" }],

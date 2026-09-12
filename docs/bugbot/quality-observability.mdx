@@ -26,7 +26,15 @@ The evaluator reports precision, recall, F1, exact-location accuracy, severity a
 
 ## Runtime telemetry
 
-When `bugbot-telemetry` is enabled, each review records only identifiers and aggregates: outcome, stage timings, changed file/line counts, rule count, finding counts and states, provider/model names, character counts, and rough token estimates. Prompt text, diffs, source, comments, responses, credentials, and rule contents are never stored in telemetry.
+When `bugbot-telemetry` is enabled, each review records only identifiers and
+aggregates: repository/event identity, outcome, stage timings, changed file/line counts, rule count, finding
+counts and states, provider/model names, character counts, and rough token
+estimates. It also records `event`, `exact-head`, or `none` as the canonical
+selection reason and the bounded `0`/`1`/`2+` candidate bucket; `complete` or `partial` coverage; logical and raw provider
+request counts; the fixed concurrency limit of two; and fetched, retained,
+omitted, and truncated counts per source. Prompt text, branches, diffs, source,
+comments, responses, credentials, authors, and rule contents are never stored in
+telemetry.
 
 The Action exports all review snapshots as the `bugbot-telemetry` JSON output and includes the current outcome/effort/latency in the Job Summary. Logs also contain one `[bugbot.telemetry]` JSON record per review.
 
@@ -39,7 +47,12 @@ copilot bugbot-analytics --input bugbot-telemetry.json
 copilot bugbot-analytics --input action.log --output json
 ```
 
-The report separates non-failure rate from completed-review rate, and includes outcome distribution, p50/p95/max latency, per-stage p95, findings per run, resolution events, finding-state observations, and estimated tokens. State observations are snapshots, not unique user-feedback events. Use those trends with benchmark results; latency alone is not a quality measure.
+The report separates non-failure rate from completed-review rate, and includes
+`partial` as an analyzed outcome rather than a clean claim. It also includes
+outcome distribution, p50/p95/max latency, per-stage p95, findings per run,
+resolution events, finding-state observations, and estimated tokens. State
+observations are snapshots, not unique user-feedback events. Use those trends
+with benchmark results; latency alone is not a quality measure.
 
 ## Programmatic API
 

@@ -29,7 +29,7 @@ export interface PublishFindingsParam {
 
 export async function publishFindings(param: PublishFindingsParam): Promise<void> {
     const { execution, context, findings, commitSha, overflowCount = 0, overflowTitles = [], ports } = param;
-    const { existingByFindingId, openPrNumbers, prContext } = context;
+    const { existingByFindingId, canonicalPullRequest, prContext } = context;
 
     const watermark =
         commitSha && execution.owner && execution.repo
@@ -37,11 +37,11 @@ export async function publishFindings(param: PublishFindingsParam): Promise<void
             : getCommentWatermark();
 
     const reviewPublisher =
-        prContext && openPrNumbers.length > 0
+        prContext && canonicalPullRequest
             ? new PullRequestReviewCommentPublisher({
                   repository: ports.pullRequestComments,
                   execution,
-                  openPrNumber: openPrNumbers[0],
+                  openPrNumber: canonicalPullRequest.number,
                   prContext,
                   watermark,
                   ruleSources: context.reviewRuleSources,

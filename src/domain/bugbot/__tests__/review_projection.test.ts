@@ -1,9 +1,11 @@
 import { buildBugbotReviewProjection } from '../review_projection';
 
 describe('buildBugbotReviewProjection', () => {
+  const completeCoverage = { status: 'complete' as const, sources: [] };
   const base = {
     pullRequestNumber: 358,
     analyzedHeadSha: 'a'.repeat(40),
+    coverage: completeCoverage,
     findings: [
       { id: 'b', state: 'fixed' as const, parentReviewIdentity: '20' },
       { id: 'a', state: 'open' as const, parentReviewIdentity: '10' },
@@ -57,5 +59,26 @@ describe('buildBugbotReviewProjection', () => {
       findings: [{ id: 'a', state: 'fixed' }],
     });
     expect(changed.digest).not.toBe(buildBugbotReviewProjection(base).digest);
+  });
+
+  it('never projects an empty partial review as clean or failed', () => {
+    const projection = buildBugbotReviewProjection({
+      ...base,
+      findings: [],
+      coverage: {
+        status: 'partial',
+        sources: [{
+          source: 'diff',
+          status: 'partial',
+          pagesFetched: 10,
+          itemsFetched: 1_000,
+          itemsRetained: 1_000,
+          omittedItems: 0,
+          truncatedItems: 0,
+          limitReached: true,
+        }],
+      },
+    });
+    expect(projection.outcome).toBe('partial');
   });
 });

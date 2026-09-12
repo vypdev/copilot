@@ -52,6 +52,7 @@ export interface GithubIssueComment {
     id: number;
     body?: string | null;
     user?: { login?: string };
+    created_at?: string;
 }
 
 export interface GithubIssueTitleClient {

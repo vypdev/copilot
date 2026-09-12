@@ -12,7 +12,7 @@ type PublicationKeysAreExact = Assert<
   Equal<keyof BugbotFindingPublicationPorts, "issueComments" | "pullRequestComments" | "reviewState">
 >;
 type ContextKeysAreExact = Assert<
-  Equal<keyof BugbotContextPorts, 'issue' | 'pullRequest' | 'reviewState' | 'navigation' | 'rules'>
+  Equal<keyof BugbotContextPorts, 'loader' | 'issue' | 'pullRequest' | 'reviewState' | 'navigation' | 'rules'>
 >;
 type ResolutionKeysAreExact = Assert<
   Equal<keyof BugbotFindingResolutionPorts, "issueComments" | "pullRequestComments">
@@ -161,5 +161,34 @@ describe("Bugbot port boundaries", () => {
     expect(contextPortSource).not.toContain('navigation?:');
     expect(snapshotLoaderSource).toContain('ports.navigation.forPullRequest');
     expect(snapshotLoaderSource).not.toContain('https://github.com');
+  });
+
+  it('keeps credentials and provider fan-out outside the bounded context loader', () => {
+    const loaderSource = readFileSync(
+      join(
+        portsDirectory,
+        '../usecases/steps/commit/bugbot/load_bugbot_context_use_case.ts',
+      ),
+      'utf8',
+    );
+    const requestSource = readFileSync(
+      join(
+        portsDirectory,
+        '../usecases/steps/commit/bugbot/bugbot_context_request.ts',
+      ),
+      'utf8',
+    );
+    const pullRequestReadPortSource = readFileSync(
+      join(portsDirectory, 'bugbot_pull_request_read_ports.ts'),
+      'utf8',
+    );
+
+    expect(loaderSource).not.toMatch(/\bExecution\b/u);
+    expect(loaderSource).not.toMatch(/\btoken\b/u);
+    expect(loaderSource).not.toContain('openPrNumbers');
+    expect(loaderSource).not.toContain('getOpenPullRequestNumbersByHeadBranch');
+    expect(loaderSource).not.toContain('Promise.all');
+    expect(requestSource).toContain("import type { Execution }");
+    expect(pullRequestReadPortSource).not.toContain('getOpenPullRequestNumbersByHeadBranch');
   });
 });

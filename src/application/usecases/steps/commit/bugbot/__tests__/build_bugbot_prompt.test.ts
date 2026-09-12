@@ -26,9 +26,17 @@ function aiWithIgnoreFiles(patterns: string[]): Ai {
 
 function mockContext(overrides: Partial<BugbotContext> = {}): BugbotContext {
     return {
+        existingByFindingId: {},
+        issueComments: [],
+        canonicalPullRequest: null,
+        selectionReason: 'none',
+        coverage: { status: 'complete', sources: [] },
+        eligibleResolutionIds: new Set(),
         previousFindingsBlock: "",
+        prContext: null,
+        unresolvedFindingsWithBody: [],
         ...overrides,
-    } as BugbotContext;
+    };
 }
 
 describe("buildBugbotPrompt", () => {
@@ -40,6 +48,7 @@ describe("buildBugbotPrompt", () => {
         expect(prompt).toContain("develop");
         expect(prompt).toContain("findings");
         expect(prompt).toContain("resolved_finding_ids");
+        expect(prompt).toContain('Context coverage:** complete');
     });
 
     it("includes ignore patterns when getAiIgnoreFiles returns patterns", () => {
