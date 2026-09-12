@@ -39,6 +39,11 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
+      - name: Set up Node.js 24 for exact agent provisioning
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+
       - name: Fetch incremental review range
         if: github.event.action == 'synchronize'
         env:
