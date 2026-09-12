@@ -6,6 +6,7 @@ import { ParamUseCase } from "./base/param_usecase";
 import { runSingleActionWorkflow } from "./single_action_workflow";
 import type { ActorAuthorizationPort } from "../ports/actor_authorization_ports";
 import type { BugbotReviewOperationContext } from './steps/commit/bugbot/bugbot_review_operation_context';
+import type { ThinkContext } from './steps/common/think_workflow';
 
 export class SingleActionUseCase implements ParamUseCase<Execution, Result[]> {
   taskId: string = "SingleActionUseCase";
@@ -14,7 +15,7 @@ export class SingleActionUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly publishGithubActionUseCase: ParamUseCase<Execution, Result[]> | undefined,
     private readonly createReleaseUseCase: ParamUseCase<Execution, Result[]> | undefined,
     private readonly createTagUseCase: ParamUseCase<Execution, Result[]> | undefined,
-    private readonly thinkUseCase: ParamUseCase<Execution, Result[]>,
+    private readonly thinkUseCase: ParamUseCase<ThinkContext, Result[]>,
     private readonly initialSetupUseCase: ParamUseCase<Execution, Result[]>,
     private readonly checkProgressUseCase: ParamUseCase<Execution, Result[]>,
     private readonly detectPotentialProblemsUseCase: ParamUseCase<BugbotReviewOperationContext, Result[]>,

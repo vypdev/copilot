@@ -17,6 +17,7 @@ jest.mock('../../application/usecases/steps/common/publish_resume_use_case', () 
 }));
 
 jest.mock('../../application/usecases/steps/common/store_configuration_use_case', () => ({
+    ...jest.requireActual('../../application/usecases/steps/common/store_configuration_use_case'),
     StoreConfigurationUseCase: jest.fn().mockImplementation(() => ({ invoke: mockStoreInvoke })),
 }));
 
@@ -30,20 +31,59 @@ const recommendationState = {
 
 function execution(): Execution {
     return {
+        owner: 'test-owner',
+        repo: 'test-repo',
+        eventName: 'issues',
         currentConfiguration: { results: [] },
         isSingleAction: false,
-        singleAction: { throwError: false },
+        isIssue: true,
+        isPullRequest: false,
+        isPush: false,
+        isBugfix: false,
+        isFeature: false,
+        isDocs: false,
+        isChore: false,
+        issueNumber: 11,
+        issueNotBranched: false,
+        issue: { number: 11 },
+        pullRequest: { number: -1 },
+        singleAction: { issue: -1, throwError: false },
+        release: { active: false },
+        hotfix: { active: false },
+        debug: false,
+        images: {
+            imagesOnIssue: false,
+            issueAutomaticActions: [],
+            issueFeatureGifs: [],
+            issueBugfixGifs: [],
+            issueReleaseGifs: [],
+            issueHotfixGifs: [],
+            issueDocsGifs: [],
+            issueChoreGifs: [],
+            imagesOnPullRequest: false,
+            pullRequestAutomaticActions: [],
+            pullRequestFeatureGifs: [],
+            pullRequestBugfixGifs: [],
+            pullRequestReleaseGifs: [],
+            pullRequestHotfixGifs: [],
+            pullRequestDocsGifs: [],
+            pullRequestChoreGifs: [],
+        },
+        tokens: { token: 'product-pat' },
         ai: new Ai('', 'model', false, [], false, 'low', 20),
     } as unknown as Execution;
 }
 
 function singleActionExecution(isRecommendStepsAction = false, isPublishIssueCommentAction = false): Execution {
-    return {
-        currentConfiguration: { results: [] },
+    return Object.assign(execution(), {
         isSingleAction: true,
-        singleAction: { throwError: true, isRecommendStepsAction, isPublishIssueCommentAction },
-        ai: new Ai('', 'model', false, [], false, 'low', 20),
-    } as unknown as Execution;
+        singleAction: {
+            issue: 11,
+            throwError: true,
+            isRecommendStepsAction,
+            isPublishIssueCommentAction,
+        },
+    }) as Execution;
 }
 
 describe('finishGithubAction', () => {
@@ -76,17 +116,20 @@ describe('finishGithubAction', () => {
         await finishGithubAction(action, results, {} as never, {} as never);
 
         expect(action.currentConfiguration.recommendationState).toEqual(recommendationState);
-        expect(mockStoreInvoke).toHaveBeenCalledWith(action);
+        expect(mockStoreInvoke).toHaveBeenCalledWith(expect.objectContaining({
+            issueNumber: 11,
+            currentConfiguration: expect.objectContaining({ recommendationState }),
+        }));
     });
 
     it('does not commit a pending recommendation state when publication fails', async () => {
-        mockPublishInvoke.mockImplementation(async (action: Execution) => {
-            action.currentConfiguration.results.push(new Result({
+        mockPublishInvoke.mockImplementation(async () => (
+            new Result({
                 id: 'PublishResultUseCase',
                 success: false,
                 executed: true,
-            }));
-        });
+            })
+        ));
         const action = execution();
         const results = [new Result({
             id: 'RecommendStepsUseCase',
@@ -114,7 +157,7 @@ describe('finishGithubAction', () => {
 
         await finishGithubAction(action, [], {} as never, {} as never);
 
-        expect(mockStoreInvoke).toHaveBeenCalledWith(action);
+        expect(mockStoreInvoke).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 11 }));
     });
 
     it('does not publish a second result comment for the issue-comment single action', async () => {

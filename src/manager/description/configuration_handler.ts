@@ -1,6 +1,6 @@
 import { Config, requireCurrentConfigurationPayload } from "../../data/model/config";
-import type { Execution } from "../../data/model/execution";
 import type { ExecutionConfigurationQuery } from "../../application/ports/execution_configuration_ports";
+import type { ConfigurationPersistenceContext } from '../../application/ports/configuration_store_ports';
 import { logError } from "../../utils/logger";
 import { IssueContentInterface } from "./base/issue_content_interface";
 import { buildConfigurationPayload } from './configuration_payload_policy';
@@ -16,9 +16,9 @@ export class ConfigurationHandler extends IssueContentInterface {
         return false;
     }
 
-    update = async (execution: Execution) => {
-        const storedRaw = await this.internalGetter(execution);
-        return await this.internalUpdate(execution, buildConfigurationPayload(execution, storedRaw));
+    update = async (query: ExecutionConfigurationQuery, context: ConfigurationPersistenceContext) => {
+        const storedRaw = await this.internalGetter(query);
+        return this.internalUpdate(query, buildConfigurationPayload(context, storedRaw));
     }
 
     get = async (query: ExecutionConfigurationQuery): Promise<Config | undefined> => {

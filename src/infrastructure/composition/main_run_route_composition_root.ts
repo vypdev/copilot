@@ -71,6 +71,10 @@ import { createWorkflowDispatchClient } from "./github_workflow_client_factory";
 import { randomUUID } from "node:crypto";
 import type { BugbotScmBinding } from './bugbot_scm_port_factory';
 import type { Execution } from '../../data/model/execution';
+import {
+  bindIssueDescriptionQuery,
+  bindIssueNotification,
+} from './shared_capability_port_binding';
 
 function createDetectPotentialProblemsUseCase(binding: BugbotScmBinding): DetectPotentialProblemsUseCase {
   const bugbot = createBugbotCompositionRoot(binding);
@@ -104,8 +108,8 @@ export function createSingleActionUseCaseCompositionRoot(
     repositoryReleasePort ? new CreateReleaseUseCase(repositoryReleasePort) : undefined,
     repositoryTagPort ? new CreateTagUseCase(repositoryTagPort) : undefined,
     new ThinkUseCase(
-      issueDescriptionQueryPort,
-      createIssueNotificationRepository(),
+      bindIssueDescriptionQuery(issueDescriptionQueryPort, binding),
+      bindIssueNotification(createIssueNotificationRepository(), binding),
       createFindingsQueryPort(),
     ),
     createInitialSetupCompositionRoot(),
@@ -172,21 +176,20 @@ export function createIssueCommentUseCaseCompositionRoot(binding: BugbotScmBindi
 
   return new IssueCommentUseCase(
     new CheckIssueCommentLanguageUseCase(
-      new CommentLanguageTranslationWorkflow(bugbot.issue, language),
+      new CommentLanguageTranslationWorkflow(bugbot.scm.publication.issueComments, language),
     ),
     new DetectBugbotFixIntentUseCase(
       findings,
       bugbot.scm.context,
     ),
     new ThinkUseCase(
-      createIssueContentCompositionRoot(),
-      createIssueNotificationRepository(),
+      bindIssueDescriptionQuery(createIssueContentCompositionRoot(), binding),
+      bindIssueNotification(createIssueNotificationRepository(), binding),
       findings,
     ),
     new BugbotAutofixUseCase(fixer, bugbot.scm.context, bugbotGit),
     new DoUserRequestUseCase(fixer, gitCommit),
     createActorAuthorizationRepository(),
-    gitCommit,
     bugbotGit,
     new DismissBugbotFindingsUseCase({ contextPorts: bugbot.scm.context, resolutionPorts: bugbot.scm.resolution }),
     new DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry),
@@ -220,21 +223,20 @@ export function createPullRequestReviewCommentUseCaseCompositionRoot(binding: Bu
 
   return new PullRequestReviewCommentUseCase(
     new CheckPullRequestCommentLanguageUseCase(
-      new CommentLanguageTranslationWorkflow(bugbot.issue, language),
+      new CommentLanguageTranslationWorkflow(bugbot.scm.publication.issueComments, language),
     ),
     new DetectBugbotFixIntentUseCase(
       findings,
       bugbot.scm.context,
     ),
     new ThinkUseCase(
-      createIssueContentCompositionRoot(),
-      createIssueNotificationRepository(),
+      bindIssueDescriptionQuery(createIssueContentCompositionRoot(), binding),
+      bindIssueNotification(createIssueNotificationRepository(), binding),
       findings,
     ),
     new BugbotAutofixUseCase(fixer, bugbot.scm.context, bugbotGit),
     new DoUserRequestUseCase(fixer, gitCommit),
     createActorAuthorizationRepository(),
-    gitCommit,
     bugbotGit,
     new DismissBugbotFindingsUseCase({ contextPorts: bugbot.scm.context, resolutionPorts: bugbot.scm.resolution }),
     new DetectPotentialProblemsUseCase(findings, bugbot.scm, bugbot.telemetry),
@@ -272,7 +274,8 @@ export function createMainRunRouteCompositionRoot(
     createSingleActionUseCaseCompositionRoot(surface, bugbotBinding(execution)));
   const issueComment = lazyWith((execution: Execution) =>
     createIssueCommentUseCaseCompositionRoot(bugbotBinding(execution)));
-  const issue = lazy(() => createIssueUseCaseCompositionRoot());
+  const issue = lazyWith((execution: Execution) =>
+    createIssueUseCaseCompositionRoot(bugbotBinding(execution)));
   const pullRequestReviewComment = lazyWith((execution: Execution) =>
     createPullRequestReviewCommentUseCaseCompositionRoot(bugbotBinding(execution)));
   const pullRequest = lazyWith((execution: Execution) =>
@@ -286,7 +289,7 @@ export function createMainRunRouteCompositionRoot(
     "issue-comment": async (execution) =>
       issueComment(execution).invoke(execution),
     issue: async (execution) =>
-      issue().invoke(execution),
+      issue(execution).invoke(execution),
     "pull-request-review-comment": async (execution) =>
       pullRequestReviewComment(execution).invoke(execution),
     "pull-request": async (execution) =>
@@ -294,11 +297,6 @@ export function createMainRunRouteCompositionRoot(
     push: async (execution) =>
       push(execution).invoke(execution),
   };
-}
-
-function lazy<T>(factory: () => T): () => T {
-  let value: T | undefined;
-  return () => value ?? (value = factory());
 }
 
 function lazyWith<T, TArg>(factory: (arg: TArg) => T): (arg: TArg) => T {

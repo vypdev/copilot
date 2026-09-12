@@ -173,7 +173,16 @@
         "src/application/policies/github_execution_admission_policy.ts",
         "src/application/policies/workflow_queue_policy.ts",
         "src/application/usecases/steps/commit/bugbot/bugbot_review_operation_context.ts",
-        "src/application/policies/result_publication_policy.ts"
+        "src/application/policies/result_publication_policy.ts",
+        "src/application/usecases/comment_automation_context.ts",
+        "src/application/usecases/steps/common/check_permissions_workflow.ts",
+        "src/application/usecases/steps/common/comment_language_translation_workflow.ts",
+        "src/application/usecases/steps/common/think_workflow.ts",
+        "src/application/usecases/steps/common/update_title_workflow.ts",
+        "src/application/usecases/steps/common/project_content_link_workflow.ts",
+        "src/application/usecases/steps/common/publish_resume_workflow.ts",
+        "src/application/usecases/steps/common/store_configuration_use_case.ts",
+        "src/infrastructure/composition/shared_capability_port_binding.ts"
       ],
       "tests": [
         "src/__tests__/api.test.ts",
@@ -184,6 +193,8 @@
         "src/architecture/__tests__/execution_import_ratchet.test.ts",
         "src/architecture/__tests__/raw_error_logging_boundaries.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_review_operation_context.test.ts",
+        "src/application/usecases/steps/common/__tests__/shared_capability_context_projection.test.ts",
+        "src/infrastructure/composition/__tests__/shared_capability_port_binding.test.ts",
         "src/application/usecases/execution/__tests__/resolve_github_execution_admission_use_case.test.ts",
         "src/application/usecases/workflow/__tests__/wait_for_previous_workflow_runs_use_case.test.ts"
       ],
@@ -225,6 +236,10 @@
         "src/application/usecases/actions/deployment_orchestration_use_case.ts",
         "src/application/usecases/steps/commit/bugbot/load_bugbot_context_use_case.ts",
         "src/application/usecases/steps/commit/bugbot/bugbot_review_operation_context.ts",
+        "src/application/usecases/comment_automation_context.ts",
+        "src/application/usecases/steps/common/publish_resume_workflow.ts",
+        "src/application/usecases/steps/common/store_configuration_use_case.ts",
+        "src/infrastructure/composition/shared_capability_port_binding.ts",
         "src/application/usecases/setup/doctor_use_case.ts",
         "src/application/policies/setup_questionnaire_policy.ts",
         "src/cli/setup_terminal_driver.ts",
@@ -239,6 +254,8 @@
         "src/application/usecases/actions/__tests__/deployment_orchestration_use_case.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/load_bugbot_context_use_case.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_review_operation_context.test.ts",
+        "src/application/usecases/steps/common/__tests__/shared_capability_context_projection.test.ts",
+        "src/infrastructure/composition/__tests__/shared_capability_port_binding.test.ts",
         "src/application/usecases/setup/__tests__/doctor_use_case.test.ts",
         "src/application/policies/__tests__/setup_questionnaire_policy.test.ts",
         "src/application/policies/__tests__/agent_execution_plan_policy.test.ts"
@@ -356,7 +373,7 @@
       "status": "implemented",
       "scope": "Admit only explicit commands or exact mentions, then route them while protecting repository mutations",
       "owner": "Copilot maintainers",
-      "lastVerified": "2026-09-12",
+      "lastVerified": "2026-09-13",
       "specs": [
         "specs/comment-automation-and-authorization.md"
       ],
@@ -370,22 +387,41 @@
         "src/application/usecases/pull_request_review_comment_use_case.ts"
       ],
       "code": [
+        "src/actions/main_run_route.ts",
+        "src/data/model/execution.ts",
+        "src/data/model/pull_request.ts",
+        "src/domain/github_comment_target.ts",
         "src/domain/copilot_comment_request.ts",
         "src/domain/copilot_command.ts",
         "src/application/policies/agent_task_activation_policy.ts",
+        "src/application/usecases/comment_automation_context.ts",
         "src/application/usecases/comment_automation_use_case.ts",
         "src/application/usecases/comment_automation_route_policy.ts",
         "src/application/usecases/comment_automation_command_workflow.ts",
+        "src/application/usecases/steps/issue_comment/check_issue_comment_language_use_case.ts",
+        "src/application/usecases/steps/common/comment_language_translation_workflow.ts",
+        "src/application/usecases/steps/common/think_request_policy.ts",
+        "src/application/usecases/steps/common/think_workflow.ts",
+        "src/infrastructure/composition/shared_capability_port_binding.ts",
         "src/data/repository/organization/actor_authorization_repository.ts"
       ],
       "tests": [
         "src/actions/__tests__/github_action.test.ts",
+        "src/actions/__tests__/main_run_route.test.ts",
+        "src/actions/__tests__/common_action.test.ts",
+        "src/data/model/__tests__/execution.test.ts",
+        "src/data/model/__tests__/pull_request.test.ts",
+        "src/domain/__tests__/github_comment_target.test.ts",
         "src/domain/__tests__/copilot_comment_request.test.ts",
         "src/domain/__tests__/copilot_command.test.ts",
         "src/application/policies/__tests__/agent_task_activation_policy.test.ts",
         "src/application/usecases/__tests__/comment_automation_use_case.test.ts",
         "src/application/usecases/__tests__/issue_comment_use_case.test.ts",
         "src/application/usecases/__tests__/pull_request_review_comment_use_case.test.ts",
+        "src/application/usecases/steps/issue_comment/__tests__/check_issue_comment_language_use_case.test.ts",
+        "src/application/usecases/steps/common/__tests__/think_request_policy.test.ts",
+        "src/application/usecases/steps/common/__tests__/shared_capability_context_projection.test.ts",
+        "src/infrastructure/composition/__tests__/shared_capability_port_binding.test.ts",
         "src/data/repository/organization/__tests__/actor_authorization_repository.test.ts"
       ],
       "documentation": [

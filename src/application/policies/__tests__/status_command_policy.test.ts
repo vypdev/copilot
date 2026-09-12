@@ -46,10 +46,27 @@ describe('status command policy', () => {
             lifecycle: 'reviewing',
             pullRequestDescriptionMode: 'append',
         });
+        expect(Object.isFrozen(snapshot)).toBe(true);
+        expect(Object.isFrozen(snapshot.issueLabels)).toBe(true);
+        expect(Object.isFrozen(snapshot.pullRequestLabels)).toBe(true);
+    });
+
+    it('copies and freezes finding counts from mutable execution results', () => {
+        const findingStates = { open: 2, reopened: 1, resolved: 3 };
+        const snapshot = buildCopilotStatusSnapshot(execution({
+            currentConfiguration: { results: [{ payload: { findingStates } }] },
+        }) as never);
+
+        findingStates.open = 99;
+        expect(snapshot.activeFindings).toEqual({ open: 2, reopened: 1, resolved: 3 });
+        expect(Object.isFrozen(snapshot.activeFindings)).toBe(true);
     });
 
     it('renders a markdown status result without invoking an agent', () => {
-        const result = buildCopilotStatusResult(execution() as never, 'CommentAutomationUseCase');
+        const result = buildCopilotStatusResult(
+            buildCopilotStatusSnapshot(execution() as never),
+            'CommentAutomationUseCase',
+        );
         expect(result.success).toBe(true);
         expect(result.executed).toBe(true);
         expect(result.steps[0]).toContain('## Copilot status');

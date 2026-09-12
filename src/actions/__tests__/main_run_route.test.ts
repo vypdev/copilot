@@ -12,7 +12,7 @@ const base = {
 describe('resolveMainRunRoute', () => {
     it.each([
         ['single-action', { isSingleAction: true }],
-        ['issue-comment', { isIssue: true, isIssueComment: true }],
+        ['issue-comment', { isIssueComment: true }],
         ['issue', { isIssue: true }],
         ['pull-request-review-comment', { isPullRequest: true, isPullRequestReviewComment: true }],
         ['pull-request', { isPullRequest: true }],
@@ -36,6 +36,11 @@ describe('resolveMainRunRoute', () => {
             isPullRequest: true,
             isPush: true,
         })).toBe('issue');
+        expect(resolveMainRunRoute({
+            ...base,
+            isIssueComment: true,
+            isPullRequest: true,
+        })).toBe('issue-comment');
         expect(resolveMainRunRoute({ ...base, isPullRequest: true, isPush: true })).toBe('pull-request');
     });
 });

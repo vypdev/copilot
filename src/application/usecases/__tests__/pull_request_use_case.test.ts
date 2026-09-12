@@ -22,7 +22,34 @@ const mockCloseIssueInvoke = jest.fn();
 const mockReviewPotentialProblemsInvoke = jest.fn();
 
 function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
-  return {
+  const defaultIssue = { number: -1, title: '', branchManagementAlways: false };
+  const defaultPullRequest = {
+    number: 7,
+    id: 'PR_node_7',
+    title: 'Feature title',
+    head: 'feature/review',
+    action: "opened",
+    isOpened: true,
+    isMerged: false,
+    isClosed: false,
+    isSynchronize: false,
+  };
+  const defaultLabels = {
+    isHotfix: false,
+    isRelease: false,
+    isBugfix: false,
+    isBug: false,
+    isFeature: false,
+    isEnhancement: false,
+    isDocs: false,
+    isDocumentation: false,
+    isChore: false,
+    isMaintenance: false,
+    isHelp: false,
+    isQuestion: false,
+    containsBranchedLabel: false,
+  };
+  const base = {
     owner: 'org',
     repo: 'repo',
     issueNumber: -1,
@@ -33,18 +60,25 @@ function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
     commit: { branch: 'feature/review' },
     currentConfiguration: { parentBranch: 'develop' },
     branches: { development: 'develop' },
-    pullRequest: {
-      number: 7,
-      head: 'feature/review',
-      action: "opened",
-      isOpened: true,
-      isMerged: false,
-      isClosed: false,
-      isSynchronize: false,
+    isIssue: false,
+    issue: defaultIssue,
+    pullRequest: defaultPullRequest,
+    emoji: { emojiLabeledTitle: false, branchManagementEmoji: '' },
+    release: { active: false },
+    hotfix: { active: false },
+    labels: defaultLabels,
+    project: {
+      getProjects: () => [],
+      getProjectColumnIssueCreated: () => 'Todo',
+      getProjectColumnPullRequestCreated: () => 'Review',
     },
     ai: new Ai('', 'model', false, [], false, 'low', 20),
     ...overrides,
-  } as unknown as Execution;
+  } as Record<string, unknown>;
+  if (overrides.issue) base.issue = { ...defaultIssue, ...(overrides.issue as object) };
+  if (overrides.pullRequest) base.pullRequest = { ...defaultPullRequest, ...(overrides.pullRequest as object) };
+  if (overrides.labels) base.labels = { ...defaultLabels, ...(overrides.labels as object) };
+  return base as unknown as Execution;
 }
 
 const workflowSteps = {
@@ -89,10 +123,16 @@ describe("PullRequestUseCase", () => {
     });
     await useCase.invoke(param);
 
-    expect(mockUpdateTitleInvoke).toHaveBeenCalledWith(param);
+    expect(mockUpdateTitleInvoke).toHaveBeenCalledWith(expect.objectContaining({
+      kind: 'pull-request',
+      pullRequestNumber: 7,
+    }));
     expect(mockAssignMemberInvoke).toHaveBeenCalledWith(param);
     expect(mockAssignReviewersInvoke).toHaveBeenCalledWith(param);
-    expect(mockLinkProjectInvoke).toHaveBeenCalledWith(param);
+    expect(mockLinkProjectInvoke).toHaveBeenCalledWith(expect.objectContaining({
+      contentType: 'pull request',
+      contentNumber: 7,
+    }));
     expect(mockLinkIssueInvoke).toHaveBeenCalledWith(param);
     expect(mockSyncLabelsInvoke).toHaveBeenCalledWith(param);
     expect(mockCheckPriorityInvoke).toHaveBeenCalledWith(param);
@@ -138,7 +178,10 @@ describe("PullRequestUseCase", () => {
 
     await useCase.invoke(param);
 
-    expect(mockUpdateTitleInvoke).toHaveBeenCalledWith(param);
+    expect(mockUpdateTitleInvoke).toHaveBeenCalledWith(expect.objectContaining({
+      kind: 'pull-request',
+      pullRequestNumber: 7,
+    }));
     expect(mockUpdateDescriptionInvoke).not.toHaveBeenCalled();
     expect(mockReviewPotentialProblemsInvoke).not.toHaveBeenCalled();
     expect(mockAssignMemberInvoke).not.toHaveBeenCalled();

@@ -19,14 +19,11 @@ jest.mock('../../../../../data/repository/project/project_board_query_repository
 
 function baseParam(overrides: Record<string, unknown> = {}) {
   return {
-    owner: 'o',
-    repo: 'r',
-    pullRequest: { number: 10, id: 'pr-node-1' },
-    tokens: { token: 't' },
-    project: {
-      getProjects: () => [{ id: 'p1', title: 'Backlog', url: 'https://github.com/org/repo/projects/1' }],
-      getProjectColumnPullRequestCreated: () => 'To Do',
-    },
+    contentType: 'pull request',
+    contentNumber: 10,
+    contentId: 'pr-node-1',
+    columnName: 'To Do',
+    projects: [{ id: 'p1', title: 'Backlog', type: 'organization', owner: 'org', url: 'https://github.com/org/repo/projects/1', number: 1 }],
     ...overrides,
   } as unknown as Parameters<LinkPullRequestProjectUseCase['invoke']>[0];
 }
@@ -37,8 +34,11 @@ describe('LinkPullRequestProjectUseCase', () => {
   beforeEach(() => {
     jest.useFakeTimers();
     useCase = new LinkPullRequestProjectUseCase(
-      { moveIssueToColumn: mockMoveIssueToColumn, setTaskPriority: jest.fn(), setTaskSize: jest.fn() },
-      { linkContentId: mockLinkContentId },
+      {
+        resolveIssueContentId: jest.fn(),
+        linkContentId: mockLinkContentId,
+        moveContent: mockMoveIssueToColumn,
+      },
       { wait: mockWait },
     );
     mockLinkContentId.mockResolvedValue(true);
@@ -55,15 +55,8 @@ describe('LinkPullRequestProjectUseCase', () => {
     const promise = useCase.invoke(param);
     await jest.advanceTimersByTimeAsync(10000);
     const results = await promise;
-    expect(mockLinkContentId).toHaveBeenCalledWith(expect.any(Object), 'pr-node-1', 't');
-    expect(mockMoveIssueToColumn).toHaveBeenCalledWith(
-      expect.any(Object),
-      'o',
-      'r',
-      10,
-      'To Do',
-      't'
-    );
+    expect(mockLinkContentId).toHaveBeenCalledWith(expect.any(Object), 'pr-node-1');
+    expect(mockMoveIssueToColumn).toHaveBeenCalledWith(expect.any(Object), 10, 'To Do');
     expect(results.some((r) => r.success && r.steps?.some((s) => s.includes('Backlog')))).toBe(true);
   });
 

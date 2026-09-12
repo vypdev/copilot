@@ -1,5 +1,5 @@
 import { Result } from '../../data/model/result';
-import type { Execution } from '../../data/model/execution';
+import type { CommentAutomationContext } from './comment_automation_context';
 import type { CommentAutomationDecision } from './comment_automation_decision_workflow';
 import type { CommentAutomationOptions } from './comment_automation_contracts';
 import { canRunBugbotAutofix, canRunDoUserRequest } from './steps/commit/bugbot/bugbot_fix_intent_payload';
@@ -7,21 +7,17 @@ import { logInfo } from '../ports/logging_ports';
 import { runCommentAutomationAction } from './comment_automation_action_workflow';
 
 export async function completeCommentAutomation(
-  param: Execution,
+  param: CommentAutomationContext,
   options: CommentAutomationOptions,
   decision: CommentAutomationDecision,
-  ports: Record<string, never>,
 ): Promise<Result[]> {
   logUnauthorizedActionSkip(decision);
   if (decision.route === 'think') {
     logInfo('Skipping bugbot autofix (no fix request, no targets, or no context).');
     logInfo('Running ThinkUseCase (no file-modifying action ran).');
-    return options.thinkUseCase.invoke(param);
+    return options.thinkUseCase.invoke(param.think);
   }
-  return runCommentAutomationAction(param, options, decision.route, decision.intentPayload, {
-    ...ports,
-    bugbotGitMutationPort: options.bugbotGitMutationPort,
-  });
+  return runCommentAutomationAction(param, options, decision.route, decision.intentPayload);
 }
 
 function logUnauthorizedActionSkip(decision: CommentAutomationDecision): void {

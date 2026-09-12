@@ -5,7 +5,6 @@ import { runCommentAutomation } from "./comment_automation_use_case";
 import type { BugbotAutofixParam } from "./steps/commit/bugbot/bugbot_autofix_use_case";
 import type { DoUserRequestParam } from "./steps/commit/user_request_use_case";
 import type { ActorAuthorizationPort } from "../ports/actor_authorization_ports";
-import type { GitCommitPort } from "../ports/git_ports";
 import type { DismissBugbotFindingsParam } from './steps/commit/bugbot/dismiss_bugbot_findings_use_case';
 import type { UpdatePullRequestDescriptionUseCase } from './steps/pull_request/update_pull_request_description_use_case';
 import type { RememberBugbotRuleParam } from './steps/commit/bugbot/remember_bugbot_rule_use_case';
@@ -15,6 +14,10 @@ import type {
   BugbotFixIntentContext,
   BugbotReviewOperationContext,
 } from './steps/commit/bugbot/bugbot_review_operation_context';
+import type { CommentLanguageRequest } from './steps/common/comment_language_translation_workflow';
+import type { ThinkContext } from './steps/common/think_workflow';
+import { projectPullRequestCommentLanguageRequest } from './steps/pull_request_review_comment/check_pull_request_comment_language_use_case';
+import { projectCommentAutomationContext } from './comment_automation_context';
 
 export class PullRequestReviewCommentUseCase implements ParamUseCase<
   Execution,
@@ -23,16 +26,15 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
   taskId = "PullRequestReviewCommentUseCase";
 
   constructor(
-    private readonly languageUseCase: ParamUseCase<Execution, Result[]>,
+    private readonly languageUseCase: ParamUseCase<CommentLanguageRequest, Result[]>,
     private readonly intentUseCase: ParamUseCase<BugbotFixIntentContext, Result[]>,
-    private readonly thinkUseCase: ParamUseCase<Execution, Result[]>,
+    private readonly thinkUseCase: ParamUseCase<ThinkContext, Result[]>,
     private readonly autofixUseCase: ParamUseCase<BugbotAutofixParam, Result[]>,
     private readonly doUserRequestUseCase: ParamUseCase<
       DoUserRequestParam,
       Result[]
     >,
     private readonly actorAuthorizationPort: ActorAuthorizationPort,
-    private readonly gitCommitPort: GitCommitPort,
     private readonly bugbotGitMutationPort: BugbotGitMutationPort,
     private readonly dismissBugbotFindingsUseCase?: ParamUseCase<DismissBugbotFindingsParam, Result[]>,
     private readonly reviewPotentialProblemsUseCase?: ParamUseCase<BugbotReviewOperationContext, Result[]>,
@@ -42,25 +44,41 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
   ) {}
 
   async invoke(param: Execution): Promise<Result[]> {
-    return runCommentAutomation(
+    const context = projectCommentAutomationContext(
       param,
+      projectPullRequestCommentLanguageRequest(param),
+      param.pullRequest.commentBody ?? '',
+    );
+    return runCommentAutomation(
+      context,
       {
         taskId: this.taskId,
         languageUseCase: this.languageUseCase,
         intentUseCase: this.intentUseCase,
         thinkUseCase: this.thinkUseCase,
         autofixUseCase: this.autofixUseCase,
-        doUserRequestUseCase: this.doUserRequestUseCase,
-        userComment: param.pullRequest.commentBody ?? "",
-        gitCommitPort: this.gitCommitPort,
+        doUserRequestUseCase: {
+          invoke: (request) => this.doUserRequestUseCase.invoke({ execution: param, ...request }),
+        },
         bugbotGitMutationPort: this.bugbotGitMutationPort,
         dismissBugbotFindingsUseCase: this.dismissBugbotFindingsUseCase,
         reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
-        updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase,
+        updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase
+          ? { invoke: () => this.updatePullRequestDescriptionUseCase!.invokeExplicit(param) }
+          : undefined,
         rememberBugbotRuleUseCase: this.rememberBugbotRuleUseCase,
-        syncBranchUseCase: this.syncBranchUseCase,
+        syncBranchUseCase: this.syncBranchUseCase
+          ? { invoke: (options) => this.syncBranchUseCase!.invoke({ execution: param, options }) }
+          : undefined,
       },
-      this.actorAuthorizationPort,
+      {
+        isActorAllowedToModifyFiles: (actor) => this.actorAuthorizationPort.isActorAllowedToModifyFiles(
+          param.owner,
+          param.repo,
+          actor,
+          param.tokens.token,
+        ),
+      },
     );
   }
 }

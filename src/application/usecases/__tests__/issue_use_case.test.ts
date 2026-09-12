@@ -34,14 +34,49 @@ const workflowSteps = {
 };
 
 function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
-  return {
+  const defaultIssue = { number: 8, opened: false, creator: 'alice', title: 'Issue', branchManagementAlways: false };
+  const defaultPullRequest = { number: -1, opened: false, creator: '', title: '', id: '' };
+  const defaultLabels = {
+    isRelease: false,
+    isQuestion: false,
+    isHelp: false,
+    isMandatoryBranchedLabel: false,
+    currentIssueLabels: [],
+    isHotfix: false,
+    isBugfix: false,
+    isBug: false,
+    isFeature: false,
+    isEnhancement: false,
+    isDocs: false,
+    isDocumentation: false,
+    isChore: false,
+    isMaintenance: false,
+    containsBranchedLabel: false,
+  };
+  const base = {
     cleanIssueBranches: false,
     isBranched: true,
-    issue: { opened: false },
-    labels: { isRelease: false, isQuestion: false, isHelp: false },
+    isIssue: true,
+    isPullRequest: false,
+    issueNumber: 8,
+    issue: defaultIssue,
+    pullRequest: defaultPullRequest,
+    labels: defaultLabels,
+    emoji: { emojiLabeledTitle: false, branchManagementEmoji: '' },
+    release: { active: false },
+    hotfix: { active: false },
+    project: {
+      getProjects: () => [],
+      getProjectColumnIssueCreated: () => 'Todo',
+      getProjectColumnPullRequestCreated: () => 'Review',
+    },
     ai: new Ai("", "model", false, [], false, "low", 20),
     ...overrides,
-  } as unknown as Execution;
+  } as Record<string, unknown>;
+  if (overrides.issue) base.issue = { ...defaultIssue, ...(overrides.issue as object) };
+  if (overrides.pullRequest) base.pullRequest = { ...defaultPullRequest, ...(overrides.pullRequest as object) };
+  if (overrides.labels) base.labels = { ...defaultLabels, ...(overrides.labels as object) };
+  return base as unknown as Execution;
 }
 
 function createUseCase(): IssueUseCase {

@@ -1,6 +1,10 @@
 import { Result } from '../../../../../data/model/result';
 import { PublishResultUseCase } from '../publish_resume_use_case';
 import { ApplicationError } from '../../../../errors/application_error';
+import {
+  projectPublishResultContext,
+  type PublishResultContextSource,
+} from '../publish_resume_workflow';
 
 const mockGetAccumulatedLogsAsText = jest.fn(() => '');
 jest.mock('../../../../ports/logging_ports', () => ({
@@ -9,8 +13,9 @@ jest.mock('../../../../ports/logging_ports', () => ({
   getAccumulatedLogsAsText: () => mockGetAccumulatedLogsAsText(),
 }));
 
+const mockGetRandomElement = jest.fn<string | undefined, [readonly string[]]>(() => undefined);
 jest.mock('../../../../../utils/list_utils', () => ({
-  getRandomElement: jest.fn(() => undefined),
+  getRandomElement: (values: readonly string[]) => mockGetRandomElement(values),
 }));
 
 const mockAddComment = jest.fn();
@@ -20,11 +25,30 @@ const logReport = {
   clearAccumulatedLogs: jest.fn(),
 };
 
-function baseParam(overrides: Record<string, unknown> = {}) {
-  const defaultConfig = { results: [new Result({ id: 'x', success: true, executed: true, steps: ['Step 1'] })] };
+function baseImages(): PublishResultContextSource['images'] {
   return {
-    owner: 'o',
-    repo: 'r',
+    imagesOnIssue: true,
+    imagesOnPullRequest: true,
+    issueAutomaticActions: [],
+    issueReleaseGifs: [],
+    issueHotfixGifs: [],
+    issueBugfixGifs: [],
+    issueFeatureGifs: [],
+    issueDocsGifs: [],
+    issueChoreGifs: [],
+    pullRequestReleaseGifs: [],
+    pullRequestHotfixGifs: [],
+    pullRequestBugfixGifs: [],
+    pullRequestFeatureGifs: [],
+    pullRequestDocsGifs: [],
+    pullRequestChoreGifs: [],
+    pullRequestAutomaticActions: [],
+  };
+}
+
+function baseParam(overrides: Partial<PublishResultContextSource> = {}) {
+  const defaultConfig = { results: [new Result({ id: 'x', success: true, executed: true, steps: ['Step 1'] })] };
+  return projectPublishResultContext({
     issueNumber: 42,
     issue: { number: 42 },
     pullRequest: { number: 99 },
@@ -32,33 +56,19 @@ function baseParam(overrides: Record<string, unknown> = {}) {
     isPullRequest: false,
     isPush: false,
     isSingleAction: false,
+    isBugfix: false,
+    isFeature: false,
+    isDocs: false,
+    isChore: false,
     currentConfiguration: defaultConfig,
-    tokens: { token: 't' },
-    images: {
-      imagesOnIssue: true,
-      imagesOnPullRequest: true,
-      issueAutomaticActions: [],
-      issueReleaseGifs: [],
-      issueHotfixGifs: [],
-      issueBugfixGifs: [],
-      issueFeatureGifs: [],
-      issueDocsGifs: [],
-      issueChoreGifs: [],
-      pullRequestReleaseGifs: [],
-      pullRequestHotfixGifs: [],
-      pullRequestBugfixGifs: [],
-      pullRequestFeatureGifs: [],
-      pullRequestDocsGifs: [],
-      pullRequestChoreGifs: [],
-      pullRequestAutomaticActions: [],
-    },
+    images: baseImages(),
     singleAction: { issue: 123 },
     release: { active: false },
     hotfix: { active: false },
     issueNotBranched: false,
     debug: false,
     ...overrides,
-  } as unknown as Parameters<PublishResultUseCase['invoke']>[0];
+  });
 }
 
 describe('PublishResultUseCase', () => {
@@ -66,11 +76,12 @@ describe('PublishResultUseCase', () => {
 
   beforeEach(() => {
     useCase = new PublishResultUseCase(
-      { addComment: mockAddComment, openIssue: jest.fn() },
+      { addComment: mockAddComment },
       logReport,
     );
     mockAddComment.mockReset();
     mockGetAccumulatedLogsAsText.mockReturnValue('');
+    mockGetRandomElement.mockReset().mockReturnValue(undefined);
   });
 
   it('does not call addComment when content is empty (no steps in results)', async () => {
@@ -91,7 +102,7 @@ describe('PublishResultUseCase', () => {
       debug: true,
       release: { active: true },
       images: {
-        ...baseParam().images,
+        ...baseImages(),
         issueReleaseGifs: ['release.gif'],
       },
       currentConfiguration: {
@@ -109,7 +120,7 @@ describe('PublishResultUseCase', () => {
       isIssue: true,
       release: { active: true },
       images: {
-        ...baseParam().images,
+        ...baseImages(),
         issueReleaseGifs: ['release.gif'],
       },
       currentConfiguration: {
@@ -133,19 +144,18 @@ describe('PublishResultUseCase', () => {
 
     await useCase.invoke(param);
 
-    expect(mockAddComment).toHaveBeenCalledWith('o', 'r', 42, expect.stringContaining('Agent authentication failed'), 't');
+    expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining('Agent authentication failed'));
   });
 
   it('calls addComment on issue when isIssue and results have steps', async () => {
     mockAddComment.mockResolvedValue(undefined);
-    const param = baseParam({ isIssue: true });
     const resultsWithSteps = [new Result({ id: 'a', success: true, executed: true, steps: ['Step 1'] })];
-    param.currentConfiguration = { results: resultsWithSteps } as Parameters<PublishResultUseCase['invoke']>[0]['currentConfiguration'];
+    const param = baseParam({ isIssue: true, currentConfiguration: { results: resultsWithSteps } });
 
     await useCase.invoke(param);
 
     expect(mockAddComment).toHaveBeenCalledTimes(1);
-    expect(mockAddComment).toHaveBeenCalledWith('o', 'r', 42, expect.stringContaining('1. Step 1'), 't');
+    expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining('1. Step 1'));
   });
 
   it('preserves markdown result structure instead of numbering every line', async () => {
@@ -165,7 +175,7 @@ describe('PublishResultUseCase', () => {
 
     await useCase.invoke(param);
 
-    const commentBody = mockAddComment.mock.calls[0][3] as string;
+    const commentBody = mockAddComment.mock.calls[0][1] as string;
     expect(commentBody).toContain('# 🪄 Automatic Actions\n## Recommended implementation steps');
     expect(commentBody).toContain('\n1. Add the module\n2. Add tests');
     expect(commentBody).toContain('```sh\npnpm test\n```');
@@ -175,14 +185,13 @@ describe('PublishResultUseCase', () => {
 
   it('calls addComment on pull request when isPullRequest and results have steps', async () => {
     mockAddComment.mockResolvedValue(undefined);
-    const param = baseParam({ isPullRequest: true });
     const resultsWithSteps = [new Result({ id: 'a', success: true, executed: true, steps: ['Step 1'] })];
-    param.currentConfiguration = { results: resultsWithSteps } as Parameters<PublishResultUseCase['invoke']>[0]['currentConfiguration'];
+    const param = baseParam({ isPullRequest: true, currentConfiguration: { results: resultsWithSteps } });
 
     await useCase.invoke(param);
 
     expect(mockAddComment).toHaveBeenCalledTimes(1);
-    expect(mockAddComment).toHaveBeenCalledWith('o', 'r', 99, expect.stringContaining('1. Step 1'), 't');
+    expect(mockAddComment).toHaveBeenCalledWith(99, expect.stringContaining('1. Step 1'));
   });
 
   it('does not duplicate a Bugbot native review with an independent PR comment', async () => {
@@ -214,7 +223,7 @@ describe('PublishResultUseCase', () => {
 
     await useCase.invoke(param);
 
-    const commentBody = mockAddComment.mock.calls[0][3] as string;
+    const commentBody = mockAddComment.mock.calls[0][1] as string;
     expect(commentBody).toContain('Debug log');
     expect(commentBody).toContain('[INFO] line1');
     expect(commentBody).toContain('[WARN] line2');
@@ -227,7 +236,7 @@ describe('PublishResultUseCase', () => {
 
     await useCase.invoke(param);
 
-    const commentBody = mockAddComment.mock.calls[0][3] as string;
+    const commentBody = mockAddComment.mock.calls[0][1] as string;
     expect(commentBody).not.toContain('Debug log');
   });
 
@@ -242,21 +251,20 @@ describe('PublishResultUseCase', () => {
 
     await useCase.invoke(param);
 
-    const commentBody = mockAddComment.mock.calls[0][3] as string;
+    const commentBody = mockAddComment.mock.calls[0][1] as string;
     expect(commentBody).not.toContain('Debug log');
   });
 
-  it('pushes failure result to currentConfiguration.results when addComment throws', async () => {
+  it('returns a failure result without mutating the publication snapshot when addComment throws', async () => {
     mockAddComment.mockRejectedValue(new Error('API error'));
     const param = baseParam({ isIssue: true });
-    const initialLength = param.currentConfiguration.results.length;
+    const initialLength = param.results.length;
 
-    await useCase.invoke(param);
+    const failure = await useCase.invoke(param);
 
-    expect(param.currentConfiguration.results.length).toBe(initialLength + 1);
-    const lastResult = param.currentConfiguration.results[param.currentConfiguration.results.length - 1];
-    expect(lastResult.success).toBe(false);
-    expect(lastResult.steps).toContain('Tried to publish the resume, but there was a problem.');
+    expect(param.results).toHaveLength(initialLength);
+    expect(failure?.success).toBe(false);
+    expect(failure?.steps).toContain('Tried to publish the resume, but there was a problem.');
   });
 
   it('uses release title and image when isIssue and release.active', async () => {
@@ -267,7 +275,61 @@ describe('PublishResultUseCase', () => {
       currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step'] })] },
     });
     await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith('o', 'r', 42, expect.stringContaining('Release Actions'), 't');
+    expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining('Release Actions'));
+  });
+
+  it('renders a selected issue image only when issue images are enabled', async () => {
+    mockAddComment.mockResolvedValue(undefined);
+    mockGetRandomElement.mockReturnValue('release.gif');
+    const param = baseParam({
+      isIssue: true,
+      release: { active: true },
+      images: { ...baseImages(), issueReleaseGifs: ['release.gif'] },
+    });
+
+    await useCase.invoke(param);
+
+    expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining('![image](release.gif)'));
+  });
+
+  it('omits a selected issue image when issue images are disabled', async () => {
+    mockAddComment.mockResolvedValue(undefined);
+    mockGetRandomElement.mockReturnValue('release.gif');
+    const param = baseParam({
+      isIssue: true,
+      release: { active: true },
+      images: { ...baseImages(), imagesOnIssue: false, issueReleaseGifs: ['release.gif'] },
+    });
+
+    await useCase.invoke(param);
+
+    expect(mockAddComment.mock.calls[0][1]).not.toContain('![image](release.gif)');
+  });
+
+  it('renders a selected pull-request image only when pull-request images are enabled', async () => {
+    mockAddComment.mockResolvedValue(undefined);
+    mockGetRandomElement.mockReturnValue('pull-request.gif');
+    const param = baseParam({
+      isPullRequest: true,
+      images: { ...baseImages(), pullRequestAutomaticActions: ['pull-request.gif'] },
+    });
+
+    await useCase.invoke(param);
+
+    expect(mockAddComment).toHaveBeenCalledWith(99, expect.stringContaining('![image](pull-request.gif)'));
+  });
+
+  it('omits a selected pull-request image when pull-request images are disabled', async () => {
+    mockAddComment.mockResolvedValue(undefined);
+    mockGetRandomElement.mockReturnValue('pull-request.gif');
+    const param = baseParam({
+      isPullRequest: true,
+      images: { ...baseImages(), imagesOnPullRequest: false, pullRequestAutomaticActions: ['pull-request.gif'] },
+    });
+
+    await useCase.invoke(param);
+
+    expect(mockAddComment.mock.calls[0][1]).not.toContain('![image](pull-request.gif)');
   });
 
   it('uses hotfix title when isIssue and hotfix.active', async () => {
@@ -278,7 +340,7 @@ describe('PublishResultUseCase', () => {
       currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step'] })] },
     });
     await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith('o', 'r', 42, expect.stringContaining('Hotfix Actions'), 't');
+    expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining('Hotfix Actions'));
   });
 
   it('uses feature title when isIssue and isFeature', async () => {
@@ -289,7 +351,7 @@ describe('PublishResultUseCase', () => {
       currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step'] })] },
     });
     await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith('o', 'r', 42, expect.stringContaining('Feature Actions'), 't');
+    expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining('Feature Actions'));
   });
 
   it('uses docs title when isIssue and isDocs', async () => {
@@ -300,7 +362,7 @@ describe('PublishResultUseCase', () => {
       currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step'] })] },
     });
     await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith('o', 'r', 42, expect.stringContaining('Documentation Actions'), 't');
+    expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining('Documentation Actions'));
   });
 
   it('uses chore title when isPullRequest and isChore', async () => {
@@ -311,7 +373,7 @@ describe('PublishResultUseCase', () => {
       currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step'] })] },
     });
     await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith('o', 'r', 99, expect.stringContaining('Chore Actions'), 't');
+    expect(mockAddComment).toHaveBeenCalledWith(99, expect.stringContaining('Chore Actions'));
   });
 
   it('uses Automatic Actions and singleAction.issue when isSingleAction', async () => {
@@ -322,7 +384,7 @@ describe('PublishResultUseCase', () => {
       currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step'] })] },
     });
     await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith('o', 'r', 456, expect.any(String), 't');
+    expect(mockAddComment).toHaveBeenCalledWith(456, expect.any(String));
   });
 
   it('includes reminder section when results have reminders', async () => {
@@ -336,8 +398,8 @@ describe('PublishResultUseCase', () => {
       },
     });
     await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith('o', 'r', 42, expect.stringContaining('Reminder'), 't');
-    expect(mockAddComment).toHaveBeenCalledWith('o', 'r', 42, expect.stringContaining('1. Remind me'), 't');
+    expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining('Reminder'));
+    expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining('1. Remind me'));
   });
 
   it('includes errors section when results have errors', async () => {
@@ -351,7 +413,7 @@ describe('PublishResultUseCase', () => {
       },
     });
     await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith('o', 'r', 42, expect.stringContaining('Errors Found'), 't');
+    expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining('Errors Found'));
   });
 
   it('calls addComment on issueNumber when isPush and issueNumber > 0', async () => {
@@ -362,7 +424,7 @@ describe('PublishResultUseCase', () => {
       currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step'] })] },
     });
     await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith('o', 'r', 7, expect.any(String), 't');
+    expect(mockAddComment).toHaveBeenCalledWith(7, expect.any(String));
   });
 
   it('uses issueNotBranched and Automatic Actions title when isIssue and issueNotBranched', async () => {
@@ -373,7 +435,7 @@ describe('PublishResultUseCase', () => {
       currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step'] })] },
     });
     await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith('o', 'r', 42, expect.stringContaining('Automatic Actions'), 't');
+    expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining('Automatic Actions'));
   });
 
   it('uses bugfix title when isIssue and isBugfix', async () => {
@@ -384,7 +446,7 @@ describe('PublishResultUseCase', () => {
       currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step'] })] },
     });
     await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith('o', 'r', 42, expect.stringContaining('Bugfix Actions'), 't');
+    expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining('Bugfix Actions'));
   });
 
   it('uses release title when isPullRequest and release.active', async () => {
@@ -395,7 +457,7 @@ describe('PublishResultUseCase', () => {
       currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step'] })] },
     });
     await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith('o', 'r', 99, expect.stringContaining('Release Actions'), 't');
+    expect(mockAddComment).toHaveBeenCalledWith(99, expect.stringContaining('Release Actions'));
   });
 
   it('uses Automatic Actions when isPullRequest and no release/hotfix/type flags', async () => {
@@ -407,7 +469,7 @@ describe('PublishResultUseCase', () => {
       currentConfiguration: { results: [new Result({ id: 'a', success: true, executed: true, steps: ['Step'] })] },
     });
     await useCase.invoke(param);
-    expect(mockAddComment).toHaveBeenCalledWith('o', 'r', 99, expect.stringContaining('Automatic Actions'), 't');
+    expect(mockAddComment).toHaveBeenCalledWith(99, expect.stringContaining('Automatic Actions'));
   });
 
   it('does not call addComment when isPush but issueNumber is 0', async () => {

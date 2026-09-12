@@ -23,14 +23,10 @@ jest.mock('../../../../../data/repository/project/project_board_query_repository
 
 function baseParam(overrides: Record<string, unknown> = {}) {
   return {
-    owner: 'o',
-    repo: 'r',
-    issue: { number: 42 },
-    tokens: { token: 't' },
-    project: {
-      getProjects: () => [{ id: 'p1', title: 'Backlog', url: 'https://github.com/org/repo/projects/1' }],
-      getProjectColumnIssueCreated: () => 'To Do',
-    },
+    contentType: 'issue',
+    contentNumber: 42,
+    columnName: 'To Do',
+    projects: [{ id: 'p1', title: 'Backlog', type: 'organization', owner: 'org', url: 'https://github.com/org/repo/projects/1', number: 1 }],
     ...overrides,
   } as unknown as Parameters<LinkIssueProjectUseCase['invoke']>[0];
 }
@@ -40,14 +36,18 @@ describe('LinkIssueProjectUseCase', () => {
 
   beforeEach(() => {
     useCase = new LinkIssueProjectUseCase(
-      { getId: mockGetId },
-      { moveIssueToColumn: mockMoveIssueToColumn, setTaskPriority: jest.fn(), setTaskSize: jest.fn() },
-      { linkContentId: mockLinkContentId },
+      {
+        resolveIssueContentId: mockGetId,
+        linkContentId: mockLinkContentId,
+        moveContent: mockMoveIssueToColumn,
+      },
       { wait: mockWait },
     );
     mockGetId.mockResolvedValue('issue-node-1');
     mockLinkContentId.mockResolvedValue(true);
     mockMoveIssueToColumn.mockResolvedValue(true);
+    mockGetId.mockClear();
+    mockLinkContentId.mockClear();
     mockMoveIssueToColumn.mockClear();
     mockWait.mockClear();
   });
@@ -61,16 +61,9 @@ describe('LinkIssueProjectUseCase', () => {
     const promise = useCase.invoke(param);
     await jest.advanceTimersByTimeAsync(10000);
     const results = await promise;
-    expect(mockGetId).toHaveBeenCalledWith('o', 'r', 42, 't');
+    expect(mockGetId).toHaveBeenCalledWith(42);
     expect(mockLinkContentId).toHaveBeenCalled();
-    expect(mockMoveIssueToColumn).toHaveBeenCalledWith(
-      expect.any(Object),
-      'o',
-      'r',
-      42,
-      'To Do',
-      't'
-    );
+    expect(mockMoveIssueToColumn).toHaveBeenCalledWith(expect.any(Object), 42, 'To Do');
     expect(results.some((r) => r.success && r.steps?.some((s) => s.includes('Backlog')))).toBe(true);
   });
 
@@ -80,6 +73,14 @@ describe('LinkIssueProjectUseCase', () => {
     const results = await useCase.invoke(param);
     expect(mockMoveIssueToColumn).not.toHaveBeenCalled();
     expect(results.length).toBeGreaterThanOrEqual(0);
+  });
+
+  it('skips provider calls when no projects are configured', async () => {
+    const results = await useCase.invoke(baseParam({ projects: [] }));
+
+    expect(results).toEqual([]);
+    expect(mockGetId).not.toHaveBeenCalled();
+    expect(mockLinkContentId).not.toHaveBeenCalled();
   });
 
   it('returns success executed false when linkContentId succeeds but moveIssueToColumn returns false', async () => {

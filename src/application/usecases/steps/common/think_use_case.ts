@@ -1,23 +1,22 @@
-import { Execution } from '../../../../data/model/execution';
 import { Result } from '../../../../data/model/result';
 import type { FindingsQueryPort } from '../../../ports/agent_findings_ports';
-import type { IssueDescriptionQueryPort } from '../../../ports/issue_description_ports';
-import type { IssueNotificationPort } from '../../../ports/issue_lifecycle_ports';
+import type { BoundIssueDescriptionQueryPort } from '../../../ports/issue_description_ports';
+import type { BoundIssueNotificationPort } from '../../../ports/issue_lifecycle_ports';
 import { ParamUseCase } from '../../base/param_usecase';
-import { runThinkWorkflow } from './think_workflow';
+import { runThinkWorkflow, type ThinkContext } from './think_workflow';
 
-export class ThinkUseCase implements ParamUseCase<Execution, Result[]> {
+export class ThinkUseCase implements ParamUseCase<ThinkContext, Result[]> {
     taskId: string = 'ThinkUseCase';
     private aiRepository: FindingsQueryPort;
     constructor(
-        private readonly issueDescriptionQueryPort: IssueDescriptionQueryPort,
-        private readonly issueNotificationPort: IssueNotificationPort,
+        private readonly issueDescriptionQueryPort: BoundIssueDescriptionQueryPort,
+        private readonly issueNotificationPort: BoundIssueNotificationPort,
         aiRepository: FindingsQueryPort,
     ) {
         this.aiRepository = aiRepository;
     }
 
-    async invoke(param: Execution): Promise<Result[]> {
+    async invoke(param: ThinkContext): Promise<Result[]> {
         return runThinkWorkflow(param, this.taskId, {
             issueDescriptionQueryPort: this.issueDescriptionQueryPort,
             issueNotificationPort: this.issueNotificationPort,

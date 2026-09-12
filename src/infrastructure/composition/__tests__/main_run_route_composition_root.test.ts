@@ -25,10 +25,11 @@ const mockFindings = {};
 const mockLanguage = {};
 const mockFixer = {};
 const mockRules = {};
+const mockIssueComments = {};
 const mockScm = {
   context: mockContext,
   resolution: mockResolution,
-  publication: { kind: 'publication' },
+  publication: { kind: 'publication', issueComments: mockIssueComments },
   reconciliation: { snapshot: {}, presentation: {} },
 };
 const binding = { owner: 'owner', repository: 'repo', token: 'token' };
@@ -91,7 +92,7 @@ describe("main run route composition root", () => {
     expect(useCase).toBeInstanceOf(IssueCommentUseCase);
     expect(CheckIssueCommentLanguageUseCase).toHaveBeenCalledWith(
       expect.objectContaining({
-        commentRepository: mockIssue,
+        commentRepository: mockIssueComments,
         languageQueryPort: mockLanguage,
       }),
     );
@@ -116,20 +117,9 @@ describe("main run route composition root", () => {
     );
     expect(DoUserRequestUseCase).toHaveBeenCalledWith(mockFixer, gitCommit);
     expect(RememberBugbotRuleUseCase).toHaveBeenCalledWith(mockRules);
+    expect(IssueCommentUseCase).toHaveBeenCalledTimes(1);
     expect(IssueCommentUseCase).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      gitCommit,
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
+      ...Array.from({ length: 12 }, () => expect.anything()),
     );
   });
 
@@ -137,20 +127,9 @@ describe("main run route composition root", () => {
     const useCase = createPullRequestReviewCommentUseCaseCompositionRoot(binding);
 
     expect(useCase).toBeInstanceOf(PullRequestReviewCommentUseCase);
+    expect(PullRequestReviewCommentUseCase).toHaveBeenCalledTimes(1);
     expect(PullRequestReviewCommentUseCase).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
+      ...Array.from({ length: 12 }, () => expect.anything()),
     );
   });
 

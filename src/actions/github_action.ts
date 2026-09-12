@@ -24,6 +24,7 @@ import { createActorAuthorizationRepository } from '../infrastructure/compositio
 import { runAtApplicationErrorBoundary } from '../application/errors/application_error_context';
 import { toApplicationError } from '../application/errors/application_error';
 import { renderApplicationErrorText } from '../application/policies/application_error_presentation_policy';
+import { bindIssueNotification } from '../infrastructure/composition/shared_capability_port_binding';
 
 export async function runGitHubAction(): Promise<void> {
     const eventInputs = buildGithubActionEventInputs({
@@ -102,11 +103,22 @@ export async function runGitHubAction(): Promise<void> {
         createSynchronizeAgentActivityUseCase(),
     );
     const issueContentPort = createIssueContentCompositionRoot();
+    const repositoryBinding = {
+        owner: execution.owner,
+        repository: execution.repo,
+        token: execution.tokens.token,
+    };
+    const configurationHandler = new ConfigurationHandler(issueContentPort);
     await finishGithubAction(
         execution,
         results,
-        createIssueNotificationRepository(),
-        new ConfigurationHandler(issueContentPort),
+        bindIssueNotification(createIssueNotificationRepository(), repositoryBinding),
+        {
+            update: (context) => configurationHandler.update({
+                ...repositoryBinding,
+                issueNumber: context.issueNumber,
+            }, context),
+        },
         createCopilotEvidenceCompositionRoot(),
         createGithubActionSummaryCompositionRoot(),
     );

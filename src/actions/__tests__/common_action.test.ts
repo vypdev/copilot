@@ -459,6 +459,23 @@ describe('mainRun', () => {
     expect(results).toEqual(expected);
   });
 
+  it('runs IssueCommentUseCase for a PR conversation comment without treating it as a PR event', async () => {
+    const execution = mockExecution({
+      isIssue: false,
+      isPullRequest: true,
+      issue: { isIssueComment: true, isIssue: false },
+      pullRequest: { isPullRequestReviewComment: false, isPullRequest: true },
+    });
+    const expected = [new Result({ id: 'pr-conversation', success: true })];
+    mockIssueCommentInvoke.mockResolvedValue(expected);
+
+    const results = await runMain(execution);
+
+    expect(mockIssueCommentInvoke).toHaveBeenCalledWith(execution);
+    expect(mockPullRequestInvoke).not.toHaveBeenCalled();
+    expect(results).toEqual(expected);
+  });
+
   it('runs IssueUseCase when isIssue and not issue comment', async () => {
     const execution = mockExecution({
       isIssue: true,

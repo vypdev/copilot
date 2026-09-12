@@ -1,4 +1,3 @@
-import type { Execution } from '../../../../data/model/execution';
 import { parseCopilotCommand, type ParsedCopilotCommand } from '../../../../domain/copilot_command';
 import { containsBotMention } from '../../../../domain/copilot_comment_request';
 import { extractMentionQuestion, getThinkCommentBody } from './think_input_policy';
@@ -16,9 +15,25 @@ export type ThinkRequestDecision =
         command?: ParsedCopilotCommand;
     };
 
+export interface ThinkRequestSource {
+    readonly isPullRequest: boolean;
+    readonly issue: {
+        readonly commentBody: string;
+        readonly isIssueComment: boolean;
+        readonly number: number;
+    };
+    readonly pullRequest: {
+        readonly commentBody: string;
+        readonly isPullRequestReviewComment: boolean;
+        readonly number: number;
+    };
+    readonly issueNumber: number;
+    readonly tokenUser?: string;
+}
+
 /** Resolves the comment input and destination without performing I/O. */
 export function resolveThinkRequest(
-    param: Pick<Execution, 'issue' | 'pullRequest' | 'issueNumber' | 'tokenUser'>,
+    param: ThinkRequestSource,
 ): ThinkRequestDecision {
     const commentBody = getThinkCommentBody({
         issueCommentBody: param.issue.commentBody,
@@ -39,14 +54,14 @@ export function resolveThinkRequest(
         : extractMentionQuestion(commentBody, param.tokenUser ?? '');
     if (!question) return { kind: 'skip', reason: 'empty-question' };
 
-    const isIssueComment = param.issue.isIssueComment;
+    const isPullRequestTarget = param.isPullRequest;
     return {
         kind: 'ready',
         commentBody,
         question,
-        issueNumberForContext: isIssueComment ? param.issue.number : param.issueNumber,
-        destinationNumber: isIssueComment ? param.issue.number : param.pullRequest.number,
-        destinationType: isIssueComment ? 'issue' : 'PR',
+        issueNumberForContext: isPullRequestTarget ? param.issueNumber : param.issue.number,
+        destinationNumber: isPullRequestTarget ? param.pullRequest.number : param.issue.number,
+        destinationType: isPullRequestTarget ? 'PR' : 'issue',
         ...(command.kind === 'command' ? { command: command.command } : {}),
     };
 }

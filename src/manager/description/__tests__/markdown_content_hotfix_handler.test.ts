@@ -1,5 +1,5 @@
 import { MarkdownContentHotfixHandler } from '../markdown_content_hotfix_handler';
-import type { Execution } from '../../../data/model/execution';
+import type { ExecutionConfigurationQuery } from '../../../application/ports/execution_configuration_ports';
 
 jest.mock('../../../utils/logger', () => ({
   logError: jest.fn(),
@@ -16,20 +16,14 @@ function descriptionWithContent(content: string): string {
   return `intro\n${HANDLER_START}\n${content}\n${HANDLER_END}\noutro`;
 }
 
-function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
+function configurationQuery(overrides: Partial<ExecutionConfigurationQuery> = {}): ExecutionConfigurationQuery {
   return {
     owner: 'o',
-    repo: 'r',
-    tokens: { token: 't' },
-    isIssue: true,
-    isPullRequest: false,
-    isPush: false,
-    isSingleAction: false,
-    issue: { number: 1 },
-    pullRequest: { number: 0 },
+    repository: 'r',
+    token: 't',
     issueNumber: 1,
     ...overrides,
-  } as unknown as Execution;
+  };
 }
 
 describe('MarkdownContentHotfixHandler', () => {
@@ -50,27 +44,27 @@ describe('MarkdownContentHotfixHandler', () => {
   describe('get', () => {
     it('returns undefined when description has no block', async () => {
       mockGetDescription.mockResolvedValue('no block');
-      const execution = minimalExecution();
+      const query = configurationQuery();
 
-      const result = await handler.get(execution);
+      const result = await handler.get(query);
 
       expect(result).toBeUndefined();
     });
 
     it('returns extracted content when description has block', async () => {
       mockGetDescription.mockResolvedValue(descriptionWithContent('## Changelog\n- fix'));
-      const execution = minimalExecution();
+      const query = configurationQuery();
 
-      const result = await handler.get(execution);
+      const result = await handler.get(query);
 
       expect(result?.trim()).toBe('## Changelog\n- fix');
     });
 
     it('throws when getDescription throws', async () => {
       mockGetDescription.mockRejectedValue(new Error('api error'));
-      const execution = minimalExecution();
+      const query = configurationQuery();
 
-      await expect(handler.get(execution)).rejects.toThrow('api error');
+      await expect(handler.get(query)).rejects.toThrow('api error');
     });
   });
 
@@ -79,8 +73,8 @@ describe('MarkdownContentHotfixHandler', () => {
       mockGetDescription.mockResolvedValue(descriptionWithContent('old'));
       mockUpdateDescription.mockResolvedValue('newDesc');
 
-      const execution = minimalExecution();
-      const result = await handler.update(execution, '## New content');
+      const query = configurationQuery();
+      const result = await handler.update(query, '## New content');
 
       expect(mockUpdateDescription).toHaveBeenCalled();
       expect(result).toBeDefined();
@@ -90,8 +84,8 @@ describe('MarkdownContentHotfixHandler', () => {
       mockGetDescription.mockResolvedValue(descriptionWithContent('old'));
       mockUpdateDescription.mockRejectedValue(new Error('update failed'));
 
-      const execution = minimalExecution();
-      const result = await handler.update(execution, 'content');
+      const query = configurationQuery();
+      const result = await handler.update(query, 'content');
 
       expect(result).toBeUndefined();
     });

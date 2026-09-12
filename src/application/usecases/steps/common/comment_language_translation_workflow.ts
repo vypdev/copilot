@@ -3,7 +3,7 @@ import { AGENT_PLAN } from '../../../policies/agent_task_policy';
 import type { AgentConfiguration } from '../../../ports/agent_configuration_ports';
 import type { LanguageQueryPort } from '../../../ports/agent_language_ports';
 import { LANGUAGE_CHECK_RESPONSE_SCHEMA, TRANSLATION_RESPONSE_SCHEMA } from '../../../policies/agent_response_schemas';
-import type { IssueCommentUpdatePort } from '../../../ports/issue_lifecycle_ports';
+import type { BoundIssueCommentUpdatePort } from '../../../ports/issue_lifecycle_ports';
 import { getCheckCommentLanguagePrompt, getTranslateCommentPrompt } from '../../../../prompts';
 import { logDebugInfo, logInfo } from '../../../ports/logging_ports';
 import { getTaskEmoji } from '../../../../utils/task_emoji';
@@ -14,21 +14,35 @@ import {
 
 export { TRANSLATED_COMMENT_MARKER } from '../../../policies/comment_translation_policy';
 
-export type CommentLanguageContext = {
-    taskId: string;
-    commentBody: string;
-    locale: string;
-    issueNumber: number;
-    commentId: number;
-    owner: string;
-    repo: string;
-    token: string;
-    configuration: AgentConfiguration | undefined;
-};
+export interface CommentLanguageRequest {
+    readonly commentBody: string;
+    readonly locale: string;
+    readonly issueNumber: number;
+    readonly commentId: number;
+    readonly configuration: Readonly<AgentConfiguration> | undefined;
+}
+
+export interface CommentLanguageContext extends CommentLanguageRequest {
+    readonly taskId: string;
+}
+
+export function projectCommentLanguageRequest(
+    source: Omit<CommentLanguageRequest, 'configuration'> & { readonly configuration: AgentConfiguration | undefined },
+): CommentLanguageRequest {
+    return Object.freeze({
+        commentBody: source.commentBody,
+        locale: source.locale,
+        issueNumber: source.issueNumber,
+        commentId: source.commentId,
+        configuration: source.configuration === undefined
+            ? undefined
+            : Object.freeze({ ...source.configuration }),
+    });
+}
 
 export class CommentLanguageTranslationWorkflow {
     constructor(
-        private readonly commentRepository: IssueCommentUpdatePort,
+        private readonly commentRepository: BoundIssueCommentUpdatePort,
         private readonly languageQueryPort: LanguageQueryPort,
     ) {}
 
@@ -72,12 +86,9 @@ export class CommentLanguageTranslationWorkflow {
         }
 
         await this.commentRepository.updateComment(
-            context.owner,
-            context.repo,
             context.issueNumber,
             context.commentId,
             publication.commentBody,
-            context.token,
         );
         return [];
     }

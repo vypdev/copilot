@@ -43,8 +43,14 @@ import { composeIssueUseCase } from "./issue_use_case_composition";
 import { createOrganizationMembersCompositionRoot } from "./organization_members_composition_root";
 import { createProjectBoardCompositionRoot } from "./project_board_composition_root";
 import { createActorAuthorizationRepository } from './actor_authorization_composition_root';
+import {
+  bindIssueTitle,
+  bindOrganizationMembers,
+  bindProjectContent,
+  type RepositoryCredentialBinding,
+} from './shared_capability_port_binding';
 
-export function createIssueUseCaseCompositionRoot(): IssueUseCase {
+export function createIssueUseCaseCompositionRoot(binding: RepositoryCredentialBinding): IssueUseCase {
   const issueMetadata = new IssueMetadataRepository(
     createIssueMetadataClient(),
     createGraphqlTransportClient(),
@@ -75,23 +81,26 @@ export function createIssueUseCaseCompositionRoot(): IssueUseCase {
     createGraphqlTransportClient(),
   );
   const moveIssueToInProgress = new MoveIssueToInProgressUseCase(projectBoard.command);
+  const issueTitle = new IssueTitleRepository(createIssueTitleClient(), issueMetadata);
+  const projectContent = bindProjectContent(
+    issueMetadata,
+    projectBoard.command,
+    projectBoard.link,
+    binding,
+  );
 
   const workflowSteps = {
-    checkPermissions: new CheckPermissionsUseCase(organizationMembers),
+    checkPermissions: new CheckPermissionsUseCase(bindOrganizationMembers(organizationMembers, binding)),
     closeNotAllowedIssue: new CloseNotAllowedIssueUseCase(issueClosure),
     removeIssueBranches: new RemoveIssueBranchesUseCase(branchLifecycle),
     assignMemberToIssue: new AssignMemberToIssueUseCase(
       issueAssignee,
       organizationMembers,
     ),
-    updateTitle: new UpdateTitleUseCase(
-      new IssueTitleRepository(createIssueTitleClient(), issueMetadata),
-    ),
+    updateTitle: new UpdateTitleUseCase(bindIssueTitle(issueTitle, binding)),
     updateIssueType: new UpdateIssueTypeUseCase(issueTypeAssignment),
     linkIssueProject: new LinkIssueProjectUseCase(
-      issueMetadata,
-      projectBoard.command,
-      projectBoard.link,
+      projectContent,
       eventualConsistencyDelay,
     ),
     checkPriorityIssueSize: new CheckPriorityIssueSizeUseCase(projectBoard.command),

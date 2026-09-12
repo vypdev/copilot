@@ -1,8 +1,7 @@
-import { Execution } from "../../../data/model/execution";
 import type { IssueDescriptionCommandPort, IssueDescriptionQueryPort } from "../../../application/ports/issue_description_ports";
+import type { ExecutionConfigurationQuery } from '../../../application/ports/execution_configuration_ports';
 import { logError } from "../../../utils/logger";
 import { ContentInterface } from "./content_interface";
-import { resolveReadContentNumber, resolveWriteContentNumber } from './issue_content_number_policy';
 import { toApplicationError } from '../../../application/errors/application_error';
 
 export abstract class IssueContentInterface extends ContentInterface {
@@ -10,16 +9,13 @@ export abstract class IssueContentInterface extends ContentInterface {
         super();
     }
 
-    internalGetter = async (execution: Execution): Promise<string | undefined> => {
+    internalGetter = async (query: ExecutionConfigurationQuery): Promise<string | undefined> => {
         try {
-            const number = resolveReadContentNumber(execution);
-            if (number === undefined) return undefined;
-
             const description = await this.issueDescriptionPort.getDescription(
-                execution.owner,
-                execution.repo,
-                number,
-                execution.tokens.token,
+                query.owner,
+                query.repository,
+                query.issueNumber,
+                query.token,
             );
 
             return this.getContent(description);
@@ -29,16 +25,13 @@ export abstract class IssueContentInterface extends ContentInterface {
         }
     }
 
-    internalUpdate = async (execution: Execution, content: string): Promise<string | undefined> => {
+    internalUpdate = async (query: ExecutionConfigurationQuery, content: string): Promise<string | undefined> => {
         try {
-            const number = resolveWriteContentNumber(execution);
-            if (number === undefined) return undefined;
-
             const description = await this.issueDescriptionPort.getDescription(
-                execution.owner,
-                execution.repo,
-                number,
-                execution.tokens.token,
+                query.owner,
+                query.repository,
+                query.issueNumber,
+                query.token,
             );
 
             const updated = this.updateContent(description, content);
@@ -47,11 +40,11 @@ export abstract class IssueContentInterface extends ContentInterface {
             }
 
             await this.issueDescriptionPort.updateDescription(
-                execution.owner,
-                execution.repo,
-                number,
+                query.owner,
+                query.repository,
+                query.issueNumber,
                 updated,
-                execution.tokens.token,
+                query.token,
             );
 
             return updated;

@@ -1,10 +1,10 @@
-import type { Result } from '../../data/model/result';
 import { sanitizeAgentMarkdown } from './github_comment_publication_policy';
 import { selectResultPublicationPresentation } from './result_publication_presentation_policy';
 import { renderResultSections as renderPublicationSections } from './result_publication_sections_policy';
 import type {
     ResultPublicationContext,
     ResultPublicationPresentation,
+    ResultPublicationRecord,
     ResultPublicationSections,
     ResultPublicationTargetInput,
 } from './result_publication_contracts';
@@ -16,7 +16,7 @@ export type {
     ResultPublicationTargetInput,
 } from './result_publication_contracts';
 
-type ImageSelector = (images: string[]) => string | undefined;
+type ImageSelector = (images: readonly string[]) => string | undefined;
 const MAX_DEBUG_LOG_LENGTH = 12_000;
 
 /** Resolves the GitHub discussion that receives a result comment. */
@@ -35,7 +35,7 @@ export function resolveResultPublicationPresentation(
     return selectResultPublicationPresentation(context, selectImage);
 }
 
-export function renderResultSections(results: ReadonlyArray<Result>): ResultPublicationSections {
+export function renderResultSections(results: readonly ResultPublicationRecord[]): ResultPublicationSections {
     return renderPublicationSections(results);
 }
 

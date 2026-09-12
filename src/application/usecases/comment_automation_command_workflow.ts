@@ -1,7 +1,7 @@
 import { Result } from '../../data/model/result';
-import type { Execution } from '../../data/model/execution';
-import type { ActorAuthorizationPort } from '../ports/actor_authorization_ports';
+import type { BoundActorAuthorizationPort } from '../ports/actor_authorization_ports';
 import type { CommentAutomationOptions } from './comment_automation_contracts';
+import type { CommentAutomationContext } from './comment_automation_context';
 import type { ParsedCopilotCommand } from '../../domain/copilot_command';
 import { buildCopilotStatusResult } from '../policies/status_command_policy';
 import { buildCopilotHelpMessage } from '../policies/copilot_interaction_policy';
@@ -11,22 +11,20 @@ import { finalizeWorkspaceMutation, prepareWorkspaceMutation } from './steps/com
 import { runBranchSyncCommand } from './branch_sync/branch_sync_comment_command';
 import { ApplicationError, toApplicationError } from '../errors/application_error';
 import {
-    projectBugbotCommitContext,
-    projectBugbotContextSelectionContext,
-    projectBugbotReviewOperationContext,
+    withBugbotReviewOverrides,
 } from './steps/commit/bugbot/bugbot_review_operation_context';
 
 const LEARNED_BUGBOT_RULE_PATH = '.copilot/BUGBOT.learned.md';
 
 /** Executes deterministic /copilot commands without routing them through intent detection. */
 export async function runExplicitCommentCommand(
-    param: Execution,
+    param: CommentAutomationContext,
     options: CommentAutomationOptions,
     command: ParsedCopilotCommand,
-    actorAuthorizationPort: ActorAuthorizationPort,
+    actorAuthorizationPort: BoundActorAuthorizationPort,
 ): Promise<Result[] | undefined> {
     if (command.name === 'help') return runHelpCommand(param, options);
-    if (command.name === 'status') return [buildCopilotStatusResult(param, options.taskId)];
+    if (command.name === 'status') return [buildCopilotStatusResult(param.status, options.taskId)];
     if (command.name === 'dismiss') return runDismissCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'remember') return runRememberCommand(param, options, command, actorAuthorizationPort);
     if (command.name === 'description') return runDescriptionCommand(param, options, actorAuthorizationPort);
@@ -39,12 +37,12 @@ export async function runExplicitCommentCommand(
 }
 
 async function runRememberCommand(
-    param: Execution,
+    param: CommentAutomationContext,
     options: CommentAutomationOptions,
     command: ParsedCopilotCommand,
-    actorAuthorizationPort: ActorAuthorizationPort,
+    actorAuthorizationPort: BoundActorAuthorizationPort,
 ): Promise<Result[]> {
-    const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.owner, param.repo, param.actor, param.tokens.token);
+    const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.actor);
     if (!allowed || !options.rememberBugbotRuleUseCase) {
         return [new Result({
             id: `${options.taskId}.Remember`,
@@ -55,7 +53,7 @@ async function runRememberCommand(
     }
     let mutation;
     try {
-        mutation = await prepareWorkspaceMutation(options.gitCommitPort, {
+        mutation = await prepareWorkspaceMutation(options.bugbotGitMutationPort, {
             operation: 'Remember Bugbot rule',
         });
     } catch (error) {
@@ -65,7 +63,7 @@ async function runRememberCommand(
     if (!results.some((result) => result.executed)) return results;
     try {
         const { workspacePaths } = await finalizeWorkspaceMutation(
-            options.gitCommitPort,
+            options.bugbotGitMutationPort,
             mutation.workspacePathsBefore,
             'Remember Bugbot rule',
         );
@@ -81,7 +79,7 @@ async function runRememberCommand(
         return [...results, rememberFailure(error)];
     }
     const commitResults = await commitUserRequestIfSuccessful(
-        projectBugbotCommitContext(param),
+        param.bugbot.commit,
         undefined,
         results,
         options.bugbotGitMutationPort,
@@ -99,7 +97,7 @@ function rememberFailure(error: unknown): Result {
 }
 
 function runHelpCommand(
-    param: Execution,
+    param: CommentAutomationContext,
     options: CommentAutomationOptions,
 ): Result[] {
     return [new Result({
@@ -107,14 +105,14 @@ function runHelpCommand(
         success: true,
         executed: true,
         stepFormat: 'markdown',
-        steps: [buildCopilotHelpMessage(param.tokenUser)],
+        steps: [buildCopilotHelpMessage(param.trustedBotLogin)],
     })];
 }
 
 async function runDescriptionCommand(
-    param: Execution,
+    param: CommentAutomationContext,
     options: CommentAutomationOptions,
-    actorAuthorizationPort: ActorAuthorizationPort,
+    actorAuthorizationPort: BoundActorAuthorizationPort,
 ): Promise<Result[]> {
     if (!options.updatePullRequestDescriptionUseCase) {
         return [new Result({
@@ -124,12 +122,7 @@ async function runDescriptionCommand(
             errors: [new ApplicationError('configuration.unsupported', 'Explicit pull-request description command is not available in this composition.')],
         })];
     }
-    const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(
-        param.owner,
-        param.repo,
-        param.actor,
-        param.tokens.token,
-    );
+    const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.actor);
     if (!allowed) {
         return [new Result({
             id: `${options.taskId}.Description`,
@@ -138,21 +131,16 @@ async function runDescriptionCommand(
             steps: ['Explicit pull-request description command skipped because the actor is not authorized to modify it.'],
         })];
     }
-    return options.updatePullRequestDescriptionUseCase.invokeExplicit(param);
+    return options.updatePullRequestDescriptionUseCase.invoke();
 }
 
 async function runDismissCommand(
-    param: Execution,
+    param: CommentAutomationContext,
     options: CommentAutomationOptions,
     command: ParsedCopilotCommand,
-    actorAuthorizationPort: ActorAuthorizationPort,
+    actorAuthorizationPort: BoundActorAuthorizationPort,
 ): Promise<Result[]> {
-    const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(
-        param.owner,
-        param.repo,
-        param.actor,
-        param.tokens.token,
-    );
+    const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(param.actor);
     if (!allowed || !options.dismissBugbotFindingsUseCase) {
         return [new Result({
             id: options.taskId,
@@ -162,13 +150,13 @@ async function runDismissCommand(
         })];
     }
     return options.dismissBugbotFindingsUseCase.invoke({
-        operation: projectBugbotContextSelectionContext(param),
+        operation: param.bugbot.fixIntent,
         findingIds: command.arguments,
     });
 }
 
 async function runReviewCommand(
-    param: Execution,
+    param: CommentAutomationContext,
     options: CommentAutomationOptions,
     command: ParsedCopilotCommand,
 ): Promise<Result[]> {
@@ -191,19 +179,19 @@ async function runReviewCommand(
         return results;
     }
     const invokeReview = () => options.reviewPotentialProblemsUseCase!.invoke(
-        projectBugbotReviewOperationContext(param),
+        withBugbotReviewOverrides(param.bugbot.review, parsedOptions.overrides),
     );
-    const reviewResults = await param.ai.withBugbotReviewConfiguration(parsedOptions.overrides, invokeReview);
+    const reviewResults = await invokeReview();
     results.push(...reviewResults);
     return results;
 }
 
 function runThinkCommand(
-    param: Execution,
+    param: CommentAutomationContext,
     options: CommentAutomationOptions,
     command: ParsedCopilotCommand,
 ): Promise<Result[]> {
-    return options.thinkUseCase.invoke(param).then(results => [
+    return options.thinkUseCase.invoke(param.think).then(results => [
         new Result({
             id: `${options.taskId}.ExplicitCommand`,
             success: true,

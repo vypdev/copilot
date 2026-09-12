@@ -1,5 +1,6 @@
 import type { AgentConfiguration, AgentTask } from '../../../../../domain/agent';
 import type { BugbotReviewConfiguration } from '../../../../../domain/bugbot/review_configuration';
+import type { BugbotReviewCommandOverrides } from '../../../../../domain/bugbot/review_command';
 import { parsePositiveSafeInteger } from '../../../../../domain/positive_integer_policy';
 
 export interface BugbotContextSelectionContext {
@@ -163,6 +164,24 @@ export function projectBugbotReviewOperationContext(
       minimumSeverity: source.ai.getBugbotMinSeverity(),
       commentLimit: source.ai.getBugbotCommentLimit(),
       reviewConfiguration: Object.freeze({ ...analysisReviewConfiguration }),
+    }),
+  });
+}
+
+/** Applies one explicit command's bounded review overrides without mutating shared configuration. */
+export function withBugbotReviewOverrides(
+  context: BugbotReviewOperationContext,
+  overrides: BugbotReviewCommandOverrides,
+): BugbotReviewOperationContext {
+  return Object.freeze({
+    ...context,
+    analysis: Object.freeze({
+      ...context.analysis,
+      agentConfiguration: Object.freeze({ ...context.analysis.agentConfiguration }),
+      reviewConfiguration: Object.freeze({
+        ...context.analysis.reviewConfiguration,
+        ...overrides,
+      }),
     }),
   });
 }

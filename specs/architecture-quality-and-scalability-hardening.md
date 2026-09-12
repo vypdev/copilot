@@ -59,7 +59,7 @@ Implementation ledger:
 | P1-A | implemented | canonical-selection, bounded-read, partial-coverage, eligibility, adapter, UX, documentation, and coverage evidence catalogued in `bugbot-context-selection-and-budgeting.md` | controlled GitHub UX evidence before first rollout |
 | P1-B | implemented | immutable questionnaire, raw terminal split, stable/skipped doctor report, query-only composition, narrow remote adapters, docs, and coverage gates | controlled GitHub permission-path evidence before first rollout |
 | P1-C | implemented | exhaustive provider plans, operator-owned runtime admission, pinned-install verification, admitted-only process adapter, clean command-text removal, workflows/docs/catalog, and automated contract evidence | controlled provider sandbox smoke before first rollout |
-| P2 | implementing | P2-A, P2-B, and P2-C clean cuts implemented; bound Bugbot SCM/Git authority, direct public context, zero Bugbot leaf imports, and exact aggregate inventory reduced from 140 to 104 | implement P2-D through P2-G and final 16-file audit evidence |
+| P2 | implementing | P2-A through P2-D clean cuts implemented; shared comment analysis/publication uses immutable fact contexts and bound ports; exact aggregate inventory reduced from 140 to 75 | implement P2-E through P2-G and final 16-file audit evidence |
 
 The fixed safety rule is that a refactor MUST preserve observable product
 behavior unless this SDD and the capability-owning SDD explicitly define the
@@ -433,7 +433,7 @@ aggregate rewrite:
 | P2-A | setup execution | complete; credential-bound setup ports and ceiling 130 |
 | P2-B | Bugbot read-only selection and analysis facts | complete; five leaf imports removed, nested immutable credential-free contexts, ceiling 125 |
 | P2-C | Bugbot provider I/O and authorized mutations | complete; five immutable fact contexts, repository-bound SCM/Git ports, direct-context public API, zero Bugbot leaf imports, ceiling 104 |
-| P2-D | shared comment analysis and publication | Think/permissions/translation/title/configuration contexts replace the aggregate |
+| P2-D | shared comment analysis and publication | complete; Think/permissions/translation/title/publication/configuration/project contexts, bound ports, and ceiling 75 |
 | P2-E | issue and pull-request steps | zero aggregate imports below the two approved route coordinators |
 | P2-F | push and single-action steps | zero aggregate imports below the two approved route coordinators |
 | P2-G | closure audit | exact justified 16-file allowlist and clean topology/quality evidence |
@@ -657,8 +657,9 @@ case ledger:
 Repository thresholds remain 90% lines/statements, 88% functions, and 82%
 branches. Changed pure error, state, selection, report, and provider security
 policies require 100% enumerated branch coverage. Changed orchestration modules
-require at least 95% lines/statements and 90% branches/functions. Refactored
-terminal adapters require at least 90% lines and 85% branches.
+require at least 95% lines/statements and 90% branches/functions; P2-D enforces
+that aggregate path with `scripts/validate-shared-capability-context-coverage.cjs`.
+Refactored terminal adapters require at least 90% lines and 85% branches.
 
 Tests use deterministic barriers, clocks, IDs, pagination, provider fakes, and
 process fakes; they never sleep or call live services. Workflow tests parse YAML
@@ -781,9 +782,9 @@ Follow `deployment-concurrency-and-state-fencing.md` for every slice:
 Follow `execution-error-and-context-hardening.md` for the final allowlist and API
 closure:
 
-1. Complete P2-A setup and P2-B Bugbot analysis as the first clean cuts.
-2. Complete P2-C Bugbot I/O/mutation, P2-D shared comment analysis, P2-E
-   issue/PR, and P2-F push/single-action in that order.
+1. P2-A setup, P2-B Bugbot analysis, P2-C Bugbot I/O/mutation, and P2-D shared
+   comment analysis are complete clean cuts.
+2. Complete P2-E issue/PR and P2-F push/single-action in that order.
 3. Remove leaf imports and obsolete aggregate methods only after parity tests;
    lower the exact checked-in ceiling in every slice.
 4. Run P2-G as a final clean-clone architecture audit and review every remaining allowlist entry.

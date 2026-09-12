@@ -1,4 +1,5 @@
 import { CheckPermissionsUseCase } from '../check_permissions_use_case';
+import { projectCheckPermissionsContext, type CheckPermissionsContextSource } from '../check_permissions_workflow';
 
 jest.mock('../../../../../utils/logger', () => ({
   logInfo: jest.fn(),
@@ -27,21 +28,25 @@ function baseParam(overrides: Record<string, unknown> = {}) {
       currentIssueLabels: ['feature'],
     },
     ...overrides,
-  } as unknown as Parameters<CheckPermissionsUseCase['invoke']>[0];
+  } as unknown as CheckPermissionsContextSource;
 }
 
 describe('CheckPermissionsUseCase', () => {
   let useCase: CheckPermissionsUseCase;
 
   beforeEach(() => {
-    useCase = new CheckPermissionsUseCase({ getAllMembers: mockGetAllMembers, getRandomMembers: jest.fn() });
+    useCase = new CheckPermissionsUseCase({ getAllMembers: mockGetAllMembers });
     mockGetAllMembers.mockReset();
   });
+
+  function invoke(param: CheckPermissionsContextSource) {
+    return useCase.invoke(projectCheckPermissionsContext(param));
+  }
 
   it('returns success executed false when issue is not opened', async () => {
     const param = baseParam({ issue: { opened: false, creator: 'alice' } });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(true);
@@ -56,7 +61,7 @@ describe('CheckPermissionsUseCase', () => {
       pullRequest: { opened: false, creator: 'bob' },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(true);
@@ -68,11 +73,11 @@ describe('CheckPermissionsUseCase', () => {
     mockGetAllMembers.mockResolvedValue(['alice', 'bob']);
     const param = baseParam({ labels: { isMandatoryBranchedLabel: true, currentIssueLabels: ['feature'] } });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results[0].success).toBe(true);
     expect(results[0].executed).toBe(true);
-    expect(mockGetAllMembers).toHaveBeenCalledWith('o', 't');
+    expect(mockGetAllMembers).toHaveBeenCalledWith();
   });
 
   it('returns failure when mandatory label and creator is not team member', async () => {
@@ -82,7 +87,7 @@ describe('CheckPermissionsUseCase', () => {
       labels: { isMandatoryBranchedLabel: true, currentIssueLabels: ['hotfix'] },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results[0].success).toBe(false);
     expect(results[0].executed).toBe(true);
@@ -93,7 +98,7 @@ describe('CheckPermissionsUseCase', () => {
     mockGetAllMembers.mockResolvedValue([]);
     const param = baseParam({ labels: { isMandatoryBranchedLabel: false, currentIssueLabels: [] } });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results[0].success).toBe(true);
     expect(results[0].executed).toBe(true);
@@ -103,7 +108,7 @@ describe('CheckPermissionsUseCase', () => {
     mockGetAllMembers.mockRejectedValue(new Error('API error'));
     const param = baseParam();
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results[0].success).toBe(false);
     expect(results[0].steps).toContain('Tried to check action permissions.');
@@ -119,11 +124,11 @@ describe('CheckPermissionsUseCase', () => {
       labels: { isMandatoryBranchedLabel: true, currentIssueLabels: ['hotfix'] },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results[0].success).toBe(true);
     expect(results[0].executed).toBe(true);
-    expect(mockGetAllMembers).toHaveBeenCalledWith('o', 't');
+    expect(mockGetAllMembers).toHaveBeenCalledWith();
   });
 
   it('returns failure when isPullRequest, mandatory label, and creator not in team', async () => {
@@ -136,7 +141,7 @@ describe('CheckPermissionsUseCase', () => {
       labels: { isMandatoryBranchedLabel: true, currentIssueLabels: ['release'] },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invoke(param);
 
     expect(results[0].success).toBe(false);
     expect(results[0].steps?.some((s) => s.includes('bob') && s.includes('not authorized'))).toBe(true);

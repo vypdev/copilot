@@ -6,6 +6,9 @@ import { ParamUseCase } from "./base/param_usecase";
 import type { IssueWorkflowSteps } from "./issue_workflow_steps";
 import { runIssueWorkflow } from "./issue_workflow";
 import type { ActorAuthorizationPort } from '../ports/actor_authorization_ports';
+import { projectCheckPermissionsContext } from './steps/common/check_permissions_workflow';
+import { projectUpdateTitleContext } from './steps/common/update_title_workflow';
+import { projectIssueContentLinkContext } from './steps/common/project_content_link_workflow';
 
 export class IssueUseCase implements ParamUseCase<Execution, Result[]> {
   taskId: string = "IssueUseCase";
@@ -24,6 +27,11 @@ export class IssueUseCase implements ParamUseCase<Execution, Result[]> {
       answerIssueHelpUseCase: this.answerIssueHelpUseCase,
       workflowSteps: this.workflowSteps,
       actorAuthorizationPort: this.actorAuthorizationPort,
+      sharedContexts: {
+        permissions: projectCheckPermissionsContext(param),
+        title: projectUpdateTitleContext(param),
+        projectLink: projectIssueContentLinkContext(param),
+      },
     });
   }
 }

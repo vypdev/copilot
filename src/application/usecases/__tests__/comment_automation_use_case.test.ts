@@ -4,6 +4,17 @@ import { Ai } from "../../../data/model/ai";
 import { runCommentAutomation as runCommentAutomationImpl } from "../comment_automation_use_case";
 import type { CommentAutomationOptions } from '../comment_automation_contracts';
 import type { ActorAuthorizationPort } from '../../ports/actor_authorization_ports';
+import { projectCommentAutomationContext } from '../comment_automation_context';
+import { projectCommentLanguageRequest } from '../steps/common/comment_language_translation_workflow';
+
+type TestCommentAutomationOptions = Omit<
+  CommentAutomationOptions,
+  'bugbotGitMutationPort' | 'updatePullRequestDescriptionUseCase'
+> & {
+  userComment: string;
+  bugbotGitMutationPort?: CommentAutomationOptions['bugbotGitMutationPort'];
+  updatePullRequestDescriptionUseCase?: { invoke(): Promise<Result[]> };
+};
 
 jest.mock("../../../utils/logger", () => ({
   logInfo: jest.fn(),
@@ -43,9 +54,7 @@ function configuredAi(options: { membersOnly?: boolean; fixVerifyCommands?: stri
 
 function runCommentAutomation(
   execution: Execution,
-  options: Omit<CommentAutomationOptions, 'bugbotGitMutationPort'> & {
-    bugbotGitMutationPort?: CommentAutomationOptions['bugbotGitMutationPort'];
-  },
+  options: TestCommentAutomationOptions,
   actorAuthorizationPort: ActorAuthorizationPort,
   authenticatedUserPort?: {
     getTokenUserDetails?(): Promise<{ name: string; email: string }>;
@@ -70,9 +79,9 @@ function runCommentAutomation(
     },
     ai: execution.ai ?? configuredAi(),
   } as Execution;
-  const bugbotGitMutationPort = options.bugbotGitMutationPort ?? Object.assign(
+  const bugbotGitMutationPort = Object.assign(
     {},
-    options.gitCommitPort,
+    options.bugbotGitMutationPort,
     {
       getAuthenticatedUserDetails: async () => {
         const details = await authenticatedUserPort?.getTokenUserDetails?.();
@@ -80,10 +89,35 @@ function runCommentAutomation(
       },
     },
   ) as never;
-  return runCommentAutomationImpl(source, {
-    ...options,
+  const {
+    userComment,
+    bugbotGitMutationPort: _bugbotGitMutationPort,
+    updatePullRequestDescriptionUseCase,
+    ...automationOptions
+  } = options;
+  const context = projectCommentAutomationContext(
+    source as never,
+    projectCommentLanguageRequest({
+      commentBody: userComment,
+      locale: 'en-US',
+      issueNumber: source.issue.number ?? source.pullRequest.number,
+      commentId: source.issue.commentId ?? source.pullRequest.commentId ?? -1,
+      configuration: source.ai.getAgentConfiguration('findings'),
+    }),
+    userComment,
+  );
+  return runCommentAutomationImpl(context, {
+    ...automationOptions,
     bugbotGitMutationPort,
-  }, actorAuthorizationPort);
+    updatePullRequestDescriptionUseCase,
+  }, {
+    isActorAllowedToModifyFiles: (actor) => actorAuthorizationPort.isActorAllowedToModifyFiles(
+      source.owner,
+      source.repo,
+      actor,
+      source.tokens.token,
+    ),
+  });
 }
 
 describe("runCommentAutomation", () => {
@@ -135,7 +169,7 @@ describe("runCommentAutomation", () => {
           invoke: jest.fn().mockResolvedValue([]),
         },
         userComment: "@vypbot fix it",
-        gitCommitPort: {} as never,
+        bugbotGitMutationPort: {} as never,
       },
       {
         isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true),
@@ -196,7 +230,7 @@ describe("runCommentAutomation", () => {
           invoke: jest.fn(),
         },
         userComment: "@vypbot fix it",
-        gitCommitPort: {} as never,
+        bugbotGitMutationPort: {} as never,
       },
       authorization,
       {} as never,
@@ -230,7 +264,7 @@ describe("runCommentAutomation", () => {
         autofixUseCase: {} as never,
         doUserRequestUseCase: {} as never,
         userComment: '/copilot plan',
-        gitCommitPort: {} as never,
+        bugbotGitMutationPort: {} as never,
       },
       { isActorAllowedToModifyFiles: jest.fn() },
       {} as never,
@@ -263,7 +297,7 @@ describe("runCommentAutomation", () => {
         autofixUseCase: {} as never,
         doUserRequestUseCase: {} as never,
         userComment: '/copilot help',
-        gitCommitPort: {} as never,
+        bugbotGitMutationPort: {} as never,
       },
       {} as never,
       {} as never,
@@ -275,6 +309,44 @@ describe("runCommentAutomation", () => {
       stepFormat: 'markdown',
     });
     expect(results[0].steps[0]).toContain('@vypbot');
+    expect(language.invoke).not.toHaveBeenCalled();
+    expect(intent.invoke).not.toHaveBeenCalled();
+    expect(think.invoke).not.toHaveBeenCalled();
+  });
+
+  it('returns the projected status without invoking language or intent agents', async () => {
+    const language = { invoke: jest.fn() };
+    const intent = { invoke: jest.fn() };
+    const think = { invoke: jest.fn() };
+
+    const results = await runCommentAutomation(
+      {
+        owner: 'o',
+        repo: 'r',
+        actor: 'actor',
+        tokenUser: 'vypbot',
+        tokens: { token: 't' },
+      } as Execution,
+      {
+        taskId: 'CommentAutomation',
+        languageUseCase: language as never,
+        intentUseCase: intent as never,
+        thinkUseCase: think as never,
+        autofixUseCase: {} as never,
+        doUserRequestUseCase: {} as never,
+        userComment: '/copilot status',
+        bugbotGitMutationPort: {} as never,
+      },
+      {} as never,
+      {} as never,
+    );
+
+    expect(results[0]).toMatchObject({
+      id: 'CommentAutomation.Status',
+      success: true,
+      executed: true,
+      stepFormat: 'markdown',
+    });
     expect(language.invoke).not.toHaveBeenCalled();
     expect(intent.invoke).not.toHaveBeenCalled();
     expect(think.invoke).not.toHaveBeenCalled();
@@ -300,17 +372,14 @@ describe("runCommentAutomation", () => {
         doUserRequestUseCase: {} as never,
         syncBranchUseCase: sync as never,
         userComment,
-        gitCommitPort: {} as never,
+        bugbotGitMutationPort: {} as never,
       },
       authorization,
       {} as never,
     );
 
     expect(results[0].id).toBe('sync');
-    expect(sync.invoke).toHaveBeenCalledWith({
-      execution: expect.objectContaining(execution),
-      options: { dryRun: false, useAgent: true, parentOverride },
-    });
+    expect(sync.invoke).toHaveBeenCalledWith({ dryRun: false, useAgent: true, parentOverride });
     expect(language.invoke).not.toHaveBeenCalled();
     expect(intent.invoke).not.toHaveBeenCalled();
   });
@@ -332,7 +401,7 @@ describe("runCommentAutomation", () => {
         doUserRequestUseCase: {} as never,
         syncBranchUseCase: sync as never,
         userComment: "@vypbot update the issue's branch",
-        gitCommitPort: {} as never,
+        bugbotGitMutationPort: {} as never,
       },
       { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) },
       {} as never,
@@ -355,7 +424,7 @@ describe("runCommentAutomation", () => {
         autofixUseCase: {} as never,
         doUserRequestUseCase: {} as never,
         userComment: 'plain comment',
-        gitCommitPort: {} as never,
+        bugbotGitMutationPort: {} as never,
       },
       {} as never,
       {} as never,
@@ -380,7 +449,7 @@ describe("runCommentAutomation", () => {
       autofixUseCase: {} as never,
       doUserRequestUseCase: {} as never,
       syncBranchUseCase: sync as never,
-      gitCommitPort: {} as never,
+      bugbotGitMutationPort: {} as never,
     };
     const execution = { owner: 'o', repo: 'r', actor: 'alice', tokens: { token: 't' } } as Execution;
     const unauthorized = await runCommentAutomation(
@@ -413,7 +482,7 @@ describe("runCommentAutomation", () => {
         autofixUseCase: {} as never,
         doUserRequestUseCase: {} as never,
         userComment: '/copilot sync-branch',
-        gitCommitPort: {} as never,
+        bugbotGitMutationPort: {} as never,
       },
       authorization,
       {} as never,
@@ -447,7 +516,7 @@ describe("runCommentAutomation", () => {
         autofixUseCase: {} as never,
         doUserRequestUseCase: {} as never,
         userComment: '@vypbot please inspect this',
-        gitCommitPort: {} as never,
+        bugbotGitMutationPort: {} as never,
       },
       authorization,
       {} as never,
@@ -472,7 +541,7 @@ describe("runCommentAutomation", () => {
         doUserRequestUseCase: {} as never,
         reviewPotentialProblemsUseCase: review as never,
         userComment: '/copilot recheck',
-        gitCommitPort: {} as never,
+        bugbotGitMutationPort: {} as never,
       },
       {} as never,
       {} as never,
@@ -494,7 +563,7 @@ describe("runCommentAutomation", () => {
         autofixUseCase: {} as never,
         doUserRequestUseCase: {} as never,
         userComment: '/copilot analyze',
-        gitCommitPort: {} as never,
+        bugbotGitMutationPort: {} as never,
       },
       {} as never,
       {} as never,
@@ -536,7 +605,7 @@ describe("runCommentAutomation", () => {
         doUserRequestUseCase: {} as never,
         reviewPotentialProblemsUseCase: review as never,
         userComment: '@VYPBOT analyze the changes for security issues',
-        gitCommitPort: {} as never,
+        bugbotGitMutationPort: {} as never,
       },
       { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(false) } as never,
       {} as never,
@@ -569,7 +638,7 @@ describe("runCommentAutomation", () => {
         autofixUseCase: {} as never,
         doUserRequestUseCase: doUserRequest as never,
         userComment: '/copilot implement add a regression test',
-        gitCommitPort: {} as never,
+        bugbotGitMutationPort: {} as never,
       },
       { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) } as never,
       {} as never,
@@ -582,7 +651,7 @@ describe("runCommentAutomation", () => {
   });
 
   it('routes explicit PR description commands without language or intent detection', async () => {
-    const description = { invokeExplicit: jest.fn().mockResolvedValue([successfulResult('description')]) };
+    const description = { invoke: jest.fn().mockResolvedValue([successfulResult('description')]) };
     const language = { invoke: jest.fn() };
     const intent = { invoke: jest.fn() };
     const authorization = { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) };
@@ -596,7 +665,7 @@ describe("runCommentAutomation", () => {
         autofixUseCase: {} as never,
         doUserRequestUseCase: {} as never,
         userComment: '/copilot description',
-        gitCommitPort: {} as never,
+        bugbotGitMutationPort: {} as never,
         updatePullRequestDescriptionUseCase: description,
       },
       authorization,
@@ -604,13 +673,13 @@ describe("runCommentAutomation", () => {
     );
 
     expect(results).toEqual([expect.objectContaining({ id: 'description' })]);
-    expect(description.invokeExplicit).toHaveBeenCalledTimes(1);
+    expect(description.invoke).toHaveBeenCalledTimes(1);
     expect(language.invoke).not.toHaveBeenCalled();
     expect(intent.invoke).not.toHaveBeenCalled();
   });
 
   it('skips explicit PR description commands when the actor is not authorized', async () => {
-    const description = { invokeExplicit: jest.fn() };
+    const description = { invoke: jest.fn() };
     const authorization = { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(false) };
 
     const results = await runCommentAutomation(
@@ -623,14 +692,14 @@ describe("runCommentAutomation", () => {
         autofixUseCase: {} as never,
         doUserRequestUseCase: {} as never,
         userComment: '/copilot description',
-        gitCommitPort: {} as never,
+        bugbotGitMutationPort: {} as never,
         updatePullRequestDescriptionUseCase: description,
       },
       authorization,
       {} as never,
     );
 
-    expect(description.invokeExplicit).not.toHaveBeenCalled();
+    expect(description.invoke).not.toHaveBeenCalled();
     expect(results[0]).toMatchObject({
       id: 'CommentAutomation.Description',
       success: true,
@@ -649,7 +718,7 @@ describe("runCommentAutomation", () => {
         autofixUseCase: {} as never,
         doUserRequestUseCase: {} as never,
         userComment: '/copilot description',
-        gitCommitPort: {} as never,
+        bugbotGitMutationPort: {} as never,
       },
       {} as never,
       {} as never,
@@ -674,7 +743,7 @@ describe("runCommentAutomation", () => {
         autofixUseCase: {} as never,
         doUserRequestUseCase: {} as never,
         userComment: '/copilot execute-shell rm -rf',
-        gitCommitPort: {} as never,
+        bugbotGitMutationPort: {} as never,
       },
       {} as never,
       {} as never,
@@ -697,7 +766,7 @@ describe("runCommentAutomation", () => {
         autofixUseCase: {} as never,
         doUserRequestUseCase: {} as never,
         userComment: '/copilot dismiss FINDING-1',
-        gitCommitPort: {} as never,
+        bugbotGitMutationPort: {} as never,
         dismissBugbotFindingsUseCase: dismiss as never,
       },
       authorization,
@@ -722,7 +791,7 @@ describe("runCommentAutomation", () => {
         doUserRequestUseCase: {} as never,
         dismissBugbotFindingsUseCase: dismiss as never,
         userComment: '/copilot dismiss FINDING-1',
-        gitCommitPort: {} as never,
+        bugbotGitMutationPort: {} as never,
       },
       authorization as never,
       {} as never,
@@ -735,7 +804,7 @@ describe("runCommentAutomation", () => {
   it('commits an explicitly remembered rule using only its exact guarded path', async () => {
     const remember = { invoke: jest.fn().mockResolvedValue([successfulResult('remember')]) };
     const statusOutputs = ['', '?? .copilot/BUGBOT.learned.md\n', '?? .copilot/BUGBOT.learned.md\n'];
-    const gitCommitPort = {
+    const bugbotGitMutationPort = {
       execute: jest.fn((_program: string, args: string[], options?: { stdout?: (data: Buffer) => void }) => {
         if (args[0] === 'status') options?.stdout?.(Buffer.from(statusOutputs.shift() ?? ''));
         return Promise.resolve();
@@ -761,21 +830,21 @@ describe("runCommentAutomation", () => {
         doUserRequestUseCase: {} as never,
         rememberBugbotRuleUseCase: remember as never,
         userComment: '/copilot remember Prefer exact path validation',
-        gitCommitPort: gitCommitPort as never,
+        bugbotGitMutationPort: bugbotGitMutationPort as never,
       },
       { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) } as never,
       { getTokenUserDetails: jest.fn().mockResolvedValue({ name: 'Bot', email: 'bot@example.com' }) } as never,
     );
 
     expect(remember.invoke).toHaveBeenCalledTimes(1);
-    expect(gitCommitPort.stagePaths).toHaveBeenCalledWith(['.copilot/BUGBOT.learned.md']);
-    expect(gitCommitPort.stageAll).not.toHaveBeenCalled();
+    expect(bugbotGitMutationPort.stagePaths).toHaveBeenCalledWith(['.copilot/BUGBOT.learned.md']);
+    expect(bugbotGitMutationPort.stageAll).not.toHaveBeenCalled();
     expect(results.at(-1)).toMatchObject({ id: 'DoUserRequestCommitAndPush', success: true });
   });
 
   it('refuses to remember a rule when the workspace is already dirty', async () => {
     const remember = { invoke: jest.fn() };
-    const gitCommitPort = {
+    const bugbotGitMutationPort = {
       execute: jest.fn((_program: string, args: string[], options?: { stdout?: (data: Buffer) => void }) => {
         if (args[0] === 'status') options?.stdout?.(Buffer.from(' M src/unrelated.ts\n'));
         return Promise.resolve();
@@ -792,7 +861,7 @@ describe("runCommentAutomation", () => {
         doUserRequestUseCase: {} as never,
         rememberBugbotRuleUseCase: remember as never,
         userComment: '/copilot remember Do not hide failures',
-        gitCommitPort: gitCommitPort as never,
+        bugbotGitMutationPort: bugbotGitMutationPort as never,
       },
       { isActorAllowedToModifyFiles: jest.fn().mockResolvedValue(true) } as never,
       {} as never,

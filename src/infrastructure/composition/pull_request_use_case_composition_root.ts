@@ -36,6 +36,7 @@ import { DetectPotentialProblemsUseCase } from "../../application/usecases/steps
 import { createBugbotCompositionRoot } from "./bugbot_composition_root";
 import { createActorAuthorizationRepository } from './actor_authorization_composition_root';
 import type { BugbotScmBinding } from './bugbot_scm_port_factory';
+import { bindIssueTitle, bindProjectContent } from './shared_capability_port_binding';
 
 export function createPullRequestUseCaseCompositionRoot(binding: BugbotScmBinding): PullRequestUseCase {
   const issueLifecycle = new IssueLifecycleRepository(
@@ -54,6 +55,12 @@ export function createPullRequestUseCaseCompositionRoot(binding: BugbotScmBindin
   const projectBoard = createProjectBoardCompositionRoot();
   const bugbot = createBugbotCompositionRoot(binding);
   const issueTitle = new IssueTitleRepository(createIssueTitleClient(), issueMetadata);
+  const projectContent = bindProjectContent(
+    issueMetadata,
+    projectBoard.command,
+    projectBoard.link,
+    binding,
+  );
   const issueClosure = new IssueClosureRepository(issueLifecycle, issueContent);
   const issueAssignee = new IssueAssignmentRepository(createIssueAssignmentClient());
   const pullRequestLabels = new IssueLabelRepository(createIssueLabelsClient());
@@ -61,7 +68,7 @@ export function createPullRequestUseCaseCompositionRoot(binding: BugbotScmBindin
   const eventualConsistencyDelay = new TimerDelayAdapter();
 
   const workflowSteps = {
-    updateTitle: new UpdateTitleUseCase(issueTitle),
+    updateTitle: new UpdateTitleUseCase(bindIssueTitle(issueTitle, binding)),
     assignMemberToIssue: new AssignMemberToIssueUseCase(
       issueAssignee,
       organizationMembers,
@@ -72,8 +79,7 @@ export function createPullRequestUseCaseCompositionRoot(binding: BugbotScmBindin
       organizationMembers,
     ),
     linkPullRequestProject: new LinkPullRequestProjectUseCase(
-      projectBoard.command,
-      projectBoard.link,
+      projectContent,
       eventualConsistencyDelay,
     ),
     linkPullRequestIssue: new LinkPullRequestIssueUseCase(

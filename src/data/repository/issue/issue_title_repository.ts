@@ -1,7 +1,6 @@
-import type { IssueTitlePort } from '../../../application/ports/issue_title_ports';
+import type { IssueTitlePort, TitleLabelFacts } from '../../../application/ports/issue_title_ports';
 import type { GithubClientPort } from '../../../infrastructure/github/ports/github_client_provider_port';
 import type { GithubIssueTitleClient } from '../../../infrastructure/github/ports/github_issue_provider_ports';
-import { Labels } from '../../model/labels';
 import { resolveIssueTitleEmoji, resolvePullRequestTitleEmoji } from '../issue_emoji_policy';
 import { normalizePullRequestSourceTitle, sanitizeIssueTitle, sanitizePullRequestTitle } from '../issue_title_policy';
 import { updateIssueTitle, withTitleUpdateLogging } from './issue_title_update';
@@ -16,7 +15,7 @@ export class IssueTitleRepository implements IssueTitlePort {
 
     updateTitleIssueFormat = async (
         owner: string, repository: string, version: string, issueTitle: string, issueNumber: number,
-        branchManagementAlways: boolean, branchManagementEmoji: string, labels: Labels, token: string,
+        branchManagementAlways: boolean, branchManagementEmoji: string, labels: TitleLabelFacts, token: string,
     ): Promise<string | undefined> => {
         return withTitleUpdateLogging(() => {
             const emoji = resolveIssueTitleEmoji(labels, branchManagementAlways, branchManagementEmoji);
@@ -31,7 +30,7 @@ export class IssueTitleRepository implements IssueTitlePort {
     updateTitlePullRequestFormat = async (
         owner: string, repository: string, pullRequestTitle: string, issueTitle: string, issueNumber: number,
         pullRequestNumber: number, branchManagementAlways: boolean, branchManagementEmoji: string,
-        labels: Labels, token: string,
+        labels: TitleLabelFacts, token: string,
     ): Promise<string | undefined> => {
         return withTitleUpdateLogging(() => {
             const emoji = resolvePullRequestTitleEmoji(labels, branchManagementAlways, branchManagementEmoji);

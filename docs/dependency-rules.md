@@ -251,7 +251,12 @@ to 130 consumers: six setup imports were removed and four already-stale entries
 were deleted. P2-B then moved five Bugbot analysis leaves to nested immutable,
 credential-free `BugbotContextSelectionContext` and
 `BugbotReviewOperationContext` contracts, reducing the ceiling to 125.
-Every merged P2 slice must lower the checked-in maximum by the imports it removes.
+P2-C bound Bugbot SCM/Git authority and reduced the ceiling to 104. P2-D then
+moved comment orchestration, permissions, translation, Think, title, result
+publication, configuration persistence, and project linking to immutable
+capability records backed by repository-bound semantic ports, reducing the
+ceiling to 75. Every merged P2 slice must lower the checked-in maximum by the
+imports it removes.
 
 The package subpath `@vypdev/copilot/bugbot` exposes one review operation,
 `review(BugbotReviewRequest)`. It does not export the internal `Execution` or

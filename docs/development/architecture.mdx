@@ -97,8 +97,20 @@ organization-rule facts into a frozen `BugbotContextSelectionContext`. Only the
 detection route extends it with locale, selected-agent, severity, limits, and
 bounded review configuration as `BugbotReviewOperationContext`. Both contracts
 exclude the SCM token, mutable `Ai` model, event objects, and provider clients;
-selection-only workflows cannot request analysis configuration. Provider I/O
-remains in the coordinator until its credential-bound P2-C cut.
+selection-only workflows cannot request analysis configuration. P2-C binds SCM
+and Git authority in infrastructure ports, so Bugbot leaves receive neither
+credentials nor unbound provider calls.
+
+The P2-D comment boundary applies the same rule to reusable issue and pull
+request behavior. The two comment route coordinators project a frozen
+`CommentAutomationContext`; permissions, translation, Think, title, result
+publication, configuration persistence, and project linking then receive still
+narrower readonly records. `shared_capability_port_binding.ts` captures
+repository identity and credentials once and exposes operation-only ports for
+membership, description, notification, comment update, title, and project
+content. Publication and persistence snapshot mutable inputs before I/O, and
+publication failures return a semantic result instead of mutating the context.
+The exact `Execution` inventory is 75 after this cut, down from 104 after P2-C.
 
 Configuration embedded in issue or pull-request content is versioned. Readers
 accept only the current schema and fail closed on missing, malformed, or

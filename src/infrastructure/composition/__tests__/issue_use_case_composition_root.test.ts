@@ -91,7 +91,7 @@ describe("issue use case composition root", () => {
   beforeEach(() => jest.clearAllMocks());
 
   it("binds branch capabilities independently without a preparation aggregate", () => {
-    const result = createIssueUseCaseCompositionRoot();
+    const result = createIssueUseCaseCompositionRoot({ owner: 'owner', repository: 'repo', token: 'token' });
     const dependencies = composeIssueUseCase.mock.calls[0];
     const workflowSteps = dependencies[2];
 

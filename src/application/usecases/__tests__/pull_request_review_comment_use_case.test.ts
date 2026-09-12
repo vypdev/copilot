@@ -21,6 +21,7 @@ const mockMarkFindingsResolved = jest.fn();
 jest.mock(
   "../steps/pull_request_review_comment/check_pull_request_comment_language_use_case",
   () => ({
+    ...jest.requireActual("../steps/pull_request_review_comment/check_pull_request_comment_language_use_case"),
     CheckPullRequestCommentLanguageUseCase: jest
       .fn()
       .mockImplementation(() => ({
@@ -154,15 +155,6 @@ describe("PullRequestReviewCommentUseCase", () => {
       { taskId: "BugbotAutofixUseCase", invoke: mockAutofixInvoke },
       { taskId: "DoUserRequestUseCase", invoke: mockDoUserRequestInvoke },
       { isActorAllowedToModifyFiles: mockIsActorAllowedToModifyFiles },
-      {
-        execute: jest.fn(),
-        fetch: jest.fn(),
-        configureAuthor: jest.fn(),
-        stageAll: jest.fn(),
-        stagePaths: jest.fn(),
-        commit: jest.fn(),
-        push: jest.fn(),
-      },
       {
         execute: jest.fn(),
         getAuthenticatedUserDetails: jest.fn(),
@@ -546,5 +538,55 @@ describe("PullRequestReviewCommentUseCase", () => {
       true,
     );
     expect(results.some((r) => r.id === "ThinkUseCase")).toBe(true);
+  });
+
+  it("binds optional description and branch-sync capabilities to the route execution", async () => {
+    const mockUpdateDescription = jest.fn().mockResolvedValue([new Result({
+      id: "description",
+      success: true,
+      executed: true,
+    })]);
+    const mockSyncBranch = jest.fn().mockResolvedValue([new Result({
+      id: "sync",
+      success: true,
+      executed: true,
+    })]);
+    const routedUseCase = new PullRequestReviewCommentUseCase(
+      { invoke: mockCheckLanguageInvoke } as never,
+      { invoke: mockDetectIntentInvoke } as never,
+      { invoke: mockThinkInvoke } as never,
+      { invoke: mockAutofixInvoke } as never,
+      { invoke: mockDoUserRequestInvoke } as never,
+      { isActorAllowedToModifyFiles: mockIsActorAllowedToModifyFiles },
+      {} as never,
+      undefined,
+      undefined,
+      { invokeExplicit: mockUpdateDescription } as never,
+      undefined,
+      { invoke: mockSyncBranch } as never,
+    );
+    const descriptionExecution = baseExecution({
+      actor: "alice",
+      pullRequest: { ...baseExecution().pullRequest, commentBody: "/copilot description" } as never,
+    });
+    const syncExecution = baseExecution({
+      actor: "alice",
+      pullRequest: { ...baseExecution().pullRequest, commentBody: "/copilot sync-branch --from develop" } as never,
+    });
+    const missingBodyExecution = baseExecution({
+      pullRequest: { ...baseExecution().pullRequest, commentBody: undefined } as never,
+    });
+
+    await routedUseCase.invoke(descriptionExecution);
+    await routedUseCase.invoke(syncExecution);
+    await routedUseCase.invoke(missingBodyExecution);
+
+    expect(mockUpdateDescription).toHaveBeenCalledTimes(1);
+    expect(mockUpdateDescription).toHaveBeenCalledWith(descriptionExecution);
+    expect(mockSyncBranch).toHaveBeenCalledTimes(1);
+    expect(mockSyncBranch).toHaveBeenCalledWith({
+      execution: syncExecution,
+      options: { dryRun: false, useAgent: true, parentOverride: "develop" },
+    });
   });
 });
