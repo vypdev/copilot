@@ -421,6 +421,9 @@
         "src/domain/bugbot/review_configuration.ts",
         "src/application/policies/bounded_concurrency_policy.ts",
         "src/application/policies/bugbot_resolution_eligibility_policy.ts",
+        "src/application/ports/bugbot_git_ports.ts",
+        "src/application/ports/bugbot_reconciliation_ports.ts",
+        "src/application/ports/bugbot_scm_ports.ts",
         "src/application/usecases/steps/commit/bugbot/schema.ts",
         "src/application/usecases/steps/commit/bugbot/bugbot_review_operation_context.ts",
         "src/application/usecases/steps/commit/bugbot/bugbot_context_request.ts",
@@ -430,7 +433,8 @@
         "src/application/usecases/steps/commit/bugbot/publish_findings_use_case.ts",
         "src/application/usecases/steps/commit/workspace_mutation_guard.ts",
         "src/data/repository/issue/bugbot_issue_comment_query_repository.ts",
-        "src/infrastructure/composition/bugbot_context_port_factory.ts",
+        "src/infrastructure/bound_bugbot_git_mutation_adapter.ts",
+        "src/infrastructure/composition/bugbot_scm_port_factory.ts",
         "src/infrastructure/composition/bugbot_composition_root.ts"
       ],
       "tests": [
@@ -445,6 +449,9 @@
         "src/data/repository/issue/__tests__/bugbot_issue_comment_query_repository.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/publish_findings_use_case.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_autofix_use_case.test.ts",
+        "src/application/ports/__tests__/bugbot_port_boundaries.test.ts",
+        "src/infrastructure/composition/__tests__/bugbot_scm_port_factory.test.ts",
+        "src/__tests__/api.test.ts",
         "src/domain/bugbot/__tests__/finding_identity.test.ts"
       ],
       "documentation": [
@@ -454,7 +461,8 @@
         "docs/bugbot/autofix.mdx",
         "docs/bugbot/failure-scenarios.mdx",
         "docs/bugbot/quality-observability.mdx",
-        "docs/bugbot/permissions.mdx"
+        "docs/bugbot/permissions.mdx",
+        "docs/bugbot/programmatic-api.mdx"
       ]
     },
     {

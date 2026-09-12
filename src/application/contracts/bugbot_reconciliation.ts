@@ -13,17 +13,11 @@ import type { BugbotContextCoverage } from '../../domain/bugbot/context';
 
 /** Narrow runtime facts required to reconcile one analyzed pull-request head. */
 export interface BugbotReconciliationTarget {
-  readonly owner: string;
-  readonly repository: string;
   readonly pullRequestNumber: number;
   readonly linkedIssueNumber?: number;
   readonly analyzedHeadSha: string;
   readonly trustedAuthorLogin?: string;
   readonly locale: string;
-}
-
-export interface BugbotReconciliationCredential {
-  readonly token: string;
 }
 
 export type BugbotSnapshotSurfaceState =

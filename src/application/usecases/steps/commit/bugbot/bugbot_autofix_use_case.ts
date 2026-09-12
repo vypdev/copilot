@@ -1,6 +1,6 @@
 import type { FixerQueryPort } from '../../../../ports/agent_fixer_ports';
 import type { BugbotContextPorts } from '../../../../../application/ports/bugbot_context_ports';
-import type { GitCommitPort } from '../../../../../application/ports/git_ports';
+import type { BugbotGitMutationPort } from '../../../../../application/ports/bugbot_git_ports';
 import { ParamUseCase } from '../../../base/param_usecase';
 import { Result } from '../../../../../data/model/result';
 import { runBugbotAutofixWorkflow } from './bugbot_autofix_workflow';
@@ -15,7 +15,7 @@ export class BugbotAutofixUseCase implements ParamUseCase<BugbotAutofixParam, Re
     constructor(
         private readonly aiRepository: FixerQueryPort,
         private readonly contextPorts: BugbotContextPorts,
-        private readonly gitCommitPort: GitCommitPort,
+        private readonly gitCommitPort: BugbotGitMutationPort,
     ) {}
 
     async invoke(param: BugbotAutofixParam): Promise<Result[]> {

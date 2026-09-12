@@ -1,7 +1,6 @@
 import type { Execution } from '../../data/model/execution';
 import { Result } from '../../data/model/result';
 import { logError, logInfo } from '../ports/logging_ports';
-import type { AuthenticatedUserPort } from '../ports/authenticated_user_ports';
 import { isCopilotCommentRequest } from '../../domain/copilot_comment_request';
 import type { ActorAuthorizationPort } from '../ports/actor_authorization_ports';
 import type { CommentAutomationOptions } from './comment_automation_contracts';
@@ -18,7 +17,6 @@ export async function runCommentAutomation(
   param: Execution,
   options: CommentAutomationOptions,
   actorAuthorizationPort: ActorAuthorizationPort,
-  authenticatedUserPort: AuthenticatedUserPort,
 ): Promise<Result[]> {
   logInfo(`${options.taskId} started.`);
   let languageResults: Result[] = [];
@@ -43,21 +41,17 @@ export async function runCommentAutomation(
       return [new Result({ id: options.taskId, success: true, executed: false })];
     }
     if (command.kind === 'command') {
-      const explicitResults = await runExplicitCommentCommand(param, options, command.command, actorAuthorizationPort, authenticatedUserPort);
+      const explicitResults = await runExplicitCommentCommand(param, options, command.command, actorAuthorizationPort);
       if (explicitResults) return explicitResults;
       // Explicit fix/implement commands are already mention-gated by their
       // deterministic prefix and still flow through structured intent parsing.
-      return runNaturalLanguageCommentAutomation(param, options, actorAuthorizationPort, [], {
-        authenticatedUserPort,
-      });
+      return runNaturalLanguageCommentAutomation(param, options, actorAuthorizationPort, [], {});
     }
     if (isNaturalLanguageBranchSyncRequest(options.userComment, param.tokenUser ?? '')) {
       return runBranchSyncCommand(param, options, [], actorAuthorizationPort);
     }
     languageResults = await options.languageUseCase.invoke(param);
-    return await runNaturalLanguageCommentAutomation(param, options, actorAuthorizationPort, languageResults, {
-      authenticatedUserPort,
-    });
+    return await runNaturalLanguageCommentAutomation(param, options, actorAuthorizationPort, languageResults, {});
   } catch (cause) {
     const semanticError = new ApplicationError('workflow.failed', "Comment automation failed.", { cause });
     logError(semanticError);

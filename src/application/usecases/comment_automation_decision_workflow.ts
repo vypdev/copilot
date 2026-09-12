@@ -8,6 +8,7 @@ import type { BugbotFixIntentPayload } from "./steps/commit/bugbot/bugbot_fix_in
 import type { CommentAutomationOptions } from "./comment_automation_contracts";
 import { containsBotMention } from '../../domain/copilot_comment_request';
 import { parseCopilotCommand } from '../../domain/copilot_command';
+import { projectBugbotFixIntentContext } from './steps/commit/bugbot/bugbot_review_operation_context';
 
 export interface CommentAutomationDecision {
   intentResults: Result[];
@@ -21,7 +22,7 @@ export async function resolveCommentAutomationDecision(
   actorAuthorizationPort: ActorAuthorizationPort,
 ): Promise<CommentAutomationDecision> {
   logInfo("Running bugbot fix intent detection (before Think).");
-  const intentResults = await options.intentUseCase.invoke(param);
+  const intentResults = await options.intentUseCase.invoke(projectBugbotFixIntentContext(param));
   const intentPayload = getBugbotFixIntentPayload(intentResults);
   const parsedCommand = parseCopilotCommand(options.userComment);
   const explicitMutationCommand = parsedCommand.kind === 'command'

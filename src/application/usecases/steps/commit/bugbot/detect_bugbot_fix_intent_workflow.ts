@@ -1,9 +1,7 @@
 import { isAgentConfigurationReady } from "../../../../../data/model/agent";
-import type { Execution } from "../../../../../data/model/execution";
 import { AGENT_PLAN } from "../../../../../application/policies/agent_task_policy";
 import type { FindingsQueryPort } from "../../../../ports/agent_findings_ports";
 import type { BugbotContextPorts } from "../../../../../application/ports/bugbot_context_ports";
-import type { BugbotPullRequestQueryPort } from "../../../../../application/ports/bugbot_pull_request_read_ports";
 import { logDebugInfo, logInfo } from "../../../../ports/logging_ports";
 import { Result } from "../../../../../data/model/result";
 import { parseCopilotCommand } from '../../../../../domain/copilot_command';
@@ -13,36 +11,34 @@ import {
   projectBugbotContextRequest,
   type LoadBugbotContextOptions,
 } from "./bugbot_context_request";
-import { projectBugbotContextSelectionContext } from './bugbot_review_operation_context';
+import type { BugbotFixIntentContext } from './bugbot_review_operation_context';
 import { BUGBOT_FIX_INTENT_RESPONSE_SCHEMA } from "./schema";
 import {
   buildUnresolvedFindingSummaries,
   parseBugbotFixIntentResponse,
-  selectBugbotCommentBody,
   type BugbotFixIntent,
 } from "./detect_bugbot_fix_intent_policy";
 
 const TASK_ID = "DetectBugbotFixIntentUseCase";
 
 export interface DetectBugbotFixIntentWorkflowPorts {
-  pullRequestQueryPort: BugbotPullRequestQueryPort;
   aiRepository: FindingsQueryPort;
   contextPorts: BugbotContextPorts;
 }
 
 /** Detects whether a comment requests a finding fix, repository change, or read-only review. */
 export async function runDetectBugbotFixIntentWorkflow(
-  param: Execution,
+  param: BugbotFixIntentContext,
   ports: DetectBugbotFixIntentWorkflowPorts,
 ): Promise<Result[]> {
   const results: Result[] = [];
 
-  if (param.issueNumber <= 0 && param.pullRequest.number <= 0) {
+  if (param.target.issueNumber <= 0 && param.target.pullRequestNumber <= 0) {
     logInfo("No issue or pull request number; skipping bugbot fix intent detection.");
     return results;
   }
 
-  const commentBody = selectBugbotCommentBody(param);
+  const commentBody = param.comment.body;
   if (!commentBody?.trim()) {
     logInfo("No comment body; skipping bugbot fix intent detection.");
     return results;
@@ -51,7 +47,7 @@ export async function runDetectBugbotFixIntentWorkflow(
   const explicitCommand = parseCopilotCommand(commentBody);
   const isExplicitFix = explicitCommand.kind === 'command' && explicitCommand.command.name === 'fix';
   const isExplicitImplement = explicitCommand.kind === 'command' && explicitCommand.command.name === 'implement';
-  if (!isExplicitFix && !isExplicitImplement && !isAgentConfigurationReady(param.ai.getAgentConfiguration("findings"))) {
+  if (!isExplicitFix && !isExplicitImplement && !isAgentConfigurationReady(param.agentConfiguration)) {
     logInfo("Agent not configured; skipping bugbot fix intent detection.");
     return results;
   }
@@ -61,22 +57,18 @@ export async function runDetectBugbotFixIntentWorkflow(
   const contextOptions: LoadBugbotContextOptions | undefined = branchOverride
     ? {
         branchOverride,
-        ...(param.pullRequest.number > 0 ? { pullRequestNumberOverride: param.pullRequest.number } : {}),
+        ...(param.target.pullRequestNumber > 0 ? { pullRequestNumberOverride: param.target.pullRequestNumber } : {}),
       }
     : undefined;
   const context = await loadBugbotContext(
-    projectBugbotContextRequest(projectBugbotContextSelectionContext(param), contextOptions),
-    ports.contextPorts.loader.bind({
-      owner: param.owner,
-      repository: param.repo,
-      token: param.tokens.token,
-    }),
+    projectBugbotContextRequest(param, contextOptions),
+    ports.contextPorts,
   );
   const unresolvedWithBody = context.unresolvedFindingsWithBody ?? [];
 
   const unresolvedIds = new Set(unresolvedWithBody.map((finding) => finding.id));
   const unresolvedFindings = buildUnresolvedFindingSummaries(unresolvedWithBody);
-  const parentCommentBody = await resolveParentCommentBody(param, ports.pullRequestQueryPort);
+  const parentCommentBody = await resolveParentCommentBody(param, ports.contextPorts);
   if (isExplicitImplement) {
     const requestText = explicitCommand.command.arguments.join(' ').trim();
     results.push(new Result({
@@ -126,7 +118,7 @@ export async function runDetectBugbotFixIntentWorkflow(
     `DetectBugbotFixIntent: prompt length=${prompt.length}, unresolved findings=${unresolvedFindings.length}. Calling configured findings agent.`,
   );
   const response = await ports.aiRepository.query({
-    configuration: param.ai.getAgentConfiguration("findings"),
+    configuration: param.agentConfiguration,
     agentId: AGENT_PLAN,
     prompt,
     options: {
@@ -175,27 +167,24 @@ export async function runDetectBugbotFixIntentWorkflow(
   return results;
 }
 
-function resolveBranchOverride(param: Execution): string | undefined {
-  const pullRequestBranch = param.pullRequest.isPullRequestReviewComment
-    ? param.pullRequest.head?.trim()
+function resolveBranchOverride(param: BugbotFixIntentContext): string | undefined {
+  const pullRequestBranch = param.comment.isPullRequestReviewComment
+    ? param.target.headBranch.trim()
     : undefined;
   if (pullRequestBranch) return pullRequestBranch;
-  return param.commit.branch?.trim() || undefined;
+  return param.target.commitBranch.trim() || undefined;
 }
 
 async function resolveParentCommentBody(
-  param: Execution,
-  pullRequestQueryPort: BugbotPullRequestQueryPort,
+  param: BugbotFixIntentContext,
+  contextPorts: BugbotContextPorts,
 ): Promise<string | undefined> {
-  if (!param.pullRequest.isPullRequestReviewComment || !param.pullRequest.commentInReplyToId) {
+  if (!param.comment.isPullRequestReviewComment || !param.comment.parentCommentId) {
     return undefined;
   }
-  const parentBody = await pullRequestQueryPort.getPullRequestReviewCommentBody(
-    param.owner,
-    param.repo,
-    param.pullRequest.number,
-    param.pullRequest.commentInReplyToId,
-    param.tokens.token,
+  const parentBody = await contextPorts.getPullRequestReviewCommentBody(
+    param.target.pullRequestNumber,
+    param.comment.parentCommentId,
   );
   return parentBody ?? undefined;
 }

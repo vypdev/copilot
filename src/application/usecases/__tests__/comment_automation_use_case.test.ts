@@ -2,6 +2,8 @@ import { Result } from "../../../data/model/result";
 import type { Execution } from "../../../data/model/execution";
 import { Ai } from "../../../data/model/ai";
 import { runCommentAutomation as runCommentAutomationImpl } from "../comment_automation_use_case";
+import type { CommentAutomationOptions } from '../comment_automation_contracts';
+import type { ActorAuthorizationPort } from '../../ports/actor_authorization_ports';
 
 jest.mock("../../../utils/logger", () => ({
   logInfo: jest.fn(),
@@ -41,10 +43,47 @@ function configuredAi(options: { membersOnly?: boolean; fixVerifyCommands?: stri
 
 function runCommentAutomation(
   execution: Execution,
-  ...args: Parameters<typeof runCommentAutomationImpl> extends [Execution, ...infer Rest] ? Rest : never
+  options: Omit<CommentAutomationOptions, 'bugbotGitMutationPort'> & {
+    bugbotGitMutationPort?: CommentAutomationOptions['bugbotGitMutationPort'];
+  },
+  actorAuthorizationPort: ActorAuthorizationPort,
+  authenticatedUserPort?: {
+    getTokenUserDetails?(): Promise<{ name: string; email: string }>;
+  },
 ) {
-  if (!execution.ai) Object.assign(execution, { ai: configuredAi() });
-  return runCommentAutomationImpl(execution, ...args);
+  const source = {
+    ...execution,
+    owner: execution.owner ?? 'o',
+    repo: execution.repo ?? 'r',
+    issueNumber: execution.issueNumber ?? -1,
+    isPullRequest: execution.isPullRequest ?? false,
+    eventName: execution.eventName ?? 'issue_comment',
+    commit: { ...(execution.commit ?? {}), branch: execution.commit?.branch ?? '' },
+    currentConfiguration: execution.currentConfiguration ?? {},
+    branches: execution.branches ?? {},
+    issue: execution.issue ?? {},
+    pullRequest: {
+      ...(execution.pullRequest ?? {}),
+      number: execution.pullRequest?.number ?? -1,
+      head: execution.pullRequest?.head ?? '',
+      action: execution.pullRequest?.action ?? '',
+    },
+    ai: execution.ai ?? configuredAi(),
+  } as Execution;
+  const bugbotGitMutationPort = options.bugbotGitMutationPort ?? Object.assign(
+    {},
+    options.gitCommitPort,
+    {
+      getAuthenticatedUserDetails: async () => {
+        const details = await authenticatedUserPort?.getTokenUserDetails?.();
+        return details ?? { name: 'Bot', email: 'bot@example.com' };
+      },
+    },
+  ) as never;
+  return runCommentAutomationImpl(source, {
+    ...options,
+    bugbotGitMutationPort,
+  }, actorAuthorizationPort);
 }
 
 describe("runCommentAutomation", () => {
@@ -269,7 +308,7 @@ describe("runCommentAutomation", () => {
 
     expect(results[0].id).toBe('sync');
     expect(sync.invoke).toHaveBeenCalledWith({
-      execution,
+      execution: expect.objectContaining(execution),
       options: { dryRun: false, useAgent: true, parentOverride },
     });
     expect(language.invoke).not.toHaveBeenCalled();

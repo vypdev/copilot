@@ -1,6 +1,5 @@
 import type { BugbotFindingResolutionPorts } from '../../../../../application/ports/bugbot_finding_resolution_ports';
 import { PullRequestReviewOperationError } from '../../../../../application/ports/pull_request_review_errors';
-import type { Execution } from '../../../../../data/model/execution';
 import { logError } from '../../../../ports/logging_ports';
 import type { BugbotContext } from './types';
 import type {
@@ -11,9 +10,10 @@ import { resolveIssueFinding } from './resolve_issue_finding';
 import { resolvePullRequestFinding } from './resolve_pull_request_finding';
 import { isHumanResolver } from '../../../../../domain/bugbot/review_state';
 import { ApplicationError } from '../../../../errors/application_error';
+import type { BugbotContextSelectionContext } from './bugbot_review_operation_context';
 
 export interface MarkFindingsResolvedParam {
-    execution: Execution;
+    operation: BugbotContextSelectionContext;
     context: BugbotContext;
     resolvedFindingIds: Set<string>;
     resolvedFindingResolutions?: ReadonlyMap<string, BugbotFindingResolution>;
@@ -23,7 +23,7 @@ export interface MarkFindingsResolvedParam {
 export async function markFindingsResolved(param: MarkFindingsResolvedParam): Promise<ApplicationError[]> {
     const errors: ApplicationError[] = [];
     for (const [findingId, existing] of Object.entries(param.context.existingByFindingId)) {
-        await repairExistingPullRequestFinding(param.ports, param.execution, findingId, existing.pullRequest, errors);
+        await repairExistingPullRequestFinding(param.ports, param.operation, findingId, existing.pullRequest, errors);
         if (!param.resolvedFindingIds.has(findingId)) continue;
         await resolvePullRequestIfNeeded(param, findingId, existing.pullRequest, errors);
         await resolveIssueIfNeeded(param, findingId, existing.issue, errors);
@@ -33,28 +33,25 @@ export async function markFindingsResolved(param: MarkFindingsResolvedParam): Pr
 
 async function repairExistingPullRequestFinding(
     ports: BugbotFindingResolutionPorts,
-    execution: Execution,
+    operation: BugbotContextSelectionContext,
     findingId: string,
     destination: ExistingPullRequestFindingInfo | undefined,
     errors: ApplicationError[],
 ): Promise<void> {
     if (destination == null) return;
     if (destination.resolution === 'dismissed' && destination.threadResolved === true) {
-        await tryResolvePullRequestFinding(ports, execution, findingId, destination, errors, 'dismissed');
+        await tryResolvePullRequestFinding(ports, findingId, destination, errors, 'dismissed');
         return;
     }
     if (!destination.resolved
         && destination.threadResolved === true
         && destination.threadResolvedByLogin != null
-        && execution.tokenUser?.trim()
-        && !isHumanResolver(destination.threadResolvedByLogin, execution.tokenUser)) {
+        && operation.trustedAuthorLogin?.trim()
+        && !isHumanResolver(destination.threadResolvedByLogin, operation.trustedAuthorLogin)) {
         try {
             await ports.pullRequestComments.unresolvePullRequestReviewThread(
-                execution.owner,
-                execution.repo,
                 destination.pullRequestNumber,
                 destination.commentIdentity,
-                execution.tokens.token,
             );
         } catch {
             addResolutionError(errors, 'pull request');
@@ -71,7 +68,6 @@ async function resolvePullRequestIfNeeded(
     if (destination != null && (!destination.resolved || destination.verificationRequired === true)) {
         await tryResolvePullRequestFinding(
             param.ports,
-            param.execution,
             findingId,
             destination,
             errors,
@@ -96,10 +92,7 @@ async function resolveIssueIfNeeded(
         await resolveIssueFinding(param.ports.issueComments, {
             findingId,
             comment: { id: comment.id, body: comment.body },
-            owner: param.execution.owner,
-            repo: param.execution.repo,
-            issueNumber: param.execution.issueNumber,
-            token: param.execution.tokens.token,
+            issueNumber: param.operation.target.issueNumber,
             resolution: param.resolvedFindingResolutions?.get(findingId),
         });
     } catch {
@@ -109,7 +102,6 @@ async function resolveIssueIfNeeded(
 
 async function tryResolvePullRequestFinding(
     ports: BugbotFindingResolutionPorts,
-    execution: Execution,
     findingId: string,
     destination: ExistingPullRequestFindingInfo,
     errors: ApplicationError[],
@@ -120,9 +112,6 @@ async function tryResolvePullRequestFinding(
             findingId,
             commentIdentity: destination.commentIdentity,
             pullRequestNumber: destination.pullRequestNumber,
-            owner: execution.owner,
-            repo: execution.repo,
-            token: execution.tokens.token,
             resolution,
         });
     } catch {

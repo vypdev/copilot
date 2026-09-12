@@ -16,7 +16,6 @@ describe('commitUserRequestIfSuccessful', () => {
             undefined,
             [new Result({ success: false, executed: true })],
             {} as never,
-            {} as never,
         );
 
         expect(results).toEqual([]);
@@ -30,7 +29,6 @@ describe('commitUserRequestIfSuccessful', () => {
             {} as never,
             'feature/1',
             [new Result({ success: true, executed: true })],
-            {} as never,
             {} as never,
         );
 
@@ -52,7 +50,6 @@ describe('commitUserRequestIfSuccessful', () => {
             {} as never,
             undefined,
             [new Result({ success: true, executed: true })],
-            {} as never,
             {} as never,
         );
 

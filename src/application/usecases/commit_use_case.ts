@@ -6,6 +6,8 @@ import { ParamUseCase } from "./base/param_usecase";
 import { CheckProgressUseCase } from "./actions/check_progress_use_case";
 import type { ActorAuthorizationPort } from "../ports/actor_authorization_ports";
 import { toApplicationError } from "../errors/application_error";
+import type { BugbotReviewOperationContext } from './steps/commit/bugbot/bugbot_review_operation_context';
+import { projectBugbotReviewOperationContext } from './steps/commit/bugbot/bugbot_review_operation_context';
 
 export class CommitUseCase implements ParamUseCase<Execution, Result[]> {
     taskId: string = 'CommitUseCase';
@@ -13,7 +15,7 @@ export class CommitUseCase implements ParamUseCase<Execution, Result[]> {
     constructor(
         private readonly notifyNewCommitUseCase: ParamUseCase<Execution, Result[]>,
         private readonly checkChangesIssueSizeUseCase: ParamUseCase<Execution, Result[]>,
-        private readonly detectPotentialProblemsUseCase: ParamUseCase<Execution, Result[]>,
+        private readonly detectPotentialProblemsUseCase: ParamUseCase<BugbotReviewOperationContext, Result[]>,
         private readonly checkProgressUseCase: CheckProgressUseCase,
         private readonly actorAuthorizationPort?: ActorAuthorizationPort,
     ) {}
@@ -43,7 +45,9 @@ export class CommitUseCase implements ParamUseCase<Execution, Result[]> {
                 ));
             if (agentAllowed) {
                 results.push(...(await this.checkProgressUseCase.invoke(param)));
-                results.push(...(await this.detectPotentialProblemsUseCase.invoke(param)));
+                results.push(...(await this.detectPotentialProblemsUseCase.invoke(
+                    projectBugbotReviewOperationContext(param),
+                )));
             } else {
                 logInfo('Skipping push agent analysis because ai-members-only is enabled and the actor is not authorized.');
             }

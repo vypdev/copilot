@@ -6,6 +6,8 @@ import { BugbotAutofixUseCase } from "../bugbot_autofix_use_case";
 import { GitCommitAdapter } from "../../../../../../infrastructure/git_commit_adapter";
 import type { BugbotContext } from "../types";
 import { buildMarker } from '../../../../../policies/bugbot_finding_marker_policy';
+import type { Execution } from '../../../../../../data/model/execution';
+import { projectBugbotAutofixOperationContext } from '../bugbot_review_operation_context';
 
 const mockExec = jest.fn();
 let workspaceInspectionCount = 0;
@@ -27,7 +29,7 @@ jest.mock("../load_bugbot_context_use_case", () => ({
 }));
 
 
-function baseExecution() {
+function baseExecution(): Execution {
     return {
         owner: "o",
         repo: "r",
@@ -42,7 +44,7 @@ function baseExecution() {
             getBugbotReviewConfiguration: () => ({ organizationRules: [] }),
             getAiIgnoreFiles: () => [],
         },
-    } as unknown as Parameters<BugbotAutofixUseCase["invoke"]>[0]["execution"];
+    } as unknown as Execution;
 }
 
 function contextWithFindings(ids: string[]) {
@@ -83,25 +85,8 @@ describe("BugbotAutofixUseCase", () => {
     beforeEach(() => {
         useCase = new BugbotAutofixUseCase(
             { fix: (request: { configuration: unknown; prompt: string }) => mockCopilotMessage(request.configuration, request.prompt) },
-            {
-                loader: { bind: jest.fn().mockReturnValue({}) },
-                issue: { listIssueComments: jest.fn() },
-                reviewState: { listPullRequestReviews: jest.fn().mockResolvedValue([]) },
-                navigation: { forPullRequest: jest.fn() },
-                rules: { loadRules: jest.fn().mockResolvedValue([]) },
-                pullRequest: {
-                    getPullRequestReviewCommentBody: jest.fn(),
-                    listPullRequestReviewComments: jest.fn(),
-                    getPullRequestHeadSha: jest.fn(),
-                    getReviewDiffSnapshot: jest.fn().mockResolvedValue({
-                        changes: [],
-                        filesWithFirstDiffLine: [],
-                        filesWithDiffLocations: [],
-                    }),
-                    listPullRequestReviewThreadStates: jest.fn().mockResolvedValue({}),
-                },
-            },
-            new GitCommitAdapter(),
+            {} as never,
+            new GitCommitAdapter() as never,
         );
         mockLoadBugbotContext.mockReset();
         mockCopilotMessage.mockReset();
@@ -120,7 +105,7 @@ describe("BugbotAutofixUseCase", () => {
 
     it("returns empty results when targetFindingIds is empty", async () => {
         const results = await useCase.invoke({
-            execution: baseExecution(),
+            operation: projectBugbotAutofixOperationContext(baseExecution()),
             targetFindingIds: [],
             userComment: "fix it",
         });
@@ -135,10 +120,12 @@ describe("BugbotAutofixUseCase", () => {
         (exec as { ai?: unknown }).ai = {
             getAgentConfiguration: () => ({ provider: 'opencode', model: '' }),
             getBugbotFixVerifyCommands: () => ["pnpm test"],
+            getBugbotReviewConfiguration: () => ({ organizationRules: [] }),
+            getAiIgnoreFiles: () => [],
         };
 
         const results = await useCase.invoke({
-            execution: exec,
+            operation: projectBugbotAutofixOperationContext(exec),
             targetFindingIds: ["f1"],
             userComment: "fix it",
         });
@@ -153,7 +140,7 @@ describe("BugbotAutofixUseCase", () => {
         mockCopilotMessage.mockResolvedValue({ text: "Done.", sessionId: "s1" });
 
         await useCase.invoke({
-            execution: baseExecution(),
+            operation: projectBugbotAutofixOperationContext(baseExecution()),
             targetFindingIds: ["f1"],
             userComment: "fix it",
             context: ctx,
@@ -169,7 +156,7 @@ describe("BugbotAutofixUseCase", () => {
         mockCopilotMessage.mockResolvedValue({ text: "Done.", sessionId: "s1" });
 
         await useCase.invoke({
-            execution: baseExecution(),
+            operation: projectBugbotAutofixOperationContext(baseExecution()),
             targetFindingIds: ["f1"],
             userComment: "fix it",
         });
@@ -182,7 +169,7 @@ describe("BugbotAutofixUseCase", () => {
         mockLoadBugbotContext.mockRejectedValue(new Error('stale pull request'));
 
         const results = await useCase.invoke({
-            execution: baseExecution(),
+            operation: projectBugbotAutofixOperationContext(baseExecution()),
             targetFindingIds: ['f1'],
             userComment: 'fix it',
             context: contextWithFindings(['f1']),
@@ -201,7 +188,7 @@ describe("BugbotAutofixUseCase", () => {
         mockCopilotMessage.mockResolvedValue({ text: "Done.", sessionId: "s1" });
 
         const results = await useCase.invoke({
-            execution: baseExecution(),
+            operation: projectBugbotAutofixOperationContext(baseExecution()),
             targetFindingIds: ["f1", "f2", "nonexistent"],
             userComment: "fix all",
             context: ctx,
@@ -221,7 +208,7 @@ describe("BugbotAutofixUseCase", () => {
         mockLoadBugbotContext.mockResolvedValue(ctx);
 
         const results = await useCase.invoke({
-            execution: baseExecution(),
+            operation: projectBugbotAutofixOperationContext(baseExecution()),
             targetFindingIds: ["f1", "f2"],
             userComment: "fix all",
             context: ctx,
@@ -237,7 +224,7 @@ describe("BugbotAutofixUseCase", () => {
         mockCopilotMessage.mockResolvedValue(null);
 
         const results = await useCase.invoke({
-            execution: baseExecution(),
+            operation: projectBugbotAutofixOperationContext(baseExecution()),
             targetFindingIds: ["f1"],
             userComment: "fix it",
             context: ctx,
@@ -254,7 +241,7 @@ describe("BugbotAutofixUseCase", () => {
         mockCopilotMessage.mockResolvedValue({ text: "Fixed.", sessionId: "s1" });
 
         const results = await useCase.invoke({
-            execution: baseExecution(),
+            operation: projectBugbotAutofixOperationContext(baseExecution()),
             targetFindingIds: ["f1"],
             userComment: "fix it",
             context: ctx,
@@ -281,7 +268,7 @@ describe("BugbotAutofixUseCase", () => {
         );
 
         const results = await useCase.invoke({
-            execution: baseExecution(),
+            operation: projectBugbotAutofixOperationContext(baseExecution()),
             targetFindingIds: ["f1"],
             userComment: "fix it",
             context: ctx,
@@ -299,7 +286,7 @@ describe("BugbotAutofixUseCase", () => {
         mockExec.mockRejectedValueOnce("status unavailable");
 
         const results = await useCase.invoke({
-            execution: baseExecution(),
+            operation: projectBugbotAutofixOperationContext(baseExecution()),
             targetFindingIds: ["f1"],
             userComment: "fix it",
             context: ctx,
@@ -330,7 +317,7 @@ describe("BugbotAutofixUseCase", () => {
         mockCopilotMessage.mockResolvedValue({ text: "Fixed.", sessionId: "s1" });
 
         const results = await useCase.invoke({
-            execution: baseExecution(),
+            operation: projectBugbotAutofixOperationContext(baseExecution()),
             targetFindingIds: ["f1"],
             userComment: "fix it",
             context: ctx,
@@ -355,7 +342,7 @@ describe("BugbotAutofixUseCase", () => {
         mockCopilotMessage.mockResolvedValue({ text: "Fixed.", sessionId: "s1" });
 
         const results = await useCase.invoke({
-            execution: baseExecution(),
+            operation: projectBugbotAutofixOperationContext(baseExecution()),
             targetFindingIds: ["f1"],
             userComment: "fix it",
             context: ctx,
@@ -378,7 +365,7 @@ describe("BugbotAutofixUseCase", () => {
         mockCopilotMessage.mockResolvedValue({ text: "No changes needed.", sessionId: "s1" });
 
         const results = await useCase.invoke({
-            execution: baseExecution(),
+            operation: projectBugbotAutofixOperationContext(baseExecution()),
             targetFindingIds: ["f1"],
             userComment: "fix it",
             context: ctx,

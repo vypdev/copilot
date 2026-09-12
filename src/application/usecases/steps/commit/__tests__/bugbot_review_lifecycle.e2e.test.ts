@@ -7,6 +7,7 @@ import type {
   PullRequestReviewThreadState,
 } from '../../../../ports/pull_request_review_comment_ports';
 import { DetectPotentialProblemsUseCase } from '../detect_potential_problems_use_case';
+import { projectBugbotReviewOperationContext } from '../bugbot/bugbot_review_operation_context';
 
 class InMemoryReviewProvider {
   readonly comments: PullRequestReviewComment[] = [];
@@ -17,10 +18,10 @@ class InMemoryReviewProvider {
   private nextId = 1;
 
   async listIssueComments() { return [...this.statusComments]; }
-  async addComment(_owner: string, _repo: string, _number: number, body: string) {
+  async addComment(_number: number, body: string) {
     this.statusComments.push({ id: 10_000 + this.statusComments.length, body, user: { login: 'bot' } });
   }
-  async updateComment(_owner: string, _repo: string, _number: number, id: number, body: string) {
+  async updateComment(_number: number, id: number, body: string) {
     const comment = this.statusComments.find((item) => item.id === id);
     if (comment) comment.body = body;
   }
@@ -36,7 +37,7 @@ class InMemoryReviewProvider {
     };
   }
   async listPullRequestReviewThreadStates() { return { ...this.threadStates }; }
-  forPullRequest(_owner: string, _repo: string, pullRequestNumber: number, headSha: string) {
+  forPullRequest(pullRequestNumber: number, headSha: string) {
     return {
       pullRequestUrl: `https://github.com/org/repo/pull/${pullRequestNumber}`,
       commitUrl: `https://github.com/org/repo/commit/${headSha}`,
@@ -44,7 +45,7 @@ class InMemoryReviewProvider {
   }
 
   async createReviewWithComments(
-    _owner: string, _repo: string, _pr: number, _sha: string, body: string,
+    _pr: number, _sha: string, body: string,
     comments: PullRequestReviewCommentDraft[],
   ) {
     const reviewIdentity = String(1_000 + this.reviews.length);
@@ -74,18 +75,18 @@ class InMemoryReviewProvider {
     return { identity: reviewIdentity };
   }
 
-  async updatePullRequestReviewComment(_owner: string, _repo: string, identity: string, body: string) {
+  async updatePullRequestReviewComment(identity: string, body: string) {
     const comment = this.comments.find((item) => item.identity === identity);
     if (comment) comment.body = body;
   }
-  async updatePullRequestReview(_owner: string, _repo: string, _pr: number, identity: string, body: string) {
+  async updatePullRequestReview(_pr: number, identity: string, body: string) {
     const review = this.reviews.find((item) => item.identity === identity);
     if (review) review.body = body;
   }
-  async resolvePullRequestReviewThread(_owner: string, _repo: string, _pr: number, identity: string) {
+  async resolvePullRequestReviewThread(_pr: number, identity: string) {
     this.threadStates[identity] = { resolved: true, resolvedByLogin: 'bot' };
   }
-  async unresolvePullRequestReviewThread(_owner: string, _repo: string, _pr: number, identity: string) {
+  async unresolvePullRequestReviewThread(_pr: number, identity: string) {
     this.threadStates[identity] = { resolved: false };
   }
 }
@@ -106,42 +107,62 @@ function contextPorts(provider: InMemoryReviewProvider) {
   });
   const rules = { loadRules: async () => [] };
   return {
-    loader: {
-      bind: () => ({
-        getPullRequest: async (number: number) => ({
-          number,
-          state: 'open' as const,
-          baseRepository: { owner: 'org', name: 'repo' },
-          headRepositoryOwner: 'org',
-          headRef: 'feature/review',
-          headSha: provider.headSha,
-        }),
-        findOpenPullRequestsByExactHead: async () => [],
-        listIssueComments: async (number: number) => {
-          const value = await provider.listIssueComments();
-          return bounded('issue-comments', value, value.length);
-        },
-        listPullRequestReviewComments: async (number: number) => {
-          const value = await provider.listPullRequestReviewComments();
-          return bounded('pull-request-comments', value, value.length);
-        },
-        listPullRequestReviewThreadStates: async (number: number) => {
-          const value = await provider.listPullRequestReviewThreadStates();
-          return bounded('review-threads', value, Object.keys(value).length);
-        },
-        getReviewDiffSnapshot: async (number: number) => {
-          const value = await provider.getReviewDiffSnapshot();
-          return bounded('diff', value, value.changes.length);
-        },
-        getPullRequestHeadSha: async () => provider.headSha,
-        loadRules: rules.loadRules,
-      }),
+    getPullRequest: async (number: number) => ({
+      number,
+      state: 'open' as const,
+      baseRepository: { owner: 'org', name: 'repo' },
+      headRepositoryOwner: 'org',
+      headRef: 'feature/review',
+      headSha: provider.headSha,
+    }),
+    findOpenPullRequestsByExactHead: async () => [],
+    listIssueComments: async (_number: number) => {
+      const value = await provider.listIssueComments();
+      return bounded('issue-comments', value, value.length);
     },
-    issue: provider,
-    pullRequest: provider,
-    reviewState: provider,
-    navigation: provider,
-    rules,
+    listPullRequestReviewComments: async (_number: number) => {
+      const value = await provider.listPullRequestReviewComments();
+      return bounded('pull-request-comments', value, value.length);
+    },
+    listPullRequestReviewThreadStates: async (_number: number) => {
+      const value = await provider.listPullRequestReviewThreadStates();
+      return bounded('review-threads', value, Object.keys(value).length);
+    },
+    getReviewDiffSnapshot: async (_number: number) => {
+      const value = await provider.getReviewDiffSnapshot();
+      return bounded('diff', value, value.changes.length);
+    },
+    getPullRequestHeadSha: async () => provider.headSha,
+    getPullRequestReviewCommentBody: provider.getPullRequestReviewCommentBody.bind(provider),
+    loadRules: rules.loadRules,
+  };
+}
+
+function scmPorts(provider: InMemoryReviewProvider) {
+  return {
+    context: contextPorts(provider),
+    publication: {
+      issueComments: provider,
+      pullRequestComments: provider,
+    },
+    resolution: {
+      issueComments: provider,
+      pullRequestComments: provider,
+    },
+    reconciliation: {
+      snapshot: {
+        listIssueComments: provider.listIssueComments.bind(provider),
+        listPullRequestReviewComments: provider.listPullRequestReviewComments.bind(provider),
+        listPullRequestReviewThreadStates: provider.listPullRequestReviewThreadStates.bind(provider),
+        listPullRequestReviews: provider.listPullRequestReviews.bind(provider),
+        getPullRequestHeadSha: provider.getPullRequestHeadSha.bind(provider),
+        navigationForPullRequest: provider.forPullRequest.bind(provider),
+      },
+      presentation: {
+        comments: provider,
+        updatePullRequestReview: provider.updatePullRequestReview.bind(provider),
+      },
+    },
   };
 }
 
@@ -171,13 +192,11 @@ describe('Bugbot review lifecycle E2E contract', () => {
     const telemetry: unknown[] = [];
     const useCase = new DetectPotentialProblemsUseCase(
       { query: jest.fn(async () => responses.shift()) },
-      contextPorts(provider),
-      { issueComments: provider, pullRequestComments: provider, reviewState: provider },
-      { issueComments: provider, pullRequestComments: provider },
+      scmPorts(provider),
       { publish: (snapshot) => { telemetry.push(snapshot); } },
     );
 
-    await useCase.invoke(execution());
+    await useCase.invoke(projectBugbotReviewOperationContext(execution()));
     expect(provider.reviews).toHaveLength(1);
     expect(provider.reviews[0].body).toContain('## 🤖 Bugbot review');
     expect(provider.reviews[0].comments[0].body).toContain('```suggestion');
@@ -186,7 +205,7 @@ describe('Bugbot review lifecycle E2E contract', () => {
       resolvedByLogin: 'maintainer',
     };
 
-    const second = await useCase.invoke(execution());
+    const second = await useCase.invoke(projectBugbotReviewOperationContext(execution()));
     expect(provider.reviews).toHaveLength(1);
     expect(second[0].payload).toEqual(expect.objectContaining({ findingStates: expect.objectContaining({ dismissed: 1 }) }));
     expect(telemetry).toHaveLength(2);
@@ -196,12 +215,12 @@ describe('Bugbot review lifecycle E2E contract', () => {
     const provider = new InMemoryReviewProvider();
     const useCase = new DetectPotentialProblemsUseCase(
       { query: jest.fn(async () => ({ findings: [finding()] })) },
-      contextPorts(provider),
-      { issueComments: provider, pullRequestComments: provider, reviewState: provider },
-      { issueComments: provider, pullRequestComments: provider },
+      scmPorts(provider),
     );
 
-    const results = await useCase.invoke(execution('dry-run'));
+    const results = await useCase.invoke(
+      projectBugbotReviewOperationContext(execution('dry-run')),
+    );
     expect(provider.reviews).toEqual([]);
     expect(provider.comments).toEqual([]);
     expect(results[0].payload).toEqual(expect.objectContaining({ dryRun: true, findings: [expect.objectContaining({ id: 'unchecked-token' })] }));

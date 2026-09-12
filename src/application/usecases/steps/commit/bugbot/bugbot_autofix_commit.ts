@@ -1,42 +1,39 @@
-import type { Execution } from '../../../../../data/model/execution';
-import type { AuthenticatedUserPort } from '../../../../../application/ports/authenticated_user_ports';
-import type { GitCommitPort } from '../../../../../application/ports/git_ports';
+import type { BugbotGitMutationPort } from '../../../../../application/ports/bugbot_git_ports';
 import { buildBugbotCommitMessage, buildUserRequestCommitMessage } from './commit_message_policy';
 import {
     runCommitAndPushWorkflow,
     type CommitAndPushWorkflowResult,
 } from './commit_and_push_workflow';
+import type { BugbotCommitContext } from './bugbot_review_operation_context';
 
 export type BugbotAutofixCommitResult = CommitAndPushWorkflowResult;
 
 export async function runBugbotAutofixCommitAndPush(
-    execution: Execution,
+    context: BugbotCommitContext,
     options: { branchOverride?: string; branchAlreadyCheckedOut?: boolean; targetFindingIds?: string[]; workspacePaths?: string[] } | undefined,
-    authenticatedUserPort: AuthenticatedUserPort,
-    gitCommitPort: GitCommitPort,
+    gitCommitPort: BugbotGitMutationPort,
 ): Promise<BugbotAutofixCommitResult> {
-    const branch = options?.branchOverride ?? execution.commit.branch;
-    return runCommitAndPushWorkflow(execution, {
+    const branch = options?.branchOverride ?? context.branch;
+    return runCommitAndPushWorkflow(context, {
         branch,
         branchOverride: Boolean(options?.branchOverride) && !options?.branchAlreadyCheckedOut,
         workspacePaths: options?.workspacePaths,
-        commitMessage: buildBugbotCommitMessage(execution.issueNumber, options?.targetFindingIds ?? []),
+        commitMessage: buildBugbotCommitMessage(context.issueNumber, options?.targetFindingIds ?? []),
         noChangesMessage: 'No changes to commit after autofix.',
-    }, authenticatedUserPort, gitCommitPort);
+    }, gitCommitPort);
 }
 
 export async function runUserRequestCommitAndPush(
-    execution: Execution,
+    context: BugbotCommitContext,
     options: { branchOverride?: string; branchAlreadyCheckedOut?: boolean; workspacePaths?: string[] } | undefined,
-    authenticatedUserPort: AuthenticatedUserPort,
-    gitCommitPort: GitCommitPort,
+    gitCommitPort: BugbotGitMutationPort,
 ): Promise<BugbotAutofixCommitResult> {
-    const branch = options?.branchOverride ?? execution.commit.branch;
-    return runCommitAndPushWorkflow(execution, {
+    const branch = options?.branchOverride ?? context.branch;
+    return runCommitAndPushWorkflow(context, {
         branch,
         branchOverride: Boolean(options?.branchOverride) && !options?.branchAlreadyCheckedOut,
         workspacePaths: options?.workspacePaths,
-        commitMessage: buildUserRequestCommitMessage(execution.issueNumber),
+        commitMessage: buildUserRequestCommitMessage(context.issueNumber),
         noChangesMessage: 'No changes to commit after user request.',
-    }, authenticatedUserPort, gitCommitPort);
+    }, gitCommitPort);
 }

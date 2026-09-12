@@ -1,10 +1,9 @@
-import type { BugbotIssueCommentWritePort } from "../../../../../application/ports/bugbot_issue_write_ports";
-import type { Execution } from "../../../../../data/model/execution";
+import type { BoundBugbotIssueCommentWritePort } from "../../../../../application/ports/bugbot_issue_write_ports";
 import { logDebugInfo } from "../../../../ports/logging_ports";
 
 export async function publishOverflowComment(
-    repository: BugbotIssueCommentWritePort,
-    execution: Execution,
+    repository: BoundBugbotIssueCommentWritePort,
+    issueNumber: number,
     overflowCount: number,
     overflowTitles: string[],
     commitSha: string | undefined
@@ -19,11 +18,8 @@ export async function publishOverflowComment(
 There are **${overflowCount}** more finding(s) that were not published as individual comments. Review locally or in the full diff to see the list.${titlesList}`;
 
     await repository.addComment(
-        execution.owner,
-        execution.repo,
-        execution.issueNumber,
+        issueNumber,
         body,
-        execution.tokens.token,
         commitSha ? { commitSha } : undefined
     );
     logDebugInfo(`Added overflow comment: ${overflowCount} additional finding(s) not published individually.`);

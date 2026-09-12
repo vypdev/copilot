@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { BugbotFindingPublicationPorts } from "../bugbot_finding_publication_ports";
 import type { BugbotFindingResolutionPorts } from "../bugbot_finding_resolution_ports";
@@ -9,10 +9,19 @@ import type { BugbotContextPorts } from '../bugbot_context_ports';
 type Equal<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 type Assert<T extends true> = T;
 type PublicationKeysAreExact = Assert<
-  Equal<keyof BugbotFindingPublicationPorts, "issueComments" | "pullRequestComments" | "reviewState">
+  Equal<keyof BugbotFindingPublicationPorts, "issueComments" | "pullRequestComments">
 >;
 type ContextKeysAreExact = Assert<
-  Equal<keyof BugbotContextPorts, 'loader' | 'issue' | 'pullRequest' | 'reviewState' | 'navigation' | 'rules'>
+  Equal<keyof BugbotContextPorts,
+    | 'getPullRequest'
+    | 'findOpenPullRequestsByExactHead'
+    | 'listIssueComments'
+    | 'listPullRequestReviewComments'
+    | 'listPullRequestReviewThreadStates'
+    | 'getReviewDiffSnapshot'
+    | 'getPullRequestHeadSha'
+    | 'getPullRequestReviewCommentBody'
+    | 'loadRules'>
 >;
 type ResolutionKeysAreExact = Assert<
   Equal<keyof BugbotFindingResolutionPorts, "issueComments" | "pullRequestComments">
@@ -114,8 +123,8 @@ describe("Bugbot port boundaries", () => {
 
     expect(issuePortSource).toContain("BugbotIssueCommentCreatePort");
     expect(issuePortSource).toContain("BugbotIssueCommentUpdatePort");
-    expect(resolutionPortSource).toContain("BugbotIssueCommentUpdatePort");
-    expect(resolutionPortSource).toContain("BugbotPullRequestResolutionPort");
+    expect(resolutionPortSource).toContain("BoundBugbotIssueCommentUpdatePort");
+    expect(resolutionPortSource).toContain("BoundBugbotPullRequestResolutionPort");
     expect(markResolvedSource).not.toContain("BugbotIssueCommentWritePort");
     expect(markResolvedSource).toContain("BugbotFindingResolutionPorts");
     expect(workflowSource).not.toContain("BugbotWritePorts");
@@ -128,7 +137,7 @@ describe("Bugbot port boundaries", () => {
       "utf8",
     );
     expect(writePortSource).toContain("unresolvePullRequestReviewThread");
-    expect(writePortSource).not.toContain("resolvePullRequestReviewThread(");
+    expect(writePortSource).not.toMatch(/^\s*resolvePullRequestReviewThread\(/mu);
   });
 
   it('segregates review-summary presentation from inline finding publication', () => {
@@ -141,13 +150,12 @@ describe("Bugbot port boundaries", () => {
       'utf8',
     );
     expect(writePortSource).not.toContain('PullRequestReviewSummaryUpdatePort');
-    expect(publicationPortSource).toContain('reviewState:');
-    expect(publicationPortSource).not.toContain('reviewState?');
+    expect(publicationPortSource).not.toContain('reviewState');
   });
 
   it('requires provider-owned navigation instead of constructing provider URLs in use cases', () => {
-    const contextPortSource = readFileSync(
-      join(portsDirectory, 'bugbot_context_ports.ts'),
+    const reconciliationPortSource = readFileSync(
+      join(portsDirectory, 'bugbot_reconciliation_ports.ts'),
       'utf8',
     );
     const snapshotLoaderSource = readFileSync(
@@ -157,9 +165,8 @@ describe("Bugbot port boundaries", () => {
       ),
       'utf8',
     );
-    expect(contextPortSource).toContain('navigation: BugbotReviewNavigationPort');
-    expect(contextPortSource).not.toContain('navigation?:');
-    expect(snapshotLoaderSource).toContain('ports.navigation.forPullRequest');
+    expect(reconciliationPortSource).toContain('navigationForPullRequest(');
+    expect(snapshotLoaderSource).toContain('ports.navigationForPullRequest');
     expect(snapshotLoaderSource).not.toContain('https://github.com');
   });
 
@@ -207,10 +214,35 @@ describe("Bugbot port boundaries", () => {
     expect(requestSource).toContain('BugbotContextSelectionContext');
     expect(operationContextSource).not.toContain('data/model/execution');
     expect(operationContextSource).not.toMatch(/readonly\s+tokens?\s*:/u);
-    for (const source of selectionOnlySources) {
-      expect(source).toContain('projectBugbotContextSelectionContext');
-      expect(source).not.toContain('projectBugbotReviewOperationContext');
-    }
+    for (const source of selectionOnlySources) expect(source).not.toMatch(/\bExecution\b/u);
     expect(pullRequestReadPortSource).not.toContain('getOpenPullRequestNumbersByHeadBranch');
+  });
+
+  it('keeps every production Bugbot leaf free of the runtime aggregate and bound port credentials', () => {
+    const bugbotDirectory = join(portsDirectory, '../usecases/steps/commit/bugbot');
+    const leafFiles = readdirSync(bugbotDirectory, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.ts'))
+      .map((entry) => join(bugbotDirectory, entry.name));
+    leafFiles.push(
+      join(portsDirectory, '../usecases/steps/commit/detect_potential_problems_use_case.ts'),
+      join(portsDirectory, '../usecases/steps/commit/detect_potential_problems_workflow.ts'),
+    );
+
+    for (const file of leafFiles) {
+      const source = readFileSync(file, 'utf8');
+      expect(source).not.toContain('data/model/execution');
+      expect(source).not.toMatch(/\bExecution\b/u);
+    }
+
+    for (const file of [
+      'bugbot_context_ports.ts',
+      'bugbot_finding_publication_ports.ts',
+      'bugbot_finding_resolution_ports.ts',
+      'bugbot_git_ports.ts',
+      'bugbot_reconciliation_ports.ts',
+      'bugbot_scm_ports.ts',
+    ]) {
+      expect(readFileSync(join(portsDirectory, file), 'utf8')).not.toMatch(/\btoken\s*[?:]/u);
+    }
   });
 });

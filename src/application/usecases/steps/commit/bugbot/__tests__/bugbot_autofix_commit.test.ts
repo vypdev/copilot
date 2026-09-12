@@ -10,6 +10,8 @@ import {
 import type { Execution } from "../../../../../../data/model/execution";
 import { logInfo } from "../../../../../ports/logging_ports";
 import { GitCommitAdapter } from "../../../../../../infrastructure/git_commit_adapter";
+import { BoundBugbotGitMutationAdapter } from '../../../../../../infrastructure/bound_bugbot_git_mutation_adapter';
+import { projectBugbotCommitContext } from '../bugbot_review_operation_context';
 
 const shellQuoteParse = jest.fn();
 jest.mock("shell-quote", () => ({
@@ -32,13 +34,26 @@ jest.mock("../../../../../../data/repository/organization/authenticated_user_rep
 const mockGetUserFromToken = jest.fn();
 const authenticatedUserPort = { getTokenUserDetails: mockGetTokenUserDetails, getUserFromToken: mockGetUserFromToken };
 const gitCommitPort = new GitCommitAdapter();
+const bugbotGitMutationPort = new BoundBugbotGitMutationAdapter(
+    gitCommitPort,
+    authenticatedUserPort,
+    't',
+);
 
 function runBugbotAutofixCommitAndPush(execution: Execution, options?: { branchOverride?: string; targetFindingIds?: string[]; workspacePaths?: string[] }) {
-    return runBugbotAutofixCommitAndPushImpl(execution, options, authenticatedUserPort, gitCommitPort);
+    return runBugbotAutofixCommitAndPushImpl(
+        projectBugbotCommitContext(execution),
+        options,
+        bugbotGitMutationPort,
+    );
 }
 
 function runUserRequestCommitAndPush(execution: Execution, options?: { branchOverride?: string }) {
-    return runUserRequestCommitAndPushImpl(execution, options, authenticatedUserPort, gitCommitPort);
+    return runUserRequestCommitAndPushImpl(
+        projectBugbotCommitContext(execution),
+        options,
+        bugbotGitMutationPort,
+    );
 }
 
 const mockExec = jest.spyOn(exec, "exec") as jest.Mock;

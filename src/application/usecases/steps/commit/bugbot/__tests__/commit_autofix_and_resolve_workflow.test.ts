@@ -1,4 +1,3 @@
-import type { Execution } from "../../../../../../data/model/execution";
 import type { Result } from "../../../../../../data/model/result";
 import { commitAutofixAndResolveFindings } from "../commit_autofix_and_resolve_workflow";
 
@@ -29,14 +28,13 @@ describe("commitAutofixAndResolveFindings", () => {
     runBugbotAutofixCommitAndPush.mockResolvedValue({ success: true, committed: true });
 
     const errors = await commitAutofixAndResolveFindings(
-      { owner: "o", repo: "r" } as Execution,
+      {} as never,
       {
         branchOverride: "bugfix",
         targetFindingIds: ["finding-1"],
         context: {},
       } as never,
       [{ success: true, payload: {} } as Result],
-      {} as never,
       {} as never,
     );
 
@@ -50,13 +48,12 @@ describe("commitAutofixAndResolveFindings", () => {
 
     await expect(
       commitAutofixAndResolveFindings(
-        { owner: "o", repo: "r" } as Execution,
+        {} as never,
         {
           targetFindingIds: ["finding-1"],
           context: {},
         } as never,
         [{ success: true, payload: {} } as Result],
-        {} as never,
         {} as never,
       ),
     ).resolves.toEqual([]);
@@ -72,10 +69,9 @@ describe("commitAutofixAndResolveFindings", () => {
     });
 
     const errors = await commitAutofixAndResolveFindings(
-      { owner: "o", repo: "r" } as Execution,
+      {} as never,
       { targetFindingIds: ["finding-1"], context: {} } as never,
       [{ success: true, payload: {} } as Result],
-      {} as never,
       {} as never,
     );
 
@@ -89,10 +85,9 @@ describe("commitAutofixAndResolveFindings", () => {
 
     await expect(
       commitAutofixAndResolveFindings(
-        { owner: "o", repo: "r" } as Execution,
+        {} as never,
         { targetFindingIds: ["finding-1"] } as never,
         [{ success: true, payload: {} } as Result],
-        {} as never,
         {} as never,
       ),
     ).resolves.toEqual([]);
@@ -106,13 +101,12 @@ describe("commitAutofixAndResolveFindings", () => {
 
     await expect(
       commitAutofixAndResolveFindings(
-        { owner: "o", repo: "r" } as Execution,
+        {} as never,
         {
           targetFindingIds: ["finding-1"],
           context: {},
         } as never,
         [{ success: true, payload: {} } as Result],
-        {} as never,
         {} as never,
       ),
     ).resolves.toEqual([]);

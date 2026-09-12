@@ -1,21 +1,21 @@
-import type { Execution } from './data/model/execution';
-import { Ai } from './data/model/ai';
 import type { Result } from './data/model/result';
 import type { AgentConfiguration } from './domain/agent';
 import type { FindingsQueryPort } from './application/ports/agent_findings_ports';
-import type { BugbotContextPorts } from './application/ports/bugbot_context_ports';
-import type { BugbotFindingPublicationPorts } from './application/ports/bugbot_finding_publication_ports';
-import type { BugbotFindingResolutionPorts } from './application/ports/bugbot_finding_resolution_ports';
+import type { BugbotScmPorts } from './application/ports/bugbot_scm_ports';
 import type { BugbotTelemetryPort } from './application/ports/bugbot_telemetry_ports';
 import type { BugbotReviewConfiguration } from './domain/bugbot/review_configuration';
 import { DetectPotentialProblemsUseCase } from './application/usecases/steps/commit/detect_potential_problems_use_case';
 import { ApplicationError, toApplicationError } from './application/errors/application_error';
 import { runAtApplicationErrorBoundary } from './application/errors/application_error_context';
+import { normalizeBugbotReviewConfiguration } from './domain/bugbot/review_configuration';
+import type { BugbotReviewOperationContext } from './application/usecases/steps/commit/bugbot/bugbot_review_operation_context';
 
-export interface BugbotScmGateway {
-    readonly context: BugbotContextPorts;
-    readonly publication: BugbotFindingPublicationPorts;
-    readonly resolution: BugbotFindingResolutionPorts;
+/** Already-bound SCM authority for exactly one repository. */
+export interface BugbotScmGateway extends BugbotScmPorts {
+    readonly repository: {
+        readonly owner: string;
+        readonly name: string;
+    };
     readonly telemetry?: BugbotTelemetryPort;
 }
 
@@ -44,13 +44,6 @@ export type BugbotReviewTarget =
 
 /** Sole supported request for the programmatic Bugbot review entry point. */
 export interface BugbotReviewRequest {
-    readonly repository: {
-        readonly owner: string;
-        readonly name: string;
-    };
-    readonly credential: {
-        readonly token: string;
-    };
     readonly target: BugbotReviewTarget;
     readonly agent: AgentConfiguration;
     readonly configuration?: Partial<BugbotReviewConfiguration>;
@@ -59,7 +52,6 @@ export interface BugbotReviewRequest {
     readonly commentLimit?: number;
     readonly authenticatedUser?: string;
     readonly locale?: {
-        readonly issue?: string;
         readonly pullRequest?: string;
     };
 }
@@ -67,13 +59,13 @@ export interface BugbotReviewRequest {
 /** Provider-neutral programmatic entry point. Consumers supply agent and SCM adapters. */
 export class BugbotReviewService {
     private readonly useCase: DetectPotentialProblemsUseCase;
+    private readonly repository: BugbotScmGateway['repository'];
 
     constructor(agent: FindingsQueryPort, scm: BugbotScmGateway) {
+        this.repository = scm.repository;
         this.useCase = new DetectPotentialProblemsUseCase(
             agent,
-            scm.context,
-            scm.publication,
-            scm.resolution,
+            scm,
             scm.telemetry,
         );
     }
@@ -81,7 +73,9 @@ export class BugbotReviewService {
     async review(request: BugbotReviewRequest): Promise<readonly Result[]> {
         return runAtApplicationErrorBoundary(async () => {
             try {
-                return await this.useCase.invoke(buildReviewExecution(request));
+                return await this.useCase.invoke(
+                    buildReviewOperationContext(request, this.repository),
+                );
             } catch (cause) {
                 throw toApplicationError(cause, 'unexpected', 'Bugbot review failed.');
             }
@@ -89,13 +83,15 @@ export class BugbotReviewService {
     }
 }
 
-function buildReviewExecution(request: BugbotReviewRequest): Execution {
+function buildReviewOperationContext(
+    request: BugbotReviewRequest,
+    binding: BugbotScmGateway['repository'],
+): BugbotReviewOperationContext {
     if (!request || typeof request !== 'object') {
         throw new ApplicationError('validation.invalid-input', 'Bugbot review request is missing or invalid.');
     }
-    const owner = requireText(request.repository?.owner, 'Repository owner', 100);
-    const repository = requireText(request.repository?.name, 'Repository name', 100);
-    const token = requireText(request.credential?.token, 'SCM credential', 10_000, 'authorization.credential-invalid');
+    const owner = requireText(binding?.owner, 'Bound repository owner', 100);
+    const repository = requireText(binding?.name, 'Bound repository name', 100);
     const commentLimit = request.commentLimit ?? 20;
     if (!Number.isSafeInteger(commentLimit) || commentLimit < 1 || commentLimit > 100) {
         throw new ApplicationError('configuration.invalid', 'Bugbot comment limit must be an integer between 1 and 100.');
@@ -113,64 +109,48 @@ function buildReviewExecution(request: BugbotReviewRequest): Execution {
     if (!['info', 'low', 'medium', 'high'].includes(minimumSeverity)) {
         throw new ApplicationError('configuration.invalid', 'Bugbot minimum severity is invalid.');
     }
-    const ai = new Ai(
-        '',
-        agent.model,
-        false,
-        ignoreFiles,
-        false,
-        minimumSeverity,
-        commentLimit,
-        [],
-        { findings: agent, fixer: agent, reviewer: agent },
-        'replace',
-        configuration,
-    );
+    const normalizedConfiguration = normalizeBugbotReviewConfiguration(configuration);
+    const { organizationRules, ...reviewConfiguration } = normalizedConfiguration;
     const isPullRequest = target.kind === 'pull-request';
     const issueNumber = isPullRequest ? target.linkedIssueNumber ?? -1 : target.issueNumber ?? -1;
     const branch = isPullRequest ? target.head : target.branch;
     const eventName = isPullRequest ? 'pull_request' : 'push';
     const action = isPullRequest ? target.action ?? 'synchronize' : '';
-    const inputs = {
-        eventName,
-        action,
-        repo: { owner, repo: repository },
-        ref: `refs/heads/${branch}`,
-        ...(target.before ? { before: target.before } : {}),
-        ...(!isPullRequest && target.after ? { after: target.after } : {}),
-        ...(isPullRequest ? {
-            pull_request: {
-                number: target.number,
-                draft: target.draft ?? false,
-                head: { ref: target.head, ...(target.expectedHeadSha ? { sha: target.expectedHeadSha } : {}) },
-                base: { ref: target.base ?? 'develop' },
-            },
-        } : {}),
-    };
-
-    // This is the only public-to-internal aggregate boundary. Every mutable
-    // input is copied, and the aggregate itself remains absent from the API.
-    return {
-        ai,
-        owner,
-        repo: repository,
-        issueNumber,
-        isPullRequest,
-        eventName,
-        inputs,
-        tokenUser: optionalText(request.authenticatedUser, 'Authenticated user', 255),
-        tokens: { token },
-        commit: { branch },
-        branches: { development: target.base ?? 'develop' },
-        currentConfiguration: { parentBranch: target.base },
-        pullRequest: isPullRequest
-            ? { number: target.number, head: target.head, action }
-            : { number: -1, head: '', action: '' },
-        locale: {
-            issue: optionalText(request.locale?.issue, 'Issue locale', 64) ?? 'en-US',
+    const authenticatedUser = optionalText(request.authenticatedUser, 'Authenticated user', 255);
+    return Object.freeze({
+        repository: Object.freeze({ owner, name: repository }),
+        target: Object.freeze({
+            issueNumber,
+            isPullRequest,
+            pullRequestNumber: isPullRequest ? target.number : -1,
+            headBranch: branch,
+            commitBranch: branch,
+            baseBranch: target.base ?? 'develop',
+            pullRequestAction: action,
+            draft: isPullRequest ? target.draft ?? false : false,
+        }),
+        trigger: Object.freeze({
+            kind: eventName,
+            ...(target.before ? { before: target.before } : {}),
+            ...(!isPullRequest && target.after ? { after: target.after } : {}),
+            ...(isPullRequest && target.expectedHeadSha
+                ? { expectedHeadSha: target.expectedHeadSha.toLowerCase() }
+                : {}),
+            headOwner: owner,
+        }),
+        ...(authenticatedUser ? { trustedAuthorLogin: authenticatedUser } : {}),
+        ignorePatterns: Object.freeze(ignoreFiles),
+        organizationRules: Object.freeze([...organizationRules]),
+        locale: Object.freeze({
             pullRequest: optionalText(request.locale?.pullRequest, 'Pull request locale', 64) ?? 'en-US',
-        },
-    } as unknown as Execution;
+        }),
+        analysis: Object.freeze({
+            agentConfiguration: Object.freeze(agent),
+            minimumSeverity,
+            commentLimit,
+            reviewConfiguration: Object.freeze(reviewConfiguration),
+        }),
+    });
 }
 
 function normalizeTarget(target: BugbotReviewTarget): BugbotReviewTarget {
@@ -292,11 +272,10 @@ function requireText(
     value: unknown,
     field: string,
     maximum: number,
-    code: 'validation.invalid-input' | 'authorization.credential-invalid' = 'validation.invalid-input',
 ): string {
     const normalized = typeof value === 'string' ? value.trim() : '';
     if (!normalized || normalized.length > maximum || /[\r\n\0]/u.test(normalized)) {
-        throw new ApplicationError(code, `${field} is missing or invalid.`);
+        throw new ApplicationError('validation.invalid-input', `${field} is missing or invalid.`);
     }
     return normalized;
 }
@@ -326,11 +305,13 @@ export type { FindingsQueryPort } from './application/ports/agent_findings_ports
 export type { BugbotContextPorts } from './application/ports/bugbot_context_ports';
 export type { BugbotFindingPublicationPorts } from './application/ports/bugbot_finding_publication_ports';
 export type { BugbotFindingResolutionPorts } from './application/ports/bugbot_finding_resolution_ports';
-export type { BugbotTelemetryPort } from './application/ports/bugbot_telemetry_ports';
+export type { BugbotScmPorts } from './application/ports/bugbot_scm_ports';
 export type {
-    BugbotReviewNavigation,
-    BugbotReviewNavigationPort,
-} from './application/ports/bugbot_review_navigation_ports';
+    BugbotPresentationMutationPorts,
+    BugbotReconciliationSnapshotPorts,
+} from './application/ports/bugbot_reconciliation_ports';
+export type { BugbotTelemetryPort } from './application/ports/bugbot_telemetry_ports';
+export type { BugbotReviewNavigation } from './application/ports/bugbot_review_navigation_ports';
 export type { Result } from './data/model/result';
 export type { BugbotFinding } from './domain/bugbot/finding';
 export type { BugbotReviewConfiguration } from './domain/bugbot/review_configuration';
@@ -349,6 +330,4 @@ export type {
 export type {
     PullRequestReviewReference,
     PullRequestReviewSummary,
-    PullRequestReviewSummaryQueryPort,
-    PullRequestReviewSummaryUpdatePort,
 } from './application/ports/pull_request_review_comment_ports';

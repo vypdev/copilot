@@ -1,4 +1,3 @@
-import type { Execution } from "../../../../../data/model/execution";
 import type { BugbotFindingPublicationPorts } from "../../../../../application/ports/bugbot_finding_publication_ports";
 import type { BugbotFindingResolutionPorts } from "../../../../../application/ports/bugbot_finding_resolution_ports";
 import type { BugbotContext } from "./types";
@@ -6,9 +5,10 @@ import type { PreparedBugbotFindings } from "./prepare_bugbot_findings";
 import { markFindingsResolved } from "./mark_findings_resolved_use_case";
 import { publishFindings } from "./publish_findings_use_case";
 import { PullRequestReviewOperationError } from "../../../../../application/ports/pull_request_review_errors";
+import type { BugbotReviewOperationContext } from './bugbot_review_operation_context';
 
 export async function applyDetectedFindings(
-  execution: Execution,
+  operation: BugbotReviewOperationContext,
   context: BugbotContext,
   prepared: PreparedBugbotFindings,
   publicationPorts: BugbotFindingPublicationPorts,
@@ -16,7 +16,7 @@ export async function applyDetectedFindings(
 ): Promise<Error[]> {
   try {
     await publishFindings({
-      execution,
+      operation,
       context,
       findings: prepared.toPublish,
       commitSha: context.prContext?.prHeadSha ?? "",
@@ -34,7 +34,7 @@ export async function applyDetectedFindings(
     return [publicationError];
   }
   const resolutionErrors = await markFindingsResolved({
-    execution,
+    operation,
     context,
     resolvedFindingIds: prepared.resolvedFindingIds,
     resolvedFindingResolutions: prepared.resolvedFindingResolutions,

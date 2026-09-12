@@ -1,8 +1,4 @@
-import type { BugbotIssueReadPort } from './bugbot_issue_read_ports';
-import type { BugbotPullRequestReadPort } from './bugbot_pull_request_read_ports';
 import type { BugbotRuleFileQueryPort } from './bugbot_rule_ports';
-import type { PullRequestReviewSummaryQueryPort } from './pull_request_review_comment_ports';
-import type { BugbotReviewNavigationPort } from './bugbot_review_navigation_ports';
 import type { BugbotPullRequestIdentity, BugbotSourceCoverage } from '../../domain/bugbot/context';
 import type { PullRequestReviewDiffSnapshot } from './bugbot_pull_request_read_ports';
 import type { BugbotIssueComment } from './bugbot_issue_read_ports';
@@ -19,22 +15,8 @@ export interface BoundBugbotContextReadPorts {
     listPullRequestReviewThreadStates(pullRequestNumber: number): Promise<BoundedBugbotRead<Readonly<Record<string, PullRequestReviewThreadState>>>>;
     getReviewDiffSnapshot(pullRequestNumber: number): Promise<BoundedBugbotRead<PullRequestReviewDiffSnapshot>>;
     getPullRequestHeadSha(pullRequestNumber: number): Promise<string | undefined>;
+    getPullRequestReviewCommentBody(pullRequestNumber: number, commentId: number): Promise<string | null>;
     loadRules(paths: readonly string[]): ReturnType<BugbotRuleFileQueryPort['loadRules']>;
 }
-export interface BugbotContextReadPortFactory {
-    bind(binding: {
-        readonly owner: string;
-        readonly repository: string;
-        readonly token: string;
-    }): BoundBugbotContextReadPorts;
-}
-export interface BugbotContextPorts {
-    loader: BugbotContextReadPortFactory;
-    issue: BugbotIssueReadPort;
-    pullRequest: BugbotPullRequestReadPort;
-    /** Required for coherent PR review projection. */
-    reviewState: PullRequestReviewSummaryQueryPort;
-    /** Provider-owned navigation used by durable review presentation. */
-    navigation: BugbotReviewNavigationPort;
-    rules: BugbotRuleFileQueryPort;
-}
+/** Repository-bound, credential-free context reads exposed to Bugbot use cases. */
+export type BugbotContextPorts = BoundBugbotContextReadPorts;

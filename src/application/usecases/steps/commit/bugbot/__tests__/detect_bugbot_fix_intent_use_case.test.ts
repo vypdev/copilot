@@ -5,6 +5,7 @@
 import { DetectBugbotFixIntentUseCase } from "../detect_bugbot_fix_intent_use_case";
 import type { Execution } from "../../../../../../data/model/execution";
 import { Result } from "../../../../../../data/model/result";
+import { projectBugbotFixIntentContext } from '../bugbot_review_operation_context';
 
 jest.mock("../../../../../../utils/logger", () => ({
     logInfo: jest.fn(),
@@ -62,33 +63,19 @@ function mockContextWithUnresolved(count = 1) {
     };
 }
 
+function invoke(useCase: DetectBugbotFixIntentUseCase, execution: Execution) {
+    return useCase.invoke(projectBugbotFixIntentContext(execution));
+}
+
 describe("DetectBugbotFixIntentUseCase", () => {
     let useCase: DetectBugbotFixIntentUseCase;
 
     beforeEach(() => {
-        const issuePort = { listIssueComments: jest.fn() };
-        const pullRequestPort = {
-            getPullRequestReviewCommentBody: mockGetPullRequestReviewCommentBody,
-            listPullRequestReviewComments: jest.fn(),
-            getPullRequestHeadSha: jest.fn(),
-            getReviewDiffSnapshot: jest.fn().mockResolvedValue({
-                changes: [],
-                filesWithFirstDiffLine: [],
-                filesWithDiffLocations: [],
-            }),
-            listPullRequestReviewThreadStates: jest.fn().mockResolvedValue({}),
-        };
         useCase = new DetectBugbotFixIntentUseCase(
-            pullRequestPort,
             { query: (request: { configuration: unknown; agentId: string; prompt: string; options?: unknown }) => mockAskAgent(request.configuration, request.agentId, request.prompt, request.options) },
             {
-                loader: { bind: jest.fn().mockReturnValue({}) },
-                issue: issuePort,
-                pullRequest: pullRequestPort,
-                reviewState: { listPullRequestReviews: jest.fn().mockResolvedValue([]) },
-                navigation: { forPullRequest: jest.fn() },
-                rules: { loadRules: jest.fn().mockResolvedValue([]) },
-            },
+                getPullRequestReviewCommentBody: mockGetPullRequestReviewCommentBody,
+            } as never,
         );
         mockLoadBugbotContext.mockReset();
         mockAskAgent.mockReset();
@@ -97,17 +84,21 @@ describe("DetectBugbotFixIntentUseCase", () => {
 
     it("returns empty results when OpenCode not configured", async () => {
         const param = baseExecution({
-            ai: { getAgentConfiguration: () => ({ provider: 'opencode', model: '' }) } as unknown as Execution["ai"],
+            ai: {
+                getAgentConfiguration: () => ({ provider: 'opencode', model: '' }),
+                getBugbotReviewConfiguration: () => ({ organizationRules: [] }),
+                getAiIgnoreFiles: () => [],
+            } as unknown as Execution["ai"],
         });
 
-        const results = await useCase.invoke(param);
+        const results = await invoke(useCase, param);
 
         expect(results).toEqual([]);
         expect(mockLoadBugbotContext).not.toHaveBeenCalled();
     });
 
     it("returns empty results when issueNumber is -1", async () => {
-        const results = await useCase.invoke(baseExecution({ issueNumber: -1 }));
+        const results = await invoke(useCase, baseExecution({ issueNumber: -1 }));
 
         expect(results).toEqual([]);
         expect(mockLoadBugbotContext).not.toHaveBeenCalled();
@@ -116,8 +107,9 @@ describe("DetectBugbotFixIntentUseCase", () => {
     it('supports autofix intent on a PR review without a linked issue', async () => {
         mockLoadBugbotContext.mockResolvedValue(mockContextWithUnresolved(1));
         mockAskAgent.mockResolvedValue({ is_fix_request: true, target_finding_ids: ['finding-0'], is_do_request: false });
-        const results = await useCase.invoke(baseExecution({
+        const results = await invoke(useCase, baseExecution({
             issueNumber: -1,
+            isPullRequest: true,
             commit: { branch: '' },
             issue: { ...baseExecution().issue, isIssueComment: false, commentBody: '' },
             pullRequest: {
@@ -141,7 +133,7 @@ describe("DetectBugbotFixIntentUseCase", () => {
     });
 
     it("returns empty results when comment body is empty", async () => {
-        const results = await useCase.invoke(
+        const results = await invoke(useCase,
             baseExecution({ issue: { ...baseExecution().issue, commentBody: "" } } as Partial<Execution>)
         );
 
@@ -153,7 +145,7 @@ describe("DetectBugbotFixIntentUseCase", () => {
         mockLoadBugbotContext.mockResolvedValue(mockContextWithUnresolved(1));
         mockAskAgent.mockResolvedValue({ is_fix_request: false, target_finding_ids: [], is_do_request: false });
 
-        const results = await useCase.invoke(
+        const results = await invoke(useCase,
             baseExecution({ commit: { branch: "" } } as Partial<Execution>)
         );
 
@@ -173,7 +165,7 @@ describe("DetectBugbotFixIntentUseCase", () => {
         mockLoadBugbotContext.mockResolvedValue(mockContextWithUnresolved(1));
         mockAskAgent.mockResolvedValue({ is_fix_request: false, target_finding_ids: [], is_do_request: false });
 
-        await useCase.invoke(baseExecution({ commit: { branch: "" } } as Partial<Execution>));
+        await invoke(useCase, baseExecution({ commit: { branch: "" } } as Partial<Execution>));
 
         expect(mockLoadBugbotContext).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -190,7 +182,7 @@ describe("DetectBugbotFixIntentUseCase", () => {
         mockLoadBugbotContext.mockResolvedValue(mockContextWithUnresolved(0));
         mockAskAgent.mockResolvedValue({ is_fix_request: false, target_finding_ids: [], is_do_request: true, is_review_request: false });
 
-        const results = await useCase.invoke(baseExecution());
+        const results = await invoke(useCase, baseExecution());
 
         expect(results).toHaveLength(1);
         expect(mockAskAgent).toHaveBeenCalledTimes(1);
@@ -201,7 +193,7 @@ describe("DetectBugbotFixIntentUseCase", () => {
         mockLoadBugbotContext.mockResolvedValue(mockContextWithUnresolved(0));
         mockAskAgent.mockResolvedValue({ is_fix_request: false, target_finding_ids: [], is_do_request: false, is_review_request: true });
 
-        const results = await useCase.invoke(baseExecution({
+        const results = await invoke(useCase, baseExecution({
             issue: { ...baseExecution().issue, commentBody: '@bot analyze the changes for security issues' },
         } as Partial<Execution>));
 
@@ -212,7 +204,7 @@ describe("DetectBugbotFixIntentUseCase", () => {
         const context = mockContextWithUnresolved(0);
         mockLoadBugbotContext.mockResolvedValue(context);
 
-        const results = await useCase.invoke(baseExecution({
+        const results = await invoke(useCase, baseExecution({
             issue: { ...baseExecution().issue, commentBody: '/copilot implement add a regression test' },
         } as Partial<Execution>));
 
@@ -232,7 +224,7 @@ describe("DetectBugbotFixIntentUseCase", () => {
             is_do_request: false,
         });
 
-        const results = await useCase.invoke(baseExecution());
+        const results = await invoke(useCase, baseExecution());
 
         expect(mockAskAgent).toHaveBeenCalledTimes(1);
         expect(results).toHaveLength(1);
@@ -246,7 +238,7 @@ describe("DetectBugbotFixIntentUseCase", () => {
         const context = mockContextWithUnresolved(2);
         mockLoadBugbotContext.mockResolvedValue(context);
 
-        const results = await useCase.invoke(baseExecution({
+        const results = await invoke(useCase, baseExecution({
             issue: { ...baseExecution().issue, commentBody: '/copilot fix finding-0' },
         } as Partial<Execution>));
 
@@ -257,7 +249,7 @@ describe("DetectBugbotFixIntentUseCase", () => {
     it('skips an explicit fix command when there are no unresolved findings', async () => {
         mockLoadBugbotContext.mockResolvedValue(mockContextWithUnresolved(0));
 
-        const results = await useCase.invoke(baseExecution({
+        const results = await invoke(useCase, baseExecution({
             issue: { ...baseExecution().issue, commentBody: '/copilot fix finding-0' },
         } as Partial<Execution>));
 
@@ -268,7 +260,7 @@ describe("DetectBugbotFixIntentUseCase", () => {
     it('supports selecting all unresolved findings with an explicit command', async () => {
         mockLoadBugbotContext.mockResolvedValue(mockContextWithUnresolved(2));
 
-        const results = await useCase.invoke(baseExecution({
+        const results = await invoke(useCase, baseExecution({
             issue: { ...baseExecution().issue, commentBody: '/copilot fix all' },
         } as Partial<Execution>));
 
@@ -280,7 +272,7 @@ describe("DetectBugbotFixIntentUseCase", () => {
         mockLoadBugbotContext.mockResolvedValue(mockContextWithUnresolved(1));
         mockAskAgent.mockResolvedValue(null);
 
-        const results = await useCase.invoke(baseExecution());
+        const results = await invoke(useCase, baseExecution());
 
         expect(results).toHaveLength(1);
         expect((results[0].payload as { isFixRequest: boolean; isDoRequest: boolean }).isFixRequest).toBe(false);
@@ -292,7 +284,7 @@ describe("DetectBugbotFixIntentUseCase", () => {
         mockGetPullRequestReviewCommentBody.mockResolvedValue("Parent body");
         mockAskAgent.mockResolvedValue({ is_fix_request: false, target_finding_ids: [], is_do_request: false });
 
-        await useCase.invoke(
+        await invoke(useCase,
             baseExecution({
                 issue: { ...baseExecution().issue, isIssueComment: false },
                 pullRequest: {
@@ -304,7 +296,7 @@ describe("DetectBugbotFixIntentUseCase", () => {
             } as Partial<Execution>)
         );
 
-        expect(mockGetPullRequestReviewCommentBody).toHaveBeenCalledWith("o", "r", 50, 999, "t");
+        expect(mockGetPullRequestReviewCommentBody).toHaveBeenCalledWith(50, 999);
         expect(mockAskAgent).toHaveBeenCalledWith(
             expect.anything(),
             "build",
@@ -328,7 +320,7 @@ describe("DetectBugbotFixIntentUseCase", () => {
             is_do_request: false,
         });
 
-        const results = await useCase.invoke(baseExecution());
+        const results = await invoke(useCase, baseExecution());
 
         expect(mockAskAgent).toHaveBeenCalledTimes(1);
         const prompt = mockAskAgent.mock.calls[0]?.[2];

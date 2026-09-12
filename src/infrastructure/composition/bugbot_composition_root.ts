@@ -5,9 +5,7 @@ import {
   createPullRequestLifecycleClient,
   createPullRequestReviewCommentClient,
 } from "./github_pull_request_client_factory";
-import type { BugbotContextPorts } from "../../application/ports/bugbot_context_ports";
-import type { BugbotFindingResolutionPorts } from "../../application/ports/bugbot_finding_resolution_ports";
-import type { BugbotFindingPublicationPorts } from "../../application/ports/bugbot_finding_publication_ports";
+import type { BugbotScmPorts } from '../../application/ports/bugbot_scm_ports';
 
 import { BugbotIssueRepository } from "../../data/repository/issue/bugbot_issue_repository";
 import { IssueContentRepository } from "../../data/repository/issue/issue_content_repository";
@@ -23,20 +21,17 @@ import { LoggerBugbotTelemetryAdapter } from '../logging/logger_bugbot_telemetry
 import type { BugbotTelemetryPort } from '../../application/ports/bugbot_telemetry_ports';
 import type { BugbotLearnedRuleCommandPort, BugbotRuleFileQueryPort } from '../../application/ports/bugbot_rule_ports';
 import { GithubBugbotReviewNavigationAdapter } from '../github/github_bugbot_review_navigation_adapter';
-import { BugbotContextPortFactory } from './bugbot_context_port_factory';
+import { BugbotScmPortFactory, type BugbotScmBinding } from './bugbot_scm_port_factory';
 
 export type BugbotCompositionRoot = {
   issue: BugbotIssueRepository;
-  pullRequest: BugbotPullRequestRepository;
-  context: BugbotContextPorts;
-  resolution: BugbotFindingResolutionPorts;
-  publication: BugbotFindingPublicationPorts;
+  scm: BugbotScmPorts;
   telemetry: BugbotTelemetryPort;
   rules: BugbotRuleFileQueryPort & BugbotLearnedRuleCommandPort;
 
 };
 
-export function createBugbotCompositionRoot(): BugbotCompositionRoot {
+export function createBugbotCompositionRoot(binding: BugbotScmBinding): BugbotCompositionRoot {
   const issueContent = new IssueContentRepository(createIssueContentClient());
   const issue = new BugbotIssueRepository(issueContent);
   const reviewCommentClient = createPullRequestReviewCommentClient();
@@ -63,22 +58,21 @@ export function createBugbotCompositionRoot(): BugbotCompositionRoot {
   );
   const rules = new WorkspaceBugbotRulesRepository();
   const navigation = new GithubBugbotReviewNavigationAdapter();
-  const loader = new BugbotContextPortFactory(
+  const scm = new BugbotScmPortFactory(
     bugbotIssueComments,
+    issue,
     lifecycle,
     changes,
+    pullRequest,
     reviewQuery,
     threadCommand,
     rules,
-  );
+    navigation,
+  ).bind(binding);
   return {
     issue,
-    pullRequest,
-    context: { loader, issue, pullRequest, reviewState: pullRequest, navigation, rules },
-    resolution: { issueComments: issue, pullRequestComments: pullRequest },
-    publication: { issueComments: issue, pullRequestComments: pullRequest, reviewState: pullRequest },
+    scm,
     telemetry: new LoggerBugbotTelemetryAdapter(),
     rules,
-
   };
 }

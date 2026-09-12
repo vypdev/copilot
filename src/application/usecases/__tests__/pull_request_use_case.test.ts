@@ -1,6 +1,7 @@
 import { PullRequestUseCase } from "../pull_request_use_case";
 import type { Execution } from "../../../data/model/execution";
 import { Result } from "../../../data/model/result";
+import { Ai } from '../../../data/model/ai';
 
 const mockLogError = jest.fn();
 jest.mock("../../ports/logging_ports", () => ({
@@ -22,14 +23,26 @@ const mockReviewPotentialProblemsInvoke = jest.fn();
 
 function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
   return {
+    owner: 'org',
+    repo: 'repo',
+    issueNumber: -1,
+    isPullRequest: true,
+    eventName: 'pull_request',
+    tokens: { token: 'token' },
+    tokenUser: 'bot',
+    commit: { branch: 'feature/review' },
+    currentConfiguration: { parentBranch: 'develop' },
+    branches: { development: 'develop' },
     pullRequest: {
+      number: 7,
+      head: 'feature/review',
       action: "opened",
       isOpened: true,
       isMerged: false,
       isClosed: false,
       isSynchronize: false,
     },
-    ai: { getAiMembersOnly: () => false, getPullRequestDescriptionMode: () => 'disabled' },
+    ai: new Ai('', 'model', false, [], false, 'low', 20),
     ...overrides,
   } as unknown as Execution;
 }

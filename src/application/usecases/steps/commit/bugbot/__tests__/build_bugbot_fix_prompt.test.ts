@@ -2,21 +2,30 @@
  * Unit tests for buildBugbotFixPrompt.
  */
 
-import type { Execution } from "../../../../../../data/model/execution";
 import type { BugbotContext } from "../types";
 import { buildBugbotFixPrompt } from "../build_bugbot_fix_prompt";
+import type { BugbotAutofixOperationContext } from '../bugbot_review_operation_context';
 
-function mockExecution(overrides: Partial<Execution> = {}): Execution {
+function mockOperation(overrides: Partial<BugbotAutofixOperationContext> = {}): BugbotAutofixOperationContext {
     return {
-        owner: "test-owner",
-        repo: "test-repo",
-        issueNumber: 42,
-        commit: { branch: "feature/42-branch" },
-        currentConfiguration: { parentBranch: "develop" },
-        branches: { development: "develop" },
-        ai: undefined,
+        repository: { owner: 'test-owner', name: 'test-repo' },
+        target: {
+            issueNumber: 42,
+            isPullRequest: true,
+            pullRequestNumber: 5,
+            headBranch: 'feature/42-branch',
+            commitBranch: 'feature/42-branch',
+            baseBranch: 'develop',
+            pullRequestAction: 'synchronize',
+            draft: false,
+        },
+        trigger: { kind: 'pull_request', headOwner: 'test-owner' },
+        ignorePatterns: [],
+        organizationRules: [],
+        agentConfiguration: { provider: 'codex', model: 'model' },
+        verifyCommands: [],
         ...overrides,
-    } as Execution;
+    };
 }
 
 function mockContext(overrides: Partial<BugbotContext> = {}): BugbotContext {
@@ -49,7 +58,7 @@ function mockContext(overrides: Partial<BugbotContext> = {}): BugbotContext {
 
 describe("buildBugbotFixPrompt", () => {
     it("includes repo context, findings, user comment, and verify commands", () => {
-        const param = mockExecution();
+        const param = mockOperation();
         const context = mockContext();
         const prompt = buildBugbotFixPrompt(
             param,
@@ -73,7 +82,7 @@ describe("buildBugbotFixPrompt", () => {
 
     it("includes the canonical PR number", () => {
         const prompt = buildBugbotFixPrompt(
-            mockExecution(),
+            mockOperation(),
             mockContext(),
             ["find-1"],
             "fix it",
@@ -83,7 +92,7 @@ describe("buildBugbotFixPrompt", () => {
     });
 
     it("asks to run verify when verifyCommands is empty", () => {
-        const prompt = buildBugbotFixPrompt(mockExecution(), mockContext(), ["find-1"], "fix", []);
+        const prompt = buildBugbotFixPrompt(mockOperation(), mockContext(), ["find-1"], "fix", []);
         expect(prompt).toContain("Run any standard project checks");
     });
 
@@ -93,7 +102,7 @@ describe("buildBugbotFixPrompt", () => {
             unresolvedFindingsWithBody: [{ id: "find-1", fullBody: longBody }],
         });
         const prompt = buildBugbotFixPrompt(
-            mockExecution(),
+            mockOperation(),
             context,
             ["find-1"],
             "fix",
@@ -116,7 +125,7 @@ describe("buildBugbotFixPrompt", () => {
             ],
         });
         const prompt = buildBugbotFixPrompt(
-            mockExecution(),
+            mockOperation(),
             context,
             ["id-with`backtick"],
             "fix",
@@ -128,7 +137,7 @@ describe("buildBugbotFixPrompt", () => {
 
     it("escapes backticks in verify commands so prompt block is not broken", () => {
         const prompt = buildBugbotFixPrompt(
-            mockExecution(),
+            mockOperation(),
             mockContext(),
             ["find-1"],
             "fix",
@@ -139,10 +148,9 @@ describe("buildBugbotFixPrompt", () => {
     });
 
     it("uses branches.development as base branch when parentBranch is undefined", () => {
-        const param = mockExecution({
-            currentConfiguration: { parentBranch: undefined },
-            branches: { development: "main" },
-        } as Partial<Execution>);
+        const param = mockOperation({
+            target: { ...mockOperation().target, baseBranch: 'main' },
+        });
         const prompt = buildBugbotFixPrompt(param, mockContext(), ["find-1"], "fix", []);
         expect(prompt).toContain("main");
     });
@@ -150,7 +158,7 @@ describe("buildBugbotFixPrompt", () => {
     it("skips findings not in existingByFindingId", () => {
         const context = mockContext();
         const prompt = buildBugbotFixPrompt(
-            mockExecution(),
+            mockOperation(),
             context,
             ["find-1", "find-missing"],
             "fix",
@@ -164,7 +172,7 @@ describe("buildBugbotFixPrompt", () => {
         const context = mockContext({
             unresolvedFindingsWithBody: [{ id: "find-1", fullBody: "   " }],
         });
-        const prompt = buildBugbotFixPrompt(mockExecution(), context, ["find-1"], "fix", []);
+        const prompt = buildBugbotFixPrompt(mockOperation(), context, ["find-1"], "fix", []);
         expect(prompt).not.toContain("find-1");
     });
 });

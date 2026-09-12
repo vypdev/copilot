@@ -1,4 +1,5 @@
 import type {
+  PullRequestReviewComment,
   PullRequestReviewCommentListQueryPort,
   PullRequestReviewCommentUpdatePort,
   PullRequestReviewThreadCommandPort,
@@ -9,3 +10,16 @@ export interface BugbotPullRequestResolutionPort
     PullRequestReviewCommentListQueryPort,
     PullRequestReviewCommentUpdatePort,
     PullRequestReviewThreadCommandPort {}
+
+export interface BoundBugbotPullRequestResolutionPort {
+  listPullRequestReviewComments(pullRequestNumber: number): Promise<PullRequestReviewComment[]>;
+  updatePullRequestReviewComment(commentIdentity: string, body: string): Promise<void>;
+  resolvePullRequestReviewThread(
+    pullRequestNumber: number,
+    commentIdentity: string,
+  ): Promise<void>;
+  unresolvePullRequestReviewThread(
+    pullRequestNumber: number,
+    commentIdentity: string,
+  ): Promise<void>;
+}

@@ -150,9 +150,18 @@ describe("IssueCommentUseCase", () => {
       { taskId: "BugbotAutofixUseCase", invoke: mockAutofixInvoke },
       { taskId: "DoUserRequestUseCase", invoke: mockDoUserRequestInvoke },
       { isActorAllowedToModifyFiles: mockIsActorAllowedToModifyFiles },
-      { getUserFromToken: jest.fn(), getTokenUserDetails: jest.fn() },
       {
         execute: jest.fn(),
+        fetch: jest.fn(),
+        configureAuthor: jest.fn(),
+        stageAll: jest.fn(),
+        stagePaths: jest.fn(),
+        commit: jest.fn(),
+        push: jest.fn(),
+      },
+      {
+        execute: jest.fn(),
+        getAuthenticatedUserDetails: jest.fn(),
         fetch: jest.fn(),
         configureAuthor: jest.fn(),
         stageAll: jest.fn(),
@@ -501,9 +510,8 @@ describe("IssueCommentUseCase", () => {
     expect(mockDoUserRequestInvoke).toHaveBeenCalledTimes(1);
     expect(mockRunUserRequestCommitAndPush).toHaveBeenCalledTimes(1);
     expect(mockRunUserRequestCommitAndPush).toHaveBeenCalledWith(
-      expect.anything(),
+      expect.objectContaining({ issueNumber: 296 }),
       expect.objectContaining({ branchOverride: "feature/296-from-issue" }),
-      expect.anything(),
       expect.anything(),
     );
     expect(mockThinkInvoke).not.toHaveBeenCalled();

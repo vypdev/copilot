@@ -1,8 +1,27 @@
-import { ApplicationError, BugbotReviewService, type BugbotReviewRequest } from '../api';
+import {
+  ApplicationError,
+  BugbotReviewService,
+  type BugbotReviewRequest,
+  type BugbotScmGateway,
+} from '../api';
 // @ts-expect-error The legacy aggregate is intentionally absent from the public API.
 import type { Execution as RemovedExecution } from '../api';
 // @ts-expect-error The legacy AI model is intentionally absent from the public API.
 import type { Ai as RemovedAi } from '../api';
+
+type Equal<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+type Assert<T extends true> = T;
+type ReviewRequestKeysAreExact = Assert<Equal<
+  keyof BugbotReviewRequest,
+  | 'target'
+  | 'agent'
+  | 'configuration'
+  | 'ignoreFiles'
+  | 'minimumSeverity'
+  | 'commentLimit'
+  | 'authenticatedUser'
+  | 'locale'
+>>;
 
 describe('Bugbot public API', () => {
   it('accepts only the request contract and emits request-scoped telemetry', async () => {
@@ -10,15 +29,11 @@ describe('Bugbot public API', () => {
     const service = new BugbotReviewService(
       { query: jest.fn() },
       {
-        context: { issue: {}, pullRequest: {} } as never,
-        publication: { issueComments: {}, pullRequestComments: {} } as never,
-        resolution: { issueComments: {}, pullRequestComments: {} } as never,
+        repository: { owner: 'acme', name: 'portable-project' },
         telemetry: { publish },
-      },
+      } as unknown as BugbotScmGateway,
     );
     const request: BugbotReviewRequest = {
-      repository: { owner: 'acme', name: 'portable-project' },
-      credential: { token: 'test-token' },
       target: { kind: 'branch', branch: 'feature/review' },
       agent: { provider: 'codex', model: '' },
       configuration: {
@@ -45,15 +60,9 @@ describe('Bugbot public API', () => {
   it('rejects malformed public input with a semantic error', async () => {
     const service = new BugbotReviewService(
       { query: jest.fn() },
-      {
-        context: {} as never,
-        publication: {} as never,
-        resolution: {} as never,
-      },
+      { repository: { owner: 'acme', name: 'repo' } } as BugbotScmGateway,
     );
     const review = service.review({
-      repository: { owner: 'acme', name: 'repo' },
-      credential: { token: 'test-token' },
       target: { kind: 'pull-request', number: 0, head: 'feature/review' },
       agent: { provider: 'codex', model: 'model' },
     });
@@ -67,19 +76,28 @@ describe('Bugbot public API', () => {
     });
   });
 
+  it('rejects a gateway that does not declare its bound repository identity', async () => {
+    const service = new BugbotReviewService(
+      { query: jest.fn() },
+      {} as BugbotScmGateway,
+    );
+
+    await expect(service.review({
+      target: { kind: 'branch', branch: 'feature/review' },
+      agent: { provider: 'codex', model: 'model' },
+    })).rejects.toMatchObject({
+      code: 'validation.invalid-input',
+      message: 'Bound repository owner is missing or invalid.',
+    });
+  });
+
   it('rejects JavaScript-only configuration shapes without exposing their values', async () => {
     const service = new BugbotReviewService(
       { query: jest.fn() },
-      {
-        context: {} as never,
-        publication: {} as never,
-        resolution: {} as never,
-      },
+      { repository: { owner: 'acme', name: 'repo' } } as BugbotScmGateway,
     );
     const invalidRule = { token: 'gho_private-provider-value' };
     const review = service.review({
-      repository: { owner: 'acme', name: 'repo' },
-      credential: { token: 'test-token' },
       target: { kind: 'branch', branch: 'feature/review' },
       agent: { provider: 'codex', model: 'model' },
       configuration: { organizationRules: [invalidRule] },
@@ -101,5 +119,20 @@ const verifyRemovedApiAtCompileTime = (): void => {
   void (null as unknown as RemovedAi);
   // @ts-expect-error The removed review(Execution, options) overload must not compile.
   void service.review(execution, {});
+  const requestWithCredential: BugbotReviewRequest = {
+    target: { kind: 'branch', branch: 'feature/review' },
+    agent: { provider: 'codex', model: 'model' },
+    // @ts-expect-error Provider authority belongs to the already-bound gateway.
+    credential: { token: 'secret' },
+  };
+  const requestWithRepository: BugbotReviewRequest = {
+    target: { kind: 'branch', branch: 'feature/review' },
+    agent: { provider: 'codex', model: 'model' },
+    // @ts-expect-error Repository identity belongs to the already-bound gateway.
+    repository: { owner: 'acme', name: 'repo' },
+  };
+  void requestWithCredential;
+  void requestWithRepository;
 };
 void verifyRemovedApiAtCompileTime;
+void (null as unknown as ReviewRequestKeysAreExact);

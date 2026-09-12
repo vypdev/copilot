@@ -19,23 +19,28 @@ import {
 
 const mockIssue = {};
 const mockPullRequest = {};
-const mockContext = { pullRequest: mockPullRequest };
+const mockContext = { kind: 'context' };
 const mockResolution = { kind: "resolution" };
 const mockFindings = {};
 const mockLanguage = {};
 const mockFixer = {};
 const mockRules = {};
+const mockScm = {
+  context: mockContext,
+  resolution: mockResolution,
+  publication: { kind: 'publication' },
+  reconciliation: { snapshot: {}, presentation: {} },
+};
+const binding = { owner: 'owner', repository: 'repo', token: 'token' };
 const mockIssueInvoke = jest.fn();
 const mockPullRequestInvoke = jest.fn();
 
 jest.mock("../bugbot_composition_root", () => ({
   createBugbotCompositionRoot: jest.fn(() => ({
     issue: mockIssue,
-    pullRequest: mockPullRequest,
-    context: mockContext,
-    resolution: mockResolution,
+    scm: mockScm,
     rules: mockRules,
-    write: {},
+    telemetry: {},
   })),
 }));
 
@@ -81,7 +86,7 @@ describe("main run route composition root", () => {
   beforeEach(() => jest.clearAllMocks());
 
   it("shares route-scoped Bugbot, agent, and Git commit capabilities", () => {
-    const useCase = createIssueCommentUseCaseCompositionRoot();
+    const useCase = createIssueCommentUseCaseCompositionRoot(binding);
 
     expect(useCase).toBeInstanceOf(IssueCommentUseCase);
     expect(CheckIssueCommentLanguageUseCase).toHaveBeenCalledWith(
@@ -91,7 +96,6 @@ describe("main run route composition root", () => {
       }),
     );
     expect(DetectBugbotFixIntentUseCase).toHaveBeenCalledWith(
-      mockPullRequest,
       mockFindings,
       mockContext,
     );
@@ -108,7 +112,7 @@ describe("main run route composition root", () => {
     expect(BugbotAutofixUseCase).toHaveBeenCalledWith(
       mockFixer,
       mockContext,
-      gitCommit,
+      expect.anything(),
     );
     expect(DoUserRequestUseCase).toHaveBeenCalledWith(mockFixer, gitCommit);
     expect(RememberBugbotRuleUseCase).toHaveBeenCalledWith(mockRules);
@@ -119,8 +123,8 @@ describe("main run route composition root", () => {
       expect.anything(),
       expect.anything(),
       expect.anything(),
-      expect.anything(),
       gitCommit,
+      expect.anything(),
       expect.anything(),
       expect.anything(),
       expect.anything(),
@@ -130,7 +134,7 @@ describe("main run route composition root", () => {
   });
 
   it("keeps Bugbot resolution out of the review-comment autofix composition", () => {
-    const useCase = createPullRequestReviewCommentUseCaseCompositionRoot();
+    const useCase = createPullRequestReviewCommentUseCaseCompositionRoot(binding);
 
     expect(useCase).toBeInstanceOf(PullRequestReviewCommentUseCase);
     expect(PullRequestReviewCommentUseCase).toHaveBeenCalledWith(
@@ -172,7 +176,11 @@ describe("main run route composition root", () => {
   });
 
   it("binds every route to its matching use case", async () => {
-    const execution = {} as Execution;
+    const execution = {
+      owner: 'owner',
+      repo: 'repo',
+      tokens: { token: 'token' },
+    } as Execution;
     const handlers = createMainRunRouteCompositionRoot(
       {} as ProjectBoardCommandPort,
       "local",

@@ -1,15 +1,15 @@
 import type { Result } from './data/model/result';
 import type { AgentConfiguration } from './domain/agent';
 import type { FindingsQueryPort } from './application/ports/agent_findings_ports';
-import type { BugbotContextPorts } from './application/ports/bugbot_context_ports';
-import type { BugbotFindingPublicationPorts } from './application/ports/bugbot_finding_publication_ports';
-import type { BugbotFindingResolutionPorts } from './application/ports/bugbot_finding_resolution_ports';
+import type { BugbotScmPorts } from './application/ports/bugbot_scm_ports';
 import type { BugbotTelemetryPort } from './application/ports/bugbot_telemetry_ports';
 import type { BugbotReviewConfiguration } from './domain/bugbot/review_configuration';
-export interface BugbotScmGateway {
-    readonly context: BugbotContextPorts;
-    readonly publication: BugbotFindingPublicationPorts;
-    readonly resolution: BugbotFindingResolutionPorts;
+/** Already-bound SCM authority for exactly one repository. */
+export interface BugbotScmGateway extends BugbotScmPorts {
+    readonly repository: {
+        readonly owner: string;
+        readonly name: string;
+    };
     readonly telemetry?: BugbotTelemetryPort;
 }
 export type BugbotMinimumSeverity = 'info' | 'low' | 'medium' | 'high';
@@ -33,13 +33,6 @@ export type BugbotReviewTarget = {
 };
 /** Sole supported request for the programmatic Bugbot review entry point. */
 export interface BugbotReviewRequest {
-    readonly repository: {
-        readonly owner: string;
-        readonly name: string;
-    };
-    readonly credential: {
-        readonly token: string;
-    };
     readonly target: BugbotReviewTarget;
     readonly agent: AgentConfiguration;
     readonly configuration?: Partial<BugbotReviewConfiguration>;
@@ -48,13 +41,13 @@ export interface BugbotReviewRequest {
     readonly commentLimit?: number;
     readonly authenticatedUser?: string;
     readonly locale?: {
-        readonly issue?: string;
         readonly pullRequest?: string;
     };
 }
 /** Provider-neutral programmatic entry point. Consumers supply agent and SCM adapters. */
 export declare class BugbotReviewService {
     private readonly useCase;
+    private readonly repository;
     constructor(agent: FindingsQueryPort, scm: BugbotScmGateway);
     review(request: BugbotReviewRequest): Promise<readonly Result[]>;
 }
@@ -72,12 +65,14 @@ export type { FindingsQueryPort } from './application/ports/agent_findings_ports
 export type { BugbotContextPorts } from './application/ports/bugbot_context_ports';
 export type { BugbotFindingPublicationPorts } from './application/ports/bugbot_finding_publication_ports';
 export type { BugbotFindingResolutionPorts } from './application/ports/bugbot_finding_resolution_ports';
+export type { BugbotScmPorts } from './application/ports/bugbot_scm_ports';
+export type { BugbotPresentationMutationPorts, BugbotReconciliationSnapshotPorts, } from './application/ports/bugbot_reconciliation_ports';
 export type { BugbotTelemetryPort } from './application/ports/bugbot_telemetry_ports';
-export type { BugbotReviewNavigation, BugbotReviewNavigationPort, } from './application/ports/bugbot_review_navigation_ports';
+export type { BugbotReviewNavigation } from './application/ports/bugbot_review_navigation_ports';
 export type { Result } from './data/model/result';
 export type { BugbotFinding } from './domain/bugbot/finding';
 export type { BugbotReviewConfiguration } from './domain/bugbot/review_configuration';
 export type { BugbotReviewTelemetrySnapshot } from './application/ports/bugbot_telemetry_ports';
 export type { BugbotFindingState, BugbotFindingStateCounts, BugbotFindingEvidence, BugbotResolvedFindingState, } from './domain/bugbot/review_state';
 export type { BugbotProjectedFinding, BugbotProjectionOutcome, BugbotReviewProjection, } from './domain/bugbot/review_projection';
-export type { PullRequestReviewReference, PullRequestReviewSummary, PullRequestReviewSummaryQueryPort, PullRequestReviewSummaryUpdatePort, } from './application/ports/pull_request_review_comment_ports';
+export type { PullRequestReviewReference, PullRequestReviewSummary, } from './application/ports/pull_request_review_comment_ports';

@@ -56,6 +56,26 @@ with benchmark results; latency alone is not a quality measure.
 
 ## Programmatic API
 
-The npm package exports `@vypdev/copilot/bugbot`. `BugbotReviewService` accepts a findings-agent port and one `BugbotScmGateway` containing context, publication, resolution, and optional telemetry ports. The context and publication contracts require semantic review-summary read/update capabilities in addition to inline-comment/thread capabilities, so an adapter cannot silently omit final projection support. Context adapters must also provide trusted PR/commit/run navigation; the application never guesses a provider hostname. Consumers can provide GitHub, GitLab, or internal SCM adapters without changing the review application layer. Its `review(execution, options)` method supports the same scoped dry-run, effort, trace, and suggestion options.
+The npm package exports `@vypdev/copilot/bugbot`. `BugbotReviewService` accepts
+a findings-agent port and one repository-bound `BugbotScmGateway` containing
+context, publication, resolution, reconciliation, and optional telemetry
+capabilities. The gateway binds provider credentials before service
+construction and is the sole source of repository identity; neither
+`BugbotReviewRequest` nor any application use case can receive its credentials.
+Reconciliation requires semantic review-summary reads and writes
+in addition to inline-comment/thread capabilities, so an adapter cannot
+silently omit final projection support. It also provides trusted PR/commit/run navigation;
+the application never guesses a provider hostname. Consumers can
+provide GitHub, GitLab, or internal SCM adapters without changing the review
+application layer. `review(request)` supports scoped dry-run, effort, trace,
+and suggestion configuration through that single immutable request.
 
-The API also exports the benchmark evaluator, telemetry parser/aggregator, identity helpers, review-configuration normalizers, finding-state classifier, final projection builder/types, and semantic review-summary and navigation port types. The bundled GitHub adapter remains one concrete integration; it uses `GITHUB_SERVER_URL` so GitHub Enterprise links remain correct and adds a run link only when `GITHUB_REPOSITORY` and `GITHUB_RUN_ID` identify the current repository. No workflow name or project-specific CI check is part of the generic review service.
+The API also exports the benchmark evaluator, telemetry parser/aggregator,
+identity helpers, review-configuration normalizers, finding-state classifier,
+final projection data, and the bound gateway capability types. It does not
+export unbound provider query or mutation ports. The bundled GitHub adapter
+remains one concrete integration; it uses `GITHUB_SERVER_URL` so GitHub
+Enterprise links remain correct and adds a run link only when
+`GITHUB_REPOSITORY` and `GITHUB_RUN_ID` identify the current repository. No
+workflow name or project-specific CI check is part of the generic review
+service.

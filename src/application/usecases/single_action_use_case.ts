@@ -5,6 +5,7 @@ import { getTaskEmoji } from "../../utils/task_emoji";
 import { ParamUseCase } from "./base/param_usecase";
 import { runSingleActionWorkflow } from "./single_action_workflow";
 import type { ActorAuthorizationPort } from "../ports/actor_authorization_ports";
+import type { BugbotReviewOperationContext } from './steps/commit/bugbot/bugbot_review_operation_context';
 
 export class SingleActionUseCase implements ParamUseCase<Execution, Result[]> {
   taskId: string = "SingleActionUseCase";
@@ -16,7 +17,7 @@ export class SingleActionUseCase implements ParamUseCase<Execution, Result[]> {
     private readonly thinkUseCase: ParamUseCase<Execution, Result[]>,
     private readonly initialSetupUseCase: ParamUseCase<Execution, Result[]>,
     private readonly checkProgressUseCase: ParamUseCase<Execution, Result[]>,
-    private readonly detectPotentialProblemsUseCase: ParamUseCase<Execution, Result[]>,
+    private readonly detectPotentialProblemsUseCase: ParamUseCase<BugbotReviewOperationContext, Result[]>,
     private readonly recommendStepsUseCase: ParamUseCase<Execution, Result[]>,
     private readonly closeInactiveIssuesUseCase?: ParamUseCase<Execution, Result[]>,
     private readonly actorAuthorizationPort?: ActorAuthorizationPort,

@@ -5,8 +5,6 @@ const head = 'a'.repeat(40);
 
 function target(overrides: Partial<BugbotReconciliationTarget> = {}): BugbotReconciliationTarget {
   return {
-    owner: 'org',
-    repository: 'repo',
     pullRequestNumber: 10,
     linkedIssueNumber: 20,
     analyzedHeadSha: head,
@@ -22,7 +20,7 @@ function harness() {
   const listPullRequestReviewThreadStates = jest.fn().mockResolvedValue({});
   const listPullRequestReviews = jest.fn().mockResolvedValue([]);
   const listIssueComments = jest.fn().mockImplementation(
-    (_owner: string, _repository: string, number: number) =>
+    (number: number) =>
       Promise.resolve([{ id: number, body: null }]),
   );
   const forPullRequest = jest.fn().mockReturnValue({
@@ -31,14 +29,12 @@ function harness() {
   });
   return {
     ports: {
-      issueComments: { listIssueComments },
-      pullRequest: {
-        getPullRequestHeadSha,
-        listPullRequestReviewComments,
-        listPullRequestReviewThreadStates,
-      },
-      reviews: { listPullRequestReviews },
-      navigation: { forPullRequest },
+      listIssueComments,
+      getPullRequestHeadSha,
+      listPullRequestReviewComments,
+      listPullRequestReviewThreadStates,
+      listPullRequestReviews,
+      navigationForPullRequest: forPullRequest,
     },
     getPullRequestHeadSha,
     listPullRequestReviewComments,
@@ -55,7 +51,6 @@ describe('loadBugbotReconciliationSnapshot', () => {
 
     const result = await loadBugbotReconciliationSnapshot(
       target(),
-      { token: 'token' },
       test.ports,
     );
 
@@ -79,7 +74,6 @@ describe('loadBugbotReconciliationSnapshot', () => {
 
     const result = await loadBugbotReconciliationSnapshot(
       target({ linkedIssueNumber: 10 }),
-      { token: 'token' },
       test.ports,
     );
 
@@ -94,7 +88,6 @@ describe('loadBugbotReconciliationSnapshot', () => {
 
     const result = await loadBugbotReconciliationSnapshot(
       target({ linkedIssueNumber: undefined }),
-      { token: 'token' },
       test.ports,
     );
 
@@ -111,7 +104,6 @@ describe('loadBugbotReconciliationSnapshot', () => {
 
     const result = await loadBugbotReconciliationSnapshot(
       target(),
-      { token: 'token' },
       test.ports,
     );
 
@@ -130,7 +122,6 @@ describe('loadBugbotReconciliationSnapshot', () => {
 
     const result = await loadBugbotReconciliationSnapshot(
       target(),
-      { token: 'token' },
       test.ports,
     );
 
@@ -144,7 +135,6 @@ describe('loadBugbotReconciliationSnapshot', () => {
 
     const result = await loadBugbotReconciliationSnapshot(
       target(),
-      { token: 'token' },
       test.ports,
     );
 
@@ -159,7 +149,6 @@ describe('loadBugbotReconciliationSnapshot', () => {
 
     await expect(loadBugbotReconciliationSnapshot(
       target(),
-      { token: 'token' },
       test.ports,
     )).rejects.toThrow('Unable to get the pull request head commit.');
   });
@@ -172,7 +161,6 @@ describe('loadBugbotReconciliationSnapshot', () => {
 
     const result = await loadBugbotReconciliationSnapshot(
       target(),
-      { token: 'token' },
       test.ports,
     );
 

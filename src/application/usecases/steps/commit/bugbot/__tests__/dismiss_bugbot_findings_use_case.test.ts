@@ -12,15 +12,20 @@ jest.mock('../mark_findings_resolved_workflow', () => ({
 
 function execution() {
     return {
-        owner: 'owner',
-        repo: 'repo',
-        issueNumber: 7,
-        tokens: { token: 'token' },
-        commit: { branch: 'feature/7' },
-        ai: {
-            getBugbotReviewConfiguration: () => ({ organizationRules: [] }),
-            getAiIgnoreFiles: () => [],
+        repository: { owner: 'owner', name: 'repo' },
+        target: {
+            issueNumber: 7,
+            isPullRequest: false,
+            pullRequestNumber: -1,
+            headBranch: 'feature/7',
+            commitBranch: 'feature/7',
+            baseBranch: 'develop',
+            pullRequestAction: '',
+            draft: false,
         },
+        trigger: { kind: 'issue_comment', headOwner: 'owner' },
+        ignorePatterns: [],
+        organizationRules: [],
     } as never;
 }
 
@@ -44,11 +49,11 @@ describe('DismissBugbotFindingsUseCase', () => {
 
     it('dismisses only IDs that exist in persisted findings', async () => {
         const useCase = new DismissBugbotFindingsUseCase({
-            contextPorts: { loader: { bind: () => ({}) }, issue: {}, pullRequest: {} } as never,
+            contextPorts: {} as never,
             resolutionPorts: {} as never,
         });
 
-        const results = await useCase.invoke({ execution: execution(), findingIds: ['finding-1', 'missing'] });
+        const results = await useCase.invoke({ operation: execution(), findingIds: ['finding-1', 'missing'] });
 
         expect(mockMarkFindingsResolved).toHaveBeenCalledWith(expect.objectContaining({
             resolvedFindingIds: new Set(['finding-1']),
@@ -58,11 +63,11 @@ describe('DismissBugbotFindingsUseCase', () => {
 
     it('is an idempotent no-op when no requested finding exists', async () => {
         const useCase = new DismissBugbotFindingsUseCase({
-            contextPorts: { loader: { bind: () => ({}) }, issue: {}, pullRequest: {} } as never,
+            contextPorts: {} as never,
             resolutionPorts: {} as never,
         });
 
-        const results = await useCase.invoke({ execution: execution(), findingIds: ['missing'] });
+        const results = await useCase.invoke({ operation: execution(), findingIds: ['missing'] });
 
         expect(mockMarkFindingsResolved).not.toHaveBeenCalled();
         expect(results[0].steps[0]).toContain('nothing was dismissed');

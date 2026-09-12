@@ -6,6 +6,7 @@ import type { ParamUseCase } from "./base/param_usecase";
 import type { PullRequestWorkflowSteps } from "./pull_request_workflow_steps";
 import { runPullRequestWorkflow } from "./pull_request_workflow";
 import type { ActorAuthorizationPort } from '../ports/actor_authorization_ports';
+import type { BugbotReviewOperationContext } from './steps/commit/bugbot/bugbot_review_operation_context';
 
 export class PullRequestUseCase implements ParamUseCase<Execution, Result[]> {
   taskId: string = "PullRequestUseCase";
@@ -13,7 +14,7 @@ export class PullRequestUseCase implements ParamUseCase<Execution, Result[]> {
   constructor(
     private readonly updatePullRequestDescriptionUseCase: ParamUseCase<Execution, Result[]>,
     private readonly workflowSteps: PullRequestWorkflowSteps,
-    private readonly reviewPotentialProblemsUseCase?: ParamUseCase<Execution, Result[]>,
+    private readonly reviewPotentialProblemsUseCase?: ParamUseCase<BugbotReviewOperationContext, Result[]>,
     private readonly actorAuthorizationPort?: ActorAuthorizationPort,
   ) {}
 

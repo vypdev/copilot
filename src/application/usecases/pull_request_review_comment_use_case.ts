@@ -4,13 +4,17 @@ import { ParamUseCase } from "./base/param_usecase";
 import { runCommentAutomation } from "./comment_automation_use_case";
 import type { BugbotAutofixParam } from "./steps/commit/bugbot/bugbot_autofix_use_case";
 import type { DoUserRequestParam } from "./steps/commit/user_request_use_case";
-import type { AuthenticatedUserPort } from "../ports/authenticated_user_ports";
 import type { ActorAuthorizationPort } from "../ports/actor_authorization_ports";
 import type { GitCommitPort } from "../ports/git_ports";
 import type { DismissBugbotFindingsParam } from './steps/commit/bugbot/dismiss_bugbot_findings_use_case';
 import type { UpdatePullRequestDescriptionUseCase } from './steps/pull_request/update_pull_request_description_use_case';
 import type { RememberBugbotRuleParam } from './steps/commit/bugbot/remember_bugbot_rule_use_case';
 import type { SyncBranchRequest } from './branch_sync/sync_branch_use_case';
+import type { BugbotGitMutationPort } from '../ports/bugbot_git_ports';
+import type {
+  BugbotFixIntentContext,
+  BugbotReviewOperationContext,
+} from './steps/commit/bugbot/bugbot_review_operation_context';
 
 export class PullRequestReviewCommentUseCase implements ParamUseCase<
   Execution,
@@ -20,7 +24,7 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
 
   constructor(
     private readonly languageUseCase: ParamUseCase<Execution, Result[]>,
-    private readonly intentUseCase: ParamUseCase<Execution, Result[]>,
+    private readonly intentUseCase: ParamUseCase<BugbotFixIntentContext, Result[]>,
     private readonly thinkUseCase: ParamUseCase<Execution, Result[]>,
     private readonly autofixUseCase: ParamUseCase<BugbotAutofixParam, Result[]>,
     private readonly doUserRequestUseCase: ParamUseCase<
@@ -28,10 +32,10 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
       Result[]
     >,
     private readonly actorAuthorizationPort: ActorAuthorizationPort,
-    private readonly authenticatedUserPort: AuthenticatedUserPort,
     private readonly gitCommitPort: GitCommitPort,
+    private readonly bugbotGitMutationPort: BugbotGitMutationPort,
     private readonly dismissBugbotFindingsUseCase?: ParamUseCase<DismissBugbotFindingsParam, Result[]>,
-    private readonly reviewPotentialProblemsUseCase?: ParamUseCase<Execution, Result[]>,
+    private readonly reviewPotentialProblemsUseCase?: ParamUseCase<BugbotReviewOperationContext, Result[]>,
     private readonly updatePullRequestDescriptionUseCase?: UpdatePullRequestDescriptionUseCase,
     private readonly rememberBugbotRuleUseCase?: ParamUseCase<RememberBugbotRuleParam, Result[]>,
     private readonly syncBranchUseCase?: ParamUseCase<SyncBranchRequest, Result[]>,
@@ -49,6 +53,7 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
         doUserRequestUseCase: this.doUserRequestUseCase,
         userComment: param.pullRequest.commentBody ?? "",
         gitCommitPort: this.gitCommitPort,
+        bugbotGitMutationPort: this.bugbotGitMutationPort,
         dismissBugbotFindingsUseCase: this.dismissBugbotFindingsUseCase,
         reviewPotentialProblemsUseCase: this.reviewPotentialProblemsUseCase,
         updatePullRequestDescriptionUseCase: this.updatePullRequestDescriptionUseCase,
@@ -56,7 +61,6 @@ export class PullRequestReviewCommentUseCase implements ParamUseCase<
         syncBranchUseCase: this.syncBranchUseCase,
       },
       this.actorAuthorizationPort,
-      this.authenticatedUserPort,
     );
   }
 }

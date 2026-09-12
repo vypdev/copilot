@@ -5,7 +5,7 @@
 import { publishFindings as publishFindingsImpl, type PublishFindingsParam } from "../publish_findings_use_case";
 import type { BugbotFinding } from '../../../../../../domain/bugbot/finding';
 import type { BugbotContext } from "../types";
-import { Ai } from "../../../../../../data/model/ai";
+import type { BugbotReviewOperationContext } from '../bugbot_review_operation_context';
 
 jest.mock("../../../../../../utils/logger", () => ({
     logDebugInfo: jest.fn(),
@@ -31,7 +31,6 @@ function publishFindings(param: Omit<PublishFindingsParam, "ports">) {
                 updatePullRequestReviewComment: mockUpdatePullRequestReviewComment,
                 unresolvePullRequestReviewThread: mockUnresolvePullRequestReviewThread,
             },
-            reviewState: { updatePullRequestReview: mockUpdatePullRequestReview },
         },
     });
 }
@@ -69,13 +68,37 @@ function baseContext(overrides: Partial<BugbotContext> = {}): BugbotContext {
     };
 }
 
-const baseExecution = {
-    owner: "o",
-    repo: "r",
-    issueNumber: 42,
-    tokens: { token: "t" },
-    ai: new Ai("", "model", false, [], false, "low", 20),
-} as Parameters<typeof publishFindings>[0]["execution"];
+const baseOperation: BugbotReviewOperationContext = {
+    repository: { owner: 'o', name: 'r' },
+    target: {
+        issueNumber: 42,
+        isPullRequest: true,
+        pullRequestNumber: 50,
+        headBranch: 'feature/42',
+        commitBranch: 'feature/42',
+        baseBranch: 'develop',
+        pullRequestAction: 'synchronize',
+        draft: false,
+    },
+    trigger: { kind: 'pull_request', headOwner: 'o' },
+    ignorePatterns: [],
+    organizationRules: [],
+    locale: { pullRequest: 'en-US' },
+    analysis: {
+        agentConfiguration: { provider: 'codex', model: 'model' },
+        minimumSeverity: 'low',
+        commentLimit: 20,
+        reviewConfiguration: {
+            publicationMode: 'publish',
+            effort: 'default',
+            reviewDrafts: false,
+            traceRules: false,
+            suggestedChanges: true,
+            telemetry: true,
+            failOnUnresolved: false,
+        },
+    },
+};
 
 describe("publishFindings", () => {
     beforeEach(() => {
@@ -89,19 +112,22 @@ describe("publishFindings", () => {
 
     it("adds issue comment for new finding", async () => {
         await publishFindings({
-            execution: baseExecution,
+            operation: baseOperation,
             context: baseContext(),
             findings: [finding()],
         });
 
         expect(mockAddComment).toHaveBeenCalledTimes(1);
-        expect(mockAddComment).toHaveBeenCalledWith("o", "r", 42, expect.stringContaining("## Test"), "t", undefined);
+        expect(mockAddComment).toHaveBeenCalledWith(42, expect.stringContaining("## Test"), undefined);
         expect(mockUpdateComment).not.toHaveBeenCalled();
     });
 
     it("publishes a PR-only finding without calling the issue API", async () => {
         await publishFindings({
-            execution: { ...baseExecution, issueNumber: -1 } as typeof baseExecution,
+            operation: {
+                ...baseOperation,
+                target: { ...baseOperation.target, issueNumber: -1 },
+            },
             context: baseContext({
                 prContext: {
                     prHeadSha: "sha1",
@@ -118,7 +144,7 @@ describe("publishFindings", () => {
 
     it("updates issue comment when finding already has issueCommentId", async () => {
         await publishFindings({
-            execution: baseExecution,
+            operation: baseOperation,
             context: baseContext({
                 existingByFindingId: {
                     f1: {
@@ -134,13 +160,13 @@ describe("publishFindings", () => {
             findings: [finding()],
         });
 
-        expect(mockUpdateComment).toHaveBeenCalledWith("o", "r", 42, 100, expect.any(String), "t", undefined);
+        expect(mockUpdateComment).toHaveBeenCalledWith(42, 100, expect.any(String), undefined);
         expect(mockAddComment).not.toHaveBeenCalled();
     });
 
     it("creates PR review comment when finding.file is in prFiles", async () => {
         await publishFindings({
-            execution: baseExecution,
+            operation: baseOperation,
             context: baseContext({
                 prContext: {
                     prHeadSha: "sha1",
@@ -154,27 +180,30 @@ describe("publishFindings", () => {
         expect(mockAddComment).not.toHaveBeenCalled();
         expect(mockCreateReviewWithComments).toHaveBeenCalledTimes(1);
         expect(mockCreateReviewWithComments).toHaveBeenCalledWith(
-            "o",
-            "r",
             50,
             "sha1",
             expect.stringContaining("## 🤖 Bugbot review"),
             expect.arrayContaining([
                 expect.objectContaining({ path: "src/foo.ts", line: 5, body: expect.any(String) }),
             ]),
-            "t"
         );
-        expect(mockCreateReviewWithComments.mock.calls[0][4]).toContain('Bugbot review snapshot');
-        expect(mockCreateReviewWithComments.mock.calls[0][4]).not.toContain('active potential problem');
+        expect(mockCreateReviewWithComments.mock.calls[0][2]).toContain('Bugbot review snapshot');
+        expect(mockCreateReviewWithComments.mock.calls[0][2]).not.toContain('active potential problem');
     });
 
     it('traces included, truncated, and omitted rule sources in the review summary without rule contents', async () => {
-        const execution = {
-            ...baseExecution,
-            ai: { getBugbotReviewConfiguration: () => ({ traceRules: true }) },
-        } as typeof baseExecution;
+        const operation = {
+            ...baseOperation,
+            analysis: {
+                ...baseOperation.analysis,
+                reviewConfiguration: {
+                    ...baseOperation.analysis.reviewConfiguration,
+                    traceRules: true,
+                },
+            },
+        } as typeof baseOperation;
         await publishFindings({
-            execution,
+            operation,
             context: baseContext({
                 reviewRuleSources: [
                     'organization:1',
@@ -190,7 +219,7 @@ describe("publishFindings", () => {
             findings: [finding({ file: 'src/foo.ts' })],
         });
 
-        const summary = mockCreateReviewWithComments.mock.calls[0][4] as string;
+        const summary = mockCreateReviewWithComments.mock.calls[0][2] as string;
         expect(summary).toContain('### Review configuration');
         expect(summary).toContain('| `organization:1` | included |');
         expect(summary).toContain('| `path:src/.copilot/BUGBOT.md` | truncated |');
@@ -199,12 +228,18 @@ describe("publishFindings", () => {
     });
 
     it('renders a suggested change only on an exact RIGHT-side line anchor', async () => {
-        const execution = {
-            ...baseExecution,
-            ai: { getBugbotReviewConfiguration: () => ({ suggestedChanges: true }) },
-        } as typeof baseExecution;
+        const operation = {
+            ...baseOperation,
+            analysis: {
+                ...baseOperation.analysis,
+                reviewConfiguration: {
+                    ...baseOperation.analysis.reviewConfiguration,
+                    suggestedChanges: true,
+                },
+            },
+        } as typeof baseOperation;
         await publishFindings({
-            execution,
+            operation,
             context: baseContext({
                 prContext: {
                     prHeadSha: 'sha1',
@@ -216,16 +251,22 @@ describe("publishFindings", () => {
             findings: [finding({ file: 'src/foo.ts', line: 10, suggestedCode: 'return safeValue;' })],
         });
 
-        expect(mockCreateReviewWithComments.mock.calls[0][5][0].body).toContain('```suggestion\nreturn safeValue;');
+        expect(mockCreateReviewWithComments.mock.calls[0][3][0].body).toContain('```suggestion\nreturn safeValue;');
     });
 
     it('does not render a suggested change on a LEFT-side line anchor', async () => {
-        const execution = {
-            ...baseExecution,
-            ai: { getBugbotReviewConfiguration: () => ({ suggestedChanges: true }) },
-        } as typeof baseExecution;
+        const operation = {
+            ...baseOperation,
+            analysis: {
+                ...baseOperation.analysis,
+                reviewConfiguration: {
+                    ...baseOperation.analysis.reviewConfiguration,
+                    suggestedChanges: true,
+                },
+            },
+        } as typeof baseOperation;
         await publishFindings({
-            execution,
+            operation,
             context: baseContext({
                 prContext: {
                     prHeadSha: 'sha1',
@@ -237,12 +278,12 @@ describe("publishFindings", () => {
             findings: [finding({ file: 'src/foo.ts', line: 10, suggestedCode: 'return unsafe;' })],
         });
 
-        expect(mockCreateReviewWithComments.mock.calls[0][5][0].body).not.toContain('```suggestion');
+        expect(mockCreateReviewWithComments.mock.calls[0][3][0].body).not.toContain('```suggestion');
     });
 
     it("publishes an exact multi-line diff range when both endpoints are addressable", async () => {
         await publishFindings({
-            execution: baseExecution,
+            operation: baseOperation,
             context: baseContext({
                 prContext: {
                     prHeadSha: "sha1",
@@ -257,8 +298,6 @@ describe("publishFindings", () => {
         });
 
         expect(mockCreateReviewWithComments).toHaveBeenCalledWith(
-            "o",
-            "r",
             50,
             "sha1",
             expect.any(String),
@@ -269,13 +308,12 @@ describe("publishFindings", () => {
                 startLine: 10,
                 startSide: "RIGHT",
             })],
-            "t",
         );
     });
 
     it("keeps a finding inside the review when its reported file is not in the PR", async () => {
         await publishFindings({
-            execution: baseExecution,
+            operation: baseOperation,
             context: baseContext({
                 prContext: {
                     prHeadSha: "sha1",
@@ -288,8 +326,6 @@ describe("publishFindings", () => {
 
         expect(mockAddComment).not.toHaveBeenCalled();
         expect(mockCreateReviewWithComments).toHaveBeenCalledWith(
-            "o",
-            "r",
             50,
             "sha1",
             expect.stringContaining("src/foo.ts"),
@@ -298,13 +334,12 @@ describe("publishFindings", () => {
                 line: 3,
                 body: expect.stringContaining("Review-level finding"),
             })],
-            "t",
         );
     });
 
     it("uses pathToFirstDiffLine when finding has no line", async () => {
         await publishFindings({
-            execution: baseExecution,
+            operation: baseOperation,
             context: baseContext({
                 prContext: {
                     prHeadSha: "sha1",
@@ -316,21 +351,18 @@ describe("publishFindings", () => {
         });
 
         expect(mockCreateReviewWithComments).toHaveBeenCalledWith(
-            "o",
-            "r",
             50,
             "sha1",
             expect.stringContaining("## 🤖 Bugbot review"),
             expect.arrayContaining([
                 expect.objectContaining({ path: "src/a.ts", line: 20 }),
             ]),
-            "t"
         );
     });
 
     it("updates existing PR review comment when finding has prCommentId for same PR", async () => {
         await publishFindings({
-            execution: baseExecution,
+            operation: baseOperation,
             context: baseContext({
                 existingByFindingId: {
                     f1: {
@@ -353,18 +385,15 @@ describe("publishFindings", () => {
         });
 
         expect(mockUpdatePullRequestReviewComment).toHaveBeenCalledWith(
-            "o",
-            "r",
             "PRRC_300",
             expect.any(String),
-            "t"
         );
         expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
     });
 
     it("persists the open marker before reopening a finding that is active again", async () => {
         await publishFindings({
-            execution: baseExecution,
+            operation: baseOperation,
             context: baseContext({
                 existingByFindingId: {
                     f1: {
@@ -387,7 +416,7 @@ describe("publishFindings", () => {
         });
 
         expect(mockUnresolvePullRequestReviewThread).toHaveBeenCalledWith(
-            "o", "r", 50, "PRRC_resolved", "t",
+            50, "PRRC_resolved",
         );
         expect(mockUpdatePullRequestReviewComment).toHaveBeenCalledTimes(1);
         expect(mockUpdatePullRequestReviewComment.mock.invocationCallOrder[0]).toBeLessThan(
@@ -397,7 +426,7 @@ describe("publishFindings", () => {
 
     it('does not let model output silently reopen a human dismissal', async () => {
         await publishFindings({
-            execution: baseExecution,
+            operation: baseOperation,
             context: baseContext({
                 existingByFindingId: {
                     f1: {
@@ -428,7 +457,7 @@ describe("publishFindings", () => {
 
     it("adds overflow comment when overflowCount > 0", async () => {
         await publishFindings({
-            execution: baseExecution,
+            operation: baseOperation,
             context: baseContext(),
             findings: [finding()],
             overflowCount: 3,
@@ -437,17 +466,17 @@ describe("publishFindings", () => {
 
         expect(mockAddComment).toHaveBeenCalledTimes(2);
         const overflowCall = mockAddComment.mock.calls.find(
-            (c: unknown[]) => (c[3] as string).includes("More findings")
+            (c: unknown[]) => (c[1] as string).includes("More findings")
         );
         expect(overflowCall).toBeDefined();
-        expect(overflowCall[3]).toContain("3");
-        expect(overflowCall[3]).toContain("Extra 1");
+        expect(overflowCall[1]).toContain("3");
+        expect(overflowCall[1]).toContain("Extra 1");
     });
 
     it("adds overflow comment with 'and N more' when overflowTitles length > 15", async () => {
         const manyTitles = Array.from({ length: 20 }, (_, i) => `Finding ${i}`);
         await publishFindings({
-            execution: baseExecution,
+            operation: baseOperation,
             context: baseContext(),
             findings: [],
             overflowCount: 20,
@@ -455,35 +484,32 @@ describe("publishFindings", () => {
         });
 
         const overflowCall = mockAddComment.mock.calls.find(
-            (c: unknown[]) => (c[3] as string).includes("More findings")
+            (c: unknown[]) => (c[1] as string).includes("More findings")
         );
         expect(overflowCall).toBeDefined();
-        expect(overflowCall[3]).toContain("5 more");
-        expect(overflowCall[3]).toContain("Finding 0");
-        expect(overflowCall[3]).not.toContain("Finding 19");
+        expect(overflowCall[1]).toContain("5 more");
+        expect(overflowCall[1]).toContain("Finding 0");
+        expect(overflowCall[1]).not.toContain("Finding 19");
     });
 
     it("uses commitSha for watermark and passes commitSha to addComment when provided", async () => {
         await publishFindings({
-            execution: baseExecution,
+            operation: baseOperation,
             context: baseContext(),
             findings: [finding()],
             commitSha: "abc123",
         });
 
         expect(mockAddComment).toHaveBeenCalledWith(
-            "o",
-            "r",
             42,
             expect.any(String),
-            "t",
             { commitSha: "abc123" }
         );
     });
 
     it("passes commitSha to updateComment when finding has issueCommentId and commitSha is provided", async () => {
         await publishFindings({
-            execution: baseExecution,
+            operation: baseOperation,
             context: baseContext({
                 existingByFindingId: {
                     f1: {
@@ -501,19 +527,16 @@ describe("publishFindings", () => {
         });
 
         expect(mockUpdateComment).toHaveBeenCalledWith(
-            "o",
-            "r",
             42,
             100,
             expect.any(String),
-            "t",
             { commitSha: "def456" }
         );
     });
 
     it("keeps a finding in the review summary when the PR has no commentable diff line", async () => {
         await publishFindings({
-            execution: baseExecution,
+            operation: baseOperation,
             context: baseContext({
                 prContext: {
                     prHeadSha: "sha1",
@@ -525,19 +548,16 @@ describe("publishFindings", () => {
         });
 
         expect(mockCreateReviewWithComments).toHaveBeenCalledWith(
-            "o",
-            "r",
             50,
             "sha1",
             expect.stringContaining("### Review-level findings"),
             [],
-            "t"
         );
     });
 
     it("creates new PR review comment when existing prCommentId is for a different PR", async () => {
         await publishFindings({
-            execution: baseExecution,
+            operation: baseOperation,
             context: baseContext({
                 existingByFindingId: {
                     f1: {
@@ -561,21 +581,18 @@ describe("publishFindings", () => {
 
         expect(mockUpdatePullRequestReviewComment).not.toHaveBeenCalled();
         expect(mockCreateReviewWithComments).toHaveBeenCalledWith(
-            "o",
-            "r",
             50,
             "sha1",
             expect.stringContaining("## 🤖 Bugbot review"),
             expect.arrayContaining([
                 expect.objectContaining({ path: "src/foo.ts", body: expect.any(String) }),
             ]),
-            "t"
         );
     });
 
     it("adds overflow comment with no titles list when overflowTitles is empty", async () => {
         await publishFindings({
-            execution: baseExecution,
+            operation: baseOperation,
             context: baseContext(),
             findings: [],
             overflowCount: 2,
@@ -583,16 +600,16 @@ describe("publishFindings", () => {
         });
 
         const overflowCall = mockAddComment.mock.calls.find(
-            (c: unknown[]) => (c[3] as string).includes("More findings")
+            (c: unknown[]) => (c[1] as string).includes("More findings")
         );
         expect(overflowCall).toBeDefined();
-        expect(overflowCall[3]).toContain("**2**");
-        expect(overflowCall[3]).not.toMatch(/\n- /);
+        expect(overflowCall[1]).toContain("**2**");
+        expect(overflowCall[1]).not.toMatch(/\n- /);
     });
 
     it("passes commitSha to addComment when adding overflow comment", async () => {
         await publishFindings({
-            execution: baseExecution,
+            operation: baseOperation,
             context: baseContext(),
             findings: [],
             overflowCount: 1,
@@ -601,17 +618,17 @@ describe("publishFindings", () => {
         });
 
         const overflowCall = mockAddComment.mock.calls.find(
-            (c: unknown[]) => (c[3] as string).includes("More findings")
+            (c: unknown[]) => (c[1] as string).includes("More findings")
         );
         expect(overflowCall).toBeDefined();
-        expect(overflowCall[5]).toEqual({ commitSha: "overflow-sha" });
+        expect(overflowCall[2]).toEqual({ commitSha: "overflow-sha" });
     });
 
     it("publishes findings without a reported file in the same summarized review", async () => {
         const { logInfo } = await import("../../../../../../utils/logger");
         (logInfo as jest.Mock).mockClear();
         await publishFindings({
-            execution: baseExecution,
+            operation: baseOperation,
             context: baseContext({
                 prContext: {
                     prHeadSha: "sha1",
@@ -628,8 +645,8 @@ describe("publishFindings", () => {
 
         expect(mockAddComment).not.toHaveBeenCalled();
         expect(mockCreateReviewWithComments).toHaveBeenCalledTimes(1);
-        expect(mockCreateReviewWithComments.mock.calls[0][5]).toHaveLength(3);
-        expect(mockCreateReviewWithComments.mock.calls[0][5]).toEqual(
+        expect(mockCreateReviewWithComments.mock.calls[0][3]).toHaveLength(3);
+        expect(mockCreateReviewWithComments.mock.calls[0][3]).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({ path: "src/only.ts", line: 4 }),
             ]),

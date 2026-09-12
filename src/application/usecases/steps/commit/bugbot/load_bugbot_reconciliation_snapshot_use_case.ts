@@ -1,27 +1,13 @@
 import type {
-  BugbotReconciliationCredential,
   BugbotReconciliationSnapshot,
   BugbotReconciliationSnapshotResult,
   BugbotReconciliationTarget,
   BugbotSnapshotSurfaceState,
 } from '../../../../contracts/bugbot_reconciliation';
-import type { BugbotIssueReadPort } from '../../../../ports/bugbot_issue_read_ports';
-import type { BugbotPullRequestReadPort } from '../../../../ports/bugbot_pull_request_read_ports';
-import type { BugbotReviewNavigationPort } from '../../../../ports/bugbot_review_navigation_ports';
-import type { PullRequestReviewSummaryQueryPort } from '../../../../ports/pull_request_review_comment_ports';
 import { PullRequestReviewOperationError } from '../../../../ports/pull_request_review_errors';
+import type { BugbotReconciliationSnapshotPorts } from '../../../../ports/bugbot_reconciliation_ports';
 
-export interface BugbotReconciliationSnapshotPorts {
-  readonly issueComments: BugbotIssueReadPort;
-  readonly pullRequest: Pick<
-    BugbotPullRequestReadPort,
-    | 'getPullRequestHeadSha'
-    | 'listPullRequestReviewComments'
-    | 'listPullRequestReviewThreadStates'
-  >;
-  readonly reviews: PullRequestReviewSummaryQueryPort;
-  readonly navigation: BugbotReviewNavigationPort;
-}
+export type { BugbotReconciliationSnapshotPorts } from '../../../../ports/bugbot_reconciliation_ports';
 
 /**
  * Acquires one coherent final snapshot around two head guards. Surface reads
@@ -30,19 +16,15 @@ export interface BugbotReconciliationSnapshotPorts {
  */
 export async function loadBugbotReconciliationSnapshot(
   target: BugbotReconciliationTarget,
-  credential: BugbotReconciliationCredential,
   ports: BugbotReconciliationSnapshotPorts,
 ): Promise<BugbotReconciliationSnapshotResult> {
-  const initialHeadSha = await readHead(target, credential, ports);
+  const initialHeadSha = await readHead(target, ports);
   if (!initialHeadSha || initialHeadSha !== target.analyzedHeadSha) {
     return superseded(target, initialHeadSha);
   }
 
-  const conversationPromise = ports.issueComments.listIssueComments(
-    target.owner,
-    target.repository,
+  const conversationPromise = ports.listIssueComments(
     target.pullRequestNumber,
-    credential.token,
   );
   const linkedIssueNumber = target.linkedIssueNumber;
   const linkedIssueSharesConversation = linkedIssueNumber !== undefined
@@ -51,38 +33,26 @@ export async function loadBugbotReconciliationSnapshot(
     ? Promise.resolve([])
     : linkedIssueSharesConversation
       ? conversationPromise
-      : ports.issueComments.listIssueComments(
-          target.owner,
-          target.repository,
+      : ports.listIssueComments(
           linkedIssueNumber,
-          credential.token,
         );
 
   const [commentsRead, threadsRead, reviewsRead, conversationRead, linkedIssueRead] =
     await Promise.allSettled([
-      ports.pullRequest.listPullRequestReviewComments(
-        target.owner,
-        target.repository,
+      ports.listPullRequestReviewComments(
         target.pullRequestNumber,
-        credential.token,
       ),
-      ports.pullRequest.listPullRequestReviewThreadStates(
-        target.owner,
-        target.repository,
+      ports.listPullRequestReviewThreadStates(
         target.pullRequestNumber,
-        credential.token,
       ),
-      ports.reviews.listPullRequestReviews(
-        target.owner,
-        target.repository,
+      ports.listPullRequestReviews(
         target.pullRequestNumber,
-        credential.token,
       ),
       conversationPromise,
       linkedIssuePromise,
     ]);
 
-  const finalHeadSha = await readHead(target, credential, ports);
+  const finalHeadSha = await readHead(target, ports);
   if (!finalHeadSha || finalHeadSha !== target.analyzedHeadSha) {
     return superseded(target, finalHeadSha);
   }
@@ -90,9 +60,7 @@ export async function loadBugbotReconciliationSnapshot(
   let navigation: BugbotReconciliationSnapshot['navigation'];
   let navigationState: BugbotSnapshotSurfaceState = 'verified';
   try {
-    navigation = ports.navigation.forPullRequest(
-      target.owner,
-      target.repository,
+    navigation = ports.navigationForPullRequest(
       target.pullRequestNumber,
       finalHeadSha,
     );
@@ -131,15 +99,11 @@ export async function loadBugbotReconciliationSnapshot(
 
 async function readHead(
   target: BugbotReconciliationTarget,
-  credential: BugbotReconciliationCredential,
   ports: BugbotReconciliationSnapshotPorts,
 ): Promise<string | undefined> {
   try {
-    return await ports.pullRequest.getPullRequestHeadSha(
-      target.owner,
-      target.repository,
+    return await ports.getPullRequestHeadSha(
       target.pullRequestNumber,
-      credential.token,
     );
   } catch {
     throw new PullRequestReviewOperationError('get-head-sha');

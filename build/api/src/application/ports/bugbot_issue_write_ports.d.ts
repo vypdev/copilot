@@ -10,3 +10,15 @@ export interface BugbotIssueCommentUpdatePort {
 }
 export interface BugbotIssueCommentWritePort extends BugbotIssueCommentCreatePort, BugbotIssueCommentUpdatePort {
 }
+export interface BoundBugbotIssueCommentCreatePort {
+    addComment(issueNumber: number, comment: string, options?: {
+        commitSha?: string;
+    }): Promise<void>;
+}
+export interface BoundBugbotIssueCommentUpdatePort {
+    updateComment(issueNumber: number, commentId: number, comment: string, options?: {
+        commitSha?: string;
+    }): Promise<void>;
+}
+export interface BoundBugbotIssueCommentWritePort extends BoundBugbotIssueCommentCreatePort, BoundBugbotIssueCommentUpdatePort {
+}

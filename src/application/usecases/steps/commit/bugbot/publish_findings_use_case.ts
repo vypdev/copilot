@@ -3,7 +3,6 @@
  * Issue publication, PR review policy, and overflow reporting live in dedicated collaborators.
  */
 
-import type { Execution } from "../../../../../data/model/execution";
 import type { BugbotFindingPublicationPorts } from "../../../../../application/ports/bugbot_finding_publication_ports";
 import { getCommentWatermark } from "../../../../../utils/comment_watermark";
 import type { BugbotContext } from "./types";
@@ -14,9 +13,10 @@ import {
 import { publishIssueFindingComment } from "./publish_issue_finding_comment";
 import { PullRequestReviewCommentPublisher } from "./publish_pr_review_comments";
 import { publishOverflowComment } from "./publish_overflow_comment";
+import type { BugbotReviewOperationContext } from './bugbot_review_operation_context';
 
 export interface PublishFindingsParam {
-    execution: Execution;
+    operation: BugbotReviewOperationContext;
     context: BugbotContext;
     findings: BugbotFinding[];
     /** Commit SHA for bugbot watermark (commit link). When set, comment uses "for commit ..." watermark. */
@@ -28,19 +28,19 @@ export interface PublishFindingsParam {
 }
 
 export async function publishFindings(param: PublishFindingsParam): Promise<void> {
-    const { execution, context, findings, commitSha, overflowCount = 0, overflowTitles = [], ports } = param;
+    const { operation, context, findings, commitSha, overflowCount = 0, overflowTitles = [], ports } = param;
     const { existingByFindingId, canonicalPullRequest, prContext } = context;
 
     const watermark =
-        commitSha && execution.owner && execution.repo
-            ? getCommentWatermark({ commitSha, owner: execution.owner, repo: execution.repo })
+        commitSha
+            ? getCommentWatermark({ commitSha, owner: operation.repository.owner, repo: operation.repository.name })
             : getCommentWatermark();
 
     const reviewPublisher =
         prContext && canonicalPullRequest
             ? new PullRequestReviewCommentPublisher({
                   repository: ports.pullRequestComments,
-                  execution,
+                  operation,
                   openPrNumber: canonicalPullRequest.number,
                   prContext,
                   watermark,
@@ -50,10 +50,10 @@ export async function publishFindings(param: PublishFindingsParam): Promise<void
             : undefined;
 
     for (const finding of findings) {
-        if (execution.issueNumber > 0 && !reviewPublisher) {
+        if (operation.target.issueNumber > 0 && !reviewPublisher) {
             await publishIssueFindingComment(
                 ports.issueComments,
-                execution,
+                operation.target.issueNumber,
                 finding,
                 findExistingFindingInfo(existingByFindingId, finding),
                 commitSha
@@ -65,10 +65,10 @@ export async function publishFindings(param: PublishFindingsParam): Promise<void
     }
 
     await reviewPublisher?.flush(overflowCount, overflowTitles);
-    if (execution.issueNumber > 0 && !reviewPublisher) {
+    if (operation.target.issueNumber > 0 && !reviewPublisher) {
         await publishOverflowComment(
             ports.issueComments,
-            execution,
+            operation.target.issueNumber,
             overflowCount,
             overflowTitles,
             commitSha

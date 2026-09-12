@@ -15,6 +15,7 @@ import {
 import { buildMarker } from '../../../../policies/bugbot_finding_marker_policy';
 import type { BugbotFinding } from '../../../../../domain/bugbot/finding';
 import type { BugbotContextSource, BugbotSourceCoverage } from '../../../../../domain/bugbot/context';
+import { projectBugbotReviewOperationContext } from '../bugbot/bugbot_review_operation_context';
 
 jest.mock("@actions/github", () => {
   const actual =
@@ -97,26 +98,137 @@ function baseParam(overrides: Record<string, unknown> = {}): Execution {
   } as unknown as Execution;
 }
 
+function invokeUseCase(useCase: DetectPotentialProblemsUseCase, source: Execution) {
+  return useCase.invoke(projectBugbotReviewOperationContext(source));
+}
+
 describe("DetectPotentialProblemsUseCase", () => {
   let useCase: DetectPotentialProblemsUseCase;
 
   beforeEach(() => {
-    const issuePort = {
-      listIssueComments: mockListIssueComments,
-      addComment: mockAddComment,
-      updateComment: mockUpdateComment,
-    };
     const rulesPort = { loadRules: jest.fn().mockResolvedValue([]) };
-    const pullRequestPort = {
-      getPullRequestReviewCommentBody: jest.fn(),
-      listPullRequestReviewComments: mockListPullRequestReviewComments,
-      getPullRequestHeadSha: mockGetPullRequestHeadSha,
-      getReviewDiffSnapshot: mockGetReviewDiffSnapshot,
-      listPullRequestReviewThreadStates: jest.fn().mockResolvedValue({}),
-      createReviewWithComments: mockCreateReviewWithComments,
-      updatePullRequestReviewComment: mockUpdatePullRequestReviewComment,
-      resolvePullRequestReviewThread: mockResolvePullRequestReviewThread,
-      unresolvePullRequestReviewThread: mockUnresolvePullRequestReviewThread,
+    const mockListPullRequestReviewThreadStates = jest.fn().mockResolvedValue({});
+    const issueComments = {
+      addComment: (
+        issueNumber: number,
+        body: string,
+        options?: { commitSha?: string },
+      ) => mockAddComment('owner', 'repo', issueNumber, body, 'token', options),
+      updateComment: (
+        issueNumber: number,
+        commentId: number,
+        body: string,
+        options?: { commitSha?: string },
+      ) => mockUpdateComment(
+        'owner',
+        'repo',
+        issueNumber,
+        commentId,
+        body,
+        'token',
+        options,
+      ),
+    };
+    const pullRequestComments = {
+      createReviewWithComments: (
+        pullRequestNumber: number,
+        commitId: string,
+        body: string,
+        comments: Parameters<PullRequestReviewCommentCommandRepository['createReviewWithComments']>[5],
+      ) => mockCreateReviewWithComments(
+        'owner',
+        'repo',
+        pullRequestNumber,
+        commitId,
+        body,
+        comments,
+        'token',
+      ),
+      updatePullRequestReviewComment: (commentIdentity: string, body: string) =>
+        mockUpdatePullRequestReviewComment('owner', 'repo', commentIdentity, body, 'token'),
+      resolvePullRequestReviewThread: (pullRequestNumber: number, commentIdentity: string) =>
+        mockResolvePullRequestReviewThread(
+          'owner',
+          'repo',
+          pullRequestNumber,
+          commentIdentity,
+          'token',
+        ),
+      unresolvePullRequestReviewThread: (pullRequestNumber: number, commentIdentity: string) =>
+        mockUnresolvePullRequestReviewThread(
+          'owner',
+          'repo',
+          pullRequestNumber,
+          commentIdentity,
+          'token',
+        ),
+      listPullRequestReviewComments: (pullRequestNumber: number) =>
+        mockListPullRequestReviewComments('owner', 'repo', pullRequestNumber, 'token'),
+    };
+    const context = {
+      getPullRequest: async (pullRequestNumber: number) => ({
+        number: pullRequestNumber,
+        state: 'open' as const,
+        baseRepository: { owner: 'owner', name: 'repo' },
+        headRepositoryOwner: 'owner',
+        headRef: 'feature/head',
+        headSha: await mockGetPullRequestHeadSha(pullRequestNumber),
+      }),
+      findOpenPullRequestsByExactHead: async (headOwner: string, headRef: string) => {
+        const numbers = await mockFindExactHeadCandidateNumbers(headRef);
+        return Promise.all(numbers.map(async (number: number) => ({
+          number,
+          state: 'open' as const,
+          baseRepository: { owner: 'owner', name: 'repo' },
+          headRepositoryOwner: headOwner,
+          headRef,
+          headSha: await mockGetPullRequestHeadSha(number),
+        })));
+      },
+      listIssueComments: async (issueNumber: number) => {
+        const value = await mockListIssueComments('owner', 'repo', issueNumber, 'token');
+        return {
+          value,
+          coverage: issueCoverageOverride ?? completeCoverage('issue-comments', value.length),
+        };
+      },
+      listPullRequestReviewComments: async (pullRequestNumber: number) => {
+        const value = await mockListPullRequestReviewComments(
+          'owner',
+          'repo',
+          pullRequestNumber,
+          'token',
+        );
+        return {
+          value,
+          coverage: completeCoverage('pull-request-comments', value.length),
+        };
+      },
+      listPullRequestReviewThreadStates: async (pullRequestNumber: number) => {
+        const value = await mockListPullRequestReviewThreadStates(
+          'owner',
+          'repo',
+          pullRequestNumber,
+          'token',
+        );
+        return {
+          value,
+          coverage: completeCoverage('review-threads', Object.keys(value).length),
+        };
+      },
+      getReviewDiffSnapshot: async (pullRequestNumber: number) => {
+        const value = await mockGetReviewDiffSnapshot(
+          'owner',
+          'repo',
+          pullRequestNumber,
+          'token',
+        );
+        return { value, coverage: completeCoverage('diff', value.changes.length) };
+      },
+      getPullRequestHeadSha: (pullRequestNumber: number) =>
+        mockGetPullRequestHeadSha('owner', 'repo', pullRequestNumber, 'token'),
+      getPullRequestReviewCommentBody: jest.fn().mockResolvedValue(null),
+      loadRules: rulesPort.loadRules,
     };
     useCase = new DetectPotentialProblemsUseCase(
       {
@@ -134,60 +246,46 @@ describe("DetectPotentialProblemsUseCase", () => {
           ),
       },
       {
-        loader: {
-          bind: () => ({
-            getPullRequest: async (pullRequestNumber: number) => ({
-              number: pullRequestNumber,
-              state: 'open' as const,
-              baseRepository: { owner: 'owner', name: 'repo' },
-              headRepositoryOwner: 'owner',
-              headRef: 'feature/head',
-              headSha: await mockGetPullRequestHeadSha(pullRequestNumber),
+        context,
+        publication: { issueComments, pullRequestComments },
+        resolution: { issueComments, pullRequestComments },
+        reconciliation: {
+          snapshot: {
+            listIssueComments: (issueNumber: number) =>
+              mockListIssueComments('owner', 'repo', issueNumber, 'token'),
+            listPullRequestReviewComments: pullRequestComments.listPullRequestReviewComments,
+            listPullRequestReviewThreadStates: (pullRequestNumber: number) =>
+              mockListPullRequestReviewThreadStates(
+                'owner',
+                'repo',
+                pullRequestNumber,
+                'token',
+              ),
+            listPullRequestReviews: (pullRequestNumber: number) =>
+              mockListPullRequestReviews('owner', 'repo', pullRequestNumber, 'token'),
+            getPullRequestHeadSha: context.getPullRequestHeadSha,
+            navigationForPullRequest: () => ({
+              pullRequestUrl: 'https://github.com/org/repo/pull/7',
+              commitUrl: `https://github.com/org/repo/commit/${'a'.repeat(40)}`,
             }),
-            findOpenPullRequestsByExactHead: async (headOwner: string, headRef: string) => {
-              const numbers = await mockFindExactHeadCandidateNumbers(headRef);
-              return Promise.all(numbers.map(async (number: number) => ({
-                number,
-                state: 'open' as const,
-                baseRepository: { owner: 'owner', name: 'repo' },
-                headRepositoryOwner: headOwner,
-                headRef,
-                headSha: await mockGetPullRequestHeadSha(number),
-              })));
-            },
-            listIssueComments: async (issueNumber: number) => {
-              const value = await mockListIssueComments('owner', 'repo', issueNumber, 'token');
-              return { value, coverage: issueCoverageOverride ?? completeCoverage('issue-comments', value.length) };
-            },
-            listPullRequestReviewComments: async (pullRequestNumber: number) => {
-              const value = await mockListPullRequestReviewComments('owner', 'repo', pullRequestNumber, 'token');
-              return { value, coverage: completeCoverage('pull-request-comments', value.length) };
-            },
-            listPullRequestReviewThreadStates: async (pullRequestNumber: number) => {
-              const value = await pullRequestPort.listPullRequestReviewThreadStates('owner', 'repo', pullRequestNumber, 'token');
-              return { value, coverage: completeCoverage('review-threads', Object.keys(value).length) };
-            },
-            getReviewDiffSnapshot: async (pullRequestNumber: number) => {
-              const value = await mockGetReviewDiffSnapshot('owner', 'repo', pullRequestNumber, 'token');
-              return { value, coverage: completeCoverage('diff', value.changes.length) };
-            },
-            getPullRequestHeadSha: (pullRequestNumber: number) => mockGetPullRequestHeadSha('owner', 'repo', pullRequestNumber, 'token'),
-            loadRules: rulesPort.loadRules,
-          }),
+          },
+          presentation: {
+            comments: issueComments,
+            updatePullRequestReview: (
+              pullRequestNumber: number,
+              reviewIdentity: string,
+              body: string,
+            ) => mockUpdatePullRequestReview(
+              'owner',
+              'repo',
+              pullRequestNumber,
+              reviewIdentity,
+              body,
+              'token',
+            ),
+          },
         },
-        issue: issuePort,
-        pullRequest: pullRequestPort,
-        reviewState: { listPullRequestReviews: mockListPullRequestReviews },
-        navigation: {
-          forPullRequest: () => ({
-            pullRequestUrl: 'https://github.com/org/repo/pull/7',
-            commitUrl: `https://github.com/org/repo/commit/${'a'.repeat(40)}`,
-          }),
-        },
-        rules: rulesPort,
       },
-      { issueComments: issuePort, pullRequestComments: pullRequestPort, reviewState: { updatePullRequestReview: mockUpdatePullRequestReview } },
-      { issueComments: issuePort, pullRequestComments: pullRequestPort },
     );
     mockListIssueComments.mockReset();
     mockAddComment.mockReset();
@@ -234,7 +332,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       }),
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invokeUseCase(useCase, param);
 
     expect(results).toHaveLength(0);
     expect(mockListIssueComments).not.toHaveBeenCalled();
@@ -254,7 +352,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       ),
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invokeUseCase(useCase, param);
 
     expect(results).toHaveLength(0);
     expect(mockAskAgent).not.toHaveBeenCalled();
@@ -263,7 +361,7 @@ describe("DetectPotentialProblemsUseCase", () => {
   it("returns empty results when issue number is -1", async () => {
     const param = baseParam({ issueNumber: -1 });
 
-    const results = await useCase.invoke(param);
+    const results = await invokeUseCase(useCase, param);
 
     expect(results).toHaveLength(0);
     expect(mockListIssueComments).not.toHaveBeenCalled();
@@ -279,7 +377,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       inputs: { eventName: 'issue_comment', repo: { owner: 'owner', repo: 'repo' } },
     });
 
-    const results = await useCase.invoke(param);
+    const results = await invokeUseCase(useCase, param);
 
     expect(results[0].success).toBe(true);
     expect(mockAskAgent).toHaveBeenCalledTimes(1);
@@ -288,7 +386,7 @@ describe("DetectPotentialProblemsUseCase", () => {
   it("returns a failure when askAgent returns null", async () => {
     mockAskAgent.mockResolvedValue(null);
 
-    const results = await useCase.invoke(baseParam());
+    const results = await invokeUseCase(useCase, baseParam());
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
@@ -300,7 +398,7 @@ describe("DetectPotentialProblemsUseCase", () => {
   it("returns a failure when askAgent returns a string (non-object)", async () => {
     mockAskAgent.mockResolvedValue("plain text");
 
-    const results = await useCase.invoke(baseParam());
+    const results = await invokeUseCase(useCase, baseParam());
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
@@ -311,7 +409,7 @@ describe("DetectPotentialProblemsUseCase", () => {
   it("fails closed when the structured response has no findings array", async () => {
     mockAskAgent.mockResolvedValue({ other: "data" });
 
-    const results = await useCase.invoke(baseParam());
+    const results = await invokeUseCase(useCase, baseParam());
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
@@ -322,7 +420,7 @@ describe("DetectPotentialProblemsUseCase", () => {
   it('returns success with "no new findings, no resolved" when findings and resolved_findings are empty', async () => {
     mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
 
-    const results = await useCase.invoke(baseParam());
+    const results = await invokeUseCase(useCase, baseParam());
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(true);
@@ -342,7 +440,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     };
     mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
 
-    const [result] = await useCase.invoke(baseParam());
+    const [result] = await invokeUseCase(useCase, baseParam());
 
     expect(result.success).toBe(true);
     expect(result.steps?.[0]).toContain('partial context coverage');
@@ -355,7 +453,7 @@ describe("DetectPotentialProblemsUseCase", () => {
   it("calls listIssueComments and askAgent with repo context and no previous block when no comments", async () => {
     mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
 
-    await useCase.invoke(baseParam());
+    await invokeUseCase(useCase, baseParam());
 
     expect(mockListIssueComments).toHaveBeenCalledWith(
       "owner",
@@ -380,7 +478,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     };
     mockAskAgent.mockResolvedValue({ findings: [finding] });
 
-    const results = await useCase.invoke(baseParam());
+    const results = await invokeUseCase(useCase, baseParam());
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(true);
@@ -426,7 +524,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     ]);
     mockListPullRequestReviewComments.mockResolvedValue([]);
 
-    await useCase.invoke(baseParam());
+    await invokeUseCase(useCase, baseParam());
 
     expect(mockCreateReviewWithComments).toHaveBeenCalledTimes(1);
     expect(mockCreateReviewWithComments).toHaveBeenCalledWith(
@@ -453,7 +551,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     mockGetChangedFiles.mockResolvedValue([]);
     mockGetFilesWithFirstDiffLine.mockResolvedValue([]);
 
-    const results = await useCase.invoke(baseParam({
+    const results = await invokeUseCase(useCase, baseParam({
       issueNumber: -1,
       isPullRequest: true,
       eventName: "pull_request",
@@ -485,7 +583,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       line: 1,
     }] });
 
-    const results = await useCase.invoke(baseParam({
+    const results = await invokeUseCase(useCase, baseParam({
       issueNumber: -1,
       isPullRequest: true,
       eventName: "pull_request",
@@ -513,7 +611,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     ]);
     mockAskAgent.mockResolvedValue({ findings: [finding] });
 
-    await useCase.invoke(baseParam());
+    await invokeUseCase(useCase, baseParam());
 
     expect(mockUpdateComment).toHaveBeenCalledWith(
       "owner",
@@ -540,7 +638,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       resolved_findings: [{ id: "old-bug-id", resolution: "fixed" }],
     });
 
-    await useCase.invoke(baseParam());
+    await invokeUseCase(useCase, baseParam());
 
     const prompt = mockAskAgent.mock.calls[0][2];
     expect(prompt).toContain("Previously reported issues");
@@ -554,6 +652,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       888,
       expect.stringContaining("Resolved"),
       "token",
+      undefined,
     );
     expect(mockUpdateComment.mock.calls[0][4]).toContain("resolved:true");
   });
@@ -568,7 +667,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     ]);
     mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
 
-    const results = await useCase.invoke(baseParam());
+    const results = await invokeUseCase(useCase, baseParam());
 
     expect(results[0].payload).toEqual(expect.objectContaining({
       findingStates: expect.objectContaining({ open: 1 }),
@@ -593,7 +692,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       resolved_findings: [{ id: "pr-finding", resolution: "fixed" }],
     });
 
-    await useCase.invoke(baseParam());
+    await invokeUseCase(useCase, baseParam());
 
     expect(mockUpdatePullRequestReviewComment).toHaveBeenCalledWith(
       "owner",
@@ -638,7 +737,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       new Error("provider rejected secret-token"),
     );
 
-    const results = await useCase.invoke(baseParam());
+    const results = await invokeUseCase(useCase, baseParam());
 
     expect(mockUpdatePullRequestReviewComment).toHaveBeenCalledWith(
       'owner',
@@ -670,7 +769,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       resolved_findings: [], // does not include unfixed-id
     });
 
-    await useCase.invoke(baseParam());
+    await invokeUseCase(useCase, baseParam());
 
     expect(mockUpdateComment).not.toHaveBeenCalled();
   });
@@ -679,7 +778,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     const { logError } = require("../../../../../utils/logger");
     mockAskAgent.mockRejectedValue(new Error("OpenCode timeout secret-token"));
 
-    const results = await useCase.invoke(baseParam());
+    const results = await invokeUseCase(useCase, baseParam());
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
@@ -709,24 +808,104 @@ describe("DetectPotentialProblemsUseCase", () => {
       } as never,
       { getClient: jest.fn() } as never,
     );
-    const pullRequestPort = {
-      getPullRequestReviewCommentBody: jest.fn(),
-      listPullRequestReviewComments: mockListPullRequestReviewComments,
-      getPullRequestHeadSha: mockGetPullRequestHeadSha,
-      getReviewDiffSnapshot: mockGetReviewDiffSnapshot,
-      listPullRequestReviewThreadStates: jest.fn().mockResolvedValue({}),
-      createReviewWithComments:
-        commandRepository.createReviewWithComments.bind(commandRepository),
-      updatePullRequestReviewComment: jest.fn(),
-      resolvePullRequestReviewThread: jest.fn(),
-      unresolvePullRequestReviewThread: jest.fn(),
-    };
-    const issuePort = {
-      listIssueComments: mockListIssueComments,
-      addComment: mockAddComment,
-      updateComment: mockUpdateComment,
-    };
     const rulesPort = { loadRules: jest.fn().mockResolvedValue([]) };
+    const listReviewThreadStates = jest.fn().mockResolvedValue({});
+    const issueComments = {
+      addComment: (issueNumber: number, body: string, options?: { commitSha?: string }) =>
+        mockAddComment('owner', 'repo', issueNumber, body, 'secret-token', options),
+      updateComment: (
+        issueNumber: number,
+        commentId: number,
+        body: string,
+        options?: { commitSha?: string },
+      ) => mockUpdateComment(
+        'owner',
+        'repo',
+        issueNumber,
+        commentId,
+        body,
+        'secret-token',
+        options,
+      ),
+    };
+    const pullRequestComments = {
+      createReviewWithComments: (
+        pullRequestNumber: number,
+        commitId: string,
+        body: string,
+        comments: Parameters<PullRequestReviewCommentCommandRepository['createReviewWithComments']>[5],
+      ) => commandRepository.createReviewWithComments(
+        'owner',
+        'repo',
+        pullRequestNumber,
+        commitId,
+        body,
+        comments,
+        'secret-token',
+      ),
+      updatePullRequestReviewComment: jest.fn().mockResolvedValue(undefined),
+      resolvePullRequestReviewThread: jest.fn().mockResolvedValue(undefined),
+      unresolvePullRequestReviewThread: jest.fn().mockResolvedValue(undefined),
+      listPullRequestReviewComments: (pullRequestNumber: number) =>
+        mockListPullRequestReviewComments('owner', 'repo', pullRequestNumber, 'secret-token'),
+    };
+    const context = {
+      getPullRequest: async (pullRequestNumber: number) => ({
+        number: pullRequestNumber,
+        state: 'open' as const,
+        baseRepository: { owner: 'owner', name: 'repo' },
+        headRepositoryOwner: 'owner',
+        headRef: 'feature/head',
+        headSha: await mockGetPullRequestHeadSha(pullRequestNumber),
+      }),
+      findOpenPullRequestsByExactHead: async (headOwner: string, headRef: string) => {
+        const numbers = await mockFindExactHeadCandidateNumbers(headRef);
+        return Promise.all(numbers.map(async (number: number) => ({
+          number,
+          state: 'open' as const,
+          baseRepository: { owner: 'owner', name: 'repo' },
+          headRepositoryOwner: headOwner,
+          headRef,
+          headSha: await mockGetPullRequestHeadSha(number),
+        })));
+      },
+      listIssueComments: async (issueNumber: number) => {
+        const value = await mockListIssueComments('owner', 'repo', issueNumber, 'secret-token');
+        return { value, coverage: completeCoverage('issue-comments', value.length) };
+      },
+      listPullRequestReviewComments: async (pullRequestNumber: number) => {
+        const value = await mockListPullRequestReviewComments(
+          'owner',
+          'repo',
+          pullRequestNumber,
+          'secret-token',
+        );
+        return {
+          value,
+          coverage: completeCoverage('pull-request-comments', value.length),
+        };
+      },
+      listPullRequestReviewThreadStates: async (pullRequestNumber: number) => {
+        const value = await listReviewThreadStates(pullRequestNumber);
+        return {
+          value,
+          coverage: completeCoverage('review-threads', Object.keys(value).length),
+        };
+      },
+      getReviewDiffSnapshot: async (pullRequestNumber: number) => {
+        const value = await mockGetReviewDiffSnapshot(
+          'owner',
+          'repo',
+          pullRequestNumber,
+          'secret-token',
+        );
+        return { value, coverage: completeCoverage('diff', value.changes.length) };
+      },
+      getPullRequestHeadSha: (pullRequestNumber: number) =>
+        mockGetPullRequestHeadSha('owner', 'repo', pullRequestNumber, 'secret-token'),
+      getPullRequestReviewCommentBody: jest.fn().mockResolvedValue(null),
+      loadRules: rulesPort.loadRules,
+    };
     const integratedUseCase = new DetectPotentialProblemsUseCase(
       {
         query: (request: {
@@ -743,60 +922,29 @@ describe("DetectPotentialProblemsUseCase", () => {
           ),
       },
       {
-        loader: {
-          bind: () => ({
-            getPullRequest: async (pullRequestNumber: number) => ({
-              number: pullRequestNumber,
-              state: 'open' as const,
-              baseRepository: { owner: 'owner', name: 'repo' },
-              headRepositoryOwner: 'owner',
-              headRef: 'feature/head',
-              headSha: await mockGetPullRequestHeadSha(pullRequestNumber),
+        context,
+        publication: { issueComments, pullRequestComments },
+        resolution: { issueComments, pullRequestComments },
+        reconciliation: {
+          snapshot: {
+            listIssueComments: (issueNumber: number) =>
+              mockListIssueComments('owner', 'repo', issueNumber, 'secret-token'),
+            listPullRequestReviewComments: pullRequestComments.listPullRequestReviewComments,
+            listPullRequestReviewThreadStates: listReviewThreadStates,
+            listPullRequestReviews: (pullRequestNumber: number) =>
+              mockListPullRequestReviews('owner', 'repo', pullRequestNumber, 'secret-token'),
+            getPullRequestHeadSha: context.getPullRequestHeadSha,
+            navigationForPullRequest: () => ({
+              pullRequestUrl: 'https://github.com/org/repo/pull/7',
+              commitUrl: `https://github.com/org/repo/commit/${'a'.repeat(40)}`,
             }),
-            findOpenPullRequestsByExactHead: async (headOwner: string, headRef: string) => {
-              const numbers = await mockFindExactHeadCandidateNumbers(headRef);
-              return Promise.all(numbers.map(async (number: number) => ({
-                number,
-                state: 'open' as const,
-                baseRepository: { owner: 'owner', name: 'repo' },
-                headRepositoryOwner: headOwner,
-                headRef,
-                headSha: await mockGetPullRequestHeadSha(number),
-              })));
-            },
-            listIssueComments: async (issueNumber: number) => {
-              const value = await mockListIssueComments('owner', 'repo', issueNumber, 'token');
-              return { value, coverage: completeCoverage('issue-comments', value.length) };
-            },
-            listPullRequestReviewComments: async (pullRequestNumber: number) => {
-              const value = await mockListPullRequestReviewComments('owner', 'repo', pullRequestNumber, 'token');
-              return { value, coverage: completeCoverage('pull-request-comments', value.length) };
-            },
-            listPullRequestReviewThreadStates: async (pullRequestNumber: number) => {
-              const value = await pullRequestPort.listPullRequestReviewThreadStates('owner', 'repo', pullRequestNumber, 'token');
-              return { value, coverage: completeCoverage('review-threads', Object.keys(value).length) };
-            },
-            getReviewDiffSnapshot: async (pullRequestNumber: number) => {
-              const value = await mockGetReviewDiffSnapshot('owner', 'repo', pullRequestNumber, 'token');
-              return { value, coverage: completeCoverage('diff', value.changes.length) };
-            },
-            getPullRequestHeadSha: (pullRequestNumber: number) => mockGetPullRequestHeadSha('owner', 'repo', pullRequestNumber, 'token'),
-            loadRules: rulesPort.loadRules,
-          }),
+          },
+          presentation: {
+            comments: issueComments,
+            updatePullRequestReview: jest.fn().mockResolvedValue(undefined),
+          },
         },
-        issue: issuePort,
-        pullRequest: pullRequestPort,
-        reviewState: { listPullRequestReviews: mockListPullRequestReviews },
-        navigation: {
-          forPullRequest: () => ({
-            pullRequestUrl: 'https://github.com/org/repo/pull/7',
-            commitUrl: `https://github.com/org/repo/commit/${'a'.repeat(40)}`,
-          }),
-        },
-        rules: rulesPort,
       },
-      { issueComments: issuePort, pullRequestComments: pullRequestPort, reviewState: { updatePullRequestReview: mockUpdatePullRequestReview } },
-      { issueComments: issuePort, pullRequestComments: pullRequestPort },
     );
     mockAskAgent.mockResolvedValue({
       findings: [
@@ -820,9 +968,9 @@ describe("DetectPotentialProblemsUseCase", () => {
     mockListPullRequestReviewComments.mockResolvedValue([]);
 
     const results = await integratedUseCase.invoke(
-      baseParam({
+      projectBugbotReviewOperationContext(baseParam({
         tokens: { token: "secret-token" },
-      }),
+      })),
     );
 
     expect(createReview).toHaveBeenCalledTimes(1);
@@ -847,7 +995,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       },
     ]);
 
-    const results = await useCase.invoke(baseParam());
+    const results = await invokeUseCase(useCase, baseParam());
 
     expect(results[0].success).toBe(true);
     expect(results[0].steps?.[0]).toMatch(
@@ -861,7 +1009,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       findings: [{ id: "f1", title: "T", description: "D" }],
     });
 
-    await useCase.invoke(baseParam());
+    await invokeUseCase(useCase, baseParam());
 
     expect(mockGetPullRequestHeadSha).not.toHaveBeenCalled();
     expect(mockCreateReviewWithComments).not.toHaveBeenCalled();
@@ -887,7 +1035,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     ]);
     mockListPullRequestReviewComments.mockResolvedValue([]);
 
-    await useCase.invoke(baseParam());
+    await invokeUseCase(useCase, baseParam());
 
     expect(mockAddComment).toHaveBeenCalledWith(
       'owner',
@@ -938,7 +1086,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     ]);
     mockAskAgent.mockResolvedValue({ findings: [finding] });
 
-    await useCase.invoke(baseParam());
+    await invokeUseCase(useCase, baseParam());
 
     expect(mockUpdatePullRequestReviewComment).toHaveBeenCalledWith(
       "owner",
@@ -957,7 +1105,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       branches: { development: "main" },
     });
 
-    await useCase.invoke(param);
+    await invokeUseCase(useCase, param);
 
     const prompt = mockAskAgent.mock.calls[0][2];
     expect(prompt).toContain("Base branch: main");
@@ -973,7 +1121,7 @@ describe("DetectPotentialProblemsUseCase", () => {
     ]);
     mockAskAgent.mockResolvedValue({ findings: [], resolved_findings: [] });
 
-    await useCase.invoke(baseParam());
+    await invokeUseCase(useCase, baseParam());
 
     const prompt = mockAskAgent.mock.calls[0][2];
     expect(prompt).toContain("Extracted Title Here");
@@ -983,7 +1131,7 @@ describe("DetectPotentialProblemsUseCase", () => {
   it("fails closed when findings is not an array", async () => {
     mockAskAgent.mockResolvedValue({ findings: "not-array" });
 
-    const results = await useCase.invoke(baseParam());
+    const results = await invokeUseCase(useCase, baseParam());
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
@@ -1004,7 +1152,7 @@ describe("DetectPotentialProblemsUseCase", () => {
       resolved_findings: [{ id: "done-id", resolution: "fixed" }],
     });
 
-    await useCase.invoke(baseParam());
+    await invokeUseCase(useCase, baseParam());
 
     expect(mockUpdateComment).not.toHaveBeenCalled();
   });
@@ -1023,7 +1171,7 @@ describe("DetectPotentialProblemsUseCase", () => {
         resolved_findings: [{ id: "spacey-id", resolution: "fixed" }],
       });
 
-      await useCase.invoke(baseParam());
+      await invokeUseCase(useCase, baseParam());
 
       expect(mockUpdateComment).toHaveBeenCalledTimes(1);
       expect(mockUpdateComment).toHaveBeenCalledWith(
@@ -1033,6 +1181,7 @@ describe("DetectPotentialProblemsUseCase", () => {
         333,
         expect.any(String),
         "token",
+        undefined,
       );
       const updatedBody = mockUpdateComment.mock.calls[0][4];
       expect(updatedBody).toContain("resolved:true");
@@ -1071,7 +1220,7 @@ describe("DetectPotentialProblemsUseCase", () => {
         resolved_findings: [{ id: "pr-spacey-id", resolution: "fixed" }],
       });
 
-      await useCase.invoke(baseParam());
+      await invokeUseCase(useCase, baseParam());
 
       expect(mockUpdatePullRequestReviewComment).toHaveBeenCalledTimes(1);
       const updatedBody = mockUpdatePullRequestReviewComment.mock.calls[0][3];
@@ -1092,7 +1241,7 @@ describe("DetectPotentialProblemsUseCase", () => {
         resolved_findings: [{ id: findingId, resolution: "fixed" }],
       });
 
-      await useCase.invoke(baseParam());
+      await invokeUseCase(useCase, baseParam());
 
       expect(mockUpdateComment).toHaveBeenCalledTimes(1);
       const updatedBody = mockUpdateComment.mock.calls[0][4];
@@ -1112,7 +1261,7 @@ describe("DetectPotentialProblemsUseCase", () => {
         ],
       });
 
-      const results = await useCase.invoke(baseParam());
+      const results = await invokeUseCase(useCase, baseParam());
 
       expect(mockAddComment).not.toHaveBeenCalled();
       expect(results[0].success).toBe(true);
@@ -1150,7 +1299,7 @@ describe("DetectPotentialProblemsUseCase", () => {
         resolved_findings: [],
       });
 
-      await useCase.invoke(param);
+      await invokeUseCase(useCase, param);
 
       expect(mockAddComment).toHaveBeenCalledTimes(1);
       expect(mockAddComment.mock.calls[0][3]).toContain("High severity");
@@ -1177,7 +1326,7 @@ describe("DetectPotentialProblemsUseCase", () => {
         resolved_findings: [],
       });
 
-      await useCase.invoke(baseParam());
+      await invokeUseCase(useCase, baseParam());
 
       expect(mockAddComment).toHaveBeenCalledTimes(1);
       expect(mockAddComment.mock.calls[0][3]).toContain("Safe");
@@ -1215,7 +1364,7 @@ describe("DetectPotentialProblemsUseCase", () => {
         resolved_findings: [],
       });
 
-      await useCase.invoke(param);
+      await invokeUseCase(useCase, param);
 
       expect(mockAddComment).toHaveBeenCalledTimes(1);
       expect(mockAddComment.mock.calls[0][3]).toContain("Not ignored");
@@ -1233,7 +1382,7 @@ describe("DetectPotentialProblemsUseCase", () => {
         resolved_findings: [],
       });
 
-      await useCase.invoke(baseParam());
+      await invokeUseCase(useCase, baseParam());
 
       expect(mockAddComment).toHaveBeenCalled();
       const bodies = mockAddComment.mock.calls.map((c) => c[3] as string);
@@ -1271,7 +1420,7 @@ describe("DetectPotentialProblemsUseCase", () => {
         resolved_findings: [],
       });
 
-      await useCase.invoke(baseParam());
+      await invokeUseCase(useCase, baseParam());
 
       expect(mockAddComment).toHaveBeenCalledTimes(2);
       const bodies = mockAddComment.mock.calls.map((call) => call[3] as string);

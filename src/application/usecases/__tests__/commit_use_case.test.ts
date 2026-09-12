@@ -40,11 +40,20 @@ jest.mock('../steps/commit/detect_potential_problems_use_case', () => ({
 
 function minimalExecution(overrides: Record<string, unknown> = {}): Execution {
   return {
+    owner: 'org',
+    repo: 'repo',
+    isPullRequest: false,
+    eventName: 'push',
+    tokenUser: 'bot',
+    tokens: { token: 'token' },
     commit: {
       commits: [{ id: 'c1', message: 'msg' }],
       branch: 'feature/123',
     },
     issueNumber: 123,
+    currentConfiguration: { parentBranch: 'develop' },
+    branches: { development: 'develop' },
+    pullRequest: { number: -1, head: '', action: '' },
     ai: new Ai('', 'model', false, [], false, 'low', 20),
     ...overrides,
   } as unknown as Execution;
@@ -96,7 +105,10 @@ describe('CommitUseCase', () => {
     expect(mockNotifyInvoke).toHaveBeenCalledWith(param);
     expect(mockCheckChangesInvoke).toHaveBeenCalledWith(param);
     expect(mockCheckProgressInvoke).toHaveBeenCalledWith(param);
-    expect(mockDetectProblemsInvoke).toHaveBeenCalledWith(param);
+    expect(mockDetectProblemsInvoke).toHaveBeenCalledWith(expect.objectContaining({
+      repository: { owner: 'org', name: 'repo' },
+      target: expect.objectContaining({ issueNumber: 123, isPullRequest: false }),
+    }));
     expect(results).toHaveLength(2);
     expect(results[0].id).toBe('n');
     expect(results[1].id).toBe('c');

@@ -1,12 +1,9 @@
 import { isAgentConfigurationReady } from '../../../../data/model/agent';
-import type { Execution } from '../../../../data/model/execution';
 import { Result } from '../../../../data/model/result';
 import type { FindingsQueryPort } from '../../../ports/agent_findings_ports';
 import { getTaskEmoji } from '../../../../utils/task_emoji';
 import { logDebugInfo, logError, logInfo } from '../../../ports/logging_ports';
-import type { BugbotContextPorts } from '../../../ports/bugbot_context_ports';
-import type { BugbotFindingPublicationPorts } from '../../../ports/bugbot_finding_publication_ports';
-import type { BugbotFindingResolutionPorts } from '../../../ports/bugbot_finding_resolution_ports';
+import type { BugbotScmPorts } from '../../../ports/bugbot_scm_ports';
 import { PullRequestReviewOperationError } from '../../../ports/pull_request_review_errors';
 import { loadBugbotContext } from './bugbot/load_bugbot_context_use_case';
 import {
@@ -28,15 +25,12 @@ import {
 import type { BugbotFinding } from '../../../../domain/bugbot/finding';
 import { ApplicationError } from '../../../errors/application_error';
 import {
-    projectBugbotReviewOperationContext,
     type BugbotReviewOperationContext,
 } from './bugbot/bugbot_review_operation_context';
 
 export interface DetectPotentialProblemsWorkflowDependencies {
     aiRepository: FindingsQueryPort;
-    contextPorts: BugbotContextPorts;
-    publicationPorts: BugbotFindingPublicationPorts;
-    resolutionPorts: BugbotFindingResolutionPorts;
+    scm: BugbotScmPorts;
     telemetryPort?: BugbotTelemetryPort;
 }
 
@@ -44,11 +38,10 @@ const TASK_ID = 'DetectPotentialProblemsUseCase';
 
 /** Coordinates Bugbot context, analysis and finding publication behind application ports. */
 export async function runDetectPotentialProblemsWorkflow(
-    param: Execution,
+    reviewContext: BugbotReviewOperationContext,
     dependencies: DetectPotentialProblemsWorkflowDependencies,
 ): Promise<Result[]> {
     const workflowStartedAt = Date.now();
-    const reviewContext = projectBugbotReviewOperationContext(param);
     const telemetry = new BugbotReviewTelemetry(reviewContext);
     const publishTelemetry = async (outcome: BugbotReviewOutcome, category?: string) => {
         const snapshot = telemetry.snapshot(outcome, category);
@@ -87,12 +80,8 @@ export async function runDetectPotentialProblemsWorkflow(
             return [];
         }
         const contextRequest = projectBugbotContextRequest(reviewContext, contextOptions);
-        const contextReader = dependencies.contextPorts.loader.bind({
-            owner: param.owner,
-            repository: param.repo,
-            token: param.tokens.token,
-        });
-        const context = await telemetry.measure('context', () => loadBugbotContext(contextRequest, contextReader));
+        const context = await telemetry.measure('context', () =>
+            loadBugbotContext(contextRequest, dependencies.scm.context));
         const eventHeadSha = reviewContext.trigger.expectedHeadSha;
         if (isLoadedBugbotRevisionSuperseded(context, eventHeadSha)) {
             return await complete(supersededResult(context.prContext?.prHeadSha, eventHeadSha), 'superseded');
@@ -102,7 +91,7 @@ export async function runDetectPotentialProblemsWorkflow(
             const analysisError = new ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.');
             const presentation = reviewContext.analysis.reviewConfiguration.publicationMode === 'publish'
                 ? await telemetry.measure('projection', () => reconcileReviewState({
-                    execution: param,
+                    operation: reviewContext,
                     loadedContext: context,
                     activeFindings: [],
                     mutationErrors: [analysisError],
@@ -113,26 +102,27 @@ export async function runDetectPotentialProblemsWorkflow(
             return await complete(noAnalysisResult(presentation), 'failed');
         }
         telemetry.observePrepared(prepared);
-        if (await telemetry.measure('freshness', () => hasNewerBugbotRevision(param, context, dependencies.contextPorts))) {
+        if (await telemetry.measure('freshness', () =>
+            hasNewerBugbotRevision(context, dependencies.scm.context))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
         if (reviewContext.analysis.reviewConfiguration.publicationMode === 'dry-run') {
             return await complete(dryRunResult(prepared, context), 'dry-run');
         }
         const resolutionErrors = await telemetry.measure('publication', () => applyDetectedFindings(
-            param,
+            reviewContext,
             context,
             prepared,
-            dependencies.publicationPorts,
-            dependencies.resolutionPorts,
+            dependencies.scm.publication,
+            dependencies.scm.resolution,
         ));
         if (await telemetry.measure('post-publication-freshness', () =>
-            hasNewerBugbotRevision(param, context, dependencies.contextPorts))) {
+            hasNewerBugbotRevision(context, dependencies.scm.context))) {
             return await complete(supersededResult(context.prContext?.prHeadSha), 'superseded');
         }
         const presentation = await telemetry.measure('projection', () =>
             reconcileReviewState({
-                execution: param,
+                operation: reviewContext,
                 loadedContext: context,
                 activeFindings: prepared.activeFindings ?? prepared.toPublish,
                 expectedPublishedFindings: prepared.toPublish,
@@ -349,7 +339,7 @@ function toBugbotPresentationError(error: Error): ApplicationError {
 }
 
 async function reconcileReviewState(input: {
-    readonly execution: Execution;
+    readonly operation: BugbotReviewOperationContext;
     readonly loadedContext: BugbotContext;
     readonly activeFindings: readonly BugbotFinding[];
     readonly expectedPublishedFindings?: readonly BugbotFinding[];
@@ -361,34 +351,23 @@ async function reconcileReviewState(input: {
     if (!pullRequestNumber || !analyzedHeadSha) return undefined;
     return reconcileBugbotReviewState({
         target: {
-            owner: input.execution.owner,
-            repository: input.execution.repo,
             pullRequestNumber,
-            ...(input.execution.issueNumber > 0
-                ? { linkedIssueNumber: input.execution.issueNumber }
+            ...(input.operation.target.issueNumber > 0
+                ? { linkedIssueNumber: input.operation.target.issueNumber }
                 : {}),
             analyzedHeadSha,
-            ...(input.execution.tokenUser
-                ? { trustedAuthorLogin: input.execution.tokenUser }
+            ...(input.operation.trustedAuthorLogin
+                ? { trustedAuthorLogin: input.operation.trustedAuthorLogin }
                 : {}),
-            locale: input.execution.locale?.pullRequest ?? 'en-US',
+            locale: input.operation.locale.pullRequest,
         },
-        credential: { token: input.execution.tokens.token },
         loadedContext: input.loadedContext,
         activeFindings: input.activeFindings,
         ...(input.expectedPublishedFindings
             ? { expectedPublishedFindings: input.expectedPublishedFindings }
             : {}),
         ...(input.mutationErrors ? { mutationErrors: input.mutationErrors } : {}),
-        snapshotPorts: {
-            issueComments: input.dependencies.contextPorts.issue,
-            pullRequest: input.dependencies.contextPorts.pullRequest,
-            reviews: input.dependencies.contextPorts.reviewState,
-            navigation: input.dependencies.contextPorts.navigation,
-        },
-        presentationPorts: {
-            comments: input.dependencies.publicationPorts.issueComments,
-            reviews: input.dependencies.publicationPorts.reviewState,
-        },
+        snapshotPorts: input.dependencies.scm.reconciliation.snapshot,
+        presentationPorts: input.dependencies.scm.reconciliation.presentation,
     });
 }

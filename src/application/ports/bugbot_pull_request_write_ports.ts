@@ -1,4 +1,6 @@
 import type {
+  PullRequestReviewCommentDraft,
+  PullRequestReviewReference,
   PullRequestReviewCommentCommandPort,
   PullRequestReviewThreadCommandPort,
 } from "./pull_request_review_comment_ports";
@@ -8,3 +10,17 @@ export interface BugbotPullRequestWritePort
   extends
     PullRequestReviewCommentCommandPort,
     Pick<PullRequestReviewThreadCommandPort, "unresolvePullRequestReviewThread"> {}
+
+export interface BoundBugbotPullRequestWritePort {
+  createReviewWithComments(
+    pullRequestNumber: number,
+    commitId: string,
+    body: string,
+    comments: PullRequestReviewCommentDraft[],
+  ): Promise<PullRequestReviewReference | undefined>;
+  updatePullRequestReviewComment(commentIdentity: string, body: string): Promise<void>;
+  unresolvePullRequestReviewThread(
+    pullRequestNumber: number,
+    commentIdentity: string,
+  ): Promise<void>;
+}

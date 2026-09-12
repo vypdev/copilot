@@ -21,8 +21,6 @@ import {
 const service = new BugbotReviewService(findingsPort, scmGateway);
 
 const request: BugbotReviewRequest = {
-  repository: { owner: 'acme', name: 'checkout' },
-  credential: { token: process.env.GITHUB_TOKEN! },
   target: {
     kind: 'pull-request',
     number: 42,
@@ -33,7 +31,7 @@ const request: BugbotReviewRequest = {
     provider: 'codex',
     modelProvider: 'openai',
     model: 'gpt-5.6-luna',
-    command: 'codex exec -',
+    executable: 'codex',
   },
   configuration: { publicationMode: 'dry-run', effort: 'high' },
 };
@@ -60,8 +58,12 @@ includes a token, provider payload, raw cause, stack, prompt, command arguments,
 or local path.
 
 The API intentionally has no overload accepting the internal runtime aggregate
-and does not export `Execution` or `Ai`. Callers provide request facts and
-capability ports; internal orchestration remains package-owned.
+and does not export `Execution` or `Ai`. It also never accepts a token in the
+request. Callers expose the bound `{ owner, name }` repository identity on the
+`BugbotScmGateway` and keep its credentials closed inside the adapter before
+constructing the service; review workflows
+receive only capability methods. Internal orchestration and authority remain
+package-owned.
 
 See [Application error reference](/security-operations/operations/error-reference)
 for the stable code meanings and operator actions.

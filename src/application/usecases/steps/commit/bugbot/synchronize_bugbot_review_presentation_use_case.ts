@@ -1,12 +1,10 @@
 import type {
   BugbotPresentationReport,
-  BugbotReconciliationCredential,
   BugbotReconciliationPlan,
   BugbotReconciliationSnapshot,
   BugbotReconciliationTarget,
 } from '../../../../contracts/bugbot_reconciliation';
-import type { BugbotIssueCommentWritePort } from '../../../../ports/bugbot_issue_write_ports';
-import type { PullRequestReviewSummaryUpdatePort } from '../../../../ports/pull_request_review_comment_ports';
+import type { BugbotPresentationMutationPorts } from '../../../../ports/bugbot_reconciliation_ports';
 import type { BugbotReviewNavigation } from '../../../../ports/bugbot_review_navigation_ports';
 import {
   isBugbotStatusComment,
@@ -23,10 +21,7 @@ import { buildBugbotReviewProjection } from '../../../../../domain/bugbot/review
 const MAX_REVIEW_UPDATES_PER_RUN = 20;
 const REVIEW_UPDATE_CONCURRENCY = 4;
 
-export interface BugbotPresentationMutationPorts {
-  readonly comments: BugbotIssueCommentWritePort;
-  readonly reviews: PullRequestReviewSummaryUpdatePort;
-}
+export type { BugbotPresentationMutationPorts } from '../../../../ports/bugbot_reconciliation_ports';
 
 interface PlannedReviewUpdate {
   readonly ownedReview: OwnedBugbotReview;
@@ -35,7 +30,6 @@ interface PlannedReviewUpdate {
 
 export interface BugbotPresentationSynchronizationInput {
   readonly target: BugbotReconciliationTarget;
-  readonly credential: BugbotReconciliationCredential;
   readonly snapshot: BugbotReconciliationSnapshot;
   readonly plan: BugbotReconciliationPlan;
   readonly ports: BugbotPresentationMutationPorts;
@@ -62,13 +56,10 @@ export async function synchronizeBugbotReviewPresentation(
     selectedReviewUpdates,
     REVIEW_UPDATE_CONCURRENCY,
     async ({ ownedReview, body }) => {
-      await input.ports.reviews.updatePullRequestReview(
-        input.target.owner,
-        input.target.repository,
+      await input.ports.updatePullRequestReview(
         input.target.pullRequestNumber,
         ownedReview.review.identity,
         body,
-        input.credential.token,
       );
     },
   );
@@ -157,22 +148,16 @@ async function synchronizeStatusCard(
   try {
     if (!canonical) {
       await input.ports.comments.addComment(
-        input.target.owner,
-        input.target.repository,
         input.target.pullRequestNumber,
         statusBody,
-        input.credential.token,
         { commitSha: input.snapshot.verifiedHeadSha },
       );
       operation = 'created';
     } else if (!canonical.body?.startsWith(statusBody)) {
       await input.ports.comments.updateComment(
-        input.target.owner,
-        input.target.repository,
         input.target.pullRequestNumber,
         canonical.id,
         statusBody,
-        input.credential.token,
         { commitSha: input.snapshot.verifiedHeadSha },
       );
       operation = 'updated';
@@ -186,8 +171,6 @@ async function synchronizeStatusCard(
     REVIEW_UPDATE_CONCURRENCY,
     async (duplicate) => {
       await input.ports.comments.updateComment(
-        input.target.owner,
-        input.target.repository,
         input.target.pullRequestNumber,
         duplicate.id,
         [
@@ -195,7 +178,6 @@ async function synchronizeStatusCard(
           '',
           `This duplicate status card is no longer current. [Use the canonical PR status](${navigation.pullRequestUrl}).`,
         ].join('\n'),
-        input.credential.token,
         { commitSha: input.snapshot.verifiedHeadSha },
       );
     },

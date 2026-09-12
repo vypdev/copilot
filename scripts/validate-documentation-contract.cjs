@@ -246,7 +246,8 @@ requireText('bugbot/detection.mdx', 'One stable **Bugbot status** comment', 'can
 requireText('bugbot/detection.mdx', 'the review snapshot is history', 'historical Bugbot review semantics');
 requireText('bugbot/detection.mdx', 'including overflow', 'complete Bugbot aggregate counts');
 requireText('bugbot/how-it-works.mdx', 'same HTTPS server and repository', 'safe provider navigation boundary');
-requireText('bugbot/quality-observability.mdx', 'Context adapters must also provide trusted PR/commit/run navigation', 'public Bugbot navigation port');
+requireText('bugbot/quality-observability.mdx', 'gateway binds provider credentials before service', 'bound public Bugbot gateway');
+requireText('bugbot/quality-observability.mdx', 'provides trusted PR/commit/run navigation', 'public Bugbot navigation capability');
 requireText('issues/deployment-orchestration.mdx', '**Allowed actions** to permit direct', 'npm direct-publish prerequisite');
 requireText('issues/deployment-orchestration.mdx', '`NPM_VISIBILITY_POLL_INTERVAL_SECONDS`', 'npm polling variable');
 requireText('issues/deployment-orchestration.mdx', '`NPM_VISIBILITY_TIMEOUT_SECONDS`', 'npm timeout variable');
