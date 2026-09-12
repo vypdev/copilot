@@ -42,7 +42,8 @@ export function projectBugbotContextRequest(
     headRef,
     ...(context.trigger.expectedHeadSha ? { expectedHeadSha: context.trigger.expectedHeadSha } : {}),
     ...(eventPullRequestNumber ? { eventPullRequestNumber } : {}),
-    pullRequestRequired: options?.pullRequestRequired ?? eventPullRequestNumber !== undefined,
+    pullRequestRequired: context.target.isPullRequest
+      || (options?.pullRequestRequired ?? eventPullRequestNumber !== undefined),
   };
   return {
     target,

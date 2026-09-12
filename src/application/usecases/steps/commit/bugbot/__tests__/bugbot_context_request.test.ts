@@ -56,6 +56,21 @@ describe('Bugbot context request projection', () => {
     expect(JSON.stringify(request)).not.toContain('token');
   });
 
+  it('keeps a malformed PR target mandatory even when its number is invalid', () => {
+    const request = projectBugbotContextRequest(reviewContext({
+      target: {
+        ...reviewContext().target,
+        isPullRequest: true,
+        pullRequestNumber: 0,
+        headBranch: 'feature/pr',
+      },
+      trigger: { kind: 'pull_request', headOwner: 'acme' },
+    }), { pullRequestRequired: false });
+
+    expect(request.target).not.toHaveProperty('eventPullRequestNumber');
+    expect(request.target.pullRequestRequired).toBe(true);
+  });
+
   it('applies explicit options and omits invalid optional identities', () => {
     const request = projectBugbotContextRequest(reviewContext({
       repository: { owner: 'acme', name: 'repo' },

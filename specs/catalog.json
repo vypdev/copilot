@@ -422,6 +422,8 @@
         "src/application/policies/bounded_concurrency_policy.ts",
         "src/application/policies/bugbot_resolution_eligibility_policy.ts",
         "src/application/usecases/steps/commit/bugbot/schema.ts",
+        "src/application/usecases/steps/commit/bugbot/bugbot_review_operation_context.ts",
+        "src/application/usecases/steps/commit/bugbot/bugbot_context_request.ts",
         "src/application/usecases/steps/commit/bugbot/prepare_bugbot_findings_policy.ts",
         "src/application/usecases/steps/commit/bugbot/load_bugbot_context_use_case.ts",
         "src/application/usecases/steps/commit/bugbot/bugbot_previous_findings_context.ts",
@@ -433,6 +435,8 @@
       ],
       "tests": [
         "src/application/usecases/steps/commit/__tests__/bugbot_review_lifecycle.e2e.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_review_operation_context.test.ts",
+        "src/application/usecases/steps/commit/bugbot/__tests__/bugbot_context_request.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/load_bugbot_context_use_case.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/schema.test.ts",
         "src/application/usecases/steps/commit/bugbot/__tests__/prepare_bugbot_findings.test.ts",
