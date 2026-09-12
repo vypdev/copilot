@@ -6,6 +6,7 @@ import { readLifecycleExternalEvidence, resolveLifecycleState } from '../../poli
 import { resolveLifecycleWaitingState, type LifecycleWaitingStateDecision } from '../../policies/lifecycle_waiting_state_policy';
 import type { IssueLabelsPort, PullRequestHeadShaPort } from '../../ports/issue_management_ports';
 import { logDebugInfo, logError } from '../../ports/logging_ports';
+import { ApplicationError } from '../../errors/application_error';
 
 export interface SynchronizeLifecycleStateParam {
     execution: LifecycleSynchronizationExecution;
@@ -119,7 +120,7 @@ export class SynchronizeLifecycleStateUseCase {
         } catch (error) {
             const message = `Unable to synchronize Copilot lifecycle state: ${error instanceof Error ? error.message : String(error)}`;
             logError(message);
-            return [new Result({ id: this.taskId, success: false, executed: true, errors: [message] })];
+            return [new Result({ id: this.taskId, success: false, executed: true, errors: [new ApplicationError('provider.unavailable', message, { cause: error })] })];
         }
     }
 

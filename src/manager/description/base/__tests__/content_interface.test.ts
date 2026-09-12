@@ -75,7 +75,10 @@ describe('ContentInterface', () => {
 
         expect(() => handler.getContent(desc)).toThrow('indexOf failed');
         expect(logError).toHaveBeenCalledWith(
-          expect.stringMatching(/Error reading issue configuration: Error: indexOf failed/),
+          expect.objectContaining({
+            code: 'configuration.invalid',
+            message: 'Unable to read issue configuration.',
+          }),
         );
 
         (String.prototype.indexOf as jest.Mock).mockRestore();
@@ -130,7 +133,10 @@ describe('ContentInterface', () => {
 
         expect(result).toBeUndefined();
         expect(logError).toHaveBeenCalledWith(
-          expect.stringMatching(/Error updating issue description: Error: indexOf failed/),
+          expect.objectContaining({
+            code: 'provider.unavailable',
+            message: 'Unable to update the issue description.',
+          }),
         );
 
         (String.prototype.indexOf as jest.Mock).mockRestore();

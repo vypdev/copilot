@@ -57,7 +57,7 @@ export function registerDetectPotentialProblemsCommand(program: Command): void {
               success: result.success,
               executed: result.executed,
               steps: result.steps,
-              errors: result.errors.map((error) => error.message),
+              errors: result.errors.map((error) => error.toJSON()),
               payload: result.payload,
             })),
           }, null, 2));

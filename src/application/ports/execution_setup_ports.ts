@@ -6,7 +6,3 @@ export interface ExecutionIssueSetupPort {
     getDescription(owner: string, repo: string, issueNumber: number, token: string): Promise<string | undefined>;
     updateDescription(owner: string, repo: string, issueNumber: number, description: string, token: string): Promise<void>;
 }
-
-export interface ExecutionOrganizationSetupPort {
-    getUserFromToken(token: string): Promise<string | undefined>;
-}

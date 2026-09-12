@@ -1,4 +1,5 @@
 import { type BugbotFindingState, type BugbotFindingStateCounts } from './review_state';
+import type { BugbotContextCoverage } from './context';
 export type BugbotProjectionOutcome = 'complete' | 'partial' | 'failed' | 'superseded' | 'dry-run';
 export interface BugbotProjectedFinding {
     readonly id: string;
@@ -16,6 +17,7 @@ export interface BugbotReviewProjection {
     readonly counts: Readonly<BugbotFindingStateCounts>;
     readonly actionableCount: number;
     readonly outcome: BugbotProjectionOutcome;
+    readonly coverage: BugbotContextCoverage;
     readonly errors: readonly string[];
     readonly digest: string;
 }
@@ -25,6 +27,7 @@ export declare function buildBugbotReviewProjection(input: {
     verifiedHeadSha?: string;
     findings: readonly BugbotProjectedFinding[];
     errors?: readonly string[];
+    coverage: BugbotContextCoverage;
     superseded?: boolean;
     dryRun?: boolean;
 }): BugbotReviewProjection;

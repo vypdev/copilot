@@ -242,6 +242,11 @@
           "icon": "server"
         },
         {
+          "title": "Application error reference",
+          "href": "/security-operations/operations/error-reference",
+          "icon": "triangle-exclamation"
+        },
+        {
           "title": "Troubleshooting",
           "href": "/security-operations/operations/troubleshooting",
           "icon": "wrench"
@@ -531,6 +536,11 @@
           "title": "Configuration",
           "href": "/bugbot/configuration",
           "icon": "gear"
+        },
+        {
+          "title": "Programmatic API",
+          "href": "/bugbot/programmatic-api",
+          "icon": "code"
         },
         {
           "title": "Quality and observability",

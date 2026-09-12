@@ -11,7 +11,6 @@ import { isEnabledInput } from './input_boolean_policy';
 import { buildGithubActionExecution, readGithubActionSingleAction } from './github_action_execution';
 import { buildGithubActionEventInputs } from './github_event_inputs';
 import { mainRun } from './common_action';
-import { waitForPreviousWorkflowRuns, WorkflowQueueFailureError, WORKFLOW_QUEUE_FAILURE_MESSAGE } from './main_run_lifecycle';
 import { INPUT_KEYS } from '../application/contracts/input_keys';
 import { logDebugInfo, logError, logInfo } from '../utils/logger';
 import { createGithubExecutionAdmissionUseCase } from '../infrastructure/composition/github_execution_admission_composition_root';
@@ -22,13 +21,11 @@ import { createSynchronizeAgentActivityUseCase } from '../infrastructure/composi
 import { readGithubActionAiInputs } from './github_action_ai_inputs';
 import { activeAgentTasks } from '../application/policies/agent_task_activation_policy';
 import { createActorAuthorizationRepository } from '../infrastructure/composition/actor_authorization_composition_root';
+import { runAtApplicationErrorBoundary } from '../application/errors/application_error_context';
+import { toApplicationError } from '../application/errors/application_error';
+import { renderApplicationErrorText } from '../application/policies/application_error_presentation_policy';
 
 export async function runGitHubAction(): Promise<void> {
-    if (isEnabledInput(getGithubActionInput(INPUT_KEYS.QUEUE_GATE_ONLY))) {
-        await runQueueGateOnly();
-        return;
-    }
-
     const eventInputs = buildGithubActionEventInputs({
         payload: github.context.payload as Record<string, unknown>,
         eventName: github.context.eventName,
@@ -96,6 +93,7 @@ export async function runGitHubAction(): Promise<void> {
         execution,
         projectBoard.command,
         new GitCliRepository(token),
+        'github-workflow',
         createSynchronizeLifecycleStateUseCase(),
         createSynchronizeAgentActivityUseCase(),
     );
@@ -110,22 +108,6 @@ export async function runGitHubAction(): Promise<void> {
     );
 }
 
-async function runQueueGateOnly(): Promise<void> {
-    try {
-        const eventInputs = buildGithubActionEventInputs({
-            payload: github.context.payload as Record<string, unknown>,
-            eventName: github.context.eventName,
-            actor: github.context.actor,
-            repo: github.context.repo,
-        });
-        const token = getGithubActionInput(INPUT_KEYS.TOKEN, { required: true });
-        await waitForPreviousWorkflowRuns(token, eventInputs.repo);
-    } catch {
-        logError(WORKFLOW_QUEUE_FAILURE_MESSAGE);
-        throw new WorkflowQueueFailureError();
-    }
-}
-
 /**
  * Runs the action entrypoint without forcing a successful process exit.
  *
@@ -137,12 +119,15 @@ async function runQueueGateOnly(): Promise<void> {
 export async function runGitHubActionEntry(
     run: () => Promise<void> = runGitHubAction,
 ): Promise<void> {
-    try {
-        await run();
-    } catch (error: unknown) {
-        logError(error);
-        core.setFailed(error instanceof Error ? error.message : String(error));
-    }
+    return runAtApplicationErrorBoundary(async () => {
+        try {
+            await run();
+        } catch (cause: unknown) {
+            const semanticError = toApplicationError(cause, 'workflow.failed', 'GitHub Action execution failed.');
+            logError(semanticError);
+            core.setFailed(renderApplicationErrorText(semanticError));
+        }
+    });
 }
 
 // Only auto-run when executed as the action entry (not when imported by tests)

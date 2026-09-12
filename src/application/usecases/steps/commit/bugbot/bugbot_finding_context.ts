@@ -14,12 +14,13 @@ import {
 } from "../../../../../domain/bugbot/finding";
 import { githubUsersMatch } from '../../../../../domain/github_user_policy';
 import { isHumanResolver } from '../../../../../domain/bugbot/review_state';
-import { renderUntrustedField } from '../../../../../domain/security/untrusted_content';
+import type { PreviousBugbotFinding } from './bugbot_previous_findings_context';
 
 export interface BugbotComment {
   id: number;
   body: string | null;
   user?: { login?: string };
+  createdAt?: string;
 }
 
 export interface ParsedBugbotFindingComments {
@@ -151,37 +152,6 @@ function mergeFindingContexts(target: ExistingByFindingId, source: ExistingByFin
   }
 }
 
-export interface PreviousBugbotFinding {
-  id: string;
-  fullBody: string;
-}
-
-/**
- * Prompt budgets are an application safety boundary. A repository can contain
- * many historical findings, and sending every full comment to a model would
- * create unbounded cost and reduce the quality of the current analysis.
- */
-export const MAX_PREVIOUS_FINDINGS = 100;
-export const MAX_PREVIOUS_FINDINGS_BLOCK_LENGTH = 48_000;
-
-export function limitPreviousBugbotFindings(
-  previousFindings: readonly PreviousBugbotFinding[],
-  maximumLength: number = MAX_PREVIOUS_FINDINGS_BLOCK_LENGTH,
-): PreviousBugbotFinding[] {
-  const selected: PreviousBugbotFinding[] = [];
-  let totalLength = 0;
-
-  for (const finding of previousFindings) {
-    if (selected.length >= MAX_PREVIOUS_FINDINGS) break;
-    const itemLength = formatPreviousFinding(finding).length;
-    if (totalLength + itemLength > maximumLength) break;
-    selected.push(finding);
-    totalLength += itemLength;
-  }
-
-  return selected;
-}
-
 export function collectPreviousBugbotFindings(
   issueComments: BugbotComment[],
   existingByFindingId: ExistingByFindingId,
@@ -189,11 +159,12 @@ export function collectPreviousBugbotFindings(
 ): PreviousBugbotFinding[] {
   return Object.entries(existingByFindingId).flatMap(([findingId, data]) => {
     if (isExistingFindingFullyResolved(data)) return [];
+    const issueComment = data.issue != null && !data.issue.resolved
+      ? issueComments.find((comment) => comment.id === data.issue?.commentId)
+      : undefined;
     const issueBody =
-      data.issue != null && !data.issue.resolved
-        ? (issueComments.find(
-            (comment) => comment.id === data.issue?.commentId,
-          )?.body ?? null)
+      issueComment != null
+        ? (issueComment.body ?? null)
         : null;
     const pullRequestBody =
       data.pullRequest != null && (!data.pullRequest.resolved || data.pullRequest.verificationRequired === true)
@@ -205,43 +176,10 @@ export function collectPreviousBugbotFindings(
           {
             id: findingId,
             fullBody: truncateFindingBody(rawBody, MAX_FINDING_BODY_LENGTH),
+            ...(issueComment?.createdAt ? { createdAt: issueComment.createdAt } : {}),
+            ...(issueComment ? { providerId: `issue:${issueComment.id}` } : { providerId: `pull-request:${findingId}` }),
           },
         ]
       : [];
   });
-}
-
-export function buildPreviousFindingsBlock(
-  previousFindings: PreviousBugbotFinding[],
-): string {
-  if (previousFindings.length === 0) return "";
-  const prefix = `
-**Previously reported issues (not yet marked resolved).** For each one we show the exact comment we posted (title, description, location, suggestion, and a hidden marker with the finding id at the end).
-
-`;
-  const suffix = `
-**Your task 2:** For each finding above, analyze the current code and decide:
-- If the problem **still exists** (same code or same issue present): do **not** include its id in \`resolved_finding_ids\`.
-- If the problem **no longer applies** (e.g. that code was removed or refactored away): include its id in \`resolved_finding_ids\`.
-- If the problem **has been fixed** (code was changed and the issue is resolved): include its id in \`resolved_finding_ids\`.
-
-Return in \`resolved_finding_ids\` only the ids from the list above that are now fixed or no longer apply. Use the exact id shown in each "Finding id" line.`;
-  // Reserve room for the dynamic omission notice so the complete prompt block,
-  // not merely the finding bodies, is bounded by the public context contract.
-  const omissionNoticeBudget = 256;
-  const findingsBudget = Math.max(
-    0,
-    MAX_PREVIOUS_FINDINGS_BLOCK_LENGTH - prefix.length - suffix.length - omissionNoticeBudget,
-  );
-  const boundedFindings = limitPreviousBugbotFindings(previousFindings, findingsBudget);
-  const items = boundedFindings.map(formatPreviousFinding).join("\n");
-  const omittedCount = previousFindings.length - boundedFindings.length;
-  const omissionNote = omittedCount > 0
-    ? `\n\n**${omittedCount} older finding(s) were omitted from this prompt because of the context budget. Do not resolve an omitted finding in this response.**`
-    : "";
-  return `${prefix}${items}${omissionNote}${suffix}`;
-}
-
-function formatPreviousFinding(finding: PreviousBugbotFinding): string {
-  return `---\n**Finding id (use this exact id in resolved_finding_ids if resolved/no longer applies):** \`${finding.id.replace(/`/g, "\\`")}\`\n\n**Full comment as posted (including metadata at the end):**\n${renderUntrustedField(finding.fullBody, `github.previous-finding.${finding.id}`, MAX_FINDING_BODY_LENGTH)}\n`;
 }

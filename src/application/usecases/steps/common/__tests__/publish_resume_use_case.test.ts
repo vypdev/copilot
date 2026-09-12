@@ -1,5 +1,6 @@
 import { Result } from '../../../../../data/model/result';
 import { PublishResultUseCase } from '../publish_resume_use_case';
+import { ApplicationError } from '../../../../errors/application_error';
 
 const mockGetAccumulatedLogsAsText = jest.fn(() => '');
 jest.mock('../../../../ports/logging_ports', () => ({
@@ -126,7 +127,7 @@ describe('PublishResultUseCase', () => {
     const param = baseParam({
       isIssue: true,
       currentConfiguration: {
-        results: [new Result({ id: 'x', success: false, executed: true, errors: ['Agent authentication failed'] })],
+        results: [new Result({ id: 'x', success: false, executed: true, errors: [new ApplicationError('authorization.credential-invalid', 'Agent authentication failed')] })],
       },
     });
 
@@ -345,7 +346,7 @@ describe('PublishResultUseCase', () => {
       isIssue: true,
       currentConfiguration: {
         results: [
-          new Result({ id: 'a', success: true, executed: true, steps: ['Step'], errors: ['Something failed'] }),
+          new Result({ id: 'a', success: true, executed: true, steps: ['Step'], errors: [new ApplicationError('workflow.failed', 'Something failed')] }),
         ],
       },
     });

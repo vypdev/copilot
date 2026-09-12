@@ -3,6 +3,7 @@ import { Ai } from '../../data/model/ai';
 import { Result } from '../../data/model/result';
 import { finishGithubAction } from '../github_action_completion';
 import * as core from '@actions/core';
+import { ApplicationError } from '../../application/errors/application_error';
 
 jest.mock('@actions/core', () => ({ setOutput: jest.fn(), setFailed: jest.fn() }));
 
@@ -227,12 +228,14 @@ describe('finishGithubAction', () => {
             id: 'AgentBackedFeature',
             success: false,
             executed: true,
-            errors: ['Agent execution failed.'],
+            errors: [new ApplicationError('agent.failed', 'Agent execution failed.')],
         });
 
         await finishGithubAction(execution(), [failed], {} as never, {} as never);
 
-        expect(core.setFailed).toHaveBeenCalledWith('Agent execution failed.');
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Cause (agent.failed): Agent execution failed.'));
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringContaining('Action: Inspect the sanitized agent status'));
+        expect(core.setFailed).toHaveBeenCalledWith(expect.stringMatching(/Reference: [0-9a-f-]{36}/));
     });
 
     it('always fails unknown finding state and applies the configured policy to verification-required', async () => {

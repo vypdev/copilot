@@ -11,6 +11,7 @@ import {
     resolveResultPublicationIssueNumber,
     resolveResultPublicationPresentation,
 } from '../../../policies/result_publication_policy';
+import { toApplicationError } from '../../../errors/application_error';
 
 export async function runPublishResume(
     param: Execution,
@@ -42,13 +43,14 @@ export async function runPublishResume(
             param.tokens.token,
         );
     } catch (error) {
-        logError(error);
+        const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to publish the workflow summary.');
+        logError(semanticError);
         param.currentConfiguration.results.push(new Result({
             id: taskId,
             success: false,
             executed: true,
             steps: ['Tried to publish the resume, but there was a problem.'],
-            errors: [error],
+            errors: [semanticError],
         }));
     }
 }

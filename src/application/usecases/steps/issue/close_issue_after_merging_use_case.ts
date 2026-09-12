@@ -4,6 +4,7 @@ import type { IssueClosurePort } from "../../../../application/ports/issue_lifec
 import { logDebugInfo, logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
+import { toApplicationError } from "../../../errors/application_error";
 
 export class CloseIssueAfterMergingUseCase implements ParamUseCase<Execution, Result[]> {
     taskId: string = 'CloseIssueAfterMergingUseCase';
@@ -61,7 +62,8 @@ export class CloseIssueAfterMergingUseCase implements ParamUseCase<Execution, Re
             }
 
         } catch (error) {
-            logError(`CloseIssueAfterMerging: failed to close issue #${param.issueNumber}.`, error instanceof Error ? { stack: (error as Error).stack } : undefined);
+            const semanticError = toApplicationError(error, 'provider.unavailable', `Unable to close issue #${param.issueNumber}.`);
+            logError(semanticError);
             result.push(
                 new Result({
                     id: this.taskId,
@@ -70,7 +72,7 @@ export class CloseIssueAfterMergingUseCase implements ParamUseCase<Execution, Re
                     steps: [
                         `Tried to close issue #${param.issueNumber}, but there was a problem.`,
                     ],
-                    errors: [error],
+                    errors: [semanticError],
                 })
             )
         }

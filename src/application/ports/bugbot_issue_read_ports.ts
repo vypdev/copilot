@@ -2,6 +2,7 @@ export interface BugbotIssueComment {
     id: number;
     body: string | null;
     user?: { login?: string };
+    createdAt?: string;
 }
 
 export interface BugbotIssueReadPort {

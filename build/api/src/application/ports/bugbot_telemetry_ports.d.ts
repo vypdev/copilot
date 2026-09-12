@@ -1,8 +1,10 @@
-export type BugbotReviewOutcome = 'completed' | 'no-findings' | 'dry-run' | 'superseded' | 'skipped' | 'failed';
+export type BugbotReviewOutcome = 'completed' | 'no-findings' | 'partial' | 'dry-run' | 'superseded' | 'skipped' | 'failed';
 export interface BugbotReviewTelemetrySnapshot {
     readonly schemaVersion: 1;
     readonly reviewId: string;
     readonly repository: string;
+    readonly repositoryId?: number;
+    readonly triggerKind: string;
     readonly pullRequestNumber?: number;
     readonly headSha?: string;
     readonly publicationMode: 'publish' | 'dry-run';
@@ -19,6 +21,22 @@ export interface BugbotReviewTelemetrySnapshot {
     readonly changedFiles: number;
     readonly changedLines: number;
     readonly rulesLoaded: number;
+    readonly contextSelectionReason?: "event" | "exact-head" | "none";
+    readonly contextCandidateBucket?: "0" | "1" | "2+";
+    readonly contextCoverageStatus?: "complete" | "partial";
+    readonly contextCoverage?: Readonly<Record<string, {
+        readonly status: "complete" | "partial";
+        readonly pagesFetched: number;
+        readonly itemsFetched: number;
+        readonly itemsRetained: number;
+        readonly omittedItems: number;
+        readonly truncatedItems: number;
+        readonly limitReached: boolean;
+        readonly providerLimitReached?: boolean;
+    }>>;
+    readonly contextLogicalProviderReads: number;
+    readonly contextRawProviderRequests: number;
+    readonly contextConcurrencyLimit: 2;
     readonly candidateFindings: number;
     readonly publishedFindings: number;
     readonly overflowFindings: number;

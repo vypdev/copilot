@@ -35,15 +35,15 @@ jobs:
           agent-model-provider: ${{ vars.AGENT_MODEL_PROVIDER || 'openai' }}
           agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
           agent-effort: ${{ vars.AGENT_EFFORT }}
-          agent-command: ${{ vars.AGENT_COMMAND }}
+          agent-executable: ${{ vars.AGENT_EXECUTABLE }}
           findings-provider: ${{ vars.FINDINGS_PROVIDER }}
           findings-model-provider: ${{ vars.FINDINGS_MODEL_PROVIDER }}
           findings-model: ${{ vars.FINDINGS_MODEL }}
           findings-effort: ${{ vars.FINDINGS_EFFORT }}
-          findings-command: ${{ vars.FINDINGS_COMMAND }}
+          findings-executable: ${{ vars.FINDINGS_EXECUTABLE }}
           fixer-provider: ${{ vars.FIXER_PROVIDER }}
           fixer-model-provider: ${{ vars.FIXER_MODEL_PROVIDER }}
           fixer-model: ${{ vars.FIXER_MODEL }}
           fixer-effort: ${{ vars.FIXER_EFFORT }}
-          fixer-command: ${{ vars.FIXER_COMMAND }}
+          fixer-executable: ${{ vars.FIXER_EXECUTABLE }}
           token: ${{ secrets.PAT }}

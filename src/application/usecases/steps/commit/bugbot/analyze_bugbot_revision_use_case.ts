@@ -10,6 +10,7 @@ import { prepareDetectedFindings } from './apply_detected_findings';
 import type { PreparedBugbotFindings } from './prepare_bugbot_findings';
 import { queryBugbotFindings } from './query_bugbot_findings';
 import type { BugbotReviewTelemetry } from './bugbot_review_telemetry';
+import { filterEligibleBugbotResolutionIds } from '../../../../policies/bugbot_resolution_eligibility_policy';
 
 export interface AnalyzeBugbotRevisionDependencies {
     readonly agent: FindingsQueryPort;
@@ -37,19 +38,16 @@ export async function analyzeBugbotRevision(
     const prepared = suppressDismissedFindings(execution, context, raw);
     return {
         ...prepared,
-        resolvedFindingIds: suppressDismissedResolutionClaims(context, reconcileResolvedFindingIds(
-            prepared.resolvedFindingIds,
+        resolvedFindingIds: filterEligibleBugbotResolutionIds(
+            reconcileResolvedFindingIds(
+                prepared.resolvedFindingIds,
+                context.existingByFindingId,
+                prepared.activeFindings ?? prepared.toPublish,
+            ),
+            context.eligibleResolutionIds,
             context.existingByFindingId,
-            prepared.activeFindings ?? prepared.toPublish,
-        )),
+        ),
     };
-}
-
-function suppressDismissedResolutionClaims(context: BugbotContext, resolvedFindingIds: ReadonlySet<string>): Set<string> {
-    return new Set([...resolvedFindingIds].filter((findingId) => {
-        const existing = context.existingByFindingId[findingId];
-        return existing?.issue?.resolution !== 'dismissed' && existing?.pullRequest?.resolution !== 'dismissed';
-    }));
 }
 
 function suppressDismissedFindings(

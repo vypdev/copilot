@@ -64,6 +64,54 @@ describe("PullRequestReviewThreadRepository", () => {
     });
   });
 
+  it('loads only the newest two review-thread pages and marks older state partial', async () => {
+    mockGraphql
+      .mockResolvedValueOnce({
+        repository: { pullRequest: { reviewThreads: {
+          nodes: [{ isResolved: false, comments: { nodes: [{ id: 'PRRC_NEW' }] } }],
+          pageInfo: { hasPreviousPage: true, startCursor: 'older' },
+        } } },
+      })
+      .mockResolvedValueOnce({
+        repository: { pullRequest: { reviewThreads: {
+          nodes: [{ isResolved: true, comments: { nodes: [{ id: 'PRRC_OLD' }] } }],
+          pageInfo: { hasPreviousPage: true, startCursor: 'oldest' },
+        } } },
+      });
+
+    const result = await repository.listBugbotPullRequestReviewThreadStatesBounded(
+      'owner', 'repo', 7, 'token',
+    );
+
+    expect(mockGraphql).toHaveBeenCalledTimes(2);
+    expect(mockGraphql.mock.calls[0][0]).toContain('reviewThreads(last: 100, before: $cursor)');
+    expect(mockGraphql.mock.calls[0][0]).toContain('comments(first: 1)');
+    expect(mockGraphql.mock.calls[1][1]).toEqual(expect.objectContaining({ cursor: 'older' }));
+    expect(result.states).toEqual({
+      PRRC_NEW: { resolved: false },
+      PRRC_OLD: { resolved: true },
+    });
+    expect(result.coverage).toEqual(expect.objectContaining({
+      source: 'review-threads',
+      status: 'partial',
+      pagesFetched: 2,
+      limitReached: true,
+      providerLimitReached: true,
+    }));
+  });
+
+  it('rejects bounded thread pagination without a required cursor', async () => {
+    mockGraphql.mockResolvedValue({
+      repository: { pullRequest: { reviewThreads: {
+        nodes: [],
+        pageInfo: { hasPreviousPage: true, startCursor: null },
+      } } },
+    });
+    await expect(repository.listBugbotPullRequestReviewThreadStatesBounded(
+      'owner', 'repo', 7, 'token',
+    )).rejects.toMatchObject({ operation: 'list-threads' });
+  });
+
   it("resolves the thread containing the requested comment", async () => {
     mockGraphql
       .mockResolvedValueOnce({

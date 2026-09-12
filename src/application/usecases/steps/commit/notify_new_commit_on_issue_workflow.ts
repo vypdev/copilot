@@ -4,6 +4,7 @@ import type { IssueNotificationPort } from "../../../../application/ports/issue_
 import { logDebugInfo, logError } from "../../../ports/logging_ports";
 import { buildCommitPrefix } from "../common/execute_script_use_case";
 import { buildCommitNotificationContent } from "./commit_notification_content_policy";
+import { toApplicationError } from "../../../errors/application_error";
 
 export async function runNotifyNewCommitOnIssueWorkflow(
   param: Execution,
@@ -47,17 +48,15 @@ export async function runNotifyNewCommitOnIssueWorkflow(
       param.tokens.token,
     );
   } catch (error) {
-    logError(
-      `NotifyNewCommitOnIssue: failed to notify issue #${param.issueNumber}.`,
-      error instanceof Error ? { stack: error.stack } : undefined,
-    );
+    const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to notify the issue about the new commit.');
+    logError(semanticError);
     result.push(
       new Result({
         id: taskId,
         success: false,
         executed: true,
         steps: ["Tried to notify the new commit on the issue, but there was a problem."],
-        errors: [error?.toString() ?? "Unknown error"],
+        errors: [semanticError],
       }),
     );
   }

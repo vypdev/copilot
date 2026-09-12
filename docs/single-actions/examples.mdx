@@ -98,25 +98,13 @@ jobs:
 
 For a **question** from the CLI, use the **CLI** (see below); the workflow `think_action` uses repo context without a direct “question” input in the action. See [Workflow & CLI](/single-actions/workflow-and-cli).
 
-## Workflow: create release
+## Workflow-owned release publication
 
-Create a GitHub release with version, title, and changelog:
-
-```yaml
-- uses: vypdev/copilot@v3
-  with:
-    token: ${{ secrets.PAT }}
-    single-action: create_release
-    single-action-version: "1.2.0"
-    single-action-title: "Release 1.2.0"
-    single-action-changelog: |
-      ## New features
-      - Added user login
-      ## Fixes
-      - Fixed null check in API
-```
-
-Changelog can be read from a file or generated in a previous step and passed as input.
+Use the supplied release or hotfix workflow. It creates the durable operation
+from bounded version, title, and changelog inputs, then later invokes
+`create_tag`, `create_release`, and (for this repository)
+`publish_github_action` with the exact issue, operation ID, and version.
+Those commands intentionally have no standalone or local example.
 
 ## Workflow: create tag
 

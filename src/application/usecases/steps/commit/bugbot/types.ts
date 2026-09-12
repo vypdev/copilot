@@ -4,6 +4,10 @@
  * the read-only workspace for context before returning findings.
  */
 import type { ExistingByFindingId } from '../../../../../domain/bugbot/finding';
+import type {
+  BugbotContextCoverage,
+  BugbotPullRequestIdentity,
+} from '../../../../../domain/bugbot/context';
 
 /** PR metadata used only when publishing findings to GitHub. */
 export interface BugbotPrContext {
@@ -40,7 +44,10 @@ export interface BugbotContext {
   existingByFindingId: ExistingByFindingId;
   /** Full issue-comment bodies reserved for read-modify-write operations. */
   issueComments: Array<{ id: number; body: string | null }>;
-  openPrNumbers: number[];
+  canonicalPullRequest: BugbotPullRequestIdentity | null;
+  selectionReason: "event" | "exact-head" | "none";
+  coverage: BugbotContextCoverage;
+  eligibleResolutionIds: ReadonlySet<string>;
   /** Bounded text sent to the configured findings agent. */
   previousFindingsBlock: string;
   /** Canonical, bounded PR diff supplied by the GitHub API. */

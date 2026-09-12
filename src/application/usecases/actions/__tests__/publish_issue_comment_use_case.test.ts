@@ -117,6 +117,10 @@ describe('PublishIssueCommentUseCase', () => {
         const results = await useCase.invoke(execution('Deployment failed.'));
 
         expect(results[0].success).toBe(false);
-        expect(results[0].errors[0].message).toBe('API error');
+        expect(results[0].errors[0]).toMatchObject({
+            code: 'provider.unavailable',
+            message: 'Unable to publish the issue comment.',
+        });
+        expect(JSON.stringify(results[0])).not.toContain('API error');
     });
 });

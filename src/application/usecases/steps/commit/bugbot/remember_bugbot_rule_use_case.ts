@@ -2,6 +2,7 @@ import type { Execution } from '../../../../../data/model/execution';
 import { Result } from '../../../../../data/model/result';
 import type { BugbotLearnedRuleCommandPort } from '../../../../ports/bugbot_rule_ports';
 import type { ParamUseCase } from '../../../base/param_usecase';
+import { toApplicationError } from '../../../../errors/application_error';
 
 export interface RememberBugbotRuleParam {
     readonly execution: Execution;
@@ -31,7 +32,7 @@ export class RememberBugbotRuleUseCase implements ParamUseCase<RememberBugbotRul
                 id: this.taskId,
                 success: false,
                 executed: false,
-                errors: [error instanceof Error ? error.message : 'Unable to remember the Bugbot rule.'],
+                errors: [toApplicationError(error, 'provider.unavailable', 'Unable to remember the Bugbot rule.')],
             })];
         }
     }

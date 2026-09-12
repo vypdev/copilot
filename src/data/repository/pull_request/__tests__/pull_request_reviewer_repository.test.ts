@@ -235,7 +235,7 @@ describe("PullRequestReviewerRepository", () => {
     ).rejects.toThrow("Unable to list pull request reviewers.");
   });
 
-  it("translates reviewer-command failures", async () => {
+  it("translates reviewer execution failures", async () => {
     const failure = new Error("review request failed secret-token");
     const requestReviewers = jest.fn().mockRejectedValue(failure);
     const getClient = jest.fn(() => ({

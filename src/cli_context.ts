@@ -1,4 +1,5 @@
 import { execSync } from 'child_process';
+import { realpathSync } from 'node:fs';
 import { ERRORS } from './cli/cli_errors';
 
 export type GitInfo = { owner: string; repo: string } | { error: string };
@@ -32,6 +33,15 @@ export function isInsideGitRepo(cwd: string): boolean {
   try {
     execSync('git rev-parse --is-inside-work-tree', { cwd, stdio: 'pipe' });
     return true;
+  } catch {
+    return false;
+  }
+}
+
+export function isGitRepositoryRoot(cwd: string): boolean {
+  try {
+    const root = execSync('git rev-parse --show-toplevel', { cwd, stdio: 'pipe' }).toString().trim();
+    return realpathSync(root) === realpathSync(cwd);
   } catch {
     return false;
   }

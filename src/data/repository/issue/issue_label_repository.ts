@@ -2,6 +2,7 @@ import { logDebugInfo, logError } from "../../../utils/logger";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type { GithubIssueLabelsClient } from "../../../infrastructure/github/ports/github_issue_provider_ports";
 import { requireArrayPage } from "../github/github_pagination_policy";
+import { toApplicationError } from '../../../application/errors/application_error';
 
 export class IssueLabelRepository {
     constructor(private readonly githubClient: GithubClientPort<GithubIssueLabelsClient>) {}
@@ -21,7 +22,7 @@ export class IssueLabelRepository {
                 logDebugInfo(`Issue #${issueNumber} not found or no access; returning empty labels.`);
                 return [];
             }
-            logError(`Error fetching labels for issue #${issueNumber}: ${error}`);
+            logError(toApplicationError(error, 'provider.unavailable', `Unable to fetch labels for issue #${issueNumber}.`));
             throw error;
         }
     };

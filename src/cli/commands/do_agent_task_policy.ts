@@ -10,7 +10,7 @@ export function buildDoAgentTasks(options: DoAgentOptions): AgentTaskConfigurati
     modelProvider: read(options.agentModelProvider, "AGENT_MODEL_PROVIDER") || DEFAULT_MODEL_PROVIDER,
     model: read(options.agentModel, "AGENT_MODEL") || DEFAULT_AGENT_MODEL,
     effort: read(options.agentEffort, "AGENT_EFFORT"),
-    command: read(options.agentCommand, "AGENT_COMMAND"),
+    executable: read(options.agentExecutable, "AGENT_EXECUTABLE"),
     findings: buildTaskOverrides(options, "findings"),
     fixer: buildTaskOverrides(options, "fixer"),
   });
@@ -26,14 +26,14 @@ function buildTaskOverrides(
         modelProvider: options.findingsModelProvider,
         model: options.findingsModel,
         effort: options.findingsEffort,
-        command: options.findingsCommand,
+        executable: options.findingsExecutable,
       }
     : {
         provider: options.fixerProvider,
         modelProvider: options.fixerModelProvider,
         model: options.fixerModel,
         effort: options.fixerEffort,
-        command: options.fixerCommand,
+        executable: options.fixerExecutable,
       };
   const prefix = task.toUpperCase();
   return {
@@ -41,7 +41,7 @@ function buildTaskOverrides(
     modelProvider: read(values.modelProvider, `${prefix}_MODEL_PROVIDER`),
     model: read(values.model, `${prefix}_MODEL`),
     effort: read(values.effort, `${prefix}_EFFORT`),
-    command: read(values.command, `${prefix}_COMMAND`),
+    executable: read(values.executable, `${prefix}_EXECUTABLE`),
   };
 }
 

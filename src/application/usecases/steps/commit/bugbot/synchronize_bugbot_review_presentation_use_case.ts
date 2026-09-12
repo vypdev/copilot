@@ -56,7 +56,7 @@ export async function synchronizeBugbotReviewPresentation(
     return report(projection, 0, 0, 'failed', initialErrors);
   }
 
-  const plannedReviewUpdates = planReviewUpdates(input, projection.digest, navigation);
+  const plannedReviewUpdates = planReviewUpdates(input, projection, navigation);
   const selectedReviewUpdates = plannedReviewUpdates.slice(0, MAX_REVIEW_UPDATES_PER_RUN);
   const reviewWriteResults = await mapWithConcurrency(
     selectedReviewUpdates,
@@ -106,7 +106,7 @@ export async function synchronizeBugbotReviewPresentation(
 
 function planReviewUpdates(
   input: BugbotPresentationSynchronizationInput,
-  projectionDigest: string,
+  projection: BugbotPresentationReport['projection'],
   navigation: BugbotReviewNavigation,
 ): PlannedReviewUpdate[] {
   return selectOwnedBugbotReviews({
@@ -119,7 +119,8 @@ function planReviewUpdates(
       reviewIdentity: ownedReview.review.identity,
       analyzedHeadSha: ownedReview.review.commitId ?? input.target.analyzedHeadSha,
       currentHeadSha: input.snapshot.verifiedHeadSha,
-      projectionDigest,
+      projectionDigest: projection.digest,
+      coverageStatus: projection.coverage.status,
       findings: ownedReview.findings,
       locale: input.target.locale,
       statusUrl: navigation.pullRequestUrl,
@@ -213,6 +214,7 @@ function buildProjection(
     analyzedHeadSha: input.target.analyzedHeadSha,
     verifiedHeadSha: input.snapshot.verifiedHeadSha,
     findings: input.plan.findings,
+    coverage: input.plan.coverage,
     errors: errors.map((error) => error.message.slice(0, 500)),
   });
 }

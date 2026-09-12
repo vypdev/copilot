@@ -24,12 +24,22 @@ labels, and the composition root wires the adapters. The use case revalidates
 each issue immediately before mutation so the periodic scan remains best-effort
 and fail-closed for changed candidates.
 
-Setup follows the same boundary: credential collection, workflow comparison,
-approval, and doctor decisions live in application use cases and semantic ports.
-GitHub Secret encryption, workflow dispatch, provider metadata requests, and the
-temporary health-workflow bootstrap are infrastructure adapters. Secret values
-never enter setup override files, Variables, logs, or the generated workflow
-templates.
+Setup follows the same boundary. A pure immutable questionnaire policy owns
+question order, conditional states, validation, and fresh configuration
+snapshots. A controller drives that policy through a raw terminal driver whose
+only responsibilities are interactivity, text input, masked secret input, and
+idempotent close. Separate render, plan presentation, and confirmation ports own
+user-facing output; `--non-interactive` never constructs the terminal.
+
+Credential collection, workflow comparison, approval, and doctor decisions live
+in application use cases and semantic ports. GitHub Secret encryption, workflow
+dispatch, provider metadata requests, and setup-only temporary health-workflow
+bootstrap are infrastructure adapters. Remote Variables and Secrets expose
+separate query and command adapters instead of a broad resource facade. Doctor
+receives query ports only, schedules independent probes with a fixed maximum of
+four, and restores declared order in its stable `pass|warn|fail|skipped` report.
+Secret values never enter questionnaire state, setup override files, Variables,
+plans, logs, reports, or generated workflow templates.
 
 The setup policy is intentionally split by responsibility:
 
@@ -37,9 +47,16 @@ The setup policy is intentionally split by responsibility:
 - `setup_configuration_validation.ts` owns structural and semantic validation.
 - `setup_configuration_storage_policy.ts` owns repository/organization scope
   resolution and effective-resource preservation.
+- `setup_configuration_clone_policy.ts` owns reference-isolated configuration copies.
+- `setup_questionnaire_policy.ts` owns setup states, questions, transitions, and answers.
 - `setup_configuration_plan.ts` owns the reviewable provisioning plan.
+- `setup_doctor_report_policy.ts` owns stable check validation and aggregation.
 - `setup_resource_provisioning.ts` owns grouping and port calls for Variables
   and Secrets.
+
+There are no installed users or persisted setup state to migrate, so this is a
+greenfield contract: no legacy prompt facade, compatibility overload, dual
+reader/writer, deprecated result, or transitional state alias is retained.
 
 The runtime `Execution` aggregate is projected once at
 `initial_setup_request.ts`; the setup workflow consumes only the repository,
@@ -54,8 +71,26 @@ reconciliation use cases receive narrow context contracts containing only the
 facts they need; they do not depend on the complete `Execution` aggregate.
 This keeps pure decisions independently testable and makes new event sources
 less likely to couple unrelated capabilities. Application failures use the
-typed `ApplicationError` contract with a category, retry hint, and diagnostic
-cause; the cause is never published as user-facing workflow output.
+closed `ApplicationError` contract: one of 18 semantic codes, a derived
+category and retry decision, impact, recommended action, retained-state
+summary, and request correlation UUID. A raw cause is ECMAScript-private,
+never serialized or logged, and cannot enter `Result.errors`. CLI output,
+GitHub comments, Job Summaries, and Check failures project the same semantic
+view.
+
+The main-run setup path follows that rule end to end. Its action boundary copies
+and freezes a `SetupExecutionContext`, setup returns a discriminated result, and
+only the boundary applies resolved identity, labels, versions, and configuration
+fields. The composition root captures repository coordinates and credentials in
+the concrete adapters, so setup contexts and their nested version-description
+queries contain neither tokens nor provider clients. There is no aggregate
+overload or compatibility adapter for the removed setup signatures.
+
+An AST architecture ratchet resolves the real `Execution` class symbol through
+renamed imports and type aliases. Its checked-in baseline may shrink but cannot
+grow or move to new files. The final target keeps the aggregate only at route
+and entrypoint boundaries; leaf use cases receive freshly copied, readonly
+capability contexts.
 
 Configuration embedded in issue or pull-request content is versioned. Readers
 accept only the current schema and fail closed on missing, malformed, or
@@ -166,18 +201,17 @@ filesystem dependency. `DeploymentOrchestrationUseCase` receives the narrow
 `DeploymentOrchestrationContext`; the `Execution` aggregate is structurally
 projected by the single-action boundary.
 
-Application ports expose managed-PR identity, target capabilities, exact commit
-reachability, trusted reconciliation refs, workflow continuation, durable issue
-state and presentation operations, effective target-policy inspection, and
-authoritative merge-queue membership. The GitHub deployment repository combines classic protection with
-all effective rulesets, maps required producer identities, and parses bounded
-workflow YAML. Pure readiness policy owns `ready`, `unknown`, and `unsupported`
-decisions plus exact attestation matching. Runtime, setup, and doctor share that
-policy; entrypoints never supply an optimistic static capability boolean.
-`GithubDeploymentRepository` maps REST and
-GraphQL provider facts. `DeploymentStateRepository` owns the strict schema-v3
-hidden issue block. The composition root is
-the only place that binds these repositories and the Octokit adapter.
+Application ports keep managed-PR mutation, target-rule inspection, Git
+refs/ancestry, workflow continuation, durable issue state, publication receipts,
+and presentation as separate capabilities. `GithubManagedPullRequestRepository`
+maps PR and merge-queue membership, `GithubTargetMergeCapabilitiesInspector`
+combines classic protection with effective rulesets and bounded workflow YAML,
+and `GithubDeploymentGitRepository` owns refs and ancestry. Pure readiness policy
+owns `ready`, `unknown`, and `unsupported` decisions plus exact attestation
+matching. Runtime, setup, and doctor share that policy; entrypoints never supply
+an optimistic static capability boolean. `DeploymentStateRepository` owns the
+strict schema-v3 hidden issue block. The composition root is the only place that
+binds these repositories and the Octokit adapter.
 
 Durable transitions compare the operation ID and expected stored phase before
 each write. PR and publication side effects use deterministic markers, exact

@@ -17,6 +17,10 @@ function execution() {
         issueNumber: 7,
         tokens: { token: 'token' },
         commit: { branch: 'feature/7' },
+        ai: {
+            getBugbotReviewConfiguration: () => ({ organizationRules: [] }),
+            getAiIgnoreFiles: () => [],
+        },
     } as never;
 }
 
@@ -28,7 +32,10 @@ describe('DismissBugbotFindingsUseCase', () => {
         mockLoadBugbotContext.mockResolvedValue({
             existingByFindingId: { 'finding-1': { issue: { commentId: 10, resolved: false } } },
             issueComments: [{ id: 10, body: 'finding' }],
-            openPrNumbers: [],
+            canonicalPullRequest: null,
+            selectionReason: 'none',
+            coverage: { status: 'complete', sources: [] },
+            eligibleResolutionIds: new Set(['finding-1']),
             previousFindingsBlock: '',
             prContext: null,
             unresolvedFindingsWithBody: [],
@@ -37,7 +44,7 @@ describe('DismissBugbotFindingsUseCase', () => {
 
     it('dismisses only IDs that exist in persisted findings', async () => {
         const useCase = new DismissBugbotFindingsUseCase({
-            contextPorts: { issue: {}, pullRequest: {} } as never,
+            contextPorts: { loader: { bind: () => ({}) }, issue: {}, pullRequest: {} } as never,
             resolutionPorts: {} as never,
         });
 
@@ -51,7 +58,7 @@ describe('DismissBugbotFindingsUseCase', () => {
 
     it('is an idempotent no-op when no requested finding exists', async () => {
         const useCase = new DismissBugbotFindingsUseCase({
-            contextPorts: { issue: {}, pullRequest: {} } as never,
+            contextPorts: { loader: { bind: () => ({}) }, issue: {}, pullRequest: {} } as never,
             resolutionPorts: {} as never,
         });
 
@@ -61,4 +68,3 @@ describe('DismissBugbotFindingsUseCase', () => {
         expect(results[0].steps[0]).toContain('nothing was dismissed');
     });
 });
-

@@ -16,7 +16,7 @@ export function statusIcon(status: SetupCredentialCheck['status']): string {
 }
 
 export function doctorIcon(status: DoctorCheckStatus): string {
-    return status === 'pass' ? '✓' : status === 'warn' ? '⚠' : '✗';
+    return status === 'pass' ? '✓' : status === 'warn' ? '⚠' : status === 'skipped' ? '–' : '✗';
 }
 
 export function formatTask(task: string): string {
@@ -24,12 +24,14 @@ export function formatTask(task: string): string {
 }
 
 export function color(value: string, code: number): string {
-    if (!stdout.isTTY) return value;
+    if (!stdout.isTTY || process.env.NO_COLOR !== undefined) return value;
     return `\u001b[${code}m${value}\u001b[0m`;
 }
 
-export function renderBox(content: string, title: string, borderCode = 36): string {
-    const lines = [` ${title} `, ...content.split('\n').map(line => ` ${line}`)];
+export function renderBox(content: string, title: string, borderCode = 36, maximumWidth = stdout.columns ?? 120): string {
+    const contentWidth = Math.max(20, Math.min(120, maximumWidth) - 4);
+    const wrapped = content.split('\n').flatMap((line) => wrapLine(line, contentWidth));
+    const lines = [` ${title} `, ...wrapped.map(line => ` ${line}`)];
     const width = Math.max(...lines.map(line => stripAnsi(line).length)) + 1;
     const border = color(`╭${'─'.repeat(width)}╮`, borderCode);
     const bottom = color(`╰${'─'.repeat(width)}╯`, borderCode);
@@ -38,6 +40,25 @@ export function renderBox(content: string, title: string, borderCode = 36): stri
         ...lines.map(line => `${color('│', borderCode)}${line}${' '.repeat(Math.max(0, width - stripAnsi(line).length))}${color('│', borderCode)}`),
         bottom,
     ].join('\n');
+}
+
+function wrapLine(line: string, maximumWidth: number): string[] {
+    if (stripAnsi(line).length <= maximumWidth) return [line];
+    const indent = line.match(/^\s*/)?.[0] ?? '';
+    const words = line.trim().split(/\s+/);
+    const lines: string[] = [];
+    let current = indent;
+    for (const word of words) {
+        const candidate = current.trim() ? `${current} ${word}` : `${indent}${word}`;
+        if (stripAnsi(candidate).length <= maximumWidth) {
+            current = candidate;
+            continue;
+        }
+        if (current.trim()) lines.push(current);
+        current = `${indent}${word}`;
+    }
+    if (current.trim() || lines.length === 0) lines.push(current);
+    return lines;
 }
 
 export function renderRemoteConfiguration(

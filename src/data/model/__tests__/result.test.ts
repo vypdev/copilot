@@ -1,4 +1,5 @@
 import { getResultPayload, Result } from '../result';
+import { ApplicationError } from '../../../application/errors/application_error';
 
 describe('Result', () => {
   it('uses defaults for missing fields', () => {
@@ -30,18 +31,20 @@ describe('Result', () => {
     expect(r.reminders).toEqual(['Reminder']);
   });
 
-  it('normalizes string and Error values from the errors collection', () => {
-    const error = new Error('typed failure');
-    const r = new Result({ errors: ['string failure', error] });
+  it('retains semantic errors in a copied readonly collection', () => {
+    const errors = [new ApplicationError('workflow.failed', 'Typed failure.')];
+    const r = new Result({ errors });
 
-    expect(r.errors.map((item) => item.message)).toEqual(['string failure', 'typed failure']);
+    errors.push(new ApplicationError('unexpected', 'Later failure.'));
+    expect(r.errors.map((item) => item.message)).toEqual(['Typed failure.']);
+    expect(r.errors[0]).toBeInstanceOf(ApplicationError);
   });
 
   it('does not expose array payloads as object payloads and tolerates malformed collections', () => {
     const result = new Result({
       steps: 'invalid' as unknown as string[],
       reminders: null as unknown as string[],
-      errors: null as unknown as unknown[],
+      errors: null as unknown as ApplicationError[],
       payload: ['not-an-object'],
     });
 

@@ -4,6 +4,7 @@ import type { BranchLifecyclePort, BranchNamePort } from "../../../ports/branch_
 import { logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
+import { toApplicationError } from "../../../errors/application_error";
 
 export class RemoveNotNeededBranchesUseCase implements ParamUseCase<Execution, Result[]> {
     taskId = "RemoveNotNeededBranchesUseCase";
@@ -39,7 +40,7 @@ export class RemoveNotNeededBranchesUseCase implements ParamUseCase<Execution, R
                     success: false,
                     executed: true,
                     steps: ["Tried to remove not needed branches related to the issue, but there was a problem."],
-                    errors: [error],
+                    errors: [toApplicationError(error, 'provider.unavailable', 'Unable to remove obsolete issue branches.')],
                 }),
             ];
         }

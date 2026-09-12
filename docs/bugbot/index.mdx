@@ -24,7 +24,7 @@ See [Agent CLI configuration](/agents/cli-configuration) and [Configuration](/bu
 
 | What you do | What happens |
 | --- | --- |
-| **Push** to a branch linked to an issue | Bugbot analyzes the diff and posts findings on the issue and any open PR. |
+| **Push** to a branch linked to an issue | Bugbot analyzes the diff and posts findings on the issue and, when uniquely verified, one canonical PR. |
 | **Open, reopen, or synchronize a PR** | Bugbot reviews the full PR when it opens/reopens and only the new commit range on synchronization, while rechecking every open finding and reconciling one current status card from verified GitHub state. |
 | **Comment** `/copilot review`, `/copilot findings`, or `/copilot recheck` | Bugbot performs a read-only review and reconciles historical review blocks, native threads, the status card, Check, and Job Summary without changing files. |
 | **Comment** “fix it” / “fix all” (with permission) | The selected agent applies the requested fixes; verification commands run before any commit or push. |
@@ -37,6 +37,7 @@ See [Agent CLI configuration](/agents/cli-configuration) and [Configuration](/bu
 - [Autofix](/bugbot/autofix)
 - [Do user request](/bugbot/do-user-request)
 - [Configuration](/bugbot/configuration)
+- [Programmatic API](/bugbot/programmatic-api)
 - [How it works](/bugbot/how-it-works)
 - [Quality and observability](/bugbot/quality-observability)
 - [Examples](/bugbot/examples)

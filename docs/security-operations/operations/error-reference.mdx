@@ -1,0 +1,36 @@
+---
+title: Application error reference
+description: Stable semantic failure codes, user impact, and recovery actions.
+---
+
+# Application error reference
+
+Every failure presentation uses the same order: impact, safe cause and code,
+recommended action, retained state, then a correlation UUID. Search the Job
+Summary and sanitized logs using that UUID; it is safe to include in a support
+request. Do not include credentials or private provider output.
+
+| Code | Meaning | Action |
+| --- | --- | --- |
+| `configuration.invalid` | A configured value or combination is invalid. | Correct the configuration and retry. |
+| `configuration.unsupported` | This installation cannot provide the requested capability. | Select a supported configuration or update the installation. |
+| `authorization.denied` | The actor or credential lacks required authority. | Grant the documented permission and retry. |
+| `authorization.credential-invalid` | A required credential is missing, rejected, or expired. | Replace or configure the credential and retry. |
+| `provider.not-found` | A required provider resource does not exist. | Verify the target resource and retry. |
+| `provider.conflict` | Current provider state conflicts with the operation. | Reload current state and retry only if still needed. |
+| `provider.rate-limited` | The provider temporarily limited requests. | Retry after the provider limit resets. |
+| `provider.unavailable` | The provider or transport is temporarily unavailable. | Retry when the provider is available. |
+| `provider.contract-invalid` | A provider response could not be interpreted safely. | Review the integration before retrying. |
+| `agent.policy-rejected` | Fixed policy rejected the agent execution plan. | Use an allowed agent configuration. |
+| `agent.failed` | An admitted agent did not produce a usable result. | Inspect sanitized agent status and retry if appropriate. |
+| `validation.invalid-input` | Entrypoint input is malformed. | Correct the input and retry. |
+| `workflow.invalid-event` | The event cannot start the requested workflow. | Start from a supported event or surface. |
+| `workflow.stale` | A newer durable state superseded this invocation. | Inspect current state and start a fresh invocation only if needed. |
+| `workflow.cancelled` | The operation was explicitly cancelled before completion. | Start a new invocation if the operation is still required. |
+| `workflow.failed` | Orchestration failed without a narrower classification. | Inspect current state and retry the failed step. |
+| `timeout` | A bounded operation exceeded its deadline. | Verify current state before retrying. |
+| `unexpected` | An unclassified failure was handled safely. | Investigate with the correlation ID before retrying. |
+
+Retryability is determined by the code. A specific operation can make a
+normally retryable failure terminal, but presentation never turns a terminal
+code into a retry recommendation.

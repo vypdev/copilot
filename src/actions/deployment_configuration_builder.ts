@@ -101,7 +101,7 @@ export function readDeploymentConfiguration(
     hotfixTree: branches.hotfixTree || "hotfix",
   }));
   if (errors.length > 0) {
-    throw new ApplicationError(`Invalid deployment configuration: ${errors.join(" ")}`, "validation");
+    throw new ApplicationError("configuration.invalid", `Invalid deployment configuration: ${errors.join(" ")}`);
   }
   return configuration;
 }

@@ -26,7 +26,7 @@ Do not describe `codex` and `openai` as interchangeable values. `codex` is a run
 The built-in Codex command is:
 
 ```text
-codex exec --ephemeral --skip-git-repo-check --model <model> --config 'model_provider="<provider>"' [--config 'model_reasoning_effort="<effort>"'] -
+codex exec --strict-config --ignore-user-config --ignore-rules --ephemeral --sandbox <mode> --model <model> --config 'model_provider="<provider>"' [--config 'model_reasoning_effort="<effort>"'] -
 ```
 
 The command reads the prompt from standard input, runs ephemerally, and does not use a shell. A provider failure is terminal; Copilot does not silently fall back to OpenCode or Cursor.
@@ -44,16 +44,19 @@ Copilot never prints, copies, or serializes token values. With no exported crede
 
 ## Provisioning
 
-GitHub Actions provisioning uses an installed-first policy. A preinitialized `codex` executable is accepted without `CODEX_VERSION`. If it is missing, provisioning requires the pinned version variable:
+GitHub Actions provisioning uses an exact-version installed-first policy. A
+preinitialized `codex` executable is accepted only when it reports
+`codex-cli 0.153.4`. If the default executable is missing or reports another
+version, `auto` installs the exact manifest package and validates it again:
 
 ```text
-CODEX_VERSION=<approved-version>
+@openai/codex@0.153.4
 ```
 
 The approved package installation shape is:
 
 ```bash
-npm install --global "@openai/codex@${CODEX_VERSION}"
+npm install --global "@openai/codex@0.153.4"
 ```
 
 Verify the executable before a real request:

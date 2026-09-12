@@ -42,7 +42,7 @@ describe('RecommendStepsUseCase', () => {
     const results = await useCase.invoke(param);
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
-    expect(results[0].errors.map((error) => error.message)).toContain('Missing agent CLI command and model.');
+    expect(results[0].errors.map((error) => error.message)).toContain('Missing agent model or executable.');
   });
 
   it('returns failure when issueNumber is -1', async () => {

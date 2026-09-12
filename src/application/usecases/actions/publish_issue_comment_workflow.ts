@@ -4,6 +4,7 @@ import { stripTrailingCommentWatermarks } from '../../../utils/comment_watermark
 import { resolveIssueCommentPublicationRequest } from '../../policies/issue_comment_publication_policy';
 import type { IssueCommentPublicationPort } from '../../ports/issue_lifecycle_ports';
 import { logError } from '../../ports/logging_ports';
+import { ApplicationError, toApplicationError } from '../../errors/application_error';
 
 export async function runPublishIssueComment(
     param: Execution,
@@ -12,7 +13,12 @@ export async function runPublishIssueComment(
 ): Promise<Result[]> {
     const request = resolveIssueCommentPublicationRequest(param.singleAction);
     if (request instanceof Error) {
-        return [new Result({ id: taskId, success: false, executed: true, errors: [request] })];
+        return [new Result({
+            id: taskId,
+            success: false,
+            executed: true,
+            errors: [new ApplicationError('validation.invalid-input', request.message, { cause: request })],
+        })];
     }
 
     try {
@@ -37,7 +43,7 @@ export async function runPublishIssueComment(
                     id: taskId,
                     success: false,
                     executed: true,
-                    errors: [`Comment ${request.commentId} does not belong to issue ${param.singleAction.issue}.`],
+                    errors: [new ApplicationError('provider.not-found', `Comment ${request.commentId} does not belong to issue ${param.singleAction.issue}.`)],
                 })];
             }
             const message = request.mode === 'append'
@@ -56,8 +62,9 @@ export async function runPublishIssueComment(
         // the common completion phase from emitting a second issue comment.
         return [new Result({ id: taskId, success: true, executed: true })];
     } catch (error) {
-        logError(`Error executing ${taskId}: ${error}`);
-        return [new Result({ id: taskId, success: false, executed: true, errors: [error] })];
+        const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to publish the issue comment.');
+        logError(semanticError);
+        return [new Result({ id: taskId, success: false, executed: true, errors: [semanticError] })];
     }
 }
 

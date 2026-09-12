@@ -1,21 +1,62 @@
-import type { Execution } from './data/model/execution';
+import type { Result } from './data/model/result';
+import type { AgentConfiguration } from './domain/agent';
 import type { FindingsQueryPort } from './application/ports/agent_findings_ports';
 import type { BugbotContextPorts } from './application/ports/bugbot_context_ports';
 import type { BugbotFindingPublicationPorts } from './application/ports/bugbot_finding_publication_ports';
 import type { BugbotFindingResolutionPorts } from './application/ports/bugbot_finding_resolution_ports';
 import type { BugbotTelemetryPort } from './application/ports/bugbot_telemetry_ports';
-import type { BugbotReviewCommandOverrides } from './domain/bugbot/review_command';
+import type { BugbotReviewConfiguration } from './domain/bugbot/review_configuration';
 export interface BugbotScmGateway {
     readonly context: BugbotContextPorts;
     readonly publication: BugbotFindingPublicationPorts;
     readonly resolution: BugbotFindingResolutionPorts;
     readonly telemetry?: BugbotTelemetryPort;
 }
+export type BugbotMinimumSeverity = 'info' | 'low' | 'medium' | 'high';
+export type BugbotReviewTarget = {
+    readonly kind: 'pull-request';
+    readonly number: number;
+    readonly head: string;
+    readonly base?: string;
+    readonly linkedIssueNumber?: number;
+    readonly action?: 'opened' | 'reopened' | 'synchronize';
+    readonly expectedHeadSha?: string;
+    readonly before?: string;
+    readonly draft?: boolean;
+} | {
+    readonly kind: 'branch';
+    readonly branch: string;
+    readonly base?: string;
+    readonly issueNumber?: number;
+    readonly before?: string;
+    readonly after?: string;
+};
+/** Sole supported request for the programmatic Bugbot review entry point. */
+export interface BugbotReviewRequest {
+    readonly repository: {
+        readonly owner: string;
+        readonly name: string;
+    };
+    readonly credential: {
+        readonly token: string;
+    };
+    readonly target: BugbotReviewTarget;
+    readonly agent: AgentConfiguration;
+    readonly configuration?: Partial<BugbotReviewConfiguration>;
+    readonly ignoreFiles?: readonly string[];
+    readonly minimumSeverity?: BugbotMinimumSeverity;
+    readonly commentLimit?: number;
+    readonly authenticatedUser?: string;
+    readonly locale?: {
+        readonly issue?: string;
+        readonly pullRequest?: string;
+    };
+}
 /** Provider-neutral programmatic entry point. Consumers supply agent and SCM adapters. */
 export declare class BugbotReviewService {
     private readonly useCase;
     constructor(agent: FindingsQueryPort, scm: BugbotScmGateway);
-    review(execution: Execution, options?: BugbotReviewCommandOverrides): Promise<import("./data/model/result").Result[]>;
+    review(request: BugbotReviewRequest): Promise<readonly Result[]>;
 }
 export { evaluateBugbotFindings, evaluateBugbotQualityGate } from './tooling/bugbot_quality_eval';
 export { evaluateBugbotBenchmark, loadBugbotBenchmark, loadBugbotPredictions } from './tooling/bugbot_benchmark';
@@ -24,8 +65,9 @@ export { buildSemanticFindingFingerprint, buildFindingFingerprint } from './doma
 export { normalizeBugbotReviewConfiguration, resolveBugbotReviewEffort } from './domain/bugbot/review_configuration';
 export { BUGBOT_FINDING_STATES, classifyBugbotFindingState, countActionableBugbotFindings, countBugbotFindingStates, isBugbotActionableState, isBugbotCleanState, } from './domain/bugbot/review_state';
 export { buildBugbotReviewProjection } from './domain/bugbot/review_projection';
-export { Execution } from './data/model/execution';
-export { Ai } from './data/model/ai';
+export { ApplicationError } from './application/errors/application_error';
+export type { ApplicationErrorCode, ApplicationErrorKind, ApplicationErrorPublicRecord, } from './application/errors/application_error';
+export type { AgentConfiguration } from './domain/agent';
 export type { FindingsQueryPort } from './application/ports/agent_findings_ports';
 export type { BugbotContextPorts } from './application/ports/bugbot_context_ports';
 export type { BugbotFindingPublicationPorts } from './application/ports/bugbot_finding_publication_ports';

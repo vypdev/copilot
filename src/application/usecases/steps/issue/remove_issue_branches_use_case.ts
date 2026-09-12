@@ -5,6 +5,7 @@ import { logDebugInfo, logError, logInfo, logWarn } from "../../../ports/logging
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
 import { selectIssueBranchesToRemove } from './remove_issue_branches_policy';
+import { toApplicationError } from '../../../errors/application_error';
 
 /**
  * Remove any branch created for this issue
@@ -33,7 +34,8 @@ export class RemoveIssueBranchesUseCase implements ParamUseCase<Execution, Resul
                 results.push(...await removeIssueBranch(param, this.taskId, branchName, this.branchLifecyclePort));
             }
         } catch (error) {
-            logError(`RemoveIssueBranches: error removing branches for issue #${param.issueNumber}.`, error instanceof Error ? { stack: (error as Error).stack } : undefined);
+            const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to remove issue branches.');
+            logError(semanticError);
             results.push(
                 new Result({
                     id: this.taskId,
@@ -42,7 +44,7 @@ export class RemoveIssueBranchesUseCase implements ParamUseCase<Execution, Resul
                     steps: [
                         `Tried to remove issue branches, but there was a problem.`,
                     ],
-                    errors: [error],
+                    errors: [semanticError],
                 })
             )
         }

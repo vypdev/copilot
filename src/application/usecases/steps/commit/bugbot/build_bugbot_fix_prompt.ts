@@ -36,8 +36,7 @@ export function buildBugbotFixPrompt(
     const issueNumber = param.issueNumber;
     const owner = param.owner;
     const repo = param.repo;
-    const openPrNumbers = context.openPrNumbers;
-    const prNumber = openPrNumbers.length > 0 ? openPrNumbers[0] : null;
+    const prNumber = context.canonicalPullRequest?.number ?? null;
 
     const safeId = (id: string) => id.replace(/`/g, "\\`");
     const findingsBlock = targetFindingIds

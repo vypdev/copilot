@@ -43,8 +43,9 @@ From an issue or pull-request comment, `/copilot analyze`, `/copilot review`,
 immediately. You can also write a natural-language request such as
 `@vypbot review this PR for authentication vulnerabilities`; the bot mention
 is matched case-insensitively and the request is routed to the same review
-flow. On an issue comment, Copilot resolves the branch from the open PR linked
-to the issue. These commands do not invoke autofix and do not modify files.
+flow. An issue-only comment has no inferred PR or branch; its review remains
+issue-only unless the event itself supplies an authoritative PR target. These
+commands do not invoke autofix and do not modify files.
 
 Explicit reviews accept bounded per-run options, for example `/copilot review effort=high dry-run=true trace-rules=true suggested-changes=false`. Unknown keys and values are rejected rather than silently inferred.
 
@@ -53,7 +54,11 @@ You can run Bugbot detection **without pushing**:
 - **Single action:** In a workflow, set `single-action: detect_potential_problems_action` and `single-action-issue: <issue number>`. The workflow must run in a context where the **branch** to analyze is the current checkout (e.g. trigger on `workflow_dispatch` after checking out the branch you want to analyze).
 - **CLI:** From the repository root, run `copilot detect-potential-problems -i <issue>` (optionally `-b <branch>`). Add `--dry-run --output json` for a machine-readable, mutation-free result, and choose `--effort`, `--trace-rules`, or `--no-suggestions` when needed. Provide `--token` or `PERSONAL_ACCESS_TOKEN` in the environment, plus the configured agent CLI credentials/model. See [Examples → CLI](/bugbot/examples#cli-detect-potential-problems) and [Smoke tests](/security-operations/operations/smoke-tests).
 
-In both cases, the action uses the same detection flow: load context for that issue/branch, call the configured agent, filter and apply the comment limit, then publish either to the issue or to an open PR for that branch.
+In both cases, the action uses the same detection flow: load context for that
+issue/branch, call the configured agent, filter and apply the comment limit,
+then publish either to the issue or to the single provider-verified canonical PR
+for that exact head. If two open PRs share the exact head, Bugbot stops as
+ambiguous instead of selecting by provider order.
 
 ---
 
@@ -72,7 +77,12 @@ The action embeds a **hidden marker** in each comment so it can later **update**
 
 ### On the pull request
 
-When an **open PR** targets the branch, Bugbot creates one submitted review. Its body is a historical snapshot of the analyzed commit and its findings descend from that review as inline comments. A small bounded block at the top is mutable and reports the current state of findings that originated in that review. Findings are not mirrored as independent comments in the PR conversation.
+When one **open PR** is uniquely verified for the exact head, Bugbot creates one
+submitted review. Its body is a historical snapshot of the analyzed commit and
+its findings descend from that review as inline comments. A small bounded block
+at the top is mutable and reports the current state of findings that originated
+in that review. Findings are not mirrored as independent comments in the PR
+conversation.
 
 Each child comment is attached to an exact line/range confirmed from the current diff. A finding tied to a changed file but not an addressable line becomes a GitHub file-level review comment. A finding with no valid changed file is attached to the first changed file with an explicit fallback note. Only a PR with no changed file at all keeps the complete finding in the review body.
 
@@ -163,6 +173,20 @@ thread. Descriptions and suggestions are mutable explanation, not identity.
 Resolution is only accepted for findings
 present in the loaded, bounded history, so an agent cannot resolve an arbitrary
 identifier invented in its response.
+
+### Complete and partial context
+
+Bugbot's status card contains a context-coverage section. `complete` means every
+applicable bounded source finished without reaching a fixed cap. `partial`
+means the run retained a deterministic subset—for example the newest 200
+comments, newest 200 thread records, or first 1,000 diff files. Partial analysis
+may still report findings supported by retained evidence, but it never says the
+whole PR is clean and never resolves a prior finding omitted from the prompt.
+
+A GitHub read error is not partial context: the run fails before agent analysis
+or finding mutation. For a cap, inspect the named omitted source, split an
+oversized PR when appropriate, and run `/copilot recheck`. For an ambiguous PR
+head, close the obsolete PR or invoke the review from the intended PR event.
 
 ---
 

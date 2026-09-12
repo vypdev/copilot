@@ -14,6 +14,7 @@ const TEMPLATE = `You are analyzing the latest code changes for potential bugs a
 - Base branch: {{baseBranch}}
 - Issue number: {{issueNumber}}
 {{ignoreBlock}}
+{{coverageBlock}}
 {{diffBlock}}
 {{reviewConversationBlock}}
 {{rulesBlock}}
@@ -34,10 +35,10 @@ For every finding:
 - include the nearest stable \`symbol\` and a minimal exact \`codeSnippet\` when available so the finding can survive rebases, line movement, and file renames.
 - when a fix is a safe replacement of exactly the reported line range, include only the replacement text in \`suggestedCode\`; otherwise omit it.
 
-Return findings with id, title, description, severity, confidence, category, evidence, suggestion, symbol, codeSnippet, and optional suggestedCode; include file, line, and endLine when applicable. Only include files outside the ignore list.
+Return every finding field required by the response schema. Use null for file, line, endLine, severity, confidence, category, evidence, suggestion, symbol, codeSnippet, or suggestedCode when that value does not safely apply. Only include files outside the ignore list.
 {{previousBlock}}
 
-**Output:** Return a JSON object with: "findings" (array of new/current problems from task 1), and if we gave you previously reported issues above, "resolved_finding_ids" (array of those ids that are now fixed or no longer apply, as per task 2). Optionally return "resolved_finding_reasons" as an object mapping those exact ids to "fixed" or "obsolete". Never resolve an id that was not included in the previous-findings list.`;
+**Output:** Return a JSON object with "findings" (new/current problems from task 1) and "resolved_findings" (objects containing the exact prior finding id and either "fixed" or "obsolete"). Always return both arrays; use an empty array when there are no resolved findings. Never resolve an id that was not included in the previous-findings list.`;
 
 export type BugbotParams = {
     projectContextInstruction: string;
@@ -49,6 +50,7 @@ export type BugbotParams = {
     changeScopeInstruction: string;
     ignoreBlock: string;
     previousBlock: string;
+    coverageBlock: string;
     diffBlock?: string;
     reviewConversationBlock?: string;
     rulesBlock?: string;

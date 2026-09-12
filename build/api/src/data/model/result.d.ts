@@ -1,3 +1,4 @@
+import type { ApplicationError } from './application_error';
 export type ResultStepFormat = 'plain' | 'markdown';
 export interface ResultInput {
     id?: string;
@@ -6,7 +7,7 @@ export interface ResultInput {
     steps?: string[];
     payload?: unknown;
     reminders?: string[];
-    errors?: unknown[];
+    errors?: readonly ApplicationError[];
     stepFormat?: ResultStepFormat;
 }
 export declare function getResultPayload(payload: unknown): Record<string, unknown> | undefined;
@@ -17,7 +18,7 @@ export declare class Result {
     steps: string[];
     payload: unknown;
     reminders: string[];
-    errors: Error[];
+    readonly errors: readonly ApplicationError[];
     stepFormat: ResultStepFormat;
     constructor(data: ResultInput);
 }

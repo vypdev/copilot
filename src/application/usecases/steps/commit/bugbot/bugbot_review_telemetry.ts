@@ -63,11 +63,40 @@ export class BugbotReviewTelemetry {
     snapshot(outcome: BugbotReviewOutcome, errorCategory?: string): BugbotReviewTelemetrySnapshot {
         const changes = this.context?.prContext?.changes ?? [];
         const headSha = this.context?.prContext?.prHeadSha;
+        const canonicalPullRequestNumber = this.context?.canonicalPullRequest?.number;
+        const contextCoverage = Object.fromEntries(
+            (this.context?.coverage.sources ?? [])
+                .map((source) => [source.source, {
+                    status: source.status,
+                    pagesFetched: source.pagesFetched,
+                    itemsFetched: source.itemsFetched,
+                    itemsRetained: source.itemsRetained,
+                    omittedItems: source.omittedItems,
+                    truncatedItems: source.truncatedItems,
+                    limitReached: source.limitReached,
+                    ...(source.providerLimitReached ? { providerLimitReached: true } : {}),
+                }]),
+        );
+        const providerSources = (this.context?.coverage.sources ?? []).filter((source) =>
+            source.pagesFetched > 0 && [
+                'selection',
+                'issue-comments',
+                'pull-request-comments',
+                'review-threads',
+                'diff',
+            ].includes(source.source));
+        const selectionCandidates = this.context?.coverage.sources
+            .find((source) => source.source === 'selection')?.itemsFetched;
+        const repositoryId = this.execution.inputs?.repository?.id;
         const startedAtEpoch = Date.parse(this.startedAt);
         const reviewId = [
             this.execution.owner || 'unknown',
             this.execution.repo || 'unknown',
-            this.execution.pullRequest?.number > 0 ? `pr-${this.execution.pullRequest.number}` : 'branch',
+            canonicalPullRequestNumber !== undefined
+                ? `pr-${canonicalPullRequestNumber}`
+                : this.execution.pullRequest?.number > 0
+                    ? `pr-${this.execution.pullRequest.number}`
+                    : 'branch',
             headSha?.slice(0, 12) || String(Number.isFinite(startedAtEpoch) ? startedAtEpoch : this.startedAtMs),
         ].join(':');
         const agent = this.execution.ai.getAgentConfiguration(this.execution.isPullRequest ? 'reviewer' : 'findings');
@@ -83,7 +112,15 @@ export class BugbotReviewTelemetry {
             schemaVersion: 1,
             reviewId,
             repository: `${this.execution.owner}/${this.execution.repo}`,
-            ...(this.execution.pullRequest?.number > 0 ? { pullRequestNumber: this.execution.pullRequest.number } : {}),
+            ...(Number.isSafeInteger(repositoryId) && Number(repositoryId) > 0
+                ? { repositoryId: Number(repositoryId) }
+                : {}),
+            triggerKind: sanitizeMetricName(this.execution.eventName || 'unknown'),
+            ...(canonicalPullRequestNumber !== undefined
+                ? { pullRequestNumber: canonicalPullRequestNumber }
+                : this.execution.pullRequest?.number > 0
+                    ? { pullRequestNumber: this.execution.pullRequest.number }
+                    : {}),
             ...(headSha ? { headSha } : {}),
             publicationMode: this.execution.ai.getBugbotReviewConfiguration().publicationMode,
             configuredEffort: this.execution.ai.getBugbotReviewConfiguration().effort,
@@ -99,8 +136,21 @@ export class BugbotReviewTelemetry {
             changedFiles: changes.length,
             changedLines: changes.reduce((sum, change) => sum + change.additions + change.deletions, 0),
             rulesLoaded: this.context?.reviewRuleSources?.length ?? 0,
+            ...(this.context ? {
+                contextSelectionReason: this.context.selectionReason,
+                ...(selectionCandidates !== undefined ? {
+                    contextCandidateBucket: selectionCandidates >= 2 ? '2+' as const : String(selectionCandidates) as '0' | '1',
+                } : {}),
+                contextCoverageStatus: this.context.coverage.status,
+                contextCoverage,
+            } : {}),
+            contextLogicalProviderReads: providerSources.length,
+            contextRawProviderRequests: providerSources.reduce((sum, source) => sum + source.pagesFetched, 0),
+            contextConcurrencyLimit: 2,
             candidateFindings: this.prepared?.activeFindings?.length ?? 0,
-            publishedFindings: outcome === 'completed' ? this.prepared?.toPublish.length ?? 0 : 0,
+            publishedFindings: outcome === 'completed' || outcome === 'partial'
+                ? this.prepared?.toPublish.length ?? 0
+                : 0,
             overflowFindings: this.prepared?.overflowCount ?? 0,
             resolvedFindings: this.prepared?.resolvedFindingIds.size ?? 0,
             ...(findingStates ? { findingStates } : {}),

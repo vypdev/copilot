@@ -64,5 +64,5 @@ export class WaitForPreviousWorkflowRunsUseCase implements ParamUseCase<Previous
 }
 
 function queueTimeoutError(): ApplicationError {
-    return new ApplicationError('Timeout waiting for previous runs to finish.', 'workflow', { retryable: true });
+    return new ApplicationError('timeout', 'Timeout waiting for previous runs to finish.');
 }

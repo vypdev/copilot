@@ -31,12 +31,16 @@ When you set the **`single-action`** input (and any required targets such as `si
 |-------------|-------------|
 | **Progress / Bugbot / Recommend steps** | Run on demand with `single-action-issue`; no need to push or wait for the commit workflow. |
 | **Think** | Deep code analysis or questions; no issue required. Use from workflow or CLI with `-q "<question>"`. |
-| **GitHub Release / Setup** | Create a standalone GitHub Release, or run initial setup for labels and issue types. |
+| **Repository setup** | Provision labels and issue types without opening a deployment mutation path. |
 | **Durable deployment callbacks** | Supplied release/hotfix workflows create the accepted tag and advance operation state with the exact issue and operation ID. |
 | **Inactive issue cleanup** | Close stale issues waiting for a maintainer or issue author; no issue number required. |
 
 <Info>
-**Actions that fail the job** if the last step fails: `publish_github_action`, `create_release`, `close_inactive_issues_action`, `publish_issue_comment`, and all five workflow-owned deployment actions: `create_tag`, `prepare_deployment_action`, `continue_deployment_action`, `published_deployment_action`, and `failed_deployment_action`. The workflow will be marked as failed so you can act on it.
+**Actions that fail the job** if the last step fails include all seven
+workflow-owned deployment/publication actions: `create_tag`, `create_release`,
+`publish_github_action`, `prepare_deployment_action`,
+`continue_deployment_action`, `published_deployment_action`, and
+`failed_deployment_action`. The workflow is marked as failed so you can act.
 </Info>
 
 ## Next steps

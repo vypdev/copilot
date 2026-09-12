@@ -1,10 +1,14 @@
 # Setup, Configuration, Credentials, and Doctor
 
-- Status: As-built baseline
+- Status: Implemented — automated architecture, UX, documentation, and coverage gates complete; controlled live GitHub permission-path evidence remains external
 - Date: 2026-09-11
+- Last updated: 2026-09-12
+- Catalog capability ID: `setup-and-doctor`
+- Last verified: 2026-09-12
 - Owners: Copilot maintainers
 - Scope: interactive/non-interactive installation planning, file and resource provisioning, credential validation, and read-only diagnosis
-- Related issues/PRs: merge-queue readiness SDD
+- Related issues/PRs: merge-queue readiness SDD; architecture quality and
+  scalability hardening SDD
 - Required review gates: product UX, architecture, testing, documentation, security/operations
 - Open decisions blocking readiness: none for the baseline
 
@@ -19,7 +23,7 @@ provider credentials; secret values never enter config files or plan objects.
 ```text
 repository + config -> inspect remote -> choose bounded options/storage
                     -> validate credentials/readiness -> preview -> confirm -> provision
-repository + same config -> doctor -> pass/warn/fail report only
+repository + same config -> doctor -> pass/warn/fail/skipped report only
 ```
 
 ## 2. Problem, current behavior, and evidence
@@ -34,14 +38,16 @@ but unusable, overwrite hand-maintained files, or expose credentials.
 
 1. The CLI verifies it runs at a Git repository root and resolves owner/repo.
 2. Defaults and optional YAML/JSON overrides form one typed configuration.
-3. The wizard collects choices, inspects remote repository/organization state,
-   chooses Secret and Variable storage, validates cross-field rules, and shows a plan.
+3. An immutable questionnaire collects choices, inspects remote
+   repository/organization state, chooses Secret and Variable storage, validates
+   cross-field rules, and shows a plan without giving terminal code product policy.
 4. Credential collection validates the setup PAT, checks effective existing
    credentials remotely where possible, and asks to keep/replace/skip.
 5. Only confirmed plans provision selected files and GitHub resources; changed
    managed files require approval and backups.
 6. Doctor compares the repository to the same expected configuration and emits
-   `pass`, `warn`, or `fail` without mutation.
+   stable, ordered `pass`, `warn`, `fail`, or dependency-blocked `skipped`
+   checks without mutation. Local checks continue after setup-PAT failure.
 
 ### 2.3 Evidence and contract classification
 
@@ -49,20 +55,24 @@ but unusable, overwrite hand-maintained files, or expose credentials.
   and doctor commands, setup adapters, and `setup/` assets.
 - Intentional contract: preview/confirmation, separate credentials, bounded
   configuration, preserve-existing storage, backups, and read-only doctor.
-- Known debt and limitations: GitHub cannot reveal Secret values; health may be
+- Known limitations: GitHub cannot reveal Secret values; health may be
   `unverifiable`; remote organization access depends on PAT permissions; live
-  setup UX has no checked-in capture.
+  GitHub permission-path UX remains an external rollout check.
 - Unknown rationale: historic defaults predating the typed wizard are not
   assumed intentional unless represented by current policy and docs.
-- Proposed improvements: transactional rollback across local and GitHub writes
-  would require a separate design.
+- Implemented hardening: questionnaire/terminal separation, named doctor checks,
+  pure report policy, and narrow remote query/command adapters are specified in
+  [`setup-doctor-architecture-hardening.md`](./setup-doctor-architecture-hardening.md),
+  under the shared gates in
+  [`architecture-quality-and-scalability-hardening.md`](./architecture-quality-and-scalability-hardening.md).
+  Transactional rollback across local and GitHub writes requires a separate design.
 
 ## 3. Actors, surfaces, and terminology
 
 | Actor | Goal | Entry point | Visible surfaces |
 |---|---|---|---|
 | Setup owner | install safely | `copilot setup` | prompts, plan, backups |
-| Operator | diagnose drift | `copilot doctor` | pass/warn/fail report |
+| Operator | diagnose drift | `copilot doctor` | pass/warn/fail/skipped report |
 | Organization admin | share credentials/config | storage prompt | org resources/access |
 | Workflow runner | use provisioned contract | generated workflows | Actions runs |
 
@@ -103,7 +113,8 @@ organization value that GitHub Actions will expose.
 | Readiness | discovered during release | setup and doctor checks | earlier action |
 | Diagnosis | mutation required | read-only doctor | safe audit |
 
-No behavior change is proposed by this baseline.
+The architecture hardening preserves the product contract while making
+cancellation, skipped diagnosis, ordering, and read-only authority explicit.
 
 ## 6. Functional behavior and state model
 
@@ -116,22 +127,27 @@ No behavior change is proposed by this baseline.
 
 ### 6.2 Alternative paths
 
-- `--non-interactive` uses explicit config/token and MUST fail on missing decisions.
-- `--skip-repository-variables` and `--skip-repository-secrets` leave remote resources untouched.
+- `--non-interactive` creates no terminal; it uses defaults, explicit config,
+  flags, and credentials, and MUST fail on missing external inputs.
+- `--yes` approves only the final plan and never supplies a missing decision.
+- `--skip-variables` and `--skip-secrets` leave those remote resource classes untouched.
 - Existing valid credentials may be kept; invalid required credentials must be replaced.
 - Runner login may satisfy explicitly declared alternative credential groups.
 
 ### 6.3 State model
 
-| State | Meaning | Next | Recovery |
-|---|---|---|---|
-| collecting | local choices incomplete | inspecting/canceled | answer prompt |
-| inspecting | remote effective state loading | validating/failed | repair PAT/access |
-| validating | cross-field and credential checks | planned/failed | correct config |
-| planned | complete preview, no writes | confirmed/canceled | review |
-| provisioning | bounded writes underway | complete/partial | use backup/report |
-| diagnosing | read-only comparison | healthy/unhealthy | run setup separately |
-| complete | selected contract installed | verify workflows | none |
+Questionnaire state order is exact and forward-only:
+
+```text
+capabilities -> agent-runtime -> agent-model-defaults -> agent-role-overrides
+-> repository -> deployment -> bugbot -> projects -> provisioning -> storage
+-> review -> confirmation -> completed
+```
+
+Any active state can transition to `cancelled`. Conditional states are skipped
+by policy when irrelevant; there is no legacy state alias or back-navigation
+mode. After questionnaire completion, credential validation and provisioning
+remain separate application flows.
 
 Cancellation before confirmation writes nothing. Partial remote provisioning
 retains successful facts and reports remaining work; retries MUST preserve valid
@@ -161,10 +177,10 @@ rules, secret serialization, backups, and confirmation are not configurable.
 | Boundary | Owns | Must not own/import |
 |---|---|---|
 | Domain | setup plan/check/value types | prompts/Octokit/fs |
-| Policies | defaults, merge, validation, storage, resource plan | terminal UI |
-| Use cases | collect, credential decisions, provision, doctor | provider DTOs |
-| Ports | prompt, workspace, remote config, secrets, health | secret storage implementation |
-| Adapters | terminal, filesystem, Octokit, health workflow | product defaults |
+| Policies | defaults, immutable clone/questionnaire, validation, storage, plans, doctor report | terminal UI |
+| Use cases | drive questionnaire, credential decisions, provision, doctor probes | provider DTOs |
+| Ports | raw terminal, render/present/confirm, workspace, narrow remote queries/commands, health | provider implementation |
+| Adapters | terminal mechanics, presenters, filesystem, narrow Octokit reads/writes, health query/bootstrap | product defaults/question order |
 | CLI composition | command flags and concrete wiring | duplicated validation |
 
 ```mermaid
@@ -217,33 +233,39 @@ plan objects, errors, command history suggestions, backups, or doctor output.
 ## 12. Observability and operational UX
 
 Setup reports the plan, credential checks, merge-queue checks, file decisions,
-and provisioning results. Doctor returns a non-zero exit when unhealthy and
-distinguishes `pass`, `warn`, and `fail`. Every check names its area and next
-action. Logs correlate owner/repository but redact values. No telemetry service
-is required.
+and provisioning results. Doctor returns a non-zero exit exactly when at least
+one check is `fail`; `warn` and `skipped` preserve a successful exit when no
+failure exists. Every check has a stable ID, status, summary, safe evidence,
+blocker IDs, and an action where useful. Reports render in declared order even
+when independent read-only probes complete out of order. Logs correlate
+owner/repository but redact values. No telemetry service is required.
 
 ## 13. Compatibility, migration, rollout, and rollback
 
-Existing unmanaged files remain untouched. Changed managed files require
-approval and backup. Absent config uses current defaults; unknown keys or values
-fail validation rather than being guessed. Removing a feature does not
-destructively delete remote resources. Rollback uses backups and the previous
-workflow revision; successful remote writes are reported for manual reversal.
+There are no installed users, external API consumers, or production setup state
+to migrate. The implementation is a greenfield cutover: no compatibility
+adapter, deprecated result shape, dual reader/writer, state alias, or legacy test
+suite remains. Existing unmanaged repository files are still product data and
+remain untouched; changed managed files require approval and backup. Unknown
+keys or values fail validation rather than being guessed. Rollback uses backups
+and the previous workflow revision; successful remote writes are reported for
+manual reversal.
 
 ## 14. Testing strategy and numeric budget
 
 | Area | Minimum cases | Risks |
 |---|---:|---|
 | Defaults/config/storage policy | 24 | bounds, precedence, cross-fields |
-| Wizard/state/idempotency | 18 | cancel, preserve, replace, partial retry |
+| Questionnaire/wizard/idempotency | 18 | transitions, immutability, cancel, preserve, replace |
 | Credentials/provider adapters | 18 | valid/invalid/missing/unverifiable/groups |
 | Workflows/assets/schema | 14 | selection, parity, readiness, permissions |
 | Prompt/CLI UX/sanitization | 12 | masking, status order, non-interactive |
-| Integration/security/migration | 12 | backup, org scope, doctor, no `.env` |
+| Integration/security/cutover | 12 | backup, org scope, doctor, no `.env` |
 | **Total** | **98** | no double counting |
 
-Global coverage thresholds remain; new pure policies SHOULD reach 95% branch
-coverage. Tests use temporary directories, fake prompts and GitHub adapters, no
+Global coverage thresholds remain; questionnaire and doctor report policies
+MUST reach 100% statements/branches/functions/lines, and changed setup
+application modules MUST reach at least 90% branch coverage. Tests use temporary directories, fake prompts and GitHub adapters, no
 live services. Workflow checks parse YAML. Manual evidence covers terminal
 widths, canceled prompts, secret masking, and GitHub permission variants.
 
@@ -288,17 +310,20 @@ widths, canceled prompts, secret masking, and GitHub permission variants.
 
 ## 19. Definition of Done
 
-- [ ] Every new option has default, bounds, precedence, persistence, migration, and security rules.
-- [ ] The 98-case budget and coverage thresholds pass.
-- [ ] Setup cancel/retry/partial state and doctor read-only behavior pass.
-- [ ] Secrets are absent from plans, config, logs, errors, and backups.
-- [ ] Workflow/assets, documentation, and catalog checks pass.
+- [x] Every new option has default, bounds, precedence, persistence, retirement/rejection, and security rules.
+- [x] The 98-case budget and coverage thresholds pass.
+- [x] Setup cancel/retry/partial state and doctor read-only behavior pass.
+- [x] Secrets are absent from plans, config, logs, errors, and backups.
+- [x] Workflow/assets, documentation, and catalog checks pass.
 - [ ] Human terminal and permission-path UX evidence is captured.
 
 ## 20. References and decisions
 
 - Primary sources: catalogued setup code, tests, assets, and docs.
 - Related SDD: `merge-queue-readiness.md`.
+- Implemented hardening: `setup-doctor-architecture-hardening.md` owns setup questionnaire,
+  doctor, and remote configuration adapter decomposition; the architecture
+  hardening SDD owns shared sequencing and verification gates.
 - Decision: one configuration policy serves setup, doctor, and workflow inputs.
 - Rejected: storing credentials in YAML/JSON or silently overwriting managed files.
 - Follow-up: cross-provider transactional rollback is outside this baseline.

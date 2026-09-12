@@ -1,6 +1,11 @@
 import type { ManagedPullRequestPhase } from "../../domain/deployment_operation";
 import type { TargetMergeCapabilities } from "../policies/deployment_plan_policy";
-import type { DeploymentOperationSnapshot } from "../../domain/deployment_operation";
+import type { DeploymentOperationSnapshot, DeploymentPublicationReceipt } from "../../domain/deployment_operation";
+import type {
+  DeploymentStateLoadOutcome,
+  DeploymentStateSaveOutcome,
+  ExpectedDeploymentState,
+} from "../../domain/deployment_state_fence";
 import type { DeploymentConfigurationValues } from "../../domain/deployment_configuration";
 import type { CopilotLifecycleLabels } from "../../domain/copilot_lifecycle";
 
@@ -13,6 +18,7 @@ export interface ManagedPullRequestRecord {
   readonly baseBranch: string;
   readonly state: "open" | "closed";
   readonly merged: boolean;
+  readonly autoMergeEnabled: boolean;
   readonly mergeCommitSha?: string;
   readonly repositoryFullName: string;
 }
@@ -48,7 +54,7 @@ export interface TargetMergePolicyInspectionPort {
   ): Promise<TargetMergeCapabilities>;
 }
 
-export interface ManagedPullRequestPort extends TargetMergePolicyInspectionPort {
+export interface ManagedPullRequestPort {
   findManagedPullRequests(query: ManagedPullRequestQuery): Promise<readonly ManagedPullRequestRecord[]>;
   createManagedPullRequest(command: ManagedPullRequestCreate): Promise<ManagedPullRequestRecord>;
   getPullRequest(owner: string, repository: string, pullRequest: number, token: string): Promise<ManagedPullRequestRecord>;
@@ -70,7 +76,7 @@ export interface DeploymentGitPort {
   isCommitReachable(owner: string, repository: string, branch: string, sha: string, token: string): Promise<boolean>;
   createOrVerifyBranch(owner: string, repository: string, branch: string, sha: string, token: string): Promise<void>;
   mergeCommitIntoBranch(owner: string, repository: string, branch: string, sourceSha: string, token: string): Promise<string>;
-  deleteBranch(owner: string, repository: string, branch: string, token: string): Promise<void>;
+  deleteBranch(owner: string, repository: string, branch: string, expectedSha: string, token: string): Promise<void>;
   listBranches(owner: string, repository: string, prefix: string, token: string): Promise<readonly string[]>;
 }
 
@@ -99,6 +105,22 @@ export interface DeploymentPresentationPort {
   publishMilestone(owner: string, repository: string, issue: number, marker: string, body: string, token: string): Promise<void>;
 }
 
+export type DeploymentPublicationInspection =
+  | { readonly kind: "verified"; readonly receipt: DeploymentPublicationReceipt }
+  | { readonly kind: "absent"; readonly effect: "tag" | "release" }
+  | { readonly kind: "conflict"; readonly reason: string };
+
+export interface DeploymentPublicationReceiptPort {
+  inspect(command: {
+    readonly owner: string;
+    readonly repository: string;
+    readonly tag: string;
+    readonly productionSha: string;
+    readonly operationId: string;
+    readonly token: string;
+  }): Promise<DeploymentPublicationInspection>;
+}
+
 export interface DeploymentIssueState {
   branchType: string;
   releaseBranch?: string;
@@ -114,7 +136,7 @@ export interface DeploymentIssueState {
   recommendationState?: unknown;
 }
 
-export interface DeploymentStateQuery {
+export interface DeploymentStateBinding {
   readonly owner: string;
   readonly repository: string;
   readonly issue: number;
@@ -122,8 +144,15 @@ export interface DeploymentStateQuery {
 }
 
 export interface DeploymentStateStorePort {
-  load(query: DeploymentStateQuery): Promise<DeploymentOperationSnapshot | undefined>;
-  save(command: DeploymentStateQuery & { readonly state: DeploymentIssueState }): Promise<void>;
+  load(): Promise<DeploymentStateLoadOutcome>;
+  save(command: {
+    readonly expected: ExpectedDeploymentState;
+    readonly state: DeploymentIssueState & { readonly deploymentOrchestration: DeploymentOperationSnapshot };
+  }): Promise<DeploymentStateSaveOutcome>;
+}
+
+export interface DeploymentStateStoreFactoryPort {
+  bind(binding: DeploymentStateBinding): DeploymentStateStorePort;
 }
 
 /** Narrow runtime view adapted structurally at the single-action boundary. */

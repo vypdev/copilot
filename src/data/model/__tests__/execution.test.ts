@@ -52,6 +52,7 @@ import { Tokens } from '../tokens';
 import { Workflows } from '../workflows';
 import { ExecutionBranchVersionResolver } from '../../../application/usecases/execution/execution_branch_version_resolver';
 import { SetupExecutionUseCase } from '../../../application/usecases/execution/setup_execution_use_case';
+import { applySetupExecutionResult, projectSetupExecutionContext } from '../../../actions/setup_execution_boundary';
 
 function makeLabels(): Labels {
   return new Labels(
@@ -220,22 +221,23 @@ const setupIssuePort = {
   getDescription: jest.fn(),
   updateDescription: jest.fn(),
 };
-const setupOrganizationPort = { getUserFromToken: mockGetUserFromToken };
+const setupOrganizationPort = { getTokenUser: mockGetUserFromToken };
 const setupConfigurationPort = { get: mockConfigGet };
 
-function setupExecution(execution: Execution): Promise<void> {
+async function setupExecution(execution: Execution): Promise<void> {
   const branchVersionResolver = new ExecutionBranchVersionResolver(
     branchRepository,
     { taskId: 'release-version', invoke: mockGetReleaseVersionInvoke },
     { taskId: 'release-type', invoke: mockGetReleaseTypeInvoke },
     { taskId: 'hotfix-version', invoke: mockGetHotfixVersionInvoke },
   );
-  return new SetupExecutionUseCase(
+  const result = await new SetupExecutionUseCase(
     setupIssuePort,
     setupOrganizationPort,
     setupConfigurationPort,
     branchVersionResolver,
-  ).invoke(execution);
+  ).invoke(projectSetupExecutionContext(execution));
+  applySetupExecutionResult(execution, result);
 }
 
 describe('Execution', () => {
@@ -491,12 +493,7 @@ describe('Execution', () => {
 
       await setupExecution(e);
 
-      expect(mockConfigGet).toHaveBeenCalledWith({
-        owner: 'owner',
-        repository: 'repository',
-        issueNumber: 99,
-        token: 'token',
-      });
+      expect(mockConfigGet).toHaveBeenCalledWith(99);
     });
 
     it('sets issueNumber from pullRequest head when isPullRequest and not single action', async () => {
@@ -512,12 +509,7 @@ describe('Execution', () => {
       } as never, { pullRequest });
       await setupExecution(e);
       expect(e.issueNumber).toBe(42);
-      expect(mockConfigGet).toHaveBeenCalledWith({
-        owner: 'owner',
-        repository: 'repository',
-        issueNumber: 314,
-        token: 'token',
-      });
+      expect(mockConfigGet).toHaveBeenCalledWith(314);
     });
 
     it('sets issueNumber from commit branch when isPush and not single action', async () => {
@@ -527,7 +519,7 @@ describe('Execution', () => {
       );
       await setupExecution(e);
       expect(e.issueNumber).toBe(7);
-      expect(mockConfigGet).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 7 }));
+      expect(mockConfigGet).toHaveBeenCalledWith(7);
     });
 
     it('sets currentIssueLabels from issue repository', async () => {
@@ -569,7 +561,7 @@ describe('Execution', () => {
       await setupExecution(e);
       expect(e.issueNumber).toBe(123);
       expect(e.singleAction.issue).toBe(123);
-      expect(mockConfigGet).toHaveBeenCalledWith(expect.objectContaining({ issueNumber: 123 }));
+      expect(mockConfigGet).toHaveBeenCalledWith(123);
     });
 
     it('rejects malformed configured issue numbers before querying GitHub', async () => {

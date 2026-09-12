@@ -11,10 +11,11 @@ describe('agent input builder', () => {
             [INPUT_KEYS.FINDINGS_MODEL_PROVIDER]: 'openai',
             [INPUT_KEYS.FINDINGS_MODEL]: 'codex-model',
             [INPUT_KEYS.FINDINGS_EFFORT]: 'high',
+            [INPUT_KEYS.FINDINGS_EXECUTABLE]: '/opt/agents/codex',
             [INPUT_KEYS.FIXER_EFFORT]: 'low',
         });
-        expect(tasks.findings).toMatchObject({ provider: 'codex', modelProvider: 'openai', model: 'codex-model', effort: 'high', command: "codex exec --ephemeral --skip-git-repo-check --model codex-model --config 'model_provider=\"openai\"' --config 'model_reasoning_effort=\"high\"' -" });
-        expect(tasks.fixer).toMatchObject({ provider: 'opencode', modelProvider: 'openai', model: 'base-model', effort: 'low', command: 'opencode run --model openai/base-model --variant low' });
+        expect(tasks.findings).toMatchObject({ provider: 'codex', modelProvider: 'openai', model: 'codex-model', effort: 'high', executable: '/opt/agents/codex' });
+        expect(tasks.fixer).toEqual({ provider: 'opencode', modelProvider: 'openai', model: 'base-model', effort: 'low' });
     });
 
     it('supports independent planner and reviewer roles while preserving the base fallback', () => {

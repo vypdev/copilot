@@ -11,8 +11,12 @@ import { RepositoryDefaultBranchRepository } from "../../data/repository/release
 import { RepositoryTagRepository } from "../../data/repository/release/repository_tag_repository";
 import { GitCliRepository } from "../../data/repository/git_cli_repository";
 import { composeInitialSetupUseCase } from "./initial_setup_use_case_composition";
-import { SetupWorkspaceAdapter } from "../setup_workspace_adapter";
-import { RepositoryVariablesRepository } from '../../data/repository/repository_variables_repository';
+import { SetupWorkspaceMutationAdapter } from "../setup_workspace_adapter";
+import {
+    RepositorySecretsCommandRepository,
+    RepositoryVariablesCommandRepository,
+    SetupRemoteConfigurationQueryRepository,
+} from '../../data/repository/repository_variables_repository';
 import { createRepositoryVariablesClient } from './github_identity_client_factory';
 
 export function createInitialSetupCompositionRoot(): InitialSetupUseCase {
@@ -20,7 +24,7 @@ export function createInitialSetupCompositionRoot(): InitialSetupUseCase {
         createIssueLabelProvisioningClient(),
     );
 
-    const repositoryConfiguration = new RepositoryVariablesRepository(createRepositoryVariablesClient());
+    const githubResourceClient = createRepositoryVariablesClient();
     return composeInitialSetupUseCase(
         new AuthenticatedUserRepository(createAuthenticatedUserClient()),
         labelProvisioning,
@@ -28,9 +32,9 @@ export function createInitialSetupCompositionRoot(): InitialSetupUseCase {
         new GitCliRepository(),
         new RepositoryDefaultBranchRepository(createReleaseClient()),
         new RepositoryTagRepository(createReleaseClient()),
-        new SetupWorkspaceAdapter(),
-        repositoryConfiguration,
-        repositoryConfiguration,
-        repositoryConfiguration,
+        new SetupWorkspaceMutationAdapter(),
+        new RepositoryVariablesCommandRepository(githubResourceClient),
+        new RepositorySecretsCommandRepository(githubResourceClient),
+        new SetupRemoteConfigurationQueryRepository(githubResourceClient),
     );
 }

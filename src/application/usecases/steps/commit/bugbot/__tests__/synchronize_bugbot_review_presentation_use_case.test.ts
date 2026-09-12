@@ -50,6 +50,7 @@ function plan(overrides: Partial<BugbotReconciliationPlan> = {}): BugbotReconcil
   return {
     findings: [],
     diagnostics: [],
+    coverage: { status: 'complete', sources: [] },
     ...overrides,
   };
 }

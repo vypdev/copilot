@@ -1,15 +1,23 @@
 # Configurable Production-First Release Orchestration
 
-- Status: Implemented; live rollout and human UX validation pending
+- Status: Implemented; live rollout, human UX validation, and concurrency
+  conformance hardening pending
 - Date: 2026-09-09
-- Last updated: 2026-09-10
+- Last updated: 2026-09-11
 - Owners: Copilot maintainers
 - Scope: release and hotfix promotion, publication, reconciliation, and cleanup
+- Related proposals:
+  [`deployment-concurrency-and-state-fencing.md`](./deployment-concurrency-and-state-fencing.md)
+  owns the P0-B implementation contract;
+  [`architecture-quality-and-scalability-hardening.md`](./architecture-quality-and-scalability-hardening.md)
+  owns sequencing and shared gates
 - Implementation: `df972490` plus the documentation/validation follow-up recorded
   in the companion traceability matrix
 - Required review gates: architecture, product UX, security, and operations
 - Open validation gates: AC-40 and the human portion of AC-46 must be captured
-  from a real GitHub release/hotfix flow on desktop/mobile and light/dark views
+  from a real GitHub release/hotfix flow on desktop/mobile and light/dark views;
+  P0-B must replace the unproven issue-body compare-before-write guarantee with
+  verified cross-workflow serialization and simultaneous-invocation evidence
 - Standard: [Product Specification Standard](./README.md)
 
 ## 1. Summary
@@ -1144,10 +1152,26 @@ not cross into domain decisions or user-facing models.
 
 ### 17.5 Persistence and concurrency
 
-Durable transitions use compare-before-write semantics on operation ID and
-expected phase. Concurrent duplicate invocations may repeat safe reads but only
-one can persist a successful phase transition. Side effects are protected by
-deterministic identities and postcondition verification.
+Durable transitions validate operation ID, expected phase, and monotonic state
+revision before writing. Because GitHub's issue update endpoint does not provide
+an atomic conditional `PATCH`, this read/compare/write sequence is a defensive
+staleness fence rather than a compare-and-set mutex.
+
+Authoritative mutual exclusion MUST be provided by one repository-wide GitHub
+Actions concurrency group shared by every mutation path for the same launcher
+issue, including release, hotfix, managed-PR continuation, publication,
+reconciliation, cleanup, and retry. The group is
+`copilot-deployment-<repository-id>-<issue-number>`, queues without canceling an
+admitted mutation, and may use a trusted read-only resolver job before the
+serialized mutation job. After admission, the use case reloads state and
+provider facts before every irreversible side effect. Duplicate invocations may
+repeat safe reads, but only the admitted current-phase invocation may mutate.
+
+The P0-B implementation in the 2026-09-12 worktree applies this contract to all
+three workflow routes and includes a deterministic simultaneous-writer test.
+Controlled live GitHub queue evidence remains outstanding. The P0-B
+[`deployment-concurrency-and-state-fencing.md`](./deployment-concurrency-and-state-fencing.md)
+owns the detailed contract and remaining human evidence.
 
 Persisted orchestration and configuration readers accept only the current
 schema. Missing, malformed, or different-version state fails closed instead of
@@ -1213,8 +1237,9 @@ In addition:
 - Contract tests parse active and setup workflow YAML rather than searching only
   for unstructured text.
 - Replay tests invoke the same event multiple times and in reordered sequences.
-- Race tests simulate two invocations reading the same phase and verify one
-  durable transition/side effect identity.
+- Race tests use a deterministic barrier to start two invocations from the same
+  phase and verify one admitted mutation sequence. A stale-phase mock without
+  simultaneous admission does not satisfy this requirement.
 - Adapter tests cover success, already-exists, not-found, conflict, protection,
   permission, rate-limit, and transient failure mappings.
 - Presentation tests assert semantic sections, ordering, stable markers, URLs,
@@ -1526,6 +1551,24 @@ readability, cover at least the following scenarios.
 17. Run unit, integration, architecture, workflow-contract, documentation, lint,
     build, coverage, and Graphify update checks.
 
+### 23.1 Required concurrency hardening increment
+
+The concurrency/state-fencing increment is implemented; only its controlled
+live serialization evidence remains a human gate. The exact contract is
+[`deployment-concurrency-and-state-fencing.md`](./deployment-concurrency-and-state-fencing.md).
+The implementation:
+
+1. adds cross-workflow group and deterministic simultaneous-invocation tests;
+2. adds the trusted issue resolver and shared queued/non-canceling mutation group
+   to active workflows and setup templates;
+3. defines the sole initial state schema/revision, rejects unversioned shapes,
+   and performs pre-effect revalidation without a migration path;
+4. decomposes phase handlers and provider rule normalization behind narrow contracts;
+5. updates this SDD, traceability, operator recovery, bundles, and catalog
+   evidence; and
+6. satisfies P0-B's automated test budget and repository gates. Controlled live
+   queue evidence remains explicitly pending.
+
 ## 24. Definition of done
 
 - Every functional and safety requirement in this specification is implemented.
@@ -1536,6 +1579,8 @@ readability, cover at least the following scenarios.
 - No default release/hotfix path polls PR checks inside a runner.
 - A canceled or duplicated run can resume without duplicate tags, packages,
   releases, PRs, comments, labels, or merges.
+- Cross-workflow concurrency and a deterministic simultaneous-invocation test
+  prove that only one current-phase mutation sequence is admitted.
 - Release origin and strategy are visible and immutable for the duration of an
   operation.
 - Default setup produces the recommended production-lineage, auto PR, automatic

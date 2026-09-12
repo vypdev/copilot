@@ -13,8 +13,10 @@ import { redactSensitiveText } from '../../../../../domain/security/sensitive_te
 
 export type BugbotResponse = {
     findings?: BugbotFinding[];
-    resolved_finding_ids?: string[];
-    resolved_finding_reasons?: Record<string, BugbotFindingResolution>;
+    resolved_findings?: Array<{
+        id?: string;
+        resolution?: BugbotFindingResolution;
+    }>;
 };
 
 export type PreparedBugbotFindings = ApplyLimitResult & {
@@ -26,7 +28,7 @@ export type PreparedBugbotFindings = ApplyLimitResult & {
 
 /** Hard cap for model-controlled arrays before any filtering or publication. */
 export const MAX_AGENT_FINDINGS = 500;
-export const MAX_AGENT_RESOLVED_FINDING_IDS = 500;
+export const MAX_AGENT_RESOLVED_FINDINGS = 500;
 export const MIN_AGENT_FINDING_CONFIDENCE = 0.70;
 
 export function normalizeBugbotResponse(response: unknown): {
@@ -37,10 +39,11 @@ export function normalizeBugbotResponse(response: unknown): {
     if (response == null || typeof response !== 'object') return undefined;
     const payload = response as Record<string, unknown>;
     if (!Array.isArray(payload.findings)) return undefined;
+    const resolvedFindingResolutions = normalizeResolvedFindings(payload.resolved_findings);
     return {
         findings: normalizeFindings(payload.findings),
-        resolvedFindingIds: normalizeResolvedFindingIds(payload.resolved_finding_ids),
-        resolvedFindingResolutions: normalizeResolvedFindingReasons(payload.resolved_finding_reasons),
+        resolvedFindingIds: new Set(resolvedFindingResolutions.keys()),
+        resolvedFindingResolutions,
     };
 }
 
@@ -125,22 +128,27 @@ function normalizeSuggestedCode(value: unknown): string | undefined {
     return normalized && !normalized.includes('```') ? normalized : undefined;
 }
 
-function normalizeResolvedFindingIds(findingIds: unknown): Set<string> {
-    return new Set((Array.isArray(findingIds) ? findingIds : []).slice(0, MAX_AGENT_RESOLVED_FINDING_IDS).flatMap(findingId => {
-        if (typeof findingId !== 'string') return [];
-        const normalizedId = normalizeFindingIdForMarker(findingId);
-        return normalizedId == null ? [] : [normalizedId];
-    }));
-}
-
-function normalizeResolvedFindingReasons(value: unknown): Map<string, BugbotFindingResolution> {
-    if (value == null || typeof value !== 'object' || Array.isArray(value)) return new Map();
-    return new Map(Object.entries(value as Record<string, unknown>).flatMap(([findingId, reason]) => {
-        const normalizedId = normalizeFindingIdForMarker(findingId);
-        return normalizedId && (reason === 'fixed' || reason === 'obsolete')
-            ? [[normalizedId, reason as BugbotFindingResolution]]
-            : [];
-    }));
+function normalizeResolvedFindings(value: unknown): Map<string, BugbotFindingResolution> {
+    if (!Array.isArray(value)) return new Map();
+    const resolutions = new Map<string, BugbotFindingResolution>();
+    const conflictedIds = new Set<string>();
+    for (const candidate of value.slice(0, MAX_AGENT_RESOLVED_FINDINGS)) {
+        if (!isRecord(candidate)) continue;
+        const normalizedId = typeof candidate.id === 'string'
+            ? normalizeFindingIdForMarker(candidate.id)
+            : null;
+        if (!normalizedId
+            || conflictedIds.has(normalizedId)
+            || (candidate.resolution !== 'fixed' && candidate.resolution !== 'obsolete')) continue;
+        const current = resolutions.get(normalizedId);
+        if (current && current !== candidate.resolution) {
+            resolutions.delete(normalizedId);
+            conflictedIds.add(normalizedId);
+            continue;
+        }
+        resolutions.set(normalizedId, candidate.resolution);
+    }
+    return resolutions;
 }
 
 function boundedText(value: unknown, maxLength: number): string {

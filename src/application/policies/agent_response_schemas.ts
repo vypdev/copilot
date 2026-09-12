@@ -4,19 +4,18 @@ export const TRANSLATION_RESPONSE_SCHEMA = {
     type: 'object',
     properties: {
         translatedText: {
-            type: 'string',
-            minLength: 1,
+            type: ['string', 'null'],
             maxLength: 12_000,
-            description: 'The text translated to the requested locale. Required. Must not be empty.',
+            description: 'The translated text, or null when translation cannot be produced.',
         },
         reason: {
-            type: 'string',
+            type: ['string', 'null'],
             maxLength: 2_000,
             description:
-                'Optional: reason why translation could not be produced or was partial (e.g. ambiguous input).',
+                'Reason why translation could not be produced, or null when translation succeeded.',
         },
     },
-    required: ['translatedText'],
+    required: ['translatedText', 'reason'],
     additionalProperties: false,
 } as const;
 

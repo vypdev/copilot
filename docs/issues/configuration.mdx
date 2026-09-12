@@ -132,16 +132,20 @@ The workflow can select one provider for both findings and fixer operations. The
 - `agent-model-provider`: upstream provider for the selected model (for example `openai` or `opencode`)
 - `agent-model`: model name without the provider prefix (for example `gpt-5.6-luna`)
 - `agent-effort`: optional reasoning effort or provider-specific model variant
-- `agent-command`: optional literal executable plus arguments for the selected CLI. OpenCode commands must include an explicit `--model provider/model` selection.
+- `agent-executable`: optional exact provider basename or absolute path to the same executable. Arguments, wrappers, and alternate basenames are rejected.
+
 All three providers use the CLI contract:
 
 | Provider | CLI command |
 | --- | --- |
-| OpenCode | `opencode run --model provider/model [--variant effort]` |
-| Cursor | `agent -p --output-format text --model model <prompt>` |
-| Codex | `codex exec --ephemeral --skip-git-repo-check --model model --config 'model_provider="provider"' [--config 'model_reasoning_effort="effort"'] -` |
+| OpenCode | `opencode run --pure --agent managed-role --format json --model provider/model [--variant effort]` |
+| Cursor | `agent -p --output-format text --sandbox enabled --model model [--mode ask\|--force] <prompt>` |
+| Codex | `codex exec --strict-config --ignore-user-config --ignore-rules --ephemeral --sandbox mode --model model ... -` |
 
-SDK and HTTP server transports are not part of the current public contract. CLI commands are executed without a shell and credentials are supplied through the runner environment or an explicitly controlled local credential store. Tokens must never be included in `agent-command`.
+SDK and HTTP server transports are not part of the public contract. Copilot
+constructs all arguments, invokes the selected executable without a shell, and
+supplies at most the selected credential through the controlled environment.
+Tokens must never be placed in action inputs.
 #### AI model compatibility input
 - `ai-pull-request-description-mode`: PR body policy: `replace`, `append`, `preserve`, or `disabled` (default: `replace`)
 - `ai-ignore-files`: Comma-separated list of files to ignore for AI operations

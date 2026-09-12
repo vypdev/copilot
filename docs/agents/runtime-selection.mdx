@@ -13,3 +13,7 @@ description: Select exactly one external CLI runtime for a run.
 | `cursor` | `agent` | Non-interactive prompt mode |
 
 Only runtimes selected by active roles are provisioned, authenticated, and executed. A workflow may therefore use more than one runtime when its active roles have independent overrides. The runtime is not the model provider. For example, `opencode` can execute an `openai/...` model.
+
+`agent-executable` and the corresponding role overrides may select only the expected bare basename or an absolute path with that basename. The canonical target must be a regular executable owned by the runner user or root and not group/world writable. Versions are fixed by the runtime manifest: Codex `codex-cli 0.153.4`, OpenCode `1.18.3`, Cursor `2026.09.10-fd3934a`.
+
+There is no runtime registry or provider fallback. The exhaustive dispatcher recognizes exactly these three values and rejects every other value before spawn.

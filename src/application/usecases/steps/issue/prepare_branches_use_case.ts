@@ -17,6 +17,7 @@ import { selectBranchPreparationStrategy } from "./branch_preparation_strategy";
 import { prepareManagedBranch } from "./prepare_managed_branch";
 import { prepareHotfixBranch } from "./prepare_hotfix_branch";
 import { prepareReleaseBranch } from "./prepare_release_branch";
+import { toApplicationError } from "../../../errors/application_error";
 
 export class PrepareBranchesUseCase implements ParamUseCase<
   Execution,
@@ -68,10 +69,8 @@ export class PrepareBranchesUseCase implements ParamUseCase<
       result.push(...await this.prepareBranchByStrategy(param, issueTitle, branches));
       return result;
     } catch (error) {
-      logError(
-        `PrepareBranches: error preparing branches for issue #${param.issueNumber}.`,
-        error instanceof Error ? { stack: error.stack } : undefined,
-      );
+      const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to prepare the issue branch.');
+      logError(semanticError);
       result.push(
         new Result({
           id: this.taskId,
@@ -80,7 +79,7 @@ export class PrepareBranchesUseCase implements ParamUseCase<
           steps: [
             "Tried to prepare the branch for the issue, but there was a problem.",
           ],
-          errors: [error instanceof Error ? error : new Error(String(error))],
+          errors: [semanticError],
         }),
       );
       return result;

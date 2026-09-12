@@ -4,6 +4,7 @@ import type { IssueTypeAssignmentPort } from "../../../../application/ports/issu
 import { logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
+import { toApplicationError } from "../../../errors/application_error";
 
 export class UpdateIssueTypeUseCase implements ParamUseCase<Execution, Result[]> {
     taskId: string = 'UpdateIssueTypeUseCase';
@@ -25,7 +26,8 @@ export class UpdateIssueTypeUseCase implements ParamUseCase<Execution, Result[]>
                 param.tokens.token,
             );
         } catch (error) {
-            logError(error);
+            const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to update the issue type.');
+            logError(semanticError);
             result.push(
                 new Result({
                     id: this.taskId,
@@ -34,7 +36,7 @@ export class UpdateIssueTypeUseCase implements ParamUseCase<Execution, Result[]>
                     steps: [
                         `Tried to update issue type, but there was a problem.`,
                     ],
-                    errors: [error],
+                    errors: [semanticError],
                 })
             )
         }

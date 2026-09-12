@@ -19,6 +19,7 @@ import {
     ensureRepositoryVariables,
     resolveRemoteConfiguration,
 } from './setup_resource_provisioning';
+import { ApplicationError, type ApplicationErrorCode, toApplicationError } from '../../errors/application_error';
 
 export interface InitialSetupWorkflowDependencies extends SetupResourceProvisioningDependencies {
     authenticatedUserPort: AuthenticatedUserPort;
@@ -32,7 +33,7 @@ export interface InitialSetupWorkflowDependencies extends SetupResourceProvision
 
 type InitialLabelProvisioningOutcome =
     | { completed: true; configured: LabelProvisioningSummary; progress: LabelProvisioningSummary }
-    | { completed: false; error: string };
+    | { completed: false; error: ApplicationError };
 
 const TASK_ID = 'InitialSetupUseCase';
 
@@ -43,13 +44,13 @@ export async function runInitialSetupWorkflow(
 ): Promise<Result[]> {
     logInfo(`${getTaskEmoji(TASK_ID)} Executing ${TASK_ID}.`);
     const steps: string[] = [];
-    const errors: string[] = [];
+    const errors: ApplicationError[] = [];
 
     try {
         const setupConfiguration = request.setupConfiguration;
         if (!dependencies.setupWorkspacePort.hasValidToken(request.token)) {
             logInfo('  🛑 Setup requires the setup PAT provided for this command with a valid token.');
-            errors.push('A valid setup PAT must be provided to run setup. It is separate from the workflow PAT Secret.');
+            errors.push(new ApplicationError('authorization.credential-invalid', 'A valid setup PAT must be provided to run setup. It is separate from the workflow PAT Secret.'));
             return [buildResult(errors, steps)];
         }
         logInfo('📋 Ensuring .github and copying setup files...');
@@ -70,11 +71,18 @@ export async function runInitialSetupWorkflow(
         }
         steps.push(`✅ GitHub access verified: ${githubAccess.user}`);
 
-        const remoteConfiguration = await resolveRemoteConfiguration(request, dependencies, setupConfiguration, errors);
+        const remoteConfigurationErrors: string[] = [];
+        const remoteConfiguration = await resolveRemoteConfiguration(
+            request,
+            dependencies,
+            setupConfiguration,
+            remoteConfigurationErrors,
+        );
+        errors.push(...fromMessages(remoteConfigurationErrors, 'provider.unavailable'));
 
         const secrets = await ensureRepositorySecrets(request, dependencies, setupConfiguration, remoteConfiguration);
         if (secrets.step) steps.push(secrets.step);
-        if (secrets.errors.length > 0) errors.push(...secrets.errors);
+        if (secrets.errors.length > 0) errors.push(...fromMessages(secrets.errors, 'authorization.credential-invalid'));
 
         logInfo('🏷️  Checking configured and progress labels...');
         const labels = await ensureInitialLabels(request, dependencies.initialLabelProvisioningPort);
@@ -88,22 +96,23 @@ export async function runInitialSetupWorkflow(
         logInfo('📋 Checking issue types...');
         const issueTypes = await ensureIssueTypes(request, dependencies.issueTypeProvisioningPort);
         if (!issueTypes.success) {
-            errors.push(...issueTypes.errors);
+            errors.push(...fromMessages(issueTypes.errors, 'provider.unavailable'));
         } else {
             steps.push(`✅ Issue types checked: ${issueTypes.created} created, ${issueTypes.existing} already existed`);
         }
 
         const variables = await ensureRepositoryVariables(request, dependencies, setupConfiguration, remoteConfiguration);
         if (variables.step) steps.push(variables.step);
-        if (variables.errors.length > 0) errors.push(...variables.errors);
+        if (variables.errors.length > 0) errors.push(...fromMessages(variables.errors, 'provider.unavailable'));
 
         const defaultVersion = await ensureDefaultVersion(request, dependencies, setupConfiguration);
         if (defaultVersion.step) steps.push(defaultVersion.step);
         if (defaultVersion.error) errors.push(defaultVersion.error);
         return [buildResult(errors, steps)];
     } catch (error) {
-        logError(error);
-        errors.push(`Error running initial setup: ${error}`);
+        const semanticError = toApplicationError(error, 'workflow.failed', 'Error running initial setup.');
+        logError(semanticError);
+        errors.push(semanticError);
         return [buildResult(errors, steps)];
     }
 }
@@ -111,13 +120,14 @@ export async function runInitialSetupWorkflow(
 async function verifyGitHubAccess(
     request: InitialSetupRequest,
     repository: AuthenticatedUserPort,
-): Promise<{ success: boolean; user?: string; errors: string[] }> {
+): Promise<{ success: boolean; user?: string; errors: ApplicationError[] }> {
     try {
         const user = await repository.getUserFromToken(request.token);
         return { success: true, user, errors: [] };
     } catch (error) {
-        logError(`Error verifying GitHub access: ${error}`);
-        return { success: false, errors: [`Could not verify GitHub access: ${error}`] };
+        const semanticError = toApplicationError(error, 'authorization.credential-invalid', 'Could not verify GitHub access.');
+        logError(semanticError);
+        return { success: false, errors: [semanticError] };
     }
 }
 
@@ -134,9 +144,9 @@ async function ensureInitialLabels(
         );
         return { completed: true, ...summary };
     } catch (error) {
-        const message = `Error ensuring initial labels: ${error}`;
+        const message = 'Could not ensure the initial labels.';
         logError(message);
-        return { completed: false, error: message };
+        return { completed: false, error: toApplicationError(error, 'provider.unavailable', message) };
     }
 }
 
@@ -157,8 +167,9 @@ async function ensureIssueTypes(
             errors: result.errors,
         };
     } catch (error) {
-        logError(`Error ensuring issue types: ${error}`);
-        return { success: false, created: 0, existing: 0, errors: [`Error ensuring issue types: ${error}`] };
+        const semanticError = toApplicationError(error, 'provider.unavailable', 'Could not ensure issue types.');
+        logError(semanticError);
+        return { success: false, created: 0, existing: 0, errors: [semanticError.message] };
     }
 }
 
@@ -166,7 +177,7 @@ async function ensureDefaultVersion(
     request: InitialSetupRequest,
     dependencies: InitialSetupWorkflowDependencies,
     setupConfiguration?: SetupConfiguration,
-): Promise<{ step?: string; error?: string }> {
+): Promise<{ step?: string; error?: ApplicationError }> {
     if (setupConfiguration?.createInitialTag === false) {
         return { step: '⏭️  Initial version tag creation disabled by setup configuration.' };
     }
@@ -186,7 +197,7 @@ async function ensureDefaultVersion(
         if (!defaultBranch) {
             const message = 'Could not get default branch to create initial version tag.';
             logError(message);
-            return { error: message };
+            return { error: new ApplicationError('provider.contract-invalid', message) };
         }
 
         const sha = await dependencies.repositoryTagPort.createTag(
@@ -198,29 +209,29 @@ async function ensureDefaultVersion(
         );
         return sha
             ? { step: `✅ Default version tag ${DEFAULT_INITIAL_TAG} created on branch ${defaultBranch}. Run \`git fetch --tags\` to update local refs.` }
-            : { error: `Failed to create tag ${DEFAULT_INITIAL_TAG} on ${request.owner}/${request.repo}` };
+            : { error: new ApplicationError('provider.contract-invalid', `Failed to create tag ${DEFAULT_INITIAL_TAG}.`) };
     } catch (error) {
-        const message = `Error ensuring default version: ${error}`;
+        const message = 'Error ensuring default version.';
         logError(message);
-        return { error: message };
+        return { error: toApplicationError(error, 'provider.unavailable', message) };
     }
 }
 
 function appendLabelSummary(
     steps: string[],
-    errors: string[],
+    errors: ApplicationError[],
     summary: LabelProvisioningSummary,
     labelType: string,
 ): void {
     if (summary.errors.length > 0) {
-        errors.push(...summary.errors);
+        errors.push(...fromMessages(summary.errors, 'provider.unavailable'));
         logError(`Error checking labels: ${summary.errors}`);
     } else {
         steps.push(`✅ ${labelType} checked: ${summary.created} created, ${summary.existing} already existed`);
     }
 }
 
-function buildResult(errors: string[], steps: string[]): Result {
+function buildResult(errors: ApplicationError[], steps: string[]): Result {
     return new Result({
         id: TASK_ID,
         success: errors.length === 0,
@@ -228,4 +239,8 @@ function buildResult(errors: string[], steps: string[]): Result {
         steps,
         errors: errors.length > 0 ? errors : undefined,
     });
+}
+
+function fromMessages(messages: readonly string[], code: ApplicationErrorCode): ApplicationError[] {
+    return messages.map(message => new ApplicationError(code, message));
 }

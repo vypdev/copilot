@@ -6,18 +6,23 @@ export type AgentCapability = AgentTask | 'language';
 export const DEFAULT_AGENT_PROVIDER: AgentProvider = 'codex';
 export const DEFAULT_MODEL_PROVIDER = 'openai';
 export const DEFAULT_AGENT_MODEL = 'gpt-5.6-luna';
+export const AGENT_EXECUTABLE_BASENAMES: Readonly<Record<AgentProvider, string>> = {
+    codex: 'codex',
+    opencode: 'opencode',
+    cursor: 'agent',
+};
 
 /**
- * Agent configuration is the provider-neutral contract shared by the action,
- * CLI and infrastructure adapters. Provider-specific command flags are
- * derived at the boundary instead of being assembled by callers.
+ * Agent configuration is the provider-neutral contract shared by entrypoints
+ * and the execution planner. Provider argv and authority are never supplied by
+ * callers; each provider policy reconstructs them from these structured facts.
  */
 export interface AgentConfiguration {
     provider: AgentProvider;
     modelProvider?: string;
     model: string;
     effort?: string;
-    command?: string;
+    executable?: string;
 }
 
 export interface AgentTaskConfiguration {
@@ -29,6 +34,5 @@ export interface AgentTaskConfiguration {
 }
 
 export function isAgentConfigurationReady(configuration: AgentConfiguration | undefined): boolean {
-    if (!configuration?.model.trim()) return false;
-    return Boolean(configuration.command?.trim());
+    return Boolean(configuration?.model.trim());
 }

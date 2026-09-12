@@ -8,6 +8,8 @@ import type {
     PullRequestReviewChange,
     PullRequestReviewDiffSnapshot,
 } from '../../../application/ports/bugbot_pull_request_read_ports';
+import { toApplicationError } from '../../../application/errors/application_error';
+import type { BugbotSourceCoverage } from '../../../domain/bugbot/context';
 
 export class PullRequestChangesRepository {
     constructor(private readonly githubClient: GithubClientPort<GithubPullRequestChangesClient>) {}
@@ -91,25 +93,54 @@ export class PullRequestChangesRepository {
     ): Promise<PullRequestReviewDiffSnapshot> => {
         try {
             const files = await this.listAllFiles(owner, repository, pullNumber, token);
-            const changes: PullRequestReviewChange[] = files.map(({ filename, status, additions, deletions, patch }) => ({
-                filename,
-                status,
-                additions,
-                deletions,
-                patch: patch || '',
-            }));
-            const filesWithFirstDiffLine = files.flatMap((file) => {
-                if (file.status === 'removed' || !file.patch) return [];
-                const firstLine = PullRequestChangesRepository.firstLineFromPatch(file.patch);
-                return firstLine === undefined ? [] : [{ path: file.filename, firstLine }];
-            });
-            const filesWithDiffLocations = files.flatMap((file) => {
-                const locations = PullRequestChangesRepository.locationsFromPatch(file.patch ?? '');
-                return locations.length === 0 ? [] : [{ path: file.filename, locations }];
-            });
-            return { changes, filesWithFirstDiffLine, filesWithDiffLocations };
+            return PullRequestChangesRepository.toSnapshot(files);
         } catch (error) {
-            logError(`Error getting pull request review diff snapshot: ${error}.`);
+            logError(toApplicationError(error, 'provider.unavailable', 'Unable to read the pull request review diff.'));
+            throw toPullRequestReviewOperationError(error, 'list-files');
+        }
+    };
+
+    getBoundedBugbotReviewDiffSnapshot = async (
+        owner: string,
+        repository: string,
+        pullNumber: number,
+        token: string,
+    ): Promise<{ readonly snapshot: PullRequestReviewDiffSnapshot; readonly coverage: BugbotSourceCoverage }> => {
+        const octokit = this.githubClient.getClient(token);
+        try {
+            const files: GithubPullRequestFile[] = [];
+            let pagesFetched = 0;
+            let limitReached = false;
+            for (let page = 1; page <= 10; page += 1) {
+                const response = await octokit.rest.pulls.listFiles({
+                    owner,
+                    repo: repository,
+                    pull_number: pullNumber,
+                    per_page: 100,
+                    page,
+                });
+                const records = requireArrayPage<GithubPullRequestFile>(response.data, 'pull request files');
+                pagesFetched += 1;
+                files.push(...records);
+                if (records.length < 100) break;
+                if (page === 10) limitReached = true;
+            }
+            return {
+                snapshot: PullRequestChangesRepository.toSnapshot(files),
+                coverage: {
+                    source: 'diff',
+                    status: limitReached ? 'partial' : 'complete',
+                    pagesFetched,
+                    itemsFetched: files.length,
+                    itemsRetained: files.length,
+                    omittedItems: 0,
+                    truncatedItems: 0,
+                    limitReached,
+                    ...(limitReached ? { providerLimitReached: true } : {}),
+                },
+            };
+        } catch (error) {
+            logError(toApplicationError(error, 'provider.unavailable', 'Unable to read the pull request review diff.'));
             throw toPullRequestReviewOperationError(error, 'list-files');
         }
     };
@@ -133,9 +164,29 @@ export class PullRequestChangesRepository {
             }
             return data.head.sha;
         } catch (error) {
-            logError(`Error getting PR head SHA: ${error}.`);
+            logError(toApplicationError(error, 'provider.unavailable', 'Unable to read the pull request head SHA.'));
             throw toPullRequestReviewOperationError(error, "get-head-sha");
         }
     };
+
+    private static toSnapshot(files: readonly GithubPullRequestFile[]): PullRequestReviewDiffSnapshot {
+        const changes: PullRequestReviewChange[] = files.map(({ filename, status, additions, deletions, patch }) => ({
+            filename,
+            status,
+            additions,
+            deletions,
+            patch: patch || '',
+        }));
+        const filesWithFirstDiffLine = files.flatMap((file) => {
+            if (file.status === 'removed' || !file.patch) return [];
+            const firstLine = PullRequestChangesRepository.firstLineFromPatch(file.patch);
+            return firstLine === undefined ? [] : [{ path: file.filename, firstLine }];
+        });
+        const filesWithDiffLocations = files.flatMap((file) => {
+            const locations = PullRequestChangesRepository.locationsFromPatch(file.patch ?? '');
+            return locations.length === 0 ? [] : [{ path: file.filename, locations }];
+        });
+        return { changes, filesWithFirstDiffLine, filesWithDiffLocations };
+    }
 
 }

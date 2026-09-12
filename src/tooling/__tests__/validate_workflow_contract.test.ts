@@ -13,7 +13,7 @@ interface ContractModule {
   assertAgentWorkflowPermissions(file: string, workflow: Record<string, unknown>): void;
   assertLightweightBranchSyncWorkflow(file: string, workflow: Record<string, unknown>): void;
   MIN_QUEUE_JOB_TIMEOUT_MINUTES: number;
-  QUEUE_GATE_TIMEOUT_MINUTES: number;
+  DEPLOYMENT_VALIDATION_TIMEOUT_MINUTES: number;
   PREPARE_VERSION_TIMEOUT_MINUTES: number;
   PREPARE_COMPILED_TIMEOUT_MINUTES: number;
   TAG_TIMEOUT_MINUTES: number;
@@ -35,7 +35,7 @@ const {
   assertAgentWorkflowPermissions,
   assertLightweightBranchSyncWorkflow,
   MIN_QUEUE_JOB_TIMEOUT_MINUTES,
-  QUEUE_GATE_TIMEOUT_MINUTES,
+  DEPLOYMENT_VALIDATION_TIMEOUT_MINUTES,
   PREPARE_VERSION_TIMEOUT_MINUTES,
   PREPARE_COMPILED_TIMEOUT_MINUTES,
   TAG_TIMEOUT_MINUTES,
@@ -193,7 +193,7 @@ describe('workflow contract validator', () => {
     expect(() => validateWorkflow(file, workflow)).toThrow('must materialize and verify the exact GitHub before/after review range');
   });
 
-  it('validates the exact gate-first DAG for active and setup release/hotfix workflows', () => {
+  it('validates the exact mutex and validation-first DAG for active and setup release/hotfix workflows', () => {
     for (const directory of ['.github/workflows', 'setup/workflows']) {
       for (const fileName of ['release_workflow.yml', 'hotfix_workflow.yml']) {
         const file = path.join(process.cwd(), directory, fileName);
@@ -209,8 +209,13 @@ describe('workflow contract validator', () => {
       const file = path.join(process.cwd(), directory, 'copilot_deployment_orchestration.yml');
       const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
       expect(() => validateWorkflow(file, workflow)).not.toThrow();
-      expect(workflow.jobs.continue.if).toContain('github.event.pull_request.head.repo.full_name == github.repository');
-      const continuation = workflow.jobs.continue.steps.find(
+      expect(workflow.jobs['resolve-operation'].if).toContain('github.event.pull_request.head.repo.full_name == github.repository');
+      expect(workflow.jobs.mutate.concurrency).toEqual({
+        group: 'copilot-deployment-${{ github.repository_id }}-${{ needs.resolve-operation.outputs.issue }}',
+        'cancel-in-progress': false,
+        queue: 'max',
+      });
+      const continuation = workflow.jobs.mutate.steps.find(
         (step: { with?: Record<string, unknown> }) => step.with?.['single-action'] === 'continue_deployment_action',
       );
       expect(continuation?.with?.['merge-queue-check-attestations'])
@@ -223,7 +228,7 @@ describe('workflow contract validator', () => {
     (directory) => {
       const file = path.join(process.cwd(), directory, 'copilot_deployment_orchestration.yml');
       const workflow = yaml.load(readFileSync(file, 'utf8')) as MutationWorkflow;
-      const continuation = workflow.jobs.continue.steps.find(
+      const continuation = workflow.jobs.mutate.steps.find(
         (step: { with?: Record<string, unknown> }) => step.with?.['single-action'] === 'continue_deployment_action',
       );
       delete continuation.with['merge-queue-check-attestations'];
@@ -294,7 +299,7 @@ describe('workflow contract validator', () => {
     const action = report.steps[2];
     const expectedToken = '${{ secrets.PAT }}';
 
-    expect(report.if).toBe("${{ failure() && inputs.issue != '-1' }}");
+    expect(report.if).toBe("${{ failure() && needs.validate.result == 'success' }}");
     expect(report.permissions).toEqual({ contents: 'read', issues: 'write' });
     expect(report.steps[0]).toEqual(expect.objectContaining({
       uses: 'actions/checkout@v5',
@@ -343,14 +348,18 @@ describe('workflow contract validator', () => {
 
   it('rejects a local Copilot reference from a distributed setup workflow', () => {
     const { file, workflow } = loadMutationWorkflow('setup/workflows', 'release_workflow.yml');
-    workflow.jobs['queue-gate'].steps[1].uses = './';
+    const action = workflow.jobs.promote.steps.find((step: { with?: Record<string, unknown> }) =>
+      step.with?.['single-action'] === 'prepare_deployment_action');
+    action.uses = './';
 
     expect(() => assertMajorActionReferences(file, workflow)).toThrow('must invoke Copilot with vypdev/copilot@v3');
   });
 
   it('rejects a distributed Copilot reference from an internal workflow', () => {
     const { file, workflow } = loadMutationWorkflow('.github/workflows', 'release_workflow.yml');
-    workflow.jobs['queue-gate'].steps[1].uses = 'vypdev/copilot@v3';
+    const action = workflow.jobs.promote.steps.find((step: { with?: Record<string, unknown> }) =>
+      step.with?.['single-action'] === 'prepare_deployment_action');
+    action.uses = 'vypdev/copilot@v3';
 
     expect(() => assertMajorActionReferences(file, workflow)).toThrow('must invoke Copilot with ./');
   });
@@ -358,7 +367,7 @@ describe('workflow contract validator', () => {
   it.each(mutationWorkflowNames)('rejects a missing failure reporter in %s', (fileName) => {
     expectMutationRejected('.github/workflows', fileName, (workflow) => {
       delete workflow.jobs['report-failure'];
-    }, 'must define the exact gate-first job graph');
+    }, 'must define the exact validation-first job graph');
   });
 
   it.each(mutationWorkflowNames)('rejects a failure reporter that can run without a failed deployment in %s', (fileName) => {
@@ -367,10 +376,10 @@ describe('workflow contract validator', () => {
     }, 'must run only for a failed deployment');
   });
 
-  it.each(mutationDirectories.flatMap((directory) => mutationWorkflowNames.map((fileName) => [directory, fileName] as const)))('enforces the exact queue and preparation budgets for %s/%s', (directory, fileName) => {
+  it.each(mutationDirectories.flatMap((directory) => mutationWorkflowNames.map((fileName) => [directory, fileName] as const)))('enforces the exact validation and preparation budgets for %s/%s', (directory, fileName) => {
     expectMutationRejected(directory, fileName, (workflow) => {
-      workflow.jobs['queue-gate']['timeout-minutes'] = QUEUE_GATE_TIMEOUT_MINUTES - 1;
-    }, 'queue-gate must have timeout-minutes 120');
+      workflow.jobs.validate['timeout-minutes'] = DEPLOYMENT_VALIDATION_TIMEOUT_MINUTES - 1;
+    }, 'validate must have timeout-minutes 5');
     expectMutationRejected(directory, fileName, (workflow) => {
       workflow.jobs['prepare-version-files']['timeout-minutes'] = (directory === '.github/workflows' ? PREPARE_VERSION_TIMEOUT_MINUTES : 30) - 1;
     }, `job prepare-version-files must have timeout-minutes ${directory === '.github/workflows' ? 15 : 30}`);
@@ -446,106 +455,70 @@ describe('workflow contract validator', () => {
   });
 
   it.each([
-    ['direct pre-gate mutation', (workflow: MutationWorkflow) => {
+    ['direct pre-validation mutation', (workflow: MutationWorkflow) => {
       workflow.jobs['prepare-version-files'].needs = [];
-    }, 'job prepare-version-files must need exactly queue-gate'],
+    }, 'job prepare-version-files must need exactly validate'],
     ['broken transitive edge', (workflow: MutationWorkflow) => {
-      workflow.jobs.promote.needs = ['queue-gate'];
+      workflow.jobs.promote.needs = ['validate'];
     }, 'job promote must need exactly prepare-compiled-files'],
     ['always bypass', (workflow: MutationWorkflow) => {
       workflow.jobs['prepare-version-files'].if = '${{ always() }}';
     }, 'must run only in prepare mode'],
-    ['failure bypass', (workflow: MutationWorkflow) => {
-      workflow.jobs['prepare-version-files'].if = '${{ failure() }}';
-    }, 'must run only in prepare mode'],
-    ['cancelled bypass', (workflow: MutationWorkflow) => {
-      workflow.jobs['prepare-version-files'].if = '${{ cancelled() }}';
-    }, 'must run only in prepare mode'],
-    ['queue-gate continue-on-error', (workflow: MutationWorkflow) => {
-      workflow.jobs['queue-gate']['continue-on-error'] = false;
-    }, 'queue-gate must not define bypass'],
-    ['gate-step continue-on-error', (workflow: MutationWorkflow) => {
-      workflow.jobs['queue-gate'].steps[1]['continue-on-error'] = true;
-    }, 'queue-gate action must not define continue-on-error'],
-    ['gate write permission', (workflow: MutationWorkflow) => {
-      workflow.jobs['queue-gate'].permissions.actions = 'write';
-    }, 'queue-gate must have only actions: read'],
-    ['missing actions read', (workflow: MutationWorkflow) => {
-      delete workflow.jobs['queue-gate'].permissions.actions;
-    }, 'queue-gate must have only actions: read'],
-    ['PAT token', (workflow: MutationWorkflow) => {
-      workflow.jobs['queue-gate'].steps[1].with.token = '${{ secrets.PAT }}';
-    }, 'queue-gate must pass only queue-gate-only and github.token'],
-    ['credential persistence', (workflow: MutationWorkflow) => {
-      workflow.jobs['queue-gate'].steps[0].with['persist-credentials'] = true;
-    }, 'queue-gate checkout must set persist-credentials: false'],
-    ['pre-gate run', (workflow: MutationWorkflow) => {
-      workflow.jobs['queue-gate'].steps[0].run = 'printf unsafe';
-    }, 'queue-gate may contain only a safe checkout'],
-    ['missing gate-only', (workflow: MutationWorkflow) => {
-      delete workflow.jobs['queue-gate'].steps[1].with['queue-gate-only'];
-    }, 'queue-gate must invoke'],
-    ['false gate-only', (workflow: MutationWorkflow) => {
-      workflow.jobs['queue-gate'].steps[1].with['queue-gate-only'] = 'false';
-    }, 'queue-gate must invoke'],
-    ['workflow concurrency', (workflow: MutationWorkflow) => {
-      workflow.concurrency = { group: 'unsafe' };
-    }, 'must not define GitHub concurrency'],
-    ['job concurrency', (workflow: MutationWorkflow) => {
+    ['validation write permission', (workflow: MutationWorkflow) => {
+      workflow.jobs.validate.permissions = { contents: 'write' };
+    }, 'validate must have no repository permissions'],
+    ['validation secret', (workflow: MutationWorkflow) => {
+      workflow.jobs.validate.env = { PAT: '${{ secrets.PAT }}' };
+    }, 'must scope Secrets to the exact step'],
+    ['validation bypass', (workflow: MutationWorkflow) => {
+      workflow.jobs.validate['continue-on-error'] = true;
+    }, 'validate must not receive job credentials'],
+    ['validation token', (workflow: MutationWorkflow) => {
+      workflow.jobs.validate.steps[0].with['github-token'] = '${{ github.token }}';
+    }, 'bounded cross-field inputs without credentials'],
+    ['missing operation cross-field validation', (workflow: MutationWorkflow) => {
+      workflow.jobs.validate.steps[0].with.script = 'const issue = 1; Number.isSafeInteger(issue);';
+    }, 'bounded cross-field inputs'],
+    ['wrong workflow mutex', (workflow: MutationWorkflow) => {
+      workflow.concurrency.group = 'unsafe';
+    }, 'exact issue-scoped deployment concurrency group'],
+    ['single pending queue', (workflow: MutationWorkflow) => {
+      workflow.concurrency.queue = 'single';
+    }, 'queue: max'],
+    ['cancel in progress', (workflow: MutationWorkflow) => {
+      workflow.concurrency['cancel-in-progress'] = true;
+    }, 'queue: max'],
+    ['launcher issue default', (workflow: MutationWorkflow) => {
+      workflow.on.workflow_dispatch.inputs.issue.default = '-1';
+    }, 'launcher issue must be required and have no default'],
+    ['job-level competing mutex', (workflow: MutationWorkflow) => {
       workflow.jobs.tag.concurrency = { group: 'unsafe' };
-    }, 'job tag must not define GitHub concurrency'],
-  ])('rejects isolated %s mutation in a real release fixture', (_reason, mutate, message) => {
+    }, 'must rely on the workflow deployment mutex'],
+  ])('rejects isolated %s in a real release fixture', (_reason, mutate, message) => {
     expectMutationRejected('.github/workflows', 'release_workflow.yml', mutate, message);
   });
 
-  it('rejects a release workflow when a mutation job bypasses the queue gate', () => {
-    const workflow = {
-      name: 'Task - Release',
-      jobs: {
-        'queue-gate': {
-          'runs-on': 'ubuntu-latest',
-          'timeout-minutes': 120,
-          permissions: { actions: 'read', contents: 'read' },
-          steps: [
-            { uses: 'actions/checkout@v5', with: { 'persist-credentials': false } },
-            { uses: './', with: { 'queue-gate-only': 'true', token: '${{ github.token }}' } },
-          ],
-        },
-        'prepare-version-files': {
-          'runs-on': 'ubuntu-latest',
-          'timeout-minutes': 15,
-          permissions: { contents: 'write' },
-          needs: 'unrelated',
-          steps: [],
-        },
-        unrelated: { 'runs-on': 'ubuntu-latest', steps: [] },
-        'prepare-compiled-files': { 'runs-on': 'ubuntu-latest', needs: 'prepare-version-files', steps: [] },
-        tag: { 'runs-on': 'ubuntu-latest', needs: 'prepare-compiled-files', steps: [] },
-      },
-    };
-
-    expect(() => validateWorkflow(path.join(process.cwd(), 'setup/workflows/release_workflow.yml'), workflow)).toThrow();
-  });
-
   it.each([
-    ['gate write permission', (gate: Record<string, unknown>) => { gate.permissions = { actions: 'write', contents: 'read' }; }],
-    ['gate provider environment', (gate: Record<string, unknown>) => { gate.env = { OPENAI_API_KEY: '${{ secrets.OPENAI_API_KEY }}' }; }],
-    ['gate false mode', (gate: Record<string, unknown>) => {
-      const steps = gate.steps as Record<string, unknown>[];
-      (steps[1].with as Record<string, unknown>)['queue-gate-only'] = 'false';
-    }],
-    ['gate unsafe condition', (gate: Record<string, unknown>) => { gate.if = '${{ always() }}'; }],
-    ['persistent gate checkout', (gate: Record<string, unknown>) => {
-      const steps = gate.steps as Record<string, unknown>[];
-      (steps[0].with as Record<string, unknown>)['persist-credentials'] = true;
-    }],
-  ])('rejects %s in a release gate', (_reason, mutate) => {
-    const file = path.join(process.cwd(), 'setup/workflows/release_workflow.yml');
-    const workflow = JSON.parse(JSON.stringify(yaml.load(readFileSync(file, 'utf8')))) as {
-      jobs: Record<string, Record<string, unknown>>;
-    };
-    mutate(workflow.jobs['queue-gate']);
-    expect(() => validateWorkflow(file, workflow)).toThrow();
+    ['resolver write permission', (workflow: MutationWorkflow) => {
+      workflow.jobs['resolve-operation'].permissions.issues = 'write';
+    }, 'resolver must be read-only'],
+    ['resolver secret', (workflow: MutationWorkflow) => {
+      workflow.jobs['resolve-operation'].env = { PAT: '${{ secrets.PAT }}' };
+    }, 'must scope Secrets to the exact step'],
+    ['missing durable proof', (workflow: MutationWorkflow) => {
+      workflow.jobs['resolve-operation'].steps[0].with.script = 'core.setOutput("issue", "1")';
+    }, 'prove marker ownership'],
+    ['unresolved mutation', (workflow: MutationWorkflow) => {
+      workflow.jobs.mutate.needs = [];
+    }, 'exact resolved issue deployment mutex'],
+    ['wrong continuation mutex', (workflow: MutationWorkflow) => {
+      workflow.jobs.mutate.concurrency.group = 'unsafe';
+    }, 'exact resolved issue deployment mutex'],
+  ])('rejects managed-PR %s', (_reason, mutate, message) => {
+    const file = path.join(process.cwd(), 'setup/workflows/copilot_deployment_orchestration.yml');
+    const workflow = JSON.parse(JSON.stringify(yaml.load(readFileSync(file, 'utf8')))) as MutationWorkflow;
+    mutate(workflow);
+    expect(() => validateWorkflow(file, workflow)).toThrow(message);
   });
 
   it.each([

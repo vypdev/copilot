@@ -10,6 +10,7 @@ import type {
 import { resolveIssueFinding } from './resolve_issue_finding';
 import { resolvePullRequestFinding } from './resolve_pull_request_finding';
 import { isHumanResolver } from '../../../../../domain/bugbot/review_state';
+import { ApplicationError } from '../../../../errors/application_error';
 
 export interface MarkFindingsResolvedParam {
     execution: Execution;
@@ -19,8 +20,8 @@ export interface MarkFindingsResolvedParam {
     ports: BugbotFindingResolutionPorts;
 }
 
-export async function markFindingsResolved(param: MarkFindingsResolvedParam): Promise<Error[]> {
-    const errors: Error[] = [];
+export async function markFindingsResolved(param: MarkFindingsResolvedParam): Promise<ApplicationError[]> {
+    const errors: ApplicationError[] = [];
     for (const [findingId, existing] of Object.entries(param.context.existingByFindingId)) {
         await repairExistingPullRequestFinding(param.ports, param.execution, findingId, existing.pullRequest, errors);
         if (!param.resolvedFindingIds.has(findingId)) continue;
@@ -35,7 +36,7 @@ async function repairExistingPullRequestFinding(
     execution: Execution,
     findingId: string,
     destination: ExistingPullRequestFindingInfo | undefined,
-    errors: Error[],
+    errors: ApplicationError[],
 ): Promise<void> {
     if (destination == null) return;
     if (destination.resolution === 'dismissed' && destination.threadResolved === true) {
@@ -65,7 +66,7 @@ async function resolvePullRequestIfNeeded(
     param: MarkFindingsResolvedParam,
     findingId: string,
     destination: ExistingPullRequestFindingInfo | undefined,
-    errors: Error[],
+    errors: ApplicationError[],
 ): Promise<void> {
     if (destination != null && (!destination.resolved || destination.verificationRequired === true)) {
         await tryResolvePullRequestFinding(
@@ -83,7 +84,7 @@ async function resolveIssueIfNeeded(
     param: MarkFindingsResolvedParam,
     findingId: string,
     destination: { commentId: number; resolved: boolean } | undefined,
-    errors: Error[],
+    errors: ApplicationError[],
 ): Promise<void> {
     if (destination == null || destination.resolved) return;
     const comment = param.context.issueComments.find(item => item.id === destination.commentId);
@@ -111,7 +112,7 @@ async function tryResolvePullRequestFinding(
     execution: Execution,
     findingId: string,
     destination: ExistingPullRequestFindingInfo,
-    errors: Error[],
+    errors: ApplicationError[],
     resolution?: BugbotFindingResolution,
 ): Promise<void> {
     try {
@@ -129,10 +130,17 @@ async function tryResolvePullRequestFinding(
     }
 }
 
-function addResolutionError(errors: Error[], destination: 'issue' | 'pull request'): void {
-    const error = destination === 'pull request'
+function addResolutionError(errors: ApplicationError[], destination: 'issue' | 'pull request'): void {
+    const cause = destination === 'pull request'
         ? new PullRequestReviewOperationError('mark-resolved')
         : new Error('Unable to mark an issue finding as resolved.');
-    logError(error);
-    errors.push(error);
+    const semanticError = new ApplicationError(
+        'provider.unavailable',
+        destination === 'pull request'
+            ? 'Unable to mark a pull request finding as resolved.'
+            : 'Unable to mark an issue finding as resolved.',
+        { cause },
+    );
+    logError(semanticError);
+    errors.push(semanticError);
 }

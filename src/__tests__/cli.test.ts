@@ -47,6 +47,19 @@ jest.mock('../utils/setup_files', () => {
 
 jest.mock('../infrastructure/composition/setup_credentials_composition_root', () => ({
   createSetupCredentialsUseCase: () => ({ collect: jest.fn().mockResolvedValue({ collection: { apiKeys: [] }, checks: [], existingSecretNames: [] }) }),
+  createSetupRemoteConfigurationReadPort: () => ({
+    inspect: jest.fn().mockResolvedValue({
+      ownerType: 'User',
+      repositoryVisibility: 'private',
+      repositorySecrets: [],
+      organizationSecrets: [],
+      repositoryVariables: [],
+      organizationVariables: [],
+      organizationAccess: 'not_applicable',
+      organizationSecretsAccess: 'not_applicable',
+      organizationVariablesAccess: 'not_applicable',
+    }),
+  }),
 }));
 
 describe('CLI', () => {
@@ -59,7 +72,7 @@ describe('CLI', () => {
     process.exitCode = undefined;
     process.env.AGENT_PROVIDER = 'opencode';
     process.env.AGENT_MODEL = 'test-model';
-    process.env.AGENT_COMMAND = 'opencode run --model openai/test-model';
+    process.env.AGENT_EXECUTABLE = 'opencode';
     process.env.AGENT_MODEL_PROVIDER = 'openai';
     process.env.OPENAI_API_KEY = 'test-key';
     exitSpy = jest.spyOn(process, 'exit').mockImplementation((() => {}) as () => never);
@@ -320,6 +333,8 @@ describe('CLI', () => {
         '--token',
         'ghp_setup_test_token_xxxxxxxxxxxxxxxxxxxx',
         '--skip-secrets',
+        '--non-interactive',
+        '--yes',
       ]);
 
       expect(runLocalAction).toHaveBeenCalledTimes(1);
@@ -330,7 +345,7 @@ describe('CLI', () => {
     });
 
     it('proceeds when --token is provided even if env/.env has no token', async () => {
-      await program.parseAsync(['node', 'cli', 'setup', '--token', 'ghp_abcdefghijklmnopqrstuvwxyz12', '--skip-secrets']);
+      await program.parseAsync(['node', 'cli', 'setup', '--token', 'ghp_abcdefghijklmnopqrstuvwxyz12', '--skip-secrets', '--non-interactive', '--yes']);
 
       expect(exitSpy).not.toHaveBeenCalled();
       expect(runLocalAction).toHaveBeenCalledTimes(1);
@@ -345,7 +360,7 @@ describe('CLI', () => {
         return Buffer.from('https://github.com/o/r.git');
       });
 
-      await program.parseAsync(['node', 'cli', 'setup']);
+      await program.parseAsync(['node', 'cli', 'setup', '--non-interactive']);
 
       expect(process.exitCode).toBe(1);
       const { logError } = require('../utils/logger');
@@ -361,7 +376,7 @@ describe('CLI', () => {
       const { logError } = require('../utils/logger');
       (runLocalAction as jest.Mock).mockClear();
 
-      await program.parseAsync(['node', 'cli', 'setup']);
+      await program.parseAsync(['node', 'cli', 'setup', '--non-interactive']);
 
       expect(logError).toHaveBeenCalled();
       expect(process.exitCode).toBe(1);
@@ -375,7 +390,7 @@ describe('CLI', () => {
       const { logError, logInfo } = require('../utils/logger');
       (runLocalAction as jest.Mock).mockClear();
 
-      await program.parseAsync(['node', 'cli', 'setup']);
+      await program.parseAsync(['node', 'cli', 'setup', '--non-interactive']);
 
       expect(logError).toHaveBeenCalledWith(expect.stringContaining('Setup requires PERSONAL_ACCESS_TOKEN'));
       expect(logInfo).toHaveBeenCalledWith(expect.stringContaining('PERSONAL_ACCESS_TOKEN'));
@@ -388,7 +403,7 @@ describe('CLI', () => {
       const { logError, logInfo } = require('../utils/logger');
       (runLocalAction as jest.Mock).mockClear();
 
-      await program.parseAsync(['node', 'cli', 'setup']);
+      await program.parseAsync(['node', 'cli', 'setup', '--non-interactive']);
 
       expect(logError).toHaveBeenCalledWith(expect.stringContaining('Setup requires PERSONAL_ACCESS_TOKEN'));
       expect(logInfo).not.toHaveBeenCalledWith(expect.stringContaining('.env'));

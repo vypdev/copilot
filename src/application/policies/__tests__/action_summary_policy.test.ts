@@ -1,5 +1,6 @@
 import { Result } from '../../../data/model/result';
 import { buildActionSummary } from '../action_summary_policy';
+import { ApplicationError } from '../../errors/application_error';
 
 describe('action summary policy', () => {
     it('renders bounded result details and lifecycle metadata', () => {
@@ -26,7 +27,7 @@ describe('action summary policy', () => {
             eventName: 'push',
             issueNumber: -1,
             pullRequestNumber: -1,
-            results: [new Result({ id: 'Failure', success: false, executed: true, errors: [new Error('token=secret-value\n    at hidden()')] })],
+            results: [new Result({ id: 'Failure', success: false, executed: true, errors: [new ApplicationError('workflow.failed', 'token=secret-value\n    at hidden()')] })],
         });
 
         expect(summary).toContain('❌ Failure');

@@ -10,6 +10,7 @@ import { parseBugbotReviewCommandOptions } from '../../domain/bugbot/review_comm
 import { commitUserRequestIfSuccessful } from './steps/commit/bugbot/commit_user_request_workflow';
 import { finalizeWorkspaceMutation, prepareWorkspaceMutation } from './steps/commit/workspace_mutation_guard';
 import { runBranchSyncCommand } from './branch_sync/branch_sync_comment_command';
+import { ApplicationError, toApplicationError } from '../errors/application_error';
 
 const LEARNED_BUGBOT_RULE_PATH = '.copilot/BUGBOT.learned.md';
 
@@ -67,9 +68,10 @@ async function runRememberCommand(
             'Remember Bugbot rule',
         );
         if (workspacePaths.length !== 1 || workspacePaths[0] !== LEARNED_BUGBOT_RULE_PATH) {
-            return [...results, rememberFailure(
+            return [...results, rememberFailure(new ApplicationError(
+                'agent.policy-rejected',
                 `Remember Bugbot rule refused unexpected workspace paths: ${workspacePaths.join(', ')}`,
-            )];
+            ))];
         }
         const last = results.at(-1);
         if (last) last.payload = { workspacePaths };
@@ -81,12 +83,11 @@ async function runRememberCommand(
 }
 
 function rememberFailure(error: unknown): Result {
-    const message = error instanceof Error ? error.message : String(error);
     return new Result({
         id: 'CommentAutomation.Remember',
         success: false,
         executed: true,
-        errors: [message],
+        errors: [toApplicationError(error, 'workflow.failed', 'Remembering the Bugbot rule failed.')],
     });
 }
 
@@ -113,7 +114,7 @@ async function runDescriptionCommand(
             id: `${options.taskId}.Description`,
             success: false,
             executed: false,
-            errors: ['Explicit pull-request description command is not available in this composition.'],
+            errors: [new ApplicationError('configuration.unsupported', 'Explicit pull-request description command is not available in this composition.')],
         })];
     }
     const allowed = await actorAuthorizationPort.isActorAllowedToModifyFiles(
@@ -178,7 +179,7 @@ async function runReviewCommand(
             id: `${options.taskId}.Review`,
             success: false,
             executed: true,
-            errors: ['Explicit review command is not available in this composition.'],
+            errors: [new ApplicationError('configuration.unsupported', 'Explicit review command is not available in this composition.')],
         }));
         return results;
     }
@@ -210,6 +211,6 @@ export function invalidCommentCommandResult(taskId: string, reason: string): Res
         id: taskId,
         success: false,
         executed: false,
-        errors: [reason],
+        errors: [new ApplicationError('validation.invalid-input', reason)],
     });
 }

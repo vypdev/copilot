@@ -10,6 +10,18 @@ import {
 } from "../bugbot_fix_intent_payload";
 import { Result } from "../../../../../../data/model/result";
 
+const context = {
+    existingByFindingId: {},
+    issueComments: [],
+    canonicalPullRequest: null,
+    selectionReason: 'none' as const,
+    coverage: { status: 'complete' as const, sources: [] },
+    eligibleResolutionIds: new Set<string>(),
+    previousFindingsBlock: "",
+    prContext: null,
+    unresolvedFindingsWithBody: [],
+};
+
 describe("bugbot_fix_intent_payload", () => {
     describe("getBugbotFixIntentPayload", () => {
         it("returns undefined when results is empty", () => {
@@ -73,7 +85,7 @@ describe("bugbot_fix_intent_payload", () => {
                     isFixRequest: false,
                     isDoRequest: false,
                     targetFindingIds: ["f1"],
-                    context: { existingByFindingId: {}, issueComments: [], openPrNumbers: [], previousFindingsBlock: "", prContext: null, unresolvedFindingsWithBody: [] },
+                    context,
                 })
             ).toBe(false);
         });
@@ -83,7 +95,7 @@ describe("bugbot_fix_intent_payload", () => {
                 isFixRequest: true,
                 isDoRequest: false,
                 targetFindingIds: ["f1"],
-                context: { existingByFindingId: {}, issueComments: [], openPrNumbers: [], previousFindingsBlock: "", prContext: null, unresolvedFindingsWithBody: [] },
+                context,
             };
             expect(canRunBugbotAutofix(payload)).toBe(true);
         });

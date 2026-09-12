@@ -56,7 +56,7 @@ export async function runPullRequestWorkflow(
       return ports.workflowSteps.closeIssueAfterMerging.invoke(param);
     }
   } catch (cause) {
-    const semanticError = new ApplicationError("Unable to process the pull request.", 'workflow', { cause });
+    const semanticError = new ApplicationError('workflow.failed', "Unable to process the pull request.", { cause });
     logError(semanticError);
     return [
       new Result({

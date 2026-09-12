@@ -14,7 +14,7 @@ function execution(overrides: Record<string, unknown> = {}): any {
             isDetectPotentialProblemsAction: false,
         },
         ai: {
-            getAgentConfiguration: jest.fn(() => ({ model: 'model', command: 'agent' })),
+            getAgentConfiguration: jest.fn(() => ({ model: 'model' })),
             getPullRequestDescriptionMode: jest.fn(() => 'disabled'),
         },
         ...overrides,
@@ -50,8 +50,8 @@ describe('agent activity policy', () => {
     });
 
     it('does not track metadata-only pull request edits as agent activity', () => {
-        const unavailable = { model: '', command: '' };
-        const available = { model: 'model', command: 'agent' };
+        const unavailable = { model: '' };
+        const available = { model: 'model' };
         expect(shouldTrackAgentActivity(execution({
             eventName: 'pull_request',
             issueNumber: -1,
@@ -93,7 +93,7 @@ describe('agent activity policy', () => {
     it('does not track routes without an effective agent configuration', () => {
         expect(shouldTrackAgentActivity(execution({
             ai: {
-                getAgentConfiguration: jest.fn(() => ({ model: '', command: '' })),
+                getAgentConfiguration: jest.fn(() => ({ model: '' })),
                 getPullRequestDescriptionMode: jest.fn(() => 'disabled'),
             },
         }), 'issue')).toBe(false);

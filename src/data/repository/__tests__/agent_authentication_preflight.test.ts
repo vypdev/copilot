@@ -1,7 +1,7 @@
 import { runAgentAuthenticationPreflight, resolveAgentAuthenticationPreflightMode } from '../agent_authentication_preflight';
 
 describe('agent authentication preflight', () => {
-    const cursor = { provider: 'cursor' as const, transport: 'cli' as const, model: 'cursor', command: 'cursor-agent' };
+    const cursor = { provider: 'cursor' as const, model: 'cursor' };
 
     it('fails by default when CLI credentials are missing', () => {
         const result = runAgentAuthenticationPreflight(cursor, {});
@@ -17,13 +17,13 @@ describe('agent authentication preflight', () => {
     });
 
     it('requires credentials for OpenCode CLI execution', () => {
-        const result = runAgentAuthenticationPreflight({ provider: 'opencode', model: 'model', command: 'opencode run' }, {});
+        const result = runAgentAuthenticationPreflight({ provider: 'opencode', model: 'model' }, {});
         expect(result.check.status).toBe('missing');
         expect(result.shouldFail).toBe(true);
     });
 
     it('fails closed when a Codex runner has no detectable authentication state', () => {
-        const result = runAgentAuthenticationPreflight({ provider: 'codex', model: 'gpt-5', command: 'codex exec --model gpt-5 --config model_provider=openai -' }, {});
+        const result = runAgentAuthenticationPreflight({ provider: 'codex', model: 'gpt-5' }, {});
         expect(result.check.status).toBe('missing');
         expect(result.shouldFail).toBe(true);
     });

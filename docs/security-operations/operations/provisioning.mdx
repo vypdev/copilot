@@ -4,12 +4,20 @@ description: Pinned installation and verification of the selected agent CLI.
 ---
 # CLI provisioning
 
-When running in GitHub Actions, the Action provisions and verifies the selected runtime. It first reuses an executable already present on the runner (`AGENT_PROVISIONING=auto`, the default), which allows a preinitialized Codex CLI to run without a credential or package version in the repository. If the executable is absent, versions MUST be explicit. Codex and OpenCode are installed with the runner's system `npm`; Cursor uses its official installer with checksum verification. The Action never uses `npx`, Yarn, Bun, or an unpinned installer. A setup workflow using `ubuntu-latest` therefore needs an approved version variable when the selected CLI is not already installed on the runner.
+When running in GitHub Actions, the Action provisions and verifies only the
+selected runtime. `AGENT_PROVISIONING=auto` reuses a preinstalled executable only
+after exact-version validation. If the default Codex or OpenCode executable is
+missing or reports another version, the Action installs the manifest-owned
+version through the runner's system `npm` and validates it again. An explicit
+executable is never replaced. Cursor must be
+preinstalled at the exact manifest version because its public installer cannot
+guarantee an immutable historical version. The Action never uses `npx`, Yarn,
+Bun, a floating tag, or an unpinned installer.
 
 | Runtime | Provisioning source | Required pin |
 | --- | --- | --- |
-| OpenCode | `opencode-ai@<version>` through runner `npm` | `OPENCODE_VERSION` only when absent |
-| Codex | `@openai/codex@<version>` through runner `npm` | `CODEX_VERSION` only when absent |
-| Cursor | Official installer with SHA-256 verification | `CURSOR_INSTALLER_SHA256` only when absent |
+| OpenCode | `opencode-ai@1.18.3` through runner `npm` | Manifest `1.18.3` |
+| Codex | `@openai/codex@0.153.4` through runner `npm` | Manifest `codex-cli 0.153.4` |
+| Cursor | Controlled runner image | Manifest `2026.09.10-fd3934a` |
 
 Provisioning failure is terminal. The Action MUST NOT install another runtime as a fallback.

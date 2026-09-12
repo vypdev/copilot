@@ -6,6 +6,8 @@ import type {
     GithubPullRequestLifecycleClient,
     GithubPullRequestSummary,
 } from "../../../infrastructure/github/ports/github_pull_request_provider_ports";
+import { toApplicationError } from '../../../application/errors/application_error';
+import type { BugbotPullRequestIdentity } from '../../../domain/bugbot/context';
 
 export class PullRequestLifecycleRepository implements PullRequestHeadShaPort {
     constructor(private readonly githubClient: GithubClientPort<GithubPullRequestLifecycleClient>) {}
@@ -28,42 +30,64 @@ export class PullRequestLifecycleRepository implements PullRequestHeadShaPort {
             logDebugInfo(`Found ${numbers.length} open PR(s) for head branch "${headBranch}": ${numbers.join(', ') || 'none'}`);
             return numbers;
         } catch (error) {
-            logError(`Error listing PRs for branch ${headBranch}: ${error}`);
+            logError(toApplicationError(error, 'provider.unavailable', `Unable to list pull requests for branch ${headBranch}.`));
             throw error;
         }
     };
 
-    /**
-     * Returns the head branch of the first open PR that references the given issue number
-     * (e.g. body contains "#123" or head ref contains "123" as in feature/123-...).
-     * Used for issue_comment events where commit.branch is empty.
-     * Uses bounded matching so #12 does not match #123 and branch "feature/1234-fix" does not match issue 123.
-     */
-    getHeadBranchForIssue = async (
+    getBugbotPullRequestIdentity = async (
         owner: string,
         repository: string,
-        issueNumber: number,
-        token: string
-    ): Promise<string | undefined> => {
+        pullRequestNumber: number,
+        token: string,
+    ): Promise<BugbotPullRequestIdentity> => {
         const octokit = this.githubClient.getClient(token);
-        const escaped = String(issueNumber).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const bodyRefRegex = new RegExp(`(?:^|[^\\d])#${escaped}(?:$|[^\\d])`);
-        const headRefRegex = new RegExp(`\\b${escaped}\\b`);
         try {
-            const pullRequests = await this.listOpenPullRequests(octokit, owner, repository);
-            for (const pr of pullRequests) {
-                const body = pr.body ?? '';
-                const headRef = pr.head?.ref ?? '';
-                if (bodyRefRegex.test(body) || headRefRegex.test(headRef)) {
-                    logDebugInfo(`Found head branch "${headRef}" for issue #${issueNumber} (PR #${pr.number}).`);
-                    return headRef;
-                }
-            }
-            logDebugInfo(`No open PR referencing issue #${issueNumber} found.`);
-            return undefined;
+            if (!octokit.rest.pulls.get) throw new Error('Pull-request identity query is not available.');
+            const { data } = await octokit.rest.pulls.get({
+                owner,
+                repo: repository,
+                pull_number: pullRequestNumber,
+            });
+            return toBugbotPullRequestIdentity(data);
         } catch (error) {
-            logError(`Error getting head branch for issue #${issueNumber}: ${error}`);
-            throw error;
+            const semanticError = toApplicationError(
+                error,
+                'provider.unavailable',
+                `Unable to verify pull request #${pullRequestNumber}.`,
+            );
+            logError(semanticError);
+            throw semanticError;
+        }
+    };
+
+    findOpenBugbotPullRequestsByExactHead = async (
+        owner: string,
+        repository: string,
+        headOwner: string,
+        headRef: string,
+        token: string,
+    ): Promise<readonly BugbotPullRequestIdentity[]> => {
+        const octokit = this.githubClient.getClient(token);
+        try {
+            const { data } = await octokit.rest.pulls.list({
+                owner,
+                repo: repository,
+                state: 'open',
+                head: `${headOwner}:${headRef}`,
+                per_page: 2,
+                page: 1,
+            });
+            if (!Array.isArray(data)) throw new Error('Exact-head pull request query did not return an array.');
+            return data.slice(0, 2).map(toBugbotPullRequestIdentity);
+        } catch (error) {
+            const semanticError = toApplicationError(
+                error,
+                'provider.unavailable',
+                `Unable to resolve the exact pull request for ${headOwner}:${headRef}.`,
+            );
+            logError(semanticError);
+            throw semanticError;
         }
     };
 
@@ -185,4 +209,48 @@ export class PullRequestLifecycleRepository implements PullRequestHeadShaPort {
         return data.head?.sha ?? undefined;
     };
 
+}
+
+function toBugbotPullRequestIdentity(value: {
+    number?: number;
+    state?: string;
+    head?: {
+        ref?: string | null;
+        sha?: string | null;
+        repo?: { owner?: { login?: string | null } | null } | null;
+    };
+    base?: {
+        repo?: {
+            id?: number;
+            name?: string | null;
+            owner?: { login?: string | null } | null;
+        } | null;
+    };
+}): BugbotPullRequestIdentity {
+    const number = value.number;
+    const state = value.state;
+    const baseOwner = value.base?.repo?.owner?.login?.trim();
+    const baseName = value.base?.repo?.name?.trim();
+    const headOwner = value.head?.repo?.owner?.login?.trim();
+    const headRef = value.head?.ref?.trim();
+    const headSha = value.head?.sha?.trim().toLowerCase();
+    if (!Number.isSafeInteger(number) || Number(number) <= 0
+        || (state !== 'open' && state !== 'closed')
+        || !baseOwner || !baseName || !headOwner || !headRef
+        || !headSha || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(headSha)) {
+        throw new Error('Pull-request identity response is incomplete or invalid.');
+    }
+    const repositoryId = value.base?.repo?.id;
+    return {
+        number: Number(number),
+        state,
+        baseRepository: {
+            owner: baseOwner,
+            name: baseName,
+            ...(Number.isSafeInteger(repositoryId) && Number(repositoryId) > 0 ? { id: Number(repositoryId) } : {}),
+        },
+        headRepositoryOwner: headOwner,
+        headRef,
+        headSha,
+    };
 }

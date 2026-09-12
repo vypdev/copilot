@@ -12,14 +12,14 @@ import {
 } from '../../policies/setup_configuration_policy';
 import type {
     SetupRemoteConfigurationReadPort,
-    SetupRepositorySecretsPort,
-    SetupRepositoryVariablesPort,
+    SetupRepositorySecretsCommandPort,
+    SetupRepositoryVariablesCommandPort,
 } from '../../ports/setup_wizard_ports';
 import { logError } from '../../ports/logging_ports';
 
 export interface SetupResourceProvisioningDependencies {
-    setupRepositoryVariablesPort?: SetupRepositoryVariablesPort;
-    setupRepositorySecretsPort?: SetupRepositorySecretsPort;
+    setupRepositoryVariablesPort?: SetupRepositoryVariablesCommandPort;
+    setupRepositorySecretsPort?: SetupRepositorySecretsCommandPort;
     setupRemoteConfigurationReadPort?: SetupRemoteConfigurationReadPort;
 }
 
@@ -134,7 +134,7 @@ export function groupSetupResources(
 
 async function upsertVariableGroups(
     context: SetupRepositoryContext,
-    port: SetupRepositoryVariablesPort,
+    port: SetupRepositoryVariablesCommandPort,
     groups: readonly SetupResourceGroup[],
 ): Promise<{ created: number; updated: number; errors: string[] }> {
     let created = 0;
@@ -157,7 +157,7 @@ async function upsertVariableGroups(
 
 async function upsertSecretGroups(
     context: SetupRepositoryContext,
-    port: SetupRepositorySecretsPort,
+    port: SetupRepositorySecretsCommandPort,
     groups: readonly SetupResourceGroup[],
 ): Promise<{ created: number; updated: number; skipped: number; errors: string[] }> {
     let created = 0;

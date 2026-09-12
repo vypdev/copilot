@@ -6,6 +6,7 @@ import { logDebugInfo, logError, logInfo } from '../../../utils/logger';
 import { createLinkedBranchMutation, loadLinkedBranchContext } from './linked_branch_graphql';
 import { isExpectedLinkedBranchRef, qualifyLinkedBranchRef, resolveLinkedBranchIdentifiers } from './linked_branch_policy';
 import { createdLinkedBranchResult, idempotentLinkedBranchResult, linkedBranchFailureResult, missingLinkedBranchContextResult, missingLinkedBranchResult, unexpectedLinkedBranchResult } from './linked_branch_result_policy';
+import { toApplicationError } from '../../../application/errors/application_error';
 
 export async function runCreateLinkedBranch(
     client: GithubClientPort<GithubGraphqlTransportClient>,
@@ -49,7 +50,7 @@ export async function runCreateLinkedBranch(
             logInfo(`Linked branch ${newBranchName} already exists; treating the operation as idempotently complete.`);
             return [idempotentLinkedBranchResult()];
         }
-        logError(`Error Linking branch "${error}"`);
+        logError(toApplicationError(error, 'provider.unavailable', `Unable to link branch ${newBranchName}.`));
         return [linkedBranchFailureResult(error)];
     }
 }

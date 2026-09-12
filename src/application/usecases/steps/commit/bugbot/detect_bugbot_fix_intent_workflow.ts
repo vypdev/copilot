@@ -8,7 +8,11 @@ import { logDebugInfo, logInfo } from "../../../../ports/logging_ports";
 import { Result } from "../../../../../data/model/result";
 import { parseCopilotCommand } from '../../../../../domain/copilot_command';
 import { buildBugbotFixIntentPrompt } from "./build_bugbot_fix_intent_prompt";
-import { loadBugbotContext, type LoadBugbotContextOptions } from "./load_bugbot_context_use_case";
+import { loadBugbotContext } from "./load_bugbot_context_use_case";
+import {
+  projectBugbotContextRequest,
+  type LoadBugbotContextOptions,
+} from "./bugbot_context_request";
 import { BUGBOT_FIX_INTENT_RESPONSE_SCHEMA } from "./schema";
 import {
   buildUnresolvedFindingSummaries,
@@ -51,11 +55,7 @@ export async function runDetectBugbotFixIntentWorkflow(
     return results;
   }
 
-  const branchOverride = await resolveBranchOverride(param, ports.pullRequestQueryPort);
-  if (branchOverride === null) {
-    logInfo("Could not resolve branch for issue; skipping bugbot fix intent detection.");
-    return results;
-  }
+  const branchOverride = resolveBranchOverride(param);
 
   const contextOptions: LoadBugbotContextOptions | undefined = branchOverride
     ? {
@@ -63,7 +63,14 @@ export async function runDetectBugbotFixIntentWorkflow(
         ...(param.pullRequest.number > 0 ? { pullRequestNumberOverride: param.pullRequest.number } : {}),
       }
     : undefined;
-  const context = await loadBugbotContext(param, contextOptions, ports.contextPorts);
+  const context = await loadBugbotContext(
+    projectBugbotContextRequest(param, contextOptions),
+    ports.contextPorts.loader.bind({
+      owner: param.owner,
+      repository: param.repo,
+      token: param.tokens.token,
+    }),
+  );
   const unresolvedWithBody = context.unresolvedFindingsWithBody ?? [];
 
   const unresolvedIds = new Set(unresolvedWithBody.map((finding) => finding.id));
@@ -167,23 +174,12 @@ export async function runDetectBugbotFixIntentWorkflow(
   return results;
 }
 
-async function resolveBranchOverride(
-  param: Execution,
-  pullRequestQueryPort: BugbotPullRequestQueryPort,
-): Promise<string | undefined | null> {
+function resolveBranchOverride(param: Execution): string | undefined {
   const pullRequestBranch = param.pullRequest.isPullRequestReviewComment
     ? param.pullRequest.head?.trim()
     : undefined;
   if (pullRequestBranch) return pullRequestBranch;
-  if (param.commit.branch?.trim()) return undefined;
-  if (param.issueNumber <= 0) return null;
-  const branch = await pullRequestQueryPort.getHeadBranchForIssue(
-    param.owner,
-    param.repo,
-    param.issueNumber,
-    param.tokens.token,
-  );
-  return branch || null;
+  return param.commit.branch?.trim() || undefined;
 }
 
 async function resolveParentCommentBody(

@@ -1,17 +1,16 @@
-import type { AgentCapability, AgentProvider } from '../../../domain/agent';
+import type { AgentCapability, AgentConfiguration } from '../../../domain/agent';
 
 export interface AgentCliPort {
     execute(request: {
-        command: string;
+        configuration: AgentConfiguration;
+        capability: AgentCapability;
         prompt: string;
-        provider?: AgentProvider;
-        modelProvider?: string;
-        capability?: AgentCapability;
         environment?: NodeJS.ProcessEnv;
-        promptMode?: 'stdin' | 'argv';
         timeoutMs: number;
         signal?: AbortSignal;
         cwd?: string;
         maxOutputBytes?: number;
+        maxPromptBytes?: number;
+        outputSchema?: Record<string, unknown>;
     }): Promise<string>;
 }

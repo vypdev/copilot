@@ -160,7 +160,7 @@ describe("runBugbotAutofixCommitAndPush", () => {
         });
         const { logError } = require("../../../../../ports/logging_ports");
         expect(logError).toHaveBeenCalledWith(
-            expect.stringContaining("Failed to restore stashed changes")
+            expect.objectContaining({ message: expect.stringContaining("Failed to restore stashed changes") })
         );
         expect(logError).toHaveBeenCalledWith(
             expect.stringContaining("run 'git stash pop' manually")
@@ -188,7 +188,7 @@ describe("runBugbotAutofixCommitAndPush", () => {
         expect(result.success).toBe(false);
         const { logError } = require("../../../../../ports/logging_ports");
         expect(logError).toHaveBeenCalledWith(
-            expect.stringContaining("Failed to checkout branch")
+            expect.objectContaining({ message: expect.stringContaining("Failed to checkout branch") })
         );
         expect(logError).toHaveBeenCalledWith(
             expect.stringContaining("Changes were stashed; run 'git stash pop' manually")
@@ -409,7 +409,7 @@ describe("runBugbotAutofixCommitAndPush", () => {
         expect(result).toEqual({
             success: false,
             committed: false,
-            error: "commit failed",
+            error: "Commit or push failed.",
         });
     });
 
@@ -717,7 +717,7 @@ describe("runUserRequestCommitAndPush", () => {
         expect(result).toEqual({
             success: false,
             committed: false,
-            error: "push failed",
+            error: "Commit or push failed.",
         });
     });
 });

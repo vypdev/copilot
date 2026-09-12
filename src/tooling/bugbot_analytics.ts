@@ -18,7 +18,7 @@ export interface BugbotAnalyticsReport {
     readonly stageP95Ms: Readonly<Record<string, number>>;
 }
 
-const OUTCOMES: readonly BugbotReviewOutcome[] = ['completed', 'no-findings', 'dry-run', 'superseded', 'skipped', 'failed'];
+const OUTCOMES: readonly BugbotReviewOutcome[] = ['completed', 'no-findings', 'partial', 'dry-run', 'superseded', 'skipped', 'failed'];
 
 /** Aggregates content-free telemetry. Empty input is valid and produces a zero report. */
 export function buildBugbotAnalytics(snapshots: readonly BugbotReviewTelemetrySnapshot[]): BugbotAnalyticsReport {
@@ -35,7 +35,7 @@ export function buildBugbotAnalytics(snapshots: readonly BugbotReviewTelemetrySn
     const reviews = snapshots.length;
     const nonFailures = reviews - outcomes.failed;
     const actionableReviews = reviews - outcomes.superseded - outcomes.skipped;
-    const completedReviews = outcomes.completed + outcomes['no-findings'] + outcomes['dry-run'];
+    const completedReviews = outcomes.completed + outcomes['no-findings'] + outcomes.partial + outcomes['dry-run'];
     return {
         reviews,
         outcomes,
@@ -104,10 +104,17 @@ function normalizeSnapshots(value: unknown): BugbotReviewTelemetrySnapshot[] {
             ? Object.fromEntries(Object.entries(snapshot.findingStates)
                 .filter(([, count]) => isNonNegativeFinite(count))) as BugbotReviewTelemetrySnapshot['findingStates']
             : undefined;
+        const contextCoverage = normalizeContextCoverage(snapshot.contextCoverage);
         return [{
             schemaVersion: 1,
             reviewId: snapshot.reviewId.slice(0, 500),
             repository: typeof snapshot.repository === 'string' ? snapshot.repository.slice(0, 500) : 'unknown/unknown',
+            ...(isNonNegativeFinite(snapshot.repositoryId) && snapshot.repositoryId > 0
+                ? { repositoryId: snapshot.repositoryId }
+                : {}),
+            triggerKind: typeof snapshot.triggerKind === 'string' && snapshot.triggerKind.trim()
+                ? snapshot.triggerKind.slice(0, 80)
+                : 'unknown',
             ...(isNonNegativeFinite(snapshot.pullRequestNumber) ? { pullRequestNumber: snapshot.pullRequestNumber } : {}),
             ...(typeof snapshot.headSha === 'string' ? { headSha: snapshot.headSha.slice(0, 64) } : {}),
             publicationMode: snapshot.publicationMode === 'dry-run' ? 'dry-run' : 'publish',
@@ -124,6 +131,23 @@ function normalizeSnapshots(value: unknown): BugbotReviewTelemetrySnapshot[] {
             changedFiles: numeric(snapshot.changedFiles),
             changedLines: numeric(snapshot.changedLines),
             rulesLoaded: numeric(snapshot.rulesLoaded),
+            ...(snapshot.contextSelectionReason === 'event'
+                || snapshot.contextSelectionReason === 'exact-head'
+                || snapshot.contextSelectionReason === 'none'
+                ? { contextSelectionReason: snapshot.contextSelectionReason }
+                : {}),
+            ...(snapshot.contextCandidateBucket === '0'
+                || snapshot.contextCandidateBucket === '1'
+                || snapshot.contextCandidateBucket === '2+'
+                ? { contextCandidateBucket: snapshot.contextCandidateBucket }
+                : {}),
+            ...(snapshot.contextCoverageStatus === 'complete' || snapshot.contextCoverageStatus === 'partial'
+                ? { contextCoverageStatus: snapshot.contextCoverageStatus }
+                : {}),
+            ...(contextCoverage ? { contextCoverage } : {}),
+            contextLogicalProviderReads: numeric(snapshot.contextLogicalProviderReads),
+            contextRawProviderRequests: numeric(snapshot.contextRawProviderRequests),
+            contextConcurrencyLimit: 2,
             candidateFindings: numeric(snapshot.candidateFindings),
             publishedFindings: numeric(snapshot.publishedFindings),
             overflowFindings: numeric(snapshot.overflowFindings),
@@ -133,6 +157,35 @@ function normalizeSnapshots(value: unknown): BugbotReviewTelemetrySnapshot[] {
             ...(typeof snapshot.errorCategory === 'string' ? { errorCategory: snapshot.errorCategory.slice(0, 80) } : {}),
         }];
     });
+}
+
+function normalizeContextCoverage(
+    value: BugbotReviewTelemetrySnapshot['contextCoverage'] | undefined,
+): BugbotReviewTelemetrySnapshot['contextCoverage'] | undefined {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+    const entries = Object.entries(value).slice(0, 20).flatMap(([source, candidate]) => {
+        if (!source.trim() || !candidate || typeof candidate !== 'object') return [];
+        if (candidate.status !== 'complete' && candidate.status !== 'partial') return [];
+        const numericValues = [
+            candidate.pagesFetched,
+            candidate.itemsFetched,
+            candidate.itemsRetained,
+            candidate.omittedItems,
+            candidate.truncatedItems,
+        ];
+        if (!numericValues.every(isNonNegativeFinite) || typeof candidate.limitReached !== 'boolean') return [];
+        return [[source.slice(0, 80), {
+            status: candidate.status,
+            pagesFetched: candidate.pagesFetched,
+            itemsFetched: candidate.itemsFetched,
+            itemsRetained: candidate.itemsRetained,
+            omittedItems: candidate.omittedItems,
+            truncatedItems: candidate.truncatedItems,
+            limitReached: candidate.limitReached,
+            ...(candidate.providerLimitReached === true ? { providerLimitReached: true } : {}),
+        }] as const];
+    });
+    return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 }
 
 function isNonNegativeFinite(value: unknown): value is number {

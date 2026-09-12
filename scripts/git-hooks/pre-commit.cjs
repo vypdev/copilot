@@ -16,7 +16,7 @@ const opts = {
     Object.entries(process.env).filter(([key]) => ![
       'AGENT_PROVIDER',
       'AGENT_MODEL',
-      'AGENT_COMMAND',
+      'AGENT_EXECUTABLE',
       'AGENT_MODEL_PROVIDER',
       'AGENT_ALLOWED_MODEL_PROVIDERS',
       'AGENT_ALLOWED_MODELS',

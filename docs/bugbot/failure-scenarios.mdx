@@ -25,7 +25,13 @@ description: Diagnose terminal failures across detection, publication, autofix, 
     Use the canonical **Bugbot status** card and `Copilot / Review` Check for the aggregate state. Run `/copilot recheck` to repair the generated status block; the historical snapshot text is intentionally retained.
   </Accordion>
   <Accordion title="The status card says partial or unknown" icon="triangle-exclamation">
-    Open **Technical details** for the bounded failed operation. Correct permissions or wait for a provider rate limit, then run `/copilot recheck`. Every final-read surface is tracked independently, so an empty verified result is not confused with a failed read. A previously observed non-clean finding that disappears remains visible as `unknown`; only fully resolved findings may be omitted safely. Completed markers and thread transitions are retained and reused, and `unknown` always fails the Action and Check.
+    Open **Coverage** and **Technical details**. A fixed context cap is `partial`: retained evidence may produce findings, but Bugbot cannot declare the whole PR clean or resolve omitted history. Inspect the named source, split an oversized PR if appropriate, then run `/copilot recheck`. A provider or permission error is `unavailable` and aborts before analysis; correct access or wait for the rate limit before retrying. Every final-read surface is tracked independently, so an empty verified result is not confused with a failed read. A previously observed non-clean finding that disappears remains visible as `unknown`; only fully resolved findings may be omitted safely.
+  </Accordion>
+  <Accordion title="Two pull requests match the exact head" icon="code-branch">
+    Bugbot reports an ambiguous target and performs no model call or finding mutation. It never guesses by pull-request age, number, or provider order. Close the obsolete PR or run the review from the intended pull-request event so that exact identity can be verified.
+  </Accordion>
+  <Accordion title="The pull-request event identity is stale" icon="git-commit">
+    Bugbot verifies the event PR's open state, base repository, head owner/ref, and head SHA. Any mismatch stops the run without falling back to a branch search. Start a new review for the current PR revision.
   </Accordion>
   <Accordion title="The PR received a newer commit during reconciliation" icon="git-commit">
     Bugbot checks the PR head immediately before and after collecting the final snapshot. If either head differs from the analyzed commit, it discards the snapshot and performs no review/status writes. The newer workflow run owns the next projection; use `/copilot recheck` only if no newer run is active.

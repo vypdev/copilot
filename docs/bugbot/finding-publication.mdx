@@ -4,7 +4,16 @@ description: How Bugbot validates, deduplicates, limits, and publishes findings.
 ---
 # Finding publication
 
-Bugbot accepts only structured findings that pass local schema, confidence, path, severity, duplicate, and comment-limit policies. For issue-only work, individually selected findings are published as issue comments. When a pull request is available, Bugbot publishes one GitHub review containing a historical review-level snapshot and up to `bugbot-comment-limit` new findings as child line/range or file-level comments; overflow stays summarized in the review while still contributing to aggregate counts. It does not mirror findings as independent pull-request conversation comments. One separate, stable status card in the PR conversation presents the current aggregate projection.
+Bugbot accepts only structured findings that pass local schema, confidence,
+path, severity, duplicate, and comment-limit policies. For issue-only work,
+individually selected findings are published as issue comments. When one pull
+request is uniquely verified for the exact canonical head, Bugbot publishes one
+GitHub review containing a historical review-level snapshot and up to
+`bugbot-comment-limit` new findings as child line/range or file-level comments;
+overflow stays summarized in the review while still contributing to aggregate
+counts. It does not mirror findings as independent pull-request conversation
+comments. One separate, stable status card in the PR conversation presents the
+current aggregate projection.
 
 Each line comment is anchored to a location proved addressable by the canonical GitHub diff. When only the file can be proved, Bugbot uses a file-level review comment. When the reported file is outside the pull-request diff, it uses the first changed file and explains the fallback. The PR head SHA is revalidated immediately before publication.
 

@@ -4,6 +4,7 @@ import { logDebugInfo, logError, logInfo } from "../../../utils/logger";
 import { tagReference, tagReferencePath } from "../release_tag_policy";
 import type { RepositoryTagPort } from "../../../application/ports/repository_release_ports";
 import { findRepositoryTag, getRepositoryTagSha } from './repository_tag_query';
+import { ApplicationError, toApplicationError } from '../../../application/errors/application_error';
 
 export class RepositoryTagRepository implements RepositoryTagPort {
     constructor(private readonly githubClient: GithubClientPort<GithubReleaseClient>) {}
@@ -21,8 +22,10 @@ export class RepositoryTagRepository implements RepositoryTagPort {
             throw new Error(`The '${sourceTag}' tag does not exist in the remote repository.`);
         }
 
-        const foundTargetTag = await findRepositoryTag(octokit, owner, repository, targetTag);
-        if (foundTargetTag) {
+        const targetTagSha = await getRepositoryTagSha(octokit, owner, repository, targetTag);
+        if (targetTagSha === sourceTagSha) {
+            logDebugInfo(`Tag '${targetTag}' already points to '${sourceTag}'.`);
+        } else if (targetTagSha) {
             logDebugInfo(`Updating the '${targetTag}' tag to point to the '${sourceTag}' tag`);
             await octokit.rest.git.updateRef({
                 owner,
@@ -74,7 +77,7 @@ export class RepositoryTagRepository implements RepositoryTagPort {
             logInfo(`Created tag '${tag}' in repository ${owner}/${repository} from branch '${branch}'`);
             return ref.object.sha;
         } catch (error) {
-            logError(`Error creating tag '${tag}': ${JSON.stringify(error, null, 2)}`);
+            logError(toApplicationError(error, 'provider.unavailable', `Unable to create tag '${tag}'.`));
             throw error;
         }
     };
@@ -87,19 +90,27 @@ export class RepositoryTagRepository implements RepositoryTagPort {
         token: string,
     ): Promise<string> => {
         const octokit = this.githubClient.getClient(token);
-        const existingTag = await findRepositoryTag(octokit, owner, repository, tag);
-        if (existingTag) {
-            if (existingTag.object.sha !== sha) {
-                throw new Error(`Immutable tag '${tag}' exists at ${existingTag.object.sha}, expected ${sha}.`);
+        const existingTagSha = await getRepositoryTagSha(octokit, owner, repository, tag);
+        if (existingTagSha) {
+            if (existingTagSha !== sha) {
+                throw new ApplicationError('provider.conflict', `Immutable tag '${tag}' exists at ${existingTagSha}, expected ${sha}.`);
             }
             return sha;
         }
-        await octokit.rest.git.createRef({
-            owner,
-            repo: repository,
-            ref: `refs/tags/${tag}`,
-            sha,
-        });
-        return sha;
+        try {
+            await octokit.rest.git.createRef({
+                owner,
+                repo: repository,
+                ref: `refs/tags/${tag}`,
+                sha,
+            });
+        } catch (error) {
+            const recovered = await getRepositoryTagSha(octokit, owner, repository, tag);
+            if (recovered === sha) return sha;
+            throw error;
+        }
+        const verified = await getRepositoryTagSha(octokit, owner, repository, tag);
+        if (verified !== sha) throw new ApplicationError('provider.contract-invalid', `Creating immutable tag '${tag}' was not verified at ${sha}.`);
+        return verified;
     };
 }

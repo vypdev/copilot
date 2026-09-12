@@ -1,30 +1,24 @@
-import { Execution } from "../../../../data/model/execution";
 import { Result } from "../../../../data/model/result";
-import type { IssueDescriptionQueryPort } from "../../../../application/ports/issue_description_ports";
 import { extractVersion } from "../../../../utils/content_utils";
 import { logDebugInfo, logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
+import { toApplicationError } from "../../../errors/application_error";
+import type { SetupIssueQueryPort } from '../../../ports/setup_execution_ports';
+import type { VersionDescriptionContext } from '../../execution/setup_execution_contracts';
 
-export class GetReleaseVersionUseCase implements ParamUseCase<Execution, Result[]> {
+export class GetReleaseVersionUseCase implements ParamUseCase<VersionDescriptionContext, Result[]> {
     taskId: string = 'GetReleaseVersionUseCase';
     
-    constructor(private readonly issueRepository: IssueDescriptionQueryPort) {}
+    constructor(private readonly issueRepository: Pick<SetupIssueQueryPort, 'getDescription'>) {}
 
-    async invoke(param: Execution): Promise<Result[]> {
+    async invoke(param: VersionDescriptionContext): Promise<Result[]> {
         logInfo(`${getTaskEmoji(this.taskId)} Executing ${this.taskId}.`);
 
         const result: Result[] = [];
 
         try {
-            let number = -1
-            if (param.isSingleAction) {
-                number = param.singleAction.issue
-            } else if (param.isIssue) {
-                number = param.issue.number
-            } else if (param.isPullRequest) {
-                number = param.pullRequest.number
-            } else {
+            if (!isPositiveIssueNumber(param.issueNumber)) {
                 result.push(
                     new Result({
                         id: this.taskId,
@@ -36,15 +30,10 @@ export class GetReleaseVersionUseCase implements ParamUseCase<Execution, Result[
                 return result;
             }
 
-            const description = await this.issueRepository.getDescription(
-                param.owner,
-                param.repo,
-                number,
-                param.tokens.token,
-            )
+            const description = await this.issueRepository.getDescription(param.issueNumber)
 
             if (description === undefined) {
-                logDebugInfo(`GetReleaseVersion: no description for issue/PR ${number}.`);
+                logDebugInfo(`GetReleaseVersion: no description for issue ${param.issueNumber}.`);
                 result.push(
                     new Result({
                         id: this.taskId,
@@ -59,7 +48,7 @@ export class GetReleaseVersionUseCase implements ParamUseCase<Execution, Result[
             const releaseVersion = extractVersion('Release Version', description)
 
             if (releaseVersion === undefined) {
-                logDebugInfo(`GetReleaseVersion: no "Release Version" found in description (issue/PR ${number}).`);
+                logDebugInfo(`GetReleaseVersion: no "Release Version" found in description (issue ${param.issueNumber}).`);
                 result.push(
                     new Result({
                         id: this.taskId,
@@ -81,18 +70,23 @@ export class GetReleaseVersionUseCase implements ParamUseCase<Execution, Result[
                 })
             );
         } catch (error) {
-            logError(`GetReleaseVersion: failed to get version for issue/PR.`, error instanceof Error ? { stack: (error as Error).stack } : undefined);
+            const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to read the release version.');
+            logError(semanticError);
             result.push(
                 new Result({
                     id: this.taskId,
                     success: false,
                     executed: true,
                     steps: [`Tried to get the release version but there was a problem.`],
-                    errors: [error],
+                    errors: [semanticError],
                 })
             );
         }
 
         return result;
     }
+}
+
+function isPositiveIssueNumber(value: number): boolean {
+    return Number.isSafeInteger(value) && value > 0;
 }

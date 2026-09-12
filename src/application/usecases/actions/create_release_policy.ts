@@ -26,6 +26,6 @@ export function normalizeVersion(version: string): string | undefined {
 
 export function versionForRelease(version: string): string {
     const normalized = normalizeVersion(version);
-    if (normalized === undefined) throw new ApplicationError('Cannot build a release version from invalid input.', 'validation');
+    if (normalized === undefined) throw new ApplicationError('validation.invalid-input', 'Cannot build a release version from invalid input.');
     return `v${normalized}`;
 }

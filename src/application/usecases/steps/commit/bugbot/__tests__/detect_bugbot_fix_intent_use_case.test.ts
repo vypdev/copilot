@@ -13,7 +13,6 @@ jest.mock("../../../../../../utils/logger", () => ({
 
 const mockLoadBugbotContext = jest.fn();
 const mockAskAgent = jest.fn();
-const mockGetHeadBranchForIssue = jest.fn();
 const mockGetPullRequestReviewCommentBody = jest.fn();
 
 jest.mock("../load_bugbot_context_use_case", () => ({
@@ -36,7 +35,11 @@ function baseExecution(overrides: Partial<Execution> = {}): Execution {
             commentId: 1,
         },
         pullRequest: { isPullRequestReviewComment: false, commentBody: "", number: 0 },
-        ai: { getAgentConfiguration: () => ({ provider: 'opencode', model: 'model', command: 'opencode run' }) },
+        ai: {
+            getAgentConfiguration: () => ({ provider: 'opencode', model: 'model' }),
+            getBugbotReviewConfiguration: () => ({ organizationRules: [] }),
+            getAiIgnoreFiles: () => [],
+        },
         ...overrides,
     } as unknown as Execution;
 }
@@ -49,7 +52,10 @@ function mockContextWithUnresolved(count = 1) {
     return {
         existingByFindingId: {} as Record<string, { resolved: boolean }>,
         issueComments: [],
-        openPrNumbers: [],
+        canonicalPullRequest: null,
+        selectionReason: 'none',
+        coverage: { status: 'complete', sources: [] },
+        eligibleResolutionIds: new Set(unresolved.map((finding) => finding.id)),
         previousFindingsBlock: "",
         prContext: null,
         unresolvedFindingsWithBody: unresolved,
@@ -62,9 +68,7 @@ describe("DetectBugbotFixIntentUseCase", () => {
     beforeEach(() => {
         const issuePort = { listIssueComments: jest.fn() };
         const pullRequestPort = {
-            getHeadBranchForIssue: mockGetHeadBranchForIssue,
             getPullRequestReviewCommentBody: mockGetPullRequestReviewCommentBody,
-            getOpenPullRequestNumbersByHeadBranch: jest.fn(),
             listPullRequestReviewComments: jest.fn(),
             getPullRequestHeadSha: jest.fn(),
             getReviewDiffSnapshot: jest.fn().mockResolvedValue({
@@ -78,6 +82,7 @@ describe("DetectBugbotFixIntentUseCase", () => {
             pullRequestPort,
             { query: (request: { configuration: unknown; agentId: string; prompt: string; options?: unknown }) => mockAskAgent(request.configuration, request.agentId, request.prompt, request.options) },
             {
+                loader: { bind: jest.fn().mockReturnValue({}) },
                 issue: issuePort,
                 pullRequest: pullRequestPort,
                 reviewState: { listPullRequestReviews: jest.fn().mockResolvedValue([]) },
@@ -87,7 +92,6 @@ describe("DetectBugbotFixIntentUseCase", () => {
         );
         mockLoadBugbotContext.mockReset();
         mockAskAgent.mockReset();
-        mockGetHeadBranchForIssue.mockReset();
         mockGetPullRequestReviewCommentBody.mockReset();
     });
 
@@ -126,11 +130,11 @@ describe("DetectBugbotFixIntentUseCase", () => {
 
         expect(results[0].success).toBe(true);
         expect(mockLoadBugbotContext).toHaveBeenCalledWith(
-            expect.anything(),
-            expect.objectContaining({ branchOverride: 'feature/no-linked-issue', pullRequestNumberOverride: 50 }),
+            expect.objectContaining({
+                target: expect.objectContaining({ headRef: 'feature/no-linked-issue', eventPullRequestNumber: 50 }),
+            }),
             expect.anything(),
         );
-        expect(mockGetHeadBranchForIssue).not.toHaveBeenCalled();
     });
 
     it("returns empty results when comment body is empty", async () => {
@@ -142,29 +146,30 @@ describe("DetectBugbotFixIntentUseCase", () => {
         expect(mockLoadBugbotContext).not.toHaveBeenCalled();
     });
 
-    it("returns empty results when no branch and getHeadBranchForIssue returns null", async () => {
-        mockGetHeadBranchForIssue.mockResolvedValue(undefined);
+    it("loads issue-only context when no branch or pull request identity exists", async () => {
         mockLoadBugbotContext.mockResolvedValue(mockContextWithUnresolved(1));
+        mockAskAgent.mockResolvedValue({ is_fix_request: false, target_finding_ids: [], is_do_request: false });
 
         const results = await useCase.invoke(
             baseExecution({ commit: { branch: "" } } as Partial<Execution>)
         );
 
-        expect(mockGetHeadBranchForIssue).toHaveBeenCalledWith("o", "r", 42, "t");
-        expect(results).toEqual([]);
+        expect(results).toHaveLength(1);
+        expect(mockLoadBugbotContext).toHaveBeenCalledWith(
+            expect.objectContaining({ target: expect.objectContaining({ headRef: '', pullRequestRequired: false }) }),
+            expect.anything(),
+        );
     });
 
-    it("uses branchOverride when commit.branch empty and getHeadBranchForIssue returns branch", async () => {
-        mockGetHeadBranchForIssue.mockResolvedValue("feature/42-pr");
+    it("does not infer a pull request branch from an issue", async () => {
         mockLoadBugbotContext.mockResolvedValue(mockContextWithUnresolved(1));
         mockAskAgent.mockResolvedValue({ is_fix_request: false, target_finding_ids: [], is_do_request: false });
 
         await useCase.invoke(baseExecution({ commit: { branch: "" } } as Partial<Execution>));
 
         expect(mockLoadBugbotContext).toHaveBeenCalledWith(
+            expect.objectContaining({ target: expect.objectContaining({ headRef: '', pullRequestRequired: false }) }),
             expect.anything(),
-            expect.objectContaining({ branchOverride: "feature/42-pr" }),
-            expect.objectContaining({ issue: expect.anything(), pullRequest: expect.anything() })
         );
     });
 

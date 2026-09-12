@@ -3,6 +3,7 @@ import type { GitCommitPort } from '../../../../../application/ports/git_ports';
 import type { BugbotContext } from './types';
 import { logDebugInfo, logError } from '../../../../ports/logging_ports';
 import { finalizeWorkspaceMutation } from '../workspace_mutation_guard';
+import { ApplicationError, toApplicationError } from '../../../../errors/application_error';
 
 export async function finalizeBugbotAutofix(
     context: BugbotContext,
@@ -14,7 +15,7 @@ export async function finalizeBugbotAutofix(
 ): Promise<Result[]> {
     if (!responseText) {
         logError('Bugbot autofix: no response from configured build agent.');
-        return [failure('Configured build agent returned no response.')];
+        return [failure(new ApplicationError('agent.failed', 'Configured build agent returned no response.'))];
     }
     let workspacePaths: string[];
     try {
@@ -24,9 +25,9 @@ export async function finalizeBugbotAutofix(
             'Bugbot autofix',
         ));
     } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        logError(message);
-        return [failure(message)];
+        const semanticError = toApplicationError(error, 'workflow.failed', 'Bugbot autofix postflight failed.');
+        logError(semanticError);
+        return [failure(semanticError)];
     }
     logDebugInfo(`BugbotAutofix: response length=${responseText.length}; safe paths=${workspacePaths.length}.`);
     return [new Result({
@@ -38,6 +39,6 @@ export async function finalizeBugbotAutofix(
     })];
 }
 
-function failure(message: string): Result {
-    return new Result({ id: 'BugbotAutofixUseCase', success: false, executed: true, errors: [message] });
+function failure(semanticError: ApplicationError): Result {
+    return new Result({ id: 'BugbotAutofixUseCase', success: false, executed: true, errors: [semanticError] });
 }

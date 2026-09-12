@@ -11,7 +11,7 @@ These inputs are used when you run the action in single-action mode. For the com
 
 | Input | Description | Example |
 |-------|-------------|---------|
-| `single-action` | The action to run | `check_progress_action`, `think_action`, `create_release`, etc. |
+| `single-action` | The action to run | `check_progress_action`, `think_action`, etc. |
 | `token` | GitHub PAT (required for almost all single actions) | `${{ secrets.PAT }}` |
 
 ## When the action needs an issue
@@ -29,13 +29,14 @@ repository's open issues carrying a waiting-state label. Configure its optional
 
 ### Internal operation identity
 
-`create_tag`, `continue_deployment_action`, `published_deployment_action`, and
+`create_tag`, `create_release`, `publish_github_action`,
+`continue_deployment_action`, `published_deployment_action`, and
 `failed_deployment_action` require `single-action-operation-id`. It must be the
 exact durable ID supplied by Copilot for that launcher issue. The workflows also
 pass the matching version where applicable. `prepare_deployment_action` creates
 the operation ID and instead requires issue, version, title, and changelog.
 
-These five actions belong to `release_workflow.yml`, `hotfix_workflow.yml`, and
+These seven actions belong to `release_workflow.yml`, `hotfix_workflow.yml`, and
 `copilot_deployment_orchestration.yml`; do not invoke them manually or reuse an
 ID across issues.
 
@@ -50,23 +51,18 @@ cannot silently update the wrong comment.
 
 ## When the action needs a version
 
-For standalone `create_release` and workflow-owned `create_tag`:
+For workflow-owned `create_tag`, `create_release`, and
+`publish_github_action`:
 
 | Input | Description | Example |
 |-------|-------------|---------|
 | `single-action-version` | Version string (e.g. semver) | `'1.2.0'` |
 
-`create_tag` additionally requires `single-action-issue` and the exact
+`single-action-issue` and the exact
 `single-action-operation-id` created for that issue. It is accepted only in the
 publish phase of the matching durable release or hotfix operation; it is not a
-standalone tag-creation command.
-
-For **`create_release`** only:
-
-| Input | Description | Example |
-|-------|-------------|---------|
-| `single-action-title` | Release title | `'Release 1.2.0'` |
-| `single-action-changelog` | Changelog or release notes body (markdown) | Multi-line string or file content |
+standalone publication command. Release title and changelog come only from the
+durable operation created by `prepare_deployment_action`.
 
 ## Example: workflow with single action
 
@@ -78,20 +74,7 @@ For **`create_release`** only:
     single-action-issue: '123'
 ```
 
-For release:
-
-```yaml
-- uses: vypdev/copilot@v3
-  with:
-    token: ${{ secrets.PAT }}
-    single-action: create_release
-    single-action-version: '1.2.0'
-    single-action-title: 'Release 1.2.0'
-    single-action-changelog: |
-      ## New features
-      - Added X
-      ## Fixes
-      - Fixed Y
-```
+Use the supplied release/hotfix workflows for publication; direct examples are
+intentionally omitted because there is no standalone or local compatibility path.
 
 See [Workflow & CLI](/single-actions/workflow-and-cli) for more examples and CLI equivalents.

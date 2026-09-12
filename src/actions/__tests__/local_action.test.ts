@@ -155,6 +155,26 @@ describe('runLocalAction', () => {
     expect(mockGetProjectDetail).not.toHaveBeenCalled();
   });
 
+  it.each([
+    'create_tag',
+    'create_release',
+    'publish_github_action',
+    'prepare_deployment_action',
+    'continue_deployment_action',
+    'published_deployment_action',
+    'failed_deployment_action',
+  ])('rejects local deployment mutation %s before composition', async (singleAction) => {
+    await expect(runLocalAction({
+      [INPUT_KEYS.SINGLE_ACTION]: singleAction,
+      [INPUT_KEYS.SINGLE_ACTION_ISSUE]: '355',
+      [INPUT_KEYS.TOKEN]: 'local-token',
+      repo: { owner: 'o', repo: 'r' },
+    })).rejects.toThrow('serialized GitHub workflows');
+
+    expect(mockMainRun).not.toHaveBeenCalled();
+    expect(mockGetProjectDetail).not.toHaveBeenCalled();
+  });
+
   it('includes errors and reminders in boxen content when results have errors and reminders', async () => {
     const boxen = require('boxen');
     mockMainRun.mockResolvedValue([

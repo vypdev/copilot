@@ -13,9 +13,9 @@ jest.mock('../../data/repository/agent_cli_provisioner', () => ({
 jest.mock('../../utils/logger', () => ({ logInfo: jest.fn(), logDebugInfo: jest.fn() }));
 
 const tasks: AgentTaskConfiguration = {
-    findings: { provider: 'codex', modelProvider: 'openai', model: 'findings', command: 'codex findings' },
-    fixer: { provider: 'codex', modelProvider: 'openai', model: 'fixer', command: 'codex fixer' },
-    planner: { provider: 'opencode', modelProvider: 'anthropic', model: 'planner', command: 'opencode planner' },
+    findings: { provider: 'codex', modelProvider: 'openai', model: 'findings' },
+    fixer: { provider: 'codex', modelProvider: 'openai', model: 'fixer' },
+    planner: { provider: 'opencode', modelProvider: 'anthropic', model: 'planner' },
 };
 
 describe('prepareGithubAgentRuntime', () => {
@@ -57,5 +57,43 @@ describe('prepareGithubAgentRuntime', () => {
 
         expect(mockPreflight).toHaveBeenCalledTimes(2);
         expect(mockProvision).toHaveBeenCalledTimes(1);
+    });
+
+    it('maps missing active-role authentication to a safe semantic error', () => {
+        mockPreflight.mockReturnValue({
+            check: { status: 'missing', message: 'secret-bearing provider diagnostic' },
+            shouldFail: true,
+            mode: 'required',
+        });
+
+        expect(() => prepareGithubAgentRuntime(tasks, ['planner'])).toThrow(
+            expect.objectContaining({
+                code: 'authorization.credential-invalid',
+                message: 'Authentication is unavailable for the active planner agent role using opencode.',
+            }),
+        );
+        try {
+            prepareGithubAgentRuntime(tasks, ['planner']);
+        } catch (error) {
+            expect(JSON.stringify(error)).not.toContain('secret-bearing provider diagnostic');
+        }
+    });
+
+    it('maps provisioning failures without exposing provider diagnostics', () => {
+        mockProvision.mockImplementation(() => {
+            throw new Error('secret-bearing provisioning diagnostic');
+        });
+
+        expect(() => prepareGithubAgentRuntime(tasks, ['planner'])).toThrow(
+            expect.objectContaining({
+                code: 'configuration.unsupported',
+                message: 'The opencode runtime could not satisfy the exact manifest provisioning contract.',
+            }),
+        );
+        try {
+            prepareGithubAgentRuntime(tasks, ['planner']);
+        } catch (error) {
+            expect(JSON.stringify(error)).not.toContain('secret-bearing provisioning diagnostic');
+        }
     });
 });

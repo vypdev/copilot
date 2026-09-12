@@ -7,11 +7,11 @@ description: Pin agent CLI versions and installer integrity inputs for reproduci
 
 Every runtime must have a deliberate version policy. A missing version is not an invitation to install the latest package implicitly.
 
-| Runtime | Version input | Installation boundary | Verification |
+| Runtime | Accepted version | Installation boundary | Verification |
 | --- | --- | --- | --- |
-| Codex | `CODEX_VERSION` | Runner `npm` global install | CLI version output |
-| OpenCode | `OPENCODE_VERSION` | Runner `npm` global install | CLI version output |
-| Cursor | installer and `CURSOR_INSTALLER_SHA256` | Official installer download | SHA-256 comparison |
+| Codex | `codex-cli 0.153.4` | Runner `npm` global install | Exact CLI version output |
+| OpenCode | `1.18.3` | Runner `npm` global install | Exact CLI version output |
+| Cursor | `2026.09.10-fd3934a` | Controlled runner image | Exact CLI version output |
 
 The Copilot CLI is distributed as `@vypdev/copilot` and exposes the `copilot` executable. Pin it for reproducible local tooling:
 
@@ -23,11 +23,11 @@ copilot --version
 
 ## Rules
 
-1. Pin the version in repository or organization variables.
+1. Pin the version in the reviewed source-controlled runtime manifest.
 2. Provision only the selected runtime.
 3. Verify the installed version before invoking the agent.
-4. For Cursor, require the expected SHA-256 before running the installer.
+4. For Cursor, require the exact preinstalled build; automatic installation is unsupported.
 5. Treat missing, malformed, or mismatched values as terminal failures.
-6. Record the effective version in sanitized logs without credentials.
+6. Record the effective version and manifest revision in sanitized logs without credentials.
 
 See [Provisioning](/security-operations/operations/provisioning) and [Upgrade and rollback](/security-operations/operations/upgrade-rollback) for the lifecycle procedure.

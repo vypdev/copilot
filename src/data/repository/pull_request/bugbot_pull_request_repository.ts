@@ -18,21 +18,12 @@ export class BugbotPullRequestRepository
     BugbotPullRequestResolutionPort
 {
   constructor(
-    private readonly lifecycle: Pick<BugbotPullRequestReadPort, "getHeadBranchForIssue" | "getOpenPullRequestNumbersByHeadBranch">,
     private readonly changes: Pick<BugbotPullRequestReadPort, "getPullRequestHeadSha" | "getReviewDiffSnapshot">,
     private readonly reviewQuery: PullRequestReviewCommentQueryPort & PullRequestReviewSummaryQueryPort,
     private readonly reviewCommand: PullRequestReviewCommentCommandPort & PullRequestReviewSummaryUpdatePort,
     private readonly threadCommand: PullRequestReviewThreadCommandPort & PullRequestReviewThreadStateQueryPort,
   ) {}
 
-  getHeadBranchForIssue = (
-    ...args: Parameters<BugbotPullRequestReadPort["getHeadBranchForIssue"]>
-  ) => this.lifecycle.getHeadBranchForIssue(...args);
-  getOpenPullRequestNumbersByHeadBranch = (
-    ...args: Parameters<
-      BugbotPullRequestReadPort["getOpenPullRequestNumbersByHeadBranch"]
-    >
-  ) => this.lifecycle.getOpenPullRequestNumbersByHeadBranch(...args);
   getPullRequestReviewCommentBody = (
     ...args: Parameters<
       BugbotPullRequestReadPort["getPullRequestReviewCommentBody"]

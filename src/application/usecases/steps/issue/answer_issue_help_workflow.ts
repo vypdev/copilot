@@ -13,6 +13,7 @@ import { getTaskEmoji } from '../../../../utils/task_emoji';
 import { extractStructuredAnswer } from '../common/agent_answer_policy';
 import { sanitizeAgentMarkdown } from '../../../../application/policies/github_comment_publication_policy';
 import { buildCopilotWelcomeMessage } from '../../../../application/policies/copilot_interaction_policy';
+import { ApplicationError, toApplicationError } from '../../../errors/application_error';
 
 export interface AnswerIssueHelpWorkflowDependencies {
     issueNotificationPort: IssueNotificationPort;
@@ -75,12 +76,13 @@ export async function runAnswerIssueHelpWorkflow(
             payload: { welcomePublished: isNewIssue(param) },
         })];
     } catch (error) {
-        logError(`Error in ${TASK_ID}: ${error}`);
+        const semanticError = toApplicationError(error, 'workflow.failed', `Error in ${TASK_ID}: unable to answer the help issue.`);
+        logError(semanticError);
         return [new Result({
             id: TASK_ID,
             success: false,
             executed: true,
-            errors: [`Error in ${TASK_ID}: ${error}`],
+            errors: [semanticError],
         })];
     }
 }
@@ -117,7 +119,7 @@ function noAnswerResult(): Result {
         id: TASK_ID,
         success: false,
         executed: true,
-        errors: ['Configured agent returned no answer for initial help.'],
+        errors: [new ApplicationError('agent.failed', 'Configured agent returned no answer for initial help.')],
     });
 }
 

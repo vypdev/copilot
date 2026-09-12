@@ -4,6 +4,7 @@ import type {
   DeploymentOperationSnapshot,
   ReconciliationTargetState,
 } from "../../domain/deployment_operation";
+import { DEPLOYMENT_STATE_VERSION } from "../../domain/deployment_operation";
 import type {
   MergeQueueObservationProblem,
   MergeQueueProducerEvidence,
@@ -33,6 +34,8 @@ export function buildInitialDeploymentOperation(
     ? input.configuration.releaseReconciliationStrategy
     : input.configuration.hotfixReconciliationStrategy;
   return {
+    stateVersion: DEPLOYMENT_STATE_VERSION,
+    revision: 0,
     operationId: input.operationId,
     kind: input.kind,
     version: input.version,

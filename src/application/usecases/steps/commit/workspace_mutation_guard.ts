@@ -22,8 +22,8 @@ export async function prepareWorkspaceMutation(
     const workspacePathsBefore = await inspectWorkspace(gitCommitPort, `before ${options.operation}`);
     if (workspacePathsBefore.length > 0) {
         throw new ApplicationError(
+            'agent.policy-rejected',
             `${options.operation} refused: workspace is not clean before agent execution.`,
-            'validation',
         );
     }
 
@@ -32,15 +32,15 @@ export async function prepareWorkspaceMutation(
         branchCheckedOut = await checkoutBranch(options.branch, gitCommitPort, options.token);
         if (!branchCheckedOut) {
             throw new ApplicationError(
+                'provider.unavailable',
                 `${options.operation} refused: failed to checkout target branch ${options.branch}.`,
-                'provider',
             );
         }
         const afterCheckout = await inspectWorkspace(gitCommitPort, `after ${options.operation} branch checkout`);
         if (afterCheckout.length > 0) {
             throw new ApplicationError(
+                'agent.policy-rejected',
                 `${options.operation} refused: branch checkout produced a dirty workspace.`,
-                'validation',
             );
         }
     }
@@ -58,19 +58,19 @@ export async function finalizeWorkspaceMutation(
     const unsafePaths = workspacePathsAfter.filter(isSensitiveWorkspacePath);
     if (unsafePaths.length > 0) {
         throw new ApplicationError(
+            'agent.policy-rejected',
             `${operation} refused because sensitive files were modified: ${unsafePaths.join(', ')}`,
-            'validation',
         );
     }
 
     const workspacePaths = selectWorkspacePathsToCommit([...before], workspacePathsAfter);
     if (workspacePaths.length === 0) {
-        throw new ApplicationError(`${operation} produced no safe workspace paths to commit.`, 'validation');
+        throw new ApplicationError('agent.policy-rejected', `${operation} produced no safe workspace paths to commit.`);
     }
     if (workspacePaths.length > MAX_AUTOMATED_CHANGED_PATHS) {
         throw new ApplicationError(
+            'agent.policy-rejected',
             `${operation} refused because it changed ${workspacePaths.length} paths; maximum is ${MAX_AUTOMATED_CHANGED_PATHS}.`,
-            'validation',
         );
     }
     return { workspacePaths };
@@ -80,9 +80,8 @@ async function inspectWorkspace(gitCommitPort: GitCommitPort, phase: string): Pr
     try {
         return await listWorkspacePaths(gitCommitPort);
     } catch (error) {
-        throw new ApplicationError(`Unable to inspect workspace ${phase}.`, 'provider', {
+        throw new ApplicationError('provider.unavailable', `Unable to inspect workspace ${phase}.`, {
             cause: error,
-            retryable: true,
         });
     }
 }

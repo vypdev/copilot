@@ -137,7 +137,7 @@ describe('IssueTypeRepository', () => {
         await expect(new IssueTypeRepository(new OctokitGraphqlTransportClientAdapter()).ensureIssueTypes(
             'owner', issueTypes, 'token',
         )).resolves.toMatchObject({ created: 0, existing: 0, errors: expect.arrayContaining([
-            expect.stringContaining('Error creating Issue type "task"'),
+            expect.stringContaining('Unable to ensure issue type "task"'),
         ]) });
     });
 

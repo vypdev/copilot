@@ -40,6 +40,15 @@ model. A Tarjan-based production architecture test rejects static, re-export,
 side-effect, `require()` and dynamic-import cycles. The current productive graph
 contains no directed dependency cycle.
 
+The runtime setup capability now receives a deeply readonly
+`SetupExecutionContext` and returns a discriminated `SetupExecutionResult`.
+Issue resolution, release/hotfix description readers, and branch-version
+resolution no longer receive or mutate `Execution`. Repository coordinates and
+the token are bound once by `execution_setup_composition_root.ts`; the semantic
+ports exposed to application code accept only operation facts such as an issue
+number. The action boundary is the sole owner of applying the explicit result
+back to the runtime aggregate.
+
 Pure domain/model policies may import:
 
 - standard TypeScript types;
@@ -149,6 +158,20 @@ roots. The local action lifecycle now uses
 `local_action_composition_root.ts`, which owns the shared Project Board scope and
 the Git tag-query adapter.
 
+Deployment command composition is a GitHub-workflow-only boundary. The local
+surface rejects orchestration and publication commands before main-run
+composition, and the shared route root leaves deployment state, PR, Git,
+publication, and release/tag command ports unconstructed for that surface.
+There is no compatibility or legacy mutation route.
+
+Deployment orchestration selects one of four fixed entry-mode handlers for
+prepare, continuation, publication confirmation, or failure recording. Those
+handlers receive `DeploymentOrchestrationContext`, never the complete
+`Execution` aggregate. Managed PR mutation, target-rule/merge-queue inspection,
+and Git refs/ancestry are separate application ports and concrete adapters; the
+former broad deployment repository no longer exists. ESLint enforces a maximum
+cyclomatic complexity of 15 for every target-rule normalization function.
+
 Issue and pull-request orchestration use cases receive their executable steps as
 explicit application contracts. Their concrete step instances are assembled in
 the corresponding infrastructure composition roots; application orchestration
@@ -188,6 +211,8 @@ PullRequestReviewThreadCommandPort
 ProjectBoardCommandPort
 OrganizationMembersPort
 RepositoryReleasePublicationPort
+DeploymentStateStorePort
+DeploymentPublicationReceiptPort
 ```
 
 When one adapter implements several operations, application callers still
@@ -206,6 +231,29 @@ parameters, tokens and GraphQL transport details must not cross application
 ports, enter `Result.errors`, or be interpolated into logs. Command outcomes
 remain observable through every productive caller; partial success must not be
 reported as unconditional success.
+
+`Result.errors` is exactly `readonly ApplicationError[]`. The error code fixes
+its category and default retryability; a caller may narrow a retryable error but
+cannot broaden a terminal one. Raw causes are private and disposable. The
+logging contract accepts only text already known to be safe or the allowlisted
+public error record, and an AST check rejects caught values passed to any
+production logger unless they first cross `toApplicationError`.
+
+The checked-in `src/architecture/execution_import_baseline.json` is the exact,
+shrinking migration inventory. The compiler-based test resolves the `Execution`
+symbol, so type-only imports, renamed imports, `Pick<Execution>`, and local type
+aliases count as dependencies. Every removal must shrink the checked-in list and
+maximum in the same change; adding, moving, or silently omitting a consumer
+fails CI. Once context projection is complete, this baseline is
+replaced by the exact route-boundary allowlist documented in the governing SDD.
+The P2-A setup cut and exact-inventory correction reduced that ratchet from 140
+to 130 consumers: six setup imports were removed and four already-stale entries
+were deleted. Every merged P2 slice must lower the checked-in maximum by the
+imports it removes.
+
+The package subpath `@vypdev/copilot/bugbot` exposes one review operation,
+`review(BugbotReviewRequest)`. It does not export the internal `Execution` or
+`Ai` models and has no aggregate-based overload or compatibility surface.
 
 ## Forbidden abstractions
 

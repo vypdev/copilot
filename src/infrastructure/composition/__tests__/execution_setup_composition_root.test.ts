@@ -1,6 +1,12 @@
-const issueSetupPort = { kind: 'issue-setup' };
-const organizationSetupPort = { kind: 'organization-setup' };
-const configurationPort = { kind: 'configuration' };
+const issueSetupPort = {
+  isPullRequest: jest.fn(),
+  isIssue: jest.fn(),
+  getHeadBranch: jest.fn(),
+  getLabels: jest.fn(),
+  getDescription: jest.fn(),
+};
+const organizationSetupPort = { getUserFromToken: jest.fn() };
+const configurationPort = { get: jest.fn() };
 const releaseVersionUseCase = { kind: 'release-version' };
 const releaseTypeUseCase = { kind: 'release-type' };
 const hotfixVersionUseCase = { kind: 'hotfix-version' };
@@ -42,6 +48,11 @@ jest.mock('../../../application/usecases/execution/setup_execution_use_case', ()
 }));
 
 import type { LatestTagQueryPort } from '../../../application/ports/branch_tag_ports';
+import type {
+  SetupConfigurationQueryPort,
+  SetupIssueQueryPort,
+  SetupOrganizationQueryPort,
+} from '../../../application/ports/setup_execution_ports';
 import { createSetupExecutionUseCase } from '../execution_setup_composition_root';
 
 describe('execution setup composition root', () => {
@@ -49,29 +60,55 @@ describe('execution setup composition root', () => {
     jest.clearAllMocks();
   });
 
-  it('composes semantic setup capabilities and shares the issue setup port', () => {
+  it('binds credentials once and exposes only semantic setup operations', async () => {
     const latestTagQueryPort = { getLatestTag: jest.fn() } as LatestTagQueryPort;
+    const credentials = { owner: 'owner', repository: 'repository', token: 'secret-token' };
 
-    const result = createSetupExecutionUseCase(latestTagQueryPort);
+    const result = createSetupExecutionUseCase(latestTagQueryPort, credentials);
 
     expect(result).toBe(setupExecutionUseCase);
     expect(configurationHandler).toHaveBeenCalledWith(issueSetupPort);
-    expect(getReleaseVersionUseCase).toHaveBeenCalledWith(issueSetupPort);
-    expect(getReleaseTypeUseCase).toHaveBeenCalledWith(issueSetupPort);
-    expect(getHotfixVersionUseCase).toHaveBeenCalledWith(issueSetupPort);
+    const semanticIssuePort = (getReleaseVersionUseCase.mock.calls as unknown[][])[0][0] as SetupIssueQueryPort;
+    expect(getReleaseTypeUseCase).toHaveBeenCalledWith(semanticIssuePort);
+    expect(getHotfixVersionUseCase).toHaveBeenCalledWith(semanticIssuePort);
     expect(executionBranchVersionResolver).toHaveBeenCalledWith(
       latestTagQueryPort,
       releaseVersionUseCase,
       releaseTypeUseCase,
       hotfixVersionUseCase,
     );
+    const [, semanticOrganizationPort, semanticConfigurationPort, resolver] = (
+      setupExecution.mock.calls as unknown[][]
+    )[0] as [SetupIssueQueryPort, SetupOrganizationQueryPort, SetupConfigurationQueryPort, unknown];
     expect(setupExecution).toHaveBeenCalledWith(
-      issueSetupPort,
-      organizationSetupPort,
-      configurationPort,
+      semanticIssuePort,
+      semanticOrganizationPort,
+      semanticConfigurationPort,
       branchVersionResolver,
     );
+    expect(resolver).toBe(branchVersionResolver);
     expect(createExecutionIssueSetupCompositionRoot).toHaveBeenCalledTimes(1);
     expect(createAuthenticatedUserCompositionRoot).toHaveBeenCalledTimes(1);
+
+    await semanticIssuePort.isPullRequest(42);
+    await semanticIssuePort.isIssue(42);
+    await semanticIssuePort.getHeadBranch(42);
+    await semanticIssuePort.getLabels(42);
+    await semanticIssuePort.getDescription(42);
+    await semanticOrganizationPort.getTokenUser();
+    await semanticConfigurationPort.get(42);
+
+    expect(issueSetupPort.isPullRequest).toHaveBeenCalledWith('owner', 'repository', 42, 'secret-token');
+    expect(issueSetupPort.isIssue).toHaveBeenCalledWith('owner', 'repository', 42, 'secret-token');
+    expect(issueSetupPort.getHeadBranch).toHaveBeenCalledWith('owner', 'repository', 42, 'secret-token');
+    expect(issueSetupPort.getLabels).toHaveBeenCalledWith('owner', 'repository', 42, 'secret-token');
+    expect(issueSetupPort.getDescription).toHaveBeenCalledWith('owner', 'repository', 42, 'secret-token');
+    expect(organizationSetupPort.getUserFromToken).toHaveBeenCalledWith('secret-token');
+    expect(configurationPort.get).toHaveBeenCalledWith({
+      owner: 'owner',
+      repository: 'repository',
+      issueNumber: 42,
+      token: 'secret-token',
+    });
   });
 });

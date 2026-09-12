@@ -1,22 +1,20 @@
-import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { accessSync, constants, mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { accessSync, constants } from 'node:fs';
 import { delimiter, isAbsolute, join } from 'node:path';
 import type { AgentConfiguration, AgentProvider } from '../model/agent';
-import { parseAgentCommand } from '../../application/policies/agent_command_parser';
+import { getAgentRuntimeManifestEntry } from '../../infrastructure/agents/agent_runtime_manifest';
 import {
     DEFAULT_AGENT_EXECUTABLES,
     provisioningDisabledError,
     resolveAgentProvisioningMode,
-    shouldSkipProvisioning,
 } from './agent_cli_provisioning_policy';
+import { assertAgentRuntimeVersion } from '../../infrastructure/agents/agent_runtime_manifest';
 
 export type AgentCliProvisioningEnvironment = NodeJS.ProcessEnv;
 
-export type AgentCliProvisioningTarget = AgentProvider | Pick<AgentConfiguration, 'provider' | 'command'>;
+export type AgentCliProvisioningTarget = AgentProvider | Pick<AgentConfiguration, 'provider' | 'executable'>;
 
-function executableExists(executable: string, environment: NodeJS.ProcessEnv): boolean {
+export function agentExecutableExists(executable: string, environment: NodeJS.ProcessEnv): boolean {
     if (isAbsolute(executable) || executable.includes('/')) {
         try {
             accessSync(executable, constants.X_OK);
@@ -42,8 +40,8 @@ function executableExists(executable: string, environment: NodeJS.ProcessEnv): b
 
 export interface AgentCliProvisioningSystem {
     executableExists(executable: string, environment: AgentCliProvisioningEnvironment): boolean;
+    readVersion(executable: string, environment: AgentCliProvisioningEnvironment): string;
     installPackage(packageName: string, version: string): void;
-    installCursor(expectedSha256: string): void;
 }
 
 function installPackageGlobally(packageName: string, version: string): void {
@@ -52,40 +50,17 @@ function installPackageGlobally(packageName: string, version: string): void {
     execFileSync('npm', ['install', '--global', `${packageName}@${version}`], { stdio: 'inherit' });
 }
 
-function installCursor(expectedSha256: string): void {
-    const directory = mkdtempSync(join(tmpdir(), 'copilot-cursor-installer-'));
-    const installer = join(directory, 'install.sh');
-    try {
-        execFileSync('curl', ['--fail', '--silent', '--show-error', '--location', 'https://cursor.com/install', '--output', installer], { stdio: 'inherit' });
-        const actualSha256 = createHash('sha256').update(readFileSync(installer)).digest('hex');
-        if (actualSha256.toLowerCase() !== expectedSha256.toLowerCase()) {
-            throw new Error('Cursor installer checksum mismatch.');
-        }
-        execFileSync('bash', [installer], { stdio: 'inherit' });
-    } finally {
-        rmSync(directory, { recursive: true, force: true });
-    }
-}
-
-function requirePinnedVersion(packageName: string, version: string | undefined, versionVariable: string): string {
-    const normalized = version?.trim();
-    if (!normalized || !/^v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(normalized)) {
-        throw new Error(`${packageName} CLI is not installed and ${versionVariable} must contain a pinned semantic version (for example 1.2.3). Preinstall the CLI or set ${versionVariable} to a pinned version.`);
-    }
-    return normalized;
-}
-
-function requireInstallerChecksum(checksum: string | undefined): string {
-    if (!checksum?.match(/^[a-f0-9]{64}$/i)) {
-        throw new Error('CURSOR_INSTALLER_SHA256 must be provided for verified Cursor provisioning.');
-    }
-    return checksum;
-}
-
 const DEFAULT_SYSTEM: AgentCliProvisioningSystem = {
-    executableExists,
+    executableExists: agentExecutableExists,
+    readVersion(executable, environment) {
+        return execFileSync(executable, ['--version'], {
+            env: environment,
+            encoding: 'utf8',
+            stdio: ['ignore', 'pipe', 'ignore'],
+            timeout: 15_000,
+        });
+    },
     installPackage: installPackageGlobally,
-    installCursor,
 };
 
 export class AgentCliProvisioner {
@@ -95,30 +70,42 @@ export class AgentCliProvisioner {
 
     provision(target: AgentCliProvisioningTarget, environment: AgentCliProvisioningEnvironment = process.env): void {
         const provider = typeof target === 'string' ? target : target.provider;
-        const configuredCommand = typeof target === 'string' ? undefined : target.command;
-        const executable = configuredCommand ? parseAgentCommand(configuredCommand).executable : DEFAULT_AGENT_EXECUTABLES[provider];
+        const selectedExecutable = typeof target === 'string' ? undefined : target.executable?.trim() || undefined;
+        const executable = typeof target === 'string'
+            ? DEFAULT_AGENT_EXECUTABLES[provider]
+            : selectedExecutable || DEFAULT_AGENT_EXECUTABLES[provider];
         const mode = resolveAgentProvisioningMode(environment.AGENT_PROVISIONING);
 
-        if (shouldSkipProvisioning(
-            mode,
-            executable,
-            this.provisionedExecutables,
-            this.system.executableExists(executable, environment),
-        )) return;
+        if (this.provisionedExecutables.has(executable)) return;
+        const executableAvailable = this.system.executableExists(executable, environment);
+        if (executableAvailable && mode !== 'always') {
+            try {
+                this.assertVersion(executable, provider, environment);
+                this.provisionedExecutables.add(executable);
+                return;
+            } catch (error) {
+                if (mode === 'disabled' || !canRepairManifestExecutable(provider, selectedExecutable)) {
+                    throw error;
+                }
+            }
+        }
         if (mode === 'disabled') {
             throw provisioningDisabledError(provider, executable);
         }
 
         this.installProvider(provider, environment);
         this.assertInstalled(executable, provider, environment);
+        this.assertVersion(executable, provider, environment);
         this.provisionedExecutables.add(executable);
     }
 
-    private installProvider(provider: AgentProvider, environment: NodeJS.ProcessEnv): void {
+    private installProvider(provider: AgentProvider, _environment: NodeJS.ProcessEnv): void {
         const installers: Record<AgentProvider, () => void> = {
-            codex: () => this.system.installPackage('@openai/codex', requirePinnedVersion('@openai/codex', environment.CODEX_VERSION, 'CODEX_VERSION')),
-            opencode: () => this.system.installPackage('opencode-ai', requirePinnedVersion('opencode-ai', environment.OPENCODE_VERSION, 'OPENCODE_VERSION')),
-            cursor: () => this.system.installCursor(requireInstallerChecksum(environment.CURSOR_INSTALLER_SHA256)),
+            codex: () => this.system.installPackage('@openai/codex', manifestSemver('codex')),
+            opencode: () => this.system.installPackage('opencode-ai', manifestSemver('opencode')),
+            cursor: () => {
+                throw new Error(`Cursor ${getAgentRuntimeManifestEntry('cursor').version} must be preinstalled; automatic installation cannot guarantee the manifest version.`);
+            },
         };
         installers[provider]();
     }
@@ -128,4 +115,24 @@ export class AgentCliProvisioner {
             throw new Error(`The ${provider} CLI was provisioned but executable "${executable}" is not available on PATH.`);
         }
     }
+
+    private assertVersion(executable: string, provider: AgentProvider, environment: NodeJS.ProcessEnv): void {
+        try {
+            assertAgentRuntimeVersion(provider, this.system.readVersion(executable, environment));
+        } catch (error) {
+            throw Object.assign(
+                new Error(`The ${provider} CLI failed exact-version preflight: ${error instanceof Error ? error.message : String(error)}`),
+                { cause: error },
+            );
+        }
+    }
+}
+
+function manifestSemver(provider: 'codex' | 'opencode'): string {
+    return getAgentRuntimeManifestEntry(provider).version.replace(/^codex-cli\s+/, '');
+}
+
+function canRepairManifestExecutable(provider: AgentProvider, selectedExecutable: string | undefined): provider is 'codex' | 'opencode' {
+    return provider !== 'cursor'
+        && (selectedExecutable === undefined || selectedExecutable === DEFAULT_AGENT_EXECUTABLES[provider]);
 }

@@ -5,7 +5,11 @@ import type { LatestTagQueryPort } from '../application/ports/branch_tag_ports';
 import { clearAccumulatedLogs, logDebugInfo, logInfo } from '../utils/logger';
 import { resolveMainRunRoute } from './main_run_route';
 import { createSetupExecutionUseCase } from '../infrastructure/composition/execution_setup_composition_root';
-import { createMainRunRouteCompositionRoot } from '../infrastructure/composition/main_run_route_composition_root';
+import { applySetupExecutionResult, projectSetupExecutionContext } from './setup_execution_boundary';
+import {
+    createMainRunRouteCompositionRoot,
+    type MainRunCompositionSurface,
+} from '../infrastructure/composition/main_run_route_composition_root';
 import { requireRepositoryCoordinates } from './repository_context';
 import { configureApplicationLogger, setGlobalLoggerDebug } from '../application/ports/logging_ports';
 import { createLoggerAdapter } from '../infrastructure/logging/logger_adapter';
@@ -24,6 +28,7 @@ export async function mainRun(
     execution: Execution,
     projectBoardCommandPort: ProjectBoardCommandPort,
     latestTagQueryPort: LatestTagQueryPort,
+    compositionSurface: MainRunCompositionSurface,
     lifecycleStateUseCase?: SynchronizeLifecycleStateUseCase,
     agentActivityUseCase?: SynchronizeAgentActivityUseCase,
 ): Promise<Result[]> {
@@ -44,12 +49,17 @@ export async function mainRun(
         await waitForPreviousWorkflowRuns(execution.tokens.token, repository);
     }
 
-    await createSetupExecutionUseCase(latestTagQueryPort).invoke(execution);
+    const setupExecution = createSetupExecutionUseCase(latestTagQueryPort, {
+        owner: repository.owner,
+        repository: repository.repo,
+        token: execution.tokens.token,
+    });
+    applySetupExecutionResult(execution, await setupExecution.invoke(projectSetupExecutionContext(execution)));
     clearAccumulatedLogs();
 
     logDebugInfo(`Setup done. Issue number: ${execution.issueNumber}, isSingleAction: ${execution.isSingleAction}, isIssue: ${execution.isIssue}, isPullRequest: ${execution.isPullRequest}, isPush: ${execution.isPush}`);
 
-    const routeHandlers = createMainRunRouteCompositionRoot(projectBoardCommandPort);
+    const routeHandlers = createMainRunRouteCompositionRoot(projectBoardCommandPort, compositionSurface);
     
     if (execution.runnedByToken) {
         return runTrackedRoute(execution, 'single-action', () => runTokenExecution(execution, routeHandlers), undefined, agentActivityUseCase);

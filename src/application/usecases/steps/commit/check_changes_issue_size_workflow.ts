@@ -6,6 +6,7 @@ import type { IssueLabelsPort } from '../../../ports/issue_management_ports';
 import type { PullRequestBranchQueryPort } from '../../../ports/pull_request_branch_ports';
 import { logDebugInfo, logError } from '../../../ports/logging_ports';
 import { updateIssueAndRelatedPullRequests } from './update_change_size_labels';
+import { toApplicationError } from '../../../errors/application_error';
 
 export interface CheckChangesIssueSizeDependencies {
     projectBoardCommandPort: ProjectBoardCommandPort;
@@ -55,13 +56,14 @@ export async function runCheckChangesIssueSize(param: Execution, taskId: string,
             steps: [`${size.reason}, so the issue was resized to ${size.size}.` + (update.openPullRequestNumbers.length > 0 ? ` Same label applied to ${update.openPullRequestNumbers.length} open PR(s).` : '')],
         })];
     } catch (error) {
-        logError(`CheckChangesIssueSize: failed for issue #${param.issueNumber}.`, error instanceof Error ? { stack: error.stack } : undefined);
+        const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to check the size of the changes.');
+        logError(semanticError);
         return [new Result({
             id: taskId,
             success: false,
             executed: true,
             steps: ['Tried to check the size of the changes, but there was a problem.'],
-            errors: [error?.toString() ?? 'Unknown error'],
+            errors: [semanticError],
         })];
     }
 }

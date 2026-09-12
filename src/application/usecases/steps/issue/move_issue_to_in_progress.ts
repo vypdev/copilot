@@ -4,6 +4,7 @@ import type { ProjectBoardCommandPort } from "../../../../application/ports/proj
 import { logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
+import { toApplicationError } from "../../../errors/application_error";
 
 export class MoveIssueToInProgressUseCase implements ParamUseCase<Execution, Result[]> {
     taskId: string = 'MoveIssueToInProgressUseCase';
@@ -40,7 +41,8 @@ export class MoveIssueToInProgressUseCase implements ParamUseCase<Execution, Res
                 }
             }
         } catch (error) {
-            logError(error);
+            const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to move the issue to the in-progress column.');
+            logError(semanticError);
             result.push(
                 new Result({
                     id: this.taskId,
@@ -49,9 +51,7 @@ export class MoveIssueToInProgressUseCase implements ParamUseCase<Execution, Res
                     steps: [
                         `Tried to move the issue to \`${columnName}\`, but there was a problem.`,
                     ],
-                    errors: [
-                        error?.toString() ?? 'Unknown error',
-                    ],
+                    errors: [semanticError],
                 })
             )
         }

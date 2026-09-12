@@ -1,4 +1,5 @@
 import { Result } from '../../model/result';
+import { ApplicationError, toApplicationError } from '../../../application/errors/application_error';
 
 const RESULT_ID = 'branch_repository';
 
@@ -8,7 +9,11 @@ export function missingLinkedBranchContextResult(branchName: string, issueNumber
         success: false,
         executed: true,
         steps: [`Error linking branch ${branchName} to issue: Repository not found.`],
-        errors: [new Error(`Missing repository context for issue #${issueNumber}: repository=${ids.repositoryId ?? 'unknown'}, issue=${ids.issueId ?? 'unknown'}, oid=${ids.branchOid ?? 'unknown'}.`)],
+        errors: [new ApplicationError(
+            'provider.contract-invalid',
+            `The branch provider returned incomplete context for issue #${issueNumber}.`,
+            { cause: ids },
+        )],
     });
 }
 
@@ -45,6 +50,6 @@ export function linkedBranchFailureResult(error: unknown): Result {
         success: false,
         executed: true,
         steps: ['Tried to link branch to the issue, but there was a problem.'],
-        errors: [error instanceof Error ? error : new Error(String(error))],
+        errors: [toApplicationError(error, 'provider.unavailable', 'Unable to link the branch to the issue.')],
     });
 }

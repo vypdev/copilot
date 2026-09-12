@@ -9,6 +9,7 @@ import type {
   BugbotProjectedFinding,
   BugbotReviewProjection,
 } from '../../domain/bugbot/review_projection';
+import type { BugbotContextCoverage } from '../../domain/bugbot/context';
 
 /** Narrow runtime facts required to reconcile one analyzed pull-request head. */
 export interface BugbotReconciliationTarget {
@@ -67,6 +68,7 @@ export type BugbotReconciliationSnapshotResult =
 export interface BugbotReconciliationPlan {
   readonly findings: readonly BugbotProjectedFinding[];
   readonly diagnostics: readonly string[];
+  readonly coverage: BugbotContextCoverage;
 }
 
 export interface BugbotPresentationReport {

@@ -9,7 +9,6 @@ describe('agent capability composition root', () => {
             provider: 'codex' as const,
             modelProvider: 'openai',
             model: 'gpt-5',
-            command: 'codex exec --model gpt-5 --config model_provider=openai -',
         };
 
         const findings = createFindingsQueryPort({ cli });

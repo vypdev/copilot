@@ -1,0 +1,19 @@
+{
+  "revision": "2026-09-12.p1-c.1",
+  "providers": {
+    "codex": {
+      "executable": "codex",
+      "version": "codex-cli 0.153.4",
+      "package": "@openai/codex"
+    },
+    "opencode": {
+      "executable": "opencode",
+      "version": "1.18.3",
+      "package": "opencode-ai"
+    },
+    "cursor": {
+      "executable": "agent",
+      "version": "2026.09.10-fd3934a"
+    }
+  }
+}

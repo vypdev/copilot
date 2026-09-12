@@ -144,7 +144,7 @@ describe('ThinkUseCase', () => {
 
     expect(results).toHaveLength(1);
     expect(results[0].success).toBe(false);
-    expect(results[0].errors.map((error) => error.message)).toContain('Configured agent model or CLI command not found.');
+    expect(results[0].errors.map((error) => error.message)).toContain('Configured agent model or executable not found.');
     expect(mockAskAgent).not.toHaveBeenCalled();
   });
 

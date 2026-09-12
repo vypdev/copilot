@@ -26,9 +26,9 @@ describe("SetupMergeQueueReadinessUseCase", () => {
     const targets = { getTargetCapabilities: jest.fn().mockResolvedValue(capabilities()) };
     const checks = await new SetupMergeQueueReadinessUseCase(targets).inspect(request());
     expect(checks).toEqual(expect.arrayContaining([
-      expect.objectContaining({ area: "Merge queue readiness · production (master)", status: "pass" }),
-      expect.objectContaining({ area: "Merge queue readiness · development (develop)", status: "pass" }),
-      expect.objectContaining({ area: "Merge queue readiness · active release", status: "warn" }),
+      expect.objectContaining({ id: "github.merge-queue.production", status: "pass" }),
+      expect.objectContaining({ id: "github.merge-queue.development", status: "pass" }),
+      expect.objectContaining({ id: "github.merge-queue.active-release", status: "warn" }),
     ]));
   });
 
@@ -40,13 +40,13 @@ describe("SetupMergeQueueReadinessUseCase", () => {
       }],
     })) };
     const checks = await new SetupMergeQueueReadinessUseCase(targets).inspect(request());
-    expect(checks.filter((check) => check.area.startsWith("Merge queue readiness ·") && check.area.includes("(")))
+    expect(checks.filter((check) => ["github.merge-queue.production", "github.merge-queue.development"].includes(check.id)))
       .toEqual([
-        expect.objectContaining({ status: "pass", message: expect.stringContaining("1 required producer(s) verified") }),
-        expect.objectContaining({ status: "pass", message: expect.stringContaining("1 required producer(s) verified") }),
+        expect.objectContaining({ status: "pass", summary: expect.stringContaining("1 required producer(s) verified") }),
+        expect.objectContaining({ status: "pass", summary: expect.stringContaining("1 required producer(s) verified") }),
       ]);
     expect(checks).toEqual(expect.arrayContaining([
-      expect.objectContaining({ area: "Required producer · production · CI Check", status: "pass" }),
+      expect.objectContaining({ id: "github.merge-queue.production.producer.ci-check-15368", status: "pass" }),
     ]));
   });
 
@@ -58,7 +58,7 @@ describe("SetupMergeQueueReadinessUseCase", () => {
       }],
     })) };
     const checks = await new SetupMergeQueueReadinessUseCase(targets).inspect(request());
-    expect(checks[0]).toEqual(expect.objectContaining({ status: "fail", message: expect.stringContaining("External CI [unknown]") }));
+    expect(checks[0]).toEqual(expect.objectContaining({ status: "fail", summary: expect.stringContaining("External CI [unknown]") }));
   });
 
   it("applies attestations only to their configured logical target", async () => {
@@ -73,8 +73,8 @@ describe("SetupMergeQueueReadinessUseCase", () => {
       { context: "External CI", integrationId: 999, targets: ["production"] },
     ];
     const checks = await new SetupMergeQueueReadinessUseCase(targets).inspect(value);
-    expect(checks[0]).toEqual(expect.objectContaining({ status: "pass", message: expect.stringContaining("1 covered by exact attestation") }));
-    expect(checks.find((check) => check.area === "Merge queue readiness · development (develop)"))
+    expect(checks[0]).toEqual(expect.objectContaining({ status: "pass", summary: expect.stringContaining("1 covered by exact attestation") }));
+    expect(checks.find((check) => check.id === "github.merge-queue.development"))
       .toEqual(expect.objectContaining({ status: "fail" }));
   });
 
@@ -83,10 +83,10 @@ describe("SetupMergeQueueReadinessUseCase", () => {
       new Error("forbidden\n::error::@team github_pat_abcdefghijklmnopqrstuvwxyz123456"),
     ) };
     const checks = await new SetupMergeQueueReadinessUseCase(targets).inspect(request());
-    expect(checks[0]).toEqual(expect.objectContaining({ status: "fail", message: expect.stringContaining("forbidden") }));
-    expect(checks[0].message).not.toContain("::error::");
-    expect(checks[0].message).not.toContain("@team");
-    expect(checks[0].message).not.toContain("github_pat_");
+    expect(checks[0]).toEqual(expect.objectContaining({ status: "fail", summary: expect.stringContaining("forbidden") }));
+    expect(checks[0].summary).not.toContain("::error::");
+    expect(checks[0].summary).not.toContain("@team");
+    expect(checks[0].summary).not.toContain("github_pat_");
   });
 
   it("localizes fail-closed policy observation guidance", async () => {
@@ -98,7 +98,7 @@ describe("SetupMergeQueueReadinessUseCase", () => {
     const checks = await new SetupMergeQueueReadinessUseCase(targets).inspect(value);
     expect(checks[0]).toEqual(expect.objectContaining({
       status: "fail",
-      message: expect.stringContaining("Restaura el acceso de lectura"),
+      summary: expect.stringContaining("Restaura el acceso de lectura"),
     }));
   });
 
@@ -111,7 +111,7 @@ describe("SetupMergeQueueReadinessUseCase", () => {
     const checks = await new SetupMergeQueueReadinessUseCase(targets).inspect(value);
     expect(checks).toEqual(expect.arrayContaining([
       expect.objectContaining({
-        area: "Merge queue attestation · Removed vendor gate",
+        id: "github.merge-queue.attestation.removed-vendor-gate-999",
         status: "warn",
       }),
     ]));
@@ -125,7 +125,7 @@ describe("SetupMergeQueueReadinessUseCase", () => {
     ];
     const checks = await new SetupMergeQueueReadinessUseCase(targets).inspect(value);
     expect(checks).toEqual(expect.arrayContaining([
-      expect.objectContaining({ area: "Merge queue attestation · Retired CI", status: "warn" }),
+      expect.objectContaining({ id: "github.merge-queue.attestation.retired-ci-99", status: "warn" }),
     ]));
   });
 

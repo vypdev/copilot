@@ -9,6 +9,7 @@ import { resolveThinkRequest } from './think_request_policy';
 import type { ThinkRequestDecision } from './think_request_policy';
 import { runThinkAnswerWorkflow } from './think_answer_workflow';
 import { resolveThinkAgentTask } from '../../../../application/policies/agent_task_policy';
+import { ApplicationError, toApplicationError } from '../../../errors/application_error';
 
 export interface ThinkWorkflowDependencies {
     issueDescriptionQueryPort: IssueDescriptionQueryPort;
@@ -36,19 +37,20 @@ export async function runThinkWorkflow(
                     id: taskId,
                     success: false,
                     executed: false,
-                    errors: ['Configured agent model or CLI command not found.'],
+                    errors: [new ApplicationError('configuration.invalid', 'Configured agent model or executable not found.')],
                 }),
             ];
         }
         return await runThinkAnswerWorkflow(param, taskId, request, dependencies, agentTask);
     } catch (error) {
-        logError(`Error in ThinkUseCase: ${error}`);
+        const semanticError = toApplicationError(error, 'agent.failed', 'Error in ThinkUseCase: unable to complete the request.');
+        logError(semanticError);
         return [
             new Result({
                 id: taskId,
                 success: false,
                 executed: false,
-                errors: [`Error in ThinkUseCase: ${error}`],
+                errors: [semanticError],
             }),
         ];
     }

@@ -19,7 +19,7 @@ const SETUP_OVERRIDE_KEYS = new Set([
     'actionInputs',
     'storage',
 ]);
-const AGENT_OVERRIDE_KEYS = new Set(['provider', 'modelProvider', 'model', 'effort']);
+const AGENT_OVERRIDE_KEYS = new Set(['provider', 'modelProvider', 'model', 'effort', 'executable']);
 const REPOSITORY_STRING_KEYS = new Set([
     'mainBranch',
     'developmentBranch',

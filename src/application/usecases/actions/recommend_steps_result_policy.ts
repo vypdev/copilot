@@ -4,6 +4,7 @@ import type { RecommendationState } from '../../../data/model/recommendation_sta
 import { createRecommendationFingerprint, isNoNewRecommendation, limitStoredRecommendation } from '../../../application/policies/recommendation_policy';
 import { logDebugInfo, logError, logInfo } from '../../ports/logging_ports';
 import { buildCopilotWelcomeMessage } from '../../../application/policies/copilot_interaction_policy';
+import { ApplicationError } from '../../errors/application_error';
 
 export function buildRecommendationResult(
     param: Execution,
@@ -15,9 +16,9 @@ export function buildRecommendationResult(
 ): Result[] {
     const steps = extractRecommendationText(response);
     if (!steps) {
-        const error = new Error('The configured agent returned no recommendation.');
-        logError(error);
-        return [new Result({ id: taskId, success: false, executed: true, errors: [error] })];
+        const semanticError = new ApplicationError('agent.failed', 'The configured agent returned no recommendation.');
+        logError(semanticError);
+        return [new Result({ id: taskId, success: false, executed: true, errors: [semanticError] })];
     }
     logDebugInfo(`RecommendSteps: agent response received. Steps length=${steps.length}.`);
     if (previousRecommendation && isNoNewRecommendation(steps)) return skipUnchangedRecommendation(param, previousRecommendation, issueDescriptionFingerprint, 'agent found no material change');

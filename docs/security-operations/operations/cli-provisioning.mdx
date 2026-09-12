@@ -11,33 +11,41 @@ The Action executes external provider-specific CLIs. It does not embed agent SDK
 
 | Runtime | Binary | Invocation | Credential reference |
 | --- | --- | --- | --- |
-| OpenCode | `opencode` | `opencode run --model provider/model [--variant effort]` | Provider credential, for example `OPENAI_API_KEY` |
-| Codex | `codex` | `codex exec --ephemeral --skip-git-repo-check --model model --config 'model_provider="provider"' -` | `CODEX_API_KEY` or controlled local session |
-| Cursor | `agent` | `agent -p --output-format text --model model <prompt>` | `CURSOR_API_KEY` |
+| OpenCode | `opencode` | `opencode run --pure --agent managed-role --format json --model provider/model [--variant effort]` | Provider credential, for example `OPENAI_API_KEY` |
+| Codex | `codex` | `codex exec --strict-config --ignore-user-config --ignore-rules --ephemeral --sandbox mode --model model ... -` | `OPENAI_API_KEY`, `CODEX_API_KEY`, or controlled local session |
+| Cursor | `agent` | `agent -p --output-format text --sandbox enabled --model model [--mode ask\|--force] <prompt>` | `CURSOR_API_KEY` |
 
-## Version variables
+## Manifest-owned versions
 
-Use GitHub repository or environment Variables for non-sensitive provisioning inputs. The default `auto` mode accepts a preinstalled executable, which is useful for controlled self-hosted runners:
+The immutable manifest owns every accepted version:
 
 ```text
-CODEX_VERSION=<approved-version>
-OPENCODE_VERSION=<approved-version>
-CURSOR_INSTALLER_SHA256=<approved-installer-sha256>
+Codex CLI: codex-cli 0.153.4
+OpenCode: 1.18.3
+Cursor Agent: 2026.09.10-fd3934a
 AGENT_PROVISIONING=auto
 ```
 
-The GitHub workflows pass these values to the Action. The selected provider is provisioned only when the Action runs in GitHub Actions and its executable is absent. Set `always` to force a pinned installation or `disabled` to require the runner image to provide the executable. Local development can use already-installed binaries. `CODEX_VERSION` and `OPENCODE_VERSION` must be pinned semantic versions such as `1.2.3`; floating tags, local paths, and arbitrary package specifications are rejected before any download.
+The selected provider is provisioned only when needed. In the recommended
+`auto` mode, a missing or version-mismatched default Codex/OpenCode executable
+is installed from the exact manifest package and then revalidated. Explicit
+executable paths are never replaced. Set `always` to reinstall Codex/OpenCode at
+the manifest version or `disabled` to require the runner image. Local and
+prebuilt runtimes are admitted only when `--version` exactly matches. Repository
+Variables cannot replace, widen, or float the manifest version.
 
 ## Approved installation methods
 
 Codex and OpenCode are installed with the pinned package versions using the runner's system `npm`. This avoids depending on a Corepack/pnpm binary on the runner (including the Intel macOS SEA failure mode):
 
 ```bash
-npm install --global "@openai/codex@${CODEX_VERSION}"
-npm install --global "opencode-ai@${OPENCODE_VERSION}"
+npm install --global "@openai/codex@0.153.4"
+npm install --global "opencode-ai@1.18.3"
 ```
 
-Cursor uses the official installer and verifies its SHA-256 against `CURSOR_INSTALLER_SHA256` before execution. Do not substitute an unofficial npm package. The installer is deleted after verification/execution.
+Cursor automatic installation is unsupported because the public installer does
+not select an immutable historical build. Bake the exact manifest version into a
+controlled runner image; do not substitute an unofficial npm package.
 
 Do not use `npx`, Yarn, Bun, floating `@latest`, unverified shell downloads, or secrets in command-line arguments.
 
@@ -45,9 +53,7 @@ Do not use `npx`, Yarn, Bun, floating `@latest`, unverified shell downloads, or 
 
 ```yaml
 env:
-  CODEX_VERSION: ${{ vars.CODEX_VERSION }}
-  OPENCODE_VERSION: ${{ vars.OPENCODE_VERSION }}
-  CURSOR_INSTALLER_SHA256: ${{ vars.CURSOR_INSTALLER_SHA256 }}
+  AGENT_PROVISIONING: ${{ vars.AGENT_PROVISIONING || 'auto' }}
   OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
   CODEX_API_KEY: ${{ secrets.CODEX_API_KEY }}
@@ -68,10 +74,10 @@ env:
   AGENT_ALLOWED_MODELS: openai/gpt-5.6-luna
 ```
 
-The effective Codex command is:
+The managed Codex shape includes:
 
 ```text
-codex exec --ephemeral --skip-git-repo-check --model gpt-5.6-luna --config 'model_provider="openai"' -
+codex exec --strict-config --ignore-user-config --ignore-rules --ephemeral --sandbox read-only --model gpt-5.6-luna --config 'model_provider="openai"' -
 ```
 
 The allowlists are authorization policy, not credentials and not model selectors. A rejected provider/model is a terminal failure.
@@ -90,12 +96,13 @@ For Codex authentication modes and account restrictions, see [Codex authenticati
 
 ## Verified development manifest
 
-The following versions were verified during development on a Linux x64 machine:
+The runtime manifest accepts exactly:
 
 ```text
-Codex CLI: 0.149.0
-OpenCode: 1.18.21
-Cursor Agent: 2026.08.11-e8db854
+Codex CLI: codex-cli 0.153.4
+OpenCode: 1.18.3
+Cursor Agent: 2026.09.10-fd3934a
 ```
 
-These are development evidence, not permanent defaults. Update the corresponding GitHub Variables deliberately and repeat version, headless, authentication, and smoke validation before upgrading.
+An upgrade is a reviewed code change to the manifest, provider fixtures,
+provisioning, automated checks, documentation, and authenticated smoke evidence.

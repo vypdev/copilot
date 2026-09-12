@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 function productionTypeScriptFiles(directory: string): string[] {
@@ -164,7 +164,47 @@ describe('application architecture boundaries', () => {
         );
         expect(source).not.toContain('data/model/execution');
         expect(source).toContain('DeploymentOrchestrationContext');
-        expect(source).toContain('DeploymentStateStorePort');
+        expect(source).toContain('DeploymentStateBoundary');
+        const boundary = readFileSync(
+            join(applicationRoot, 'services/deployment_state_boundary.ts'),
+            'utf8',
+        );
+        expect(boundary).toContain('DeploymentStateStorePort');
+        expect(boundary).not.toContain('data/model/execution');
+    });
+
+    it('keeps deployment phase ownership in fixed narrow handlers', () => {
+        const handlerRoot = join(applicationRoot, 'usecases/actions/deployment_handlers');
+        const handlers = productionTypeScriptFiles(handlerRoot)
+            .map((file) => ({ file, source: readFileSync(file, 'utf8') }));
+        const coordinator = readFileSync(
+            join(applicationRoot, 'usecases/actions/deployment_orchestration_use_case.ts'),
+            'utf8',
+        );
+
+        expect(handlers.map(({ file }) => file)).toHaveLength(6);
+        expect(handlers.filter(({ source }) => source.includes('data/model/execution'))).toEqual([]);
+        expect(coordinator.split(/\r?\n/).length).toBeLessThanOrEqual(100);
+        expect(coordinator).toContain('PreparePromotionHandler');
+        expect(coordinator).toContain('ContinueDeploymentHandler');
+        expect(coordinator).toContain('ConfirmPublicationHandler');
+        expect(coordinator).toContain('RecordFailureHandler');
+        expect(coordinator).not.toMatch(/private async (prepare|published|failed|advanceReconciliation)/);
+    });
+
+    it('keeps deployment provider responsibilities in separate adapters', () => {
+        const deploymentRoot = join(__dirname, '../../data/repository/deployment');
+        const composition = readFileSync(
+            join(__dirname, '../../infrastructure/composition/main_run_route_composition_root.ts'),
+            'utf8',
+        );
+        const ports = readFileSync(join(applicationRoot, 'ports/deployment_orchestration_ports.ts'), 'utf8');
+
+        expect(existsSync(join(deploymentRoot, 'github_deployment_repository.ts'))).toBe(false);
+        expect(composition).toContain('GithubManagedPullRequestRepository');
+        expect(composition).toContain('GithubTargetMergeCapabilitiesInspector');
+        expect(composition).toContain('GithubDeploymentGitRepository');
+        expect(ports).not.toMatch(/ManagedPullRequestPort extends TargetMergePolicyInspectionPort/);
     });
 
     it('keeps deployment application ports provider-neutral', () => {
@@ -177,6 +217,22 @@ describe('application architecture boundaries', () => {
         const source = readFileSync(join(applicationRoot, 'policies/deployment_presentation_policy.ts'), 'utf8');
         expect(source).not.toMatch(/ports\//);
         expect(source).not.toMatch(/updateDescription|addComment|createManagedPullRequest|deleteBranch|dispatch/);
+    });
+
+    it('does not compose deployment or publication command adapters for the local surface', () => {
+        const source = readFileSync(
+            join(__dirname, '../../infrastructure/composition/main_run_route_composition_root.ts'),
+            'utf8',
+        );
+        expect(source).toContain('surface === "github-workflow"');
+        expect(source).toContain(': undefined');
+        const localPolicy = readFileSync(
+            join(applicationRoot, 'policies/local_single_action_policy.ts'),
+            'utf8',
+        );
+        expect(localPolicy).toContain('ACTIONS.CREATE_TAG');
+        expect(localPolicy).toContain('ACTIONS.CREATE_RELEASE');
+        expect(localPolicy).toContain('ACTIONS.PUBLISH_GITHUB_ACTION');
     });
 
     it('keeps Bugbot reconciliation behind narrow contracts and one-way dependencies', () => {

@@ -2,6 +2,7 @@ import type { GithubClientPort } from "../../../infrastructure/github/ports/gith
 import type { GithubReleaseClient } from "../../../infrastructure/github/ports/github_release_provider_ports";
 import { logDebugInfo, logError } from "../../../utils/logger";
 import type { RepositoryDefaultBranchPort } from "../../../application/ports/repository_release_ports";
+import { toApplicationError } from '../../../application/errors/application_error';
 
 export class RepositoryDefaultBranchRepository implements RepositoryDefaultBranchPort {
     constructor(private readonly githubClient: GithubClientPort<GithubReleaseClient>) {}
@@ -17,7 +18,7 @@ export class RepositoryDefaultBranchRepository implements RepositoryDefaultBranc
             logDebugInfo(`Default branch for ${owner}/${repository}: ${data.default_branch}`);
             return data.default_branch;
         } catch (error) {
-            logError(`Error getting default branch for ${owner}/${repository}: ${error}`);
+            logError(toApplicationError(error, 'provider.unavailable', `Unable to get the default branch for ${owner}/${repository}.`));
             throw error;
         }
     };

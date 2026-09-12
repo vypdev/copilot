@@ -65,6 +65,7 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
     add('AGENT_MODEL_PROVIDER', base.modelProvider);
     add('AGENT_MODEL', base.model);
     add('AGENT_EFFORT', base.effort);
+    add('AGENT_EXECUTABLE', base.executable);
     add('AGENT_PROVISIONING', configuration.ai.provisioningMode);
     add('AGENT_ALLOWED_MODEL_PROVIDERS', unique(SETUP_AGENT_TASKS.map(task => configuration.agents[task].modelProvider)).join(','));
     add('AGENT_ALLOWED_MODELS', unique(SETUP_AGENT_TASKS.map(task => `${configuration.agents[task].modelProvider}/${configuration.agents[task].model}`)).join(','));
@@ -75,6 +76,7 @@ export function buildSetupRepositoryVariables(configuration: SetupConfiguration)
         add(`${prefix}_MODEL_PROVIDER`, agent.modelProvider);
         add(`${prefix}_MODEL`, agent.model);
         add(`${prefix}_EFFORT`, agent.effort);
+        add(`${prefix}_EXECUTABLE`, agent.executable);
     }
     const repository = configuration.repository;
     add('MAIN_BRANCH', repository.mainBranch);
@@ -196,6 +198,7 @@ function buildAgentActionInputs(configuration: SetupConfiguration): Record<strin
     add('agent-model-provider', base.modelProvider);
     add('agent-model', base.model);
     add('agent-effort', base.effort);
+    add('agent-executable', base.executable);
     for (const task of SETUP_AGENT_TASKS) {
         const agent = configuration.agents[task];
         const prefix = `${task}-`;
@@ -203,6 +206,7 @@ function buildAgentActionInputs(configuration: SetupConfiguration): Record<strin
         add(`${prefix}model-provider`, agent.modelProvider);
         add(`${prefix}model`, agent.model);
         add(`${prefix}effort`, agent.effort);
+        add(`${prefix}executable`, agent.executable);
     }
     return result;
 }

@@ -12,6 +12,7 @@ describe('getBugbotPrompt', () => {
             changeScopeInstruction: 'Inspect only abc1234..def5678.',
             ignoreBlock: '\n**Files to ignore:** *.test.ts',
             previousBlock: '(No previous findings.)',
+            coverageBlock: '**Context coverage:** complete.',
         });
         expect(prompt).toContain('**Context.**');
         expect(prompt).toContain('org');
@@ -22,8 +23,9 @@ describe('getBugbotPrompt', () => {
         expect(prompt).toContain('Inspect only abc1234..def5678.');
         expect(prompt).toContain('*.test.ts');
         expect(prompt).toContain('(No previous findings.)');
+        expect(prompt).toContain('Context coverage');
         expect(prompt).toContain('findings');
-        expect(prompt).toContain('resolved_finding_ids');
+        expect(prompt).toContain('resolved_findings');
         expect(prompt).not.toContain('{{');
     });
 });

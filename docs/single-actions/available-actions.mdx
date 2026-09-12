@@ -24,8 +24,6 @@ These actions need **`single-action-issue`** set to the issue number. The workfl
 |--------|-----------------|-------------|-------------|
 | **`think_action`** | — | **Deep code analysis** and change proposals via the configured agent. You can pass a question (e.g. from CLI with `-q "..."`). No issue required. | One-off reasoning over the codebase; use from CLI or a workflow that provides context. |
 | **`initial_setup`** | — | Performs **initial setup**: creates labels, issue types (if supported), verifies access. If the repo has no version tags, creates default tag **`v1.0.0`** so release/hotfix issues get a base version. No issue required. | First-time repo setup; run once or when you add new labels/types. Run on new repos before creating release/hotfix issues to avoid "Unknown Version" loops. |
-| **`create_release`** | `single-action-version`, `single-action-title`, `single-action-changelog` | Creates a **GitHub release** with the given version, title, and changelog (markdown body). | From a workflow after tests pass; use version and changelog from your build or inputs. |
-| **`publish_github_action`** | `single-action-version` | **Publishes or updates** the GitHub Action: creates/updates the major version tag (for example, `v3` from a `v3.x.y` release) and the corresponding GitHub Release. Requires that `create_tag` has been run first to create the source tag `v{version}`. | In a CI job that builds and publishes the action, after `create_tag` and `create_release` have run. |
 | **`close_inactive_issues_action`** | — (`inactivity-threshold-hours` optional) | Scans open issues waiting for a maintainer or issue author and closes those whose `updated_at` exceeds the configured inactivity window. Revalidates each candidate before closing and posts an explanation. | From the scheduled `copilot_close_inactive_issues.yml` workflow; no issue number is required. |
 | **`check_branch_sync_action`** | — | Discovers open issue/PR branch relationships and updates stale/aligned notices without invoking an agent. | From the supplied all-branch `copilot_branch_sync.yml` observer; normally do not invoke it manually. |
 
@@ -39,6 +37,8 @@ accepted SHA that apply to them.
 | Action | Required inputs | Workflow owner | Purpose |
 |---|---|---|---|
 | **`create_tag`** | `single-action-issue`, `single-action-operation-id`, `single-action-version` | Release/hotfix `publish` mode | Create or verify immutable `v<version>` at the production SHA accepted by that durable operation. |
+| **`create_release`** | `single-action-issue`, `single-action-operation-id`, `single-action-version` | Release/hotfix `publish` mode | Create or verify the exact GitHub Release and operation/SHA receipt using durable title and changelog. |
+| **`publish_github_action`** | `single-action-issue`, `single-action-operation-id`, `single-action-version` | This repository's serialized `publish` mode | Verify/update the moving major Action tag and release alias from the immutable version tag. |
 | **`prepare_deployment_action`** | `single-action-issue`, `single-action-version`, `single-action-title`, `single-action-changelog` | Release/hotfix `prepare` mode | Snapshot configuration, create durable state, and create or reuse the production promotion PR. |
 | **`continue_deployment_action`** | `single-action-issue`, `single-action-operation-id` | `copilot_deployment_orchestration.yml` | Verify the managed PR marker, repository, branches, stored SHA, and phase before advancing. |
 | **`published_deployment_action`** | `single-action-issue`, `single-action-operation-id`, matching `single-action-version` | Release/hotfix `publish` mode | Record verified publication, project the `deployed` fact, and create reconciliation PRs. |
@@ -77,9 +77,9 @@ The **`copilot do`** CLI command (for example, `copilot do -p "..."`) uses the c
 | `recommend_steps_action` | ✅ | — | — | — |
 | `think_action` | — | — | — | — |
 | `initial_setup` | — | — | — | — |
-| `create_release` | — | ✅ | ✅ | ✅ |
+| `create_release` | ✅ | ✅ | — | — |
 | `create_tag` | orchestration: ✅ | ✅ | — | — |
-| `publish_github_action` | — | ✅ | — | — |
+| `publish_github_action` | ✅ | ✅ | — | — |
 | `close_inactive_issues_action` | — | — | — | — |
 | `check_branch_sync_action` | — | — | — | — |
 | `publish_issue_comment` | ✅ | — | — | — |

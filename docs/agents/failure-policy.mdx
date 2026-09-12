@@ -14,10 +14,13 @@ The Action fails closed. It MUST stop rather than silently selecting another run
 | Invalid model provider | Configuration | Stop before CLI execution |
 | Provider not allowlisted | Authorization | Stop before CLI execution |
 | Qualified model not allowlisted | Authorization | Stop before CLI execution |
-| Missing pinned version | Provisioning | Stop before installation/use |
+| Version differs from exact manifest | Preflight | Stop before agent process |
 | Missing executable | Provisioning | Stop before agent request |
 | Missing credential reference | Authentication preflight | Stop before agent request |
-| Headless help check fails | Provisioning | Stop before agent request |
+| Executable owner/permissions invalid | Preflight | Stop before agent request |
+| Workspace is not the canonical repository root | Preflight | Stop before agent request |
+| Managed artifact hash changes | Preflight | Stop before agent request |
+| Ambient provider configuration exists | Preflight | Stop before agent request |
 | CLI timeout | Execution | Stop; do not switch provider |
 | Non-zero CLI exit | Execution | Stop; preserve sanitized diagnostics only |
 | Invalid agent response | Parsing | Stop; do not publish unsafe findings |
@@ -26,11 +29,16 @@ The Action fails closed. It MUST stop rather than silently selecting another run
 
 ## Retry rule
 
-Retries, when implemented by a provider-specific policy, MUST retry only the same selected operation. A retry MUST NOT change the runtime, provider, model, credential, or command.
+Retries, when implemented by a provider-specific policy, MUST retry only the same selected operation. A retry MUST NOT change the runtime, provider, model, credential, executable, or admitted plan.
 
 ## Logging rule
 
-Diagnostics MAY include provider-independent error categories, exit status, and bounded sanitized stderr. Diagnostics MUST NOT include API keys, OAuth tokens, authentication files, cookies, prompts containing secrets, or unbounded provider output.
+Lifecycle diagnostics include only bounded semantic observations: provider,
+capability, phase, manifest/version, authority/output modes, artifact hashes,
+duration, output byte count, failure category, semantic code, and retryability.
+They MUST NOT include model names, API keys, OAuth tokens, authentication files,
+cookies, prompts, response content, argv, paths, environment values, raw stderr,
+or user identity.
 
 ## Cost rule
 

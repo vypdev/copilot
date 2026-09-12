@@ -82,7 +82,7 @@ describe('setup resource provisioning policy', () => {
                     apiKeys: [{ name: 'OPENAI_API_KEY', value: 'api-key' }],
                 },
             },
-            { setupRepositorySecretsPort: { list: jest.fn(), upsertSecrets } },
+            { setupRepositorySecretsPort: { upsertSecrets } },
             configuration,
         );
 
@@ -97,7 +97,7 @@ describe('setup resource provisioning policy', () => {
     it('reports when setup secrets are enabled without validated credentials', async () => {
         const result = await ensureRepositorySecrets(
             context,
-            { setupRepositorySecretsPort: { list: jest.fn(), upsertSecrets: jest.fn() } },
+            { setupRepositorySecretsPort: { upsertSecrets: jest.fn() } },
             createDefaultSetupConfiguration(),
         );
 

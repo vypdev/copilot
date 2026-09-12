@@ -1,35 +1,23 @@
 ---
 title: Agent input reference
-description: Strict reference for the public agent inputs and their effective defaults.
+description: Strict reference for structured agent selection and effective defaults.
 ---
 
 # Agent input reference
-
-The agent inputs are the public configuration contract for agent execution. Provider-specific capabilities not represented by the common contract can be supplied through an audited `agent-command` override.
 
 ## Selection inputs
 
 | Input | Required | Effective default | Meaning | Secret |
 | --- | --- | --- | --- | --- |
-| `agent-provider` | No | `codex` | CLI runtime: `codex`, `opencode`, or `cursor` | No |
+| `agent-provider` | No | `codex` | Runtime: `codex`, `opencode`, or `cursor` | No |
 | `agent-model-provider` | No | `openai` | Provider serving the selected model | No |
-| `agent-model` | No | `gpt-5.6-luna` | Model name without the provider prefix | No |
-| `agent-effort` | No | empty | Reasoning effort or provider-specific model variant | No |
-| `agent-command` | No | Provider-specific command | Optional literal CLI override | No |
+| `agent-model` | No | `gpt-5.6-luna` | Model without provider prefix | No |
+| `agent-effort` | No | empty | Supported reasoning effort or variant | No |
+| `agent-executable` | No | Manifest basename | Exact basename or absolute path to that basename | No |
 
-Each task also supports independent overrides: `findings-provider`, `findings-model-provider`, `findings-model`, `findings-effort`, `findings-command` and the corresponding `fixer-*` inputs. The lifecycle roles `planner-*`, `reviewer-*`, and `tester-*` are optional overrides for planning/conversation, PR review, and test planning. Empty role overrides inherit the common selection. The built-in mapping is `findings` for push Bugbot, `reviewer` for PR Bugbot, `planner` for plans and answers, `tester` for `/copilot test-plan`, and `fixer` for authorized file changes.
+Each task supports the corresponding `findings-*`, `fixer-*`, `planner-*`, `reviewer-*`, and `tester-*` overrides, including `*-executable`. Empty role overrides inherit the common selection. There is no input for command text, arguments, sandbox, permissions, network, plugins, MCP, subagents, environment, persistence, limits, or versions.
 
-The qualified model is always constructed as:
-
-```text
-<agent-model-provider>/<agent-model>
-```
-
-For the effective defaults:
-
-```text
-openai/gpt-5.6-luna
-```
+The qualified model is `<agent-model-provider>/<agent-model>`; the default is `openai/gpt-5.6-luna`.
 
 ## Authorization variables
 
@@ -37,35 +25,37 @@ openai/gpt-5.6-luna
 | --- | --- | --- |
 | `AGENT_ALLOWED_MODEL_PROVIDERS` | `openai` | Comma-separated provider allowlist |
 | `AGENT_ALLOWED_MODELS` | `openai/gpt-5.6-luna` | Exact qualified-model allowlist |
+| `AGENT_PROVISIONING` | `auto` | `auto`, `always`, or `disabled`; versions remain manifest-owned |
 
-Allowlists authorize a selection. They do not select the runtime, model, or credential.
+Allowlists authorize a selection; they do not select runtime, model, executable, or credential.
 
 ## Authentication variables
 
 | Runtime/provider | Credential reference |
 | --- | --- |
 | OpenCode using OpenAI | `OPENAI_API_KEY` or a controlled local provider login |
-| Codex | `CODEX_API_KEY` or a controlled local Codex session |
+| Codex | `OPENAI_API_KEY`, `CODEX_API_KEY`, or a controlled local Codex session |
 | Cursor | `CURSOR_API_KEY` |
 
-Values MUST be supplied through the runner's secret/environment mechanism. They MUST NOT be placed in `with`, command arguments, prompts, repository files, or logs.
+Values must be supplied through the runner's secret/environment mechanism and scoped to the action step. Never put them in `with`, prompts, repository files, or logs.
 
-## Provider commands
+## Exact runtime manifest
 
-| Runtime | Default command |
-| --- | --- |
-| OpenCode | `opencode run --model <provider>/<model> [--variant <effort>]` |
-| Codex | `codex exec --ephemeral --skip-git-repo-check --model <model> --config 'model_provider="<provider>"' [--config 'model_reasoning_effort="<effort>"'] -` |
-| Cursor | `agent -p --output-format text --model <model> <prompt>` |
+| Runtime | Executable | Accepted version |
+| --- | --- | --- |
+| OpenCode | `opencode` | `1.18.3` |
+| Codex | `codex` | `codex-cli 0.153.4` |
+| Cursor | `agent` | `2026.09.10-fd3934a` |
 
-Commands are executed without a shell. Codex receives the prompt over `stdin`; OpenCode and Cursor receive it as a single positional argument. A custom command MUST contain explicit model selection; Codex must also contain `model_provider`, and Codex/OpenCode must contain effort when configured. No runtime, provider, model, credential, or command fallback is attempted.
+Codex and OpenCode may be provisioned at their manifest versions. Cursor must already be installed at the exact version because its public installer cannot guarantee an immutable historical version. Repository variables cannot override this manifest.
 
 ## Configuration ownership
 
-- Action inputs are declared in `action.yml`.
-- Workflow defaults are declared in `setup/workflows/*.yml`.
-- Runtime input resolution is implemented in `src/actions/agent_input_builder.ts`.
-- Model authorization is implemented in `src/actions/agent_configuration_builder.ts`.
-- Provider commands are implemented in provider-specific CLI adapters.
+- `action.yml` declares public inputs.
+- `setup/workflows/*.yml` maps repository Variables.
+- The input builder resolves structured values and precedence.
+- The exhaustive provider dispatcher owns argv and authority.
+- The execution planner owns executable/version/workspace/artifact preflight.
+- The generic process adapter consumes only an admitted plan.
 
-A change to one source MUST be reflected in the others and covered by validation.
+A contract change must update these surfaces, tests, the SDD, and catalog evidence together.

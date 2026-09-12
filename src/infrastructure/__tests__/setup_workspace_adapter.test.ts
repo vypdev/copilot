@@ -8,9 +8,9 @@ jest.mock('../../utils/setup_files', () => ({
     hasValidSetupToken,
 }));
 
-import { SetupWorkspaceAdapter } from '../setup_workspace_adapter';
+import { SetupWorkspaceMutationAdapter } from '../setup_workspace_adapter';
 
-describe('SetupWorkspaceAdapter', () => {
+describe('SetupWorkspaceMutationAdapter', () => {
     const originalCwd = process.cwd;
 
     beforeEach(() => {
@@ -25,7 +25,7 @@ describe('SetupWorkspaceAdapter', () => {
     it('prepares the current workspace through the setup file port', () => {
         const result = { copied: ['action.yml'], skipped: [] };
         copySetupFiles.mockReturnValue(result);
-        const adapter = new SetupWorkspaceAdapter();
+        const adapter = new SetupWorkspaceMutationAdapter();
 
         expect(adapter.prepare()).toBe(result);
         expect(ensureGitHubDirs).toHaveBeenCalledWith('/workspace');
@@ -35,7 +35,7 @@ describe('SetupWorkspaceAdapter', () => {
     it('delegates token validation to the setup file boundary', () => {
         hasValidSetupToken.mockReturnValue(true);
 
-        expect(new SetupWorkspaceAdapter().hasValidToken()).toBe(true);
+        expect(new SetupWorkspaceMutationAdapter().hasValidToken()).toBe(true);
         expect(hasValidSetupToken).toHaveBeenCalledWith('/workspace');
     });
 });

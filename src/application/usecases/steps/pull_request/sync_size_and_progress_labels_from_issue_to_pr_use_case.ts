@@ -5,6 +5,7 @@ import { logDebugInfo, logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
 import { mergeSizeAndProgressLabels, selectSizeAndProgressLabels } from './sync_size_and_progress_labels_policy';
+import { toApplicationError } from '../../../errors/application_error';
 
 /**
  * Copies size and progress labels from the linked issue to the PR.
@@ -81,14 +82,15 @@ export class SyncSizeAndProgressLabelsFromIssueToPrUseCase implements ParamUseCa
                 }),
             );
         } catch (error) {
-            logError(error);
+            const semanticError = toApplicationError(error, 'provider.unavailable', 'Unable to synchronize size and progress labels.');
+            logError(semanticError);
             result.push(
                 new Result({
                     id: this.taskId,
                     success: false,
                     executed: true,
                     steps: [`Failed to sync size/progress labels from issue to PR.`],
-                    errors: [error?.toString() ?? 'Unknown error'],
+                    errors: [semanticError],
                 }),
             );
         }

@@ -25,7 +25,18 @@ This page describes the **internal flow** of Bugbot: how detection runs, how the
 
 1. **Guards:** The configured agent runtime must be available; the branch must be linked to an issue (`issueNumber !== -1`). Otherwise detection is skipped.
 
-2. **Load context:** The action fetches **issue comments**, **PR reviews**, **PR review comments**, and review-thread state (including the resolver identity) for the issue and any open PRs. Markers are trusted only when their author matches the authenticated workflow identity. A thread resolved by a person is persisted as dismissed on the next supported reconciliation; a manually reopened resolved thread requires verification before it can be considered clean. The action builds:
+2. **Select and load context:** A PR event candidate is fetched directly and
+   accepted only when its open state, base repository, head owner/ref, and head
+   SHA match the event. Without an event PR, Bugbot asks GitHub for at most two
+   open PRs matching the exact `<head-owner>:<head-ref>` value. Exactly one match
+   is canonical; zero means issue-only analysis where supported, and two is an
+   ambiguity that stops the review. Bugbot never picks the first PR from an
+   unordered list. It then fetches **issue comments**, **PR review comments**,
+   review-thread state, and the diff only for that canonical identity. Markers
+   are trusted only when their author matches the authenticated workflow
+   identity. A thread resolved by a person is persisted as dismissed on the next
+   supported reconciliation; a manually reopened resolved thread requires
+   verification before it can be considered clean. The action builds:
    - A map of **existing findings** (id → issue comment id, PR comment id, resolved).
    - A **previous findings block** (id, title, description) to send to the configured agent so it can report which are now **resolved**.
    - For the target PR: one canonical GitHub diff snapshot containing the changed-file manifest, bounded patches, and every addressable left/right diff location. All projections come from one paginated file traversal.
@@ -38,21 +49,47 @@ This page describes the **internal flow** of Bugbot: how detection runs, how the
    unbounded comment history from exhausting the prompt or causing unsafe
    guesses about resolution.
 
+   Provider work is fixed as well: selection uses one request; issue comments,
+   PR review comments, and review threads use at most two pages of 100; the diff
+   uses at most ten pages of 100 files; and at most two independent detail reads
+   run concurrently. Conversation packing keeps the newest 50 entries within
+   24,000 characters and renders the retained entries chronologically. Reaching
+   a fixed cap produces explicit **partial coverage**. A provider error instead
+   aborts before the agent or any finding mutation.
+
 3. **Build prompt:** The action builds a prompt for the configured agent's analysis role with repository context, hierarchical repository rules, the canonical diff, human discussion, optional ignore patterns (`ai-ignore-files`), and **previously reported findings**. PR `synchronize` and push events with valid Git object ids use the exact `before..after` range. Initial or reopened PR reviews use the canonical PR diff; when no canonical diff exists, on-demand and fallback reviews derive a bounded branch/base or current-commit scope from the read-only checkout. The agent is asked to:
    - **Task 1:** Return only actionable, changed-code defects with a causal explanation, evidence, category, severity, confidence, exact file/line or range, and a practical fix. Findings below 0.70 confidence, style comments, and speculative concerns are excluded.
-   - **Task 2:** Return **resolved_finding_ids**: which of the previous findings are now fixed or no longer apply.
+   - **Task 2:** Return **resolved_findings**: exact retained finding ids paired with `fixed` or `obsolete`. The array is empty when nothing was resolved.
 
 4. **Filter and limit:** The response is validated again locally even when the CLI claims schema support. Secrets are redacted before publication. Unsafe paths, malformed identities, unsupported enum values, low-confidence items, ignored files, and findings below `bugbot-severity` are rejected. Distinct root causes on the same line are retained; semantic duplicates are removed. Findings are ranked by severity and confidence before `bugbot-comment-limit` is applied.
 
 5. **Publish active findings:** The PR head SHA is checked before analysis and again immediately before publication. Superseded runs exit successfully without publishing or resolving anything. For issue-only work, each finding is added or updated as an issue comment. For a PR, Bugbot creates **one historical review snapshot** with child line/range or file-level comments; it does not add a duplicate finding comment in the PR conversation. Existing findings are updated in place and overflow remains in the snapshot while still contributing to current aggregate counts. When reopening a finding, the open marker is stored before the native thread is reopened, so an interrupted run cannot falsely claim a completed transition.
 
-6. **Mark resolved:** For each existing finding whose id is in `resolved_finding_ids`, the action first **updates** the stored finding marker with `resolved: true` and its reason, then **resolves the PR review thread** when applicable. Resolution runs only after active publication succeeds. A retry discovers and repairs either half of an interrupted transition.
+6. **Mark resolved:** For each existing finding represented by an exact
+   `{ id, resolution }` entry in `resolved_findings`, the action first verifies
+   that the finding was among the retained previous findings for this run.
+   Omitted history is never
+   resolution-eligible. It then **updates** the stored finding marker with
+   `resolved: true` and its reason and **resolves the PR review thread** when
+   applicable. Resolution runs only after active publication succeeds. A retry
+   discovers and repairs either half of an interrupted transition.
+
+   This is a strict initial contract: every response includes both top-level
+   arrays and every finding field, using `null` for unavailable optional values.
+   Removed resolution keys are rejected; there is no legacy conversion path.
+   If one id receives conflicting lifecycle classifications, it is not resolved.
 
 7. **Re-read and project:** After mutations, Bugbot verifies the PR head, re-reads linked-issue findings, reviews, child comments, native thread facts, and the PR conversation concurrently, and then verifies the head again. If the head changed while those reads were in flight, the whole snapshot is discarded as superseded. Each surface records whether its read was verified, failed, or not applicable, and each non-clean issue and PR destination must be observed independently; one visible or clean destination cannot hide another that is open, unverifiable, or missing. Pure lifecycle, provider-projection, and reconciliation-plan policies derive `open`, `reopened`, `fixed`, `obsolete`, `dismissed`, `verification-required`, or `unknown`. A dedicated presentation use case then updates at most 20 affected historical review blocks per run with bounded concurrency, upserts the oldest trusted **Bugbot status** card, and feeds the Result, lifecycle labels, Job Summary, Check Run, and telemetry. Missing or malformed owned evidence fails closed; it is never presented as clean. User-facing PR, commit, run, review, and finding links come only from authenticated provider adapters. Finding links are accepted only when they belong to the same HTTPS server and repository, including GitHub Enterprise installations.
 
 Review and Commit workflow templates share a repository-and-branch concurrency key. A newer run cancels an older review of the same branch, while the application head guards and idempotent provider writes protect partial/canceled transitions. Other durable mutation workflows retain their workflow-local queue.
 
-Every exit path emits optional content-free telemetry. `bugbot-dry-run` stops after the second freshness gate and returns the complete proposed state without publishing, resolving, committing, updating Checks, or persisting configuration.
+Every exit path emits optional content-free telemetry, including canonical
+selection reason, logical and raw request counts, the fixed concurrency limit,
+and retained/omitted/truncated counts per context source. A partial run can
+publish findings supported by retained evidence, but its status explicitly says
+that it cannot declare the whole PR clean. `bugbot-dry-run` stops after the
+second freshness gate and returns the complete proposed state without
+publishing, resolving, committing, updating Checks, or persisting configuration.
 
 ---
 
@@ -71,7 +108,12 @@ When you post a comment on an **issue** or **pull request** (or reply in a PR re
 
 2. **Permission check:** The action checks if the **comment author** is allowed to modify files: **organization member** (for org repos), or **repository owner / collaborator with `push`, `maintain`, or `admin` permission** (for personal repos). If not, it does **not** run autofix or do-user-request; it can still run **Think** or a read-only review.
 
-3. **Branch resolution (issue comment only):** On **issue_comment**, the action needs a **branch** to checkout and push to. It looks up an **open PR** that references the issue and uses that PR’s **head branch**. If there is no such PR, autofix and do-user-request are skipped.
+3. **Mutation target:** Autofix and do-user-request require an authoritative
+   branch from a pull-request review-comment event or from an execution that
+   already names the branch. An issue-only comment is not allowed to infer a
+   write target by scanning open PRs; it can request analysis, receive an
+   answer, or dismiss an issue finding, but file-changing commands must be made
+   from the intended PR thread or an explicit branch-scoped CLI/workflow run.
 
 4. **Autofix (when it’s a fix request and permission is granted):**
    - Build a **prompt** with repo context, the **full text** of the target findings (truncated per finding if needed), your comment, and the verify commands.

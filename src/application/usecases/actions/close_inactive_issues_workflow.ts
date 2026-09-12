@@ -5,6 +5,7 @@ import type { IssueClosurePort } from '../../ports/issue_lifecycle_ports';
 import type { IssueInactivityClockPort, IssueInactivityQueryPort } from '../../ports/issue_inactivity_ports';
 import { sanitizePublishedError } from '../../policies/github_comment_publication_policy';
 import { logDebugInfo, logError, logInfo } from '../../ports/logging_ports';
+import { ApplicationError, toApplicationError } from '../../errors/application_error';
 
 export interface CloseInactiveIssuesWorkflowDependencies {
     readonly issueQueryPort: IssueInactivityQueryPort;
@@ -34,7 +35,7 @@ export async function runCloseInactiveIssuesWorkflow(
         let eligibleCount = 0;
         let closedCount = 0;
         let skippedCount = 0;
-        const errors: string[] = [];
+        const errors: ApplicationError[] = [];
 
         for (const candidate of candidates) {
             const initialDecision = evaluateIssueInactivity({
@@ -93,7 +94,7 @@ export async function runCloseInactiveIssuesWorkflow(
             } catch (error) {
                 const message = `Unable to close issue #${candidate.number} after inactivity.`;
                 logError(message);
-                errors.push(`${message} ${safeErrorMessage(error)}`);
+                errors.push(new ApplicationError('provider.unavailable', `${message} ${safeErrorMessage(error)}`, { cause: error }));
             }
         }
 
@@ -121,7 +122,7 @@ export async function runCloseInactiveIssuesWorkflow(
             success: false,
             executed: true,
             steps: [message],
-            errors: [`${message} ${safeErrorMessage(error)}`],
+            errors: [toApplicationError(error, 'provider.unavailable', `${message} ${safeErrorMessage(error)}`)],
         })];
     }
 }

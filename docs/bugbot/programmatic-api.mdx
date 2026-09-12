@@ -1,0 +1,67 @@
+---
+title: Programmatic API
+description: Run a provider-neutral Bugbot review through the request-only package API.
+---
+
+# Programmatic API
+
+Import the API from `@vypdev/copilot/bugbot`. Construct
+`BugbotReviewService` with provider-neutral findings and SCM ports, then pass a
+single `BugbotReviewRequest` to `review`.
+
+```ts
+import {
+  ApplicationError,
+  BugbotReviewService,
+  type BugbotReviewRequest,
+  type BugbotScmGateway,
+  type FindingsQueryPort,
+} from '@vypdev/copilot/bugbot';
+
+const service = new BugbotReviewService(findingsPort, scmGateway);
+
+const request: BugbotReviewRequest = {
+  repository: { owner: 'acme', name: 'checkout' },
+  credential: { token: process.env.GITHUB_TOKEN! },
+  target: {
+    kind: 'pull-request',
+    number: 42,
+    head: 'feature/42-checkout',
+    base: 'develop',
+  },
+  agent: {
+    provider: 'codex',
+    modelProvider: 'openai',
+    model: 'gpt-5.6-luna',
+    command: 'codex exec -',
+  },
+  configuration: { publicationMode: 'dry-run', effort: 'high' },
+};
+
+try {
+  const results = await service.review(request);
+  for (const result of results) {
+    for (const error of result.errors) console.error(error.toJSON());
+  }
+} catch (error) {
+  if (error instanceof ApplicationError) console.error(error.toJSON());
+  else throw error;
+}
+```
+
+`target` is a discriminated union: use `kind: 'pull-request'` with a positive
+PR number and head branch, or `kind: 'branch'` with a branch name. Runtime input
+is validated and bounded even when JavaScript bypasses TypeScript.
+
+The returned error array is readonly and contains only semantic
+`ApplicationError` values. `toJSON()` exposes the safe message, code, category,
+retry decision, impact, action, retained state, and correlation ID. It never
+includes a token, provider payload, raw cause, stack, prompt, command arguments,
+or local path.
+
+The API intentionally has no overload accepting the internal runtime aggregate
+and does not export `Execution` or `Ai`. Callers provide request facts and
+capability ports; internal orchestration remains package-owned.
+
+See [Application error reference](/security-operations/operations/error-reference)
+for the stable code meanings and operator actions.

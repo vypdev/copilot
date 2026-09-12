@@ -2,8 +2,8 @@ import { Command } from 'commander';
 import { getGitInfo, isInsideGitRepo } from '../../cli_context';
 import { createDefaultSetupConfiguration, mergeSetupConfiguration } from '../../application/policies/setup_configuration_policy';
 import { loadSetupConfigurationOverrides } from '../setup_config_file';
-import { SetupWorkspaceAdapter } from '../../infrastructure/setup_workspace_adapter';
-import type { SetupWorkspacePort, SetupWorkspaceResult } from '../../application/ports/setup_workspace_ports';
+import { SetupReconcileWorkspaceAdapter } from '../../infrastructure/setup_workspace_adapter';
+import type { SetupDoctorWorkspaceQueryPort, SetupWorkspacePort, SetupWorkspaceResult } from '../../application/ports/setup_workspace_ports';
 
 export interface ReconcileCommandOptions {
     config?: string;
@@ -24,7 +24,7 @@ export function registerReconcileCommand(program: Command): void {
 
 export function runReconcileCommand(
     options: ReconcileCommandOptions,
-    workspace: SetupWorkspacePort = new SetupWorkspaceAdapter(),
+    workspace: SetupWorkspacePort & SetupDoctorWorkspaceQueryPort = new SetupReconcileWorkspaceAdapter(),
 ): void {
     const cwd = process.cwd();
     if (!isInsideGitRepo(cwd)) throw new Error('Run "copilot reconcile" from the root of a git repository.');
@@ -33,7 +33,7 @@ export function runReconcileCommand(
 
     const overrides = options.config ? loadSetupConfigurationOverrides(options.config) : {};
     const configuration = mergeSetupConfiguration(createDefaultSetupConfiguration(), overrides);
-    const comparisons = [...(workspace.compareWorkflows?.(configuration.features) ?? [])];
+    const comparisons = [...workspace.compareWorkflows(configuration.features)];
     const drift = comparisons.filter(comparison => comparison.status !== 'unchanged');
     const report = {
         repository: `${gitInfo.owner}/${gitInfo.repo}`,

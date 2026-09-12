@@ -2,7 +2,7 @@ import type { GithubReleaseClient } from '../../../infrastructure/github/ports/g
 import { isGithubNotFound } from '../github/github_error_policy';
 import { tagReference } from '../release_tag_policy';
 
-export type RepositoryTagRef = { object: { sha: string } };
+export type RepositoryTagRef = { object: { sha: string; type?: string } };
 
 export async function findRepositoryTag(
     client: GithubReleaseClient,
@@ -25,5 +25,13 @@ export async function getRepositoryTagSha(
     repository: string,
     tag: string,
 ): Promise<string | undefined> {
-    return (await findRepositoryTag(client, owner, repository, tag))?.object.sha;
+    const reference = await findRepositoryTag(client, owner, repository, tag);
+    if (!reference) return undefined;
+    let object = reference.object;
+    for (let depth = 0; object.type === 'tag' && depth < 5; depth += 1) {
+        const response = await client.rest.git.getTag({ owner, repo: repository, tag_sha: object.sha });
+        object = response.data.object;
+    }
+    if (object.type === 'tag') throw new Error(`Tag '${tag}' has an unsupported annotation depth.`);
+    return object.sha;
 }

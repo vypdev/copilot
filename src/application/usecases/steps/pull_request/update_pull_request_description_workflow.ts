@@ -118,15 +118,15 @@ export async function runUpdatePullRequestDescriptionWorkflow(
         );
         return [new Result({ id: taskId, success: true, executed: true, steps: [] })];
     } catch (cause) {
-        const error = new ApplicationError('Unable to update pull request description.', 'workflow', { cause });
-        logError(error);
+        const semanticError = new ApplicationError('workflow.failed', 'Unable to update pull request description.', { cause });
+        logError(semanticError);
         return [
             new Result({
                 id: taskId,
                 success: false,
                 executed: true,
-                steps: [error.message],
-                errors: [error],
+                steps: [semanticError.message],
+                errors: [semanticError],
             }),
         ];
     }

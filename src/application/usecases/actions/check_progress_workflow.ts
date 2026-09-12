@@ -7,6 +7,7 @@ import { getTaskEmoji } from '../../../utils/task_emoji';
 import { syncProgressLabelsToOpenPullRequests } from './sync_progress_labels_to_open_pull_requests';
 import { buildProgressSummaryMessage } from './progress_summary_builder';
 import { analyzeProgress, type ProgressAnalysisDependencies } from './progress_analysis_workflow';
+import { ApplicationError, toApplicationError } from '../../errors/application_error';
 
 export interface CheckProgressWorkflowDependencies extends ProgressAnalysisDependencies {
     issueRepository: IssueLabelsPort & IssueProgressPort;
@@ -36,17 +37,14 @@ export async function runCheckProgressWorkflow(
         await persistProgress(param, issueNumber, branch, progress, dependencies);
         return [buildProgressResult(taskId, issueNumber, branch, developmentBranch, progress, summary, reasoning, remaining)];
     } catch (error) {
-        logError(`Error in ${taskId}: ${JSON.stringify(error, null, 2)}`);
+        const semanticError = toApplicationError(error, 'workflow.failed', `Unable to complete ${taskId}.`);
+        logError(semanticError);
         return [
             new Result({
                 id: taskId,
                 success: false,
                 executed: true,
-                errors: [
-                    new Error(
-                        `Error in ${taskId}: ${error instanceof Error ? error.message : String(error)}`,
-                    ),
-                ],
+                errors: [semanticError],
             }),
         ];
     }
@@ -67,7 +65,7 @@ function buildZeroProgressResult(
         success: false,
         executed: true,
         steps: [`Progress for issue #${issueNumber}: 0%`, summary],
-        errors: [message],
+        errors: [new ApplicationError('agent.failed', message)],
         payload: { progress: 0, summary, reasoning: reasoning || undefined, issueNumber, branch, developmentBranch },
     });
 }

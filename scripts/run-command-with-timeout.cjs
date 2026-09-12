@@ -2,6 +2,7 @@
 
 const { spawn } = require("node:child_process");
 const { writeSync } = require("node:fs");
+const { signalPosixProcessGroup } = require("./process-group-signal.cjs");
 
 const [, , timeoutValue, command, ...args] = process.argv;
 const timeoutMs = Number(timeoutValue);
@@ -20,14 +21,10 @@ let terminationTimer;
 let killTimer;
 let forwardedSignal;
 
-function signalProcessGroup(signal) {
+function signalProcessGroup(signal, { leaderExited = false } = {}) {
   if (!child?.pid) return;
-  try {
-    if (process.platform === "win32") child.kill(signal);
-    else process.kill(-child.pid, signal);
-  } catch (error) {
-    if (error.code !== "ESRCH") throw error;
-  }
+  if (process.platform === "win32") child.kill(signal);
+  else signalPosixProcessGroup(process.kill, child.pid, signal, { leaderExited });
 }
 
 function beginTermination(signal, timeoutExpired = false) {
@@ -77,7 +74,9 @@ child.on("exit", () => {
   // A descendant can be created concurrently with the first group signal.
   // Once the direct child has exited it cannot fork again, so signaling the
   // group a second time closes that race before the runner reports completion.
-  if (forwardedSignal) signalProcessGroup("SIGKILL");
+  // macOS can report EPERM after the leader is reaped even though the earlier
+  // group signal succeeded, so only this idempotent sweep treats it as gone.
+  if (forwardedSignal) signalProcessGroup("SIGKILL", { leaderExited: true });
 });
 
 child.on("close", (code, signal) => {

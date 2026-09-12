@@ -153,6 +153,7 @@ describe("main run route composition root", () => {
   it("exposes one handler for every executable route", () => {
     const handlers = createMainRunRouteCompositionRoot(
       {} as ProjectBoardCommandPort,
+      "local",
     );
 
     expect(Object.keys(handlers).sort()).toEqual(
@@ -174,6 +175,7 @@ describe("main run route composition root", () => {
     const execution = {} as Execution;
     const handlers = createMainRunRouteCompositionRoot(
       {} as ProjectBoardCommandPort,
+      "local",
     );
 
     await handlers["single-action"](execution);

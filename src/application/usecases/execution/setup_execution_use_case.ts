@@ -1,22 +1,25 @@
-import type { ExecutionConfigurationPort } from '../../ports/execution_configuration_ports';
-import type { ExecutionIssueSetupPort, ExecutionOrganizationSetupPort } from '../../ports/execution_setup_ports';
-import type { Execution } from '../../../data/model/execution';
+import type {
+    SetupConfigurationQueryPort,
+    SetupIssueQueryPort,
+    SetupOrganizationQueryPort,
+} from '../../ports/setup_execution_ports';
 import type { ParamUseCase } from '../base/param_usecase';
 import type { ExecutionBranchVersionResolution } from './execution_branch_version_resolver';
 import { runSetupExecution } from './setup_execution_workflow';
+import type { SetupExecutionContext, SetupExecutionResult } from './setup_execution_contracts';
 
-export class SetupExecutionUseCase implements ParamUseCase<Execution, void> {
+export class SetupExecutionUseCase implements ParamUseCase<SetupExecutionContext, SetupExecutionResult> {
     taskId = 'SetupExecutionUseCase';
 
     constructor(
-        private readonly issueSetupPort: ExecutionIssueSetupPort,
-        private readonly organizationSetupPort: ExecutionOrganizationSetupPort,
-        private readonly configurationPort: ExecutionConfigurationPort,
+        private readonly issueSetupPort: SetupIssueQueryPort,
+        private readonly organizationSetupPort: SetupOrganizationQueryPort,
+        private readonly configurationPort: SetupConfigurationQueryPort,
         private readonly branchVersionResolver: ExecutionBranchVersionResolution,
     ) {}
 
-    invoke(execution: Execution): Promise<void> {
-        return runSetupExecution(execution, {
+    invoke(context: SetupExecutionContext): Promise<SetupExecutionResult> {
+        return runSetupExecution(context, {
             issueSetupPort: this.issueSetupPort,
             organizationSetupPort: this.organizationSetupPort,
             configurationPort: this.configurationPort,

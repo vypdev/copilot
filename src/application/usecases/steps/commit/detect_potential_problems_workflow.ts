@@ -8,7 +8,11 @@ import type { BugbotContextPorts } from '../../../ports/bugbot_context_ports';
 import type { BugbotFindingPublicationPorts } from '../../../ports/bugbot_finding_publication_ports';
 import type { BugbotFindingResolutionPorts } from '../../../ports/bugbot_finding_resolution_ports';
 import { PullRequestReviewOperationError } from '../../../ports/pull_request_review_errors';
-import { loadBugbotContext, type LoadBugbotContextOptions } from './bugbot/load_bugbot_context_use_case';
+import { loadBugbotContext } from './bugbot/load_bugbot_context_use_case';
+import {
+    projectBugbotContextRequest,
+    type LoadBugbotContextOptions,
+} from './bugbot/bugbot_context_request';
 import { applyDetectedFindings } from './bugbot/apply_detected_findings';
 import type { PreparedBugbotFindings } from './bugbot/prepare_bugbot_findings';
 import { projectBugbotFindingStatuses } from '../../../policies/bugbot_finding_status_policy';
@@ -22,6 +26,7 @@ import {
     type BugbotPresentationReport,
 } from './bugbot/reconcile_bugbot_review_state_use_case';
 import type { BugbotFinding } from '../../../../domain/bugbot/finding';
+import { ApplicationError } from '../../../errors/application_error';
 
 export interface DetectPotentialProblemsWorkflowDependencies {
     aiRepository: FindingsQueryPort;
@@ -45,8 +50,8 @@ export async function runDetectPotentialProblemsWorkflow(
         if (param.ai.getBugbotReviewConfiguration().telemetry) {
             try {
                 await dependencies.telemetryPort?.publish(snapshot);
-            } catch (error) {
-                logInfo(`Bugbot telemetry publication failed without affecting the review: ${error instanceof Error ? error.name : 'unknown'}.`);
+            } catch {
+                logInfo('Bugbot telemetry publication failed without affecting the review.');
             }
         }
         return snapshot;
@@ -70,20 +75,26 @@ export async function runDetectPotentialProblemsWorkflow(
             return await complete(skippedDraftResult(), 'skipped');
         }
 
-        const contextOptions = await resolveContextOptions(param, dependencies.contextPorts);
+        const contextOptions = resolveContextOptions(param);
         if (contextOptions === null) {
             logDebugInfo('No branch or pull request target available for potential-problems detection.');
             await publishTelemetry('skipped', 'missing_context');
             return [];
         }
-        const context = await telemetry.measure('context', () => loadBugbotContext(param, contextOptions, dependencies.contextPorts));
+        const contextRequest = projectBugbotContextRequest(param, contextOptions);
+        const contextReader = dependencies.contextPorts.loader.bind({
+            owner: param.owner,
+            repository: param.repo,
+            token: param.tokens.token,
+        });
+        const context = await telemetry.measure('context', () => loadBugbotContext(contextRequest, contextReader));
         const eventHeadSha = expectedBugbotHeadSha(param);
         if (isLoadedBugbotRevisionSuperseded(context, eventHeadSha)) {
             return await complete(supersededResult(context.prContext?.prHeadSha, eventHeadSha), 'superseded');
         }
         const prepared = await analyzeBugbotRevision(param, context, { agent: dependencies.aiRepository, telemetry });
         if (prepared === undefined) {
-            const analysisError = new Error('The configured agent returned no potential-problem analysis.');
+            const analysisError = new ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.');
             const presentation = param.ai.getBugbotReviewConfiguration().publicationMode === 'publish'
                 ? await telemetry.measure('projection', () => reconcileReviewState({
                     execution: param,
@@ -129,13 +140,17 @@ export async function runDetectPotentialProblemsWorkflow(
         const hasChanges = prepared.toPublish.length > 0 || prepared.resolvedFindingIds.size > 0;
         return await complete(
             detectionResult(prepared, context, finalErrors, presentation),
-            finalErrors.length === 0 ? (hasChanges ? 'completed' : 'no-findings') : 'failed',
+            finalErrors.length > 0
+                ? 'failed'
+                : context.coverage.status === 'partial'
+                    ? 'partial'
+                    : hasChanges ? 'completed' : 'no-findings',
         );
     } catch (error) {
-        const normalizedError = error instanceof PullRequestReviewOperationError
-            ? error
-            : new Error('Unable to detect potential problems.');
-        const resultError = new Error(`Error in ${TASK_ID}: ${normalizedError.message}`);
+        const resultError = toBugbotApplicationError(
+            error,
+            `Error in ${TASK_ID}: Unable to detect potential problems.`,
+        );
         logError(resultError.message);
         const result = new Result({
             id: TASK_ID,
@@ -178,6 +193,7 @@ function dryRunResult(prepared: PreparedBugbotFindings, context: BugbotContext):
             resolvedFindingIds: [...prepared.resolvedFindingIds],
             findingStates: statuses.counts,
             ruleSources: context.reviewRuleSources ?? [],
+            contextCoverage: context.coverage,
         },
     });
 }
@@ -198,10 +214,7 @@ function supersededResult(loadedHeadSha?: string, expectedHeadSha?: string): Res
     });
 }
 
-async function resolveContextOptions(
-    param: Execution,
-    contextPorts: BugbotContextPorts,
-): Promise<LoadBugbotContextOptions | undefined | null> {
+function resolveContextOptions(param: Execution): LoadBugbotContextOptions | undefined | null {
     if (param.isPullRequest) {
         return {
             branchOverride: param.pullRequest.head,
@@ -210,14 +223,10 @@ async function resolveContextOptions(
         };
     }
     if (param.commit.branch?.trim()) return undefined;
-    if (!['issues', 'issue_comment'].includes(param.eventName) || param.issueNumber <= 0) return undefined;
-    const branch = await contextPorts.pullRequest.getHeadBranchForIssue(
-        param.owner,
-        param.repo,
-        param.issueNumber,
-        param.tokens.token,
-    );
-    return branch ? { branchOverride: branch } : null;
+    if (['issues', 'issue_comment'].includes(param.eventName) && param.issueNumber > 0) {
+        return undefined;
+    }
+    return null;
 }
 
 function shouldSkipDetection(param: Execution): boolean {
@@ -236,7 +245,7 @@ function noAnalysisResult(presentation?: BugbotPresentationReport): Result {
     logDebugInfo('DetectPotentialProblems: No response from configured agent.');
     const errors = presentation?.errors.length
         ? [...presentation.errors]
-        : [new Error('The configured agent returned no potential-problem analysis.')];
+        : [new ApplicationError('agent.failed', 'The configured agent returned no potential-problem analysis.')];
     return new Result({
         id: TASK_ID,
         success: false,
@@ -244,7 +253,9 @@ function noAnalysisResult(presentation?: BugbotPresentationReport): Result {
         ...(presentation ? {
             steps: [`Bugbot analysis failed; the verified PR status was reconciled (${formatStateCounts(presentation.projection.counts)}).`],
         } : {}),
-        errors,
+        errors: errors.map(error => presentation
+            ? toBugbotPresentationError(error)
+            : toBugbotApplicationError(error, 'Bugbot review reconciliation failed.')),
         ...(presentation ? {
             payload: {
                 findingStates: presentation.projection.counts,
@@ -269,6 +280,9 @@ function detectionResult(
         : ['no new findings, no resolved'];
     if (prepared.overflowCount > 0) stepParts.push(`${prepared.overflowCount} more not published (see summary comment)`);
     if (prepared.resolvedFindingIds.size > 0) stepParts.push(`${prepared.resolvedFindingIds.size} marked as resolved by configured agent`);
+    if (context.coverage.status === 'partial') {
+        stepParts.push('partial context coverage; this run does not declare the complete target clean');
+    }
     const statusSummary = presentation?.projection ?? projectBugbotFindingStatuses(
             context.existingByFindingId,
             prepared.activeFindings ?? prepared.toPublish,
@@ -288,9 +302,15 @@ function detectionResult(
         success: resolutionErrors.length === 0,
         executed: true,
         steps: [`Potential problems detection completed. ${stepParts.join('; ')}.`],
-        errors: [...resolutionErrors],
+        errors: resolutionErrors.map(error => presentation
+            ? toBugbotPresentationError(error)
+            : toBugbotApplicationError(
+                error,
+                'Bugbot finding publication or reconciliation failed.',
+            )),
         payload: {
             findingStates: statusSummary.counts,
+            contextCoverage: context.coverage,
             ...(presentation ? {
                 reviewProjection: presentation.projection,
                 statusCardOperation: presentation.statusCardOperation,
@@ -308,6 +328,20 @@ function formatStateCounts(counts: Readonly<Record<string, number>>): string {
         .join(', ') || 'none';
 }
 
+function toBugbotApplicationError(error: unknown, fallbackMessage: string): ApplicationError {
+    if (error instanceof ApplicationError) return error;
+    const message = error instanceof PullRequestReviewOperationError ? error.message : fallbackMessage;
+    return new ApplicationError('provider.unavailable', message, { cause: error });
+}
+
+function toBugbotPresentationError(error: Error): ApplicationError {
+    if (error instanceof ApplicationError) return error;
+    const message = error instanceof PullRequestReviewOperationError
+        ? error.message
+        : 'Bugbot finding presentation failed.';
+    return new ApplicationError('provider.unavailable', message, { cause: error });
+}
+
 async function reconcileReviewState(input: {
     readonly execution: Execution;
     readonly loadedContext: BugbotContext;
@@ -316,7 +350,7 @@ async function reconcileReviewState(input: {
     readonly mutationErrors?: readonly Error[];
     readonly dependencies: DetectPotentialProblemsWorkflowDependencies;
 }): Promise<BugbotPresentationReport | undefined> {
-    const pullRequestNumber = input.loadedContext.openPrNumbers[0];
+    const pullRequestNumber = input.loadedContext.canonicalPullRequest?.number;
     const analyzedHeadSha = input.loadedContext.prContext?.prHeadSha;
     if (!pullRequestNumber || !analyzedHeadSha) return undefined;
     return reconcileBugbotReviewState({

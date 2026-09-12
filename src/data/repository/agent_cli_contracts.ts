@@ -1,13 +1,10 @@
-import type { AgentCapability, AgentProvider } from '../model/agent';
+import type { AgentCapability, AgentConfiguration } from '../model/agent';
 
 export interface AgentCliRequest {
-    command: string;
+    configuration: AgentConfiguration;
+    capability: AgentCapability;
     prompt: string;
-    provider?: AgentProvider;
-    modelProvider?: string;
-    capability?: AgentCapability;
     environment?: NodeJS.ProcessEnv;
-    promptMode?: 'stdin' | 'argv';
     timeoutMs: number;
     signal?: AbortSignal;
     cwd?: string;

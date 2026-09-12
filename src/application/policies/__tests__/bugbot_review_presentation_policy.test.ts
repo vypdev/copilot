@@ -11,6 +11,7 @@ import {
 } from '../bugbot_review_presentation_policy';
 
 const head = 'a'.repeat(40);
+const completeCoverage = { status: 'complete' as const, sources: [] };
 const links = {
   pullRequestUrl: 'https://github.com/org/repo/pull/358',
   commitUrl: `https://github.com/org/repo/commit/${head}`,
@@ -21,6 +22,7 @@ function projection(states: BugbotFindingState[] = []) {
   return buildBugbotReviewProjection({
     pullRequestNumber: 358,
     analyzedHeadSha: head,
+    coverage: completeCoverage,
     findings: states.map((state, index) => ({
       id: `finding-${index}`,
       title: `Finding ${index}`,
@@ -88,6 +90,7 @@ describe('Bugbot review presentation', () => {
     const partial = buildBugbotReviewProjection({
       pullRequestNumber: 358,
       analyzedHeadSha: head,
+      coverage: completeCoverage,
       findings: [{ id: 'fixed', state: 'fixed' }],
       errors: ['@team <!-- unsafe -->'],
     });
@@ -99,6 +102,34 @@ describe('Bugbot review presentation', () => {
     expect(english).toContain('@​team');
   });
 
+  it('never presents an empty partial-context review as globally clean', () => {
+    const partialCoverage = {
+      status: 'partial' as const,
+      sources: [{
+        source: 'issue-comments' as const,
+        status: 'partial' as const,
+        pagesFetched: 2,
+        itemsFetched: 200,
+        itemsRetained: 200,
+        omittedItems: 1,
+        truncatedItems: 0,
+        limitReached: true,
+      }],
+    };
+    const body = renderBugbotStatusCard(buildBugbotReviewProjection({
+      pullRequestNumber: 358,
+      analyzedHeadSha: head,
+      coverage: partialCoverage,
+      findings: [],
+    }), 'en-US', links);
+
+    expect(body).toContain('cannot declare the whole pull request clean');
+    expect(body).toContain('issue-comments: partial; retained=200, omitted=1');
+    expect(body).toContain('Projection: partial');
+    expect(body).not.toContain('No active findings');
+    expect(body).not.toContain('No action required');
+  });
+
   it('renders empty and long finding lists without requiring a workflow-run link', () => {
     const noRunLinks = { pullRequestUrl: links.pullRequestUrl, commitUrl: links.commitUrl };
     expect(renderBugbotStatusCard(projection(), 'es-ES', noRunLinks)).toContain(
@@ -107,6 +138,7 @@ describe('Bugbot review presentation', () => {
     const long = buildBugbotReviewProjection({
       pullRequestNumber: 358,
       analyzedHeadSha: head,
+      coverage: completeCoverage,
       findings: Array.from({ length: 22 }, (_, index) => ({
         id: `finding-${index}`,
         state: index % 2 === 0 ? 'obsolete' as const : 'dismissed' as const,
@@ -125,24 +157,24 @@ describe('Bugbot review presentation', () => {
     expect(isBugbotStatusComment(buildBugbotStatusMarker(projection()))).toBe(true);
   });
 
-  it('normalizes the mutable legacy review language into a historical snapshot', () => {
+  it('preserves the single current snapshot schema while refreshing its state block', () => {
     const body = renderBugbotReviewSnapshot(
-      '## 🤖 Bugbot review\n\nBugbot found **1** active potential problem(s) in this revision. 1 finding(s) are attached.\n\nTo request an automatic repair for all active findings, reply with `/copilot fix all`.',
+      '## 🤖 Bugbot review snapshot\n\nBugbot reported **1** potential problem when this commit was analyzed.',
       {
         reviewIdentity: '77',
         analyzedHeadSha: head,
         currentHeadSha: 'b'.repeat(40),
         projectionDigest: '12345678',
+        coverageStatus: 'complete',
         findings: projection(['fixed']).findings,
         locale: 'en-US',
         statusUrl: links.pullRequestUrl,
       },
     );
     expect(body).toContain('All findings originating in this review are resolved');
-    expect(body).toContain('Bugbot reported **1** potential problem');
+    expect(body).toContain('Bugbot reported **1** potential problem when this commit was analyzed.');
     expect(body).toContain('Bugbot review snapshot');
-    expect(body).not.toContain('active potential problem');
-    expect(body).not.toContain('/copilot fix all');
+    expect(body.match(/Bugbot review snapshot/gu)).toHaveLength(1);
   });
 
   it('replaces an existing status block idempotently', () => {
@@ -151,6 +183,7 @@ describe('Bugbot review presentation', () => {
       analyzedHeadSha: head,
       currentHeadSha: head,
       projectionDigest: '12345678',
+      coverageStatus: 'complete',
       findings: projection(['open']).findings,
       locale: 'en-US',
       statusUrl: links.pullRequestUrl,
@@ -160,6 +193,7 @@ describe('Bugbot review presentation', () => {
       analyzedHeadSha: head,
       currentHeadSha: head,
       projectionDigest: '12345678',
+      coverageStatus: 'complete',
       findings: projection(['open']).findings,
       locale: 'en-US',
       statusUrl: links.pullRequestUrl,
@@ -175,6 +209,7 @@ describe('Bugbot review presentation', () => {
         analyzedHeadSha: head,
         currentHeadSha: head,
         projectionDigest: '12345678',
+        coverageStatus: 'complete',
         findings: projection(states).findings,
         locale,
         statusUrl: links.pullRequestUrl,
@@ -202,6 +237,7 @@ describe('Bugbot review presentation', () => {
       analyzedHeadSha: head,
       currentHeadSha: head,
       projectionDigest: '12345678',
+      coverageStatus: 'complete',
       findings: projection(['fixed']).findings,
       locale: 'en-US',
       statusUrl: links.pullRequestUrl,
@@ -211,6 +247,7 @@ describe('Bugbot review presentation', () => {
       analyzedHeadSha: head,
       currentHeadSha: head,
       projectionDigest: '12345678',
+      coverageStatus: 'complete',
       findings: projection(['open']).findings,
       locale: 'es-ES',
       statusUrl: links.pullRequestUrl,
@@ -226,6 +263,7 @@ describe('Bugbot review presentation', () => {
     const unsafe = buildBugbotReviewProjection({
       pullRequestNumber: 358,
       analyzedHeadSha: head,
+      coverage: completeCoverage,
       findings: [{ id: 'x', state: 'open', title: '@team <!-- injected -->' }],
     });
     const body = renderBugbotStatusCard(unsafe, 'en-US', links);

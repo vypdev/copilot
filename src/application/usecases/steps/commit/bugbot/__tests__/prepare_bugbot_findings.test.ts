@@ -63,12 +63,16 @@ describe('prepareBugbotFindings', () => {
                 { id: 'one', title: 'One', description: 'One description.', file: 'a.ts', severity: 'high' },
                 { id: 'two', title: 'Two', description: 'Two description.', file: 'b.ts', severity: 'high' },
             ],
-            resolved_finding_ids: ['safe-id', '<!--broken-->'],
+            resolved_findings: [
+                { id: 'safe-id', resolution: 'obsolete' },
+                { id: '<!--broken-->', resolution: 'fixed' },
+            ],
         }, [], 'low', 1);
 
         expect(result?.toPublish).toHaveLength(1);
         expect(result?.overflowCount).toBe(1);
         expect(result?.resolvedFindingIds).toEqual(new Set(['safe-id']));
+        expect(result?.resolvedFindingResolutions).toEqual(new Map([['safe-id', 'obsolete']]));
     });
 
     it('returns undefined for non-object responses', () => {
@@ -81,11 +85,31 @@ describe('prepareBugbotFindings', () => {
                 { id: 'id-->x', title: 'canonical', description: 'safe' },
                 { id: 'a'.repeat(201), title: 'too long', description: 'rejected' },
             ],
-            resolved_finding_ids: ['resolved-->id', 'b'.repeat(201)],
+            resolved_findings: [
+                { id: 'resolved-->id', resolution: 'fixed' },
+                { id: 'b'.repeat(201), resolution: 'obsolete' },
+                { id: 'valid-id', resolution: 'dismissed' },
+            ],
         }, [], 'low', 10);
 
         expect(result?.toPublish.map((finding) => finding.id)).toEqual([]);
         expect(result?.resolvedFindingIds).toEqual(new Set());
+    });
+
+    it('does not resolve an id with conflicting lifecycle classifications', () => {
+        const result = prepareBugbotFindings({
+            findings: [],
+            resolved_findings: [
+                { id: 'conflicted-id', resolution: 'fixed' },
+                { id: 'conflicted-id', resolution: 'obsolete' },
+                { id: 'conflicted-id', resolution: 'fixed' },
+                { id: 'stable-id', resolution: 'fixed' },
+                { id: 'stable-id', resolution: 'fixed' },
+            ],
+        }, [], 'low', 10);
+
+        expect(result?.resolvedFindingIds).toEqual(new Set(['stable-id']));
+        expect(result?.resolvedFindingResolutions).toEqual(new Map([['stable-id', 'fixed']]));
     });
 
     it('rejects malformed findings and strips model-controlled extra properties', () => {
@@ -117,9 +141,12 @@ describe('prepareBugbotFindings', () => {
             title: `Finding ${index}`,
             description: 'Description',
         }));
-        const resolvedFindingIds = Array.from({ length: 501 }, (_, index) => `resolved-${index}`);
+        const resolvedFindings = Array.from({ length: 501 }, (_, index) => ({
+            id: `resolved-${index}`,
+            resolution: 'fixed' as const,
+        }));
 
-        const result = prepareBugbotFindings({ findings, resolved_finding_ids: resolvedFindingIds }, [], 'low', 200);
+        const result = prepareBugbotFindings({ findings, resolved_findings: resolvedFindings }, [], 'low', 200);
 
         expect(result?.activeFindings).toHaveLength(500);
         expect(result?.resolvedFindingIds.size).toBe(500);

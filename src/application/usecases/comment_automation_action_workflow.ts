@@ -7,6 +7,7 @@ import type { BugbotFixIntentPayload } from "./steps/commit/bugbot/bugbot_fix_in
 import { commitAutofixAndResolveFindings } from "./steps/commit/bugbot/commit_autofix_and_resolve_workflow";
 import { commitUserRequestIfSuccessful } from "./steps/commit/bugbot/commit_user_request_workflow";
 import { logInfo } from "../ports/logging_ports";
+import { ApplicationError, toApplicationError } from "../errors/application_error";
 
 export type CommentAutomationAction = "autofix" | "do-user-request" | "review" | "think";
 
@@ -38,7 +39,7 @@ async function runReviewAction(
       id: `${options.taskId}.Review`,
       success: false,
       executed: false,
-      errors: ["Read-only review is not available in this composition."],
+      errors: [new ApplicationError('configuration.unsupported', "Read-only review is not available in this composition.")],
     })];
   }
   logInfo("Running natural-language read-only review.");
@@ -85,7 +86,11 @@ async function runAutofixAction(
         steps: [
           "Autofix postflight failed: commit/push or finding reconciliation did not complete.",
         ],
-        errors: resolutionErrors,
+        errors: resolutionErrors.map(error => toApplicationError(
+          error,
+          'workflow.failed',
+          'Autofix postflight could not complete.',
+        )),
       }),
     );
     return autofixResults;

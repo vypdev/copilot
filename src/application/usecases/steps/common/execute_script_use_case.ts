@@ -4,6 +4,7 @@ import { logDebugInfo, logError, logInfo } from "../../../ports/logging_ports";
 import { getTaskEmoji } from "../../../../utils/task_emoji";
 import { ParamUseCase } from "../../base/param_usecase";
 import { applyCommitPrefixTransform } from './commit_prefix_transform_policy';
+import { toApplicationError } from '../../../errors/application_error';
 
 export class CommitPrefixBuilderUseCase implements ParamUseCase<Execution, Result[]> {
     taskId: string = 'CommitPrefixBuilderUseCase';
@@ -34,14 +35,15 @@ export class CommitPrefixBuilderUseCase implements ParamUseCase<Execution, Resul
                 })
             )
         } catch (error) {
-            logError(error);
+            const semanticError = toApplicationError(error, 'unexpected', 'Unable to build the commit prefix.');
+            logError(semanticError);
             result.push(
                 new Result({
                     id: this.taskId,
                     success: false,
                     executed: true,
                     steps: [],
-                    errors: [error],
+                    errors: [semanticError],
                 })
             )
         }

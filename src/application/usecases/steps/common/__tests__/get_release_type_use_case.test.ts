@@ -19,15 +19,7 @@ describe('GetReleaseTypeUseCase', () => {
 
   it('returns success with releaseType when description contains Release Type', async () => {
     mockGetDescription.mockResolvedValue('Body\n### Release Type Minor\n');
-    const param = {
-      isSingleAction: true,
-      isIssue: false,
-      isPullRequest: false,
-      singleAction: { issue: 1 },
-      owner: 'o',
-      repo: 'r',
-      tokens: { token: 't' },
-    } as unknown as Parameters<GetReleaseTypeUseCase['invoke']>[0];
+    const param = { issueNumber: 1 };
 
     const results = await useCase.invoke(param);
 
@@ -37,13 +29,7 @@ describe('GetReleaseTypeUseCase', () => {
 
   it('returns failure when release type not found in description', async () => {
     mockGetDescription.mockResolvedValue('No release type here');
-    const param = {
-      isSingleAction: true,
-      singleAction: { issue: 1 },
-      owner: 'o',
-      repo: 'r',
-      tokens: { token: 't' },
-    } as unknown as Parameters<GetReleaseTypeUseCase['invoke']>[0];
+    const param = { issueNumber: 1 };
 
     const results = await useCase.invoke(param);
 
@@ -51,14 +37,7 @@ describe('GetReleaseTypeUseCase', () => {
   });
 
   it('returns failure when not single action, issue or pull request', async () => {
-    const param = {
-      isSingleAction: false,
-      isIssue: false,
-      isPullRequest: false,
-      owner: 'o',
-      repo: 'r',
-      tokens: { token: 't' },
-    } as unknown as Parameters<GetReleaseTypeUseCase['invoke']>[0];
+    const param = { issueNumber: -1 };
 
     const results = await useCase.invoke(param);
 
@@ -68,13 +47,7 @@ describe('GetReleaseTypeUseCase', () => {
 
   it('returns failure when getDescription returns undefined', async () => {
     mockGetDescription.mockResolvedValue(undefined);
-    const param = {
-      isSingleAction: true,
-      singleAction: { issue: 1 },
-      owner: 'o',
-      repo: 'r',
-      tokens: { token: 't' },
-    } as unknown as Parameters<GetReleaseTypeUseCase['invoke']>[0];
+    const param = { issueNumber: 1 };
 
     const results = await useCase.invoke(param);
 
@@ -84,13 +57,7 @@ describe('GetReleaseTypeUseCase', () => {
 
   it('returns failure and pushes result on catch', async () => {
     mockGetDescription.mockRejectedValue(new Error('API error'));
-    const param = {
-      isSingleAction: true,
-      singleAction: { issue: 1 },
-      owner: 'o',
-      repo: 'r',
-      tokens: { token: 't' },
-    } as unknown as Parameters<GetReleaseTypeUseCase['invoke']>[0];
+    const param = { issueNumber: 1 };
 
     const results = await useCase.invoke(param);
 
@@ -98,41 +65,23 @@ describe('GetReleaseTypeUseCase', () => {
     expect(results[0].steps).toContain('Tried to check action permissions.');
   });
 
-  it('uses issue.number when isIssue true', async () => {
+  it('queries the explicit issue number', async () => {
     mockGetDescription.mockResolvedValue('### Release Type Major\n');
-    const param = {
-      isSingleAction: false,
-      isIssue: true,
-      isPullRequest: false,
-      issue: { number: 200 },
-      pullRequest: { number: 0 },
-      owner: 'o',
-      repo: 'r',
-      tokens: { token: 't' },
-    } as unknown as Parameters<GetReleaseTypeUseCase['invoke']>[0];
+    const param = { issueNumber: 200 };
 
     const results = await useCase.invoke(param);
 
     expect(results[0].success).toBe(true);
-    expect(mockGetDescription).toHaveBeenCalledWith('o', 'r', 200, 't');
+    expect(mockGetDescription).toHaveBeenCalledWith(200);
   });
 
-  it('uses pullRequest.number when isPullRequest true', async () => {
+  it('does not need event-type dispatch to query another issue', async () => {
     mockGetDescription.mockResolvedValue('### Release Type Patch\n');
-    const param = {
-      isSingleAction: false,
-      isIssue: false,
-      isPullRequest: true,
-      issue: { number: 0 },
-      pullRequest: { number: 88 },
-      owner: 'o',
-      repo: 'r',
-      tokens: { token: 't' },
-    } as unknown as Parameters<GetReleaseTypeUseCase['invoke']>[0];
+    const param = { issueNumber: 88 };
 
     const results = await useCase.invoke(param);
 
     expect(results[0].success).toBe(true);
-    expect(mockGetDescription).toHaveBeenCalledWith('o', 'r', 88, 't');
+    expect(mockGetDescription).toHaveBeenCalledWith(88);
   });
 });

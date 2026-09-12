@@ -5,6 +5,7 @@ import {
   type BugbotFindingState,
   type BugbotFindingStateCounts,
 } from './review_state';
+import type { BugbotContextCoverage } from './context';
 
 export type BugbotProjectionOutcome =
   | 'complete'
@@ -30,6 +31,7 @@ export interface BugbotReviewProjection {
   readonly counts: Readonly<BugbotFindingStateCounts>;
   readonly actionableCount: number;
   readonly outcome: BugbotProjectionOutcome;
+  readonly coverage: BugbotContextCoverage;
   readonly errors: readonly string[];
   readonly digest: string;
 }
@@ -40,6 +42,7 @@ export function buildBugbotReviewProjection(input: {
   verifiedHeadSha?: string;
   findings: readonly BugbotProjectedFinding[];
   errors?: readonly string[];
+  coverage: BugbotContextCoverage;
   superseded?: boolean;
   dryRun?: boolean;
 }): BugbotReviewProjection {
@@ -54,7 +57,9 @@ export function buildBugbotReviewProjection(input: {
     ? 'superseded'
     : input.dryRun
       ? 'dry-run'
-      : errors.length > 0 || counts.unknown > 0
+      : input.coverage.status === 'partial'
+        ? 'partial'
+        : errors.length > 0 || counts.unknown > 0
         ? (findings.length > 0 ? 'partial' : 'failed')
         : 'complete';
   const canonical = JSON.stringify({
@@ -69,6 +74,7 @@ export function buildBugbotReviewProjection(input: {
     })),
     counts: BUGBOT_FINDING_STATES.map((state) => [state, counts[state]]),
     outcome,
+    coverage: input.coverage,
     errors,
   });
   return {
@@ -82,6 +88,7 @@ export function buildBugbotReviewProjection(input: {
       isBugbotActionableState(finding.state),
     ).length,
     outcome,
+    coverage: input.coverage,
     errors,
     digest: stableDigest(canonical),
   };

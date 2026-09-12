@@ -75,6 +75,7 @@ export function createDefaultSetupConfiguration(): SetupConfiguration {
         modelProvider: DEFAULT_MODEL_PROVIDER,
         model: DEFAULT_AGENT_MODEL,
         effort: '',
+        executable: '',
     });
     const agents = Object.fromEntries(
         SETUP_AGENT_TASKS.map(task => [task, defaultRole()]),

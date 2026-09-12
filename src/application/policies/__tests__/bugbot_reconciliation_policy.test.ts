@@ -6,6 +6,7 @@ import {
 } from '../bugbot_reconciliation_policy';
 
 describe('bugbot reconciliation policy', () => {
+    const coverage = { status: 'complete' as const, sources: [] };
     it('builds a deterministic fail-closed plan without duplicating durable diagnostics', () => {
         const finding = { id: 'finding', title: 'Finding', description: 'Description' };
         const result = buildBugbotReconciliationPlan({
@@ -30,6 +31,7 @@ describe('bugbot reconciliation policy', () => {
             previousFindingTitles: new Map([['finding', 'Previous title']]),
             activeFindings: [finding],
             expectedPublishedFindings: [finding],
+            coverage,
         });
 
         expect(result.findings).toEqual([expect.objectContaining({
@@ -59,6 +61,7 @@ describe('bugbot reconciliation policy', () => {
             previousFindingTitles: new Map(),
             activeFindings: [visible, overflow],
             expectedPublishedFindings: [visible],
+            coverage,
         });
 
         expect(result.findings).toEqual(expect.arrayContaining([

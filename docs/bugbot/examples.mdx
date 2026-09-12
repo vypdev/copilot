@@ -46,13 +46,15 @@ jobs:
           ai-ignore-files: "build/*, dist/*"
 ```
 
-No `contents: write` is needed for **detection only**; the action only posts comments. For **autofix** and **do-user-request**, use the issue/PR comment workflows below with `contents: write`.
+No `contents: write` is needed for **detection only**; the action only posts comments. For **autofix** and **do-user-request**, use the PR review-thread workflow below with `contents: write`, or an explicitly branch-scoped CLI/workflow execution.
 
 ---
 
-## Issue comment workflow (for autofix)
+## Issue comment workflow (read-only and issue-scoped actions)
 
-Workflows that run on **`issue_comment`** allow users to ask the bot to fix findings or apply a do-user-request from an **issue**. You must grant **`contents: write`** so the action can push.
+Workflows that run on **`issue_comment`** support issue-scoped analysis,
+answers, and finding dismissal. They do not infer a write branch for autofix or
+do-user-request.
 
 ```yaml
 name: Copilot - Issue Comment
@@ -83,13 +85,16 @@ jobs:
           bugbot-fix-verify-commands: ${{ vars.BUGBOT_AUTOFIX_VERIFY_COMMANDS }}
 ```
 
-**Note:** On issue comment, the action needs an **open PR** that references the issue to know which branch to checkout and push to. If there is no such PR, autofix and do-user-request are skipped.
+**Note:** An issue-only comment never scans open PRs to guess a write branch.
+Use it for analysis, answers, or dismissal. Run autofix and do-user-request from
+the intended PR review thread, or from an explicitly branch-scoped CLI/workflow
+execution.
 
 ---
 
-## Pull request comment workflow (for autofix)
+## Pull request review-thread workflow (for autofix)
 
-For comments on the **PR** or **replies in a review thread**, use a workflow on **`pull_request_review_comment`** (and optionally `issue_comment` if you want both). Again, **`contents: write`** is required for autofix and do-user-request.
+For **replies in a PR review thread**, use a workflow on **`pull_request_review_comment`**. The event supplies an authoritative PR and head branch. **`contents: write`** is required for autofix and do-user-request. A general PR-conversation comment is delivered as `issue_comment`; this contract treats it as non-branch-authoritative and never scans open PRs to turn it into a write target.
 
 ```yaml
 name: Copilot - Pull Request Comment
@@ -162,7 +167,8 @@ jobs:
           agent-model: ${{ vars.AGENT_MODEL || 'gpt-5.6-luna' }}
 ```
 
-After the run, findings appear on the issue and on any open PR for that branch.
+After the run, findings appear on the issue and, when exact identity is uniquely
+verified, on one canonical PR for that branch.
 
 ---
 
@@ -198,7 +204,11 @@ These are examples of comments that typically trigger **Bugbot autofix** (fix on
 | `please fix the null reference and the off-by-one` | Fix findings that match those descriptions. |
 | `fix finding xyz-123` | Fix the finding with id `xyz-123` if it exists and is unresolved. |
 
-Post these on the **issue** or on the **PR** (or reply in the **review thread** of a finding). The action will run only if you have permission (organization member, or repository owner / `push`/`maintain`/`admin` collaborator in a personal repository) and, for issue comments, there is an open PR for the issue.
+Post read-only review commands on an **issue** or **PR**. Post file-changing
+commands in the intended **PR review thread** (or use an explicit branch-scoped
+execution). The action will run only if you have permission (organization
+member, or repository owner / `push`/`maintain`/`admin` collaborator in a
+personal repository) and the write target is authoritative.
 
 ---
 

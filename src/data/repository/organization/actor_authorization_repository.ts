@@ -3,6 +3,7 @@ import { authorizationForFileModification } from "../actor_modification_policy";
 import type { ActorAuthorizationPort } from "../../../application/ports/actor_authorization_ports";
 import type { GithubClientPort } from "../../../infrastructure/github/ports/github_client_provider_port";
 import type { GithubActorAuthorizationClient } from "../../../infrastructure/github/ports/github_identity_provider_ports";
+import { toApplicationError } from '../../../application/errors/application_error';
 
 export class ActorAuthorizationRepository implements ActorAuthorizationPort {
     constructor(private readonly githubClient: GithubClientPort<GithubActorAuthorizationClient>) {}
@@ -17,7 +18,7 @@ export class ActorAuthorizationRepository implements ActorAuthorizationPort {
             if (authorization.ownerMatches) return true;
             return this.checkUserRepositoryPermission(octokit, owner, actor, repo);
         } catch (err) {
-            logDebugInfo(`isActorAllowedToModifyFiles(${owner}, ${repo}, ${actor}): ${err instanceof Error ? err.message : String(err)}`);
+            logDebugInfo(toApplicationError(err, 'authorization.denied', 'Unable to verify actor authorization.').message);
             return false;
         }
     };

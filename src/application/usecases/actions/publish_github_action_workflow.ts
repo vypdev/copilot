@@ -4,6 +4,7 @@ import type { RepositoryReleasePublicationPort, RepositoryTagPort } from '../../
 import { INPUT_KEYS } from '../../contracts/input_keys';
 import { logError, logInfo } from '../../ports/logging_ports';
 import { validateDeploymentContinuation } from '../../policies/deployment_continuation_guard';
+import { ApplicationError, toApplicationError } from '../../errors/application_error';
 
 export async function runPublishGithubAction(
     param: Execution,
@@ -27,13 +28,14 @@ export async function runPublishGithubAction(
         );
         return releaseId ? successResult(taskId, sourceTag, targetTag, releaseId) : failureResult(taskId, sourceTag, targetTag);
     } catch (error) {
-        logError(`Error executing ${taskId}: ${error}`);
+        const semanticError = toApplicationError(error, 'provider.unavailable', `Unable to update release ${targetTag} from ${sourceTag}.`);
+        logError(semanticError);
         return [new Result({
             id: taskId,
             success: false,
             executed: true,
             steps: [`Failed to update release \`${targetTag}\` from \`${sourceTag}\`.`],
-            errors: [error],
+            errors: [semanticError],
         })];
     }
 }
@@ -45,10 +47,10 @@ function validateVersion(param: Execution, taskId: string): Result | undefined {
         ["publishing"],
         param.singleAction.version,
     );
-    if (continuationError) return new Result({ id: taskId, success: false, executed: true, errors: [continuationError] });
+    if (continuationError) return new Result({ id: taskId, success: false, executed: true, errors: [new ApplicationError('workflow.stale', continuationError)] });
     if (param.singleAction.version.length > 0 || param.currentConfiguration?.deploymentOrchestration?.version) return undefined;
     logError('Version is not set.');
-    return new Result({ id: taskId, success: false, executed: true, errors: [`${INPUT_KEYS.SINGLE_ACTION_VERSION} is not set.`] });
+    return new Result({ id: taskId, success: false, executed: true, errors: [new ApplicationError('validation.invalid-input', `${INPUT_KEYS.SINGLE_ACTION_VERSION} is not set.`)] });
 }
 
 function successResult(taskId: string, sourceTag: string, targetTag: string, releaseId: string): Result[] {
@@ -57,5 +59,5 @@ function successResult(taskId: string, sourceTag: string, targetTag: string, rel
 }
 
 function failureResult(taskId: string, sourceTag: string, targetTag: string): Result[] {
-    return [new Result({ id: taskId, success: false, executed: true, errors: [`Failed to update release \`${targetTag}\` from \`${sourceTag}\`.`] })];
+    return [new Result({ id: taskId, success: false, executed: true, errors: [new ApplicationError('provider.contract-invalid', `Failed to update release ${targetTag} from ${sourceTag}.`)] })];
 }

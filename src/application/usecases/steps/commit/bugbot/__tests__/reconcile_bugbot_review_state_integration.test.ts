@@ -43,7 +43,17 @@ function context(existingResolved = false): BugbotContext {
         }
       : {},
     issueComments: [],
-    openPrNumbers: [358],
+    canonicalPullRequest: {
+      number: 358,
+      state: 'open',
+      baseRepository: { owner: 'org', name: 'repo' },
+      headRepositoryOwner: 'org',
+      headRef: 'feature/review',
+      headSha: head,
+    },
+    selectionReason: 'event',
+    coverage: { status: 'complete', sources: [] },
+    eligibleResolutionIds: new Set(),
     previousFindingsBlock: '',
     prContext: {
       prHeadSha: head,
@@ -90,9 +100,7 @@ function harness(options: {
       ),
     },
     pullRequest: {
-      getHeadBranchForIssue: jest.fn(),
       getPullRequestReviewCommentBody: jest.fn(),
-      getOpenPullRequestNumbersByHeadBranch: jest.fn(),
       listPullRequestReviewComments: jest.fn().mockResolvedValue(comments),
       getPullRequestHeadSha: jest.fn().mockResolvedValue(options.currentHead ?? head),
       getReviewDiffSnapshot: jest.fn(),
@@ -137,7 +145,7 @@ async function reconcileBugbotReviewState(input: {
   contextPorts: ReturnType<typeof harness>['contextPorts'];
   publicationPorts: ReturnType<typeof harness>['publicationPorts'];
 }) {
-  const pullRequestNumber = input.loadedContext.openPrNumbers[0];
+  const pullRequestNumber = input.loadedContext.canonicalPullRequest?.number;
   const analyzedHeadSha = input.loadedContext.prContext?.prHeadSha;
   if (!pullRequestNumber || !analyzedHeadSha) return undefined;
   return reconcileBugbotReviewStateUseCase({
@@ -179,7 +187,7 @@ describe('Bugbot review reconciliation integration', () => {
     const test = harness();
     await expect(reconcileBugbotReviewState({
       execution: execution(),
-      loadedContext: { ...context(), openPrNumbers: [] },
+      loadedContext: { ...context(), canonicalPullRequest: null, selectionReason: 'none' },
       activeFindings: [],
       contextPorts: test.contextPorts,
       publicationPorts: test.publicationPorts,
@@ -209,7 +217,7 @@ describe('Bugbot review reconciliation integration', () => {
         identity: '77',
         authorLogin: 'bugbot',
         commitId: 'b'.repeat(40),
-        body: '## 🤖 Bugbot review\n\nBugbot found **1** active potential problem(s) in this revision.',
+        body: '## 🤖 Bugbot review snapshot\n\nBugbot reported **1** potential problem when this commit was analyzed.',
       }],
     });
 
@@ -1007,7 +1015,7 @@ describe('Bugbot review reconciliation integration', () => {
         body: marker(true, 'fixed'),
       },
       thread: { resolved: true },
-      reviews: [{ identity: '77', authorLogin: 'bugbot', body: 'legacy', commitId: head }],
+      reviews: [{ identity: '77', authorLogin: 'bugbot', body: '## 🤖 Bugbot review snapshot\n\nHistorical review.', commitId: head }],
       updateReviewError: new Error('secret provider detail'),
     });
     const report = await reconcileBugbotReviewState({
@@ -1158,7 +1166,7 @@ describe('Bugbot review reconciliation integration', () => {
     const reviews = comments.map((comment): PullRequestReviewSummary => ({
       identity: comment.parentReviewIdentity!,
       authorLogin: 'bugbot',
-      body: 'legacy',
+      body: '## 🤖 Bugbot review snapshot\n\nHistorical review.',
       commitId: head,
     }));
     const test = harness({ reviews });

@@ -3,10 +3,12 @@ import { Result } from '../../../../../data/model/result';
 import type { BugbotContextPorts } from '../../../../../application/ports/bugbot_context_ports';
 import type { BugbotFindingResolutionPorts } from '../../../../../application/ports/bugbot_finding_resolution_ports';
 import { loadBugbotContext } from './load_bugbot_context_use_case';
+import { projectBugbotContextRequest } from './bugbot_context_request';
 import { markFindingsResolved } from './mark_findings_resolved_workflow';
 import { normalizeFindingIdForMarker } from '../../../../policies/bugbot_finding_marker_policy';
 import { logError } from '../../../../ports/logging_ports';
 import type { BugbotFindingResolution } from '../../../../../domain/bugbot/finding';
+import { toApplicationError } from '../../../../errors/application_error';
 
 export interface DismissBugbotFindingsParam {
     execution: Execution;
@@ -54,12 +56,21 @@ export class DismissBugbotFindingsUseCase {
                 success: errors.length === 0,
                 executed: true,
                 steps: [`Dismissed ${dismissibleIds.size} Bugbot finding(s) by explicit user command.`],
-                errors,
+                errors: errors.map(error => toApplicationError(
+                    error,
+                    'provider.unavailable',
+                    'A Bugbot finding could not be dismissed.',
+                )),
             })];
         } catch (error) {
             const message = `Unable to dismiss Bugbot findings: ${error instanceof Error ? error.message : String(error)}`;
             logError(message);
-            return [new Result({ id: this.taskId, success: false, executed: true, errors: [message] })];
+            return [new Result({
+                id: this.taskId,
+                success: false,
+                executed: true,
+                errors: [toApplicationError(error, 'provider.unavailable', 'Unable to dismiss Bugbot findings.')],
+            })];
         }
     }
 }
@@ -68,19 +79,17 @@ async function loadDismissContext(
     execution: Execution,
     ports: BugbotContextPorts,
 ) {
+    const reader = ports.loader.bind({
+        owner: execution.owner,
+        repository: execution.repo,
+        token: execution.tokens.token,
+    });
     const branch = execution.commit.branch?.trim() || execution.pullRequest?.head?.trim();
     if (branch) {
-        return loadBugbotContext(execution, {
+        return loadBugbotContext(projectBugbotContextRequest(execution, {
             branchOverride: branch,
             ...(execution.pullRequest?.number > 0 ? { pullRequestNumberOverride: execution.pullRequest.number } : {}),
-        }, ports);
+        }), reader);
     }
-    if (execution.issueNumber <= 0) return loadBugbotContext(execution, undefined, ports);
-    const issueBranch = await ports.pullRequest.getHeadBranchForIssue(
-        execution.owner,
-        execution.repo,
-        execution.issueNumber,
-        execution.tokens.token,
-    );
-    return loadBugbotContext(execution, issueBranch ? { branchOverride: issueBranch } : undefined, ports);
+    return loadBugbotContext(projectBugbotContextRequest(execution), reader);
 }

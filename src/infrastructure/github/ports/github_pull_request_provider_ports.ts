@@ -35,9 +35,22 @@ export interface GithubPullRequestLifecycleClient {
       ): Promise<{ data: GithubPullRequestSummary[] }>;
       update(parameters: Record<string, unknown>): Promise<unknown>;
       get?(parameters: Record<string, unknown>): Promise<{ data: {
+        number?: number;
+        state?: string;
         body?: string | null;
-        head?: { ref?: string | null; sha?: string | null };
-        base?: { ref?: string | null };
+        head?: {
+          ref?: string | null;
+          sha?: string | null;
+          repo?: { owner?: { login?: string | null } | null } | null;
+        };
+        base?: {
+          ref?: string | null;
+          repo?: {
+            id?: number;
+            name?: string | null;
+            owner?: { login?: string | null } | null;
+          } | null;
+        };
       } }>;
     };
   };
@@ -45,6 +58,18 @@ export interface GithubPullRequestLifecycleClient {
 
 export interface GithubPullRequestSummary {
   number: number;
+  state?: string;
   body?: string | null;
-  head?: { ref?: string | null };
+  head?: {
+    ref?: string | null;
+    sha?: string | null;
+    repo?: { owner?: { login?: string | null } | null } | null;
+  };
+  base?: {
+    repo?: {
+      id?: number;
+      name?: string | null;
+      owner?: { login?: string | null } | null;
+    } | null;
+  };
 }

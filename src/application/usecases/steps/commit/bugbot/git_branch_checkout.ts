@@ -1,5 +1,6 @@
 import type { GitCommitPort } from '../../../../ports/git_ports';
 import { logDebugInfo, logError, logInfo } from "../../../../ports/logging_ports";
+import { toApplicationError } from '../../../../errors/application_error';
 
 const STASH_MESSAGE = "bugbot-autofix-before-checkout";
 
@@ -27,8 +28,8 @@ export async function checkoutBranch(
         logInfo(`Checked out branch ${branch}.`);
         return didStash ? restoreStashedChanges(gitCommitPort) : true;
     } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        logError(`Failed to checkout branch ${branch}: ${msg}`);
+        const semanticError = toApplicationError(err, 'workflow.failed', `Failed to checkout branch ${branch}.`);
+        logError(semanticError);
         if (didStash) logError("Changes were stashed; run 'git stash pop' manually to restore them.");
         return false;
     }
@@ -47,8 +48,8 @@ async function restoreStashedChanges(gitCommitPort: GitCommitPort): Promise<bool
         logDebugInfo("Restored stashed changes after checkout.");
         return true;
     } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        logError(`Failed to restore stashed changes after checkout: ${message}`);
+        const semanticError = toApplicationError(error, 'workflow.failed', 'Failed to restore stashed changes after checkout.');
+        logError(semanticError);
         logError("Changes remain stashed; run 'git stash pop' manually to restore them.");
         return false;
     }

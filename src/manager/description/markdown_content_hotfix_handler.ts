@@ -1,6 +1,7 @@
 import { Execution } from "../../data/model/execution";
 import { logError } from "../../utils/logger";
 import { IssueContentInterface } from "./base/issue_content_interface";
+import { toApplicationError } from '../../application/errors/application_error';
 
 export class MarkdownContentHotfixHandler extends IssueContentInterface {
     get id(): string {
@@ -15,7 +16,7 @@ export class MarkdownContentHotfixHandler extends IssueContentInterface {
         try {
             return await this.internalUpdate(execution, content)
         } catch (error) {
-            logError(`Error updating issue content: ${error}`);
+            logError(toApplicationError(error, 'provider.unavailable', 'Unable to update issue content.'));
             return undefined;
         }
     }
@@ -28,7 +29,7 @@ export class MarkdownContentHotfixHandler extends IssueContentInterface {
             }
             return content;
         } catch (error) {
-            logError(`Error reading issue content: ${error}`);
+            logError(toApplicationError(error, 'provider.unavailable', 'Unable to read issue content.'));
             throw error;
         }
     }

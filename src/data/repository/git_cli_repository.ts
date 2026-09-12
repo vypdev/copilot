@@ -2,6 +2,7 @@ import * as exec from '@actions/exec';
 import { logDebugInfo, logError } from '../../utils/logger';
 import { getLatestVersion } from '../model/version_policy';
 import { buildGitAuthenticationEnvironment } from '../../infrastructure/git_authentication_environment';
+import { toApplicationError } from '../../application/errors/application_error';
 
 /**
  * Repository for Git operations executed via CLI (exec).
@@ -21,7 +22,7 @@ export class GitCliRepository {
 
             logDebugInfo('Successfully fetched all remote branches.');
         } catch (error) {
-            logError(`Error fetching remote branches: ${error}`);
+            logError(toApplicationError(error, 'provider.unavailable', 'Unable to fetch remote branches.'));
             throw error;
         }
     };
@@ -53,7 +54,7 @@ export class GitCliRepository {
                 return undefined;
             }
         } catch (error) {
-            logError(`Error fetching the latest tag: ${error}`);
+            logError(toApplicationError(error, 'provider.unavailable', 'Unable to fetch the latest tag.'));
             throw error;
         }
     };
@@ -88,7 +89,7 @@ export class GitCliRepository {
                 throw new Error('No commit found for the tag');
             }
         } catch (error) {
-            logError(`Error fetching the commit hash: ${error}`);
+            logError(toApplicationError(error, 'provider.unavailable', 'Unable to fetch the commit hash.'));
             throw error;
         }
         return undefined;

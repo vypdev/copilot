@@ -19,6 +19,7 @@ describe('assertAgentResponseSchema', () => {
         })).not.toThrow();
 
         expect(() => assertAgentResponseSchema(null, {})).not.toThrow();
+        expect(() => assertAgentResponseSchema(null, { type: ['string', 'null'] })).not.toThrow();
     });
 
     it.each([
@@ -27,6 +28,7 @@ describe('assertAgentResponseSchema', () => {
         ['array type', {}, { type: 'array' }, 'expected array'],
         ['integer type', 1.5, { type: 'integer' }, 'expected integer'],
         ['primitive type', 1, { type: 'string' }, 'expected string'],
+        ['union type', true, { type: ['string', 'null'] }, 'expected string or null'],
         ['short string', 'x', { type: 'string', minLength: 2 }, 'too short'],
         ['long string', 'xxx', { type: 'string', maxLength: 2 }, 'too long'],
         ['non-finite number', Number.NaN, { type: 'number' }, 'not finite'],
